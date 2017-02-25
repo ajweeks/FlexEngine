@@ -124,6 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="lib\glad\src\glad.c" />
+    <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ShaderUtils.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\TechDemo.cpp" />
@@ -132,6 +133,7 @@
     <ClInclude Include="include\Primitives.h" />
     <ClInclude Include="include\TechDemo.h" />
     <ClInclude Include="include\ShaderUtils.h" />
+    <ClInclude Include="include\Random.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
