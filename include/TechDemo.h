@@ -40,6 +40,8 @@ private:
 
 	GLuint m_TextureID;
 
+	GLuint m_UniformTimeID;
+
 	static const int NUM_ICONS = 3;
 	GLFWimage icons[NUM_ICONS];
 

@@ -78,6 +78,7 @@ TechDemo::~TechDemo()
 	glDeleteBuffers(1, &m_VertexBufferID);
 	glDeleteVertexArrays(1, &m_VertexArrayID);
 	glDeleteBuffers(1, &m_ColorBufferID);
+	glDeleteBuffers(1, &m_TexCoordBufferID);
 	glBindVertexArray(0);
 	
 	glfwDestroyWindow(m_Window);
@@ -200,108 +201,30 @@ void TechDemo::Initialize()
 	glDepthFunc(GL_LESS);
 
 	static const GLfloat vertices[] = {
-		-1.0f,-1.0f,-1.0f,
-		-1.0f,-1.0f, 1.0f,
-		-1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f,-1.0f, 
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 1.0f,-1.0f,
-		1.0f,-1.0f, 1.0f,
-		-1.0f,-1.0f,-1.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 1.0f,-1.0f,
-		1.0f,-1.0f,-1.0f,
-		-1.0f,-1.0f,-1.0f,
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 1.0f, 1.0f,
-		-1.0f, 1.0f,-1.0f,
-		1.0f,-1.0f, 1.0f,
-		-1.0f,-1.0f, 1.0f,
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 1.0f, 1.0f,
-		-1.0f,-1.0f, 1.0f,
-		1.0f,-1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 1.0f,-1.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f,-1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f,-1.0f,
-		-1.0f, 1.0f,-1.0f,
-		1.0f, 1.0f, 1.0f,
-		-1.0f, 1.0f,-1.0f,
-		-1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,
-		-1.0f, 1.0f, 1.0f,
-		1.0f,-1.0f, 1.0f
+		-1.0f, -1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 -1.0f, -1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f,  -1.0f, -1.0f,
 	};
 
-	static GLfloat colors[12 * 3 * 3];
-	for (size_t i = 0; i < 12 * 3; i++)
-	{
-		colors[i * 3 + 0] = 1.0f;
-		colors[i * 3 + 1] = 1.0f;
-		colors[i * 3 + 2] = 1.0f;
-	}
+	//static GLfloat colors[12 * 3 * 3];
+	//for (size_t i = 0; i < 12 * 3; i++)
+	//{
+	//	colors[i * 3 + 0] = 1.0f;
+	//	colors[i * 3 + 1] = 1.0f;
+	//	colors[i * 3 + 2] = 1.0f;
+	//}
 
 	static const GLfloat texCoords[] = 
 	{
-		0.0f, 0.0f,
 		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
 		0.0f, 0.0f,
+		1.0f, 0.0f,
 		0.0f, 1.0f,
-		1.0f, 1.0f,
 		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f,
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f
+		1.0f, 1.0f
 	};
 
 	//static const GLuint indices[] = {
@@ -324,12 +247,12 @@ void TechDemo::Initialize()
 	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(posAttrib);
 
-	glGenBuffers(1, &m_ColorBufferID);
-	glBindBuffer(GL_ARRAY_BUFFER, m_ColorBufferID);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
-	GLint colorAttrib = glGetAttribLocation(m_ProgramID, "in_Color");
-	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(colorAttrib);
+	//glGenBuffers(1, &m_ColorBufferID);
+	//glBindBuffer(GL_ARRAY_BUFFER, m_ColorBufferID);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+	//GLint colorAttrib = glGetAttribLocation(m_ProgramID, "in_Color");
+	//glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	//glEnableVertexAttribArray(colorAttrib);
 	
 	glGenBuffers(1, &m_TexCoordBufferID);
 	glBindBuffer(GL_ARRAY_BUFFER, m_TexCoordBufferID);
@@ -338,8 +261,10 @@ void TechDemo::Initialize()
 	glVertexAttribPointer(texCoordAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(texCoordAttrib);
 
-	LoadAndBindGLTexture("resources/images/test.jpg", m_TextureID);
+	LoadAndBindGLTexture("resources/images/test2.jpg", m_TextureID);
 	glUniform1i(glGetUniformLocation(m_ProgramID, "texTest"), 0);
+
+	m_UniformTimeID = glGetUniformLocation(m_ProgramID, "time");
 
 	//glGenBuffers(1, &m_IndicesBufferID);
 	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IndicesBufferID);
@@ -392,8 +317,10 @@ void TechDemo::UpdateAndRender()
 		glm::mat4 Model = glm::mat4(1.0f);
 		glm::mat4 MVP = Projection * View * Model;
 		glUniformMatrix4fv(m_MVPID, 1, GL_FALSE, &MVP[0][0]);
+		
+		glUniform1f(m_UniformTimeID, currentTime);
 
-		glDrawArrays(GL_TRIANGLES, 0, 12 * 3);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		glfwSwapBuffers(m_Window);

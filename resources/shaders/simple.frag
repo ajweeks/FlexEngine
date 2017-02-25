@@ -1,12 +1,24 @@
 #version 400
 
 uniform sampler2D texTest;
+uniform float time;
 
-in vec3 ex_Color;
 in vec2 ex_TexCoord;
 
 out vec4 fragmentColor;
 
 void main() {
-	fragmentColor = texture(texTest, ex_TexCoord) * vec4(ex_Color, 1.0);
+	if (ex_TexCoord.y < 0.5)
+	{
+		fragmentColor = texture(texTest, ex_TexCoord);
+	}
+	else
+	{
+		vec2 newTexCoord = ex_TexCoord;
+		float dPos = sin(ex_TexCoord.y * 100) * 0.035;
+		newTexCoord.x += dPos;
+		newTexCoord.y = 1.0 - newTexCoord.y;
+		fragmentColor = texture(texTest, newTexCoord);
+		fragmentColor.rgb *= 0.8f; // Darken
+	}
 }
