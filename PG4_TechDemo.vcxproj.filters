@@ -44,5 +44,11 @@
     <ClInclude Include="include\Random.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\gl3w-master\include\GL\glcorearb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
