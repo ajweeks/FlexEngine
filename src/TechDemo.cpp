@@ -2,22 +2,20 @@
 #include "TechDemo.h"
 #include "ShaderUtils.h"
 #include "Logger.h"
+#include "FreeCamera.h"
+#include "GameContext.h"
+#include "InputManager.h"
 
 #include <iostream>
 #include <string> 
 
-#include <glm\glm.hpp> // vec3, vec3, mat4
-#include <glm\gtc\matrix_transform.hpp> // translate, rotation, scale, perspective
-#include <glm\gtc\type_ptr.hpp> // value_ptr
-#include <glm\gtx\euler_angles.hpp>
+#include <glm\glm.hpp>
 
 #include <SOIL.h>
 
 #define ArrayCount(arr) (sizeof(arr[0]) / sizeof(arr))
 
 using namespace glm;
-
-// TODO: Window focus listening
 
 void ErrorCallback(int error, const char* description)
 {
@@ -26,15 +24,14 @@ void ErrorCallback(int error, const char* description)
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-	{
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
-	}
+	TechDemo* techDemo = static_cast<TechDemo*>(glfwGetWindowUserPointer(window));
+	techDemo->m_InputManager->KeyCallback(window, key, scancode, action, mods);
 }
 
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
-	//TechDemo* techDemo = static_cast<TechDemo*>(glfwGetWindowUserPointer(window));
+	TechDemo* techDemo = static_cast<TechDemo*>(glfwGetWindowUserPointer(window));
+	techDemo->m_InputManager->MouseButtonCallback(window, button, action, mods);
 }
 
 void WindowFocusCallback(GLFWwindow* window, int focused)
@@ -46,7 +43,7 @@ void WindowFocusCallback(GLFWwindow* window, int focused)
 void CursorPosCallback(GLFWwindow* window, double x, double y)
 {
 	TechDemo* techDemo = static_cast<TechDemo*>(glfwGetWindowUserPointer(window));
-	techDemo->SetMousePosition((float)x, (float)y);
+	techDemo->m_InputManager->CursorPosCallback(window, x, y);
 }
 
 void WindowSizeCallback(GLFWwindow* window, int width, int height)
@@ -72,6 +69,8 @@ TechDemo::~TechDemo()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	
+	delete m_Camera;
+
 	glfwDestroyWindow(m_Window);
 
 	SOIL_free_image_data(icons[0].pixels);
@@ -140,11 +139,8 @@ void TechDemo::Initialize()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	m_WindowSize = vec2(1920, 1080);
-	m_ZNear = 0.1f;
-	m_ZFar = 1000.0f;
-	m_FOV = 45.0f;
 
+	m_WindowSize = vec2i(1920, 1080);
 	m_Window = glfwCreateWindow(m_WindowSize.x, m_WindowSize.y, "Window Title", NULL, NULL);
 	if (!m_Window)
 	{
@@ -190,9 +186,19 @@ void TechDemo::Initialize()
 	//LoadAndBindGLTexture("resources/images/test2.jpg", m_TextureID);
 	//glUniform1i(glGetUniformLocation(m_ProgramID, "texTest"), 0);
 
-	m_Cube.Init(m_ProgramID, vec3(0.0f, 0.0f, 0.0f), glm::quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f));
-	m_Cube2.Init(m_ProgramID, vec3(0.0f, 0.0f, 4.0f), glm::quat(vec3(0.0f, 0.0f, 2.0f)), vec3(1.0f, 5.0f, 1.0f));
-	//m_Sphere1.Init(m_ProgramID, Sphere::Type::STANDARD, 2.0f, 20, 20);
+	m_InputManager = new InputManager();
+	m_GameContext = {};
+	m_GameContext.inputManager = m_InputManager;
+	m_GameContext.windowFocused = m_WindowFocused;
+	m_GameContext.windowSize = m_WindowSize;
+
+	m_Camera = new FreeCamera(m_GameContext);
+	m_Camera->SetPosition(vec3(-10.0f, 3.0f, -5.0f));
+	m_GameContext.camera = m_Camera;
+
+	m_Sphere1.Init(m_ProgramID, vec3(0.0f, 0.0f, 0.0f));
+	m_Cube.Init(m_ProgramID, vec3(0.0f, 0.0f, -6.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f));
+	m_Cube2.Init(m_ProgramID, vec3(0.0f, 0.0f, 4.0f), quat(vec3(0.0f, 0.0f, 2.0f)), vec3(1.0f, 5.0f, 1.0f));
 
 	SetVSyncEnabled(true);
 }
@@ -218,14 +224,19 @@ void TechDemo::UpdateAndRender()
 			glfwSetWindowTitle(m_Window, (std::string("Window Title    FPS:") + std::to_string(m_FPS)).c_str());
 		}
 
+		m_GameContext.deltaTime = dt;
+		m_GameContext.elapsedTime = currentTime;
+
+		m_InputManager->Update();
+		m_Camera->Update(m_GameContext);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glUseProgram(m_ProgramID);
 
-		CalculateViewProjection(dt);
-
-		m_Cube.Draw(m_ProgramID, m_ViewProjection, currentTime);
-		m_Cube2.Draw(m_ProgramID, m_ViewProjection, currentTime);
+		m_Sphere1.Draw(m_ProgramID, m_GameContext, currentTime);
+		m_Cube.Draw(m_ProgramID, m_GameContext, currentTime);
+		m_Cube2.Draw(m_ProgramID, m_GameContext, currentTime);
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glUseProgram(0);
@@ -246,19 +257,9 @@ void TechDemo::ToggleVSyncEnabled()
 	SetVSyncEnabled(!m_VSyncEnabled);
 }
 
-glm::mat4 TechDemo::GetViewProjection() const
+glm::vec2 TechDemo::GetWindowSize() const
 {
-	return m_ViewProjection;
-}
-
-void TechDemo::SetMousePosition(float x, float y)
-{
-	SetMousePosition(vec2(x, y));
-}
-
-void TechDemo::SetMousePosition(glm::vec2 mousePos)
-{
-	m_MousePos = mousePos;
+	return m_WindowSize;
 }
 
 void TechDemo::UpdateWindowSize(int width, int height)
@@ -275,25 +276,4 @@ void TechDemo::UpdateWindowSize(glm::vec2i windowSize)
 void TechDemo::UpdateWindowFocused(int focused)
 {
 	m_WindowFocused = focused == GLFW_TRUE;
-}
-
-void TechDemo::CalculateViewProjection(float dt)
-{
-	static float currentTime = 0.0f;
-
-	float aspectRatio = m_WindowSize.x / (float)m_WindowSize.y;
-	glm::mat4 Projection = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
-
-	bool move = m_WindowFocused;
-	if (move) currentTime += dt;
-
-	vec3 eye = glm::vec3(8 + (cos(currentTime) * 4.0f), 3.5f, sin(currentTime) * 3.0f);
-
-	vec3 center = glm::vec3(0, 0, 0);
-	vec3 up = glm::vec3(0, 1, 0);
-
-	glm::mat4 View = glm::lookAt(
-		eye, center, up
-	);
-	m_ViewProjection = Projection * View;
 }

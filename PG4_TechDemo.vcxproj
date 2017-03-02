@@ -128,6 +128,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\InputManager.cpp" />
+    <ClCompile Include="src\FreeCamera.cpp" />
     <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="lib\glad\src\glad.c" />
     <ClCompile Include="src\Colours.cpp" />
@@ -138,13 +140,16 @@
     <ClCompile Include="src\TechDemo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\FreeCamera.h" />
     <ClInclude Include="include\Colours.h" />
+    <ClInclude Include="include\GameContext.h" />
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\Primitives.h" />
     <ClInclude Include="include\TechDemo.h" />
     <ClInclude Include="include\ShaderUtils.h" />
     <ClInclude Include="include\Random.h" />
     <ClInclude Include="include\Typedefs.h" />
+    <ClInclude Include="include\InputManager.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\glcorearb.h" />
   </ItemGroup>

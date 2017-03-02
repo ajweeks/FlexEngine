@@ -2,6 +2,7 @@
 
 #include "Typedefs.h"
 #include "Primitives.h"
+#include "GameContext.h"
 
 // Include glad *before* glfw
 #include <glad\glad.h>
@@ -10,6 +11,8 @@
 #include <glm\vec2.hpp>
 
 struct GLFWwindow;
+class FreeCamera;
+class InputManager;
 
 class TechDemo final
 {
@@ -24,37 +27,27 @@ public:
 	void SetVSyncEnabled(bool enabled);
 	void ToggleVSyncEnabled();
 
-	glm::mat4 GetViewProjection() const;
-
+	glm::vec2 GetWindowSize() const;
 
 private:
 	// Callback accessors
-	void SetMousePosition(float x, float y);
-	void SetMousePosition(glm::vec2 mousePos);
 	void UpdateWindowSize(int width, int height);
 	void UpdateWindowSize(glm::vec2i windowSize);
 	void UpdateWindowFocused(int focused);
 
-	void CalculateViewProjection(float dt);
-
 	GLFWwindow* m_Window;
 
 	glm::vec2i m_WindowSize;
+	bool m_WindowFocused;
 
 	int m_FramesThisSecond;
 	int m_FPS;
 
 	bool m_VSyncEnabled;
 
-	bool m_WindowFocused;
-
-	// Camera variables
-	glm::mat4 m_ViewProjection;
-	float m_FOV;
-	float m_ZNear;
-	float m_ZFar;
-
-	glm::vec2 m_MousePos;
+	FreeCamera *m_Camera;
+	InputManager *m_InputManager;
+	GameContext m_GameContext;
 
 	GLuint m_ProgramID;
 
@@ -63,7 +56,7 @@ private:
 	
 	CubePosCol m_Cube;
 	CubePosCol m_Cube2;
-	Sphere m_Sphere1;
+	SpherePosCol m_Sphere1;
 
 	static const int NUM_ICONS = 3;
 	GLFWimage icons[NUM_ICONS];
@@ -78,5 +71,4 @@ private:
 
 	TechDemo(const TechDemo&) = delete;
 	TechDemo& operator=(const TechDemo&) = delete;
-
 };

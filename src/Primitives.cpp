@@ -1,13 +1,13 @@
 
 #include "Primitives.h"
+#include "GameContext.h"
+#include "FreeCamera.h"
 
 #include <glm\trigonometric.hpp>
 #include <glm\geometric.hpp>
 #include <glm\gtc\constants.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 #include <glm\mat4x4.hpp>
-
-#include <vector>
 
 using namespace glm;
 
@@ -33,11 +33,11 @@ void CubePosCol::Init(GLuint program, glm::vec3 position, glm::quat rotation, gl
 
 	GLint posAttrib = glGetAttribLocation(program, "in_Position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 4, GL_FLOAT, GL_FALSE, stride, 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, stride, 0);
 
 	GLint colorAttrib = glGetAttribLocation(program, "in_Color");
 	glEnableVertexAttribArray(colorAttrib);
-	glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(VertexPosCol, VertexPosCol::col));
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(VertexPosCol, VertexPosCol::col));
 
 	m_UniformTimeID = glGetUniformLocation(program, "in_Time");
 	m_MVPID = glGetUniformLocation(program, "in_MVP");
@@ -50,7 +50,7 @@ CubePosCol::~CubePosCol()
 	glDeleteVertexArrays(1, &m_VAO);
 }
 
-void CubePosCol::Draw(GLuint program, const glm::mat4& viewProjection, float currentTime)
+void CubePosCol::Draw(GLuint program, const GameContext& gameContext, float currentTime)
 {
 	glBindVertexArray(m_VAO);
 	
@@ -62,8 +62,10 @@ void CubePosCol::Draw(GLuint program, const glm::mat4& viewProjection, float cur
 	glm::mat4 Rotation = glm::mat4(m_Rotation);
 	glm::mat4 Scale = glm::scale(glm::mat4(1.0f), m_Scale);
 	glm::mat4 Model = Translation * Rotation * Scale;
-	glm::mat4 MVP = viewProjection * Model;
+	glm::mat4 MVP = gameContext.camera->GetViewProjection() * Model;
 	glUniformMatrix4fv(m_MVPID, 1, GL_FALSE, &MVP[0][0]);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 
 	glDrawArrays(GL_TRIANGLES, 0, NUM_VERTS);
 
@@ -73,132 +75,168 @@ void CubePosCol::Draw(GLuint program, const glm::mat4& viewProjection, float cur
 const VertexPosCol CubePosCol::s_Vertices[] =
 {
 	// Front
-	{ -1.0f, -1.0f, -1.0f, 1.0f,	Colour::RED },
-	{ -1.0f,  1.0f, -1.0f, 1.0f,	Colour::LIME_GREEN },
-	{ 1.0f,  1.0f, -1.0f, 1.0f,		Colour::ORANGE },
+	{ -1.0f, -1.0f, -1.0f, 	Colour::RED },
+	{ -1.0f,  1.0f, -1.0f, 	Colour::LIME_GREEN },
+	{ 1.0f,  1.0f, -1.0f, 	Colour::ORANGE },
 
-	{ -1.0f, -1.0f, -1.0f, 1.0f,	Colour::RED },
-	{ 1.0f,  1.0f, -1.0f, 1.0f,		Colour::ORANGE },
-	{ 1.0f, -1.0f, -1.0f, 1.0f,		Colour::PINK },
+	{ -1.0f, -1.0f, -1.0f, 	Colour::RED },
+	{ 1.0f,  1.0f, -1.0f, 	Colour::ORANGE },
+	{ 1.0f, -1.0f, -1.0f, 	Colour::PINK },
 
 	// Top
-	{ -1.0f, 1.0f, -1.0f, 1.0f,		Colour::GREEN },
-	{ -1.0f, 1.0f,  1.0f, 1.0f,		Colour::LIGHT_BLUE },
-	{ 1.0f,  1.0f,  1.0f, 1.0f,		Colour::YELLOW },
+	{ -1.0f, 1.0f, -1.0f, 	Colour::GREEN },
+	{ -1.0f, 1.0f,  1.0f, 	Colour::LIGHT_BLUE },
+	{ 1.0f,  1.0f,  1.0f, 	Colour::YELLOW },
 	
-	{ -1.0f, 1.0f, -1.0f, 1.0f,		Colour::GREEN },
-	{ 1.0f,  1.0f,  1.0f, 1.0f,		Colour::YELLOW },
-	{ 1.0f,  1.0f, -1.0f, 1.0f,		Colour::BLACK },
+	{ -1.0f, 1.0f, -1.0f, 	Colour::GREEN },
+	{ 1.0f,  1.0f,  1.0f, 	Colour::YELLOW },
+	{ 1.0f,  1.0f, -1.0f, 	Colour::BLACK },
 
 	// Back
-	{ 1.0f, -1.0f, 1.0f, 1.0f,		Colour::BLACK },
-	{ 1.0f,  1.0f, 1.0f, 1.0f,		Colour::DARK_GRAY },
-	{ -1.0f,  1.0f, 1.0f, 1.0f,		Colour::LIGHT_GRAY },
+	{ 1.0f, -1.0f, 1.0f, 	Colour::BLACK },
+	{ 1.0f,  1.0f, 1.0f, 	Colour::DARK_GRAY },
+	{ -1.0f,  1.0f, 1.0f, 	Colour::LIGHT_GRAY },
 
-	{ 1.0f, -1.0f, 1.0f, 1.0f,		Colour::BLACK },
-	{ -1.0f, 1.0f, 1.0f, 1.0f,		Colour::LIGHT_GRAY },
-	{ -1.0f, -1.0f, 1.0f, 1.0f,		Colour::WHITE },
+	{ 1.0f, -1.0f, 1.0f, 	Colour::BLACK },
+	{ -1.0f, 1.0f, 1.0f, 	Colour::LIGHT_GRAY },
+	{ -1.0f, -1.0f, 1.0f, 	Colour::WHITE },
 
 	// Bottom
-	{ -1.0f, -1.0f, -1.0f, 1.0f,	Colour::BLUE },
-	{ -1.0f, -1.0f,  1.0f, 1.0f,	Colour::LIGHT_BLUE },
-	{ 1.0f,  -1.0f,  1.0f, 1.0f,	Colour::LIME_GREEN },
+	{ -1.0f, -1.0f, -1.0f, 	Colour::BLUE },
+	{ -1.0f, -1.0f,  1.0f, 	Colour::LIGHT_BLUE },
+	{ 1.0f,  -1.0f,  1.0f, 	Colour::LIME_GREEN },
 
-	{ -1.0f, -1.0f, -1.0f, 1.0f,	Colour::BLUE },
-	{ 1.0f, -1.0f,  1.0f, 1.0f,		Colour::LIME_GREEN },
-	{ 1.0f, -1.0f, -1.0f, 1.0f,		Colour::YELLOW },
+	{ -1.0f, -1.0f, -1.0f, 	Colour::BLUE },
+	{ 1.0f, -1.0f,  1.0f, 	Colour::LIME_GREEN },
+	{ 1.0f, -1.0f, -1.0f, 	Colour::YELLOW },
 
 	// Right
-	{ 1.0f, -1.0f, -1.0f, 1.0f,		Colour::PINK },
-	{ 1.0f,  1.0f, -1.0f, 1.0f,		Colour::CYAN },
-	{ 1.0f,  1.0f,  1.0f, 1.0f,		Colour::PURPLE },
+	{ 1.0f, -1.0f, -1.0f, 	Colour::PINK },
+	{ 1.0f,  1.0f, -1.0f,	Colour::CYAN },
+	{ 1.0f,  1.0f,  1.0f, 	Colour::PURPLE },
 
-	{ 1.0f, -1.0f, -1.0f, 1.0f,		Colour::PINK },
-	{ 1.0f,  1.0f,  1.0f, 1.0f,		Colour::PURPLE },
-	{ 1.0f, -1.0f,  1.0f, 1.0f,		Colour::BLUE },
+	{ 1.0f, -1.0f, -1.0f, 	Colour::PINK },
+	{ 1.0f,  1.0f,  1.0f, 	Colour::PURPLE },
+	{ 1.0f, -1.0f,  1.0f, 	Colour::BLUE },
 
 	// Left
-	{ -1.0f, -1.0f, -1.0f, 1.0f,	Colour::LIME_GREEN },
-	{ -1.0f,  1.0f, -1.0f, 1.0f,	Colour::LIGHT_GRAY },
-	{ -1.0f,  1.0f,  1.0f, 1.0f,	Colour::LIGHT_BLUE },
+	{ -1.0f, -1.0f, -1.0f, 	Colour::LIME_GREEN },
+	{ -1.0f,  1.0f, -1.0f, 	Colour::LIGHT_GRAY },
+	{ -1.0f,  1.0f,  1.0f, 	Colour::LIGHT_BLUE },
 
-	{ -1.0f, -1.0f, -1.0f, 1.0f,	Colour::LIME_GREEN },
-	{ -1.0f,  1.0f,  1.0f, 1.0f,	Colour::LIGHT_BLUE },
-	{ -1.0f, -1.0f,  1.0f, 1.0f,	Colour::ORANGE },
+	{ -1.0f, -1.0f, -1.0f, 	Colour::LIME_GREEN },
+	{ -1.0f,  1.0f,  1.0f, 	Colour::LIGHT_BLUE },
+	{ -1.0f, -1.0f,  1.0f, 	Colour::ORANGE },
 };
 
-// Sphere
-Sphere::Sphere()
+SpherePosCol::SpherePosCol()
 {
 }
 
-void Sphere::Init(GLuint program,  Type type, float radius, int parallelSegments, int meridianSegments,
-	glm::vec3 position, glm::quat rotation, glm::vec3 scale)
+void SpherePosCol::Init(GLuint program, glm::vec3 position, glm::quat rotation, glm::vec3 scale)
 {
 	m_Position = position;
 	m_Rotation = rotation;
 	m_Scale = scale;
 
-	std::vector<VertexPosCol> vertices;
+	GLuint parallelCount = 10;
+	GLuint meridianCount = 12;
 
-	switch (type)
-	{
-	case Sphere::Type::STANDARD:
-	{
-		m_VertexCount = parallelSegments * meridianSegments;
-		vertices.reserve(m_VertexCount);
+	assert(parallelCount > 0 && meridianCount > 0);
 
-		const float PI = pi<float>();
-		const float TWO_PI = two_pi<float>();
-		for (size_t p = 0; p < parallelSegments; ++p)
+	const float PI = glm::pi<float>();
+	const float TWO_PI = glm::two_pi<float>();
+
+	// Vertices
+	VertexPosCol v1 (0.0f, 1.0f, 0.0f, Colour::BLACK);
+	m_Vertices.push_back(v1);
+	
+	for (GLuint j = 0; j < parallelCount - 1; j++)
+	{
+		float polar = PI * float(j + 1) / (float)parallelCount;
+		float sinP = sin(polar);
+		float cosP = cos(polar);
+		for (GLuint i = 0; i < meridianCount; i++)
 		{
-			for (size_t m = 0; m < meridianSegments; ++m)
-			{
-				float inclination = PI * (float)(p) / (float)(parallelSegments);
-				float azimuthAngle = TWO_PI * (float)(m) / (float)(meridianSegments);
-				vec3 cartesian1 = SphericalToCartesian(radius, inclination, azimuthAngle);
-
-				float y = -cos(PI * (float)(p) / (float)(parallelSegments));
-				//float radius = glm::sqrt(1 - (y * y));
-				float x = sin(TWO_PI * (float)(m) / (float)(meridianSegments));
-				float z = cos(TWO_PI * (float)(m) / (float)(meridianSegments));
-				vec3 cartesian2 = vec3(x, y, z) * radius;
-
-				VertexPosCol vertex = VertexPosCol(cartesian1.x, cartesian1.y, cartesian1.z, 1.0, Colour::WHITE);
-				vertices.push_back(vertex);
-			}
+			float azimuth = TWO_PI * (float)i / (float)meridianCount;
+			float sinA = sin(azimuth);
+			float cosA = cos(azimuth);
+			vec3 point(sinP * cosA, cosP, sinP * sinA);
+			VertexPosCol vertex(point.x, point.y, point.z, Colour::WHITE);
+			m_Vertices.push_back(vertex);
 		}
-	} break;
-	case Sphere::Type::SPHEREIFIED_CUBE:
-	{
-
-	} break;
-	case Sphere::Type::ICOSAHEDRON:
-	{
-
-	} break;
-	default:
-	{
-	} break;
 	}
+	VertexPosCol vF(0.0f, -1.0f, 0.0f, Colour::GRAY);
+	m_Vertices.push_back(vF);
+
+	m_NumVerts = m_Vertices.size();
+
+	// Indices
+	m_Indices.clear();
+
+	// Top triangles
+	for (size_t i = 0; i < meridianCount; i++)
+	{
+		GLuint a = i + 1;
+		GLuint b = (i + 1) % meridianCount + 1;
+		m_Indices.push_back(0);
+		m_Indices.push_back(a);
+		m_Indices.push_back(b);
+	}
+	
+	// Center quads
+	for (size_t j = 0; j < parallelCount - 2; j++)
+	{
+		GLuint aStart = j * meridianCount + 1;
+		GLuint bStart = (j + 1) * meridianCount + 1;
+		for (size_t i = 0; i < meridianCount; i++)
+		{
+			GLuint a = aStart + i;
+			GLuint a1 = aStart + (i + 1) % meridianCount;
+			GLuint b = bStart + i;
+			GLuint b1 = bStart + (i + 1) % meridianCount;
+			m_Indices.push_back(a);
+			m_Indices.push_back(a1);
+			m_Indices.push_back(b1);
+			
+			m_Indices.push_back(a);
+			m_Indices.push_back(b1);
+			m_Indices.push_back(b);
+		}
+	}
+	
+	// Bottom triangles
+	for (size_t i = 0; i < meridianCount; i++)
+	{
+		GLuint a = i + meridianCount * (parallelCount - 2) + 1;
+		GLuint b = (i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1;
+		m_Indices.push_back(m_NumVerts - 1);
+		m_Indices.push_back(a);
+		m_Indices.push_back(b);
+	}
+
+	m_NumIndices = m_Indices.size();
 
 	glGenVertexArrays(1, &m_VAO);
 	glBindVertexArray(m_VAO);
 
 	glGenBuffers(1, &m_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(m_Vertices[0]) * m_Vertices.size(), m_Vertices.data(), GL_STATIC_DRAW);
+
+	glGenBuffers(1, &m_IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(m_Indices[0]) * m_Indices.size(), m_Indices.data(), GL_STATIC_DRAW);
 
 	const int stride = VertexPosCol::stride;
 
 	GLint posAttrib = glGetAttribLocation(program, "in_Position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, stride, 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, stride, 0);
 
 	GLint colorAttrib = glGetAttribLocation(program, "in_Color");
 	glEnableVertexAttribArray(colorAttrib);
-	glVertexAttribPointer(colorAttrib, 4, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(VertexPosCol, VertexPosCol::col));
+	glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, stride, (void*)offsetof(VertexPosCol, VertexPosCol::col));
 
 	m_UniformTimeID = glGetUniformLocation(program, "in_Time");
 	m_MVPID = glGetUniformLocation(program, "in_MVP");
@@ -206,12 +244,12 @@ void Sphere::Init(GLuint program,  Type type, float radius, int parallelSegments
 	glBindVertexArray(0);
 }
 
-Sphere::~Sphere()
+SpherePosCol::~SpherePosCol()
 {
 	glDeleteVertexArrays(1, &m_VAO);
 }
 
-void Sphere::Draw(GLuint program, const glm::mat4& viewProjection, float currentTime)
+void SpherePosCol::Draw(GLuint program, const GameContext& gameContext, float currentTime)
 {
 	glBindVertexArray(m_VAO);
 
@@ -223,42 +261,13 @@ void Sphere::Draw(GLuint program, const glm::mat4& viewProjection, float current
 	glm::mat4 Rotation = glm::mat4(m_Rotation);
 	glm::mat4 Scale = glm::scale(glm::mat4(1.0f), m_Scale);
 	glm::mat4 Model = Translation * Rotation * Scale;
-	glm::mat4 MVP = viewProjection * Model;
+	glm::mat4 MVP = gameContext.camera->GetViewProjection() * Model;
 	glUniformMatrix4fv(m_MVPID, 1, GL_FALSE, &MVP[0][0]);
 
-	glDrawArrays(GL_TRIANGLES, 0, m_VertexCount);
+	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+
+	glDrawElements(GL_TRIANGLES, m_NumIndices, GL_UNSIGNED_INT, (GLuint*)0);
 
 	glBindVertexArray(0);
 }
-
-glm::vec3 Sphere::SphericalToCartesian(float radius, float inclination, float azimuthAngle)
-{
-	vec3 result = {};
-
-	result.y = radius * cos(inclination);
-	result.x = radius * sin(inclination) * cos(azimuthAngle);
-	result.z = radius * sin(inclination) * sin(azimuthAngle);
-
-	return result;
-}
-
-glm::vec3 Sphere::CartesionToSpherical(float x, float y, float z)
-{
-	return CartesionToSpherical(vec3(x, y, z));
-}
-
-glm::vec3 Sphere::CartesionToSpherical(glm::vec3 cartesian)
-{
-	const float radius = length(cartesian);
-	const float inclination = acos(cartesian.z / radius);
-	const float azimuthAngle = atan2(cartesian.y, cartesian.x);
-
-	vec3 result = {};
-
-	result.x = radius;
-	result.y = inclination;
-	result.z = azimuthAngle;
-
-	return result;
-}
-
