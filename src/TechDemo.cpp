@@ -1,6 +1,7 @@
 
 #include "TechDemo.h"
 #include "ShaderUtils.h"
+#include "Logger.h"
 
 #include <iostream>
 #include <string> 
@@ -19,7 +20,7 @@ using namespace glm;
 
 void ErrorCallback(int error, const char* description)
 {
-	fprintf(stderr, "Error: %s\n", description);
+	Logger::LogError("GL Error: " + std::string(description));
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -148,8 +149,7 @@ GLFWimage LoadGLFWImage(const std::string filename)
 	
 	if (data == 0)
 	{
-		std::cout << "SOIL loading error: " << SOIL_last_result() << std::endl;
-		std::cout << "image filepath: " << filename << std::endl;
+		Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + "\nimage filepath: " + filename);
 		return result;
 	}
 	else
@@ -187,7 +187,7 @@ void TechDemo::Initialize()
 
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-	std::cout << "INFO: OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+	Logger::LogInfo("OpenGL Version: " + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))));
 
 	icons[0] = LoadGLFWImage("resources/icons/icon_01_48.png");
 	icons[1] = LoadGLFWImage("resources/icons/icon_01_32.png");
