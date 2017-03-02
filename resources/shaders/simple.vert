@@ -1,13 +1,13 @@
 #version 400
 
+uniform mat4 in_MVP;
+
 in vec4 in_Position;
-in vec2 in_TexCoord;
+in vec4 in_Color;
 
-out vec2 ex_TexCoord;
-
-uniform mat4 MVP;
+out vec4 ex_Color;
 
 void main() {
-	gl_Position = in_Position;//MVP * in_Position;
-	ex_TexCoord = in_TexCoord;
+	gl_Position = in_MVP * in_Position;
+	ex_Color = in_Color;
 }
