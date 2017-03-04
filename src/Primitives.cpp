@@ -139,8 +139,8 @@ void SpherePosCol::Init(GLuint program, glm::vec3 position, glm::quat rotation, 
 	m_Rotation = rotation;
 	m_Scale = scale;
 
-	GLuint parallelCount = 10;
-	GLuint meridianCount = 12;
+	GLuint parallelCount = 30;
+	GLuint meridianCount = 30;
 
 	assert(parallelCount > 0 && meridianCount > 0);
 
@@ -162,7 +162,9 @@ void SpherePosCol::Init(GLuint program, glm::vec3 position, glm::quat rotation, 
 			float sinA = sin(azimuth);
 			float cosA = cos(azimuth);
 			vec3 point(sinP * cosA, cosP, sinP * sinA);
-			VertexPosCol vertex(point.x, point.y, point.z, Colour::WHITE);
+			const float* color = 
+				(i % 2 == 0 ? j % 2 == 0 ? Colour::ORANGE : Colour::PURPLE : j % 2 == 0 ? Colour::WHITE : Colour::YELLOW);
+			VertexPosCol vertex(point.x, point.y, point.z, color);
 			m_Vertices.push_back(vertex);
 		}
 	}
