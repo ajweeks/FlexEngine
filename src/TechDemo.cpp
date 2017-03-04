@@ -200,7 +200,7 @@ void TechDemo::Initialize()
 	m_Cube.Init(m_ProgramID, vec3(0.0f, 0.0f, -6.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f));
 	m_Cube2.Init(m_ProgramID, vec3(0.0f, 0.0f, 4.0f), quat(vec3(0.0f, 0.0f, 2.0f)), vec3(1.0f, 5.0f, 1.0f));
 
-	SetVSyncEnabled(true);
+	SetVSyncEnabled(false);
 }
 
 void TechDemo::UpdateAndRender()
@@ -209,6 +209,8 @@ void TechDemo::UpdateAndRender()
 	float prevTime = (float)glfwGetTime();
 	while (!glfwWindowShouldClose(m_Window))
 	{
+		glfwPollEvents();
+
 		float currentTime = (float)glfwGetTime();
 		float dt = currentTime - prevTime;
 		prevTime = currentTime;
@@ -242,7 +244,6 @@ void TechDemo::UpdateAndRender()
 		glUseProgram(0);
 
 		glfwSwapBuffers(m_Window);
-		glfwPollEvents();
 	}
 }
 

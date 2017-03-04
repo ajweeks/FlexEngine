@@ -61,10 +61,20 @@ void InputManager::MouseButtonCallback(GLFWwindow* window, int button, int actio
 		if (action == GLFW_PRESS)
 		{
 			++m_MouseButtons[button].down;
+
+			if (button == GLFW_MOUSE_BUTTON_LEFT)
+			{
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			}
 		}
 		else
 		{
 			m_MouseButtons[button].down = 0;
+
+			if (button == GLFW_MOUSE_BUTTON_LEFT)
+			{
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			}
 		}
 	}
 }
