@@ -242,6 +242,8 @@ void TechDemo::UpdateAndRender()
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glUseProgram(0);
+		
+		m_InputManager->PostUpdate();
 
 		glfwSwapBuffers(m_Window);
 	}

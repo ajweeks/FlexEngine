@@ -31,6 +31,11 @@ void InputManager::Update()
 	}
 }
 
+void InputManager::PostUpdate()
+{
+	m_PrevMousePosition = m_MousePosition;
+}
+
 int InputManager::GetKeyDown(int vkCode)
 {
 	auto value = m_Keys.find(vkCode);

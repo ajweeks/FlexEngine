@@ -13,6 +13,7 @@ public:
 	~InputManager();
 
 	void Update();
+	void PostUpdate();
 
 	int GetKeyDown(int vkCode);
 	bool GetKeyPressed(int vkCode);
