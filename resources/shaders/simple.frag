@@ -12,4 +12,3 @@ void main() {
 	fragmentColor.r += in_Time;
 	fragmentColor.r = fract(fragmentColor.r * 5) + fract((fragmentColor.g) * 3);
 }
-

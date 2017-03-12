@@ -7,9 +7,6 @@
 #include <glm\vec4.hpp>
 #include <glm\gtc\quaternion.hpp>
 
-#include <glad\glad.h>
-#include <GLFW\glfw3.h>
-
 #include <vector>
 
 struct GameContext;
@@ -47,10 +44,11 @@ struct CubePosCol
 {
 	CubePosCol();
 
-	void Init(GLuint program, glm::vec3 position, glm::quat rotation = glm::quat(glm::vec3(0.0f)), glm::vec3 scale = glm::vec3(1.0f));
+	void Init(const GameContext& gameContext, glm::vec3 position, glm::quat rotation = glm::quat(glm::vec3(0.0f)), glm::vec3 scale = glm::vec3(1.0f));
+	void Destroy(const GameContext& gameContext);
 	~CubePosCol();
 
-	void Draw(GLuint program, const GameContext& gameContext, float currentTime);
+	void Render(const GameContext& gameContext);
 
 	static const int NUM_VERTS = 4 * 12;
 	static const VertexPosCol s_Vertices[NUM_VERTS];
@@ -59,10 +57,10 @@ struct CubePosCol
 	glm::quat m_Rotation;
 	glm::vec3 m_Scale;
 
-	GLuint m_MVPID;
-	GLuint m_UniformTimeID;
-	GLuint m_VAO;
-	GLuint m_VBO;
+	glm::uint m_MVPID;
+	glm::uint m_UniformTimeID;
+	glm::uint m_VAO;
+	glm::uint m_VBO;
 };
 
 
@@ -70,24 +68,25 @@ struct SpherePosCol
 {
 	SpherePosCol();
 
-	void Init(GLuint program, glm::vec3 position, glm::quat rotation = glm::quat(glm::vec3(0.0f)), glm::vec3 scale = glm::vec3(1.0f));
+	void Init(const GameContext& gameContext, glm::vec3 position, glm::quat rotation = glm::quat(glm::vec3(0.0f)), glm::vec3 scale = glm::vec3(1.0f));
+	void Destroy(const GameContext& gameContext);
 	~SpherePosCol();
 
-	void Draw(GLuint program, const GameContext& gameContext, float currentTime);
+	void Render(const GameContext& gameContext);
 
 	std::vector<VertexPosCol> m_Vertices;
-	std::vector<GLuint> m_Indices;
+	std::vector<glm::uint> m_Indices;
 
-	GLuint m_NumVerts;
-	GLuint m_NumIndices;
+	glm::uint m_NumVerts;
+	glm::uint m_NumIndices;
 
 	glm::vec3 m_Position;
 	glm::quat m_Rotation;
 	glm::vec3 m_Scale;
 
-	GLuint m_MVPID;
-	GLuint m_UniformTimeID;
-	GLuint m_VAO;
-	GLuint m_VBO;
-	GLuint m_IBO;
+	glm::uint m_MVPID;
+	glm::uint m_UniformTimeID;
+	glm::uint m_VAO;
+	glm::uint m_VBO;
+	glm::uint m_IBO;
 };

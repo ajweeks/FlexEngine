@@ -2,6 +2,9 @@
 #include "InputManager.h"
 #include "Logger.h"
 
+#include <glad\glad.h>
+#include <GLFW\glfw3.h>
+
 #include <assert.h>
 
 InputManager::InputManager()
@@ -53,13 +56,12 @@ bool InputManager::GetKeyPressed(int vkCode)
 	return GetKeyDown(vkCode) == 1;
 }
 
-void InputManager::CursorPosCallback(GLFWwindow* window, double x, double y)
+void InputManager::CursorPosCallback(double x, double y)
 {
-	m_PrevMousePosition = m_MousePosition;
 	m_MousePosition = glm::vec2(x, y);
 }
 
-void InputManager::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+void InputManager::MouseButtonCallback(int button, int action, int mods)
 {
 	if (button < MOUSE_BUTTON_COUNT)
 	{	
@@ -67,24 +69,24 @@ void InputManager::MouseButtonCallback(GLFWwindow* window, int button, int actio
 		{
 			++m_MouseButtons[button].down;
 
-			if (button == GLFW_MOUSE_BUTTON_LEFT)
-			{
-				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			}
+			//if (button == GLFW_MOUSE_BUTTON_LEFT)
+			//{
+			//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			//}
 		}
 		else
 		{
 			m_MouseButtons[button].down = 0;
 
-			if (button == GLFW_MOUSE_BUTTON_LEFT)
-			{
-				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			}
+			//if (button == GLFW_MOUSE_BUTTON_LEFT)
+			//{
+			//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			//}
 		}
 	}
 }
 
-void InputManager::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void InputManager::KeyCallback(int key, int scancode, int action, int mods)
 {
 	if (action == GLFW_PRESS)
 	{

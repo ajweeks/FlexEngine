@@ -1,5 +1,4 @@
 
-// TODO: Make this file OS agnostic
 #include <windows.h>
 
 #include "TechDemo.h"

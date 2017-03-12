@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -40,13 +40,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -69,11 +69,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)include;$(GLFW)\include;$(GLAD)\include;$(GLM);$(SOIL)\src;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files %28x86%29\Windows Kits\10\Include\10.0.14393.0\um;$(SolutionDir)include;$(GLFW)\include;$(GLAD)\include;$(GLM);$(SOIL)\src;$(IncludePath)</IncludePath>
     <LibraryPath>$(GLFW)\bin\lib-vc2015;$(SOIL)\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)include;$(GLFW)\include;$(GLAD)\include;$(GLM);$(SOIL)\src;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files %28x86%29\Windows Kits\10\Include\10.0.14393.0\um;$(SolutionDir)include;$(GLFW)\include;$(GLAD)\include;$(GLM);$(SOIL)\src;$(IncludePath)</IncludePath>
     <LibraryPath>$(GLFW)\bin\lib-vc2015;$(SOIL)\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -128,6 +128,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="include\Helpers.cpp" />
+    <ClCompile Include="src\Graphics\GLRenderer.cpp" />
+    <ClCompile Include="src\Scene\SceneManager.cpp" />
+    <ClCompile Include="src\Scene\TestScene.cpp" />
+    <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\Window.cpp" />
+    <ClCompile Include="src\Scene\BaseScene.cpp" />
+    <ClCompile Include="src\Graphics\Renderer.cpp" />
     <ClCompile Include="src\InputManager.cpp" />
     <ClCompile Include="src\FreeCamera.cpp" />
     <ClCompile Include="src\Logger.cpp" />
@@ -140,9 +148,13 @@
     <ClCompile Include="src\TechDemo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\GLHelpers.h" />
+    <ClInclude Include="include\Graphics\GLRenderer.h" />
+    <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
     <ClInclude Include="include\Colours.h" />
     <ClInclude Include="include\GameContext.h" />
+    <ClInclude Include="include\Helpers.h" />
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\Primitives.h" />
     <ClInclude Include="include\TechDemo.h" />
@@ -150,8 +162,13 @@
     <ClInclude Include="include\Random.h" />
     <ClInclude Include="include\Typedefs.h" />
     <ClInclude Include="include\InputManager.h" />
+    <ClInclude Include="include\Window\Window.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\glcorearb.h" />
+    <ClInclude Include="include\Graphics\Renderer.h" />
+    <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
+    <ClInclude Include="include\Scene\SceneManager.h" />
+    <ClInclude Include="include\Scene\TestScene.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

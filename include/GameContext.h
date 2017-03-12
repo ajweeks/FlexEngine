@@ -1,16 +1,22 @@
 #pragma once
 
-#include "FreeCamera.h"
-#include "InputManager.h"
-
 #include <glm\vec2.hpp>
+
+class Window;
+class FreeCamera;
+class InputManager;
+class Renderer;
+class TechDemo;
 
 struct GameContext
 {
+	Window* window;
 	FreeCamera* camera;
 	InputManager* inputManager;
-	glm::vec2 windowSize;
-	bool windowFocused;
+	Renderer* renderer;
+	TechDemo* mainApp;
+
+	glm::uint program;
 	float elapsedTime;
 	float deltaTime;
 };
