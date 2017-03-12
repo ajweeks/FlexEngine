@@ -1,9 +1,8 @@
 
 #include "InputManager.h"
 #include "Logger.h"
-
-#include <glad\glad.h>
-#include <GLFW\glfw3.h>
+#include "GameContext.h"
+#include "Window/Window.h"
 
 #include <assert.h>
 
@@ -39,21 +38,21 @@ void InputManager::PostUpdate()
 	m_PrevMousePosition = m_MousePosition;
 }
 
-int InputManager::GetKeyDown(int vkCode)
+int InputManager::GetKeyDown(KeyCode keyCode)
 {
-	auto value = m_Keys.find(vkCode);
+	auto value = m_Keys.find(keyCode);
 	if (value == m_Keys.end())
 	{
 		Key key = {};
-		m_Keys[vkCode] = key;
+		m_Keys[keyCode] = key;
 		return 0;
 	}
-	return m_Keys[vkCode].down;
+	return m_Keys[keyCode].down;
 }
 
-bool InputManager::GetKeyPressed(int vkCode)
+bool InputManager::GetKeyPressed(KeyCode keyCode)
 {
-	return GetKeyDown(vkCode) == 1;
+	return GetKeyDown(keyCode) == 1;
 }
 
 void InputManager::CursorPosCallback(double x, double y)
@@ -61,44 +60,43 @@ void InputManager::CursorPosCallback(double x, double y)
 	m_MousePosition = glm::vec2(x, y);
 }
 
-void InputManager::MouseButtonCallback(int button, int action, int mods)
+void InputManager::MouseButtonCallback(GameContext& gameContext, MouseButton button, Action action, int mods)
 {
-	if (button < MOUSE_BUTTON_COUNT)
-	{	
-		if (action == GLFW_PRESS)
-		{
-			++m_MouseButtons[button].down;
+	assert((int)button < MOUSE_BUTTON_COUNT);
 
-			//if (button == GLFW_MOUSE_BUTTON_LEFT)
-			//{
-			//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			//}
+	if (action == Action::PRESS)
+	{
+		++m_MouseButtons[(int)button].down;
+
+		if (button == MouseButton::LEFT)
+		{
+			gameContext.window->SetCursorMode(Window::CursorMode::DISABLED);
 		}
-		else
-		{
-			m_MouseButtons[button].down = 0;
+	}
+	else
+	{
+		m_MouseButtons[(int)button].down = 0;
 
-			//if (button == GLFW_MOUSE_BUTTON_LEFT)
-			//{
-			//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			//}
+		if (button == MouseButton::LEFT)
+		{
+			gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
 		}
 	}
 }
 
-void InputManager::KeyCallback(int key, int scancode, int action, int mods)
+void InputManager::KeyCallback(KeyCode keycode, int scancode, Action action, int mods)
 {
-	if (action == GLFW_PRESS)
+	if (action == Action::PRESS)
 	{
-		++m_Keys[key].down;
+		++m_Keys[keycode].down;
 	}
-	else if (action == GLFW_REPEAT)
+	else if (action == Action::REPEAT)
 	{
-		++m_Keys[key].down;
+		++m_Keys[keycode].down;
 	}
-	else if (action == GLFW_RELEASE)
+	else if (action == Action::RELEASE)
 	{
-		m_Keys[key].down = 0;
+		m_Keys[keycode].down = 0;
 	}
 }
 
@@ -112,16 +110,17 @@ glm::vec2 InputManager::GetMouseMovement() const
 	return m_MousePosition - m_PrevMousePosition;
 }
 
-int InputManager::GetMouseButtonDown(int button)
+int InputManager::GetMouseButtonDown(MouseButton button)
 {
-	assert(button >= 0 && button <= MOUSE_BUTTON_COUNT - 1);
+	assert((int)button >= 0 && (int)button <= MOUSE_BUTTON_COUNT - 1);
 
-	return m_MouseButtons[button].down;
+	return m_MouseButtons[(int)button].down;
 }
 
-bool InputManager::GetMouseButtonClicked(int button)
+bool InputManager::GetMouseButtonClicked(MouseButton button)
 {
-	assert(button >= 0 && button <= MOUSE_BUTTON_COUNT - 1);
+	assert((int)button >= 0 && (int)button <= MOUSE_BUTTON_COUNT - 1);
 
-	return m_MouseButtons[button].down == 1;
+	return m_MouseButtons[(int)button].down == 1;
 }
+

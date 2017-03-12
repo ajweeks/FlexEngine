@@ -3,7 +3,6 @@
 #include "Window/GLFWWindowWrapper.h"
 #include "Helpers.h"
 #include "Logger.h"
-#include "InputManager.h"
 
 using namespace glm;
 
@@ -93,14 +92,14 @@ void Window::SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds)
 
 
 // Callbacks
-void Window::KeyCallback(int key, int scancode, int action, int mods)
+void Window::KeyCallback(InputManager::KeyCode keycode, int scancode, InputManager::Action action, int mods)
 {
-	m_GameContextRef.inputManager->KeyCallback(key, scancode, action, mods);
+	m_GameContextRef.inputManager->KeyCallback(keycode, scancode, action, mods);
 }
 
-void Window::MouseButtonCallback(int button, int action, int mods)
+void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods)
 {
-	m_GameContextRef.inputManager->MouseButtonCallback(button, action, mods);
+	m_GameContextRef.inputManager->MouseButtonCallback(m_GameContextRef, mouseButton, action, mods);
 }
 
 void Window::WindowFocusCallback(int focused)

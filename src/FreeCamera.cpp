@@ -9,8 +9,6 @@
 #include <glm\gtc\matrix_transform.hpp>
 #include <glm\gtx\euler_angles.hpp>
 
-#include <GLFW\glfw3.h>
-
 using namespace glm;
 
 FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float zFar) :
@@ -34,7 +32,7 @@ FreeCamera::~FreeCamera()
 void FreeCamera::Update(const GameContext& gameContext)
 {
 	vec2 look = vec2(0.0f);
-	if (gameContext.inputManager->GetMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT))
+	if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
 	{
 		look = gameContext.inputManager->GetMouseMovement();
 		look.y = -look.y;
@@ -59,37 +57,37 @@ void FreeCamera::Update(const GameContext& gameContext)
 	m_Up = cross(m_Forward, m_Right);
 
 	vec3 translation = {};
-	if (gameContext.inputManager->GetKeyDown(GLFW_KEY_W))
+	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_W))
 	{
 		translation += m_Forward;
 	}
-	if (gameContext.inputManager->GetKeyDown(GLFW_KEY_S))
+	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_S))
 	{
 		translation -= m_Forward;
 	}
-	if (gameContext.inputManager->GetKeyDown(GLFW_KEY_A))
+	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_A))
 	{
 		translation += m_Right;
 	}
-	if (gameContext.inputManager->GetKeyDown(GLFW_KEY_D))
+	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_D))
 	{
 		translation -= m_Right;
 	}
-	if (gameContext.inputManager->GetKeyDown(GLFW_KEY_E))
+	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_E))
 	{
 		translation += m_Up;
 	}
-	if (gameContext.inputManager->GetKeyDown(GLFW_KEY_Q))
+	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_Q))
 	{
 		translation -= m_Up;
 	}
 
 	float speedMultiplier = 1.0f;
-	if (gameContext.inputManager->GetKeyDown(GLFW_KEY_LEFT_SHIFT))
+	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
 	{
 		speedMultiplier = m_MoveSpeedFastMultiplier;
 	}
-	else if (gameContext.inputManager->GetKeyDown(GLFW_KEY_LEFT_CONTROL))
+	else if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 	{
 		speedMultiplier = m_MoveSpeedSlowMultiplier;
 	}

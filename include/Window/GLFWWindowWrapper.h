@@ -15,6 +15,7 @@ public:
 	
 	virtual void Update(const GameContext& gameContext) override;
 	virtual void PollEvents() override;
+	virtual void SetCursorMode(CursorMode mode) override;
 
 	GLFWwindow* GetWindow() const;
 

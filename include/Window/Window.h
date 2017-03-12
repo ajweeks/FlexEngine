@@ -2,6 +2,7 @@
 
 #include "Typedefs.h"
 #include "GameContext.h"
+#include "InputManager.h"
 
 #include <string>
 
@@ -10,6 +11,13 @@ struct GLFWwindow;
 class Window
 {
 public:
+	enum class CursorMode
+	{
+		NORMAL,
+		HIDDEN,
+		DISABLED
+	};
+
 	Window(GameContext& gameContext, std::string title, glm::vec2 size);
 	virtual ~Window();
 
@@ -27,12 +35,14 @@ public:
 	// Set to 0 to update window title every frame
 	void SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds);
 
+	virtual void SetCursorMode(CursorMode mode) = 0;
+
 	GLFWwindow* IsGLFWWindow();
 
 protected:
 	// Callbacks
-	void KeyCallback(int key, int scancode, int action, int mods);
-	void MouseButtonCallback(int button, int action, int mods);
+	void KeyCallback(InputManager::KeyCode keycode, int scancode, InputManager::Action action, int mods);
+	void MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods);
 	void WindowFocusCallback(int focused);
 	void CursorPosCallback(double x, double y);
 	void WindowSizeCallback(int width, int height);
