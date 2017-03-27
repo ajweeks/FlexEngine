@@ -11,6 +11,8 @@ public:
 	BaseScene(std::string name);
 	virtual ~BaseScene();
 
+	virtual void Destroy(const GameContext& gameContext) = 0;
+
 	virtual void UpdateAndRender(const GameContext& gameContext) = 0;
 
 	std::string GetName() const;

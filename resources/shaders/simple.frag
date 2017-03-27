@@ -9,6 +9,5 @@ out vec4 fragmentColor;
 
 void main() {
 	fragmentColor = vec4(ex_Color, 1.0);
-	fragmentColor.r += in_Time;
-	fragmentColor.r = fract(fragmentColor.r * 5) + fract((fragmentColor.g) * 3);
+	fragmentColor.r = fract(fragmentColor.r * 5 + in_Time * 2) + fract((fragmentColor.g) * 3);
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Typedefs.h"
-#include "Primitives.h"
+#include "Vertex.h"
 #include "GameContext.h"
 #include "Window/Window.h"
 
@@ -22,9 +22,12 @@ public:
 	void Stop();
 	
 private:
+	void Destroy();
+
 	Window* m_Window;
 	SceneManager* m_SceneManager;
 	GameContext m_GameContext;
+	FreeCamera* m_DefaultCamera;
 
 	bool m_Running;
 

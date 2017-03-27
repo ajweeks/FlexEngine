@@ -13,34 +13,54 @@ public:
 	GLRenderer(GameContext& gameContext);
 	virtual ~GLRenderer();
 
+	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
+		std::vector<glm::uint>* indices) override;
+
+	virtual void Draw(glm::uint renderID) override;
+
 	virtual void SetVSyncEnabled(bool enableVSync) override;
 	virtual void Clear(int flags) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
 
-	virtual void BindVertexArray(glm::uint vertexArrayObject) override;
-	virtual void UseProgram(glm::uint program) override;
-	virtual void BindBuffer(BufferTarget bufferTarget, glm::uint buffer) override;
-	virtual void SetUniform1f(glm::uint uniform, float value) override;
-	virtual void SetUniformMatrix4fv(glm::uint uniform, glm::uint count, bool transpose, float* values) override;
-	virtual void EnableVertexAttribArray(glm::uint index) override;
-	virtual void VertexAttribPointer(glm::uint index, int size, Type type, bool normalized, size_t stride, const void* pointer) override;
-	virtual void GenVertexArrays(glm::uint count, glm::uint* arrays) override;
-	virtual void GenBuffers(glm::uint count, glm::uint* buffers) override;
-	virtual void BufferData(BufferTarget bufferTarget, glm::uint size, const void* data, UsageFlag usage) override;
+	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model) override;
 
-	virtual void DrawArrays(Mode mode, glm::uint first, glm::uint count) override;
-	virtual void DrawElements(Mode mode, glm::uint count, Type type, const void* indices) override;
+	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
+	virtual void SetUniform1f(glm::uint location, float val) override;
 
-	virtual void DeleteVertexArrays(glm::uint count, glm::uint* arrays) override;
+	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, 
+		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
-	virtual int GetAttribLocation(glm::uint program, const char* name) override;
-	virtual int GetUniformLocation(glm::uint program, const char* name) override;
+	virtual void Destroy(glm::uint renderID) override;
 
 private:
 	static GLuint BufferTargetToGLTarget(BufferTarget bufferTarget);
 	static GLenum TypeToGLType(Type type);
 	static GLenum UsageFlagToGLUsageFlag(UsageFlag usage);
 	static GLenum ModeToGLMode(Mode mode);
+
+	struct RenderObject
+	{
+		GLuint renderID;
+
+		GLuint VAO;
+		GLuint VBO;
+		GLuint IBO;
+
+		GLuint vertexBuffer;
+		std::vector<VertexPosCol>* vertices = nullptr;
+
+		bool indexed;
+		GLuint indexBuffer;
+		std::vector<glm::uint>* indices = nullptr;
+
+		GLuint MVP;
+	};
+
+	RenderObject* GetRenderObject(int renderID);
+
+	// TODO: use sorted data type (map)
+	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;
 	GLuint m_Program;

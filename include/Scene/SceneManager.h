@@ -19,6 +19,8 @@ public:
 
 	BaseScene* CurrentScene() const;
 
+	void Destroy(const GameContext& gameContext);
+
 private:
 	int m_CurrentSceneIndex;
 	std::vector<BaseScene*> m_Scenes;

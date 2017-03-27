@@ -3,6 +3,9 @@
 #include "GameContext.h"
 #include "Window/Window.h"
 #include "Logger.h"
+#include "FreeCamera.h"
+
+#include <algorithm>
 
 #include <glad\glad.h>
 #include <GLFW\glfw3.h>
@@ -13,7 +16,7 @@ GLRenderer::GLRenderer(GameContext& gameContext) :
 	Renderer(gameContext),
 	m_Program(gameContext.program)
 {
-	glClearColor(0.05f, 0.1f, 0.25f, 1.0f);
+	glClearColor(0.08f, 0.13f, 0.2f, 1.0f);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -26,6 +29,18 @@ GLRenderer::GLRenderer(GameContext& gameContext) :
 
 GLRenderer::~GLRenderer()
 {
+	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	{
+		glDeleteBuffers(1, &m_RenderObjects[i]->VBO);
+		if (m_RenderObjects[i]->indexed)
+		{
+			glDeleteBuffers(1, &m_RenderObjects[i]->IBO);
+		}
+
+		delete m_RenderObjects[i];
+	}
+	m_RenderObjects.clear();
+
 	glDeleteProgram(m_Program);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(0);
@@ -33,6 +48,71 @@ GLRenderer::~GLRenderer()
 	glBindVertexArray(0);
 
 	glfwTerminate();
+}
+
+glm::uint GLRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
+{
+	const uint renderID = m_RenderObjects.size();
+
+	RenderObject* object = new RenderObject();
+	object->renderID = renderID;
+
+	glGenVertexArrays(1, &object->VAO);
+	glBindVertexArray(object->VAO);
+
+	glGenBuffers(1, &object->VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, object->VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices->at(0)) * vertices->size(), vertices->data(), GL_STATIC_DRAW);
+
+	object->vertices = vertices;
+
+	uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
+	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, VertexPosCol::stride, 0);
+
+	object->MVP = glGetUniformLocation(gameContext.program, "in_MVP");
+	
+	m_RenderObjects.push_back(object);
+
+	glBindVertexArray(0);
+
+	return renderID;
+}
+
+glm::uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices)
+{
+	const uint renderID = Initialize(gameContext, vertices);
+	
+	RenderObject* object = GetRenderObject(renderID);
+
+	object->indices = indices;
+	object->indexed = true;
+
+	glGenBuffers(1, &object->IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object->IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices->at(0)) * indices->size(), indices->data(), GL_STATIC_DRAW);
+
+	return renderID;
+}
+
+void GLRenderer::Draw(glm::uint renderID)
+{
+	RenderObject* renderObject = GetRenderObject(renderID);
+
+	glBindVertexArray(renderObject->VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+
+	if (renderObject->indexed)
+	{
+		glDrawElements(GL_TRIANGLES, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+	}
+	else
+	{
+		glDrawArrays(GL_TRIANGLES, 0, renderObject->vertices->size());
+	}
+
+	glBindVertexArray(0);
 }
 
 void GLRenderer::SetVSyncEnabled(bool enableVSync)
@@ -54,95 +134,54 @@ void GLRenderer::SwapBuffers(const GameContext& gameContext)
 	glfwSwapBuffers(gameContext.window->IsGLFWWindow());
 }
 
-void GLRenderer::BindVertexArray(uint vertexArrayObject)
+void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model)
 {
-	glBindVertexArray(vertexArrayObject);
+	RenderObject* renderObject = GetRenderObject(renderID);
+
+	glm::mat4 MVP = gameContext.camera->GetViewProjection() * model;
+	glUniformMatrix4fv(renderObject->MVP, 1, false, &MVP[0][0]);
 }
 
-void GLRenderer::UseProgram(uint program)
+int GLRenderer::GetShaderUniformLocation(glm::uint program, const std::string uniformName)
 {
-	glUseProgram(program);
+	return glGetUniformLocation(program, uniformName.c_str());
 }
 
-void GLRenderer::BindBuffer(BufferTarget bufferTarget, uint buffer)
+void GLRenderer::SetUniform1f(glm::uint location, float val)
 {
-	const GLuint glTarget = BufferTargetToGLTarget(bufferTarget);
-	glBindBuffer(glTarget, buffer);
+	glUniform1f(location, val);
 }
 
-void GLRenderer::SetUniform1f(uint uniform, float value)
+void GLRenderer::DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
-	glUniform1f(uniform, value);
+	RenderObject* renderObject = GetRenderObject(renderID);
+
+	glBindVertexArray(renderObject->VAO);
+
+	GLuint location = glGetAttribLocation(program, variableName.c_str());
+	glEnableVertexAttribArray(location);
+	GLenum glRenderType = TypeToGLType(renderType);
+	glVertexAttribPointer(location, size, glRenderType, normalized, stride, pointer);
+
+	glBindVertexArray(0);
 }
 
-void GLRenderer::SetUniformMatrix4fv(uint uniform, uint count, bool transpose, float* values)
+void GLRenderer::Destroy(glm::uint renderID)
 {
-	glUniformMatrix4fv(uniform, count, transpose, values);
-}
-
-void GLRenderer::DrawArrays(Mode mode, uint first, uint count)
-{
-	const GLenum glMode = ModeToGLMode(mode);
-
-	glDrawArrays(glMode, first, count);
-}
-
-void GLRenderer::DrawElements(Mode mode, uint count, Type type, const void* indices)
-{
-	const GLenum glMode = ModeToGLMode(mode);
-	const GLenum glType = TypeToGLType(type);
-
-	glDrawElements(glMode, count, glType, indices);
-}
-
-void GLRenderer::EnableVertexAttribArray(uint index)
-{
-	glEnableVertexAttribArray(index);
-}
-
-void GLRenderer::VertexAttribPointer(uint index, int size, Type type, bool normalized, size_t stride, const void* pointer)
-{
-	const GLenum glType = TypeToGLType(type);
-
-	glVertexAttribPointer(index, size, glType, normalized, stride, pointer);
-}
-
-void GLRenderer::GenVertexArrays(glm::uint count, glm::uint* arrays)
-{
-	glGenVertexArrays(count, arrays);
-}
-
-void GLRenderer::GenBuffers(uint count, uint* buffers)
-{
-	glGenBuffers(count, (GLuint*)buffers);
-}
-
-void GLRenderer::BufferData(BufferTarget bufferTarget, uint size, const void* data, UsageFlag usage)
-{
-	const GLuint glTarget = BufferTargetToGLTarget(bufferTarget);
-	const GLenum glUsage = UsageFlagToGLUsageFlag(usage);
-
-	glBufferData(glTarget, size, data, glUsage);
-}
-
-void GLRenderer::DeleteVertexArrays(glm::uint count, glm::uint* arrays)
-{
-	glDeleteVertexArrays(count, arrays);
-}
-
-int GLRenderer::GetAttribLocation(uint program, const char* name)
-{
-	return glGetAttribLocation(program, name);
-}
-
-int GLRenderer::GetUniformLocation(uint program, const char* name)
-{
-	return glGetUniformLocation(program, name);
+	for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
+	{
+		if ((*iter)->renderID == renderID)
+		{
+			m_RenderObjects.erase(iter);
+			return;
+		}
+	}
 }
 
 GLuint GLRenderer::BufferTargetToGLTarget(BufferTarget bufferTarget)
 {
 	GLuint glTarget = 0;
+
 	if (bufferTarget == BufferTarget::ARRAY_BUFFER) glTarget = GL_ARRAY_BUFFER;
 	else if (bufferTarget == BufferTarget::ELEMENT_ARRAY_BUFFER) glTarget = GL_ELEMENT_ARRAY_BUFFER;
 	else Logger::LogError("Unhandled BufferTarget passed to GLRenderer: " + std::to_string((int)bufferTarget));
@@ -153,6 +192,7 @@ GLuint GLRenderer::BufferTargetToGLTarget(BufferTarget bufferTarget)
 GLenum GLRenderer::TypeToGLType(Type type)
 {
 	GLenum glType = 0;
+
 	if (type == Type::BYTE) glType = GL_BYTE;
 	else if (type == Type::UNSIGNED_BYTE) glType = GL_UNSIGNED_BYTE;
 	else if (type == Type::SHORT) glType = GL_SHORT;
@@ -169,6 +209,7 @@ GLenum GLRenderer::TypeToGLType(Type type)
 GLenum GLRenderer::UsageFlagToGLUsageFlag(UsageFlag usage)
 {
 	GLenum glUsage = 0;
+
 	if (usage == UsageFlag::STATIC_DRAW) glUsage = GL_STATIC_DRAW;
 	else if (usage == UsageFlag::DYNAMIC_DRAW) glUsage = GL_DYNAMIC_DRAW;
 	else Logger::LogError("Unhandled usage flag passed to GLRenderer: " + std::to_string((int)usage));
@@ -179,6 +220,7 @@ GLenum GLRenderer::UsageFlagToGLUsageFlag(UsageFlag usage)
 GLenum GLRenderer::ModeToGLMode(Mode mode)
 {
 	GLenum glMode = 0;
+
 	if (mode == Mode::POINTS) glMode = GL_POINTS;
 	else if (mode == Mode::LINES) glMode = GL_LINES;
 	else if (mode == Mode::LINE_LOOP) glMode = GL_LINE_LOOP;
@@ -190,4 +232,9 @@ GLenum GLRenderer::ModeToGLMode(Mode mode)
 	else Logger::LogError("Unhandled Mode passed to GLRenderer: " + std::to_string((int)mode));
 
 	return glMode;
+}
+
+GLRenderer::RenderObject* GLRenderer::GetRenderObject(int renderID)
+{
+	return m_RenderObjects[renderID];
 }

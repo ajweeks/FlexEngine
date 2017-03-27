@@ -10,7 +10,7 @@ struct GameContext;
 class GLFWWindowWrapper : public Window
 {
 public:
-	GLFWWindowWrapper(std::string title, glm::vec2 size, GameContext& gameContext);
+	GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext);
 	virtual ~GLFWWindowWrapper();
 	
 	virtual void Update(const GameContext& gameContext) override;

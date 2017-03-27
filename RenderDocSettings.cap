@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CaptureSettings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Options>
+    <AllowVSync>true</AllowVSync>
+    <AllowFullscreen>true</AllowFullscreen>
+    <APIValidation>false</APIValidation>
+    <CaptureCallstacks>false</CaptureCallstacks>
+    <CaptureCallstacksOnlyDraws>false</CaptureCallstacksOnlyDraws>
+    <DelayForDebugger>0</DelayForDebugger>
+    <VerifyMapWrites>false</VerifyMapWrites>
+    <HookIntoChildren>false</HookIntoChildren>
+    <RefAllResources>false</RefAllResources>
+    <SaveAllInitials>false</SaveAllInitials>
+    <CaptureAllCmdLists>false</CaptureAllCmdLists>
+    <DebugOutputMute>true</DebugOutputMute>
+  </Options>
+  <Inject>false</Inject>
+  <AutoStart>false</AutoStart>
+  <Executable>D:\MEGASync\DAE\Year 2\Programming 4\Tech Demo\PG4_TechDemo\Debug\PG4_TechDemo.exe</Executable>
+  <WorkingDir>D:\MEGASync\DAE\Year 2\Programming 4\Tech Demo\PG4_TechDemo</WorkingDir>
+  <CmdLine />
+  <Environment />
+</CaptureSettings>

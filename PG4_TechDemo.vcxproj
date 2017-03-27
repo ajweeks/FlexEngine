@@ -109,7 +109,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;libSOIL.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
@@ -130,6 +130,8 @@
   <ItemGroup>
     <ClCompile Include="include\Helpers.cpp" />
     <ClCompile Include="src\Graphics\GLRenderer.cpp" />
+    <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
+    <ClCompile Include="src\Prefabs\SpherePosCol.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
     <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
@@ -141,7 +143,6 @@
     <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="lib\glad\src\glad.c" />
     <ClCompile Include="src\Colours.cpp" />
-    <ClCompile Include="src\Primitives.cpp" />
     <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ShaderUtils.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -150,13 +151,15 @@
   <ItemGroup>
     <ClInclude Include="include\GLHelpers.h" />
     <ClInclude Include="include\Graphics\GLRenderer.h" />
+    <ClInclude Include="include\Prefabs\CubePosCol.h" />
+    <ClInclude Include="include\Prefabs\SpherePosCol.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
     <ClInclude Include="include\Colours.h" />
     <ClInclude Include="include\GameContext.h" />
     <ClInclude Include="include\Helpers.h" />
     <ClInclude Include="include\Logger.h" />
-    <ClInclude Include="include\Primitives.h" />
+    <ClInclude Include="include\Vertex.h" />
     <ClInclude Include="include\TechDemo.h" />
     <ClInclude Include="include\ShaderUtils.h" />
     <ClInclude Include="include\Random.h" />

@@ -7,9 +7,6 @@
 #include "TechDemo.h"
 #include "InputManager.h"
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
 void GLFWErrorCallback(int error, const char* description)
 {
 	Logger::LogError("GL Error: " + std::string(description));
@@ -237,7 +234,7 @@ void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height)
 	window->WindowSizeCallback(width, height);
 }
 
-GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2 size, GameContext& gameContext) :
+GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
 	Window(gameContext, title, size)
 {
 	glfwSetErrorCallback(GLFWErrorCallback);

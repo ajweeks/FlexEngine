@@ -11,6 +11,10 @@ SceneManager::SceneManager() :
 
 SceneManager::~SceneManager()
 {
+	for (size_t i = 0; i < m_Scenes.size(); i++)
+	{
+		delete m_Scenes[i];
+	}
 }
 
 void SceneManager::UpdateAndRender(const GameContext& gameContext)
@@ -81,4 +85,12 @@ BaseScene* SceneManager::CurrentScene() const
 	}
 
 	return m_Scenes[m_CurrentSceneIndex];
+}
+
+void SceneManager::Destroy(const GameContext& gameContext)
+{
+	for (size_t i = 0; i < m_Scenes.size(); i++)
+	{
+		m_Scenes[i]->Destroy(gameContext);
+	}
 }
