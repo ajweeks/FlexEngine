@@ -2,11 +2,6 @@
 
 #include "Renderer.h"
 
-#include <vulkan\vulkan.h>
-
-//#define TINYOBJLOADER_IMPLEMENTATION
-//#include <tiny_obj_loader.h>
-
 #include <iostream>
 #include <stdexcept>
 #include <functional>
@@ -226,5 +221,4 @@ private:
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;
-
 };

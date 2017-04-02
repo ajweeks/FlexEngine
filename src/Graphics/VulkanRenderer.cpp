@@ -8,13 +8,14 @@
 
 #include <algorithm>	
 
+#include <glm/gtx/hash.hpp>
+
 using namespace glm;
 
 VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	Renderer(gameContext)
 	//m_Program(gameContext.program)
 {
-	
 	//glClearColor(0.08f, 0.13f, 0.2f, 1.0f);
 	//
 	//glEnable(GL_DEPTH_TEST);
@@ -241,9 +242,6 @@ VulkanRenderer::RenderObject* VulkanRenderer::GetRenderObject(int renderID)
 	return m_RenderObjects[renderID];
 }
 
-
-#include <glm/gtx/hash.hpp>
-
 // Vertex hash function
 namespace std
 {
@@ -281,7 +279,7 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
 	}
 }
 
-// Vertex
+#pragma region Vertex
 VkVertexInputBindingDescription Vertex::getBindingDescription()
 {
 	VkVertexInputBindingDescription bindingDesc = {};
@@ -318,8 +316,9 @@ bool Vertex::operator==(const Vertex& other) const
 {
 	return pos == other.pos && color == other.color && texCoord == other.texCoord;
 }
+#pragma endregion
 
-// VDeleter
+#pragma region VDeleter
 template<typename T>
 VDeleter<T>::VDeleter() :
 	VDeleter([](T, VkAllocationCallbacks*) {})
@@ -395,3 +394,4 @@ void VDeleter<T>::cleanup()
 	}
 	object = VK_NULL_HANDLE;
 }
+#pragma endregion

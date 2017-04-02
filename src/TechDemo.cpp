@@ -9,6 +9,19 @@
 #include "Scene/TestScene.h"
 #include "Typedefs.h"
 
+// Ensure more than one API isn't defined
+#if COMPILE_VULKAN
+#if COMPILE_OPEN_GL
+assert(false);
+#endif
+#endif
+
+#if COMPILE_OPEN_GL
+#if COMPILE_VULKAN
+assert(false);
+#endif
+#endif
+
 using namespace glm;
 
 TechDemo::TechDemo()

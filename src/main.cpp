@@ -1,15 +1,15 @@
 #include "stdafx.h"
 
+#include "TechDemo.h"
+
 #include <windows.h>
 
+// Memory leak checking includes
 #if defined(DEBUG) | defined(_DEBUG)
-	// Memory leak checking includes
 	#define _CRTDBG_MAP_ALLOC  
 	#include <stdlib.h>  
 	#include <crtdbg.h>  
 #endif
-
-#include "TechDemo.h"
 
 int main (int argc, char *argv[])
 {

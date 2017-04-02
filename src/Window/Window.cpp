@@ -58,8 +58,18 @@ bool Window::HasFocus() const
 
 GLFWwindow* Window::IsGLFWWindow() 
 {
-	GLWindowWrapper* subclass = dynamic_cast<GLWindowWrapper*>(this);
-	if (subclass) return subclass->GetWindow();
+	GLWindowWrapper* glWindow = dynamic_cast<GLWindowWrapper*>(this);
+	if (glWindow)
+	{
+		return glWindow->GetWindow();
+	}
+	
+	VulkanWindowWrapper* vulkanWindow = dynamic_cast<VulkanWindowWrapper*>(this);
+	if (vulkanWindow)
+	{
+		return vulkanWindow->GetWindow();
+	}
+
 	return nullptr;
 }
 
