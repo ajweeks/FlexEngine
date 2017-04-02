@@ -1,15 +1,13 @@
+#include "stdafx.h"
 
 #include "TechDemo.h"
 #include "Logger.h"
 #include "FreeCamera.h"
 #include "GameContext.h"
 #include "InputManager.h"
-#include "Window/GLFWWindowWrapper.h"
-#include "Graphics/GLRenderer.h"
 #include "Scene/SceneManager.h"
 #include "Scene/TestScene.h"
-
-#include <glm/glm.hpp>
+#include "Typedefs.h"
 
 using namespace glm;
 
@@ -31,10 +29,16 @@ void TechDemo::Initialize()
 	m_GameContext = {};
 	m_GameContext.mainApp = this;
 
-	m_Window = new GLFWWindowWrapper("Tech Demo", vec2i(1920, 1080), m_GameContext);
+
+#if COMPILE_VULKAN
+	m_Window = new VulkanWindowWrapper("Vulkan", vec2i(1920, 1080), m_GameContext);
+	VulkanRenderer* renderer = new VulkanRenderer(m_GameContext);
+#elif COMPILE_OPEN_GL
+	m_Window = new GLWindowWrapper("Tech Demo", vec2i(1920, 1080), m_GameContext);
+	GLRenderer* renderer = new GLRenderer(m_GameContext);
+#endif
 	m_Window->SetUpdateWindowTitleFrequency(0.4f);
 
-	GLRenderer* renderer = new GLRenderer(m_GameContext);
 	m_GameContext.renderer->SetVSyncEnabled(false);
 
 	m_SceneManager = new SceneManager();
@@ -68,22 +72,22 @@ void TechDemo::UpdateAndRender()
 		float dt = currentTime - previousTime;
 		previousTime = currentTime;
 		if (dt < 0.0f) dt = 0.0f;
-
+	
 		m_GameContext.deltaTime = dt;
 		m_GameContext.elapsedTime = currentTime;
-
+	
 		m_GameContext.window->PollEvents();
-
+	
 		m_GameContext.inputManager->Update();
 		m_GameContext.camera->Update(m_GameContext);
 		m_GameContext.renderer->Clear((int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH);
-
+	
 		m_GameContext.window->Update(m_GameContext);
-
+	
 		m_SceneManager->UpdateAndRender(m_GameContext);
-
+	
 		m_GameContext.inputManager->PostUpdate();
-
+	
 		m_GameContext.renderer->SwapBuffers(m_GameContext);
 	}
 

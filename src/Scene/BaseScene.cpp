@@ -1,3 +1,4 @@
+#include "stdafx.h"
 
 #include "Scene/BaseScene.h"
 #include "Logger.h"

@@ -69,22 +69,22 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Program Files %28x86%29\Windows Kits\10\Include\10.0.14393.0\um;$(SolutionDir)include;$(GLFW)\include;$(GLAD)\include;$(GLM);$(SOIL)\src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(GLFW)\bin\lib-vc2015;$(SOIL)\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)include;$(GLFW)\include;$(GLM);$(SOIL)\src;$(VULKAN)\include;$(TINY_OBJ);$(SolutionDir)lib\glad\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(GLFW)\bin\lib-vc2015;$(SOIL)\lib;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\Program Files %28x86%29\Windows Kits\10\Include\10.0.14393.0\um;$(SolutionDir)include;$(GLFW)\include;$(GLAD)\include;$(GLM);$(SOIL)\src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(GLFW)\bin\lib-vc2015;$(SOIL)\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Program Files %28x86%29\Windows Kits\10\Include\10.0.14393.0\um;$(SolutionDir)include;$(GLFW)\include;$(GLAD)\include;$(GLM);$(SOIL)\src;$(VULKAN)\include;$(STB);$(TINY_OBJ);$(IncludePath)</IncludePath>
+    <LibraryPath>$(GLFW)\bin\lib-vc2015;$(SOIL)\lib;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <AdditionalOptions>/NODEFAULTLIB:"MSVCRT" %(AdditionalOptions)</AdditionalOptions>
@@ -109,7 +109,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
     </Link>
@@ -130,18 +130,26 @@
   <ItemGroup>
     <ClCompile Include="include\Helpers.cpp" />
     <ClCompile Include="src\Graphics\GLRenderer.cpp" />
+    <ClCompile Include="src\Graphics\VulkanRenderer.cpp" />
     <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
     <ClCompile Include="src\Prefabs\SpherePosCol.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
+    <ClCompile Include="src\stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\GLWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\VulkanWindowWrapper.cpp" />
     <ClCompile Include="src\Window\Window.cpp" />
     <ClCompile Include="src\Scene\BaseScene.cpp" />
     <ClCompile Include="src\Graphics\Renderer.cpp" />
     <ClCompile Include="src\InputManager.cpp" />
     <ClCompile Include="src\FreeCamera.cpp" />
     <ClCompile Include="src\Logger.cpp" />
-    <ClCompile Include="lib\glad\src\glad.c" />
+    <ClCompile Include="lib\glad\src\glad.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="src\Colours.cpp" />
     <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ShaderUtils.cpp" />
@@ -151,6 +159,7 @@
   <ItemGroup>
     <ClInclude Include="include\GLHelpers.h" />
     <ClInclude Include="include\Graphics\GLRenderer.h" />
+    <ClInclude Include="include\Graphics\VulkanRenderer.h" />
     <ClInclude Include="include\Prefabs\CubePosCol.h" />
     <ClInclude Include="include\Prefabs\SpherePosCol.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
@@ -159,17 +168,20 @@
     <ClInclude Include="include\GameContext.h" />
     <ClInclude Include="include\Helpers.h" />
     <ClInclude Include="include\Logger.h" />
+    <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\Vertex.h" />
     <ClInclude Include="include\TechDemo.h" />
     <ClInclude Include="include\ShaderUtils.h" />
     <ClInclude Include="include\Random.h" />
     <ClInclude Include="include\Typedefs.h" />
     <ClInclude Include="include\InputManager.h" />
+    <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
+    <ClInclude Include="include\Window\VulkanWindowWrapper.h" />
     <ClInclude Include="include\Window\Window.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\glcorearb.h" />
     <ClInclude Include="include\Graphics\Renderer.h" />
-    <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
+    <ClInclude Include="include\Window\GLWindowWrapper.h" />
     <ClInclude Include="include\Scene\SceneManager.h" />
     <ClInclude Include="include\Scene\TestScene.h" />
   </ItemGroup>

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string>
-
 #include "FreeCamera.h"
 #include "GameContext.h"
+
+#include <string>
 
 class BaseScene
 {

@@ -1,7 +1,9 @@
 ﻿#pragma once
 
 #include <vector>
-#include "Scene/BaseScene.h"
+
+class BaseScene;
+struct GameContext;
 
 class SceneManager
 {

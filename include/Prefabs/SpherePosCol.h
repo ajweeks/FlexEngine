@@ -1,12 +1,13 @@
 #pragma once
 
-#include "GameContext.h"
 #include "Vertex.h"
 
 #include <vector>
 
 #include <glm\vec3.hpp>
 #include <glm\gtc\quaternion.hpp>
+
+struct GameContext;
 
 struct SpherePosCol
 {

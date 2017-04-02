@@ -1,7 +1,11 @@
+#include "stdafx.h"
 
 #include "Prefabs/SpherePosCol.h"
+
+#include "GameContext.h"
 #include "Graphics/Renderer.h"
-#include "FreeCamera.h"
+#include "Colours.h"
+#include "Typedefs.h"
 
 #include <glm\gtc\matrix_transform.hpp>
 
@@ -17,6 +21,7 @@ void SpherePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm:
 	m_Rotation = rotation;
 	m_Scale = scale;
 
+	
 	uint parallelCount = 30;
 	uint meridianCount = 30;
 

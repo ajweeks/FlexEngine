@@ -24,8 +24,8 @@ private:
 	CubePosCol m_Cube2;
 	SpherePosCol m_Sphere1;
 
-	int m_CubesLong;
-	int m_CubesWide;
+	size_t m_CubesLong;
+	size_t m_CubesWide;
 
 	TestScene(const TestScene&) = delete;
 	TestScene& operator=(const TestScene&) = delete;

@@ -1,3 +1,4 @@
+#include "stdafx.h"
 
 #include "InputManager.h"
 #include "Logger.h"

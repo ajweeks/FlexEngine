@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glad\glad.h>
-
 #include <string>
 
 class ShaderUtils final
@@ -15,8 +13,8 @@ public:
 		FRAGMENT, VERTEX
 	};
 
-	static GLuint LoadShader(std::string filepath, ShaderType type);
-	static GLuint LoadShaders(std::string vertex, std::string fragment);
+	static size_t LoadShader(std::string filepath, ShaderType type);
+	static size_t LoadShaders(std::string vertex, std::string fragment);
 
 private:
 	ShaderUtils(const ShaderUtils&) = delete;

@@ -2,9 +2,6 @@
 
 #include "Renderer.h"
 
-#include <glad\glad.h>
-#include <GLFW\glfw3.h>
-
 struct GameContext;
 
 class GLRenderer : public Renderer
@@ -34,27 +31,27 @@ public:
 	virtual void Destroy(glm::uint renderID) override;
 
 private:
-	static GLuint BufferTargetToGLTarget(BufferTarget bufferTarget);
-	static GLenum TypeToGLType(Type type);
-	static GLenum UsageFlagToGLUsageFlag(UsageFlag usage);
-	static GLenum ModeToGLMode(Mode mode);
+	static glm::uint BufferTargetToGLTarget(BufferTarget bufferTarget);
+	static glm::uint TypeToGLType(Type type);
+	static glm::uint UsageFlagToGLUsageFlag(UsageFlag usage);
+	static glm::uint ModeToGLMode(Mode mode);
 
 	struct RenderObject
 	{
-		GLuint renderID;
+		glm::uint renderID;
 
-		GLuint VAO;
-		GLuint VBO;
-		GLuint IBO;
+		glm::uint VAO;
+		glm::uint VBO;
+		glm::uint IBO;
 
-		GLuint vertexBuffer;
+		glm::uint vertexBuffer;
 		std::vector<VertexPosCol>* vertices = nullptr;
 
 		bool indexed;
-		GLuint indexBuffer;
+		glm::uint indexBuffer;
 		std::vector<glm::uint>* indices = nullptr;
 
-		GLuint MVP;
+		glm::uint MVP;
 	};
 
 	RenderObject* GetRenderObject(int renderID);
@@ -63,7 +60,7 @@ private:
 	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;
-	GLuint m_Program;
+	glm::uint m_Program;
 
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;

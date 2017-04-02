@@ -7,3 +7,4 @@ namespace glm
 {
 	typedef tvec2<int> vec2i;
 }
+

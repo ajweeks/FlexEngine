@@ -1,0 +1,9 @@
+# File created by ZBrush
+# ToolType: PolyMesh3D
+# www.zbrush.com
+newmtl defaultMat
+map_Kd lambertian.jpg
+map_bump -bm 0.001 bump-lowRes.png
+#map_bump -bm 0.02 bump.png
+Ks .0001 .0001 .0001
+Ns 5

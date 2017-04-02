@@ -1,12 +1,13 @@
-﻿
+﻿#include "stdafx.h"
+
 #include "Window/Window.h"
-#include "Window/GLFWWindowWrapper.h"
+#include "Window/GLWindowWrapper.h"
 #include "Helpers.h"
 #include "Logger.h"
 
 using namespace glm;
 
-Window::Window(GameContext& gameContext, std::string title, glm::vec2 size) :
+Window::Window(std::string title, glm::vec2 size, GameContext& gameContext) :
 	m_TitleString(title),
 	m_Size(size),
 	m_ShowFPSInWindowTitle(true),
@@ -57,7 +58,7 @@ bool Window::HasFocus() const
 
 GLFWwindow* Window::IsGLFWWindow() 
 {
-	GLFWWindowWrapper* subclass = dynamic_cast<GLFWWindowWrapper*>(this);
+	GLWindowWrapper* subclass = dynamic_cast<GLWindowWrapper*>(this);
 	if (subclass) return subclass->GetWindow();
 	return nullptr;
 }
@@ -104,7 +105,7 @@ void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputMan
 
 void Window::WindowFocusCallback(int focused)
 {
-	m_HasFocus = focused;
+	m_HasFocus = focused != 0;
 }
 
 void Window::CursorPosCallback(double x, double y)

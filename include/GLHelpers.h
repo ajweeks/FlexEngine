@@ -6,6 +6,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
 #include <SOIL.h>
 
 GLFWimage LoadGLFWImage(const std::string filename)

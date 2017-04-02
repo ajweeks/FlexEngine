@@ -1,9 +1,10 @@
+#include "stdafx.h"
 
 #include "Prefabs/CubePosCol.h"
 
 #include "GameContext.h"
 #include "Graphics/Renderer.h"
-#include "FreeCamera.h"
+#include "Colours.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 

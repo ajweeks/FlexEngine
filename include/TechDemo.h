@@ -1,15 +1,11 @@
 #pragma once
 
-#include "Typedefs.h"
-#include "Vertex.h"
 #include "GameContext.h"
-#include "Window/Window.h"
-
-#include <glm\vec2.hpp>
 
 class FreeCamera;
 class InputManager;
 class SceneManager;
+class Window;
 
 class TechDemo final
 {

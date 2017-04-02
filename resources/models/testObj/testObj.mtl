@@ -1,0 +1,40 @@
+#
+#
+#
+
+newmtl BackGroundMat
+Ka 0.6000 .6000 0.6000 
+Kd 0.6000 .6000 0.6000 
+illum 1 
+
+newmtl InnerMat
+Ka 0.100 .1000 0.1000 
+Kd 0.200 .2000 0.2000 
+Ks .300 .300 .300 
+Ns 8.0000
+illum 3
+
+newmtl LTELogo
+Ka 0.100 .1000 0.1000 
+Kd 0.2500 .25000 0.25000 
+Ks .500 .500 .500 
+Ns 200.0000 
+sharpness 100
+illum 3
+
+newmtl Material
+illum 2
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.0 0.0 0.0
+Ke 1 1 1
+
+newmtl OuterMat
+Ka 0.1000 .0400 0.0100
+Kd 0.1000 .0400 0.0100 
+Ks 0.1000 .100 0.100 
+Ni 1.01
+Tf 0.7500 .920 0.9900
+Ns 10.0000 
+illum 4 
+

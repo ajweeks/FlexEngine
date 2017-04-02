@@ -18,7 +18,7 @@ public:
 		DISABLED
 	};
 
-	Window(GameContext& gameContext, std::string title, glm::vec2 size);
+	Window(std::string title, glm::vec2 size, GameContext& gameContext);
 	virtual ~Window();
 
 	virtual void Update(const GameContext& gameContext);

@@ -53,8 +53,7 @@ public:
 		LINE_STRIP,
 		TRIANGLES,
 		TRIANGLE_STRIP,
-		TRIANGLE_FAN,
-		QUADS
+		TRIANGLE_FAN
 	};
 
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) = 0;
