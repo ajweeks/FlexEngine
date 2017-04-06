@@ -14,15 +14,10 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, GameContext
 		exit(EXIT_FAILURE);
 	}
 
-	// Call before window creation
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-	// OpenGL:
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	// Vulkan:
-	//glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	m_Window = glfwCreateWindow(size.x, size.y, title.c_str(), NULL, NULL);
 	if (!m_Window)
@@ -66,3 +61,8 @@ GLWindowWrapper::~GLWindowWrapper()
 {
 }
 
+void GLWindowWrapper::SetSize(int width, int height)
+{
+	m_Size = glm::vec2i(width, height);
+	glViewport(0, 0, width, height);
+}

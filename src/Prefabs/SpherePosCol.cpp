@@ -133,5 +133,5 @@ void SpherePosCol::Render(const GameContext& gameContext)
 	glm::mat4 model = translation * rotation * scale;
 	renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
 
-	renderer->Draw(m_RenderID);
+	renderer->Draw(gameContext, m_RenderID);
 }

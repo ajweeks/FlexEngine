@@ -14,7 +14,7 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
 
-	virtual void Draw(glm::uint renderID) override;
+	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
 	virtual void SetVSyncEnabled(bool enableVSync) override;
 	virtual void Clear(int flags) override;

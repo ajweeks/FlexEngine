@@ -13,7 +13,7 @@ VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, Gam
 		exit(EXIT_FAILURE);
 	}
 
-	// Are these allowed (or needed?)
+	// TODO: Are these two lines needed?
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
@@ -40,8 +40,6 @@ VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, Gam
 	glfwFocusWindow(m_Window);
 	m_HasFocus = true;
 
-	glfwMakeContextCurrent(m_Window);
-
 	//gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
 	//gameContext.program = ShaderUtils::LoadShaders("resources/shaders/vk_simple.spirv", "resources/shaders/vk_simple.spirv");
@@ -59,4 +57,17 @@ VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, Gam
 
 VulkanWindowWrapper::~VulkanWindowWrapper()
 {
+}
+
+void VulkanWindowWrapper::SetSize(int width, int height)
+{
+	m_Size = glm::vec2i(width, height);
+	// TODO: Resize viewport here!
+}
+
+void VulkanWindowWrapper::WindowSizeCallback(int width, int height)
+{
+	Window::WindowSizeCallback(width, height);
+
+	// TODO: Recreate vulkan swap chain!
 }

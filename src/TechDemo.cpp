@@ -33,15 +33,14 @@ TechDemo::~TechDemo()
 	delete m_GameContext.inputManager;
 	delete m_DefaultCamera;
 	delete m_SceneManager;
-	delete m_GameContext.renderer;
 	delete m_Window;
+	delete m_GameContext.renderer;
 }
 
 void TechDemo::Initialize()
 {
 	m_GameContext = {};
 	m_GameContext.mainApp = this;
-
 
 #if COMPILE_VULKAN
 	m_Window = new VulkanWindowWrapper("Vulkan", vec2i(1920, 1080), m_GameContext);
@@ -63,6 +62,8 @@ void TechDemo::Initialize()
 	m_GameContext.camera = m_DefaultCamera;
 
 	m_GameContext.inputManager = new InputManager();
+
+	renderer->PostInitialize();
 }
 
 void TechDemo::Stop()

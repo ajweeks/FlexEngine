@@ -2,19 +2,11 @@
 
 #include "Renderer.h"
 
-#include <iostream>
-#include <stdexcept>
 #include <functional>
-#include <fstream>
-#include <algorithm>
 #include <vector>
-#include <cstring>
-#include <set>
-#include <array>
-#include <chrono>
-#include <unordered_map>
 
 struct GameContext;
+class Window;
 
 struct QueueFamilyIndices
 {
@@ -40,8 +32,10 @@ struct Vertex
 	glm::vec3 color;
 	glm::vec2 texCoord;
 
-	static VkVertexInputBindingDescription getBindingDescription();
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
+	static VkVertexInputBindingDescription GetVertPosColTexBindingDescription();
+	static VkVertexInputBindingDescription GetVertPosColBindingDescription();
+	static std::array<VkVertexInputAttributeDescription, 3> GetVertPosColTexAttributeDescriptions();
+	static std::array<VkVertexInputAttributeDescription, 2> GetVertPosColAttributeDescriptions();
 	bool operator==(const Vertex& other) const;
 };
 
@@ -89,12 +83,14 @@ class VulkanRenderer : public Renderer
 public:
 	VulkanRenderer(GameContext& gameContext);
 	virtual ~VulkanRenderer();
+	
+	virtual void PostInitialize() override;
 
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
 
-	virtual void Draw(glm::uint renderID) override;
+	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
 	virtual void SetVSyncEnabled(bool enableVSync) override;
 	virtual void Clear(int flags) override;
@@ -115,6 +111,67 @@ private:
 	//static GLenum TypeToGLType(Type type);
 	//static GLenum UsageFlagToGLUsageFlag(UsageFlag usage);
 	//static GLenum ModeToGLMode(Mode mode);
+
+	void CreateInstance();
+	void SetupDebugCallback();
+	void CreateSurface(Window* window);
+	void PickPhysicalDevice();
+	void CreateLogicalDevice();
+	void CreateSwapChain(Window* window);
+	void CreateImageViews();
+	void CreateRenderPass();
+	void CreateDescriptorSetLayout();
+	void CreateGraphicsPipeline();
+	void CreateCommandPool();
+	void CreateDepthResources();
+	void CreateFramebuffers();
+	void CreateTextureImage();
+	void CreateTextureImageView();
+	void CreateTextureSampler();
+	void LoadModel(const std::string& filePath);
+
+	void CreateCube(float size, glm::vec3 offset);
+
+	void CreateVertexBuffer();
+	void CreateIndexBuffer();
+	void CreateUniformBuffer();
+	void CreateDescriptorPool();
+	void CreateDescriptorSet();
+	void CreateCommandBuffers();
+	void CreateSemaphores();
+
+	void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VDeleter<VkImageView>& imageView);
+	void RecreateSwapChain(Window* window);
+	VkCommandBuffer BeginSingleTimeCommands();
+	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+	void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+		VkMemoryPropertyFlags properties, VDeleter<VkImage>& image, VDeleter<VkDeviceMemory>& imageMemory);
+	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+	VkFormat FindDepthFormat();
+	bool HasStencilComponent(VkFormat format);
+	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
+	void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+		VDeleter<VkBuffer>& buffer, VDeleter<VkDeviceMemory>& bufferMemory);
+	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	void DrawFrame(Window* window);
+	void CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule);
+	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
+	VkExtent2D ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities);
+	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
+	bool IsDeviceSuitable(VkPhysicalDevice device);
+	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
+	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+	std::vector<const char*> GetRequiredExtensions();
+	bool CheckValidationLayerSupport();
+	void UpdateUniformBuffer(const GameContext& gameContext);
+
+	static std::vector<char> ReadFile(const std::string& filename);
+	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags, 
+		VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, 
+		const char* msg, void* userData);
 
 	struct RenderObject
 	{
@@ -140,10 +197,6 @@ private:
 	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;
-
-
-	const int WIDTH = 800;
-	const int HEIGHT = 600;
 
 	const std::string MODEL_PATH = "resources/models/chalet.obj";
 	const std::string MODEL_TEXTURE_PATH = "resources/textures/chalet.jpg";
@@ -197,7 +250,7 @@ private:
 	VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
 	VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
 
-	std::vector<Vertex> vertices;
+	std::vector<VertexPosCol> vertices;
 	std::vector<uint32_t> indices;
 
 	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
@@ -218,6 +271,7 @@ private:
 	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
 	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
 
+	VkClearColorValue m_ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;

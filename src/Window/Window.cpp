@@ -40,17 +40,6 @@ vec2i Window::GetSize() const
 	return m_Size;
 }
 
-void Window::SetSize(int width, int height)
-{
-	SetSize(vec2(width, height));
-}
-
-void Window::SetSize(vec2i windowSize)
-{
-	m_Size = windowSize;
-	glViewport(0, 0, windowSize.x, windowSize.y);
-}
-
 bool Window::HasFocus() const
 {
 	return m_HasFocus;

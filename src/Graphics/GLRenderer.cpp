@@ -93,8 +93,10 @@ uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexP
 	return renderID;
 }
 
-void GLRenderer::Draw(uint renderID)
+void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 {
+	UNREFERENCED_PARAMETER(gameContext);
+
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	glBindVertexArray(renderObject->VAO);
