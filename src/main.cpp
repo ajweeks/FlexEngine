@@ -11,7 +11,7 @@
 	#include <crtdbg.h>  
 #endif
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	// Notify user if heap is corrupt
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
@@ -28,4 +28,9 @@ int main (int argc, char *argv[])
 	delete techDemo;
 
 	exit(EXIT_SUCCESS);
+}
+
+int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
+{
+	return main(0, {});
 }

@@ -1,0 +1,21 @@
+# 
+# Wavefront material file
+# Converted by the DEEP Exploration  2.1.12.1218
+# Right Hemisphere, LTD
+# http://www.righthemisphere.com/
+# 
+
+newmtl inside
+Ka 0.4 0.4 0.4
+Kd 0.587609 0.587609 0.587609
+Ks 0.071744 0.071744 0.071744
+illum 1
+Ns 32
+
+newmtl outside
+Ka 0 0 0
+Kd 1 1 1
+Ks 0.384296 0.194061 0.174387
+illum 2
+Ns 64
+map_Kd cup.jpg

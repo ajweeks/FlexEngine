@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if COMPILE_VULKAN
 
 #include "Window/VulkanWindowWrapper.h"
 #include "Logger.h"
@@ -71,3 +72,5 @@ void VulkanWindowWrapper::WindowSizeCallback(int width, int height)
 
 	// TODO: Recreate vulkan swap chain!
 }
+
+#endif // COMPILE_VULKAN

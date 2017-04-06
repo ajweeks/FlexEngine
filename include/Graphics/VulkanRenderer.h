@@ -1,4 +1,5 @@
 #pragma once
+#if COMPILE_VULKAN
 
 #include "Renderer.h"
 
@@ -93,7 +94,7 @@ public:
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
 	virtual void SetVSyncEnabled(bool enableVSync) override;
-	virtual void Clear(int flags) override;
+	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
 
 	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model) override;
@@ -276,3 +277,5 @@ private:
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 };
+
+#endif // COMPILE_VULKAN

@@ -64,7 +64,7 @@ public:
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;
 
 	virtual void SetVSyncEnabled(bool enableVSync) = 0;
-	virtual void Clear(int flags) = 0;
+	virtual void Clear(int flags, const GameContext& gameContext) = 0;
 	virtual void SwapBuffers(const GameContext& gameContext) = 0;
 
 	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model) = 0;

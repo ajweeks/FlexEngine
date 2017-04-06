@@ -85,7 +85,7 @@ void InputManager::MouseButtonCallback(GameContext& gameContext, MouseButton but
 	}
 }
 
-void InputManager::KeyCallback(KeyCode keycode, int scancode, Action action, int mods)
+void InputManager::KeyCallback(KeyCode keycode, Action action, int mods)
 {
 	if (action == Action::PRESS)
 	{

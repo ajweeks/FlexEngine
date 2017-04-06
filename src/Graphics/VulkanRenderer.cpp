@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if COMPILE_VULKAN
 
 #include "Graphics/VulkanRenderer.h"
 #include "GameContext.h"
@@ -186,7 +187,7 @@ void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
 	// TODO: Set swap interval here
 }
 
-void VulkanRenderer::Clear(int flags)
+void VulkanRenderer::Clear(int flags, const GameContext& gameContext)
 {
 	//GLbitfield mask = 0;
 	//if ((int)flags & (int)ClearFlag::COLOR) mask |= GL_COLOR_BUFFER_BIT;
@@ -1879,7 +1880,7 @@ bool Vertex::operator==(const Vertex& other) const
 {
 	return pos == other.pos && color == other.color && texCoord == other.texCoord;
 }
-#pragma endregion
+#pragma endregion // Vertex
 
 #pragma region VDeleter
 template<typename T>
@@ -1957,4 +1958,6 @@ void VDeleter<T>::cleanup()
 	}
 	object = VK_NULL_HANDLE;
 }
-#pragma endregion
+#pragma endregion // VDeleter
+
+#endif // COMPILE_OPEN_GL

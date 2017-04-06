@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.props" Condition="Exists('packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -82,12 +83,14 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <AdditionalOptions>/NODEFAULTLIB:"MSVCRT" %(AdditionalOptions)</AdditionalOptions>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -104,7 +107,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -112,6 +116,7 @@
       <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -129,6 +134,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="include\Helpers.cpp" />
+    <ClCompile Include="src\Graphics\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GLRenderer.cpp" />
     <ClCompile Include="src\Graphics\VulkanRenderer.cpp" />
     <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
@@ -137,7 +143,9 @@
     <ClCompile Include="src\Scene\TestScene.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Window\D3DWindowWrapper.cpp" />
     <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
     <ClCompile Include="src\Window\GLWindowWrapper.cpp" />
     <ClCompile Include="src\Window\VulkanWindowWrapper.cpp" />
@@ -149,6 +157,7 @@
     <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="lib\glad\src\glad.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\Colours.cpp" />
     <ClCompile Include="src\Random.cpp" />
@@ -158,6 +167,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\GLHelpers.h" />
+    <ClInclude Include="include\Graphics\D3DRenderer.h" />
     <ClInclude Include="include\Graphics\GLRenderer.h" />
     <ClInclude Include="include\Graphics\VulkanRenderer.h" />
     <ClInclude Include="include\Prefabs\CubePosCol.h" />
@@ -175,6 +185,7 @@
     <ClInclude Include="include\Random.h" />
     <ClInclude Include="include\Typedefs.h" />
     <ClInclude Include="include\InputManager.h" />
+    <ClInclude Include="include\Window\D3DWindowWrapper.h" />
     <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
     <ClInclude Include="include\Window\VulkanWindowWrapper.h" />
     <ClInclude Include="include\Window\Window.h" />
@@ -185,7 +196,18 @@
     <ClInclude Include="include\Scene\SceneManager.h" />
     <ClInclude Include="include\Scene\TestScene.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets" Condition="Exists('packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.props'))" />
+    <Error Condition="!Exists('packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets'))" />
+  </Target>
 </Project>

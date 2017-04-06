@@ -1,4 +1,5 @@
 #pragma once
+#if COMPILE_OPEN_GL
 
 #include "Renderer.h"
 
@@ -13,11 +14,13 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
+	
+	virtual void PostInitialize() override;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
 	virtual void SetVSyncEnabled(bool enableVSync) override;
-	virtual void Clear(int flags) override;
+	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
 
 	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model) override;
@@ -66,3 +69,5 @@ private:
 	GLRenderer& operator=(const GLRenderer&) = delete;
 
 };
+
+#endif // COMPILE_OPEN_GL

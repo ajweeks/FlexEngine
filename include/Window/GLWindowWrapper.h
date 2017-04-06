@@ -1,4 +1,5 @@
 ﻿#pragma once
+#if COMPILE_OPEN_GL
 
 #include "GLFWWindowWrapper.h"
 
@@ -16,3 +17,5 @@ private:
 	GLWindowWrapper(const GLWindowWrapper&) = delete;
 	GLWindowWrapper& operator=(const GLWindowWrapper&) = delete;
 };
+
+#endif // COMPILE_OPEN_GL

@@ -189,7 +189,7 @@ public:
 	
 	void CursorPosCallback(double x, double y);
 	void MouseButtonCallback(GameContext& gameContext, MouseButton button, Action action, int mods);
-	void KeyCallback(KeyCode keycode, int scancode, Action action, int mods);
+	void KeyCallback(KeyCode keycode, Action action, int mods);
 
 	glm::vec2 GetMousePosition() const;
 	glm::vec2 GetMouseMovement() const;

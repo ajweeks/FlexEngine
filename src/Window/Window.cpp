@@ -7,7 +7,7 @@
 
 using namespace glm;
 
-Window::Window(std::string title, glm::vec2 size, GameContext& gameContext) :
+Window::Window(const std::string& title, glm::vec2 size, GameContext& gameContext) :
 	m_TitleString(title),
 	m_Size(size),
 	m_ShowFPSInWindowTitle(true),
@@ -47,22 +47,26 @@ bool Window::HasFocus() const
 
 GLFWwindow* Window::IsGLFWWindow() 
 {
+#if COMPILE_OPEN_GL
 	GLWindowWrapper* glWindow = dynamic_cast<GLWindowWrapper*>(this);
 	if (glWindow)
 	{
 		return glWindow->GetWindow();
 	}
+#endif
 	
+#if COMPILE_VULKAN
 	VulkanWindowWrapper* vulkanWindow = dynamic_cast<VulkanWindowWrapper*>(this);
 	if (vulkanWindow)
 	{
 		return vulkanWindow->GetWindow();
 	}
+#endif
 
 	return nullptr;
 }
 
-void Window::SetTitleString(std::string title)
+void Window::SetTitleString(const std::string& title)
 {
 	m_TitleString = title;
 }
@@ -92,9 +96,9 @@ void Window::SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds)
 
 
 // Callbacks
-void Window::KeyCallback(InputManager::KeyCode keycode, int scancode, InputManager::Action action, int mods)
+void Window::KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, int mods)
 {
-	m_GameContextRef.inputManager->KeyCallback(keycode, scancode, action, mods);
+	m_GameContextRef.inputManager->KeyCallback(keycode, action, mods);
 }
 
 void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods)

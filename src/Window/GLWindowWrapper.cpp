@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#if COMPILE_OPEN_GL
 
 #include "Window/GLWindowWrapper.h"
 #include "Logger.h"
@@ -66,3 +67,5 @@ void GLWindowWrapper::SetSize(int width, int height)
 	m_Size = glm::vec2i(width, height);
 	glViewport(0, 0, width, height);
 }
+
+#endif // COMPILE_OPEN_GL

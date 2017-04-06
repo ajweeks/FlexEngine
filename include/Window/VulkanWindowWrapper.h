@@ -1,4 +1,5 @@
 #pragma once
+#if COMPILE_VULKAN
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFWWindowWrapper.h"
@@ -19,3 +20,5 @@ private:
 	VulkanWindowWrapper(const VulkanWindowWrapper&) = delete;
 	VulkanWindowWrapper& operator=(const VulkanWindowWrapper&) = delete;
 };
+
+#endif // COMPILE_VULKAN

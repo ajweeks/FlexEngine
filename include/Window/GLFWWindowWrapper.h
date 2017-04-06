@@ -1,4 +1,5 @@
 #pragma once
+#if COMPILE_OPEN_GL || COMPILE_VULKAN
 
 #include "Window.h"
 
@@ -11,6 +12,8 @@ class GLFWWindowWrapper : public Window
 public:
 	GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext);
 	virtual ~GLFWWindowWrapper();
+	
+	virtual float GetTime() override;
 
 	virtual void Update(const GameContext& gameContext) override;
 	virtual void PollEvents() override;
@@ -19,7 +22,7 @@ public:
 	GLFWwindow* GetWindow() const;
 
 protected:
-	virtual void SetWindowTitle(std::string title) override;
+	virtual void SetWindowTitle(const std::string& title) override;
 	GLFWwindow* m_Window;
 
 private:
@@ -38,3 +41,5 @@ void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int
 void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused);
 void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
+
+#endif // COMPILE_OPEN_GL || COMPILE_VULKAN

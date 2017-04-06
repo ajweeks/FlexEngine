@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if COMPILE_OPEN_GL
 
 #include "Graphics/GLRenderer.h"
 #include "GameContext.h"
@@ -93,6 +94,10 @@ uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexP
 	return renderID;
 }
 
+void GLRenderer::PostInitialize()
+{
+}
+
 void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 {
 	UNREFERENCED_PARAMETER(gameContext);
@@ -121,7 +126,7 @@ void GLRenderer::SetVSyncEnabled(bool enableVSync)
 	glfwSwapInterval(enableVSync ? 1 : 0);
 }
 
-void GLRenderer::Clear(int flags)
+void GLRenderer::Clear(int flags, const GameContext& gameContext)
 {
 	GLbitfield mask = 0;
 	if ((int)flags & (int)ClearFlag::COLOR) mask |= GL_COLOR_BUFFER_BIT;
@@ -240,3 +245,5 @@ GLRenderer::RenderObject* GLRenderer::GetRenderObject(int renderID)
 {
 	return m_RenderObjects[renderID];
 }
+
+#endif // COMPILE_OPEN_GL

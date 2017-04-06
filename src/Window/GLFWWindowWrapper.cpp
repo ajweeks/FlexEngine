@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if COMPILE_OPEN_GL || COMPILE_VULKAN
 
 #include "Window/GLFWWindowWrapper.h"
 #include "Logger.h"
@@ -204,7 +205,7 @@ void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, 
 	const InputManager::KeyCode inputKey = GLFWKeyToInputManagerKey(key);
 	const int inputMods = GLFWModsToInputManagerMods(mods);
 
-	window->KeyCallback(inputKey, scancode, inputAction, inputMods);
+	window->KeyCallback(inputKey, inputAction, inputMods);
 }
 
 void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods)
@@ -249,6 +250,11 @@ GLFWWindowWrapper::~GLFWWindowWrapper()
 	}
 }
 
+float GLFWWindowWrapper::GetTime()
+{
+	return (float)glfwGetTime();
+}
+
 void GLFWWindowWrapper::PollEvents()
 {
 	glfwPollEvents();
@@ -285,7 +291,9 @@ GLFWwindow* GLFWWindowWrapper::GetWindow() const
 	return m_Window;
 }
 
-void GLFWWindowWrapper::SetWindowTitle(std::string title)
+void GLFWWindowWrapper::SetWindowTitle(const std::string& title)
 {
 	glfwSetWindowTitle(m_Window, title.c_str());
 }
+
+#endif // COMPILE_OPEN_GL || COMPILE_VULKAN
