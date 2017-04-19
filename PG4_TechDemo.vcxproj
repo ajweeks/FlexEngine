@@ -166,7 +166,7 @@
     <ClCompile Include="src\TechDemo.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\GLHelpers.h" />
+    <ClInclude Include="include\Graphics\GLHelpers.h" />
     <ClInclude Include="include\Graphics\D3DRenderer.h" />
     <ClInclude Include="include\Graphics\GLRenderer.h" />
     <ClInclude Include="include\Graphics\VulkanRenderer.h" />
