@@ -6,10 +6,119 @@
 #include "Window/Window.h"
 #include "Logger.h"
 #include "FreeCamera.h"
+#include "ReadFile.h"
 
 #include <algorithm>
 
 using namespace glm;
+using namespace DirectX;
+using namespace DirectX::SimpleMath;
+using Microsoft::WRL::ComPtr;
+
+namespace
+{
+	struct VS_BLOOM_PARAMETERS
+	{
+		float bloomThreshold; 
+		float blurAmount;
+		float bloomIntensity;
+		float baseIntensity;
+		float bloomSaturation;
+		float baseSaturation;
+		uint8_t na[8];
+	};
+
+	static_assert(!(sizeof(VS_BLOOM_PARAMETERS) % 16),
+		"VS_BLOOM_PARAMETERS needs to be 16 bytes aligned");
+
+	struct VS_BLUR_PARAMETERS
+	{
+		static const size_t SAMPLE_COUNT = 15;
+
+		XMFLOAT4 sampleOffsets[SAMPLE_COUNT];
+		XMFLOAT4 sampleWeights[SAMPLE_COUNT];
+
+		void SetBlurEffectParameters(float dx, float dy,
+			const VS_BLOOM_PARAMETERS& params)
+		{
+			sampleWeights[0].x = ComputeGaussian(0, params.blurAmount);
+			sampleOffsets[0].x = sampleOffsets[0].y = 0.f;
+
+			float totalWeights = sampleWeights[0].x;
+
+			// Add pairs of additional sample taps, positioned
+			// along a line in both directions from the center.
+			for (size_t i = 0; i < SAMPLE_COUNT / 2; i++)
+			{
+				// Store weights for the positive and negative taps.
+				float weight = ComputeGaussian(float(i + 1.f), params.blurAmount);
+
+				sampleWeights[i * 2 + 1].x = weight;
+				sampleWeights[i * 2 + 2].x = weight;
+
+				totalWeights += weight * 2;
+
+				// To get the maximum amount of blurring from a limited number of
+				// pixel shader samples, we take advantage of the bilinear filtering
+				// hardware inside the texture fetch unit. If we position our texture
+				// coordinates exactly halfway between two texels, the filtering unit
+				// will average them for us, giving two samples for the price of one.
+				// This allows us to step in units of two texels per sample, rather
+				// than just one at a time. The 1.5 offset kicks things off by
+				// positioning us nicely in between two texels.
+				float sampleOffset = float(i) * 2.f + 1.5f;
+
+				Vector2 delta = Vector2(dx, dy) * sampleOffset;
+
+				// Store texture coordinate offsets for the positive and negative taps.
+				sampleOffsets[i * 2 + 1].x = delta.x;
+				sampleOffsets[i * 2 + 1].y = delta.y;
+				sampleOffsets[i * 2 + 2].x = -delta.x;
+				sampleOffsets[i * 2 + 2].y = -delta.y;
+			}
+
+			for (size_t i = 0; i < SAMPLE_COUNT; i++)
+			{
+				sampleWeights[i].x /= totalWeights;
+			}
+		}
+
+	private:
+		float ComputeGaussian(float n, float theta)
+		{
+			return (float)((1.0 / sqrtf(2 * XM_PI * theta))
+				* expf(-(n * n) / (2 * theta * theta)));
+		}
+	};
+
+	static_assert(!(sizeof(VS_BLUR_PARAMETERS) % 16),
+		"VS_BLUR_PARAMETERS needs to be 16 bytes aligned");
+
+	enum BloomPresets
+	{
+		Default = 0,
+		Soft,
+		Desaturated,
+		Saturated,
+		Blurry,
+		Subtle,
+		None
+	};
+
+	BloomPresets g_Bloom = BloomPresets::Subtle;
+
+	static const VS_BLOOM_PARAMETERS g_BloomPresets[] =
+	{
+		//Thresh  Blur Bloom  Base  BloomSat BaseSat
+		{ 0.25f,  4,   1.25f, 1,    1,       1 }, // Default
+		{ 0,      3,   1,     1,    1,       1 }, // Soft
+		{ 0.5f,   8,   2,     1,    0,       1 }, // Desaturated
+		{ 0.25f,  4,   2,     1,    2,       0 }, // Saturated
+		{ 0,      2,   1,     0.1f, 1,       1 }, // Blurry
+		{ 0.5f,   2,   1,     1,    1,       1 }, // Subtle
+		{ 0.25f,  4,   1.25f, 1,    1,       1 }, // None
+	};
+};
 
 D3DRenderer::D3DRenderer(GameContext& gameContext) :
 	Renderer(gameContext),
@@ -90,7 +199,6 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 
 void D3DRenderer::PostInitialize()
 {
-	
 }
 
 void D3DRenderer::Draw(const GameContext& gameContext, uint renderID)
@@ -99,87 +207,6 @@ void D3DRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	RenderObject* renderObject = GetRenderObject(renderID);
 
-
-	static float a = 0.0f;
-	a += 0.16f;
-	m_World = Matrix::CreateRotationY(cosf(a * 0.5f) * 0.5f);
-
-	//m_d3dContext->OMSetBlendState(m_States->Opaque(), nullptr, 0xFFFFFFFF);
-	//m_d3dContext->OMSetDepthStencilState(m_States->DepthNone(), 0);
-	//if (m_EnableMSAA)
-	//{
-	//	m_d3dContext->RSSetState(m_RasterizerState.Get());
-	//}
-	//else
-	//{
-	//	m_d3dContext->RSSetState(m_States->CullNone());
-	//}
-
-	//m_Effect->Apply(m_d3dContext.Get());
-
-	//m_d3dContext->IASetInputLayout(m_InputLayout.Get());
-
-	//m_VertexBatch->Begin();
-
-	// Triangle
-	//VertexPositionColor v1(Vector3(400.0f, 150.0f, 0.0f), Colors::Red);
-	//VertexPositionColor v2(Vector3(600.0f, 450.0f, 0.0f), Colors::Orange);
-	//VertexPositionColor v3(Vector3(200.0f, 450.0f, 0.0f), Colors::Green);
-	//
-	//m_VertexBatch->DrawTriangle(v1, v2, v3);
-
-	// Grid
-	//Vector3 xAxis(2.0f, 0.0f, 0.0f);
-	//Vector3 yAxis(0.0f, 0.0f, 2.0f);
-	//Vector3 zAxis(0.0f, 2.0f, 0.0f);
-	//Vector3 origin = Vector3::Zero;
-	//
-	//size_t divisions = 20;
-	//
-	//for (size_t i = 0; i <= divisions; i++)
-	//{
-	//	float fPercent = (float(i) / float(divisions));
-	//	fPercent = (fPercent * 2.0f) - 1.0f;
-	//	Vector3 scale = xAxis * fPercent + origin;
-	//
-	//	VertexPositionColor gridV1(scale - yAxis, Colors::White);
-	//	VertexPositionColor gridV2(scale + yAxis, Colors::White);
-	//	m_VertexBatch->DrawLine(gridV1, gridV2);
-	//}
-	//
-	//for (size_t i = 0; i <= divisions; i++)
-	//{
-	//	float fPercent = (float(i) / float(divisions));
-	//	fPercent = (fPercent * 2.0f) - 1.0f;
-	//	Vector3 scale = yAxis * fPercent + origin;
-	//
-	//	VertexPositionColor gridV1(scale - xAxis, Colors::White);
-	//	VertexPositionColor gridV2(scale + xAxis, Colors::White);
-	//	m_VertexBatch->DrawLine(gridV1, gridV2);
-	//}
-
-	//m_VertexBatch->End();
-
-	//m_Effect->SetWorld(m_World);
-
-	//m_Cube->Draw(m_Effect.get(), m_InputLayout.Get());
-	m_Cube->Draw(m_World, m_View, m_Proj, Colors::White, nullptr, m_Wireframe);
-
-	//m_Model->Draw(m_d3dContext.Get(), *m_States, m_World, m_View, m_Proj);
-
-	// Text
-	//m_FontSpriteBatch->Begin();
-	//const char* ascii = "Hello World!";
-	//std::wstring_convert<std::codecvt_utf8<wchar_t>> asciiConverter;
-	//std::wstring outputStr = asciiConverter.from_bytes(ascii);
-	//Vector2 fontOrigin = m_Font->MeasureString(outputStr.c_str()) / 2.0f;
-	//
-	////static float a = 0.0f;
-	////a += m_timer.GetElapsedSeconds();
-	//m_Font->DrawString(m_FontSpriteBatch.get(), outputStr.c_str(), m_FontPos + Vector2(-1.0f, -1.0f), Colors::Black, 0.0f, fontOrigin);
-	//m_Font->DrawString(m_FontSpriteBatch.get(), outputStr.c_str(), m_FontPos, Colors::White, 0.0f, fontOrigin);
-	//
-	//m_FontSpriteBatch->End();
 	//glBindVertexArray(renderObject->VAO);
 	//
 	//glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
@@ -194,12 +221,19 @@ void D3DRenderer::Draw(const GameContext& gameContext, uint renderID)
 	//}
 	//
 	//glBindVertexArray(0);
+
+	//m_World = Matrix::CreateRotationY(cosf(a * 0.5f) * 0.5f);
+
+	m_SpriteBatch->Begin();
+	m_SpriteBatch->Draw(m_Background.Get(), m_FullscreenRect);
+	m_SpriteBatch->End();
+
+	m_Shape->Draw(m_World, m_View, m_Projection);
 }
 
 void D3DRenderer::SetVSyncEnabled(bool enableVSync)
 {
 	m_VSyncEnabled = enableVSync;
-	//glfwSwapInterval(enableVSync ? 1 : 0);
 }
 
 void D3DRenderer::Clear(int flags, const GameContext& gameContext)
@@ -208,10 +242,11 @@ void D3DRenderer::Clear(int flags, const GameContext& gameContext)
 	if (flags & (int)ClearFlag::DEPTH) d3dClearFlags |= D3D11_CLEAR_DEPTH;
 	if (flags & (int)ClearFlag::STENCIL) d3dClearFlags |= D3D11_CLEAR_STENCIL;
 
-	m_d3dContext->ClearRenderTargetView(m_renderTargetView.Get(), m_ClearColor);
+	//m_d3dContext->ClearRenderTargetView(m_renderTargetView.Get(), m_ClearColor);
 	m_d3dContext->ClearDepthStencilView(m_depthStencilView.Get(), d3dClearFlags, 1.0f, 0);
 
-	m_d3dContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
+	//m_d3dContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
+	m_d3dContext->OMSetRenderTargets(1, m_sceneRT.GetAddressOf(), m_depthStencilView.Get());
 
 	const vec2i windowSize = gameContext.window->GetSize();
 	CD3D11_VIEWPORT viewport(0.0f, 0.0f, static_cast<float>(windowSize.x), static_cast<float>(windowSize.y));
@@ -220,10 +255,19 @@ void D3DRenderer::Clear(int flags, const GameContext& gameContext)
 
 void D3DRenderer::SwapBuffers(const GameContext& gameContext)
 {
+	float totalTime = gameContext.elapsedTime;
+
+	m_World = Matrix::CreateRotationZ(totalTime / 2.f)
+		* Matrix::CreateRotationY(totalTime)
+		* Matrix::CreateRotationX(totalTime * 2.f);
+
+
+	PostProcess();
+	
 	// The first argument instructs DXGI to block until VSync, putting the application
 	// to sleep until the next VSync. This ensures we don't waste any cycles rendering
 	// frames that will never be displayed to the screen.
-	HRESULT hr = m_swapChain->Present(1, 0);
+	HRESULT hr = m_swapChain->Present(m_VSyncEnabled ? 1 : 0, 0);
 
 	// If the device was reset we must completely reinitialize the renderer.
 	if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
@@ -430,105 +474,51 @@ void D3DRenderer::CreateDevice()
 
 	// DirectX 11.1 if present
 	if (SUCCEEDED(m_d3dDevice.As(&m_d3dDevice1)))
+	{
 		(void)m_d3dContext.As(&m_d3dContext1);
+	}
 
-	// TODO: Initialize device dependent objects here (independent of window size).
-	/*
-	//m_SpriteBatch = std::make_unique<SpriteBatch>(m_d3dContext.Get());
-	//
-	//ComPtr<ID3D11Resource> resource;
-	//DX::ThrowIfFailed(CreateWICTextureFromFile(m_d3dDevice.Get(), L"resources/textures/workworkworkworkwork.jpg", 
-	//	resource.GetAddressOf(),
-	//	m_Texture.ReleaseAndGetAddressOf()));
-	//
-	//ComPtr<ID3D11Texture2D> work;
-	//DX::ThrowIfFailed(resource.As(&work));
-	//
-	//CD3D11_TEXTURE2D_DESC workDesc;
-	//work->GetDesc(&workDesc);
+	m_States = std::make_unique<CommonStates>(m_d3dDevice.Get());
+
+	DX::ThrowIfFailed(CreateWICTextureFromFile(m_d3dDevice.Get(), L"resources/textures/slice-of-lemon-640.jpg", nullptr,
+		m_Background.ReleaseAndGetAddressOf()));
+
+	m_SpriteBatch = std::make_unique<SpriteBatch>(m_d3dContext.Get());
+	m_Shape = GeometricPrimitive::CreateTorus(m_d3dContext.Get());
+
+	m_View = Matrix::CreateLookAt(Vector3(0.0f, 3.0f, -3.0f), Vector3::Zero, Vector3::UnitY);
 
 
-	//m_Origin.x = float(workDesc.Width * 2.0f);
-	//m_Origin.y = float(workDesc.Height * 2.0f);
-	//
-	//m_TileRect.left = workDesc.Width * 2;
-	//m_TileRect.right = workDesc.Width * 6;
-	//m_TileRect.top = workDesc.Width * 2;
-	//m_TileRect.bottom = workDesc.Width * 6;
+	auto blob = DX::ReadData(L"BloomExtract.cso");
+	DX::ThrowIfFailed(m_d3dDevice->CreatePixelShader(blob.data(), blob.size(),
+		nullptr, m_BloomExtractPS.ReleaseAndGetAddressOf()));
 
-	//// Font
-	//m_Font = std::make_unique<SpriteFont>(m_d3dDevice.Get(), L"resources/fonts/myfile.spritefont");
-	//m_FontSpriteBatch = std::make_unique<SpriteBatch>(m_d3dContext.Get());
-	//
-	//// Triangle
-	//m_States = std::make_unique<CommonStates>(m_d3dDevice.Get());
+	blob = DX::ReadData(L"BloomCombine.cso");
+	DX::ThrowIfFailed(m_d3dDevice->CreatePixelShader(blob.data(), blob.size(),
+		nullptr, m_BloomCombinePS.ReleaseAndGetAddressOf()));
 
-	//m_Effect = std::make_unique<BasicEffect>(m_d3dDevice.Get());
-	//m_Effect->SetTextureEnabled(true);
-	//m_Effect->SetPerPixelLighting(true);
-	//m_Effect->SetLightingEnabled(true);
-	//m_Effect->SetLightEnabled(0, true);
-	//m_Effect->SetLightDiffuseColor(0, Colors::White);
-	//m_Effect->SetLightDirection(0, -Vector3::UnitZ);
-	//m_Effect->SetVertexColorEnabled(true);
+	blob = DX::ReadData(L"GaussianBlur.cso");
+	DX::ThrowIfFailed(m_d3dDevice->CreatePixelShader(blob.data(), blob.size(),
+		nullptr, m_GaussianBlurPS.ReleaseAndGetAddressOf()));
 
-	//m_VertexBatch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(m_d3dContext.Get());
-	*/
-	// Grid
+	{
+		CD3D11_BUFFER_DESC cbDesc(sizeof(VS_BLOOM_PARAMETERS),
+			D3D11_BIND_CONSTANT_BUFFER);
+		D3D11_SUBRESOURCE_DATA initData;
+		initData.pSysMem = &g_BloomPresets[g_Bloom];
+		initData.SysMemPitch = sizeof(VS_BLOOM_PARAMETERS);
+		DX::ThrowIfFailed(m_d3dDevice->CreateBuffer(&cbDesc, &initData,
+			m_BloomParams.ReleaseAndGetAddressOf()));
+	}
 
-	// Cube
-	m_Cube = GeometricPrimitive::CreateCube(m_d3dContext.Get());
-	//m_Cube->CreateInputLayout(m_Effect.get(), m_InputLayout.ReleaseAndGetAddressOf());
-
-	m_World = Matrix::Identity;
-
-	/*
-	//m_States = std::make_unique<CommonStates>(m_d3dDevice.Get());
-	//m_fxFactory = std::make_unique<DGSLEffectFactory>(m_d3dDevice.Get());
-	//m_Model = Model::CreateFromCMO(m_d3dDevice.Get(), L"resources/models/cup/cup.cmo", *m_fxFactory);
-
-	//m_Model->UpdateEffects([&](IEffect* effect)
-	//{
-	//	auto lights = dynamic_cast<IEffectLights*>(effect);
-	//	if (lights)
-	//	{
-	//		lights->SetLightingEnabled(true);
-	//		lights->SetPerPixelLighting(true);
-	//		lights->SetLightEnabled(0, true);
-	//		lights->SetLightDiffuseColor(0, Colors::Pink);
-	//		lights->SetLightEnabled(1, false);
-	//		lights->SetLightEnabled(2, false);
-	//	}
-	//
-	//	auto fog = dynamic_cast<IEffectFog*>(effect);
-	//	if (fog)
-	//	{
-	//		fog->SetFogEnabled(true);
-	//		fog->SetFogColor(m_ClearColor);
-	//		fog->SetFogStart(3.0f);
-	//		fog->SetFogEnd(4.0f);
-	//	}
-	//});
-
-	//DX::ThrowIfFailed(CreateWICTextureFromFile(m_d3dDevice.Get(), L"resources/textures/workworkworkworkwork.jpg", nullptr,
-	//	m_Texture.ReleaseAndGetAddressOf()));
-	//m_Effect->SetTexture(m_Texture.Get());
-
-	//void const* shaderByteCode;
-	//size_t byteCodeLength;
-
-	//m_Effect->GetVertexShaderBytecode(&shaderByteCode, &byteCodeLength);
-	//DX::ThrowIfFailed(m_d3dDevice->CreateInputLayout(VertexPositionColor::InputElements, VertexPositionColor::InputElementCount,
-	//	shaderByteCode, byteCodeLength, m_InputLayout.ReleaseAndGetAddressOf()));
-
-	//// Rasterizer state
-	//CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE,
-	//	D3D11_DEFAULT_DEPTH_BIAS, D3D11_DEFAULT_DEPTH_BIAS_CLAMP,
-	//	D3D11_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, FALSE, m_EnableMSAA ? TRUE : FALSE, FALSE);
-	//
-	//DX::ThrowIfFailed(m_d3dDevice->CreateRasterizerState(&rastDesc, m_RasterizerState.ReleaseAndGetAddressOf()));
-
-	*/
+	{
+		CD3D11_BUFFER_DESC cbDesc(sizeof(VS_BLUR_PARAMETERS),
+			D3D11_BIND_CONSTANT_BUFFER);
+		DX::ThrowIfFailed(m_d3dDevice->CreateBuffer(&cbDesc, nullptr,
+			m_BlurParamsWidth.ReleaseAndGetAddressOf()));
+		DX::ThrowIfFailed(m_d3dDevice->CreateBuffer(&cbDesc, nullptr,
+			m_BlurParamsHeight.ReleaseAndGetAddressOf()));
+	}
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
@@ -642,6 +632,12 @@ void D3DRenderer::CreateResources(const GameContext& gameContext)
 	// Create a view interface on the rendertarget to use on bind.
 	DX::ThrowIfFailed(m_d3dDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, m_renderTargetView.ReleaseAndGetAddressOf()));
 
+	// Obtain the backbuffer for this window which will be the final 3D rendertarget.
+	DX::ThrowIfFailed(m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &m_backBuffer));
+
+	// Create a view interface on the rendertarget to use on bind.
+	DX::ThrowIfFailed(m_d3dDevice->CreateRenderTargetView(m_backBuffer.Get(), nullptr, m_renderTargetView.ReleaseAndGetAddressOf()));
+
 	// Allocate a 2-D surface as the depth/stencil buffer and
 	// create a DepthStencil view on this surface to use on bind.
 	CD3D11_TEXTURE2D_DESC depthStencilDesc(depthBufferFormat, backBufferWidth, backBufferHeight, 1, 1, D3D11_BIND_DEPTH_STENCIL);
@@ -656,20 +652,55 @@ void D3DRenderer::CreateResources(const GameContext& gameContext)
 
 
 	// TODO: Initialize windows-size dependent objects here.
-	//m_FontPos.x = 160.0f;
-	//m_FontPos.y = 30.0f;
 
-	m_View = Matrix::CreateLookAt(Vector3(2.0f, 2.0f, 2.0f),
-		Vector3::Zero, Vector3::UnitY);
+	// Full-size render target for scene
+	CD3D11_TEXTURE2D_DESC sceneDesc(backBufferFormat, backBufferWidth, backBufferHeight,
+		1, 1, D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
+	DX::ThrowIfFailed(m_d3dDevice->CreateTexture2D(&sceneDesc, nullptr,
+		m_sceneTex.GetAddressOf()));
+	DX::ThrowIfFailed(m_d3dDevice->CreateRenderTargetView(m_sceneTex.Get(), nullptr,
+		m_sceneRT.ReleaseAndGetAddressOf()));
+	DX::ThrowIfFailed(m_d3dDevice->CreateShaderResourceView(m_sceneTex.Get(), nullptr,
+		m_sceneSRV.ReleaseAndGetAddressOf()));
 
-	const float FOV = XM_PI / 4.0f;
-	const float nearPlane = 0.1f;
-	const float farPlane = 10.0f;
-	const float aspectRatio = float(backBufferWidth) / float(backBufferHeight);
-	m_Proj = Matrix::CreatePerspectiveFieldOfView(FOV, aspectRatio, nearPlane, farPlane);
+	// Half-size blurring render targets
+	CD3D11_TEXTURE2D_DESC rtDesc(backBufferFormat, backBufferWidth / 2, backBufferHeight / 2,
+		1, 1, D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> rtTexture1;
+	DX::ThrowIfFailed(m_d3dDevice->CreateTexture2D(&rtDesc, nullptr,
+		rtTexture1.GetAddressOf()));
+	DX::ThrowIfFailed(m_d3dDevice->CreateRenderTargetView(rtTexture1.Get(), nullptr,
+		m_rt1RT.ReleaseAndGetAddressOf()));
+	DX::ThrowIfFailed(m_d3dDevice->CreateShaderResourceView(rtTexture1.Get(), nullptr,
+		m_rt1SRV.ReleaseAndGetAddressOf()));
 
-	//m_Effect->SetView(m_View);
-	//m_Effect->SetProjection(m_Proj);
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> rtTexture2;
+	DX::ThrowIfFailed(m_d3dDevice->CreateTexture2D(&rtDesc, nullptr,
+		rtTexture2.GetAddressOf()));
+	DX::ThrowIfFailed(m_d3dDevice->CreateRenderTargetView(rtTexture2.Get(), nullptr,
+		m_rt2RT.ReleaseAndGetAddressOf()));
+	DX::ThrowIfFailed(m_d3dDevice->CreateShaderResourceView(rtTexture2.Get(), nullptr,
+		m_rt2SRV.ReleaseAndGetAddressOf()));
+
+	m_bloomRect.left = 0;
+	m_bloomRect.top = 0;
+	m_bloomRect.right = backBufferWidth / 2;
+	m_bloomRect.bottom = backBufferHeight / 2;
+
+	m_FullscreenRect.left = 0;
+	m_FullscreenRect.top = 0;
+	m_FullscreenRect.right = backBufferWidth;
+	m_FullscreenRect.bottom = backBufferHeight;
+
+	m_Projection = Matrix::CreatePerspectiveFieldOfView(XM_PIDIV4, float(backBufferWidth) / float(backBufferHeight), 0.01f, 100.f);
+
+	VS_BLUR_PARAMETERS blurData;
+	blurData.SetBlurEffectParameters(1.f / (backBufferWidth / 2), 0, g_BloomPresets[g_Bloom]);
+	m_d3dContext->UpdateSubresource(m_BlurParamsWidth.Get(), 0, nullptr, &blurData, sizeof(VS_BLUR_PARAMETERS), 0);
+
+	blurData.SetBlurEffectParameters(0, 1.f / (backBufferHeight / 2), g_BloomPresets[g_Bloom]);
+	m_d3dContext->UpdateSubresource(m_BlurParamsHeight.Get(), 0, nullptr, &blurData, sizeof(VS_BLUR_PARAMETERS), 0);
+
 }
 
 void D3DRenderer::OnDeviceLost(const GameContext& gameContext)
@@ -685,25 +716,94 @@ void D3DRenderer::OnDeviceLost(const GameContext& gameContext)
 	m_d3dDevice1.Reset();
 	m_d3dDevice.Reset();
 
-	//m_SpriteBatch.reset();
-	//m_Font.reset();
-	//m_FontSpriteBatch.reset();
+	m_States.reset();
+	m_SpriteBatch.reset();
+	m_Shape.reset();
+	m_Background.Reset();
 
-	//m_States.reset();
-	//m_fxFactory.reset();
-	//m_Model.reset();
+	m_BloomExtractPS.Reset();
+	m_BloomCombinePS.Reset();
+	m_GaussianBlurPS.Reset();
 
-	//m_VertexBatch.reset();
-	//m_RasterizerState.Reset();
+	m_BloomParams.Reset();
+	m_BlurParamsWidth.Reset();
+	m_BlurParamsHeight.Reset();
 
-	//m_Effect.reset();
-	//m_InputLayout.Reset();
-
-	m_Cube.reset();
-	//m_Texture.Reset();
+	m_sceneTex.Reset();
+	m_sceneSRV.Reset();
+	m_sceneRT.Reset();
+	m_rt1SRV.Reset();
+	m_rt1RT.Reset();
+	m_rt2SRV.Reset();
+	m_rt2RT.Reset();
+	m_backBuffer.Reset();
 
 	CreateDevice();
 	CreateResources(gameContext);
+}
+
+void D3DRenderer::PostProcess()
+{
+	ID3D11ShaderResourceView* null[] = { nullptr, nullptr };
+
+	if (g_Bloom == None)
+	{
+		// Pass-through test
+		m_d3dContext->CopyResource(m_backBuffer.Get(), m_sceneTex.Get());
+	}
+	else
+	{
+		// scene -> RT1 (downsample)
+		m_d3dContext->OMSetRenderTargets(1, m_rt1RT.GetAddressOf(), nullptr);
+		m_SpriteBatch->Begin(SpriteSortMode_Immediate,
+			nullptr, nullptr, nullptr, nullptr,
+			[=]() {
+			m_d3dContext->PSSetConstantBuffers(0, 1, m_BloomParams.GetAddressOf());
+			m_d3dContext->PSSetShader(m_BloomExtractPS.Get(), nullptr, 0);
+		});
+		m_SpriteBatch->Draw(m_sceneSRV.Get(), m_bloomRect);
+		m_SpriteBatch->End();
+
+		// RT1 -> RT2 (blur horizontal)
+		m_d3dContext->OMSetRenderTargets(1, m_rt2RT.GetAddressOf(), nullptr);
+		m_SpriteBatch->Begin(SpriteSortMode_Immediate,
+			nullptr, nullptr, nullptr, nullptr,
+			[=]() {
+			m_d3dContext->PSSetShader(m_GaussianBlurPS.Get(), nullptr, 0);
+			m_d3dContext->PSSetConstantBuffers(0, 1,
+				m_BlurParamsWidth.GetAddressOf());
+		});
+		m_SpriteBatch->Draw(m_rt1SRV.Get(), m_bloomRect);
+		m_SpriteBatch->End();
+
+		m_d3dContext->PSSetShaderResources(0, 2, null);
+
+		// RT2 -> RT1 (blur vertical)
+		m_d3dContext->OMSetRenderTargets(1, m_rt1RT.GetAddressOf(), nullptr);
+		m_SpriteBatch->Begin(SpriteSortMode_Immediate,
+			nullptr, nullptr, nullptr, nullptr,
+			[=]() {
+			m_d3dContext->PSSetShader(m_GaussianBlurPS.Get(), nullptr, 0);
+			m_d3dContext->PSSetConstantBuffers(0, 1,
+				m_BlurParamsHeight.GetAddressOf());
+		});
+		m_SpriteBatch->Draw(m_rt2SRV.Get(), m_bloomRect);
+		m_SpriteBatch->End();
+
+		// RT1 + scene
+		m_d3dContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr);
+		m_SpriteBatch->Begin(SpriteSortMode_Immediate,
+			nullptr, nullptr, nullptr, nullptr,
+			[=]() {
+			m_d3dContext->PSSetShader(m_BloomCombinePS.Get(), nullptr, 0);
+			m_d3dContext->PSSetShaderResources(1, 1, m_sceneSRV.GetAddressOf());
+			m_d3dContext->PSSetConstantBuffers(0, 1, m_BloomParams.GetAddressOf());
+		});
+		m_SpriteBatch->Draw(m_rt1SRV.Get(), m_FullscreenRect);
+		m_SpriteBatch->End();
+	}
+
+	m_d3dContext->PSSetShaderResources(0, 2, null);
 }
 
 #endif // COMPILE_D3D

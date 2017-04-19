@@ -90,6 +90,9 @@
     <ClCompile Include="src\Helpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\ReadFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\TechDemo.h">
@@ -176,11 +179,22 @@
     <ClInclude Include="include\Window\D3DWindowWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\ReadFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ReadData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\Graphics\GLHelpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="resources\shaders\BloomCombine.hlsl" />
+    <FxCompile Include="resources\shaders\BloomExtract.hlsl" />
+    <FxCompile Include="resources\shaders\GaussianBlur.hlsl" />
   </ItemGroup>
 </Project>

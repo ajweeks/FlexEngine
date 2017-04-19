@@ -107,7 +107,12 @@ VulkanRenderer::~VulkanRenderer()
 glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
 {
 	//CreateCube(1.0f, vec3(1.5f * count, 0.0f, 0.0f));
-	this->vertices = *vertices;
+	m_Vertices = *vertices;
+
+	//for (size_t i = 0; i < m_Vertices.size(); i++)
+	//{
+	//	m_Vertices[i].pos.y = -m_Vertices[i].pos.y;
+	//}
 
 	return 0;
 	//const uint renderID = m_RenderObjects.size();
@@ -139,8 +144,9 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector
 
 glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices)
 {
-	this->vertices = *vertices;
-	this->indices = *indices;
+	Initialize(gameContext, vertices);
+
+	m_Indices = *indices;
 
 	//const uint renderID = Initialize(gameContext, vertices);
 	//
@@ -175,9 +181,6 @@ void VulkanRenderer::Draw(const GameContext& gameContext, glm::uint renderID)
 	//}
 	//
 	//glBindVertexArray(0);
-
-	UpdateUniformBuffer(gameContext);
-	DrawFrame(gameContext.window);
 }
 
 void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
@@ -199,6 +202,9 @@ void VulkanRenderer::SwapBuffers(const GameContext& gameContext)
 {
 	//glfwSwapBuffers(gameContext.window->IsGLFWWindow());
 	// TODO: Swap buffers here!
+
+	UpdateUniformBuffer(gameContext);
+	DrawFrame(gameContext.window);
 }
 
 void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model)
@@ -748,7 +754,7 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 
 	VkPipelineMultisampleStateCreateInfo multisampling = {};
@@ -1086,7 +1092,7 @@ void VulkanRenderer::CreateCommandBuffers()
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-		if (!indices.empty())
+		if (!m_Indices.empty())
 		{
 			vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 		}
@@ -1095,7 +1101,7 @@ void VulkanRenderer::CreateCommandBuffers()
 
 		// Non-indexed drawing:
 #if 1
-		vkCmdDraw(commandBuffers[i], vertices.size(), 1, 0, 0);
+		vkCmdDraw(commandBuffers[i], m_Vertices.size(), 1, 0, 0);
 #else
 		// Indexed drawing:
 #endif
@@ -1260,17 +1266,17 @@ void VulkanRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
 void VulkanRenderer::CreateCube(float size, glm::vec3 offset)
 {
 	const float hSize = size / 2.0f;
-	vertices.push_back({ offset + vec3{ -hSize, -hSize, -hSize },{ 1.0f, 0.0f, 0.0f } });
-	vertices.push_back({ offset + vec3{ -hSize, hSize, -hSize },{ 0.5f, 0.5f, 0.0f } });
-	vertices.push_back({ offset + vec3{ hSize, hSize, -hSize },{ 1.0f, 0.0f, 1.0f } });
-	vertices.push_back({ offset + vec3{ hSize, -hSize, -hSize }, { 0.0f, 0.5f, 1.0f } });
+	m_Vertices.push_back({ offset + vec3{ -hSize, -hSize, -hSize },{ 1.0f, 0.0f, 0.0f } });
+	m_Vertices.push_back({ offset + vec3{ -hSize, hSize, -hSize },{ 0.5f, 0.5f, 0.0f } });
+	m_Vertices.push_back({ offset + vec3{ hSize, hSize, -hSize },{ 1.0f, 0.0f, 1.0f } });
+	m_Vertices.push_back({ offset + vec3{ hSize, -hSize, -hSize }, { 0.0f, 0.5f, 1.0f } });
 						 
-	vertices.push_back({ offset + vec3{ -hSize, -hSize, hSize },{ 1.0f, 0.0f, 0.0f }});
-	vertices.push_back({ offset + vec3{ -hSize, hSize, hSize },{ 1.0f, 0.0f, 1.0f } });
-	vertices.push_back({ offset + vec3{ hSize, hSize, hSize },{ 0.0f, 1.0f, 0.5f } });
-	vertices.push_back({ offset + vec3{ hSize, -hSize, hSize },{ 0.0f, 0.5f, 1.0f } });
+	m_Vertices.push_back({ offset + vec3{ -hSize, -hSize, hSize },{ 1.0f, 0.0f, 0.0f }});
+	m_Vertices.push_back({ offset + vec3{ -hSize, hSize, hSize },{ 1.0f, 0.0f, 1.0f } });
+	m_Vertices.push_back({ offset + vec3{ hSize, hSize, hSize },{ 0.0f, 1.0f, 0.5f } });
+	m_Vertices.push_back({ offset + vec3{ hSize, -hSize, hSize },{ 0.0f, 0.5f, 1.0f } });
 
-	const int indexOffset = vertices.size() - 8;
+	const int indexOffset = m_Vertices.size() - 8;
 
 	std::vector<uint> newIndices = { 
 		0, 1, 2, 0, 2, 3, // F
@@ -1283,7 +1289,7 @@ void VulkanRenderer::CreateCube(float size, glm::vec3 offset)
 
 	std::for_each(newIndices.begin(), newIndices.end(), [indexOffset](uint& val) { val += indexOffset; });
 
-	std::copy(newIndices.begin(), newIndices.end(), std::back_inserter(indices));
+	std::copy(newIndices.begin(), newIndices.end(), std::back_inserter(m_Indices));
 }
 
 void VulkanRenderer::LoadModel(const std::string& filePath)
@@ -1332,7 +1338,7 @@ void VulkanRenderer::LoadModel(const std::string& filePath)
 
 void VulkanRenderer::CreateVertexBuffer()
 {
-	const size_t bufferSize = sizeof(vertices[0]) * vertices.size();
+	const size_t bufferSize = sizeof(m_Vertices[0]) * m_Vertices.size();
 
 	VDeleter<VkBuffer> stagingBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> stagingBufferMemory{ device, vkFreeMemory };
@@ -1341,7 +1347,7 @@ void VulkanRenderer::CreateVertexBuffer()
 
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, vertices.data(), bufferSize);
+	memcpy(data, m_Vertices.data(), bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -1352,8 +1358,8 @@ void VulkanRenderer::CreateVertexBuffer()
 
 void VulkanRenderer::CreateIndexBuffer()
 {
-	if (indices.empty()) return;
-	const size_t bufferSize = sizeof(indices[0]) * indices.size();
+	if (m_Indices.empty()) return;
+	const size_t bufferSize = sizeof(m_Indices[0]) * m_Indices.size();
 
 	VDeleter<VkBuffer> stagingBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> stagingBufferMemory{ device, vkFreeMemory };
@@ -1362,7 +1368,7 @@ void VulkanRenderer::CreateIndexBuffer()
 
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, indices.data(), bufferSize);
+	memcpy(data, m_Indices.data(), bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,

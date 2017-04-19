@@ -3,11 +3,6 @@
 
 #include "Renderer.h"
 
-using namespace DirectX;
-using namespace DirectX::SimpleMath;
-
-using Microsoft::WRL::ComPtr;
-
 struct GameContext;
 
 class D3DRenderer : public Renderer
@@ -78,6 +73,8 @@ private:
 	void CreateResources(const GameContext& gameContext);
 
 	void OnDeviceLost(const GameContext& gameContext);
+	
+	void PostProcess();
 
 	D3D_FEATURE_LEVEL m_featureLevel;
 	Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;
@@ -90,39 +87,47 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_renderTargetView;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthStencilView;
 
-	// Rendering loop timer
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_backBuffer;
+
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_sceneTex;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_sceneSRV;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_sceneRT;
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_rt1SRV;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rt1RT;
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_rt2SRV;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rt2RT;
+
+	RECT m_bloomRect;
+
 	DirectX::XMVECTORF32 m_ClearColor = DirectX::Colors::DarkGoldenrod;
 
-	// Sprite
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Texture;
-	//std::unique_ptr<DirectX::SpriteBatch> m_SpriteBatch;
-	//DirectX::SimpleMath::Vector2 m_ScreenPos;
-	//DirectX::SimpleMath::Vector2 m_Origin;
-	//RECT m_TileRect;
-	//std::unique_ptr<DirectX::CommonStates> m_States;
-
-	// Font
-	//std::unique_ptr<DirectX::SpriteFont> m_Font;
-	//DirectX::SimpleMath::Vector2 m_FontPos;
-	//std::unique_ptr<DirectX::SpriteBatch> m_FontSpriteBatch;
-	//
-	//std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_VertexBatch;
+	//Microsoft::WRL::ComPtr<ID3D11Buffer> m_shapeVB;
+	//Microsoft::WRL::ComPtr<ID3D11Buffer> m_shapeIB;
+	//Microsoft::WRL::ComPtr<ID3D11PixelShader> m_PixelShader;
 
 	DirectX::SimpleMath::Matrix m_World;
 	DirectX::SimpleMath::Matrix m_View;
-	DirectX::SimpleMath::Matrix m_Proj;
+	DirectX::SimpleMath::Matrix m_Projection;
 
-	//std::unique_ptr<DirectX::BasicEffect> m_Effect;
+	std::unique_ptr<DirectX::CommonStates> m_States;
+	std::unique_ptr<DirectX::SpriteBatch> m_SpriteBatch;
+	std::unique_ptr<DirectX::GeometricPrimitive> m_Shape;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Background;
+	RECT m_FullscreenRect;
+
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_BloomExtractPS;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_BloomCombinePS;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_GaussianBlurPS;
+
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_BloomParams;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_BlurParamsWidth;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_BlurParamsHeight;
+
 	//Microsoft::WRL::ComPtr<ID3D11InputLayout> m_InputLayout;
-	//std::unique_ptr<DirectX::CommonStates> m_States;
-	//std::unique_ptr<DirectX::IEffectFactory> m_fxFactory;
-	//std::unique_ptr<DirectX::Model> m_Model;
-
-	// Sphere
-	std::unique_ptr<DirectX::GeometricPrimitive> m_Cube;
 	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Texture;
-
-	//Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_RasterizerState;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Cubemap;
 
 	bool m_Wireframe = false;
 	bool m_EnableMSAA = false;

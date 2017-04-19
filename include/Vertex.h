@@ -19,8 +19,8 @@ struct VertexPosCol
 	VertexPosCol(glm::vec3 pos, glm::vec3 col) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] } {}
 
 	static const int stride = 3 * sizeof(float) + 3 * sizeof(float);
-	float pos[3];
-	float col[3];
+	glm::vec3 pos;
+	glm::vec3 col;
 };
 
 //struct VertexPosColUV

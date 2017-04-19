@@ -84,7 +84,7 @@ void TechDemo::UpdateAndRender()
 	
 		m_GameContext.inputManager->Update();
 		m_GameContext.camera->Update(m_GameContext);
-		m_GameContext.renderer->Clear((int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH, m_GameContext);
+		m_GameContext.renderer->Clear((int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL, m_GameContext);
 	
 		m_GameContext.window->Update(m_GameContext);
 	

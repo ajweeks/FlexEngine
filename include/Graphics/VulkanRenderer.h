@@ -251,8 +251,8 @@ private:
 	VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
 	VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
 
-	std::vector<VertexPosCol> vertices;
-	std::vector<uint32_t> indices;
+	std::vector<VertexPosCol> m_Vertices;
+	std::vector<uint32_t> m_Indices;
 
 	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
