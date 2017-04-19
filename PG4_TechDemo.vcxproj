@@ -133,7 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="include\Helpers.cpp" />
+    <ClCompile Include="src\Helpers.cpp" />
     <ClCompile Include="src\Graphics\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GLRenderer.cpp" />
     <ClCompile Include="src\Graphics\VulkanRenderer.cpp" />
