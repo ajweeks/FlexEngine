@@ -113,7 +113,7 @@ int MultiRenderer::GetShaderUniformLocation(glm::uint program, const std::string
 	{
 		return m_Renderers[i]->GetShaderUniformLocation(program, uniformName);
 	}
-	//return 0;
+	return 0;
 }
 
 void MultiRenderer::SetUniform1f(glm::uint location, float val)

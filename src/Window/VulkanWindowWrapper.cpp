@@ -34,7 +34,7 @@ VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, Gam
 
 	glfwSetKeyCallback(m_Window, GLFWKeyCallback);
 	glfwSetMouseButtonCallback(m_Window, GLFWMouseButtonCallback);
-	glfwSetCursorPosCallback(m_Window, GLFWCursorPosCallback);
+	glfwSetCursorPosCallback(m_Window, VulkanCursorPosCallback);
 	glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
 	glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 
@@ -69,8 +69,13 @@ void VulkanWindowWrapper::SetSize(int width, int height)
 void VulkanWindowWrapper::WindowSizeCallback(int width, int height)
 {
 	Window::WindowSizeCallback(width, height);
-
 	// TODO: Recreate vulkan swap chain!
+}
+
+void VulkanWindowWrapper::VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y)
+{
+	// Vulkan is whack yo
+	GLFWCursorPosCallback(glfwWindow, x, -y);
 }
 
 #endif // COMPILE_VULKAN

@@ -69,6 +69,7 @@ void TechDemo::Initialize()
 	m_Window->SetUpdateWindowTitleFrequency(0.4f);
 
 	m_GameContext.renderer->SetVSyncEnabled(false);
+	m_GameContext.renderer->SetClearColor(0.08f, 0.13f, 0.2f);
 
 	m_SceneManager = new SceneManager();
 	TestScene* testScene = new TestScene(m_GameContext);

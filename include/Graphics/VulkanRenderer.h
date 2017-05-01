@@ -27,17 +27,13 @@ struct SwapChainSupportDetails
 	std::vector<VkPresentModeKHR> presentModes;
 };
 
-struct Vertex
+struct VulkanVertex
 {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-
 	static VkVertexInputBindingDescription GetVertPosColTexBindingDescription();
 	static VkVertexInputBindingDescription GetVertPosColBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, 3> GetVertPosColTexAttributeDescriptions();
 	static std::array<VkVertexInputAttributeDescription, 2> GetVertPosColAttributeDescriptions();
-	bool operator==(const Vertex& other) const;
+	//bool operator==(const VulkanVertex& other) const;
 };
 
 struct UniformBufferObject
@@ -90,6 +86,8 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
+	
+	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
@@ -131,10 +129,8 @@ private:
 	void CreateTextureSampler();
 	void LoadModel(const std::string& filePath);
 
-	void CreateCube(float size, glm::vec3 offset);
-
-	void CreateVertexBuffer();
-	void CreateIndexBuffer();
+	void CreateVertexBuffer(glm::uint renderID);
+	void CreateIndexBuffer(glm::uint renderID);
 	void CreateUniformBuffer();
 	void CreateDescriptorPool();
 	void CreateDescriptorSet();
@@ -167,7 +163,7 @@ private:
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 	std::vector<const char*> GetRequiredExtensions();
 	bool CheckValidationLayerSupport();
-	void UpdateUniformBuffer(const GameContext& gameContext);
+	void UpdateUniformBuffer(const GameContext& gameContext, const UniformBufferObject& ubo);
 
 	static std::vector<char> ReadFile(const std::string& filename);
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags, 
@@ -176,17 +172,29 @@ private:
 
 	struct RenderObject
 	{
+		RenderObject(const VDeleter<VkDevice>& device)
+		{
+			vertexBuffer = VDeleter<VkBuffer>(device, vkDestroyBuffer);
+			vertexBufferMemory = VDeleter<VkBuffer>(device, vkFreeMemory);
+			indexBuffer = VDeleter<VkBuffer>(device, vkDestroyBuffer);
+			indexBufferMemory = VDeleter<VkBuffer>(device, vkFreeMemory);
+		}
+
 		glm::uint renderID;
 
 		glm::uint VAO;
 		glm::uint VBO;
 		glm::uint IBO;
 
-		glm::uint vertexBuffer;
+		VDeleter<VkBuffer> vertexBuffer; //{ device, vkDestroyBuffer }
+		VDeleter<VkDeviceMemory> vertexBufferMemory; // { device, vkFreeMemory };
+		VDeleter<VkBuffer> indexBuffer; // { device, vkDestroyBuffer };
+		VDeleter<VkDeviceMemory> indexBufferMemory; // { device, vkFreeMemory };
+		std::vector<VkCommandBuffer> commandBuffers;
+
 		std::vector<VertexPosCol>* vertices = nullptr;
 
-		bool indexed;
-		glm::uint indexBuffer;
+		bool indexed = false;
 		std::vector<glm::uint>* indices = nullptr;
 
 		glm::uint MVP;
@@ -251,13 +259,8 @@ private:
 	VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
 	VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
 
-	std::vector<VertexPosCol> m_Vertices;
-	std::vector<uint32_t> m_Indices;
-
-	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
-	VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
+	//std::vector<VertexPosCol> m_Vertices;
+	//std::vector<uint32_t> m_Indices;
 
 	VDeleter<VkBuffer> uniformStagingBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> uniformStagingBufferMemory{ device, vkFreeMemory };
@@ -267,12 +270,10 @@ private:
 	VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
 	VkDescriptorSet descriptorSet;
 
-	std::vector<VkCommandBuffer> commandBuffers;
-
 	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
 	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
 
-	VkClearColorValue m_ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+	VkClearColorValue m_ClearColor;
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;

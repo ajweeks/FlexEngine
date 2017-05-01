@@ -61,6 +61,8 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) = 0;
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices) = 0;
 	
+	virtual void SetClearColor(float r, float g, float b) = 0;
+
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;
 
 	virtual void SetVSyncEnabled(bool enableVSync) = 0;

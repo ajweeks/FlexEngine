@@ -20,7 +20,10 @@ FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float z
 	m_MoveSpeedSlowMultiplier(0.1f),
 	m_RotationSpeed(0.0011f),
 	m_Yaw(0.0f),
-	m_Pitch(0.0f)
+	m_Pitch(0.0f),
+	m_View(mat4(0.0f)),
+	m_Proj(mat4(0.0f)),
+	m_ViewProjection(mat4(0.0f))
 {
 	gameContext.camera = this;
 	RecalculateViewProjection(gameContext);
@@ -76,11 +79,13 @@ void FreeCamera::Update(const GameContext& gameContext)
 	}
 	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_E))
 	{
-		translation += m_Up;
+		if (gameContext.flipY) translation -= m_Up;
+		else translation += m_Up;
 	}
 	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_Q))
 	{
-		translation -= m_Up;
+		if (gameContext.flipY) translation += m_Up;
+		else translation -= m_Up;
 	}
 
 	float speedMultiplier = 1.0f;
@@ -116,6 +121,16 @@ void FreeCamera::SetZFar(float zFar)
 glm::mat4 FreeCamera::GetViewProjection() const
 {
 	return m_ViewProjection;
+}
+
+glm::mat4 FreeCamera::GetView() const
+{
+	return m_View;
+}
+
+glm::mat4 FreeCamera::GetProj() const
+{
+	return m_Proj;
 }
 
 void FreeCamera::SetMoveSpeed(float moveSpeed)
@@ -155,10 +170,10 @@ void FreeCamera::RecalculateViewProjection(const GameContext& gameContext)
 {
 	const vec2 windowSize = gameContext.window->GetSize();
 	float aspectRatio = windowSize.x / (float)windowSize.y;
-	mat4 projection = perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
+	m_Proj = perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
 
 	mat4 translation = translate(mat4(1.0f), m_Position);
 
-	mat4 view = lookAt(m_Position, m_Position + m_Forward, m_Up);
-	m_ViewProjection = projection * view;
+	m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
+	m_ViewProjection = m_Proj * m_View;
 }

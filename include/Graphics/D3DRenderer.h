@@ -14,7 +14,9 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
-	
+
+	virtual void SetClearColor(float r, float g, float b) override;
+
 	virtual void PostInitialize() override;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
@@ -101,7 +103,7 @@ private:
 
 	RECT m_bloomRect;
 
-	DirectX::XMVECTORF32 m_ClearColor = DirectX::Colors::DarkGoldenrod;
+	DirectX::XMVECTORF32 m_ClearColor;
 
 	//Microsoft::WRL::ComPtr<ID3D11Buffer> m_shapeVB;
 	//Microsoft::WRL::ComPtr<ID3D11Buffer> m_shapeIB;

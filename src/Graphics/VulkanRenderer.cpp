@@ -42,7 +42,8 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext)
 	//LoadAndBindGLTexture("resources/images/test2.jpg", m_TextureID);
 	//glUniform1i(glGetUniformLocation(m_ProgramID, "texTest"), 0);
 
-	m_Vertices.resize(20);
+	// Vulkan is flipped
+	gameContext.flipY = true;
 
 	CreateInstance();
 	SetupDebugCallback();
@@ -70,8 +71,11 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext)
 
 void VulkanRenderer::PostInitialize()
 {
-	CreateVertexBuffer();
-	CreateIndexBuffer();
+	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	{
+		CreateVertexBuffer(i);
+		CreateIndexBuffer(i);
+	}
 	CreateUniformBuffer();
 	CreateDescriptorPool();
 	CreateDescriptorSet();
@@ -81,23 +85,11 @@ void VulkanRenderer::PostInitialize()
 
 VulkanRenderer::~VulkanRenderer()
 {
-	//for (size_t i = 0; i < m_RenderObjects.size(); i++)
-	//{
-	//	glDeleteBuffers(1, &m_RenderObjects[i]->VBO);
-	//	if (m_RenderObjects[i]->indexed)
-	//	{
-	//		glDeleteBuffers(1, &m_RenderObjects[i]->IBO);
-	//	}
-	//
-	//	delete m_RenderObjects[i];
-	//}
-	//m_RenderObjects.clear();
-	//
-	//glDeleteProgram(m_Program);
-	//glDisableVertexAttribArray(1);
-	//glDisableVertexAttribArray(0);
-	//glBindBuffer(GL_ARRAY_BUFFER, 0);
-	//glBindVertexArray(0);
+	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	{
+		delete m_RenderObjects[i];
+	}
+	m_RenderObjects.clear();
 	
 	vkDeviceWaitIdle(device);
 
@@ -106,15 +98,28 @@ VulkanRenderer::~VulkanRenderer()
 
 glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
 {
+	size_t renderID = m_RenderObjects.size();
+	RenderObject* renderObject = new RenderObject(device);
+	m_RenderObjects.push_back(renderObject);
+
+	renderObject->vertices = vertices;
+
+	//const size_t offset = m_Vertices.size();
+	//m_Vertices.resize(m_Vertices.size() + vertices->size());
+	//for (size_t i = 0; i < vertices->size(); ++i)
+	//{
+	//	m_Vertices[i + offset] = (*vertices)[i];
+	//	m_Vertices[i + offset].pos.y *= -1;
+	//}
+
 	//CreateCube(1.0f, vec3(1.5f * count, 0.0f, 0.0f));
-	m_Vertices = *vertices;
 
 	//for (size_t i = 0; i < m_Vertices.size(); i++)
 	//{
 	//	m_Vertices[i].pos.y = -m_Vertices[i].pos.y;
 	//}
 
-	return 0;
+	return renderID;
 	//const uint renderID = m_RenderObjects.size();
 	//
 	//RenderObject* object = new RenderObject();
@@ -144,9 +149,19 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector
 
 glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices)
 {
-	Initialize(gameContext, vertices);
+	glm::uint renderID = Initialize(gameContext, vertices);
+	
+	RenderObject* renderObject = GetRenderObject(renderID);
+	renderObject->indices = indices;
+	renderObject->indexed = true;
 
-	m_Indices = *indices;
+	//m_Indices = *indices;
+	//const size_t offset = m_Indices.size() - 1;
+	//m_Indices.resize(m_Indices.size() + indices->size());
+	//for (size_t i = offset; i < m_Indices.size(); i++)
+	//{
+	//	m_Indices[i] = (*indices)[i];
+	//}
 
 	//const uint renderID = Initialize(gameContext, vertices);
 	//
@@ -160,7 +175,12 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector
 	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices->at(0)) * indices->size(), indices->data(), GL_STATIC_DRAW);
 	//
 	//return renderID;
-	return 0;
+	return renderID;
+}
+
+void VulkanRenderer::SetClearColor(float r, float g, float b)
+{
+	m_ClearColor = { r, g, b, 1.0f };
 }
 
 void VulkanRenderer::Draw(const GameContext& gameContext, glm::uint renderID)
@@ -201,18 +221,37 @@ void VulkanRenderer::Clear(int flags, const GameContext& gameContext)
 void VulkanRenderer::SwapBuffers(const GameContext& gameContext)
 {
 	//glfwSwapBuffers(gameContext.window->IsGLFWWindow());
-	// TODO: Swap buffers here!
 
-	UpdateUniformBuffer(gameContext);
+	//UpdateUniformBuffer(gameContext);
 	DrawFrame(gameContext.window);
 }
 
 void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model)
 {
-	//RenderObject* renderObject = GetRenderObject(renderID);
-	//
+	RenderObject* renderObject = GetRenderObject(renderID);
+	
 	//glm::mat4 MVP = gameContext.camera->GetViewProjection() * model;
-	//glUniformMatrix4fv(renderObject->MVP, 1, false, &MVP[0][0]);
+
+	UniformBufferObject ubo = {};
+	ubo.model = model;
+	ubo.view = gameContext.camera->GetView();
+	ubo.proj = gameContext.camera->GetProj();
+
+	//const glm::vec3 eyePos(2.0f, 2.0f, 2.0f);
+	//ubo.view = glm::lookAt(eyePos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	//
+	//const float FOVdegrees = 45.0f;
+	//const float nearPlane = 0.1f;
+	//const float farPlane = 10.0f;
+	//ubo.proj = glm::perspective(glm::radians(FOVdegrees), swapChainExtent.width / (float)swapChainExtent.height, nearPlane, farPlane);
+	//ubo.proj[1][1] *= -1;
+	
+	void* data;
+	vkMapMemory(device, uniformStagingBufferMemory, 0, sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(device, uniformStagingBufferMemory);
+
+	UpdateUniformBuffer(gameContext, ubo);
 }
 
 int VulkanRenderer::GetShaderUniformLocation(glm::uint program, const std::string uniformName)
@@ -316,13 +355,13 @@ VulkanRenderer::RenderObject* VulkanRenderer::GetRenderObject(int renderID)
 // Vertex hash function
 namespace std
 {
-	template<> struct hash<Vertex>
+	template<> struct hash<VertexPosColTex>
 	{
-		size_t operator()(Vertex const& vertex) const
+		size_t operator()(VertexPosColTex const& vertex) const
 		{
 			return ((hash<glm::vec3>()(vertex.pos) ^
-				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.texCoord) << 1);
+				(hash<glm::vec3>()(vertex.col) << 1)) >> 1) ^
+				(hash<glm::vec2>()(vertex.uv) << 1);
 		}
 	};
 }
@@ -713,8 +752,8 @@ void VulkanRenderer::CreateGraphicsPipeline()
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-	auto bindingDescription = Vertex::GetVertPosColBindingDescription();
-	auto attributeDescription = Vertex::GetVertPosColAttributeDescriptions();
+	auto bindingDescription = VulkanVertex::GetVertPosColBindingDescription();
+	auto attributeDescription = VulkanVertex::GetVertPosColAttributeDescriptions();
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1044,74 +1083,80 @@ void VulkanRenderer::CreateTextureImage()
 
 void VulkanRenderer::CreateCommandBuffers()
 {
-	if (commandBuffers.size() > 0)
+	for (RenderObject* renderObject : m_RenderObjects)
 	{
-		vkFreeCommandBuffers(device, commandPool, commandBuffers.size(), commandBuffers.data());
-	}
-
-	commandBuffers.resize(swapChainFramebuffers.size());
-
-	VkCommandBufferAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = commandPool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
-
-	if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to allocate command buffers!");
-	}
-
-	for (size_t i = 0; i < commandBuffers.size(); i++)
-	{
-		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-		vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
-
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = renderPass;
-		renderPassInfo.framebuffer = swapChainFramebuffers[i];
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swapChainExtent;
-
-		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = m_ClearColor;
-		clearValues[1].depthStencil = { 1.0f, 0 };
-
-		renderPassInfo.clearValueCount = clearValues.size();
-		renderPassInfo.pClearValues = clearValues.data();
-
-		vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-		VkBuffer vertexBuffers[] = { vertexBuffer };
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-
-		if (!m_Indices.empty())
+		if (renderObject->commandBuffers.size() > 0)
 		{
-			vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkFreeCommandBuffers(device, commandPool, renderObject->commandBuffers.size(), renderObject->commandBuffers.data());
 		}
 
-		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+		renderObject->commandBuffers.resize(swapChainFramebuffers.size());
 
-		// Non-indexed drawing:
-#if 1
-		vkCmdDraw(commandBuffers[i], m_Vertices.size(), 1, 0, 0);
-#else
-		// Indexed drawing:
-#endif
-		//vkCmdDrawIndexed(commandBuffers[i], indices.size(), 1, 0, 0, 0);
+		VkCommandBufferAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = commandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = (uint32_t)renderObject->commandBuffers.size();
 
-		vkCmdEndRenderPass(commandBuffers[i]);
-
-		if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
+		if (vkAllocateCommandBuffers(device, &allocInfo, renderObject->commandBuffers.data()) != VK_SUCCESS)
 		{
-			throw std::runtime_error("failed to record command buffer!");
+			throw std::runtime_error("failed to allocate command buffers!");
+		}
+
+		for (size_t i = 0; i < renderObject->commandBuffers.size(); i++)
+		{
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+			vkBeginCommandBuffer(renderObject->commandBuffers[i], &beginInfo);
+
+			VkRenderPassBeginInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = renderPass;
+			renderPassInfo.framebuffer = swapChainFramebuffers[i];
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = swapChainExtent;
+
+			std::array<VkClearValue, 2> clearValues = {};
+			clearValues[0].color = m_ClearColor;
+			clearValues[1].depthStencil = { 1.0f, 0 };
+
+			renderPassInfo.clearValueCount = clearValues.size();
+			renderPassInfo.pClearValues = clearValues.data();
+
+			vkCmdBeginRenderPass(renderObject->commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			vkCmdBindPipeline(renderObject->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+			std::vector<VkBuffer> vertexBuffers = { renderObject->vertexBuffer };
+
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(renderObject->commandBuffers[i], 0, 1, vertexBuffers.data(), offsets);
+
+			VkBuffer indexBuffer = renderObject->indexBuffer;
+			if (renderObject->indices && !renderObject->indices->empty())
+			{
+				vkCmdBindIndexBuffer(renderObject->commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			}
+
+			vkCmdBindDescriptorSets(renderObject->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+			if (renderObject->indexed)
+			{
+				vkCmdDrawIndexed(renderObject->commandBuffers[i], renderObject->indices->size(), 1, 0, 0, 0);
+			}
+			else
+			{
+				vkCmdDraw(renderObject->commandBuffers[i], renderObject->vertices->size(), 1, 0, 0);
+			}
+
+			vkCmdEndRenderPass(renderObject->commandBuffers[i]);
+
+			if (vkEndCommandBuffer(renderObject->commandBuffers[i]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("failed to record command buffer!");
+			}
 		}
 	}
 }
@@ -1263,35 +1308,6 @@ void VulkanRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
 	EndSingleTimeCommands(commandBuffer);
 }
 
-void VulkanRenderer::CreateCube(float size, glm::vec3 offset)
-{
-	const float hSize = size / 2.0f;
-	m_Vertices.push_back({ offset + vec3{ -hSize, -hSize, -hSize },{ 1.0f, 0.0f, 0.0f } });
-	m_Vertices.push_back({ offset + vec3{ -hSize, hSize, -hSize },{ 0.5f, 0.5f, 0.0f } });
-	m_Vertices.push_back({ offset + vec3{ hSize, hSize, -hSize },{ 1.0f, 0.0f, 1.0f } });
-	m_Vertices.push_back({ offset + vec3{ hSize, -hSize, -hSize }, { 0.0f, 0.5f, 1.0f } });
-						 
-	m_Vertices.push_back({ offset + vec3{ -hSize, -hSize, hSize },{ 1.0f, 0.0f, 0.0f }});
-	m_Vertices.push_back({ offset + vec3{ -hSize, hSize, hSize },{ 1.0f, 0.0f, 1.0f } });
-	m_Vertices.push_back({ offset + vec3{ hSize, hSize, hSize },{ 0.0f, 1.0f, 0.5f } });
-	m_Vertices.push_back({ offset + vec3{ hSize, -hSize, hSize },{ 0.0f, 0.5f, 1.0f } });
-
-	const int indexOffset = m_Vertices.size() - 8;
-
-	std::vector<uint> newIndices = { 
-		0, 1, 2, 0, 2, 3, // F
-		1, 5, 6, 1, 6, 2, // T
-		5, 4, 7, 5, 7, 6, // B
-		4, 0, 3, 4, 3, 7, // D
-		4, 5, 1, 4, 1, 0, // L
-		3, 2, 6, 3, 6, 7, // R
-	};
-
-	std::for_each(newIndices.begin(), newIndices.end(), [indexOffset](uint& val) { val += indexOffset; });
-
-	std::copy(newIndices.begin(), newIndices.end(), std::back_inserter(m_Indices));
-}
-
 void VulkanRenderer::LoadModel(const std::string& filePath)
 {
 	tinyobj::attrib_t attrib;
@@ -1299,7 +1315,7 @@ void VulkanRenderer::LoadModel(const std::string& filePath)
 	std::vector<tinyobj::material_t> materials;
 	std::string err;
 
-	std::unordered_map<Vertex, int> uniqueVertices = {};
+	std::unordered_map<VertexPosColTex, int> uniqueVertices = {};
 
 	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filePath.c_str()))
 	{
@@ -1336,9 +1352,10 @@ void VulkanRenderer::LoadModel(const std::string& filePath)
 	//}
 }
 
-void VulkanRenderer::CreateVertexBuffer()
+void VulkanRenderer::CreateVertexBuffer(glm::uint renderID)
 {
-	const size_t bufferSize = sizeof(m_Vertices[0]) * m_Vertices.size();
+	RenderObject* renderObject = GetRenderObject(renderID);
+	const size_t bufferSize = sizeof(renderObject->vertices[0]) * renderObject->vertices->size();
 
 	VDeleter<VkBuffer> stagingBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> stagingBufferMemory{ device, vkFreeMemory };
@@ -1347,19 +1364,21 @@ void VulkanRenderer::CreateVertexBuffer()
 
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, m_Vertices.data(), bufferSize);
+	memcpy(data, renderObject->vertices->data(), bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderObject->vertexBuffer, renderObject->vertexBufferMemory);
 
-	CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+	CopyBuffer(stagingBuffer, renderObject->vertexBuffer, bufferSize);
 }
 
-void VulkanRenderer::CreateIndexBuffer()
+void VulkanRenderer::CreateIndexBuffer(glm::uint renderID)
 {
-	if (m_Indices.empty()) return;
-	const size_t bufferSize = sizeof(m_Indices[0]) * m_Indices.size();
+	RenderObject* renderObject = GetRenderObject(renderID);
+
+	if (!renderObject->indices || renderObject->indices->empty()) return;
+	const size_t bufferSize = sizeof(renderObject->indices[0]) * renderObject->indices->size();
 
 	VDeleter<VkBuffer> stagingBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> stagingBufferMemory{ device, vkFreeMemory };
@@ -1368,13 +1387,13 @@ void VulkanRenderer::CreateIndexBuffer()
 
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, m_Indices.data(), bufferSize);
+	memcpy(data, renderObject->indices->data(), bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderObject->indexBuffer, renderObject->indexBufferMemory);
 
-	CopyBuffer(stagingBuffer, indexBuffer, bufferSize);
+	CopyBuffer(stagingBuffer, renderObject->indexBuffer, bufferSize);
 }
 
 void VulkanRenderer::CreateUniformBuffer()
@@ -1516,8 +1535,23 @@ void VulkanRenderer::DrawFrame(Window* window)
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+
+
+	// TODO: FIXME: Is this what you do with command buffers??
+	// One per object or what?
+
+
+	submitInfo.commandBufferCount = m_RenderObjects.size();
+	std::vector<std::vector<VkCommandBuffer>> commandBuffers;
+	for (size_t i = 0; i < m_RenderObjects[0]->commandBuffers.size(); ++i)
+	{
+		commandBuffers.push_back({});
+		for (RenderObject* renderObject : m_RenderObjects)
+		{
+			commandBuffers[commandBuffers.size() - 1].push_back(renderObject->commandBuffers[i]);
+		}
+	}
+	submitInfo.pCommandBuffers = commandBuffers[imageIndex].data();
 
 	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
 	submitInfo.signalSemaphoreCount = 1;
@@ -1770,25 +1804,25 @@ bool VulkanRenderer::CheckValidationLayerSupport()
 	return true;
 }
 
-void VulkanRenderer::UpdateUniformBuffer(const GameContext& gameContext)
+void VulkanRenderer::UpdateUniformBuffer(const GameContext& gameContext, const UniformBufferObject& ubo)
 {
-	UniformBufferObject ubo = {};
-	float degreesPerSecond = 90.0f;
-	ubo.model = glm::rotate(glm::mat4(), gameContext.elapsedTime * glm::radians(degreesPerSecond), glm::vec3(0.0f, 0.0f, 1.0f));
-
-	const glm::vec3 eyePos(2.0f, 2.0f, 2.0f);
-	ubo.view = glm::lookAt(eyePos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-
-	const float FOVdegrees = 45.0f;
-	const float nearPlane = 0.1f;
-	const float farPlane = 10.0f;
-	ubo.proj = glm::perspective(glm::radians(FOVdegrees), swapChainExtent.width / (float)swapChainExtent.height, nearPlane, farPlane);
-	ubo.proj[1][1] *= -1;
-
-	void* data;
-	vkMapMemory(device, uniformStagingBufferMemory, 0, sizeof(ubo), 0, &data);
-	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(device, uniformStagingBufferMemory);
+	//UniformBufferObject ubo = {};
+	//float degreesPerSecond = 90.0f;
+	//ubo.model = glm::rotate(glm::mat4(), gameContext.elapsedTime * glm::radians(degreesPerSecond), glm::vec3(0.0f, 0.0f, 1.0f));
+	//
+	//const glm::vec3 eyePos(2.0f, 2.0f, 2.0f);
+	//ubo.view = glm::lookAt(eyePos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	//
+	//const float FOVdegrees = 45.0f;
+	//const float nearPlane = 0.1f;
+	//const float farPlane = 10.0f;
+	//ubo.proj = glm::perspective(glm::radians(FOVdegrees), swapChainExtent.width / (float)swapChainExtent.height, nearPlane, farPlane);
+	//ubo.proj[1][1] *= -1;
+	//
+	//void* data;
+	//vkMapMemory(device, uniformStagingBufferMemory, 0, sizeof(ubo), 0, &data);
+	//memcpy(data, &ubo, sizeof(ubo));
+	//vkUnmapMemory(device, uniformStagingBufferMemory);
 
 	CopyBuffer(uniformStagingBuffer, uniformBuffer, sizeof(ubo));
 }
@@ -1823,17 +1857,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsE
 #pragma endregion
 
 #pragma region Vertex
-VkVertexInputBindingDescription Vertex::GetVertPosColTexBindingDescription()
+VkVertexInputBindingDescription VulkanVertex::GetVertPosColTexBindingDescription()
 {
 	VkVertexInputBindingDescription bindingDesc = {};
 	bindingDesc.binding = 0;
-	bindingDesc.stride = sizeof(Vertex);
+	bindingDesc.stride = sizeof(VertexPosColTex);
 	bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 	return bindingDesc;
 }
 
-VkVertexInputBindingDescription Vertex::GetVertPosColBindingDescription()
+VkVertexInputBindingDescription VulkanVertex::GetVertPosColBindingDescription()
 {
 	VkVertexInputBindingDescription bindingDesc = {};
 	bindingDesc.binding = 0;
@@ -1843,49 +1877,49 @@ VkVertexInputBindingDescription Vertex::GetVertPosColBindingDescription()
 	return bindingDesc;
 }
 
-std::array<VkVertexInputAttributeDescription, 3> Vertex::GetVertPosColTexAttributeDescriptions()
+std::array<VkVertexInputAttributeDescription, 3> VulkanVertex::GetVertPosColTexAttributeDescriptions()
 {
 	std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions;
 
 	attributeDescriptions[0].binding = 0;
 	attributeDescriptions[0].location = 0;
 	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(Vertex, pos);
+	attributeDescriptions[0].offset = offsetof(VertexPosColTex, pos);
 
 	attributeDescriptions[1].binding = 0;
 	attributeDescriptions[1].location = 1;
 	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(Vertex, color);
+	attributeDescriptions[1].offset = offsetof(VertexPosColTex, col);
 
 	attributeDescriptions[2].binding = 0;
 	attributeDescriptions[2].location = 2;
 	attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+	attributeDescriptions[2].offset = offsetof(VertexPosColTex, uv);
 
 	return attributeDescriptions;
 }
 
-std::array<VkVertexInputAttributeDescription, 2> Vertex::GetVertPosColAttributeDescriptions()
+std::array<VkVertexInputAttributeDescription, 2> VulkanVertex::GetVertPosColAttributeDescriptions()
 {
 	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions;
 
 	attributeDescriptions[0].binding = 0;
 	attributeDescriptions[0].location = 0;
 	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(Vertex, pos);
+	attributeDescriptions[0].offset = offsetof(VertexPosCol, pos);
 
 	attributeDescriptions[1].binding = 0;
 	attributeDescriptions[1].location = 1;
 	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(Vertex, color);
+	attributeDescriptions[1].offset = offsetof(VertexPosCol, col);
 
 	return attributeDescriptions;
 }
 
-bool Vertex::operator==(const Vertex& other) const
-{
-	return pos == other.pos && color == other.color && texCoord == other.texCoord;
-}
+//bool VulkanVertex::operator==(const VulkanVertex& other) const
+//{
+//	return pos == other.pos && color == other.color && texCoord == other.texCoord;
+//}
 #pragma endregion // Vertex
 
 #pragma region VDeleter
@@ -1966,4 +2000,4 @@ void VDeleter<T>::cleanup()
 }
 #pragma endregion // VDeleter
 
-#endif // COMPILE_OPEN_GL
+#endif // COMPILE_VULKAN

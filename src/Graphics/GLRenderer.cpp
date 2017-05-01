@@ -14,7 +14,7 @@ using namespace glm;
 GLRenderer::GLRenderer(GameContext& gameContext) :
 	m_Program(gameContext.program)
 {
-	glClearColor(0.08f, 0.13f, 0.2f, 1.0f);
+	gameContext.flipY = false;
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -95,6 +95,11 @@ uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexP
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices->at(0)) * indices->size(), indices->data(), GL_STATIC_DRAW);
 
 	return renderID;
+}
+
+void GLRenderer::SetClearColor(float r, float g, float b)
+{
+	glClearColor(r, g, b, 1.0f);
 }
 
 void GLRenderer::PostInitialize()

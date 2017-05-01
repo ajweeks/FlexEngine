@@ -125,6 +125,8 @@ D3DRenderer::D3DRenderer(GameContext& gameContext) :
 
 	m_featureLevel(D3D_FEATURE_LEVEL_9_1)
 {
+	gameContext.flipY = false;
+
 	//glClearColor(0.08f, 0.13f, 0.2f, 1.0f);
 
 	//glEnable(GL_DEPTH_TEST);
@@ -194,6 +196,11 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices->at(0)) * indices->size(), indices->data(), GL_STATIC_DRAW);
 
 	return renderID;
+}
+
+void D3DRenderer::SetClearColor(float r, float g, float b)
+{
+	m_ClearColor = { r, g, b, 1.0f };
 }
 
 void D3DRenderer::PostInitialize()

@@ -18,6 +18,8 @@ public:
 	void SetZNear(float zNear);
 	void SetZFar(float zFar);
 	glm::mat4 GetViewProjection() const;
+	glm::mat4 GetView() const;
+	glm::mat4 GetProj() const;
 
 	void SetMoveSpeed(float moveSpeed);
 	void SetRotationSpeed(float rotationSpeed);
@@ -31,6 +33,8 @@ public:
 private:
 	void RecalculateViewProjection(const GameContext& gameContext);
 
+	glm::mat4 m_View;
+	glm::mat4 m_Proj;
 	glm::mat4 m_ViewProjection;
 	float m_FOV;
 	float m_ZNear;
