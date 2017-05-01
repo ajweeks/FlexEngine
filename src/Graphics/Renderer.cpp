@@ -3,9 +3,8 @@
 #include "Graphics/Renderer.h"
 #include "GameContext.h"
 
-Renderer::Renderer(GameContext& gameContext)
+Renderer::Renderer()
 {
-	gameContext.renderer = this;
 }
 
 Renderer::~Renderer()

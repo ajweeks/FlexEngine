@@ -121,7 +121,6 @@ namespace
 };
 
 D3DRenderer::D3DRenderer(GameContext& gameContext) :
-	Renderer(gameContext),
 	m_Program(gameContext.program),
 
 	m_featureLevel(D3D_FEATURE_LEVEL_9_1)

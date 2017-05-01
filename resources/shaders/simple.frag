@@ -1,5 +1,6 @@
 #version 400
 
+
 //uniform sampler2D texTest;
 uniform float in_Time;
 
@@ -9,5 +10,6 @@ out vec4 fragmentColor;
 
 void main() {
 	fragmentColor = vec4(ex_Color, 1.0);
-	fragmentColor.r = fract(fragmentColor.r * 5 + in_Time * 2) + fract((fragmentColor.g) * 3);
+	fragmentColor.r = fract(fract(fragmentColor.r * 1.2 + in_Time * 0.6) + fract((fragmentColor.b) * 3.5));
+	fragmentColor.rgb *= vec3((gl_FragCoord.x / 1000.0) + 0.3);
 }

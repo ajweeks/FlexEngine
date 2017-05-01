@@ -12,13 +12,16 @@
 using namespace glm;
 
 GLRenderer::GLRenderer(GameContext& gameContext) :
-	Renderer(gameContext),
 	m_Program(gameContext.program)
 {
 	glClearColor(0.08f, 0.13f, 0.2f, 1.0f);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CCW);
 	
 	glUseProgram(gameContext.program);
 
@@ -136,7 +139,7 @@ void GLRenderer::Clear(int flags, const GameContext& gameContext)
 
 void GLRenderer::SwapBuffers(const GameContext& gameContext)
 {
-	glfwSwapBuffers(gameContext.window->IsGLFWWindow());
+	glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 }
 
 void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint renderID, const glm::mat4x4& model)

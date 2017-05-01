@@ -16,7 +16,7 @@ std::vector<uint8_t> ReadFile(const std::string& filePath)
 	std::streampos fileLength = inFile.tellg();
 
 	std::vector<uint8_t> data;
-	data.resize(fileLength);
+	data.resize((size_t)fileLength);
 
 	inFile.seekg(0, std::ios::beg);
 

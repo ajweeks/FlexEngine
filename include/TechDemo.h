@@ -25,6 +25,8 @@ private:
 	GameContext m_GameContext;
 	FreeCamera* m_DefaultCamera;
 
+	int m_RendererIndex = 0;
+
 	bool m_Running;
 
 	TechDemo(const TechDemo&) = delete;

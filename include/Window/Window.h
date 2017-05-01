@@ -39,15 +39,13 @@ public:
 
 	virtual void SetCursorMode(CursorMode mode) = 0;
 
-	GLFWwindow* IsGLFWWindow();
-
-protected:
 	// Callbacks
 	virtual void KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, int mods);
 	virtual void MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods);
 	virtual void WindowFocusCallback(int focused);
 	virtual void CursorPosCallback(double x, double y);
 	virtual void WindowSizeCallback(int width, int height);
+protected:
 
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 	// GL Windows
@@ -58,12 +56,16 @@ protected:
 	friend void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN
 
+#if COMPILE_D3D
+	friend LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 	// D3D Windows
 	//friend LRESULT D3DKeyCallback(HWND hWnd, int keyCode, WPARAM wParam, LPARAM lParam);
 	//friend LRESULT D3DMouseButtonCallback(HWND hWnd, int button, WPARAM wParam, LPARAM lParam);
 	//friend LRESULT D3DWindowFocusCallback(HWND hWnd, int focused);
 	//friend LRESULT D3DCursorPosCallback(HWND hWnd, double x, double y);
 	//friend LRESULT D3DWindowSizeCallback(HWND hWnd, int width, int height);
+#endif
 
 	//void UpdateWindowSize(int width, int height);
 	//void UpdateWindowSize(glm::vec2i windowSize);

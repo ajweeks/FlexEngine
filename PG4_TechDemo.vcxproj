@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Graphics\MultiRenderer.cpp" />
     <ClCompile Include="src\Helpers.cpp" />
     <ClCompile Include="src\Graphics\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GLRenderer.cpp" />
@@ -149,6 +150,7 @@
     <ClCompile Include="src\Window\D3DWindowWrapper.cpp" />
     <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
     <ClCompile Include="src\Window\GLWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\MultiWindowWrapper.cpp" />
     <ClCompile Include="src\Window\VulkanWindowWrapper.cpp" />
     <ClCompile Include="src\Window\Window.cpp" />
     <ClCompile Include="src\Scene\BaseScene.cpp" />
@@ -170,6 +172,7 @@
     <ClInclude Include="include\Graphics\GLHelpers.h" />
     <ClInclude Include="include\Graphics\D3DRenderer.h" />
     <ClInclude Include="include\Graphics\GLRenderer.h" />
+    <ClInclude Include="include\Graphics\MultiRenderer.h" />
     <ClInclude Include="include\ReadData.h" />
     <ClInclude Include="include\ReadFile.h" />
     <ClInclude Include="include\Graphics\VulkanRenderer.h" />
@@ -190,6 +193,7 @@
     <ClInclude Include="include\InputManager.h" />
     <ClInclude Include="include\Window\D3DWindowWrapper.h" />
     <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
+    <ClInclude Include="include\Window\MultiWindowWrapper.h" />
     <ClInclude Include="include\Window\VulkanWindowWrapper.h" />
     <ClInclude Include="include\Window\Window.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />

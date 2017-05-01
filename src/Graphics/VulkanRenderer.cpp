@@ -30,9 +30,7 @@
 
 using namespace glm;
 
-VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
-	Renderer(gameContext)
-	//m_Program(gameContext.program)
+VulkanRenderer::VulkanRenderer(GameContext& gameContext)
 {
 	//glClearColor(0.08f, 0.13f, 0.2f, 1.0f);
 	//
@@ -43,6 +41,8 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 
 	//LoadAndBindGLTexture("resources/images/test2.jpg", m_TextureID);
 	//glUniform1i(glGetUniformLocation(m_ProgramID, "texTest"), 0);
+
+	m_Vertices.resize(20);
 
 	CreateInstance();
 	SetupDebugCallback();
@@ -408,7 +408,7 @@ void VulkanRenderer::SetupDebugCallback()
 
 void VulkanRenderer::CreateSurface(Window* window)
 {
-	if (glfwCreateWindowSurface(instance, window->IsGLFWWindow(), nullptr, surface.replace()) != VK_SUCCESS)
+	if (glfwCreateWindowSurface(instance, ((VulkanWindowWrapper*)window)->GetWindow(), nullptr, surface.replace()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create window surface!");
 	}
@@ -754,7 +754,7 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 
 	VkPipelineMultisampleStateCreateInfo multisampling = {};
@@ -1610,7 +1610,7 @@ VkExtent2D VulkanRenderer::ChooseSwapExtent(Window* window, const VkSurfaceCapab
 	else
 	{
 		int width, height;
-		glfwGetWindowSize(window->IsGLFWWindow(), &width, &height);
+		glfwGetWindowSize(((VulkanWindowWrapper*)window)->GetWindow(), &width, &height);
 
 		VkExtent2D actualExtent = { (uint32_t)width, (uint32_t)height };
 

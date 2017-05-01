@@ -61,12 +61,12 @@ void CubePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm::q
 
 		// Bottom
 		{ -1.0f, -1.0f, -1.0f, 	colours[3] },
-		{ -1.0f, -1.0f,  1.0f, 	colours[3] },
+		{ 1.0f, -1.0f, -1.0f, 	colours[3] },
 		{ 1.0f,  -1.0f,  1.0f, 	colours[3] },
 
 		{ -1.0f, -1.0f, -1.0f, 	colours[3] },
 		{ 1.0f, -1.0f,  1.0f, 	colours[3] },
-		{ 1.0f, -1.0f, -1.0f, 	colours[3] },
+		{ -1.0f, -1.0f,  1.0f, 	colours[3] },
 
 		// Right
 		{ 1.0f, -1.0f, -1.0f, 	colours[4] },
@@ -79,12 +79,12 @@ void CubePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm::q
 
 		// Left
 		{ -1.0f, -1.0f, -1.0f, colours[5] },
-		{ -1.0f,  1.0f, -1.0f, colours[5] },
 		{ -1.0f,  1.0f,  1.0f, colours[5] },
+		{ -1.0f,  1.0f, -1.0f, colours[5] },
 										
 		{ -1.0f, -1.0f, -1.0f, 	colours[5] },
-		{ -1.0f,  1.0f,  1.0f, 	colours[5] },
 		{ -1.0f, -1.0f,  1.0f, 	colours[5] },
+		{ -1.0f,  1.0f,  1.0f, 	colours[5] },
 	};
 
 	std::for_each(m_Vertices.begin(), m_Vertices.end(), [](VertexPosCol& vert) { vert.pos[0] *= 0.5f; vert.pos[1] *= 0.5f; vert.pos[2] *= 0.5f; });

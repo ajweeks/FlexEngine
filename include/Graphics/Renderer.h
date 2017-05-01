@@ -11,7 +11,7 @@ struct GameContext;
 class Renderer
 {
 public:
-	Renderer(GameContext& gameContext);
+	Renderer();
 	virtual ~Renderer();
 
 	enum class ClearFlag

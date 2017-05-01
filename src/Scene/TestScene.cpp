@@ -12,6 +12,9 @@ TestScene::TestScene(const GameContext& gameContext) :
 	//m_Sphere1.Init(gameContext, vec3(0.0f, 0.0f, 0.0f));
 	m_Cube.Init(gameContext, vec3(0.0f, 0.0f, -6.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f));
 	m_Cube2.Init(gameContext, vec3(0.0f, 0.0f, 4.0f), quat(vec3(0.0f, 0.0f, 2.0f)), vec3(1.0f, 5.0f, 1.0f));
+
+	m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
+
 	//
 	//m_CubesWide = 10;
 	//m_CubesLong = 10;
@@ -62,6 +65,8 @@ void TestScene::Destroy(const GameContext& gameContext)
 
 void TestScene::UpdateAndRender(const GameContext& gameContext)
 {
+	gameContext.renderer->SetUniform1f(m_TimeID, gameContext.elapsedTime);
+
 	//m_Sphere1.Render(gameContext);
 	m_Cube.Render(gameContext);
 	m_Cube2.Render(gameContext);

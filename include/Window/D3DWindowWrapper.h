@@ -3,9 +3,6 @@
 
 #include "Window.h"
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
 struct GameContext;
 
 class D3DWindowWrapper : public Window
@@ -22,10 +19,10 @@ public:
 
 	virtual void SetSize(int width, int height) override;
 
-	//static InputManager::Action D3DActionToInputManagerAction(int action);
-	//static InputManager::KeyCode D3DKeyToInputManagerKey(int keyCode);
-	//static int D3DModsToInputManagerMods(int glfwMods);
-	//static InputManager::MouseButton D3DButtonToInputManagerMouseButton(int button);
+	static InputManager::Action D3DActionToInputManagerAction(int action);
+	static InputManager::KeyCode D3DKeyToInputManagerKey(int keyCode);
+	static int D3DModsToInputManagerMods(int windowsMods);
+	static InputManager::MouseButton D3DButtonToInputManagerMouseButton(int button);
 
 	HWND GetWindowHandle() const;
 
@@ -34,7 +31,6 @@ private:
 	void RegisterWindow(const std::string& title, glm::vec2i size, const GameContext& gameContext);
 	virtual void SetWindowTitle(const std::string& title) override;
 
-	static LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	HWND m_Window;
 	float m_PreviousFrameTime;
@@ -45,6 +41,7 @@ private:
 	D3DWindowWrapper& operator=(const D3DWindowWrapper&) = delete;
 };
 
+LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 uint16_t ExtractInt(uint16_t orig16BitWord, unsigned from, unsigned to);
 
 // Event callbacks

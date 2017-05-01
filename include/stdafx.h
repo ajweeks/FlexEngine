@@ -2,32 +2,14 @@
 
 #define NOMINMAX
 
-#define COMPILE_OPEN_GL 0
-#define COMPILE_VULKAN 0
+#define COMPILE_OPEN_GL 1
+#define COMPILE_VULKAN 1
 #define COMPILE_D3D 1
-
-// Ensure more than one API isn't defined
-#if COMPILE_VULKAN
-#if COMPILE_OPEN_GL || COMPILE_D3D
-assert(false);
-#endif
-#endif
-
-#if COMPILE_OPEN_GL
-#if COMPILE_VULKAN || COMPILE_D3D
-assert(false);
-#endif
-#endif
-
-#if COMPILE_D3D
-#if COMPILE_OPEN_GL || COMPILE_VULKAN
-assert(false);
-#endif
-#endif
 
 #if COMPILE_VULKAN
 	#include <glad/glad.h>
-	#define GLFW_INCLUDE_VULKAN
+	#include <vulkan\vulkan.h>
+	//#define GLFW_INCLUDE_VULKAN
 	#include <GLFW/glfw3.h>
 
 	#include "Graphics/VulkanRenderer.h"
@@ -36,7 +18,7 @@ assert(false);
 
 #if COMPILE_OPEN_GL
 	#include <glad/glad.h>
-	#define GLFW_INCLUDE_NONE
+	//#define GLFW_INCLUDE_NONE
 	#include <GLFW/glfw3.h>
 
 	#include "Graphics/GLRenderer.h"
@@ -87,6 +69,9 @@ assert(false);
 		}
 	}
 #endif // COMPILE_D3D
+
+#include "Graphics/MultiRenderer.h"
+#include "Window/MultiWindowWrapper.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

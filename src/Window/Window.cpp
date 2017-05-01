@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 
 #include "Window/Window.h"
-#include "Window/GLWindowWrapper.h"
 #include "Helpers.h"
 #include "Logger.h"
 
@@ -43,27 +42,6 @@ vec2i Window::GetSize() const
 bool Window::HasFocus() const
 {
 	return m_HasFocus;
-}
-
-GLFWwindow* Window::IsGLFWWindow() 
-{
-#if COMPILE_OPEN_GL
-	GLWindowWrapper* glWindow = dynamic_cast<GLWindowWrapper*>(this);
-	if (glWindow)
-	{
-		return glWindow->GetWindow();
-	}
-#endif
-	
-#if COMPILE_VULKAN
-	VulkanWindowWrapper* vulkanWindow = dynamic_cast<VulkanWindowWrapper*>(this);
-	if (vulkanWindow)
-	{
-		return vulkanWindow->GetWindow();
-	}
-#endif
-
-	return nullptr;
 }
 
 void Window::SetTitleString(const std::string& title)
