@@ -207,6 +207,8 @@ private:
 
 	bool m_VSyncEnabled;
 
+
+
 	const std::string MODEL_PATH = "resources/models/chalet.obj";
 	const std::string MODEL_TEXTURE_PATH = "resources/textures/chalet.jpg";
 
@@ -228,7 +230,7 @@ private:
 
 	VDeleter<VkInstance> m_Instance{ vkDestroyInstance };
 	VDeleter<VkDebugReportCallbackEXT> m_Callback{ m_Instance, DestroyDebugReportCallbackEXT };
-	VDeleter<VkSurfaceKHR> surface{ m_Instance, vkDestroySurfaceKHR };
+	VDeleter<VkSurfaceKHR> m_Surface{ m_Instance, vkDestroySurfaceKHR };
 
 	VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 	VDeleter<VkDevice> m_Device{ vkDestroyDevice };
