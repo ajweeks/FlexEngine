@@ -210,68 +210,68 @@ private:
 	const std::string MODEL_PATH = "resources/models/chalet.obj";
 	const std::string MODEL_TEXTURE_PATH = "resources/textures/chalet.jpg";
 
-	const std::vector<const char*> validationLayers =
+	const std::vector<const char*> m_ValidationLayers =
 	{
 		"VK_LAYER_LUNARG_standard_validation"
 	};
 
-	const std::vector<const char*> deviceExtensions =
+	const std::vector<const char*> m_DeviceExtensions =
 	{
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 
 #ifdef NDEBUG
-	const bool enableValidationLayers = false;
+	const bool m_EnableValidationLayers = false;
 #else
-	const bool enableValidationLayers = true;
+	const bool m_EnableValidationLayers = true;
 #endif
 
-	VDeleter<VkInstance> instance{ vkDestroyInstance };
-	VDeleter<VkDebugReportCallbackEXT> callback{ instance, DestroyDebugReportCallbackEXT };
-	VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
+	VDeleter<VkInstance> m_Instance{ vkDestroyInstance };
+	VDeleter<VkDebugReportCallbackEXT> m_Callback{ m_Instance, DestroyDebugReportCallbackEXT };
+	VDeleter<VkSurfaceKHR> surface{ m_Instance, vkDestroySurfaceKHR };
 
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	VDeleter<VkDevice> device{ vkDestroyDevice };
+	VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
+	VDeleter<VkDevice> m_Device{ vkDestroyDevice };
 
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
+	VkQueue m_GraphicsQueue;
+	VkQueue m_PresentQueue;
 
-	VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
-	std::vector<VkImage> swapChainImages;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
-	std::vector<VDeleter<VkImageView>> swapChainImageViews;
-	std::vector<VDeleter<VkFramebuffer>> swapChainFramebuffers;
+	VDeleter<VkSwapchainKHR> m_SwapChain{ m_Device, vkDestroySwapchainKHR };
+	std::vector<VkImage> m_SwapChainImages;
+	VkFormat m_SwapChainImageFormat;
+	VkExtent2D m_SwapChainExtent;
+	std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
+	std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
-	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
-	VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ device, vkDestroyDescriptorSetLayout };
-	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
-	VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
+	VDeleter<VkRenderPass> m_RenderPass{ m_Device, vkDestroyRenderPass };
+	VDeleter<VkDescriptorSetLayout> m_DescriptorSetLayout{ m_Device, vkDestroyDescriptorSetLayout };
+	VDeleter<VkPipelineLayout> m_PipelineLayout{ m_Device, vkDestroyPipelineLayout };
+	VDeleter<VkPipeline> m_GraphicsPipeline{ m_Device, vkDestroyPipeline };
 
-	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+	VDeleter<VkCommandPool> m_CommandPool{ m_Device, vkDestroyCommandPool };
 
-	VDeleter<VkImage> textureImage{ device, vkDestroyImage };
-	VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
-	VDeleter<VkImageView> textureImageView{ device, vkDestroyImageView };
-	VDeleter<VkSampler> textureSampler{ device, vkDestroySampler };
+	VDeleter<VkImage> m_TextureImage{ m_Device, vkDestroyImage };
+	VDeleter<VkDeviceMemory> m_TextureImageMemory{ m_Device, vkFreeMemory };
+	VDeleter<VkImageView> m_TextureImageView{ m_Device, vkDestroyImageView };
+	VDeleter<VkSampler> m_TextureSampler{ m_Device, vkDestroySampler };
 
-	VDeleter<VkImage> depthImage{ device, vkDestroyImage };
-	VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
-	VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
+	VDeleter<VkImage> m_DepthImage{ m_Device, vkDestroyImage };
+	VDeleter<VkDeviceMemory> m_DepthImageMemory{ m_Device, vkFreeMemory };
+	VDeleter<VkImageView> m_DepthImageView{ m_Device, vkDestroyImageView };
 
 	//std::vector<VertexPosCol> m_Vertices;
 	//std::vector<uint32_t> m_Indices;
 
-	VDeleter<VkBuffer> uniformStagingBuffer{ device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> uniformStagingBufferMemory{ device, vkFreeMemory };
-	VDeleter<VkBuffer> uniformBuffer{ device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> uniformBufferMemory{ device, vkFreeMemory };
+	VDeleter<VkBuffer> m_UniformStagingBuffer{ m_Device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> m_UniformStagingBufferMemory{ m_Device, vkFreeMemory };
+	VDeleter<VkBuffer> m_UniformBuffer{ m_Device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> m_UniformBufferMemory{ m_Device, vkFreeMemory };
 
-	VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
-	VkDescriptorSet descriptorSet;
+	VDeleter<VkDescriptorPool> m_DescriptorPool{ m_Device, vkDestroyDescriptorPool };
+	VkDescriptorSet m_DescriptorSet;
 
-	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
-	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
+	VDeleter<VkSemaphore> m_ImageAvailableSemaphore{ m_Device, vkDestroySemaphore };
+	VDeleter<VkSemaphore> m_RenderFinishedSemaphore{ m_Device, vkDestroySemaphore };
 
 	VkClearColorValue m_ClearColor;
 
