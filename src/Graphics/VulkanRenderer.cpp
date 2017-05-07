@@ -1357,7 +1357,7 @@ void VulkanRenderer::LoadModel(const std::string& filePath)
 void VulkanRenderer::CreateVertexBuffer(glm::uint renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
-	const size_t bufferSize = sizeof(renderObject->vertices[0]) * renderObject->vertices->size();
+	const size_t bufferSize = sizeof((*renderObject->vertices)[0]) * renderObject->vertices->size();
 
 	VDeleter<VkBuffer> stagingBuffer{ m_Device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> stagingBufferMemory{ m_Device, vkFreeMemory };
