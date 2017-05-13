@@ -9,6 +9,32 @@
 struct GameContext;
 class Window;
 
+template <typename T>
+class VDeleter
+{
+public:
+	VDeleter();
+
+	VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef);
+	VDeleter(const VDeleter<VkInstance>& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef);
+	VDeleter(const VDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef);
+	~VDeleter();
+
+	const T* operator &() const;
+	T* replace();
+	operator T() const;
+	void operator=(T rhs);
+
+	template<typename V>
+	bool operator==(V rhs);
+
+private:
+	T object{ VK_NULL_HANDLE };
+	std::function<void(T)> deleter;
+
+	void cleanup();
+};
+
 struct QueueFamilyIndices
 {
 	int graphicsFamily = -1;
@@ -36,43 +62,50 @@ struct VulkanVertex
 	//bool operator==(const VulkanVertex& other) const;
 };
 
-struct UniformBufferObject
+struct Buffer
 {
-	glm::mat4 model;
+	Buffer(const VDeleter<VkDevice>& device) :
+		buffer(VDeleter<VkBuffer>(device, vkDestroyBuffer)),
+		memory(VDeleter<VkDeviceMemory>(device, vkFreeMemory))
+	{}
+
+	VDeleter<VkBuffer> buffer; // { m_Device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> memory; // { m_Device, vkFreeMemory };
+	VkDescriptorBufferInfo descriptor;
+	VkDeviceSize size = 0;
+	VkDeviceSize alignment = 0;
+	void* mapped = nullptr;
+
+	VkBufferUsageFlags usageFlags;
+	VkMemoryPropertyFlags memoryPropertyFlags;
+};
+
+struct UniformBuffers 
+{
+	UniformBuffers(const VDeleter<VkDevice>& device) :
+		viewBuffer(device),
+		dynamicBuffer(device)
+	{}
+
+	Buffer viewBuffer;
+	Buffer dynamicBuffer;
+};
+
+struct UniformBufferObjectData 
+{
+	glm::mat4 projection;
 	glm::mat4 view;
-	glm::mat4 proj;
+};
+
+struct UniformBufferObjectDynamic
+{
+	glm::mat4* model;
 };
 
 VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 	const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
 
 void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
-
-template <typename T>
-class VDeleter
-{
-public:
-	VDeleter();
-
-	VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef);
-	VDeleter(const VDeleter<VkInstance>& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef);
-	VDeleter(const VDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef);
-	~VDeleter();
-
-	const T* operator &() const;
-	T* replace();
-	operator T() const;
-	void operator=(T rhs);
-
-	template<typename V>
-	bool operator==(V rhs);
-
-private:
-	T object{ VK_NULL_HANDLE };
-	std::function<void(T)> deleter;
-
-	void cleanup();
-};
 
 
 class VulkanRenderer : public Renderer
@@ -91,6 +124,8 @@ public:
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
+	virtual void OnWindowSize(int width, int height) override;
+
 	virtual void SetVSyncEnabled(bool enableVSync) override;
 	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
@@ -106,11 +141,6 @@ public:
 	virtual void Destroy(glm::uint renderID) override;
 
 private:
-	//static GLuint BufferTargetToGLTarget(BufferTarget bufferTarget);
-	//static GLenum TypeToGLType(Type type);
-	//static GLenum UsageFlagToGLUsageFlag(UsageFlag usage);
-	//static GLenum ModeToGLMode(Mode mode);
-
 	void CreateInstance();
 	void SetupDebugCallback();
 	void CreateSurface(Window* window);
@@ -121,20 +151,26 @@ private:
 	void CreateRenderPass();
 	void CreateDescriptorSetLayout();
 	void CreateGraphicsPipeline();
-	void CreateCommandPool();
 	void CreateDepthResources();
 	void CreateFramebuffers();
-	void CreateTextureImage();
+	void CreateTextureImage(const std::string& filePath);
 	void CreateTextureImageView();
 	void CreateTextureSampler();
 	void LoadModel(const std::string& filePath);
 
-	void CreateVertexBuffer(glm::uint renderID);
-	void CreateIndexBuffer(glm::uint renderID);
-	void CreateUniformBuffer();
+	void CreateVertexBuffer();
+	void CreateIndexBuffer();
+	void PrepareUniformBuffers();
 	void CreateDescriptorPool();
 	void CreateDescriptorSet();
+
+	void CreateCommandPool();
+	void ReBuildCommandBuffers();
 	void CreateCommandBuffers();
+	void BuildCommandBuffers();
+	bool CheckCommandBuffers();
+	void DestroyCommandBuffers();
+	
 	void CreateSemaphores();
 
 	void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VDeleter<VkImageView>& imageView);
@@ -149,9 +185,8 @@ private:
 	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
-	void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-		VDeleter<VkBuffer>& buffer, VDeleter<VkDeviceMemory>& bufferMemory);
-	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer& buffer);
+	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 	void DrawFrame(Window* window);
 	void CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule);
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -163,7 +198,9 @@ private:
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 	std::vector<const char*> GetRequiredExtensions();
 	bool CheckValidationLayerSupport();
-	void UpdateUniformBuffer(const GameContext& gameContext, const UniformBufferObject& ubo);
+
+	void UpdateUniformBuffer(const GameContext& gameContext);
+	void UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model);
 
 	static std::vector<char> ReadFile(const std::string& filename);
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags, 
@@ -172,30 +209,18 @@ private:
 
 	struct RenderObject
 	{
-		RenderObject(const VDeleter<VkDevice>& device)
-		{
-			vertexBuffer = VDeleter<VkBuffer>(device, vkDestroyBuffer);
-			vertexBufferMemory = VDeleter<VkBuffer>(device, vkFreeMemory);
-			indexBuffer = VDeleter<VkBuffer>(device, vkDestroyBuffer);
-			indexBufferMemory = VDeleter<VkBuffer>(device, vkFreeMemory);
-		}
-
 		glm::uint renderID;
 
 		glm::uint VAO;
 		glm::uint VBO;
 		glm::uint IBO;
 
-		VDeleter<VkBuffer> vertexBuffer; //{ device, vkDestroyBuffer }
-		VDeleter<VkDeviceMemory> vertexBufferMemory; // { device, vkFreeMemory };
-		VDeleter<VkBuffer> indexBuffer; // { device, vkDestroyBuffer };
-		VDeleter<VkDeviceMemory> indexBufferMemory; // { device, vkFreeMemory };
-		std::vector<VkCommandBuffer> commandBuffers;
-
 		std::vector<VertexPosCol>* vertices = nullptr;
+		glm::uint vertexOffset = 0;
 
 		bool indexed = false;
 		std::vector<glm::uint>* indices = nullptr;
+		glm::uint indexOffset = 0;
 
 		glm::uint MVP;
 	};
@@ -206,11 +231,7 @@ private:
 	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;
-
-
-
-	const std::string MODEL_PATH = "resources/models/chalet.obj";
-	const std::string MODEL_TEXTURE_PATH = "resources/textures/chalet.jpg";
+	bool m_SwapChainNeedsRebuilding;
 
 	const std::vector<const char*> m_ValidationLayers =
 	{
@@ -233,6 +254,7 @@ private:
 	VDeleter<VkSurfaceKHR> m_Surface{ m_Instance, vkDestroySurfaceKHR };
 
 	VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDeviceProperties m_PhysicalDeviceProperties;
 	VDeleter<VkDevice> m_Device{ vkDestroyDevice };
 
 	VkQueue m_GraphicsQueue;
@@ -246,11 +268,13 @@ private:
 	std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
 	VDeleter<VkRenderPass> m_RenderPass{ m_Device, vkDestroyRenderPass };
+	VkDescriptorSet m_DescriptorSet;
 	VDeleter<VkDescriptorSetLayout> m_DescriptorSetLayout{ m_Device, vkDestroyDescriptorSetLayout };
 	VDeleter<VkPipelineLayout> m_PipelineLayout{ m_Device, vkDestroyPipelineLayout };
 	VDeleter<VkPipeline> m_GraphicsPipeline{ m_Device, vkDestroyPipeline };
 
 	VDeleter<VkCommandPool> m_CommandPool{ m_Device, vkDestroyCommandPool };
+	std::vector<VkCommandBuffer> m_CommandBuffers;
 
 	VDeleter<VkImage> m_TextureImage{ m_Device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> m_TextureImageMemory{ m_Device, vkFreeMemory };
@@ -264,18 +288,26 @@ private:
 	//std::vector<VertexPosCol> m_Vertices;
 	//std::vector<uint32_t> m_Indices;
 
-	VDeleter<VkBuffer> m_UniformStagingBuffer{ m_Device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> m_UniformStagingBufferMemory{ m_Device, vkFreeMemory };
-	VDeleter<VkBuffer> m_UniformBuffer{ m_Device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> m_UniformBufferMemory{ m_Device, vkFreeMemory };
+	//VDeleter<VkBuffer> m_UniformStagingBuffer{ m_Device, vkDestroyBuffer };
+	//VDeleter<VkDeviceMemory> m_UniformStagingBufferMemory{ m_Device, vkFreeMemory };
+	//VDeleter<VkBuffer> m_UniformBuffer{ m_Device, vkDestroyBuffer };
+	//VDeleter<VkDeviceMemory> m_UniformBufferMemory{ m_Device, vkFreeMemory };
 
 	VDeleter<VkDescriptorPool> m_DescriptorPool{ m_Device, vkDestroyDescriptorPool };
-	VkDescriptorSet m_DescriptorSet;
+
+	Buffer m_VertexBuffer;
+	Buffer m_IndexBuffer;
+
+	size_t m_DynamicAlignment;
 
 	VDeleter<VkSemaphore> m_ImageAvailableSemaphore{ m_Device, vkDestroySemaphore };
 	VDeleter<VkSemaphore> m_RenderFinishedSemaphore{ m_Device, vkDestroySemaphore };
-
+	
 	VkClearColorValue m_ClearColor;
+
+	UniformBuffers m_UniformBuffers;
+	UniformBufferObjectData m_UniformBufferData;
+	UniformBufferObjectDynamic m_UniformBufferDynamic;
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;

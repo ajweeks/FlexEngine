@@ -128,6 +128,11 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 	glBindVertexArray(0);
 }
 
+void GLRenderer::OnWindowSize(int width, int height)
+{
+	glViewport(0, 0, width, height);
+}
+
 void GLRenderer::SetVSyncEnabled(bool enableVSync)
 {
 	m_VSyncEnabled = enableVSync;

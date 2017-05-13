@@ -65,6 +65,8 @@ public:
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;
 
+	virtual void OnWindowSize(int width, int height) = 0;
+
 	virtual void SetVSyncEnabled(bool enableVSync) = 0;
 	virtual void Clear(int flags, const GameContext& gameContext) = 0;
 	virtual void SwapBuffers(const GameContext& gameContext) = 0;

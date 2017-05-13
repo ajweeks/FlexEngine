@@ -19,13 +19,12 @@ FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float z
 	m_MoveSpeedFastMultiplier(3.5f),
 	m_MoveSpeedSlowMultiplier(0.1f),
 	m_RotationSpeed(0.0011f),
-	m_Yaw(0.0f),
-	m_Pitch(0.0f),
 	m_View(mat4(0.0f)),
 	m_Proj(mat4(0.0f)),
 	m_ViewProjection(mat4(0.0f))
 {
 	gameContext.camera = this;
+	ResetOrientation();
 	RecalculateViewProjection(gameContext);
 }
 
@@ -160,9 +159,8 @@ void FreeCamera::ResetPosition()
 
 void FreeCamera::ResetOrientation()
 {
-	m_Forward = vec3(0.0f, 0.0f, 1.0f);
-	m_Up = vec3(0.0f, 1.0f, 0.0f);
-	m_Right = vec3(1.0f, 0.0f, 0.0f);
+	m_Pitch = 0.0f;
+	m_Yaw = glm::half_pi<float>();
 }
 
 // TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)

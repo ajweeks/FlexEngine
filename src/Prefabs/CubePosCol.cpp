@@ -43,12 +43,12 @@ void CubePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm::q
 
 		// Top
 		{ -1.0f, 1.0f, -1.0f, 	colours[1] },
-		{ -1.0f, 1.0f,  1.0f, 	colours[1] },
-		{ 1.0f,  1.0f,  1.0f, 	colours[1] },
+		{  -1.0f, 1.0f,  1.0f, 	colours[1] },
+		{  1.0f,  1.0f,  1.0f, 	colours[1] },
 
-		{ -1.0f, 1.0f, -1.0f, 	colours[1] },
-		{ 1.0f,  1.0f,  1.0f, 	colours[1] },
-		{ 1.0f,  1.0f, -1.0f, 	colours[1] },
+		{  -1.0f, 1.0f, -1.0f, 	colours[1] },
+		{  1.0f,  1.0f,  1.0f, 	colours[1] },
+		{  1.0f,  1.0f, -1.0f, 	colours[1] },
 
 		// Back
 		{ 1.0f, -1.0f, 1.0f, 	colours[2] },

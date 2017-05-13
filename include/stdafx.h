@@ -8,12 +8,26 @@
 
 #if COMPILE_VULKAN
 	#include <glad/glad.h>
-	#include <vulkan\vulkan.h>
+	#include <vulkan/vulkan.h>
 	//#define GLFW_INCLUDE_VULKAN
 	#include <GLFW/glfw3.h>
 
 	#include "Graphics/VulkanRenderer.h"
 	#include "Window/VulkanWindowWrapper.h"
+
+	std::string VulkanErrorString(VkResult errorCode);
+
+#ifndef VK_CHECK_RESULT
+#define VK_CHECK_RESULT(f)																				\
+{																										\
+	VkResult res = (f);																					\
+	if (res != VK_SUCCESS)																				\
+	{																									\
+		std::cerr << "Vulkan fatal error: VkResult is \"" << VulkanErrorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
+		assert(res == VK_SUCCESS);																		\
+	}																									\
+}
+#endif // VK_CHECK_RESULT
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL

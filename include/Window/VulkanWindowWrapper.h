@@ -15,7 +15,6 @@ public:
 	virtual void SetSize(int width, int height) override;
 
 private:
-	virtual void WindowSizeCallback(int width, int height) override;
 	static void VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 
 	VulkanWindowWrapper(const VulkanWindowWrapper&) = delete;

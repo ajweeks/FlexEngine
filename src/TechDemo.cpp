@@ -76,7 +76,7 @@ void TechDemo::Initialize()
 	m_SceneManager->AddScene(testScene);
 
 	m_DefaultCamera = new FreeCamera(m_GameContext);
-	m_DefaultCamera->SetPosition(vec3(-10.0f, 3.0f, -5.0f));
+	m_DefaultCamera->SetPosition(vec3(0.0f, 0.0f, -8.0f));
 	m_GameContext.camera = m_DefaultCamera;
 
 	m_GameContext.inputManager = new InputManager();

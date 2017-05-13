@@ -197,7 +197,8 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 
 	return renderID;
 }
-
+
+
 void D3DRenderer::SetClearColor(float r, float g, float b)
 {
 	m_ClearColor = { r, g, b, 1.0f };
@@ -235,6 +236,11 @@ void D3DRenderer::Draw(const GameContext& gameContext, uint renderID)
 	m_SpriteBatch->End();
 
 	m_Shape->Draw(m_World, m_View, m_Projection);
+}
+
+void D3DRenderer::OnWindowSize(int width, int height)
+{
+	// TODO: Recreate swap chain!
 }
 
 void D3DRenderer::SetVSyncEnabled(bool enableVSync)

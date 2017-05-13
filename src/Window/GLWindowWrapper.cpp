@@ -65,7 +65,7 @@ GLWindowWrapper::~GLWindowWrapper()
 void GLWindowWrapper::SetSize(int width, int height)
 {
 	m_Size = glm::vec2i(width, height);
-	glViewport(0, 0, width, height);
+	m_GameContextRef.renderer->OnWindowSize(width, height);
 }
 
 #endif // COMPILE_OPEN_GL

@@ -22,6 +22,8 @@ public:
 	
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
+	virtual void OnWindowSize(int width, int height) override;
+
 	virtual void SetVSyncEnabled(bool enableVSync) override;
 	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;

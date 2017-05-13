@@ -75,6 +75,14 @@ void MultiRenderer::Draw(const GameContext& gameContext, glm::uint renderID)
 	}
 }
 
+void MultiRenderer::OnWindowSize(int width, int height)
+{
+	for (size_t i = 0; i < m_Renderers.size(); i++)
+	{
+		m_Renderers[i]->OnWindowSize(width, height);
+	}
+}
+
 void MultiRenderer::SetVSyncEnabled(bool enableVSync)
 {
 	for (size_t i = 0; i < m_Renderers.size(); ++i)

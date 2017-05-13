@@ -406,7 +406,7 @@ void D3DWindowWrapper::Update(const GameContext& gameContext)
 void D3DWindowWrapper::SetSize(int width, int height)
 {
 	m_Size = glm::vec2i(width, height);
-	// TODO: Resize viewport here
+	m_GameContextRef.renderer->OnWindowSize(width, height);
 }
 
 void D3DWindowWrapper::SetWindowTitle(const std::string& title)

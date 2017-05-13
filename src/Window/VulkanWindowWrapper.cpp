@@ -63,13 +63,7 @@ VulkanWindowWrapper::~VulkanWindowWrapper()
 void VulkanWindowWrapper::SetSize(int width, int height)
 {
 	m_Size = glm::vec2i(width, height);
-	// TODO: Resize viewport here!
-}
-
-void VulkanWindowWrapper::WindowSizeCallback(int width, int height)
-{
-	Window::WindowSizeCallback(width, height);
-	// TODO: Recreate vulkan swap chain!
+	m_GameContextRef.renderer->OnWindowSize(width, height);
 }
 
 void VulkanWindowWrapper::VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y)
