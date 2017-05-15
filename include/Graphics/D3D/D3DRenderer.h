@@ -1,7 +1,7 @@
 #pragma once
 #if COMPILE_D3D
 
-#include "Renderer.h"
+#include "../Renderer.h"
 
 struct GameContext;
 
@@ -52,11 +52,13 @@ private:
 		glm::uint IBO;
 
 		std::vector<VertexPosCol>* vertices = nullptr;
+		ID3D11Buffer* m_pVertexBuffer;
 
 		bool indexed;
 		std::vector<glm::uint>* indices = nullptr;
+		ID3D11Buffer* m_pIndexBuffer;
 
-		glm::uint MVP;
+		glm::mat4 world;
 	};
 
 	RenderObject* GetRenderObject(int renderID);
@@ -74,9 +76,14 @@ private:
 	void CreateResources(const GameContext& gameContext);
 
 	void OnDeviceLost(const GameContext& gameContext);
-	void PostProcess();
+	void Draw(const GameContext& gameContext);
 	void UpdateUniformBuffers(const GameContext& gameContext);
 
+	void InitializeVertexBuffer(glm::uint renderID);
+	void UpdateVertexBuffer(glm::uint renderID);
+
+	void InitializeIndexBuffer(glm::uint renderID);
+	void UpdateIndexBuffer(glm::uint renderID);
 
 	D3D_FEATURE_LEVEL m_featureLevel;
 	Microsoft::WRL::ComPtr<ID3D11Device> m_Device;
@@ -90,20 +97,22 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_DepthStencilView;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_BackBuffer;
 
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_SceneTex;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_SceneSRV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_SceneRT;
+	// Used for post-processing
+	//Microsoft::WRL::ComPtr<ID3D11Texture2D> m_SceneTex;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_SceneSRV;
+	//Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_SceneRT;
 
 	DirectX::XMVECTORF32 m_ClearColor;
 
-	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_InputLayout;
-	std::unique_ptr<DirectX::IEffect> m_Effect;
+	ID3D11InputLayout* m_pInputLayout;
+	ID3DX11Effect* m_pEffect;
+	ID3DX11EffectTechnique* m_pTechnique;
+
+	ID3DX11EffectMatrixVariable* m_pWorldViewProjectionVariable;
 
 	glm::mat4 m_World;
 	glm::mat4 m_View;
 	glm::mat4 m_Projection;
-
-	std::unique_ptr<DirectX::GeometricPrimitive> m_Shape;
 
 	bool m_Wireframe = false;
 	bool m_EnableMSAA = false;

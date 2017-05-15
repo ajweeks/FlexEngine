@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #if COMPILE_D3D
 
-#include "Window/D3DWindowWrapper.h"
+#include "Window/D3D/D3DWindowWrapper.h"
 #include "Logger.h"
 #include "GameContext.h"
 #include "ShaderUtils.h"
@@ -331,8 +331,8 @@ void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size,
 	RECT rc;
 	rc.top = 0;
 	rc.left = 0;
-	rc.right = static_cast<LONG>(size.x);
-	rc.bottom = static_cast<LONG>(size.y);
+	rc.right = static_cast<LONG>(size.x / 2.0f);
+	rc.bottom = static_cast<LONG>(size.y / 2.0f);
 
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 

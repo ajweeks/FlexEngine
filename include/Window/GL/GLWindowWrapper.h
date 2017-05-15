@@ -1,7 +1,7 @@
 ﻿#pragma once
 #if COMPILE_OPEN_GL
 
-#include "GLFWWindowWrapper.h"
+#include "../GLFWWindowWrapper.h"
 
 struct GameContext;
 

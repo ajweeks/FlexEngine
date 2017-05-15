@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #if COMPILE_VULKAN
 
-#include "Graphics/VulkanRenderer.h"
+#include "Graphics/Vulkan/VulkanRenderer.h"
 #include "GameContext.h"
 #include "Window/Window.h"
 #include "Logger.h"

@@ -13,6 +13,9 @@ using namespace glm;
 
 TechDemo::TechDemo()
 {
+
+	m_RendererIndex = 2;
+
 }
 
 TechDemo::~TechDemo()
@@ -72,8 +75,7 @@ void TechDemo::Initialize()
 	m_GameContext.renderer->SetClearColor(0.08f, 0.13f, 0.2f);
 
 	m_SceneManager = new SceneManager();
-	TestScene* testScene = new TestScene(m_GameContext);
-	m_SceneManager->AddScene(testScene);
+	m_SceneManager->AddScene(new TestScene(m_GameContext));
 
 	m_DefaultCamera = new FreeCamera(m_GameContext);
 	m_DefaultCamera->SetPosition(vec3(0.0f, 0.0f, -8.0f));
@@ -87,10 +89,9 @@ void TechDemo::Initialize()
 void TechDemo::Destroy()
 {
 	m_SceneManager->Destroy(m_GameContext);
-
+	delete m_SceneManager;
 	delete m_GameContext.inputManager;
 	delete m_DefaultCamera;
-	delete m_SceneManager;
 	delete m_Window;
 	delete m_GameContext.renderer;
 }
@@ -129,7 +130,6 @@ void TechDemo::UpdateAndRender()
 		}
 	
 		m_GameContext.inputManager->PostUpdate();
-
 	
 		m_GameContext.renderer->SwapBuffers(m_GameContext);
 	}

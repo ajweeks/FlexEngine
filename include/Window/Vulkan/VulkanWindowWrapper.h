@@ -2,7 +2,7 @@
 #if COMPILE_VULKAN
 
 #define GLFW_INCLUDE_VULKAN
-#include "GLFWWindowWrapper.h"
+#include "../GLFWWindowWrapper.h"
 
 struct GameContext;
 

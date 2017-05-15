@@ -12,8 +12,8 @@
 	//#define GLFW_INCLUDE_VULKAN
 	#include <GLFW/glfw3.h>
 
-	#include "Graphics/VulkanRenderer.h"
-	#include "Window/VulkanWindowWrapper.h"
+	#include "Graphics/Vulkan/VulkanRenderer.h"
+	#include "Window/Vulkan/VulkanWindowWrapper.h"
 
 	std::string VulkanErrorString(VkResult errorCode);
 
@@ -35,17 +35,26 @@
 	//#define GLFW_INCLUDE_NONE
 	#include <GLFW/glfw3.h>
 
-	#include "Graphics/GLRenderer.h"
-	#include "Window/GLWindowWrapper.h"
+	#include "Graphics/GL/GLRenderer.h"
+	#include "Window/GL/GLWindowWrapper.h"
 #endif // COMPILE_OPEN_GL
 
 #if COMPILE_D3D
 	#include <d3d11.h>
-	#include <DirectXMath.h>
-	#include <DirectXColors.h>
-	#include <wrl/client.h>
-
 	#pragma comment(lib, "d3d11.lib")
+	#include <d3dcompiler.h>
+	#pragma comment(lib, "d3dcompiler.lib")
+
+	#include "d3dx11effect.h"
+	#if defined(DEBUG) || defined(_DEBUG)
+		#pragma comment(lib, "DxEffects11_vc14_Debug.lib")
+	#else 
+		#pragma comment(lib, "DxEffects11_vc14_Release.lib")
+	#endif
+
+	//#include <DirectXMath.h>
+	//#include <DirectXColors.h>
+	//#include <wrl/client.h>
 
 	// DirectXTK
 	#include "CommonStates.h"
@@ -66,8 +75,8 @@
 	#include "VertexTypes.h"
 	#include "WICTextureLoader.h"
 
-	#include "Graphics/D3DRenderer.h"
-	#include "Window/D3DWindowWrapper.h"
+	#include "Graphics/D3D/D3DRenderer.h"
+	#include "Window/D3D/D3DWindowWrapper.h"
 
 	#include "ReadData.h"
 

@@ -29,6 +29,31 @@ void Logger::Log(const std::string& message, LogLevel logLevel)
 	std::cout << message << std::endl;
 }
 
+void Logger::Log(const std::wstring& message, LogLevel logLevel)
+{
+	switch (logLevel)
+	{
+	case Logger::LogLevel::LOG_INFO:
+	{
+		std::wcout << L"[INFO]: ";
+	} break;
+	case Logger::LogLevel::LOG_WARNING:
+	{
+		std::wcout << L"[WARNING]: ";
+	} break;
+	case Logger::LogLevel::LOG_ERROR:
+	{
+		std::wcout << L"[ERROR]: ";
+	} break;
+	default:
+	{
+		std::wcout << L"UNHANDLED LOG LEVEL!: " + std::to_wstring(int(logLevel)) + L", message: ";
+	} break;
+	}
+
+	std::wcout << message << std::endl;
+}
+
 void Logger::LogInfo(const std::string& message)
 {
 	Log(message, LogLevel::LOG_INFO);
@@ -40,6 +65,21 @@ void Logger::LogWarning(const std::string& message)
 }
 
 void Logger::LogError(const std::string& message)
+{
+	Log(message, LogLevel::LOG_ERROR);
+}
+
+void Logger::LogInfo(const std::wstring& message)
+{
+	Log(message, LogLevel::LOG_INFO);
+}
+
+void Logger::LogWarning(const std::wstring& message)
+{
+	Log(message, LogLevel::LOG_WARNING);
+}
+
+void Logger::LogError(const std::wstring& message)
 {
 	Log(message, LogLevel::LOG_ERROR);
 }

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #if COMPILE_OPEN_GL
 
-#include "Graphics/GLRenderer.h"
+#include "Graphics/GL/GLRenderer.h"
 #include "GameContext.h"
 #include "Window/Window.h"
 #include "Logger.h"

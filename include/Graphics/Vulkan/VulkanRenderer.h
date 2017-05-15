@@ -1,7 +1,7 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#include "Renderer.h"
+#include "../Renderer.h"
 
 #include <functional>
 #include <vector>
@@ -221,8 +221,6 @@ private:
 		bool indexed = false;
 		std::vector<glm::uint>* indices = nullptr;
 		glm::uint indexOffset = 0;
-
-		glm::uint MVP;
 	};
 
 	RenderObject* GetRenderObject(int renderID);

@@ -2,7 +2,7 @@
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
 #include "Window/GLFWWindowWrapper.h"
-#include "Graphics/GLHelpers.h"
+#include "Graphics/GL/GLHelpers.h"
 #include "Logger.h"
 #include "GameContext.h"
 #include "ShaderUtils.h"

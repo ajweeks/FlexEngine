@@ -1,7 +1,7 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include "Renderer.h"
+#include "../Renderer.h"
 
 struct GameContext;
 
