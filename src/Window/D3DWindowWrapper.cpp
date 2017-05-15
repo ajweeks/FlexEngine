@@ -8,6 +8,8 @@
 #include "TechDemo.h"
 #include "InputManager.h"
 
+#include <Windowsx.h>
+
 #include <locale>
 #include <codecvt>
 
@@ -151,7 +153,9 @@ InputManager::KeyCode D3DWindowWrapper::D3DKeyToInputManagerKey(int keyCode)
 	case VK_ADD: inputKey = InputManager::KeyCode::KEY_KP_ADD; break;
 	//case VK_KP_ENTER: inputKey = InputManager::KeyCode::KEY_KP_ENTER; break;
 	//case VK_KP_EQUAL: inputKey = InputManager::KeyCode::KEY_KP_EQUAL; break;
+	case VK_SHIFT: // Fallthrough
 	case VK_LSHIFT: inputKey = InputManager::KeyCode::KEY_LEFT_SHIFT; break;
+	case VK_CONTROL: // Fallthrough
 	case VK_LCONTROL: inputKey = InputManager::KeyCode::KEY_LEFT_CONTROL; break;
 	case VK_LMENU: inputKey = InputManager::KeyCode::KEY_LEFT_ALT; break;
 	case VK_LWIN: inputKey = InputManager::KeyCode::KEY_LEFT_SUPER; break;
@@ -159,6 +163,7 @@ InputManager::KeyCode D3DWindowWrapper::D3DKeyToInputManagerKey(int keyCode)
 	case VK_RCONTROL: inputKey = InputManager::KeyCode::KEY_RIGHT_CONTROL; break;
 	case VK_RMENU: inputKey = InputManager::KeyCode::KEY_RIGHT_ALT; break;
 	case VK_RWIN: inputKey = InputManager::KeyCode::KEY_RIGHT_SUPER; break;
+	case VK_APPS: // Fallthrough (context menu)
 	case VK_MENU: inputKey = InputManager::KeyCode::KEY_MENU; break;
 	case -1: break; // We don't care about events GLFW can't handle
 	default:
@@ -278,6 +283,7 @@ uint16_t ExtractInt(uint16_t orig16BitWord, unsigned from, unsigned to)
 D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, GameContext& gameContext) :
 	Window(title, size, gameContext)
 {
+	// WINDOW ISN"T BEING UNREGISTERED
 	RegisterWindow(title, size, gameContext);
 	m_StartingTime = GetTickCount();
 
@@ -292,7 +298,7 @@ D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, Ga
 	//glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
 	//glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 
-	//m_HasFocus = true;
+	m_HasFocus = true;
 
 	//gameContext.program = ShaderUtils::LoadShaders("resources/shaders/simple.vert", "resources/shaders/simple.frag");
 }
@@ -330,8 +336,8 @@ void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size,
 	RECT rc;
 	rc.top = 0;
 	rc.left = 0;
-	rc.right = static_cast<LONG>(size.x / 2); // TODO: Remove / 2
-	rc.bottom = static_cast<LONG>(size.y / 2);
+	rc.right = static_cast<LONG>(size.x);
+	rc.bottom = static_cast<LONG>(size.y);
 
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -490,6 +496,13 @@ LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		const int inputMods = D3DWindowWrapper::D3DModsToInputManagerMods((int)wParam);
 
 		window->MouseButtonCallback(mouseButton, inputAction, inputMods);
+	} return 0;
+	case WM_MOUSEMOVE:
+	{
+		double x = GET_X_LPARAM(lParam);
+		double y = GET_Y_LPARAM(lParam);
+
+		window->CursorPosCallback(x, y);
 	} return 0;
 	}
 

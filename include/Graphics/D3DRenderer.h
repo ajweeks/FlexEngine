@@ -67,7 +67,6 @@ private:
 	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;
-	glm::uint m_Program;
 
 	D3DRenderer(const D3DRenderer&) = delete;
 	D3DRenderer& operator=(const D3DRenderer&) = delete;
@@ -80,58 +79,40 @@ private:
 	
 	void PostProcess();
 
+	void UpdateUniformBuffers(const GameContext& gameContext);
+
+
 	D3D_FEATURE_LEVEL m_featureLevel;
-	Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;
-	Microsoft::WRL::ComPtr<ID3D11Device1> m_d3dDevice1;
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_d3dContext;
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext1> m_d3dContext1;
+	Microsoft::WRL::ComPtr<ID3D11Device> m_Device;
+	Microsoft::WRL::ComPtr<ID3D11Device1> m_Device1;
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_DeviceContext;
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext1> m_DeviceContext1;
 
-	Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
-	Microsoft::WRL::ComPtr<IDXGISwapChain1> m_swapChain1;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_renderTargetView;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthStencilView;
+	Microsoft::WRL::ComPtr<IDXGISwapChain> m_SwapChain;
+	Microsoft::WRL::ComPtr<IDXGISwapChain1> m_SwapChain1;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_RenderTargetView;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_DepthStencilView;
 
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_backBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_BackBuffer;
 
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_sceneTex;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_sceneSRV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_sceneRT;
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_rt1SRV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rt1RT;
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_rt2SRV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rt2RT;
-
-	RECT m_bloomRect;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_SceneTex;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_SceneSRV;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_SceneRT;
 
 	DirectX::XMVECTORF32 m_ClearColor;
 
-	//Microsoft::WRL::ComPtr<ID3D11Buffer> m_shapeVB;
-	//Microsoft::WRL::ComPtr<ID3D11Buffer> m_shapeIB;
-	//Microsoft::WRL::ComPtr<ID3D11PixelShader> m_PixelShader;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_InputLayout;
+	std::unique_ptr<DirectX::IEffect> m_Effect;
 
-	DirectX::SimpleMath::Matrix m_World;
-	DirectX::SimpleMath::Matrix m_View;
-	DirectX::SimpleMath::Matrix m_Projection;
+	glm::mat4 m_World;
+	glm::mat4 m_View;
+	glm::mat4 m_Projection;
 
 	std::unique_ptr<DirectX::CommonStates> m_States;
 	std::unique_ptr<DirectX::SpriteBatch> m_SpriteBatch;
 	std::unique_ptr<DirectX::GeometricPrimitive> m_Shape;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Background;
 	RECT m_FullscreenRect;
-
-	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_BloomExtractPS;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_BloomCombinePS;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_GaussianBlurPS;
-
-	Microsoft::WRL::ComPtr<ID3D11Buffer> m_BloomParams;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> m_BlurParamsWidth;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> m_BlurParamsHeight;
-
-	//Microsoft::WRL::ComPtr<ID3D11InputLayout> m_InputLayout;
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Texture;
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Cubemap;
 
 	bool m_Wireframe = false;
 	bool m_EnableMSAA = false;
