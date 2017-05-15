@@ -35,6 +35,14 @@ D3DRenderer::D3DRenderer(GameContext& gameContext) :
 
 D3DRenderer::~D3DRenderer()
 {
+	SafeRelease(m_pTechnique);
+	SafeRelease(m_pInputLayout);
+
+	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	{
+		SafeRelease(m_RenderObjects[i]->vertexBuffer);
+		SafeRelease(m_RenderObjects[i]->indexBuffer);
+	}
 }
 
 uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
@@ -127,8 +135,6 @@ void D3DRenderer::Clear(int flags, const GameContext& gameContext)
 void D3DRenderer::SwapBuffers(const GameContext& gameContext)
 {
 	float totalTime = gameContext.elapsedTime;
-
-	m_World = glm::mat4(1.0f);
 
 	//UpdateUniformBuffers(gameContext);
 
@@ -316,6 +322,15 @@ void D3DRenderer::CreateDevice()
 		(void)m_DeviceContext.As(&m_DeviceContext1);
 	}
 
+	if (m_pTechnique)
+	{
+		SafeRelease(m_pTechnique);
+	}
+
+	if (m_pInputLayout)
+	{
+		SafeRelease(m_pInputLayout);
+	}
 
 	const std::wstring effectFilePath = L"resources/shaders/simple.hlsl";
 	m_pEffect = LoadEffectFromFile(effectFilePath, m_Device.Get());
@@ -351,13 +366,18 @@ void D3DRenderer::InitializeVertexBuffer(glm::uint renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
+	if (renderObject->vertexBuffer)
+	{
+		SafeRelease(renderObject->vertexBuffer);
+	}
+
 	D3D11_BUFFER_DESC vertexBuffDesc;
 	vertexBuffDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_VERTEX_BUFFER;
 	vertexBuffDesc.ByteWidth = sizeof(VertexPosCol) * renderObject->vertices->size();
 	vertexBuffDesc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
 	vertexBuffDesc.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
 	vertexBuffDesc.MiscFlags = 0;
-	m_Device->CreateBuffer(&vertexBuffDesc, NULL, &renderObject->m_pVertexBuffer);
+	m_Device->CreateBuffer(&vertexBuffDesc, NULL, &renderObject->vertexBuffer);
 }
 
 void D3DRenderer::UpdateVertexBuffer(glm::uint renderID)
@@ -365,14 +385,19 @@ void D3DRenderer::UpdateVertexBuffer(glm::uint renderID)
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	m_DeviceContext->Map(renderObject->m_pVertexBuffer, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource);
+	m_DeviceContext->Map(renderObject->vertexBuffer, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource);
 	memcpy(mappedResource.pData, renderObject->vertices->data(), sizeof(VertexPosCol) * renderObject->vertices->size());
-	m_DeviceContext->Unmap(renderObject->m_pVertexBuffer, 0);
+	m_DeviceContext->Unmap(renderObject->vertexBuffer, 0);
 }
 
 void D3DRenderer::InitializeIndexBuffer(glm::uint renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
+
+	if (renderObject->indexBuffer)
+	{
+		SafeRelease(renderObject->indexBuffer);
+	}
 
 	D3D11_BUFFER_DESC indexBuffDesc;
 	indexBuffDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_INDEX_BUFFER;
@@ -380,7 +405,7 @@ void D3DRenderer::InitializeIndexBuffer(glm::uint renderID)
 	indexBuffDesc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
 	indexBuffDesc.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
 	indexBuffDesc.MiscFlags = 0;
-	m_Device->CreateBuffer(&indexBuffDesc, NULL, &renderObject->m_pIndexBuffer);
+	m_Device->CreateBuffer(&indexBuffDesc, NULL, &renderObject->indexBuffer);
 }
 
 void D3DRenderer::UpdateIndexBuffer(glm::uint renderID)
@@ -399,9 +424,9 @@ void D3DRenderer::UpdateIndexBuffer(glm::uint renderID)
 	}
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	m_DeviceContext->Map(renderObject->m_pIndexBuffer, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource);
+	m_DeviceContext->Map(renderObject->indexBuffer, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource);
 	memcpy(mappedResource.pData, renderObject->indices->data(), sizeof(uint) * renderObject->indices->size());
-	m_DeviceContext->Unmap(renderObject->m_pIndexBuffer, 0);
+	m_DeviceContext->Unmap(renderObject->indexBuffer, 0);
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
@@ -546,10 +571,8 @@ void D3DRenderer::CreateResources(const GameContext& gameContext)
 
 void D3DRenderer::Draw(const GameContext& gameContext)
 {
-	m_Projection = gameContext.camera->GetProj();
-	m_View = gameContext.camera->GetView();
-	XMMATRIX proj = XMLoadFloat4x4(&XMFLOAT4X4(&m_Projection[0][0]));
-	XMMATRIX view = XMLoadFloat4x4(&XMFLOAT4X4(&m_View[0][0]));
+	XMMATRIX proj = XMLoadFloat4x4(&XMFLOAT4X4(&gameContext.camera->GetProj()[0][0]));
+	XMMATRIX view = XMLoadFloat4x4(&XMFLOAT4X4(&gameContext.camera->GetView()[0][0]));
 	XMMATRIX viewProjection = view * proj;
 
 	m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -566,8 +589,8 @@ void D3DRenderer::Draw(const GameContext& gameContext)
 
 		UINT offset = 0;
 		UINT stride = sizeof(VertexPosCol);
-		m_DeviceContext->IASetVertexBuffers(0, 1, &renderObject->m_pVertexBuffer, &stride, &offset);
-		m_DeviceContext->IASetIndexBuffer(renderObject->m_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+		m_DeviceContext->IASetVertexBuffers(0, 1, &renderObject->vertexBuffer, &stride, &offset);
+		m_DeviceContext->IASetIndexBuffer(renderObject->indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 		D3DX11_TECHNIQUE_DESC techDesc;
 		m_pTechnique->GetDesc(&techDesc);

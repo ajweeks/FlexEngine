@@ -93,6 +93,26 @@
 	}
 #endif // COMPILE_D3D
 
+template<class Interface>
+inline void SafeRelease(Interface &pInterfaceToRelease)
+{
+	if (pInterfaceToRelease != 0)
+	{
+		pInterfaceToRelease->Release();
+		pInterfaceToRelease = 0;
+	}
+}
+
+template<class T>
+inline void SafeDelete(T &pObjectToDelete)
+{
+	if (pObjectToDelete != 0)
+	{
+		delete(pObjectToDelete);
+		pObjectToDelete = 0;
+	}
+}
+
 #include "Graphics/MultiRenderer.h"
 #include "Window/MultiWindowWrapper.h"
 

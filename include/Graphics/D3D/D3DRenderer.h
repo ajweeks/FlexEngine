@@ -52,11 +52,11 @@ private:
 		glm::uint IBO;
 
 		std::vector<VertexPosCol>* vertices = nullptr;
-		ID3D11Buffer* m_pVertexBuffer;
+		ID3D11Buffer* vertexBuffer;
 
 		bool indexed;
 		std::vector<glm::uint>* indices = nullptr;
-		ID3D11Buffer* m_pIndexBuffer;
+		ID3D11Buffer* indexBuffer;
 
 		glm::mat4 world;
 	};
@@ -64,14 +64,13 @@ private:
 	RenderObject* GetRenderObject(int renderID);
 
 	// TODO: use sorted data type (map)
-	std::vector<RenderObject*> m_RenderObjects;
+	std::vector<RenderObject*> m_RenderObjects = {};
 
 	bool m_VSyncEnabled;
 
 	D3DRenderer(const D3DRenderer&) = delete;
 	D3DRenderer& operator=(const D3DRenderer&) = delete;
 
-	// --------- Tutorial Code ---------
 	void CreateDevice();
 	void CreateResources(const GameContext& gameContext);
 
@@ -104,15 +103,11 @@ private:
 
 	DirectX::XMVECTORF32 m_ClearColor;
 
-	ID3D11InputLayout* m_pInputLayout;
-	ID3DX11Effect* m_pEffect;
-	ID3DX11EffectTechnique* m_pTechnique;
+	ID3D11InputLayout* m_pInputLayout = nullptr;
+	ID3DX11Effect* m_pEffect = nullptr;
+	ID3DX11EffectTechnique* m_pTechnique = nullptr;
 
-	ID3DX11EffectMatrixVariable* m_pWorldViewProjectionVariable;
-
-	glm::mat4 m_World;
-	glm::mat4 m_View;
-	glm::mat4 m_Projection;
+	ID3DX11EffectMatrixVariable* m_pWorldViewProjectionVariable = nullptr;
 
 	bool m_Wireframe = false;
 	bool m_EnableMSAA = false;

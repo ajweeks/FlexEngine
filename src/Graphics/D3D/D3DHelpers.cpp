@@ -14,8 +14,8 @@ ID3DX11Effect* LoadEffectFromFile(const std::wstring& filePath, ID3D11Device* de
 
 	DWORD shaderFlags = 0;
 	#if defined( DEBUG ) || defined( _DEBUG )
-	shaderFlags |= D3DCOMPILE_DEBUG;
-	shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+		shaderFlags |= D3DCOMPILE_DEBUG;
+		shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
 	#endif
 
 	hr = D3DX11CompileEffectFromFile(filePath.c_str(),
@@ -39,8 +39,7 @@ ID3DX11Effect* LoadEffectFromFile(const std::wstring& filePath, ID3D11Device* de
 				ss << errors[i];
 			}
 
-			pErrorBlob->Release();
-			pErrorBlob = nullptr;
+			SafeRelease(pErrorBlob);
 
 			Logger::LogError(ss.str());
 		}
@@ -51,6 +50,8 @@ ID3DX11Effect* LoadEffectFromFile(const std::wstring& filePath, ID3D11Device* de
 
 		return nullptr;
 	}
+
+	SafeRelease(pErrorBlob);
 
 	return pEffect;
 }
