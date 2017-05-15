@@ -81,10 +81,6 @@ void D3DRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	RenderObject* renderObject = GetRenderObject(renderID);
 
-	m_SpriteBatch->Begin();
-	m_SpriteBatch->Draw(m_Background.Get(), m_FullscreenRect);
-	m_SpriteBatch->End();
-
 	XMFLOAT4X4 matWorldF = XMFLOAT4X4(&m_World[0][0]);
 	XMFLOAT4X4 matViewF = XMFLOAT4X4(&m_View[0][0]);
 	XMFLOAT4X4 matProjF = XMFLOAT4X4(&m_Projection[0][0]);
@@ -111,11 +107,15 @@ void D3DRenderer::Clear(int flags, const GameContext& gameContext)
 	if (flags & (int)ClearFlag::DEPTH) d3dClearFlags |= D3D11_CLEAR_DEPTH;
 	if (flags & (int)ClearFlag::STENCIL) d3dClearFlags |= D3D11_CLEAR_STENCIL;
 
-	//m_DeviceContext->ClearRenderTargetView(m_RenderTargetView.Get(), m_ClearColor);
+	// Post-processed
+	m_DeviceContext->ClearRenderTargetView(m_SceneRT.Get(), m_ClearColor);
 	m_DeviceContext->ClearDepthStencilView(m_DepthStencilView.Get(), d3dClearFlags, 1.0f, 0);
-
-	//m_DeviceContext->OMSetRenderTargets(1, m_RenderTargetView.GetAddressOf(), m_DepthStencilView.Get());
 	m_DeviceContext->OMSetRenderTargets(1, m_SceneRT.GetAddressOf(), m_DepthStencilView.Get());
+
+	// Non-post-processed:
+	//m_DeviceContext->ClearDepthStencilView(m_DepthStencilView.Get(), d3dClearFlags, 1.0f, 0);
+	//m_DeviceContext->ClearRenderTargetView(m_RenderTargetView.Get(), m_ClearColor);
+	//m_DeviceContext->OMSetRenderTargets(1, m_RenderTargetView.GetAddressOf(), m_DepthStencilView.Get());
 
 	const vec2i windowSize = gameContext.window->GetSize();
 	CD3D11_VIEWPORT viewport(0.0f, 0.0f, static_cast<float>(windowSize.x), static_cast<float>(windowSize.y));
@@ -340,12 +340,6 @@ void D3DRenderer::CreateDevice()
 		(void)m_DeviceContext.As(&m_DeviceContext1);
 	}
 
-	m_States = std::make_unique<CommonStates>(m_Device.Get());
-
-	DX::ThrowIfFailed(CreateWICTextureFromFile(m_Device.Get(), L"resources/textures/slice-of-lemon-640.jpg", nullptr,
-		m_Background.ReleaseAndGetAddressOf()));
-
-	m_SpriteBatch = std::make_unique<SpriteBatch>(m_DeviceContext.Get());
 	m_Shape = GeometricPrimitive::CreateTorus(m_DeviceContext.Get());
 
 
@@ -505,13 +499,6 @@ void D3DRenderer::CreateResources(const GameContext& gameContext)
 	DX::ThrowIfFailed(m_Device->CreateTexture2D(&sceneDesc, nullptr, m_SceneTex.GetAddressOf()));
 	DX::ThrowIfFailed(m_Device->CreateRenderTargetView(m_SceneTex.Get(), nullptr, m_SceneRT.ReleaseAndGetAddressOf()));
 	DX::ThrowIfFailed(m_Device->CreateShaderResourceView(m_SceneTex.Get(), nullptr, m_SceneSRV.ReleaseAndGetAddressOf()));
-
-	m_FullscreenRect.left = 0;
-	m_FullscreenRect.top = 0;
-	m_FullscreenRect.right = backBufferWidth;
-	m_FullscreenRect.bottom = backBufferHeight;
-
-	//m_Projection = Matrix::CreatePerspectiveFieldOfView(XM_PIDIV4, float(backBufferWidth) / float(backBufferHeight), 0.01f, 100.f);
 }
 
 void D3DRenderer::OnDeviceLost(const GameContext& gameContext)
@@ -527,10 +514,7 @@ void D3DRenderer::OnDeviceLost(const GameContext& gameContext)
 	m_Device1.Reset();
 	m_Device.Reset();
 
-	m_States.reset();
-	m_SpriteBatch.reset();
 	m_Shape.reset();
-	m_Background.Reset();
 
 	m_SceneTex.Reset();
 	m_SceneSRV.Reset();

@@ -51,11 +51,9 @@ private:
 		glm::uint VBO;
 		glm::uint IBO;
 
-		glm::uint vertexBuffer;
 		std::vector<VertexPosCol>* vertices = nullptr;
 
 		bool indexed;
-		glm::uint indexBuffer;
 		std::vector<glm::uint>* indices = nullptr;
 
 		glm::uint MVP;
@@ -76,9 +74,7 @@ private:
 	void CreateResources(const GameContext& gameContext);
 
 	void OnDeviceLost(const GameContext& gameContext);
-	
 	void PostProcess();
-
 	void UpdateUniformBuffers(const GameContext& gameContext);
 
 
@@ -92,7 +88,6 @@ private:
 	Microsoft::WRL::ComPtr<IDXGISwapChain1> m_SwapChain1;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_RenderTargetView;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_DepthStencilView;
-
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_BackBuffer;
 
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_SceneTex;
@@ -108,11 +103,7 @@ private:
 	glm::mat4 m_View;
 	glm::mat4 m_Projection;
 
-	std::unique_ptr<DirectX::CommonStates> m_States;
-	std::unique_ptr<DirectX::SpriteBatch> m_SpriteBatch;
 	std::unique_ptr<DirectX::GeometricPrimitive> m_Shape;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_Background;
-	RECT m_FullscreenRect;
 
 	bool m_Wireframe = false;
 	bool m_EnableMSAA = false;
