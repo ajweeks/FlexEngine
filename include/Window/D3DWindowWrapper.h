@@ -33,6 +33,7 @@ private:
 
 
 	HWND m_Window;
+	LPCWSTR m_WindowClassName;
 	float m_PreviousFrameTime;
 
 	double m_StartingTime;

@@ -283,7 +283,6 @@ uint16_t ExtractInt(uint16_t orig16BitWord, unsigned from, unsigned to)
 D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, GameContext& gameContext) :
 	Window(title, size, gameContext)
 {
-	// WINDOW ISN"T BEING UNREGISTERED
 	RegisterWindow(title, size, gameContext);
 	m_StartingTime = GetTickCount();
 
@@ -291,13 +290,7 @@ D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, Ga
 	{
 		exit(EXIT_FAILURE);
 	}
-
-	//glfwSetKeyCallback(m_Window, GLFWKeyCallback);
-	//glfwSetMouseButtonCallback(m_Window, GLFWMouseButtonCallback);
-	//glfwSetCursorPosCallback(m_Window, GLFWCursorPosCallback);
-	//glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
-	//glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
-
+	
 	m_HasFocus = true;
 
 	//gameContext.program = ShaderUtils::LoadShaders("resources/shaders/simple.vert", "resources/shaders/simple.frag");
@@ -312,6 +305,8 @@ void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size,
 {
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 
+	m_WindowClassName = L"D3D11_WindowClass";
+
 	// Register class
 	WNDCLASSEX wcex;
 	wcex.cbSize = sizeof(WNDCLASSEX);
@@ -324,7 +319,7 @@ void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size,
 	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = nullptr;
-	wcex.lpszClassName = L"D3D11_WindowClass";
+	wcex.lpszClassName = m_WindowClassName;
 	wcex.hIconSm = LoadIcon(wcex.hInstance, L"IDI_ICON");
 	if (!RegisterClassEx(&wcex))
 	{
@@ -370,6 +365,7 @@ D3DWindowWrapper::~D3DWindowWrapper()
 	if (m_Window)
 	{
 		DestroyWindow(m_Window);
+		UnregisterClass(m_WindowClassName, GetModuleHandle(NULL));
 	}
 }
 
