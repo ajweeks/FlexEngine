@@ -210,9 +210,4 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="resources\shaders\BloomCombine.hlsl" />
-    <FxCompile Include="resources\shaders\BloomExtract.hlsl" />
-    <FxCompile Include="resources\shaders\GaussianBlur.hlsl" />
-  </ItemGroup>
 </Project>

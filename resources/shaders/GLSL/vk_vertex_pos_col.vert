@@ -30,4 +30,9 @@ void main()
 	mat4 modelView = uboView.view * uboInstance.model;
 	vec3 worldPos = vec3(modelView * vec4(inPos, 1.0));
 	gl_Position = uboView.projection * modelView * vec4(inPos.xyz, 1.0);
+	
+	// Convert from GL coordinates to Vulkan coordinates
+	// TODO: Move out to external function in helper file
+	gl_Position.y = -gl_Position.y;
+	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

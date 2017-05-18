@@ -101,7 +101,7 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector
 
 	//for (size_t i = 0; i < renderObject->vertices->size(); i++)
 	//{
-	//	(*renderObject->vertices)[i].pos.y *= -1;
+	//	(*renderObject->vertices)[i].pos *= -1;
 	//}
 
 	return renderID;
@@ -595,8 +595,19 @@ void VulkanRenderer::CreateTextureSampler()
 
 void VulkanRenderer::CreateGraphicsPipeline()
 {
-	auto vertShaderCode = ReadFile("resources/shaders/vk_vertex_pos_col_vert.spv");
-	auto fragShaderCode = ReadFile("resources/shaders/vk_vertex_pos_col_frag.spv");
+	// TODO: Use same glsl shaders for GL and Vulkan
+	auto fragShaderCode = ReadFile("resources/shaders/GLSL/spv/vk_vertex_pos_col_frag.spv");
+	auto vertShaderCode = ReadFile("resources/shaders/GLSL/spv/vk_vertex_pos_col_vert.spv");
+
+	if (vertShaderCode.empty())
+	{
+		// TODO: Use default vert shader here
+	}
+
+	if (fragShaderCode.empty())
+	{
+		// TODO: Use default frag shader here
+	}
 
 	VDeleter<VkShaderModule> vertShaderModule{ m_Device, vkDestroyShaderModule };
 	VDeleter<VkShaderModule> fragShaderModule{ m_Device, vkDestroyShaderModule };
@@ -658,7 +669,7 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 
 	VkPipelineMultisampleStateCreateInfo multisampling = {};
@@ -1330,7 +1341,7 @@ void VulkanRenderer::CreateDescriptorPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = poolSizes.size();
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 2;
+	poolInfo.maxSets = 2; // TODO: 1?
 	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, m_DescriptorPool.replace()));
@@ -1347,17 +1358,12 @@ void VulkanRenderer::CreateDescriptorSet()
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_Device, &allocInfo, &m_DescriptorSet));
 
+	std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = {};
+
 	VkDescriptorBufferInfo uniformBufferInfo = {};
 	uniformBufferInfo.buffer = m_UniformBuffers.viewBuffer.buffer;
 	uniformBufferInfo.offset = 0;
 	uniformBufferInfo.range = sizeof(UniformBufferObjectData);
-
-	VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
-	uniformBufferDynamicInfo.buffer = m_UniformBuffers.dynamicBuffer.buffer;
-	uniformBufferDynamicInfo.offset = 0;
-	uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectDynamic) * m_RenderObjects.size();
-
-	std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = {};
 
 	writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[0].dstSet = m_DescriptorSet;
@@ -1365,6 +1371,11 @@ void VulkanRenderer::CreateDescriptorSet()
 	writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	writeDescriptorSets[0].descriptorCount = 1;
 	writeDescriptorSets[0].pBufferInfo = &uniformBufferInfo;
+
+	VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
+	uniformBufferDynamicInfo.buffer = m_UniformBuffers.dynamicBuffer.buffer;
+	uniformBufferDynamicInfo.offset = 0;
+	uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectDynamic) * m_RenderObjects.size();
 
 	writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[1].dstSet = m_DescriptorSet;
@@ -1718,7 +1729,8 @@ std::vector<char> VulkanRenderer::ReadFile(const std::string& filename)
 
 	if (!file.is_open())
 	{
-		throw std::runtime_error("failed to open file!");
+		Logger::LogError("Couldn't read file: " + filename);
+		return{};
 	}
 
 	size_t fileSize = (size_t)file.tellg();

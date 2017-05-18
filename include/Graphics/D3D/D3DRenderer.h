@@ -74,6 +74,8 @@ private:
 	void CreateDevice();
 	void CreateResources(const GameContext& gameContext);
 
+	void CreateInputLayout();
+
 	void OnDeviceLost(const GameContext& gameContext);
 	void Draw(const GameContext& gameContext);
 	void UpdateUniformBuffers(const GameContext& gameContext);

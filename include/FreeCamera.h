@@ -36,6 +36,7 @@ private:
 	glm::mat4 m_View;
 	glm::mat4 m_Proj;
 	glm::mat4 m_ViewProjection;
+
 	float m_FOV;
 	float m_ZNear;
 	float m_ZFar;

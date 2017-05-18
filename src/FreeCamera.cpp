@@ -38,7 +38,7 @@ void FreeCamera::Update(const GameContext& gameContext)
 	if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
 	{
 		look = gameContext.inputManager->GetMouseMovement();
-		look.y = -look.y;
+		if (!gameContext.flipY) look.y = -look.y;
 
 		m_Yaw += look.x * m_RotationSpeed;
 		m_Pitch += look.y * m_RotationSpeed;
@@ -78,13 +78,11 @@ void FreeCamera::Update(const GameContext& gameContext)
 	}
 	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_E))
 	{
-		if (gameContext.flipY) translation -= m_Up;
-		else translation += m_Up;
+		translation += m_Up;
 	}
 	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_Q))
 	{
-		if (gameContext.flipY) translation += m_Up;
-		else translation -= m_Up;
+		translation -= m_Up;
 	}
 
 	float speedMultiplier = 1.0f;
@@ -170,8 +168,7 @@ void FreeCamera::RecalculateViewProjection(const GameContext& gameContext)
 	float aspectRatio = windowSize.x / (float)windowSize.y;
 	m_Proj = perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
 
-	mat4 translation = translate(mat4(1.0f), m_Position);
-
 	m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
 	m_ViewProjection = m_Proj * m_View;
+
 }

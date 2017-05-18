@@ -14,7 +14,7 @@ using namespace glm;
 TechDemo::TechDemo()
 {
 
-	m_RendererIndex = 2;
+	//m_RendererIndex = 2;
 
 }
 

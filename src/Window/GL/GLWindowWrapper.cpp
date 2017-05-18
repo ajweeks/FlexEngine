@@ -45,7 +45,7 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, GameContext
 	const std::string glVersion(reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 	Logger::LogInfo("OpenGL Version: " + glVersion);
 
-	gameContext.program = ShaderUtils::LoadShaders("resources/shaders/simple.vert", "resources/shaders/simple.frag");
+	gameContext.program = ShaderUtils::LoadShaders("resources/shaders/GLSL/simple.vert", "resources/shaders/GLSL/simple.frag");
 	
 	//icons[0] = LoadGLFWImage("resources/icons/icon_01_48.png");
 	//icons[1] = LoadGLFWImage("resources/icons/icon_01_32.png");

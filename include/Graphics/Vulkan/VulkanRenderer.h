@@ -139,7 +139,7 @@ public:
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
 	virtual void Destroy(glm::uint renderID) override;
-
+		
 private:
 	void CreateInstance();
 	void SetupDebugCallback();

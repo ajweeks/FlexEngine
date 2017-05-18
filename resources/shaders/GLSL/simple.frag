@@ -1,8 +1,6 @@
-#version 400
+#version 450
 
-
-//uniform sampler2D texTest;
-uniform float in_Time;
+//uniform float in_Time;
 
 in vec3 ex_Color;
 

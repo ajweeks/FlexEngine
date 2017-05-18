@@ -25,6 +25,21 @@ D3DRenderer::D3DRenderer(GameContext& gameContext) :
 	CreateDevice();
 	CreateResources(gameContext);
 
+	const std::wstring effectFilePath = L"resources/shaders/HLSL/simple.hlsl";
+	m_pEffect = LoadEffectFromFile(effectFilePath, m_Device.Get());
+	m_pTechnique = m_pEffect->GetTechniqueByIndex(0);
+
+	if (!m_pWorldViewProjectionVariable)
+	{
+		m_pWorldViewProjectionVariable = m_pEffect->GetVariableBySemantic("WORLDVIEWPROJECTION")->AsMatrix();
+		if (!m_pWorldViewProjectionVariable->IsValid())
+		{
+			Logger::LogError(L"Couldn't find variable with semantic WORLDVIEWPROJECTION in effect " + effectFilePath);
+		}
+	}
+
+	CreateInputLayout();
+
 	// Change the timer settings if you want something other than the default variable timestep mode.
 	// e.g. for 60 FPS fixed timestep update logic, call:
 	/*
@@ -331,35 +346,6 @@ void D3DRenderer::CreateDevice()
 	{
 		SafeRelease(m_pInputLayout);
 	}
-
-	const std::wstring effectFilePath = L"resources/shaders/simple.hlsl";
-	m_pEffect = LoadEffectFromFile(effectFilePath, m_Device.Get());
-	m_pTechnique = m_pEffect->GetTechniqueByIndex(0);
-
-	D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-	};
-	UINT numElements = sizeof(inputLayoutDesc) / sizeof(inputLayoutDesc[0]);
-
-
-	D3DX11_PASS_DESC PassDesc;
-	m_pTechnique->GetPassByIndex(0)->GetDesc(&PassDesc);
-	hr = m_Device->CreateInputLayout(inputLayoutDesc, numElements, PassDesc.pIAInputSignature, PassDesc.IAInputSignatureSize, &m_pInputLayout);
-	if (FAILED(hr))
-	{
-		Logger::LogError(L"D3DRenderer couldn't create input layout for effect file " + effectFilePath);
-	}
-
-	if (!m_pWorldViewProjectionVariable)
-	{
-		m_pWorldViewProjectionVariable = m_pEffect->GetVariableBySemantic("WORLDVIEWPROJECTION")->AsMatrix();
-		if (!m_pWorldViewProjectionVariable->IsValid())
-		{
-			Logger::LogError(L"Couldn't find variable with semantic WORLDVIEWPROJECTION in effect " + effectFilePath);
-		}
-	}
 }
 
 void D3DRenderer::InitializeVertexBuffer(glm::uint renderID)
@@ -607,6 +593,25 @@ void D3DRenderer::Draw(const GameContext& gameContext)
 			}
 		}
 	}
+}
+
+void D3DRenderer::CreateInputLayout()
+{
+	D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+	UINT numElements = sizeof(inputLayoutDesc) / sizeof(inputLayoutDesc[0]);
+
+	D3DX11_PASS_DESC PassDesc;
+	m_pTechnique->GetPassByIndex(0)->GetDesc(&PassDesc);
+	HRESULT hr = m_Device->CreateInputLayout(inputLayoutDesc, numElements, PassDesc.pIAInputSignature, PassDesc.IAInputSignatureSize, &m_pInputLayout);
+	if (FAILED(hr))
+	{
+		Logger::LogError(L"D3DRenderer couldn't create input layout");
+	}
+
 }
 
 void D3DRenderer::OnDeviceLost(const GameContext& gameContext)

@@ -292,8 +292,6 @@ D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, Ga
 	}
 	
 	m_HasFocus = true;
-
-	//gameContext.program = ShaderUtils::LoadShaders("resources/shaders/simple.vert", "resources/shaders/simple.frag");
 }
 
 HWND D3DWindowWrapper::GetWindowHandle() const

@@ -12,17 +12,17 @@ TestScene::TestScene(const GameContext& gameContext) :
 	m_Sphere1.Init(gameContext, vec3(0.0f, 0.0f, 0.0f));
 	m_Cube.Init(gameContext, vec3(-4.0f, 0.0f, 0.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f));
 	m_Cube2.Init(gameContext, vec3(4.0f, 0.0f, 0.0f), quat(vec3(0.0f, 0.0f, 2.0f)), vec3(1.0f, 5.0f, 1.0f));
-
-	m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
 	
-	m_CubesWide = 10;
-	m_CubesLong = 10;
+	//m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
+	
+	m_CubesWide = 7;
+	m_CubesLong = 7;
 	m_Cubes.reserve(m_CubesWide * m_CubesLong);
 	
 	const float cubeScale = 0.5f;
 	const float cubeOffset = 1.5f;
 	
-	vec3 offset = vec3(-5.0f, 0.0f, 3.0f);
+	vec3 offset = vec3(m_CubesWide / 2.0f * -cubeScale, 0.0f, cubeOffset + m_CubesLong / 2.0f * cubeScale);
 	
 	for (size_t i = 0; i < m_CubesLong; i++)
 	{
