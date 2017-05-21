@@ -208,82 +208,10 @@ InputManager::MouseButton D3DWindowWrapper::D3DButtonToInputManagerMouseButton(i
 	return InputManager::MouseButton::_NONE;
 }
 
-uint16_t ExtractInt(uint16_t orig16BitWord, unsigned from, unsigned to)
-{
-	unsigned mask = ((1 << (to - from + 1)) - 1) << from;
-	return (orig16BitWord & mask) >> from;
-}
-
-//LRESULT D3DKeyCallback(HWND hWnd, int keyCode, WPARAM wParam, LPARAM lParam)
-//{
-//	const int repeatCount = ExtractInt(lParam, 0, 15);
-//	const int scanCode = ExtractInt(lParam, 16, 23);
-//	const bool previouslyDown = ExtractInt(lParam, 16, 16) == 1;
-//	const bool pressed = ExtractInt(lParam, 17, 17) == 0;
-//
-//	Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-//	InputManager::Action inputAction;
-//	if (pressed)
-//	{
-//		if (previouslyDown)
-//		{
-//			inputAction = InputManager::Action::PRESS;
-//		}
-//		else
-//		{
-//			inputAction = InputManager::Action::REPEAT;
-//		}
-//	}
-//	else
-//	{
-//		inputAction = InputManager::Action::RELEASE;
-//	}
-//	const InputManager::KeyCode inputKey = D3DWindowWrapper::D3DKeyToInputManagerKey(wParam);
-//
-//	// TODO: Calculate mods here
-//	const int inputMods = 0;
-//
-//	window->KeyCallback(inputKey, inputAction, inputMods);
-//
-//	return CallNextHookEx(NULL, keyCode, wParam, lParam);
-//}
-//
-//LRESULT D3DMouseButtonCallback(HWND hWnd, int button, WPARAM wParam, LPARAM lParam)
-//{
-//	Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-//	InputManager::Action inputAction;
-//
-//
-//	// TODO: Calculate mods here
-//	const int inputMods = 0;
-//
-//	const InputManager::MouseButton mouseButton = D3DWindowWrapper::D3DButtonToInputManagerMouseButton(button);
-//
-//	window->MouseButtonCallback(mouseButton, inputAction, inputMods);
-//}
-//
-//LRESULT D3DWindowFocusCallback(HWND hWnd, int focused)
-//{
-//	Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-//	window->WindowFocusCallback(focused);
-//}
-//
-//LRESULT D3DCursorPosCallback(HWND hWnd, double x, double y)
-//{
-//	Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-//	window->CursorPosCallback(x, y);
-//}
-//
-//LRESULT D3DWindowSizeCallback(HWND hWnd, int width, int height)
-//{
-//	Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-//	window->WindowSizeCallback(width, height);
-//}
-
-D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, GameContext& gameContext) :
+D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext) :
 	Window(title, size, gameContext)
 {
-	RegisterWindow(title, size, gameContext);
+	RegisterWindow(title, size, pos, gameContext);
 	m_StartingTime = GetTickCount();
 
 	if (!m_Window)
@@ -299,7 +227,7 @@ HWND D3DWindowWrapper::GetWindowHandle() const
 	return m_Window;
 }
 
-void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size, const GameContext& gameContext)
+void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size, glm::vec2i pos, const GameContext& gameContext)
 {
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 
@@ -329,8 +257,8 @@ void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size,
 	RECT rc;
 	rc.top = 0;
 	rc.left = 0;
-	rc.right = static_cast<LONG>(size.x / 2.0f);
-	rc.bottom = static_cast<LONG>(size.y / 2.0f);
+	rc.right = static_cast<LONG>(size.x);
+	rc.bottom = static_cast<LONG>(size.y);
 
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -355,7 +283,9 @@ void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size,
 
 	SetWindowLongPtr(m_Window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-	GetClientRect(m_Window, &rc);
+	// NOTE: This function has an offset that GLFW doesn't have
+	const glm::vec2i windowPosOffset = { -12, -54 };
+	SetWindowPos(m_Window, 0, pos.x + windowPosOffset.x, pos.y + windowPosOffset.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 }
 
 D3DWindowWrapper::~D3DWindowWrapper()

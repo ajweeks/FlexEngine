@@ -8,7 +8,7 @@ struct GameContext;
 class D3DWindowWrapper : public Window
 {
 public:
-	D3DWindowWrapper(const std::string& title, glm::vec2i size, GameContext& gameContext);
+	D3DWindowWrapper(const std::string& title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
 	virtual ~D3DWindowWrapper();
 	
 	virtual float GetTime() override;
@@ -28,7 +28,7 @@ public:
 
 private:
 
-	void RegisterWindow(const std::string& title, glm::vec2i size, const GameContext& gameContext);
+	void RegisterWindow(const std::string& title, glm::vec2i size, glm::vec2i pos, const GameContext& gameContext);
 	virtual void SetWindowTitle(const std::string& title) override;
 
 
@@ -43,7 +43,6 @@ private:
 };
 
 LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-uint16_t ExtractInt(uint16_t orig16BitWord, unsigned from, unsigned to);
 
 // Event callbacks
 //void D3DErrorCallback(HWND hWnd, int error, const char* description);

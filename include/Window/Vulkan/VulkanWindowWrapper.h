@@ -9,7 +9,7 @@ struct GameContext;
 class VulkanWindowWrapper : public GLFWWindowWrapper
 {
 public:
-	VulkanWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext);
+	VulkanWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
 	virtual ~VulkanWindowWrapper();
 
 	virtual void SetSize(int width, int height) override;

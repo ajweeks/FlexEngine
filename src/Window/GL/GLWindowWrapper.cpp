@@ -5,7 +5,7 @@
 #include "Logger.h"
 #include "ShaderUtils.h"
 
-GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
+GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext) :
 	GLFWWindowWrapper(title, size, gameContext)
 {
 	glfwSetErrorCallback(GLFWErrorCallback);
@@ -34,6 +34,8 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, GameContext
 	glfwSetCursorPosCallback(m_Window, GLFWCursorPosCallback);
 	glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
 	glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
+
+	glfwSetWindowPos(m_Window, pos.x, pos.y);
 
 	glfwFocusWindow(m_Window);
 	m_HasFocus = true;

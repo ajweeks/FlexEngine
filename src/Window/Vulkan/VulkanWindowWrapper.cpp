@@ -4,7 +4,7 @@
 #include "Window/Vulkan/VulkanWindowWrapper.h"
 #include "Logger.h"
 
-VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
+VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext) :
 	GLFWWindowWrapper(title, size, gameContext)
 {
 	glfwSetErrorCallback(GLFWErrorCallback);
@@ -13,12 +13,6 @@ VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, Gam
 	{
 		exit(EXIT_FAILURE);
 	}
-
-	// TODO: Are these two lines needed?
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Tell the window to not use OpenGL
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -38,22 +32,10 @@ VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, Gam
 	glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
 	glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 
+	glfwSetWindowPos(m_Window, pos.x, pos.y);
+
 	glfwFocusWindow(m_Window);
 	m_HasFocus = true;
-
-	//gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-	//gameContext.program = ShaderUtils::LoadShaders("resources/shaders/vk_simple.spirv", "resources/shaders/vk_simple.spirv");
-
-	//icons[0] = LoadGLFWImage("resources/icons/icon_01_48.png");
-	//icons[1] = LoadGLFWImage("resources/icons/icon_01_32.png");
-	//icons[2] = LoadGLFWImage("resources/icons/icon_01_16.png");
-	//
-	//glfwSetWindowIcon(m_Window, NUM_ICONS, icons);
-
-	//SOIL_free_image_data(icons[0].pixels);
-	//SOIL_free_image_data(icons[1].pixels);
-	//SOIL_free_image_data(icons[2].pixels);
 }
 
 VulkanWindowWrapper::~VulkanWindowWrapper()

@@ -52,10 +52,6 @@
 		#pragma comment(lib, "DxEffects11_vc14_Release.lib")
 	#endif
 
-	//#include <DirectXMath.h>
-	//#include <DirectXColors.h>
-	//#include <wrl/client.h>
-
 	// DirectXTK
 	#include "CommonStates.h"
 	#include "DDSTextureLoader.h"
