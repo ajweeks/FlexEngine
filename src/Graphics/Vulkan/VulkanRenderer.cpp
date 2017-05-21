@@ -2,7 +2,6 @@
 #if COMPILE_VULKAN
 
 #include "Graphics/Vulkan/VulkanRenderer.h"
-#include "Graphics/Vulkan/VulkanHelpers.h"
 #include "Helpers.h"
 #include "GameContext.h"
 #include "Window/Window.h"
@@ -70,7 +69,7 @@ void VulkanRenderer::PostInitialize()
 
 VulkanRenderer::~VulkanRenderer()
 {
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		delete m_RenderObjects[i];
 	}
@@ -247,31 +246,6 @@ namespace std
 		}
 	};
 }
-
-#pragma region VulkanStuff
-// Debug callbacks
-VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
-{
-	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-	if (func != nullptr)
-	{
-		return func(instance, pCreateInfo, pAllocator, pCallback);
-	}
-	else
-	{
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-	}
-}
-
-void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator)
-{
-	auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
-	if (func != nullptr)
-	{
-		func(instance, callback, pAllocator);
-	}
-}
-
 
 void VulkanRenderer::CreateInstance()
 {
@@ -1723,72 +1697,5 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsE
 
 	return VK_FALSE;
 }
-#pragma endregion
-
-#pragma region Vertex
-VkVertexInputBindingDescription VulkanVertex::GetVertPosColTexBindingDescription()
-{
-	VkVertexInputBindingDescription bindingDesc = {};
-	bindingDesc.binding = 0;
-	bindingDesc.stride = sizeof(VertexPosColTex);
-	bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDesc;
-}
-
-VkVertexInputBindingDescription VulkanVertex::GetVertPosColBindingDescription()
-{
-	VkVertexInputBindingDescription bindingDesc = {};
-	bindingDesc.binding = 0;
-	bindingDesc.stride = sizeof(VertexPosCol);
-	bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDesc;
-}
-
-std::array<VkVertexInputAttributeDescription, 3> VulkanVertex::GetVertPosColTexAttributeDescriptions()
-{
-	std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions;
-
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = 0;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(VertexPosColTex, pos);
-
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(VertexPosColTex, col);
-
-	attributeDescriptions[2].binding = 0;
-	attributeDescriptions[2].location = 2;
-	attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[2].offset = offsetof(VertexPosColTex, uv);
-
-	return attributeDescriptions;
-}
-
-std::array<VkVertexInputAttributeDescription, 2> VulkanVertex::GetVertPosColAttributeDescriptions()
-{
-	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions;
-
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = 0;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(VertexPosCol, pos);
-
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(VertexPosCol, col);
-
-	return attributeDescriptions;
-}
-
-//bool VulkanVertex::operator==(const VulkanVertex& other) const
-//{
-//	return pos == other.pos && color == other.color && texCoord == other.texCoord;
-//}
-#pragma endregion // Vertex
 
 #endif // COMPILE_VULKAN

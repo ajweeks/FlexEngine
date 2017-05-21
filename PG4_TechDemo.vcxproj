@@ -135,6 +135,7 @@
     <ClCompile Include="src\Graphics\D3D\D3DHelpers.cpp" />
     <ClCompile Include="src\Graphics\MultiRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanBuffer.cpp" />
+    <ClCompile Include="src\Graphics\Vulkan\VulkanHelpers.cpp" />
     <ClCompile Include="src\Helpers.cpp" />
     <ClCompile Include="src\Graphics\D3D\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GL\GLRenderer.cpp" />

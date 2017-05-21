@@ -12,6 +12,7 @@
 using namespace glm;
 
 TechDemo::TechDemo() :
+	m_RendererIndex(RendererID::VULKAN),
 	m_RendererCount(3),
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)
@@ -44,7 +45,7 @@ void TechDemo::Initialize()
 
 void TechDemo::Destroy()
 {
-	m_SceneManager->Destroy(m_GameContext);
+	m_SceneManager->DestroyAllScenes(m_GameContext);
 	delete m_SceneManager;
 	delete m_GameContext.inputManager;
 	delete m_DefaultCamera;
@@ -58,7 +59,7 @@ void TechDemo::InitializeWindowAndRenderer()
 	const vec2i windowPos = vec2i(300, 300);
 
 #if COMPILE_VULKAN
-	if (m_RendererIndex == 0)
+	if (m_RendererIndex == RendererID::VULKAN)
 	{
 		VulkanWindowWrapper* vulkanWindow = new VulkanWindowWrapper("Tech Demo - Vulkan", windowSize, windowPos, m_GameContext);
 		m_Window = vulkanWindow;
@@ -67,7 +68,7 @@ void TechDemo::InitializeWindowAndRenderer()
 	}
 #endif
 #if COMPILE_OPEN_GL
-	if (m_RendererIndex == 1)
+	if (m_RendererIndex == RendererID::GL)
 	{
 		GLWindowWrapper* glWindow = new GLWindowWrapper("Tech Demo - OpenGL", windowSize, windowPos, m_GameContext);
 		m_Window = glWindow;
@@ -76,7 +77,7 @@ void TechDemo::InitializeWindowAndRenderer()
 	}
 #endif
 #if COMPILE_D3D
-	if (m_RendererIndex == 2)
+	if (m_RendererIndex == RendererID::D3D)
 	{
 		D3DWindowWrapper* d3dWindow = new D3DWindowWrapper("Tech Demo - Direct3D", windowSize, windowPos, m_GameContext);
 		m_Window = d3dWindow;
@@ -102,7 +103,7 @@ void TechDemo::CycleRenderer()
 	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene());
 	DestroyWindowAndRenderer();
 
-	m_RendererIndex = (m_RendererIndex + 1) % m_RendererCount;
+	m_RendererIndex = RendererID(((int)m_RendererIndex + 1) % m_RendererCount);
 
 	InitializeWindowAndRenderer();
 	m_SceneManager->AddScene(new TestScene(m_GameContext));

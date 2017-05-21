@@ -4,67 +4,13 @@
 #include "../Renderer.h"
 #include "VDeleter.h"
 #include "VulkanBuffer.h"
+#include "Graphics/Vulkan/VulkanHelpers.h"
 
 #include <vector>
 #include <array>
 
 struct GameContext;
 class Window;
-
-struct QueueFamilyIndices
-{
-	int graphicsFamily = -1;
-	int presentFamily = -1;
-
-	bool isComplete()
-	{
-		return graphicsFamily >= 0 && presentFamily >= 0;
-	}
-};
-
-struct SwapChainSupportDetails
-{
-	VkSurfaceCapabilitiesKHR capabilities;
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> presentModes;
-};
-
-struct VulkanVertex
-{
-	static VkVertexInputBindingDescription GetVertPosColTexBindingDescription();
-	static VkVertexInputBindingDescription GetVertPosColBindingDescription();
-	static std::array<VkVertexInputAttributeDescription, 3> GetVertPosColTexAttributeDescriptions();
-	static std::array<VkVertexInputAttributeDescription, 2> GetVertPosColAttributeDescriptions();
-	//bool operator==(const VulkanVertex& other) const;
-};
-
-struct UniformBuffers 
-{
-	UniformBuffers(const VDeleter<VkDevice>& device) :
-		viewBuffer(device),
-		dynamicBuffer(device)
-	{}
-
-	VulkanBuffer viewBuffer;
-	VulkanBuffer dynamicBuffer;
-};
-
-struct UniformBufferObjectData 
-{
-	glm::mat4 projection;
-	glm::mat4 view;
-};
-
-struct UniformBufferObjectDynamic
-{
-	glm::mat4* model;
-};
-
-VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
-	const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
-
-void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
-
 
 class VulkanRenderer : public Renderer
 {

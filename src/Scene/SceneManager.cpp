@@ -18,6 +18,7 @@ SceneManager::~SceneManager()
 	{
 		delete m_Scenes[i];
 	}
+	m_Scenes.clear();
 }
 
 void SceneManager::UpdateAndRender(const GameContext& gameContext)
@@ -90,7 +91,7 @@ BaseScene* SceneManager::CurrentScene() const
 	return m_Scenes[m_CurrentSceneIndex];
 }
 
-void SceneManager::Destroy(const GameContext& gameContext)
+void SceneManager::DestroyAllScenes(const GameContext& gameContext)
 {
 	for (size_t i = 0; i < m_Scenes.size(); i++)
 	{

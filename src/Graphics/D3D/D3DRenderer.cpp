@@ -57,6 +57,7 @@ D3DRenderer::~D3DRenderer()
 	{
 		SafeRelease(m_RenderObjects[i]->vertexBuffer);
 		SafeRelease(m_RenderObjects[i]->indexBuffer);
+		delete m_RenderObjects[i];
 	}
 }
 

@@ -18,6 +18,13 @@ public:
 	void Stop();
 	
 private:
+	enum class RendererID
+	{
+		VULKAN,
+		D3D,
+		GL
+	};
+
 	void Destroy();
 
 	void CycleRenderer();
@@ -34,7 +41,7 @@ private:
 	glm::vec3 m_ClearColor;
 	bool m_VSyncEnabled;
 
-	int m_RendererIndex = 0;
+	RendererID m_RendererIndex;
 
 	bool m_Running;
 

@@ -21,7 +21,7 @@ public:
 
 	BaseScene* CurrentScene() const;
 
-	void Destroy(const GameContext& gameContext);
+	void DestroyAllScenes(const GameContext& gameContext);
 
 private:
 	int m_CurrentSceneIndex;
