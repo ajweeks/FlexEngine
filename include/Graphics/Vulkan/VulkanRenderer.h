@@ -2,38 +2,14 @@
 #if COMPILE_VULKAN
 
 #include "../Renderer.h"
+#include "VDeleter.h"
+#include "VulkanBuffer.h"
 
-#include <functional>
 #include <vector>
+#include <array>
 
 struct GameContext;
 class Window;
-
-template <typename T>
-class VDeleter
-{
-public:
-	VDeleter();
-
-	VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef);
-	VDeleter(const VDeleter<VkInstance>& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef);
-	VDeleter(const VDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef);
-	~VDeleter();
-
-	const T* operator &() const;
-	T* replace();
-	operator T() const;
-	void operator=(T rhs);
-
-	template<typename V>
-	bool operator==(V rhs);
-
-private:
-	T object{ VK_NULL_HANDLE };
-	std::function<void(T)> deleter;
-
-	void cleanup();
-};
 
 struct QueueFamilyIndices
 {
@@ -62,24 +38,6 @@ struct VulkanVertex
 	//bool operator==(const VulkanVertex& other) const;
 };
 
-struct Buffer
-{
-	Buffer(const VDeleter<VkDevice>& device) :
-		buffer(VDeleter<VkBuffer>(device, vkDestroyBuffer)),
-		memory(VDeleter<VkDeviceMemory>(device, vkFreeMemory))
-	{}
-
-	VDeleter<VkBuffer> buffer; // { m_Device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> memory; // { m_Device, vkFreeMemory };
-	VkDescriptorBufferInfo descriptor;
-	VkDeviceSize size = 0;
-	VkDeviceSize alignment = 0;
-	void* mapped = nullptr;
-
-	VkBufferUsageFlags usageFlags;
-	VkMemoryPropertyFlags memoryPropertyFlags;
-};
-
 struct UniformBuffers 
 {
 	UniformBuffers(const VDeleter<VkDevice>& device) :
@@ -87,8 +45,8 @@ struct UniformBuffers
 		dynamicBuffer(device)
 	{}
 
-	Buffer viewBuffer;
-	Buffer dynamicBuffer;
+	VulkanBuffer viewBuffer;
+	VulkanBuffer dynamicBuffer;
 };
 
 struct UniformBufferObjectData 
@@ -185,7 +143,7 @@ private:
 	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
-	void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer& buffer);
+	void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer& buffer);
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 	void DrawFrame(Window* window);
 	void CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule);
@@ -202,7 +160,6 @@ private:
 	void UpdateUniformBuffer(const GameContext& gameContext);
 	void UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model);
 
-	static std::vector<char> ReadFile(const std::string& filename);
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags, 
 		VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, 
 		const char* msg, void* userData);
@@ -283,18 +240,10 @@ private:
 	VDeleter<VkDeviceMemory> m_DepthImageMemory{ m_Device, vkFreeMemory };
 	VDeleter<VkImageView> m_DepthImageView{ m_Device, vkDestroyImageView };
 
-	//std::vector<VertexPosCol> m_Vertices;
-	//std::vector<uint32_t> m_Indices;
-
-	//VDeleter<VkBuffer> m_UniformStagingBuffer{ m_Device, vkDestroyBuffer };
-	//VDeleter<VkDeviceMemory> m_UniformStagingBufferMemory{ m_Device, vkFreeMemory };
-	//VDeleter<VkBuffer> m_UniformBuffer{ m_Device, vkDestroyBuffer };
-	//VDeleter<VkDeviceMemory> m_UniformBufferMemory{ m_Device, vkFreeMemory };
-
 	VDeleter<VkDescriptorPool> m_DescriptorPool{ m_Device, vkDestroyDescriptorPool };
 
-	Buffer m_VertexBuffer;
-	Buffer m_IndexBuffer;
+	VulkanBuffer m_VertexBuffer;
+	VulkanBuffer m_IndexBuffer;
 
 	size_t m_DynamicAlignment;
 

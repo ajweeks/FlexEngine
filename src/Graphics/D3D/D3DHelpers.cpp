@@ -4,6 +4,7 @@
 #include "Graphics/D3D/D3DHelpers.h"
 #include "Logger.h"
 
+#include <fstream>
 #include <sstream>
 
 ID3DX11Effect* LoadEffectFromFile(const std::wstring& filePath, ID3D11Device* device)

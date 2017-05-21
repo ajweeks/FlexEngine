@@ -2,6 +2,8 @@
 #if COMPILE_VULKAN
 
 #include "Graphics/Vulkan/VulkanRenderer.h"
+#include "Graphics/Vulkan/VulkanHelpers.h"
+#include "Helpers.h"
 #include "GameContext.h"
 #include "Window/Window.h"
 #include "Logger.h"
@@ -14,13 +16,6 @@
 #include <glm\gtc\matrix_transform.hpp>
 
 #include <iostream>
-#include <stdexcept>
-#include <fstream>
-#include <algorithm>
-#include <cstring>
-#include <set>
-#include <array>
-#include <chrono>
 #include <unordered_map>
 
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -1000,11 +995,11 @@ void VulkanRenderer::BuildCommandBuffers()
 		vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
 
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer.buffer, offsets);
+		vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer.m_Buffer, offsets);
 		
-		if (m_IndexBuffer.size != 0)
+		if (m_IndexBuffer.m_Size != 0)
 		{
-			vkCmdBindIndexBuffer(m_CommandBuffers[i], m_IndexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(m_CommandBuffers[i], m_IndexBuffer.m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 		}
 
 		for (size_t j = 0; j < m_RenderObjects.size(); j++)
@@ -1155,7 +1150,7 @@ void VulkanRenderer::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t widt
 	EndSingleTimeCommands(commandBuffer);
 }
 
-void VulkanRenderer::CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer& buffer)
+void VulkanRenderer::CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer& buffer)
 {
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1163,30 +1158,30 @@ void VulkanRenderer::CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFla
 	bufferInfo.usage = usage;
 	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	VK_CHECK_RESULT(vkCreateBuffer(m_Device, &bufferInfo, nullptr, buffer.buffer.replace()));
+	VK_CHECK_RESULT(vkCreateBuffer(m_Device, &bufferInfo, nullptr, buffer.m_Buffer.replace()));
 
 	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(m_Device, buffer.buffer, &memRequirements);
+	vkGetBufferMemoryRequirements(m_Device, buffer.m_Buffer, &memRequirements);
 
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
 
-	VK_CHECK_RESULT(vkAllocateMemory(m_Device, &allocInfo, nullptr, buffer.memory.replace()));
+	VK_CHECK_RESULT(vkAllocateMemory(m_Device, &allocInfo, nullptr, buffer.m_Memory.replace()));
 
 	// Create the memory backing up the buffer handle
-	buffer.alignment = memRequirements.alignment;
-	buffer.size = allocInfo.allocationSize;
-	buffer.usageFlags = usage;
-	buffer.memoryPropertyFlags = properties;
+	buffer.m_Alignment = memRequirements.alignment;
+	buffer.m_Size = allocInfo.allocationSize;
+	buffer.m_UsageFlags = usage;
+	buffer.m_MemoryPropertyFlags = properties;
 
 	// Initialize a default descriptor that covers the whole buffer size
-	buffer.descriptor.offset = 0;
-	buffer.descriptor.range = VK_WHOLE_SIZE;
-	buffer.descriptor.buffer = buffer.buffer;
+	buffer.m_DescriptorInfo.offset = 0;
+	buffer.m_DescriptorInfo.range = VK_WHOLE_SIZE;
+	buffer.m_DescriptorInfo.buffer = buffer.m_Buffer;
 
-	vkBindBufferMemory(m_Device, buffer.buffer, buffer.memory, 0);
+	vkBindBufferMemory(m_Device, buffer.m_Buffer, buffer.m_Memory, 0);
 }
 
 void VulkanRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
@@ -1259,19 +1254,18 @@ void VulkanRenderer::CreateVertexBuffer()
 
 	const size_t bufferSize = sizeof(VertexPosCol) * vertices.size();
 
-	Buffer stagingBuffer(m_Device);
+	VulkanBuffer stagingBuffer(m_Device);
 	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
 
-	void* data;
-	vkMapMemory(m_Device, stagingBuffer.memory, 0, bufferSize, 0, &data);
-	memcpy(data, vertices.data(), bufferSize);
-	vkUnmapMemory(m_Device, stagingBuffer.memory);
+	stagingBuffer.Map(bufferSize);
+	memcpy(stagingBuffer.m_Mapped, vertices.data(), bufferSize);
+	stagingBuffer.Unmap();
 
 	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_VertexBuffer);
 
-	CopyBuffer(stagingBuffer.buffer, m_VertexBuffer.buffer, bufferSize);
+	CopyBuffer(stagingBuffer.m_Buffer, m_VertexBuffer.m_Buffer, bufferSize);
 }
 
 void VulkanRenderer::CreateIndexBuffer()
@@ -1291,19 +1285,18 @@ void VulkanRenderer::CreateIndexBuffer()
 	if (indices.empty()) return;
 	const size_t bufferSize = sizeof(uint) * indices.size();
 
-	Buffer stagingBuffer(m_Device);
+	VulkanBuffer stagingBuffer(m_Device);
 	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
 
-	void* data;
-	vkMapMemory(m_Device, stagingBuffer.memory, 0, bufferSize, 0, &data);
-	memcpy(data, indices.data(), bufferSize);
-	vkUnmapMemory(m_Device, stagingBuffer.memory);
+	stagingBuffer.Map(bufferSize);
+	memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
+	stagingBuffer.Unmap();
 
 	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer);
 
-	CopyBuffer(stagingBuffer.buffer, m_IndexBuffer.buffer, bufferSize);
+	CopyBuffer(stagingBuffer.m_Buffer, m_IndexBuffer.m_Buffer, bufferSize);
 }
 
 void VulkanRenderer::PrepareUniformBuffers()
@@ -1325,8 +1318,8 @@ void VulkanRenderer::PrepareUniformBuffers()
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, m_UniformBuffers.dynamicBuffer);
 
 	// Map persistent
-	VK_CHECK_RESULT(vkMapMemory(m_Device, m_UniformBuffers.viewBuffer.memory, 0, VK_WHOLE_SIZE, 0, &m_UniformBuffers.viewBuffer.mapped));
-	VK_CHECK_RESULT(vkMapMemory(m_Device, m_UniformBuffers.dynamicBuffer.memory, 0, VK_WHOLE_SIZE, 0, &m_UniformBuffers.dynamicBuffer.mapped));
+	VK_CHECK_RESULT(vkMapMemory(m_Device, m_UniformBuffers.viewBuffer.m_Memory, 0, VK_WHOLE_SIZE, 0, &m_UniformBuffers.viewBuffer.m_Mapped));
+	VK_CHECK_RESULT(vkMapMemory(m_Device, m_UniformBuffers.dynamicBuffer.m_Memory, 0, VK_WHOLE_SIZE, 0, &m_UniformBuffers.dynamicBuffer.m_Mapped));
 }
 
 void VulkanRenderer::CreateDescriptorPool()
@@ -1361,7 +1354,7 @@ void VulkanRenderer::CreateDescriptorSet()
 	std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = {};
 
 	VkDescriptorBufferInfo uniformBufferInfo = {};
-	uniformBufferInfo.buffer = m_UniformBuffers.viewBuffer.buffer;
+	uniformBufferInfo.buffer = m_UniformBuffers.viewBuffer.m_Buffer;
 	uniformBufferInfo.offset = 0;
 	uniformBufferInfo.range = sizeof(UniformBufferObjectData);
 
@@ -1373,7 +1366,7 @@ void VulkanRenderer::CreateDescriptorSet()
 	writeDescriptorSets[0].pBufferInfo = &uniformBufferInfo;
 
 	VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
-	uniformBufferDynamicInfo.buffer = m_UniformBuffers.dynamicBuffer.buffer;
+	uniformBufferDynamicInfo.buffer = m_UniformBuffers.dynamicBuffer.m_Buffer;
 	uniformBufferDynamicInfo.offset = 0;
 	uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectDynamic) * m_RenderObjects.size();
 
@@ -1703,7 +1696,7 @@ void VulkanRenderer::UpdateUniformBuffer(const GameContext& gameContext)
 	m_UniformBufferData.projection = gameContext.camera->GetProj();
 	m_UniformBufferData.view = gameContext.camera->GetView();
 
-	memcpy(m_UniformBuffers.viewBuffer.mapped, &m_UniformBufferData, sizeof(m_UniformBufferData));
+	memcpy(m_UniformBuffers.viewBuffer.m_Mapped, &m_UniformBufferData, sizeof(m_UniformBufferData));
 }
 
 void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
@@ -1712,36 +1705,15 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 	m_UniformBufferDynamic.model[renderID] = model;
 
 	size_t size = sizeof(*m_UniformBufferDynamic.model) * m_RenderObjects.size();
-	void* firstIndex = m_UniformBuffers.dynamicBuffer.mapped;
+	void* firstIndex = m_UniformBuffers.dynamicBuffer.m_Mapped;
 	memcpy((void*)((uint64_t)firstIndex + (renderID * m_DynamicAlignment)), &m_UniformBufferDynamic.model[renderID], size);
 
 	// Flush to make changes visible to the host 
 	VkMappedMemoryRange mappedMemoryRange {};
 	mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-	mappedMemoryRange.memory = m_UniformBuffers.dynamicBuffer.memory;
+	mappedMemoryRange.memory = m_UniformBuffers.dynamicBuffer.m_Memory;
 	mappedMemoryRange.size = size;
 	vkFlushMappedMemoryRanges(m_Device, 1, &mappedMemoryRange);
-}
-
-std::vector<char> VulkanRenderer::ReadFile(const std::string& filename)
-{
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open())
-	{
-		Logger::LogError("Couldn't read file: " + filename);
-		return{};
-	}
-
-	size_t fileSize = (size_t)file.tellg();
-	std::vector<char> buffer(fileSize);
-
-	file.seekg(0);
-	file.read(buffer.data(), fileSize);
-
-	file.close();
-
-	return buffer;
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
@@ -1818,83 +1790,5 @@ std::array<VkVertexInputAttributeDescription, 2> VulkanVertex::GetVertPosColAttr
 //	return pos == other.pos && color == other.color && texCoord == other.texCoord;
 //}
 #pragma endregion // Vertex
-
-#pragma region VDeleter
-template<typename T>
-VDeleter<T>::VDeleter() :
-	VDeleter([](T, VkAllocationCallbacks*) {})
-{
-}
-
-template<typename T>
-VDeleter<T>::VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef)
-{
-	this->deleter = [=](T obj) { deletef(obj, nullptr); };
-}
-
-template<typename T>
-VDeleter<T>::VDeleter(const VDeleter<VkInstance>& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef)
-{
-	this->deleter = [&instance, deletef](T obj) { deletef(instance, obj, nullptr); };
-}
-
-template<typename T>
-VDeleter<T>::VDeleter(const VDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef)
-{
-	this->deleter = [&device, deletef](T obj) { deletef(device, obj, nullptr); };
-}
-
-template<typename T>
-VDeleter<T>::~VDeleter()
-{
-	cleanup();
-}
-
-template<typename T>
-const T* VDeleter<T>::operator &() const
-{
-	return &object;
-}
-
-template<typename T>
-T* VDeleter<T>::replace()
-{
-	cleanup();
-	return &object;
-}
-
-template<typename T>
-VDeleter<T>::operator T() const
-{
-	return object;
-}
-
-template<typename T>
-void VDeleter<T>::operator=(T rhs)
-{
-	if (rhs != object)
-	{
-		cleanup();
-		object = rhs;
-	}
-}
-
-template<typename T>
-template<typename V>
-inline bool VDeleter<T>::operator==(V rhs)
-{
-	return false;
-}
-
-template<typename T>
-void VDeleter<T>::cleanup()
-{
-	if (object != VK_NULL_HANDLE)
-	{
-		deleter(object);
-	}
-	object = VK_NULL_HANDLE;
-}
-#pragma endregion // VDeleter
 
 #endif // COMPILE_VULKAN

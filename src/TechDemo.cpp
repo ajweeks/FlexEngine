@@ -11,7 +11,10 @@
 
 using namespace glm;
 
-TechDemo::TechDemo()
+TechDemo::TechDemo() :
+	m_RendererCount(3),
+	m_ClearColor(0.08f, 0.13f, 0.2f),
+	m_VSyncEnabled(false)
 {
 }
 
@@ -25,6 +28,32 @@ void TechDemo::Initialize()
 	m_GameContext = {};
 	m_GameContext.mainApp = this;
 
+	InitializeWindowAndRenderer();
+
+	m_SceneManager = new SceneManager();
+	m_SceneManager->AddScene(new TestScene(m_GameContext));
+
+	m_DefaultCamera = new FreeCamera(m_GameContext);
+	m_DefaultCamera->SetPosition(vec3(0.0f, 0.0f, -8.0f));
+	m_GameContext.camera = m_DefaultCamera;
+
+	m_GameContext.inputManager = new InputManager();
+
+	m_GameContext.renderer->PostInitialize();
+}
+
+void TechDemo::Destroy()
+{
+	m_SceneManager->Destroy(m_GameContext);
+	delete m_SceneManager;
+	delete m_GameContext.inputManager;
+	delete m_DefaultCamera;
+	
+	DestroyWindowAndRenderer();
+}
+
+void TechDemo::InitializeWindowAndRenderer()
+{
 	const vec2i windowSize = vec2i(1920, 1080);
 	const vec2i windowPos = vec2i(300, 300);
 
@@ -58,29 +87,27 @@ void TechDemo::Initialize()
 
 	m_Window->SetUpdateWindowTitleFrequency(0.4f);
 
-	m_GameContext.renderer->SetVSyncEnabled(false);
-	m_GameContext.renderer->SetClearColor(0.08f, 0.13f, 0.2f);
-
-	m_SceneManager = new SceneManager();
-	m_SceneManager->AddScene(new TestScene(m_GameContext));
-
-	m_DefaultCamera = new FreeCamera(m_GameContext);
-	m_DefaultCamera->SetPosition(vec3(0.0f, 0.0f, -8.0f));
-	m_GameContext.camera = m_DefaultCamera;
-
-	m_GameContext.inputManager = new InputManager();
-
-	m_GameContext.renderer->PostInitialize();
+	m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+	m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
 }
 
-void TechDemo::Destroy()
+void TechDemo::DestroyWindowAndRenderer()
 {
-	m_SceneManager->Destroy(m_GameContext);
-	delete m_SceneManager;
-	delete m_GameContext.inputManager;
-	delete m_DefaultCamera;
 	delete m_Window;
 	delete m_GameContext.renderer;
+}
+
+void TechDemo::CycleRenderer()
+{
+	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene());
+	DestroyWindowAndRenderer();
+
+	m_RendererIndex = (m_RendererIndex + 1) % m_RendererCount;
+
+	InitializeWindowAndRenderer();
+	m_SceneManager->AddScene(new TestScene(m_GameContext));
+
+	m_GameContext.renderer->PostInitialize();
 }
 
 void TechDemo::UpdateAndRender()
@@ -109,10 +136,8 @@ void TechDemo::UpdateAndRender()
 
 		if (m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_T))
 		{
-			++m_RendererIndex;
-			if (m_RendererIndex > 2) m_RendererIndex = 0;
-			Destroy();
-			Initialize();
+			m_GameContext.inputManager->ClearAllInputs();
+			CycleRenderer();
 			continue;
 		}
 	

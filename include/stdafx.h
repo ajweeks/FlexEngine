@@ -9,30 +9,14 @@
 #if COMPILE_VULKAN
 	#include <glad/glad.h>
 	#include <vulkan/vulkan.h>
-	//#define GLFW_INCLUDE_VULKAN
 	#include <GLFW/glfw3.h>
 
 	#include "Graphics/Vulkan/VulkanRenderer.h"
 	#include "Window/Vulkan/VulkanWindowWrapper.h"
-
-	std::string VulkanErrorString(VkResult errorCode);
-
-#ifndef VK_CHECK_RESULT
-#define VK_CHECK_RESULT(f)																				\
-{																										\
-	VkResult res = (f);																					\
-	if (res != VK_SUCCESS)																				\
-	{																									\
-		std::cerr << "Vulkan fatal error: VkResult is \"" << VulkanErrorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
-		assert(res == VK_SUCCESS);																		\
-	}																									\
-}
-#endif // VK_CHECK_RESULT
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
 	#include <glad/glad.h>
-	//#define GLFW_INCLUDE_NONE
 	#include <GLFW/glfw3.h>
 
 	#include "Graphics/GL/GLRenderer.h"
@@ -73,8 +57,6 @@
 
 	#include "Graphics/D3D/D3DRenderer.h"
 	#include "Window/D3D/D3DWindowWrapper.h"
-
-	#include "ReadData.h"
 
 	namespace DX
 	{

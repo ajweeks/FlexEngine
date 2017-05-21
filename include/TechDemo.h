@@ -20,10 +20,19 @@ public:
 private:
 	void Destroy();
 
+	void CycleRenderer();
+	void InitializeWindowAndRenderer();
+	void DestroyWindowAndRenderer();
+
+	size_t m_RendererCount;
+
 	Window* m_Window;
 	SceneManager* m_SceneManager;
 	GameContext m_GameContext;
 	FreeCamera* m_DefaultCamera;
+
+	glm::vec3 m_ClearColor;
+	bool m_VSyncEnabled;
 
 	int m_RendererIndex = 0;
 

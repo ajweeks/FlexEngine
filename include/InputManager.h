@@ -175,7 +175,7 @@ public:
 
 	struct Key
 	{
-		int down; // A count of how many frames this key has been down for
+		int down; // A count of how many frames this key has been down for (0 means not down)
 	};
 
 	InputManager();
@@ -195,6 +195,8 @@ public:
 	glm::vec2 GetMouseMovement() const;
 	int GetMouseButtonDown(MouseButton button);
 	bool GetMouseButtonClicked(MouseButton button);
+
+	void ClearAllInputs();
 	
 private:
 	std::map<KeyCode, Key> m_Keys;

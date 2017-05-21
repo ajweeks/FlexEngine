@@ -125,3 +125,19 @@ bool InputManager::GetMouseButtonClicked(MouseButton button)
 	return m_MouseButtons[(int)button].down == 1;
 }
 
+void InputManager::ClearAllInputs()
+{
+	for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
+	{
+		iter->second.down = 0;
+	}
+
+	for (size_t i = 0; i < MOUSE_BUTTON_COUNT; i++)
+	{
+		m_MouseButtons[i].down = 0;
+	}
+
+	m_MousePosition = {};
+	m_PrevMousePosition = m_MousePosition;
+}
+

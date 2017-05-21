@@ -134,13 +134,13 @@
   <ItemGroup>
     <ClCompile Include="src\Graphics\D3D\D3DHelpers.cpp" />
     <ClCompile Include="src\Graphics\MultiRenderer.cpp" />
+    <ClCompile Include="src\Graphics\Vulkan\VulkanBuffer.cpp" />
     <ClCompile Include="src\Helpers.cpp" />
     <ClCompile Include="src\Graphics\D3D\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GL\GLRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanRenderer.cpp" />
     <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
     <ClCompile Include="src\Prefabs\SpherePosCol.cpp" />
-    <ClCompile Include="src\ReadFile.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
     <ClCompile Include="src\stdafx.cpp">
@@ -173,8 +173,7 @@
     <ClInclude Include="include\Graphics\D3D\D3DRenderer.h" />
     <ClInclude Include="include\Graphics\GL\GLRenderer.h" />
     <ClInclude Include="include\Graphics\MultiRenderer.h" />
-    <ClInclude Include="include\ReadData.h" />
-    <ClInclude Include="include\ReadFile.h" />
+    <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
     <ClInclude Include="include\Prefabs\CubePosCol.h" />
     <ClInclude Include="include\Prefabs\SpherePosCol.h" />
@@ -203,6 +202,8 @@
     <ClInclude Include="include\Scene\SceneManager.h" />
     <ClInclude Include="include\Scene\TestScene.h" />
     <ClInclude Include="include\Graphics\D3D\D3DHelpers.h" />
+    <ClInclude Include="include\Graphics\Vulkan\VDeleter.h" />
+    <ClInclude Include="include\Graphics\Vulkan\VulkanBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
