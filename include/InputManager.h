@@ -191,12 +191,13 @@ public:
 	void MouseButtonCallback(GameContext& gameContext, MouseButton button, Action action, int mods);
 	void KeyCallback(KeyCode keycode, Action action, int mods);
 
+	void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 	glm::vec2 GetMousePosition() const;
 	glm::vec2 GetMouseMovement() const;
 	int GetMouseButtonDown(MouseButton button);
 	bool GetMouseButtonClicked(MouseButton button);
 
-	void ClearAllInputs();
+	void ClearAllInputs(const GameContext& gameContext);
 	
 private:
 	std::map<KeyCode, Key> m_Keys;

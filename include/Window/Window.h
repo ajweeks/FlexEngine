@@ -37,7 +37,7 @@ public:
 	// Set to 0 to update window title every frame
 	void SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds);
 
-	virtual void SetCursorMode(CursorMode mode) = 0;
+	virtual void SetCursorMode(CursorMode mode);
 
 	// Callbacks
 	virtual void KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, int mods);
@@ -48,7 +48,6 @@ public:
 protected:
 
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
-	// GL Windows
 	friend void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods);
 	friend void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods);
 	friend void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused);
@@ -58,20 +57,16 @@ protected:
 
 #if COMPILE_D3D
 	friend LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-	// D3D Windows
-	//friend LRESULT D3DKeyCallback(HWND hWnd, int keyCode, WPARAM wParam, LPARAM lParam);
-	//friend LRESULT D3DMouseButtonCallback(HWND hWnd, int button, WPARAM wParam, LPARAM lParam);
-	//friend LRESULT D3DWindowFocusCallback(HWND hWnd, int focused);
-	//friend LRESULT D3DCursorPosCallback(HWND hWnd, double x, double y);
-	//friend LRESULT D3DWindowSizeCallback(HWND hWnd, int width, int height);
-#endif
+#endif // COMPILE_D3D
 
 	//void UpdateWindowSize(int width, int height);
 	//void UpdateWindowSize(glm::vec2i windowSize);
 	//void UpdateWindowFocused(int focused);
 
 	virtual void SetWindowTitle(const std::string& title) = 0;
+
+	// Called when we want to manually position the cursor
+	virtual void SetMousePosition(glm::vec2 mousePosition) = 0;
 
 	// Store this privately so we can access it in callbacks
 	// Should be updated with every call to Update()
@@ -86,6 +81,8 @@ protected:
 
 	float m_UpdateWindowTitleFrequency;
 	float m_SecondsSinceTitleUpdate;
+
+	CursorMode m_CursorMode;
 
 private:
 	std::string GenerateWindowTitle(float dt);

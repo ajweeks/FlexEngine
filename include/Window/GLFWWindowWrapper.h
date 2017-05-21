@@ -23,6 +23,8 @@ public:
 
 protected:
 	virtual void SetWindowTitle(const std::string& title) override;
+	virtual void SetMousePosition(glm::vec2 mousePosition) override;
+
 	GLFWwindow* m_Window;
 
 private:

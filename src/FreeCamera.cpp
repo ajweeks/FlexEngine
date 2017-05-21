@@ -38,7 +38,7 @@ void FreeCamera::Update(const GameContext& gameContext)
 	if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
 	{
 		look = gameContext.inputManager->GetMouseMovement();
-		if (!gameContext.flipY) look.y = -look.y;
+		look.y = -look.y;
 
 		m_Yaw += look.x * m_RotationSpeed;
 		m_Pitch += look.y * m_RotationSpeed;

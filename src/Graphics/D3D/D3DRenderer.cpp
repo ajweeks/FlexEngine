@@ -20,8 +20,6 @@ using Microsoft::WRL::ComPtr;
 D3DRenderer::D3DRenderer(GameContext& gameContext) :
 	m_featureLevel(D3D_FEATURE_LEVEL_11_1)
 {
-	gameContext.flipY = false;
-
 	CreateDevice();
 	CreateResources(gameContext);
 

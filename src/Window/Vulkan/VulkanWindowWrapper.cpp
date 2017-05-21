@@ -50,8 +50,7 @@ void VulkanWindowWrapper::SetSize(int width, int height)
 
 void VulkanWindowWrapper::VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y)
 {
-	// Vulkan is whack yo
-	GLFWCursorPosCallback(glfwWindow, x, -y);
+	GLFWCursorPosCallback(glfwWindow, x, y);
 }
 
 #endif // COMPILE_VULKAN

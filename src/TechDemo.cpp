@@ -137,7 +137,7 @@ void TechDemo::UpdateAndRender()
 
 		if (m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_T))
 		{
-			m_GameContext.inputManager->ClearAllInputs();
+			m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 			CycleRenderer();
 			continue;
 		}

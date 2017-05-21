@@ -262,6 +262,8 @@ void GLFWWindowWrapper::PollEvents()
 
 void GLFWWindowWrapper::SetCursorMode(CursorMode mode)
 {
+	Window::SetCursorMode(mode);
+
 	int glfwCursorMode = 0;
 
 	switch (mode)
@@ -294,6 +296,11 @@ GLFWwindow* GLFWWindowWrapper::GetWindow() const
 void GLFWWindowWrapper::SetWindowTitle(const std::string& title)
 {
 	glfwSetWindowTitle(m_Window, title.c_str());
+}
+
+void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
+{
+	glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
 }
 
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN

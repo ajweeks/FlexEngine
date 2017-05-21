@@ -227,6 +227,16 @@ HWND D3DWindowWrapper::GetWindowHandle() const
 	return m_Window;
 }
 
+void D3DWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
+{
+	POINT posPoint;
+	posPoint.x = (int)mousePosition.x;
+	posPoint.y = (int)mousePosition.y;
+	ClientToScreen(m_Window, &posPoint);
+
+	SetCursorPos(posPoint.x, posPoint.y);
+}
+
 void D3DWindowWrapper::RegisterWindow(const std::string& title, glm::vec2i size, glm::vec2i pos, const GameContext& gameContext)
 {
 	HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -314,18 +324,17 @@ void D3DWindowWrapper::PollEvents()
 
 void D3DWindowWrapper::SetCursorMode(CursorMode mode)
 {
-	// TODO: Implement
-	//int glfwCursorMode = 0;
-	//
-	//switch (mode)
-	//{
-	//case Window::CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
-	//case Window::CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
-	//case Window::CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-	//default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((int)mode)); break;
-	//}
-	//
-	//glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+	Window::SetCursorMode(mode);
+
+	int glfwCursorMode = 0;
+	
+	switch (mode)
+	{
+	case Window::CursorMode::NORMAL: ShowCursor(true); break;
+	case Window::CursorMode::HIDDEN: ShowCursor(false); break;
+	//case Window::CursorMode::DISABLED: ShowCursor(false); break;
+	default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((int)mode)); break;
+	}
 }
 
 void D3DWindowWrapper::Update(const GameContext& gameContext)
@@ -378,6 +387,8 @@ LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		const InputManager::Action inputAction = InputManager::Action::PRESS; // GLFWActionToInputManagerAction(action);
 		const InputManager::MouseButton mouseButton = InputManager::MouseButton::LEFT;
 		const int inputMods = D3DWindowWrapper::D3DModsToInputManagerMods((int)wParam);
+
+
 
 		window->MouseButtonCallback(mouseButton, inputAction, inputMods);
 	} return 0;

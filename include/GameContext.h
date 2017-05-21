@@ -19,5 +19,4 @@ struct GameContext
 	glm::uint program;
 	float elapsedTime;
 	float deltaTime;
-	bool flipY;
 };

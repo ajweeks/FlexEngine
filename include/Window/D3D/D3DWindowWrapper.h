@@ -26,8 +26,10 @@ public:
 
 	HWND GetWindowHandle() const;
 
-private:
+protected:
+	virtual void SetMousePosition(glm::vec2 mousePosition) override;
 
+private:
 	void RegisterWindow(const std::string& title, glm::vec2i size, glm::vec2i pos, const GameContext& gameContext);
 	virtual void SetWindowTitle(const std::string& title) override;
 

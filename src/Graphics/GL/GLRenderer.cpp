@@ -14,8 +14,6 @@ using namespace glm;
 GLRenderer::GLRenderer(GameContext& gameContext) :
 	m_Program(gameContext.program)
 {
-	gameContext.flipY = false;
-
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 

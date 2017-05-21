@@ -71,7 +71,7 @@ void InputManager::MouseButtonCallback(GameContext& gameContext, MouseButton but
 
 		if (button == MouseButton::LEFT)
 		{
-			gameContext.window->SetCursorMode(Window::CursorMode::DISABLED);
+			gameContext.window->SetCursorMode(Window::CursorMode::HIDDEN);
 		}
 	}
 	else
@@ -106,6 +106,16 @@ glm::vec2 InputManager::GetMousePosition() const
 	return m_MousePosition;
 }
 
+void InputManager::SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos)
+{
+	m_MousePosition = mousePos;
+
+	if (updatePreviousPos)
+	{
+		m_PrevMousePosition = m_MousePosition;
+	}
+}
+
 glm::vec2 InputManager::GetMouseMovement() const
 {
 	return m_MousePosition - m_PrevMousePosition;
@@ -125,7 +135,7 @@ bool InputManager::GetMouseButtonClicked(MouseButton button)
 	return m_MouseButtons[(int)button].down == 1;
 }
 
-void InputManager::ClearAllInputs()
+void InputManager::ClearAllInputs(const GameContext& gameContext)
 {
 	for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
 	{
@@ -139,5 +149,7 @@ void InputManager::ClearAllInputs()
 
 	m_MousePosition = {};
 	m_PrevMousePosition = m_MousePosition;
+
+	gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
 }
 

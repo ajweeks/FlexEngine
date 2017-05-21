@@ -29,8 +29,6 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	m_IndexBuffer(m_Device),
 	m_UniformBuffers(m_Device)
 {
-	gameContext.flipY = true;
-
 	CreateInstance();
 	SetupDebugCallback();
 	CreateSurface(gameContext.window);

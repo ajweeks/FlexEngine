@@ -32,6 +32,33 @@ void Window::Update(const GameContext& gameContext)
 		m_SecondsSinceTitleUpdate = 0.0f;
 		SetWindowTitle(GenerateWindowTitle(gameContext.deltaTime));
 	}
+
+	if (m_CursorMode == CursorMode::HIDDEN)
+	{
+		const vec2i windowSize = gameContext.window->GetSize();
+		const vec2 oldMousePos = gameContext.inputManager->GetMousePosition();
+		vec2 newMousePos = oldMousePos;
+		if (oldMousePos.x < 0)
+		{
+			newMousePos.x = windowSize.x + oldMousePos.x;
+		}
+		else if (oldMousePos.x >= windowSize.x)
+		{
+			newMousePos.x = 0;
+		}
+		
+		if (oldMousePos.y < 0)
+		{
+			newMousePos.y = windowSize.y + oldMousePos.y;
+		}
+		else if (oldMousePos.y >= windowSize.y)
+		{
+			newMousePos.y = 0;
+		}
+
+		gameContext.inputManager->SetMousePosition(newMousePos);
+		SetMousePosition(newMousePos);
+	}
 }
 
 vec2i Window::GetSize() const
@@ -70,6 +97,11 @@ void Window::SetShowMSInTitleBar(bool showMS)
 void Window::SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds)
 {
 	m_UpdateWindowTitleFrequency = updateFrequencyinSeconds;
+}
+
+void Window::SetCursorMode(CursorMode mode)
+{
+	m_CursorMode = mode;
 }
 
 
