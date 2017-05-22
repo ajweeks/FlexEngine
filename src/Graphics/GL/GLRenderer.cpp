@@ -54,25 +54,25 @@ uint GLRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPo
 {
 	const uint renderID = m_RenderObjects.size();
 
-	RenderObject* object = new RenderObject();
-	object->renderID = renderID;
+	RenderObject* renderObject = new RenderObject();
+	renderObject->renderID = renderID;
 
-	glGenVertexArrays(1, &object->VAO);
-	glBindVertexArray(object->VAO);
+	glGenVertexArrays(1, &renderObject->VAO);
+	glBindVertexArray(renderObject->VAO);
 
-	glGenBuffers(1, &object->VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, object->VBO);
+	glGenBuffers(1, &renderObject->VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices->at(0)) * vertices->size(), vertices->data(), GL_STATIC_DRAW);
 
-	object->vertices = vertices;
+	renderObject->vertices = vertices;
 
 	uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
 	glEnableVertexAttribArray(posAttrib);
 	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, VertexPosCol::stride, 0);
 
-	object->MVP = glGetUniformLocation(gameContext.program, "in_MVP");
+	renderObject->MVP = glGetUniformLocation(gameContext.program, "in_MVP");
 	
-	m_RenderObjects.push_back(object);
+	m_RenderObjects.push_back(renderObject);
 
 	glBindVertexArray(0);
 
@@ -83,16 +83,32 @@ uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexP
 {
 	const uint renderID = Initialize(gameContext, vertices);
 	
-	RenderObject* object = GetRenderObject(renderID);
+	RenderObject* renderObject = GetRenderObject(renderID);
 
-	object->indices = indices;
-	object->indexed = true;
+	renderObject->indices = indices;
+	renderObject->indexed = true;
 
-	glGenBuffers(1, &object->IBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object->IBO);
+	glGenBuffers(1, &renderObject->IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices->at(0)) * indices->size(), indices->data(), GL_STATIC_DRAW);
 
 	return renderID;
+}
+
+void GLRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
+{
+	RenderObject* renderObject = GetRenderObject(renderID);
+	GLenum glMode = TopologyModeToGLMode(topology);
+	
+	if (glMode == GL_INVALID_ENUM)
+	{
+		Logger::LogError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: " + std::to_string((int)topology));
+		renderObject->topology = GL_TRIANGLES;
+	}
+	else
+	{
+		renderObject->topology = glMode;
+	}
 }
 
 void GLRenderer::SetClearColor(float r, float g, float b)
@@ -111,18 +127,18 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	glBindVertexArray(renderObject->VAO);
-
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
 	if (renderObject->indexed)
 	{
-		glDrawElements(GL_TRIANGLES, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+		glDrawElements(renderObject->topology, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 	}
 	else
 	{
-		glDrawArrays(GL_TRIANGLES, 0, renderObject->vertices->size());
+		glDrawArrays(renderObject->topology, 0, renderObject->vertices->size());
 	}
 
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 }
 
@@ -236,20 +252,21 @@ GLenum GLRenderer::UsageFlagToGLUsageFlag(UsageFlag usage)
 	return glUsage;
 }
 
-GLenum GLRenderer::ModeToGLMode(Mode mode)
+GLenum GLRenderer::TopologyModeToGLMode(TopologyMode topology)
 {
 	GLenum glMode = 0;
 
-	if (mode == Mode::POINTS) glMode = GL_POINTS;
-	else if (mode == Mode::LINES) glMode = GL_LINES;
-	else if (mode == Mode::LINE_LOOP) glMode = GL_LINE_LOOP;
-	else if (mode == Mode::LINE_STRIP) glMode = GL_LINE_STRIP;
-	else if (mode == Mode::TRIANGLES) glMode = GL_TRIANGLES;
-	else if (mode == Mode::TRIANGLE_STRIP) glMode = GL_TRIANGLE_STRIP;
-	else if (mode == Mode::TRIANGLE_FAN) glMode = GL_TRIANGLE_FAN;
-	else Logger::LogError("Unhandled Mode passed to GLRenderer: " + std::to_string((int)mode));
-
-	return glMode;
+	switch (topology)
+	{
+	case TopologyMode::POINT_LIST: return GL_POINTS;
+	case TopologyMode::LINE_LIST: return GL_LINES;
+	case TopologyMode::LINE_LOOP: return GL_LINE_LOOP;
+	case TopologyMode::LINE_STRIP: return GL_LINE_STRIP;
+	case TopologyMode::TRIANGLE_LIST: return GL_TRIANGLES;
+	case TopologyMode::TRIANGLE_STRIP: return GL_TRIANGLE_STRIP;
+	case TopologyMode::TRIANGLE_FAN: return GL_TRIANGLE_FAN;
+	default: return GL_INVALID_ENUM;
+	}
 }
 
 GLRenderer::RenderObject* GLRenderer::GetRenderObject(int renderID)

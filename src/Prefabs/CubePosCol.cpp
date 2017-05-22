@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "Prefabs/CubePosCol.h"
+#include "Prefabs/CubePrefab.h"
 
 #include "GameContext.h"
 #include "Graphics/Renderer.h"
@@ -12,15 +12,15 @@
 
 using namespace glm;
 
-CubePosCol::CubePosCol()
+CubePrefab::CubePrefab()
 {
 }
 
-CubePosCol::~CubePosCol()
+CubePrefab::~CubePrefab()
 {
 }
 
-void CubePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm::quat rotation, glm::vec3 scale)
+void CubePrefab::Init(const GameContext& gameContext, glm::vec3 position, glm::quat rotation, glm::vec3 scale)
 {
 	m_Position = position;
 	m_Rotation = rotation;
@@ -97,12 +97,12 @@ void CubePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm::q
 	m_UniformTimeID = renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
 }
 
-void CubePosCol::Destroy(const GameContext& gameContext)
+void CubePrefab::Destroy(const GameContext& gameContext)
 {
 	gameContext.renderer->Destroy(m_RenderID);
 }
 
-void CubePosCol::Render(const GameContext& gameContext)
+void CubePrefab::Render(const GameContext& gameContext)
 {
 	Renderer* renderer = gameContext.renderer;
 
@@ -115,4 +115,20 @@ void CubePosCol::Render(const GameContext& gameContext)
 	renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
 
 	renderer->Draw(gameContext, m_RenderID);
+}
+
+void CubePrefab::Rotate(glm::quat deltaRotation)
+{
+	m_Rotation *= deltaRotation;
+}
+
+void CubePrefab::Rotate(glm::vec3 deltaEulerRotationRad)
+{
+	quat rotationQuat(deltaEulerRotationRad);
+	m_Rotation *= rotationQuat;
+}
+
+void CubePrefab::Scale(glm::vec3 deltaScale)
+{
+	m_Scale *= deltaScale;
 }

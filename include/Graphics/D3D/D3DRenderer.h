@@ -15,9 +15,10 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
 
-	virtual void SetClearColor(float r, float g, float b) override;
-
 	virtual void PostInitialize() override;
+
+	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
+	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
@@ -41,7 +42,7 @@ private:
 	static glm::uint BufferTargetToD3DTarget(BufferTarget bufferTarget);
 	static glm::uint TypeToD3DType(Type type);
 	static glm::uint UsageFlagToD3DUsageFlag(UsageFlag usage);
-	static glm::uint ModeToD3DMode(Mode mode);
+	static D3D_PRIMITIVE_TOPOLOGY TopologyModeToD3DMode(TopologyMode toplogy);
 
 	struct RenderObject
 	{
@@ -50,6 +51,8 @@ private:
 		glm::uint VAO;
 		glm::uint VBO;
 		glm::uint IBO;
+
+		D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 		std::vector<VertexPosCol>* vertices = nullptr;
 		ID3D11Buffer* vertexBuffer;

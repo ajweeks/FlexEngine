@@ -24,6 +24,7 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
 	
+	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
@@ -54,7 +55,7 @@ private:
 	void CreateImageViews();
 	void CreateRenderPass();
 	void CreateDescriptorSetLayout();
-	void CreateGraphicsPipeline();
+	void CreateGraphicsPipeline(glm::uint renderID);
 	void CreateDepthResources();
 	void CreateFramebuffers();
 	void CreateTextureImage(const std::string& filePath);
@@ -110,8 +111,18 @@ private:
 		VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, 
 		const char* msg, void* userData);
 
+	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
+
 	struct RenderObject
 	{
+		RenderObject(const VDeleter<VkDevice>& device) :
+			pipelineLayout(device, vkDestroyPipelineLayout),
+			graphicsPipeline(device, vkDestroyPipeline)
+		{
+		}
+
+		VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
 		glm::uint renderID;
 
 		glm::uint VAO;
@@ -124,6 +135,9 @@ private:
 		bool indexed = false;
 		std::vector<glm::uint>* indices = nullptr;
 		glm::uint indexOffset = 0;
+
+		VDeleter<VkPipelineLayout> pipelineLayout; // { m_Device, vkDestroyPipelineLayout };
+		VDeleter<VkPipeline> graphicsPipeline; // { m_Device, vkDestroyPipeline };
 	};
 
 	RenderObject* GetRenderObject(int renderID);
@@ -171,8 +185,6 @@ private:
 	VDeleter<VkRenderPass> m_RenderPass{ m_Device, vkDestroyRenderPass };
 	VkDescriptorSet m_DescriptorSet;
 	VDeleter<VkDescriptorSetLayout> m_DescriptorSetLayout{ m_Device, vkDestroyDescriptorSetLayout };
-	VDeleter<VkPipelineLayout> m_PipelineLayout{ m_Device, vkDestroyPipelineLayout };
-	VDeleter<VkPipeline> m_GraphicsPipeline{ m_Device, vkDestroyPipeline };
 
 	VDeleter<VkCommandPool> m_CommandPool{ m_Device, vkDestroyCommandPool };
 	std::vector<VkCommandBuffer> m_CommandBuffers;

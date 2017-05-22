@@ -141,6 +141,7 @@
     <ClCompile Include="src\Graphics\GL\GLRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanRenderer.cpp" />
     <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
+    <ClCompile Include="src\Prefabs\GridPrefab.cpp" />
     <ClCompile Include="src\Prefabs\SpherePosCol.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
@@ -176,8 +177,9 @@
     <ClInclude Include="include\Graphics\MultiRenderer.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
-    <ClInclude Include="include\Prefabs\CubePosCol.h" />
-    <ClInclude Include="include\Prefabs\SpherePosCol.h" />
+    <ClInclude Include="include\Prefabs\CubePrefab.h" />
+    <ClInclude Include="include\Prefabs\GridPrefab.h" />
+    <ClInclude Include="include\Prefabs\SpherePrefab.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
     <ClInclude Include="include\Colours.h" />

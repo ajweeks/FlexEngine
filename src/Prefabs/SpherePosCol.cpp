@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "Prefabs/SpherePosCol.h"
+#include "Prefabs/SpherePrefab.h"
 
 #include "GameContext.h"
 #include "Graphics/Renderer.h"
@@ -11,11 +11,11 @@
 
 using namespace glm;
 
-SpherePosCol::SpherePosCol()
+SpherePrefab::SpherePrefab()
 {
 }
 
-void SpherePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm::quat rotation, glm::vec3 scale)
+void SpherePrefab::Init(const GameContext& gameContext, glm::vec3 position, glm::quat rotation, glm::vec3 scale)
 {
 	m_Position = position;
 	m_Rotation = rotation;
@@ -112,16 +112,16 @@ void SpherePosCol::Init(const GameContext& gameContext, glm::vec3 position, glm:
 	m_UniformTimeID = renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
 }
 
-void SpherePosCol::Destroy(const GameContext& gameContext)
+void SpherePrefab::Destroy(const GameContext& gameContext)
 {
 	gameContext.renderer->Destroy(m_RenderID);
 }
 
-SpherePosCol::~SpherePosCol()
+SpherePrefab::~SpherePrefab()
 {
 }
 
-void SpherePosCol::Render(const GameContext& gameContext)
+void SpherePrefab::Render(const GameContext& gameContext)
 {
 	Renderer* renderer = gameContext.renderer;
 

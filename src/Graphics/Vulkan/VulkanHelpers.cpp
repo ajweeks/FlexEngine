@@ -62,6 +62,12 @@ std::array<VkVertexInputAttributeDescription, 2> VulkanVertex::GetVertPosColAttr
 	return attributeDescriptions;
 }
 
+UniformBuffers::UniformBuffers(const VDeleter<VkDevice>& device) :
+	viewBuffer(device),
+	dynamicBuffer(device)
+{
+}
+
 std::string VulkanErrorString(VkResult errorCode)
 {
 	{

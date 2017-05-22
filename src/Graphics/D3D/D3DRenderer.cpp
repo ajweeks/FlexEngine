@@ -63,11 +63,11 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 {
 	const uint renderID = m_RenderObjects.size();
 
-	RenderObject* object = new RenderObject();
-	object->renderID = renderID;
-	object->vertices = vertices;
+	RenderObject* renderObject = new RenderObject();
+	renderObject->renderID = renderID;
+	renderObject->vertices = vertices;
 
-	m_RenderObjects.push_back(object);
+	m_RenderObjects.push_back(renderObject);
 
 	InitializeVertexBuffer(renderID);
 	UpdateVertexBuffer(renderID);
@@ -86,15 +86,21 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 {
 	const uint renderID = Initialize(gameContext, vertices);
 
-	RenderObject* object = GetRenderObject(renderID);
+	RenderObject* renderObject = GetRenderObject(renderID);
 
-	object->indices = indices;
-	object->indexed = true;
+	renderObject->indices = indices;
+	renderObject->indexed = true;
 
 	InitializeIndexBuffer(renderID);
 	UpdateIndexBuffer(renderID);
 
 	return renderID;
+}
+
+void D3DRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
+{
+	RenderObject* renderObject = GetRenderObject(renderID);
+	renderObject->topology = TopologyModeToD3DMode(topology);
 }
 
 void D3DRenderer::SetClearColor(float r, float g, float b)
@@ -249,21 +255,19 @@ glm::uint D3DRenderer::UsageFlagToD3DUsageFlag(UsageFlag usage)
 	return glUsage;
 }
 
-glm::uint D3DRenderer::ModeToD3DMode(Mode mode)
+D3D_PRIMITIVE_TOPOLOGY D3DRenderer::TopologyModeToD3DMode(TopologyMode topology)
 {
-	glm::uint glMode = 0;
-
-	// TODO: Implement
-	//if (mode == Mode::POINTS) glMode = GL_POINTS;
-	//else if (mode == Mode::LINES) glMode = GL_LINES;
-	//else if (mode == Mode::LINE_LOOP) glMode = GL_LINE_LOOP;
-	//else if (mode == Mode::LINE_STRIP) glMode = GL_LINE_STRIP;
-	//else if (mode == Mode::TRIANGLES) glMode = GL_TRIANGLES;
-	//else if (mode == Mode::TRIANGLE_STRIP) glMode = GL_TRIANGLE_STRIP;
-	//else if (mode == Mode::TRIANGLE_FAN) glMode = GL_TRIANGLE_FAN;
-	//else Logger::LogError("Unhandled Mode passed to GLRenderer: " + std::to_string((int)mode));
-
-	return glMode;
+	switch (topology)
+	{
+	case TopologyMode::POINT_LIST: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+	case TopologyMode::LINE_LIST: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+	//case TopologyMode::LINE_LOOP: return D3D_PRIMITIVE_TOPOLOGY_LINELOOP; // Unsupported
+	case TopologyMode::LINE_STRIP: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+	case TopologyMode::TRIANGLE_LIST: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case TopologyMode::TRIANGLE_STRIP: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+	//case TopologyMode::TRIANGLE_FAN: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLEFAN; // Unsupported
+	default: return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+	}
 }
 
 D3DRenderer::RenderObject* D3DRenderer::GetRenderObject(int renderID)
@@ -560,12 +564,13 @@ void D3DRenderer::Draw(const GameContext& gameContext)
 	XMMATRIX view = XMLoadFloat4x4(&XMFLOAT4X4(&gameContext.camera->GetView()[0][0]));
 	XMMATRIX viewProjection = view * proj;
 
-	m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_DeviceContext->IASetInputLayout(m_pInputLayout);
 
 	for (size_t i = 0; i < m_RenderObjects.size(); i++)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
+
+		m_DeviceContext->IASetPrimitiveTopology(renderObject->topology);
 
 		XMFLOAT4X4 worldF = XMFLOAT4X4(&renderObject->world[0][0]);
 		auto world = XMLoadFloat4x4(&worldF);

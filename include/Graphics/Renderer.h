@@ -45,13 +45,13 @@ public:
 		DOUBLE
 	};
 
-	enum class Mode
+	enum class TopologyMode
 	{
-		POINTS,
-		LINES,
+		POINT_LIST,
+		LINE_LIST,
 		LINE_LOOP,
 		LINE_STRIP,
-		TRIANGLES,
+		TRIANGLE_LIST,
 		TRIANGLE_STRIP,
 		TRIANGLE_FAN
 	};
@@ -60,7 +60,8 @@ public:
 
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) = 0;
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices) = 0;
-	
+
+	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
 	virtual void SetClearColor(float r, float g, float b) = 0;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;

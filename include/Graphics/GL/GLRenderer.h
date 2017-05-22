@@ -15,11 +15,12 @@ public:
 	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
 		std::vector<glm::uint>* indices) override;
 
-	virtual void SetClearColor(float r, float g, float b) override;
-
 	virtual void PostInitialize() override;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
+
+	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
+	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void OnWindowSize(int width, int height) override;
 
@@ -41,7 +42,7 @@ private:
 	static glm::uint BufferTargetToGLTarget(BufferTarget bufferTarget);
 	static glm::uint TypeToGLType(Type type);
 	static glm::uint UsageFlagToGLUsageFlag(UsageFlag usage);
-	static glm::uint ModeToGLMode(Mode mode);
+	static glm::uint TopologyModeToGLMode(TopologyMode topology);
 
 	struct RenderObject
 	{
@@ -50,6 +51,8 @@ private:
 		glm::uint VAO;
 		glm::uint VBO;
 		glm::uint IBO;
+
+		GLenum topology = GL_TRIANGLES;
 
 		glm::uint vertexBuffer;
 		std::vector<VertexPosCol>* vertices = nullptr;

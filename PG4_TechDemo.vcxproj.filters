@@ -105,6 +105,9 @@
     <ClCompile Include="src\Graphics\Vulkan\VulkanHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Prefabs\GridPrefab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\TechDemo.h">
@@ -158,12 +161,6 @@
     <ClInclude Include="include\Scene\TestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Prefabs\CubePosCol.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Prefabs\SpherePosCol.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Vertex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -210,6 +207,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Prefabs\GridPrefab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Prefabs\CubePrefab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Prefabs\SpherePrefab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -43,15 +43,11 @@ struct VulkanVertex
 	static VkVertexInputBindingDescription GetVertPosColBindingDescription();
 	static std::array<VkVertexInputAttributeDescription, 3> GetVertPosColTexAttributeDescriptions();
 	static std::array<VkVertexInputAttributeDescription, 2> GetVertPosColAttributeDescriptions();
-	//bool operator==(const VulkanVertex& other) const;
 };
 
 struct UniformBuffers
 {
-	UniformBuffers(const VDeleter<VkDevice>& device) :
-		viewBuffer(device),
-		dynamicBuffer(device)
-	{}
+	UniformBuffers(const VDeleter<VkDevice>& device);
 
 	VulkanBuffer viewBuffer;
 	VulkanBuffer dynamicBuffer;

@@ -38,7 +38,6 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	CreateImageViews();
 	CreateRenderPass();
 	CreateDescriptorSetLayout();
-	CreateGraphicsPipeline();
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
@@ -55,6 +54,11 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 
 void VulkanRenderer::PostInitialize()
 {
+	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	{
+		CreateGraphicsPipeline(i);
+	}
+
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 
@@ -86,7 +90,7 @@ VulkanRenderer::~VulkanRenderer()
 glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
 {
 	size_t renderID = m_RenderObjects.size();
-	RenderObject* renderObject = new RenderObject();
+	RenderObject* renderObject = new RenderObject(m_Device);
 	m_RenderObjects.push_back(renderObject);
 
 	renderObject->vertices = vertices;
@@ -120,6 +124,21 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector
 	//}
 
 	return renderID;
+}
+
+void VulkanRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
+{
+	RenderObject* renderObject = GetRenderObject(renderID);
+	VkPrimitiveTopology vkTopology = TopologyModeToVkPrimitiveTopology(topology);
+
+	if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
+	{
+		Logger::LogError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: " + (int)topology);
+	}
+	else
+	{
+		renderObject->topology = vkTopology;
+	}
 }
 
 void VulkanRenderer::SetClearColor(float r, float g, float b)
@@ -382,7 +401,10 @@ void VulkanRenderer::RecreateSwapChain(Window* window)
 	CreateSwapChain(window);
 	CreateImageViews();
 	CreateRenderPass();
-	CreateGraphicsPipeline();
+	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	{
+		CreateGraphicsPipeline(i);
+	}
 	CreateDepthResources();
 	CreateFramebuffers();
 	CreateCommandBuffers();
@@ -560,8 +582,10 @@ void VulkanRenderer::CreateTextureSampler()
 	VK_CHECK_RESULT(vkCreateSampler(m_Device, &samplerInfo, nullptr, m_TextureSampler.replace()));
 }
 
-void VulkanRenderer::CreateGraphicsPipeline()
+void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 {
+	RenderObject* renderObject = GetRenderObject(renderID);
+
 	// TODO: Use same glsl shaders for GL and Vulkan
 	auto fragShaderCode = ReadFile("resources/shaders/GLSL/spv/vk_vertex_pos_col_frag.spv");
 	auto vertShaderCode = ReadFile("resources/shaders/GLSL/spv/vk_vertex_pos_col_vert.spv");
@@ -607,7 +631,7 @@ void VulkanRenderer::CreateGraphicsPipeline()
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.topology = renderObject->topology;
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 
 	VkViewport viewport = {};
@@ -665,7 +689,7 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = setLayouts;
 
-	VK_CHECK_RESULT(vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, m_PipelineLayout.replace()));
+	VK_CHECK_RESULT(vkCreatePipelineLayout(m_Device, &pipelineLayoutInfo, nullptr, renderObject->pipelineLayout.replace()));
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{};
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -690,12 +714,12 @@ void VulkanRenderer::CreateGraphicsPipeline()
 	pipelineInfo.pMultisampleState = &multisampling;
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDepthStencilState = &depthStencil;
-	pipelineInfo.layout = m_PipelineLayout;
+	pipelineInfo.layout = renderObject->pipelineLayout;
 	pipelineInfo.renderPass = m_RenderPass;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, m_GraphicsPipeline.replace()));
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, renderObject->graphicsPipeline.replace()));
 }
 
 void VulkanRenderer::CreateFramebuffers()
@@ -964,8 +988,6 @@ void VulkanRenderer::BuildCommandBuffers()
 		VkRect2D scissor = VkRect2D{ { 0u, 0u }, { m_SwapChainExtent.width, m_SwapChainExtent.height } };
 		vkCmdSetScissor(m_CommandBuffers[i], 0, 1, &scissor);
 
-		vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_GraphicsPipeline);
-
 		VkDeviceSize offsets[1] = { 0 };
 		vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer.m_Buffer, offsets);
 		
@@ -979,7 +1001,10 @@ void VulkanRenderer::BuildCommandBuffers()
 			uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 
 			RenderObject* renderObject = m_RenderObjects[j];
-			vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 
+
+			vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
+
+			vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
 				0, 1, &m_DescriptorSet, 
 				1, &dynamicOffset);
 
@@ -1694,6 +1719,21 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsE
 	std::cerr << "validation layer: " << msg << std::endl;
 
 	return VK_FALSE;
+}
+
+VkPrimitiveTopology VulkanRenderer::TopologyModeToVkPrimitiveTopology(TopologyMode mode)
+{
+	switch (mode)
+	{
+	case TopologyMode::POINT_LIST: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+	case TopologyMode::LINE_LIST: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	//case TopologyMode::LINE_LOOP: return VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_LINE_LOOP; // Unsupported
+	case TopologyMode::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+	case TopologyMode::TRIANGLE_LIST: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	case TopologyMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+	case TopologyMode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+	default: return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+	}
 }
 
 #endif // COMPILE_VULKAN

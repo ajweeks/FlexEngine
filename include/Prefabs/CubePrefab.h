@@ -2,28 +2,31 @@
 
 #include "Vertex.h"
 
-#include <vector>
-
 #include <glm\vec3.hpp>
 #include <glm\gtc\quaternion.hpp>
 
+#include <vector>
+
 struct GameContext;
 
-struct SpherePosCol
+struct CubePrefab
 {
-	SpherePosCol();
+	CubePrefab();
 
 	void Init(const GameContext& gameContext, 
 		glm::vec3 position = glm::vec3(0.0f), 
 		glm::quat rotation = glm::quat(glm::vec3(0.0f)), 
 		glm::vec3 scale = glm::vec3(1.0f));
 	void Destroy(const GameContext& gameContext);
-	~SpherePosCol();
+	~CubePrefab();
 
 	void Render(const GameContext& gameContext);
 
+	void Rotate(glm::quat deltaRotation);
+	void Rotate(glm::vec3 deltaEulerRotationRad);
+	void Scale(glm::vec3 deltaScale);
+
 	std::vector<VertexPosCol> m_Vertices;
-	std::vector<glm::uint> m_Indices;
 
 	glm::uint m_RenderID;
 

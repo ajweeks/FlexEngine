@@ -32,7 +32,9 @@ void TechDemo::Initialize()
 	InitializeWindowAndRenderer();
 
 	m_SceneManager = new SceneManager();
-	m_SceneManager->AddScene(new TestScene(m_GameContext));
+	TestScene* pDefaultScene = new TestScene(m_GameContext);
+	m_SceneManager->AddScene(pDefaultScene);
+	pDefaultScene->Initialize(m_GameContext);
 
 	m_DefaultCamera = new FreeCamera(m_GameContext);
 	m_DefaultCamera->SetPosition(vec3(0.0f, 0.0f, -8.0f));
@@ -106,7 +108,10 @@ void TechDemo::CycleRenderer()
 	m_RendererIndex = RendererID(((int)m_RendererIndex + 1) % m_RendererCount);
 
 	InitializeWindowAndRenderer();
-	m_SceneManager->AddScene(new TestScene(m_GameContext));
+
+	TestScene* pDefaultScene = new TestScene(m_GameContext);
+	m_SceneManager->AddScene(pDefaultScene);
+	pDefaultScene->Initialize(m_GameContext);
 
 	m_GameContext.renderer->PostInitialize();
 }
