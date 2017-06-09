@@ -1,0 +1,36 @@
+[Header]
+ICOfile = "Milky_thumb.jpg"
+PREVIEWfile = "Milkyway_preview.jpg"
+Name = "Milkyway"
+Author = "Blochi"
+Location = "Space"
+Comment = "purely artificial, derived from NASA map, spiced up with nebulas"
+Link = "http://www.hdrlabs.com/sibl/archive.html"
+Date = "2001:00:00"
+Time = "00:00:00"
+
+[Background]
+BGfile = "Milkyway_BG.jpg"
+BGmap = 1
+BGu = 0
+BGv = 0
+BGheight = 4000
+
+[Enviroment]
+EVfile = "Milkyway_Light.hdr"
+EVmap = 1
+EVu = 0
+EVv = 0
+EVheight = 128
+EVmulti = 1
+EVgamma = 1.6
+
+[Reflection]
+REFfile = "Milkyway_small.hdr"
+REFmap = 1
+REFu = 0
+REFv = 0
+REFheight = 1024
+REFmulti = 1
+REFgamma = 1.6
+

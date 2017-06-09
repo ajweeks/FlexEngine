@@ -1,0 +1,54 @@
+[Header]
+ICOfile = "Factory_Catwalk_Thumb.jpg"
+PREVIEWfile = "Factory_Catwalk_preview.jpg"
+Name = "Factory Catwalk"
+Author = "Blochi"
+Location = "Movieset"
+Comment = "Indoor movie set, rusty pipes professionally lit for showdown action."
+GEOlat = 33.85174201755203
+GEOlong = -118.39616060256958
+Link = "http://www.hdrlabs.com/sibl/archive.html"
+Date = "2009:01:21"
+Time = "09:30:00"
+Height = 1.6
+
+[Background]
+; color has been slightly shifted in tonemapping
+BGfile = "Factory_Catwalk_Bg.jpg"
+BGmap = 1
+BGu = 0.000000
+BGv = 0.000000
+BGheight = 4000
+
+[Enviroment]
+EVfile = "Factory_Catwalk_Env.hdr"
+EVmap = 1
+EVu = 0.000000
+EVv = 0.000000
+EVheight = 256
+EVmulti = 1.000000
+EVgamma = 1.600000
+
+[Reflection]
+REFfile = "Factory_Catwalk_2k.hdr"
+REFmap = 1
+REFu = 0.000000
+REFv = 0.000000
+REFheight = 1024
+REFmulti = 1.000000
+REFgamma = 1.600000
+
+[Light1]
+LIGHTname = "Evil Keylight"
+LIGHTcolor = 249,220,189
+LIGHTmulti = 0.8000
+LIGHTu = 0.252000
+LIGHTv = 0.856000
+
+[Light2]
+LIGHTname = "Shiny Blue Rimlight"
+LIGHTcolor = 76,159,255
+LIGHTmulti = 0.7000
+LIGHTu = 0.668000
+LIGHTv = 0.500000
+ 
