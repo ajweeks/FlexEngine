@@ -41,15 +41,6 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
-
-	//CreateTextureImage();
-	//CreateTextureImageView();
-
-//#if 0
-//	LoadModel(MODEL_PATH);
-//#else
-//	CreateCube(1.0f);
-//#endif
 }
 
 void VulkanRenderer::PostInitialize()
@@ -95,16 +86,7 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector
 
 	renderObject->vertices = vertices;
 
-	//for (size_t i = 0; i < renderObject->vertices->size(); i++)
-	//{
-	//	(*renderObject->vertices)[i].pos *= -1;
-	//}
-
 	return renderID;
-
-	//uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
-	//glEnableVertexAttribArray(posAttrib);
-	//glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, VertexPosCol::stride, 0);
 }
 
 glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices)
@@ -114,14 +96,6 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector
 	RenderObject* renderObject = GetRenderObject(renderID);
 	renderObject->indices = indices;
 	renderObject->indexed = true;
-
-	//m_Indices = *indices;
-	//const size_t offset = m_Indices.size() - 1;
-	//m_Indices.resize(m_Indices.size() + indices->size());
-	//for (size_t i = offset; i < m_Indices.size(); i++)
-	//{
-	//	m_Indices[i] = (*indices)[i];
-	//}
 
 	return renderID;
 }
@@ -148,22 +122,8 @@ void VulkanRenderer::SetClearColor(float r, float g, float b)
 
 void VulkanRenderer::Draw(const GameContext& gameContext, glm::uint renderID)
 {
-	//RenderObject* renderObject = GetRenderObject(renderID);
-	//
-	//glBindVertexArray(renderObject->VAO);
-	//
-	//glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-	//
-	//if (renderObject->indexed)
-	//{
-	//	glDrawElements(GL_TRIANGLES, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
-	//}
-	//else
-	//{
-	//	glDrawArrays(GL_TRIANGLES, 0, renderObject->vertices->size());
-	//}
-	//
-	//glBindVertexArray(0);
+	UNREFERENCED_PARAMETER(gameContext);
+	UNREFERENCED_PARAMETER(renderID);
 }
 
 void VulkanRenderer::OnWindowSize(int width, int height)
@@ -178,10 +138,8 @@ void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
 
 void VulkanRenderer::Clear(int flags, const GameContext& gameContext)
 {
-	//GLbitfield mask = 0;
-	//if ((int)flags & (int)ClearFlag::COLOR) mask |= GL_COLOR_BUFFER_BIT;
-	//if ((int)flags & (int)ClearFlag::DEPTH) mask |= GL_DEPTH_BUFFER_BIT;
-	//glClear(mask);
+	UNREFERENCED_PARAMETER(gameContext);
+	UNREFERENCED_PARAMETER(flags);
 }
 
 void VulkanRenderer::SwapBuffers(const GameContext& gameContext)
@@ -210,27 +168,30 @@ void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, glm::
 
 int VulkanRenderer::GetShaderUniformLocation(glm::uint program, const std::string uniformName)
 {
-	//return glGetUniformLocation(program, uniformName.c_str());
+	// TODO: Implement
+	UNREFERENCED_PARAMETER(program);
+	UNREFERENCED_PARAMETER(uniformName);
 	return 0;
 }
 
 void VulkanRenderer::SetUniform1f(glm::uint location, float val)
 {
-	//glUniform1f(location, val);
+	// TODO: Implement
+	UNREFERENCED_PARAMETER(location);
+	UNREFERENCED_PARAMETER(val);
 }
 
 void VulkanRenderer::DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
-	//RenderObject* renderObject = GetRenderObject(renderID);
-	//
-	//glBindVertexArray(renderObject->VAO);
-	//
-	//GLuint location = glGetAttribLocation(program, variableName.c_str());
-	//glEnableVertexAttribArray(location);
-	//GLenum glRenderType = TypeToGLType(renderType);
-	//glVertexAttribPointer(location, size, glRenderType, normalized, stride, pointer);
-	//
-	//glBindVertexArray(0);
+	// TODO: Implement
+	UNREFERENCED_PARAMETER(renderID);
+	UNREFERENCED_PARAMETER(program);
+	UNREFERENCED_PARAMETER(variableName);
+	UNREFERENCED_PARAMETER(size);
+	UNREFERENCED_PARAMETER(renderType);
+	UNREFERENCED_PARAMETER(normalized);
+	UNREFERENCED_PARAMETER(stride);
+	UNREFERENCED_PARAMETER(pointer);
 }
 
 void VulkanRenderer::Destroy(glm::uint renderID)
@@ -875,7 +836,6 @@ void VulkanRenderer::CreateDepthResources()
 void VulkanRenderer::CreateTextureImage(const std::string& filePath)
 {
 	int textureWidth, textureHeight, textureChannels;
-	//stbi_uc* pixels = stbi_load(MODEL_TEXTURE_PATH.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 	unsigned char* pixels = SOIL_load_image(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, SOIL_LOAD_RGBA);
 
 	if (!pixels)
@@ -1208,6 +1168,7 @@ void VulkanRenderer::LoadModel(const std::string& filePath)
 		throw std::runtime_error(err);
 	}
 
+	// TODO: re-implement
 	//for (const auto& shape : shapes)
 	//{
 	//	for (const auto& index : shape.mesh.indices)
@@ -1331,7 +1292,7 @@ void VulkanRenderer::CreateDescriptorPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = poolSizes.size();
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 2; // TODO: 1?
+	poolInfo.maxSets = 2; // TODO: Set this value smartly
 	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, m_DescriptorPool.replace()));
