@@ -14,7 +14,6 @@ BaseScene::BaseScene(std::string name) :
 
 BaseScene::~BaseScene()
 {
-	delete m_Camera;
 }
 
 std::string BaseScene::GetName() const

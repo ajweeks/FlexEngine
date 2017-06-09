@@ -62,9 +62,10 @@ void VulkanRenderer::PostInitialize()
 
 VulkanRenderer::~VulkanRenderer()
 {
-	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+	auto iter = m_RenderObjects.begin();
+	while (iter != m_RenderObjects.end())
 	{
-		delete m_RenderObjects[i];
+		iter = Destroy(iter);
 	}
 	m_RenderObjects.clear();
 
@@ -200,7 +201,7 @@ void VulkanRenderer::Destroy(glm::uint renderID)
 	{
 		if ((*iter)->renderID == renderID)
 		{
-			m_RenderObjects.erase(iter);
+			iter = Destroy(iter);
 			return;
 		}
 	}
@@ -209,6 +210,15 @@ void VulkanRenderer::Destroy(glm::uint renderID)
 VulkanRenderer::RenderObject* VulkanRenderer::GetRenderObject(int renderID)
 {
 	return m_RenderObjects[renderID];
+}
+
+VulkanRenderer::RenderObjectIter VulkanRenderer::Destroy(RenderObjectIter iter)
+{
+	RenderObject* pRenderObject = *iter;
+	auto newIter = m_RenderObjects.erase(iter);
+	SafeDelete(pRenderObject);
+
+	return newIter;
 }
 
 // Vertex hash function

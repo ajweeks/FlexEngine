@@ -29,15 +29,10 @@ GLRenderer::GLRenderer(GameContext& gameContext) :
 
 GLRenderer::~GLRenderer()
 {
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	auto iter = m_RenderObjects.begin();
+	while (iter != m_RenderObjects.end())
 	{
-		glDeleteBuffers(1, &m_RenderObjects[i]->VBO);
-		if (m_RenderObjects[i]->indexed)
-		{
-			glDeleteBuffers(1, &m_RenderObjects[i]->IBO);
-		}
-
-		delete m_RenderObjects[i];
+		iter = Destroy(iter);
 	}
 	m_RenderObjects.clear();
 
@@ -204,10 +199,7 @@ void GLRenderer::Destroy(uint renderID)
 	{
 		if ((*iter)->renderID == renderID)
 		{
-			RenderObject* object = *iter;
-			m_RenderObjects.erase(iter);
-			delete object;
-
+			Destroy(iter);
 			return;
 		}
 	}
@@ -272,6 +264,22 @@ GLenum GLRenderer::TopologyModeToGLMode(TopologyMode topology)
 GLRenderer::RenderObject* GLRenderer::GetRenderObject(int renderID)
 {
 	return m_RenderObjects[renderID];
+}
+
+GLRenderer::RenderObjectIter GLRenderer::Destroy(RenderObjectIter iter)
+{
+	RenderObject* pRenderObject = *iter;
+	auto newIter = m_RenderObjects.erase(iter);
+
+	glDeleteBuffers(1, &pRenderObject->VBO);
+	if (pRenderObject->indexed)
+	{
+		glDeleteBuffers(1, &pRenderObject->IBO);
+	}
+
+	SafeDelete(pRenderObject);
+
+	return newIter;
 }
 
 #endif // COMPILE_OPEN_GL

@@ -18,7 +18,6 @@ public:
 	virtual void UpdateAndRender(const GameContext& gameContext) override;
 
 private:
-
 	std::vector<CubePrefab> m_Cubes;
 
 	CubePrefab m_Cube;

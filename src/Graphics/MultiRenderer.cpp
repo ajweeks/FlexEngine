@@ -12,7 +12,7 @@ MultiRenderer::~MultiRenderer()
 {
 	for (size_t i = 0; i < m_Renderers.size(); i++)
 	{
-		delete m_Renderers[i];
+		SafeDelete(m_Renderers[i]);
 	}
 	m_Renderers.clear();
 }

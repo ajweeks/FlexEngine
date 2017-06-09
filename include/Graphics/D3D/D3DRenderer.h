@@ -63,8 +63,11 @@ private:
 
 		glm::mat4 world;
 	};
+	
+	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
 
 	RenderObject* GetRenderObject(int renderID);
+	RenderObjectIter Destroy(RenderObjectIter iter);
 
 	// TODO: use sorted data type (map)
 	std::vector<RenderObject*> m_RenderObjects = {};
@@ -114,7 +117,7 @@ private:
 
 	ID3DX11EffectMatrixVariable* m_pWorldViewProjectionVariable = nullptr;
 
-	bool m_PrintExtraD3DErrorInfo = true;
+	bool m_PrintExtraD3DErrorInfo = false;
 	ID3D11Debug* m_pDebugInterface = nullptr;
 
 	bool m_Wireframe = false;

@@ -14,7 +14,7 @@ public:
 	void UpdateAndRender(const GameContext& gameContext);
 
 	void AddScene(BaseScene* newScene);
-	void RemoveScene(BaseScene* scene);
+	void RemoveScene(BaseScene* scene, const GameContext& gameContext);
 
 	void SetCurrentScene(int sceneIndex);
 	void SetCurrentScene(std::string sceneName);

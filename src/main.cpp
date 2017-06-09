@@ -18,14 +18,16 @@ int main(int argc, char *argv[])
 
 	// Enable run-time memory leak check for debug builds
 #if defined(DEBUG) | defined(_DEBUG)
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-	//_CrtSetBreakAlloc(336);
+	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	//_CrtSetBreakAlloc(714);
 #endif
 
-	TechDemo* techDemo = new TechDemo();
-	techDemo->Initialize();
-	techDemo->UpdateAndRender();
-	delete techDemo;
+	{
+		TechDemo* techDemo = new TechDemo();
+		techDemo->Initialize();
+		techDemo->UpdateAndRender();
+		SafeDelete(techDemo);
+	}
 
 	system("PAUSE");
 	exit(EXIT_SUCCESS);

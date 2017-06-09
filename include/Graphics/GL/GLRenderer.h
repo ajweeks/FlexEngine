@@ -64,7 +64,10 @@ private:
 		glm::uint MVP;
 	};
 
+	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
+
 	RenderObject* GetRenderObject(int renderID);
+	RenderObjectIter Destroy(RenderObjectIter iter);
 
 	// TODO: use sorted data type (map)
 	std::vector<RenderObject*> m_RenderObjects;

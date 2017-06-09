@@ -38,8 +38,7 @@ D3DRenderer::D3DRenderer(GameContext& gameContext) :
 
 	CreateInputLayout();
 
-	// Change the timer settings if you want something other than the default variable timestep mode.
-	// e.g. for 60 FPS fixed timestep update logic, call:
+	// For 60 FPS fixed timestep update logic:
 	/*
 	m_timer.SetFixedTimeStep(true);
 	m_timer.SetTargetElapsedSeconds(1.0 / 60);
@@ -58,11 +57,10 @@ D3DRenderer::~D3DRenderer()
 	SafeRelease(m_pInputLayout);
 	SafeRelease(m_pEffect);
 
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	auto iter = m_RenderObjects.begin();
+	while (iter != m_RenderObjects.end())
 	{
-		SafeRelease(m_RenderObjects[i]->vertexBuffer);
-		SafeRelease(m_RenderObjects[i]->indexBuffer);
-		delete m_RenderObjects[i];
+		iter = Destroy(iter);
 	}
 
 	m_BackBuffer.ReleaseAndGetAddressOf();
@@ -91,13 +89,6 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 
 	InitializeVertexBuffer(renderID);
 	UpdateVertexBuffer(renderID);
-
-	//uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
-	//glEnableVertexAttribArray(posAttrib);
-	//glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, VertexPosCol::stride, 0);
-	//
-	//object->MVP = glGetUniformLocation(gameContext.program, "in_MVP");
-
 
 	return renderID;
 }
@@ -135,15 +126,13 @@ void D3DRenderer::PostInitialize()
 void D3DRenderer::Draw(const GameContext& gameContext, uint renderID)
 {
 	UNREFERENCED_PARAMETER(gameContext);
-
-	RenderObject* renderObject = GetRenderObject(renderID);
-
-
 }
 
 void D3DRenderer::OnWindowSize(int width, int height)
 {
 	// TODO: Recreate swap chain!
+	UNREFERENCED_PARAMETER(width);
+	UNREFERENCED_PARAMETER(height);
 }
 
 void D3DRenderer::SetVSyncEnabled(bool enableVSync)
@@ -176,8 +165,6 @@ void D3DRenderer::SwapBuffers(const GameContext& gameContext)
 {
 	float totalTime = gameContext.elapsedTime;
 
-	//UpdateUniformBuffers(gameContext);
-
 	Draw(gameContext);
 
 	HRESULT hr = m_SwapChain->Present(m_VSyncEnabled ? 1 : 0, 0);
@@ -203,12 +190,16 @@ void D3DRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint ren
 int D3DRenderer::GetShaderUniformLocation(uint program, const std::string uniformName)
 {
 	// TODO: Implement
+	UNREFERENCED_PARAMETER(program);
+	UNREFERENCED_PARAMETER(uniformName);
 	return 0;
 }
 
 void D3DRenderer::SetUniform1f(uint location, float val)
 {
 	// TODO: Implement
+	UNREFERENCED_PARAMETER(location);
+	UNREFERENCED_PARAMETER(val);
 }
 
 void D3DRenderer::DescribeShaderVariable(uint renderID, uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
@@ -216,6 +207,15 @@ void D3DRenderer::DescribeShaderVariable(uint renderID, uint program, const std:
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	// TODO: Implement
+	UNREFERENCED_PARAMETER(renderID);
+	UNREFERENCED_PARAMETER(program);
+	UNREFERENCED_PARAMETER(variableName);
+	UNREFERENCED_PARAMETER(size);
+	UNREFERENCED_PARAMETER(renderType);
+	UNREFERENCED_PARAMETER(normalized);
+	UNREFERENCED_PARAMETER(stride);
+	UNREFERENCED_PARAMETER(pointer);
+
 }
 
 void D3DRenderer::Destroy(uint renderID)
@@ -224,13 +224,21 @@ void D3DRenderer::Destroy(uint renderID)
 	{
 		if ((*iter)->renderID == renderID)
 		{
-			RenderObject* object = *iter;
-			m_RenderObjects.erase(iter);
-			delete object;
-
+			iter = Destroy(iter);
 			return;
 		}
 	}
+}
+
+D3DRenderer::RenderObjectIter D3DRenderer::Destroy(RenderObjectIter iter)
+{
+	RenderObject* pRenderObject = *iter;
+	auto newIter = m_RenderObjects.erase(iter);
+	SafeRelease(pRenderObject->vertexBuffer);
+	SafeRelease(pRenderObject->indexBuffer);
+	SafeDelete(pRenderObject);
+
+	return newIter;
 }
 
 glm::uint D3DRenderer::BufferTargetToD3DTarget(BufferTarget bufferTarget)
@@ -238,9 +246,7 @@ glm::uint D3DRenderer::BufferTargetToD3DTarget(BufferTarget bufferTarget)
 	glm::uint glTarget = 0;
 
 	// TODO: Implement
-	//if (bufferTarget == BufferTarget::ARRAY_BUFFER) glTarget = GL_ARRAY_BUFFER;
-	//else if (bufferTarget == BufferTarget::ELEMENT_ARRAY_BUFFER) glTarget = GL_ELEMENT_ARRAY_BUFFER;
-	//else Logger::LogError("Unhandled BufferTarget passed to GLRenderer: " + std::to_string((int)bufferTarget));
+	UNREFERENCED_PARAMETER(bufferTarget);
 
 	return glTarget;
 }
@@ -250,15 +256,7 @@ glm::uint D3DRenderer::TypeToD3DType(Type type)
 	glm::uint glType = 0;
 
 	// TODO: Implement
-	//if (type == Type::BYTE) glType = GL_BYTE;
-	//else if (type == Type::UNSIGNED_BYTE) glType = GL_UNSIGNED_BYTE;
-	//else if (type == Type::SHORT) glType = GL_SHORT;
-	//else if (type == Type::UNSIGNED_SHORT) glType = GL_UNSIGNED_SHORT;
-	//else if (type == Type::INT) glType = GL_INT;
-	//else if (type == Type::UNSIGNED_INT) glType = GL_UNSIGNED_INT;
-	//else if (type == Type::FLOAT) glType = GL_FLOAT;
-	//else if (type == Type::DOUBLE) glType = GL_DOUBLE;
-	//else Logger::LogError("Unhandled Type passed to GLRenderer: " + std::to_string((int)type));
+	UNREFERENCED_PARAMETER(type);
 
 	return glType;
 }
@@ -268,9 +266,7 @@ glm::uint D3DRenderer::UsageFlagToD3DUsageFlag(UsageFlag usage)
 	glm::uint glUsage = 0;
 
 	// TODO: Implement
-	//if (usage == UsageFlag::STATIC_DRAW) glUsage = GL_STATIC_DRAW;
-	//else if (usage == UsageFlag::DYNAMIC_DRAW) glUsage = GL_DYNAMIC_DRAW;
-	//else Logger::LogError("Unhandled usage flag passed to GLRenderer: " + std::to_string((int)usage));
+	UNREFERENCED_PARAMETER(usage);
 
 	return glUsage;
 }
@@ -324,16 +320,16 @@ void D3DRenderer::CreateDevice()
 
 	// Create the DX11 API device object, and get a corresponding context.
 	HRESULT hr = D3D11CreateDevice(
-		nullptr,                                // specify nullptr to use the default adapter
+		nullptr,                                  // Specify nullptr to use the default adapter
 		D3D_DRIVER_TYPE_HARDWARE,
 		nullptr,
 		creationFlags,
 		featureLevels,
 		_countof(featureLevels),
 		D3D11_SDK_VERSION,
-		m_Device.ReleaseAndGetAddressOf(),   // returns the Direct3D device created
-		&m_featureLevel,                        // returns feature level of device created
-		m_DeviceContext.ReleaseAndGetAddressOf()   // returns the device immediate context
+		m_Device.ReleaseAndGetAddressOf(),        // Returns the Direct3D device created
+		&m_featureLevel,                          // Returns feature level of device created
+		m_DeviceContext.ReleaseAndGetAddressOf()  // Returns the device immediate context
 	);
 
 	if (hr == E_INVALIDARG)
@@ -635,13 +631,10 @@ void D3DRenderer::CreateInputLayout()
 	{
 		Logger::LogError(L"D3DRenderer couldn't create input layout");
 	}
-
 }
 
 void D3DRenderer::OnDeviceLost(const GameContext& gameContext)
 {
-	// Add Direct3D resource cleanup here:
-
 	m_DepthStencilView.Reset();
 	m_RenderTargetView.Reset();
 	m_SwapChain1.Reset();
@@ -651,9 +644,6 @@ void D3DRenderer::OnDeviceLost(const GameContext& gameContext)
 	m_Device1.Reset();
 	m_Device.Reset();
 
-	//m_SceneTex.Reset();
-	//m_SceneSRV.Reset();
-	//m_SceneRT.Reset();
 	m_BackBuffer.Reset();
 
 	CreateDevice();
@@ -662,7 +652,8 @@ void D3DRenderer::OnDeviceLost(const GameContext& gameContext)
 
 void D3DRenderer::UpdateUniformBuffers(const GameContext& gameContext)
 {
-
+	// TODO: Implement
+	UNREFERENCED_PARAMETER(gameContext);
 }
 
 #endif // COMPILE_D3D

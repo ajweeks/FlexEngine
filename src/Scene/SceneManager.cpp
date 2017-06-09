@@ -16,7 +16,7 @@ SceneManager::~SceneManager()
 {
 	for (size_t i = 0; i < m_Scenes.size(); i++)
 	{
-		delete m_Scenes[i];
+		SafeDelete(m_Scenes[i]);
 	}
 	m_Scenes.clear();
 }
@@ -44,11 +44,13 @@ void SceneManager::AddScene(BaseScene* newScene)
 	}
 }
 
-void SceneManager::RemoveScene(BaseScene* scene)
+void SceneManager::RemoveScene(BaseScene* scene, const GameContext& gameContext)
 {
-	if (std::find(m_Scenes.begin(), m_Scenes.end(), scene) != m_Scenes.end())
+	auto iter = std::find(m_Scenes.begin(), m_Scenes.end(), scene);
+	if (iter != m_Scenes.end())
 	{
-		m_Scenes.erase(std::remove(m_Scenes.begin(), m_Scenes.end(), scene), m_Scenes.end());
+		(*iter)->Destroy(gameContext);
+		m_Scenes.erase(iter);
 	}
 	else
 	{
@@ -97,4 +99,5 @@ void SceneManager::DestroyAllScenes(const GameContext& gameContext)
 	{
 		m_Scenes[i]->Destroy(gameContext);
 	}
+	m_Scenes.clear();
 }

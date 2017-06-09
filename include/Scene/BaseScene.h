@@ -19,7 +19,6 @@ public:
 
 private:
 	std::string m_Name;
-	FreeCamera *m_Camera;
 
 	BaseScene(const BaseScene&) = delete;
 	BaseScene& operator=(const BaseScene&) = delete;

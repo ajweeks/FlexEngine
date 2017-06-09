@@ -47,8 +47,6 @@ void GridPrefab::Init(const GameContext& gameContext, float rowWidth, int lineCo
 		m_Vertices.push_back({ halfWidth, 0.0f, i * rowWidth - halfWidth, color });
 	}
 
-	//std::for_each(m_Vertices.begin(), m_Vertices.end(), [](VertexPosCol& vert) { vert.pos[0] *= 0.5f; vert.pos[1] *= 0.5f; vert.pos[2] *= 0.5f; });
-
 	m_RenderID = renderer->Initialize(gameContext, &m_Vertices);
 	renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::LINE_LIST);
 
