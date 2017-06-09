@@ -44,7 +44,6 @@ D3DRenderer::D3DRenderer(GameContext& gameContext) :
 	m_timer.SetTargetElapsedSeconds(1.0 / 60);
 	*/
 
-
 	if (m_PrintExtraD3DErrorInfo)
 	{
 		m_Device.Get()->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_pDebugInterface);

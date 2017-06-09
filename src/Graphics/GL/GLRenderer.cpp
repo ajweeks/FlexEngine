@@ -22,9 +22,6 @@ GLRenderer::GLRenderer(GameContext& gameContext) :
 	glFrontFace(GL_CCW);
 	
 	glUseProgram(gameContext.program);
-
-	//LoadAndBindGLTexture("resources/images/test2.jpg", m_TextureID);
-	//glUniform1i(glGetUniformLocation(m_ProgramID, "texTest"), 0);
 }
 
 GLRenderer::~GLRenderer()
