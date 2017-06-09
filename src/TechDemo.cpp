@@ -12,7 +12,7 @@
 using namespace glm;
 
 TechDemo::TechDemo() :
-	m_RendererIndex(RendererID::VULKAN),
+	m_RendererIndex(RendererID::D3D),
 	m_RendererCount(3),
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)

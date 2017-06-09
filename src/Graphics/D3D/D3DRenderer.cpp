@@ -44,18 +44,38 @@ D3DRenderer::D3DRenderer(GameContext& gameContext) :
 	m_timer.SetFixedTimeStep(true);
 	m_timer.SetTargetElapsedSeconds(1.0 / 60);
 	*/
+
+
+	if (m_PrintExtraD3DErrorInfo)
+	{
+		m_Device.Get()->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_pDebugInterface);
+	}
 }
 
 D3DRenderer::~D3DRenderer()
 {
 	SafeRelease(m_pTechnique);
 	SafeRelease(m_pInputLayout);
+	SafeRelease(m_pEffect);
 
 	for (size_t i = 0; i < m_RenderObjects.size(); i++)
 	{
 		SafeRelease(m_RenderObjects[i]->vertexBuffer);
 		SafeRelease(m_RenderObjects[i]->indexBuffer);
 		delete m_RenderObjects[i];
+	}
+
+	m_BackBuffer.ReleaseAndGetAddressOf();
+
+	m_Device.ReleaseAndGetAddressOf();
+
+	if (m_PrintExtraD3DErrorInfo)
+	{
+		if (m_pDebugInterface)
+		{
+			m_pDebugInterface->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+			m_pDebugInterface->Release();
+		}
 	}
 }
 

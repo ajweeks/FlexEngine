@@ -114,6 +114,9 @@ private:
 
 	ID3DX11EffectMatrixVariable* m_pWorldViewProjectionVariable = nullptr;
 
+	bool m_PrintExtraD3DErrorInfo = true;
+	ID3D11Debug* m_pDebugInterface = nullptr;
+
 	bool m_Wireframe = false;
 	bool m_EnableMSAA = false;
 };
