@@ -22,7 +22,8 @@ private:
 
 	CubePrefab m_Cube;
 	CubePrefab m_Cube2;
-	SpherePrefab m_Sphere1;
+	SpherePrefab m_UVSphere;
+	//SpherePrefab m_IcoSphere;
 
 	GridPrefab m_Grid;
 

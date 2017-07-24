@@ -17,9 +17,11 @@ TestScene::~TestScene()
 
 void TestScene::Initialize(const GameContext& gameContext)
 {
-	m_Sphere1.Init(gameContext, vec3(0.0f, 1.0f, 0.0f));
-	m_Cube.Init(gameContext, vec3(-4.0f, 0.5f, 0.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f));
-	m_Cube2.Init(gameContext, vec3(7.0f, 2.5f, 0.0f), quat(vec3(0.2f, 0.3f, 2.0f)), vec3(1.0f, 5.0f, 1.0f));
+	m_UVSphere.SetIterationCount(2);
+	m_UVSphere.Init(gameContext, SpherePrefab::Type::UVSPHERE, Transform(vec3(-2.0f, 1.0f, 0.0f), quat(), vec3()));
+	//m_IcoSphere.Init(gameContext, SpherePrefab::Type::ICOSPHERE, vec3(2.0f, 1.0f, 0.0f), quat(vec3(0.0f)), vec3(0.5f, 0.5f, 0.5f));
+	m_Cube.Init(gameContext, Transform(vec3(-4.0f, 0.5f, 0.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f)));
+	m_Cube2.Init(gameContext, Transform(vec3(7.0f, 2.5f, 0.0f), quat(vec3(0.2f, 0.3f, 2.0f)), vec3(1.0f, 5.0f, 1.0f)));
 
 	//m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
 
@@ -43,9 +45,10 @@ void TestScene::Initialize(const GameContext& gameContext)
 			const float scaleScale = 0.2f + (cubeIndex / ((float)(m_CubesLong * m_CubesWide))) * 1.0f;
 
 			m_Cubes[cubeIndex].Init(gameContext,
-				offset + vec3(i * cubeOffset, 0.0f, j * cubeOffset),
-				quat(vec3(0.0f, yRot, 0.0f)),
-				vec3(cubeScale * scaleScale, cubeScale * scaleScale, cubeScale * scaleScale));
+				Transform(
+					offset + vec3(i * cubeOffset, 0.0f, j * cubeOffset),
+					quat(vec3(0.0f, yRot, 0.0f)),
+					vec3(cubeScale * scaleScale, cubeScale * scaleScale, cubeScale * scaleScale)));
 		}
 	}
 
@@ -54,7 +57,8 @@ void TestScene::Initialize(const GameContext& gameContext)
 
 void TestScene::Destroy(const GameContext& gameContext)
 {
-	m_Sphere1.Destroy(gameContext);
+	m_UVSphere.Destroy(gameContext);
+	//m_IcoSphere.Destroy(gameContext);
 	m_Cube.Destroy(gameContext);
 	m_Cube2.Destroy(gameContext);
 	
@@ -77,10 +81,11 @@ void TestScene::UpdateAndRender(const GameContext& gameContext)
 
 	gameContext.renderer->SetUniform1f(m_TimeID, gameContext.elapsedTime);
 
-	m_Sphere1.Render(gameContext);
+	m_UVSphere.Render(gameContext);
+	//m_IcoSphere.Render(gameContext);
 	m_Cube.Render(gameContext);
-	m_Cube2.Rotate({ 0.1f * dt, -0.3f * dt, 0.4f * dt });
-	m_Cube2.Scale({ 1.0f - (sin(elapsed) * 0.01f) * dt, 1.0f - (sin(elapsed * 1.28f) * 0.01f) * dt, 1.0f - (cos(elapsed * 2.9f) * 0.01f) * dt});
+	m_Cube2.GetTransform().Rotate({ 0.1f * dt, -0.3f * dt, 0.4f * dt });
+	m_Cube2.GetTransform().Scale({ 1.0f - (sin(elapsed) * 0.01f) * dt, 1.0f - (sin(elapsed * 1.28f) * 0.01f) * dt, 1.0f - (cos(elapsed * 2.9f) * 0.01f) * dt});
 	m_Cube2.Render(gameContext);
 	
 	for (size_t i = 0; i < m_CubesLong; i++)

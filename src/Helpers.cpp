@@ -37,3 +37,8 @@ std::vector<char> ReadFile(const std::string& filePath)
 
 	return chars;
 }
+
+glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
+{
+	return a * (1.0f - t) + b * t;
+}

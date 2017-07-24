@@ -20,11 +20,9 @@ CubePrefab::~CubePrefab()
 {
 }
 
-void CubePrefab::Init(const GameContext& gameContext, glm::vec3 position, glm::quat rotation, glm::vec3 scale)
+void CubePrefab::Init(const GameContext& gameContext, const Transform& transform)
 {
-	m_Position = position;
-	m_Rotation = rotation;
-	m_Scale = scale;
+	m_Transform = transform;
 
 	Renderer* renderer = gameContext.renderer;
 
@@ -108,27 +106,11 @@ void CubePrefab::Render(const GameContext& gameContext)
 
 	renderer->SetUniform1f(m_UniformTimeID, gameContext.elapsedTime);
 
-	glm::mat4 translation = glm::translate(glm::mat4(1.0f), m_Position);
-	glm::mat4 rotation = glm::mat4(m_Rotation);
-	glm::mat4 scale = glm::scale(glm::mat4(1.0f), m_Scale);
+	glm::mat4 translation = glm::translate(glm::mat4(1.0f), m_Transform.position);
+	glm::mat4 rotation = glm::mat4(m_Transform.rotation);
+	glm::mat4 scale = glm::scale(glm::mat4(1.0f), m_Transform.scale);
 	glm::mat4 model = translation * rotation * scale;
 	renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
 
 	renderer->Draw(gameContext, m_RenderID);
-}
-
-void CubePrefab::Rotate(glm::quat deltaRotation)
-{
-	m_Rotation *= deltaRotation;
-}
-
-void CubePrefab::Rotate(glm::vec3 deltaEulerRotationRad)
-{
-	quat rotationQuat(deltaEulerRotationRad);
-	m_Rotation *= rotationQuat;
-}
-
-void CubePrefab::Scale(glm::vec3 deltaScale)
-{
-	m_Scale *= deltaScale;
 }

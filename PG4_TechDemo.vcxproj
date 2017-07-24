@@ -69,12 +69,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\tinyobjloader;$(S_LIBS)\stb;$(IncludePath)</IncludePath>
-    <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(VULKAN)\Lib32</LibraryPath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\tinyobjloader;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(S_LIBS)\assimp\build\code\Debug;$(VULKAN)\Lib32</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\tinyobjloader;$(S_LIBS)\stb;$(IncludePath)</IncludePath>
-    <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(VULKAN)\Lib32</LibraryPath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\tinyobjloader;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(S_LIBS)\assimp\build\code\Debug;$(VULKAN)\Lib32</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -85,7 +85,7 @@
       <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;d3d11.lib;d3dcompiler.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <AdditionalOptions>/NODEFAULTLIB:"MSVCRT" %(AdditionalOptions)</AdditionalOptions>
@@ -112,7 +112,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <SubSystem>Console</SubSystem>
@@ -142,19 +142,22 @@
     <ClCompile Include="src\Graphics\Vulkan\VulkanRenderer.cpp" />
     <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
     <ClCompile Include="src\Prefabs\GridPrefab.cpp" />
+    <ClCompile Include="src\Prefabs\Mesh.cpp" />
+    <ClCompile Include="src\Prefabs\Prefab.cpp" />
     <ClCompile Include="src\Prefabs\SpherePosCol.cpp" />
+    <ClCompile Include="src\Prefabs\Transform.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Window\D3D\D3DWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\GL\GLWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\MultiWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\Vulkan\VulkanWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\Window.cpp" />
+    <ClCompile Include="src\Scene\Window\D3D\D3DWindowWrapper.cpp" />
+    <ClCompile Include="src\Scene\Window\GLFWWindowWrapper.cpp" />
+    <ClCompile Include="src\Scene\Window\GL\GLWindowWrapper.cpp" />
+    <ClCompile Include="src\Scene\Window\MultiWindowWrapper.cpp" />
+    <ClCompile Include="src\Scene\Window\Vulkan\VulkanWindowWrapper.cpp" />
+    <ClCompile Include="src\Scene\Window\Window.cpp" />
     <ClCompile Include="src\Scene\BaseScene.cpp" />
     <ClCompile Include="src\Graphics\Renderer.cpp" />
     <ClCompile Include="src\InputManager.cpp" />
@@ -179,7 +182,10 @@
     <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
     <ClInclude Include="include\Prefabs\CubePrefab.h" />
     <ClInclude Include="include\Prefabs\GridPrefab.h" />
+    <ClInclude Include="include\Prefabs\Mesh.h" />
+    <ClInclude Include="include\Prefabs\Prefab.h" />
     <ClInclude Include="include\Prefabs\SpherePrefab.h" />
+    <ClInclude Include="include\Prefabs\Transform.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
     <ClInclude Include="include\Colours.h" />

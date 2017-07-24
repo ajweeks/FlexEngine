@@ -1,4 +1,3 @@
-
 #include "stdafx.h"
 
 #include "Prefabs/GridPrefab.h"
@@ -6,10 +5,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-GridPrefab::GridPrefab() :
-	m_Position(0.0f),
-	m_Rotation(),
-	m_Scale(1.0f)
+GridPrefab::GridPrefab()
 {
 }
 
@@ -17,8 +13,11 @@ GridPrefab::~GridPrefab()
 {
 }
 
-void GridPrefab::Init(const GameContext& gameContext, float rowWidth, int lineCount)
+void GridPrefab::Init(const GameContext& gameContext, float rowWidth, int lineCount, const Transform& transform)
 {
+	m_Transform = transform;
+
+	m_RowWidth = rowWidth;
 	m_LineCount = lineCount;
 
 	Renderer* renderer = gameContext.renderer;
@@ -63,7 +62,7 @@ void GridPrefab::Render(const GameContext& gameContext)
 {
 	Renderer* renderer = gameContext.renderer;
 
-	glm::mat4 scale = glm::scale(glm::mat4(1.0f), m_Scale);
+	glm::mat4 scale = glm::scale(glm::mat4(1.0f), m_Transform.scale);
 	renderer->UpdateTransformMatrix(gameContext, m_RenderID, scale);
 
 	renderer->Draw(gameContext, m_RenderID);

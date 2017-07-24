@@ -69,6 +69,15 @@ void Logger::LogError(const std::string& message)
 	Log(message, LogLevel::LOG_ERROR);
 }
 
+void Logger::Assert(bool value, const std::string& onFailMessage)
+{
+	if (!value)
+	{
+		Logger::LogError(onFailMessage);
+	}
+	assert(value);
+}
+
 void Logger::LogInfo(const std::wstring& message)
 {
 	Log(message, LogLevel::LOG_INFO);
@@ -82,5 +91,14 @@ void Logger::LogWarning(const std::wstring& message)
 void Logger::LogError(const std::wstring& message)
 {
 	Log(message, LogLevel::LOG_ERROR);
+}
+
+void Logger::Assert(bool value, const std::wstring& onFailMessage)
+{
+	if (!value)
+	{
+		Logger::LogError(onFailMessage);
+	}
+	assert(value);
 }
 

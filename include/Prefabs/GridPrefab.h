@@ -1,32 +1,21 @@
 #pragma once
 
-#include "Vertex.h"
+#include "Prefab.h"
 
-#include <glm\vec3.hpp>
-#include <glm\gtc\quaternion.hpp>
-
-#include <vector>
-
-struct GameContext;
-
-struct GridPrefab
+struct GridPrefab : public Prefab
 {
 	GridPrefab();
-
-	void Init(const GameContext& gameContext, float rowWidth, int lineCount);
-	void Destroy(const GameContext& gameContext);
 	~GridPrefab();
 
-	void Render(const GameContext& gameContext);
+	void Init(const GameContext& gameContext, float rowWidth, int lineCount, const Transform& transform = Transform());
+	virtual void Destroy(const GameContext& gameContext) override;
 
+	virtual void Render(const GameContext& gameContext) override;
+
+	float m_RowWidth;
 	int m_LineCount;
-	std::vector<VertexPosCol> m_Vertices;
 
 	glm::uint m_RenderID;
-
-	glm::vec3 m_Position;
-	glm::quat m_Rotation;
-	glm::vec3 m_Scale;
 
 	glm::uint m_UniformTimeID;
 };
