@@ -1,15 +1,15 @@
 #include "stdafx.h"
 
-#include "Prefabs\Transform.h"
+#include "Transform.h"
 
-using namespace glm;
+#include <glm\gtc\matrix_transform.hpp>
 
 Transform::Transform()
 {
 	SetAsIdentity();
 }
 
-Transform::Transform(const vec3& position, const quat& rotation, const vec3& scale) :
+Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale) :
 	position(position),
 	rotation(rotation),
 	scale(scale)
@@ -32,7 +32,7 @@ void Transform::Rotate(glm::quat deltaRotation)
 
 void Transform::Rotate(glm::vec3 deltaEulerRotationRad)
 {
-	quat rotationQuat(deltaEulerRotationRad);
+	glm::quat rotationQuat(deltaEulerRotationRad);
 	rotation *= rotationQuat;
 }
 
@@ -43,9 +43,19 @@ void Transform::Scale(glm::vec3 deltaScale)
 
 void Transform::SetAsIdentity()
 {
-	position = vec3(0.0f);
-	rotation = quat(vec3(0.0f));
-	scale = vec3(1.0f);
+	position = glm::vec3(0.0f);
+	rotation = glm::quat(glm::vec3(0.0f));
+	scale = glm::vec3(1.0f);
+}
+
+glm::mat4 Transform::GetModelMatrix()
+{
+	glm::mat4 matTrans = glm::translate(glm::mat4(1.0f), position);
+	glm::mat4 matRot = glm::mat4(rotation);
+	glm::mat4 matScale = glm::scale(glm::mat4(1.0f), scale);
+	glm::mat4 matModel = matTrans * matRot * matScale;
+
+	return matModel;
 }
 
 Transform Transform::Identity()

@@ -182,7 +182,7 @@
     <ClInclude Include="include\Prefabs\Mesh.h" />
     <ClInclude Include="include\Prefabs\Prefab.h" />
     <ClInclude Include="include\Prefabs\SpherePrefab.h" />
-    <ClInclude Include="include\Prefabs\Transform.h" />
+    <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
     <ClInclude Include="include\Colours.h" />

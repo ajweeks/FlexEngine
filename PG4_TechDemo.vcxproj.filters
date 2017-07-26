@@ -218,10 +218,10 @@
     <ClInclude Include="include\Prefabs\Mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Prefabs\Transform.h">
+    <ClInclude Include="include\Prefabs\Prefab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Prefabs\Prefab.h">
+    <ClInclude Include="include\Transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

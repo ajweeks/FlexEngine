@@ -15,6 +15,8 @@ struct Transform
 	void Scale(glm::vec3 deltaScale);
 	void SetAsIdentity();
 
+	glm::mat4 GetModelMatrix();
+
 	static Transform Identity();
 
 	glm::vec3 position;
