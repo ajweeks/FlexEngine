@@ -44,8 +44,6 @@ public:
 	Transform& GetTransform();
 
 private:
-	//bool AddVertexBuffer(const GameContext& gameContext);
-
 	// Calculate stride using m_HasElement
 	glm::uint CalculateVertexBufferStride() const;
 	void CreateVertexBuffer(VertexBufferData* vertexBufferData);
@@ -59,12 +57,14 @@ private:
 	glm::uint m_HasElement;
 	std::vector<glm::vec3> m_Positions;
 	std::vector<glm::vec4> m_Colors;
-	//std::vector<glm::vec3> m_Normals;
+	std::vector<glm::vec3> m_Normals;
+	std::vector<glm::vec2> m_TexCoords;
 	//std::vector<glm::vec3> m_Tangents;
 	//std::vector<glm::vec3> m_Binormals;
-	//std::vector<glm::vec2> m_TexCoords;
 
 	static glm::vec4 m_DefaultColor;
 	static glm::vec3 m_DefaultPosition;
+	static glm::vec3 m_DefaultNormal;
+	static glm::vec2 m_DefaultTexCoord;
 
 };

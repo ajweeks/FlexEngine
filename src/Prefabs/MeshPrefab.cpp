@@ -18,6 +18,8 @@ using namespace glm;
 
 glm::vec4 MeshPrefab::m_DefaultColor(0.0f, 0.0f, 0.0f, 1.0f);
 glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
+glm::vec3 MeshPrefab::m_DefaultNormal(0.0f, 1.0f, 0.0f);
+glm::vec2 MeshPrefab::m_DefaultTexCoord(0.0f, 0.0f);
 
 MeshPrefab::MeshPrefab()
 {
@@ -183,8 +185,9 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			{ { -1.0f,  1.0f,  1.0f }, 	Colors[5] },
 		};
 		*/
-
-		const std::array<glm::vec4, 6> colors = { Color::RED, Color::BLUE, Color::GRAY, Color::ORANGE, Color::WHITE, Color::PINK };
+		
+		//const std::array<glm::vec4, 6> colors = { Color::RED, Color::BLUE, Color::GRAY, Color::ORANGE, Color::WHITE, Color::PINK };
+		const std::array<glm::vec4, 6> colors = { Color::RED, Color::RED, Color::RED, Color::RED, Color::RED, Color::RED };
 		m_Positions =
 		{
 			// Front
@@ -301,12 +304,6 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		};
 		m_HasElement |= (glm::uint)ILSemantic::COLOR;
 
-		CreateVertexBuffer(vertexBufferData);
-
-		m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
-
-		/*
-		
 		m_Normals =
 		{
 			// Front
@@ -365,7 +362,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		};
 		m_HasElement |= (glm::uint)ILSemantic::NORMAL;
 
-		m_TexCoords = 
+		m_TexCoords =
 		{
 			// Front
 			{ 0.0f, 0.0f },
@@ -422,7 +419,11 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			{ 1.0f, 0.0f },
 		};
 		m_HasElement |= (glm::uint)ILSemantic::TEXCOORD;
-		*/
+
+		CreateVertexBuffer(vertexBufferData);
+
+		m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
+
 	} break;
 	case MeshPrefab::PrefabShape::ICO_SPHERE:
 	{
@@ -598,13 +599,13 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		glm::vec3 v1(0.0f, 1.0f, 0.0f); // Top vertex
 		m_Positions.push_back(v1);
 		m_Colors.push_back(Color::RED);
-		//m_TexCoords.push_back({ 0.0f, 0.0f });
-		//m_Normals.push_back({ 0.0f, 1.0f, 0.0f });
+		m_TexCoords.push_back({ 0.0f, 0.0f });
+		m_Normals.push_back({ 0.0f, 1.0f, 0.0f });
 
 		m_HasElement |= (glm::uint)ILSemantic::POSITION;
 		m_HasElement |= (glm::uint)ILSemantic::COLOR;
-		//m_HasElement |= (glm::uint)ILSemantic::TEXCOORD;
-		//m_HasElement |= (glm::uint)ILSemantic::NORMAL;
+		m_HasElement |= (glm::uint)ILSemantic::TEXCOORD;
+		m_HasElement |= (glm::uint)ILSemantic::NORMAL;
 
 		glm::uint parallelCount = 10;
 		glm::uint meridianCount = 5;
@@ -630,16 +631,16 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 
 				m_Positions.push_back(point);
 				m_Colors.push_back(color);
-				//m_TexCoords.push_back({ 0.0f, 0.0f });
-				//m_Normals.push_back({ 1.0f, 0.0f, 0.0f });
+				m_TexCoords.push_back({ 0.0f, 0.0f });
+				m_Normals.push_back({ 1.0f, 0.0f, 0.0f });
 			}
 		}
 
 		glm::vec3 vF(0.0f, -1.0f, 0.0f); // Bottom vertex
 		m_Positions.push_back(vF);
 		m_Colors.push_back(Color::YELLOW);
-		//m_TexCoords.push_back({ 0.0f, 0.0f });
-		//m_Normals.push_back({ 0.0f, -1.0f, 0.0f });
+		m_TexCoords.push_back({ 0.0f, 0.0f });
+		m_Normals.push_back({ 0.0f, -1.0f, 0.0f });
 
 		const glm::uint numVerts = m_Positions.size();
 
@@ -694,95 +695,6 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	} break;
 	case MeshPrefab::PrefabShape::GRID:
 	{
-		/*
-		int lineCount = 15;
-		float rowWidth = 1.0f;
-
-		const glm::vec4 lineColor = Color::GRAY;
-		const glm::vec4 centerLineColor = Color::LIGHT_GRAY;
-
-		const size_t vertexCount = lineCount * 2 * 2;
-		m_Vertices.reserve(vertexCount);
-
-		float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
-
-		// Horizontal lines
-		for (int i = 0; i < lineCount; ++i)
-		{
-			const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
-			m_Vertices.push_back({ { i * rowWidth - halfWidth, 0.0f, -halfWidth }, color });
-			m_Vertices.push_back({ { i * rowWidth - halfWidth, 0.0f, halfWidth }, color });
-		}
-
-		// Vertical lines
-		for (int i = 0; i < lineCount; ++i)
-		{
-			const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
-			m_Vertices.push_back({ { -halfWidth, 0.0f, i * rowWidth - halfWidth }, color });
-			m_Vertices.push_back({ { halfWidth, 0.0f, i * rowWidth - halfWidth }, color });
-		}
-		*/
-
-		float rowWidth = 1.0f;
-		int lineCount = 15;
-
-		const glm::vec4 lineColor = Color::GRAY;
-		const glm::vec4 centerLineColor = Color::LIGHT_GRAY;
-
-		const size_t vertexCount = lineCount * 2 * 2;
-		m_Positions.reserve(vertexCount);
-		m_Colors.reserve(vertexCount);
-		//m_TexCoords.reserve(vertexCount);
-		//m_Normals.reserve(vertexCount);
-
-		m_HasElement |= (glm::uint)ILSemantic::POSITION;
-		m_HasElement |= (glm::uint)ILSemantic::COLOR;
-		//m_HasElement |= (glm::uint)ILSemantic::TEXCOORD;
-		//m_HasElement |= (glm::uint)ILSemantic::NORMAL;
-
-		float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
-
-		// Horizontal lines
-		for (int i = 0; i < lineCount; ++i)
-		{
-			m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, -halfWidth });
-			m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, halfWidth });
-
-			const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
-			m_Colors.push_back(color);
-			m_Colors.push_back(color);
-
-			//m_TexCoords.push_back({ 0.0f, 0.0f });
-			//m_TexCoords.push_back({ 0.0f, 0.0f });
-
-			//m_Normals.push_back({ 0.0f, 0.0f, 1.0f });
-			//m_Normals.push_back({ 0.0f, 0.0f, 1.0f });
-		}
-
-		// Vertical lines
-		for (int i = 0; i < lineCount; ++i)
-		{
-			m_Positions.push_back({ -halfWidth, 0.0f, i * rowWidth - halfWidth });
-			m_Positions.push_back({ halfWidth, 0.0f, i * rowWidth - halfWidth });
-
-			const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
-			m_Colors.push_back(color);
-			m_Colors.push_back(color);
-
-			//m_TexCoords.push_back({ 0.0f, 0.0f });
-			//m_TexCoords.push_back({ 0.0f, 0.0f });
-
-			//m_Normals.push_back({ 0.0f, 0.0f, 1.0f });
-			//m_Normals.push_back({ 0.0f, 0.0f, 1.0f });
-		}
-
-		CreateVertexBuffer(vertexBufferData);
-
-		m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
-
-		renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::LINE_LIST);
-
-		/*
 		float rowWidth = 1.0f;
 		int lineCount = 15;
 
@@ -794,7 +706,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		m_Colors.reserve(vertexCount);
 		m_TexCoords.reserve(vertexCount);
 		m_Normals.reserve(vertexCount);
-		
+
 		m_HasElement |= (glm::uint)ILSemantic::POSITION;
 		m_HasElement |= (glm::uint)ILSemantic::COLOR;
 		m_HasElement |= (glm::uint)ILSemantic::TEXCOORD;
@@ -836,7 +748,12 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			m_Normals.push_back({ 0.0f, 0.0f, 1.0f });
 		}
 
-		*/
+		CreateVertexBuffer(vertexBufferData);
+
+		m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
+
+		renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::LINE_LIST);
+
 	} break;
 	default:
 	{
@@ -845,31 +762,30 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	} break;
 	}
 
+	// TODO: Move to function to determine based on m_HasElement
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Position", 3, Renderer::Type::FLOAT, false,
+		vertexBufferData->VertexStride, (void*)0);
+	
 	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false,
-		sizeof(glm::vec3) + sizeof(glm::vec4), (void*)(sizeof(glm::vec3)));
-
+		vertexBufferData->VertexStride, (void*)sizeof(glm::vec3));
+	
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Normal", 3, Renderer::Type::FLOAT, false,
+		vertexBufferData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4)));
+	
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_TexCoord", 2, Renderer::Type::FLOAT, false,
+		vertexBufferData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3)));
+	
 	return true;
 }
 
 void MeshPrefab::Render(const GameContext& gameContext)
 {
 	Renderer* renderer = gameContext.renderer;
-
-	glm::mat4 translation = glm::translate(glm::mat4(1.0f), m_Transform.position);
-	glm::mat4 rotation = glm::mat4(m_Transform.rotation);
-	glm::mat4 scale = glm::scale(glm::mat4(1.0f), m_Transform.scale);
-	glm::mat4 model = translation * rotation * scale;
+	
+	glm::mat4 model = m_Transform.GetModelMatrix();
 	renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
-
+	
 	renderer->Draw(gameContext, m_RenderID);
-
-
-	//Renderer* renderer = gameContext.renderer;
-	//
-	//glm::mat4 model = m_Transform.GetModelMatrix();
-	//renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
-	//
-	//renderer->Draw(gameContext, m_RenderID);
 }
 
 void MeshPrefab::Destroy(const GameContext& gameContext)
@@ -894,8 +810,8 @@ void MeshPrefab::CreateVertexBuffer(VertexBufferData* vertexBufferData)
 	vertexBufferData->BufferSize = vertexBufferData->VertexCount * vertexBufferData->VertexStride;
 
 	Logger::Assert(m_Colors.size() == vertexBufferData->VertexCount);
-	//Logger::Assert(m_Normals.size() == vertexData->VertexCount);
-	//Logger::Assert(m_TexCoords.size() == vertexData->VertexCount);
+	Logger::Assert(m_Normals.size() == vertexBufferData->VertexCount);
+	Logger::Assert(m_TexCoords.size() == vertexBufferData->VertexCount);
 
 	void *pDataLocation = malloc(vertexBufferData->BufferSize);
 	if (pDataLocation == nullptr)
@@ -910,17 +826,26 @@ void MeshPrefab::CreateVertexBuffer(VertexBufferData* vertexBufferData)
 	{
 		//memcpy(pDataLocation, &m_Vertices[i], sizeof(VertexPosCol));
 
-		memcpy(pDataLocation, (m_HasElement & (glm::uint)ILSemantic::POSITION) ? 
-			&m_Positions[i] : 
+		memcpy(pDataLocation, (m_HasElement & (glm::uint)ILSemantic::POSITION) ?
+			&m_Positions[i] :
 			&m_DefaultPosition, sizeof(glm::vec3));
-		memcpy((char*)(pDataLocation) + sizeof(glm::vec3), (m_HasElement & (glm::uint)ILSemantic::COLOR) ? 
-			&m_Colors[i] : 
-			&m_DefaultColor, sizeof(glm::vec4));
+		pDataLocation = (char *)pDataLocation + (sizeof(glm::vec3));
 
-		//case ILSemantic::NORMAL:
-		//	memcpy(pDataLocation, HasElement(ilDescription.SemanticType) ? &m_Normals[i] : &m_DefaultFloat3, ilDescription.Offset);
-		//case ILSemantic::TEXCOORD:
-		//	memcpy(pDataLocation, HasElement(ilDescription.SemanticType) ? &m_TexCoords[i] : &m_DefaultFloat2, ilDescription.Offset);
+		memcpy(pDataLocation, (m_HasElement & (glm::uint)ILSemantic::COLOR) ?
+			&m_Colors[i] :
+			&m_DefaultColor, sizeof(glm::vec4));
+		pDataLocation = (char *)pDataLocation + (sizeof(glm::vec4));
+
+		memcpy(pDataLocation, (m_HasElement & (glm::uint)ILSemantic::NORMAL) ?
+			&m_Normals[i] :
+			&m_DefaultNormal, sizeof(glm::vec3));
+		pDataLocation = (char *)pDataLocation + (sizeof(glm::vec3));
+
+		memcpy(pDataLocation, (m_HasElement & (glm::uint)ILSemantic::TEXCOORD) ?
+			&m_TexCoords[i] :
+			&m_DefaultTexCoord, sizeof(glm::vec2));
+		pDataLocation = (char *)pDataLocation + (sizeof(glm::vec2));
+
 		//case ILSemantic::TANGENT:
 		//	memcpy(pDataLocation, HasElement(ilDescription.SemanticType) ? &m_Tangents[i] : &m_DefaultFloat3, ilDescription.Offset);
 		//case ILSemantic::BINORMAL:
@@ -928,7 +853,6 @@ void MeshPrefab::CreateVertexBuffer(VertexBufferData* vertexBufferData)
 		//default:
 		//	Logger::LogError(L"MaterialComponent::BuildVertexBuffer() > Unsupported SemanticType!");
 
-		pDataLocation = (char *)pDataLocation + (sizeof(glm::vec3) + sizeof(glm::vec4));
 	}
 }
 

@@ -62,6 +62,7 @@ private:
 		std::vector<glm::uint>* indices = nullptr;
 
 		glm::uint MVP;
+		glm::uint ModelInverse;
 	};
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
