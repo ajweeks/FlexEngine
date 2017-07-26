@@ -69,17 +69,18 @@
 			}
 		}
 	}
+
+	template<class Interface>
+	inline void SafeRelease(Interface &pInterfaceToRelease)
+	{
+		if (pInterfaceToRelease != 0)
+		{
+			pInterfaceToRelease->Release();
+			pInterfaceToRelease = 0;
+		}
+	}
 #endif // COMPILE_D3D
 
-template<class Interface>
-inline void SafeRelease(Interface &pInterfaceToRelease)
-{
-	if (pInterfaceToRelease != 0)
-	{
-		pInterfaceToRelease->Release();
-		pInterfaceToRelease = 0;
-	}
-}
 
 template<class T>
 inline void SafeDelete(T &pObjectToDelete)

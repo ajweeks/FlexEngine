@@ -22,7 +22,9 @@ private:
 	{
 		VULKAN,
 		D3D,
-		GL
+		GL,
+
+		_LAST_ELEMENT
 	};
 
 	void Destroy();
@@ -30,6 +32,8 @@ private:
 	void CycleRenderer();
 	void InitializeWindowAndRenderer();
 	void DestroyWindowAndRenderer();
+	
+	std::string RenderIDToString(RendererID rendererID) const;
 
 	size_t m_RendererCount;
 

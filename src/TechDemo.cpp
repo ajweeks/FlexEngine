@@ -12,11 +12,40 @@
 using namespace glm;
 
 TechDemo::TechDemo() :
-	m_RendererIndex(RendererID::GL),
-	m_RendererCount(3),
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)
 {
+	RendererID preferredInitialRenderer = RendererID::GL;
+
+	m_RendererIndex = RendererID::_LAST_ELEMENT;
+	m_RendererCount = 0;
+
+#if COMPILE_D3D
+	++m_RendererCount;
+	if (m_RendererIndex == RendererID::_LAST_ELEMENT || preferredInitialRenderer == RendererID::D3D)
+	{
+		m_RendererIndex = RendererID::D3D;
+	}
+#endif
+#if COMPILE_OPEN_GL
+	++m_RendererCount;
+	if (m_RendererIndex == RendererID::_LAST_ELEMENT || preferredInitialRenderer == RendererID::GL)
+	{
+		m_RendererIndex = RendererID::GL;
+	}
+#endif
+#if COMPILE_VULKAN
+	++m_RendererCount;
+	if (m_RendererIndex == RendererID::_LAST_ELEMENT || preferredInitialRenderer == RendererID::VULKAN)
+	{
+		m_RendererIndex = RendererID::VULKAN;
+	}
+#endif
+
+	Logger::LogInfo(std::to_string(m_RendererCount) + " renderers enabled");
+	Logger::LogInfo("Current renderer: " + RenderIDToString(m_RendererIndex));
+	Logger::Assert(m_RendererCount != 0, "At least one renderer must be enabled! (see stdafx.h)");
+
 }
 
 TechDemo::~TechDemo()
@@ -100,12 +129,39 @@ void TechDemo::DestroyWindowAndRenderer()
 	SafeDelete(m_GameContext.renderer);
 }
 
+std::string TechDemo::RenderIDToString(RendererID rendererID) const
+{
+	switch (rendererID)
+	{
+	case TechDemo::RendererID::VULKAN: return "Vulkan";
+	case TechDemo::RendererID::D3D: return "D3D";
+	case TechDemo::RendererID::GL: return "Open GL";
+	case TechDemo::RendererID::_LAST_ELEMENT:  // Fallthrough
+	default:
+		return "Unknown";
+	}
+}
+
 void TechDemo::CycleRenderer()
 {
 	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
 	DestroyWindowAndRenderer();
 
 	m_RendererIndex = RendererID(((int)m_RendererIndex + 1) % m_RendererCount);
+	while (true)
+	{
+		m_RendererIndex = RendererID(((int)m_RendererIndex + 1) % (int)RendererID::_LAST_ELEMENT);
+#if COMPILE_VULKAN
+		if (m_RendererIndex == RendererID::VULKAN) break;
+#endif
+#if COMPILE_D3D
+		if (m_RendererIndex == RendererID::D3D) break;
+#endif
+#if COMPILE_OPEN_GL
+		if (m_RendererIndex == RendererID::GL) break;
+#endif
+	}
+	Logger::LogInfo("Current renderer: " + RenderIDToString(m_RendererIndex));
 
 	InitializeWindowAndRenderer();
 
