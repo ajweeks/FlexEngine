@@ -51,12 +51,6 @@
     <ClCompile Include="src\Scene\TestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Prefabs\CubePosCol.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Prefabs\SpherePosCol.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -81,9 +75,6 @@
     <ClCompile Include="src\Graphics\Vulkan\VulkanHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Prefabs\GridPrefab.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Scene\Window\D3D\D3DWindowWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -99,19 +90,16 @@
     <ClCompile Include="src\Scene\Window\Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Prefabs\Mesh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Prefabs\Transform.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Prefabs\Prefab.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Colors.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Graphics\GL\GLHelpers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Prefabs\MeshPrefab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Transform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -206,25 +194,13 @@
     <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Prefabs\GridPrefab.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Prefabs\CubePrefab.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Prefabs\SpherePrefab.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Prefabs\Mesh.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Prefabs\Prefab.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Colors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Prefabs\MeshPrefab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

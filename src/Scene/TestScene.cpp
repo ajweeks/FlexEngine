@@ -17,11 +17,16 @@ TestScene::~TestScene()
 
 void TestScene::Initialize(const GameContext& gameContext)
 {
-	m_UVSphere.SetIterationCount(2);
-	m_UVSphere.Init(gameContext, SpherePrefab::Type::UVSPHERE, Transform(vec3(-2.0f, 1.0f, 0.0f), quat(), vec3()));
+	//m_UVSphere.SetIterationCount(2);
+	m_UVSphere.LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::UV_SPHERE);
+	m_UVSphere.SetTransform(Transform(vec3(-2.0f, 1.0f, 0.0f), quat(), vec3()));
 	//m_IcoSphere.Init(gameContext, SpherePrefab::Type::ICOSPHERE, vec3(2.0f, 1.0f, 0.0f), quat(vec3(0.0f)), vec3(0.5f, 0.5f, 0.5f));
-	m_Cube.Init(gameContext, Transform(vec3(-4.0f, 0.5f, 0.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f)));
-	m_Cube2.Init(gameContext, Transform(vec3(7.0f, 2.5f, 0.0f), quat(vec3(0.2f, 0.3f, 2.0f)), vec3(1.0f, 5.0f, 1.0f)));
+	
+	m_Cube.LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
+	m_Cube.SetTransform(Transform(vec3(-4.0f, 0.5f, 0.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f)));
+
+	m_Cube2.LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
+	m_Cube2.SetTransform(Transform(vec3(7.0f, 2.5f, 0.0f), quat(vec3(0.2f, 0.3f, 2.0f)), vec3(1.0f, 5.0f, 1.0f)));
 
 	//m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
 
@@ -38,21 +43,21 @@ void TestScene::Initialize(const GameContext& gameContext)
 	{
 		for (size_t j = 0; j < m_CubesWide; j++)
 		{
-			m_Cubes.push_back(CubePrefab());
+			m_Cubes.push_back({});
 
 			const int cubeIndex = i * m_CubesLong + j;
 			const float yRot = (i / (float)m_CubesLong) + (j / (float)m_CubesWide);
 			const float scaleScale = 0.2f + (cubeIndex / ((float)(m_CubesLong * m_CubesWide))) * 1.0f;
 
-			m_Cubes[cubeIndex].Init(gameContext,
-				Transform(
+			m_Cubes[cubeIndex].LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
+			m_Cubes[cubeIndex].SetTransform(Transform(
 					offset + vec3(i * cubeOffset, 0.0f, j * cubeOffset),
 					quat(vec3(0.0f, yRot, 0.0f)),
 					vec3(cubeScale * scaleScale, cubeScale * scaleScale, cubeScale * scaleScale)));
 		}
 	}
 
-	m_Grid.Init(gameContext, 1.0f, 15);
+	m_Grid.LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 }
 
 void TestScene::Destroy(const GameContext& gameContext)

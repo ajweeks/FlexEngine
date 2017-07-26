@@ -140,12 +140,8 @@
     <ClCompile Include="src\Graphics\D3D\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GL\GLRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanRenderer.cpp" />
-    <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
-    <ClCompile Include="src\Prefabs\GridPrefab.cpp" />
-    <ClCompile Include="src\Prefabs\Mesh.cpp" />
-    <ClCompile Include="src\Prefabs\Prefab.cpp" />
-    <ClCompile Include="src\Prefabs\SpherePosCol.cpp" />
-    <ClCompile Include="src\Prefabs\Transform.cpp" />
+    <ClCompile Include="src\Prefabs\MeshPrefab.cpp" />
+    <ClCompile Include="src\Transform.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
     <ClCompile Include="src\stdafx.cpp">
@@ -178,11 +174,7 @@
     <ClInclude Include="include\Graphics\GL\GLRenderer.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
-    <ClInclude Include="include\Prefabs\CubePrefab.h" />
-    <ClInclude Include="include\Prefabs\GridPrefab.h" />
-    <ClInclude Include="include\Prefabs\Mesh.h" />
-    <ClInclude Include="include\Prefabs\Prefab.h" />
-    <ClInclude Include="include\Prefabs\SpherePrefab.h" />
+    <ClInclude Include="include\Prefabs\MeshPrefab.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
