@@ -2,7 +2,6 @@
 
 #include "Transform.h"
 #include "GameContext.h"
-#include "Vertex.h"
 #include "VertexBufferData.h"
 
 #include <vector>
@@ -48,19 +47,16 @@ private:
 	//bool AddVertexBuffer(const GameContext& gameContext);
 
 	// Calculate stride using m_HasElement
-	//glm::uint CalculateVertexBufferStride() const;
+	glm::uint CalculateVertexBufferStride() const;
 	void CreateVertexBuffer(VertexBufferData* vertexBufferData);
 
 	Transform m_Transform;
 	glm::uint m_RenderID;
 
-	std::vector<VertexPosCol> m_Vertices;
-	std::vector<glm::uint> m_Indices;
-
 	std::vector<VertexBufferData> m_VertexBuffers;
 
+	std::vector<glm::uint> m_Indices;
 	glm::uint m_HasElement;
-
 	std::vector<glm::vec3> m_Positions;
 	std::vector<glm::vec4> m_Colors;
 	//std::vector<glm::vec3> m_Normals;
