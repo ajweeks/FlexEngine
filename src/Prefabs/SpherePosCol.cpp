@@ -38,20 +38,20 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 		// Vertices
 		const float t = (1.0f + sqrt(5.0f)) / 2.0f;
 
-		m_Vertices.push_back(VertexPosCol(-1.0f, t, 0, Colour::RED));
-		m_Vertices.push_back(VertexPosCol(1.0f, t, 0, Colour::YELLOW));
-		m_Vertices.push_back(VertexPosCol(-1.0f, -t, 0, Colour::GRAY));
-		m_Vertices.push_back(VertexPosCol(1.0f, -t, 0, Colour::ORANGE));
+		m_Vertices.push_back(VertexPosCol({ -1.0f, t, 0 }, Colour::RED));
+		m_Vertices.push_back(VertexPosCol({1.0f, t, 0 }, Colour::YELLOW));
+		m_Vertices.push_back(VertexPosCol({-1.0f, -t, 0 }, Colour::GRAY));
+		m_Vertices.push_back(VertexPosCol({1.0f, -t, 0 }, Colour::ORANGE));
 							 
-		m_Vertices.push_back(VertexPosCol(0, -1.0f, t, Colour::WHITE));
-		m_Vertices.push_back(VertexPosCol(0, 1.0f, t, Colour::BLACK));
-		m_Vertices.push_back(VertexPosCol(0, -1.0f, -t, Colour::GREEN));
-		m_Vertices.push_back(VertexPosCol(0, 1.0f, -t, Colour::PINK));
+		m_Vertices.push_back(VertexPosCol({0, -1.0f, t }, Colour::WHITE));
+		m_Vertices.push_back(VertexPosCol({0, 1.0f, t }, Colour::BLACK));
+		m_Vertices.push_back(VertexPosCol({0, -1.0f, -t }, Colour::GREEN));
+		m_Vertices.push_back(VertexPosCol({0, 1.0f, -t }, Colour::PINK));
 							 
-		m_Vertices.push_back(VertexPosCol(t, 0, -1.0f, Colour::PURPLE));
-		m_Vertices.push_back(VertexPosCol(t, 0, 1.0f, Colour::LIGHT_BLUE));
-		m_Vertices.push_back(VertexPosCol(-t, 0, -1.0f, Colour::LIME_GREEN));
-		m_Vertices.push_back(VertexPosCol(-t, 0, 1.0f, Colour::LIGHT_GRAY));
+		m_Vertices.push_back(VertexPosCol({ t, 0, -1.0f }, Colour::PURPLE));
+		m_Vertices.push_back(VertexPosCol({t, 0, 1.0f }, Colour::LIGHT_BLUE));
+		m_Vertices.push_back(VertexPosCol({-t, 0, -1.0f }, Colour::LIME_GREEN));
+		m_Vertices.push_back(VertexPosCol({-t, 0, 1.0f }, Colour::LIGHT_GRAY));
 
 		// Indices
 		std::vector<uint> ind;
@@ -149,7 +149,7 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 	case SpherePrefab::Type::UVSPHERE:
 	{
 		// Vertices
-		VertexPosCol v1(0.0f, 1.0f, 0.0f, Colour::GRAY); // Top vertex
+		VertexPosCol v1({ 0.0f, 1.0f, 0.0f }, Colour::GRAY); // Top vertex
 		m_Vertices.push_back(v1);
 
 		for (uint j = 0; j < parallelCount - 1; j++)
@@ -163,13 +163,13 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 				float sinA = sin(azimuth);
 				float cosA = cos(azimuth);
 				vec3 point(sinP * cosA, cosP, sinP * sinA);
-				const float* color =
+				const glm::vec4 color =
 					(i % 2 == 0 ? j % 2 == 0 ? Colour::ORANGE : Colour::PURPLE : j % 2 == 0 ? Colour::WHITE : Colour::YELLOW);
-				VertexPosCol vertex(point.x, point.y, point.z, color);
+				VertexPosCol vertex(point, color);
 				m_Vertices.push_back(vertex);
 			}
 		}
-		VertexPosCol vF(0.0f, -1.0f, 0.0f, Colour::GRAY); // Bottom vertex
+		VertexPosCol vF({ 0.0f, -1.0f, 0.0f }, Colour::GRAY); // Bottom vertex
 		m_Vertices.push_back(vF);
 
 		const uint numVerts = m_Vertices.size();
@@ -227,7 +227,7 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 
 	m_RenderID = renderer->Initialize(gameContext, &m_Vertices, &m_Indices);
 
-	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 3, Renderer::Type::FLOAT, false, 
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false, 
 		VertexPosCol::stride, (void*)offsetof(VertexPosCol, VertexPosCol::col));
 
 	m_UniformTimeID = renderer->GetShaderUniformLocation(gameContext.program, "in_Time");

@@ -22,8 +22,8 @@ void GridPrefab::Init(const GameContext& gameContext, float rowWidth, int lineCo
 
 	Renderer* renderer = gameContext.renderer;
 
-	const float* lineColor = Colour::GRAY;
-	const float* centerLineColor = Colour::LIGHT_GRAY;
+	const glm::vec4 lineColor = Colour::GRAY;
+	const glm::vec4 centerLineColor = Colour::LIGHT_GRAY;
 
 	const size_t vertexCount = lineCount * 2 * 2;
 	m_Vertices.reserve(vertexCount);
@@ -33,23 +33,23 @@ void GridPrefab::Init(const GameContext& gameContext, float rowWidth, int lineCo
 	// Horizontal lines
 	for (int i = 0; i < lineCount; ++i)
 	{
-		const float* color = (i == lineCount / 2 ? centerLineColor : lineColor);
-		m_Vertices.push_back({ i * rowWidth - halfWidth, 0.0f, -halfWidth, color });
-		m_Vertices.push_back({ i * rowWidth - halfWidth, 0.0f, halfWidth, color });
+		const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
+		m_Vertices.push_back({ {i * rowWidth - halfWidth, 0.0f, -halfWidth }, color });
+		m_Vertices.push_back({ {i * rowWidth - halfWidth, 0.0f, halfWidth }, color });
 	}
 
 	// Vertical lines
 	for (int i = 0; i < lineCount; ++i)
 	{
-		const float* color = (i == lineCount / 2 ? centerLineColor : lineColor);
-		m_Vertices.push_back({ -halfWidth, 0.0f, i * rowWidth - halfWidth, color });
-		m_Vertices.push_back({ halfWidth, 0.0f, i * rowWidth - halfWidth, color });
+		const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
+		m_Vertices.push_back({ { -halfWidth, 0.0f, i * rowWidth - halfWidth }, color });
+		m_Vertices.push_back({ { halfWidth, 0.0f, i * rowWidth - halfWidth }, color });
 	}
 
 	m_RenderID = renderer->Initialize(gameContext, &m_Vertices);
 	renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::LINE_LIST);
 
-	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 3, Renderer::Type::FLOAT, false, VertexPosCol::stride,
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false, VertexPosCol::stride,
 		(void*)offsetof(VertexPosCol, VertexPosCol::col));
 }
 

@@ -91,9 +91,6 @@ inline void SafeDelete(T &pObjectToDelete)
 	}
 }
 
-#include "Graphics/MultiRenderer.h"
-#include "Window/MultiWindowWrapper.h"
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED

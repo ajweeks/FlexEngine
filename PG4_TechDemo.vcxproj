@@ -133,7 +133,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Graphics\D3D\D3DHelpers.cpp" />
-    <ClCompile Include="src\Graphics\MultiRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanBuffer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanHelpers.cpp" />
     <ClCompile Include="src\Helpers.cpp" />
@@ -155,7 +154,6 @@
     <ClCompile Include="src\Scene\Window\D3D\D3DWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\GLFWWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\GL\GLWindowWrapper.cpp" />
-    <ClCompile Include="src\Scene\Window\MultiWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\Vulkan\VulkanWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\Window.cpp" />
     <ClCompile Include="src\Scene\BaseScene.cpp" />
@@ -177,7 +175,6 @@
     <ClInclude Include="include\Graphics\GL\GLHelpers.h" />
     <ClInclude Include="include\Graphics\D3D\D3DRenderer.h" />
     <ClInclude Include="include\Graphics\GL\GLRenderer.h" />
-    <ClInclude Include="include\Graphics\MultiRenderer.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
     <ClInclude Include="include\Prefabs\CubePrefab.h" />
@@ -201,7 +198,6 @@
     <ClInclude Include="include\InputManager.h" />
     <ClInclude Include="include\Window\D3D\D3DWindowWrapper.h" />
     <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
-    <ClInclude Include="include\Window\MultiWindowWrapper.h" />
     <ClInclude Include="include\Window\Vulkan\VulkanWindowWrapper.h" />
     <ClInclude Include="include\Window\Window.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />

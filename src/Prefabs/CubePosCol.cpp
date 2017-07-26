@@ -27,69 +27,69 @@ void CubePrefab::Init(const GameContext& gameContext, const Transform& transform
 	Renderer* renderer = gameContext.renderer;
 
 	//							 FRONT		  TOP			BACK		  BOTTOM		  RIGHT			 LEFT
-	const float* colours[6] = { Colour::RED, Colour::BLUE, Colour::GRAY, Colour::ORANGE, Colour::WHITE, Colour::PINK };
+	const glm::vec4 colours[6] = { Colour::RED, Colour::BLUE, Colour::GRAY, Colour::ORANGE, Colour::WHITE, Colour::PINK };
 	m_Vertices =
 	{
 		// Front
-		{ -1.0f, -1.0f, -1.0f, 	colours[0] },
-		{ -1.0f,  1.0f, -1.0f, 	colours[0] },
-		{ 1.0f,  1.0f, -1.0f, 	colours[0] },
+		{ { -1.0f, -1.0f, -1.0f }, 	colours[0] },
+		{ { -1.0f,  1.0f, -1.0f }, 	colours[0] },
+		{ { 1.0f,  1.0f, -1.0f }, 	colours[0] },
 
-		{ -1.0f, -1.0f, -1.0f, 	colours[0] },
-		{ 1.0f,  1.0f, -1.0f, 	colours[0] },
-		{ 1.0f, -1.0f, -1.0f, 	colours[0] },
+		{ { -1.0f, -1.0f, -1.0f }, 	colours[0] },
+		{ { 1.0f,  1.0f, -1.0f }, 	colours[0] },
+		{ { 1.0f, -1.0f, -1.0f }, 	colours[0] },
 
 		// Top
-		{ -1.0f, 1.0f, -1.0f, 	colours[1] },
-		{  -1.0f, 1.0f,  1.0f, 	colours[1] },
-		{  1.0f,  1.0f,  1.0f, 	colours[1] },
-
-		{  -1.0f, 1.0f, -1.0f, 	colours[1] },
-		{  1.0f,  1.0f,  1.0f, 	colours[1] },
-		{  1.0f,  1.0f, -1.0f, 	colours[1] },
+		{ { -1.0f, 1.0f, -1.0f}, 	colours[1] },
+		{ { -1.0f, 1.0f,  1.0f}, 	colours[1] },
+		{ { 1.0f,  1.0f,  1.0f}, 	colours[1] },
+							  
+		{ { -1.0f, 1.0f, -1.0f}, 	colours[1] },
+		{ { 1.0f,  1.0f,  1.0f}, 	colours[1] },
+		{ { 1.0f,  1.0f, -1.0f}, 	colours[1] },
 
 		// Back
-		{ 1.0f, -1.0f, 1.0f, 	colours[2] },
-		{ 1.0f,  1.0f, 1.0f, 	colours[2] },
-		{ -1.0f,  1.0f, 1.0f, 	colours[2] },
+		{ { 1.0f, -1.0f, 1.0f }, 	colours[2] },
+		{ { 1.0f,  1.0f, 1.0f }, 	colours[2] },
+		{ { -1.0f,  1.0f, 1.0f }, 	colours[2] },
 
-		{ 1.0f, -1.0f, 1.0f, 	colours[2] },
-		{ -1.0f, 1.0f, 1.0f, 	colours[2] },
-		{ -1.0f, -1.0f, 1.0f, 	colours[2] },
+		{ { 1.0f, -1.0f, 1.0f }, 	colours[2] },
+		{ { -1.0f, 1.0f, 1.0f }, 	colours[2] },
+		{ { -1.0f, -1.0f, 1.0f }, 	colours[2] },
 
 		// Bottom
-		{ -1.0f, -1.0f, -1.0f, 	colours[3] },
-		{ 1.0f, -1.0f, -1.0f, 	colours[3] },
-		{ 1.0f,  -1.0f,  1.0f, 	colours[3] },
+		{ { -1.0f, -1.0f, -1.0f }, 	colours[3] },
+		{ { 1.0f, -1.0f, -1.0f }, 	colours[3] },
+		{ { 1.0f,  -1.0f,  1.0f }, 	colours[3] },
 
-		{ -1.0f, -1.0f, -1.0f, 	colours[3] },
-		{ 1.0f, -1.0f,  1.0f, 	colours[3] },
-		{ -1.0f, -1.0f,  1.0f, 	colours[3] },
+		{ { -1.0f, -1.0f, -1.0f }, 	colours[3] },
+		{ { 1.0f, -1.0f,  1.0f }, 	colours[3] },
+		{ { -1.0f, -1.0f,  1.0f }, 	colours[3] },
 
 		// Right
-		{ 1.0f, -1.0f, -1.0f, 	colours[4] },
-		{ 1.0f,  1.0f, -1.0f,	colours[4] },
-		{ 1.0f,  1.0f,  1.0f, 	colours[4] },
-
-		{ 1.0f, -1.0f, -1.0f, 	colours[4] },
-		{ 1.0f,  1.0f,  1.0f, 	colours[4] },
-		{ 1.0f, -1.0f,  1.0f, 	colours[4] },
+		{ { 1.0f, -1.0f, -1.0f }, 	colours[4] },
+		{ { 1.0f,  1.0f, -1.0f },	colours[4] },
+		{ { 1.0f,  1.0f,  1.0f }, 	colours[4] },
+							   
+		{ { 1.0f, -1.0f, -1.0f }, 	colours[4] },
+		{ { 1.0f,  1.0f,  1.0f }, 	colours[4] },
+		{ { 1.0f, -1.0f,  1.0f }, 	colours[4] },
 
 		// Left
-		{ -1.0f, -1.0f, -1.0f, colours[5] },
-		{ -1.0f,  1.0f,  1.0f, colours[5] },
-		{ -1.0f,  1.0f, -1.0f, colours[5] },
+		{ { -1.0f, -1.0f, -1.0f }, colours[5] },
+		{ { -1.0f,  1.0f,  1.0f }, colours[5] },
+		{ { -1.0f,  1.0f, -1.0f }, colours[5] },
 										
-		{ -1.0f, -1.0f, -1.0f, 	colours[5] },
-		{ -1.0f, -1.0f,  1.0f, 	colours[5] },
-		{ -1.0f,  1.0f,  1.0f, 	colours[5] },
+		{ { -1.0f, -1.0f, -1.0f }, 	colours[5] },
+		{ { -1.0f, -1.0f,  1.0f }, 	colours[5] },
+		{ { -1.0f,  1.0f,  1.0f }, 	colours[5] },
 	};
 
 	std::for_each(m_Vertices.begin(), m_Vertices.end(), [](VertexPosCol& vert) { vert.pos[0] *= 0.5f; vert.pos[1] *= 0.5f; vert.pos[2] *= 0.5f; });
 
 	m_RenderID = renderer->Initialize(gameContext, &m_Vertices);
 
-	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 3, Renderer::Type::FLOAT, false, VertexPosCol::stride,
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false, VertexPosCol::stride,
 		(void*)offsetof(VertexPosCol, VertexPosCol::col));
 
 	m_UniformTimeID = renderer->GetShaderUniformLocation(gameContext.program, "in_Time");

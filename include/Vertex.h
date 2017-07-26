@@ -12,15 +12,14 @@ struct GameContext;
 struct VertexPosCol
 {
 	VertexPosCol() {};
-	VertexPosCol(float x, float y, float z, float r, float g, float b) : pos{ x, y, z }, col{ r, g, b } {}
-	VertexPosCol(float x, float y, float z, const float col[3]) : pos{ x, y, z }, col{ col[0], col[1], col[2] } {}
-	VertexPosCol(const float pos[3], const float col[3]) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] } {}
-	VertexPosCol(glm::vec3 pos, const float col[3]) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] } {}
-	VertexPosCol(glm::vec3 pos, glm::vec3 col) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] } {}
+	VertexPosCol(float x, float y, float z, float r, float g, float b, float a) : pos{ x, y, z }, col{ r, g, b, a } {}
+	VertexPosCol(float x, float y, float z, const float col[4]) : pos{ x, y, z }, col{ col[0], col[1], col[2], col[3] } {}
+	VertexPosCol(const float pos[3], const float col[4]) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2], col[3] } {}
+	VertexPosCol(glm::vec3 pos, glm::vec4 col) : pos(pos), col(col) {}
 
-	static const int stride = 3 * sizeof(float) + 3 * sizeof(float);
+	static const int stride = 3 * sizeof(float) + 4 * sizeof(float);
 	glm::vec3 pos;
-	glm::vec3 col;
+	glm::vec4 col;
 };
 
 struct VertexPosColTex
@@ -28,7 +27,6 @@ struct VertexPosColTex
 	VertexPosColTex() {};
 	VertexPosColTex(float x, float y, float z, float r, float g, float b, float u, float v) : pos{ x, y, z }, col{ r, g, b }, uv(u, v) {}
 	VertexPosColTex(float x, float y, float z, const float col[3], float uv[2]) : pos{ x, y, z }, col{ col[0], col[1], col[2] }, uv{ uv[0], uv[1] } {}
-	VertexPosColTex(const float pos[3], const float col[3], const float uv[2]) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] }, uv{ uv[0], uv[1] } {}
 	VertexPosColTex(glm::vec3 pos, glm::vec3 col, glm::vec2 uv) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] }, uv(uv) {}
 
 	static const int stride = 3 * sizeof(float) + 3 * sizeof(float);
