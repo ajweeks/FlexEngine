@@ -8,6 +8,7 @@
 #include "Logger.h"
 #include "FreeCamera.h"
 #include "TechDemo.h"
+#include "VertexBufferData.h"
 
 #include <algorithm>	
 
@@ -79,20 +80,20 @@ VulkanRenderer::~VulkanRenderer()
 	glfwTerminate();
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
+glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData)
 {
 	size_t renderID = m_RenderObjects.size();
 	RenderObject* renderObject = new RenderObject(m_Device);
 	m_RenderObjects.push_back(renderObject);
 
-	renderObject->vertices = vertices;
+	renderObject->vertexBufferData = vertexBufferData;
 
 	return renderID;
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices)
+glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData, std::vector<glm::uint>* indices)
 {
-	glm::uint renderID = Initialize(gameContext, vertices);
+	glm::uint renderID = Initialize(gameContext, vertexBufferData);
 	
 	RenderObject* renderObject = GetRenderObject(renderID);
 	renderObject->indices = indices;
@@ -984,7 +985,7 @@ void VulkanRenderer::BuildCommandBuffers()
 			}
 			else
 			{
-				vkCmdDraw(m_CommandBuffers[i], renderObject->vertices->size(), 1, renderObject->vertexOffset, 0);
+				vkCmdDraw(m_CommandBuffers[i], renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 			}
 		}
 
@@ -1217,7 +1218,11 @@ void VulkanRenderer::CreateVertexBuffer()
 	{
 		RenderObject* renderObject = GetRenderObject(i);
 		renderObject->vertexOffset = vertices.size();
-		vertices.insert(vertices.end(), renderObject->vertices->begin(), renderObject->vertices->end());
+		
+		for (size_t i = 0; i < renderObject->vertexBufferData->VertexCount; i++)
+		{
+			vertices.push_back(((VertexPosCol*)(renderObject->vertexBufferData->pDataStart))[i]);
+		}
 	}
 
 	const size_t bufferSize = sizeof(VertexPosCol) * vertices.size();

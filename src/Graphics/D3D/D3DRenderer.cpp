@@ -9,6 +9,7 @@
 #include "FreeCamera.h"
 #include "Helpers.h"
 #include "Vertex.h"
+#include "VertexBufferData.h"
 
 #include <algorithm>
 
@@ -76,13 +77,13 @@ D3DRenderer::~D3DRenderer()
 	}
 }
 
-uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
+uint D3DRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData)
 {
 	const uint renderID = m_RenderObjects.size();
 
 	RenderObject* renderObject = new RenderObject();
 	renderObject->renderID = renderID;
-	renderObject->vertices = vertices;
+	renderObject->vertexBufferData = vertexBufferData;
 
 	m_RenderObjects.push_back(renderObject);
 
@@ -92,9 +93,9 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 	return renderID;
 }
 
-uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<uint>* indices)
+uint D3DRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData, std::vector<uint>* indices)
 {
-	const uint renderID = Initialize(gameContext, vertices);
+	const uint renderID = Initialize(gameContext, vertexBufferData);
 
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -377,7 +378,7 @@ void D3DRenderer::InitializeVertexBuffer(glm::uint renderID)
 
 	D3D11_BUFFER_DESC vertexBuffDesc;
 	vertexBuffDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_VERTEX_BUFFER;
-	vertexBuffDesc.ByteWidth = sizeof(VertexPosCol) * renderObject->vertices->size();
+	vertexBuffDesc.ByteWidth = renderObject->vertexBufferData->BufferSize;
 	vertexBuffDesc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::D3D11_CPU_ACCESS_WRITE;
 	vertexBuffDesc.Usage = D3D11_USAGE::D3D11_USAGE_DYNAMIC;
 	vertexBuffDesc.MiscFlags = 0;
@@ -390,7 +391,7 @@ void D3DRenderer::UpdateVertexBuffer(glm::uint renderID)
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	m_DeviceContext->Map(renderObject->vertexBuffer, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource);
-	memcpy(mappedResource.pData, renderObject->vertices->data(), sizeof(VertexPosCol) * renderObject->vertices->size());
+	memcpy(mappedResource.pData, renderObject->vertexBufferData->pDataStart, renderObject->vertexBufferData->BufferSize);
 	m_DeviceContext->Unmap(renderObject->vertexBuffer, 0);
 }
 
@@ -608,7 +609,7 @@ void D3DRenderer::Draw(const GameContext& gameContext)
 			}
 			else
 			{
-				m_DeviceContext->Draw(renderObject->vertices->size(), 0);
+				m_DeviceContext->Draw(renderObject->vertexBufferData->VertexCount, 0);
 			}
 		}
 	}

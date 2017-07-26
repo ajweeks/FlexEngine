@@ -20,8 +20,8 @@ public:
 	
 	virtual void PostInitialize() override;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData,
 		std::vector<glm::uint>* indices) override;
 	
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
@@ -129,7 +129,7 @@ private:
 		glm::uint VBO;
 		glm::uint IBO;
 
-		std::vector<VertexPosCol>* vertices = nullptr;
+		VertexBufferData* vertexBufferData = nullptr;
 		glm::uint vertexOffset = 0;
 
 		bool indexed = false;

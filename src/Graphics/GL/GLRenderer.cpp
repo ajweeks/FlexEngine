@@ -6,6 +6,7 @@
 #include "Window/Window.h"
 #include "Logger.h"
 #include "FreeCamera.h"
+#include "VertexBufferData.h"
 
 #include <algorithm>
 
@@ -42,7 +43,7 @@ GLRenderer::~GLRenderer()
 	glfwTerminate();
 }
 
-uint GLRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
+uint GLRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData)
 {
 	const uint renderID = m_RenderObjects.size();
 
@@ -54,9 +55,9 @@ uint GLRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPo
 
 	glGenBuffers(1, &renderObject->VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices->at(0)) * vertices->size(), vertices->data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertexBufferData->BufferSize, vertexBufferData->pDataStart, GL_STATIC_DRAW);
 
-	renderObject->vertices = vertices;
+	renderObject->vertexBufferData = vertexBufferData;
 
 	uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
 	glEnableVertexAttribArray(posAttrib);
@@ -71,9 +72,9 @@ uint GLRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPo
 	return renderID;
 }
 
-uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexPosCol>* vertices, std::vector<uint>* indices)
+uint GLRenderer::Initialize(const GameContext& gameContext,  VertexBufferData* vertexBufferData, std::vector<uint>* indices)
 {
-	const uint renderID = Initialize(gameContext, vertices);
+	const uint renderID = Initialize(gameContext, vertexBufferData);
 	
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -127,7 +128,7 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 	}
 	else
 	{
-		glDrawArrays(renderObject->topology, 0, renderObject->vertices->size());
+		glDrawArrays(renderObject->topology, 0, renderObject->vertexBufferData->BufferSize);
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);

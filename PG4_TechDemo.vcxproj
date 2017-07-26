@@ -189,6 +189,7 @@
     <ClInclude Include="include\Random.h" />
     <ClInclude Include="include\Typedefs.h" />
     <ClInclude Include="include\InputManager.h" />
+    <ClInclude Include="include\VertexBufferData.h" />
     <ClInclude Include="include\Window\D3D\D3DWindowWrapper.h" />
     <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
     <ClInclude Include="include\Window\Vulkan\VulkanWindowWrapper.h" />

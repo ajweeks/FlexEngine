@@ -16,16 +16,19 @@
 
 using namespace glm;
 
+glm::vec4 MeshPrefab::m_DefaultColor(0.0f, 0.0f, 0.0f, 1.0f);
+glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
+
 MeshPrefab::MeshPrefab()
 {
 }
 
 MeshPrefab::~MeshPrefab()
 {
-	//for (size_t i = 0; i < m_VertexBuffers.size(); i++)
-	//{
-	//	m_VertexBuffers[i].Destroy();
-	//}
+	for (size_t i = 0; i < m_VertexBuffers.size(); i++)
+	{
+		m_VertexBuffers[i].Destroy();
+	}
 }
 
 bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath)
@@ -113,6 +116,9 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 {
 	Renderer* renderer = gameContext.renderer;
 
+	m_VertexBuffers.push_back({});
+	VertexBufferData* vertexBufferData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
+
 	switch (shape)
 	{
 	case MeshPrefab::PrefabShape::CUBE:
@@ -178,7 +184,9 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 
 		std::for_each(m_Vertices.begin(), m_Vertices.end(), [](VertexPosCol& vert) { vert.pos[0] *= 0.5f; vert.pos[1] *= 0.5f; vert.pos[2] *= 0.5f; });
 
-		m_RenderID = renderer->Initialize(gameContext, &m_Vertices);
+		CreateVertexBuffer(vertexBufferData);
+
+		m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
 
 		renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false, VertexPosCol::stride,
 			(void*)offsetof(VertexPosCol, VertexPosCol::col));
@@ -635,7 +643,9 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			m_Indices.push_back(b);
 		}
 
-		m_RenderID = renderer->Initialize(gameContext, &m_Vertices, &m_Indices);
+		CreateVertexBuffer(vertexBufferData);
+
+		m_RenderID = renderer->Initialize(gameContext, vertexBufferData, &m_Indices);
 
 		renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false,
 			VertexPosCol::stride, (void*)offsetof(VertexPosCol, VertexPosCol::col));
@@ -759,7 +769,10 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			m_Vertices.push_back({ { halfWidth, 0.0f, i * rowWidth - halfWidth }, color });
 		}
 
-		m_RenderID = renderer->Initialize(gameContext, &m_Vertices);
+		CreateVertexBuffer(vertexBufferData);
+
+		m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
+
 		renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::LINE_LIST);
 
 		renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false, VertexPosCol::stride,
@@ -867,6 +880,46 @@ void MeshPrefab::SetTransform(const Transform& transform)
 Transform& MeshPrefab::GetTransform()
 {
 	return m_Transform;
+}
+
+void MeshPrefab::CreateVertexBuffer(VertexBufferData* vertexBufferData)
+{
+	vertexBufferData->VertexCount = m_Vertices.size();
+	vertexBufferData->VertexStride = sizeof(VertexPosCol);
+	vertexBufferData->BufferSize = vertexBufferData->VertexCount * vertexBufferData->VertexStride;
+
+	void *pDataLocation = malloc(vertexBufferData->BufferSize);
+	if (pDataLocation == nullptr)
+	{
+		Logger::LogWarning("MeshPrefab::LoadPrefabShape failed to allocate memory required for vertex buffer data");
+		return;
+	}
+
+	vertexBufferData->pDataStart = pDataLocation;
+
+	for (UINT i = 0; i < vertexBufferData->VertexCount; ++i)
+	{
+		memcpy(pDataLocation, &m_Vertices[i], sizeof(VertexPosCol));
+		//memcpy(pDataLocation, (m_HasElement & (glm::uint)ILSemantic::POSITION) ? 
+		//	&m_Positions[i] : 
+		//	&m_DefaultPosition, 0);
+		//memcpy(pDataLocation, (m_HasElement & (glm::uint)ILSemantic::COLOR) ? 
+		//	&m_Colors[i] : 
+		//	&m_DefaultColor, 12);
+
+		//case ILSemantic::NORMAL:
+		//	memcpy(pDataLocation, HasElement(ilDescription.SemanticType) ? &m_Normals[i] : &m_DefaultFloat3, ilDescription.Offset);
+		//case ILSemantic::TEXCOORD:
+		//	memcpy(pDataLocation, HasElement(ilDescription.SemanticType) ? &m_TexCoords[i] : &m_DefaultFloat2, ilDescription.Offset);
+		//case ILSemantic::TANGENT:
+		//	memcpy(pDataLocation, HasElement(ilDescription.SemanticType) ? &m_Tangents[i] : &m_DefaultFloat3, ilDescription.Offset);
+		//case ILSemantic::BINORMAL:
+		//	memcpy(pDataLocation, HasElement(ilDescription.SemanticType) ? &m_Binormals[i] : &m_DefaultFloat3, ilDescription.Offset);
+		//default:
+		//	Logger::LogError(L"MaterialComponent::BuildVertexBuffer() > Unsupported SemanticType!");
+
+		pDataLocation = (char *)pDataLocation + sizeof(VertexPosCol);
+	}
 }
 
 //bool MeshPrefab::AddVertexBuffer(const GameContext& gameContext)

@@ -7,6 +7,7 @@
 #include <vector>
 
 struct GameContext;
+struct VertexBufferData;
 
 class Renderer
 {
@@ -58,8 +59,8 @@ public:
 
 	virtual void PostInitialize() = 0;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) = 0;
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices) = 0;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData) = 0;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData, std::vector<glm::uint>* indices) = 0;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
 	virtual void SetClearColor(float r, float g, float b) = 0;

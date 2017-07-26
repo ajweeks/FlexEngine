@@ -11,8 +11,8 @@ public:
 	D3DRenderer(GameContext& gameContext);
 	virtual ~D3DRenderer();
 
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData,
 		std::vector<glm::uint>* indices) override;
 
 	virtual void PostInitialize() override;
@@ -54,7 +54,7 @@ private:
 
 		D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-		std::vector<VertexPosCol>* vertices = nullptr;
+		VertexBufferData* vertexBufferData = nullptr;
 		ID3D11Buffer* vertexBuffer;
 
 		bool indexed;
