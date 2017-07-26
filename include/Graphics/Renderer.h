@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vertex.h"
+#include "VertexBufferData.h"
 
 #include <glm\detail\type_int.hpp>
 
@@ -56,12 +57,20 @@ public:
 		TRIANGLE_FAN
 	};
 
+	enum class CullMode
+	{
+		CULL_BACK,
+		CULL_FRONT,
+		CULL_NONE
+	};
+
 	virtual void PostInitialize() = 0;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) = 0;
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices) = 0;
+	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData) = 0;
+	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData, std::vector<glm::uint>* indices) = 0;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
+	virtual void SetCullMode(glm::uint renderID, CullMode cullMode) = 0;
 	virtual void SetClearColor(float r, float g, float b) = 0;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;

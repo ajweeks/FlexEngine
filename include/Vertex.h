@@ -5,6 +5,8 @@
 #include <glm\vec4.hpp>
 #include <glm\gtc\quaternion.hpp>
 
+#include <assimp\vector3.h>
+
 #include <vector>
 
 struct GameContext;
@@ -18,9 +20,25 @@ struct VertexPosCol
 	VertexPosCol(glm::vec3 pos, const float col[3]) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] } {}
 	VertexPosCol(glm::vec3 pos, glm::vec3 col) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] } {}
 
-	static const int stride = 3 * sizeof(float) + 3 * sizeof(float);
+	static const int stride = sizeof(glm::vec3) + sizeof(glm::vec3);
 	glm::vec3 pos;
 	glm::vec3 col;
+};
+
+struct VertexPosColNorm
+{
+	VertexPosColNorm() {};
+	VertexPosColNorm(float x, float y, float z, float r, float g, float b, float nX, float nY, float nZ) : pos{ x, y, z }, col{ r, g, b }, norm(nX, nY, nZ) {}
+	VertexPosColNorm(float x, float y, float z, const float col[3], float nX, float nY, float nZ) : pos{ x, y, z }, col{ col[0], col[1], col[2] }, norm(nX, nY, nZ) {}
+	VertexPosColNorm(float x, float y, float z, const float col[3], glm::vec3 norm) : pos{ x, y, z }, col{ col[0], col[1], col[2] }, norm(norm) {}
+	VertexPosColNorm(const float pos[3], const float col[3], const float norm[3]) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] }, norm{ norm[0], norm[1], norm[2] } {}
+	VertexPosColNorm(glm::vec3 pos, const float col[3], glm::vec3 norm) : pos(pos), col{ col[0], col[1], col[2] }, norm(norm) {}
+	VertexPosColNorm(glm::vec3 pos, glm::vec3 col, glm::vec3 norm) : pos(pos), col(col), norm(norm) {}
+
+	static const int stride = sizeof(glm::vec3) + sizeof(glm::vec3) + sizeof(glm::vec3);
+	glm::vec3 pos;
+	glm::vec3 col;
+	glm::vec3 norm;
 };
 
 struct VertexPosColTex
@@ -31,7 +49,7 @@ struct VertexPosColTex
 	VertexPosColTex(const float pos[3], const float col[3], const float uv[2]) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] }, uv{ uv[0], uv[1] } {}
 	VertexPosColTex(glm::vec3 pos, glm::vec3 col, glm::vec2 uv) : pos{ pos[0], pos[1], pos[2] }, col{ col[0], col[1], col[2] }, uv(uv) {}
 
-	static const int stride = 3 * sizeof(float) + 3 * sizeof(float);
+	static const int stride = sizeof(glm::vec3) + sizeof(glm::vec3) + sizeof(glm::vec2);
 	glm::vec3 pos;
 	glm::vec3 col;
 	glm::vec2 uv;

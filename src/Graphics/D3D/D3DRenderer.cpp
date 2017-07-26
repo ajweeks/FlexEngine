@@ -76,7 +76,7 @@ D3DRenderer::~D3DRenderer()
 	}
 }
 
-uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
+uint D3DRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData)
 {
 	const uint renderID = m_RenderObjects.size();
 
@@ -92,7 +92,7 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexP
 	return renderID;
 }
 
-uint D3DRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<uint>* indices)
+uint D3DRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData, std::vector<uint>* indices)
 {
 	const uint renderID = Initialize(gameContext, vertices);
 
@@ -111,6 +111,11 @@ void D3DRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 	renderObject->topology = TopologyModeToD3DMode(topology);
+}
+
+void D3DRenderer::SetCullMode(glm::uint renderID, CullMode cullMode)
+{
+	// TODO: Implement
 }
 
 void D3DRenderer::SetClearColor(float r, float g, float b)

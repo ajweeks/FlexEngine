@@ -10,6 +10,7 @@
 #include "TechDemo.h"
 
 #include <algorithm>	
+#include <set>
 
 #include <glm\gtx\hash.hpp>
 #include <glm\gtc\matrix_transform.hpp>
@@ -17,16 +18,11 @@
 #include <iostream>
 #include <unordered_map>
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
-
 #include <SOIL.h>
 
 using namespace glm;
 
 VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
-	m_VertexBuffer(m_Device),
-	m_IndexBuffer(m_Device),
 	m_UniformBuffers(m_Device)
 {
 	CreateInstance();
@@ -50,8 +46,8 @@ void VulkanRenderer::PostInitialize()
 		CreateGraphicsPipeline(i);
 	}
 
-	CreateVertexBuffer();
-	CreateIndexBuffer();
+	CreateVertexBuffers();
+	CreateIndexBuffers();
 
 	PrepareUniformBuffers();
 	CreateDescriptorPool();
@@ -79,24 +75,23 @@ VulkanRenderer::~VulkanRenderer()
 	glfwTerminate();
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
+glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData)
 {
 	size_t renderID = m_RenderObjects.size();
 	RenderObject* renderObject = new RenderObject(m_Device);
 	m_RenderObjects.push_back(renderObject);
 
-	renderObject->vertices = vertices;
-
+	renderObject->vertexData = vertexData;
+	
 	return renderID;
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices, std::vector<glm::uint>* indices)
+glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData, std::vector<glm::uint>* indices)
 {
-	glm::uint renderID = Initialize(gameContext, vertices);
+	glm::uint renderID = Initialize(gameContext, vertexData);
 	
 	RenderObject* renderObject = GetRenderObject(renderID);
 	renderObject->indices = indices;
-	renderObject->indexed = true;
 
 	return renderID;
 }
@@ -113,6 +108,27 @@ void VulkanRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
 	else
 	{
 		renderObject->topology = vkTopology;
+	}
+}
+
+void VulkanRenderer::SetCullMode(glm::uint renderID, CullMode cullMode)
+{
+	RenderObject* renderObject = GetRenderObject(renderID);
+
+	switch (cullMode)
+	{
+	case Renderer::CullMode::CULL_BACK:
+		renderObject->cullMode = VK_CULL_MODE_BACK_BIT;
+		break;
+	case Renderer::CullMode::CULL_FRONT:
+		renderObject->cullMode = VK_CULL_MODE_FRONT_BIT;
+		break;
+	case Renderer::CullMode::CULL_NONE:
+		renderObject->cullMode = VK_CULL_MODE_NONE;
+		break;
+	default:
+		Logger::LogError("VulkanRenderer::SetCullMode doesn't support given cull mode: " + std::to_string((int)cullMode));
+		break;
 	}
 }
 
@@ -630,8 +646,8 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizer.cullMode = renderObject->cullMode;
+	rasterizer.frontFace = renderObject->frontFaceWinding;
 	rasterizer.depthBiasEnable = VK_FALSE;
 
 	VkPipelineMultisampleStateCreateInfo multisampling = {};
@@ -843,6 +859,7 @@ void VulkanRenderer::CreateDepthResources()
 	TransitionImageLayout(m_DepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
+// TODO: Move image loading to separate class
 void VulkanRenderer::CreateTextureImage(const std::string& filePath)
 {
 	int textureWidth, textureHeight, textureChannels;
@@ -958,33 +975,32 @@ void VulkanRenderer::BuildCommandBuffers()
 		VkRect2D scissor = VkRect2D{ { 0u, 0u }, { m_SwapChainExtent.width, m_SwapChainExtent.height } };
 		vkCmdSetScissor(m_CommandBuffers[i], 0, 1, &scissor);
 
-		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer.m_Buffer, offsets);
-		
-		if (m_IndexBuffer.m_Size != 0)
-		{
-			vkCmdBindIndexBuffer(m_CommandBuffers[i], m_IndexBuffer.m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-		}
-
 		for (size_t j = 0; j < m_RenderObjects.size(); j++)
 		{
-			uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
+			RenderObject* renderObject = GetRenderObject(j);
 
-			RenderObject* renderObject = m_RenderObjects[j];
+			VkDeviceSize offsets[1] = { 0 };
+			vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &renderObject->vertexBuffer.m_Buffer, offsets);
+		
+			if (renderObject->indexBuffer.m_Size != 0)
+			{
+				vkCmdBindIndexBuffer(m_CommandBuffers[i], renderObject->indexBuffer.m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+			}
 
 			vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
+			uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 			vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
 				0, 1, &m_DescriptorSet, 
 				1, &dynamicOffset);
 
-			if (renderObject->indexed)
+			if (renderObject->indexBuffer.m_Size != 0)
 			{
-				vkCmdDrawIndexed(m_CommandBuffers[i], renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
+				vkCmdDrawIndexed(m_CommandBuffers[i], renderObject->indices->size(), 1, 0, 0, 0);
 			}
 			else
 			{
-				vkCmdDraw(m_CommandBuffers[i], renderObject->vertices->size(), 1, renderObject->vertexOffset, 0);
+				vkCmdDraw(m_CommandBuffers[i], renderObject->vertexData.VertexCount, 1, 0, 0);
 			}
 		}
 
@@ -1164,107 +1180,50 @@ void VulkanRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
 	EndSingleTimeCommands(commandBuffer);
 }
 
-void VulkanRenderer::LoadModel(const std::string& filePath)
+void VulkanRenderer::CreateVertexBuffers()
 {
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string err;
-
-	std::unordered_map<VertexPosColTex, int> uniqueVertices = {};
-
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filePath.c_str()))
-	{
-		throw std::runtime_error(err);
-	}
-
-	// TODO: re-implement
-	//for (const auto& shape : shapes)
-	//{
-	//	for (const auto& index : shape.mesh.indices)
-	//	{
-	//		VertexPosColTex vertex = {};
-	//
-	//		vertex.pos = {
-	//			attrib.vertices[3 * index.vertex_index + 0],
-	//			attrib.vertices[3 * index.vertex_index + 1],
-	//			attrib.vertices[3 * index.vertex_index + 2]
-	//		};
-	//
-	//		vertex.uv = {
-	//			attrib.texcoords[2 * index.texcoord_index + 0],
-	//			1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-	//		};
-	//
-	//		vertex.col = { 1.0f, 1.0f, 1.0f };
-	//
-	//		if (uniqueVertices.count(vertex) == 0)
-	//		{
-	//			uniqueVertices[vertex] = vertices.size();
-	//			vertices.push_back(vertex);
-	//		}
-	//
-	//		indices.push_back(uniqueVertices[vertex]);
-	//	}
-	//}
-}
-
-void VulkanRenderer::CreateVertexBuffer()
-{
-	std::vector<VertexPosCol> vertices;
-
 	for (size_t i = 0; i < m_RenderObjects.size(); i++)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
-		renderObject->vertexOffset = vertices.size();
-		vertices.insert(vertices.end(), renderObject->vertices->begin(), renderObject->vertices->end());
+
+		VulkanBuffer stagingBuffer(m_Device);
+		CreateAndAllocateBuffer(renderObject->vertexData.BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
+
+		stagingBuffer.Map(renderObject->vertexData.BufferSize);
+		memcpy(stagingBuffer.m_Mapped, renderObject->vertexData.pDataStart, renderObject->vertexData.BufferSize);
+		stagingBuffer.Unmap();
+
+		CreateAndAllocateBuffer(renderObject->vertexData.BufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderObject->vertexBuffer);
+
+		CopyBuffer(stagingBuffer.m_Buffer, renderObject->vertexBuffer.m_Buffer, renderObject->vertexData.BufferSize);
 	}
-
-	const size_t bufferSize = sizeof(VertexPosCol) * vertices.size();
-
-	VulkanBuffer stagingBuffer(m_Device);
-	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
-
-	stagingBuffer.Map(bufferSize);
-	memcpy(stagingBuffer.m_Mapped, vertices.data(), bufferSize);
-	stagingBuffer.Unmap();
-
-	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_VertexBuffer);
-
-	CopyBuffer(stagingBuffer.m_Buffer, m_VertexBuffer.m_Buffer, bufferSize);
 }
 
-void VulkanRenderer::CreateIndexBuffer()
+void VulkanRenderer::CreateIndexBuffers()
 {
-	std::vector<uint> indices;
-
 	for (size_t i = 0; i < m_RenderObjects.size(); i++)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
-		if (renderObject->indexed)
+		if (renderObject->indexBuffer.m_Size > 0)
 		{
-			renderObject->vertexOffset = indices.size();
-			indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+			const size_t bufferSize = sizeof(uint) * renderObject->indices->size();
+
+			VulkanBuffer stagingBuffer(m_Device);
+			CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
+
+			stagingBuffer.Map(bufferSize);
+			memcpy(stagingBuffer.m_Mapped, renderObject->indices->data(), bufferSize);
+			stagingBuffer.Unmap();
+
+			CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderObject->indexBuffer);
+
+			CopyBuffer(stagingBuffer.m_Buffer, renderObject->indexBuffer.m_Buffer, bufferSize);
 		}
 	}
-
-	if (indices.empty()) return;
-	const size_t bufferSize = sizeof(uint) * indices.size();
-
-	VulkanBuffer stagingBuffer(m_Device);
-	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
-
-	stagingBuffer.Map(bufferSize);
-	memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
-	stagingBuffer.Unmap();
-
-	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_IndexBuffer);
-
-	CopyBuffer(stagingBuffer.m_Buffer, m_IndexBuffer.m_Buffer, bufferSize);
 }
 
 void VulkanRenderer::PrepareUniformBuffers()

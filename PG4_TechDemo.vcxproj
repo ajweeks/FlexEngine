@@ -112,7 +112,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;d3d11.lib;d3dcompiler.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <SubSystem>Console</SubSystem>
@@ -132,30 +132,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Graphics\GL\GLHelpers.cpp" />
     <ClCompile Include="src\Graphics\D3D\D3DHelpers.cpp" />
-    <ClCompile Include="src\Graphics\MultiRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanBuffer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanHelpers.cpp" />
     <ClCompile Include="src\Helpers.cpp" />
     <ClCompile Include="src\Graphics\D3D\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GL\GLRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanRenderer.cpp" />
-    <ClCompile Include="src\Prefabs\CubePosCol.cpp" />
-    <ClCompile Include="src\Prefabs\GridPrefab.cpp" />
-    <ClCompile Include="src\Prefabs\Mesh.cpp" />
-    <ClCompile Include="src\Prefabs\Prefab.cpp" />
-    <ClCompile Include="src\Prefabs\SpherePosCol.cpp" />
-    <ClCompile Include="src\Prefabs\Transform.cpp" />
+    <ClCompile Include="src\Prefabs\MeshPrefab.cpp" />
+    <ClCompile Include="src\Scene\Window\D3D\D3DWindowWrapper.cpp" />
+    <ClCompile Include="src\Transform.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Scene\Window\D3D\D3DWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\GLFWWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\GL\GLWindowWrapper.cpp" />
-    <ClCompile Include="src\Scene\Window\MultiWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\Vulkan\VulkanWindowWrapper.cpp" />
     <ClCompile Include="src\Scene\Window\Window.cpp" />
     <ClCompile Include="src\Scene\BaseScene.cpp" />
@@ -167,7 +162,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Colours.cpp" />
+    <ClCompile Include="src\Colors.cpp" />
     <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ShaderUtils.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -177,18 +172,14 @@
     <ClInclude Include="include\Graphics\GL\GLHelpers.h" />
     <ClInclude Include="include\Graphics\D3D\D3DRenderer.h" />
     <ClInclude Include="include\Graphics\GL\GLRenderer.h" />
-    <ClInclude Include="include\Graphics\MultiRenderer.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
-    <ClInclude Include="include\Prefabs\CubePrefab.h" />
-    <ClInclude Include="include\Prefabs\GridPrefab.h" />
-    <ClInclude Include="include\Prefabs\Mesh.h" />
-    <ClInclude Include="include\Prefabs\Prefab.h" />
-    <ClInclude Include="include\Prefabs\SpherePrefab.h" />
-    <ClInclude Include="include\Prefabs\Transform.h" />
+    <ClInclude Include="include\Prefabs\MeshPrefab.h" />
+    <ClInclude Include="include\Transform.h" />
+    <ClInclude Include="include\VertexBufferData.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
-    <ClInclude Include="include\Colours.h" />
+    <ClInclude Include="include\Colors.h" />
     <ClInclude Include="include\GameContext.h" />
     <ClInclude Include="include\Helpers.h" />
     <ClInclude Include="include\Logger.h" />
@@ -201,7 +192,6 @@
     <ClInclude Include="include\InputManager.h" />
     <ClInclude Include="include\Window\D3D\D3DWindowWrapper.h" />
     <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
-    <ClInclude Include="include\Window\MultiWindowWrapper.h" />
     <ClInclude Include="include\Window\Vulkan\VulkanWindowWrapper.h" />
     <ClInclude Include="include\Window\Window.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />

@@ -1,9 +1,7 @@
 #pragma once
 
 #include "BaseScene.h"
-#include "Prefabs/CubePrefab.h"
-#include "Prefabs/SpherePrefab.h"
-#include "Prefabs/GridPrefab.h"
+#include "Prefabs/MeshPrefab.h"
 
 #include <vector>
 
@@ -18,14 +16,15 @@ public:
 	virtual void UpdateAndRender(const GameContext& gameContext) override;
 
 private:
-	std::vector<CubePrefab> m_Cubes;
+	std::vector<MeshPrefab> m_Cubes;
 
-	CubePrefab m_Cube;
-	CubePrefab m_Cube2;
-	SpherePrefab m_UVSphere;
-	//SpherePrefab m_IcoSphere;
+	MeshPrefab m_Cube;
+	MeshPrefab m_Cube2;
+	MeshPrefab m_UVSphere;
+	//MeshPrefab m_IcoSphere;
+	MeshPrefab m_Teapot1;
 
-	GridPrefab m_Grid;
+	MeshPrefab m_Grid;
 
 	glm::uint m_TimeID;
 

@@ -20,11 +20,12 @@ public:
 	
 	virtual void PostInitialize() override;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
+	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData,
 		std::vector<glm::uint>* indices) override;
 	
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
+	virtual void SetCullMode(glm::uint renderID, CullMode cullMode) override;
 	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
@@ -63,8 +64,8 @@ private:
 	void CreateTextureSampler();
 	void LoadModel(const std::string& filePath);
 
-	void CreateVertexBuffer();
-	void CreateIndexBuffer();
+	void CreateVertexBuffers();
+	void CreateIndexBuffers();
 	void PrepareUniformBuffers();
 	void CreateDescriptorPool();
 	void CreateDescriptorSet();
@@ -117,7 +118,9 @@ private:
 	{
 		RenderObject(const VDeleter<VkDevice>& device) :
 			pipelineLayout(device, vkDestroyPipelineLayout),
-			graphicsPipeline(device, vkDestroyPipeline)
+			graphicsPipeline(device, vkDestroyPipeline),
+			vertexBuffer(device),
+			indexBuffer(device)
 		{
 		}
 
@@ -129,12 +132,15 @@ private:
 		glm::uint VBO;
 		glm::uint IBO;
 
-		std::vector<VertexPosCol>* vertices = nullptr;
-		glm::uint vertexOffset = 0;
+		VulkanBuffer vertexBuffer;
+		VulkanBuffer indexBuffer;
 
-		bool indexed = false;
+		VertexBufferData vertexData;
+
 		std::vector<glm::uint>* indices = nullptr;
-		glm::uint indexOffset = 0;
+
+		VkCullModeFlagBits cullMode = VK_CULL_MODE_BACK_BIT;
+		VkFrontFace frontFaceWinding = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		VDeleter<VkPipelineLayout> pipelineLayout; // { m_Device, vkDestroyPipelineLayout };
 		VDeleter<VkPipeline> graphicsPipeline; // { m_Device, vkDestroyPipeline };
@@ -202,9 +208,6 @@ private:
 	VDeleter<VkImageView> m_DepthImageView{ m_Device, vkDestroyImageView };
 
 	VDeleter<VkDescriptorPool> m_DescriptorPool{ m_Device, vkDestroyDescriptorPool };
-
-	VulkanBuffer m_VertexBuffer;
-	VulkanBuffer m_IndexBuffer;
 
 	size_t m_DynamicAlignment;
 

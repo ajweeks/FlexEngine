@@ -4,7 +4,7 @@
 
 #define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 1
-#define COMPILE_D3D 1
+#define COMPILE_D3D 0
 
 #if COMPILE_VULKAN
 	#include <glad/glad.h>
@@ -69,17 +69,17 @@
 			}
 		}
 	}
-#endif // COMPILE_D3D
 
-template<class Interface>
-inline void SafeRelease(Interface &pInterfaceToRelease)
-{
-	if (pInterfaceToRelease != 0)
+	template<class Interface>
+	inline void SafeRelease(Interface &pInterfaceToRelease)
 	{
-		pInterfaceToRelease->Release();
-		pInterfaceToRelease = 0;
+		if (pInterfaceToRelease != 0)
+		{
+			pInterfaceToRelease->Release();
+			pInterfaceToRelease = 0;
+		}
 	}
-}
+#endif // COMPILE_D3D
 
 template<class T>
 inline void SafeDelete(T &pObjectToDelete)

@@ -11,8 +11,8 @@ public:
 	GLRenderer(GameContext& gameContext);
 	virtual ~GLRenderer();
 
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices,
+	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData,
 		std::vector<glm::uint>* indices) override;
 
 	virtual void PostInitialize() override;
@@ -20,6 +20,7 @@ public:
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
+	virtual void SetCullMode(glm::uint renderID, CullMode cullMode) override;
 	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void OnWindowSize(int width, int height) override;
@@ -55,7 +56,7 @@ private:
 		GLenum topology = GL_TRIANGLES;
 
 		glm::uint vertexBuffer;
-		std::vector<VertexPosCol>* vertices = nullptr;
+		VertexBufferData vertexData;
 
 		bool indexed;
 		glm::uint indexBuffer;

@@ -91,7 +91,7 @@ InputManager::KeyCode D3DWindowWrapper::D3DKeyToInputManagerKey(int keyCode)
 	case VK_OEM_6: inputKey = InputManager::KeyCode::KEY_RIGHT_BRACKET; break;
 	case VK_OEM_3: inputKey = InputManager::KeyCode::KEY_GRAVE_ACCENT; break;
 	case VK_OEM_8: inputKey = InputManager::KeyCode::KEY_WORLD_1; break;
-	//case VK_WORLD_2: inputKey = InputManager::KeyCode::KEY_WORLD_2; break;
+		//case VK_WORLD_2: inputKey = InputManager::KeyCode::KEY_WORLD_2; break;
 	case VK_ESCAPE: inputKey = InputManager::KeyCode::KEY_ESCAPE; break;
 	case VK_RETURN: inputKey = InputManager::KeyCode::KEY_ENTER; break;
 	case VK_TAB: inputKey = InputManager::KeyCode::KEY_TAB; break;
@@ -135,7 +135,7 @@ InputManager::KeyCode D3DWindowWrapper::D3DKeyToInputManagerKey(int keyCode)
 	case VK_F22: inputKey = InputManager::KeyCode::KEY_F22; break;
 	case VK_F23: inputKey = InputManager::KeyCode::KEY_F23; break;
 	case VK_F24: inputKey = InputManager::KeyCode::KEY_F24; break;
-	//case VK_F25: inputKey = InputManager::KeyCode::KEY_F25; break;
+		//case VK_F25: inputKey = InputManager::KeyCode::KEY_F25; break;
 	case VK_NUMPAD0: inputKey = InputManager::KeyCode::KEY_KP_0; break;
 	case VK_NUMPAD1: inputKey = InputManager::KeyCode::KEY_KP_1; break;
 	case VK_NUMPAD2: inputKey = InputManager::KeyCode::KEY_KP_2; break;
@@ -151,8 +151,8 @@ InputManager::KeyCode D3DWindowWrapper::D3DKeyToInputManagerKey(int keyCode)
 	case VK_MULTIPLY: inputKey = InputManager::KeyCode::KEY_KP_MULTIPLY; break;
 	case VK_SUBTRACT: inputKey = InputManager::KeyCode::KEY_KP_SUBTRACT; break;
 	case VK_ADD: inputKey = InputManager::KeyCode::KEY_KP_ADD; break;
-	//case VK_KP_ENTER: inputKey = InputManager::KeyCode::KEY_KP_ENTER; break;
-	//case VK_KP_EQUAL: inputKey = InputManager::KeyCode::KEY_KP_EQUAL; break;
+		//case VK_KP_ENTER: inputKey = InputManager::KeyCode::KEY_KP_ENTER; break;
+		//case VK_KP_EQUAL: inputKey = InputManager::KeyCode::KEY_KP_EQUAL; break;
 	case VK_SHIFT: // Fallthrough
 	case VK_LSHIFT: inputKey = InputManager::KeyCode::KEY_LEFT_SHIFT; break;
 	case VK_CONTROL: // Fallthrough
@@ -192,16 +192,16 @@ InputManager::MouseButton D3DWindowWrapper::D3DButtonToInputManagerMouseButton(i
 	{
 	case MK_LBUTTON: return InputManager::MouseButton::MOUSE_BUTTON_1;
 	case MK_MBUTTON: return InputManager::MouseButton::MOUSE_BUTTON_2;
-	case MK_RBUTTON: return InputManager::MouseButton::MOUSE_BUTTON_3; 
-	case MK_XBUTTON1: return InputManager::MouseButton::MOUSE_BUTTON_4; 
-	case MK_XBUTTON2: return InputManager::MouseButton::MOUSE_BUTTON_5; 
-	//case MK_MOUSE_BUTTON_6: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_6; break;
-	//case MK_MOUSE_BUTTON_7: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_7; break;
-	//case MK_MOUSE_BUTTON_8: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_8; break;
-	case -1: 
+	case MK_RBUTTON: return InputManager::MouseButton::MOUSE_BUTTON_3;
+	case MK_XBUTTON1: return InputManager::MouseButton::MOUSE_BUTTON_4;
+	case MK_XBUTTON2: return InputManager::MouseButton::MOUSE_BUTTON_5;
+		//case MK_MOUSE_BUTTON_6: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_6; break;
+		//case MK_MOUSE_BUTTON_7: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_7; break;
+		//case MK_MOUSE_BUTTON_8: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_8; break;
+	case -1:
 		break; // We don't care about events win32 can't handle
-	default: 
-		Logger::LogError("Unhandled button passed to D3DButtonToInputManagerMouseButton: " + std::to_string(button)); 
+	default:
+		Logger::LogError("Unhandled button passed to D3DButtonToInputManagerMouseButton: " + std::to_string(button));
 		break;
 	}
 
@@ -218,7 +218,7 @@ D3DWindowWrapper::D3DWindowWrapper(const std::string& title, glm::vec2i size, gl
 	{
 		exit(EXIT_FAILURE);
 	}
-	
+
 	m_HasFocus = true;
 }
 
@@ -327,12 +327,12 @@ void D3DWindowWrapper::SetCursorMode(CursorMode mode)
 	Window::SetCursorMode(mode);
 
 	int glfwCursorMode = 0;
-	
+
 	switch (mode)
 	{
 	case Window::CursorMode::NORMAL: ShowCursor(true); break;
 	case Window::CursorMode::HIDDEN: ShowCursor(false); break;
-	//case Window::CursorMode::DISABLED: ShowCursor(false); break;
+		//case Window::CursorMode::DISABLED: ShowCursor(false); break;
 	default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((int)mode)); break;
 	}
 }
@@ -358,7 +358,7 @@ void D3DWindowWrapper::SetWindowTitle(const std::string& title)
 LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	Window* window = (Window*)GetWindowLongPtr(hWnd, GWL_USERDATA);
-	
+
 	switch (msg)
 	{
 	case WM_CLOSE:

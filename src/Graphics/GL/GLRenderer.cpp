@@ -2,6 +2,7 @@
 #if COMPILE_OPEN_GL
 
 #include "Graphics/GL/GLRenderer.h"
+#include "Graphics/GL/GLHelpers.h"
 #include "GameContext.h"
 #include "Window/Window.h"
 #include "Logger.h"
@@ -22,6 +23,7 @@ GLRenderer::GLRenderer(GameContext& gameContext) :
 	glFrontFace(GL_CCW);
 	
 	glUseProgram(gameContext.program);
+	CheckGLErrorMessages();
 }
 
 GLRenderer::~GLRenderer()
@@ -34,15 +36,14 @@ GLRenderer::~GLRenderer()
 	m_RenderObjects.clear();
 
 	glDeleteProgram(m_Program);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	//CheckGLErrorMessages();
 
 	glfwTerminate();
 }
 
-uint GLRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPosCol>* vertices)
+uint GLRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData)
 {
 	const uint renderID = m_RenderObjects.size();
 
@@ -51,29 +52,28 @@ uint GLRenderer::Initialize(const GameContext& gameContext, std::vector<VertexPo
 
 	glGenVertexArrays(1, &renderObject->VAO);
 	glBindVertexArray(renderObject->VAO);
+	CheckGLErrorMessages();
 
 	glGenBuffers(1, &renderObject->VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices->at(0)) * vertices->size(), vertices->data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertexData.VertexStride * vertexData.VertexCount, vertexData.pDataStart, GL_STATIC_DRAW);
+	CheckGLErrorMessages();
 
-	renderObject->vertices = vertices;
-
-	uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
-	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, VertexPosCol::stride, 0);
-
+	renderObject->vertexData = vertexData;
 	renderObject->MVP = glGetUniformLocation(gameContext.program, "in_MVP");
-	
+	CheckGLErrorMessages();
+
 	m_RenderObjects.push_back(renderObject);
 
 	glBindVertexArray(0);
+	CheckGLErrorMessages();
 
 	return renderID;
 }
 
-uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexPosCol>* vertices, std::vector<uint>* indices)
+uint GLRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData, std::vector<uint>* indices)
 {
-	const uint renderID = Initialize(gameContext, vertices);
+	const uint renderID = Initialize(gameContext, vertexData);
 	
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -83,6 +83,7 @@ uint GLRenderer::Initialize(const GameContext& gameContext,  std::vector<VertexP
 	glGenBuffers(1, &renderObject->IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices->at(0)) * indices->size(), indices->data(), GL_STATIC_DRAW);
+	CheckGLErrorMessages();
 
 	return renderID;
 }
@@ -103,9 +104,40 @@ void GLRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
 	}
 }
 
+void GLRenderer::SetCullMode(glm::uint renderID, CullMode cullMode)
+{
+	RenderObject* renderObject = GetRenderObject(renderID);
+
+	glBindVertexArray(renderObject->VAO);
+	CheckGLErrorMessages();
+
+	switch (cullMode)
+	{
+	case Renderer::CullMode::CULL_BACK:
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		break;
+	case Renderer::CullMode::CULL_FRONT:
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+		break;
+	case Renderer::CullMode::CULL_NONE:
+		glDisable(GL_CULL_FACE);
+		break;
+	default:
+		Logger::LogError("GLRenderer::SetCullMode doesn't support given cull mode: " + std::to_string((int)cullMode));
+		break;
+	}
+
+	CheckGLErrorMessages();
+
+	glBindVertexArray(0);
+}
+
 void GLRenderer::SetClearColor(float r, float g, float b)
 {
 	glClearColor(r, g, b, 1.0f);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::PostInitialize()
@@ -120,15 +152,18 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	glBindVertexArray(renderObject->VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+	CheckGLErrorMessages();
 
 	if (renderObject->indexed)
 	{
-		glDrawElements(renderObject->topology, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+		glDrawElements(renderObject->topology, renderObject->vertexData.IndexCount, GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 	}
 	else
 	{
-		glDrawArrays(renderObject->topology, 0, renderObject->vertices->size());
+		glDrawArrays(renderObject->topology, 0, renderObject->vertexData.VertexCount);
 	}
+
+	CheckGLErrorMessages();
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -137,6 +172,7 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 void GLRenderer::OnWindowSize(int width, int height)
 {
 	glViewport(0, 0, width, height);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::SetVSyncEnabled(bool enableVSync)
@@ -151,6 +187,8 @@ void GLRenderer::Clear(int flags, const GameContext& gameContext)
 	if ((int)flags & (int)ClearFlag::COLOR) mask |= GL_COLOR_BUFFER_BIT;
 	if ((int)flags & (int)ClearFlag::DEPTH) mask |= GL_DEPTH_BUFFER_BIT;
 	glClear(mask);
+
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::SwapBuffers(const GameContext& gameContext)
@@ -164,16 +202,21 @@ void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint rend
 
 	glm::mat4 MVP = gameContext.camera->GetViewProjection() * model;
 	glUniformMatrix4fv(renderObject->MVP, 1, false, &MVP[0][0]);
+	CheckGLErrorMessages();
 }
 
 int GLRenderer::GetShaderUniformLocation(uint program, const std::string uniformName)
 {
-	return glGetUniformLocation(program, uniformName.c_str());
+	auto uniformLocation = glGetUniformLocation(program, uniformName.c_str());
+	CheckGLErrorMessages();
+
+	return uniformLocation;
 }
 
 void GLRenderer::SetUniform1f(uint location, float val)
 {
 	glUniform1f(location, val);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
@@ -181,11 +224,19 @@ void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	glBindVertexArray(renderObject->VAO);
+	CheckGLErrorMessages();
 
-	GLuint location = glGetAttribLocation(program, variableName.c_str());
+	GLint location = glGetAttribLocation(program, variableName.c_str());
+	if (location == -1)
+	{
+		Logger::LogInfo("Shader variable \"" + variableName + "\" unused");
+		return;
+	}
 	glEnableVertexAttribArray(location);
+	CheckGLErrorMessages();
 	GLenum glRenderType = TypeToGLType(renderType);
 	glVertexAttribPointer(location, size, glRenderType, normalized, stride, pointer);
+	CheckGLErrorMessages();
 
 	glBindVertexArray(0);
 }
@@ -268,10 +319,13 @@ GLRenderer::RenderObjectIter GLRenderer::Destroy(RenderObjectIter iter)
 	RenderObject* pRenderObject = *iter;
 	auto newIter = m_RenderObjects.erase(iter);
 
-	glDeleteBuffers(1, &pRenderObject->VBO);
+	//glDeleteBuffers(1, &pRenderObject->VBO);
+	//CheckGLErrorMessages();
+
 	if (pRenderObject->indexed)
 	{
 		glDeleteBuffers(1, &pRenderObject->IBO);
+		CheckGLErrorMessages();
 	}
 
 	SafeDelete(pRenderObject);
