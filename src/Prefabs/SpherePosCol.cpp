@@ -4,7 +4,7 @@
 
 #include "GameContext.h"
 #include "Graphics/Renderer.h"
-#include "Colours.h"
+#include "Colors.h"
 #include "Typedefs.h"
 #include "Logger.h"
 #include "Helpers.h"
@@ -38,20 +38,20 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 		// Vertices
 		const float t = (1.0f + sqrt(5.0f)) / 2.0f;
 
-		m_Vertices.push_back(VertexPosCol({ -1.0f, t, 0 }, Colour::RED));
-		m_Vertices.push_back(VertexPosCol({1.0f, t, 0 }, Colour::YELLOW));
-		m_Vertices.push_back(VertexPosCol({-1.0f, -t, 0 }, Colour::GRAY));
-		m_Vertices.push_back(VertexPosCol({1.0f, -t, 0 }, Colour::ORANGE));
+		m_Vertices.push_back(VertexPosCol({ -1.0f, t, 0 }, Color::RED));
+		m_Vertices.push_back(VertexPosCol({1.0f, t, 0 }, Color::YELLOW));
+		m_Vertices.push_back(VertexPosCol({-1.0f, -t, 0 }, Color::GRAY));
+		m_Vertices.push_back(VertexPosCol({1.0f, -t, 0 }, Color::ORANGE));
 							 
-		m_Vertices.push_back(VertexPosCol({0, -1.0f, t }, Colour::WHITE));
-		m_Vertices.push_back(VertexPosCol({0, 1.0f, t }, Colour::BLACK));
-		m_Vertices.push_back(VertexPosCol({0, -1.0f, -t }, Colour::GREEN));
-		m_Vertices.push_back(VertexPosCol({0, 1.0f, -t }, Colour::PINK));
+		m_Vertices.push_back(VertexPosCol({0, -1.0f, t }, Color::WHITE));
+		m_Vertices.push_back(VertexPosCol({0, 1.0f, t }, Color::BLACK));
+		m_Vertices.push_back(VertexPosCol({0, -1.0f, -t }, Color::GREEN));
+		m_Vertices.push_back(VertexPosCol({0, 1.0f, -t }, Color::PINK));
 							 
-		m_Vertices.push_back(VertexPosCol({ t, 0, -1.0f }, Colour::PURPLE));
-		m_Vertices.push_back(VertexPosCol({t, 0, 1.0f }, Colour::LIGHT_BLUE));
-		m_Vertices.push_back(VertexPosCol({-t, 0, -1.0f }, Colour::LIME_GREEN));
-		m_Vertices.push_back(VertexPosCol({-t, 0, 1.0f }, Colour::LIGHT_GRAY));
+		m_Vertices.push_back(VertexPosCol({ t, 0, -1.0f }, Color::PURPLE));
+		m_Vertices.push_back(VertexPosCol({t, 0, 1.0f }, Color::LIGHT_BLUE));
+		m_Vertices.push_back(VertexPosCol({-t, 0, -1.0f }, Color::LIME_GREEN));
+		m_Vertices.push_back(VertexPosCol({-t, 0, 1.0f }, Color::LIGHT_GRAY));
 
 		// Indices
 		std::vector<uint> ind;
@@ -133,9 +133,9 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 				vec3 midPointB = normalize(Lerp(m_Vertices[m_Indices[j * 3 + 1]].pos, m_Vertices[m_Indices[j * 3 + 2]].pos, 0.5f));
 				vec3 midPointC = normalize(Lerp(m_Vertices[m_Indices[j * 3 + 2]].pos, m_Vertices[m_Indices[j * 3]].pos, 0.5f));
 
-				m_Vertices.push_back(VertexPosCol(midPointA, Colour::BLACK));
-				m_Vertices.push_back(VertexPosCol(midPointB, Colour::BLACK));
-				m_Vertices.push_back(VertexPosCol(midPointC, Colour::BLACK));
+				m_Vertices.push_back(VertexPosCol(midPointA, Color::BLACK));
+				m_Vertices.push_back(VertexPosCol(midPointB, Color::BLACK));
+				m_Vertices.push_back(VertexPosCol(midPointC, Color::BLACK));
 
 				int a = m_Vertices.size() - 3;
 				int b = m_Vertices.size() - 2;
@@ -149,7 +149,7 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 	case SpherePrefab::Type::UVSPHERE:
 	{
 		// Vertices
-		VertexPosCol v1({ 0.0f, 1.0f, 0.0f }, Colour::GRAY); // Top vertex
+		VertexPosCol v1({ 0.0f, 1.0f, 0.0f }, Color::GRAY); // Top vertex
 		m_Vertices.push_back(v1);
 
 		for (uint j = 0; j < parallelCount - 1; j++)
@@ -164,12 +164,12 @@ void SpherePrefab::Init(const GameContext& gameContext, Type type, const Transfo
 				float cosA = cos(azimuth);
 				vec3 point(sinP * cosA, cosP, sinP * sinA);
 				const glm::vec4 color =
-					(i % 2 == 0 ? j % 2 == 0 ? Colour::ORANGE : Colour::PURPLE : j % 2 == 0 ? Colour::WHITE : Colour::YELLOW);
+					(i % 2 == 0 ? j % 2 == 0 ? Color::ORANGE : Color::PURPLE : j % 2 == 0 ? Color::WHITE : Color::YELLOW);
 				VertexPosCol vertex(point, color);
 				m_Vertices.push_back(vertex);
 			}
 		}
-		VertexPosCol vF({ 0.0f, -1.0f, 0.0f }, Colour::GRAY); // Bottom vertex
+		VertexPosCol vF({ 0.0f, -1.0f, 0.0f }, Color::GRAY); // Bottom vertex
 		m_Vertices.push_back(vF);
 
 		const uint numVerts = m_Vertices.size();

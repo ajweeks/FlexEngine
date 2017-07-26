@@ -4,7 +4,7 @@
 
 #include "GameContext.h"
 #include "Graphics/Renderer.h"
-#include "Colours.h"
+#include "Colors.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -27,62 +27,62 @@ void CubePrefab::Init(const GameContext& gameContext, const Transform& transform
 	Renderer* renderer = gameContext.renderer;
 
 	//							 FRONT		  TOP			BACK		  BOTTOM		  RIGHT			 LEFT
-	const glm::vec4 colours[6] = { Colour::RED, Colour::BLUE, Colour::GRAY, Colour::ORANGE, Colour::WHITE, Colour::PINK };
+	const glm::vec4 Colors[6] = { Color::RED, Color::BLUE, Color::GRAY, Color::ORANGE, Color::WHITE, Color::PINK };
 	m_Vertices =
 	{
 		// Front
-		{ { -1.0f, -1.0f, -1.0f }, 	colours[0] },
-		{ { -1.0f,  1.0f, -1.0f }, 	colours[0] },
-		{ { 1.0f,  1.0f, -1.0f }, 	colours[0] },
+		{ { -1.0f, -1.0f, -1.0f }, 	Colors[0] },
+		{ { -1.0f,  1.0f, -1.0f }, 	Colors[0] },
+		{ { 1.0f,  1.0f, -1.0f }, 	Colors[0] },
 
-		{ { -1.0f, -1.0f, -1.0f }, 	colours[0] },
-		{ { 1.0f,  1.0f, -1.0f }, 	colours[0] },
-		{ { 1.0f, -1.0f, -1.0f }, 	colours[0] },
+		{ { -1.0f, -1.0f, -1.0f }, 	Colors[0] },
+		{ { 1.0f,  1.0f, -1.0f }, 	Colors[0] },
+		{ { 1.0f, -1.0f, -1.0f }, 	Colors[0] },
 
 		// Top
-		{ { -1.0f, 1.0f, -1.0f}, 	colours[1] },
-		{ { -1.0f, 1.0f,  1.0f}, 	colours[1] },
-		{ { 1.0f,  1.0f,  1.0f}, 	colours[1] },
+		{ { -1.0f, 1.0f, -1.0f}, 	Colors[1] },
+		{ { -1.0f, 1.0f,  1.0f}, 	Colors[1] },
+		{ { 1.0f,  1.0f,  1.0f}, 	Colors[1] },
 							  
-		{ { -1.0f, 1.0f, -1.0f}, 	colours[1] },
-		{ { 1.0f,  1.0f,  1.0f}, 	colours[1] },
-		{ { 1.0f,  1.0f, -1.0f}, 	colours[1] },
+		{ { -1.0f, 1.0f, -1.0f}, 	Colors[1] },
+		{ { 1.0f,  1.0f,  1.0f}, 	Colors[1] },
+		{ { 1.0f,  1.0f, -1.0f}, 	Colors[1] },
 
 		// Back
-		{ { 1.0f, -1.0f, 1.0f }, 	colours[2] },
-		{ { 1.0f,  1.0f, 1.0f }, 	colours[2] },
-		{ { -1.0f,  1.0f, 1.0f }, 	colours[2] },
+		{ { 1.0f, -1.0f, 1.0f }, 	Colors[2] },
+		{ { 1.0f,  1.0f, 1.0f }, 	Colors[2] },
+		{ { -1.0f,  1.0f, 1.0f }, 	Colors[2] },
 
-		{ { 1.0f, -1.0f, 1.0f }, 	colours[2] },
-		{ { -1.0f, 1.0f, 1.0f }, 	colours[2] },
-		{ { -1.0f, -1.0f, 1.0f }, 	colours[2] },
+		{ { 1.0f, -1.0f, 1.0f }, 	Colors[2] },
+		{ { -1.0f, 1.0f, 1.0f }, 	Colors[2] },
+		{ { -1.0f, -1.0f, 1.0f }, 	Colors[2] },
 
 		// Bottom
-		{ { -1.0f, -1.0f, -1.0f }, 	colours[3] },
-		{ { 1.0f, -1.0f, -1.0f }, 	colours[3] },
-		{ { 1.0f,  -1.0f,  1.0f }, 	colours[3] },
+		{ { -1.0f, -1.0f, -1.0f }, 	Colors[3] },
+		{ { 1.0f, -1.0f, -1.0f }, 	Colors[3] },
+		{ { 1.0f,  -1.0f,  1.0f }, 	Colors[3] },
 
-		{ { -1.0f, -1.0f, -1.0f }, 	colours[3] },
-		{ { 1.0f, -1.0f,  1.0f }, 	colours[3] },
-		{ { -1.0f, -1.0f,  1.0f }, 	colours[3] },
+		{ { -1.0f, -1.0f, -1.0f }, 	Colors[3] },
+		{ { 1.0f, -1.0f,  1.0f }, 	Colors[3] },
+		{ { -1.0f, -1.0f,  1.0f }, 	Colors[3] },
 
 		// Right
-		{ { 1.0f, -1.0f, -1.0f }, 	colours[4] },
-		{ { 1.0f,  1.0f, -1.0f },	colours[4] },
-		{ { 1.0f,  1.0f,  1.0f }, 	colours[4] },
+		{ { 1.0f, -1.0f, -1.0f }, 	Colors[4] },
+		{ { 1.0f,  1.0f, -1.0f },	Colors[4] },
+		{ { 1.0f,  1.0f,  1.0f }, 	Colors[4] },
 							   
-		{ { 1.0f, -1.0f, -1.0f }, 	colours[4] },
-		{ { 1.0f,  1.0f,  1.0f }, 	colours[4] },
-		{ { 1.0f, -1.0f,  1.0f }, 	colours[4] },
+		{ { 1.0f, -1.0f, -1.0f }, 	Colors[4] },
+		{ { 1.0f,  1.0f,  1.0f }, 	Colors[4] },
+		{ { 1.0f, -1.0f,  1.0f }, 	Colors[4] },
 
 		// Left
-		{ { -1.0f, -1.0f, -1.0f }, colours[5] },
-		{ { -1.0f,  1.0f,  1.0f }, colours[5] },
-		{ { -1.0f,  1.0f, -1.0f }, colours[5] },
+		{ { -1.0f, -1.0f, -1.0f }, Colors[5] },
+		{ { -1.0f,  1.0f,  1.0f }, Colors[5] },
+		{ { -1.0f,  1.0f, -1.0f }, Colors[5] },
 										
-		{ { -1.0f, -1.0f, -1.0f }, 	colours[5] },
-		{ { -1.0f, -1.0f,  1.0f }, 	colours[5] },
-		{ { -1.0f,  1.0f,  1.0f }, 	colours[5] },
+		{ { -1.0f, -1.0f, -1.0f }, 	Colors[5] },
+		{ { -1.0f, -1.0f,  1.0f }, 	Colors[5] },
+		{ { -1.0f,  1.0f,  1.0f }, 	Colors[5] },
 	};
 
 	std::for_each(m_Vertices.begin(), m_Vertices.end(), [](VertexPosCol& vert) { vert.pos[0] *= 0.5f; vert.pos[1] *= 0.5f; vert.pos[2] *= 0.5f; });

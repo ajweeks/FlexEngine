@@ -165,7 +165,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Colours.cpp" />
+    <ClCompile Include="src\Colors.cpp" />
     <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ShaderUtils.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -185,7 +185,7 @@
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />
-    <ClInclude Include="include\Colours.h" />
+    <ClInclude Include="include\Colors.h" />
     <ClInclude Include="include\GameContext.h" />
     <ClInclude Include="include\Helpers.h" />
     <ClInclude Include="include\Logger.h" />

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
 #include "Prefabs/GridPrefab.h"
-#include "Colours.h"
+#include "Colors.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -22,8 +22,8 @@ void GridPrefab::Init(const GameContext& gameContext, float rowWidth, int lineCo
 
 	Renderer* renderer = gameContext.renderer;
 
-	const glm::vec4 lineColor = Colour::GRAY;
-	const glm::vec4 centerLineColor = Colour::LIGHT_GRAY;
+	const glm::vec4 lineColor = Color::GRAY;
+	const glm::vec4 centerLineColor = Color::LIGHT_GRAY;
 
 	const size_t vertexCount = lineCount * 2 * 2;
 	m_Vertices.reserve(vertexCount);
