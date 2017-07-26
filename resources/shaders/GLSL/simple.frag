@@ -1,6 +1,6 @@
 #version 450
 
-uniform vec3 lightDir = vec3(1.0, 1.0, 1.0);
+uniform vec3 lightDir = vec3(0.5, 1.0, 1.0);
 
 in vec4 ex_Color;
 in vec3 ex_Normal;
@@ -11,5 +11,6 @@ out vec4 fragmentColor;
 void main() 
 {
 	float lightIntensity = max(dot(ex_Normal, -normalize(lightDir)), 0.0f);
-	fragmentColor = lightIntensity * ex_Color;
+	//fragmentColor = ex_Color;
+	fragmentColor = (lightIntensity * 0.75 + 0.25) * ex_Color;
 }

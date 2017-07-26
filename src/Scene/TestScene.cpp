@@ -58,6 +58,15 @@ void TestScene::Initialize(const GameContext& gameContext)
 	}
 
 	m_Grid.LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+
+	m_CubeFromFile.LoadFromFile(gameContext, "resources/models/cube.fbx");
+	m_CubeFromFile.GetTransform().position = glm::vec3(-0.5f, 2.0f, 0.0f);
+	m_CubeFromFile.GetTransform().scale = glm::vec3(0.56f, 0.1f, 1.2f);
+	m_CubeFromFile.GetTransform().rotation = glm::quat(glm::vec3(0.1f, 0.2f, 0.04f));
+
+	m_Teapot.LoadFromFile(gameContext, "resources/models/teapot.fbx");
+	m_Teapot.GetTransform().position = glm::vec3(3.0f, 0.0f, 0.0f);
+	m_Teapot.GetTransform().rotation = glm::quat(glm::vec3(-glm::half_pi<float>(), 0.0f, 0.0f));
 }
 
 void TestScene::Destroy(const GameContext& gameContext)
@@ -77,6 +86,10 @@ void TestScene::Destroy(const GameContext& gameContext)
 	}
 
 	m_Grid.Destroy(gameContext);
+
+	m_CubeFromFile.Destroy(gameContext);
+
+	m_Teapot.Destroy(gameContext);
 }
 
 void TestScene::UpdateAndRender(const GameContext& gameContext)
@@ -88,6 +101,7 @@ void TestScene::UpdateAndRender(const GameContext& gameContext)
 
 	m_UVSphere.Render(gameContext);
 	//m_IcoSphere.Render(gameContext);
+
 	m_Cube.Render(gameContext);
 	m_Cube2.GetTransform().Rotate({ 0.1f * dt, -0.3f * dt, 0.4f * dt });
 	m_Cube2.GetTransform().Scale({ 1.0f - (sin(elapsed) * 0.01f) * dt, 1.0f - (sin(elapsed * 1.28f) * 0.01f) * dt, 1.0f - (cos(elapsed * 2.9f) * 0.01f) * dt});
@@ -103,4 +117,8 @@ void TestScene::UpdateAndRender(const GameContext& gameContext)
 	}
 
 	m_Grid.Render(gameContext);
+
+	m_CubeFromFile.Render(gameContext);
+
+	m_Teapot.Render(gameContext);
 }

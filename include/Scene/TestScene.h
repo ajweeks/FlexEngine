@@ -24,6 +24,8 @@ private:
 	//MeshPrefab m_IcoSphere;
 
 	MeshPrefab m_Grid;
+	MeshPrefab m_CubeFromFile;
+	MeshPrefab m_Teapot;
 
 	glm::uint m_TimeID;
 

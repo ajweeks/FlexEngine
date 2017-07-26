@@ -11,12 +11,12 @@
 #include "VertexBufferData.h"
 
 #include <algorithm>	
+#include <set>
+#include <iostream>
+#include <unordered_map>
 
 #include <glm\gtx\hash.hpp>
 #include <glm\gtc\matrix_transform.hpp>
-
-#include <iostream>
-#include <unordered_map>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>

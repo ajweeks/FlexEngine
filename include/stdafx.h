@@ -4,7 +4,7 @@
 
 #define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 1
-#define COMPILE_D3D 1
+#define COMPILE_D3D 0
 
 #if COMPILE_VULKAN
 	#include <glad/glad.h>

@@ -35,7 +35,6 @@ MeshPrefab::~MeshPrefab()
 
 bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath)
 {
-	/*
 	Assimp::Importer importer;
 
 	const aiScene* pScene = importer.ReadFile(filepath,
@@ -57,12 +56,10 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	aiMesh* mesh = pScene->mMeshes[0];
 	const size_t numVerts = mesh->mNumVertices;
 
-	aiVector3D* verts = mesh->mVertices;
-
 	for (size_t i = 0; i < numVerts; i++)
 	{
 		// Position
-		glm::vec3 pos = ToVec3(verts[i]);
+		glm::vec3 pos = ToVec3(mesh->mVertices[i]);
 		m_Positions.push_back(pos);
 		m_HasElement |= (glm::uint)ILSemantic::POSITION;
 
@@ -107,11 +104,29 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 		m_HasElement |= (glm::uint)ILSemantic::TEXCOORD;
 	}
 
-	const bool success = AddVertexBuffer(gameContext);
+	Renderer* renderer = gameContext.renderer;
 
-	return success;
-	*/
-	return false;
+	m_VertexBuffers.push_back({});
+	VertexBufferData* vertexBufferData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
+
+	CreateVertexBuffer(vertexBufferData);
+
+	m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
+
+	// TODO: Move to function to determine based on m_HasElement
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Position", 3, Renderer::Type::FLOAT, false,
+		vertexBufferData->VertexStride, (void*)0);
+
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false,
+		vertexBufferData->VertexStride, (void*)sizeof(glm::vec3));
+
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Normal", 3, Renderer::Type::FLOAT, false,
+		vertexBufferData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4)));
+
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_TexCoord", 2, Renderer::Type::FLOAT, false,
+		vertexBufferData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3)));
+
+	return true;
 }
 
 bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape)
