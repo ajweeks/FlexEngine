@@ -20,8 +20,8 @@ public:
 	
 	virtual void PostInitialize() override;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData,
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexData) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexData,
 		std::vector<glm::uint>* indices) override;
 	
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
@@ -135,7 +135,7 @@ private:
 		VulkanBuffer vertexBuffer;
 		VulkanBuffer indexBuffer;
 
-		VertexBufferData vertexData;
+		VertexBufferData* vertexData = nullptr;
 
 		std::vector<glm::uint>* indices = nullptr;
 

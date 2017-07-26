@@ -11,8 +11,8 @@ public:
 	D3DRenderer(GameContext& gameContext);
 	virtual ~D3DRenderer();
 
-	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData,
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexData) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexData,
 		std::vector<glm::uint>* indices) override;
 
 	virtual void PostInitialize() override;

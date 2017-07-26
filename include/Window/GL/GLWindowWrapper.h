@@ -14,8 +14,12 @@ public:
 	virtual void SetSize(int width, int height) override;
 
 private:
+
 	GLWindowWrapper(const GLWindowWrapper&) = delete;
 	GLWindowWrapper& operator=(const GLWindowWrapper&) = delete;
 };
+
+void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
+	GLsizei length, const GLchar *message, const void *userParam);
 
 #endif // COMPILE_OPEN_GL

@@ -43,7 +43,7 @@ GLRenderer::~GLRenderer()
 	glfwTerminate();
 }
 
-uint GLRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData)
+uint GLRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexData)
 {
 	const uint renderID = m_RenderObjects.size();
 
@@ -56,7 +56,7 @@ uint GLRenderer::Initialize(const GameContext& gameContext, const VertexBufferDa
 
 	glGenBuffers(1, &renderObject->VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertexData.VertexStride * vertexData.VertexCount, vertexData.pDataStart, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertexData->VertexStride * vertexData->VertexCount, vertexData->pDataStart, GL_STATIC_DRAW);
 	CheckGLErrorMessages();
 
 	renderObject->vertexData = vertexData;
@@ -71,7 +71,7 @@ uint GLRenderer::Initialize(const GameContext& gameContext, const VertexBufferDa
 	return renderID;
 }
 
-uint GLRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData, std::vector<uint>* indices)
+uint GLRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexData, std::vector<uint>* indices)
 {
 	const uint renderID = Initialize(gameContext, vertexData);
 	
@@ -156,11 +156,11 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	if (renderObject->indexed)
 	{
-		glDrawElements(renderObject->topology, renderObject->vertexData.IndexCount, GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+		glDrawElements(renderObject->topology, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 	}
 	else
 	{
-		glDrawArrays(renderObject->topology, 0, renderObject->vertexData.VertexCount);
+		glDrawArrays(renderObject->topology, 0, renderObject->vertexData->VertexCount);
 	}
 
 	CheckGLErrorMessages();

@@ -75,7 +75,7 @@ VulkanRenderer::~VulkanRenderer()
 	glfwTerminate();
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData)
+glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexData)
 {
 	size_t renderID = m_RenderObjects.size();
 	RenderObject* renderObject = new RenderObject(m_Device);
@@ -86,7 +86,7 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const Verte
 	return renderID;
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const VertexBufferData& vertexData, std::vector<glm::uint>* indices)
+glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexData, std::vector<glm::uint>* indices)
 {
 	glm::uint renderID = Initialize(gameContext, vertexData);
 	
@@ -1000,7 +1000,7 @@ void VulkanRenderer::BuildCommandBuffers()
 			}
 			else
 			{
-				vkCmdDraw(m_CommandBuffers[i], renderObject->vertexData.VertexCount, 1, 0, 0);
+				vkCmdDraw(m_CommandBuffers[i], renderObject->vertexData->VertexCount, 1, 0, 0);
 			}
 		}
 
@@ -1187,17 +1187,17 @@ void VulkanRenderer::CreateVertexBuffers()
 		RenderObject* renderObject = GetRenderObject(i);
 
 		VulkanBuffer stagingBuffer(m_Device);
-		CreateAndAllocateBuffer(renderObject->vertexData.BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		CreateAndAllocateBuffer(renderObject->vertexData->BufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
 
-		stagingBuffer.Map(renderObject->vertexData.BufferSize);
-		memcpy(stagingBuffer.m_Mapped, renderObject->vertexData.pDataStart, renderObject->vertexData.BufferSize);
+		stagingBuffer.Map(renderObject->vertexData->BufferSize);
+		memcpy(stagingBuffer.m_Mapped, renderObject->vertexData->pDataStart, renderObject->vertexData->BufferSize);
 		stagingBuffer.Unmap();
 
-		CreateAndAllocateBuffer(renderObject->vertexData.BufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		CreateAndAllocateBuffer(renderObject->vertexData->BufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderObject->vertexBuffer);
 
-		CopyBuffer(stagingBuffer.m_Buffer, renderObject->vertexBuffer.m_Buffer, renderObject->vertexData.BufferSize);
+		CopyBuffer(stagingBuffer.m_Buffer, renderObject->vertexBuffer.m_Buffer, renderObject->vertexData->BufferSize);
 	}
 }
 

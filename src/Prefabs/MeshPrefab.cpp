@@ -663,27 +663,28 @@ Transform& MeshPrefab::GetTransform()
 
 bool MeshPrefab::AddVertexBuffer(const GameContext& gameContext)
 {
-	VertexBufferData vertexData = {};
+	m_VertexBuffers.push_back({});
+	VertexBufferData* vertexData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
 
-	vertexData.VertexCount = m_Positions.size();
-	Logger::Assert(m_Normals.size() == vertexData.VertexCount);
-	Logger::Assert(m_Colors.size() == vertexData.VertexCount);
-	Logger::Assert(m_TexCoords.size() == vertexData.VertexCount);
-	vertexData.IndexCount = m_Indices.size();
-	vertexData.VertexStride = CalculateVertexBufferStride();
-	vertexData.BufferSize = vertexData.VertexCount * vertexData.VertexStride;
+	vertexData->VertexCount = m_Positions.size();
+	Logger::Assert(m_Normals.size() == vertexData->VertexCount);
+	Logger::Assert(m_Colors.size() == vertexData->VertexCount);
+	Logger::Assert(m_TexCoords.size() == vertexData->VertexCount);
+	vertexData->IndexCount = m_Indices.size();
+	vertexData->VertexStride = CalculateVertexBufferStride();
+	vertexData->BufferSize = vertexData->VertexCount * vertexData->VertexStride;
 
-	void *pDataLocation = malloc(vertexData.BufferSize);
+	void *pDataLocation = malloc(vertexData->BufferSize);
 	if (pDataLocation == nullptr)
 	{
 		Logger::LogWarning("MeshPrefab::LoadPrefabShape failed to allocate memory required for vertex buffer data");
 		return false;
 	}
 
-	vertexData.pDataStart = pDataLocation;
+	vertexData->pDataStart = pDataLocation;
 
 	Renderer* renderer = gameContext.renderer;
-	if (vertexData.IndexCount)
+	if (vertexData->IndexCount)
 	{
 		m_RenderID = renderer->Initialize(gameContext, vertexData, &m_Indices);
 	}
@@ -694,18 +695,16 @@ bool MeshPrefab::AddVertexBuffer(const GameContext& gameContext)
 
 	// TODO: Move to function to determine based on m_HasElement
 	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Position", 3, Renderer::Type::FLOAT, false,
-		vertexData.VertexStride, (void*)0);
+		vertexData->VertexStride, (void*)0);
 
 	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false,
-		vertexData.VertexStride, (void*)sizeof(glm::vec3));
+		vertexData->VertexStride, (void*)sizeof(glm::vec3));
 
 	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Normal", 3, Renderer::Type::FLOAT, false,
-		vertexData.VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4)));
+		vertexData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4)));
 
 	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_TexCoord", 2, Renderer::Type::FLOAT, false,
-		vertexData.VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3)));
-
-	m_VertexBuffers.push_back(vertexData);
+		vertexData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3)));
 
 	return true;
 }

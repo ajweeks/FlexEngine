@@ -66,8 +66,8 @@ public:
 
 	virtual void PostInitialize() = 0;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData) = 0;
-	virtual glm::uint Initialize(const GameContext& gameContext, const VertexBufferData& vertexData, std::vector<glm::uint>* indices) = 0;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexData) = 0;
+	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexData, std::vector<glm::uint>* indices) = 0;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
 	virtual void SetCullMode(glm::uint renderID, CullMode cullMode) = 0;
