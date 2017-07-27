@@ -14,9 +14,10 @@ VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(Vertex
 	return bindingDesc;
 }
 
-std::vector<VkVertexInputAttributeDescription> VulkanVertex::GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData)
+void VulkanVertex::GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData, std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 {
-	std::vector<VkVertexInputAttributeDescription> attributeDescriptions(4);
+	attributeDescriptions.clear();
+	attributeDescriptions.resize(4);
 
 	// Position
 	attributeDescriptions[0].binding = 0;
@@ -41,8 +42,6 @@ std::vector<VkVertexInputAttributeDescription> VulkanVertex::GetVertexAttributeD
 	attributeDescriptions[3].location = 3;
 	attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
 	attributeDescriptions[3].offset = sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3);
-
-	return attributeDescriptions;
 }
 
 UniformBuffers::UniformBuffers(const VDeleter<VkDevice>& device) :

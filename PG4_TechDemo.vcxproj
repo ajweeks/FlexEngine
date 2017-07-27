@@ -140,7 +140,8 @@
     <ClCompile Include="src\Graphics\D3D\D3DRenderer.cpp" />
     <ClCompile Include="src\Graphics\GL\GLRenderer.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanRenderer.cpp" />
-    <ClCompile Include="src\Prefabs\MeshPrefab.cpp" />
+    <ClCompile Include="src\Scene\GameObject.cpp" />
+    <ClCompile Include="src\Scene\Prefabs\MeshPrefab.cpp" />
     <ClCompile Include="src\Transform.cpp" />
     <ClCompile Include="src\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Scene\TestScene.cpp" />
@@ -148,11 +149,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Scene\Window\D3D\D3DWindowWrapper.cpp" />
-    <ClCompile Include="src\Scene\Window\GLFWWindowWrapper.cpp" />
-    <ClCompile Include="src\Scene\Window\GL\GLWindowWrapper.cpp" />
-    <ClCompile Include="src\Scene\Window\Vulkan\VulkanWindowWrapper.cpp" />
-    <ClCompile Include="src\Scene\Window\Window.cpp" />
+    <ClCompile Include="src\Window\D3D\D3DWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\GL\GLWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\Vulkan\VulkanWindowWrapper.cpp" />
+    <ClCompile Include="src\Window\Window.cpp" />
     <ClCompile Include="src\Scene\BaseScene.cpp" />
     <ClCompile Include="src\Graphics\Renderer.cpp" />
     <ClCompile Include="src\InputManager.cpp" />
@@ -174,7 +175,8 @@
     <ClInclude Include="include\Graphics\GL\GLRenderer.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h" />
     <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
-    <ClInclude Include="include\Prefabs\MeshPrefab.h" />
+    <ClInclude Include="include\Scene\GameObject.h" />
+    <ClInclude Include="include\Scene\Prefabs\MeshPrefab.h" />
     <ClInclude Include="include\Transform.h" />
     <ClInclude Include="include\Scene\BaseScene.h" />
     <ClInclude Include="include\FreeCamera.h" />

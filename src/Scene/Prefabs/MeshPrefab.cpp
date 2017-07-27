@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "Prefabs/MeshPrefab.h"
+#include "Scene/Prefabs/MeshPrefab.h"
 #include "Logger.h"
 #include "GameContext.h"
 #include "Typedefs.h"
@@ -734,7 +734,11 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	return true;
 }
 
-void MeshPrefab::Render(const GameContext& gameContext)
+void MeshPrefab::Initialize(const GameContext& gameContext)
+{
+}
+
+void MeshPrefab::UpdateAndRender(const GameContext& gameContext)
 {
 	Renderer* renderer = gameContext.renderer;
 	

@@ -17,6 +17,19 @@ std::vector<char> ReadFile(const std::string& filePath);
 
 glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t);
 
+template<class T>
+inline typename T::const_iterator Contains(const std::vector<T>& vec, const T& t)
+{
+	for (auto iter = vec.begin(); iter != vec.end(); ++iter)
+	{
+		if (*iter == t)
+		{
+			return iter;
+		}
+	}
+
+	return vec.end();
+}
 template<class TReal>
 glm::vec2 ToVec2(const aiVector2t<TReal>& vec)
 {
@@ -34,3 +47,4 @@ glm::vec4 ToVec4(const aiColor4t<TReal>& color)
 {
 	return glm::vec4(color.r, color.g, color.b, color.a);
 }
+

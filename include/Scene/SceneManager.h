@@ -13,7 +13,7 @@ public:
 
 	void UpdateAndRender(const GameContext& gameContext);
 
-	void AddScene(BaseScene* newScene);
+	void AddScene(BaseScene* newScene, const GameContext& gameContext);
 	void RemoveScene(BaseScene* scene, const GameContext& gameContext);
 
 	void SetCurrentScene(int sceneIndex);

@@ -63,8 +63,9 @@ uint GLRenderer::Initialize(const GameContext& gameContext, VertexBufferData* ve
 	glEnableVertexAttribArray(posAttrib);
 	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, renderObject->vertexBufferData->VertexStride, 0);
 
-	renderObject->MVP = glGetUniformLocation(gameContext.program, "in_MVP");
-	renderObject->ModelInverse = glGetUniformLocation(gameContext.program, "in_ModelInverse");
+	renderObject->model = glGetUniformLocation(gameContext.program, "in_Model");
+	renderObject->viewProjection = glGetUniformLocation(gameContext.program, "in_ViewProjection");
+	renderObject->modelInverse = glGetUniformLocation(gameContext.program, "in_ModelInverse");
 	
 	m_RenderObjects.push_back(renderObject);
 
@@ -165,11 +166,16 @@ void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint rend
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	glm::mat4 modelInverse = glm::inverse(model);
-	glUniformMatrix4fv(renderObject->ModelInverse, 1, false, &modelInverse[0][0]);
+	glUniformMatrix4fv(renderObject->modelInverse, 1, false, &modelInverse[0][0]);
 
-	glm::mat4 MVP = gameContext.camera->GetViewProjection() * model;
-	glUniformMatrix4fv(renderObject->MVP, 1, false, &MVP[0][0]);
+	 glm::mat4 viewProjection = gameContext.camera->GetViewProjection();
+	 glUniformMatrix4fv(renderObject->viewProjection, 1, false, &viewProjection[0][0]);
 
+	 glUniformMatrix4fv(renderObject->model, 1, false, &model[0][0]);
+
+	GLuint viewPosLocation = glGetUniformLocation(m_Program, "viewPos");
+	glm::vec3 cameraPos = gameContext.camera->GetPosition();
+	glUniform3f(viewPosLocation, cameraPos.x, cameraPos.y, cameraPos.z);
 }
 
 int GLRenderer::GetShaderUniformLocation(uint program, const std::string uniformName)

@@ -41,7 +41,7 @@ struct SwapChainSupportDetails
 struct VulkanVertex
 {
 	static VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
-	static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData);
+	static void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData, std::vector<VkVertexInputAttributeDescription>& vec);
 };
 
 struct UniformBuffers

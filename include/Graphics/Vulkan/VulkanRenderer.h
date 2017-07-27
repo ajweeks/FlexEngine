@@ -1,13 +1,14 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#include "../Renderer.h"
+#include "Graphics/Renderer.h"
 #include "VDeleter.h"
 #include "VulkanBuffer.h"
 #include "Graphics/Vulkan/VulkanHelpers.h"
 
 #include <vector>
 #include <array>
+#include <map>
 
 struct GameContext;
 class Window;
@@ -107,6 +108,8 @@ private:
 	void UpdateUniformBuffer(const GameContext& gameContext);
 	void UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model);
 
+	void LoadDefaultShaderCode();
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags, 
 		VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, 
 		const char* msg, void* userData);
@@ -136,6 +139,9 @@ private:
 		std::vector<glm::uint>* indices = nullptr;
 		glm::uint indexOffset = 0;
 
+		std::string fragShaderFilePath;
+		std::string vertShaderFilePath;
+
 		VDeleter<VkPipelineLayout> pipelineLayout; // { m_Device, vkDestroyPipelineLayout };
 		VDeleter<VkPipeline> graphicsPipeline; // { m_Device, vkDestroyPipeline };
 	};
@@ -143,7 +149,7 @@ private:
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
 
 	RenderObject* GetRenderObject(int renderID);
-	RenderObjectIter Destroy(RenderObjectIter iter);
+	//RenderObjectIter Destroy(RenderObjectIter iter);
 
 	// TODO: use sorted data type (map)
 	std::vector<RenderObject*> m_RenderObjects;
@@ -217,6 +223,14 @@ private:
 	UniformBuffers m_UniformBuffers;
 	UniformBufferObjectData m_UniformBufferData;
 	UniformBufferObjectDynamic m_UniformBufferDynamic;
+
+	const std::string m_DefaultFragShaderFilePath = "resources/shaders/GLSL/spv/vk_simple_frag.spv";
+	const std::string m_DefaultVertShaderFilePath = "resources/shaders/GLSL/spv/vk_simple_vert.spv";
+
+	std::vector<char> m_DefaultVertShaderCode;
+	std::vector<char> m_DefaultFragShaderCode;
+
+	std::map<std::string, std::vector<char>> m_LoadedShaderCode; // filepath and code
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;

@@ -62,7 +62,7 @@ void TechDemo::Initialize()
 
 	m_SceneManager = new SceneManager();
 	TestScene* pDefaultScene = new TestScene(m_GameContext);
-	m_SceneManager->AddScene(pDefaultScene);
+	m_SceneManager->AddScene(pDefaultScene, m_GameContext);
 	pDefaultScene->Initialize(m_GameContext);
 
 	m_DefaultCamera = new FreeCamera(m_GameContext);
@@ -166,7 +166,7 @@ void TechDemo::CycleRenderer()
 	InitializeWindowAndRenderer();
 
 	TestScene* pDefaultScene = new TestScene(m_GameContext);
-	m_SceneManager->AddScene(pDefaultScene);
+	m_SceneManager->AddScene(pDefaultScene, m_GameContext);
 	pDefaultScene->Initialize(m_GameContext);
 
 	m_GameContext.renderer->PostInitialize();

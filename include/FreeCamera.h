@@ -26,6 +26,7 @@ public:
 
 	void Translate(glm::vec3 translation);
 	void SetPosition(glm::vec3 position);
+	glm::vec3 GetPosition() const;
 
 	void ResetPosition();
 	void ResetOrientation();

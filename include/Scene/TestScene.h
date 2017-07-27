@@ -16,16 +16,18 @@ public:
 	virtual void UpdateAndRender(const GameContext& gameContext) override;
 
 private:
-	std::vector<MeshPrefab> m_Cubes;
+	std::vector<MeshPrefab*> m_Cubes;
 
-	MeshPrefab m_Cube;
-	MeshPrefab m_Cube2;
-	MeshPrefab m_UVSphere;
+	MeshPrefab* m_Cube;
+	MeshPrefab* m_Cube2;
+	MeshPrefab* m_UVSphere;
 	//MeshPrefab m_IcoSphere;
 
-	MeshPrefab m_Grid;
-	MeshPrefab m_CubeFromFile;
-	MeshPrefab m_Teapot;
+	MeshPrefab* m_Grid;
+	MeshPrefab* m_CubeFromFile;
+	MeshPrefab* m_Teapot;
+	MeshPrefab* m_Scene;
+	MeshPrefab* m_Landscape;
 
 	glm::uint m_TimeID;
 

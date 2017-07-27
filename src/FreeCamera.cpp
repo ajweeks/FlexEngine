@@ -150,6 +150,11 @@ void FreeCamera::SetPosition(glm::vec3 position)
 	m_Position = position;
 }
 
+glm::vec3 FreeCamera::GetPosition() const
+{
+	return m_Position;
+}
+
 void FreeCamera::ResetPosition()
 {
 	m_Position = vec3(0.0f);

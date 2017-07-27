@@ -61,8 +61,9 @@ private:
 		glm::uint indexBuffer;
 		std::vector<glm::uint>* indices = nullptr;
 
-		glm::uint MVP;
-		glm::uint ModelInverse;
+		glm::uint model;
+		glm::uint viewProjection;
+		glm::uint modelInverse;
 	};
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;

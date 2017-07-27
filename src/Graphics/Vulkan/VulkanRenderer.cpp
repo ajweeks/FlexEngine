@@ -42,6 +42,8 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
+
+	LoadDefaultShaderCode();
 }
 
 void VulkanRenderer::PostInitialize()
@@ -66,7 +68,8 @@ VulkanRenderer::~VulkanRenderer()
 	auto iter = m_RenderObjects.begin();
 	while (iter != m_RenderObjects.end())
 	{
-		iter = Destroy(iter);
+		SafeDelete(*iter);
+		iter = m_RenderObjects.erase(iter);
 	}
 	m_RenderObjects.clear();
 
@@ -202,7 +205,8 @@ void VulkanRenderer::Destroy(glm::uint renderID)
 	{
 		if ((*iter)->renderID == renderID)
 		{
-			iter = Destroy(iter);
+			SafeDelete(*iter);
+			iter = m_RenderObjects.erase(iter);
 			return;
 		}
 	}
@@ -211,15 +215,6 @@ void VulkanRenderer::Destroy(glm::uint renderID)
 VulkanRenderer::RenderObject* VulkanRenderer::GetRenderObject(int renderID)
 {
 	return m_RenderObjects[renderID];
-}
-
-VulkanRenderer::RenderObjectIter VulkanRenderer::Destroy(RenderObjectIter iter)
-{
-	RenderObject* pRenderObject = *iter;
-	auto newIter = m_RenderObjects.erase(iter);
-	SafeDelete(pRenderObject);
-
-	return newIter;
 }
 
 // Vertex hash function
@@ -558,23 +553,55 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
-	// TODO: Use same glsl shaders for GL and Vulkan
-	auto fragShaderCode = ReadFile("resources/shaders/GLSL/spv/vk_vertex_pos_col_frag.spv");
-	auto vertShaderCode = ReadFile("resources/shaders/GLSL/spv/vk_vertex_pos_col_vert.spv");
+	std::vector<char> vertShaderCode;
+	std::vector<char> fragShaderCode;
 
-	if (vertShaderCode.empty())
+	if (renderObject->vertShaderFilePath.empty())
 	{
-		// TODO: Use default vert shader here
+		// Filepath not given, use default shader
+		vertShaderCode = m_DefaultVertShaderCode;
+	}
+	else
+	{
+		auto iter = m_LoadedShaderCode.find(renderObject->vertShaderFilePath);
+		if (iter == m_LoadedShaderCode.end())
+		{
+			// Load code for first time
+			vertShaderCode = ReadFile(renderObject->vertShaderFilePath);
+		}
+		else
+		{
+			// Use already loaded code
+			vertShaderCode = iter->second;
+		}
 	}
 
-	if (fragShaderCode.empty())
+	if (renderObject->fragShaderFilePath.empty())
 	{
-		// TODO: Use default frag shader here
+		// Filepath not given, use default shader
+		fragShaderCode = m_DefaultFragShaderCode;
+	}
+	else
+	{
+		auto iter = m_LoadedShaderCode.find(renderObject->fragShaderFilePath);
+		if (iter == m_LoadedShaderCode.end())
+		{
+			// Load code for first time
+			fragShaderCode = ReadFile(renderObject->fragShaderFilePath);
+
+			m_LoadedShaderCode.insert({ renderObject->fragShaderFilePath, fragShaderCode });
+		}
+		else
+		{
+			// Use already loaded code
+			fragShaderCode = iter->second;
+		}
 	}
 
 	VDeleter<VkShaderModule> vertShaderModule{ m_Device, vkDestroyShaderModule };
-	VDeleter<VkShaderModule> fragShaderModule{ m_Device, vkDestroyShaderModule };
 	CreateShaderModule(vertShaderCode, vertShaderModule);
+
+	VDeleter<VkShaderModule> fragShaderModule{ m_Device, vkDestroyShaderModule };
 	CreateShaderModule(fragShaderCode, fragShaderModule);
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -591,8 +618,9 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-	auto bindingDescription = VulkanVertex::GetVertexBindingDescription(renderObject->vertexBufferData);
-	auto attributeDescriptions = VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData);
+	VkVertexInputBindingDescription bindingDescription = VulkanVertex::GetVertexBindingDescription(renderObject->vertexBufferData);
+	std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+	VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData, attributeDescriptions);
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1705,6 +1733,30 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 	mappedMemoryRange.memory = m_UniformBuffers.dynamicBuffer.m_Memory;
 	mappedMemoryRange.size = size;
 	vkFlushMappedMemoryRanges(m_Device, 1, &mappedMemoryRange);
+}
+
+void VulkanRenderer::LoadDefaultShaderCode()
+{
+	m_DefaultVertShaderCode = ReadFile(m_DefaultVertShaderFilePath);
+
+	if (m_DefaultVertShaderCode.empty())
+	{
+		Logger::LogWarning("Default vert shader code can't be found at " + m_DefaultVertShaderFilePath);
+	}
+	{
+		m_LoadedShaderCode.insert({ m_DefaultVertShaderFilePath, m_DefaultVertShaderCode });
+	}
+
+	m_DefaultFragShaderCode = ReadFile(m_DefaultFragShaderFilePath);
+
+	if (m_DefaultFragShaderCode.empty())
+	{
+		Logger::LogWarning("Default frag shader code can't be found at " + m_DefaultFragShaderFilePath);
+	}
+	else
+	{
+		m_LoadedShaderCode.insert({ m_DefaultFragShaderFilePath, m_DefaultFragShaderCode });
+	}
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,

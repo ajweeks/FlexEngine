@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Scene/GameObject.h"
 #include "Transform.h"
 #include "GameContext.h"
 #include "VertexBufferData.h"
@@ -8,7 +9,7 @@
 
 struct aiScene;
 
-class MeshPrefab
+class MeshPrefab : public GameObject
 {
 public:
 	MeshPrefab();
@@ -36,9 +37,10 @@ public:
 
 	bool LoadFromFile(const GameContext& gameContext, const std::string& filepath);
 	bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
-	
-	virtual void Render(const GameContext& gameContext);
-	virtual void Destroy(const GameContext& gameContext);
+
+	virtual void Initialize(const GameContext& gameContext) override;
+	virtual void UpdateAndRender(const GameContext& gameContext) override;
+	virtual void Destroy(const GameContext& gameContext) override;
 
 	void SetTransform(const Transform& transform);
 	Transform& GetTransform();

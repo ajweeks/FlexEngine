@@ -14,33 +14,29 @@ SceneManager::SceneManager() :
 
 SceneManager::~SceneManager()
 {
-	for (size_t i = 0; i < m_Scenes.size(); i++)
-	{
-		SafeDelete(m_Scenes[i]);
-	}
-	m_Scenes.clear();
 }
 
 void SceneManager::UpdateAndRender(const GameContext& gameContext)
 {
 	if (m_Scenes.empty())
 	{
-		Logger::LogError("No scenes have been added! Call SceneManager::AddScene at least once");
+		Logger::LogError("No scenes added to SceneManager");
 		return;
 	}
 
-	m_Scenes[m_CurrentSceneIndex]->UpdateAndRender(gameContext);
+	m_Scenes[m_CurrentSceneIndex]->RootUpdateAndRender(gameContext);
 }
 
-void SceneManager::AddScene(BaseScene* newScene)
+void SceneManager::AddScene(BaseScene* newScene, const GameContext& gameContext)
 {
 	if (std::find(m_Scenes.begin(), m_Scenes.end(), newScene) == m_Scenes.end())
 	{
 		m_Scenes.push_back(newScene);
+		newScene->RootInitialize(gameContext);
 	}
 	else
 	{
-		Logger::LogError("Did not add scene, it's already been added!");
+		Logger::LogError("Attempt to add already existing scene to SceneManager: " + newScene->m_Name);
 	}
 }
 
@@ -49,12 +45,13 @@ void SceneManager::RemoveScene(BaseScene* scene, const GameContext& gameContext)
 	auto iter = std::find(m_Scenes.begin(), m_Scenes.end(), scene);
 	if (iter != m_Scenes.end())
 	{
-		(*iter)->Destroy(gameContext);
+		scene->RootDestroy(gameContext);
+		SafeDelete(scene);
 		m_Scenes.erase(iter);
 	}
 	else
 	{
-		Logger::LogError("Could not remove scene, it doesn't exist in the scene manager!");
+		Logger::LogError("Attempt to remove non-existent scene from SceneManager: " + scene->m_Name);
 	}
 }
 
@@ -62,8 +59,8 @@ void SceneManager::SetCurrentScene(int sceneIndex)
 {
 	if (sceneIndex < 0 || sceneIndex >= (int)m_Scenes.size())
 	{
-		Logger::LogError("Could not set scene to index " + std::to_string(sceneIndex) + 
-			", it doesn't exist in the scene manager!");
+		Logger::LogError("Attempt to set scene to index " + std::to_string(sceneIndex) + 
+			" failed, it does not exist in the SceneManager");
 		return;
 	}
 
@@ -80,7 +77,8 @@ void SceneManager::SetCurrentScene(std::string sceneName)
 			return;
 		}
 	}
-	Logger::LogError("Could not set scene to" + sceneName + ", it doesn't exist in the scene manager!");
+
+	Logger::LogError("Attempt to set scene to " + sceneName + " failed, it does not exist in the SceneManager");
 }
 
 BaseScene* SceneManager::CurrentScene() const
@@ -95,9 +93,12 @@ BaseScene* SceneManager::CurrentScene() const
 
 void SceneManager::DestroyAllScenes(const GameContext& gameContext)
 {
-	for (size_t i = 0; i < m_Scenes.size(); i++)
+	auto iter = m_Scenes.begin();
+	while (iter != m_Scenes.end())
 	{
-		m_Scenes[i]->Destroy(gameContext);
+		(*iter)->RootDestroy(gameContext);
+		SafeDelete(*iter);
+		iter = m_Scenes.erase(iter);
 	}
 	m_Scenes.clear();
 }
