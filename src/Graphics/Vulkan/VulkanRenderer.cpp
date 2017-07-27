@@ -591,15 +591,15 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-	auto bindingDescription = VulkanVertex::GetVertPosColBindingDescription();
-	auto attributeDescription = VulkanVertex::GetVertPosColAttributeDescriptions();
+	auto bindingDescription = VulkanVertex::GetVertexBindingDescription(renderObject->vertexBufferData);
+	auto attributeDescriptions = VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData);
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.vertexAttributeDescriptionCount = attributeDescription.size();
+	vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
 	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	vertexInputInfo.pVertexAttributeDescriptions = attributeDescription.data();
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1212,33 +1212,51 @@ void VulkanRenderer::LoadModel(const std::string& filePath)
 
 void VulkanRenderer::CreateVertexBuffer()
 {
-	std::vector<VertexPosCol> vertices;
+	int requiredMemory = 0;
 
 	for (size_t i = 0; i < m_RenderObjects.size(); i++)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
-		renderObject->vertexOffset = vertices.size();
-		
-		for (size_t i = 0; i < renderObject->vertexBufferData->VertexCount; i++)
-		{
-			vertices.push_back(((VertexPosCol*)(renderObject->vertexBufferData->pDataStart))[i]);
-		}
+		requiredMemory += renderObject->vertexBufferData->BufferSize;
 	}
 
-	const size_t bufferSize = sizeof(VertexPosCol) * vertices.size();
+	void* vertexDataStart = malloc(requiredMemory);
+	if (!vertexDataStart)
+	{
+		Logger::LogError("Failed to allocate memory for vertex buffer! Attempted to allocate " + std::to_string(requiredMemory) + " bytes");
+		return;
+	}
+
+	void* vertexBufferData = vertexDataStart;
+
+	glm::uint vertexCount = 0;
+	glm::uint vertexBufferSize = 0;
+		for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	{
+		RenderObject* renderObject = GetRenderObject(i);
+		renderObject->vertexOffset = vertexCount;
+		
+		memcpy(vertexBufferData, renderObject->vertexBufferData->pDataStart, renderObject->vertexBufferData->BufferSize);
+
+		vertexCount += renderObject->vertexBufferData->VertexCount;
+		vertexBufferSize += renderObject->vertexBufferData->BufferSize;
+
+		vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->BufferSize;
+	}
 
 	VulkanBuffer stagingBuffer(m_Device);
-	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+	CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
 
-	stagingBuffer.Map(bufferSize);
-	memcpy(stagingBuffer.m_Mapped, vertices.data(), bufferSize);
+	// TODO: Look into why this crashes
+	stagingBuffer.Map(vertexBufferSize);
+	memcpy(stagingBuffer.m_Mapped, vertexDataStart, vertexBufferSize);
 	stagingBuffer.Unmap();
 
-	CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_VertexBuffer);
 
-	CopyBuffer(stagingBuffer.m_Buffer, m_VertexBuffer.m_Buffer, bufferSize);
+	CopyBuffer(stagingBuffer.m_Buffer, m_VertexBuffer.m_Buffer, vertexBufferSize);
 }
 
 void VulkanRenderer::CreateIndexBuffer()
@@ -1250,7 +1268,7 @@ void VulkanRenderer::CreateIndexBuffer()
 		RenderObject* renderObject = GetRenderObject(i);
 		if (renderObject->indexed)
 		{
-			renderObject->vertexOffset = indices.size();
+			renderObject->indexOffset = indices.size();
 			indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
 		}
 	}

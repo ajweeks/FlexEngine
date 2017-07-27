@@ -18,6 +18,7 @@ std::string VulkanErrorString(VkResult errorCode);
 }
 #endif // VK_CHECK_RESULT
 
+struct VertexBufferData;
 
 struct QueueFamilyIndices
 {
@@ -39,10 +40,8 @@ struct SwapChainSupportDetails
 
 struct VulkanVertex
 {
-	static VkVertexInputBindingDescription GetVertPosColTexBindingDescription();
-	static VkVertexInputBindingDescription GetVertPosColBindingDescription();
-	static std::array<VkVertexInputAttributeDescription, 3> GetVertPosColTexAttributeDescriptions();
-	static std::array<VkVertexInputAttributeDescription, 2> GetVertPosColAttributeDescriptions();
+	static VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
+	static std::vector<VkVertexInputAttributeDescription> GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData);
 };
 
 struct UniformBuffers

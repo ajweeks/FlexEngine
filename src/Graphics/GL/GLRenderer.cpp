@@ -61,7 +61,7 @@ uint GLRenderer::Initialize(const GameContext& gameContext, VertexBufferData* ve
 
 	uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, VertexPosCol::stride, 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, renderObject->vertexBufferData->VertexStride, 0);
 
 	renderObject->MVP = glGetUniformLocation(gameContext.program, "in_MVP");
 	renderObject->ModelInverse = glGetUniformLocation(gameContext.program, "in_ModelInverse");

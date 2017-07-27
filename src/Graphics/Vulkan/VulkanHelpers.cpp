@@ -2,62 +2,45 @@
 #include "stdafx.h"
 
 #include "Graphics/Vulkan/VulkanHelpers.h"
+#include "VertexBufferData.h"
 
-VkVertexInputBindingDescription VulkanVertex::GetVertPosColTexBindingDescription()
+VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(VertexBufferData* vertexBufferData)
 {
 	VkVertexInputBindingDescription bindingDesc = {};
 	bindingDesc.binding = 0;
-	bindingDesc.stride = sizeof(VertexPosColTex);
+	bindingDesc.stride = vertexBufferData->VertexStride;
 	bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 	return bindingDesc;
 }
 
-VkVertexInputBindingDescription VulkanVertex::GetVertPosColBindingDescription()
+std::vector<VkVertexInputAttributeDescription> VulkanVertex::GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData)
 {
-	VkVertexInputBindingDescription bindingDesc = {};
-	bindingDesc.binding = 0;
-	bindingDesc.stride = sizeof(VertexPosCol);
-	bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	std::vector<VkVertexInputAttributeDescription> attributeDescriptions(4);
 
-	return bindingDesc;
-}
-
-std::array<VkVertexInputAttributeDescription, 3> VulkanVertex::GetVertPosColTexAttributeDescriptions()
-{
-	std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions;
-
+	// Position
 	attributeDescriptions[0].binding = 0;
 	attributeDescriptions[0].location = 0;
 	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(VertexPosColTex, pos);
+	attributeDescriptions[0].offset = 0;
 
+	// Color
 	attributeDescriptions[1].binding = 0;
 	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(VertexPosColTex, col);
+	attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	attributeDescriptions[1].offset = sizeof(glm::vec3);
 
+	// Normal
 	attributeDescriptions[2].binding = 0;
 	attributeDescriptions[2].location = 2;
-	attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[2].offset = offsetof(VertexPosColTex, uv);
+	attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[2].offset = sizeof(glm::vec3) + sizeof(glm::vec4);
 
-	return attributeDescriptions;
-}
-
-std::array<VkVertexInputAttributeDescription, 2> VulkanVertex::GetVertPosColAttributeDescriptions()
-{
-	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions;
-
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = 0;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(VertexPosCol, pos);
-
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(VertexPosCol, col);
+	// Tex coord
+	attributeDescriptions[3].binding = 0;
+	attributeDescriptions[3].location = 3;
+	attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
+	attributeDescriptions[3].offset = sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3);
 
 	return attributeDescriptions;
 }

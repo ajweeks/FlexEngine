@@ -30,8 +30,8 @@ void TestScene::Initialize(const GameContext& gameContext)
 
 	//m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
 
-	m_CubesWide = 7;
-	m_CubesLong = 7;
+	m_CubesWide = 2;
+	m_CubesLong = 3;
 	m_Cubes.reserve(m_CubesWide * m_CubesLong);
 
 	const float cubeScale = 0.5f;
@@ -45,7 +45,7 @@ void TestScene::Initialize(const GameContext& gameContext)
 		{
 			m_Cubes.push_back({});
 
-			const int cubeIndex = i * m_CubesLong + j;
+			const int cubeIndex = i * m_CubesWide + j;
 			const float yRot = (i / (float)m_CubesLong) + (j / (float)m_CubesWide);
 			const float scaleScale = 0.2f + (cubeIndex / ((float)(m_CubesLong * m_CubesWide))) * 1.0f;
 
@@ -80,7 +80,7 @@ void TestScene::Destroy(const GameContext& gameContext)
 	{
 		for (size_t j = 0; j < m_CubesWide; j++)
 		{
-			const int cubeIndex = i * m_CubesLong + j;
+			const int cubeIndex = i * m_CubesWide + j;
 			m_Cubes[cubeIndex].Destroy(gameContext);
 		}
 	}
@@ -111,7 +111,7 @@ void TestScene::UpdateAndRender(const GameContext& gameContext)
 	{
 		for (size_t j = 0; j < m_CubesWide; j++)
 		{
-			const int cubeIndex = i * m_CubesLong + j;
+			const int cubeIndex = i * m_CubesWide + j;
 			m_Cubes[cubeIndex].Render(gameContext);
 		}
 	}

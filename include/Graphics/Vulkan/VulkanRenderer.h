@@ -203,6 +203,7 @@ private:
 
 	VDeleter<VkDescriptorPool> m_DescriptorPool{ m_Device, vkDestroyDescriptorPool };
 
+	// TODO: Move to render object?
 	VulkanBuffer m_VertexBuffer;
 	VulkanBuffer m_IndexBuffer;
 

@@ -54,6 +54,9 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	}
 
 	aiMesh* mesh = pScene->mMeshes[0];
+
+	m_Name = mesh->mName.C_Str();
+
 	const size_t numVerts = mesh->mNumVertices;
 
 	for (size_t i = 0; i < numVerts; i++)
@@ -94,7 +97,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 		if (mesh->HasTextureCoords(0))
 		{
 			// Truncate w component
-			texCoord = (glm::vec2)(ToVec3(*(mesh->mTextureCoords[0])));
+			texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 		}
 		else
 		{
@@ -140,68 +143,6 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	{
 	case MeshPrefab::PrefabShape::CUBE:
 	{
-		/*
-		//							 FRONT		  TOP			BACK		  BOTTOM		  RIGHT			 LEFT
-		const glm::vec4 Colors[6] = { Color::RED, Color::BLUE, Color::GRAY, Color::ORANGE, Color::WHITE, Color::PINK };
-		m_Vertices =
-		{
-			// Front
-			{ { -1.0f, -1.0f, -1.0f }, 	Colors[0] },
-			{ { -1.0f,  1.0f, -1.0f }, 	Colors[0] },
-			{ { 1.0f,  1.0f, -1.0f }, 	Colors[0] },
-
-			{ { -1.0f, -1.0f, -1.0f }, 	Colors[0] },
-			{ { 1.0f,  1.0f, -1.0f }, 	Colors[0] },
-			{ { 1.0f, -1.0f, -1.0f }, 	Colors[0] },
-
-			// Top
-			{ { -1.0f, 1.0f, -1.0f }, 	Colors[1] },
-			{ { -1.0f, 1.0f,  1.0f }, 	Colors[1] },
-			{ { 1.0f,  1.0f,  1.0f }, 	Colors[1] },
-
-			{ { -1.0f, 1.0f, -1.0f }, 	Colors[1] },
-			{ { 1.0f,  1.0f,  1.0f }, 	Colors[1] },
-			{ { 1.0f,  1.0f, -1.0f }, 	Colors[1] },
-
-			// Back
-			{ { 1.0f, -1.0f, 1.0f }, 	Colors[2] },
-			{ { 1.0f,  1.0f, 1.0f }, 	Colors[2] },
-			{ { -1.0f,  1.0f, 1.0f }, 	Colors[2] },
-
-			{ { 1.0f, -1.0f, 1.0f }, 	Colors[2] },
-			{ { -1.0f, 1.0f, 1.0f }, 	Colors[2] },
-			{ { -1.0f, -1.0f, 1.0f }, 	Colors[2] },
-
-			// Bottom
-			{ { -1.0f, -1.0f, -1.0f }, 	Colors[3] },
-			{ { 1.0f, -1.0f, -1.0f }, 	Colors[3] },
-			{ { 1.0f,  -1.0f,  1.0f }, 	Colors[3] },
-
-			{ { -1.0f, -1.0f, -1.0f }, 	Colors[3] },
-			{ { 1.0f, -1.0f,  1.0f }, 	Colors[3] },
-			{ { -1.0f, -1.0f,  1.0f }, 	Colors[3] },
-
-			// Right
-			{ { 1.0f, -1.0f, -1.0f }, 	Colors[4] },
-			{ { 1.0f,  1.0f, -1.0f },	Colors[4] },
-			{ { 1.0f,  1.0f,  1.0f }, 	Colors[4] },
-
-			{ { 1.0f, -1.0f, -1.0f }, 	Colors[4] },
-			{ { 1.0f,  1.0f,  1.0f }, 	Colors[4] },
-			{ { 1.0f, -1.0f,  1.0f }, 	Colors[4] },
-
-			// Left
-			{ { -1.0f, -1.0f, -1.0f }, Colors[5] },
-			{ { -1.0f,  1.0f,  1.0f }, Colors[5] },
-			{ { -1.0f,  1.0f, -1.0f }, Colors[5] },
-
-			{ { -1.0f, -1.0f, -1.0f }, 	Colors[5] },
-			{ { -1.0f, -1.0f,  1.0f }, 	Colors[5] },
-			{ { -1.0f,  1.0f,  1.0f }, 	Colors[5] },
-		};
-		*/
-		
-		//const std::array<glm::vec4, 6> colors = { Color::RED, Color::BLUE, Color::GRAY, Color::ORANGE, Color::WHITE, Color::PINK };
 		const std::array<glm::vec4, 6> colors = { Color::RED, Color::RED, Color::RED, Color::RED, Color::RED, Color::RED };
 		m_Positions =
 		{
@@ -870,54 +811,6 @@ void MeshPrefab::CreateVertexBuffer(VertexBufferData* vertexBufferData)
 
 	}
 }
-
-//bool MeshPrefab::AddVertexBuffer(const GameContext& gameContext)
-//{
-//	m_VertexBuffers.push_back({});
-//	VertexBufferData* vertexData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
-//
-//	vertexData->VertexCount = m_Positions.size();
-//	Logger::Assert(m_Normals.size() == vertexData->VertexCount);
-//	Logger::Assert(m_Colors.size() == vertexData->VertexCount);
-//	Logger::Assert(m_TexCoords.size() == vertexData->VertexCount);
-//	vertexData->IndexCount = m_Indices.size();
-//	vertexData->VertexStride = CalculateVertexBufferStride();
-//	vertexData->BufferSize = vertexData->VertexCount * vertexData->VertexStride;
-//
-//	void *pDataLocation = malloc(vertexData->BufferSize);
-//	if (pDataLocation == nullptr)
-//	{
-//		Logger::LogWarning("MeshPrefab::LoadPrefabShape failed to allocate memory required for vertex buffer data");
-//		return false;
-//	}
-//
-//	vertexData->pDataStart = pDataLocation;
-//
-//	Renderer* renderer = gameContext.renderer;
-//	if (vertexData->IndexCount)
-//	{
-//		m_RenderID = renderer->Initialize(gameContext, vertexData, &m_Indices);
-//	}
-//	else
-//	{
-//		m_RenderID = renderer->Initialize(gameContext, vertexData);
-//	}
-//
-//	// TODO: Move to function to determine based on m_HasElement
-//	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Position", 3, Renderer::Type::FLOAT, false,
-//		vertexData->VertexStride, (void*)0);
-//
-//	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Color", 4, Renderer::Type::FLOAT, false,
-//		vertexData->VertexStride, (void*)sizeof(glm::vec3));
-//
-//	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Normal", 3, Renderer::Type::FLOAT, false,
-//		vertexData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4)));
-//
-//	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_TexCoord", 2, Renderer::Type::FLOAT, false,
-//		vertexData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3)));
-//
-//	return true;
-//}
 
 glm::uint MeshPrefab::CalculateVertexBufferStride() const
 {

@@ -594,7 +594,7 @@ void D3DRenderer::Draw(const GameContext& gameContext)
 		m_pWorldViewProjectionVariable->SetMatrix(reinterpret_cast<float*>(&wvp));
 
 		UINT offset = 0;
-		UINT stride = sizeof(VertexPosCol);
+		UINT stride = renderObject->vertexBufferData->VertexStride;
 		m_DeviceContext->IASetVertexBuffers(0, 1, &renderObject->vertexBuffer, &stride, &offset);
 		m_DeviceContext->IASetIndexBuffer(renderObject->indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 

@@ -51,6 +51,8 @@ private:
 	Transform m_Transform;
 	glm::uint m_RenderID;
 
+	std::string m_Name;
+
 	std::vector<VertexBufferData> m_VertexBuffers;
 
 	std::vector<glm::uint> m_Indices;

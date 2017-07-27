@@ -147,10 +147,10 @@ void TechDemo::CycleRenderer()
 	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
 	DestroyWindowAndRenderer();
 
-	m_RendererIndex = RendererID(((int)m_RendererIndex + 1) % m_RendererCount);
 	while (true)
 	{
 		m_RendererIndex = RendererID(((int)m_RendererIndex + 1) % (int)RendererID::_LAST_ELEMENT);
+
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN) break;
 #endif
