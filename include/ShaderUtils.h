@@ -13,8 +13,8 @@ public:
 		FRAGMENT, VERTEX
 	};
 
-	static size_t LoadShader(std::string filepath, ShaderType type);
-	static size_t LoadShaders(std::string vertex, std::string fragment);
+	static size_t LoadShader(std::string filePath, ShaderType type);
+	static size_t LoadShaders(std::string vertShaderFilePath, std::string fragShaderFilePath);
 
 private:
 	ShaderUtils(const ShaderUtils&) = delete;

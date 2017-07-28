@@ -1,4 +1,4 @@
-#version 450
+#version 400
 
 uniform mat4 in_Model;
 uniform mat4 in_ViewProjection;

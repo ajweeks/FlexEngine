@@ -1,4 +1,4 @@
-#version 450
+#version 400
 
 uniform vec3 lightDir = vec3(0.5, 1.0, 1.0);
 uniform vec4 ambient = vec4(0.02, 0.03, 0.025, 1.0);
