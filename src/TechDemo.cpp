@@ -15,7 +15,7 @@ TechDemo::TechDemo() :
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)
 {
-	RendererID preferredInitialRenderer = RendererID::GL;
+	RendererID preferredInitialRenderer = RendererID::VULKAN;
 
 	m_RendererIndex = RendererID::_LAST_ELEMENT;
 	m_RendererCount = 0;
@@ -167,7 +167,6 @@ void TechDemo::CycleRenderer()
 
 	TestScene* pDefaultScene = new TestScene(m_GameContext);
 	m_SceneManager->AddScene(pDefaultScene, m_GameContext);
-	pDefaultScene->Initialize(m_GameContext);
 
 	m_GameContext.renderer->PostInitialize();
 }
@@ -187,24 +186,33 @@ void TechDemo::UpdateAndRender()
 		m_GameContext.elapsedTime = currentTime;
 	
 		m_GameContext.window->PollEvents();	 
-	
-		m_GameContext.inputManager->Update();
-		m_GameContext.camera->Update(m_GameContext);
-		m_GameContext.renderer->Clear((int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL, m_GameContext);
-	
-		m_GameContext.window->Update(m_GameContext);
-	
-		m_SceneManager->UpdateAndRender(m_GameContext);
 
-		if (m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_T))
+		if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
 		{
 			m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 			CycleRenderer();
 			continue;
 		}
-	
+
+		// TODO: Figure out
+		//if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
+		//{
+		//	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
+		//
+		//	m_GameContext.program = m_GameContext.renderer->ReloadShaders(m_GameContext);
+		//
+		//	TestScene* pDefaultScene = new TestScene(m_GameContext);
+		//	m_SceneManager->AddScene(pDefaultScene, m_GameContext);
+		//}
+
+		m_GameContext.camera->Update(m_GameContext);
+		m_GameContext.renderer->Clear((int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL, m_GameContext);
+		m_SceneManager->UpdateAndRender(m_GameContext);
+		m_GameContext.inputManager->Update();
+		m_GameContext.window->Update(m_GameContext);
 		m_GameContext.inputManager->PostUpdate();
-	
+
+		m_GameContext.renderer->Update(m_GameContext);
 		m_GameContext.renderer->SwapBuffers(m_GameContext);
 	}
 }

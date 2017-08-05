@@ -125,7 +125,7 @@ glm::mat4 FreeCamera::GetView() const
 	return m_View;
 }
 
-glm::mat4 FreeCamera::GetProj() const
+glm::mat4 FreeCamera::GetProjection() const
 {
 	return m_Proj;
 }

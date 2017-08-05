@@ -10,3 +10,8 @@ Renderer::Renderer()
 Renderer::~Renderer()
 {
 }
+
+Renderer::SceneInfo& Renderer::GetSceneInfo()
+{
+	return m_SceneInfo;
+}

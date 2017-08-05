@@ -73,9 +73,9 @@ VulkanRenderer::~VulkanRenderer()
 	}
 	m_RenderObjects.clear();
 
-	if (m_UniformBufferDynamic.model) 
+	if (m_UniformBufferDynamic.data) 
 	{
-		_aligned_free(m_UniformBufferDynamic.model);
+		_aligned_free(m_UniformBufferDynamic.data);
 	}
 	
 	vkDeviceWaitIdle(m_Device);	
@@ -125,10 +125,25 @@ void VulkanRenderer::SetClearColor(float r, float g, float b)
 	m_ClearColor = { r, g, b, 1.0f };
 }
 
+void VulkanRenderer::Update(const GameContext& gameContext)
+{
+	// Update uniform buffer
+	UpdateUniformBuffer(gameContext);
+
+	// TODO: Only call this when objects change
+	RebuildCommandBuffers();
+}
+
 void VulkanRenderer::Draw(const GameContext& gameContext, glm::uint renderID)
 {
 	UNREFERENCED_PARAMETER(gameContext);
 	UNREFERENCED_PARAMETER(renderID);
+}
+
+size_t VulkanRenderer::ReloadShaders(const GameContext& gameContext)
+{
+	// TODO: Implement
+	return gameContext.program;
 }
 
 void VulkanRenderer::OnWindowSize(int width, int height)
@@ -149,12 +164,6 @@ void VulkanRenderer::Clear(int flags, const GameContext& gameContext)
 
 void VulkanRenderer::SwapBuffers(const GameContext& gameContext)
 {
-	// Update uniform buffer
-	UpdateUniformBuffer(gameContext);
-
-	// TODO: Only call this when objects change
-	ReBuildCommandBuffers();
-
 	if (m_SwapChainNeedsRebuilding)
 	{
 		m_SwapChainNeedsRebuilding = false;
@@ -931,7 +940,7 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath)
 	TransitionImageLayout(m_TextureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void VulkanRenderer::ReBuildCommandBuffers()
+void VulkanRenderer::RebuildCommandBuffers()
 {
 	if (!CheckCommandBuffers())
 	{
@@ -1321,12 +1330,14 @@ void VulkanRenderer::CreateIndexBuffer()
 void VulkanRenderer::PrepareUniformBuffers()
 {
 	size_t uboAlignment = (size_t)m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-	m_DynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
+	size_t dynamicDataSize = UniformBufferObjectDynamic::size;
+	m_DynamicAlignment = (dynamicDataSize / uboAlignment) * uboAlignment + 
+		((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
 
 	size_t dynamicBufferSize = m_RenderObjects.size() * m_DynamicAlignment;
 
-	m_UniformBufferDynamic.model = (glm::mat4*)_aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
-	assert(m_UniformBufferDynamic.model);
+	m_UniformBufferDynamic.data = (UniformBufferObjectDynamic::Data*)_aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
+	assert(m_UniformBufferDynamic.data);
 
 	// Static shared uniform buffer object with projection and view matrix
 	CreateAndAllocateBuffer(sizeof(m_UniformBufferData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -1388,6 +1399,7 @@ void VulkanRenderer::CreateDescriptorSet()
 	uniformBufferDynamicInfo.buffer = m_UniformBuffers.dynamicBuffer.m_Buffer;
 	uniformBufferDynamicInfo.offset = 0;
 	uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectDynamic) * m_RenderObjects.size();
+	//uniformBufferDynamicInfo.range = UniformBufferObjectDynamic::size * m_RenderObjects.size();
 
 	writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[1].dstSet = m_DescriptorSet;
@@ -1405,7 +1417,7 @@ void VulkanRenderer::CreateDescriptorSetLayout()
 	uniformBufferBinding.binding = 0;
 	uniformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uniformBufferBinding.descriptorCount = 1;
-	uniformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uniformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	VkDescriptorSetLayoutBinding uniformBufferDynamicBinding = {};
 	uniformBufferDynamicBinding.binding = 1;
@@ -1712,8 +1724,12 @@ bool VulkanRenderer::CheckValidationLayerSupport()
 
 void VulkanRenderer::UpdateUniformBuffer(const GameContext& gameContext)
 {
-	m_UniformBufferData.projection = gameContext.camera->GetProj();
+	m_UniformBufferData.projection = gameContext.camera->GetProjection();
 	m_UniformBufferData.view = gameContext.camera->GetView();
+	m_UniformBufferData.camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
+	m_UniformBufferData.lightDir = m_SceneInfo.m_LightDir;
+	m_UniformBufferData.ambientColor = m_SceneInfo.m_AmbientColor;
+	m_UniformBufferData.specularColor = m_SceneInfo.m_SpecularColor;
 
 	memcpy(m_UniformBuffers.viewBuffer.m_Mapped, &m_UniformBufferData, sizeof(m_UniformBufferData));
 }
@@ -1721,11 +1737,13 @@ void VulkanRenderer::UpdateUniformBuffer(const GameContext& gameContext)
 void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
 {
 	// Aligned offset
-	m_UniformBufferDynamic.model[renderID] = model;
+	m_UniformBufferDynamic.data[renderID].model = model;
+	m_UniformBufferDynamic.data[renderID].modelInvTranspose = glm::transpose(glm::inverse(model));
 
-	size_t size = sizeof(*m_UniformBufferDynamic.model) * m_RenderObjects.size();
+	size_t size = m_UniformBufferDynamic.size * m_RenderObjects.size();
 	void* firstIndex = m_UniformBuffers.dynamicBuffer.m_Mapped;
-	memcpy((void*)((uint64_t)firstIndex + (renderID * m_DynamicAlignment)), &m_UniformBufferDynamic.model[renderID], size);
+	uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
+	memcpy((void*)(dest), &m_UniformBufferDynamic.data[renderID], size);
 
 	// Flush to make changes visible to the host 
 	VkMappedMemoryRange mappedMemoryRange {};

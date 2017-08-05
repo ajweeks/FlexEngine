@@ -7,14 +7,19 @@
 #include "Logger.h"
 #include "FreeCamera.h"
 #include "VertexBufferData.h"
+#include "ShaderUtils.h"
 
 #include <algorithm>
 
 using namespace glm;
 
-GLRenderer::GLRenderer(GameContext& gameContext) :
-	m_Program(gameContext.program)
+GLRenderer::GLRenderer(GameContext& gameContext)
 {
+	gameContext.program = ShaderUtils::LoadShaders(
+		"resources/shaders/GLSL/simple.vert", 
+		"resources/shaders/GLSL/simple.frag");
+	m_Program = gameContext.program;
+
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
@@ -64,8 +69,9 @@ uint GLRenderer::Initialize(const GameContext& gameContext, VertexBufferData* ve
 	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, renderObject->vertexBufferData->VertexStride, 0);
 
 	renderObject->model = glGetUniformLocation(gameContext.program, "in_Model");
-	renderObject->viewProjection = glGetUniformLocation(gameContext.program, "in_ViewProjection");
-	renderObject->modelInverse = glGetUniformLocation(gameContext.program, "in_ModelInverse");
+	renderObject->view = glGetUniformLocation(gameContext.program, "in_View");
+	renderObject->projection = glGetUniformLocation(gameContext.program, "in_Projection");
+	renderObject->modelInvTranspose = glGetUniformLocation(gameContext.program, "in_ModelInvTranspose");
 	
 	m_RenderObjects.push_back(renderObject);
 
@@ -113,8 +119,37 @@ void GLRenderer::SetClearColor(float r, float g, float b)
 
 void GLRenderer::PostInitialize()
 {
+	lightDir = glGetUniformLocation(m_Program, "lightDir");
+	ambientColor = glGetUniformLocation(m_Program, "ambientColor");
+	specularColor = glGetUniformLocation(m_Program, "specularColor");
+	camPos = glGetUniformLocation(m_Program, "camPos");
 }
 
+void GLRenderer::Update(const GameContext& gameContext)
+{
+	glUniform3f(lightDir, 
+		m_SceneInfo.m_LightDir.x,
+		m_SceneInfo.m_LightDir.y,
+		m_SceneInfo.m_LightDir.z);
+
+	glUniform4f(ambientColor,
+		m_SceneInfo.m_AmbientColor.r,
+		m_SceneInfo.m_AmbientColor.g,
+		m_SceneInfo.m_AmbientColor.b,
+		m_SceneInfo.m_AmbientColor.a);
+
+	glUniform4f(specularColor,
+		m_SceneInfo.m_SpecularColor.r,
+		m_SceneInfo.m_SpecularColor.g,
+		m_SceneInfo.m_SpecularColor.b,
+		m_SceneInfo.m_SpecularColor.a);
+
+	glm::vec3 cameraPos = gameContext.camera->GetPosition();
+	glUniform3f(camPos, 
+		cameraPos.x, 
+		cameraPos.y, 
+		cameraPos.z);
+}
 void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 {
 	UNREFERENCED_PARAMETER(gameContext);
@@ -135,6 +170,15 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+}
+
+size_t GLRenderer::ReloadShaders(const GameContext& gameContext)
+{
+	glDeleteProgram(gameContext.program);
+	m_Program = ShaderUtils::LoadShaders(
+		"resources/shaders/GLSL/simple.vert",
+		"resources/shaders/GLSL/simple.frag");
+	return m_Program;
 }
 
 void GLRenderer::OnWindowSize(int width, int height)
@@ -165,17 +209,18 @@ void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint rend
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
-	glm::mat4 modelInverse = glm::inverse(model);
-	glUniformMatrix4fv(renderObject->modelInverse, 1, false, &modelInverse[0][0]);
+	glUniformMatrix4fv(renderObject->model, 1, false, &model[0][0]);
 
-	 glm::mat4 viewProjection = gameContext.camera->GetViewProjection();
-	 glUniformMatrix4fv(renderObject->viewProjection, 1, false, &viewProjection[0][0]);
+	glm::mat4 modelInv = glm::inverse(model);
+	glm::mat4 modelInvTranspose4 = glm::transpose(modelInv);
+	glm::mat3 modelInvTranspose = glm::mat3(modelInvTranspose4);
+	glUniformMatrix4fv(renderObject->modelInvTranspose, 1, false, &modelInvTranspose[0][0]);
 
-	 glUniformMatrix4fv(renderObject->model, 1, false, &model[0][0]);
-
-	GLuint viewPosLocation = glGetUniformLocation(m_Program, "viewPos");
-	glm::vec3 cameraPos = gameContext.camera->GetPosition();
-	glUniform3f(viewPosLocation, cameraPos.x, cameraPos.y, cameraPos.z);
+	glm::mat4 view = gameContext.camera->GetView();
+	glUniformMatrix4fv(renderObject->view, 1, false, &view[0][0]);
+	
+	glm::mat4 projection = gameContext.camera->GetProjection();
+	glUniformMatrix4fv(renderObject->projection, 1, false, &projection[0][0]);
 }
 
 int GLRenderer::GetShaderUniformLocation(uint program, const std::string uniformName)

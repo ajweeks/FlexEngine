@@ -94,6 +94,11 @@ void TestScene::Initialize(const GameContext& gameContext)
 	//AddChild(m_Landscape);
 
 	//m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
+
+	Renderer::SceneInfo& sceneInfo = gameContext.renderer->GetSceneInfo();
+	sceneInfo.m_AmbientColor = glm::vec4(0.02f, 0.03f, 0.025f, 1.0f);
+	sceneInfo.m_SpecularColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	sceneInfo.m_LightDir = glm::vec4(0.9f, 0.11f, 0.12f, 0.0f);
 }
 
 void TestScene::Destroy(const GameContext& gameContext)

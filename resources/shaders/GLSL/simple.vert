@@ -1,8 +1,9 @@
 #version 400
 
 uniform mat4 in_Model;
-uniform mat4 in_ViewProjection;
-uniform mat4 in_ModelInverse;
+uniform mat3 in_ModelInvTranspose;
+uniform mat4 in_View;
+uniform mat4 in_Projection;
 
 in vec3 in_Position;
 in vec4 in_Color;
@@ -16,10 +17,12 @@ out vec2 ex_TexCoord;
 
 void main() 
 {
-	ex_FragPos = vec3(in_Model * vec4(in_Position, 1.0));
-	mat4 MVP = in_ViewProjection * in_Model;
-	ex_Normal = mat3(transpose(in_ModelInverse)) * in_Normal;
-	ex_Color = in_Color;
-	ex_TexCoord = in_TexCoord;
+	mat4 MVP = in_Projection * in_View * in_Model;
 	gl_Position = MVP * vec4(in_Position, 1.0);
+	
+	ex_FragPos = vec3(in_Model * vec4(in_Position, 1.0));
+	ex_Color = in_Color;
+	// Convert normal to model-space and prevent non-uniform scale issues
+	ex_Normal = in_ModelInvTranspose * in_Normal;
+	ex_TexCoord = in_TexCoord;
 }

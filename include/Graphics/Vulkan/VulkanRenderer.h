@@ -28,7 +28,9 @@ public:
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
 
+	virtual void Update(const GameContext& gameContext) override;
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
+	virtual size_t ReloadShaders(const GameContext& gameContext) override;
 
 	virtual void OnWindowSize(int width, int height) override;
 
@@ -71,7 +73,7 @@ private:
 	void CreateDescriptorSet();
 
 	void CreateCommandPool();
-	void ReBuildCommandBuffers();
+	void RebuildCommandBuffers();
 	void CreateCommandBuffers();
 	void BuildCommandBuffers();
 	bool CheckCommandBuffers();

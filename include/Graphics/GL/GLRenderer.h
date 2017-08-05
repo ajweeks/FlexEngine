@@ -17,7 +17,9 @@ public:
 
 	virtual void PostInitialize() override;
 
+	virtual void Update(const GameContext& gameContext) override;
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
+	virtual size_t ReloadShaders(const GameContext& gameContext) override;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
@@ -62,8 +64,9 @@ private:
 		std::vector<glm::uint>* indices = nullptr;
 
 		glm::uint model;
-		glm::uint viewProjection;
-		glm::uint modelInverse;
+		glm::uint view;
+		glm::uint projection;
+		glm::uint modelInvTranspose;
 	};
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
@@ -77,9 +80,14 @@ private:
 	bool m_VSyncEnabled;
 	glm::uint m_Program;
 
+	// Scene info variable locations
+	glm::uint lightDir;
+	glm::uint ambientColor;
+	glm::uint specularColor;
+	glm::uint camPos;
+
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;
-
 };
 
 #endif // COMPILE_OPEN_GL

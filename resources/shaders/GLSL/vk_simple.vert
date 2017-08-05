@@ -8,35 +8,41 @@ layout (location = 1) in vec4 inColor;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec2 inTexCoord;
 
-layout (location = 0) out vec4 outColor;
-layout (location = 1) out vec3 outNormal;
-layout (location = 2) out vec2 outTexCoord;
-
-layout (binding = 0) uniform UboView 
+// Updated once per frame
+layout (binding = 0) uniform UBO
 {
 	mat4 projection;
 	mat4 view;
-} uboView;
+	vec4 camPos; // Padded to 16 bytes (only 3 floats needed)
+	vec4 lightDir; // Padded to 16 bytes (only 3 floats needed)
+	vec4 ambientColor;
+	vec4 specularColor;
+} ubo;
 
-layout (binding = 1) uniform UboInstance 
+// Updated once per object
+layout (binding = 1) uniform UBOInstance
 {
 	mat4 model;
+	mat4 modelInvTranspose;
 } uboInstance;
 
+layout (location = 0) out vec3 outWorldPos;
+layout (location = 1) out vec4 outColor;
+layout (location = 2) out vec3 outNormal;
+layout (location = 3) out vec2 outTexCoord;
 
 out gl_PerVertex 
 {
-	vec4 gl_Position;   
+	vec4 gl_Position;
 };
 
 void main() 
 {
-	mat4 modelView = uboView.view * uboInstance.model;
-	vec3 worldPos = vec3(modelView * vec4(inPos, 1.0));
-	gl_Position = uboView.projection * modelView * vec4(inPos.xyz, 1.0);
+	outWorldPos = vec3(uboInstance.model * vec4(inPos, 1.0));
+	gl_Position = ubo.projection * ubo.view * vec4(outWorldPos, 1.0);
 
 	outColor = inColor;
-	outNormal = mat3(transpose(inverse(uboInstance.model))) * inNormal;
+	outNormal = mat3(uboInstance.modelInvTranspose) * inNormal;
 	outTexCoord = inTexCoord;
 	
 	// Convert from GL coordinates to Vulkan coordinates
@@ -44,3 +50,6 @@ void main()
 	gl_Position.y = -gl_Position.y;
 	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }
+
+
+

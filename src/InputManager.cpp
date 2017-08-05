@@ -89,11 +89,11 @@ void InputManager::KeyCallback(KeyCode keycode, Action action, int mods)
 {
 	if (action == Action::PRESS)
 	{
-		++m_Keys[keycode].down;
+		m_Keys[keycode].down = 1;
 	}
 	else if (action == Action::REPEAT)
 	{
-		++m_Keys[keycode].down;
+		// Ignore repeat events (we're already counting how long the key is down for
 	}
 	else if (action == Action::RELEASE)
 	{

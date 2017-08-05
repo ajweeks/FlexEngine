@@ -65,7 +65,9 @@ public:
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
 	virtual void SetClearColor(float r, float g, float b) = 0;
 
+	virtual void Update(const GameContext& gameContext) = 0;
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;
+	virtual size_t ReloadShaders(const GameContext& gameContext) = 0;
 
 	virtual void OnWindowSize(int width, int height) = 0;
 
@@ -82,6 +84,19 @@ public:
 		int stride, void* pointer) = 0;
 
 	virtual void Destroy(glm::uint renderID) = 0;
+
+	struct SceneInfo
+	{
+		// Everything has to be aligned (16 byte? aka vec4)
+		glm::vec4 m_LightDir;
+		glm::vec4 m_AmbientColor;
+		glm::vec4 m_SpecularColor;
+		// sky box, other lights, wireframe, etc...
+	};
+	SceneInfo& GetSceneInfo();
+
+protected:
+	SceneInfo m_SceneInfo;
 
 private:
 	Renderer& operator=(const Renderer&) = delete;

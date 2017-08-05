@@ -50,8 +50,11 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i 
 	m_HasFocus = true;
 
 	glfwMakeContextCurrent(m_Window);
-	
+
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+	// TODO: Find out why there's a gl error here
+	glGetError();
 
 	//GLint flags;
 	//glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -65,9 +68,6 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i 
 
 	const std::string glVersion(reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 	Logger::LogInfo("OpenGL Version: " + glVersion);
-
-	gameContext.program = ShaderUtils::LoadShaders("resources/shaders/GLSL/simple.vert", "resources/shaders/GLSL/simple.frag");
-	
 	CheckGLErrorMessages();
 }
 

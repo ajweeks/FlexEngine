@@ -27,6 +27,10 @@ GLuint ShaderUtils::LoadShader(std::string filePath, ShaderType type)
 GLuint ShaderUtils::LoadShaders(std::string vertShaderFilePath, std::string fragShaderFilePath)
 {
 	// Create the shaders
+	CheckGLErrorMessages();
+	CheckGLErrorMessages();
+	CheckGLErrorMessages();
+	CheckGLErrorMessages();
 	GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 	CheckGLErrorMessages();
 

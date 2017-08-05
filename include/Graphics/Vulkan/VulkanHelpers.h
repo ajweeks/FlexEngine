@@ -56,11 +56,22 @@ struct UniformBufferObjectData
 {
 	glm::mat4 projection;
 	glm::mat4 view;
+	glm::vec4 camPos;
+	glm::vec4 lightDir;
+	glm::vec4 ambientColor;
+	glm::vec4 specularColor;
 };
 
 struct UniformBufferObjectDynamic
 {
-	glm::mat4* model;
+	struct Data 
+	{
+		glm::mat4 model;
+		glm::mat4 modelInvTranspose;
+	};
+
+	constexpr static size_t size = sizeof(Data);
+	Data* data;
 };
 
 VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,

@@ -19,7 +19,7 @@ public:
 	void SetZFar(float zFar);
 	glm::mat4 GetViewProjection() const;
 	glm::mat4 GetView() const;
-	glm::mat4 GetProj() const;
+	glm::mat4 GetProjection() const;
 
 	void SetMoveSpeed(float moveSpeed);
 	void SetRotationSpeed(float rotationSpeed);
