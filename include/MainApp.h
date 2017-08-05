@@ -7,11 +7,11 @@ class InputManager;
 class SceneManager;
 class Window;
 
-class TechDemo final
+class MainApp final
 {
 public:
-	TechDemo();
-	~TechDemo();
+	MainApp();
+	~MainApp();
 
 	void Initialize();
 	void UpdateAndRender();
@@ -49,6 +49,6 @@ private:
 
 	bool m_Running;
 
-	TechDemo(const TechDemo&) = delete;
-	TechDemo& operator=(const TechDemo&) = delete;
+	MainApp(const MainApp&) = delete;
+	MainApp& operator=(const MainApp&) = delete;
 };

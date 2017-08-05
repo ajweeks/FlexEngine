@@ -6,7 +6,7 @@
 #include "Logger.h"
 #include "GameContext.h"
 #include "ShaderUtils.h"
-#include "TechDemo.h"
+#include "MainApp.h"
 #include "InputManager.h"
 
 void GLFWErrorCallback(int error, const char* description)

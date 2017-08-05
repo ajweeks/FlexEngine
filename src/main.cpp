@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "TechDemo.h"
+#include "MainApp.h"
 
 #include <windows.h>
 
@@ -23,10 +23,10 @@ int main(int argc, char *argv[])
 #endif
 
 	{
-		TechDemo* techDemo = new TechDemo();
-		techDemo->Initialize();
-		techDemo->UpdateAndRender();
-		SafeDelete(techDemo);
+		MainApp* mainApp = new MainApp();
+		mainApp->Initialize();
+		mainApp->UpdateAndRender();
+		SafeDelete(mainApp);
 	}
 
 	system("PAUSE");

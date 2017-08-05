@@ -6,7 +6,7 @@ class Window;
 class FreeCamera;
 class InputManager;
 class Renderer;
-class TechDemo;
+class MainApp;
 
 struct GameContext
 {
@@ -14,7 +14,7 @@ struct GameContext
 	FreeCamera* camera;
 	InputManager* inputManager;
 	Renderer* renderer;
-	TechDemo* mainApp;
+	MainApp* mainApp;
 
 	glm::uint program;
 	float elapsedTime;

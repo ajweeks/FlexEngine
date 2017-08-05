@@ -21,9 +21,6 @@
     <ClCompile Include="lib\glad\src\glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\TechDemo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\ShaderUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -105,11 +102,11 @@
     <ClCompile Include="src\Scene\GameObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\MainApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\TechDemo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\ShaderUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -210,6 +207,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Scene\GameObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MainApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

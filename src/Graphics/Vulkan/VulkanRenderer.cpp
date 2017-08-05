@@ -7,7 +7,7 @@
 #include "Window/Window.h"
 #include "Logger.h"
 #include "FreeCamera.h"
-#include "TechDemo.h"
+#include "MainApp.h"
 #include "VertexBufferData.h"
 
 #include <algorithm>	

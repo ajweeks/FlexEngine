@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "TechDemo.h"
+#include "MainApp.h"
 #include "Logger.h"
 #include "FreeCamera.h"
 #include "GameContext.h"
@@ -11,7 +11,7 @@
 
 using namespace glm;
 
-TechDemo::TechDemo() :
+MainApp::MainApp() :
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)
 {
@@ -48,12 +48,12 @@ TechDemo::TechDemo() :
 
 }
 
-TechDemo::~TechDemo()
+MainApp::~MainApp()
 {
 	Destroy();
 }
 
-void TechDemo::Initialize()
+void MainApp::Initialize()
 {
 	m_GameContext = {};
 	m_GameContext.mainApp = this;
@@ -74,7 +74,7 @@ void TechDemo::Initialize()
 	m_GameContext.renderer->PostInitialize();
 }
 
-void TechDemo::Destroy()
+void MainApp::Destroy()
 {
 	if (m_SceneManager) m_SceneManager->DestroyAllScenes(m_GameContext);
 	SafeDelete(m_SceneManager);
@@ -84,7 +84,7 @@ void TechDemo::Destroy()
 	DestroyWindowAndRenderer();
 }
 
-void TechDemo::InitializeWindowAndRenderer()
+void MainApp::InitializeWindowAndRenderer()
 {
 	const vec2i windowSize = vec2i(1920, 1080);
 	vec2i windowPos = vec2i(300, 300);
@@ -123,26 +123,26 @@ void TechDemo::InitializeWindowAndRenderer()
 	m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
 }
 
-void TechDemo::DestroyWindowAndRenderer()
+void MainApp::DestroyWindowAndRenderer()
 {
 	SafeDelete(m_Window);
 	SafeDelete(m_GameContext.renderer);
 }
 
-std::string TechDemo::RenderIDToString(RendererID rendererID) const
+std::string MainApp::RenderIDToString(RendererID rendererID) const
 {
 	switch (rendererID)
 	{
-	case TechDemo::RendererID::VULKAN: return "Vulkan";
-	case TechDemo::RendererID::D3D: return "D3D";
-	case TechDemo::RendererID::GL: return "Open GL";
-	case TechDemo::RendererID::_LAST_ELEMENT:  // Fallthrough
+	case MainApp::RendererID::VULKAN: return "Vulkan";
+	case MainApp::RendererID::D3D: return "D3D";
+	case MainApp::RendererID::GL: return "Open GL";
+	case MainApp::RendererID::_LAST_ELEMENT:  // Fallthrough
 	default:
 		return "Unknown";
 	}
 }
 
-void TechDemo::CycleRenderer()
+void MainApp::CycleRenderer()
 {
 	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
 	DestroyWindowAndRenderer();
@@ -171,7 +171,7 @@ void TechDemo::CycleRenderer()
 	m_GameContext.renderer->PostInitialize();
 }
 
-void TechDemo::UpdateAndRender()
+void MainApp::UpdateAndRender()
 {
 	m_Running = true;
 	float previousTime = (float)m_Window->GetTime();
@@ -217,7 +217,7 @@ void TechDemo::UpdateAndRender()
 	}
 }
 
-void TechDemo::Stop()
+void MainApp::Stop()
 {
 	m_Running = false;
 }
