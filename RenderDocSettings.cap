@@ -16,8 +16,8 @@
   </Options>
   <Inject>false</Inject>
   <AutoStart>false</AutoStart>
-  <Executable>D:\MEGASync\DAE\Year 2\Programming 4\Tech Demo\PG4_TechDemo\Debug\PG4_TechDemo.exe</Executable>
-  <WorkingDir>D:\MEGASync\DAE\Year 2\Programming 4\Tech Demo\PG4_TechDemo</WorkingDir>
+  <Executable>D:\MEGASync\Code\C++\RenderingEngine\RenderingEngine\Debug\RenderingEngine.exe</Executable>
+  <WorkingDir>D:\MEGASync\Code\C++\RenderingEngine\RenderingEngine</WorkingDir>
   <CmdLine />
   <Environment />
 </CaptureSettings>

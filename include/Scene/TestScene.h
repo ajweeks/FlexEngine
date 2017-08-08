@@ -18,16 +18,20 @@ public:
 private:
 	std::vector<MeshPrefab*> m_Cubes;
 
-	MeshPrefab* m_Cube;
-	MeshPrefab* m_Cube2;
-	MeshPrefab* m_UVSphere;
-	//MeshPrefab m_IcoSphere;
-
 	MeshPrefab* m_Grid;
-	MeshPrefab* m_CubeFromFile;
-	MeshPrefab* m_Teapot;
 	MeshPrefab* m_Scene;
 	MeshPrefab* m_Landscape;
+	MeshPrefab* m_Cube;
+	MeshPrefab* m_Cube2;
+	MeshPrefab* m_ChamferBox;
+	MeshPrefab* m_UVSphere;
+	//MeshPrefab m_IcoSphere;
+	MeshPrefab* m_Capsule;
+	MeshPrefab* m_Teapot;
+	MeshPrefab* m_PunchingBag;
+	MeshPrefab* m_Rock1;
+	MeshPrefab* m_Rock2;
+	MeshPrefab* m_TransformManipulatorPosition;
 
 	glm::uint m_TimeID;
 

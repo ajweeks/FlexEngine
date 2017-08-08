@@ -16,7 +16,7 @@
 
 using namespace glm;
 
-glm::vec4 MeshPrefab::m_DefaultColor(0.0f, 0.0f, 0.0f, 1.0f);
+glm::vec4 MeshPrefab::m_DefaultColor(1.0f, 1.0f, 1.0f, 1.0f);
 glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 glm::vec3 MeshPrefab::m_DefaultNormal(0.0f, 1.0f, 0.0f);
 glm::vec2 MeshPrefab::m_DefaultTexCoord(0.0f, 0.0f);
@@ -38,7 +38,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	Assimp::Importer importer;
 
 	const aiScene* pScene = importer.ReadFile(filepath,
-		aiProcess_Triangulate
+		aiProcess_TransformUVCoords
 		);
 
 	if (!pScene)
@@ -63,6 +63,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	{
 		// Position
 		glm::vec3 pos = ToVec3(mesh->mVertices[i]);
+		pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 		m_Positions.push_back(pos);
 		m_HasElement |= (glm::uint)ILSemantic::POSITION;
 
@@ -70,11 +71,11 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 		glm::vec4 col;
 		if (mesh->HasVertexColors(0))
 		{
-			col = ToVec4(*(mesh->mColors[0]));
+			col = ToVec4(mesh->mColors[0][i]);
 		}
 		else
 		{
-			col = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+			col = m_DefaultColor;
 		}
 		m_Colors.push_back(col);
 		m_HasElement |= (glm::uint)ILSemantic::COLOR;
@@ -87,7 +88,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 		}
 		else
 		{
-			norm = glm::vec3(0.0f, 0.0f, 1.0f);
+			norm = m_DefaultNormal;
 		}
 		m_Normals.push_back(norm);
 		m_HasElement |= (glm::uint)ILSemantic::NORMAL;
@@ -101,7 +102,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 		}
 		else
 		{
-			texCoord = glm::vec2(0.0f, 0.0f);
+			texCoord = m_DefaultTexCoord;
 		}
 		m_TexCoords.push_back(texCoord);
 		m_HasElement |= (glm::uint)ILSemantic::TEXCOORD;
@@ -115,6 +116,8 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	CreateVertexBuffer(vertexBufferData);
 
 	m_RenderID = renderer->Initialize(gameContext, vertexBufferData);
+	
+	renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::TRIANGLE_LIST);
 
 	// TODO: Move to function to determine based on m_HasElement
 	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Position", 3, Renderer::Type::FLOAT, false,
@@ -126,7 +129,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_Normal", 3, Renderer::Type::FLOAT, false,
 		vertexBufferData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4)));
 
-	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_TexCoord", 2, Renderer::Type::FLOAT, false,
+	renderer->DescribeShaderVariable(m_RenderID, gameContext.program, "in_TexCoords", 2, Renderer::Type::FLOAT, false,
 		vertexBufferData->VertexStride, (void*)(sizeof(glm::vec3) + sizeof(glm::vec4) + sizeof(glm::vec3)));
 
 	return true;
@@ -651,7 +654,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	} break;
 	case MeshPrefab::PrefabShape::GRID:
 	{
-		float rowWidth = 1.0f;
+		float rowWidth = 10.0f;
 		int lineCount = 15;
 
 		const glm::vec4 lineColor = Color::GRAY;

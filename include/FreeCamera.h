@@ -9,7 +9,7 @@ struct GameContext;
 class FreeCamera final
 {
 public:
-	FreeCamera(GameContext& gameContext, float FOV = 45.0f, float zNear = 0.1f, float zFar = 1000.0f);
+	FreeCamera(GameContext& gameContext, float FOV = 45.0f, float zNear = 0.1f, float zFar = 10000.0f);
 	~FreeCamera();
 
 	void Update(const GameContext& gameContext);

@@ -75,7 +75,7 @@ public:
 	virtual void Clear(int flags, const GameContext& gameContext) = 0;
 	virtual void SwapBuffers(const GameContext& gameContext) = 0;
 
-	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model) = 0;
+	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) = 0;
 	
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) = 0;
 	virtual void SetUniform1f(glm::uint location, float val) = 0;

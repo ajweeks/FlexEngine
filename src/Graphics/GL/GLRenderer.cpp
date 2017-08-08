@@ -2,6 +2,7 @@
 #if COMPILE_OPEN_GL
 
 #include "Graphics/GL/GLRenderer.h"
+#include "Graphics/GL/GLHelpers.h"
 #include "GameContext.h"
 #include "Window/Window.h"
 #include "Logger.h"
@@ -123,6 +124,14 @@ void GLRenderer::PostInitialize()
 	ambientColor = glGetUniformLocation(m_Program, "ambientColor");
 	specularColor = glGetUniformLocation(m_Program, "specularColor");
 	camPos = glGetUniformLocation(m_Program, "camPos");
+
+	glGenTextures(1, &textureMap);
+	glBindTexture(GL_TEXTURE_2D, textureMap);
+
+	GLFWimage image = LoadGLFWimage("resources/textures/work.jpg");
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	DestroyGLFWimage(image);
 }
 
 void GLRenderer::Update(const GameContext& gameContext)
@@ -150,11 +159,15 @@ void GLRenderer::Update(const GameContext& gameContext)
 		cameraPos.y, 
 		cameraPos.z);
 }
+
 void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
 	RenderObject* renderObject = GetRenderObject(renderID);
+
+	// TODO: Bind object's own texture
+	glBindTexture(GL_TEXTURE_2D, textureMap);
 
 	glBindVertexArray(renderObject->VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
@@ -205,16 +218,16 @@ void GLRenderer::SwapBuffers(const GameContext& gameContext)
 	glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 }
 
-void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint renderID, const glm::mat4x4& model)
+void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint renderID, const glm::mat4& model)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	glUniformMatrix4fv(renderObject->model, 1, false, &model[0][0]);
 
 	glm::mat4 modelInv = glm::inverse(model);
-	glm::mat4 modelInvTranspose4 = glm::transpose(modelInv);
-	glm::mat3 modelInvTranspose = glm::mat3(modelInvTranspose4);
-	glUniformMatrix4fv(renderObject->modelInvTranspose, 1, false, &modelInvTranspose[0][0]);
+	glm::mat3 modelInv3 = glm::mat3(modelInv);
+	// OpenGL will transpose for us if we set the third param to true
+	glUniformMatrix3fv(renderObject->modelInvTranspose, 1, true, &modelInv3[0][0]);
 
 	glm::mat4 view = gameContext.camera->GetView();
 	glUniformMatrix4fv(renderObject->view, 1, false, &view[0][0]);
@@ -233,7 +246,8 @@ void GLRenderer::SetUniform1f(uint location, float val)
 	glUniform1f(location, val);
 }
 
-void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
+void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::string& variableName, int size, 
+	Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 

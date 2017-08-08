@@ -37,16 +37,16 @@ void _CheckGLErrorMessages(const char* file, int line)
 	}
 }
 
-GLFWimage LoadGLFWImage(const std::string filename)
+GLFWimage LoadGLFWimage(const std::string filePath)
 {
 	GLFWimage result = {};
 
 	int channels;
-	unsigned char* data = SOIL_load_image(filename.c_str(), &result.width, &result.height, &channels, SOIL_LOAD_AUTO);
+	unsigned char* data = SOIL_load_image(filePath.c_str(), &result.width, &result.height, &channels, SOIL_LOAD_AUTO);
 
 	if (data == 0)
 	{
-		Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + "\nimage filepath: " + filename);
+		Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + "\nimage filepath: " + filePath);
 		return result;
 	}
 	else
@@ -57,20 +57,25 @@ GLFWimage LoadGLFWImage(const std::string filename)
 	return result;
 }
 
-void LoadGLTexture(const std::string filename)
+void DestroyGLFWimage(const GLFWimage& image)
+{
+	SOIL_free_image_data(image.pixels);
+}
+
+void LoadGLTexture(const std::string filePath)
 {
 	int width, height;
-	unsigned char* imageData = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+	unsigned char* imageData = SOIL_load_image(filePath.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
 	SOIL_free_image_data(imageData);
 }
 
-void LoadAndBindGLTexture(const std::string filename, GLuint& textureHandle, int sWrap, int tWrap, int minFilter, int magFilter)
+void LoadAndBindGLTexture(const std::string filePath, GLuint& textureHandle, int sWrap, int tWrap, int minFilter, int magFilter)
 {
 	glGenTextures(1, &textureHandle);
 	glBindTexture(GL_TEXTURE_2D, textureHandle);
 
-	LoadGLTexture(filename);
+	LoadGLTexture(filePath);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
