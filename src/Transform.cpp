@@ -16,6 +16,20 @@ Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const
 {
 }
 
+Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :
+	position(position),
+	rotation(rotation),
+	scale(glm::vec3(1.0f))
+{
+}
+
+Transform::Transform(const glm::vec3& position) :
+	position(position),
+	rotation(glm::quat(glm::vec3(0.0f))),
+	scale(glm::vec3(1.0f))
+{
+}
+
 Transform::~Transform()
 {
 }
