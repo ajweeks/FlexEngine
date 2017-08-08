@@ -38,7 +38,7 @@ public:
 	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
 
-	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model) override;
+	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) override;
 
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
 	virtual void SetUniform1f(glm::uint location, float val) override;
@@ -93,6 +93,7 @@ private:
 	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
+	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer& buffer);
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 	void DrawFrame(Window* window);
@@ -200,6 +201,7 @@ private:
 	VDeleter<VkCommandPool> m_CommandPool{ m_Device, vkDestroyCommandPool };
 	std::vector<VkCommandBuffer> m_CommandBuffers;
 
+	// TODO: Each object should have a vector of these types for every texture they use
 	VDeleter<VkImage> m_TextureImage{ m_Device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> m_TextureImageMemory{ m_Device, vkFreeMemory };
 	VDeleter<VkImageView> m_TextureImageView{ m_Device, vkDestroyImageView };

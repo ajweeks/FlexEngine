@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 inPos;
+layout (location = 0) in vec3 inWorldPos;
 layout (location = 1) in vec4 inColor;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec2 inTexCoord;
@@ -38,7 +38,7 @@ out gl_PerVertex
 
 void main() 
 {
-	outWorldPos = vec3(uboInstance.model * vec4(inPos, 1.0));
+	outWorldPos = vec3(uboInstance.model * vec4(inWorldPos, 1.0));
 	gl_Position = ubo.projection * ubo.view * vec4(outWorldPos, 1.0);
 
 	outColor = inColor;
@@ -50,6 +50,4 @@ void main()
 	gl_Position.y = -gl_Position.y;
 	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }
-
-
 
