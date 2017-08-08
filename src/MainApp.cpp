@@ -15,7 +15,7 @@ MainApp::MainApp() :
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)
 {
-	RendererID preferredInitialRenderer = RendererID::VULKAN;
+	RendererID preferredInitialRenderer = RendererID::GL;
 
 	m_RendererIndex = RendererID::_LAST_ELEMENT;
 	m_RendererCount = 0;
@@ -194,16 +194,21 @@ void MainApp::UpdateAndRender()
 			continue;
 		}
 
-		// TODO: Figure out
-		//if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
-		//{
-		//	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
-		//
-		//	m_GameContext.program = m_GameContext.renderer->ReloadShaders(m_GameContext);
-		//
-		//	TestScene* pDefaultScene = new TestScene(m_GameContext);
-		//	m_SceneManager->AddScene(pDefaultScene, m_GameContext);
-		//}
+		// TODO: Figure out better
+		if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
+		{
+			m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
+		
+			DestroyWindowAndRenderer();
+			InitializeWindowAndRenderer();
+
+			//m_GameContext.program = m_GameContext.renderer->ReloadShaders(m_GameContext);
+		
+			TestScene* pDefaultScene = new TestScene(m_GameContext);
+			m_SceneManager->AddScene(pDefaultScene, m_GameContext);
+
+			m_GameContext.renderer->PostInitialize();
+		}
 
 		m_GameContext.camera->Update(m_GameContext);
 		m_GameContext.renderer->Clear((int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL, m_GameContext);

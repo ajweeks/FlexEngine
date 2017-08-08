@@ -4,7 +4,10 @@ uniform vec3 lightDir;
 uniform vec4 ambientColor;
 uniform vec4 specularColor;
 uniform vec3 camPos;
-uniform sampler2D in_Texture;
+
+uniform sampler2D diffuseMap;
+uniform sampler2D specularMap;
+uniform sampler2D normalMap;
 
 in vec3 ex_WorldPos;
 in vec4 ex_Color;
@@ -15,13 +18,18 @@ out vec4 fragmentColor;
 
 void main() 
 {
-	vec3 normal = normalize(ex_Normal);
+	vec4 normalSample = texture(normalMap, ex_TexCoords);
+	vec3 normal = normalSample.xyz * 2 - 1; //normalize(ex_Normal);
 	float lightIntensity = max(dot(normal, normalize(lightDir)), 0.0);
 	lightIntensity = lightIntensity * 0.75 + 0.25;
 
-	vec4 textureSample = texture(in_Texture, ex_TexCoords);
-	vec4 diffuse = lightIntensity * textureSample * ex_Color;
+	// visualize normals:
+	//fragmentColor = vec4(normal, 1); return;
 	
+	vec4 diffuseSample = texture(diffuseMap, ex_TexCoords);
+	vec4 diffuse = lightIntensity * diffuseSample * ex_Color;
+	
+	vec4 specularSample = texture(specularMap, ex_TexCoords);
 	float specularStrength = 0.5f;
 	float shininess = 32;
 	
@@ -29,16 +37,16 @@ void main()
 	vec3 reflectDir = reflect(-normalize(lightDir), normal);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
 	
-	vec4 specular = specularStrength * spec * specularColor;
+	vec4 specular = specularStrength * specularSample * spec * specularColor;
+	
+	// visualize specular:
+	//fragmentColor = specular; return;
 	
 	fragmentColor = ambientColor + diffuse + specular;
 	
-	// No lighting:
+	// no lighting:
 	//fragmentColor = ex_Color;
 
-	// Visualize tex coords:
+	// visualize tex coords:
 	//fragmentColor = vec4(ex_TexCoord.xy, 0, 1);
-	
-	// Visualize normals:
-	//fragmentColor = vec4(normal.xyz * 0.5 + 0.5, 1);
 }

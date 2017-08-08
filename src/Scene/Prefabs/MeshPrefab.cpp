@@ -38,7 +38,8 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	Assimp::Importer importer;
 
 	const aiScene* pScene = importer.ReadFile(filepath,
-		aiProcess_TransformUVCoords
+		0
+		//aiProcess_TransformUVCoords
 		);
 
 	if (!pScene)

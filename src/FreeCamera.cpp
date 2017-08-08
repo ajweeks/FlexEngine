@@ -15,7 +15,7 @@ using namespace glm;
 FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float zFar) :
 	m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
 	m_Position(vec3(0.0f)),
-	m_MoveSpeed(10.0f),
+	m_MoveSpeed(50.0f),
 	m_MoveSpeedFastMultiplier(3.5f),
 	m_MoveSpeedSlowMultiplier(0.1f),
 	m_RotationSpeed(0.0011f),

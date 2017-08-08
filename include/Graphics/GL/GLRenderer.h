@@ -85,7 +85,9 @@ private:
 	glm::uint ambientColor;
 	glm::uint specularColor;
 	glm::uint camPos;
-	glm::uint textureMap;
+	glm::uint diffuseMapID;
+	glm::uint specularMapID;
+	glm::uint normalMapID;
 
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;

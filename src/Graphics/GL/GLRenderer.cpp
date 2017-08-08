@@ -125,13 +125,18 @@ void GLRenderer::PostInitialize()
 	specularColor = glGetUniformLocation(m_Program, "specularColor");
 	camPos = glGetUniformLocation(m_Program, "camPos");
 
-	glGenTextures(1, &textureMap);
-	glBindTexture(GL_TEXTURE_2D, textureMap);
+	GenerateGLTexture(diffuseMapID, "resources/textures/brick_d.png");
+	GenerateGLTexture(specularMapID, "resources/textures/brick_s.png");
+	GenerateGLTexture(normalMapID, "resources/textures/brick_n.png");
 
-	GLFWimage image = LoadGLFWimage("resources/textures/work.jpg");
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	DestroyGLFWimage(image);
+	glm::uint diffuseMapLocation = glGetUniformLocation(m_Program, "diffuseMap");
+	glUniform1i(diffuseMapLocation, 0);
+
+	glm::uint specularMapLocation = glGetUniformLocation(m_Program, "specularMap");
+	glUniform1i(specularMapLocation, 1);
+
+	glm::uint normalMapLocation = glGetUniformLocation(m_Program, "normalMap");
+	glUniform1i(normalMapLocation, 2);
 }
 
 void GLRenderer::Update(const GameContext& gameContext)
@@ -166,8 +171,15 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	RenderObject* renderObject = GetRenderObject(renderID);
 
+	GLuint texures[] = { diffuseMapID, specularMapID, normalMapID };
+
 	// TODO: Bind object's own texture
-	glBindTexture(GL_TEXTURE_2D, textureMap);
+	for (int i = 0; i < 3; ++i)
+	{
+		GLuint texture = texures[i];
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, texures[i]);
+	}
 
 	glBindVertexArray(renderObject->VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
