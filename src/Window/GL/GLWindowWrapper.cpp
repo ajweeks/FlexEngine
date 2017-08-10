@@ -33,6 +33,7 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i 
 	{
 		Logger::LogError("Failed to create glfw Window! Exiting");
 		glfwTerminate();
+		// TODO: Try creating a window manually here
 		exit(EXIT_FAILURE);
 	}
 
@@ -54,7 +55,7 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i 
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
 	// TODO: Find out why there's a gl error here
-	glGetError();
+	CheckGLErrorMessages();
 
 	//GLint flags;
 	//glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -83,7 +84,7 @@ void GLWindowWrapper::SetSize(int width, int height)
 
 #endif // COMPILE_OPEN_GL
 
-void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, 
+void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 	const GLchar* message, const void* userParam)
 {
 	// ignore non-significant error/warning codes

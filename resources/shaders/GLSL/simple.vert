@@ -7,13 +7,15 @@ uniform mat4 in_Projection;
 
 in vec3 in_Position;
 in vec4 in_Color;
+in vec3 in_Tangent;
+in vec3 in_Bitangent;
 in vec3 in_Normal;
-in vec2 in_TexCoords;
+in vec2 in_TexCoord;
 
 out vec3 ex_WorldPos;
 out vec4 ex_Color;
-out vec3 ex_Normal;
-out vec2 ex_TexCoords;
+out mat3 ex_TBN;
+out vec2 ex_TexCoord;
 
 void main() 
 {
@@ -22,7 +24,12 @@ void main()
 	
 	ex_WorldPos = vec3(in_Model * vec4(in_Position, 1.0));
 	ex_Color = in_Color;
+	
 	// Convert normal to model-space and prevent non-uniform scale issues
-	ex_Normal = in_ModelInvTranspose * in_Normal;
-	ex_TexCoords = in_TexCoords;
+	ex_TBN = mat3(
+		normalize(in_ModelInvTranspose * in_Tangent), 
+		normalize(in_ModelInvTranspose * in_Bitangent), 
+		normalize(in_ModelInvTranspose * in_Normal));
+
+	ex_TexCoord = in_TexCoord;
 }

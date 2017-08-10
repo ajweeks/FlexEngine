@@ -5,6 +5,7 @@
 #include <glm\detail\type_int.hpp>
 
 #include <vector>
+#include <string>
 
 struct GameContext;
 struct VertexBufferData;
@@ -14,6 +15,28 @@ class Renderer
 public:
 	Renderer();
 	virtual ~Renderer();
+
+	struct RenderObjectCreateInfo
+	{
+		VertexBufferData* vertexBufferData = nullptr;
+		std::vector<glm::uint>* indices = nullptr;
+
+		// Leave empty to not use
+		std::string diffuseMapPath;
+		std::string specularMapPath;
+		std::string normalMapPath;
+	};
+
+	enum class VertexType : glm::uint
+	{
+		NONE = 0,
+		POSITION = (1 << 0),
+		COLOR = (1 << 1),
+		TANGENT = (1 << 2),
+		BITANGENT = (1 << 3),
+		NORMAL = (1 << 4),
+		TEXCOORD = (1 << 5)
+	};
 
 	enum class ClearFlag
 	{
@@ -59,8 +82,7 @@ public:
 
 	virtual void PostInitialize() = 0;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData) = 0;
-	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData, std::vector<glm::uint>* indices) = 0;
+	virtual glm::uint Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
 	virtual void SetClearColor(float r, float g, float b) = 0;

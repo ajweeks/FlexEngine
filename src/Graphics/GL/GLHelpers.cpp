@@ -12,10 +12,10 @@ void _CheckGLErrorMessages(const char* file, int line)
 
 		switch (errorType)
 		{
-		case GL_INVALID_OPERATION:                errorName = "INVALID_OPERATION";                break;
-		case GL_INVALID_ENUM:                    errorName = "INVALID_ENUM";                        break;
-		case GL_INVALID_VALUE:                    errorName = "INVALID_VALUE";                    break;
-		case GL_OUT_OF_MEMORY:                    errorName = "OUT_OF_MEMORY";                    break;
+		case GL_INVALID_OPERATION:              errorName = "INVALID_OPERATION";                break;
+		case GL_INVALID_ENUM:                   errorName = "INVALID_ENUM";                     break;
+		case GL_INVALID_VALUE:                  errorName = "INVALID_VALUE";                    break;
+		case GL_OUT_OF_MEMORY:                  errorName = "OUT_OF_MEMORY";                    break;
 		case GL_INVALID_FRAMEBUFFER_OPERATION:  errorName = "INVALID_FRAMEBUFFER_OPERATION";    break;
 		}
 
@@ -62,8 +62,10 @@ void DestroyGLFWimage(const GLFWimage& image)
 	SOIL_free_image_data(image.pixels);
 }
 
-void GenerateGLTexture(glm::uint& textureID, const std::string filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+void GenerateGLTexture(glm::uint VAO, glm::uint& textureID, const std::string filePath, int sWrap, int tWrap, int minFilter, int magFilter)
 {
+	glBindVertexArray(VAO);
+
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 
@@ -77,6 +79,8 @@ void GenerateGLTexture(glm::uint& textureID, const std::string filePath, int sWr
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindVertexArray(0);
 
 	DestroyGLFWimage(image);
 }

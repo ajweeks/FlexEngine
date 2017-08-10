@@ -11,25 +11,44 @@ uniform sampler2D normalMap;
 
 in vec3 ex_WorldPos;
 in vec4 ex_Color;
-in vec3 ex_Normal;
-in vec2 ex_TexCoords;
+in mat3 ex_TBN;
+in vec2 ex_TexCoord;
+
+uniform bool useNormalTexture;
+uniform bool useDiffseTexture;
+uniform bool useSpecularTexture;
 
 out vec4 fragmentColor;
 
-void main() 
+void main()
 {
-	vec4 normalSample = texture(normalMap, ex_TexCoords);
-	vec3 normal = normalSample.xyz * 2 - 1; //normalize(ex_Normal);
+	vec3 normal;
+	if (useNormalTexture)
+	{
+		vec4 normalSample = texture(normalMap, ex_TexCoord);
+		normal = ex_TBN * (normalSample.xyz * 2 - 1);
+	}
+	else
+	{
+		normal = ex_TBN[2];
+	}
+
 	float lightIntensity = max(dot(normal, normalize(lightDir)), 0.0);
 	lightIntensity = lightIntensity * 0.75 + 0.25;
 
+	// visualize diffuse lighting:
+	//fragmentColor = vec4(vec3(lightIntensity), 1); return;
+	
 	// visualize normals:
-	//fragmentColor = vec4(normal, 1); return;
+	//fragmentColor = vec4(normal * 0.5 + 0.5, 1); return;
 	
-	vec4 diffuseSample = texture(diffuseMap, ex_TexCoords);
-	vec4 diffuse = lightIntensity * diffuseSample * ex_Color;
+	vec4 diffuse = lightIntensity * ex_Color;
+	if (useDiffseTexture)
+	{
+		vec4 diffuseSample = texture(diffuseMap, ex_TexCoord);
+		diffuse *= diffuseSample;
+	}
 	
-	vec4 specularSample = texture(specularMap, ex_TexCoords);
 	float specularStrength = 0.5f;
 	float shininess = 32;
 	
@@ -37,16 +56,21 @@ void main()
 	vec3 reflectDir = reflect(-normalize(lightDir), normal);
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
 	
-	vec4 specular = specularStrength * specularSample * spec * specularColor;
+	vec4 specular = specularStrength * spec * specularColor;
+	if (useSpecularTexture)
+	{
+		vec4 specularSample = texture(specularMap, ex_TexCoord);
+		specular *= specularSample;
+	}
+
+	fragmentColor = ambientColor + diffuse + specular;
 	
 	// visualize specular:
 	//fragmentColor = specular; return;
-	
-	fragmentColor = ambientColor + diffuse + specular;
-	
-	// no lighting:
-	//fragmentColor = ex_Color;
 
 	// visualize tex coords:
-	//fragmentColor = vec4(ex_TexCoord.xy, 0, 1);
+	//fragmentColor = vec4(ex_TexCoord.xy, 0, 1); return;
+	
+	// no lighting:
+	//fragmentColor = ex_Color; return;
 }

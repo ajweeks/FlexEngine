@@ -93,24 +93,19 @@ VulkanRenderer::~VulkanRenderer()
 	glfwTerminate();
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData)
+glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 {
 	size_t renderID = m_RenderObjects.size();
 	RenderObject* renderObject = new RenderObject(m_Device);
 	m_RenderObjects.push_back(renderObject);
 
-	renderObject->vertexBufferData = vertexBufferData;
-
-	return renderID;
-}
-
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData, std::vector<glm::uint>* indices)
-{
-	glm::uint renderID = Initialize(gameContext, vertexBufferData);
+	renderObject->vertexBufferData = createInfo->vertexBufferData;
 	
-	RenderObject* renderObject = GetRenderObject(renderID);
-	renderObject->indices = indices;
-	renderObject->indexed = true;
+	if (createInfo->indices != nullptr)
+	{
+		renderObject->indices = createInfo->indices;
+		renderObject->indexed = true;
+	}
 
 	return renderID;
 }

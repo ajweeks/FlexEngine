@@ -19,7 +19,7 @@ private:
 	GLWindowWrapper& operator=(const GLWindowWrapper&) = delete;
 };
 
-void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
+void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar *message, const void *userParam);
 
 #endif // COMPILE_OPEN_GL

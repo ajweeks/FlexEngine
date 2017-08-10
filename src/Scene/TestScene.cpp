@@ -26,15 +26,15 @@ void TestScene::Initialize(const GameContext& gameContext)
 	m_Teapot->SetTransform(glm::vec3(20.0f, 5.0f, 0.0f));
 	AddChild(m_Teapot);
 	
-	m_Scene = new MeshPrefab();
-	m_Scene->LoadFromFile(gameContext, "resources/models/scene_02.fbx");
-	m_Scene->SetTransform(glm::vec3(0.0f, -3.35f, 0.0f));
-	AddChild(m_Scene);
-
-	m_Landscape = new MeshPrefab();
-	m_Landscape->LoadFromFile(gameContext, "resources/models/landscape_01.fbx");
-	m_Landscape->SetTransform(glm::vec3(0.0f, -41.0f, 500.0f));
-	AddChild(m_Landscape);
+	//m_Scene = new MeshPrefab();
+	//m_Scene->LoadFromFile(gameContext, "resources/models/scene_02.fbx");
+	//m_Scene->SetTransform(glm::vec3(0.0f, -3.35f, 0.0f));
+	//AddChild(m_Scene);
+	//
+	//m_Landscape = new MeshPrefab();
+	//m_Landscape->LoadFromFile(gameContext, "resources/models/landscape_01.fbx");
+	//m_Landscape->SetTransform(glm::vec3(0.0f, -41.0f, 500.0f));
+	//AddChild(m_Landscape);
 
 	//m_UVSphere.SetIterationCount(2);
 	//m_UVSphere = new MeshPrefab();

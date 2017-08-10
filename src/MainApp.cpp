@@ -63,7 +63,6 @@ void MainApp::Initialize()
 	m_SceneManager = new SceneManager();
 	TestScene* pDefaultScene = new TestScene(m_GameContext);
 	m_SceneManager->AddScene(pDefaultScene, m_GameContext);
-	pDefaultScene->Initialize(m_GameContext);
 
 	m_DefaultCamera = new FreeCamera(m_GameContext);
 	m_DefaultCamera->SetPosition(vec3(0.0f, 5.0f, -15.0f));

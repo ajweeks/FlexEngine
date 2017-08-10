@@ -16,10 +16,14 @@ using namespace glm;
 
 GLRenderer::GLRenderer(GameContext& gameContext)
 {
+	CheckGLErrorMessages();
+
 	gameContext.program = ShaderUtils::LoadShaders(
 		"resources/shaders/GLSL/simple.vert", 
 		"resources/shaders/GLSL/simple.frag");
 	m_Program = gameContext.program;
+
+	CheckGLErrorMessages();
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -29,70 +33,71 @@ GLRenderer::GLRenderer(GameContext& gameContext)
 	glFrontFace(GL_CCW);
 	
 	glUseProgram(gameContext.program);
+	CheckGLErrorMessages();
 }
 
 GLRenderer::~GLRenderer()
 {
+	CheckGLErrorMessages();
+
 	auto iter = m_RenderObjects.begin();
 	while (iter != m_RenderObjects.end())
 	{
 		iter = Destroy(iter);
+		CheckGLErrorMessages();
 	}
 	m_RenderObjects.clear();
+	CheckGLErrorMessages();
 
 	glDeleteProgram(m_Program);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-
+	CheckGLErrorMessages();
+	
 	glfwTerminate();
 }
 
-uint GLRenderer::Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData)
+glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 {
 	const uint renderID = m_RenderObjects.size();
 
 	RenderObject* renderObject = new RenderObject();
 	renderObject->renderID = renderID;
+	m_RenderObjects.push_back(renderObject);
 
 	glGenVertexArrays(1, &renderObject->VAO);
 	glBindVertexArray(renderObject->VAO);
+	CheckGLErrorMessages();
 
 	glGenBuffers(1, &renderObject->VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertexBufferData->BufferSize, vertexBufferData->pDataStart, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, createInfo->vertexBufferData->BufferSize, createInfo->vertexBufferData->pDataStart, GL_STATIC_DRAW);
+	CheckGLErrorMessages();
 
-	renderObject->vertexBufferData = vertexBufferData;
-
-	uint posAttrib = glGetAttribLocation(gameContext.program, "in_Position");
-	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, false, renderObject->vertexBufferData->VertexStride, 0);
+	renderObject->vertexBufferData = createInfo->vertexBufferData;
 
 	renderObject->model = glGetUniformLocation(gameContext.program, "in_Model");
 	renderObject->view = glGetUniformLocation(gameContext.program, "in_View");
 	renderObject->projection = glGetUniformLocation(gameContext.program, "in_Projection");
 	renderObject->modelInvTranspose = glGetUniformLocation(gameContext.program, "in_ModelInvTranspose");
 	
-	m_RenderObjects.push_back(renderObject);
+	renderObject->diffuseMapPath = createInfo->diffuseMapPath;
+	renderObject->specularMapPath = createInfo->specularMapPath;
+	renderObject->normalMapPath = createInfo->normalMapPath;
 
-	glBindVertexArray(0);
+	if (!createInfo->diffuseMapPath.empty()) GenerateGLTexture(renderObject->VAO, renderObject->diffuseMapID, createInfo->diffuseMapPath);
+	if (!createInfo->specularMapPath.empty()) GenerateGLTexture(renderObject->VAO, renderObject->specularMapID, createInfo->specularMapPath);
+	if (!createInfo->normalMapPath.empty()) GenerateGLTexture(renderObject->VAO, renderObject->normalMapID, createInfo->normalMapPath);
 
-	return renderID;
-}
+	if (createInfo->indices != nullptr)
+	{
+		renderObject->indices = createInfo->indices;
+		renderObject->indexed = true;
 
-uint GLRenderer::Initialize(const GameContext& gameContext,  VertexBufferData* vertexBufferData, std::vector<uint>* indices)
-{
-	const uint renderID = Initialize(gameContext, vertexBufferData);
+		glGenBuffers(1, &renderObject->IBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(createInfo->indices->at(0)) * createInfo->indices->size(), createInfo->indices->data(), GL_STATIC_DRAW);
+	}
 	
-	RenderObject* renderObject = GetRenderObject(renderID);
-
-	renderObject->indices = indices;
-	renderObject->indexed = true;
-
-	glGenBuffers(1, &renderObject->IBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices->at(0)) * indices->size(), indices->data(), GL_STATIC_DRAW);
+	glBindVertexArray(0);
 
 	return renderID;
 }
@@ -116,6 +121,7 @@ void GLRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
 void GLRenderer::SetClearColor(float r, float g, float b)
 {
 	glClearColor(r, g, b, 1.0f);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::PostInitialize()
@@ -125,18 +131,29 @@ void GLRenderer::PostInitialize()
 	specularColor = glGetUniformLocation(m_Program, "specularColor");
 	camPos = glGetUniformLocation(m_Program, "camPos");
 
-	GenerateGLTexture(diffuseMapID, "resources/textures/brick_d.png");
-	GenerateGLTexture(specularMapID, "resources/textures/brick_s.png");
-	GenerateGLTexture(normalMapID, "resources/textures/brick_n.png");
-
 	glm::uint diffuseMapLocation = glGetUniformLocation(m_Program, "diffuseMap");
 	glUniform1i(diffuseMapLocation, 0);
+	CheckGLErrorMessages();
 
 	glm::uint specularMapLocation = glGetUniformLocation(m_Program, "specularMap");
 	glUniform1i(specularMapLocation, 1);
+	CheckGLErrorMessages();
 
 	glm::uint normalMapLocation = glGetUniformLocation(m_Program, "normalMap");
 	glUniform1i(normalMapLocation, 2);
+	CheckGLErrorMessages();
+
+	glm::uint useDiffuseTextureLocation = glGetUniformLocation(m_Program, "useDiffseTexture");
+	glUniform1i(useDiffuseTextureLocation, 1);
+	CheckGLErrorMessages();
+
+	glm::uint useNormalTextureLocation = glGetUniformLocation(m_Program, "useNormalTexture");
+	glUniform1i(useNormalTextureLocation, 1);
+	CheckGLErrorMessages();
+
+	glm::uint useSpecularTextureLocation = glGetUniformLocation(m_Program, "useSpecularTexture");
+	glUniform1i(useSpecularTextureLocation, 1);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::Update(const GameContext& gameContext)
@@ -145,24 +162,28 @@ void GLRenderer::Update(const GameContext& gameContext)
 		m_SceneInfo.m_LightDir.x,
 		m_SceneInfo.m_LightDir.y,
 		m_SceneInfo.m_LightDir.z);
+	CheckGLErrorMessages();
 
 	glUniform4f(ambientColor,
 		m_SceneInfo.m_AmbientColor.r,
 		m_SceneInfo.m_AmbientColor.g,
 		m_SceneInfo.m_AmbientColor.b,
 		m_SceneInfo.m_AmbientColor.a);
+	CheckGLErrorMessages();
 
 	glUniform4f(specularColor,
 		m_SceneInfo.m_SpecularColor.r,
 		m_SceneInfo.m_SpecularColor.g,
 		m_SceneInfo.m_SpecularColor.b,
 		m_SceneInfo.m_SpecularColor.a);
+	CheckGLErrorMessages();
 
 	glm::vec3 cameraPos = gameContext.camera->GetPosition();
 	glUniform3f(camPos, 
 		cameraPos.x, 
 		cameraPos.y, 
 		cameraPos.z);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
@@ -171,13 +192,12 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	RenderObject* renderObject = GetRenderObject(renderID);
 
-	GLuint texures[] = { diffuseMapID, specularMapID, normalMapID };
-
-	// TODO: Bind object's own texture
+	std::vector<glm::uint> texures;
+	renderObject->GetTextures(texures);
 	for (int i = 0; i < 3; ++i)
 	{
-		GLuint texture = texures[i];
 		glActiveTexture(GL_TEXTURE0 + i);
+		GLuint texture = texures[i];
 		glBindTexture(GL_TEXTURE_2D, texures[i]);
 	}
 
@@ -200,15 +220,18 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 size_t GLRenderer::ReloadShaders(const GameContext& gameContext)
 {
 	glDeleteProgram(gameContext.program);
+	CheckGLErrorMessages();
 	m_Program = ShaderUtils::LoadShaders(
 		"resources/shaders/GLSL/simple.vert",
 		"resources/shaders/GLSL/simple.frag");
+	CheckGLErrorMessages();
 	return m_Program;
 }
 
 void GLRenderer::OnWindowSize(int width, int height)
 {
 	glViewport(0, 0, width, height);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::SetVSyncEnabled(bool enableVSync)
@@ -223,6 +246,7 @@ void GLRenderer::Clear(int flags, const GameContext& gameContext)
 	if ((int)flags & (int)ClearFlag::COLOR) mask |= GL_COLOR_BUFFER_BIT;
 	if ((int)flags & (int)ClearFlag::DEPTH) mask |= GL_DEPTH_BUFFER_BIT;
 	glClear(mask);
+	CheckGLErrorMessages();
 }
 
 void GLRenderer::SwapBuffers(const GameContext& gameContext)
@@ -264,11 +288,20 @@ void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 	glBindVertexArray(renderObject->VAO);
+	CheckGLErrorMessages();
 
-	GLuint location = glGetAttribLocation(program, variableName.c_str());
+	GLint location = glGetAttribLocation(program, variableName.c_str());
+	if (location == -1)
+	{
+		Logger::LogWarning("Invalid shader variable name: " + variableName);
+		glBindVertexArray(0);
+		return;
+	}
 	glEnableVertexAttribArray(location);
+
 	GLenum glRenderType = TypeToGLType(renderType);
 	glVertexAttribPointer(location, size, glRenderType, normalized, stride, pointer);
+	CheckGLErrorMessages();
 
 	glBindVertexArray(0);
 }
@@ -362,4 +395,9 @@ GLRenderer::RenderObjectIter GLRenderer::Destroy(RenderObjectIter iter)
 	return newIter;
 }
 
+void GLRenderer::RenderObject::GetTextures(std::vector<glm::uint>& textures)
+{
+	textures = { diffuseMapID, specularMapID, normalMapID };
+}
 #endif // COMPILE_OPEN_GL
+

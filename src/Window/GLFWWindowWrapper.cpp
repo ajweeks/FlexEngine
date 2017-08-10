@@ -9,9 +9,115 @@
 #include "MainApp.h"
 #include "InputManager.h"
 
+GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
+	Window(title, size, gameContext)
+{
+	const bool moveConsoleToExtraMonitor = true;
+
+	if (moveConsoleToExtraMonitor)
+	{
+		int otherMonitorX = GetSystemMetrics(SM_XVIRTUALSCREEN);
+		int otherMonitorY = GetSystemMetrics(SM_YVIRTUALSCREEN);
+
+		// If another monitor is present (assumed to be to the left), move the console to it
+		if (otherMonitorX != 0)
+		{
+			int monitorWidth = GetSystemMetrics(SM_CXSCREEN);
+			int monitorHeight = GetSystemMetrics(SM_CYSCREEN);
+
+			int consoleWidth = (int)(monitorWidth);
+			int consoleHeight = (int)(monitorHeight);
+			int newX = otherMonitorX / 2;
+			int newY = 10;
+
+			HWND hWnd = GetConsoleWindow();
+			// Move once to get onto other monitor
+			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
+
+			consoleWidth = (int)(700);
+			consoleHeight = (int)(800);
+			newX = -(consoleWidth + 10);
+			newY = 10;
+
+			// Move again (which now should use the correctly DPI scaling)
+			// Yes, windows is *that* awful
+			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
+
+			// One more time and it does what it's supposed to do
+			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
+		}
+	}
+}
+
+GLFWWindowWrapper::~GLFWWindowWrapper()
+{
+	CheckGLErrorMessages();
+	if (m_Window)
+	{
+		// Not needed: (?)
+		//glfwDestroyWindow(m_Window);
+		CheckGLErrorMessages();
+		m_Window = nullptr;
+	}
+}
+
+float GLFWWindowWrapper::GetTime()
+{
+	return (float)glfwGetTime();
+}
+
+void GLFWWindowWrapper::PollEvents()
+{
+	glfwPollEvents();
+}
+
+void GLFWWindowWrapper::SetCursorMode(CursorMode mode)
+{
+	Window::SetCursorMode(mode);
+
+	int glfwCursorMode = 0;
+
+	switch (mode)
+	{
+	case Window::CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
+	case Window::CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
+	case Window::CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
+	default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((int)mode)); break;
+	}
+
+	glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+}
+
+void GLFWWindowWrapper::Update(const GameContext& gameContext)
+{
+	Window::Update(gameContext);
+
+	if (glfwWindowShouldClose(m_Window))
+	{
+		gameContext.mainApp->Stop();
+		return;
+	}
+}
+
+GLFWwindow* GLFWWindowWrapper::GetWindow() const
+{
+	return m_Window;
+}
+
+void GLFWWindowWrapper::SetWindowTitle(const std::string& title)
+{
+	glfwSetWindowTitle(m_Window, title.c_str());
+}
+
+void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
+{
+	glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
+}
+
+
 void GLFWErrorCallback(int error, const char* description)
 {
-	Logger::LogError("GL Error: " + std::string(description));
+	Logger::LogError("GLFW Error: " + std::string(description));
 }
 
 InputManager::Action GLFWActionToInputManagerAction(int glfwAction)
@@ -236,71 +342,5 @@ void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height)
 	window->WindowSizeCallback(width, height);
 }
 
-GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
-	Window(title, size, gameContext)
-{
-}
-
-GLFWWindowWrapper::~GLFWWindowWrapper()
-{
-	if (m_Window)
-	{
-		glfwDestroyWindow(m_Window);
-		m_Window = nullptr;
-	}
-}
-
-float GLFWWindowWrapper::GetTime()
-{
-	return (float)glfwGetTime();
-}
-
-void GLFWWindowWrapper::PollEvents()
-{
-	glfwPollEvents();
-}
-
-void GLFWWindowWrapper::SetCursorMode(CursorMode mode)
-{
-	Window::SetCursorMode(mode);
-
-	int glfwCursorMode = 0;
-
-	switch (mode)
-	{
-	case Window::CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
-	case Window::CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
-	case Window::CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-	default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((int)mode)); break;
-	}
-
-	glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
-}
-
-void GLFWWindowWrapper::Update(const GameContext& gameContext)
-{
-	Window::Update(gameContext);
-
-	if (glfwWindowShouldClose(m_Window))
-	{
-		gameContext.mainApp->Stop();
-		return;
-	}
-}
-
-GLFWwindow* GLFWWindowWrapper::GetWindow() const
-{
-	return m_Window;
-}
-
-void GLFWWindowWrapper::SetWindowTitle(const std::string& title)
-{
-	glfwSetWindowTitle(m_Window, title.c_str());
-}
-
-void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
-{
-	glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
-}
 
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN

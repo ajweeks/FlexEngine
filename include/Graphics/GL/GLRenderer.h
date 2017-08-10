@@ -11,9 +11,7 @@ public:
 	GLRenderer(GameContext& gameContext);
 	virtual ~GLRenderer();
 
-	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData,
-		std::vector<glm::uint>* indices) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 
 	virtual void PostInitialize() override;
 
@@ -48,6 +46,8 @@ private:
 
 	struct RenderObject
 	{
+		void GetTextures(std::vector<glm::uint>& textures);
+
 		glm::uint renderID;
 
 		glm::uint VAO;
@@ -67,6 +67,13 @@ private:
 		glm::uint view;
 		glm::uint projection;
 		glm::uint modelInvTranspose;
+
+		std::string diffuseMapPath;
+		glm::uint diffuseMapID;
+		std::string specularMapPath;
+		glm::uint specularMapID;
+		std::string normalMapPath;
+		glm::uint normalMapID;
 	};
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
@@ -85,9 +92,6 @@ private:
 	glm::uint ambientColor;
 	glm::uint specularColor;
 	glm::uint camPos;
-	glm::uint diffuseMapID;
-	glm::uint specularMapID;
-	glm::uint normalMapID;
 
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;

@@ -21,9 +21,7 @@ public:
 	
 	virtual void PostInitialize() override;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData) override;
-	virtual glm::uint Initialize(const GameContext& gameContext, VertexBufferData* vertexBufferData,
-		std::vector<glm::uint>* indices) override;
+	virtual glm::uint Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 	
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
