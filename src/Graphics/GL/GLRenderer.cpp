@@ -153,18 +153,18 @@ void GLRenderer::PostInitialize()
 	m_CamPos = glGetUniformLocation(program0, "camPos");
 	CheckGLErrorMessages();
 
-	//int diffuseMapLocation = glGetUniformLocation(program0, "diffuseMap");
-	//glUniform1i(diffuseMapLocation, 0);
-	//CheckGLErrorMessages();
-	//
-	//int specularMapLocation = glGetUniformLocation(program0, "specularMap");
-	//glUniform1i(specularMapLocation, 1);
-	//CheckGLErrorMessages();
-	//
-	//int normalMapLocation = glGetUniformLocation(program0, "normalMap");
-	//glUniform1i(normalMapLocation, 2);
-	//CheckGLErrorMessages();
+	int diffuseMapLocation = glGetUniformLocation(program0, "diffuseMap");
+	glUniform1i(diffuseMapLocation, 0);
+	CheckGLErrorMessages();
+	
+	int normalMapLocation = glGetUniformLocation(program0, "normalMap");
+	glUniform1i(normalMapLocation, 1);
+	CheckGLErrorMessages();
 
+	int specularMapLocation = glGetUniformLocation(program0, "specularMap");
+	glUniform1i(specularMapLocation, 2);
+	CheckGLErrorMessages();
+	
 	int useDiffuseTextureLocation = glGetUniformLocation(program0, "useDiffuseTexture");
 	if (useDiffuseTextureLocation == -1)
 	{
