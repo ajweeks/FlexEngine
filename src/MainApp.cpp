@@ -201,7 +201,7 @@ void MainApp::UpdateAndRender()
 			DestroyWindowAndRenderer();
 			InitializeWindowAndRenderer();
 
-			//m_GameContext.program = m_GameContext.renderer->ReloadShaders(m_GameContext);
+			//m_GameContext.renderer->ReloadShaders(m_GameContext);
 		
 			TestScene* pDefaultScene = new TestScene(m_GameContext);
 			m_SceneManager->AddScene(pDefaultScene, m_GameContext);

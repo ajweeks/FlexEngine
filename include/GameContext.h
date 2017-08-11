@@ -16,7 +16,6 @@ struct GameContext
 	Renderer* renderer;
 	MainApp* mainApp;
 
-	glm::uint program;
 	float elapsedTime;
 	float deltaTime;
 };

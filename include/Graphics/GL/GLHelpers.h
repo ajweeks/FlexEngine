@@ -11,8 +11,11 @@
 
 void _CheckGLErrorMessages(const char *file, int line);
 
+#if _DEBUG
 #define CheckGLErrorMessages() _CheckGLErrorMessages(__FILE__,__LINE__)
-
+#else
+#define CheckGLErrorMessages() 
+#endif
 GLFWimage LoadGLFWimage(const std::string filePath);
 void DestroyGLFWimage(const GLFWimage& image);
 

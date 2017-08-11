@@ -38,7 +38,7 @@ private:
 	// Calculate stride using m_HasElement
 	glm::uint CalculateVertexBufferStride() const;
 	void CreateVertexBuffer(VertexBufferData* vertexBufferData);
-	void DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData);
+	void DescribeShaderVariables(const GameContext& gameContext, glm::uint program, VertexBufferData* vertexBufferData);
 
 	Transform m_Transform;
 	glm::uint m_RenderID;

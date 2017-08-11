@@ -13,8 +13,10 @@ public:
 		FRAGMENT, VERTEX
 	};
 
-	static size_t LoadShader(std::string filePath, ShaderType type);
-	static size_t LoadShaders(std::string vertShaderFilePath, std::string fragShaderFilePath);
+	static bool LoadShaders(glm::uint program, 
+		std::string vertexShaderFilePath, glm::uint& vertexShaderID,
+		std::string fragmentShaderFilePath, glm::uint& fragmentShaderID);
+	static void LinkProgram(glm::uint program);
 
 private:
 	ShaderUtils(const ShaderUtils&) = delete;

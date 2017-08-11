@@ -17,7 +17,7 @@ public:
 
 	virtual void Update(const GameContext& gameContext) override;
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
-	virtual size_t ReloadShaders(const GameContext& gameContext) override;
+	virtual void ReloadShaders(GameContext& gameContext) override;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
@@ -33,7 +33,8 @@ public:
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
 	virtual void SetUniform1f(glm::uint location, float val) override;
 
-	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, 
+	virtual glm::uint GetProgram(glm::uint renderID) override;
+	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
 	virtual void Destroy(glm::uint renderID) override;
@@ -63,10 +64,13 @@ private:
 		glm::uint indexBuffer;
 		std::vector<glm::uint>* indices = nullptr;
 
-		glm::uint model;
-		glm::uint view;
-		glm::uint projection;
-		glm::uint modelInvTranspose;
+		int model;
+		int view;
+		int projection;
+		int modelInvTranspose;
+		int MVP;
+
+		glm::uint shaderIndex;
 
 		std::string diffuseMapPath;
 		glm::uint diffuseMapID;
@@ -80,18 +84,28 @@ private:
 
 	RenderObject* GetRenderObject(int renderID);
 	RenderObjectIter Destroy(RenderObjectIter iter);
+	void UnloadShaders();
+	void LoadShaders();
 
 	// TODO: use sorted data type (map)
 	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;
-	glm::uint m_Program;
+
+	struct Shader
+	{
+		glm::uint program;
+		glm::uint vertexShader;
+		glm::uint fragmentShader;
+	};
+
+	std::vector<Shader> m_LoadedShaders;
 
 	// Scene info variable locations
-	glm::uint lightDir;
-	glm::uint ambientColor;
-	glm::uint specularColor;
-	glm::uint camPos;
+	int m_LightDir;
+	int m_AmbientColor;
+	int m_SpecularColor;
+	int m_CamPos;
 
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;

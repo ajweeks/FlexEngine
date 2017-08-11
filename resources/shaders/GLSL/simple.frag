@@ -9,14 +9,14 @@ uniform sampler2D diffuseMap;
 uniform sampler2D specularMap;
 uniform sampler2D normalMap;
 
+uniform bool useDiffuseTexture;
+uniform bool useNormalTexture;
+uniform bool useSpecularTexture;
+
 in vec3 ex_WorldPos;
 in vec4 ex_Color;
 in mat3 ex_TBN;
 in vec2 ex_TexCoord;
-
-uniform bool useNormalTexture;
-uniform bool useDiffseTexture;
-uniform bool useSpecularTexture;
 
 out vec4 fragmentColor;
 
@@ -36,14 +36,8 @@ void main()
 	float lightIntensity = max(dot(normal, normalize(lightDir)), 0.0);
 	lightIntensity = lightIntensity * 0.75 + 0.25;
 
-	// visualize diffuse lighting:
-	//fragmentColor = vec4(vec3(lightIntensity), 1); return;
-	
-	// visualize normals:
-	//fragmentColor = vec4(normal * 0.5 + 0.5, 1); return;
-	
 	vec4 diffuse = lightIntensity * ex_Color;
-	if (useDiffseTexture)
+	if (useDiffuseTexture)
 	{
 		vec4 diffuseSample = texture(diffuseMap, ex_TexCoord);
 		diffuse *= diffuseSample;
@@ -64,6 +58,12 @@ void main()
 	}
 
 	fragmentColor = ambientColor + diffuse + specular;
+	
+	// visualize diffuse lighting:
+	//fragmentColor = vec4(vec3(lightIntensity), 1); return;
+	
+	// visualize normals:
+	//fragmentColor = vec4(normal * 0.5 + 0.5, 1); return;
 	
 	// visualize specular:
 	//fragmentColor = specular; return;

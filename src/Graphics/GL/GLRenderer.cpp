@@ -11,6 +11,7 @@
 #include "ShaderUtils.h"
 
 #include <algorithm>
+#include <utility>
 
 using namespace glm;
 
@@ -18,21 +19,17 @@ GLRenderer::GLRenderer(GameContext& gameContext)
 {
 	CheckGLErrorMessages();
 
-	gameContext.program = ShaderUtils::LoadShaders(
-		"resources/shaders/GLSL/simple.vert", 
-		"resources/shaders/GLSL/simple.frag");
-	m_Program = gameContext.program;
+	LoadShaders();
 
 	CheckGLErrorMessages();
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	CheckGLErrorMessages();
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
-	
-	glUseProgram(gameContext.program);
 	CheckGLErrorMessages();
 }
 
@@ -49,9 +46,6 @@ GLRenderer::~GLRenderer()
 	m_RenderObjects.clear();
 	CheckGLErrorMessages();
 
-	glDeleteProgram(m_Program);
-	CheckGLErrorMessages();
-	
 	glfwTerminate();
 }
 
@@ -60,8 +54,9 @@ glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObj
 	const uint renderID = m_RenderObjects.size();
 
 	RenderObject* renderObject = new RenderObject();
-	renderObject->renderID = renderID;
 	m_RenderObjects.push_back(renderObject);
+	renderObject->renderID = renderID;
+	renderObject->shaderIndex = createInfo->shaderIndex;
 
 	glGenVertexArrays(1, &renderObject->VAO);
 	glBindVertexArray(renderObject->VAO);
@@ -74,11 +69,29 @@ glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObj
 
 	renderObject->vertexBufferData = createInfo->vertexBufferData;
 
-	renderObject->model = glGetUniformLocation(gameContext.program, "in_Model");
-	renderObject->view = glGetUniformLocation(gameContext.program, "in_View");
-	renderObject->projection = glGetUniformLocation(gameContext.program, "in_Projection");
-	renderObject->modelInvTranspose = glGetUniformLocation(gameContext.program, "in_ModelInvTranspose");
-	
+	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
+
+	// TODO: Make this more flexible
+	if (renderObject->shaderIndex == 0)
+	{
+		renderObject->model = glGetUniformLocation(shader->program, "in_Model");
+		if (renderObject->model == -1) Logger::LogError("in_Model was not found!");
+
+		renderObject->view = glGetUniformLocation(shader->program, "in_View");
+		if (renderObject->view == -1) Logger::LogError("in_View was not found!");
+
+		renderObject->projection = glGetUniformLocation(shader->program, "in_Projection");
+		if (renderObject->projection == -1) Logger::LogError("in_Projection was not found!");
+
+		renderObject->modelInvTranspose = glGetUniformLocation(shader->program, "in_ModelInvTranspose");
+		if (renderObject->modelInvTranspose == -1) Logger::LogError("in_ModelInvTranspose was not found!");
+	}
+	else if (renderObject->shaderIndex == 1)
+	{
+		renderObject->MVP = glGetUniformLocation(shader->program, "in_MVP");
+		if (renderObject->MVP == -1) Logger::LogError("in_MVP was not found!");
+	}
+
 	renderObject->diffuseMapPath = createInfo->diffuseMapPath;
 	renderObject->specularMapPath = createInfo->specularMapPath;
 	renderObject->normalMapPath = createInfo->normalMapPath;
@@ -98,6 +111,7 @@ glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObj
 	}
 	
 	glBindVertexArray(0);
+	CheckGLErrorMessages();
 
 	return renderID;
 }
@@ -126,52 +140,89 @@ void GLRenderer::SetClearColor(float r, float g, float b)
 
 void GLRenderer::PostInitialize()
 {
-	lightDir = glGetUniformLocation(m_Program, "lightDir");
-	ambientColor = glGetUniformLocation(m_Program, "ambientColor");
-	specularColor = glGetUniformLocation(m_Program, "specularColor");
-	camPos = glGetUniformLocation(m_Program, "camPos");
+	// TODO: Make this function not awful
+	glm::uint program0 = m_LoadedShaders[0].program;
+	glUseProgram(program0);
 
-	glm::uint diffuseMapLocation = glGetUniformLocation(m_Program, "diffuseMap");
-	glUniform1i(diffuseMapLocation, 0);
+	m_LightDir = glGetUniformLocation(program0, "lightDir");
+	CheckGLErrorMessages();
+	m_AmbientColor = glGetUniformLocation(program0, "ambientColor");
+	CheckGLErrorMessages();
+	m_SpecularColor = glGetUniformLocation(program0, "specularColor");
+	CheckGLErrorMessages();
+	m_CamPos = glGetUniformLocation(program0, "camPos");
 	CheckGLErrorMessages();
 
-	glm::uint specularMapLocation = glGetUniformLocation(m_Program, "specularMap");
-	glUniform1i(specularMapLocation, 1);
+	//int diffuseMapLocation = glGetUniformLocation(program0, "diffuseMap");
+	//glUniform1i(diffuseMapLocation, 0);
+	//CheckGLErrorMessages();
+	//
+	//int specularMapLocation = glGetUniformLocation(program0, "specularMap");
+	//glUniform1i(specularMapLocation, 1);
+	//CheckGLErrorMessages();
+	//
+	//int normalMapLocation = glGetUniformLocation(program0, "normalMap");
+	//glUniform1i(normalMapLocation, 2);
+	//CheckGLErrorMessages();
+
+	int useDiffuseTextureLocation = glGetUniformLocation(program0, "useDiffuseTexture");
+	if (useDiffuseTextureLocation == -1)
+	{
+		Logger::LogError("Couldn't find uniform \"useDiffuseTexture\" in shader!");
+	}
+	else
+	{
+		glUniform1i(useDiffuseTextureLocation, 1);
+	}
 	CheckGLErrorMessages();
 
-	glm::uint normalMapLocation = glGetUniformLocation(m_Program, "normalMap");
-	glUniform1i(normalMapLocation, 2);
+	int useNormalTextureLocation = glGetUniformLocation(program0, "useNormalTexture");
+	if (useNormalTextureLocation == -1)
+	{
+		Logger::LogError("Couldn't find uniform \"useNormalTexture\" in shader!");
+	}
+	else
+	{
+		glUniform1i(useNormalTextureLocation, 1);
+	}
 	CheckGLErrorMessages();
 
-	glm::uint useDiffuseTextureLocation = glGetUniformLocation(m_Program, "useDiffseTexture");
-	glUniform1i(useDiffuseTextureLocation, 1);
+	int useSpecularTextureLocation = glGetUniformLocation(program0, "useSpecularTexture");
+	if (useSpecularTextureLocation == -1)
+	{
+		Logger::LogError("Couldn't find uniform \"useSpecularTexture\" in shader!");
+	}
+	else
+	{
+		glUniform1i(useSpecularTextureLocation, 1);
+	}
 	CheckGLErrorMessages();
 
-	glm::uint useNormalTextureLocation = glGetUniformLocation(m_Program, "useNormalTexture");
-	glUniform1i(useNormalTextureLocation, 1);
-	CheckGLErrorMessages();
-
-	glm::uint useSpecularTextureLocation = glGetUniformLocation(m_Program, "useSpecularTexture");
-	glUniform1i(useSpecularTextureLocation, 1);
-	CheckGLErrorMessages();
+	glUseProgram(0);
 }
 
 void GLRenderer::Update(const GameContext& gameContext)
 {
-	glUniform3f(lightDir, 
+	CheckGLErrorMessages();
+
+	glm::uint program0 = m_LoadedShaders[0].program;
+	glUseProgram(program0);
+	CheckGLErrorMessages();
+
+	glUniform3f(m_LightDir, 
 		m_SceneInfo.m_LightDir.x,
 		m_SceneInfo.m_LightDir.y,
 		m_SceneInfo.m_LightDir.z);
 	CheckGLErrorMessages();
 
-	glUniform4f(ambientColor,
+	glUniform4f(m_AmbientColor,
 		m_SceneInfo.m_AmbientColor.r,
 		m_SceneInfo.m_AmbientColor.g,
 		m_SceneInfo.m_AmbientColor.b,
 		m_SceneInfo.m_AmbientColor.a);
 	CheckGLErrorMessages();
 
-	glUniform4f(specularColor,
+	glUniform4f(m_SpecularColor,
 		m_SceneInfo.m_SpecularColor.r,
 		m_SceneInfo.m_SpecularColor.g,
 		m_SceneInfo.m_SpecularColor.b,
@@ -179,11 +230,13 @@ void GLRenderer::Update(const GameContext& gameContext)
 	CheckGLErrorMessages();
 
 	glm::vec3 cameraPos = gameContext.camera->GetPosition();
-	glUniform3f(camPos, 
+	glUniform3f(m_CamPos,
 		cameraPos.x, 
 		cameraPos.y, 
 		cameraPos.z);
 	CheckGLErrorMessages();
+
+	glUseProgram(0);
 }
 
 void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
@@ -192,6 +245,11 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 
 	RenderObject* renderObject = GetRenderObject(renderID);
 
+	// TODO: Batch draw calls
+	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
+	glUseProgram(shader->program);
+	CheckGLErrorMessages();
+
 	std::vector<glm::uint> texures;
 	renderObject->GetTextures(texures);
 	for (int i = 0; i < 3; ++i)
@@ -199,10 +257,12 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 		glActiveTexture(GL_TEXTURE0 + i);
 		GLuint texture = texures[i];
 		glBindTexture(GL_TEXTURE_2D, texures[i]);
+		CheckGLErrorMessages();
 	}
 
 	glBindVertexArray(renderObject->VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+	CheckGLErrorMessages();
 
 	if (renderObject->indexed)
 	{
@@ -212,20 +272,55 @@ void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
 	{
 		glDrawArrays(renderObject->topology, 0, renderObject->vertexBufferData->BufferSize);
 	}
+	CheckGLErrorMessages();
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	CheckGLErrorMessages();
+
+	glUseProgram(0);
 }
 
-size_t GLRenderer::ReloadShaders(const GameContext& gameContext)
+void GLRenderer::ReloadShaders(GameContext& gameContext)
 {
-	glDeleteProgram(gameContext.program);
+	UnloadShaders();
+	LoadShaders();
+
 	CheckGLErrorMessages();
-	m_Program = ShaderUtils::LoadShaders(
-		"resources/shaders/GLSL/simple.vert",
-		"resources/shaders/GLSL/simple.frag");
-	CheckGLErrorMessages();
-	return m_Program;
+}
+
+void GLRenderer::UnloadShaders()
+{
+	const size_t shaderCount = m_LoadedShaders.size();
+	for (size_t i = 0; i < shaderCount; ++i)
+	{
+		glDeleteProgram(m_LoadedShaders[i].program);
+		CheckGLErrorMessages();
+	}
+	m_LoadedShaders.clear();
+}
+
+void GLRenderer::LoadShaders()
+{
+	std::vector<std::pair<std::string, std::string>> shaderFilePaths = {
+		{ "resources/shaders/GLSL/simple.vert", "resources/shaders/GLSL/simple.frag" },
+		{ "resources/shaders/GLSL/color.vert", "resources/shaders/GLSL/color.frag" },
+	};
+
+	const size_t shaderCount = shaderFilePaths.size();
+	m_LoadedShaders.resize(shaderCount);
+
+	for (size_t i = 0; i < shaderCount; ++i)
+	{
+		m_LoadedShaders[i].program = glCreateProgram();
+		// Load shaders located at shaderFilePaths[i] and store ID into m_LoadedShaders[i]
+		ShaderUtils::LoadShaders(
+			m_LoadedShaders[i].program,
+			shaderFilePaths[i].first, m_LoadedShaders[i].vertexShader,
+			shaderFilePaths[i].second, m_LoadedShaders[i].fragmentShader);
+
+		ShaderUtils::LinkProgram(m_LoadedShaders[i].program);
+	}
 }
 
 void GLRenderer::OnWindowSize(int width, int height)
@@ -257,32 +352,61 @@ void GLRenderer::SwapBuffers(const GameContext& gameContext)
 void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint renderID, const glm::mat4& model)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
+	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
+	glUseProgram(shader->program);
 
-	glUniformMatrix4fv(renderObject->model, 1, false, &model[0][0]);
+	if (renderObject->shaderIndex == 0)
+	{
+		glm::mat4 modelInv = glm::inverse(model);
+		glm::mat3 modelInv3 = glm::mat3(modelInv);
+		glUniformMatrix4fv(renderObject->model, 1, false, &model[0][0]);
+		CheckGLErrorMessages();
 
-	glm::mat4 modelInv = glm::inverse(model);
-	glm::mat3 modelInv3 = glm::mat3(modelInv);
-	// OpenGL will transpose for us if we set the third param to true
-	glUniformMatrix3fv(renderObject->modelInvTranspose, 1, true, &modelInv3[0][0]);
+		// OpenGL will transpose for us if we set the third param to true
+		glUniformMatrix3fv(renderObject->modelInvTranspose, 1, true, &modelInv3[0][0]);
+		CheckGLErrorMessages();
 
-	glm::mat4 view = gameContext.camera->GetView();
-	glUniformMatrix4fv(renderObject->view, 1, false, &view[0][0]);
-	
-	glm::mat4 projection = gameContext.camera->GetProjection();
-	glUniformMatrix4fv(renderObject->projection, 1, false, &projection[0][0]);
+		glm::mat4 view = gameContext.camera->GetView();
+		glUniformMatrix4fv(renderObject->view, 1, false, &view[0][0]);
+		CheckGLErrorMessages();
+
+		glm::mat4 projection = gameContext.camera->GetProjection();
+		glUniformMatrix4fv(renderObject->projection, 1, false, &projection[0][0]);
+		CheckGLErrorMessages();
+	}
+	else if (renderObject->shaderIndex == 1)
+	{
+		glm::mat4 proj = gameContext.camera->GetProjection();
+		glm::mat4 view = gameContext.camera->GetView();
+		glm::mat4 MVP = proj * view * model;
+		glUniformMatrix4fv(renderObject->MVP, 1, false, &MVP[0][0]);
+		CheckGLErrorMessages();
+	}
+
+	glUseProgram(0);
 }
 
 int GLRenderer::GetShaderUniformLocation(uint program, const std::string uniformName)
 {
-	return glGetUniformLocation(program, uniformName.c_str());
+	int uniformLocation = glGetUniformLocation(program, uniformName.c_str());
+	CheckGLErrorMessages();
+	return uniformLocation;
 }
 
 void GLRenderer::SetUniform1f(uint location, float val)
 {
 	glUniform1f(location, val);
+	CheckGLErrorMessages();
 }
 
-void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::string& variableName, int size, 
+glm::uint GLRenderer::GetProgram(glm::uint renderID)
+{
+	RenderObject* renderObject = GetRenderObject(renderID);
+	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
+	return shader->program;
+}
+
+void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::string& variableName, int size,
 	Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);

@@ -145,10 +145,9 @@ void VulkanRenderer::Draw(const GameContext& gameContext, glm::uint renderID)
 	UNREFERENCED_PARAMETER(renderID);
 }
 
-size_t VulkanRenderer::ReloadShaders(const GameContext& gameContext)
+void VulkanRenderer::ReloadShaders(GameContext& gameContext)
 {
 	// TODO: Implement
-	return gameContext.program;
 }
 
 void VulkanRenderer::OnWindowSize(int width, int height)
@@ -198,6 +197,12 @@ void VulkanRenderer::SetUniform1f(glm::uint location, float val)
 	// TODO: Implement
 	UNREFERENCED_PARAMETER(location);
 	UNREFERENCED_PARAMETER(val);
+}
+
+glm::uint VulkanRenderer::GetProgram(glm::uint renderID)
+{
+	// TODO: Implement
+	return 0;
 }
 
 void VulkanRenderer::DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)

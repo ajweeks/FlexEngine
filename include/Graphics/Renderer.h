@@ -25,6 +25,8 @@ public:
 		std::string diffuseMapPath;
 		std::string specularMapPath;
 		std::string normalMapPath;
+
+		glm::uint shaderIndex;
 	};
 
 	enum class VertexType : glm::uint
@@ -89,7 +91,7 @@ public:
 
 	virtual void Update(const GameContext& gameContext) = 0;
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;
-	virtual size_t ReloadShaders(const GameContext& gameContext) = 0;
+	virtual void ReloadShaders(GameContext& gameContext) = 0;
 
 	virtual void OnWindowSize(int width, int height) = 0;
 
@@ -102,6 +104,7 @@ public:
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) = 0;
 	virtual void SetUniform1f(glm::uint location, float val) = 0;
 
+	virtual glm::uint GetProgram(glm::uint renderID) = 0;
 	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
 		int stride, void* pointer) = 0;
 

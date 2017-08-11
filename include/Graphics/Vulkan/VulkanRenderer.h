@@ -28,7 +28,7 @@ public:
 
 	virtual void Update(const GameContext& gameContext) override;
 	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
-	virtual size_t ReloadShaders(const GameContext& gameContext) override;
+	virtual void ReloadShaders(GameContext& gameContext) override;
 
 	virtual void OnWindowSize(int width, int height) override;
 
@@ -41,6 +41,7 @@ public:
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
 	virtual void SetUniform1f(glm::uint location, float val) override;
 
+	virtual glm::uint GetProgram(glm::uint renderID) override;
 	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
