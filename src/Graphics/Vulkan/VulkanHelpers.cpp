@@ -127,3 +127,17 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
 		func(instance, callback, pAllocator);
 	}
 }
+
+VulkanTexture::VulkanTexture(const VDeleter<VkDevice>& device) :
+	Image(device, vkDestroyImage),
+	ImageMemory(device, vkFreeMemory),
+	ImageView(device, vkDestroyImageView),
+	Sampler(device, vkDestroySampler)
+{
+}
+
+RenderObject::RenderObject(const VDeleter<VkDevice>& device) :
+	pipelineLayout(device, vkDestroyPipelineLayout),
+	graphicsPipeline(device, vkDestroyPipeline)
+{
+}

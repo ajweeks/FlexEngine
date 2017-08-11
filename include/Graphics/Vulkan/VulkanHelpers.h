@@ -20,6 +20,34 @@ std::string VulkanErrorString(VkResult errorCode);
 
 struct VertexBufferData;
 
+struct RenderObject
+{
+	RenderObject(const VDeleter<VkDevice>& device);
+
+	VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	glm::uint renderID;
+
+	glm::uint VAO;
+	glm::uint VBO;
+	glm::uint IBO;
+
+	VertexBufferData* vertexBufferData = nullptr;
+	glm::uint vertexOffset = 0;
+
+	bool indexed = false;
+	std::vector<glm::uint>* indices = nullptr;
+	glm::uint indexOffset = 0;
+
+	std::string fragShaderFilePath;
+	std::string vertShaderFilePath;
+
+	VDeleter<VkPipelineLayout> pipelineLayout; // { m_Device, vkDestroyPipelineLayout };
+	VDeleter<VkPipeline> graphicsPipeline; // { m_Device, vkDestroyPipeline };
+};
+
+typedef std::vector<RenderObject*>::iterator RenderObjectIter;
+
 struct QueueFamilyIndices
 {
 	int graphicsFamily = -1;
@@ -76,6 +104,17 @@ struct UniformBufferObjectDynamic
 	constexpr static size_t size = sizeof(Data);
 	Data* data;
 };
+
+struct VulkanTexture
+{
+	VulkanTexture(const VDeleter<VkDevice>& device);
+
+	VDeleter<VkImage> Image;
+	VDeleter<VkDeviceMemory> ImageMemory;
+	VDeleter<VkImageView> ImageView;
+	VDeleter<VkSampler> Sampler;
+};
+
 
 VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 	const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);

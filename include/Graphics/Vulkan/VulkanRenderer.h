@@ -16,8 +16,6 @@ class Window;
 class VulkanRenderer : public Renderer
 {
 public:
-	struct VulkanTexture;
-
 	VulkanRenderer(GameContext& gameContext);
 	virtual ~VulkanRenderer();
 	
@@ -121,38 +119,6 @@ private:
 
 	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 
-	struct RenderObject
-	{
-		RenderObject(const VDeleter<VkDevice>& device) :
-			pipelineLayout(device, vkDestroyPipelineLayout),
-			graphicsPipeline(device, vkDestroyPipeline)
-		{
-		}
-
-		VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-		glm::uint renderID;
-
-		glm::uint VAO;
-		glm::uint VBO;
-		glm::uint IBO;
-
-		VertexBufferData* vertexBufferData = nullptr;
-		glm::uint vertexOffset = 0;
-
-		bool indexed = false;
-		std::vector<glm::uint>* indices = nullptr;
-		glm::uint indexOffset = 0;
-
-		std::string fragShaderFilePath;
-		std::string vertShaderFilePath;
-
-		VDeleter<VkPipelineLayout> pipelineLayout; // { m_Device, vkDestroyPipelineLayout };
-		VDeleter<VkPipeline> graphicsPipeline; // { m_Device, vkDestroyPipeline };
-	};
-
-	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
-
 	RenderObject* GetRenderObject(int renderID);
 	//RenderObjectIter Destroy(RenderObjectIter iter);
 
@@ -203,27 +169,9 @@ private:
 	VDeleter<VkCommandPool> m_CommandPool{ m_Device, vkDestroyCommandPool };
 	std::vector<VkCommandBuffer> m_CommandBuffers;
 
-	// TODO: Each object should have a vector of these types for every texture they use
-	struct VulkanTexture
-	{
-		VulkanTexture(const VDeleter<VkDevice>& device) :
-			Image(device, vkDestroyImage),
-			ImageMemory(device, vkFreeMemory),
-			ImageView(device, vkDestroyImageView),
-			Sampler(device, vkDestroySampler)
-		{
-		}
-
-		VDeleter<VkImage> Image; // { m_Device, vkDestroyImage };
-		VDeleter<VkDeviceMemory> ImageMemory; //{ m_Device, vkFreeMemory };
-		VDeleter<VkImageView> ImageView; //{ m_Device, vkDestroyImageView };
-		VDeleter<VkSampler> Sampler; //{ m_Device, vkDestroySampler };
-	};
-
 	VulkanTexture* m_DiffuseTexture = nullptr;
 	VulkanTexture* m_NormalTexture = nullptr;
 	VulkanTexture* m_SpecularTexture = nullptr;
-
 
 	VDeleter<VkImage> m_DepthImage{ m_Device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> m_DepthImageMemory{ m_Device, vkFreeMemory };

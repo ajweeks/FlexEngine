@@ -243,7 +243,7 @@ void VulkanRenderer::Destroy(glm::uint renderID)
 	}
 }
 
-VulkanRenderer::RenderObject* VulkanRenderer::GetRenderObject(int renderID)
+RenderObject* VulkanRenderer::GetRenderObject(int renderID)
 {
 	return m_RenderObjects[renderID];
 }
