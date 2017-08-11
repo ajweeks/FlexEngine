@@ -51,12 +51,10 @@ GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameCon
 
 GLFWWindowWrapper::~GLFWWindowWrapper()
 {
-	CheckGLErrorMessages();
 	if (m_Window)
 	{
 		// Not needed: (?)
 		//glfwDestroyWindow(m_Window);
-		CheckGLErrorMessages();
 		m_Window = nullptr;
 	}
 }

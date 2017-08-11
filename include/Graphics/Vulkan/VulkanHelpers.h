@@ -60,6 +60,9 @@ struct UniformBufferObjectData
 	glm::vec4 lightDir;
 	glm::vec4 ambientColor;
 	glm::vec4 specularColor;
+	glm::int32 useDiffuseTexture;
+	glm::int32 useNormalTexture;
+	glm::int32 useSpecularTexture;
 };
 
 struct UniformBufferObjectDynamic

@@ -17,9 +17,9 @@ TestScene::~TestScene()
 
 void TestScene::Initialize(const GameContext& gameContext)
 {
-	m_Grid = new MeshPrefab();
-	m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-	AddChild(m_Grid);
+	//m_Grid = new MeshPrefab();
+	//m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+	//AddChild(m_Grid);
 
 	m_Teapot = new MeshPrefab();
 	m_Teapot->LoadFromFile(gameContext, "resources/models/teapot.fbx");
@@ -107,7 +107,6 @@ void TestScene::Initialize(const GameContext& gameContext)
 	m_TransformManipulatorPosition = new MeshPrefab();
 	m_TransformManipulatorPosition->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes.fbx");
 	AddChild(m_TransformManipulatorPosition);
-
 
 	Renderer::SceneInfo& sceneInfo = gameContext.renderer->GetSceneInfo();
 	sceneInfo.m_AmbientColor = glm::vec4(0.02f, 0.03f, 0.025f, 1.0f);

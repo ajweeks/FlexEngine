@@ -54,9 +54,17 @@ void VulkanRenderer::PostInitialize()
 	}
 
 	// TODO: Call following functions for every object which has a unique texture
-	CreateTextureImage("resources/textures/work.jpg");
-	CreateTextureImageView();
-	CreateTextureSampler();
+	CreateTextureImage("resources/textures/brick_d.png", &m_DiffuseTexture);
+	CreateTextureImageView(m_DiffuseTexture);
+	CreateTextureSampler(m_DiffuseTexture);
+
+	CreateTextureImage("resources/textures/brick_n.png", &m_NormalTexture);
+	CreateTextureImageView(m_NormalTexture);
+	CreateTextureSampler(m_NormalTexture);
+
+	CreateTextureImage("resources/textures/brick_s.png", &m_SpecularTexture);
+	CreateTextureImageView(m_SpecularTexture);
+	CreateTextureSampler(m_SpecularTexture);
 
 	CreateVertexBuffer();
 	CreateIndexBuffer();
@@ -87,6 +95,10 @@ VulkanRenderer::~VulkanRenderer()
 	{
 		_aligned_free(m_UniformBufferDynamic.data);
 	}
+
+	SafeDelete(m_DiffuseTexture);
+	SafeDelete(m_NormalTexture);
+	SafeDelete(m_SpecularTexture);
 	
 	vkDeviceWaitIdle(m_Device);	
 
@@ -467,9 +479,9 @@ void VulkanRenderer::CreateImageViews()
 	}
 }
 
-void VulkanRenderer::CreateTextureImageView()
+void VulkanRenderer::CreateTextureImageView(VulkanTexture* texture)
 {
-	CreateImageView(m_TextureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, m_TextureImageView);
+	CreateImageView(texture->Image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, texture->ImageView);
 }
 
 void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VDeleter<VkImageView>& imageView)
@@ -546,7 +558,7 @@ void VulkanRenderer::CreateRenderPass()
 	VK_CHECK_RESULT(vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, m_RenderPass.replace()));
 }
 
-void VulkanRenderer::CreateTextureSampler()
+void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture)
 {
 	VkSamplerCreateInfo samplerInfo = {};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -566,7 +578,7 @@ void VulkanRenderer::CreateTextureSampler()
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 0.0f;
 
-	VK_CHECK_RESULT(vkCreateSampler(m_Device, &samplerInfo, nullptr, m_TextureSampler.replace()));
+	VK_CHECK_RESULT(vkCreateSampler(m_Device, &samplerInfo, nullptr, texture->Sampler.replace()));
 }
 
 void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
@@ -892,15 +904,18 @@ void VulkanRenderer::CreateDepthResources()
 	TransitionImageLayout(m_DepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-void VulkanRenderer::CreateTextureImage(const std::string& filePath)
+void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTexture** texture)
 {
 	int textureWidth, textureHeight, textureChannels;
 	unsigned char* pixels = SOIL_load_image(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, SOIL_LOAD_RGBA);
 
 	if (!pixels)
 	{
-		Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + "\nimage filepath: " + filePath);
+		Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + ", image filepath: " + filePath);
+		return;
 	}
+	
+	*texture = new VulkanTexture(m_Device);
 
 	VkDeviceSize imageSize = textureWidth * textureHeight * 4;
 
@@ -941,11 +956,12 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath)
 	SOIL_free_image_data(pixels);
 
 	CreateImage(textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_TextureImageMemory);
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		(*texture)->Image, (*texture)->ImageMemory);
 
-	TransitionImageLayout(m_TextureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	CopyBufferToImage(stagingBuffer.m_Buffer, m_TextureImage, (uint32_t)textureWidth, (uint32_t)textureHeight);
-	TransitionImageLayout(m_TextureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	TransitionImageLayout((*texture)->Image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->Image, (uint32_t)textureWidth, (uint32_t)textureHeight);
+	TransitionImageLayout((*texture)->Image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void VulkanRenderer::RebuildCommandBuffers()
@@ -1386,20 +1402,27 @@ void VulkanRenderer::PrepareUniformBuffers()
 
 void VulkanRenderer::CreateDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 3> poolSizes = {};
+	std::array<VkDescriptorPoolSize, 5> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = 1;
+
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	poolSizes[1].descriptorCount = 1;
 
-	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Diffuse map
 	poolSizes[2].descriptorCount = 1;
+
+	poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Normal map
+	poolSizes[3].descriptorCount = 1;
+
+	poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Specular map
+	poolSizes[4].descriptorCount = 1;
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = poolSizes.size();
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 1; // TODO: Set this value smartly
+	poolInfo.maxSets = 1;
 	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, m_DescriptorPool.replace()));
@@ -1416,7 +1439,7 @@ void VulkanRenderer::CreateDescriptorSet()
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_Device, &allocInfo, &m_DescriptorSet));
 
-	std::array<VkWriteDescriptorSet, 3> writeDescriptorSets = {};
+	std::array<VkWriteDescriptorSet, 5> writeDescriptorSets = {};
 
 	VkDescriptorBufferInfo uniformBufferInfo = {};
 	uniformBufferInfo.buffer = m_UniformBuffers.viewBuffer.m_Buffer;
@@ -1443,10 +1466,10 @@ void VulkanRenderer::CreateDescriptorSet()
 	writeDescriptorSets[1].descriptorCount = 1;
 	writeDescriptorSets[1].pBufferInfo = &uniformBufferDynamicInfo;
 
-	VkDescriptorImageInfo imageInfo = {};
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = m_TextureImageView;
-	imageInfo.sampler = m_TextureSampler;
+	VkDescriptorImageInfo diffuseImageInfo = {};
+	diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	diffuseImageInfo.imageView = m_DiffuseTexture->ImageView;
+	diffuseImageInfo.sampler = m_DiffuseTexture->Sampler;
 
 	writeDescriptorSets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[2].dstSet = m_DescriptorSet;
@@ -1454,7 +1477,33 @@ void VulkanRenderer::CreateDescriptorSet()
 	writeDescriptorSets[2].dstArrayElement = 0;
 	writeDescriptorSets[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	writeDescriptorSets[2].descriptorCount = 1;
-	writeDescriptorSets[2].pImageInfo = &imageInfo;
+	writeDescriptorSets[2].pImageInfo = &diffuseImageInfo;
+
+	VkDescriptorImageInfo normalImageInfo = {};
+	normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	normalImageInfo.imageView = m_NormalTexture->ImageView;
+	normalImageInfo.sampler = m_NormalTexture->Sampler;
+
+	writeDescriptorSets[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeDescriptorSets[3].dstSet = m_DescriptorSet;
+	writeDescriptorSets[3].dstBinding = 3;
+	writeDescriptorSets[3].dstArrayElement = 0;
+	writeDescriptorSets[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeDescriptorSets[3].descriptorCount = 1;
+	writeDescriptorSets[3].pImageInfo = &normalImageInfo;
+
+	VkDescriptorImageInfo specularImageInfo = {};
+	specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	specularImageInfo.imageView = m_SpecularTexture->ImageView;
+	specularImageInfo.sampler = m_SpecularTexture->Sampler;
+
+	writeDescriptorSets[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeDescriptorSets[4].dstSet = m_DescriptorSet;
+	writeDescriptorSets[4].dstBinding = 4;
+	writeDescriptorSets[4].dstArrayElement = 0;
+	writeDescriptorSets[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeDescriptorSets[4].descriptorCount = 1;
+	writeDescriptorSets[4].pImageInfo = &specularImageInfo;
 
 	vkUpdateDescriptorSets(m_Device, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
 }
@@ -1473,13 +1522,31 @@ void VulkanRenderer::CreateDescriptorSetLayout()
 	uniformBufferDynamicBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	uniformBufferDynamicBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-	samplerLayoutBinding.binding = 2;
-	samplerLayoutBinding.descriptorCount = 1;
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	VkDescriptorSetLayoutBinding diffuseSamplerLayoutBinding = {};
+	diffuseSamplerLayoutBinding.binding = 2;
+	diffuseSamplerLayoutBinding.descriptorCount = 1;
+	diffuseSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	diffuseSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uniformBufferBinding, uniformBufferDynamicBinding, samplerLayoutBinding };
+	VkDescriptorSetLayoutBinding normalSamplerLayoutBinding = {};
+	normalSamplerLayoutBinding.binding = 3;
+	normalSamplerLayoutBinding.descriptorCount = 1;
+	normalSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	normalSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutBinding specularSamplerLayoutBinding = {};
+	specularSamplerLayoutBinding.binding = 4;
+	specularSamplerLayoutBinding.descriptorCount = 1;
+	specularSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	specularSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 5> bindings = { 
+		uniformBufferBinding, 
+		uniformBufferDynamicBinding, 
+		diffuseSamplerLayoutBinding,
+		normalSamplerLayoutBinding,
+		specularSamplerLayoutBinding
+	};
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.bindingCount = bindings.size();
@@ -1787,6 +1854,9 @@ void VulkanRenderer::UpdateUniformBuffer(const GameContext& gameContext)
 	m_UniformBufferData.lightDir = m_SceneInfo.m_LightDir;
 	m_UniformBufferData.ambientColor = m_SceneInfo.m_AmbientColor;
 	m_UniformBufferData.specularColor = m_SceneInfo.m_SpecularColor;
+	m_UniformBufferData.useDiffuseTexture = 1;
+	m_UniformBufferData.useNormalTexture = 1;
+	m_UniformBufferData.useSpecularTexture = 1;
 
 	memcpy(m_UniformBuffers.viewBuffer.m_Mapped, &m_UniformBufferData, sizeof(m_UniformBufferData));
 }

@@ -5,8 +5,8 @@
 
 layout (location = 0) in vec3 inWorldPos;
 layout (location = 1) in vec4 inColor;
-layout (location = 2) in vec3 inNormal;
-layout (location = 3) in vec2 inTexCoord;
+layout (location = 2) in mat3 inTBN;
+layout (location = 5) in vec2 inTexCoord;
 
 layout (binding = 0) uniform UBO
 {
@@ -16,22 +16,39 @@ layout (binding = 0) uniform UBO
 	vec4 lightDir; // Padded to 16 bytes (only 3 floats needed)
 	vec4 ambientColor;
 	vec4 specularColor;
+	bool useDiffuseTexture;
+	bool useNormalTexture;
+	bool useSpecularTexture;
 } ubo;
 
-layout (binding = 2) uniform sampler2D in_Texture;
+layout (binding = 2) uniform sampler2D diffuseMap;
+layout (binding = 3) uniform sampler2D normalMap;
+layout (binding = 4) uniform sampler2D specularMap;
 
-layout (location = 0) out vec4 outFragColor;
+layout (location = 0) out vec4 fragmentColor;
 
-void main() 
+void main()
 {
-	vec3 normal = normalize(inNormal);
+	vec3 normal;
+	if (ubo.useNormalTexture)
+	{
+		vec4 normalSample = texture(normalMap, inTexCoord);
+		normal = inTBN * (normalSample.xyz * 2 - 1);
+	}
+	else
+	{
+		normal = inTBN[2];
+	}
 	float lightIntensity = max(dot(normal, normalize(ubo.lightDir.xyz)), 0.0);
 	lightIntensity = lightIntensity * 0.75 + 0.25;
 
-	vec4 textureSample = texture(in_Texture, inTexCoord);
-	
-	vec4 diffuse = lightIntensity * textureSample * inColor;
-	
+	vec4 diffuse = lightIntensity * inColor;
+	if (ubo.useDiffuseTexture)
+	{
+		vec4 diffuseSample = texture(diffuseMap, inTexCoord);
+		diffuse *= diffuseSample;
+	}
+
 	float specularStrength = 0.5f;
 	float shininess = 32;
 	
@@ -40,13 +57,26 @@ void main()
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
 	
 	vec4 specular = specularStrength * spec * ubo.specularColor;
-	
-	//outFragColor = vec4(inTexCoord, 0, 1);
-	outFragColor = ubo.ambientColor + diffuse + specular;
-	
-	//float lightIntensity = max(dot(inNormal, -normalize(ubo.lightDir.xyz)), 0.0);
-	//lightIntensity = lightIntensity * 0.75 + 0.25;
+	if (ubo.useSpecularTexture)
+	{
+		vec4 specularSample = texture(specularMap, inTexCoord);
+		specular *= specularSample;
+	}
 
-	////outFragColor = lightIntensity * inColor;	
-	//outFragColor = lightIntensity * vec4(inTexCoord.x, inTexCoord.y, 0, 0);	
+	fragmentColor = ubo.ambientColor + diffuse + specular;
+	
+	// visualize diffuse lighting:
+	//fragmentColor = vec4(vec3(lightIntensity), 1); return;
+	
+	// visualize normals:
+	//fragmentColor = vec4(normal * 0.5 + 0.5, 1); return;
+	
+	// visualize specular:
+	//fragmentColor = specular; return;
+
+	// visualize tex coords:
+	//fragmentColor = vec4(ex_TexCoord.xy, 0, 1); return;
+	
+	// no lighting:
+	//fragmentColor = ex_Color; return;	
 }
