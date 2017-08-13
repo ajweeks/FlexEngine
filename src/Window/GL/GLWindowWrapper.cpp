@@ -54,7 +54,6 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i 
 
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-	// TODO: Find out why there's a gl error here
 	CheckGLErrorMessages();
 
 	//GLint flags;

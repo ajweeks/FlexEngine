@@ -140,7 +140,7 @@ void GLRenderer::SetClearColor(float r, float g, float b)
 
 void GLRenderer::PostInitialize()
 {
-	// TODO: Make this function not awful
+	// TODO: Find out what each shader needs and give it to them programmatically
 	glm::uint program0 = m_LoadedShaders[0].program;
 	glUseProgram(program0);
 

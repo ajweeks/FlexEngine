@@ -18,10 +18,8 @@ public:
 	enum class PrefabShape
 	{
 		CUBE,
-		ICO_SPHERE,
 		UV_SPHERE,
 		GRID
-		// TORUS, TEAPOT, etc...
 	};
 
 	bool LoadFromFile(const GameContext& gameContext, const std::string& filepath);
