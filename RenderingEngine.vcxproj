@@ -71,11 +71,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\tinyobjloader;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(S_LIBS)\assimp\build\code\Debug;$(VULKAN)\Lib32</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\tinyobjloader;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(S_LIBS)\assimp\build\code\Debug;$(VULKAN)\Lib32</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

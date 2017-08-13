@@ -48,7 +48,7 @@ public:
 	virtual void Destroy(glm::uint renderID) override;
 		
 private:
-	void CreateInstance();
+	void CreateInstance(const GameContext& gameContext);
 	void SetupDebugCallback();
 	void CreateSurface(Window* window);
 	void PickPhysicalDevice();
@@ -56,7 +56,7 @@ private:
 	void CreateSwapChain(Window* window);
 	void CreateImageViews();
 	void CreateRenderPass();
-	void CreateDescriptorSetLayout();
+	void CreateDescriptorSetLayout(glm::uint type);
 	void CreateGraphicsPipeline(glm::uint renderID);
 	void CreateDepthResources();
 	void CreateFramebuffers();
@@ -64,13 +64,17 @@ private:
 	void CreateTextureImage(const std::string& filePath, VulkanTexture** texture);
 	void CreateTextureImageView(VulkanTexture* texture);
 	void CreateTextureSampler(VulkanTexture* texture);
-	void LoadModel(const std::string& filePath);
 
-	void CreateVertexBuffer();
-	void CreateIndexBuffer();
+	void CreateVertexBuffers();
+	void CreateVertexBuffer(VulkanBuffer& vertexBuffer, glm::uint shaderIndex);
+	void CreateIndexBuffers();
+	void CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shaderIndex);
 	void PrepareUniformBuffers();
 	void CreateDescriptorPool();
-	void CreateDescriptorSet();
+	void AllocateUniformBuffer(size_t dynamicDataSize, void** data);
+	void PrepareUniformBuffer(VulkanBuffer& buffer, glm::uint bufferSize,
+		VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
+	void CreateDescriptorSet(glm::uint renderID, glm::uint descriptorSetLayoutIndex);
 
 	void CreateCommandPool();
 	void RebuildCommandBuffers();
@@ -108,7 +112,7 @@ private:
 	std::vector<const char*> GetRequiredExtensions();
 	bool CheckValidationLayerSupport();
 
-	void UpdateUniformBuffer(const GameContext& gameContext);
+	void UpdateUniformBuffers(const GameContext& gameContext);
 	void UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model);
 
 	void LoadDefaultShaderCode();
@@ -163,15 +167,21 @@ private:
 	std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
 	VDeleter<VkRenderPass> m_RenderPass{ m_Device, vkDestroyRenderPass };
-	VkDescriptorSet m_DescriptorSet;
-	VDeleter<VkDescriptorSetLayout> m_DescriptorSetLayout{ m_Device, vkDestroyDescriptorSetLayout };
+
+	std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts; // { m_Device, vkDestroyDescriptorSetLayout };
 
 	VDeleter<VkCommandPool> m_CommandPool{ m_Device, vkDestroyCommandPool };
 	std::vector<VkCommandBuffer> m_CommandBuffers;
 
-	VulkanTexture* m_DiffuseTexture = nullptr;
-	VulkanTexture* m_NormalTexture = nullptr;
-	VulkanTexture* m_SpecularTexture = nullptr;
+
+	VulkanTexture* m_BrickDiffuseTexture = nullptr;
+	VulkanTexture* m_BrickNormalTexture = nullptr;
+	VulkanTexture* m_BrickSpecularTexture = nullptr;
+
+	VulkanTexture* m_WorkDiffuseTexture = nullptr;
+	VulkanTexture* m_WorkNormalTexture = nullptr;
+	VulkanTexture* m_WorkSpecularTexture = nullptr;
+
 
 	VDeleter<VkImage> m_DepthImage{ m_Device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> m_DepthImageMemory{ m_Device, vkFreeMemory };
@@ -180,8 +190,11 @@ private:
 	VDeleter<VkDescriptorPool> m_DescriptorPool{ m_Device, vkDestroyDescriptorPool };
 
 	// TODO: Move to render object?
-	VulkanBuffer m_VertexBuffer;
-	VulkanBuffer m_IndexBuffer;
+	VulkanBuffer m_VertexBuffer_Simple;
+	VulkanBuffer m_IndexBuffer_Simple;
+
+	VulkanBuffer m_VertexBuffer_Color;
+	VulkanBuffer m_IndexBuffer_Color;
 
 	size_t m_DynamicAlignment;
 
@@ -190,12 +203,16 @@ private:
 	
 	VkClearColorValue m_ClearColor;
 
-	UniformBuffers m_UniformBuffers;
-	UniformBufferObjectData m_UniformBufferData;
-	UniformBufferObjectDynamic m_UniformBufferDynamic;
+	UniformBuffers_Simple m_UniformBuffers_Simple;
+	UniformBufferObjectData_Simple m_UniformBufferData_Simple;
+	UniformBufferObjectDataDynamic_Simple m_UniformBufferDynamic_Simple;
 
-	const std::string m_DefaultFragShaderFilePath = "resources/shaders/GLSL/spv/vk_simple_frag.spv";
-	const std::string m_DefaultVertShaderFilePath = "resources/shaders/GLSL/spv/vk_simple_vert.spv";
+	UniformBuffers_Color m_UniformBuffers_Color;
+	UniformBufferObjectData_Color m_UniformBufferData_Color;
+	UniformBufferObjectDataDynamic_Color m_UniformBufferDynamic_Color;
+
+	const std::string m_DefaultFragShaderFilePath = "resources/shaders/GLSL/spv/vk_color_frag.spv";
+	const std::string m_DefaultVertShaderFilePath = "resources/shaders/GLSL/spv/vk_color_vert.spv";
 
 	std::vector<char> m_DefaultVertShaderCode;
 	std::vector<char> m_DefaultFragShaderCode;

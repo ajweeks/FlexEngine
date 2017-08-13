@@ -3,6 +3,7 @@
 
 #include "Graphics/Vulkan/VulkanHelpers.h"
 #include "VertexBufferData.h"
+#include "Logger.h"
 
 VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(VertexBufferData* vertexBufferData)
 {
@@ -14,59 +15,111 @@ VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(Vertex
 	return bindingDesc;
 }
 
-void VulkanVertex::GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData, std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
+// TODO: Use m_HasElement rather than this shit
+void VulkanVertex::GetVertexAttributeDescriptions(
+	VertexBufferData* vertexBufferData, 
+	std::vector<VkVertexInputAttributeDescription>& attributeDescriptions,
+	glm::uint type)
 {
 	attributeDescriptions.clear();
-	attributeDescriptions.resize(6);
 
-	uint32_t offset = 0;
+	if (type == 1)
+	{
+		attributeDescriptions.resize(6);
 
-	// Position
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = 0;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offset;
-	offset += sizeof(glm::vec3);
+		uint32_t offset = 0;
 
-	// Color
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	attributeDescriptions[1].offset = offset;
-	offset += sizeof(glm::vec4);
+		// Position
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offset;
+		offset += sizeof(glm::vec3);
 
-	// Tangent
-	attributeDescriptions[2].binding = 0;
-	attributeDescriptions[2].location = 2;
-	attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[2].offset = offset;
-	offset += sizeof(glm::vec3);
+		// Color
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attributeDescriptions[1].offset = offset;
+		offset += sizeof(glm::vec4);
 
-	// Bitangent
-	attributeDescriptions[3].binding = 0;
-	attributeDescriptions[3].location = 3;
-	attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[3].offset = offset;
-	offset += sizeof(glm::vec3);
+		// Tangent
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[2].offset = offset;
+		offset += sizeof(glm::vec3);
 
-	// Normal
-	attributeDescriptions[4].binding = 0;
-	attributeDescriptions[4].location = 4;
-	attributeDescriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[4].offset = offset;
-	offset += sizeof(glm::vec3);
+		// Bitangent
+		attributeDescriptions[3].binding = 0;
+		attributeDescriptions[3].location = 3;
+		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[3].offset = offset;
+		offset += sizeof(glm::vec3);
 
-	// Tex coord
-	attributeDescriptions[5].binding = 0;
-	attributeDescriptions[5].location = 5;
-	attributeDescriptions[5].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[5].offset = offset;
-	offset += sizeof(glm::vec2);
+		// Normal
+		attributeDescriptions[4].binding = 0;
+		attributeDescriptions[4].location = 4;
+		attributeDescriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[4].offset = offset;
+		offset += sizeof(glm::vec3);
+
+		// Tex coord
+		attributeDescriptions[5].binding = 0;
+		attributeDescriptions[5].location = 5;
+		attributeDescriptions[5].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[5].offset = offset;
+		offset += sizeof(glm::vec2);
+	}
+	else if (type == 2)
+	{
+		attributeDescriptions.resize(2);
+
+		uint32_t offset = 0;
+
+		// Position
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offset;
+		offset += sizeof(glm::vec3);
+
+		// Color
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attributeDescriptions[1].offset = offset;
+		offset += sizeof(glm::vec4);
+	}
+	else 
+	{
+		Logger::LogError("Unhandled shader type passed to GetVertexAttrivuteDescriptions " + std::to_string(type));
+	}
 }
 
-UniformBuffers::UniformBuffers(const VDeleter<VkDevice>& device) :
+UniformBuffers_Simple::UniformBuffers_Simple(const VDeleter<VkDevice>& device) :
 	viewBuffer(device),
 	dynamicBuffer(device)
+{
+}
+
+UniformBuffers_Color::UniformBuffers_Color(const VDeleter<VkDevice>& device) :
+	viewBuffer(device),
+	dynamicBuffer(device)
+{
+}
+
+VulkanTexture::VulkanTexture(const VDeleter<VkDevice>& device) :
+	Image(device, vkDestroyImage),
+	ImageMemory(device, vkFreeMemory),
+	ImageView(device, vkDestroyImageView),
+	Sampler(device, vkDestroySampler)
+{
+}
+
+RenderObject::RenderObject(const VDeleter<VkDevice>& device) :
+	pipelineLayout(device, vkDestroyPipelineLayout),
+	graphicsPipeline(device, vkDestroyPipeline)
 {
 }
 
@@ -126,18 +179,4 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
 	{
 		func(instance, callback, pAllocator);
 	}
-}
-
-VulkanTexture::VulkanTexture(const VDeleter<VkDevice>& device) :
-	Image(device, vkDestroyImage),
-	ImageMemory(device, vkFreeMemory),
-	ImageView(device, vkDestroyImageView),
-	Sampler(device, vkDestroySampler)
-{
-}
-
-RenderObject::RenderObject(const VDeleter<VkDevice>& device) :
-	pipelineLayout(device, vkDestroyPipelineLayout),
-	graphicsPipeline(device, vkDestroyPipeline)
-{
 }

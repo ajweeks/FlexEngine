@@ -99,6 +99,11 @@ void Window::SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds)
 	m_UpdateWindowTitleFrequency = updateFrequencyinSeconds;
 }
 
+std::string Window::GetTitle() const
+{
+	return m_TitleString;
+}
+
 void Window::SetCursorMode(CursorMode mode)
 {
 	m_CursorMode = mode;

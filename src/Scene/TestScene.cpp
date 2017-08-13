@@ -17,9 +17,9 @@ TestScene::~TestScene()
 
 void TestScene::Initialize(const GameContext& gameContext)
 {
-	//m_Grid = new MeshPrefab();
-	//m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-	//AddChild(m_Grid);
+	m_Grid = new MeshPrefab();
+	m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+	AddChild(m_Grid);
 
 	m_Teapot = new MeshPrefab();
 	m_Teapot->LoadFromFile(gameContext, "resources/models/teapot.fbx");

@@ -37,6 +37,8 @@ public:
 	// Set to 0 to update window title every frame
 	void SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds);
 
+	std::string GetTitle() const;
+
 	virtual void SetCursorMode(CursorMode mode);
 
 	// Callbacks
