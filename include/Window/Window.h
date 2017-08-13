@@ -46,6 +46,7 @@ public:
 	virtual void MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods);
 	virtual void WindowFocusCallback(int focused);
 	virtual void CursorPosCallback(double x, double y);
+	virtual void ScrollCallback(double xoffset, double yoffset);
 	virtual void WindowSizeCallback(int width, int height);
 protected:
 
@@ -54,6 +55,7 @@ protected:
 	friend void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods);
 	friend void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused);
 	friend void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
+	friend void GLFWScrollCallback(GLFWwindow* glfwWindow, double xoffset, double yoffset);
 	friend void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN
 

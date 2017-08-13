@@ -30,6 +30,7 @@ VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, glm
 	glfwSetMouseButtonCallback(m_Window, GLFWMouseButtonCallback);
 	glfwSetCursorPosCallback(m_Window, VulkanCursorPosCallback);
 	glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
+	glfwSetScrollCallback(m_Window, GLFWScrollCallback);
 	glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 
 	glfwSetWindowPos(m_Window, pos.x, pos.y);

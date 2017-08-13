@@ -37,6 +37,11 @@ private:
 	GLFWWindowWrapper& operator=(const GLFWWindowWrapper&) = delete;
 };
 
+InputManager::Action GLFWActionToInputManagerAction(int glfwAction);
+InputManager::KeyCode GLFWKeyToInputManagerKey(int glfwKey);
+int GLFWModsToInputManagerMods(int glfwMods);
+InputManager::MouseButton GLFWButtonToInputManagerMouseButton(int glfwButton);
+
 void GLFWErrorCallback(int error, const char* description);
 void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods);
 void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods);

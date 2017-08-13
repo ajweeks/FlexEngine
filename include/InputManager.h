@@ -184,18 +184,20 @@ public:
 	void Update();
 	void PostUpdate();
 
-	int GetKeyDown(KeyCode keyCode);
-	bool GetKeyPressed(KeyCode keyCode);
+	int GetKeyDown(KeyCode keyCode) const;
+	bool GetKeyPressed(KeyCode keyCode) const;
 	
 	void CursorPosCallback(double x, double y);
 	void MouseButtonCallback(GameContext& gameContext, MouseButton button, Action action, int mods);
+	void ScrollCallback(double xOffset, double yOffset);
 	void KeyCallback(KeyCode keycode, Action action, int mods);
 
 	void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 	glm::vec2 GetMousePosition() const;
 	glm::vec2 GetMouseMovement() const;
-	int GetMouseButtonDown(MouseButton button);
-	bool GetMouseButtonClicked(MouseButton button);
+	int GetMouseButtonDown(MouseButton button) const;
+	bool GetMouseButtonClicked(MouseButton button) const;
+	float GetVerticalScrollDistance() const;
 
 	void ClearAllInputs(const GameContext& gameContext);
 	
@@ -206,5 +208,6 @@ private:
 	Key m_MouseButtons[MOUSE_BUTTON_COUNT];
 	glm::vec2 m_MousePosition;
 	glm::vec2 m_PrevMousePosition;
-
+	float m_ScrollXOffset;
+	float m_ScrollYOffset;
 };

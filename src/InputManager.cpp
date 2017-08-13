@@ -37,21 +37,22 @@ void InputManager::Update()
 void InputManager::PostUpdate()
 {
 	m_PrevMousePosition = m_MousePosition;
+	m_ScrollXOffset = 0.0f;
+	m_ScrollYOffset = 0.0f;
 }
 
-int InputManager::GetKeyDown(KeyCode keyCode)
+int InputManager::GetKeyDown(KeyCode keyCode) const
 {
 	auto value = m_Keys.find(keyCode);
-	if (value == m_Keys.end())
+	if (value != m_Keys.end())
 	{
-		Key key = {};
-		m_Keys[keyCode] = key;
-		return 0;
+		return m_Keys.at(keyCode).down;
 	}
-	return m_Keys[keyCode].down;
+
+	return 0;
 }
 
-bool InputManager::GetKeyPressed(KeyCode keyCode)
+bool InputManager::GetKeyPressed(KeyCode keyCode) const
 {
 	return GetKeyDown(keyCode) == 1;
 }
@@ -83,6 +84,12 @@ void InputManager::MouseButtonCallback(GameContext& gameContext, MouseButton but
 			gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
 		}
 	}
+}
+
+void InputManager::ScrollCallback(double xOffset, double yOffset)
+{
+	m_ScrollXOffset = (float)xOffset;
+	m_ScrollYOffset = (float)yOffset;
 }
 
 void InputManager::KeyCallback(KeyCode keycode, Action action, int mods)
@@ -121,18 +128,23 @@ glm::vec2 InputManager::GetMouseMovement() const
 	return m_MousePosition - m_PrevMousePosition;
 }
 
-int InputManager::GetMouseButtonDown(MouseButton button)
+int InputManager::GetMouseButtonDown(MouseButton button) const
 {
 	assert((int)button >= 0 && (int)button <= MOUSE_BUTTON_COUNT - 1);
 
 	return m_MouseButtons[(int)button].down;
 }
 
-bool InputManager::GetMouseButtonClicked(MouseButton button)
+bool InputManager::GetMouseButtonClicked(MouseButton button) const
 {
 	assert((int)button >= 0 && (int)button <= MOUSE_BUTTON_COUNT - 1);
 
 	return m_MouseButtons[(int)button].down == 1;
+}
+
+float InputManager::GetVerticalScrollDistance() const
+{
+	return m_ScrollYOffset;
 }
 
 void InputManager::ClearAllInputs(const GameContext& gameContext)

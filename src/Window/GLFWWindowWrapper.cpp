@@ -112,10 +112,53 @@ void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
 	glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
 }
 
-
 void GLFWErrorCallback(int error, const char* description)
 {
 	Logger::LogError("GLFW Error: " + std::string(description));
+}
+
+void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods)
+{
+	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+	const InputManager::Action inputAction = GLFWActionToInputManagerAction(action);
+	const InputManager::KeyCode inputKey = GLFWKeyToInputManagerKey(key);
+	const int inputMods = GLFWModsToInputManagerMods(mods);
+
+	window->KeyCallback(inputKey, inputAction, inputMods);
+}
+
+void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods)
+{
+	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+	const InputManager::Action inputAction = GLFWActionToInputManagerAction(action);
+	const int inputMods = GLFWModsToInputManagerMods(mods);
+	const InputManager::MouseButton mouseButton = GLFWButtonToInputManagerMouseButton(button);
+
+	window->MouseButtonCallback(mouseButton, inputAction, inputMods);
+}
+
+void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused)
+{
+	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+	window->WindowFocusCallback(focused);
+}
+
+void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y)
+{
+	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+	window->CursorPosCallback(x, y);
+}
+
+void GLFWScrollCallback(GLFWwindow* glfwWindow, double xoffset, double yoffset)
+{
+	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+	window->ScrollCallback(xoffset, yoffset);
+}
+
+void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height)
+{
+	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+	window->WindowSizeCallback(width, height);
 }
 
 InputManager::Action GLFWActionToInputManagerAction(int glfwAction)
@@ -300,44 +343,6 @@ InputManager::MouseButton GLFWButtonToInputManagerMouseButton(int glfwButton)
 	}
 
 	return inputMouseButton;
-}
-
-void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods)
-{
-	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-	const InputManager::Action inputAction = GLFWActionToInputManagerAction(action);
-	const InputManager::KeyCode inputKey = GLFWKeyToInputManagerKey(key);
-	const int inputMods = GLFWModsToInputManagerMods(mods);
-
-	window->KeyCallback(inputKey, inputAction, inputMods);
-}
-
-void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods)
-{
-	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-	const InputManager::Action inputAction = GLFWActionToInputManagerAction(action);
-	const int inputMods = GLFWModsToInputManagerMods(mods);
-	const InputManager::MouseButton mouseButton = GLFWButtonToInputManagerMouseButton(button);
-
-	window->MouseButtonCallback(mouseButton, inputAction, inputMods);
-}
-
-void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused)
-{
-	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-	window->WindowFocusCallback(focused);
-}
-
-void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y)
-{
-	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-	window->CursorPosCallback(x, y);
-}
-
-void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height)
-{
-	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-	window->WindowSizeCallback(width, height);
 }
 
 

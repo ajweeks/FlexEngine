@@ -18,6 +18,7 @@ FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float z
 	m_MoveSpeed(50.0f),
 	m_MoveSpeedFastMultiplier(3.5f),
 	m_MoveSpeedSlowMultiplier(0.1f),
+	m_ZoomSpeed(2.0f),
 	m_RotationSpeed(0.0011f),
 	m_View(mat4(0.0f)),
 	m_Proj(mat4(0.0f)),
@@ -85,6 +86,12 @@ void FreeCamera::Update(const GameContext& gameContext)
 	if (gameContext.inputManager->GetKeyDown(m_MoveDownKey))
 	{
 		translation -= m_Up;
+	}
+
+	float scrollDistance = gameContext.inputManager->GetVerticalScrollDistance();
+	if (scrollDistance != 0.0f)
+	{
+		translation += scrollDistance * m_Forward * m_ZoomSpeed;
 	}
 
 	float speedMultiplier = 1.0f;

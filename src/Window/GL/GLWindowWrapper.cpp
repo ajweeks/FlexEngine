@@ -42,6 +42,7 @@ GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i 
 	glfwSetKeyCallback(m_Window, GLFWKeyCallback);
 	glfwSetMouseButtonCallback(m_Window, GLFWMouseButtonCallback);
 	glfwSetCursorPosCallback(m_Window, GLFWCursorPosCallback);
+	glfwSetScrollCallback(m_Window, GLFWScrollCallback);
 	glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
 	glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 

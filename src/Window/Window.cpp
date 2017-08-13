@@ -131,6 +131,11 @@ void Window::CursorPosCallback(double x, double y)
 	m_GameContextRef.inputManager->CursorPosCallback(x, y);
 }
 
+void Window::ScrollCallback(double xoffset, double yoffset)
+{
+	m_GameContextRef.inputManager->ScrollCallback(xoffset, yoffset);
+}
+
 void Window::WindowSizeCallback(int width, int height)
 {
 	SetSize(width, height);
