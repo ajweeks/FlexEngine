@@ -31,6 +31,9 @@ public:
 	void ResetPosition();
 	void ResetOrientation();
 
+	void LoadDefaultKeybindings();
+	void LoadAzertyKeybindings();
+
 private:
 	void RecalculateViewProjection(const GameContext& gameContext);
 
@@ -54,5 +57,14 @@ private:
 	float m_MoveSpeedFastMultiplier;
 	float m_MoveSpeedSlowMultiplier;
 	float m_RotationSpeed;
+
+	InputManager::KeyCode m_MoveForwardKey;
+	InputManager::KeyCode m_MoveBackwardKey;
+	InputManager::KeyCode m_MoveLeftKey;
+	InputManager::KeyCode m_MoveRightKey;
+	InputManager::KeyCode m_MoveUpKey;
+	InputManager::KeyCode m_MoveDownKey;
+	InputManager::KeyCode m_MoveFasterKey;
+	InputManager::KeyCode m_MoveSlowerKey;
 
 };

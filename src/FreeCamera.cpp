@@ -26,6 +26,8 @@ FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float z
 	gameContext.camera = this;
 	ResetOrientation();
 	RecalculateViewProjection(gameContext);
+
+	LoadDefaultKeybindings();
 }
 
 FreeCamera::~FreeCamera()
@@ -60,37 +62,37 @@ void FreeCamera::Update(const GameContext& gameContext)
 	m_Up = cross(m_Forward, m_Right);
 
 	vec3 translation = {};
-	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_W))
+	if (gameContext.inputManager->GetKeyDown(m_MoveForwardKey))
 	{
 		translation += m_Forward;
 	}
-	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_S))
+	if (gameContext.inputManager->GetKeyDown(m_MoveBackwardKey))
 	{
 		translation -= m_Forward;
 	}
-	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_A))
+	if (gameContext.inputManager->GetKeyDown(m_MoveLeftKey))
 	{
 		translation += m_Right;
 	}
-	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_D))
+	if (gameContext.inputManager->GetKeyDown(m_MoveRightKey))
 	{
 		translation -= m_Right;
 	}
-	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_E))
+	if (gameContext.inputManager->GetKeyDown(m_MoveUpKey))
 	{
 		translation += m_Up;
 	}
-	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_Q))
+	if (gameContext.inputManager->GetKeyDown(m_MoveDownKey))
 	{
 		translation -= m_Up;
 	}
 
 	float speedMultiplier = 1.0f;
-	if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+	if (gameContext.inputManager->GetKeyDown(m_MoveFasterKey))
 	{
 		speedMultiplier = m_MoveSpeedFastMultiplier;
 	}
-	else if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+	else if (gameContext.inputManager->GetKeyDown(m_MoveSlowerKey))
 	{
 		speedMultiplier = m_MoveSpeedSlowMultiplier;
 	}
@@ -176,4 +178,28 @@ void FreeCamera::RecalculateViewProjection(const GameContext& gameContext)
 	m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
 	m_ViewProjection = m_Proj * m_View;
 
+}
+
+void FreeCamera::LoadDefaultKeybindings()
+{
+	m_MoveForwardKey = InputManager::KeyCode::KEY_W;
+	m_MoveBackwardKey = InputManager::KeyCode::KEY_S;
+	m_MoveLeftKey = InputManager::KeyCode::KEY_A;
+	m_MoveRightKey = InputManager::KeyCode::KEY_D;
+	m_MoveUpKey = InputManager::KeyCode::KEY_E;
+	m_MoveDownKey = InputManager::KeyCode::KEY_Q;
+	m_MoveFasterKey = InputManager::KeyCode::KEY_LEFT_SHIFT;
+	m_MoveSlowerKey = InputManager::KeyCode::KEY_LEFT_CONTROL;
+}
+
+void FreeCamera::LoadAzertyKeybindings()
+{
+	m_MoveForwardKey = InputManager::KeyCode::KEY_Z;
+	m_MoveBackwardKey = InputManager::KeyCode::KEY_S;
+	m_MoveLeftKey = InputManager::KeyCode::KEY_Q;
+	m_MoveRightKey = InputManager::KeyCode::KEY_D;
+	m_MoveUpKey = InputManager::KeyCode::KEY_E;
+	m_MoveDownKey = InputManager::KeyCode::KEY_A;
+	m_MoveFasterKey = InputManager::KeyCode::KEY_LEFT_SHIFT;
+	m_MoveSlowerKey = InputManager::KeyCode::KEY_LEFT_CONTROL;
 }
