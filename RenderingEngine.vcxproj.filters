@@ -18,9 +18,6 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\glad\src\glad.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\ShaderUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -103,6 +100,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\MainApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dependencies\glad\src\glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -210,6 +210,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\MainApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\glad\include\glad\glad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

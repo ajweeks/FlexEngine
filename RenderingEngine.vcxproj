@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(S_LIBS)\assimp\build\code\Debug;$(VULKAN)\Lib32</LibraryPath>
+    <IncludePath>$(SolutionDir)include;$(SolutionDir)dependencies\glad\include;$(SolutionDir)dependencies\glfw\include;$(SolutionDir)dependencies\glm;$(SolutionDir)dependencies\soil\src;$(SolutionDir)dependencies\stb;$(SolutionDir)dependencies\assimp\include;$(VULKAN)\include;$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)dependencies\glfw\lib\src\Debug;$(SolutionDir)dependencies\soil\lib\Debug;$(SolutionDir)dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(WindowsSDK_IncludePath);$(SolutionDir)include;$(SolutionDir)lib\glad\include;$(VULKAN)\include;$(S_LIBS)\glfw-3.2.1\include;$(S_LIBS)\glm-0.9.8.4;$(S_LIBS)\SOIL\src;$(S_LIBS)\stb;$(S_LIBS)\assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(LibraryPath);$(S_LIBS)\glfw-3.2.1\bin\lib-vc2015;$(S_LIBS)\SOIL\lib;$(S_LIBS)\assimp\build\code\Debug;$(VULKAN)\Lib32</LibraryPath>
+    <IncludePath>$(SolutionDir)include;$(SolutionDir)dependencies\glad\include;$(SolutionDir)dependencies\glfw\include;$(SolutionDir)dependencies\glm;$(SolutionDir)dependencies\soil\src;$(SolutionDir)dependencies\stb;$(SolutionDir)dependencies\assimp\include;$(VULKAN)\include;$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)dependencies\glfw\lib\src\Release;$(SolutionDir)dependencies\soil\lib\Release;$(SolutionDir)dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -87,7 +87,7 @@
       <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;d3d11.lib;d3dcompiler.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <AdditionalOptions>/NODEFAULTLIB:"MSVCRT" %(AdditionalOptions)</AdditionalOptions>
@@ -114,7 +114,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <SubSystem>Console</SubSystem>
@@ -134,6 +134,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dependencies\glad\src\glad.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="src\Graphics\D3D\D3DHelpers.cpp" />
     <ClCompile Include="src\Graphics\GL\GLHelpers.cpp" />
     <ClCompile Include="src\Graphics\Vulkan\VulkanBuffer.cpp" />
@@ -161,10 +165,6 @@
     <ClCompile Include="src\InputManager.cpp" />
     <ClCompile Include="src\FreeCamera.cpp" />
     <ClCompile Include="src\Logger.cpp" />
-    <ClCompile Include="lib\glad\src\glad.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="src\Colors.cpp" />
     <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ShaderUtils.cpp" />
@@ -172,6 +172,7 @@
     <ClCompile Include="src\MainApp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dependencies\glad\include\glad\glad.h" />
     <ClInclude Include="include\Graphics\GL\GLHelpers.h" />
     <ClInclude Include="include\Graphics\D3D\D3DRenderer.h" />
     <ClInclude Include="include\Graphics\GL\GLRenderer.h" />
