@@ -15,7 +15,6 @@ VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(Vertex
 	return bindingDesc;
 }
 
-// TODO: Use m_HasElement rather than this shit
 void VulkanVertex::GetVertexAttributeDescriptions(
 	VertexBufferData* vertexBufferData, 
 	std::vector<VkVertexInputAttributeDescription>& attributeDescriptions,
@@ -23,77 +22,85 @@ void VulkanVertex::GetVertexAttributeDescriptions(
 {
 	attributeDescriptions.clear();
 
-	if (shaderIndex == 1)
+	uint32_t offset = 0;
+	uint32_t location = 0;
+
+	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::POSITION))
 	{
-		attributeDescriptions.resize(6);
+		VkVertexInputAttributeDescription attributeDescription = {};
+		attributeDescription.binding = 0;
+		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescription.location = location;
+		attributeDescription.offset = offset;
+		attributeDescriptions.push_back(attributeDescription);
 
-		uint32_t offset = 0;
-
-		// Position
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offset;
 		offset += sizeof(glm::vec3);
+		++location;
+	}
 
-		// Color
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		attributeDescriptions[1].offset = offset;
+	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::COLOR))
+	{
+		VkVertexInputAttributeDescription attributeDescription = {};
+		attributeDescription.binding = 0;
+		attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attributeDescription.location = location;
+		attributeDescription.offset = offset;
+		attributeDescriptions.push_back(attributeDescription);
+
 		offset += sizeof(glm::vec4);
+		++location;
+	}
 
-		// Tangent
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[2].offset = offset;
+	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TANGENT))
+	{
+		VkVertexInputAttributeDescription attributeDescription = {};
+		attributeDescription.binding = 0;
+		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescription.location = location;
+		attributeDescription.offset = offset;
+		attributeDescriptions.push_back(attributeDescription);
+
 		offset += sizeof(glm::vec3);
+		++location;
+	}
 
-		// Bitangent
-		attributeDescriptions[3].binding = 0;
-		attributeDescriptions[3].location = 3;
-		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[3].offset = offset;
+	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::BITANGENT))
+	{
+		VkVertexInputAttributeDescription attributeDescription = {};
+		attributeDescription.binding = 0;
+		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescription.location = location;
+		attributeDescription.offset = offset;
+		attributeDescriptions.push_back(attributeDescription);
+
 		offset += sizeof(glm::vec3);
+		++location;
+	}
 
-		// Normal
-		attributeDescriptions[4].binding = 0;
-		attributeDescriptions[4].location = 4;
-		attributeDescriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[4].offset = offset;
+	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::NORMAL))
+	{
+		VkVertexInputAttributeDescription attributeDescription = {};
+		attributeDescription.binding = 0;
+		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescription.location = location;
+		attributeDescription.offset = offset;
+		attributeDescriptions.push_back(attributeDescription);
+
 		offset += sizeof(glm::vec3);
+		++location;
+	}
 
-		// Tex coord
-		attributeDescriptions[5].binding = 0;
-		attributeDescriptions[5].location = 5;
-		attributeDescriptions[5].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[5].offset = offset;
+	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TEXCOORD))
+	{
+		VkVertexInputAttributeDescription attributeDescription = {};
+		attributeDescription.binding = 0;
+		attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescription.location = location;
+		attributeDescription.offset = offset;
+		attributeDescriptions.push_back(attributeDescription);
+
 		offset += sizeof(glm::vec2);
-	}
-	else if (shaderIndex == 2)
-	{
-		attributeDescriptions.resize(2);
-
-		uint32_t offset = 0;
-
-		// Position
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offset;
-		offset += sizeof(glm::vec3);
-
-		// Color
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		attributeDescriptions[1].offset = offset;
-		offset += sizeof(glm::vec4);
-	}
-	else 
-	{
-		Logger::LogError("Unhandled shader type passed to GetVertexAttrivuteDescriptions " + std::to_string(shaderIndex));
+		++location;
 	}
 }
 
