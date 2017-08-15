@@ -72,11 +72,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(SolutionDir)include;$(SolutionDir)dependencies\glad\include;$(SolutionDir)dependencies\glfw\include;$(SolutionDir)dependencies\glm;$(SolutionDir)dependencies\soil\src;$(SolutionDir)dependencies\stb;$(SolutionDir)dependencies\assimp\include;$(VULKAN)\include;$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)dependencies\glfw\lib\src\Debug;$(SolutionDir)dependencies\soil\lib\Debug;$(SolutionDir)dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)dependencies\glfw\Debug;$(SolutionDir)dependencies\soil\Debug;$(SolutionDir)dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(SolutionDir)include;$(SolutionDir)dependencies\glad\include;$(SolutionDir)dependencies\glfw\include;$(SolutionDir)dependencies\glm;$(SolutionDir)dependencies\soil\src;$(SolutionDir)dependencies\stb;$(SolutionDir)dependencies\assimp\include;$(VULKAN)\include;$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)dependencies\glfw\lib\src\Release;$(SolutionDir)dependencies\soil\lib\Release;$(SolutionDir)dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)dependencies\glfw\Release;$(SolutionDir)dependencies\soil\Release;$(SolutionDir)dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
