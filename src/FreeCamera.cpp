@@ -158,6 +158,11 @@ void FreeCamera::SetPosition(glm::vec3 position)
 	m_Position = position;
 }
 
+glm::vec3 FreeCamera::GetViewDirection() const
+{
+	return m_Forward;
+}
+
 glm::vec3 FreeCamera::GetPosition() const
 {
 	return m_Position;
