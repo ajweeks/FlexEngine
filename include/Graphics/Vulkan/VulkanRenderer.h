@@ -210,13 +210,20 @@ private:
 	UniformBufferObjectData_Color m_UniformBufferData_Color;
 	UniformBufferObjectDataDynamic_Color m_UniformBufferDynamic_Color;
 
-	const std::string m_DefaultFragShaderFilePath = "resources/shaders/GLSL/spv/vk_color_frag.spv";
-	const std::string m_DefaultVertShaderFilePath = "resources/shaders/GLSL/spv/vk_color_vert.spv";
+	struct ShaderFilePath
+	{
+		std::string vertexShaderFilePath;
+		std::string fragmentShaderFilePath;
+	};
 
-	std::vector<char> m_DefaultVertShaderCode;
-	std::vector<char> m_DefaultFragShaderCode;
+	struct ShaderCode
+	{
+		std::vector<char> vertexShaderCode;
+		std::vector<char> fragmentShaderCode;
+	};
 
-	std::map<std::string, std::vector<char>> m_LoadedShaderCode; // filepath and code
+	std::vector<ShaderFilePath> m_ShaderFilePaths;
+	std::vector<ShaderCode> m_LoadedShaderCode;
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;

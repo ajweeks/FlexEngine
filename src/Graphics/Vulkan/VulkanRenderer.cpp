@@ -659,50 +659,10 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
-	std::vector<char> vertShaderCode;
-	std::vector<char> fragShaderCode;
 
-	if (renderObject->vertShaderFilePath.empty())
-	{
-		// Filepath not given, use default shader
-		vertShaderCode = m_DefaultVertShaderCode;
-	}
-	else
-	{
-		auto iter = m_LoadedShaderCode.find(renderObject->vertShaderFilePath);
-		if (iter == m_LoadedShaderCode.end())
-		{
-			// Load code for first time
-			vertShaderCode = ReadFile(renderObject->vertShaderFilePath);
-		}
-		else
-		{
-			// Use already loaded code
-			vertShaderCode = iter->second;
-		}
-	}
-
-	if (renderObject->fragShaderFilePath.empty())
-	{
-		// Filepath not given, use default shader
-		fragShaderCode = m_DefaultFragShaderCode;
-	}
-	else
-	{
-		auto iter = m_LoadedShaderCode.find(renderObject->fragShaderFilePath);
-		if (iter == m_LoadedShaderCode.end())
-		{
-			// Load code for first time
-			fragShaderCode = ReadFile(renderObject->fragShaderFilePath);
-
-			m_LoadedShaderCode.insert({ renderObject->fragShaderFilePath, fragShaderCode });
-		}
-		else
-		{
-			// Use already loaded code
-			fragShaderCode = iter->second;
-		}
-	}
+	ShaderCode shaderCode = m_LoadedShaderCode[renderObject->shaderIndex];
+	std::vector<char> vertShaderCode = shaderCode.vertexShaderCode;
+	std::vector<char> fragShaderCode = shaderCode.fragmentShaderCode;
 
 	VDeleter<VkShaderModule> vertShaderModule{ m_Device, vkDestroyShaderModule };
 	CreateShaderModule(vertShaderCode, vertShaderModule);
@@ -726,8 +686,7 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 
 	VkVertexInputBindingDescription bindingDescription = VulkanVertex::GetVertexBindingDescription(renderObject->vertexBufferData);
 	std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-	VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData, attributeDescriptions, 
-		renderObject->fragShaderFilePath == m_DefaultFragShaderFilePath ? 2 : 1);
+	VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData, attributeDescriptions, renderObject->shaderIndex);
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -2083,32 +2042,26 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 
 void VulkanRenderer::LoadDefaultShaderCode()
 {
-	m_DefaultVertShaderCode = ReadFile(m_DefaultVertShaderFilePath);
+	const std::string shaderDirectory = "resources/shaders/GLSL/spv/";
 
-	if (m_DefaultVertShaderCode.empty())
-	{
-		Logger::LogWarning("Default vert shader code can't be found at " + m_DefaultVertShaderFilePath);
-	}
-	{
-		m_LoadedShaderCode.insert({ m_DefaultVertShaderFilePath, m_DefaultVertShaderCode });
-	}
+	m_ShaderFilePaths = {
+		{ shaderDirectory + "vk_simple_vert.spv", shaderDirectory + "vk_simple_frag.spv" },
+		{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
+	};
 
-	m_DefaultFragShaderCode = ReadFile(m_DefaultFragShaderFilePath);
-
-	if (m_DefaultFragShaderCode.empty())
+	const size_t shaderCount = m_ShaderFilePaths.size();
+	m_LoadedShaderCode.resize(shaderCount);
+	for (size_t i = 0; i < shaderCount; i++)
 	{
-		Logger::LogWarning("Default frag shader code can't be found at " + m_DefaultFragShaderFilePath);
-	}
-	else
-	{
-		m_LoadedShaderCode.insert({ m_DefaultFragShaderFilePath, m_DefaultFragShaderCode });
+		m_LoadedShaderCode[i].vertexShaderCode = ReadFile(m_ShaderFilePaths[i].vertexShaderFilePath);
+		m_LoadedShaderCode[i].fragmentShaderCode = ReadFile(m_ShaderFilePaths[i].fragmentShaderFilePath);
 	}
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
 	uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
 {
-	std::cerr << "validation layer: " << msg << std::endl;
+	std::cerr << "[ERROR] (VL): " << msg << std::endl;
 
 	return VK_FALSE;
 }
