@@ -61,7 +61,7 @@ struct UniformBuffers_Color
 	VulkanBuffer dynamicBuffer;
 };
 
-struct UniformBufferObjectData_Simple
+struct UniformBufferObjectDataConstant_Simple
 {
 	glm::mat4 projection;
 	glm::mat4 view;
@@ -74,7 +74,7 @@ struct UniformBufferObjectData_Simple
 	glm::int32 useSpecularTexture;
 };
 
-struct UniformBufferObjectData_Color
+struct UniformBufferObjectDataConstant_Color
 {
 	glm::mat4 viewProjection;
 };

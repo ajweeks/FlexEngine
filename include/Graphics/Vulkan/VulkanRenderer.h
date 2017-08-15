@@ -112,7 +112,7 @@ private:
 	std::vector<const char*> GetRequiredExtensions();
 	bool CheckValidationLayerSupport();
 
-	void UpdateUniformBuffers(const GameContext& gameContext);
+	void UpdateConstantUniformBuffers(const GameContext& gameContext);
 	void UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model);
 
 	void LoadDefaultShaderCode();
@@ -203,12 +203,12 @@ private:
 	VkClearColorValue m_ClearColor;
 
 	UniformBuffers_Simple m_UniformBuffers_Simple;
-	UniformBufferObjectData_Simple m_UniformBufferData_Simple;
-	UniformBufferObjectDataDynamic_Simple m_UniformBufferDynamic_Simple;
+	UniformBufferObjectDataConstant_Simple m_UniformBufferDataConstant_Simple;
+	UniformBufferObjectDataDynamic_Simple m_UniformBufferDataDynamic_Simple;
 
 	UniformBuffers_Color m_UniformBuffers_Color;
-	UniformBufferObjectData_Color m_UniformBufferData_Color;
-	UniformBufferObjectDataDynamic_Color m_UniformBufferDynamic_Color;
+	UniformBufferObjectDataConstant_Color m_UniformBufferDataConstant_Color;
+	UniformBufferObjectDataDynamic_Color m_UniformBufferDataDynamic_Color;
 
 	struct ShaderFilePath
 	{
