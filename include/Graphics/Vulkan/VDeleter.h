@@ -1,5 +1,7 @@
 #pragma once
 
+// Mostly copied from https://github.com/SaschaWillems/Vulkan
+
 #include <functional>
 
 template <typename T>

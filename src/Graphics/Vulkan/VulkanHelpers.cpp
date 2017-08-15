@@ -19,11 +19,11 @@ VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(Vertex
 void VulkanVertex::GetVertexAttributeDescriptions(
 	VertexBufferData* vertexBufferData, 
 	std::vector<VkVertexInputAttributeDescription>& attributeDescriptions,
-	glm::uint type)
+	glm::uint shaderIndex)
 {
 	attributeDescriptions.clear();
 
-	if (type == 1)
+	if (shaderIndex == 1)
 	{
 		attributeDescriptions.resize(6);
 
@@ -71,7 +71,7 @@ void VulkanVertex::GetVertexAttributeDescriptions(
 		attributeDescriptions[5].offset = offset;
 		offset += sizeof(glm::vec2);
 	}
-	else if (type == 2)
+	else if (shaderIndex == 2)
 	{
 		attributeDescriptions.resize(2);
 
@@ -93,7 +93,7 @@ void VulkanVertex::GetVertexAttributeDescriptions(
 	}
 	else 
 	{
-		Logger::LogError("Unhandled shader type passed to GetVertexAttrivuteDescriptions " + std::to_string(type));
+		Logger::LogError("Unhandled shader type passed to GetVertexAttrivuteDescriptions " + std::to_string(shaderIndex));
 	}
 }
 
@@ -110,10 +110,10 @@ UniformBuffers_Color::UniformBuffers_Color(const VDeleter<VkDevice>& device) :
 }
 
 VulkanTexture::VulkanTexture(const VDeleter<VkDevice>& device) :
-	Image(device, vkDestroyImage),
-	ImageMemory(device, vkFreeMemory),
-	ImageView(device, vkDestroyImageView),
-	Sampler(device, vkDestroySampler)
+	image(device, vkDestroyImage),
+	imageMemory(device, vkFreeMemory),
+	imageView(device, vkDestroyImageView),
+	sampler(device, vkDestroySampler)
 {
 }
 

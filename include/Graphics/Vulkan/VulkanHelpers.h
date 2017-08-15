@@ -25,7 +25,7 @@ struct QueueFamilyIndices
 	int graphicsFamily = -1;
 	int presentFamily = -1;
 
-	bool isComplete()
+	bool IsComplete()
 	{
 		return graphicsFamily >= 0 && presentFamily >= 0;
 	}
@@ -42,7 +42,7 @@ struct VulkanVertex
 {
 	static VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
 	static void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData, 
-		std::vector<VkVertexInputAttributeDescription>& vec, glm::uint type);
+		std::vector<VkVertexInputAttributeDescription>& vec, glm::uint shaderIndex);
 };
 
 struct UniformBuffers_Simple
@@ -106,10 +106,10 @@ struct VulkanTexture
 {
 	VulkanTexture(const VDeleter<VkDevice>& device);
 
-	VDeleter<VkImage> Image;
-	VDeleter<VkDeviceMemory> ImageMemory;
-	VDeleter<VkImageView> ImageView;
-	VDeleter<VkSampler> Sampler;
+	VDeleter<VkImage> image;
+	VDeleter<VkDeviceMemory> imageMemory;
+	VDeleter<VkImageView> imageView;
+	VDeleter<VkSampler> sampler;
 };
 
 struct RenderObject
@@ -138,11 +138,11 @@ struct RenderObject
 
 	glm::uint shaderIndex;
 
-	VulkanTexture* m_DiffuseTexture = nullptr;
-	VulkanTexture* m_NormalTexture = nullptr;
-	VulkanTexture* m_SpecularTexture = nullptr;
+	VulkanTexture* diffuseTexture = nullptr;
+	VulkanTexture* normalTexture = nullptr;
+	VulkanTexture* specularTexture = nullptr;
 
-	VkDescriptorSet m_DescriptorSet;
+	VkDescriptorSet descriptorSet;
 
 	VDeleter<VkPipelineLayout> pipelineLayout;
 	VDeleter<VkPipeline> graphicsPipeline;

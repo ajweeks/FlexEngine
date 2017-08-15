@@ -91,7 +91,7 @@ void MainApp::InitializeWindowAndRenderer()
 #if COMPILE_VULKAN
 	if (m_RendererIndex == RendererID::VULKAN)
 	{
-		VulkanWindowWrapper* vulkanWindow = new VulkanWindowWrapper("Tech Demo - Vulkan", windowSize, windowPos, m_GameContext);
+		VulkanWindowWrapper* vulkanWindow = new VulkanWindowWrapper("Rendering Engine - Vulkan", windowSize, windowPos, m_GameContext);
 		m_Window = vulkanWindow;
 		VulkanRenderer* vulkanRenderer = new VulkanRenderer(m_GameContext);
 		m_GameContext.renderer = vulkanRenderer;
@@ -100,7 +100,7 @@ void MainApp::InitializeWindowAndRenderer()
 #if COMPILE_OPEN_GL
 	if (m_RendererIndex == RendererID::GL)
 	{
-		GLWindowWrapper* glWindow = new GLWindowWrapper("Tech Demo - OpenGL", windowSize, windowPos, m_GameContext);
+		GLWindowWrapper* glWindow = new GLWindowWrapper("Rendering Engine - OpenGL", windowSize, windowPos, m_GameContext);
 		m_Window = glWindow;
 		GLRenderer* glRenderer = new GLRenderer(m_GameContext);
 		m_GameContext.renderer = glRenderer;
@@ -109,7 +109,7 @@ void MainApp::InitializeWindowAndRenderer()
 #if COMPILE_D3D
 	if (m_RendererIndex == RendererID::D3D)
 	{
-		D3DWindowWrapper* d3dWindow = new D3DWindowWrapper("Tech Demo - Direct3D", windowSize, windowPos, m_GameContext);
+		D3DWindowWrapper* d3dWindow = new D3DWindowWrapper("Rendering Engine - Direct3D", windowSize, windowPos, m_GameContext);
 		m_Window = d3dWindow;
 		D3DRenderer* d3dRenderer = new D3DRenderer(m_GameContext);
 		m_GameContext.renderer = d3dRenderer;

@@ -109,15 +109,15 @@ void VulkanRenderer::PostInitialize()
 		{
 			if (i % 2 == 0)
 			{
-				renderObject->m_DiffuseTexture = m_BrickDiffuseTexture;
-				renderObject->m_NormalTexture = m_BrickNormalTexture;
-				renderObject->m_SpecularTexture = m_BrickSpecularTexture;
+				renderObject->diffuseTexture = m_BrickDiffuseTexture;
+				renderObject->normalTexture = m_BrickNormalTexture;
+				renderObject->specularTexture = m_BrickSpecularTexture;
 			}
 			else
 			{
-				renderObject->m_DiffuseTexture = m_WorkDiffuseTexture;
-				renderObject->m_NormalTexture = m_WorkNormalTexture;
-				renderObject->m_SpecularTexture = m_WorkSpecularTexture;
+				renderObject->diffuseTexture = m_WorkDiffuseTexture;
+				renderObject->normalTexture = m_WorkNormalTexture;
+				renderObject->specularTexture = m_WorkSpecularTexture;
 			}
 		}
 		else
@@ -555,7 +555,7 @@ void VulkanRenderer::CreateImageViews()
 
 void VulkanRenderer::CreateTextureImageView(VulkanTexture* texture)
 {
-	CreateImageView(texture->Image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, texture->ImageView);
+	CreateImageView(texture->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, texture->imageView);
 }
 
 void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VDeleter<VkImageView>& imageView)
@@ -652,7 +652,7 @@ void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture)
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 0.0f;
 
-	VK_CHECK_RESULT(vkCreateSampler(m_Device, &samplerInfo, nullptr, texture->Sampler.replace()));
+	VK_CHECK_RESULT(vkCreateSampler(m_Device, &samplerInfo, nullptr, texture->sampler.replace()));
 }
 
 void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
@@ -1032,11 +1032,11 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTextu
 
 	CreateImage(textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-		(*texture)->Image, (*texture)->ImageMemory);
+		(*texture)->image, (*texture)->imageMemory);
 
-	TransitionImageLayout((*texture)->Image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->Image, (uint32_t)textureWidth, (uint32_t)textureHeight);
-	TransitionImageLayout((*texture)->Image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	TransitionImageLayout((*texture)->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (uint32_t)textureWidth, (uint32_t)textureHeight);
+	TransitionImageLayout((*texture)->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void VulkanRenderer::RebuildCommandBuffers()
@@ -1124,7 +1124,7 @@ void VulkanRenderer::BuildCommandBuffers()
 			vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
 			vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
-				0, 1, &renderObject->m_DescriptorSet,
+				0, 1, &renderObject->descriptorSet,
 				1, &dynamicOffset);
 
 			if (renderObject->indexed)
@@ -1532,10 +1532,10 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = layouts;
 
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_Device, &allocInfo, &renderObject->m_DescriptorSet));
+	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_Device, &allocInfo, &renderObject->descriptorSet));
 
 
-	if (renderObject->m_DiffuseTexture != nullptr)
+	if (renderObject->diffuseTexture != nullptr)
 	{
 		std::array<VkWriteDescriptorSet, 5> writeDescriptorSets = {};
 
@@ -1544,7 +1544,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		uniformBufferInfo.range = sizeof(UniformBufferObjectData_Simple);
 
 		writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[0].dstSet = renderObject->m_DescriptorSet;
+		writeDescriptorSets[0].dstSet = renderObject->descriptorSet;
 		writeDescriptorSets[0].dstBinding = 0;
 		writeDescriptorSets[0].dstArrayElement = 0;
 		writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1556,7 +1556,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectDataDynamic_Simple) * m_RenderObjects.size();
 
 		writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[1].dstSet = renderObject->m_DescriptorSet;
+		writeDescriptorSets[1].dstSet = renderObject->descriptorSet;
 		writeDescriptorSets[1].dstBinding = 1;
 		writeDescriptorSets[1].dstArrayElement = 0;
 		writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -1565,11 +1565,11 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 
 		VkDescriptorImageInfo diffuseImageInfo = {};
 		diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		diffuseImageInfo.imageView = renderObject->m_DiffuseTexture->ImageView;
-		diffuseImageInfo.sampler = renderObject->m_DiffuseTexture->Sampler;
+		diffuseImageInfo.imageView = renderObject->diffuseTexture->imageView;
+		diffuseImageInfo.sampler = renderObject->diffuseTexture->sampler;
 
 		writeDescriptorSets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[2].dstSet = renderObject->m_DescriptorSet;
+		writeDescriptorSets[2].dstSet = renderObject->descriptorSet;
 		writeDescriptorSets[2].dstBinding = 2;
 		writeDescriptorSets[2].dstArrayElement = 0;
 		writeDescriptorSets[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1578,11 +1578,11 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 
 		VkDescriptorImageInfo normalImageInfo = {};
 		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		normalImageInfo.imageView = renderObject->m_NormalTexture->ImageView;
-		normalImageInfo.sampler = renderObject->m_NormalTexture->Sampler;
+		normalImageInfo.imageView = renderObject->normalTexture->imageView;
+		normalImageInfo.sampler = renderObject->normalTexture->sampler;
 
 		writeDescriptorSets[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[3].dstSet = renderObject->m_DescriptorSet;
+		writeDescriptorSets[3].dstSet = renderObject->descriptorSet;
 		writeDescriptorSets[3].dstBinding = 3;
 		writeDescriptorSets[3].dstArrayElement = 0;
 		writeDescriptorSets[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1591,11 +1591,11 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 
 		VkDescriptorImageInfo specularImageInfo = {};
 		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		specularImageInfo.imageView = renderObject->m_SpecularTexture->ImageView;
-		specularImageInfo.sampler = renderObject->m_SpecularTexture->Sampler;
+		specularImageInfo.imageView = renderObject->specularTexture->imageView;
+		specularImageInfo.sampler = renderObject->specularTexture->sampler;
 
 		writeDescriptorSets[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[4].dstSet = renderObject->m_DescriptorSet;
+		writeDescriptorSets[4].dstSet = renderObject->descriptorSet;
 		writeDescriptorSets[4].dstBinding = 4;
 		writeDescriptorSets[4].dstArrayElement = 0;
 		writeDescriptorSets[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1613,7 +1613,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		uniformBufferInfo.range = sizeof(UniformBufferObjectData_Color);
 
 		writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[0].dstSet = renderObject->m_DescriptorSet;
+		writeDescriptorSets[0].dstSet = renderObject->descriptorSet;
 		writeDescriptorSets[0].dstBinding = 0;
 		writeDescriptorSets[0].dstArrayElement = 0;
 		writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1625,7 +1625,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectDataDynamic_Color) * m_RenderObjects.size();
 
 		writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[1].dstSet = renderObject->m_DescriptorSet;
+		writeDescriptorSets[1].dstSet = renderObject->descriptorSet;
 		writeDescriptorSets[1].dstBinding = 1;
 		writeDescriptorSets[1].dstArrayElement = 0;
 		writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -1909,7 +1909,7 @@ bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice device)
 	VkPhysicalDeviceFeatures supportedFeatures;
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 	
-	return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+	return indices.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
 bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
@@ -1956,7 +1956,7 @@ QueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
 			indices.presentFamily = i;
 		}
 
-		if (indices.isComplete())
+		if (indices.IsComplete())
 		{
 			break;
 		}
