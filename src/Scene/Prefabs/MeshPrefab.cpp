@@ -68,7 +68,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 		glm::vec3 pos = ToVec3(mesh->mVertices[i]);
 		pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 		m_Positions.push_back(pos);
-		m_HasElement |= (glm::uint)Renderer::VertexType::POSITION;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
 
 		// Color
 		glm::vec4 col;
@@ -82,18 +82,18 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 			col = m_DefaultColor;
 		}
 		m_Colors.push_back(col);
-		m_HasElement |= (glm::uint)Renderer::VertexType::COLOR;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
 
 		// Tangent & Bitangent
 		if (mesh->HasTangentsAndBitangents())
 		{
 			glm::vec3 tangent = ToVec3(mesh->mTangents[i]);
 			m_Tangents.push_back(tangent);
-			m_HasElement |= (glm::uint)Renderer::VertexType::TANGENT;
+			m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::TANGENT;
 
 			glm::vec3 bitangent = ToVec3(mesh->mBitangents[i]);
 			m_Bitangents.push_back(bitangent);
-			m_HasElement |= (glm::uint)Renderer::VertexType::BITANGENT;
+			m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::BITANGENT;
 		}
 
 		// Normal
@@ -101,7 +101,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 		{
 			glm::vec3 norm = ToVec3(mesh->mNormals[i]);
 			m_Normals.push_back(norm);
-			m_HasElement |= (glm::uint)Renderer::VertexType::NORMAL;
+			m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::NORMAL;
 		}
 
 		// TexCoord
@@ -110,7 +110,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 			// Truncate w component
 			glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 			m_TexCoords.push_back(texCoord);
-			m_HasElement |= (glm::uint)Renderer::VertexType::TEXCOORD;
+			m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
 		}
 	}
 
@@ -213,7 +213,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			{ -0.5f, -0.5f,  0.5f, },
 			{ -0.5f,  0.5f,  0.5f, },
 		};
-		m_HasElement |= (glm::uint)Renderer::VertexType::POSITION;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
 
 		m_Colors =
 		{
@@ -271,7 +271,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			colors[5],
 			colors[5],
 		};
-		m_HasElement |= (glm::uint)Renderer::VertexType::COLOR;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
 
 		m_Normals =
 		{
@@ -329,7 +329,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			{ -1.0f, 0.0f, 0.0f, },
 			{ -1.0f, 0.0f, 0.0f, },
 		};
-		m_HasElement |= (glm::uint)Renderer::VertexType::NORMAL;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::NORMAL;
 
 		m_TexCoords =
 		{
@@ -387,7 +387,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 			{ 1.0f, 1.0f },
 			{ 1.0f, 0.0f },
 		};
-		m_HasElement |= (glm::uint)Renderer::VertexType::TEXCOORD;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
 
 	} break;
 	case MeshPrefab::PrefabShape::UV_SPHERE:
@@ -399,10 +399,10 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		m_TexCoords.push_back({ 0.0f, 0.0f });
 		m_Normals.push_back({ 0.0f, 1.0f, 0.0f });
 
-		m_HasElement |= (glm::uint)Renderer::VertexType::POSITION;
-		m_HasElement |= (glm::uint)Renderer::VertexType::COLOR;
-		m_HasElement |= (glm::uint)Renderer::VertexType::TEXCOORD;
-		m_HasElement |= (glm::uint)Renderer::VertexType::NORMAL;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::NORMAL;
 
 		glm::uint parallelCount = 10;
 		glm::uint meridianCount = 5;
@@ -503,8 +503,8 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		m_TexCoords.reserve(vertexCount);
 		m_Normals.reserve(vertexCount);
 
-		m_HasElement |= (glm::uint)Renderer::VertexType::POSITION;
-		m_HasElement |= (glm::uint)Renderer::VertexType::COLOR;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
+		m_HasElement |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
 
 		float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
 
@@ -588,7 +588,7 @@ void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, glm::ui
 	float* currentLocation = (float*)0;
 	for (size_t i = 0; i < vertexTypeCount; ++i)
 	{
-		Renderer::VertexType vertexType = Renderer::VertexType(1 << i);
+		VertexBufferData::VertexAttribute vertexType = VertexBufferData::VertexAttribute(1 << i);
 		if (m_HasElement & (int)vertexType)
 		{
 			renderer->DescribeShaderVariable(m_RenderID, program, names[i], sizes[i], Renderer::Type::FLOAT, false,
@@ -622,37 +622,37 @@ void MeshPrefab::CreateVertexBuffer(VertexBufferData* vertexBufferData)
 
 	for (UINT i = 0; i < vertexBufferData->VertexCount; ++i)
 	{
-		if (m_HasElement & (glm::uint)Renderer::VertexType::POSITION)
+		if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::POSITION)
 		{
 			memcpy(pDataLocation, &m_Positions[i], sizeof(glm::vec3));
 			pDataLocation = (float*)pDataLocation + 3;
 		}
 
-		if (m_HasElement & (glm::uint)Renderer::VertexType::COLOR)
+		if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::COLOR)
 		{
 			memcpy(pDataLocation, &m_Colors[i], sizeof(glm::vec4));
 			pDataLocation = (float*)pDataLocation + 4;
 		}
 
-		if (m_HasElement & (glm::uint)Renderer::VertexType::TANGENT)
+		if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::TANGENT)
 		{
 			memcpy(pDataLocation, &m_Tangents[i], sizeof(glm::vec3));
 			pDataLocation = (float*)pDataLocation + 3;
 		}
 
-		if (m_HasElement & (glm::uint)Renderer::VertexType::BITANGENT)
+		if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::BITANGENT)
 		{
 			memcpy(pDataLocation, &m_Bitangents[i], sizeof(glm::vec3));
 			pDataLocation = (float*)pDataLocation + 3;
 		}
 
-		if (m_HasElement & (glm::uint)Renderer::VertexType::NORMAL)
+		if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::NORMAL)
 		{
 			memcpy(pDataLocation, &m_Normals[i], sizeof(glm::vec3));
 			pDataLocation = (float*)pDataLocation + 3;
 		}
 
-		if (m_HasElement & (glm::uint)Renderer::VertexType::TEXCOORD)
+		if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD)
 		{
 			memcpy(pDataLocation, &m_TexCoords[i], sizeof(glm::vec2));
 			pDataLocation = (float*)pDataLocation + 2;
@@ -664,12 +664,12 @@ glm::uint MeshPrefab::CalculateVertexBufferStride() const
 {
 	glm::uint stride = 0;
 
-	if (m_HasElement & (glm::uint)Renderer::VertexType::POSITION) stride += sizeof(glm::vec3);
-	if (m_HasElement & (glm::uint)Renderer::VertexType::COLOR) stride += sizeof(glm::vec4);
-	if (m_HasElement & (glm::uint)Renderer::VertexType::TANGENT) stride += sizeof(glm::vec3);
-	if (m_HasElement & (glm::uint)Renderer::VertexType::BITANGENT) stride += sizeof(glm::vec3);
-	if (m_HasElement & (glm::uint)Renderer::VertexType::NORMAL) stride += sizeof(glm::vec3);
-	if (m_HasElement & (glm::uint)Renderer::VertexType::TEXCOORD) stride += sizeof(glm::vec2);
+	if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::POSITION) stride += sizeof(glm::vec3);
+	if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::COLOR) stride += sizeof(glm::vec4);
+	if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::TANGENT) stride += sizeof(glm::vec3);
+	if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::BITANGENT) stride += sizeof(glm::vec3);
+	if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::NORMAL) stride += sizeof(glm::vec3);
+	if (m_HasElement & (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD) stride += sizeof(glm::vec2);
 
 	if (stride == 0)
 	{

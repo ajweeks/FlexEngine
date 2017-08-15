@@ -29,17 +29,6 @@ public:
 		glm::uint shaderIndex;
 	};
 
-	enum class VertexType : glm::uint
-	{
-		NONE = 0,
-		POSITION = (1 << 0),
-		COLOR = (1 << 1),
-		TANGENT = (1 << 2),
-		BITANGENT = (1 << 3),
-		NORMAL = (1 << 4),
-		TEXCOORD = (1 << 5)
-	};
-
 	enum class ClearFlag
 	{
 		COLOR = (1 << 0), 
