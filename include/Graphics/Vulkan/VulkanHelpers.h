@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ShaderUtils.h"
+
 #include <string>
 
 #include <vulkan\vulkan.h>
@@ -43,32 +45,6 @@ struct VulkanVertex
 	static VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
 	static void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData, 
 		std::vector<VkVertexInputAttributeDescription>& vec, glm::uint shaderIndex);
-};
-
-struct Uniform
-{
-	enum Type : glm::uint
-	{
-		NONE = 0,
-		PROJECTION_MAT4 = (1 << 0),
-		VIEW_MAT4 = (1 << 1),
-		VIEW_INV_MAT4 = (1 << 2),
-		VIEW_PROJECTION_MAT4 = (1 << 3),
-		MODEL_MAT4 = (1 << 4),
-		MODEL_INV_TRANSPOSE_MAT4 = (1 << 5),
-		MODEL_VIEW_PROJECTION_MAT4 = (1 << 6),
-		CAM_POS_VEC4 = (1 << 7),
-		VIEW_DIR_VEC4 = (1 << 8),
-		LIGHT_DIR_VEC4 = (1 << 9),
-		AMBIENT_COLOR_VEC4 = (1 << 10),
-		SPECULAR_COLOR_VEC4 = (1 << 11),
-		USE_DIFFUSE_TEXTURE_INT = (1 << 12),
-		USE_NORMAL_TEXTURE_INT = (1 << 13),
-		USE_SPECULAR_TEXTURE_INT = (1 << 14)
-	};
-
-	static bool HasUniform(Type elements, Type uniform);
-	static glm::uint CalculateSize(Type elements);
 };
 
 struct UniformBufferObjectData

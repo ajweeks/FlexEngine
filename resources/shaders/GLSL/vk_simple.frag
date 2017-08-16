@@ -39,6 +39,7 @@ void main()
 	{
 		normal = inTBN[2];
 	}
+	
 	float lightIntensity = max(dot(normal, normalize(ubo.lightDir.xyz)), 0.0);
 	lightIntensity = lightIntensity * 0.75 + 0.25;
 

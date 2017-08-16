@@ -2015,25 +2015,25 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::PROJECTION_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], sizeof(glm::mat4));
 			index += 16;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &view[0][0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &view[0][0], sizeof(glm::mat4));
 			index += 16;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_INV_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewInv[0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewInv[0], sizeof(glm::mat4));
 			index += 16;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_PROJECTION_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewProj[0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewProj[0], sizeof(glm::mat4));
 			index += 16;
 		}
 
@@ -2054,49 +2054,49 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::CAM_POS_VEC4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &camPos[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &camPos[0], sizeof(glm::vec4));
 			index += 4;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_DIR_VEC4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewDir[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewDir[0], sizeof(glm::vec4));
 			index += 4;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::LIGHT_DIR_VEC4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_LightDir[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_LightDir[0], sizeof(glm::vec4));
 			index += 4;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::AMBIENT_COLOR_VEC4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_AmbientColor[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_AmbientColor[0], sizeof(glm::vec4));
 			index += 4;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::SPECULAR_COLOR_VEC4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], sizeof(glm::vec4));
 			index += 4;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &useDiffuseTexture, 1 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &useDiffuseTexture, sizeof(float));
 			index += 1;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &useNormalTexture, 1 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &useNormalTexture, sizeof(float));
 			index += 1;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &useSpecularTexture, 1 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &useSpecularTexture, sizeof(float));
 			index += 1;
 		}
 
@@ -2118,12 +2118,14 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::MODEL_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &model, sizeof(model)); index += 16;
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &model, sizeof(model)); 
+			index += 16;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); index += 16;
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); 
+			index += 16;
 		}
 
 		// Aligned offset
@@ -2135,8 +2137,9 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 		// Flush to make changes visible to the host 
 		VkMappedMemoryRange mappedMemoryRange{};
 		mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+		mappedMemoryRange.offset = offset;
 		mappedMemoryRange.memory = m_UniformBuffers[i].dynamicBuffer.m_Memory;
-		mappedMemoryRange.size = m_UniformBuffers[i].dynamicData.size * m_RenderObjects.size();
+		mappedMemoryRange.size = m_UniformBuffers[i].dynamicData.size;
 		vkFlushMappedMemoryRanges(m_Device, 1, &mappedMemoryRange);
 	}
 }

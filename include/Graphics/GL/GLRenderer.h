@@ -47,8 +47,6 @@ private:
 
 	struct RenderObject
 	{
-		void GetTextures(std::vector<glm::uint>& textures);
-
 		glm::uint renderID;
 
 		glm::uint VAO;
@@ -64,11 +62,22 @@ private:
 		glm::uint indexBuffer;
 		std::vector<glm::uint>* indices = nullptr;
 
-		int model;
-		int view;
+		// Uniform IDs
 		int projection;
+		int view;
+		int viewInverse;
+		int viewProjection;
+		int model;
 		int modelInvTranspose;
-		int MVP;
+		int modelViewProjection;
+		int camPos;
+		int viewDir;
+		int lightDir;
+		int ambientColor;
+		int specularColor;
+		int useDiffuseTexture;
+		int useNormalTexture;
+		int useSpecularTexture;
 
 		glm::uint shaderIndex;
 
@@ -97,15 +106,17 @@ private:
 		glm::uint program;
 		glm::uint vertexShader;
 		glm::uint fragmentShader;
+
+		Uniform::Type constantBufferUniforms;
+		Uniform::Type dynamicBufferUniforms;
 	};
 
 	std::vector<Shader> m_LoadedShaders;
 
 	// Scene info variable locations
-	int m_LightDir;
-	int m_AmbientColor;
-	int m_SpecularColor;
-	int m_CamPos;
+	//int m_LightDirID;
+	//int m_AmbientColorID;
+	//int m_SpecularColorID;
 
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;
