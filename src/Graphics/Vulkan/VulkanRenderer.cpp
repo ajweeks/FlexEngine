@@ -1403,6 +1403,31 @@ void VulkanRenderer::CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shad
 
 void VulkanRenderer::PrepareUniformBuffers()
 {
+	// Simple
+	m_UniformBufferDataConstant_Simple.elements = Uniform::Type(
+		Uniform::Type::PROJECTION_MAT4 |
+		Uniform::Type::VIEW_MAT4 |
+		Uniform::Type::CAM_POS_VEC4 |
+		Uniform::Type::LIGHT_DIR_VEC4 |
+		Uniform::Type::AMBIENT_COLOR_VEC4 |
+		Uniform::Type::SPECULAR_COLOR_VEC4 |
+		Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
+		Uniform::Type::USE_NORMAL_TEXTURE_INT |
+		Uniform::Type::USE_SPECULAR_TEXTURE_INT);
+
+	//m_UniformBufferDataDynamic_Simple.elements = Uniform::Type(
+	//	Uniform::Type::MODEL_MAT4 |
+	//	Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
+
+	// Color
+	m_UniformBufferDataConstant_Color.elements = Uniform::Type(
+		Uniform::Type::VIEW_PROJECTION_MAT4);
+
+	//m_UniformBufferPairs[shaderIndex].dynamicBufferData.elements = Uniform::Type(
+	//	Uniform::Type::MODEL_MAT4);
+
+
+
 	AllocateUniformBuffer(UniformBufferObjectDataDynamic_Simple::size, (void**)&m_UniformBufferDataDynamic_Simple.data);
 	AllocateUniformBuffer(UniformBufferObjectDataDynamic_Color::size, (void**)&m_UniformBufferDataDynamic_Color.data);
 
@@ -2000,12 +2025,12 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &useNormalTexture, 1 * sizeof(float)); 1; index += 1;
 	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &useSpecularTexture, 1 * sizeof(float)); 1; index += 1;
 
-	memcpy(m_UniformBuffers_Simple.viewBuffer.m_Mapped, m_UniformBufferDataConstant_Simple.data, sizeof(m_UniformBufferDataConstant_Simple));
+	memcpy(m_UniformBuffers_Simple.viewBuffer.m_Mapped, m_UniformBufferDataConstant_Simple.data, m_UniformBufferDataConstant_Simple.size);
 
 	// Color
 	index = 0;
 	memcpy(&m_UniformBufferDataConstant_Color.data[index], &viewProj, 16 * sizeof(float)); index += 16;
-	memcpy(m_UniformBuffers_Color.viewBuffer.m_Mapped, &m_UniformBufferDataConstant_Color, sizeof(m_UniformBufferDataConstant_Color));
+	memcpy(m_UniformBuffers_Color.viewBuffer.m_Mapped, &m_UniformBufferDataConstant_Color.data, m_UniformBufferDataConstant_Color.size);
 }
 
 void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
