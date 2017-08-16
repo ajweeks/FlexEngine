@@ -25,8 +25,6 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	m_IndexBuffer_Simple(m_Device),
 	m_VertexBuffer_Color(m_Device),
 	m_IndexBuffer_Color(m_Device),
-	m_UniformBuffers_Simple(m_Device),
-	m_UniformBuffers_Color(m_Device),
 	m_DynamicAlignment(0)
 {
 	CreateInstance(gameContext);
@@ -143,8 +141,15 @@ VulkanRenderer::~VulkanRenderer()
 	//vkDestroyImage(m_Device, m_TextureImage, nullptr);
 	//vkFreeMemory(m_Device, m_TextureImageMemory, nullptr);
 
-	free(m_UniformBufferDataConstant_Simple.data);
-	free(m_UniformBufferDataConstant_Color.data);
+	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
+	{
+		free(m_UniformBuffers[i].constantData.data);
+
+		if (m_UniformBuffers[i].dynamicData.data)
+		{
+			_aligned_free(m_UniformBuffers[i].dynamicData.data);
+		}
+	}
 
 	auto iter = m_RenderObjects.begin();
 	while (iter != m_RenderObjects.end())
@@ -153,16 +158,6 @@ VulkanRenderer::~VulkanRenderer()
 		iter = m_RenderObjects.erase(iter);
 	}
 	m_RenderObjects.clear();
-
-	if (m_UniformBufferDataDynamic_Simple.data)
-	{
-		_aligned_free(m_UniformBufferDataDynamic_Simple.data);
-	}
-
-	if (m_UniformBufferDataDynamic_Color.data)
-	{
-		_aligned_free(m_UniformBufferDataDynamic_Color.data);
-	}
 
 	for (auto iter = m_DescriptorSetLayouts.begin(); iter != m_DescriptorSetLayouts.end(); ++iter)
 	{
@@ -1406,8 +1401,12 @@ void VulkanRenderer::CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shad
 
 void VulkanRenderer::PrepareUniformBuffers()
 {
+	m_UniformBuffers.resize(m_LoadedShaderCode.size(), m_Device);
+
+	glm::uint shaderIndex = 0;
+
 	// Simple
-	m_UniformBufferDataConstant_Simple.elements = Uniform::Type(
+	m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
 		Uniform::Type::PROJECTION_MAT4 |
 		Uniform::Type::VIEW_MAT4 |
 		Uniform::Type::CAM_POS_VEC4 |
@@ -1418,44 +1417,35 @@ void VulkanRenderer::PrepareUniformBuffers()
 		Uniform::Type::USE_NORMAL_TEXTURE_INT |
 		Uniform::Type::USE_SPECULAR_TEXTURE_INT);
 
-	m_UniformBufferDataConstant_Simple.size = Uniform::CalculateSize(m_UniformBufferDataConstant_Simple.elements);
-	m_UniformBufferDataConstant_Simple.data = (float*)malloc(m_UniformBufferDataConstant_Simple.size);
-	assert(m_UniformBufferDataConstant_Simple.data);
-
-
-	m_UniformBufferDataDynamic_Simple.elements = Uniform::Type(
+	m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
 		Uniform::Type::MODEL_MAT4 |
 		Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
-	m_UniformBufferDataDynamic_Simple.size = Uniform::CalculateSize(m_UniformBufferDataDynamic_Simple.elements);
 
 	// Color
-	m_UniformBufferDataConstant_Color.elements = Uniform::Type(
+	shaderIndex = 1;
+	m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
 		Uniform::Type::VIEW_PROJECTION_MAT4);
 
-	m_UniformBufferDataConstant_Color.size = Uniform::CalculateSize(m_UniformBufferDataConstant_Color.elements);
-	m_UniformBufferDataConstant_Color.data = (float*)malloc(m_UniformBufferDataConstant_Color.size);
-	assert(m_UniformBufferDataConstant_Color.data);
-
-	m_UniformBufferDataDynamic_Color.elements = Uniform::Type(
+	m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
 		Uniform::Type::MODEL_MAT4);
-	m_UniformBufferDataDynamic_Color.size = Uniform::CalculateSize(m_UniformBufferDataDynamic_Color.elements);
 
-	const size_t dynamicSimpleBufferSize = AllocateUniformBuffer(m_UniformBufferDataDynamic_Simple.size, (void**)&m_UniformBufferDataDynamic_Simple.data);
-	const size_t dynamicColorBufferSize = AllocateUniformBuffer(m_UniformBufferDataDynamic_Color.size, (void**)&m_UniformBufferDataDynamic_Color.data);
+	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
+	{
+		m_UniformBuffers[i].constantData.size = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
+		m_UniformBuffers[i].constantData.data = (float*)malloc(m_UniformBuffers[i].constantData.size);
+		assert(m_UniformBuffers[i].constantData.data);
 
-	// Simple
-	PrepareUniformBuffer(m_UniformBuffers_Simple.constantBuffer, m_UniformBufferDataConstant_Simple.size,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		m_UniformBuffers[i].dynamicData.size = Uniform::CalculateSize(m_UniformBuffers[i].dynamicData.elements);
 
-	PrepareUniformBuffer(m_UniformBuffers_Simple.dynamicBuffer, dynamicSimpleBufferSize,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		const size_t dynamicBufferSize = AllocateUniformBuffer(
+			m_UniformBuffers[i].dynamicData.size, (void**)&m_UniformBuffers[i].dynamicData.data);
 
-	// Color
-	PrepareUniformBuffer(m_UniformBuffers_Color.constantBuffer, m_UniformBufferDataConstant_Color.size,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		PrepareUniformBuffer(m_UniformBuffers[i].constantBuffer, m_UniformBuffers[i].constantData.size,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	PrepareUniformBuffer(m_UniformBuffers_Color.dynamicBuffer, dynamicColorBufferSize,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		PrepareUniformBuffer(m_UniformBuffers[i].dynamicBuffer, dynamicBufferSize,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
 }
 
 glm::uint VulkanRenderer::AllocateUniformBuffer(size_t dynamicDataSize, void** data)
@@ -1535,7 +1525,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		std::array<VkWriteDescriptorSet, 5> writeDescriptorSets = {};
 
 		VkDescriptorBufferInfo uniformBufferInfo = {};
-		uniformBufferInfo.buffer = m_UniformBuffers_Simple.constantBuffer.m_Buffer;
+		uniformBufferInfo.buffer = m_UniformBuffers[0].constantBuffer.m_Buffer;
 		uniformBufferInfo.range = sizeof(UniformBufferObjectData);
 
 		writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1547,7 +1537,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		writeDescriptorSets[0].pBufferInfo = &uniformBufferInfo;
 
 		VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
-		uniformBufferDynamicInfo.buffer = m_UniformBuffers_Simple.dynamicBuffer.m_Buffer;
+		uniformBufferDynamicInfo.buffer = m_UniformBuffers[0].dynamicBuffer.m_Buffer;
 		uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectData) * m_RenderObjects.size();
 
 		writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1604,7 +1594,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = {};
 
 		VkDescriptorBufferInfo uniformBufferInfo = {};
-		uniformBufferInfo.buffer = m_UniformBuffers_Color.constantBuffer.m_Buffer;
+		uniformBufferInfo.buffer = m_UniformBuffers[1].constantBuffer.m_Buffer;
 		uniformBufferInfo.range = sizeof(UniformBufferObjectData);
 
 		writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1616,7 +1606,7 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 		writeDescriptorSets[0].pBufferInfo = &uniformBufferInfo;
 
 		VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
-		uniformBufferDynamicInfo.buffer = m_UniformBuffers_Color.dynamicBuffer.m_Buffer;
+		uniformBufferDynamicInfo.buffer = m_UniformBuffers[1].dynamicBuffer.m_Buffer;
 		uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectData) * m_RenderObjects.size();
 
 		writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2026,104 +2016,101 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 	float useNormalTexture = 1;
 	float useSpecularTexture = 1;
 
-	UniformBufferObjectData* constantBuffers[2] = { &m_UniformBufferDataConstant_Simple, &m_UniformBufferDataConstant_Color };
-	VulkanBuffer* vulkanBuffers[2] = { &m_UniformBuffers_Simple.constantBuffer, &m_UniformBuffers_Color.constantBuffer };
-
-	for (size_t i = 0; i < 2; i++)
+	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
 	{
 		glm::uint index = 0;
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::PROJECTION_MAT4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::PROJECTION_MAT4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &proj[0][0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], 16 * sizeof(float));
 			index += 16;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::VIEW_MAT4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_MAT4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &view[0][0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &view[0][0], 16 * sizeof(float));
 			index += 16;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::VIEW_INV_MAT4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_INV_MAT4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &viewInv[0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewInv[0], 16 * sizeof(float));
 			index += 16;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::VIEW_PROJECTION_MAT4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_PROJECTION_MAT4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &viewProj[0], 16 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewProj[0], 16 * sizeof(float));
 			index += 16;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::MODEL_MAT4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::MODEL_MAT4))
 		{
 			Logger::LogError("Constant uniform buffer contains model matrix, which should be in the dynamic uniform buffer");
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
 		{
 			Logger::LogError("Constant uniform buffer contains modelInvTranspose matrix, which should be in the dynamic uniform buffer");
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4))
 		{
 			Logger::LogError("Constant uniform buffer contains MVP matrix, which should be in the dynamic uniform buffer");
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::CAM_POS_VEC4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::CAM_POS_VEC4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &camPos[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &camPos[0], 4 * sizeof(float));
 			index += 4;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::VIEW_DIR_VEC4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_DIR_VEC4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &viewDir[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &viewDir[0], 4 * sizeof(float));
 			index += 4;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::LIGHT_DIR_VEC4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::LIGHT_DIR_VEC4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &m_SceneInfo.m_LightDir[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_LightDir[0], 4 * sizeof(float));
 			index += 4;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::AMBIENT_COLOR_VEC4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::AMBIENT_COLOR_VEC4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &m_SceneInfo.m_AmbientColor[0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_AmbientColor[0], 4 * sizeof(float));
 			index += 4;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::SPECULAR_COLOR_VEC4))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::SPECULAR_COLOR_VEC4))
 		{
-			memcpy(&constantBuffers[i]->data[index], &proj[0][0], 4 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], 4 * sizeof(float));
 			index += 4;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
 		{
-			memcpy(&constantBuffers[i]->data[index], &useDiffuseTexture, 1 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &useDiffuseTexture, 1 * sizeof(float));
 			index += 1;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
 		{
-			memcpy(&constantBuffers[i]->data[index], &useNormalTexture, 1 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &useNormalTexture, 1 * sizeof(float));
 			index += 1;
 		}
 
-		if (Uniform::HasUniform(constantBuffers[i]->elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
+		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
 		{
-			memcpy(&constantBuffers[i]->data[index], &useSpecularTexture, 1 * sizeof(float));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &useSpecularTexture, 1 * sizeof(float));
 			index += 1;
 		}
 
-		glm::uint calculatedSize = Uniform::CalculateSize(constantBuffers[i]->elements);
-		glm::uint size = constantBuffers[i]->size;
+		glm::uint calculatedSize = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
+		glm::uint size = m_UniformBuffers[i].constantData.size;
 
-		memcpy(vulkanBuffers[i]->m_Mapped, constantBuffers[i]->data, size);
+		memcpy(m_UniformBuffers[i].constantBuffer.m_Mapped, m_UniformBuffers[i].constantData.data, size);
 	}
 }
 
@@ -2133,42 +2120,42 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 
 	// Simple
 	{
-		glm::uint offset = renderID * m_UniformBufferDataDynamic_Simple.size;
+		glm::uint offset = renderID * m_UniformBuffers[0].dynamicData.size;
 		glm::uint index = 0;
-		memcpy(&m_UniformBufferDataDynamic_Simple.data[offset + index], &model, sizeof(model)); index += 16;
-		memcpy(&m_UniformBufferDataDynamic_Simple.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); index += 16;
+		memcpy(&m_UniformBuffers[0].dynamicData.data[offset + index], &model, sizeof(model)); index += 16;
+		memcpy(&m_UniformBuffers[0].dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); index += 16;
 
 		// Aligned offset
-		size_t size = m_UniformBufferDataDynamic_Simple.size;// *m_RenderObjects.size();
-		void* firstIndex = m_UniformBuffers_Simple.dynamicBuffer.m_Mapped;
+		size_t size = m_UniformBuffers[0].dynamicData.size;// *m_RenderObjects.size();
+		void* firstIndex = m_UniformBuffers[0].dynamicBuffer.m_Mapped;
 		uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
-		memcpy((void*)(dest), &m_UniformBufferDataDynamic_Simple.data[offset], size);
+		memcpy((void*)(dest), &m_UniformBuffers[0].dynamicData.data[offset], size);
 
 		// Flush to make changes visible to the host 
 		VkMappedMemoryRange mappedMemoryRange{};
 		mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-		mappedMemoryRange.memory = m_UniformBuffers_Simple.dynamicBuffer.m_Memory;
-		mappedMemoryRange.size = m_UniformBufferDataDynamic_Simple.size * m_RenderObjects.size();
+		mappedMemoryRange.memory = m_UniformBuffers[0].dynamicBuffer.m_Memory;
+		mappedMemoryRange.size = m_UniformBuffers[0].dynamicData.size * m_RenderObjects.size();
 		vkFlushMappedMemoryRanges(m_Device, 1, &mappedMemoryRange);
 	}
 
 	// Color
 	{
-		glm::uint offset = renderID * m_UniformBufferDataDynamic_Color.size;
+		glm::uint offset = renderID * m_UniformBuffers[1].dynamicData.size;
 		glm::uint index = 0;
-		memcpy(&m_UniformBufferDataDynamic_Color.data[offset + index], &model, sizeof(model)); index += 16;
+		memcpy(&m_UniformBuffers[1].dynamicData.data[offset + index], &model, sizeof(model)); index += 16;
 
 		// Aligned offset
-		size_t size = m_UniformBufferDataDynamic_Color.size;// *m_RenderObjects.size();
-		void* firstIndex = m_UniformBuffers_Color.dynamicBuffer.m_Mapped;
+		size_t size = m_UniformBuffers[1].dynamicData.size;// *m_RenderObjects.size();
+		void* firstIndex = m_UniformBuffers[1].dynamicBuffer.m_Mapped;
 		uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
-		memcpy((void*)(dest), &m_UniformBufferDataDynamic_Color.data[offset], size);
+		memcpy((void*)(dest), &m_UniformBuffers[1].dynamicData.data[offset], size);
 
 		// Flush to make changes visible to the host 
 		VkMappedMemoryRange mappedMemoryRange{};
 		mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-		mappedMemoryRange.memory = m_UniformBuffers_Color.dynamicBuffer.m_Memory;
-		mappedMemoryRange.size = m_UniformBufferDataDynamic_Color.size * m_RenderObjects.size();
+		mappedMemoryRange.memory = m_UniformBuffers[1].dynamicBuffer.m_Memory;
+		mappedMemoryRange.size = m_UniformBuffers[1].dynamicData.size * m_RenderObjects.size();
 		vkFlushMappedMemoryRanges(m_Device, 1, &mappedMemoryRange);
 	}
 }

@@ -202,13 +202,8 @@ private:
 	
 	VkClearColorValue m_ClearColor;
 
-	UniformBuffers m_UniformBuffers_Simple;
-	UniformBufferObjectData m_UniformBufferDataConstant_Simple;
-	UniformBufferObjectData m_UniformBufferDataDynamic_Simple;
-
-	UniformBuffers m_UniformBuffers_Color;
-	UniformBufferObjectData m_UniformBufferDataConstant_Color;
-	UniformBufferObjectData m_UniformBufferDataDynamic_Color;
+	// One per shader
+	std::vector<UniformBuffer> m_UniformBuffers;
 
 	struct ShaderFilePath
 	{

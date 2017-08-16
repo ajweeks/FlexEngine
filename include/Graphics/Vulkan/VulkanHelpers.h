@@ -71,19 +71,21 @@ struct Uniform
 	static glm::uint CalculateSize(Type elements);
 };
 
-struct UniformBuffers
-{
-	UniformBuffers(const VDeleter<VkDevice>& device);
-
-	VulkanBuffer constantBuffer;
-	VulkanBuffer dynamicBuffer;
-};
-
 struct UniformBufferObjectData
 {
 	Uniform::Type elements;
 	float* data = nullptr;
 	glm::uint size;
+};
+
+struct UniformBuffer
+{
+	UniformBuffer(const VDeleter<VkDevice>& device);
+
+	VulkanBuffer constantBuffer;
+	VulkanBuffer dynamicBuffer;
+	UniformBufferObjectData constantData;
+	UniformBufferObjectData dynamicData;
 };
 
 struct VulkanTexture
