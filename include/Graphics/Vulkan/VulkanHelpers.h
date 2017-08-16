@@ -75,39 +75,15 @@ struct UniformBuffers
 {
 	UniformBuffers(const VDeleter<VkDevice>& device);
 
-	VulkanBuffer viewBuffer;
+	VulkanBuffer constantBuffer;
 	VulkanBuffer dynamicBuffer;
 };
 
-struct UniformBufferObjectDataConstant
+struct UniformBufferObjectData
 {
 	Uniform::Type elements;
 	float* data = nullptr;
 	glm::uint size;
-};
-
-struct UniformBufferObjectDataDynamic_Simple
-{
-	//struct Data
-	//{
-	//	glm::mat4 model;
-	//	glm::mat4 modelInvTranspose;
-	//};
-
-	Uniform::Type elements;
-	float* data;
-	glm::uint size;
-};
-
-struct UniformBufferObjectDataDynamic_Color
-{
-	struct Data
-	{
-		glm::mat4 model;
-	};
-
-	constexpr static size_t size = sizeof(Data);
-	Data* data;
 };
 
 struct VulkanTexture

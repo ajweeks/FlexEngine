@@ -71,7 +71,7 @@ private:
 	void CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shaderIndex);
 	void PrepareUniformBuffers();
 	void CreateDescriptorPool();
-	void AllocateUniformBuffer(size_t dynamicDataSize, void** data);
+	glm::uint AllocateUniformBuffer(size_t dynamicDataSize, void** data);
 	void PrepareUniformBuffer(VulkanBuffer& buffer, glm::uint bufferSize,
 		VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 	void CreateDescriptorSet(glm::uint renderID, glm::uint descriptorSetLayoutIndex);
@@ -203,12 +203,12 @@ private:
 	VkClearColorValue m_ClearColor;
 
 	UniformBuffers m_UniformBuffers_Simple;
-	UniformBufferObjectDataConstant m_UniformBufferDataConstant_Simple;
-	UniformBufferObjectDataDynamic_Simple m_UniformBufferDataDynamic_Simple;
+	UniformBufferObjectData m_UniformBufferDataConstant_Simple;
+	UniformBufferObjectData m_UniformBufferDataDynamic_Simple;
 
 	UniformBuffers m_UniformBuffers_Color;
-	UniformBufferObjectDataConstant m_UniformBufferDataConstant_Color;
-	UniformBufferObjectDataDynamic_Color m_UniformBufferDataDynamic_Color;
+	UniformBufferObjectData m_UniformBufferDataConstant_Color;
+	UniformBufferObjectData m_UniformBufferDataDynamic_Color;
 
 	struct ShaderFilePath
 	{

@@ -133,7 +133,7 @@ glm::uint Uniform::CalculateSize(Type elements)
 }
 
 UniformBuffers::UniformBuffers(const VDeleter<VkDevice>& device) :
-	viewBuffer(device),
+	constantBuffer(device),
 	dynamicBuffer(device)
 {
 }
