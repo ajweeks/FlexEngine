@@ -1520,109 +1520,102 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(m_Device, &allocInfo, &renderObject->descriptorSet));
 
 
-	if (renderObject->diffuseTexture != nullptr)
+	std::vector<VkWriteDescriptorSet> writeDescriptorSets;
+
+	Uniform::Type constantBufferElements = m_UniformBuffers[renderObject->shaderIndex].constantData.elements;
+
+	glm::uint descriptorSetIndex = 0;
+
+	// Assume all shaders have one constant uniform buffer and one dynamic uniform buffer
+
+	VkDescriptorBufferInfo uniformBufferInfo = {};
+	uniformBufferInfo.buffer = m_UniformBuffers[renderObject->shaderIndex].constantBuffer.m_Buffer;
+	uniformBufferInfo.range = sizeof(UniformBufferObjectData);
+
+	writeDescriptorSets.push_back({});
+	writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
+	writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+	writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
+	writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
+	writeDescriptorSets[descriptorSetIndex].pBufferInfo = &uniformBufferInfo;
+	++descriptorSetIndex;
+
+	VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
+	uniformBufferDynamicInfo.buffer = m_UniformBuffers[renderObject->shaderIndex].dynamicBuffer.m_Buffer;
+	uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectData) * m_RenderObjects.size();
+
+	writeDescriptorSets.push_back({});
+	writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
+	writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+	writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
+	writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+	writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
+	writeDescriptorSets[descriptorSetIndex].pBufferInfo = &uniformBufferDynamicInfo;
+	++descriptorSetIndex;
+
+	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
 	{
-		std::array<VkWriteDescriptorSet, 5> writeDescriptorSets = {};
-
-		VkDescriptorBufferInfo uniformBufferInfo = {};
-		uniformBufferInfo.buffer = m_UniformBuffers[0].constantBuffer.m_Buffer;
-		uniformBufferInfo.range = sizeof(UniformBufferObjectData);
-
-		writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[0].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[0].dstBinding = 0;
-		writeDescriptorSets[0].dstArrayElement = 0;
-		writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeDescriptorSets[0].descriptorCount = 1;
-		writeDescriptorSets[0].pBufferInfo = &uniformBufferInfo;
-
-		VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
-		uniformBufferDynamicInfo.buffer = m_UniformBuffers[0].dynamicBuffer.m_Buffer;
-		uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectData) * m_RenderObjects.size();
-
-		writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[1].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[1].dstBinding = 1;
-		writeDescriptorSets[1].dstArrayElement = 0;
-		writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		writeDescriptorSets[1].descriptorCount = 1;
-		writeDescriptorSets[1].pBufferInfo = &uniformBufferDynamicInfo;
-
 		VkDescriptorImageInfo diffuseImageInfo = {};
 		diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		diffuseImageInfo.imageView = renderObject->diffuseTexture->imageView;
 		diffuseImageInfo.sampler = renderObject->diffuseTexture->sampler;
 
-		writeDescriptorSets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[2].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[2].dstBinding = 2;
-		writeDescriptorSets[2].dstArrayElement = 0;
-		writeDescriptorSets[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeDescriptorSets[2].descriptorCount = 1;
-		writeDescriptorSets[2].pImageInfo = &diffuseImageInfo;
+		writeDescriptorSets.push_back({});
+		writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
+		writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+		writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
+		writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
+		writeDescriptorSets[descriptorSetIndex].pImageInfo = &diffuseImageInfo;
+		++descriptorSetIndex;
+	}
 
+	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
+	{
 		VkDescriptorImageInfo normalImageInfo = {};
 		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		normalImageInfo.imageView = renderObject->normalTexture->imageView;
 		normalImageInfo.sampler = renderObject->normalTexture->sampler;
 
-		writeDescriptorSets[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[3].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[3].dstBinding = 3;
-		writeDescriptorSets[3].dstArrayElement = 0;
-		writeDescriptorSets[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeDescriptorSets[3].descriptorCount = 1;
-		writeDescriptorSets[3].pImageInfo = &normalImageInfo;
+		writeDescriptorSets.push_back({});
+		writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
+		writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+		writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
+		writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
+		writeDescriptorSets[descriptorSetIndex].pImageInfo = &normalImageInfo;
+		++descriptorSetIndex;
+	}
 
+	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
+	{
 		VkDescriptorImageInfo specularImageInfo = {};
 		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		specularImageInfo.imageView = renderObject->specularTexture->imageView;
 		specularImageInfo.sampler = renderObject->specularTexture->sampler;
 
-		writeDescriptorSets[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[4].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[4].dstBinding = 4;
-		writeDescriptorSets[4].dstArrayElement = 0;
-		writeDescriptorSets[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		writeDescriptorSets[4].descriptorCount = 1;
-		writeDescriptorSets[4].pImageInfo = &specularImageInfo;
-
-		vkUpdateDescriptorSets(m_Device, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
+		writeDescriptorSets.push_back({});
+		writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
+		writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+		writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
+		writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
+		writeDescriptorSets[descriptorSetIndex].pImageInfo = &specularImageInfo;
+		++descriptorSetIndex;
 	}
-	else
+
+	if (writeDescriptorSets.size() < 2)
 	{
-		std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = {};
-
-		VkDescriptorBufferInfo uniformBufferInfo = {};
-		uniformBufferInfo.buffer = m_UniformBuffers[1].constantBuffer.m_Buffer;
-		uniformBufferInfo.range = sizeof(UniformBufferObjectData);
-
-		writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[0].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[0].dstBinding = 0;
-		writeDescriptorSets[0].dstArrayElement = 0;
-		writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeDescriptorSets[0].descriptorCount = 1;
-		writeDescriptorSets[0].pBufferInfo = &uniformBufferInfo;
-
-		VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
-		uniformBufferDynamicInfo.buffer = m_UniformBuffers[1].dynamicBuffer.m_Buffer;
-		uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectData) * m_RenderObjects.size();
-
-		writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writeDescriptorSets[1].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[1].dstBinding = 1;
-		writeDescriptorSets[1].dstArrayElement = 0;
-		writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		writeDescriptorSets[1].descriptorCount = 1;
-		writeDescriptorSets[1].pBufferInfo = &uniformBufferDynamicInfo;
-
-		vkUpdateDescriptorSets(m_Device, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
+		Logger::LogError("All shaders must contain one constant and one dynamic uniform buffer!");
 	}
-	//else
-	//{
-	//	Logger::LogError("Unhandled descriptor set layout index " + std::to_string(descriptorSetLayoutIndex));
-	//}
+
+	vkUpdateDescriptorSets(m_Device, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
 
 }
 
