@@ -236,15 +236,15 @@ void VulkanRenderer::Update(const GameContext& gameContext)
 	RebuildCommandBuffers();
 }
 
-void VulkanRenderer::Draw(const GameContext& gameContext, glm::uint renderID)
+void VulkanRenderer::Draw(const GameContext& gameContext)
 {
 	UNREFERENCED_PARAMETER(gameContext);
-	UNREFERENCED_PARAMETER(renderID);
 }
 
 void VulkanRenderer::ReloadShaders(GameContext& gameContext)
 {
 	// TODO: Implement
+	UNREFERENCED_PARAMETER(gameContext);
 }
 
 void VulkanRenderer::OnWindowSize(int width, int height)

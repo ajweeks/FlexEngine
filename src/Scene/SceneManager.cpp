@@ -24,7 +24,7 @@ void SceneManager::UpdateAndRender(const GameContext& gameContext)
 		return;
 	}
 
-	m_Scenes[m_CurrentSceneIndex]->RootUpdateAndRender(gameContext);
+	m_Scenes[m_CurrentSceneIndex]->RootUpdate(gameContext);
 }
 
 void SceneManager::AddScene(BaseScene* newScene, const GameContext& gameContext)

@@ -217,6 +217,7 @@ void MainApp::UpdateAndRender()
 		m_GameContext.inputManager->PostUpdate();
 
 		m_GameContext.renderer->Update(m_GameContext);
+		m_GameContext.renderer->Draw(m_GameContext);
 		m_GameContext.renderer->SwapBuffers(m_GameContext);
 	}
 }

@@ -12,12 +12,12 @@ public:
 
 protected:
 	virtual void Initialize(const GameContext& gameContext) = 0;
-	virtual void UpdateAndRender(const GameContext& gameContext) = 0;
+	virtual void Update(const GameContext& gameContext) = 0;
 	virtual void Destroy(const GameContext& gameContext) = 0;
 
 private:
 	void RootInitialize(const GameContext& gameContext);
-	void RootUpdateAndRender(const GameContext& gameContext);
+	void RootUpdate(const GameContext& gameContext);
 	void RootDestroy(const GameContext& gameContext);
 
 	friend class BaseScene;

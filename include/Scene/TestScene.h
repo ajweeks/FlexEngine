@@ -13,7 +13,7 @@ public:
 	
 	virtual void Initialize(const GameContext& gameContext) override;
 	virtual void Destroy(const GameContext& gameContext) override;
-	virtual void UpdateAndRender(const GameContext& gameContext) override;
+	virtual void Update(const GameContext& gameContext) override;
 
 private:
 	std::vector<MeshPrefab*> m_Cubes;

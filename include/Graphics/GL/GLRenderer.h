@@ -16,7 +16,7 @@ public:
 	virtual void PostInitialize() override;
 
 	virtual void Update(const GameContext& gameContext) override;
-	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
+	virtual void Draw(const GameContext& gameContext) override;
 	virtual void ReloadShaders(GameContext& gameContext) override;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;

@@ -552,14 +552,12 @@ void MeshPrefab::Initialize(const GameContext& gameContext)
 {
 }
 
-void MeshPrefab::UpdateAndRender(const GameContext& gameContext)
+void MeshPrefab::Update(const GameContext& gameContext)
 {
 	Renderer* renderer = gameContext.renderer;
 	
 	glm::mat4 model = m_Transform.GetModelMatrix();
 	renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
-	
-	renderer->Draw(gameContext, m_RenderID);
 }
 
 void MeshPrefab::Destroy(const GameContext& gameContext)

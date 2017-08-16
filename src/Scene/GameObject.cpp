@@ -25,13 +25,13 @@ void GameObject::RootInitialize(const GameContext& gameContext)
 	}
 }
 
-void GameObject::RootUpdateAndRender(const GameContext& gameContext)
+void GameObject::RootUpdate(const GameContext& gameContext)
 {
-	UpdateAndRender(gameContext);
+	Update(gameContext);
 
 	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 	{
-		(*iter)->RootUpdateAndRender(gameContext);
+		(*iter)->RootUpdate(gameContext);
 	}
 }
 

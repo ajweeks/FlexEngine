@@ -27,7 +27,7 @@ public:
 	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void Update(const GameContext& gameContext) override;
-	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
+	virtual void Draw(const GameContext& gameContext) override;
 	virtual void ReloadShaders(GameContext& gameContext) override;
 
 	virtual void OnWindowSize(int width, int height) override;

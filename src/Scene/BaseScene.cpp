@@ -90,13 +90,13 @@ void BaseScene::RootInitialize(const GameContext& gameContext)
 	}
 }
 
-void BaseScene::RootUpdateAndRender(const GameContext& gameContext)
+void BaseScene::RootUpdate(const GameContext& gameContext)
 {
-	UpdateAndRender(gameContext);
+	Update(gameContext);
 
 	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 	{
-		(*iter)->RootUpdateAndRender(gameContext);
+		(*iter)->RootUpdate(gameContext);
 	}
 }
 

@@ -79,7 +79,7 @@ public:
 	virtual void SetClearColor(float r, float g, float b) = 0;
 
 	virtual void Update(const GameContext& gameContext) = 0;
-	virtual void Draw(const GameContext& gameContext, glm::uint renderID) = 0;
+	virtual void Draw(const GameContext& gameContext) = 0;
 	virtual void ReloadShaders(GameContext& gameContext) = 0;
 
 	virtual void OnWindowSize(int width, int height) = 0;

@@ -239,46 +239,49 @@ void GLRenderer::Update(const GameContext& gameContext)
 	glUseProgram(0);
 }
 
-void GLRenderer::Draw(const GameContext& gameContext, uint renderID)
+void GLRenderer::Draw(const GameContext& gameContext)
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
-	RenderObject* renderObject = GetRenderObject(renderID);
-
-	// TODO: Batch draw calls
-	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
-	glUseProgram(shader->program);
-	CheckGLErrorMessages();
-
-	std::vector<glm::uint> texures;
-	renderObject->GetTextures(texures);
-	for (int i = 0; i < 3; ++i)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
-		glActiveTexture(GL_TEXTURE0 + i);
-		GLuint texture = texures[i];
-		glBindTexture(GL_TEXTURE_2D, texures[i]);
+		RenderObject* renderObject = GetRenderObject(i);
+
+		// TODO: Batch draw calls
+		Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
+		glUseProgram(shader->program);
 		CheckGLErrorMessages();
+
+		std::vector<glm::uint> texures;
+		renderObject->GetTextures(texures);
+		for (int j = 0; j < 3; ++j)
+		{
+			glActiveTexture(GL_TEXTURE0 + j);
+			GLuint texture = texures[j];
+			glBindTexture(GL_TEXTURE_2D, texures[j]);
+			CheckGLErrorMessages();
+		}
+
+		glBindVertexArray(renderObject->VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+		CheckGLErrorMessages();
+
+		if (renderObject->indexed)
+		{
+			glDrawElements(renderObject->topology, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+		}
+		else
+		{
+			glDrawArrays(renderObject->topology, 0, renderObject->vertexBufferData->BufferSize);
+		}
+		CheckGLErrorMessages();
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+		CheckGLErrorMessages();
+
+		glUseProgram(0);
 	}
-
-	glBindVertexArray(renderObject->VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-	CheckGLErrorMessages();
-
-	if (renderObject->indexed)
-	{
-		glDrawElements(renderObject->topology, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
-	}
-	else
-	{
-		glDrawArrays(renderObject->topology, 0, renderObject->vertexBufferData->BufferSize);
-	}
-	CheckGLErrorMessages();
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-	CheckGLErrorMessages();
-
-	glUseProgram(0);
 }
 
 void GLRenderer::ReloadShaders(GameContext& gameContext)
@@ -355,6 +358,7 @@ void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint rend
 	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
 	glUseProgram(shader->program);
 
+	// TODO: Make more dynamic by using uniform element enums
 	if (renderObject->shaderIndex == 0)
 	{
 		glm::mat4 modelInv = glm::inverse(model);

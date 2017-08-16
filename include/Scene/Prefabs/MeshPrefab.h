@@ -26,7 +26,7 @@ public:
 	bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
 
 	virtual void Initialize(const GameContext& gameContext) override;
-	virtual void UpdateAndRender(const GameContext& gameContext) override;
+	virtual void Update(const GameContext& gameContext) override;
 	virtual void Destroy(const GameContext& gameContext) override;
 
 	void SetTransform(const Transform& transform);

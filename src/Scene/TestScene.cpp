@@ -125,7 +125,7 @@ void TestScene::Destroy(const GameContext& gameContext)
 {
 }
 
-void TestScene::UpdateAndRender(const GameContext& gameContext)
+void TestScene::Update(const GameContext& gameContext)
 {
 	const float dt = gameContext.deltaTime;
 	const float elapsed = gameContext.elapsedTime;
