@@ -1981,22 +1981,30 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 {
 	glm::mat4 proj = gameContext.camera->GetProjection();
 	glm::mat4 view = gameContext.camera->GetView();
+	glm::mat4 viewProj = proj * view;
 	glm::vec4 camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
 
+	float useDiffuseTexture = 1;
+	float useNormalTexture = 1;
+	float useSpecularTexture = 1;
+
 	// Simple
-	m_UniformBufferDataConstant_Simple.projection = proj;
-	m_UniformBufferDataConstant_Simple.view = view;
-	m_UniformBufferDataConstant_Simple.camPos = camPos;
-	m_UniformBufferDataConstant_Simple.lightDir = m_SceneInfo.m_LightDir;
-	m_UniformBufferDataConstant_Simple.ambientColor = m_SceneInfo.m_AmbientColor;
-	m_UniformBufferDataConstant_Simple.specularColor = m_SceneInfo.m_SpecularColor;
-	m_UniformBufferDataConstant_Simple.useDiffuseTexture = 1;
-	m_UniformBufferDataConstant_Simple.useNormalTexture = 1;
-	m_UniformBufferDataConstant_Simple.useSpecularTexture = 1;
-	memcpy(m_UniformBuffers_Simple.viewBuffer.m_Mapped, &m_UniformBufferDataConstant_Simple, sizeof(m_UniformBufferDataConstant_Simple));
+	glm::uint index = 0;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &proj[0][0], 16 * sizeof(float)); index += 16;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &view[0][0], 16 * sizeof(float)); index += 16;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &camPos[0], 4 * sizeof(float)); index += 4;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &m_SceneInfo.m_LightDir[0], 4 * sizeof(float)); index += 4;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &m_SceneInfo.m_AmbientColor[0], 4 * sizeof(float)); index += 4;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &m_SceneInfo.m_SpecularColor[0], 4 * sizeof(float)); index += 4;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &useDiffuseTexture, 1 * sizeof(float)); 1; index += 1;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &useNormalTexture, 1 * sizeof(float)); 1; index += 1;
+	memcpy(&m_UniformBufferDataConstant_Simple.data[index], &useSpecularTexture, 1 * sizeof(float)); 1; index += 1;
+
+	memcpy(m_UniformBuffers_Simple.viewBuffer.m_Mapped, m_UniformBufferDataConstant_Simple.data, sizeof(m_UniformBufferDataConstant_Simple));
 
 	// Color
-	m_UniformBufferDataConstant_Color.viewProjection = proj * view;
+	index = 0;
+	memcpy(&m_UniformBufferDataConstant_Color.data[index], &viewProj, 16 * sizeof(float)); index += 16;
 	memcpy(m_UniformBuffers_Color.viewBuffer.m_Mapped, &m_UniformBufferDataConstant_Color, sizeof(m_UniformBufferDataConstant_Color));
 }
 

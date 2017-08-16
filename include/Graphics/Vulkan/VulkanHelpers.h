@@ -55,20 +55,24 @@ struct UniformBuffers
 
 struct UniformBufferObjectDataConstant_Simple
 {
-	glm::mat4 projection;
-	glm::mat4 view;
-	glm::vec4 camPos;
-	glm::vec4 lightDir;
-	glm::vec4 ambientColor;
-	glm::vec4 specularColor;
-	glm::int32 useDiffuseTexture;
-	glm::int32 useNormalTexture;
-	glm::int32 useSpecularTexture;
+	float data[51];
+
+	//glm::mat4 projection;
+	//glm::mat4 view;
+	//glm::vec4 camPos;
+	//glm::vec4 lightDir;
+	//glm::vec4 ambientColor;
+	//glm::vec4 specularColor;
+	//glm::int32 useDiffuseTexture;
+	//glm::int32 useNormalTexture;
+	//glm::int32 useSpecularTexture;
 };
 
 struct UniformBufferObjectDataConstant_Color
 {
-	glm::mat4 viewProjection;
+	float data[16];
+
+	//glm::mat4 viewProjection;
 };
 
 struct UniformBufferObjectDataDynamic_Simple
