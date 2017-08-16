@@ -2111,44 +2111,32 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 {
 	const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 
-	// Simple
+	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
 	{
-		glm::uint offset = renderID * m_UniformBuffers[0].dynamicData.size;
+		glm::uint offset = renderID * m_UniformBuffers[i].dynamicData.size;
 		glm::uint index = 0;
-		memcpy(&m_UniformBuffers[0].dynamicData.data[offset + index], &model, sizeof(model)); index += 16;
-		memcpy(&m_UniformBuffers[0].dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); index += 16;
+
+		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::MODEL_MAT4))
+		{
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &model, sizeof(model)); index += 16;
+		}
+
+		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
+		{
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); index += 16;
+		}
 
 		// Aligned offset
-		size_t size = m_UniformBuffers[0].dynamicData.size;// *m_RenderObjects.size();
-		void* firstIndex = m_UniformBuffers[0].dynamicBuffer.m_Mapped;
+		size_t size = m_UniformBuffers[i].dynamicData.size;
+		void* firstIndex = m_UniformBuffers[i].dynamicBuffer.m_Mapped;
 		uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
-		memcpy((void*)(dest), &m_UniformBuffers[0].dynamicData.data[offset], size);
+		memcpy((void*)(dest), &m_UniformBuffers[i].dynamicData.data[offset], size);
 
 		// Flush to make changes visible to the host 
 		VkMappedMemoryRange mappedMemoryRange{};
 		mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-		mappedMemoryRange.memory = m_UniformBuffers[0].dynamicBuffer.m_Memory;
-		mappedMemoryRange.size = m_UniformBuffers[0].dynamicData.size * m_RenderObjects.size();
-		vkFlushMappedMemoryRanges(m_Device, 1, &mappedMemoryRange);
-	}
-
-	// Color
-	{
-		glm::uint offset = renderID * m_UniformBuffers[1].dynamicData.size;
-		glm::uint index = 0;
-		memcpy(&m_UniformBuffers[1].dynamicData.data[offset + index], &model, sizeof(model)); index += 16;
-
-		// Aligned offset
-		size_t size = m_UniformBuffers[1].dynamicData.size;// *m_RenderObjects.size();
-		void* firstIndex = m_UniformBuffers[1].dynamicBuffer.m_Mapped;
-		uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
-		memcpy((void*)(dest), &m_UniformBuffers[1].dynamicData.data[offset], size);
-
-		// Flush to make changes visible to the host 
-		VkMappedMemoryRange mappedMemoryRange{};
-		mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-		mappedMemoryRange.memory = m_UniformBuffers[1].dynamicBuffer.m_Memory;
-		mappedMemoryRange.size = m_UniformBuffers[1].dynamicData.size * m_RenderObjects.size();
+		mappedMemoryRange.memory = m_UniformBuffers[i].dynamicBuffer.m_Memory;
+		mappedMemoryRange.size = m_UniformBuffers[i].dynamicData.size * m_RenderObjects.size();
 		vkFlushMappedMemoryRanges(m_Device, 1, &mappedMemoryRange);
 	}
 }
