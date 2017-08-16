@@ -84,28 +84,19 @@ struct UniformBufferObjectDataConstant
 	Uniform::Type elements;
 	float* data = nullptr;
 	glm::uint size;
-
-	//glm::mat4 projection;
-	//glm::mat4 view;
-	//glm::vec4 camPos;
-	//glm::vec4 lightDir;
-	//glm::vec4 ambientColor;
-	//glm::vec4 specularColor;
-	//glm::int32 useDiffuseTexture;
-	//glm::int32 useNormalTexture;
-	//glm::int32 useSpecularTexture;
 };
 
 struct UniformBufferObjectDataDynamic_Simple
 {
-	struct Data
-	{
-		glm::mat4 model;
-		glm::mat4 modelInvTranspose;
-	};
+	//struct Data
+	//{
+	//	glm::mat4 model;
+	//	glm::mat4 modelInvTranspose;
+	//};
 
-	constexpr static size_t size = sizeof(Data);
-	Data* data;
+	Uniform::Type elements;
+	float* data;
+	glm::uint size;
 };
 
 struct UniformBufferObjectDataDynamic_Color

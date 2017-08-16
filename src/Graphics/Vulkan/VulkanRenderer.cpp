@@ -1422,9 +1422,10 @@ void VulkanRenderer::PrepareUniformBuffers()
 	m_UniformBufferDataConstant_Simple.data = (float*)malloc(m_UniformBufferDataConstant_Simple.size);
 	assert(m_UniformBufferDataConstant_Simple.data);
 
-	//m_UniformBufferDataDynamic_Simple.elements = Uniform::Type(
-	//	Uniform::Type::MODEL_MAT4 |
-	//	Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
+	m_UniformBufferDataDynamic_Simple.elements = Uniform::Type(
+		Uniform::Type::MODEL_MAT4 |
+		Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
+	m_UniformBufferDataDynamic_Simple.size = Uniform::CalculateSize(m_UniformBufferDataDynamic_Simple.elements);
 
 	// Color
 	m_UniformBufferDataConstant_Color.elements = Uniform::Type(
@@ -1437,8 +1438,7 @@ void VulkanRenderer::PrepareUniformBuffers()
 	//m_UniformBufferPairs[shaderIndex].dynamicBufferData.elements = Uniform::Type(
 	//	Uniform::Type::MODEL_MAT4);
 
-
-	AllocateUniformBuffer(UniformBufferObjectDataDynamic_Simple::size, (void**)&m_UniformBufferDataDynamic_Simple.data);
+	AllocateUniformBuffer(m_UniformBufferDataDynamic_Simple.size, (void**)&m_UniformBufferDataDynamic_Simple.data);
 	AllocateUniformBuffer(UniformBufferObjectDataDynamic_Color::size, (void**)&m_UniformBufferDataDynamic_Color.data);
 
 	// TODO: JANK: This should be changed, no? Used to be just sizeof(m_UniformBufferData)
@@ -2128,16 +2128,20 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 
 void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
 {
+	const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
+
 	// Simple
 	{
-		m_UniformBufferDataDynamic_Simple.data[renderID].model = model;
-		m_UniformBufferDataDynamic_Simple.data[renderID].modelInvTranspose = glm::transpose(glm::inverse(model));
+		glm::uint offset = renderID * m_UniformBufferDataDynamic_Simple.size;
+		glm::uint index = 0;
+		memcpy(&m_UniformBufferDataDynamic_Simple.data[offset + index], &model, sizeof(model)); index += 16;
+		memcpy(&m_UniformBufferDataDynamic_Simple.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); index += 16;
 
 		// Aligned offset
 		size_t size = m_UniformBufferDataDynamic_Simple.size * m_RenderObjects.size();
 		void* firstIndex = m_UniformBuffers_Simple.dynamicBuffer.m_Mapped;
 		uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
-		memcpy((void*)(dest), &m_UniformBufferDataDynamic_Simple.data[renderID], size);
+		memcpy((void*)(dest), &m_UniformBufferDataDynamic_Simple.data[offset], size);
 
 		// Flush to make changes visible to the host 
 		VkMappedMemoryRange mappedMemoryRange{};
