@@ -202,11 +202,11 @@ private:
 	
 	VkClearColorValue m_ClearColor;
 
-	UniformBuffers_Simple m_UniformBuffers_Simple;
+	UniformBuffers m_UniformBuffers_Simple;
 	UniformBufferObjectDataConstant_Simple m_UniformBufferDataConstant_Simple;
 	UniformBufferObjectDataDynamic_Simple m_UniformBufferDataDynamic_Simple;
 
-	UniformBuffers_Color m_UniformBuffers_Color;
+	UniformBuffers m_UniformBuffers_Color;
 	UniformBufferObjectDataConstant_Color m_UniformBufferDataConstant_Color;
 	UniformBufferObjectDataDynamic_Color m_UniformBufferDataDynamic_Color;
 

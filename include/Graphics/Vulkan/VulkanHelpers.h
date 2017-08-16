@@ -45,17 +45,9 @@ struct VulkanVertex
 		std::vector<VkVertexInputAttributeDescription>& vec, glm::uint shaderIndex);
 };
 
-struct UniformBuffers_Simple
+struct UniformBuffers
 {
-	UniformBuffers_Simple(const VDeleter<VkDevice>& device);
-
-	VulkanBuffer viewBuffer;
-	VulkanBuffer dynamicBuffer;
-};
-
-struct UniformBuffers_Color
-{
-	UniformBuffers_Color(const VDeleter<VkDevice>& device);
+	UniformBuffers(const VDeleter<VkDevice>& device);
 
 	VulkanBuffer viewBuffer;
 	VulkanBuffer dynamicBuffer;

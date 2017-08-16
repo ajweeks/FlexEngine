@@ -104,13 +104,7 @@ void VulkanVertex::GetVertexAttributeDescriptions(
 	}
 }
 
-UniformBuffers_Simple::UniformBuffers_Simple(const VDeleter<VkDevice>& device) :
-	viewBuffer(device),
-	dynamicBuffer(device)
-{
-}
-
-UniformBuffers_Color::UniformBuffers_Color(const VDeleter<VkDevice>& device) :
+UniformBuffers::UniformBuffers(const VDeleter<VkDevice>& device) :
 	viewBuffer(device),
 	dynamicBuffer(device)
 {
