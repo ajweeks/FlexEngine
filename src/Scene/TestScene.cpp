@@ -21,6 +21,11 @@ void TestScene::Initialize(const GameContext& gameContext)
 	m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 	AddChild(m_Grid);
 
+	m_Grid2 = new MeshPrefab();
+	m_Grid2->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+	m_Grid2->GetTransform().position.y += 10.0f;
+	AddChild(m_Grid2);
+
 	m_Teapot = new MeshPrefab();
 	m_Teapot->LoadFromFile(gameContext, "resources/models/teapot.fbx");
 	m_Teapot->SetTransform(glm::vec3(20.0f, 5.0f, 0.0f));

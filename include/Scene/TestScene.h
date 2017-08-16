@@ -19,6 +19,7 @@ private:
 	std::vector<MeshPrefab*> m_Cubes;
 
 	MeshPrefab* m_Grid;
+	MeshPrefab* m_Grid2;
 	MeshPrefab* m_Scene;
 	MeshPrefab* m_Landscape;
 	MeshPrefab* m_Cube;
