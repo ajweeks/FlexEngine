@@ -79,11 +79,11 @@ struct UniformBuffers
 	VulkanBuffer dynamicBuffer;
 };
 
-struct UniformBufferObjectDataConstant_Simple
+struct UniformBufferObjectDataConstant
 {
 	Uniform::Type elements;
-	float data[51];
-	glm::uint size = 51 * sizeof(float);
+	float* data = nullptr;
+	glm::uint size;
 
 	//glm::mat4 projection;
 	//glm::mat4 view;
@@ -94,15 +94,6 @@ struct UniformBufferObjectDataConstant_Simple
 	//glm::int32 useDiffuseTexture;
 	//glm::int32 useNormalTexture;
 	//glm::int32 useSpecularTexture;
-};
-
-struct UniformBufferObjectDataConstant_Color
-{
-	Uniform::Type elements;
-	float data[16];
-	glm::uint size = 16 * sizeof(float);
-
-	//glm::mat4 viewProjection;
 };
 
 struct UniformBufferObjectDataDynamic_Simple
