@@ -26,13 +26,17 @@ private:
 	MeshPrefab* m_Cube2;
 	MeshPrefab* m_ChamferBox;
 	MeshPrefab* m_UVSphere;
-	//MeshPrefab m_IcoSphere;
 	MeshPrefab* m_Capsule;
 	MeshPrefab* m_Teapot;
 	MeshPrefab* m_PunchingBag;
 	MeshPrefab* m_Rock1;
 	MeshPrefab* m_Rock2;
-	MeshPrefab* m_TransformManipulatorPosition;
+
+	MeshPrefab* m_TransformManipulator_1;
+	MeshPrefab* m_TransformManipulator_2;
+	MeshPrefab* m_TransformManipulator_3;
+	MeshPrefab* m_TransformManipulator_4;
+	MeshPrefab* m_TransformManipulator_5;
 
 	glm::uint m_TimeID;
 

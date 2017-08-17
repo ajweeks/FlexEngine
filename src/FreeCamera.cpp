@@ -9,19 +9,17 @@
 #include <glm\vec2.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 
-using namespace glm;
-
 FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float zFar) :
 	m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
-	m_Position(vec3(0.0f)),
+	m_Position(glm::vec3(0.0f)),
 	m_MoveSpeed(50.0f),
 	m_MoveSpeedFastMultiplier(3.5f),
 	m_MoveSpeedSlowMultiplier(0.1f),
 	m_ZoomSpeed(2.0f),
 	m_RotationSpeed(0.0011f),
-	m_View(mat4(0.0f)),
-	m_Proj(mat4(0.0f)),
-	m_ViewProjection(mat4(0.0f))
+	m_View(glm::mat4(0.0f)),
+	m_Proj(glm::mat4(0.0f)),
+	m_ViewProjection(glm::mat4(0.0f))
 {
 	gameContext.camera = this;
 	ResetOrientation();
@@ -36,7 +34,7 @@ FreeCamera::~FreeCamera()
 
 void FreeCamera::Update(const GameContext& gameContext)
 {
-	vec2 look = vec2(0.0f);
+	glm::vec2 look(0.0f);
 	if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
 	{
 		look = gameContext.inputManager->GetMouseMovement();
@@ -56,12 +54,12 @@ void FreeCamera::Update(const GameContext& gameContext)
 	m_Forward.z = cos(m_Pitch) * sin(m_Yaw);
 	m_Forward = normalize(m_Forward);
 
-	vec3 worldUp = vec3(0.0f, 1.0f, 0.0f);
+	glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
 
-	m_Right = normalize(cross(worldUp, m_Forward));
+	m_Right = normalize(glm::cross(worldUp, m_Forward));
 	m_Up = cross(m_Forward, m_Right);
 
-	vec3 translation = {};
+	glm::vec3 translation(0.0f);
 	if (gameContext.inputManager->GetKeyDown(m_MoveForwardKey))
 	{
 		translation += m_Forward;
@@ -170,7 +168,7 @@ glm::vec3 FreeCamera::GetPosition() const
 
 void FreeCamera::ResetPosition()
 {
-	m_Position = vec3(0.0f);
+	m_Position = glm::vec3(0.0f);
 }
 
 void FreeCamera::ResetOrientation()
@@ -182,9 +180,9 @@ void FreeCamera::ResetOrientation()
 // TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)
 void FreeCamera::RecalculateViewProjection(const GameContext& gameContext)
 {
-	const vec2 windowSize = gameContext.window->GetSize();
+	const glm::vec2 windowSize = gameContext.window->GetSize();
 	float aspectRatio = windowSize.x / (float)windowSize.y;
-	m_Proj = perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
+	m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
 
 	m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
 	m_ViewProjection = m_Proj * m_View;

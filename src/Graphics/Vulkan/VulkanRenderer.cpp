@@ -18,8 +18,6 @@
 
 #include <SOIL.h>
 
-using namespace glm;
-
 VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	m_VertexBuffer_Simple(m_Device),
 	m_IndexBuffer_Simple(m_Device),
@@ -151,13 +149,15 @@ VulkanRenderer::~VulkanRenderer()
 		}
 	}
 
-	auto iter = m_RenderObjects.begin();
-	while (iter != m_RenderObjects.end())
 	{
-		SafeDelete(*iter);
-		iter = m_RenderObjects.erase(iter);
+		auto iter = m_RenderObjects.begin();
+		while (iter != m_RenderObjects.end())
+		{
+			SafeDelete(*iter);
+			iter = m_RenderObjects.erase(iter);
+		}
+		m_RenderObjects.clear();
 	}
-	m_RenderObjects.clear();
 
 	for (auto iter = m_DescriptorSetLayouts.begin(); iter != m_DescriptorSetLayouts.end(); ++iter)
 	{
@@ -179,6 +179,8 @@ VulkanRenderer::~VulkanRenderer()
 
 glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 {
+	UNREFERENCED_PARAMETER(gameContext);
+
 	size_t renderID = m_RenderObjects.size();
 	RenderObject* renderObject = new RenderObject(m_Device);
 	m_RenderObjects.push_back(renderObject);
@@ -249,6 +251,9 @@ void VulkanRenderer::ReloadShaders(GameContext& gameContext)
 
 void VulkanRenderer::OnWindowSize(int width, int height)
 {
+	UNREFERENCED_PARAMETER(width);
+	UNREFERENCED_PARAMETER(height);
+
 	m_SwapChainNeedsRebuilding = true;
 }
 
@@ -299,6 +304,7 @@ void VulkanRenderer::SetUniform1f(glm::uint location, float val)
 glm::uint VulkanRenderer::GetProgram(glm::uint renderID)
 {
 	// TODO: Implement
+	UNREFERENCED_PARAMETER(renderID);
 	return 0;
 }
 
@@ -684,7 +690,7 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 
 	VkVertexInputBindingDescription bindingDescription = VulkanVertex::GetVertexBindingDescription(renderObject->vertexBufferData);
 	std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-	VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData, attributeDescriptions, renderObject->shaderIndex);
+	VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData, attributeDescriptions);
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1370,7 +1376,7 @@ void VulkanRenderer::CreateIndexBuffers()
 
 void VulkanRenderer::CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shaderIndex)
 {
-	std::vector<uint> indices;
+	std::vector<glm::uint> indices;
 
 	for (size_t i = 0; i < m_RenderObjects.size(); i++)
 	{
@@ -2100,7 +2106,7 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 			index += 1;
 		}
 
-		glm::uint calculatedSize = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
+		//glm::uint calculatedSize = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
 		glm::uint size = m_UniformBuffers[i].constantData.size;
 
 		memcpy(m_UniformBuffers[i].constantBuffer.m_Mapped, m_UniformBuffers[i].constantData.data, size);
@@ -2109,6 +2115,13 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 
 void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
 {
+	UNREFERENCED_PARAMETER(gameContext);
+
+
+	UNREFERENCED_PARAMETER(renderID);
+
+
+
 	const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 
 	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
@@ -2165,6 +2178,14 @@ void VulkanRenderer::LoadDefaultShaderCode()
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
 	uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
 {
+	UNREFERENCED_PARAMETER(userData);
+	UNREFERENCED_PARAMETER(layerPrefix);
+	UNREFERENCED_PARAMETER(code);
+	UNREFERENCED_PARAMETER(location);
+	UNREFERENCED_PARAMETER(obj);
+	UNREFERENCED_PARAMETER(objType);
+	UNREFERENCED_PARAMETER(flags);
+
 	std::cerr << "[ERROR] (VL): " << msg << std::endl;
 
 	return VK_FALSE;

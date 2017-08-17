@@ -17,8 +17,7 @@ VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(Vertex
 
 void VulkanVertex::GetVertexAttributeDescriptions(
 	VertexBufferData* vertexBufferData, 
-	std::vector<VkVertexInputAttributeDescription>& attributeDescriptions,
-	glm::uint shaderIndex)
+	std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 {
 	attributeDescriptions.clear();
 

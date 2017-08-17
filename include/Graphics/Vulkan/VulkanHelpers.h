@@ -44,7 +44,7 @@ struct VulkanVertex
 {
 	static VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
 	static void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData, 
-		std::vector<VkVertexInputAttributeDescription>& vec, glm::uint shaderIndex);
+		std::vector<VkVertexInputAttributeDescription>& vec);
 };
 
 struct UniformBufferObjectData

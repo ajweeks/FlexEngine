@@ -9,8 +9,6 @@
 #include "Scene/TestScene.h"
 #include "Typedefs.h"
 
-using namespace glm;
-
 MainApp::MainApp() :
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)
@@ -65,7 +63,7 @@ void MainApp::Initialize()
 	m_SceneManager->AddScene(pDefaultScene, m_GameContext);
 
 	m_DefaultCamera = new FreeCamera(m_GameContext);
-	m_DefaultCamera->SetPosition(vec3(0.0f, 5.0f, -15.0f));
+	m_DefaultCamera->SetPosition(glm::vec3(0.0f, 5.0f, -15.0f));
 	m_GameContext.camera = m_DefaultCamera;
 
 	m_GameContext.inputManager = new InputManager();
@@ -85,8 +83,8 @@ void MainApp::Destroy()
 
 void MainApp::InitializeWindowAndRenderer()
 {
-	const vec2i windowSize = vec2i(1920, 1080);
-	vec2i windowPos = vec2i(300, 300);
+	const glm::vec2i windowSize(1920, 1080);
+	glm::vec2i windowPos(300, 300);
 
 #if COMPILE_VULKAN
 	if (m_RendererIndex == RendererID::VULKAN)

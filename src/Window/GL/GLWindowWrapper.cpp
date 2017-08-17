@@ -87,6 +87,9 @@ void GLWindowWrapper::SetSize(int width, int height)
 void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 	const GLchar* message, const void* userParam)
 {
+	UNREFERENCED_PARAMETER(userParam);
+	UNREFERENCED_PARAMETER(length);
+
 	// ignore non-significant error/warning codes
 	if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
 

@@ -14,8 +14,6 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-using namespace glm;
-
 glm::vec4 MeshPrefab::m_DefaultColor(1.0f, 1.0f, 1.0f, 1.0f);
 glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 glm::vec3 MeshPrefab::m_DefaultTangent(1.0f, 0.0f, 0.0f);
@@ -57,7 +55,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	}
 
 	aiMesh* mesh = pScene->mMeshes[0];
-
+	
 	m_Name = mesh->mName.C_Str();
 
 	const size_t numVerts = mesh->mNumVertices;
@@ -126,7 +124,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	createInfo.diffuseMapPath = "resources/textures/brick_d.png";
 	createInfo.specularMapPath = "resources/textures/brick_s.png";
 	createInfo.normalMapPath = "resources/textures/brick_n.png";
-	createInfo.shaderIndex = 0;
+	createInfo.shaderIndex = m_ShaderIndex;
 
 	m_RenderID = renderer->Initialize(gameContext, &createInfo);
 	
@@ -448,8 +446,8 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		// Top triangles
 		for (size_t i = 0; i < meridianCount; i++)
 		{
-			uint a = i + 1;
-			uint b = (i + 1) % meridianCount + 1;
+			glm::uint a = i + 1;
+			glm::uint b = (i + 1) % meridianCount + 1;
 			m_Indices.push_back(0);
 			m_Indices.push_back(b);
 			m_Indices.push_back(a);
@@ -458,14 +456,14 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		// Center quads
 		for (size_t j = 0; j < parallelCount - 2; j++)
 		{
-			uint aStart = j * meridianCount + 1;
-			uint bStart = (j + 1) * meridianCount + 1;
+			glm::uint aStart = j * meridianCount + 1;
+			glm::uint bStart = (j + 1) * meridianCount + 1;
 			for (size_t i = 0; i < meridianCount; i++)
 			{
-				uint a = aStart + i;
-				uint a1 = aStart + (i + 1) % meridianCount;
-				uint b = bStart + i;
-				uint b1 = bStart + (i + 1) % meridianCount;
+				glm::uint a = aStart + i;
+				glm::uint a1 = aStart + (i + 1) % meridianCount;
+				glm::uint b = bStart + i;
+				glm::uint b1 = bStart + (i + 1) % meridianCount;
 				m_Indices.push_back(a);
 				m_Indices.push_back(a1);
 				m_Indices.push_back(b1);
@@ -479,8 +477,8 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		// Bottom triangles
 		for (size_t i = 0; i < meridianCount; i++)
 		{
-			uint a = i + meridianCount * (parallelCount - 2) + 1;
-			uint b = (i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1;
+			glm::uint a = i + meridianCount * (parallelCount - 2) + 1;
+			glm::uint b = (i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1;
 			m_Indices.push_back(numVerts - 1);
 			m_Indices.push_back(a);
 			m_Indices.push_back(b);
@@ -550,6 +548,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 
 void MeshPrefab::Initialize(const GameContext& gameContext)
 {
+	UNREFERENCED_PARAMETER(gameContext);
 }
 
 void MeshPrefab::Update(const GameContext& gameContext)
@@ -563,6 +562,11 @@ void MeshPrefab::Update(const GameContext& gameContext)
 void MeshPrefab::Destroy(const GameContext& gameContext)
 {
 	gameContext.renderer->Destroy(m_RenderID);
+}
+
+void MeshPrefab::SetShaderIndex(glm::uint shaderIndex)
+{
+	m_ShaderIndex = shaderIndex;
 }
 
 void MeshPrefab::SetTransform(const Transform& transform)

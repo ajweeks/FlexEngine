@@ -13,7 +13,6 @@
 
 #include <algorithm>
 
-using namespace glm;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 using Microsoft::WRL::ComPtr;

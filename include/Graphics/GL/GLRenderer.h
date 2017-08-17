@@ -91,7 +91,7 @@ private:
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
 
-	RenderObject* GetRenderObject(int renderID);
+	RenderObject* GetRenderObject(glm::uint renderID);
 	RenderObjectIter Destroy(RenderObjectIter iter);
 	void UnloadShaders();
 	void LoadShaders();

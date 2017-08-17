@@ -64,6 +64,8 @@ void InputManager::CursorPosCallback(double x, double y)
 
 void InputManager::MouseButtonCallback(GameContext& gameContext, MouseButton button, Action action, int mods)
 {
+	UNREFERENCED_PARAMETER(mods);
+
 	assert((int)button < MOUSE_BUTTON_COUNT);
 
 	if (action == Action::PRESS)
@@ -94,6 +96,8 @@ void InputManager::ScrollCallback(double xOffset, double yOffset)
 
 void InputManager::KeyCallback(KeyCode keycode, Action action, int mods)
 {
+	UNREFERENCED_PARAMETER(mods);
+
 	if (action == Action::PRESS)
 	{
 		m_Keys[keycode].down = 1;

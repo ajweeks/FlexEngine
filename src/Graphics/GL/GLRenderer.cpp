@@ -13,10 +13,10 @@
 #include <algorithm>
 #include <utility>
 
-using namespace glm;
-
 GLRenderer::GLRenderer(GameContext& gameContext)
 {
+	UNREFERENCED_PARAMETER(gameContext);
+
 	CheckGLErrorMessages();
 
 	LoadShaders();
@@ -51,7 +51,9 @@ GLRenderer::~GLRenderer()
 
 glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 {
-	const uint renderID = m_RenderObjects.size();
+	UNREFERENCED_PARAMETER(gameContext);
+
+	const glm::uint renderID = m_RenderObjects.size();
 
 	RenderObject* renderObject = new RenderObject();
 	m_RenderObjects.push_back(renderObject);
@@ -166,6 +168,8 @@ void GLRenderer::PostInitialize()
 
 void GLRenderer::Update(const GameContext& gameContext)
 {
+	UNREFERENCED_PARAMETER(gameContext);
+
 	CheckGLErrorMessages();
 
 	//glm::uint program0 = m_LoadedShaders[0].program;
@@ -240,10 +244,9 @@ void GLRenderer::Draw(const GameContext& gameContext)
 				texures.push_back(renderObject->specularMapID);
 			}
 
-			for (int k = 0; k < texures.size(); ++k)
+			for (int k = 0; k < (int)texures.size(); ++k)
 			{
-				glActiveTexture(GL_TEXTURE0 + k);
-				GLuint texture = texures[k];
+				glActiveTexture((GLenum)(GL_TEXTURE0 + k));
 				glBindTexture(GL_TEXTURE_2D, texures[k]);
 				CheckGLErrorMessages();
 			}
@@ -273,6 +276,8 @@ void GLRenderer::Draw(const GameContext& gameContext)
 
 void GLRenderer::ReloadShaders(GameContext& gameContext)
 {
+	UNREFERENCED_PARAMETER(gameContext);
+
 	UnloadShaders();
 	LoadShaders();
 
@@ -351,6 +356,8 @@ void GLRenderer::SetVSyncEnabled(bool enableVSync)
 
 void GLRenderer::Clear(int flags, const GameContext& gameContext)
 {
+	UNREFERENCED_PARAMETER(gameContext);
+
 	GLbitfield mask = 0;
 	if ((int)flags & (int)ClearFlag::COLOR) mask |= GL_COLOR_BUFFER_BIT;
 	if ((int)flags & (int)ClearFlag::DEPTH) mask |= GL_DEPTH_BUFFER_BIT;
@@ -363,7 +370,7 @@ void GLRenderer::SwapBuffers(const GameContext& gameContext)
 	glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 }
 
-void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint renderID, const glm::mat4& model)
+void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
@@ -512,14 +519,14 @@ void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, uint rend
 	glUseProgram(0);
 }
 
-int GLRenderer::GetShaderUniformLocation(uint program, const std::string uniformName)
+int GLRenderer::GetShaderUniformLocation(glm::uint program, const std::string uniformName)
 {
 	int uniformLocation = glGetUniformLocation(program, uniformName.c_str());
 	CheckGLErrorMessages();
 	return uniformLocation;
 }
 
-void GLRenderer::SetUniform1f(uint location, float val)
+void GLRenderer::SetUniform1f(glm::uint location, float val)
 {
 	glUniform1f(location, val);
 	CheckGLErrorMessages();
@@ -532,7 +539,7 @@ glm::uint GLRenderer::GetProgram(glm::uint renderID)
 	return shader->program;
 }
 
-void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::string& variableName, int size,
+void GLRenderer::DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,
 	Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
@@ -556,7 +563,7 @@ void GLRenderer::DescribeShaderVariable(uint renderID, uint program, const std::
 	glBindVertexArray(0);
 }
 
-void GLRenderer::Destroy(uint renderID)
+void GLRenderer::Destroy(glm::uint renderID)
 {
 	for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 	{
@@ -609,8 +616,6 @@ GLenum GLRenderer::UsageFlagToGLUsageFlag(UsageFlag usage)
 
 GLenum GLRenderer::TopologyModeToGLMode(TopologyMode topology)
 {
-	GLenum glMode = 0;
-
 	switch (topology)
 	{
 	case TopologyMode::POINT_LIST: return GL_POINTS;
@@ -624,7 +629,7 @@ GLenum GLRenderer::TopologyModeToGLMode(TopologyMode topology)
 	}
 }
 
-GLRenderer::RenderObject* GLRenderer::GetRenderObject(int renderID)
+GLRenderer::RenderObject* GLRenderer::GetRenderObject(glm::uint renderID)
 {
 	return m_RenderObjects[renderID];
 }

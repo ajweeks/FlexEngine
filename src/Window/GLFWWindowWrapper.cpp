@@ -17,7 +17,7 @@ GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameCon
 	if (moveConsoleToExtraMonitor)
 	{
 		int otherMonitorX = GetSystemMetrics(SM_XVIRTUALSCREEN);
-		int otherMonitorY = GetSystemMetrics(SM_YVIRTUALSCREEN);
+		//int otherMonitorY = GetSystemMetrics(SM_YVIRTUALSCREEN);
 
 		// If another monitor is present (assumed to be to the left), move the console to it
 		if (otherMonitorX != 0)
@@ -114,11 +114,13 @@ void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
 
 void GLFWErrorCallback(int error, const char* description)
 {
-	Logger::LogError("GLFW Error: " + std::string(description));
+	Logger::LogError("GLFW Error: " + std::to_string(error) + ": " + std::string(description));
 }
 
 void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods)
 {
+	UNREFERENCED_PARAMETER(scancode);
+
 	Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 	const InputManager::Action inputAction = GLFWActionToInputManagerAction(action);
 	const InputManager::KeyCode inputKey = GLFWKeyToInputManagerKey(key);

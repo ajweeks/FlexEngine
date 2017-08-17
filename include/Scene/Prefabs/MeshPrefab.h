@@ -29,6 +29,8 @@ public:
 	virtual void Update(const GameContext& gameContext) override;
 	virtual void Destroy(const GameContext& gameContext) override;
 
+	void SetShaderIndex(glm::uint shaderIndex);
+
 	void SetTransform(const Transform& transform);
 	Transform& GetTransform();
 
@@ -39,6 +41,8 @@ private:
 
 	Transform m_Transform;
 	glm::uint m_RenderID;
+
+	glm::uint m_ShaderIndex = 0;
 
 	std::string m_Name;
 

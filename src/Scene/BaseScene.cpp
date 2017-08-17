@@ -6,8 +6,6 @@
 
 #include <glm/vec3.hpp>
 
-using namespace glm;
-
 BaseScene::BaseScene(std::string name) :
 	m_Name(name)
 {

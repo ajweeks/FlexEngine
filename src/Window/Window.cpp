@@ -4,8 +4,6 @@
 #include "Helpers.h"
 #include "Logger.h"
 
-using namespace glm;
-
 Window::Window(const std::string& title, glm::vec2 size, GameContext& gameContext) :
 	m_TitleString(title),
 	m_Size(size),
@@ -35,9 +33,9 @@ void Window::Update(const GameContext& gameContext)
 
 	if (m_CursorMode == CursorMode::HIDDEN)
 	{
-		const vec2i windowSize = gameContext.window->GetSize();
-		const vec2 oldMousePos = gameContext.inputManager->GetMousePosition();
-		vec2 newMousePos = oldMousePos;
+		const glm::vec2i windowSize = gameContext.window->GetSize();
+		const glm::vec2 oldMousePos = gameContext.inputManager->GetMousePosition();
+		glm::vec2 newMousePos = oldMousePos;
 		if (oldMousePos.x < 0)
 		{
 			newMousePos.x = windowSize.x + oldMousePos.x;
@@ -61,7 +59,7 @@ void Window::Update(const GameContext& gameContext)
 	}
 }
 
-vec2i Window::GetSize() const
+glm::vec2i Window::GetSize() const
 {
 	return m_Size;
 }

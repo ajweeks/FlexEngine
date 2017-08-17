@@ -6,6 +6,9 @@
 #define COMPILE_VULKAN 1
 #define COMPILE_D3D 0
 
+#pragma warning(disable: 4201)
+#pragma warning(disable : 4820)  
+
 #if COMPILE_VULKAN
 	#include <glad/glad.h>
 	#include <vulkan/vulkan.h>
@@ -98,3 +101,4 @@ inline void SafeDelete(T &pObjectToDelete)
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
 #include <glm/glm.hpp>
+
