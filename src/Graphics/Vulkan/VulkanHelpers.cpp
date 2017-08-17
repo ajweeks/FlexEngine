@@ -1,9 +1,9 @@
-
 #include "stdafx.h"
 
 #include "Graphics/Vulkan/VulkanHelpers.h"
-#include "VertexBufferData.h"
+
 #include "Logger.h"
+#include "VertexBufferData.h"
 
 VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(VertexBufferData* vertexBufferData)
 {
@@ -180,7 +180,16 @@ std::string VulkanErrorString(VkResult errorCode)
 			STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
 			STR(ERROR_VALIDATION_FAILED_EXT);
 			STR(ERROR_INVALID_SHADER_NV);
+			STR(ERROR_OUT_OF_POOL_MEMORY_KHR);
+			STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 #undef STR
+		case VK_SUCCESS: 
+			// No error to print
+			return "";
+		case VK_RESULT_RANGE_SIZE:
+		case VK_RESULT_MAX_ENUM:
+		case VK_RESULT_BEGIN_RANGE:
+			return "INVALID_ENUM";
 		default:
 			return "UNKNOWN_ERROR";
 		}

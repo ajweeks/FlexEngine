@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "ShaderUtils.h"
-#include "Graphics/GL/GLHelpers.h"
 
 #include <vector>
 #include <fstream>
@@ -9,6 +8,8 @@
 #include <sstream>
 
 #include <glad\glad.h>
+
+#include "Graphics/GL/GLHelpers.h"
 
 ShaderUtils::ShaderUtils()
 {
@@ -80,7 +81,7 @@ bool ShaderUtils::LoadShaders(glm::uint program,
 	{
 		glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
 		std::string vertexShaderErrorMessage;
-		vertexShaderErrorMessage.resize(infoLogLength);
+		vertexShaderErrorMessage.resize((size_t)infoLogLength);
 		glGetShaderInfoLog(vertexShaderID, infoLogLength, NULL, (GLchar*)vertexShaderErrorMessage.data());
 		Logger::LogError(vertexShaderErrorMessage);
 	}
@@ -95,7 +96,7 @@ bool ShaderUtils::LoadShaders(glm::uint program,
 	{
 		glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
 		std::string fragmentShaderErrorMessage;
-		fragmentShaderErrorMessage.resize(infoLogLength);
+		fragmentShaderErrorMessage.resize((size_t)infoLogLength);
 		glGetShaderInfoLog(fragmentShaderID, infoLogLength, NULL,(GLchar*)fragmentShaderErrorMessage.data());
 		Logger::LogError(fragmentShaderErrorMessage);
 	}
@@ -118,7 +119,7 @@ void ShaderUtils::LinkProgram(glm::uint program)
 		int infoLogLength;
 		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
 		std::string programErrorMessage;
-		programErrorMessage.resize(infoLogLength);
+		programErrorMessage.resize((size_t)infoLogLength);
 		glGetProgramInfoLog(program, infoLogLength, NULL, (GLchar*)programErrorMessage.data());
 		Logger::LogError(programErrorMessage);
 	}

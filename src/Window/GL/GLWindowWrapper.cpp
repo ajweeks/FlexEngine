@@ -2,11 +2,12 @@
 #if COMPILE_OPEN_GL
 
 #include "Window/GL/GLWindowWrapper.h"
+
+#include <sstream>
+
 #include "Graphics/GL/GLHelpers.h"
 #include "Logger.h"
 #include "ShaderUtils.h"
-
-#include <sstream>
 
 GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext) :
 	GLFWWindowWrapper(title, size, gameContext)

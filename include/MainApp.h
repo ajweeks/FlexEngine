@@ -1,11 +1,14 @@
 #pragma once
 
-#include "GameContext.h"
+#include <string>
 
-class FreeCamera;
-class InputManager;
-class SceneManager;
-class Window;
+#include <glm\integer.hpp>
+
+#include "GameContext.h"
+#include "FreeCamera.h"
+#include "InputManager.h"
+#include "Scene\SceneManager.h"
+#include "Window\Window.h"
 
 class MainApp final
 {
@@ -35,7 +38,7 @@ private:
 	
 	std::string RenderIDToString(RendererID rendererID) const;
 
-	size_t m_RendererCount;
+	glm::uint m_RendererCount;
 
 	Window* m_Window;
 	SceneManager* m_SceneManager;

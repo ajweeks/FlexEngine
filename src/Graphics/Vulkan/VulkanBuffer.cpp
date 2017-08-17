@@ -1,4 +1,3 @@
-
 #include "stdafx.h"
 
 #include "Graphics/Vulkan/VulkanBuffer.h"

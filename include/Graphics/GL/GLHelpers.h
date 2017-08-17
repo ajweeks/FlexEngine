@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Logger.h"
-
 #include <string>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <SOIL.h>
+
+#include "Logger.h"
 
 void _CheckGLErrorMessages(const char *file, int line);
 

@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-#include "MainApp.h"
-
 #include <windows.h>
+
+#include "MainApp.h"
 
 // Memory leak checking includes
 #if defined(DEBUG) | defined(_DEBUG)

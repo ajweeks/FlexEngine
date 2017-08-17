@@ -1,11 +1,9 @@
 #pragma once
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
-#include "Window.h"
-
 #include <GLFW\glfw3.h>
 
-struct GameContext;
+#include "Window.h"
 
 class GLFWWindowWrapper : public Window
 {

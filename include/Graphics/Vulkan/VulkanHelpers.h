@@ -1,10 +1,11 @@
 #pragma once
 
-#include "ShaderUtils.h"
-
 #include <string>
+#include <vector>
 
 #include <vulkan\vulkan.h>
+
+#include "ShaderUtils.h"
 
 std::string VulkanErrorString(VkResult errorCode);
 

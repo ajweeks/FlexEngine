@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-#include "Logger.h"
-
 #include <iostream>
+
+#include "Logger.h"
 
 void Logger::Log(const std::string& message, LogLevel logLevel)
 {

@@ -2,16 +2,15 @@
 #if COMPILE_OPEN_GL
 
 #include "Graphics/GL/GLRenderer.h"
-#include "Graphics/GL/GLHelpers.h"
-#include "GameContext.h"
-#include "Window/Window.h"
-#include "Logger.h"
-#include "FreeCamera.h"
-#include "VertexBufferData.h"
-#include "ShaderUtils.h"
 
 #include <algorithm>
 #include <utility>
+
+#include "FreeCamera.h"
+#include "Graphics/GL/GLHelpers.h"
+#include "Logger.h"
+#include "ShaderUtils.h"
+#include "Window/Window.h"
 
 GLRenderer::GLRenderer(GameContext& gameContext)
 {
@@ -66,7 +65,7 @@ glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObj
 
 	glGenBuffers(1, &renderObject->VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-	glBufferData(GL_ARRAY_BUFFER, createInfo->vertexBufferData->BufferSize, createInfo->vertexBufferData->pDataStart, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)createInfo->vertexBufferData->BufferSize, createInfo->vertexBufferData->pDataStart, GL_STATIC_DRAW);
 	CheckGLErrorMessages();
 
 	renderObject->vertexBufferData = createInfo->vertexBufferData;
@@ -125,7 +124,7 @@ glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObj
 
 		glGenBuffers(1, &renderObject->IBO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(createInfo->indices->at(0)) * createInfo->indices->size(), createInfo->indices->data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(createInfo->indices->at(0)) * createInfo->indices->size()), createInfo->indices->data(), GL_STATIC_DRAW);
 	}
 
 	glBindVertexArray(0);
@@ -244,7 +243,7 @@ void GLRenderer::Draw(const GameContext& gameContext)
 				texures.push_back(renderObject->specularMapID);
 			}
 
-			for (int k = 0; k < (int)texures.size(); ++k)
+			for (glm::uint k = 0; k < texures.size(); ++k)
 			{
 				glActiveTexture((GLenum)(GL_TEXTURE0 + k));
 				glBindTexture(GL_TEXTURE_2D, texures[k]);
@@ -257,11 +256,11 @@ void GLRenderer::Draw(const GameContext& gameContext)
 
 			if (renderObject->indexed)
 			{
-				glDrawElements(renderObject->topology, renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+				glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 			}
 			else
 			{
-				glDrawArrays(renderObject->topology, 0, renderObject->vertexBufferData->BufferSize);
+				glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->BufferSize);
 			}
 			CheckGLErrorMessages();
 		}
@@ -526,7 +525,7 @@ int GLRenderer::GetShaderUniformLocation(glm::uint program, const std::string un
 	return uniformLocation;
 }
 
-void GLRenderer::SetUniform1f(glm::uint location, float val)
+void GLRenderer::SetUniform1f(int location, float val)
 {
 	glUniform1f(location, val);
 	CheckGLErrorMessages();
@@ -554,10 +553,10 @@ void GLRenderer::DescribeShaderVariable(glm::uint renderID, glm::uint program, c
 		glBindVertexArray(0);
 		return;
 	}
-	glEnableVertexAttribArray(location);
+	glEnableVertexAttribArray((GLuint)location);
 
 	GLenum glRenderType = TypeToGLType(renderType);
-	glVertexAttribPointer(location, size, glRenderType, normalized, stride, pointer);
+	glVertexAttribPointer((GLuint)location, size, glRenderType, (GLboolean)normalized, stride, pointer);
 	CheckGLErrorMessages();
 
 	glBindVertexArray(0);

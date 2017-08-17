@@ -2,6 +2,7 @@
 #if COMPILE_VULKAN
 
 #include "Window/Vulkan/VulkanWindowWrapper.h"
+
 #include "Logger.h"
 
 VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext) :

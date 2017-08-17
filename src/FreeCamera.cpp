@@ -1,13 +1,12 @@
 #include "stdafx.h"
 
 #include "FreeCamera.h"
-#include "GameContext.h"
-#include "InputManager.h"
-#include "Logger.h"
-#include "Window\Window.h"
 
 #include <glm\vec2.hpp>
 #include <glm\gtc\matrix_transform.hpp>
+
+#include "Logger.h"
+#include "Window\Window.h"
 
 FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float zFar) :
 	m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),

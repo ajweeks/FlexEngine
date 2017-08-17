@@ -2,8 +2,9 @@
 
 #include "Random.h"
 
-#include <glm\gtc\random.hpp>
 #include <time.h>
+
+#include <glm\gtc\random.hpp>
 
 void Random::InitializeSeedRandom()
 {

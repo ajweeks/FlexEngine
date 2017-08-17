@@ -1,11 +1,12 @@
 #include "stdafx.h"
 
 #include "Helpers.h"
-#include "Logger.h"
 
 #include <sstream>
 #include <iomanip>
 #include <fstream>
+
+#include "Logger.h"
 
 std::string FloatToString(float f, int precision)
 {

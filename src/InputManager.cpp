@@ -1,11 +1,11 @@
 #include "stdafx.h"
 
 #include "InputManager.h"
-#include "Logger.h"
-#include "GameContext.h"
-#include "Window/Window.h"
 
 #include <assert.h>
+
+#include "Logger.h"
+#include "Window/Window.h"
 
 InputManager::InputManager()
 {
@@ -25,7 +25,7 @@ void InputManager::Update()
 		}
 	}
 
-	for (size_t i = 0; i < MOUSE_BUTTON_COUNT; i++)
+	for (size_t i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 	{
 		if (m_MouseButtons[i].down > 0)
 		{
@@ -158,7 +158,7 @@ void InputManager::ClearAllInputs(const GameContext& gameContext)
 		iter->second.down = 0;
 	}
 
-	for (size_t i = 0; i < MOUSE_BUTTON_COUNT; i++)
+	for (size_t i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 	{
 		m_MouseButtons[i].down = 0;
 	}

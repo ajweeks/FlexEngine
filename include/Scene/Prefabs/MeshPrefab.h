@@ -1,13 +1,18 @@
 #pragma once
 
-#include "Scene/GameObject.h"
-#include "Transform.h"
-#include "GameContext.h"
-#include "VertexBufferData.h"
+#include "Scene\GameObject.h"
 
 #include <vector>
 
-struct aiScene;
+#include <glm\integer.hpp>
+#include <glm\vec2.hpp>
+#include <glm\vec3.hpp>
+#include <glm\vec4.hpp>
+
+#include <assimp\scene.h>
+
+#include "Transform.h"
+#include "VertexBufferData.h"
 
 class MeshPrefab : public GameObject
 {

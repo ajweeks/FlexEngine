@@ -2,8 +2,10 @@
 
 #include <vector>
 
-class BaseScene;
-struct GameContext;
+#include <glm\integer.hpp>
+
+#include "BaseScene.h"
+#include "GameContext.h"
 
 class SceneManager
 {
@@ -16,7 +18,7 @@ public:
 	void AddScene(BaseScene* newScene, const GameContext& gameContext);
 	void RemoveScene(BaseScene* scene, const GameContext& gameContext);
 
-	void SetCurrentScene(int sceneIndex);
+	void SetCurrentScene(glm::uint sceneIndex);
 	void SetCurrentScene(std::string sceneName);
 
 	BaseScene* CurrentScene() const;
@@ -24,7 +26,7 @@ public:
 	void DestroyAllScenes(const GameContext& gameContext);
 
 private:
-	int m_CurrentSceneIndex;
+	glm::uint m_CurrentSceneIndex;
 	std::vector<BaseScene*> m_Scenes;
 
 	SceneManager(const SceneManager&) = delete;

@@ -1,17 +1,14 @@
 #pragma once
 #if COMPILE_VULKAN
 
+#include <array>
+#include <map>
+
 #include "Graphics/Renderer.h"
 #include "VDeleter.h"
 #include "VulkanBuffer.h"
 #include "Graphics/Vulkan/VulkanHelpers.h"
-
-#include <vector>
-#include <array>
-#include <map>
-
-struct GameContext;
-class Window;
+#include "Window/Window.h"
 
 class VulkanRenderer : public Renderer
 {
@@ -39,7 +36,7 @@ public:
 	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) override;
 
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
-	virtual void SetUniform1f(glm::uint location, float val) override;
+	virtual void SetUniform1f(int location, float val) override;
 
 	virtual glm::uint GetProgram(glm::uint renderID) override;
 	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,
@@ -71,7 +68,7 @@ private:
 	void CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shaderIndex);
 	void PrepareUniformBuffers();
 	void CreateDescriptorPool();
-	glm::uint AllocateUniformBuffer(size_t dynamicDataSize, void** data);
+	glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
 	void PrepareUniformBuffer(VulkanBuffer& buffer, glm::uint bufferSize,
 		VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 	void CreateDescriptorSet(glm::uint renderID, glm::uint descriptorSetLayoutIndex);
@@ -123,7 +120,7 @@ private:
 
 	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 
-	RenderObject* GetRenderObject(int renderID);
+	RenderObject* GetRenderObject(glm::uint renderID);
 	//RenderObjectIter Destroy(RenderObjectIter iter);
 
 	// TODO: use sorted data type (map)
@@ -195,7 +192,7 @@ private:
 	VulkanBuffer m_VertexBuffer_Color;
 	VulkanBuffer m_IndexBuffer_Color;
 
-	size_t m_DynamicAlignment;
+	glm::uint m_DynamicAlignment;
 
 	VDeleter<VkSemaphore> m_ImageAvailableSemaphore{ m_Device, vkDestroySemaphore };
 	VDeleter<VkSemaphore> m_RenderFinishedSemaphore{ m_Device, vkDestroySemaphore };

@@ -1,12 +1,11 @@
-
 #include "stdafx.h"
 #if COMPILE_D3D
 
-#include "Graphics/D3D/D3DHelpers.h"
-#include "Logger.h"
-
 #include <fstream>
 #include <sstream>
+
+#include "Graphics/D3D/D3DHelpers.h"
+#include "Logger.h"
 
 ID3DX11Effect* LoadEffectFromFile(const std::wstring& filePath, ID3D11Device* device)
 {
@@ -36,7 +35,7 @@ ID3DX11Effect* LoadEffectFromFile(const std::wstring& filePath, ID3D11Device* de
 			char *errors = (char*)pErrorBlob->GetBufferPointer();
 
 			std::wstringstream ss;
-			for (unsigned int i = 0; i < pErrorBlob->GetBufferSize(); i++)
+			for (unsigned int i = 0; i < pErrorBlob->GetBufferSize(); ++i)
 			{
 				ss << errors[i];
 			}

@@ -1,10 +1,9 @@
 #include "stdafx.h"
 
 #include "MainApp.h"
-#include "Logger.h"
+
 #include "FreeCamera.h"
-#include "GameContext.h"
-#include "InputManager.h"
+#include "Logger.h"
 #include "Scene/SceneManager.h"
 #include "Scene/TestScene.h"
 #include "Typedefs.h"

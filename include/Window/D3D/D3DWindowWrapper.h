@@ -1,7 +1,7 @@
 #pragma once
 #if COMPILE_D3D
 
-#include "../Window.h"
+#include "Window/Window.h"
 
 struct GameContext;
 

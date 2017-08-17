@@ -1,6 +1,8 @@
 #pragma once
 
-#include <glm\detail\type_int.hpp>
+#include <cstdlib>
+
+#include <glm\integer.hpp>
 
 struct VertexBufferData
 {
@@ -27,7 +29,7 @@ struct VertexBufferData
 		TEXCOORD = (1 << 5)
 	};
 
-	bool HasAttribute(VertexAttribute attribute) const
+	inline bool HasAttribute(VertexAttribute attribute) const
 	{
 		return (Attributes & ((glm::uint)attribute));
 	}

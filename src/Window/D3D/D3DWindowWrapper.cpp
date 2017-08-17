@@ -2,16 +2,15 @@
 #if COMPILE_D3D
 
 #include "Window/D3D/D3DWindowWrapper.h"
-#include "Logger.h"
-#include "GameContext.h"
-#include "ShaderUtils.h"
-#include "TechDemo.h"
-#include "InputManager.h"
 
 #include <Windowsx.h>
 
 #include <locale>
 #include <codecvt>
+
+#include "Logger.h"
+#include "ShaderUtils.h"
+#include "TechDemo.h"
 
 //void D3DErrorCallback(int error, const char* description)
 //{

@@ -1,9 +1,7 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include "../Renderer.h"
-
-struct GameContext;
+#include "Graphics/Renderer.h"
 
 class GLRenderer : public Renderer
 {
@@ -31,7 +29,7 @@ public:
 	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) override;
 
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
-	virtual void SetUniform1f(glm::uint location, float val) override;
+	virtual void SetUniform1f(int location, float val) override;
 
 	virtual glm::uint GetProgram(glm::uint renderID) override;
 	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Vertex.h"
-
-#include <glm\detail\type_int.hpp>
-
-#include <vector>
 #include <string>
+#include <vector>
 
-struct GameContext;
-struct VertexBufferData;
+#include <glm\integer.hpp>
+#include <glm\vec4.hpp>
+
+#include "GameContext.h"
+#include "Vertex.h"
+#include "VertexBufferData.h"
 
 class Renderer
 {
@@ -91,7 +91,7 @@ public:
 	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) = 0;
 	
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) = 0;
-	virtual void SetUniform1f(glm::uint location, float val) = 0;
+	virtual void SetUniform1f(int location, float val) = 0;
 
 	virtual glm::uint GetProgram(glm::uint renderID) = 0;
 	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,

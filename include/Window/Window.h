@@ -1,10 +1,10 @@
 ﻿#pragma once
 
-#include "Typedefs.h"
+#include <string>
+
 #include "GameContext.h"
 #include "InputManager.h"
-
-#include <string>
+#include "Typedefs.h"
 
 struct GLFWwindow;
 

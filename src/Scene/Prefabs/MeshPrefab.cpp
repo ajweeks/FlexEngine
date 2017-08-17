@@ -1,11 +1,6 @@
 #include "stdafx.h"
 
 #include "Scene/Prefabs/MeshPrefab.h"
-#include "Logger.h"
-#include "GameContext.h"
-#include "Typedefs.h"
-#include "Helpers.h"
-#include "Colors.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/vector3.h>
@@ -13,6 +8,12 @@
 #include <assimp/postprocess.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "Colors.h"
+#include "GameContext.h"
+#include "Helpers.h"
+#include "Logger.h"
+#include "Typedefs.h"
 
 glm::vec4 MeshPrefab::m_DefaultColor(1.0f, 1.0f, 1.0f, 1.0f);
 glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
@@ -27,7 +28,7 @@ MeshPrefab::MeshPrefab()
 
 MeshPrefab::~MeshPrefab()
 {
-	for (size_t i = 0; i < m_VertexBuffers.size(); i++)
+	for (size_t i = 0; i < m_VertexBuffers.size(); ++i)
 	{
 		m_VertexBuffers[i].Destroy();
 	}
@@ -60,7 +61,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 
 	const size_t numVerts = mesh->mNumVertices;
 
-	for (size_t i = 0; i < numVerts; i++)
+	for (size_t i = 0; i < numVerts; ++i)
 	{
 		// Position
 		glm::vec3 pos = ToVec3(mesh->mVertices[i]);
@@ -410,12 +411,12 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		const float PI = glm::pi<float>();
 		const float TWO_PI = glm::two_pi<float>();
 
-		for (glm::uint j = 0; j < parallelCount - 1; j++)
+		for (glm::uint j = 0; j < parallelCount - 1; ++j)
 		{
 			float polar = PI * float(j + 1) / (float)parallelCount;
 			float sinP = sin(polar);
 			float cosP = cos(polar);
-			for (glm::uint i = 0; i < meridianCount; i++)
+			for (glm::uint i = 0; i < meridianCount; ++i)
 			{
 				float azimuth = TWO_PI * (float)i / (float)meridianCount;
 				float sinA = sin(azimuth);
@@ -444,7 +445,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		m_Indices.clear();
 
 		// Top triangles
-		for (size_t i = 0; i < meridianCount; i++)
+		for (size_t i = 0; i < meridianCount; ++i)
 		{
 			glm::uint a = i + 1;
 			glm::uint b = (i + 1) % meridianCount + 1;
@@ -454,11 +455,11 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		}
 
 		// Center quads
-		for (size_t j = 0; j < parallelCount - 2; j++)
+		for (size_t j = 0; j < parallelCount - 2; ++j)
 		{
 			glm::uint aStart = j * meridianCount + 1;
 			glm::uint bStart = (j + 1) * meridianCount + 1;
-			for (size_t i = 0; i < meridianCount; i++)
+			for (size_t i = 0; i < meridianCount; ++i)
 			{
 				glm::uint a = aStart + i;
 				glm::uint a1 = aStart + (i + 1) % meridianCount;
@@ -475,7 +476,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		}
 
 		// Bottom triangles
-		for (size_t i = 0; i < meridianCount; i++)
+		for (size_t i = 0; i < meridianCount; ++i)
 		{
 			glm::uint a = i + meridianCount * (parallelCount - 2) + 1;
 			glm::uint b = (i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1;
@@ -490,7 +491,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		createInfo.shaderIndex = 1;
 
 		float rowWidth = 10.0f;
-		int lineCount = 15;
+		glm::uint lineCount = 15;
 
 		const glm::vec4 lineColor = Color::GRAY;
 		const glm::vec4 centerLineColor = Color::LIGHT_GRAY;
@@ -507,7 +508,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
 
 		// Horizontal lines
-		for (int i = 0; i < lineCount; ++i)
+		for (glm::uint i = 0; i < lineCount; ++i)
 		{
 			m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, -halfWidth });
 			m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, halfWidth });
@@ -518,7 +519,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		}
 
 		// Vertical lines
-		for (int i = 0; i < lineCount; ++i)
+		for (glm::uint i = 0; i < lineCount; ++i)
 		{
 			m_Positions.push_back({ -halfWidth, 0.0f, i * rowWidth - halfWidth });
 			m_Positions.push_back({ halfWidth, 0.0f, i * rowWidth - halfWidth });
@@ -585,7 +586,7 @@ void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, glm::ui
 
 	constexpr size_t vertexTypeCount = 6;
 	std::string names[vertexTypeCount] = { "in_Position", "in_Color", "in_Tangent", "in_Bitangent", "in_Normal", "in_TexCoord" };
-	size_t sizes[vertexTypeCount] =      { 3,             4,          3,            3,              3,           2             };
+	int sizes[vertexTypeCount] =      { 3,             4,          3,            3,              3,           2             };
 
 	float* currentLocation = (float*)0;
 	for (size_t i = 0; i < vertexTypeCount; ++i)
@@ -594,7 +595,7 @@ void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, glm::ui
 		if (m_Attributes & (int)vertexType)
 		{
 			renderer->DescribeShaderVariable(m_RenderID, program, names[i], sizes[i], Renderer::Type::FLOAT, false,
-				vertexBufferData->VertexStride, currentLocation);
+				(int)vertexBufferData->VertexStride, currentLocation);
 			currentLocation += sizes[i];
 		}
 	}

@@ -1,9 +1,7 @@
 #pragma once
 #if COMPILE_D3D
 
-#include "../Renderer.h"
-
-struct GameContext;
+#include "Graphics/Renderer.h"
 
 class D3DRenderer : public Renderer
 {

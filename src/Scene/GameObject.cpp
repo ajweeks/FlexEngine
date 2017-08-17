@@ -9,7 +9,7 @@ GameObject::GameObject(GameObject* pParent) :
 
 GameObject::~GameObject()
 {
-	for (size_t i = 0; i < m_Children.size(); i++)
+	for (size_t i = 0; i < m_Children.size(); ++i)
 	{
 		delete m_Children[i];
 	}

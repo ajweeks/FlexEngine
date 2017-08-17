@@ -1,10 +1,11 @@
 #include "stdafx.h"
 
 #include "Scene/BaseScene.h"
-#include "Scene/GameObject.h"
-#include "Logger.h"
 
 #include <glm/vec3.hpp>
+
+#include "Scene/GameObject.h"
+#include "Logger.h"
 
 BaseScene::BaseScene(std::string name) :
 	m_Name(name)

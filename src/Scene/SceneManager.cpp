@@ -1,11 +1,10 @@
 ﻿#include "stdafx.h"
 
 #include "Scene/SceneManager.h"
-#include "Scene/BaseScene.h"
-#include "Logger.h"
-#include "GameContext.h"
 
 #include <algorithm>
+
+#include "Logger.h"
 
 SceneManager::SceneManager() :
 	m_CurrentSceneIndex(0)
@@ -55,9 +54,9 @@ void SceneManager::RemoveScene(BaseScene* scene, const GameContext& gameContext)
 	}
 }
 
-void SceneManager::SetCurrentScene(int sceneIndex)
+void SceneManager::SetCurrentScene(glm::uint sceneIndex)
 {
-	if (sceneIndex < 0 || sceneIndex >= (int)m_Scenes.size())
+	if (sceneIndex >= m_Scenes.size())
 	{
 		Logger::LogError("Attempt to set scene to index " + std::to_string(sceneIndex) + 
 			" failed, it does not exist in the SceneManager");
@@ -69,7 +68,7 @@ void SceneManager::SetCurrentScene(int sceneIndex)
 
 void SceneManager::SetCurrentScene(std::string sceneName)
 {
-	for (size_t i = 0; i < m_Scenes.size(); i++)
+	for (size_t i = 0; i < m_Scenes.size(); ++i)
 	{
 		if (m_Scenes[i]->GetName().compare(sceneName) == 0)
 		{
@@ -83,11 +82,6 @@ void SceneManager::SetCurrentScene(std::string sceneName)
 
 BaseScene* SceneManager::CurrentScene() const
 {
-	if (m_CurrentSceneIndex < 0 || m_CurrentSceneIndex >= (int)m_Scenes.size())
-	{
-		return nullptr;
-	}
-
 	return m_Scenes[m_CurrentSceneIndex];
 }
 

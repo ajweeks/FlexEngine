@@ -1,9 +1,11 @@
+
 #pragma once
 
 #include "BaseScene.h"
-#include "Prefabs/MeshPrefab.h"
 
 #include <vector>
+
+#include "Prefabs/MeshPrefab.h"
 
 class TestScene : public BaseScene
 {
@@ -40,8 +42,8 @@ private:
 
 	glm::uint m_TimeID;
 
-	size_t m_CubesLong;
-	size_t m_CubesWide;
+	glm::uint m_CubesLong;
+	glm::uint m_CubesWide;
 
 	TestScene(const TestScene&) = delete;
 	TestScene& operator=(const TestScene&) = delete;

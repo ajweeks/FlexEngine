@@ -1,12 +1,12 @@
 #pragma once
 
-#include <glm/vec2.hpp>
-
 #include <map>
 
-struct GameContext;
+#include <glm/vec2.hpp>
 
-class InputManager final
+#include "GameContext.h"
+
+class InputManager
 {
 public:
 	enum class Action

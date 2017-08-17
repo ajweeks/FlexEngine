@@ -2,12 +2,12 @@
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
 #include "Window/GLFWWindowWrapper.h"
+
 #include "Graphics/GL/GLHelpers.h"
-#include "Logger.h"
-#include "GameContext.h"
-#include "ShaderUtils.h"
-#include "MainApp.h"
 #include "InputManager.h"
+#include "Logger.h"
+#include "MainApp.h"
+#include "ShaderUtils.h"
 
 GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
 	Window(title, size, gameContext)

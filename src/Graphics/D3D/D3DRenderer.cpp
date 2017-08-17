@@ -1,18 +1,17 @@
 #include "stdafx.h"
 #if COMPILE_D3D
 
+#include <algorithm>
+
 #include "Graphics/D3D/D3DRenderer.h"
 #include "Graphics/D3D/D3DHelpers.h"
-#include "GameContext.h"
 #include "Window/Window.h"
 #include "Logger.h"
 #include "FreeCamera.h"
 #include "Helpers.h"
 #include "Vertex.h"
-#include "VertexBufferData.h"
 
-#include <algorithm>
-
+// TODO: Remove all using namespace declarations
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 using Microsoft::WRL::ComPtr;
@@ -581,7 +580,7 @@ void D3DRenderer::Draw(const GameContext& gameContext)
 
 	m_DeviceContext->IASetInputLayout(m_pInputLayout);
 
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
 

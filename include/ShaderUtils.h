@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <glm\integer.hpp>
+
 struct Uniform
 {
 	enum Type : glm::uint

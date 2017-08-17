@@ -6,30 +6,37 @@
 #define COMPILE_VULKAN 1
 #define COMPILE_D3D 0
 
-#pragma warning(disable: 4201)
-#pragma warning(disable : 4820)  
+#pragma warning(disable : 4201)
+#pragma warning(disable : 4820)
+#pragma warning(disable : 4868)
+#pragma warning(disable : 4710)
 
 #if COMPILE_VULKAN
+#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
 	#include <glad/glad.h>
 	#include <vulkan/vulkan.h>
 	#include <GLFW/glfw3.h>
+#pragma warning(pop)
 
 	#include "Graphics/Vulkan/VulkanRenderer.h"
 	#include "Window/Vulkan/VulkanWindowWrapper.h"
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
-	#define GLFW_EXPOSE_NATIVE_WIN32
+#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#define GLFW_EXPOSE_NATIVE_WIN32
 	#include <glad/glad.h>
 	#include <GLFW/glfw3.h>
 	#include <GLFW/glfw3native.h>
+#pragma warning(pop)
 
 	#include "Graphics/GL/GLRenderer.h"
 	#include "Window/GL/GLWindowWrapper.h"
 #endif // COMPILE_OPEN_GL
 
 #if COMPILE_D3D
-	#include <d3d11.h>
+#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#include <d3d11.h>
 	#pragma comment(lib, "d3d11.lib")
 	#include <d3dcompiler.h>
 	#pragma comment(lib, "d3dcompiler.lib")
@@ -59,6 +66,7 @@
 	#include "SpriteFont.h"
 	#include "VertexTypes.h"
 	#include "WICTextureLoader.h"
+#pragma warning(pop)
 
 	#include "Graphics/D3D/D3DRenderer.h"
 	#include "Window/D3D/D3DWindowWrapper.h"
@@ -97,8 +105,9 @@ inline void SafeDelete(T &pObjectToDelete)
 	}
 }
 
+#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
 #include <glm/glm.hpp>
-
+#pragma warning(pop)

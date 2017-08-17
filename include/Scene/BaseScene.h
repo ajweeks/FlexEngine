@@ -1,11 +1,11 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "FreeCamera.h"
 #include "GameContext.h"
-
-#include <string>
-
-class GameObject;
+#include "GameObject.h"
 
 class BaseScene
 {

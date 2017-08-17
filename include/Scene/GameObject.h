@@ -2,7 +2,7 @@
 
 #include <vector>
 
-struct GameContext;
+#include "GameContext.h"
 
 class GameObject
 {

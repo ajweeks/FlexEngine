@@ -2,21 +2,18 @@
 #if COMPILE_VULKAN
 
 #include "Graphics/Vulkan/VulkanRenderer.h"
-#include "Helpers.h"
-#include "GameContext.h"
-#include "Window/Window.h"
-#include "Logger.h"
-#include "FreeCamera.h"
-#include "VertexBufferData.h"
 
-#include <algorithm>	
+#include <algorithm>
 #include <set>
 #include <iostream>
 #include <unordered_map>
 
-#include <glm\gtc\matrix_transform.hpp>
-
 #include <SOIL.h>
+
+#include "FreeCamera.h"
+#include "Helpers.h"
+#include "Logger.h"
+#include "VertexBufferData.h"
 
 VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	m_VertexBuffer_Simple(m_Device),
@@ -92,12 +89,12 @@ void VulkanRenderer::PostInitialize()
 
 	CreateDescriptorPool();
 
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		CreateDescriptorSetLayout(m_RenderObjects[i]->shaderIndex);
 	}
 
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		RenderObject* renderObject = m_RenderObjects[i];
 
@@ -139,7 +136,7 @@ VulkanRenderer::~VulkanRenderer()
 	//vkDestroyImage(m_Device, m_TextureImage, nullptr);
 	//vkFreeMemory(m_Device, m_TextureImageMemory, nullptr);
 
-	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
+	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
 		free(m_UniformBuffers[i].constantData.data);
 
@@ -181,7 +178,7 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const Rende
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
-	size_t renderID = m_RenderObjects.size();
+	glm::uint renderID = m_RenderObjects.size();
 	RenderObject* renderObject = new RenderObject(m_Device);
 	m_RenderObjects.push_back(renderObject);
 
@@ -294,7 +291,7 @@ int VulkanRenderer::GetShaderUniformLocation(glm::uint program, const std::strin
 	return 0;
 }
 
-void VulkanRenderer::SetUniform1f(glm::uint location, float val)
+void VulkanRenderer::SetUniform1f(int location, float val)
 {
 	// TODO: Implement
 	UNREFERENCED_PARAMETER(location);
@@ -334,7 +331,7 @@ void VulkanRenderer::Destroy(glm::uint renderID)
 	}
 }
 
-RenderObject* VulkanRenderer::GetRenderObject(int renderID)
+RenderObject* VulkanRenderer::GetRenderObject(glm::uint renderID)
 {
 	return m_RenderObjects[renderID];
 }
@@ -433,7 +430,7 @@ void VulkanRenderer::CreateLogicalDevice()
 	{
 		VkDeviceQueueCreateInfo queueCreateInfo = {};
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueFamilyIndex = (glm::uint32)queueFamily;
 		queueCreateInfo.queueCount = 1;
 		queueCreateInfo.pQueuePriorities = &queuePriority;
 		queueCreateInfos.push_back(queueCreateInfo);
@@ -467,8 +464,8 @@ void VulkanRenderer::CreateLogicalDevice()
 
 	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_PhysicalDeviceProperties);
 
-	vkGetDeviceQueue(m_Device, indices.graphicsFamily, 0, &m_GraphicsQueue);
-	vkGetDeviceQueue(m_Device, indices.presentFamily, 0, &m_PresentQueue);
+	vkGetDeviceQueue(m_Device, (glm::uint32)indices.graphicsFamily, 0, &m_GraphicsQueue);
+	vkGetDeviceQueue(m_Device, (glm::uint32)indices.presentFamily, 0, &m_PresentQueue);
 }
 
 void VulkanRenderer::RecreateSwapChain(Window* window)
@@ -478,7 +475,7 @@ void VulkanRenderer::RecreateSwapChain(Window* window)
 	CreateSwapChain(window);
 	CreateImageViews();
 	CreateRenderPass();
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		CreateGraphicsPipeline(i);
 	}
@@ -551,7 +548,7 @@ void VulkanRenderer::CreateImageViews()
 {
 	m_SwapChainImageViews.resize(m_SwapChainImages.size(), VDeleter<VkImageView>{ m_Device, vkDestroyImageView });
 
-	for (uint32_t i = 0; i < m_SwapChainImages.size(); i++)
+	for (uint32_t i = 0; i < m_SwapChainImages.size(); ++i)
 	{
 		CreateImageView(m_SwapChainImages[i], m_SwapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_SwapChainImageViews[i]);
 	}
@@ -796,7 +793,7 @@ void VulkanRenderer::CreateFramebuffers()
 {
 	m_SwapChainFramebuffers.resize(m_SwapChainImageViews.size(), VDeleter<VkFramebuffer>{m_Device, vkDestroyFramebuffer});
 
-	for (size_t i = 0; i < m_SwapChainImageViews.size(); i++)
+	for (size_t i = 0; i < m_SwapChainImageViews.size(); ++i)
 	{
 		std::array<VkImageView, 2> attachments = {
 			m_SwapChainImageViews[i],
@@ -823,7 +820,7 @@ void VulkanRenderer::CreateCommandPool()
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+	poolInfo.queueFamilyIndex = (glm::uint32)queueFamilyIndices.graphicsFamily;
 
 	VK_CHECK_RESULT(vkCreateCommandPool(m_Device, &poolInfo, nullptr, m_CommandPool.replace()));
 }
@@ -955,7 +952,7 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTextu
 	
 	*texture = new VulkanTexture(m_Device);
 
-	VkDeviceSize imageSize = textureWidth * textureHeight * 4;
+	VkDeviceSize imageSize = (VkDeviceSize)(textureWidth * textureHeight * 4);
 
 	VulkanBuffer stagingBuffer{ m_Device };
 
@@ -993,12 +990,12 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTextu
 
 	SOIL_free_image_data(pixels);
 
-	CreateImage(textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
+	CreateImage((glm::uint32)textureWidth, (glm::uint32)textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
 		(*texture)->image, (*texture)->imageMemory);
 
 	TransitionImageLayout((*texture)->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (uint32_t)textureWidth, (uint32_t)textureHeight);
+	CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (glm::uint32)textureWidth, (glm::uint32)textureHeight);
 	TransitionImageLayout((*texture)->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
@@ -1040,7 +1037,7 @@ void VulkanRenderer::BuildCommandBuffers()
 	renderPassBeginInfo.clearValueCount = clearValues.size();
 	renderPassBeginInfo.pClearValues = clearValues.data();
 
-	for (size_t i = 0; i < m_CommandBuffers.size(); i++)
+	for (size_t i = 0; i < m_CommandBuffers.size(); ++i)
 	{
 		renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
@@ -1058,7 +1055,7 @@ void VulkanRenderer::BuildCommandBuffers()
 		VkRect2D scissor = VkRect2D{ { 0u, 0u }, { m_SwapChainExtent.width, m_SwapChainExtent.height } };
 		vkCmdSetScissor(m_CommandBuffers[i], 0, 1, &scissor);
 
-		for (size_t j = 0; j < m_RenderObjects.size(); j++)
+		for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 		{
 			uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 
@@ -1128,7 +1125,7 @@ uint32_t VulkanRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFla
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memProperties);
 
-	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
 	{
 		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
 		{
@@ -1308,9 +1305,9 @@ void VulkanRenderer::CreateVertexBuffers()
 
 void VulkanRenderer::CreateVertexBuffer(VulkanBuffer& vertexBuffer, glm::uint shaderIndex)
 {
-	int requiredMemory = 0;
+	size_t requiredMemory = 0;
 
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
 		if (renderObject->shaderIndex == shaderIndex)
@@ -1335,7 +1332,7 @@ void VulkanRenderer::CreateVertexBuffer(VulkanBuffer& vertexBuffer, glm::uint sh
 
 	glm::uint vertexCount = 0;
 	glm::uint vertexBufferSize = 0;
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
 		if (renderObject->shaderIndex == shaderIndex)
@@ -1378,7 +1375,7 @@ void VulkanRenderer::CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shad
 {
 	std::vector<glm::uint> indices;
 
-	for (size_t i = 0; i < m_RenderObjects.size(); i++)
+	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
 		RenderObject* renderObject = GetRenderObject(i);
 		if (renderObject->shaderIndex == shaderIndex && renderObject->indexed)
@@ -1435,7 +1432,7 @@ void VulkanRenderer::PrepareUniformBuffers()
 	m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
 		Uniform::Type::MODEL_MAT4);
 
-	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
+	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
 		m_UniformBuffers[i].constantData.size = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
 		m_UniformBuffers[i].constantData.data = (float*)malloc(m_UniformBuffers[i].constantData.size);
@@ -1454,7 +1451,7 @@ void VulkanRenderer::PrepareUniformBuffers()
 	}
 }
 
-glm::uint VulkanRenderer::AllocateUniformBuffer(size_t dynamicDataSize, void** data)
+glm::uint VulkanRenderer::AllocateUniformBuffer(glm::uint dynamicDataSize, void** data)
 {
 	size_t uboAlignment = (size_t)m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
 	glm::uint dynamicAllignment = 
@@ -1933,7 +1930,7 @@ QueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
 		}
 
 		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_Surface, &presentSupport);
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, (glm::uint32)i, m_Surface, &presentSupport);
 
 		if (queueFamily.queueCount > 0 && presentSupport)
 		{
@@ -1945,7 +1942,7 @@ QueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
 			break;
 		}
 
-		i++;
+		++i;
 	}
 
 	return indices;
@@ -1959,7 +1956,7 @@ std::vector<const char*> VulkanRenderer::GetRequiredExtensions()
 	const char** glfwExtensions;
 	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-	for (unsigned int i = 0; i < glfwExtensionCount; i++)
+	for (unsigned int i = 0; i < glfwExtensionCount; ++i)
 	{
 		extensions.push_back(glfwExtensions[i]);
 	}
@@ -2015,7 +2012,7 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 	float useNormalTexture = 1;
 	float useSpecularTexture = 1;
 
-	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
+	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
 		glm::uint index = 0;
 
@@ -2124,7 +2121,7 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 
 	const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 
-	for (size_t i = 0; i < m_UniformBuffers.size(); i++)
+	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
 		glm::uint offset = renderID * m_UniformBuffers[i].dynamicData.size;
 		glm::uint index = 0;
@@ -2142,7 +2139,7 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 		}
 
 		// Aligned offset
-		size_t size = m_UniformBuffers[i].dynamicData.size;
+		glm::uint size = m_UniformBuffers[i].dynamicData.size;
 		void* firstIndex = m_UniformBuffers[i].dynamicBuffer.m_Mapped;
 		uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
 		memcpy((void*)(dest), &m_UniformBuffers[i].dynamicData.data[offset], size);
@@ -2168,7 +2165,7 @@ void VulkanRenderer::LoadDefaultShaderCode()
 
 	const size_t shaderCount = m_ShaderFilePaths.size();
 	m_LoadedShaderCode.resize(shaderCount);
-	for (size_t i = 0; i < shaderCount; i++)
+	for (size_t i = 0; i < shaderCount; ++i)
 	{
 		m_LoadedShaderCode[i].vertexShaderCode = ReadFile(m_ShaderFilePaths[i].vertexShaderFilePath);
 		m_LoadedShaderCode[i].fragmentShaderCode = ReadFile(m_ShaderFilePaths[i].fragmentShaderFilePath);
@@ -2197,11 +2194,14 @@ VkPrimitiveTopology VulkanRenderer::TopologyModeToVkPrimitiveTopology(TopologyMo
 	{
 	case TopologyMode::POINT_LIST: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 	case TopologyMode::LINE_LIST: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-	//case TopologyMode::LINE_LOOP: return VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_LINE_LOOP; // Unsupported
 	case TopologyMode::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
 	case TopologyMode::TRIANGLE_LIST: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	case TopologyMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 	case TopologyMode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+
+	case TopologyMode::LINE_LOOP: 
+		Logger::LogWarning("Unsupported TopologyMode passed to Vulkan Renderer: LINE_LOOP");
+		return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM; // Unsupported
 	default: return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 	}
 }

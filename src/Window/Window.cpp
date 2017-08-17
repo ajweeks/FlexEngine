@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 
 #include "Window/Window.h"
+
 #include "Helpers.h"
 #include "Logger.h"
 

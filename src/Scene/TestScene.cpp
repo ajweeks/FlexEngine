@@ -67,9 +67,9 @@ void TestScene::Initialize(const GameContext& gameContext)
 	//
 	//vec3 offset = vec3(m_CubesWide / 2.0f * -cubeScale, cubeScale / 2.0f, cubeOffset + m_CubesLong / 2.0f * cubeScale);
 	//
-	//for (size_t i = 0; i < m_CubesLong; i++)
+	//for (glm::uint i = 0; i < m_CubesLong; ++i)
 	//{
-	//	for (size_t j = 0; j < m_CubesWide; j++)
+	//	for (glm::uint j = 0; j < m_CubesWide; ++j)
 	//	{
 	//		MeshPrefab* cube = new MeshPrefab();
 	//
