@@ -80,7 +80,7 @@ void TestScene::Initialize(const GameContext& gameContext)
 
 	m_TransformManipulator_2 = new MeshPrefab();
 	m_TransformManipulator_2->SetUsedTextures(true, false, false);
-	m_TransformManipulator_2->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes-n.fbx");
+	m_TransformManipulator_2->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes.fbx");
 	m_TransformManipulator_2->GetTransform().position.x = -spacing;
 	m_TransformManipulator_2->GetTransform().position.z = -spacing * 0.5f;
 	AddChild(m_TransformManipulator_2);
