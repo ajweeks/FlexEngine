@@ -21,7 +21,6 @@ private:
 	std::vector<MeshPrefab*> m_Cubes;
 
 	MeshPrefab* m_Grid;
-	MeshPrefab* m_Grid2;
 	MeshPrefab* m_Scene;
 	MeshPrefab* m_Landscape;
 	MeshPrefab* m_Cube;
@@ -30,7 +29,6 @@ private:
 	MeshPrefab* m_UVSphere;
 	MeshPrefab* m_Capsule;
 	MeshPrefab* m_Teapot;
-	MeshPrefab* m_PunchingBag;
 	MeshPrefab* m_Rock1;
 	MeshPrefab* m_Rock2;
 
@@ -41,9 +39,6 @@ private:
 	MeshPrefab* m_TransformManipulator_5;
 
 	glm::uint m_TimeID;
-
-	glm::uint m_CubesLong;
-	glm::uint m_CubesWide;
 
 	TestScene(const TestScene&) = delete;
 	TestScene& operator=(const TestScene&) = delete;

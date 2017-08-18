@@ -31,8 +31,7 @@ public:
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
 	virtual void SetUniform1f(int location, float val) override;
 
-	virtual glm::uint GetProgram(glm::uint renderID) override;
-	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,
+	virtual void DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size,
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
 	virtual void Destroy(glm::uint renderID) override;
@@ -60,31 +59,38 @@ private:
 		glm::uint indexBuffer;
 		std::vector<glm::uint>* indices = nullptr;
 
+		glm::mat4 model;
+
 		// Uniform IDs
-		int projection;
-		int view;
-		int viewInverse;
-		int viewProjection;
-		int model;
-		int modelInvTranspose;
-		int modelViewProjection;
-		int camPos;
-		int viewDir;
-		int lightDir;
-		int ambientColor;
-		int specularColor;
-		int useDiffuseTexture;
-		int useNormalTexture;
-		int useSpecularTexture;
+		struct UniformIDs
+		{
+			int modelID;
+			int modelInvTranspose;
+			int modelViewProjection;
+			int camPos;
+			int viewDir;
+			int lightDir;
+			int ambientColor;
+			int specularColor;
+			int useDiffuseTexture;
+			int useNormalTexture;
+			int useSpecularTexture;
+		};
+		UniformIDs uniformIDs;
 
 		glm::uint shaderIndex;
 
-		std::string diffuseMapPath;
-		glm::uint diffuseMapID;
-		std::string specularMapPath;
-		glm::uint specularMapID;
-		std::string normalMapPath;
-		glm::uint normalMapID;
+		bool useDiffuseTexture;
+		std::string diffuseTexturePath;
+		glm::uint diffuseTextureID;
+
+		bool useSpecularTexture;
+		std::string specularTexturePath;
+		glm::uint specularTextureID;
+
+		bool useNormalTexture;
+		std::string normalTexturePath;
+		glm::uint normalTextureID;
 	};
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
@@ -93,6 +99,8 @@ private:
 	RenderObjectIter Destroy(RenderObjectIter iter);
 	void UnloadShaders();
 	void LoadShaders();
+
+	void UpdatePerObjectUniforms(glm::uint renderID, const GameContext& gameContext);
 
 	// TODO: use sorted data type (map)
 	std::vector<RenderObject*> m_RenderObjects;
@@ -111,10 +119,27 @@ private:
 
 	std::vector<Shader> m_LoadedShaders;
 
-	// Scene info variable locations
-	//int m_LightDirID;
-	//int m_AmbientColorID;
-	//int m_SpecularColorID;
+	struct UniformInfo
+	{
+		Uniform::Type type;
+		int* id;
+		const GLchar* name;
+	};
+
+	struct ViewProjectionUBO
+	{
+		glm::mat4 view;
+		glm::mat4 proj;
+	};
+
+	struct ViewProjectionCombinedUBO
+	{
+		glm::mat4 viewProj;
+	};
+
+	glm::uint viewProjectionUBO;
+	glm::uint viewProjectionCombinedUBO;
+
 
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;

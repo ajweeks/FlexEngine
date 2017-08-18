@@ -93,8 +93,7 @@ public:
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) = 0;
 	virtual void SetUniform1f(int location, float val) = 0;
 
-	virtual glm::uint GetProgram(glm::uint renderID) = 0;
-	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
+	virtual void DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
 		int stride, void* pointer) = 0;
 
 	virtual void Destroy(glm::uint renderID) = 0;

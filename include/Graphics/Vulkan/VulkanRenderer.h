@@ -38,8 +38,7 @@ public:
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
 	virtual void SetUniform1f(int location, float val) override;
 
-	virtual glm::uint GetProgram(glm::uint renderID) override;
-	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,
+	virtual void DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size,
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
 	virtual void Destroy(glm::uint renderID) override;

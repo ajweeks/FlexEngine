@@ -23,7 +23,7 @@ struct Uniform
 		SPECULAR_COLOR_VEC4 = (1 << 11),
 		USE_DIFFUSE_TEXTURE_INT = (1 << 12),
 		USE_NORMAL_TEXTURE_INT = (1 << 13),
-		USE_SPECULAR_TEXTURE_INT = (1 << 14)
+		USE_SPECULAR_TEXTURE_INT = (1 << 14),
 	};
 
 	static bool HasUniform(Type elements, Type uniform);

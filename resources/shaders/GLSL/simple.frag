@@ -5,8 +5,8 @@ uniform vec4 in_AmbientColor;
 uniform vec4 in_SpecularColor;
 uniform vec4 in_CamPos;
 
-uniform sampler2D in_DiffuseMap;
-uniform sampler2D in_SpecularMap;
+uniform sampler2D in_DiffuseTexture;
+uniform sampler2D in_SpecularTexture;
 uniform sampler2D in_NormalTexture;
 
 uniform bool in_UseDiffuseTexture;
@@ -39,7 +39,7 @@ void main()
 	vec4 diffuse = lightIntensity * ex_Color;
 	if (in_UseDiffuseTexture)
 	{
-		vec4 diffuseSample = texture(in_DiffuseMap, ex_TexCoord);
+		vec4 diffuseSample = texture(in_DiffuseTexture, ex_TexCoord);
 		diffuse *= diffuseSample;
 	}
 	
@@ -53,7 +53,7 @@ void main()
 	vec4 specular = specularStrength * spec * in_SpecularColor;
 	if (in_UseSpecularTexture)
 	{
-		vec4 specularSample = texture(in_SpecularMap, ex_TexCoord);
+		vec4 specularSample = texture(in_SpecularTexture, ex_TexCoord);
 		specular *= specularSample;
 	}
 

@@ -18,12 +18,8 @@ void TestScene::Initialize(const GameContext& gameContext)
 {
 	m_Grid = new MeshPrefab();
 	m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+	m_Grid->GetTransform().position.y -= 0.05f;
 	AddChild(m_Grid);
-
-	//m_Grid2 = new MeshPrefab();
-	//m_Grid2->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-	//m_Grid2->GetTransform().position.y += 10.0f;
-	//AddChild(m_Grid2);
 
 	//m_Teapot = new MeshPrefab();
 	//m_Teapot->LoadFromFile(gameContext, "resources/models/teapot.fbx");
@@ -34,7 +30,7 @@ void TestScene::Initialize(const GameContext& gameContext)
 	//m_Scene->LoadFromFile(gameContext, "resources/models/scene_02.fbx");
 	//m_Scene->SetTransform(glm::vec3(0.0f, -3.35f, 0.0f));
 	//AddChild(m_Scene);
-	//
+	
 	//m_Landscape = new MeshPrefab();
 	//m_Landscape->LoadFromFile(gameContext, "resources/models/landscape_01.fbx");
 	//m_Landscape->SetTransform(glm::vec3(0.0f, -41.0f, 500.0f));
@@ -45,58 +41,23 @@ void TestScene::Initialize(const GameContext& gameContext)
 	//m_UVSphere->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::UV_SPHERE);
 	//m_UVSphere->SetTransform(Transform(vec3(-2.0f, 1.0f, 0.0f), quat(vec3(0.0f)), vec3(1.0f)));
 	//AddChild(m_UVSphere);
-	
+	//
 	//m_IcoSphere.Init(gameContext, SpherePrefab::Type::ICOSPHERE, vec3(2.0f, 1.0f, 0.0f), quat(vec3(0.0f)), vec3(0.5f, 0.5f, 0.5f));
 	
 	//m_Cube = new MeshPrefab();
 	//m_Cube->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
-	//m_Cube->SetTransform(Transform(vec3(-4.0f, 0.5f, 0.0f), quat(vec3(0.0f, 1.0f, 0.0f)), vec3(3.0f, 1.0f, 1.0f)));
+	//m_Cube->SetTransform(Transform(glm::vec3(-4.0f, 0.5f, 0.0f), glm::quat(glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(3.0f, 1.0f, 1.0f)));
 	//AddChild(m_Cube);
 	//
 	//m_Cube2 = new MeshPrefab();
 	//m_Cube2->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
-	//m_Cube2->SetTransform(Transform(vec3(7.0f, 2.5f, 0.0f), quat(vec3(0.2f, 0.3f, 2.0f)), vec3(1.0f, 5.0f, 1.0f)));
+	//m_Cube2->SetTransform(Transform(glm::vec3(7.0f, 2.5f, 0.0f), glm::quat(glm::vec3(0.2f, 0.3f, 2.0f)), glm::vec3(1.0f, 5.0f, 1.0f)));
 	//AddChild(m_Cube2);
 
-	//m_CubesWide = 2;
-	//m_CubesLong = 3;
-	//m_Cubes.reserve(m_CubesWide * m_CubesLong);
-	//
-	//const float cubeScale = 0.5f;
-	//const float cubeOffset = 1.5f;
-	//
-	//vec3 offset = vec3(m_CubesWide / 2.0f * -cubeScale, cubeScale / 2.0f, cubeOffset + m_CubesLong / 2.0f * cubeScale);
-	//
-	//for (glm::uint i = 0; i < m_CubesLong; ++i)
-	//{
-	//	for (glm::uint j = 0; j < m_CubesWide; ++j)
-	//	{
-	//		MeshPrefab* cube = new MeshPrefab();
-	//
-	//		const int cubeIndex = i * m_CubesWide + j;
-	//		const float yRot = (i / (float)m_CubesLong) + (j / (float)m_CubesWide);
-	//		const float scaleScale = 0.2f + (cubeIndex / ((float)(m_CubesLong * m_CubesWide))) * 1.0f;
-	//
-	//		cube->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
-	//		cube->SetTransform(Transform(
-	//				offset + vec3(i * cubeOffset, 0.0f, j * cubeOffset),
-	//				quat(vec3(0.0f, yRot, 0.0f)),
-	//				vec3(cubeScale * scaleScale, cubeScale * scaleScale, cubeScale * scaleScale)));
-	//
-	//		m_Cubes.push_back(cube);
-	//		AddChild(cube);
-	//	}
-	//}
-
-	//m_ChamferBox = new MeshPrefab();
-	//m_ChamferBox->LoadFromFile(gameContext, "resources/models/chamfer-box.fbx");
-	//m_ChamferBox->SetTransform(glm::vec3(-8.0f, 0.0f, 2.0f));
-	//AddChild(m_ChamferBox);
-	
-	//m_PunchingBag = new MeshPrefab();
-	//m_PunchingBag->LoadFromFile(gameContext, "resources/models/punching-bag.fbx");
-	//m_PunchingBag->SetTransform(glm::vec3(-3.5f, -6.0f, 0.0f));
-	//AddChild(m_PunchingBag);
+	m_ChamferBox = new MeshPrefab();
+	m_ChamferBox->LoadFromFile(gameContext, "resources/models/chamfer-box.fbx");
+	m_ChamferBox->SetTransform(glm::vec3(-8.0f, 0.0f, 2.0f));
+	AddChild(m_ChamferBox);
 	
 	//m_Rock1 = new MeshPrefab();
 	//m_Rock1->LoadFromFile(gameContext, "resources/models/rock-01.fbx");
@@ -108,34 +69,39 @@ void TestScene::Initialize(const GameContext& gameContext)
 	//m_Rock2->SetTransform(glm::vec3(10.0f, 0.0f, 8.0f));
 	//AddChild(m_Rock2);
 
-	float spacing = 12.0f;
+	float spacing = 14.0f;
 
 	m_TransformManipulator_1 = new MeshPrefab();
+	m_TransformManipulator_1->SetUsedTextures(true, true, true);
 	m_TransformManipulator_1->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes.fbx");
 	m_TransformManipulator_1->GetTransform().position.x = -spacing * 2.0f;
 	m_TransformManipulator_1->GetTransform().position.z = -spacing * 1.0f;
-	m_TransformManipulator_1->SetShaderIndex(1);
 	AddChild(m_TransformManipulator_1);
 
 	m_TransformManipulator_2 = new MeshPrefab();
+	m_TransformManipulator_2->SetUsedTextures(true, false, false);
 	m_TransformManipulator_2->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes-n.fbx");
 	m_TransformManipulator_2->GetTransform().position.x = -spacing;
 	m_TransformManipulator_2->GetTransform().position.z = -spacing * 0.5f;
 	AddChild(m_TransformManipulator_2);
 
 	m_TransformManipulator_3 = new MeshPrefab();
+	m_TransformManipulator_3->SetUsedTextures(false, true, false);
 	m_TransformManipulator_3->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes.fbx");
 	m_TransformManipulator_3->GetTransform().position.x = 0.0f;
 	m_TransformManipulator_3->GetTransform().position.z = 0.0f;
 	AddChild(m_TransformManipulator_3);
 
 	m_TransformManipulator_4 = new MeshPrefab();
+	m_TransformManipulator_4->SetUsedTextures(false, false, true);
 	m_TransformManipulator_4->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes.fbx");
 	m_TransformManipulator_4->GetTransform().position.x = spacing;
 	m_TransformManipulator_4->GetTransform().position.z = spacing * 0.5f;
 	AddChild(m_TransformManipulator_4);
 
 	m_TransformManipulator_5 = new MeshPrefab();
+	m_TransformManipulator_4->SetUsedTextures(false, false, false);
+	m_TransformManipulator_5->SetShaderIndex(1);
 	m_TransformManipulator_5->LoadFromFile(gameContext, "resources/models/transform-manipulator-position-with-planes.fbx");
 	m_TransformManipulator_5->GetTransform().position.x = spacing * 2.0f;
 	m_TransformManipulator_5->GetTransform().position.z = spacing * 1.0f;
@@ -144,7 +110,9 @@ void TestScene::Initialize(const GameContext& gameContext)
 	Renderer::SceneInfo& sceneInfo = gameContext.renderer->GetSceneInfo();
 	sceneInfo.m_AmbientColor = glm::vec4(0.02f, 0.03f, 0.025f, 1.0f);
 	sceneInfo.m_SpecularColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	sceneInfo.m_LightDir = glm::vec4(0.9f, 0.11f, 0.12f, 0.0f);
+
+	// Set in update:
+	//sceneInfo.m_LightDir = glm::vec4(0.9f, -0.11f, 0.12f, 0.0f);
 
 	//m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
 }
@@ -160,7 +128,7 @@ void TestScene::Update(const GameContext& gameContext)
 	const float elapsed = gameContext.elapsedTime;
 
 	Renderer::SceneInfo& sceneInfo = gameContext.renderer->GetSceneInfo();
-	sceneInfo.m_LightDir = glm::vec4(sin(gameContext.elapsedTime), 0.5f, cos(gameContext.elapsedTime * 0.8f) * 0.5f, 0.0f);
+	sceneInfo.m_LightDir = glm::vec4(sin(gameContext.elapsedTime), -0.5f, cos(gameContext.elapsedTime * 0.8f) * 0.5f, 0.0f);
 
 	//gameContext.renderer->SetUniform1f(m_TimeID, gameContext.elapsedTime);
 

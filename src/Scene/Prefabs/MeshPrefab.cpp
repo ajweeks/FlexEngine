@@ -122,16 +122,16 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 
 	Renderer::RenderObjectCreateInfo createInfo = {};
 	createInfo.vertexBufferData = vertexBufferData;
-	createInfo.diffuseMapPath = "resources/textures/brick_d.png";
-	createInfo.specularMapPath = "resources/textures/brick_s.png";
-	createInfo.normalMapPath = "resources/textures/brick_n.png";
+	if (m_UseDiffuse) createInfo.diffuseMapPath = "resources/textures/brick_d.png";
+	if (m_UseNormal) createInfo.normalMapPath = "resources/textures/brick_n.png";
+	if (m_UseSpecular) createInfo.specularMapPath = "resources/textures/brick_s.png";
 	createInfo.shaderIndex = m_ShaderIndex;
 
 	m_RenderID = renderer->Initialize(gameContext, &createInfo);
 	
 	renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::TRIANGLE_LIST);
 
-	DescribeShaderVariables(gameContext, renderer->GetProgram(m_RenderID), vertexBufferData);
+	DescribeShaderVariables(gameContext, vertexBufferData);
 	
 	return true;
 }
@@ -542,7 +542,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	m_RenderID = renderer->Initialize(gameContext, &createInfo);
 
 	renderer->SetTopologyMode(m_RenderID, topologyMode);
-	DescribeShaderVariables(gameContext, renderer->GetProgram(m_RenderID), vertexBufferData);
+	DescribeShaderVariables(gameContext, vertexBufferData);
 	
 	return true;
 }
@@ -565,6 +565,13 @@ void MeshPrefab::Destroy(const GameContext& gameContext)
 	gameContext.renderer->Destroy(m_RenderID);
 }
 
+void MeshPrefab::SetUsedTextures(bool useDiffuse, bool useNormal, bool useSpecular)
+{
+	m_UseDiffuse = useDiffuse;
+	m_UseNormal = useNormal;
+	m_UseSpecular = useSpecular;
+}
+
 void MeshPrefab::SetShaderIndex(glm::uint shaderIndex)
 {
 	m_ShaderIndex = shaderIndex;
@@ -580,7 +587,7 @@ Transform& MeshPrefab::GetTransform()
 	return m_Transform;
 }
 
-void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, glm::uint program, VertexBufferData* vertexBufferData)
+void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData)
 {
 	Renderer* renderer = gameContext.renderer;
 
@@ -594,7 +601,7 @@ void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, glm::ui
 		VertexBufferData::VertexAttribute vertexType = VertexBufferData::VertexAttribute(1 << i);
 		if (m_Attributes & (int)vertexType)
 		{
-			renderer->DescribeShaderVariable(m_RenderID, program, names[i], sizes[i], Renderer::Type::FLOAT, false,
+			renderer->DescribeShaderVariable(m_RenderID, names[i], sizes[i], Renderer::Type::FLOAT, false,
 				(int)vertexBufferData->VertexStride, currentLocation);
 			currentLocation += sizes[i];
 		}

@@ -34,6 +34,7 @@ public:
 	virtual void Update(const GameContext& gameContext) override;
 	virtual void Destroy(const GameContext& gameContext) override;
 
+	void SetUsedTextures(bool useDiffuse, bool useNormal, bool useSpecular);
 	void SetShaderIndex(glm::uint shaderIndex);
 
 	void SetTransform(const Transform& transform);
@@ -42,12 +43,15 @@ public:
 private:
 	glm::uint CalculateVertexBufferStride() const;
 	void CreateVertexBuffer(VertexBufferData* vertexBufferData);
-	void DescribeShaderVariables(const GameContext& gameContext, glm::uint program, VertexBufferData* vertexBufferData);
+	void DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData);
 
 	Transform m_Transform;
 	glm::uint m_RenderID;
 
 	glm::uint m_ShaderIndex = 0;
+	bool m_UseDiffuse = true;
+	bool m_UseNormal = true;
+	bool m_UseSpecular = true;
 
 	std::string m_Name;
 

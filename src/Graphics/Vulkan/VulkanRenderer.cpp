@@ -298,18 +298,10 @@ void VulkanRenderer::SetUniform1f(int location, float val)
 	UNREFERENCED_PARAMETER(val);
 }
 
-glm::uint VulkanRenderer::GetProgram(glm::uint renderID)
+void VulkanRenderer::DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
 	// TODO: Implement
 	UNREFERENCED_PARAMETER(renderID);
-	return 0;
-}
-
-void VulkanRenderer::DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
-{
-	// TODO: Implement
-	UNREFERENCED_PARAMETER(renderID);
-	UNREFERENCED_PARAMETER(program);
 	UNREFERENCED_PARAMETER(variableName);
 	UNREFERENCED_PARAMETER(size);
 	UNREFERENCED_PARAMETER(renderType);
