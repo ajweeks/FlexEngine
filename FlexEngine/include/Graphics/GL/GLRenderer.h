@@ -139,12 +139,7 @@ private:
 		glm::mat4 viewProj;
 	};
 
-	struct Skybox
-	{
-		glm::uint textureID;
-	};
-
-	Skybox m_Skybox;
+	glm::uint cubeMapTexture;
 
 	// TODO: Clean up
 	glm::uint viewProjectionUBO;
