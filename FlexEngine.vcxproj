@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)include;$(SolutionDir)dependencies\glad\include;$(SolutionDir)dependencies\glfw\include;$(SolutionDir)dependencies\glm;$(SolutionDir)dependencies\soil\src;$(SolutionDir)dependencies\stb;$(SolutionDir)dependencies\assimp\include;$(VULKAN)\include;$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)dependencies\glfw\Debug;$(SolutionDir)dependencies\soil\Debug;$(SolutionDir)dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Debug;$(SolutionDir)FlexEngine\dependencies\soil\Debug;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)include;$(SolutionDir)dependencies\glad\include;$(SolutionDir)dependencies\glfw\include;$(SolutionDir)dependencies\glm;$(SolutionDir)dependencies\soil\src;$(SolutionDir)dependencies\stb;$(SolutionDir)dependencies\assimp\include;$(VULKAN)\include;$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)dependencies\glfw\Release;$(SolutionDir)dependencies\soil\Release;$(SolutionDir)dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(WindowsSDK_LibraryPath_x86);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\soil\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -87,6 +87,7 @@
       <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>false</TreatWarningAsError>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -112,6 +113,7 @@
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -136,93 +138,81 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dependencies\glad\src\glad.c">
+    <ClCompile Include="FlexEngine\dependencies\glad\src\glad.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Graphics\D3D\D3DHelpers.cpp" />
-    <ClCompile Include="src\Graphics\GL\GLHelpers.cpp" />
-    <ClCompile Include="src\Graphics\Vulkan\VulkanBuffer.cpp" />
-    <ClCompile Include="src\Graphics\Vulkan\VulkanHelpers.cpp" />
-    <ClCompile Include="src\Helpers.cpp" />
-    <ClCompile Include="src\Graphics\D3D\D3DRenderer.cpp" />
-    <ClCompile Include="src\Graphics\GL\GLRenderer.cpp" />
-    <ClCompile Include="src\Graphics\Vulkan\VulkanRenderer.cpp" />
-    <ClCompile Include="src\Scene\GameObject.cpp" />
-    <ClCompile Include="src\Scene\Prefabs\MeshPrefab.cpp" />
-    <ClCompile Include="src\Transform.cpp" />
-    <ClCompile Include="src\Scene\SceneManager.cpp" />
-    <ClCompile Include="src\Scene\TestScene.cpp" />
-    <ClCompile Include="src\stdafx.cpp">
+    <ClCompile Include="FlexEngine\src\FlexEngine.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\D3D\D3DHelpers.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\GL\GLHelpers.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanBuffer.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanHelpers.cpp" />
+    <ClCompile Include="FlexEngine\src\Helpers.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\D3D\D3DRenderer.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\GL\GLRenderer.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanRenderer.cpp" />
+    <ClCompile Include="FlexEngine\src\Scene\GameObject.cpp" />
+    <ClCompile Include="FlexEngine\src\Scene\Prefabs\MeshPrefab.cpp" />
+    <ClCompile Include="FlexEngine\src\Transform.cpp" />
+    <ClCompile Include="FlexEngine\src\Scene\SceneManager.cpp" />
+    <ClCompile Include="FlexEngine\src\Scene\TestScene.cpp" />
+    <ClCompile Include="FlexEngine\src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Window\D3D\D3DWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\GLFWWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\GL\GLWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\Vulkan\VulkanWindowWrapper.cpp" />
-    <ClCompile Include="src\Window\Window.cpp" />
-    <ClCompile Include="src\Scene\BaseScene.cpp" />
-    <ClCompile Include="src\Graphics\Renderer.cpp" />
-    <ClCompile Include="src\InputManager.cpp" />
-    <ClCompile Include="src\FreeCamera.cpp" />
-    <ClCompile Include="src\Logger.cpp" />
-    <ClCompile Include="src\Colors.cpp" />
-    <ClCompile Include="src\Random.cpp" />
-    <ClCompile Include="src\ShaderUtils.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\FlexEngine.cpp" />
+    <ClCompile Include="FlexEngine\src\Window\D3D\D3DWindowWrapper.cpp" />
+    <ClCompile Include="FlexEngine\src\Window\GLFWWindowWrapper.cpp" />
+    <ClCompile Include="FlexEngine\src\Window\GL\GLWindowWrapper.cpp" />
+    <ClCompile Include="FlexEngine\src\Window\Vulkan\VulkanWindowWrapper.cpp" />
+    <ClCompile Include="FlexEngine\src\Window\Window.cpp" />
+    <ClCompile Include="FlexEngine\src\Scene\BaseScene.cpp" />
+    <ClCompile Include="FlexEngine\src\Graphics\Renderer.cpp" />
+    <ClCompile Include="FlexEngine\src\InputManager.cpp" />
+    <ClCompile Include="FlexEngine\src\FreeCamera.cpp" />
+    <ClCompile Include="FlexEngine\src\Logger.cpp" />
+    <ClCompile Include="FlexEngine\src\Colors.cpp" />
+    <ClCompile Include="FlexEngine\src\Random.cpp" />
+    <ClCompile Include="FlexEngine\src\ShaderUtils.cpp" />
+    <ClCompile Include="FlexEngine\src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dependencies\glad\include\glad\glad.h" />
-    <ClInclude Include="include\Graphics\GL\GLHelpers.h" />
-    <ClInclude Include="include\Graphics\D3D\D3DRenderer.h" />
-    <ClInclude Include="include\Graphics\GL\GLRenderer.h" />
-    <ClInclude Include="include\Graphics\Vulkan\VulkanHelpers.h" />
-    <ClInclude Include="include\Graphics\Vulkan\VulkanRenderer.h" />
-    <ClInclude Include="include\Scene\GameObject.h" />
-    <ClInclude Include="include\Scene\Prefabs\MeshPrefab.h" />
-    <ClInclude Include="include\Transform.h" />
-    <ClInclude Include="include\Scene\BaseScene.h" />
-    <ClInclude Include="include\FreeCamera.h" />
-    <ClInclude Include="include\Colors.h" />
-    <ClInclude Include="include\GameContext.h" />
-    <ClInclude Include="include\Helpers.h" />
-    <ClInclude Include="include\Logger.h" />
-    <ClInclude Include="include\stdafx.h" />
-    <ClInclude Include="include\Vertex.h" />
-    <ClInclude Include="include\FlexEngine.h" />
-    <ClInclude Include="include\ShaderUtils.h" />
-    <ClInclude Include="include\Random.h" />
-    <ClInclude Include="include\Typedefs.h" />
-    <ClInclude Include="include\InputManager.h" />
-    <ClInclude Include="include\VertexBufferData.h" />
-    <ClInclude Include="include\Window\D3D\D3DWindowWrapper.h" />
-    <ClInclude Include="include\Window\GLFWWindowWrapper.h" />
-    <ClInclude Include="include\Window\Vulkan\VulkanWindowWrapper.h" />
-    <ClInclude Include="include\Window\Window.h" />
+    <ClInclude Include="FlexEngine\dependencies\glad\include\glad\glad.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\GL\GLHelpers.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\D3D\D3DRenderer.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\GL\GLRenderer.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanHelpers.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanRenderer.h" />
+    <ClInclude Include="FlexEngine\include\Scene\GameObject.h" />
+    <ClInclude Include="FlexEngine\include\Scene\Prefabs\MeshPrefab.h" />
+    <ClInclude Include="FlexEngine\include\Transform.h" />
+    <ClInclude Include="FlexEngine\include\Scene\BaseScene.h" />
+    <ClInclude Include="FlexEngine\include\FreeCamera.h" />
+    <ClInclude Include="FlexEngine\include\Colors.h" />
+    <ClInclude Include="FlexEngine\include\GameContext.h" />
+    <ClInclude Include="FlexEngine\include\Helpers.h" />
+    <ClInclude Include="FlexEngine\include\Logger.h" />
+    <ClInclude Include="FlexEngine\include\stdafx.h" />
+    <ClInclude Include="FlexEngine\include\Vertex.h" />
+    <ClInclude Include="FlexEngine\include\FlexEngine.h" />
+    <ClInclude Include="FlexEngine\include\ShaderUtils.h" />
+    <ClInclude Include="FlexEngine\include\Random.h" />
+    <ClInclude Include="FlexEngine\include\Typedefs.h" />
+    <ClInclude Include="FlexEngine\include\InputManager.h" />
+    <ClInclude Include="FlexEngine\include\VertexBufferData.h" />
+    <ClInclude Include="FlexEngine\include\Window\D3D\D3DWindowWrapper.h" />
+    <ClInclude Include="FlexEngine\include\Window\GLFWWindowWrapper.h" />
+    <ClInclude Include="FlexEngine\include\Window\Vulkan\VulkanWindowWrapper.h" />
+    <ClInclude Include="FlexEngine\include\Window\Window.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\glcorearb.h" />
-    <ClInclude Include="include\Graphics\Renderer.h" />
-    <ClInclude Include="include\Window\GL\GLWindowWrapper.h" />
-    <ClInclude Include="include\Scene\SceneManager.h" />
-    <ClInclude Include="include\Scene\TestScene.h" />
-    <ClInclude Include="include\Graphics\D3D\D3DHelpers.h" />
-    <ClInclude Include="include\Graphics\Vulkan\VDeleter.h" />
-    <ClInclude Include="include\Graphics\Vulkan\VulkanBuffer.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <ClInclude Include="FlexEngine\include\Graphics\Renderer.h" />
+    <ClInclude Include="FlexEngine\include\Window\GL\GLWindowWrapper.h" />
+    <ClInclude Include="FlexEngine\include\Scene\SceneManager.h" />
+    <ClInclude Include="FlexEngine\include\Scene\TestScene.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\D3D\D3DHelpers.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VDeleter.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets" Condition="Exists('packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets')" />
-  </ImportGroup>
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.props'))" />
-    <Error Condition="!Exists('packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_2015.2017.2.10.1\build\native\directxtk_desktop_2015.targets'))" />
-  </Target>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

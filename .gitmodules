@@ -1,15 +1,15 @@
-[submodule "dependencies/glfw"]
-	path = dependencies/glfw
-	url = https://github.com/glfw/glfw
-[submodule "dependencies/glm"]
-	path = dependencies/glm
-	url = https://github.com/g-truc/glm
-[submodule "dependencies/stb"]
-	path = dependencies/stb
-	url = https://github.com/nothings/stb
-[submodule "dependencies/soil"]
-	path = dependencies/soil
-	url = https://github.com/kbranigan/Simple-OpenGL-Image-Library
-[submodule "dependencies/assimp"]
-	path = dependencies/assimp
-	url = https://github.com/assimp/assimp
+[submodule "FlexEngine/dependencies/glfw"]
+    path = FlexEngine/dependencies/glfw
+    url = https://github.com/glfw/glfw
+[submodule "FlexEngine/dependencies/glm"]
+    path = FlexEngine/dependencies/glm
+    url = https://github.com/g-truc/glm
+[submodule "FlexEngine/dependencies/stb"]
+    path = FlexEngine/dependencies/stb
+    url = https://github.com/nothings/stb
+[submodule "FlexEngine/dependencies/soil"]
+    path = FlexEngine/dependencies/soil
+    url = https://github.com/kbranigan/Simple-OpenGL-Image-Library
+[submodule "FlexEngine/dependencies/assimp"]
+    path = FlexEngine/dependencies/assimp
+    url = https://github.com/assimp/assimp
