@@ -24,7 +24,8 @@ public:
 	{
 		CUBE,
 		UV_SPHERE,
-		GRID
+		GRID,
+		SKYBOX
 	};
 
 	bool LoadFromFile(const GameContext& gameContext, const std::string& filepath);

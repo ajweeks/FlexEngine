@@ -107,6 +107,12 @@ void TestScene::Initialize(const GameContext& gameContext)
 	m_TransformManipulator_5->GetTransform().position.z = spacing * 1.0f;
 	AddChild(m_TransformManipulator_5);
 
+
+	m_Skybox = new MeshPrefab();
+	m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+	AddChild(m_Skybox);
+
+
 	Renderer::SceneInfo& sceneInfo = gameContext.renderer->GetSceneInfo();
 	sceneInfo.m_AmbientColor = glm::vec4(0.02f, 0.03f, 0.025f, 1.0f);
 	sceneInfo.m_SpecularColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);

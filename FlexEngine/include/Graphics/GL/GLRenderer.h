@@ -41,6 +41,7 @@ private:
 	static glm::uint TypeToGLType(Type type);
 	static glm::uint UsageFlagToGLUsageFlag(UsageFlag usage);
 	static glm::uint TopologyModeToGLMode(TopologyMode topology);
+	static glm::uint CullFaceToGLMode(CullFace cullFace);
 
 	struct RenderObject
 	{
@@ -91,6 +92,8 @@ private:
 		bool useNormalTexture;
 		std::string normalTexturePath;
 		glm::uint normalTextureID;
+
+		GLenum cullFace = GL_BACK;
 	};
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
@@ -136,9 +139,16 @@ private:
 		glm::mat4 viewProj;
 	};
 
+	struct Skybox
+	{
+		glm::uint textureID;
+	};
+
+	Skybox m_Skybox;
+
+	// TODO: Clean up
 	glm::uint viewProjectionUBO;
 	glm::uint viewProjectionCombinedUBO;
-
 
 	GLRenderer(const GLRenderer&) = delete;
 	GLRenderer& operator=(const GLRenderer&) = delete;

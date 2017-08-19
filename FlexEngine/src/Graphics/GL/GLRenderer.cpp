@@ -3,10 +3,13 @@
 
 #include "Graphics/GL/GLRenderer.h"
 
+#include <array>
+
 #include <algorithm>
 #include <utility>
 
 #include <glm\gtc\type_ptr.hpp>
+#include <glm\gtx\transform.hpp>
 
 #include "FreeCamera.h"
 #include "Graphics/GL/GLHelpers.h"
@@ -73,6 +76,8 @@ glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObj
 	CheckGLErrorMessages();
 
 	renderObject->vertexBufferData = createInfo->vertexBufferData;
+
+	renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);
 
 	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
 
@@ -199,6 +204,18 @@ void GLRenderer::PostInitialize()
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(ViewProjectionCombinedUBO), NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferRange(GL_UNIFORM_BUFFER, colorUBOBinding, viewProjectionCombinedUBO, 0, sizeof(ViewProjectionCombinedUBO));
+
+	// Skybox
+	std::array<std::string, 6> cubemapImageFilePaths = {
+		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_rt.tga",
+		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_lf.tga",
+		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_up.tga",
+		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_dn.tga",
+		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_bk.tga",
+		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_ft.tga"
+	};
+
+	GenerateCubemapTextures(cubeMapTexture, cubemapImageFilePaths);
 }
 
 void GLRenderer::Update(const GameContext& gameContext)
@@ -238,7 +255,7 @@ void GLRenderer::Draw(const GameContext& gameContext)
 		}
 	}
 
-	for (size_t i = 0; i < sortedRenderObjects.size(); ++i)
+	for (size_t i = 0; i < sortedRenderObjects.size() - 1 /*  DON'T RENDER SKY BOX IN THIS LOOP (- 1), do it after TODO make this nicer  */; ++i)
 	{
 		Shader* shader = &m_LoadedShaders[i];
 		glUseProgram(shader->program);
@@ -251,6 +268,8 @@ void GLRenderer::Draw(const GameContext& gameContext)
 			glBindVertexArray(renderObject->VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 			CheckGLErrorMessages();
+
+			glCullFace(renderObject->cullFace);
 
 			UpdatePerObjectUniforms(renderObject->renderID, gameContext);
 
@@ -281,11 +300,50 @@ void GLRenderer::Draw(const GameContext& gameContext)
 			}
 			CheckGLErrorMessages();
 		}
-
 	}
 
+	// Skybox
+	glUseProgram(m_LoadedShaders[2].program);
+
+	// Truncate translation part to prevent leaving the skybox
+	glm::mat4 view = glm::mat4(glm::mat3(gameContext.camera->GetView()));
+	glm::mat4 projection = gameContext.camera->GetProjection();
+	glm::mat4 viewProjection = projection * view;
+
+	int skyboxViewLocation = glGetUniformLocation(m_LoadedShaders[2].program, "in_ViewProjection");
+	if (skyboxViewLocation == -1) Logger::LogWarning("Couldn't find in_ViewProjection in skybox shader");
+	glUniformMatrix4fv(skyboxViewLocation, 1, false, &viewProjection[0][0]);
+
+	glm::mat4 model = glm::rotate(gameContext.elapsedTime * 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+	//glm::mat4 model = glm::mat4(1.0f);
+
+	int skyboxModelLocation = glGetUniformLocation(m_LoadedShaders[2].program, "in_Model");
+	if (skyboxModelLocation == -1) Logger::LogWarning("Couldn't find in_Model in skybox shader");
+	glUniformMatrix4fv(skyboxModelLocation, 1, false, &model[0][0]);
+
+	glDepthFunc(GL_LEQUAL);
+
+	for (size_t i = 0; i < sortedRenderObjects[2].size(); ++i)
+	{
+		RenderObject* renderObject = sortedRenderObjects[2][i];
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
+		glCullFace(renderObject->cullFace);
+
+		if (renderObject->indexed)
+		{
+			glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+		}
+		else
+		{
+			glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->BufferSize);
+		}
+	}
+	
+	glDepthMask(GL_TRUE);
+
+
 	glUseProgram(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	CheckGLErrorMessages();
 }
@@ -316,6 +374,7 @@ void GLRenderer::LoadShaders()
 	std::vector<std::pair<std::string, std::string>> shaderFilePaths = {
 		{ RESOURCE_LOCATION + "shaders/GLSL/simple.vert", RESOURCE_LOCATION + "shaders/GLSL/simple.frag" },
 		{ RESOURCE_LOCATION + "shaders/GLSL/color.vert", RESOURCE_LOCATION + "shaders/GLSL/color.frag" },
+		{ RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/skybox.frag" },
 	};
 
 	const size_t shaderCount = shaderFilePaths.size();
@@ -335,17 +394,25 @@ void GLRenderer::LoadShaders()
 	m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 		Uniform::Type::MODEL_MAT4 |
 		Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
+	++shaderIndex;
 
 	// Color
-	shaderIndex = 1;
 	m_LoadedShaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
 
 	m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 		Uniform::Type::MODEL_MAT4);
+	++shaderIndex;
+
+	// Skybox
+	m_LoadedShaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
+
+	m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type::NONE;
+	++shaderIndex;
 
 	for (size_t i = 0; i < shaderCount; ++i)
 	{
 		m_LoadedShaders[i].program = glCreateProgram();
+
 		// Load shaders located at shaderFilePaths[i] and store ID into m_LoadedShaders[i]
 		ShaderUtils::LoadShaders(
 			m_LoadedShaders[i].program,
@@ -633,6 +700,17 @@ GLenum GLRenderer::TopologyModeToGLMode(TopologyMode topology)
 	case TopologyMode::TRIANGLE_STRIP: return GL_TRIANGLE_STRIP;
 	case TopologyMode::TRIANGLE_FAN: return GL_TRIANGLE_FAN;
 	default: return GL_INVALID_ENUM;
+	}
+}
+
+glm::uint GLRenderer::CullFaceToGLMode(CullFace cullFace)
+{
+	switch (cullFace)
+	{
+	case CullFace::BACK: return GL_BACK;
+	case CullFace::FRONT: return GL_FRONT;
+	case CullFace::NONE: return GL_NONE; // TODO: This doesn't work, does it?
+	default: return GL_FALSE;
 	}
 }
 

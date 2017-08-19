@@ -1,0 +1,3 @@
+These sky boxes have been downloaded from http://www.3delyvisions.com. They were produced by Colin Lowndes using a properly licensed copy of TerraGen. The author granted permission to distribute these sky boxes under the GNU General Public License version 2. Thanks, Colin!
+
+I (Laszlo Menczel aka Speaker) converted the textures to TGA format and resized the ones not conforming to the power-of-two texture size rule of Quake3. Also renamed the textures to conform to the name conventions of sky boxes in Quake3 (i.e. using the postfixes _bk, _ft, _lf, _rt and _up). The original boxes did not have 'down' textures. I made a 512x512 neutral grey image and added copies of this to each sky box as a fake 'down' texture.

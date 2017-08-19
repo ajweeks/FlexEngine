@@ -394,6 +394,70 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
 
 	} break;
+	case MeshPrefab::PrefabShape::SKYBOX:
+	{
+		m_Positions =
+		{
+			// Front
+			{ -0.5f, -0.5f, -0.5f, },
+			{ -0.5f,  0.5f, -0.5f, },
+			{ 0.5f,  0.5f, -0.5f, },
+
+			{ -0.5f, -0.5f, -0.5f, },
+			{ 0.5f,  0.5f, -0.5f, },
+			{ 0.5f, -0.5f, -0.5f, },
+
+			// Top
+			{ -0.5f, 0.5f, -0.5f, },
+			{ -0.5f, 0.5f,  0.5f, },
+			{ 0.5f,  0.5f,  0.5f, },
+
+			{ -0.5f, 0.5f, -0.5f, },
+			{ 0.5f,  0.5f,  0.5f, },
+			{ 0.5f,  0.5f, -0.5f, },
+
+			// Back
+			{ 0.5f, -0.5f, 0.5f, },
+			{ 0.5f,  0.5f, 0.5f, },
+			{ -0.5f,  0.5f, 0.5f, },
+
+			{ 0.5f, -0.5f, 0.5f, },
+			{ -0.5f, 0.5f, 0.5f, },
+			{ -0.5f, -0.5f, 0.5f, },
+
+			// Bottom
+			{ -0.5f, -0.5f, -0.5f, },
+			{ 0.5f, -0.5f, -0.5f, },
+			{ 0.5f,  -0.5f,  0.5f, },
+
+			{ -0.5f, -0.5f, -0.5f, },
+			{ 0.5f, -0.5f,  0.5f, },
+			{ -0.5f, -0.5f,  0.5f, },
+
+			// Right
+			{ 0.5f, -0.5f, -0.5f, },
+			{ 0.5f,  0.5f, -0.5f, },
+			{ 0.5f,  0.5f,  0.5f, },
+
+			{ 0.5f, -0.5f, -0.5f, },
+			{ 0.5f,  0.5f,  0.5f, },
+			{ 0.5f, -0.5f,  0.5f, },
+
+			// Left
+			{ -0.5f, -0.5f, -0.5f, },
+			{ -0.5f,  0.5f,  0.5f, },
+			{ -0.5f,  0.5f, -0.5f, },
+
+			{ -0.5f, -0.5f, -0.5f, },
+			{ -0.5f, -0.5f,  0.5f, },
+			{ -0.5f,  0.5f,  0.5f, },
+		};
+		m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
+
+		createInfo.shaderIndex = 2;
+		createInfo.cullFace = Renderer::CullFace::FRONT;
+
+	} break;
 	case MeshPrefab::PrefabShape::UV_SPHERE:
 	{
 		// Vertices

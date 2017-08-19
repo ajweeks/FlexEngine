@@ -31,6 +31,7 @@ private:
 	MeshPrefab* m_Teapot;
 	MeshPrefab* m_Rock1;
 	MeshPrefab* m_Rock2;
+	MeshPrefab* m_Skybox;
 
 	MeshPrefab* m_TransformManipulator_1;
 	MeshPrefab* m_TransformManipulator_2;

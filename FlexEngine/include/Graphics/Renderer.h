@@ -16,24 +16,18 @@ public:
 	Renderer();
 	virtual ~Renderer();
 
-	struct RenderObjectCreateInfo
-	{
-		VertexBufferData* vertexBufferData = nullptr;
-		std::vector<glm::uint>* indices = nullptr;
-
-		// Leave empty to not use
-		std::string diffuseMapPath;
-		std::string specularMapPath;
-		std::string normalMapPath;
-
-		glm::uint shaderIndex;
-	};
-
 	enum class ClearFlag
 	{
 		COLOR = (1 << 0), 
 		DEPTH = (1 << 1),
 		STENCIL = (1 << 2)
+	};
+
+	enum class CullFace
+	{
+		BACK,
+		FRONT,
+		NONE
 	};
 
 	enum class BufferTarget
@@ -69,6 +63,21 @@ public:
 		TRIANGLE_LIST,
 		TRIANGLE_STRIP,
 		TRIANGLE_FAN
+	};
+
+	struct RenderObjectCreateInfo
+	{
+		VertexBufferData* vertexBufferData = nullptr;
+		std::vector<glm::uint>* indices = nullptr;
+
+		// Leave empty to not use
+		std::string diffuseMapPath;
+		std::string specularMapPath;
+		std::string normalMapPath;
+
+		glm::uint shaderIndex;
+
+		CullFace cullFace = CullFace::BACK;
 	};
 
 	virtual void PostInitialize() = 0;
