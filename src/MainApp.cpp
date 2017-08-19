@@ -183,6 +183,12 @@ void MainApp::UpdateAndRender()
 	
 		m_GameContext.window->PollEvents();	 
 
+		if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
+		{
+			m_VSyncEnabled = !m_VSyncEnabled;
+			m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+		}
+
 		if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
 		{
 			m_GameContext.inputManager->ClearAllInputs(m_GameContext);

@@ -1802,9 +1802,7 @@ VkSurfaceFormatKHR VulkanRenderer::ChooseSwapSurfaceFormat(const std::vector<VkS
 
 VkPresentModeKHR VulkanRenderer::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes)
 {
-	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
-	if (m_VSyncEnabled) bestMode = VK_PRESENT_MODE_MAILBOX_KHR;
-
+	const VkPresentModeKHR bestMode = (m_VSyncEnabled ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR);
 	VkPresentModeKHR secondBestMode = bestMode;
 
 	for (const auto& availablePresentMode : availablePresentModes)
