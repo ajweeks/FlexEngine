@@ -99,10 +99,10 @@
     <ClCompile Include="src\Scene\GameObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\MainApp.cpp">
+    <ClCompile Include="dependencies\glad\src\glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dependencies\glad\src\glad.c">
+    <ClCompile Include="src\FlexEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -209,10 +209,10 @@
     <ClInclude Include="include\Scene\GameObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\MainApp.h">
+    <ClInclude Include="dependencies\glad\include\glad\glad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dependencies\glad\include\glad\glad.h">
+    <ClInclude Include="include\FlexEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

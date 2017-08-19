@@ -10,11 +10,11 @@
 #include "Scene\SceneManager.h"
 #include "Window\Window.h"
 
-class MainApp final
+class FlexEngine final
 {
 public:
-	MainApp();
-	~MainApp();
+	FlexEngine();
+	~FlexEngine();
 
 	void Initialize();
 	void UpdateAndRender();
@@ -52,6 +52,6 @@ private:
 
 	bool m_Running;
 
-	MainApp(const MainApp&) = delete;
-	MainApp& operator=(const MainApp&) = delete;
+	FlexEngine(const FlexEngine&) = delete;
+	FlexEngine& operator=(const FlexEngine&) = delete;
 };

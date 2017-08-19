@@ -2,7 +2,7 @@
 
 #include <windows.h>
 
-#include "MainApp.h"
+#include "FlexEngine.h"
 
 // Memory leak checking includes
 #if defined(DEBUG) | defined(_DEBUG)
@@ -26,10 +26,10 @@ int main(int argc, char *argv[])
 #endif
 
 	{
-		MainApp* mainApp = new MainApp();
-		mainApp->Initialize();
-		mainApp->UpdateAndRender();
-		SafeDelete(mainApp);
+		FlexEngine* engineInstance = new FlexEngine();
+		engineInstance->Initialize();
+		engineInstance->UpdateAndRender();
+		SafeDelete(engineInstance);
 	}
 
 	system("PAUSE");

@@ -22,7 +22,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FE4C4309-D592-4259-B7F4-0E2142F53FA1}</ProjectGuid>
     <RootNamespace>PG4_TechDemo</RootNamespace>
-    <ProjectName>RenderingEngine</ProjectName>
+    <ProjectName>FlexEngine</ProjectName>
     <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -171,7 +171,7 @@
     <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ShaderUtils.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\MainApp.cpp" />
+    <ClCompile Include="src\FlexEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\glad\include\glad\glad.h" />
@@ -191,7 +191,7 @@
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\Vertex.h" />
-    <ClInclude Include="include\MainApp.h" />
+    <ClInclude Include="include\FlexEngine.h" />
     <ClInclude Include="include\ShaderUtils.h" />
     <ClInclude Include="include\Random.h" />
     <ClInclude Include="include\Typedefs.h" />

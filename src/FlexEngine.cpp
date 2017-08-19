@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "MainApp.h"
+#include "FlexEngine.h"
 
 #include "FreeCamera.h"
 #include "Logger.h"
@@ -8,7 +8,7 @@
 #include "Scene/TestScene.h"
 #include "Typedefs.h"
 
-MainApp::MainApp() :
+FlexEngine::FlexEngine() :
 	m_ClearColor(0.08f, 0.13f, 0.2f),
 	m_VSyncEnabled(false)
 {
@@ -45,15 +45,15 @@ MainApp::MainApp() :
 
 }
 
-MainApp::~MainApp()
+FlexEngine::~FlexEngine()
 {
 	Destroy();
 }
 
-void MainApp::Initialize()
+void FlexEngine::Initialize()
 {
 	m_GameContext = {};
-	m_GameContext.mainApp = this;
+	m_GameContext.engineInstance = this;
 
 	InitializeWindowAndRenderer();
 
@@ -70,7 +70,7 @@ void MainApp::Initialize()
 	m_GameContext.renderer->PostInitialize();
 }
 
-void MainApp::Destroy()
+void FlexEngine::Destroy()
 {
 	if (m_SceneManager) m_SceneManager->DestroyAllScenes(m_GameContext);
 	SafeDelete(m_SceneManager);
@@ -80,7 +80,7 @@ void MainApp::Destroy()
 	DestroyWindowAndRenderer();
 }
 
-void MainApp::InitializeWindowAndRenderer()
+void FlexEngine::InitializeWindowAndRenderer()
 {
 	const glm::vec2i windowSize(1920, 1080);
 	glm::vec2i windowPos(300, 300);
@@ -88,7 +88,7 @@ void MainApp::InitializeWindowAndRenderer()
 #if COMPILE_VULKAN
 	if (m_RendererIndex == RendererID::VULKAN)
 	{
-		VulkanWindowWrapper* vulkanWindow = new VulkanWindowWrapper("Rendering Engine - Vulkan", windowSize, windowPos, m_GameContext);
+		VulkanWindowWrapper* vulkanWindow = new VulkanWindowWrapper("Flex Engine - Vulkan", windowSize, windowPos, m_GameContext);
 		m_Window = vulkanWindow;
 		VulkanRenderer* vulkanRenderer = new VulkanRenderer(m_GameContext);
 		m_GameContext.renderer = vulkanRenderer;
@@ -97,7 +97,7 @@ void MainApp::InitializeWindowAndRenderer()
 #if COMPILE_OPEN_GL
 	if (m_RendererIndex == RendererID::GL)
 	{
-		GLWindowWrapper* glWindow = new GLWindowWrapper("Rendering Engine - OpenGL", windowSize, windowPos, m_GameContext);
+		GLWindowWrapper* glWindow = new GLWindowWrapper("Flex Engine - OpenGL", windowSize, windowPos, m_GameContext);
 		m_Window = glWindow;
 		GLRenderer* glRenderer = new GLRenderer(m_GameContext);
 		m_GameContext.renderer = glRenderer;
@@ -106,7 +106,7 @@ void MainApp::InitializeWindowAndRenderer()
 #if COMPILE_D3D
 	if (m_RendererIndex == RendererID::D3D)
 	{
-		D3DWindowWrapper* d3dWindow = new D3DWindowWrapper("Rendering Engine - Direct3D", windowSize, windowPos, m_GameContext);
+		D3DWindowWrapper* d3dWindow = new D3DWindowWrapper("Flex Engine - Direct3D", windowSize, windowPos, m_GameContext);
 		m_Window = d3dWindow;
 		D3DRenderer* d3dRenderer = new D3DRenderer(m_GameContext);
 		m_GameContext.renderer = d3dRenderer;
@@ -119,26 +119,26 @@ void MainApp::InitializeWindowAndRenderer()
 	m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
 }
 
-void MainApp::DestroyWindowAndRenderer()
+void FlexEngine::DestroyWindowAndRenderer()
 {
 	SafeDelete(m_Window);
 	SafeDelete(m_GameContext.renderer);
 }
 
-std::string MainApp::RenderIDToString(RendererID rendererID) const
+std::string FlexEngine::RenderIDToString(RendererID rendererID) const
 {
 	switch (rendererID)
 	{
-	case MainApp::RendererID::VULKAN: return "Vulkan";
-	case MainApp::RendererID::D3D: return "D3D";
-	case MainApp::RendererID::GL: return "Open GL";
-	case MainApp::RendererID::_LAST_ELEMENT:  // Fallthrough
+	case RendererID::VULKAN: return "Vulkan";
+	case RendererID::D3D: return "D3D";
+	case RendererID::GL: return "Open GL";
+	case RendererID::_LAST_ELEMENT:  // Fallthrough
 	default:
 		return "Unknown";
 	}
 }
 
-void MainApp::CycleRenderer()
+void FlexEngine::CycleRenderer()
 {
 	m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
 	DestroyWindowAndRenderer();
@@ -167,7 +167,7 @@ void MainApp::CycleRenderer()
 	m_GameContext.renderer->PostInitialize();
 }
 
-void MainApp::UpdateAndRender()
+void FlexEngine::UpdateAndRender()
 {
 	m_Running = true;
 	float previousTime = (float)m_Window->GetTime();
@@ -225,7 +225,7 @@ void MainApp::UpdateAndRender()
 	}
 }
 
-void MainApp::Stop()
+void FlexEngine::Stop()
 {
 	m_Running = false;
 }

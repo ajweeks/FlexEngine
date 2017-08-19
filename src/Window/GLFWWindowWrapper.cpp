@@ -6,7 +6,7 @@
 #include "Graphics/GL/GLHelpers.h"
 #include "InputManager.h"
 #include "Logger.h"
-#include "MainApp.h"
+#include "FlexEngine.h"
 #include "ShaderUtils.h"
 
 GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
@@ -92,10 +92,11 @@ void GLFWWindowWrapper::Update(const GameContext& gameContext)
 
 	if (glfwWindowShouldClose(m_Window))
 	{
-		gameContext.mainApp->Stop();
+		gameContext.engineInstance->Stop();
 		return;
 	}
 }
+
 
 GLFWwindow* GLFWWindowWrapper::GetWindow() const
 {

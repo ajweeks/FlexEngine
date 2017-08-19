@@ -307,7 +307,7 @@ void VulkanRenderer::CreateInstance(const GameContext& gameContext)
 	std::string applicationName = gameContext.window->GetTitle();
 	appInfo.pApplicationName = applicationName.c_str();
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = "Rendering Engine";
+	appInfo.pEngineName = "Flex Engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.apiVersion = VK_API_VERSION_1_0;
 

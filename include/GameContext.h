@@ -4,7 +4,7 @@ class Window;
 class FreeCamera;
 class InputManager;
 class Renderer;
-class MainApp;
+class FlexEngine;
 
 struct GameContext
 {
@@ -12,7 +12,7 @@ struct GameContext
 	FreeCamera* camera;
 	InputManager* inputManager;
 	Renderer* renderer;
-	MainApp* mainApp;
+	FlexEngine* engineInstance;
 
 	float elapsedTime;
 	float deltaTime;
