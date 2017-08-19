@@ -10,48 +10,51 @@
 #include "Scene\SceneManager.h"
 #include "Window\Window.h"
 
-class FlexEngine final
+namespace flex
 {
-public:
-	FlexEngine();
-	~FlexEngine();
-
-	void Initialize();
-	void UpdateAndRender();
-	void Stop();
-
-private:
-	enum class RendererID
+	class FlexEngine final
 	{
-		VULKAN,
-		D3D,
-		GL,
+	public:
+		FlexEngine();
+		~FlexEngine();
 
-		_LAST_ELEMENT
+		void Initialize();
+		void UpdateAndRender();
+		void Stop();
+
+	private:
+		enum class RendererID
+		{
+			VULKAN,
+			D3D,
+			GL,
+
+			_LAST_ELEMENT
+		};
+
+		void Destroy();
+
+		void CycleRenderer();
+		void InitializeWindowAndRenderer();
+		void DestroyWindowAndRenderer();
+
+		std::string RenderIDToString(RendererID rendererID) const;
+
+		glm::uint m_RendererCount;
+
+		Window* m_Window;
+		SceneManager* m_SceneManager;
+		GameContext m_GameContext;
+		FreeCamera* m_DefaultCamera;
+
+		glm::vec3 m_ClearColor;
+		bool m_VSyncEnabled;
+
+		RendererID m_RendererIndex;
+
+		bool m_Running;
+
+		FlexEngine(const FlexEngine&) = delete;
+		FlexEngine& operator=(const FlexEngine&) = delete;
 	};
-
-	void Destroy();
-
-	void CycleRenderer();
-	void InitializeWindowAndRenderer();
-	void DestroyWindowAndRenderer();
-	
-	std::string RenderIDToString(RendererID rendererID) const;
-
-	glm::uint m_RendererCount;
-
-	Window* m_Window;
-	SceneManager* m_SceneManager;
-	GameContext m_GameContext;
-	FreeCamera* m_DefaultCamera;
-
-	glm::vec3 m_ClearColor;
-	bool m_VSyncEnabled;
-
-	RendererID m_RendererIndex;
-
-	bool m_Running;
-
-	FlexEngine(const FlexEngine&) = delete;
-	FlexEngine& operator=(const FlexEngine&) = delete;
-};
+} // namespace flex

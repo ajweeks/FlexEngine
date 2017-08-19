@@ -209,9 +209,6 @@
     <ClInclude Include="FlexEngine\include\Typedefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FlexEngine\include\Vertex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FlexEngine\include\VertexBufferData.h">
       <Filter>Header Files</Filter>
     </ClInclude>

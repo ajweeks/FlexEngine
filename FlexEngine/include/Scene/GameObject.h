@@ -4,26 +4,29 @@
 
 #include "GameContext.h"
 
-class GameObject
+namespace flex
 {
-public:
-	GameObject(GameObject* pParent = nullptr);
-	virtual ~GameObject();
+	class GameObject
+	{
+	public:
+		GameObject(GameObject* pParent = nullptr);
+		virtual ~GameObject();
 
-protected:
-	virtual void Initialize(const GameContext& gameContext) = 0;
-	virtual void Update(const GameContext& gameContext) = 0;
-	virtual void Destroy(const GameContext& gameContext) = 0;
+	protected:
+		virtual void Initialize(const GameContext& gameContext) = 0;
+		virtual void Update(const GameContext& gameContext) = 0;
+		virtual void Destroy(const GameContext& gameContext) = 0;
 
-private:
-	void RootInitialize(const GameContext& gameContext);
-	void RootUpdate(const GameContext& gameContext);
-	void RootDestroy(const GameContext& gameContext);
+	private:
+		void RootInitialize(const GameContext& gameContext);
+		void RootUpdate(const GameContext& gameContext);
+		void RootDestroy(const GameContext& gameContext);
 
-	friend class BaseScene;
+		friend class BaseScene;
 
-	GameObject* m_pParent = nullptr;
+		GameObject* m_pParent = nullptr;
 
-	std::vector<GameObject*> m_Children;
+		std::vector<GameObject*> m_Children;
 
-};
+	};
+} // namespace flex

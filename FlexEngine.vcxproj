@@ -192,7 +192,6 @@
     <ClInclude Include="FlexEngine\include\Helpers.h" />
     <ClInclude Include="FlexEngine\include\Logger.h" />
     <ClInclude Include="FlexEngine\include\stdafx.h" />
-    <ClInclude Include="FlexEngine\include\Vertex.h" />
     <ClInclude Include="FlexEngine\include\FlexEngine.h" />
     <ClInclude Include="FlexEngine\include\ShaderUtils.h" />
     <ClInclude Include="FlexEngine\include\Random.h" />

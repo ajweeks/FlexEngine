@@ -2,45 +2,48 @@
 
 #include "Scene\GameObject.h"
 
-GameObject::GameObject(GameObject* pParent) :
-	m_pParent(pParent)
+namespace flex
 {
-}
-
-GameObject::~GameObject()
-{
-	for (size_t i = 0; i < m_Children.size(); ++i)
+	GameObject::GameObject(GameObject* pParent) :
+		m_pParent(pParent)
 	{
-		delete m_Children[i];
 	}
-}
 
-void GameObject::RootInitialize(const GameContext& gameContext)
-{
-	Initialize(gameContext);
-
-	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+	GameObject::~GameObject()
 	{
-		(*iter)->RootInitialize(gameContext);
+		for (size_t i = 0; i < m_Children.size(); ++i)
+		{
+			delete m_Children[i];
+		}
 	}
-}
 
-void GameObject::RootUpdate(const GameContext& gameContext)
-{
-	Update(gameContext);
-
-	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+	void GameObject::RootInitialize(const GameContext& gameContext)
 	{
-		(*iter)->RootUpdate(gameContext);
+		Initialize(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->RootInitialize(gameContext);
+		}
 	}
-}
 
-void GameObject::RootDestroy(const GameContext& gameContext)
-{
-	Destroy(gameContext);
-
-	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+	void GameObject::RootUpdate(const GameContext& gameContext)
 	{
-		(*iter)->RootDestroy(gameContext);
+		Update(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->RootUpdate(gameContext);
+		}
 	}
-}
+
+	void GameObject::RootDestroy(const GameContext& gameContext)
+	{
+		Destroy(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->RootDestroy(gameContext);
+		}
+	}
+} // namespace flex

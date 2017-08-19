@@ -6,9 +6,9 @@
 
 // Memory leak checking includes
 #if defined(DEBUG) | defined(_DEBUG)
-	#define _CRTDBG_MAP_ALLOC  
-	#include <stdlib.h>  
-	#include <crtdbg.h>  
+#define _CRTDBG_MAP_ALLOC  
+#include <stdlib.h>  
+#include <crtdbg.h>  
 #endif
 
 int main(int argc, char *argv[])
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 #endif
 
 	{
-		FlexEngine* engineInstance = new FlexEngine();
+		flex::FlexEngine* engineInstance = new flex::FlexEngine();
 		engineInstance->Initialize();
 		engineInstance->UpdateAndRender();
 		SafeDelete(engineInstance);

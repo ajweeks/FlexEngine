@@ -8,38 +8,41 @@
 
 #include "Logger.h"
 
-std::string FloatToString(float f, int precision)
+namespace flex
 {
-	std::stringstream stream;
-
-	stream << std::fixed << std::setprecision(precision) << f;
-
-	return stream.str();
-}
-
-std::vector<char> ReadFile(const std::string& filePath)
-{
-	std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
-
-	if (!file)
+	std::string FloatToString(float f, int precision)
 	{
-		Logger::LogError("Unable to read file " + filePath);
-		return{};
+		std::stringstream stream;
+
+		stream << std::fixed << std::setprecision(precision) << f;
+
+		return stream.str();
 	}
 
-	std::streampos length = file.tellg();
+	std::vector<char> ReadFile(const std::string& filePath)
+	{
+		std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
 
-	std::vector<char> chars;
-	chars.resize((size_t)length);
+		if (!file)
+		{
+			Logger::LogError("Unable to read file " + filePath);
+			return{};
+		}
 
-	file.seekg(0, std::ios::beg);
-	file.read(chars.data(), length);
-	file.close();
+		std::streampos length = file.tellg();
 
-	return chars;
-}
+		std::vector<char> chars;
+		chars.resize((size_t)length);
 
-glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
-{
-	return a * (1.0f - t) + b * t;
-}
+		file.seekg(0, std::ios::beg);
+		file.read(chars.data(), length);
+		file.close();
+
+		return chars;
+	}
+
+	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
+	{
+		return a * (1.0f - t) + b * t;
+	}
+} // namespace flex

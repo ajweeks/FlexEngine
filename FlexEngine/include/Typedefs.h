@@ -7,4 +7,7 @@ namespace glm
 	typedef tvec2<int> vec2i;
 }
 
-typedef glm::uint RenderID;
+namespace flex
+{
+	typedef glm::uint RenderID;
+} // namespace flex

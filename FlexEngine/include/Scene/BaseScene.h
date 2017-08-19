@@ -7,35 +7,37 @@
 #include "GameContext.h"
 #include "GameObject.h"
 
-class BaseScene
+namespace flex
 {
-public:
-	BaseScene(std::string name);
-	virtual ~BaseScene();
+	class BaseScene
+	{
+	public:
+		BaseScene(std::string name);
+		virtual ~BaseScene();
 
-	std::string GetName() const;
+		std::string GetName() const;
 
-protected:
-	virtual void Initialize(const GameContext& gameContext) = 0;
-	virtual void Destroy(const GameContext& gameContext) = 0;
-	virtual void Update(const GameContext& gameContext) = 0;
+	protected:
+		virtual void Initialize(const GameContext& gameContext) = 0;
+		virtual void Destroy(const GameContext& gameContext) = 0;
+		virtual void Update(const GameContext& gameContext) = 0;
 
-	void AddChild(GameObject* pGameObject);
-	void RemoveChild(GameObject* pGameObject, bool deleteChild);
-	void RemoveAllChildren(bool deleteChildren);
+		void AddChild(GameObject* pGameObject);
+		void RemoveChild(GameObject* pGameObject, bool deleteChild);
+		void RemoveAllChildren(bool deleteChildren);
 
-private:
-	void RootInitialize(const GameContext& gameContext);
-	void RootUpdate(const GameContext& gameContext);
-	void RootDestroy(const GameContext& gameContext);
+	private:
+		void RootInitialize(const GameContext& gameContext);
+		void RootUpdate(const GameContext& gameContext);
+		void RootDestroy(const GameContext& gameContext);
 
-	friend class SceneManager;
+		friend class SceneManager;
 
-	std::string m_Name;
+		std::string m_Name;
 
-	std::vector<GameObject*> m_Children;
+		std::vector<GameObject*> m_Children;
 
-	BaseScene(const BaseScene&) = delete;
-	BaseScene& operator=(const BaseScene&) = delete;
-};
-
+		BaseScene(const BaseScene&) = delete;
+		BaseScene& operator=(const BaseScene&) = delete;
+	};
+} // namespace flex

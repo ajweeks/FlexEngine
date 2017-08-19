@@ -15,6 +15,8 @@
 #include "Logger.h"
 #include "VertexBufferData.h"
 
+namespace flex
+{
 VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	m_VertexBuffer_Simple(m_Device),
 	m_IndexBuffer_Simple(m_Device),
@@ -2198,5 +2200,6 @@ VkPrimitiveTopology VulkanRenderer::TopologyModeToVkPrimitiveTopology(TopologyMo
 	default: return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 	}
 }
+} // namespace flex
 
 #endif // COMPILE_VULKAN

@@ -2,22 +2,24 @@
 
 #include <random>
 
-class Random final
+namespace flex
 {
-public:
-	void InitializeSeedRandom();
-	void InitializeSeed(unsigned int seed);
+	class Random final
+	{
+	public:
+		void InitializeSeedRandom();
+		void InitializeSeed(unsigned int seed);
 
-	int IntRange(int min, int max);
-	float FloatRange(float min, float max);
-	double DoubleRange(double min, double max);
+		int IntRange(int min, int max);
+		float FloatRange(float min, float max);
+		double DoubleRange(double min, double max);
 
-private:
-	Random() = delete;
-	~Random() = delete;
+	private:
+		Random() = delete;
+		~Random() = delete;
 
-	Random(const Random&) = delete;
-	Random& operator=(const Random&) = delete;
+		Random(const Random&) = delete;
+		Random& operator=(const Random&) = delete;
 
-};
-
+	};
+} // namespace flex

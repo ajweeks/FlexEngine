@@ -3,21 +3,24 @@
 
 #include "Window/GLFWWindowWrapper.h"
 
-class GLWindowWrapper : public GLFWWindowWrapper
+namespace flex
 {
-public:
-	GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
-	virtual ~GLWindowWrapper();
+	class GLWindowWrapper : public GLFWWindowWrapper
+	{
+	public:
+		GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
+		virtual ~GLWindowWrapper();
 
-	virtual void SetSize(int width, int height) override;
+		virtual void SetSize(int width, int height) override;
 
-private:
+	private:
 
-	GLWindowWrapper(const GLWindowWrapper&) = delete;
-	GLWindowWrapper& operator=(const GLWindowWrapper&) = delete;
-};
+		GLWindowWrapper(const GLWindowWrapper&) = delete;
+		GLWindowWrapper& operator=(const GLWindowWrapper&) = delete;
+	};
 
-void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
-	GLsizei length, const GLchar *message, const void *userParam);
+	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
+		GLsizei length, const GLchar *message, const void *userParam);
+} // namespace flex
 
 #endif // COMPILE_OPEN_GL

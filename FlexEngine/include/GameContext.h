@@ -1,19 +1,22 @@
 #pragma once
 
-class Window;
-class FreeCamera;
-class InputManager;
-class Renderer;
-class FlexEngine;
-
-struct GameContext
+namespace flex
 {
-	Window* window;
-	FreeCamera* camera;
-	InputManager* inputManager;
-	Renderer* renderer;
-	FlexEngine* engineInstance;
+	class Window;
+	class FreeCamera;
+	class InputManager;
+	class Renderer;
+	class FlexEngine;
 
-	float elapsedTime;
-	float deltaTime;
-};
+	struct GameContext
+	{
+		Window* window;
+		FreeCamera* camera;
+		InputManager* inputManager;
+		Renderer* renderer;
+		FlexEngine* engineInstance;
+
+		float elapsedTime;
+		float deltaTime;
+	};
+} // namespace flex

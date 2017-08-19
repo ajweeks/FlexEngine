@@ -7,104 +7,107 @@
 #include "Scene/GameObject.h"
 #include "Logger.h"
 
-BaseScene::BaseScene(std::string name) :
-	m_Name(name)
+namespace flex
 {
-}
-
-BaseScene::~BaseScene()
-{
-	auto iter = m_Children.begin();
-	while (iter != m_Children.end())
+	BaseScene::BaseScene(std::string name) :
+		m_Name(name)
 	{
-		delete *iter;
-		iter = m_Children.erase(iter);
 	}
-}
 
-std::string BaseScene::GetName() const
-{
-	return m_Name;
-}
-
-void BaseScene::AddChild(GameObject* pGameObject)
-{
-	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+	BaseScene::~BaseScene()
 	{
-		if (*iter == pGameObject)
+		auto iter = m_Children.begin();
+		while (iter != m_Children.end())
 		{
-			Logger::LogWarning("Attempting to add child to scene again");
-			return;
+			delete *iter;
+			iter = m_Children.erase(iter);
 		}
 	}
 
-	m_Children.push_back(pGameObject);
-}
-
-void BaseScene::RemoveChild(GameObject* pGameObject, bool deleteChild)
-{
-	auto iter = m_Children.begin();
-	while (iter != m_Children.end())
+	std::string BaseScene::GetName() const
 	{
-		if (*iter == pGameObject)
+		return m_Name;
+	}
+
+	void BaseScene::AddChild(GameObject* pGameObject)
+	{
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			if (deleteChild)
+			if (*iter == pGameObject)
+			{
+				Logger::LogWarning("Attempting to add child to scene again");
+				return;
+			}
+		}
+
+		m_Children.push_back(pGameObject);
+	}
+
+	void BaseScene::RemoveChild(GameObject* pGameObject, bool deleteChild)
+	{
+		auto iter = m_Children.begin();
+		while (iter != m_Children.end())
+		{
+			if (*iter == pGameObject)
+			{
+				if (deleteChild)
+				{
+					delete *iter;
+				}
+
+				iter = m_Children.erase(iter);
+				return;
+			}
+			else
+			{
+				++iter;
+			}
+		}
+
+		Logger::LogWarning("Attempting to remove non-existent child from scene");
+	}
+
+	void BaseScene::RemoveAllChildren(bool deleteChildren)
+	{
+		auto iter = m_Children.begin();
+		while (iter != m_Children.end())
+		{
+			if (deleteChildren)
 			{
 				delete *iter;
 			}
 
 			iter = m_Children.erase(iter);
-			return;
 		}
-		else
+	}
+
+	void BaseScene::RootInitialize(const GameContext& gameContext)
+	{
+		Initialize(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			++iter;
+			(*iter)->Initialize(gameContext);
 		}
 	}
 
-	Logger::LogWarning("Attempting to remove non-existent child from scene");
-}
-
-void BaseScene::RemoveAllChildren(bool deleteChildren)
-{
-	auto iter = m_Children.begin();
-	while (iter != m_Children.end())
+	void BaseScene::RootUpdate(const GameContext& gameContext)
 	{
-		if (deleteChildren)
+		Update(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			delete *iter;
+			(*iter)->RootUpdate(gameContext);
 		}
-
-		iter = m_Children.erase(iter);
 	}
-}
 
-void BaseScene::RootInitialize(const GameContext& gameContext)
-{
-	Initialize(gameContext);
-
-	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+	void BaseScene::RootDestroy(const GameContext& gameContext)
 	{
-		(*iter)->Initialize(gameContext);
+		Destroy(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->RootDestroy(gameContext);
+		}
 	}
-}
-
-void BaseScene::RootUpdate(const GameContext& gameContext)
-{
-	Update(gameContext);
-
-	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-	{
-		(*iter)->RootUpdate(gameContext);
-	}
-}
-
-void BaseScene::RootDestroy(const GameContext& gameContext)
-{
-	Destroy(gameContext);
-
-	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-	{
-		(*iter)->RootDestroy(gameContext);
-	}
-}
+} // namespace flex

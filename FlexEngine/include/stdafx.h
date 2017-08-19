@@ -115,4 +115,7 @@ inline void SafeDelete(T &pObjectToDelete)
 #include <glm/glm.hpp>
 #pragma warning(pop)
 
-static const std::string RESOURCE_LOCATION = "FlexEngine/resources/";
+namespace flex
+{
+	static const std::string RESOURCE_LOCATION = "FlexEngine/resources/";
+} // namspace flex

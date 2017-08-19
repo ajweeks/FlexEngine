@@ -2,15 +2,18 @@
 
 #include "Graphics/Renderer.h"
 
-Renderer::Renderer()
+namespace flex
 {
-}
+	Renderer::Renderer()
+	{
+	}
 
-Renderer::~Renderer()
-{
-}
+	Renderer::~Renderer()
+	{
+	}
 
-Renderer::SceneInfo& Renderer::GetSceneInfo()
-{
-	return m_SceneInfo;
-}
+	Renderer::SceneInfo& Renderer::GetSceneInfo()
+	{
+		return m_SceneInfo;
+	}
+} // namespace flex
