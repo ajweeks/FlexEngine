@@ -37,15 +37,15 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 
 	LoadDefaultShaderCode();
 
-	CreateVulkanTexture("FlexEngine/resources/textures/brick_d.png", &m_BrickDiffuseTexture);
-	CreateVulkanTexture("FlexEngine/resources/textures/brick_n.png", &m_BrickNormalTexture);
-	CreateVulkanTexture("FlexEngine/resources/textures/brick_s.png", &m_BrickSpecularTexture);
+	CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_d.png", &m_BrickDiffuseTexture);
+	CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_n.png", &m_BrickNormalTexture);
+	CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_s.png", &m_BrickSpecularTexture);
 
-	CreateVulkanTexture("FlexEngine/resources/textures/work_d.jpg", &m_WorkDiffuseTexture);
-	CreateVulkanTexture("FlexEngine/resources/textures/work_n.jpg", &m_WorkNormalTexture);
-	CreateVulkanTexture("FlexEngine/resources/textures/work_s.jpg", &m_WorkSpecularTexture);
+	CreateVulkanTexture(RESOURCE_LOCATION + "textures/work_d.jpg", &m_WorkDiffuseTexture);
+	CreateVulkanTexture(RESOURCE_LOCATION + "textures/work_n.jpg", &m_WorkNormalTexture);
+	CreateVulkanTexture(RESOURCE_LOCATION + "textures/work_s.jpg", &m_WorkSpecularTexture);
 
-	CreateVulkanTexture("FlexEngine/resources/textures/blank.jpg", &m_BlankTexture);
+	CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", &m_BlankTexture);
 }
 
 void VulkanRenderer::PostInitialize()
@@ -134,13 +134,13 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const Rende
 	renderObject->shaderIndex = createInfo->shaderIndex;
 	if (createInfo->shaderIndex == 0)
 	{
-		renderObject->vertShaderFilePath = "FlexEngine/resources/shaders/GLSL/spv/vk_simple_vert.spv";
-		renderObject->fragShaderFilePath = "FlexEngine/resources/shaders/GLSL/spv/vk_simple_frag.spv";
+		renderObject->vertShaderFilePath = RESOURCE_LOCATION + "shaders/GLSL/spv/vk_simple_vert.spv";
+		renderObject->fragShaderFilePath = RESOURCE_LOCATION + "shaders/GLSL/spv/vk_simple_frag.spv";
 	}
 	else
 	{
-		renderObject->vertShaderFilePath = "FlexEngine/resources/shaders/GLSL/spv/vk_color_vert.spv";
-		renderObject->fragShaderFilePath = "FlexEngine/resources/shaders/GLSL/spv/vk_color_frag.spv";
+		renderObject->vertShaderFilePath = RESOURCE_LOCATION + "shaders/GLSL/spv/vk_color_vert.spv";
+		renderObject->fragShaderFilePath = RESOURCE_LOCATION + "shaders/GLSL/spv/vk_color_frag.spv";
 	}
 
 	if (createInfo->diffuseMapPath == m_BrickDiffuseTexture->filePath)
@@ -2148,7 +2148,7 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 
 void VulkanRenderer::LoadDefaultShaderCode()
 {
-	const std::string shaderDirectory = "FlexEngine/resources/shaders/GLSL/spv/";
+	const std::string shaderDirectory = RESOURCE_LOCATION + "shaders/GLSL/spv/";
 
 	m_ShaderFilePaths = {
 		{ shaderDirectory + "vk_simple_vert.spv", shaderDirectory + "vk_simple_frag.spv" },

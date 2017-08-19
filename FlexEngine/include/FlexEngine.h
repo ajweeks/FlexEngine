@@ -19,7 +19,7 @@ public:
 	void Initialize();
 	void UpdateAndRender();
 	void Stop();
-	
+
 private:
 	enum class RendererID
 	{

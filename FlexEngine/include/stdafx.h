@@ -111,3 +111,5 @@ inline void SafeDelete(T &pObjectToDelete)
 #define GLM_FORCE_LEFT_HANDED
 #include <glm/glm.hpp>
 #pragma warning(pop)
+
+static const std::string RESOURCE_LOCATION = "FlexEngine/resources/";

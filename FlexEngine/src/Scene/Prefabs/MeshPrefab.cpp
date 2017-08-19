@@ -127,9 +127,9 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 
 	Renderer::RenderObjectCreateInfo createInfo = {};
 	createInfo.vertexBufferData = vertexBufferData;
-	if (m_UseDiffuse) createInfo.diffuseMapPath = "FlexEngine/resources/textures/brick_d.png";
-	if (m_UseNormal) createInfo.normalMapPath = "FlexEngine/resources/textures/brick_n.png";
-	if (m_UseSpecular) createInfo.specularMapPath = "FlexEngine/resources/textures/brick_s.png";
+	if (m_UseDiffuse) createInfo.diffuseMapPath = RESOURCE_LOCATION + "textures/brick_d.png";
+	if (m_UseNormal) createInfo.normalMapPath = RESOURCE_LOCATION + "textures/brick_n.png";
+	if (m_UseSpecular) createInfo.specularMapPath = RESOURCE_LOCATION + "textures/brick_s.png";
 	createInfo.shaderIndex = m_ShaderIndex;
 
 	m_RenderID = renderer->Initialize(gameContext, &createInfo);
@@ -156,9 +156,9 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	{
 	case MeshPrefab::PrefabShape::CUBE:
 	{
-		createInfo.diffuseMapPath = "FlexEngine/resources/textures/brick_d.png";
-		createInfo.specularMapPath = "FlexEngine/resources/textures/brick_s.png";
-		createInfo.normalMapPath = "FlexEngine/resources/textures/brick_n.png";
+		createInfo.diffuseMapPath = RESOURCE_LOCATION + "textures/brick_d.png";
+		createInfo.specularMapPath = RESOURCE_LOCATION + "textures/brick_s.png";
+		createInfo.normalMapPath = RESOURCE_LOCATION + "textures/brick_n.png";
 
 		const std::array<glm::vec4, 6> colors = { Color::RED, Color::RED, Color::RED, Color::RED, Color::RED, Color::RED };
 		m_Positions =

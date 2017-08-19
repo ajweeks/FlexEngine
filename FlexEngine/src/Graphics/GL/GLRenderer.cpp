@@ -314,8 +314,8 @@ void GLRenderer::UnloadShaders()
 void GLRenderer::LoadShaders()
 {
 	std::vector<std::pair<std::string, std::string>> shaderFilePaths = {
-		{ "FlexEngine/resources/shaders/GLSL/simple.vert", "FlexEngine/resources/shaders/GLSL/simple.frag" },
-		{ "FlexEngine/resources/shaders/GLSL/color.vert", "FlexEngine/resources/shaders/GLSL/color.frag" },
+		{ RESOURCE_LOCATION + "shaders/GLSL/simple.vert", RESOURCE_LOCATION + "shaders/GLSL/simple.frag" },
+		{ RESOURCE_LOCATION + "shaders/GLSL/color.vert", RESOURCE_LOCATION + "shaders/GLSL/color.frag" },
 	};
 
 	const size_t shaderCount = shaderFilePaths.size();
