@@ -118,7 +118,7 @@ glm::uint VulkanRenderer::InitializeRenderObject(const GameContext& gameContext,
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
-	glm::uint renderID = m_RenderObjects.size();
+	RenderID renderID = m_RenderObjects.size();
 	RenderObject* renderObject = new RenderObject(m_Device);
 	m_RenderObjects.push_back(renderObject);
 
@@ -173,7 +173,7 @@ glm::uint VulkanRenderer::InitializeRenderObject(const GameContext& gameContext,
 	return renderID;
 }
 
-void VulkanRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
+void VulkanRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 	VkPrimitiveTopology vkTopology = TopologyModeToVkPrimitiveTopology(topology);
@@ -245,7 +245,7 @@ void VulkanRenderer::SwapBuffers(const GameContext& gameContext)
 	}
 }
 
-void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
+void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 {
 	UpdateUniformBufferDynamic(gameContext, renderID, model);
 }
@@ -265,7 +265,7 @@ void VulkanRenderer::SetUniform1f(int location, float val)
 	UNREFERENCED_PARAMETER(val);
 }
 
-void VulkanRenderer::DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
+void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
 	// TODO: Implement
 	UNREFERENCED_PARAMETER(renderID);
@@ -277,7 +277,7 @@ void VulkanRenderer::DescribeShaderVariable(glm::uint renderID, const std::strin
 	UNREFERENCED_PARAMETER(pointer);
 }
 
-void VulkanRenderer::Destroy(glm::uint renderID)
+void VulkanRenderer::Destroy(RenderID renderID)
 {
 	for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 	{
@@ -290,7 +290,7 @@ void VulkanRenderer::Destroy(glm::uint renderID)
 	}
 }
 
-RenderObject* VulkanRenderer::GetRenderObject(glm::uint renderID)
+RenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
 {
 	return m_RenderObjects[renderID];
 }
@@ -615,7 +615,7 @@ void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture)
 	VK_CHECK_RESULT(vkCreateSampler(m_Device, &samplerInfo, nullptr, texture->sampler.replace()));
 }
 
-void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
+void VulkanRenderer::CreateGraphicsPipeline(RenderID renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -1490,7 +1490,7 @@ void VulkanRenderer::CreateDescriptorPool()
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, m_DescriptorPool.replace()));
 }
 
-void VulkanRenderer::CreateDescriptorSet(glm::uint renderID)
+void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -2083,7 +2083,7 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 	}
 }
 
-void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
+void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 {
 	UNREFERENCED_PARAMETER(gameContext);
 

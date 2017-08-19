@@ -57,7 +57,7 @@ glm::uint GLRenderer::InitializeRenderObject(const GameContext& gameContext, con
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
-	const glm::uint renderID = m_RenderObjects.size();
+	const RenderID renderID = m_RenderObjects.size();
 
 	RenderObject* renderObject = new RenderObject();
 	m_RenderObjects.push_back(renderObject);
@@ -163,7 +163,7 @@ glm::uint GLRenderer::InitializeRenderObject(const GameContext& gameContext, con
 	return renderID;
 }
 
-void GLRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
+void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 	GLenum glMode = TopologyModeToGLMode(topology);
@@ -421,7 +421,7 @@ void GLRenderer::LoadShaders()
 	}
 }
 
-void GLRenderer::UpdatePerObjectUniforms(glm::uint renderID, const GameContext& gameContext)
+void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 	Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
@@ -588,7 +588,7 @@ void GLRenderer::SwapBuffers(const GameContext& gameContext)
 	glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 }
 
-void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model)
+void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
@@ -609,7 +609,7 @@ void GLRenderer::SetUniform1f(int location, float val)
 	CheckGLErrorMessages();
 }
 
-void GLRenderer::DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size,
+void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
 	Renderer::Type renderType, bool normalized, int stride, void* pointer)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
@@ -635,7 +635,7 @@ void GLRenderer::DescribeShaderVariable(glm::uint renderID, const std::string& v
 	glBindVertexArray(0);
 }
 
-void GLRenderer::Destroy(glm::uint renderID)
+void GLRenderer::Destroy(RenderID renderID)
 {
 	for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 	{
@@ -712,7 +712,7 @@ glm::uint GLRenderer::CullFaceToGLMode(CullFace cullFace)
 	}
 }
 
-GLRenderer::RenderObject* GLRenderer::GetRenderObject(glm::uint renderID)
+GLRenderer::RenderObject* GLRenderer::GetRenderObject(RenderID renderID)
 {
 	return m_RenderObjects[renderID];
 }

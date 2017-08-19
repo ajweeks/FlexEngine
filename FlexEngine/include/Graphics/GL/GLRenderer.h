@@ -9,7 +9,7 @@ public:
 	GLRenderer(GameContext& gameContext);
 	virtual ~GLRenderer();
 
-	virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
+	virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 
 	virtual void PostInitialize() override;
 
@@ -17,7 +17,7 @@ public:
 	virtual void Draw(const GameContext& gameContext) override;
 	virtual void ReloadShaders(GameContext& gameContext) override;
 
-	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
+	virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void OnWindowSize(int width, int height) override;
@@ -26,15 +26,15 @@ public:
 	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
 
-	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) override;
+	virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
-	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
+	virtual int GetShaderUniformLocation(RenderID program, const std::string uniformName) override;
 	virtual void SetUniform1f(int location, float val) override;
 
-	virtual void DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size,
+	virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
-	virtual void Destroy(glm::uint renderID) override;
+	virtual void Destroy(RenderID renderID) override;
 
 private:
 	static glm::uint BufferTargetToGLTarget(BufferTarget bufferTarget);
@@ -45,7 +45,7 @@ private:
 
 	struct RenderObject
 	{
-		glm::uint renderID;
+		RenderID renderID;
 
 		glm::uint VAO;
 		glm::uint VBO;
@@ -98,12 +98,12 @@ private:
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
 
-	RenderObject* GetRenderObject(glm::uint renderID);
+	RenderObject* GetRenderObject(RenderID renderID);
 	RenderObjectIter Destroy(RenderObjectIter iter);
 	void UnloadShaders();
 	void LoadShaders();
 
-	void UpdatePerObjectUniforms(glm::uint renderID, const GameContext& gameContext);
+	void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
 
 	std::vector<RenderObject*> m_RenderObjects;
 

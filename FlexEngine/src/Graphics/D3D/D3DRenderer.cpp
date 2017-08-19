@@ -106,7 +106,7 @@ uint D3DRenderer::Initialize(const GameContext& gameContext, VertexBufferData* v
 	return renderID;
 }
 
-void D3DRenderer::SetTopologyMode(glm::uint renderID, TopologyMode topology)
+void D3DRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 	renderObject->topology = TopologyModeToD3DMode(topology);
@@ -365,7 +365,7 @@ void D3DRenderer::CreateDevice()
 	}
 }
 
-void D3DRenderer::InitializeVertexBuffer(glm::uint renderID)
+void D3DRenderer::InitializeVertexBuffer(RenderID renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -383,7 +383,7 @@ void D3DRenderer::InitializeVertexBuffer(glm::uint renderID)
 	m_Device->CreateBuffer(&vertexBuffDesc, NULL, &renderObject->vertexBuffer);
 }
 
-void D3DRenderer::UpdateVertexBuffer(glm::uint renderID)
+void D3DRenderer::UpdateVertexBuffer(RenderID renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -393,7 +393,7 @@ void D3DRenderer::UpdateVertexBuffer(glm::uint renderID)
 	m_DeviceContext->Unmap(renderObject->vertexBuffer, 0);
 }
 
-void D3DRenderer::InitializeIndexBuffer(glm::uint renderID)
+void D3DRenderer::InitializeIndexBuffer(RenderID renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
@@ -411,7 +411,7 @@ void D3DRenderer::InitializeIndexBuffer(glm::uint renderID)
 	m_Device->CreateBuffer(&indexBuffDesc, NULL, &renderObject->indexBuffer);
 }
 
-void D3DRenderer::UpdateIndexBuffer(glm::uint renderID)
+void D3DRenderer::UpdateIndexBuffer(RenderID renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 

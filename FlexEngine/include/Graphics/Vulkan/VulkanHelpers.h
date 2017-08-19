@@ -85,7 +85,7 @@ struct RenderObject
 
 	VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-	glm::uint renderID;
+	RenderID renderID;
 
 	glm::uint VAO;
 	glm::uint VBO;

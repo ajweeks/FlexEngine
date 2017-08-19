@@ -7,6 +7,7 @@
 #include <glm\vec4.hpp>
 
 #include "GameContext.h"
+#include "Typedefs.h"
 #include "Vertex.h"
 #include "VertexBufferData.h"
 
@@ -85,9 +86,9 @@ public:
 
 	virtual void PostInitialize() = 0;
 
-	virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
+	virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
 
-	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
+	virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 	virtual void SetClearColor(float r, float g, float b) = 0;
 
 	virtual void Update(const GameContext& gameContext) = 0;
@@ -100,15 +101,15 @@ public:
 	virtual void Clear(int flags, const GameContext& gameContext) = 0;
 	virtual void SwapBuffers(const GameContext& gameContext) = 0;
 
-	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) = 0;
+	virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) = 0;
 	
-	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) = 0;
+	virtual int GetShaderUniformLocation(RenderID program, const std::string uniformName) = 0;
 	virtual void SetUniform1f(int location, float val) = 0;
 
-	virtual void DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
+	virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
 		int stride, void* pointer) = 0;
 
-	virtual void Destroy(glm::uint renderID) = 0;
+	virtual void Destroy(RenderID renderID) = 0;
 
 	struct SceneInfo
 	{

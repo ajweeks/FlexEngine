@@ -15,10 +15,10 @@ public:
 
 	virtual void PostInitialize() override;
 
-	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
+	virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
 
-	virtual void Draw(const GameContext& gameContext, glm::uint renderID) override;
+	virtual void Draw(const GameContext& gameContext, RenderID renderID) override;
 
 	virtual void OnWindowSize(int width, int height) override;
 
@@ -26,15 +26,15 @@ public:
 	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
 
-	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4x4& model) override;
+	virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4x4& model) override;
 
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
 	virtual void SetUniform1f(glm::uint location, float val) override;
 
-	virtual void DescribeShaderVariable(glm::uint renderID, glm::uint program, const std::string& variableName, int size,
+	virtual void DescribeShaderVariable(RenderID renderID, glm::uint program, const std::string& variableName, int size,
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
-	virtual void Destroy(glm::uint renderID) override;
+	virtual void Destroy(RenderID renderID) override;
 
 private:
 	static glm::uint BufferTargetToD3DTarget(BufferTarget bufferTarget);
@@ -44,7 +44,7 @@ private:
 
 	struct RenderObject
 	{
-		glm::uint renderID;
+		RenderID renderID;
 
 		glm::uint VAO;
 		glm::uint VBO;
@@ -84,11 +84,11 @@ private:
 	void Draw(const GameContext& gameContext);
 	void UpdateUniformBuffers(const GameContext& gameContext);
 
-	void InitializeVertexBuffer(glm::uint renderID);
-	void UpdateVertexBuffer(glm::uint renderID);
+	void InitializeVertexBuffer(RenderID renderID);
+	void UpdateVertexBuffer(RenderID renderID);
 
-	void InitializeIndexBuffer(glm::uint renderID);
-	void UpdateIndexBuffer(glm::uint renderID);
+	void InitializeIndexBuffer(RenderID renderID);
+	void UpdateIndexBuffer(RenderID renderID);
 
 	D3D_FEATURE_LEVEL m_featureLevel;
 	Microsoft::WRL::ComPtr<ID3D11Device> m_Device;

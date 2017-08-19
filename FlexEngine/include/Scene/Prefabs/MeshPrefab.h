@@ -47,7 +47,7 @@ private:
 	void DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData);
 
 	Transform m_Transform;
-	glm::uint m_RenderID;
+	RenderID m_RenderID;
 
 	glm::uint m_ShaderIndex = 0;
 	bool m_UseDiffuse = true;

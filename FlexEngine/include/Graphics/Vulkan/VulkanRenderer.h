@@ -21,7 +21,7 @@ public:
 
 	virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 	
-	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) override;
+	virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 	virtual void SetClearColor(float r, float g, float b) override;
 
 	virtual void Update(const GameContext& gameContext) override;
@@ -34,15 +34,15 @@ public:
 	virtual void Clear(int flags, const GameContext& gameContext) override;
 	virtual void SwapBuffers(const GameContext& gameContext) override;
 
-	virtual void UpdateTransformMatrix(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model) override;
+	virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
 	virtual int GetShaderUniformLocation(glm::uint program, const std::string uniformName) override;
 	virtual void SetUniform1f(int location, float val) override;
 
-	virtual void DescribeShaderVariable(glm::uint renderID, const std::string& variableName, int size,
+	virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
 		Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
-	virtual void Destroy(glm::uint renderID) override;
+	virtual void Destroy(RenderID renderID) override;
 		
 private:
 	void CreateInstance(const GameContext& gameContext);
@@ -54,7 +54,7 @@ private:
 	void CreateImageViews();
 	void CreateRenderPass();
 	void CreateDescriptorSetLayout(glm::uint shaderIndex);
-	void CreateGraphicsPipeline(glm::uint renderID);
+	void CreateGraphicsPipeline(RenderID renderID);
 	void CreateDepthResources();
 	void CreateFramebuffers();
 
@@ -72,7 +72,7 @@ private:
 	glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
 	void PrepareUniformBuffer(VulkanBuffer& buffer, glm::uint bufferSize,
 		VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
-	void CreateDescriptorSet(glm::uint renderID);
+	void CreateDescriptorSet(RenderID renderID);
 
 	void CreateCommandPool();
 	void RebuildCommandBuffers();
@@ -111,7 +111,7 @@ private:
 	bool CheckValidationLayerSupport();
 
 	void UpdateConstantUniformBuffers(const GameContext& gameContext);
-	void UpdateUniformBufferDynamic(const GameContext& gameContext, glm::uint renderID, const glm::mat4& model);
+	void UpdateUniformBufferDynamic(const GameContext& gameContext, RenderID renderID, const glm::mat4& model);
 
 	void LoadDefaultShaderCode();
 
@@ -121,7 +121,7 @@ private:
 
 	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 
-	RenderObject* GetRenderObject(glm::uint renderID);
+	RenderObject* GetRenderObject(RenderID renderID);
 
 	std::vector<RenderObject*> m_RenderObjects;
 
