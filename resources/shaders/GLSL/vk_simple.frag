@@ -16,10 +16,17 @@ layout (binding = 0) uniform UBO
 	vec4 lightDir; // Padded to 16 bytes (only 3 floats needed)
 	vec4 ambientColor;
 	vec4 specularColor;
+} ubo;
+
+// Updated once per object
+layout (binding = 1) uniform UBOInstance
+{
+	mat4 model;
+	mat4 modelInvTranspose;
 	bool useDiffuseTexture;
 	bool useNormalTexture;
 	bool useSpecularTexture;
-} ubo;
+} uboInstance;
 
 layout (binding = 2) uniform sampler2D diffuseMap;
 layout (binding = 3) uniform sampler2D normalMap;
@@ -30,7 +37,7 @@ layout (location = 0) out vec4 fragmentColor;
 void main()
 {
 	vec3 normal;
-	if (ubo.useNormalTexture)
+	if (uboInstance.useNormalTexture)
 	{
 		vec4 normalSample = texture(normalMap, inTexCoord);
 		normal = inTBN * (normalSample.xyz * 2 - 1);
@@ -44,7 +51,7 @@ void main()
 	lightIntensity = lightIntensity * 0.75 + 0.25;
 
 	vec4 diffuse = lightIntensity * inColor;
-	if (ubo.useDiffuseTexture)
+	if (uboInstance.useDiffuseTexture)
 	{
 		vec4 diffuseSample = texture(diffuseMap, inTexCoord);
 		diffuse *= diffuseSample;
@@ -58,7 +65,7 @@ void main()
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
 	
 	vec4 specular = specularStrength * spec * ubo.specularColor;
-	if (ubo.useSpecularTexture)
+	if (uboInstance.useSpecularTexture)
 	{
 		vec4 specularSample = texture(specularMap, inTexCoord);
 		specular *= specularSample;

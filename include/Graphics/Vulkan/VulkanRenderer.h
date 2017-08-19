@@ -5,9 +5,10 @@
 #include <map>
 
 #include "Graphics/Renderer.h"
+#include "Graphics/Vulkan/VulkanHelpers.h"
+#include "ShaderUtils.h"
 #include "VDeleter.h"
 #include "VulkanBuffer.h"
-#include "Graphics/Vulkan/VulkanHelpers.h"
 #include "Window/Window.h"
 
 class VulkanRenderer : public Renderer
@@ -52,11 +53,12 @@ private:
 	void CreateSwapChain(Window* window);
 	void CreateImageViews();
 	void CreateRenderPass();
-	void CreateDescriptorSetLayout(glm::uint type);
+	void CreateDescriptorSetLayout(glm::uint shaderIndex);
 	void CreateGraphicsPipeline(glm::uint renderID);
 	void CreateDepthResources();
 	void CreateFramebuffers();
 
+	void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture);
 	void CreateTextureImage(const std::string& filePath, VulkanTexture** texture);
 	void CreateTextureImageView(VulkanTexture* texture);
 	void CreateTextureSampler(VulkanTexture* texture);
@@ -70,7 +72,7 @@ private:
 	glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
 	void PrepareUniformBuffer(VulkanBuffer& buffer, glm::uint bufferSize,
 		VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
-	void CreateDescriptorSet(glm::uint renderID, glm::uint descriptorSetLayoutIndex);
+	void CreateDescriptorSet(glm::uint renderID);
 
 	void CreateCommandPool();
 	void RebuildCommandBuffers();
@@ -120,9 +122,7 @@ private:
 	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 
 	RenderObject* GetRenderObject(glm::uint renderID);
-	//RenderObjectIter Destroy(RenderObjectIter iter);
 
-	// TODO: use sorted data type (map)
 	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;
@@ -178,6 +178,8 @@ private:
 	VulkanTexture* m_WorkNormalTexture = nullptr;
 	VulkanTexture* m_WorkSpecularTexture = nullptr;
 
+	VulkanTexture* m_BlankTexture = nullptr;
+
 
 	VDeleter<VkImage> m_DepthImage{ m_Device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> m_DepthImageMemory{ m_Device, vkFreeMemory };
@@ -207,14 +209,14 @@ private:
 		std::string fragmentShaderFilePath;
 	};
 
-	struct ShaderCode
+	struct Shader
 	{
 		std::vector<char> vertexShaderCode;
 		std::vector<char> fragmentShaderCode;
 	};
 
 	std::vector<ShaderFilePath> m_ShaderFilePaths;
-	std::vector<ShaderCode> m_LoadedShaderCode;
+	std::vector<Shader> m_LoadedShaders;
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;

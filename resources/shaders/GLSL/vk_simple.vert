@@ -19,9 +19,6 @@ layout (binding = 0) uniform UBO
 	vec4 lightDir; // Padded to 16 bytes (only 3 floats needed)
 	vec4 ambientColor;
 	vec4 specularColor;
-	bool useDiffuseTexture;
-	bool useNormalTexture;
-	bool useSpecularTexture;
 } ubo;
 
 // Updated once per object
@@ -29,6 +26,9 @@ layout (binding = 1) uniform UBOInstance
 {
 	mat4 model;
 	mat4 modelInvTranspose;
+	bool useDiffuseTexture;
+	bool useNormalTexture;
+	bool useSpecularTexture;
 } uboInstance;
 
 layout (location = 0) out vec3 outWorldPos;

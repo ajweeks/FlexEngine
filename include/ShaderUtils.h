@@ -29,25 +29,17 @@ struct Uniform
 	static bool HasUniform(Type elements, Type uniform);
 	static glm::uint CalculateSize(Type elements);
 };
+Uniform::Type operator|(const Uniform::Type& lhs, const Uniform::Type& rhs);
 
 enum class ShaderType
 {
 	FRAGMENT, VERTEX
 };
 
-class ShaderUtils final
+namespace ShaderUtils
 {
-public:
-	ShaderUtils();
-	~ShaderUtils();
-
-	static bool LoadShaders(glm::uint program, 
+	bool LoadShaders(glm::uint program, 
 		std::string vertexShaderFilePath, glm::uint& vertexShaderID,
 		std::string fragmentShaderFilePath, glm::uint& fragmentShaderID);
-	static void LinkProgram(glm::uint program);
-
-private:
-	ShaderUtils(const ShaderUtils&) = delete;
-	ShaderUtils& operator=(const ShaderUtils&) = delete;
-
-};
+	void LinkProgram(glm::uint program);
+}

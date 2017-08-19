@@ -117,6 +117,11 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 
 	m_VertexBuffers.push_back({});
 	VertexBufferData* vertexBufferData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
+	
+	if (m_ShaderIndex == 1)
+	{
+		m_Attributes = (glm::uint)VertexBufferData::VertexAttribute::POSITION | (glm::uint)VertexBufferData::VertexAttribute::COLOR;
+	}
 
 	CreateVertexBuffer(vertexBufferData);
 
@@ -592,8 +597,8 @@ void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, VertexB
 	Renderer* renderer = gameContext.renderer;
 
 	constexpr size_t vertexTypeCount = 6;
-	std::string names[vertexTypeCount] = { "in_Position", "in_Color", "in_Tangent", "in_Bitangent", "in_Normal", "in_TexCoord" };
-	int sizes[vertexTypeCount] =      { 3,             4,          3,            3,              3,           2             };
+	std::string names[vertexTypeCount] =	{ "in_Position", "in_Color", "in_Tangent", "in_Bitangent", "in_Normal", "in_TexCoord" };
+	int sizes[vertexTypeCount] =			{  3,             4,          3,            3,              3,           2            };
 
 	float* currentLocation = (float*)0;
 	for (size_t i = 0; i < vertexTypeCount; ++i)

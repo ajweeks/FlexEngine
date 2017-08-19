@@ -102,7 +102,6 @@ private:
 
 	void UpdatePerObjectUniforms(glm::uint renderID, const GameContext& gameContext);
 
-	// TODO: use sorted data type (map)
 	std::vector<RenderObject*> m_RenderObjects;
 
 	bool m_VSyncEnabled;

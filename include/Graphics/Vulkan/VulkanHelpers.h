@@ -6,6 +6,9 @@
 #include <vulkan\vulkan.h>
 
 #include "ShaderUtils.h"
+#include "VulkanBuffer.h"
+#include "VertexBufferData.h"
+#include "VDeleter.h"
 
 std::string VulkanErrorString(VkResult errorCode);
 
@@ -21,9 +24,16 @@ std::string VulkanErrorString(VkResult errorCode);
 }
 #endif // VK_CHECK_RESULT
 
-struct VertexBufferData;
+namespace Vulkan
+{
+	VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
+	
+	void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData,
+		std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
+	
+} // namespace Vulkan
 
-struct QueueFamilyIndices
+struct QueueFamilyIndices	
 {
 	int graphicsFamily = -1;
 	int presentFamily = -1;
@@ -39,13 +49,6 @@ struct SwapChainSupportDetails
 	VkSurfaceCapabilitiesKHR capabilities;
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> presentModes;
-};
-
-struct VulkanVertex
-{
-	static VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
-	static void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData, 
-		std::vector<VkVertexInputAttributeDescription>& vec);
 };
 
 struct UniformBufferObjectData
@@ -73,6 +76,7 @@ struct VulkanTexture
 	VDeleter<VkDeviceMemory> imageMemory;
 	VDeleter<VkImageView> imageView;
 	VDeleter<VkSampler> sampler;
+	std::string filePath;
 };
 
 struct RenderObject
@@ -101,8 +105,13 @@ struct RenderObject
 
 	glm::uint shaderIndex;
 
+	std::string diffuseTexturePath;
 	VulkanTexture* diffuseTexture = nullptr;
+
+	std::string normalTexturePath;
 	VulkanTexture* normalTexture = nullptr;
+
+	std::string specularTexturePath;
 	VulkanTexture* specularTexture = nullptr;
 
 	VkDescriptorSet descriptorSet;

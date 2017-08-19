@@ -5,131 +5,107 @@
 #include "Logger.h"
 #include "VertexBufferData.h"
 
-VkVertexInputBindingDescription VulkanVertex::GetVertexBindingDescription(VertexBufferData* vertexBufferData)
+namespace Vulkan
 {
-	VkVertexInputBindingDescription bindingDesc = {};
-	bindingDesc.binding = 0;
-	bindingDesc.stride = vertexBufferData->VertexStride;
-	bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDesc;
-}
-
-void VulkanVertex::GetVertexAttributeDescriptions(
-	VertexBufferData* vertexBufferData, 
-	std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
-{
-	attributeDescriptions.clear();
-
-	uint32_t offset = 0;
-	uint32_t location = 0;
-
-	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::POSITION))
+	VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData)
 	{
-		VkVertexInputAttributeDescription attributeDescription = {};
-		attributeDescription.binding = 0;
-		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescription.location = location;
-		attributeDescription.offset = offset;
-		attributeDescriptions.push_back(attributeDescription);
+		VkVertexInputBindingDescription bindingDesc = {};
+		bindingDesc.binding = 0;
+		bindingDesc.stride = vertexBufferData->VertexStride;
+		bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-		offset += sizeof(glm::vec3);
-		++location;
+		return bindingDesc;
 	}
 
-	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::COLOR))
+	void GetVertexAttributeDescriptions(
+		VertexBufferData* vertexBufferData,
+		std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 	{
-		VkVertexInputAttributeDescription attributeDescription = {};
-		attributeDescription.binding = 0;
-		attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		attributeDescription.location = location;
-		attributeDescription.offset = offset;
-		attributeDescriptions.push_back(attributeDescription);
+		attributeDescriptions.clear();
 
-		offset += sizeof(glm::vec4);
-		++location;
+		uint32_t offset = 0;
+		uint32_t location = 0;
+
+		if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::POSITION))
+		{
+			VkVertexInputAttributeDescription attributeDescription = {};
+			attributeDescription.binding = 0;
+			attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+			attributeDescription.location = location;
+			attributeDescription.offset = offset;
+			attributeDescriptions.push_back(attributeDescription);
+
+			offset += sizeof(glm::vec3);
+			++location;
+		}
+
+		if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::COLOR))
+		{
+			VkVertexInputAttributeDescription attributeDescription = {};
+			attributeDescription.binding = 0;
+			attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			attributeDescription.location = location;
+			attributeDescription.offset = offset;
+			attributeDescriptions.push_back(attributeDescription);
+
+			offset += sizeof(glm::vec4);
+			++location;
+		}
+
+		if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TANGENT))
+		{
+			VkVertexInputAttributeDescription attributeDescription = {};
+			attributeDescription.binding = 0;
+			attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+			attributeDescription.location = location;
+			attributeDescription.offset = offset;
+			attributeDescriptions.push_back(attributeDescription);
+
+			offset += sizeof(glm::vec3);
+			++location;
+		}
+
+		if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::BITANGENT))
+		{
+			VkVertexInputAttributeDescription attributeDescription = {};
+			attributeDescription.binding = 0;
+			attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+			attributeDescription.location = location;
+			attributeDescription.offset = offset;
+			attributeDescriptions.push_back(attributeDescription);
+
+			offset += sizeof(glm::vec3);
+			++location;
+		}
+
+		if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::NORMAL))
+		{
+			VkVertexInputAttributeDescription attributeDescription = {};
+			attributeDescription.binding = 0;
+			attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+			attributeDescription.location = location;
+			attributeDescription.offset = offset;
+			attributeDescriptions.push_back(attributeDescription);
+
+			offset += sizeof(glm::vec3);
+			++location;
+		}
+
+		if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TEXCOORD))
+		{
+			VkVertexInputAttributeDescription attributeDescription = {};
+			attributeDescription.binding = 0;
+			attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescription.location = location;
+			attributeDescription.offset = offset;
+			attributeDescriptions.push_back(attributeDescription);
+
+			offset += sizeof(glm::vec2);
+			++location;
+		}
 	}
-
-	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TANGENT))
-	{
-		VkVertexInputAttributeDescription attributeDescription = {};
-		attributeDescription.binding = 0;
-		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescription.location = location;
-		attributeDescription.offset = offset;
-		attributeDescriptions.push_back(attributeDescription);
-
-		offset += sizeof(glm::vec3);
-		++location;
-	}
-
-	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::BITANGENT))
-	{
-		VkVertexInputAttributeDescription attributeDescription = {};
-		attributeDescription.binding = 0;
-		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescription.location = location;
-		attributeDescription.offset = offset;
-		attributeDescriptions.push_back(attributeDescription);
-
-		offset += sizeof(glm::vec3);
-		++location;
-	}
-
-	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::NORMAL))
-	{
-		VkVertexInputAttributeDescription attributeDescription = {};
-		attributeDescription.binding = 0;
-		attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescription.location = location;
-		attributeDescription.offset = offset;
-		attributeDescriptions.push_back(attributeDescription);
-
-		offset += sizeof(glm::vec3);
-		++location;
-	}
-
-	if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TEXCOORD))
-	{
-		VkVertexInputAttributeDescription attributeDescription = {};
-		attributeDescription.binding = 0;
-		attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescription.location = location;
-		attributeDescription.offset = offset;
-		attributeDescriptions.push_back(attributeDescription);
-
-		offset += sizeof(glm::vec2);
-		++location;
-	}
-}
-
-bool Uniform::HasUniform(Uniform::Type elements, Uniform::Type uniform)
-{
-	return (elements & (glm::uint)uniform);
-}
-
-glm::uint Uniform::CalculateSize(Type elements)
-{
-	glm::uint size = 0;
-
-	if (HasUniform(elements, Uniform::Type::PROJECTION_MAT4)) size += sizeof(glm::mat4);
-	if (HasUniform(elements, Uniform::Type::VIEW_MAT4)) size += sizeof(glm::mat4);
-	if (HasUniform(elements, Uniform::Type::VIEW_INV_MAT4)) size += sizeof(glm::mat4);
-	if (HasUniform(elements, Uniform::Type::VIEW_PROJECTION_MAT4)) size += sizeof(glm::mat4);
-	if (HasUniform(elements, Uniform::Type::MODEL_MAT4)) size += sizeof(glm::mat4);
-	if (HasUniform(elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4)) size += sizeof(glm::mat4);
-	if (HasUniform(elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4)) size += sizeof(glm::mat4);
-	if (HasUniform(elements, Uniform::Type::CAM_POS_VEC4)) size += sizeof(glm::vec4);
-	if (HasUniform(elements, Uniform::Type::VIEW_DIR_VEC4)) size += sizeof(glm::vec4);
-	if (HasUniform(elements, Uniform::Type::LIGHT_DIR_VEC4)) size += sizeof(glm::vec4);
-	if (HasUniform(elements, Uniform::Type::AMBIENT_COLOR_VEC4)) size += sizeof(glm::vec4);
-	if (HasUniform(elements, Uniform::Type::SPECULAR_COLOR_VEC4)) size += sizeof(glm::vec4);
-	if (HasUniform(elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT)) size += sizeof(glm::int32);
-	if (HasUniform(elements, Uniform::Type::USE_NORMAL_TEXTURE_INT)) size += sizeof(glm::int32);
-	if (HasUniform(elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT)) size += sizeof(glm::int32);
-
-	return size;
-}
+	
+} // namespace Vulkan
 
 UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device) :
 	constantBuffer(device),

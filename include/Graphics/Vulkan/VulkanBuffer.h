@@ -2,6 +2,8 @@
 
 #include <vulkan\vulkan.h>
 
+#include "VDeleter.h"
+
 struct VulkanBuffer
 {
 	VulkanBuffer(const VDeleter<VkDevice>& device);

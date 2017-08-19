@@ -30,95 +30,38 @@ VulkanRenderer::VulkanRenderer(GameContext& gameContext) :
 	CreateSwapChain(gameContext.window);
 	CreateImageViews();
 	CreateRenderPass();
-	
+
 	CreateCommandPool();
 	CreateDepthResources();
 	CreateFramebuffers();
 
 	LoadDefaultShaderCode();
+
+	CreateVulkanTexture("resources/textures/brick_d.png", &m_BrickDiffuseTexture);
+	CreateVulkanTexture("resources/textures/brick_n.png", &m_BrickNormalTexture);
+	CreateVulkanTexture("resources/textures/brick_s.png", &m_BrickSpecularTexture);
+
+	CreateVulkanTexture("resources/textures/work_d.jpg", &m_WorkDiffuseTexture);
+	CreateVulkanTexture("resources/textures/work_n.jpg", &m_WorkNormalTexture);
+	CreateVulkanTexture("resources/textures/work_s.jpg", &m_WorkSpecularTexture);
+
+	CreateVulkanTexture("resources/textures/blank.jpg", &m_BlankTexture);
 }
 
 void VulkanRenderer::PostInitialize()
 {
-	// Brick textures
-	CreateTextureImage("resources/textures/brick_d.png", &m_BrickDiffuseTexture);
-	if (m_BrickDiffuseTexture)
-	{
-		CreateTextureImageView(m_BrickDiffuseTexture);
-		CreateTextureSampler(m_BrickDiffuseTexture);
-	}
-
-	CreateTextureImage("resources/textures/brick_n.png", &m_BrickNormalTexture);
-	if (m_BrickNormalTexture)
-	{
-		CreateTextureImageView(m_BrickNormalTexture);
-		CreateTextureSampler(m_BrickNormalTexture);
-	}
-
-	CreateTextureImage("resources/textures/brick_s.png", &m_BrickSpecularTexture);
-	if (m_BrickSpecularTexture)
-	{
-		CreateTextureImageView(m_BrickSpecularTexture);
-		CreateTextureSampler(m_BrickSpecularTexture);
-	}
-
-	// Work textures
-	CreateTextureImage("resources/textures/work_d.jpg", &m_WorkDiffuseTexture);
-	if (m_WorkDiffuseTexture)
-	{
-		CreateTextureImageView(m_WorkDiffuseTexture);
-		CreateTextureSampler(m_WorkDiffuseTexture);
-	}
-
-	CreateTextureImage("resources/textures/work_n.jpg", &m_WorkNormalTexture);
-	if (m_WorkNormalTexture)
-	{
-		CreateTextureImageView(m_WorkNormalTexture);
-		CreateTextureSampler(m_WorkNormalTexture);
-	}
-	
-	CreateTextureImage("resources/textures/work_s.jpg", &m_WorkSpecularTexture);
-	if (m_WorkSpecularTexture)
-	{
-		CreateTextureImageView(m_WorkSpecularTexture);
-		CreateTextureSampler(m_WorkSpecularTexture);
-	}
-
-
 	PrepareUniformBuffers();
 
 	CreateDescriptorPool();
 
-	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
-		CreateDescriptorSetLayout(m_RenderObjects[i]->shaderIndex);
+		CreateDescriptorSetLayout(i);
 	}
 
 	for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 	{
-		RenderObject* renderObject = m_RenderObjects[i];
-
-		if (renderObject->shaderIndex == 0)
-		{
-			if (i % 2 == 0)
-			{
-				renderObject->diffuseTexture = m_BrickDiffuseTexture;
-				renderObject->normalTexture = m_BrickNormalTexture;
-				renderObject->specularTexture = m_BrickSpecularTexture;
-			}
-			else
-			{
-				renderObject->diffuseTexture = m_WorkDiffuseTexture;
-				renderObject->normalTexture = m_WorkNormalTexture;
-				renderObject->specularTexture = m_WorkSpecularTexture;
-			}
-		}
-		else
-		{
-			// No textures to set
-		}
-
-		CreateDescriptorSet(i, renderObject->descriptorSetLayoutIndex);
+		CreateDescriptorSet(i);
 		CreateGraphicsPipeline(i);
 	}
 
@@ -131,11 +74,6 @@ void VulkanRenderer::PostInitialize()
 
 VulkanRenderer::~VulkanRenderer()
 {
-	//vkDestroyImageView(m_Device, m_TextureImageView, nullptr);
-	//
-	//vkDestroyImage(m_Device, m_TextureImage, nullptr);
-	//vkFreeMemory(m_Device, m_TextureImageMemory, nullptr);
-
 	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
 		free(m_UniformBuffers[i].constantData.data);
@@ -169,7 +107,9 @@ VulkanRenderer::~VulkanRenderer()
 	SafeDelete(m_WorkNormalTexture);
 	SafeDelete(m_WorkSpecularTexture);
 
-	vkDeviceWaitIdle(m_Device);	
+	SafeDelete(m_BlankTexture);
+
+	vkDeviceWaitIdle(m_Device);
 
 	glfwTerminate();
 }
@@ -190,7 +130,7 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const Rende
 		renderObject->indexed = true;
 	}
 
-	renderObject->descriptorSetLayoutIndex = renderID;
+	renderObject->descriptorSetLayoutIndex = createInfo->shaderIndex;
 	renderObject->shaderIndex = createInfo->shaderIndex;
 	if (createInfo->shaderIndex == 0)
 	{
@@ -201,6 +141,33 @@ glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const Rende
 	{
 		renderObject->vertShaderFilePath = "resources/shaders/GLSL/spv/vk_color_vert.spv";
 		renderObject->fragShaderFilePath = "resources/shaders/GLSL/spv/vk_color_frag.spv";
+	}
+
+	if (createInfo->diffuseMapPath == m_BrickDiffuseTexture->filePath)
+	{
+		renderObject->diffuseTexture = m_BrickDiffuseTexture;
+	}
+	else if (createInfo->diffuseMapPath == m_WorkDiffuseTexture->filePath)
+	{
+		renderObject->diffuseTexture = m_WorkDiffuseTexture;
+	}
+
+	if (createInfo->normalMapPath == m_BrickNormalTexture->filePath)
+	{
+		renderObject->normalTexture = m_BrickNormalTexture;
+	}
+	else if (createInfo->normalMapPath == m_WorkNormalTexture->filePath)
+	{
+		renderObject->normalTexture = m_WorkNormalTexture;
+	}
+
+	if (createInfo->specularMapPath == m_BrickSpecularTexture->filePath)
+	{
+		renderObject->specularTexture = m_BrickSpecularTexture;
+	}
+	else if (createInfo->specularMapPath == m_WorkSpecularTexture->filePath)
+	{
+		renderObject->specularTexture = m_WorkSpecularTexture;
 	}
 
 	return renderID;
@@ -653,7 +620,7 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 	RenderObject* renderObject = GetRenderObject(renderID);
 
 
-	ShaderCode shaderCode = m_LoadedShaderCode[renderObject->shaderIndex];
+	Shader shaderCode = m_LoadedShaders[renderObject->shaderIndex];
 	std::vector<char> vertShaderCode = shaderCode.vertexShaderCode;
 	std::vector<char> fragShaderCode = shaderCode.fragmentShaderCode;
 
@@ -677,9 +644,9 @@ void VulkanRenderer::CreateGraphicsPipeline(glm::uint renderID)
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-	VkVertexInputBindingDescription bindingDescription = VulkanVertex::GetVertexBindingDescription(renderObject->vertexBufferData);
+	VkVertexInputBindingDescription bindingDescription = Vulkan::GetVertexBindingDescription(renderObject->vertexBufferData);
 	std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-	VulkanVertex::GetVertexAttributeDescriptions(renderObject->vertexBufferData, attributeDescriptions);
+	Vulkan::GetVertexAttributeDescriptions(renderObject->vertexBufferData, attributeDescriptions);
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -823,7 +790,7 @@ VkCommandBuffer VulkanRenderer::BeginSingleTimeCommands()
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	// TODO: Create command pool just for these types of alocations, using VK_COMMAND_POOL_CREATE_TRANSIENT_BIT
-	allocInfo.commandPool = m_CommandPool; 
+	allocInfo.commandPool = m_CommandPool;
 	allocInfo.commandBufferCount = 1;
 
 	VkCommandBuffer commandBuffer;
@@ -931,6 +898,18 @@ void VulkanRenderer::CreateDepthResources()
 	TransitionImageLayout(m_DepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
+void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture)
+{
+	CreateTextureImage(filePath, texture);
+	if (*texture != nullptr)
+	{
+		CreateTextureImageView(*texture);
+		CreateTextureSampler(*texture);
+	}
+
+	(*texture)->filePath = filePath;
+}
+
 void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTexture** texture)
 {
 	int textureWidth, textureHeight, textureChannels;
@@ -941,14 +920,14 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTextu
 		Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + ", image filepath: " + filePath);
 		return;
 	}
-	
+
 	*texture = new VulkanTexture(m_Device);
 
 	VkDeviceSize imageSize = (VkDeviceSize)(textureWidth * textureHeight * 4);
 
 	VulkanBuffer stagingBuffer{ m_Device };
 
-	CreateAndAllocateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+	CreateAndAllocateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer);
 
 	//VkImageSubresource subresource = {};
@@ -964,7 +943,7 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTextu
 
 	//if (stagingImageLayout.rowPitch == textureWidth * 4)
 	//{
-		memcpy(data, pixels, (size_t)imageSize);
+	memcpy(data, pixels, (size_t)imageSize);
 	//}
 	//else
 	//{
@@ -983,7 +962,7 @@ void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTextu
 	SOIL_free_image_data(pixels);
 
 	CreateImage((glm::uint32)textureWidth, (glm::uint32)textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		(*texture)->image, (*texture)->imageMemory);
 
 	TransitionImageLayout((*texture)->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -1351,6 +1330,8 @@ void VulkanRenderer::CreateVertexBuffer(VulkanBuffer& vertexBuffer, glm::uint sh
 	memcpy(stagingBuffer.m_Mapped, vertexDataStart, vertexBufferSize);
 	stagingBuffer.Unmap();
 
+	free(vertexDataStart);
+
 	CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer);
 
@@ -1396,7 +1377,7 @@ void VulkanRenderer::CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shad
 
 void VulkanRenderer::PrepareUniformBuffers()
 {
-	m_UniformBuffers.resize(m_LoadedShaderCode.size(), m_Device);
+	m_UniformBuffers.resize(m_LoadedShaders.size(), m_Device);
 
 	glm::uint shaderIndex = 0;
 
@@ -1407,14 +1388,14 @@ void VulkanRenderer::PrepareUniformBuffers()
 		Uniform::Type::CAM_POS_VEC4 |
 		Uniform::Type::LIGHT_DIR_VEC4 |
 		Uniform::Type::AMBIENT_COLOR_VEC4 |
-		Uniform::Type::SPECULAR_COLOR_VEC4 |
-		Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
-		Uniform::Type::USE_NORMAL_TEXTURE_INT |
-		Uniform::Type::USE_SPECULAR_TEXTURE_INT);
+		Uniform::Type::SPECULAR_COLOR_VEC4);
 
 	m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
 		Uniform::Type::MODEL_MAT4 |
-		Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
+		Uniform::Type::MODEL_INV_TRANSPOSE_MAT4 |
+		Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
+		Uniform::Type::USE_NORMAL_TEXTURE_INT |
+		Uniform::Type::USE_SPECULAR_TEXTURE_INT);
 
 	// Color
 	shaderIndex = 1;
@@ -1427,26 +1408,34 @@ void VulkanRenderer::PrepareUniformBuffers()
 	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
 		m_UniformBuffers[i].constantData.size = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
-		m_UniformBuffers[i].constantData.data = (float*)malloc(m_UniformBuffers[i].constantData.size);
-		assert(m_UniformBuffers[i].constantData.data);
+		if (m_UniformBuffers[i].constantData.size > 0)
+		{
+			m_UniformBuffers[i].constantData.data = (float*)malloc(m_UniformBuffers[i].constantData.size);
+			assert(m_UniformBuffers[i].constantData.data);
+
+
+			PrepareUniformBuffer(m_UniformBuffers[i].constantBuffer, m_UniformBuffers[i].constantData.size,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		}
 
 		m_UniformBuffers[i].dynamicData.size = Uniform::CalculateSize(m_UniformBuffers[i].dynamicData.elements);
-
-		const size_t dynamicBufferSize = AllocateUniformBuffer(
-			m_UniformBuffers[i].dynamicData.size, (void**)&m_UniformBuffers[i].dynamicData.data);
-
-		PrepareUniformBuffer(m_UniformBuffers[i].constantBuffer, m_UniformBuffers[i].constantData.size,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		PrepareUniformBuffer(m_UniformBuffers[i].dynamicBuffer, dynamicBufferSize,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		if (m_UniformBuffers[i].dynamicData.size > 0)
+		{
+			const size_t dynamicBufferSize = AllocateUniformBuffer(
+				m_UniformBuffers[i].dynamicData.size * m_RenderObjects.size(), (void**)&m_UniformBuffers[i].dynamicData.data);
+			if (dynamicBufferSize > 0)
+			{
+				PrepareUniformBuffer(m_UniformBuffers[i].dynamicBuffer, dynamicBufferSize,
+					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			}
+		}
 	}
 }
 
 glm::uint VulkanRenderer::AllocateUniformBuffer(glm::uint dynamicDataSize, void** data)
 {
 	size_t uboAlignment = (size_t)m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-	glm::uint dynamicAllignment = 
+	glm::uint dynamicAllignment =
 		(dynamicDataSize / uboAlignment) * uboAlignment +
 		((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
 
@@ -1501,11 +1490,11 @@ void VulkanRenderer::CreateDescriptorPool()
 	VK_CHECK_RESULT(vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, m_DescriptorPool.replace()));
 }
 
-void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descriptorSetLayoutIndex)
+void VulkanRenderer::CreateDescriptorSet(glm::uint renderID)
 {
 	RenderObject* renderObject = GetRenderObject(renderID);
 
-	VkDescriptorSetLayout layouts[] = { m_DescriptorSetLayouts[descriptorSetLayoutIndex] };
+	VkDescriptorSetLayout layouts[] = { m_DescriptorSetLayouts[renderObject->descriptorSetLayoutIndex] };
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = m_DescriptorPool;
@@ -1518,8 +1507,10 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets;
 
 	Uniform::Type constantBufferElements = m_UniformBuffers[renderObject->shaderIndex].constantData.elements;
+	Uniform::Type dynamicBufferElements = m_UniformBuffers[renderObject->shaderIndex].dynamicData.elements;
 
 	glm::uint descriptorSetIndex = 0;
+	glm::uint binding = 0;
 
 	// Assume all shaders have one constant uniform buffer and one dynamic uniform buffer
 
@@ -1530,12 +1521,13 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 	writeDescriptorSets.push_back({});
 	writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
-	writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+	writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
 	writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
 	writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
 	writeDescriptorSets[descriptorSetIndex].pBufferInfo = &uniformBufferInfo;
 	++descriptorSetIndex;
+	++binding;
 
 	VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
 	uniformBufferDynamicInfo.buffer = m_UniformBuffers[renderObject->shaderIndex].dynamicBuffer.m_Buffer;
@@ -1544,66 +1536,97 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 	writeDescriptorSets.push_back({});
 	writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
-	writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+	writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
 	writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
 	writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
 	writeDescriptorSets[descriptorSetIndex].pBufferInfo = &uniformBufferDynamicInfo;
 	++descriptorSetIndex;
+	++binding;
 
-	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
+	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT) ||
+		Uniform::HasUniform(dynamicBufferElements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
 	{
 		VkDescriptorImageInfo diffuseImageInfo = {};
 		diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		diffuseImageInfo.imageView = renderObject->diffuseTexture->imageView;
-		diffuseImageInfo.sampler = renderObject->diffuseTexture->sampler;
+		if (renderObject->diffuseTexture)
+		{
+			diffuseImageInfo.imageView = renderObject->diffuseTexture->imageView;
+			diffuseImageInfo.sampler = renderObject->diffuseTexture->sampler;
+		}
+		else
+		{
+			diffuseImageInfo.imageView = m_BlankTexture->imageView;
+			diffuseImageInfo.sampler = m_BlankTexture->sampler;
+		}
 
 		writeDescriptorSets.push_back({});
 		writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+		writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
 		writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
 		writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
 		writeDescriptorSets[descriptorSetIndex].pImageInfo = &diffuseImageInfo;
 		++descriptorSetIndex;
 	}
+	++binding;
 
-	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
+	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_NORMAL_TEXTURE_INT) ||
+		Uniform::HasUniform(dynamicBufferElements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
 	{
 		VkDescriptorImageInfo normalImageInfo = {};
 		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		normalImageInfo.imageView = renderObject->normalTexture->imageView;
-		normalImageInfo.sampler = renderObject->normalTexture->sampler;
+		if (renderObject->normalTexture)
+		{
+			normalImageInfo.imageView = renderObject->normalTexture->imageView;
+			normalImageInfo.sampler = renderObject->normalTexture->sampler;
+		}
+		else
+		{
+			normalImageInfo.imageView = m_BlankTexture->imageView;
+			normalImageInfo.sampler = m_BlankTexture->sampler;
+		}
 
 		writeDescriptorSets.push_back({});
 		writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+		writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
 		writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
 		writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
 		writeDescriptorSets[descriptorSetIndex].pImageInfo = &normalImageInfo;
 		++descriptorSetIndex;
 	}
+	++binding;
 
-	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
+	if (Uniform::HasUniform(constantBufferElements, Uniform::Type::USE_SPECULAR_TEXTURE_INT) ||
+		Uniform::HasUniform(dynamicBufferElements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
 	{
 		VkDescriptorImageInfo specularImageInfo = {};
 		specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		specularImageInfo.imageView = renderObject->specularTexture->imageView;
-		specularImageInfo.sampler = renderObject->specularTexture->sampler;
+		if (renderObject->specularTexture)
+		{
+			specularImageInfo.imageView = renderObject->specularTexture->imageView;
+			specularImageInfo.sampler = renderObject->specularTexture->sampler;
+		}
+		else
+		{
+			specularImageInfo.imageView = m_BlankTexture->imageView;
+			specularImageInfo.sampler = m_BlankTexture->sampler;
+		}
 
 		writeDescriptorSets.push_back({});
 		writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writeDescriptorSets[descriptorSetIndex].dstSet = renderObject->descriptorSet;
-		writeDescriptorSets[descriptorSetIndex].dstBinding = descriptorSetIndex;
+		writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
 		writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
 		writeDescriptorSets[descriptorSetIndex].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
 		writeDescriptorSets[descriptorSetIndex].pImageInfo = &specularImageInfo;
 		++descriptorSetIndex;
 	}
+	++binding;
 
 	if (writeDescriptorSets.size() < 2)
 	{
@@ -1611,93 +1634,75 @@ void VulkanRenderer::CreateDescriptorSet(glm::uint renderID, glm::uint descripto
 	}
 
 	vkUpdateDescriptorSets(m_Device, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
-
 }
 
-void VulkanRenderer::CreateDescriptorSetLayout(glm::uint type)
+void VulkanRenderer::CreateDescriptorSetLayout(glm::uint shaderIndex)
 {
 	m_DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 	VkDescriptorSetLayout* descriptorSetLayout = &m_DescriptorSetLayouts.back();
+	
+	UniformBuffer* uniformBuffer = &m_UniformBuffers[shaderIndex];
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	glm::uint binding = 0;
 
-	//const size_t descriptorCount = m_RenderObjects.size();
+	VkDescriptorSetLayoutBinding uniformBufferBinding = {};
+	uniformBufferBinding.binding = binding;
+	uniformBufferBinding.descriptorCount = 1;
+	uniformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uniformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	bindings.push_back(uniformBufferBinding);
+	++binding;
 
-	if (type == 0)
+	VkDescriptorSetLayoutBinding uniformBufferDynamicBinding = {};
+	uniformBufferDynamicBinding.binding = binding;
+	uniformBufferDynamicBinding.descriptorCount = 1;
+	uniformBufferDynamicBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+	uniformBufferDynamicBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	bindings.push_back(uniformBufferDynamicBinding);
+	++binding;
+
+	if (Uniform::HasUniform(uniformBuffer->constantData.elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT) ||
+		Uniform::HasUniform(uniformBuffer->dynamicData.elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
 	{
-		VkDescriptorSetLayoutBinding uniformBufferBinding = {};
-		uniformBufferBinding.binding = 0;
-		uniformBufferBinding.descriptorCount = 1;
-		uniformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uniformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding uniformBufferDynamicBinding = {};
-		uniformBufferDynamicBinding.binding = 1;
-		uniformBufferDynamicBinding.descriptorCount = 1;
-		uniformBufferDynamicBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		uniformBufferDynamicBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
 		VkDescriptorSetLayoutBinding diffuseSamplerLayoutBinding = {};
-		diffuseSamplerLayoutBinding.binding = 2;
+		diffuseSamplerLayoutBinding.binding = binding;
 		diffuseSamplerLayoutBinding.descriptorCount = 1;
 		diffuseSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		diffuseSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings.push_back(diffuseSamplerLayoutBinding);
+		++binding;
+	}
 
+	if (Uniform::HasUniform(uniformBuffer->constantData.elements, Uniform::Type::USE_NORMAL_TEXTURE_INT) ||
+		Uniform::HasUniform(uniformBuffer->dynamicData.elements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
+	{
 		VkDescriptorSetLayoutBinding normalSamplerLayoutBinding = {};
-		normalSamplerLayoutBinding.binding = 3;
+		normalSamplerLayoutBinding.binding = binding;
 		normalSamplerLayoutBinding.descriptorCount = 1;
 		normalSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		normalSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings.push_back(normalSamplerLayoutBinding);
+		++binding;
+	}
 
+	if (Uniform::HasUniform(uniformBuffer->constantData.elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT) ||
+		Uniform::HasUniform(uniformBuffer->dynamicData.elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
+	{
 		VkDescriptorSetLayoutBinding specularSamplerLayoutBinding = {};
-		specularSamplerLayoutBinding.binding = 4;
+		specularSamplerLayoutBinding.binding = binding;
 		specularSamplerLayoutBinding.descriptorCount = 1;
 		specularSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		specularSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		std::array<VkDescriptorSetLayoutBinding, 5> bindings = {
-			uniformBufferBinding,
-			uniformBufferDynamicBinding,
-			diffuseSamplerLayoutBinding,
-			normalSamplerLayoutBinding,
-			specularSamplerLayoutBinding
-		};
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = bindings.size();
-		layoutInfo.pBindings = bindings.data();
-
-		VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, descriptorSetLayout));
+		bindings.push_back(specularSamplerLayoutBinding);
+		++binding;
 	}
-	else if (type == 1)
-	{
-		VkDescriptorSetLayoutBinding uniformBufferBinding = {};
-		uniformBufferBinding.binding = 0;
-		uniformBufferBinding.descriptorCount = 1;
-		uniformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uniformBufferBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		VkDescriptorSetLayoutBinding uniformBufferDynamicBinding = {};
-		uniformBufferDynamicBinding.binding = 1;
-		uniformBufferDynamicBinding.descriptorCount = 1;
-		uniformBufferDynamicBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		uniformBufferDynamicBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = bindings.size();
+	layoutInfo.pBindings = bindings.data();
 
-		std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
-			uniformBufferBinding,
-			uniformBufferDynamicBinding
-		};
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = bindings.size();
-		layoutInfo.pBindings = bindings.data();
-
-		VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, descriptorSetLayout));
-	}
-	else
-	{
-		Logger::LogError("Unhandled descriptor set layout type: " + std::to_string(type));
-	}
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_Device, &layoutInfo, nullptr, descriptorSetLayout));
 }
 
 void VulkanRenderer::CreateSemaphores()
@@ -1760,7 +1765,7 @@ void VulkanRenderer::DrawFrame(Window* window)
 	{
 		RecreateSwapChain(window);
 	}
-	else 
+	else
 	{
 		VK_CHECK_RESULT(result);
 	}
@@ -1881,7 +1886,7 @@ bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice device)
 
 	VkPhysicalDeviceFeatures supportedFeatures;
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-	
+
 	return indices.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
@@ -2000,10 +2005,6 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 	glm::vec4 camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
 	glm::vec4 viewDir = glm::vec4(gameContext.camera->GetViewDirection(), 0.0f);
 
-	float useDiffuseTexture = 1;
-	float useNormalTexture = 1;
-	float useSpecularTexture = 1;
-
 	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
 		glm::uint index = 0;
@@ -2073,26 +2074,8 @@ void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::SPECULAR_COLOR_VEC4))
 		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], sizeof(glm::vec4));
+			memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_SpecularColor[0], sizeof(glm::vec4));
 			index += 4;
-		}
-
-		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
-		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &useDiffuseTexture, sizeof(float));
-			index += 1;
-		}
-
-		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
-		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &useNormalTexture, sizeof(float));
-			index += 1;
-		}
-
-		if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
-		{
-			memcpy(&m_UniformBuffers[i].constantData.data[index], &useSpecularTexture, sizeof(float));
-			index += 1;
 		}
 
 		//glm::uint calculatedSize = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
@@ -2106,12 +2089,13 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
-
-	UNREFERENCED_PARAMETER(renderID);
-
-
+	RenderObject* renderObject = GetRenderObject(renderID);
 
 	const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
+
+	glm::uint useDiffuseTexture = renderObject->diffuseTexture == nullptr ? 0 : 1;
+	glm::uint useNormalTexture = renderObject->normalTexture == nullptr ? 0 : 1;
+	glm::uint useSpecularTexture = renderObject->specularTexture == nullptr ? 0 : 1;
 
 	for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 	{
@@ -2120,14 +2104,32 @@ void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, 
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::MODEL_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &model, sizeof(model)); 
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &model, sizeof(model));
 			index += 16;
 		}
 
 		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
 		{
-			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose)); 
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose));
 			index += 16;
+		}
+
+		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
+		{
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &useDiffuseTexture, sizeof(useDiffuseTexture));
+			index += 1;
+		}
+
+		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
+		{
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &useNormalTexture, sizeof(useNormalTexture));
+			index += 1;
+		}
+
+		if (Uniform::HasUniform(m_UniformBuffers[i].dynamicData.elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
+		{
+			memcpy(&m_UniformBuffers[i].dynamicData.data[offset + index], &useSpecularTexture, sizeof(useSpecularTexture));
+			index += 1;
 		}
 
 		// Aligned offset
@@ -2156,11 +2158,11 @@ void VulkanRenderer::LoadDefaultShaderCode()
 	};
 
 	const size_t shaderCount = m_ShaderFilePaths.size();
-	m_LoadedShaderCode.resize(shaderCount);
+	m_LoadedShaders.resize(shaderCount);
 	for (size_t i = 0; i < shaderCount; ++i)
 	{
-		m_LoadedShaderCode[i].vertexShaderCode = ReadFile(m_ShaderFilePaths[i].vertexShaderFilePath);
-		m_LoadedShaderCode[i].fragmentShaderCode = ReadFile(m_ShaderFilePaths[i].fragmentShaderFilePath);
+		m_LoadedShaders[i].vertexShaderCode = ReadFile(m_ShaderFilePaths[i].vertexShaderFilePath);
+		m_LoadedShaders[i].fragmentShaderCode = ReadFile(m_ShaderFilePaths[i].fragmentShaderFilePath);
 	}
 }
 
@@ -2190,10 +2192,11 @@ VkPrimitiveTopology VulkanRenderer::TopologyModeToVkPrimitiveTopology(TopologyMo
 	case TopologyMode::TRIANGLE_LIST: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	case TopologyMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 	case TopologyMode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-
-	case TopologyMode::LINE_LOOP: 
+	case TopologyMode::LINE_LOOP:
+	{	
 		Logger::LogWarning("Unsupported TopologyMode passed to Vulkan Renderer: LINE_LOOP");
-		return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM; // Unsupported
+		return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+	}
 	default: return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 	}
 }
