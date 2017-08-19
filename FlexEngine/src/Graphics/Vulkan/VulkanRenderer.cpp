@@ -114,7 +114,7 @@ VulkanRenderer::~VulkanRenderer()
 	glfwTerminate();
 }
 
-glm::uint VulkanRenderer::Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+glm::uint VulkanRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 {
 	UNREFERENCED_PARAMETER(gameContext);
 

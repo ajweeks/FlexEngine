@@ -78,11 +78,14 @@ public:
 		glm::uint shaderIndex;
 
 		CullFace cullFace = CullFace::BACK;
+
+		// Leave empty to not use
+		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 	};
 
 	virtual void PostInitialize() = 0;
 
-	virtual glm::uint Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
+	virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
 
 	virtual void SetTopologyMode(glm::uint renderID, TopologyMode topology) = 0;
 	virtual void SetClearColor(float r, float g, float b) = 0;

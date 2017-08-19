@@ -132,7 +132,7 @@ bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string&
 	if (m_UseSpecular) createInfo.specularMapPath = RESOURCE_LOCATION + "textures/brick_s.png";
 	createInfo.shaderIndex = m_ShaderIndex;
 
-	m_RenderID = renderer->Initialize(gameContext, &createInfo);
+	m_RenderID = renderer->InitializeRenderObject(gameContext, &createInfo);
 	
 	renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::TRIANGLE_LIST);
 
@@ -457,6 +457,19 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 		createInfo.shaderIndex = 2;
 		createInfo.cullFace = Renderer::CullFace::FRONT;
 
+		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
+		const std::string fileName = "skybox";
+		const std::string extension = ".jpg";
+
+		createInfo.cubeMapFilePaths = {
+			directory + fileName + "_r" + extension,
+			directory + fileName + "_l" + extension,
+			directory + fileName + "_u" + extension,
+			directory + fileName + "_d" + extension,
+			directory + fileName + "_b" + extension,
+			directory + fileName + "_f" + extension,
+		};
+
 	} break;
 	case MeshPrefab::PrefabShape::UV_SPHERE:
 	{
@@ -608,7 +621,7 @@ bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape sha
 	CreateVertexBuffer(vertexBufferData);
 	createInfo.vertexBufferData = vertexBufferData;
 
-	m_RenderID = renderer->Initialize(gameContext, &createInfo);
+	m_RenderID = renderer->InitializeRenderObject(gameContext, &createInfo);
 
 	renderer->SetTopologyMode(m_RenderID, topologyMode);
 	DescribeShaderVariables(gameContext, vertexBufferData);

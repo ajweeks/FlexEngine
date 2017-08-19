@@ -9,7 +9,7 @@ public:
 	GLRenderer(GameContext& gameContext);
 	virtual ~GLRenderer();
 
-	virtual glm::uint Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
+	virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 
 	virtual void PostInitialize() override;
 
@@ -139,7 +139,12 @@ private:
 		glm::mat4 viewProj;
 	};
 
-	glm::uint cubeMapTexture;
+	struct Skybox
+	{
+		glm::uint textureID;
+	};
+
+	Skybox m_Skybox;
 
 	// TODO: Clean up
 	glm::uint viewProjectionUBO;

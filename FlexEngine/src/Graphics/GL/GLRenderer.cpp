@@ -53,7 +53,7 @@ GLRenderer::~GLRenderer()
 	glfwTerminate();
 }
 
-glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+glm::uint GLRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 {
 	UNREFERENCED_PARAMETER(gameContext);
 
@@ -147,6 +147,16 @@ glm::uint GLRenderer::Initialize(const GameContext& gameContext, const RenderObj
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(createInfo->indices->at(0)) * createInfo->indices->size()), createInfo->indices->data(), GL_STATIC_DRAW);
 	}
 
+	// Skybox
+	if (!createInfo->cubeMapFilePaths[0].empty())
+	{
+		RenderObjectCreateInfo roCreateInfo = {};
+		roCreateInfo.vertexBufferData = createInfo->vertexBufferData;
+		roCreateInfo.cullFace = createInfo->cullFace;
+
+		GenerateCubemapTextures(renderObject->diffuseTextureID, createInfo->cubeMapFilePaths);
+	}
+
 	glBindVertexArray(0);
 	glUseProgram(0);
 
@@ -204,18 +214,6 @@ void GLRenderer::PostInitialize()
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(ViewProjectionCombinedUBO), NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferRange(GL_UNIFORM_BUFFER, colorUBOBinding, viewProjectionCombinedUBO, 0, sizeof(ViewProjectionCombinedUBO));
-
-	// Skybox
-	std::array<std::string, 6> cubemapImageFilePaths = {
-		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_rt.tga",
-		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_lf.tga",
-		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_up.tga",
-		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_dn.tga",
-		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_bk.tga",
-		RESOURCE_LOCATION + "textures/skyboxes/ely_peaks/peaks_ft.tga"
-	};
-
-	GenerateCubemapTextures(cubeMapTexture, cubemapImageFilePaths);
 }
 
 void GLRenderer::Update(const GameContext& gameContext)
@@ -327,7 +325,7 @@ void GLRenderer::Draw(const GameContext& gameContext)
 	{
 		RenderObject* renderObject = sortedRenderObjects[2][i];
 
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_Skybox.textureID);
 		glCullFace(renderObject->cullFace);
 
 		if (renderObject->indexed)
