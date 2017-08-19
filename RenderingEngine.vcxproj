@@ -86,12 +86,13 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>false</TreatWarningAsError>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
-      <AdditionalOptions>/NODEFAULTLIB:"MSVCRT" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/NODEFAULTLIB:"MSVCRT"   /ignore:4099 %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
