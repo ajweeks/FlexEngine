@@ -9,7 +9,7 @@
 #include <utility>
 
 #include <glm\gtc\type_ptr.hpp>
-#include <glm\gtx\transform.hpp>
+#include <glm\gtc\matrix_transform.hpp>
 
 #include "FreeCamera.h"
 #include "Graphics/GL/GLHelpers.h"
@@ -152,10 +152,6 @@ namespace flex
 		// Skybox
 		if (!createInfo->cubeMapFilePaths[0].empty())
 		{
-			RenderObjectCreateInfo roCreateInfo = {};
-			roCreateInfo.vertexBufferData = createInfo->vertexBufferData;
-			roCreateInfo.cullFace = createInfo->cullFace;
-
 			GenerateCubemapTextures(renderObject->diffuseTextureID, createInfo->cubeMapFilePaths);
 		}
 
@@ -314,7 +310,8 @@ namespace flex
 		if (skyboxViewLocation == -1) Logger::LogWarning("Couldn't find in_ViewProjection in skybox shader");
 		glUniformMatrix4fv(skyboxViewLocation, 1, false, &viewProjection[0][0]);
 
-		glm::mat4 model = glm::rotate(gameContext.elapsedTime * 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::rotate(model, gameContext.elapsedTime * 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
 		//glm::mat4 model = glm::mat4(1.0f);
 
 		int skyboxModelLocation = glGetUniformLocation(m_LoadedShaders[2].program, "in_Model");

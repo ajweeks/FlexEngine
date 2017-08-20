@@ -87,7 +87,6 @@ namespace flex
 		DestroyGLFWimage(image);
 	}
 
-
 	void GenerateCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths)
 	{
 		glGenTextures(1, &textureID);

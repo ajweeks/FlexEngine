@@ -54,7 +54,8 @@ namespace flex
 		glm::vec3 m_Right;
 
 		float m_MoveSpeed;
-		float m_ZoomSpeed;
+		float m_ScrollDollySpeed;
+		float m_DragDollySpeed;
 		float m_MoveSpeedFastMultiplier;
 		float m_MoveSpeedSlowMultiplier;
 		float m_RotationSpeed;
