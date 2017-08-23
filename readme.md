@@ -13,8 +13,8 @@ By supporting three different graphics APIs, I've challenged myself to designed 
 - Per-object shader/texture selection
 
 <div>
-  <img src="http://i.imgur.com/CLRQ6tC.jpg" width="48%"/>
-  <img src="http://i.imgur.com/sXbc0n5.jpg" width="48%" style="float: right"/>
+  <img src="http://i.imgur.com/CLRQ6tC.jpg" width="49%"/>
+  <img src="http://i.imgur.com/sXbc0n5.jpg" width="49%" style="float: right"/>
 </div>
 
 ![](http://i.imgur.com/mz4mlmE.jpg)
