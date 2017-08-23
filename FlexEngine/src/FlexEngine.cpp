@@ -5,7 +5,8 @@
 #include "FreeCamera.h"
 #include "Logger.h"
 #include "Scene/SceneManager.h"
-#include "Scene/TestScene.h"
+#include "Scene/Scenes/Scene_02.h"
+#include "Scene/Scenes/TestScene.h"
 #include "Typedefs.h"
 
 namespace flex
@@ -14,7 +15,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::GL;
+		RendererID preferredInitialRenderer = RendererID::VULKAN;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -60,8 +61,8 @@ namespace flex
 		InitializeWindowAndRenderer();
 
 		m_SceneManager = new SceneManager();
-		TestScene* pDefaultScene = new TestScene(m_GameContext);
-		m_SceneManager->AddScene(pDefaultScene, m_GameContext);
+
+		LoadDefaultScenes();
 
 		m_DefaultCamera = new FreeCamera(m_GameContext);
 		m_DefaultCamera->SetPosition(glm::vec3(0.0f, 5.0f, -15.0f));
@@ -127,6 +128,15 @@ namespace flex
 		SafeDelete(m_GameContext.renderer);
 	}
 
+	void FlexEngine::LoadDefaultScenes()
+	{
+		TestScene* pDefaultScene = new TestScene(m_GameContext);
+		m_SceneManager->AddScene(pDefaultScene, m_GameContext);
+
+		//Scene_02* scene02 = new Scene_02(m_GameContext);
+		//m_SceneManager->AddScene(scene02, m_GameContext);
+	}
+
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
 	{
 		switch (rendererID)
@@ -162,9 +172,8 @@ namespace flex
 		Logger::LogInfo("Current renderer: " + RenderIDToString(m_RendererIndex));
 
 		InitializeWindowAndRenderer();
-
-		TestScene* pDefaultScene = new TestScene(m_GameContext);
-		m_SceneManager->AddScene(pDefaultScene, m_GameContext);
+		
+		LoadDefaultScenes();
 
 		m_GameContext.renderer->PostInitialize();
 	}
@@ -185,6 +194,7 @@ namespace flex
 
 			m_GameContext.window->PollEvents();
 
+			// TODO: Bring keybindings out to external file (or at least variables)
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 			{
 				m_VSyncEnabled = !m_VSyncEnabled;
@@ -196,6 +206,16 @@ namespace flex
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 				CycleRenderer();
 				continue;
+			}
+
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
+			{
+				m_SceneManager->SetNextSceneActive();
+			}
+
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
+			{
+				m_SceneManager->SetPreviousSceneActive();
 			}
 
 			// TODO: Figure out better

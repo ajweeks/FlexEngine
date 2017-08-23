@@ -20,8 +20,11 @@ namespace flex
 		void AddScene(BaseScene* newScene, const GameContext& gameContext);
 		void RemoveScene(BaseScene* scene, const GameContext& gameContext);
 
+		void SetCurrentScene(BaseScene* scene);
 		void SetCurrentScene(glm::uint sceneIndex);
 		void SetCurrentScene(std::string sceneName);
+		void SetNextSceneActive();
+		void SetPreviousSceneActive();
 
 		BaseScene* CurrentScene() const;
 

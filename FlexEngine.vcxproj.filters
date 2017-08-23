@@ -42,9 +42,6 @@
     <ClCompile Include="FlexEngine\src\Graphics\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlexEngine\src\Scene\Prefabs\MeshPrefab.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FlexEngine\src\Scene\BaseScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -52,9 +49,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FlexEngine\src\Scene\SceneManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FlexEngine\src\Scene\TestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FlexEngine\src\Window\D3D\D3DWindowWrapper.cpp">
@@ -105,6 +99,18 @@
     <ClCompile Include="FlexEngine\src\FlexEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FlexEngine\src\Scene\Scenes\TestScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FlexEngine\src\Scene\MeshPrefab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FlexEngine\src\Scene\Scenes\Scene_02.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h">
@@ -143,9 +149,6 @@
     <ClInclude Include="FlexEngine\include\Graphics\Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FlexEngine\include\Scene\Prefabs\MeshPrefab.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FlexEngine\include\Scene\BaseScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -153,9 +156,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Scene\SceneManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlexEngine\include\Scene\TestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Window\D3D\D3DWindowWrapper.h">
@@ -210,6 +210,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\VertexBufferData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\include\Scene\Scenes\TestScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\include\Scene\MeshPrefab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\include\Scene\Scenes\Scene_02.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

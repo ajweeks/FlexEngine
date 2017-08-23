@@ -56,6 +56,20 @@ namespace flex
 		}
 	}
 
+	void SceneManager::SetCurrentScene(BaseScene* scene)
+	{
+		for (size_t i = 0; i < m_Scenes.size(); ++i)
+		{
+			if (m_Scenes[i]->m_Name.compare(scene->m_Name) == 0)
+			{
+				m_CurrentSceneIndex = i;
+				return;
+			}
+		}
+
+		Logger::LogError("Attempt to set current scene to " + scene->m_Name + " failed because it was not found in the scene manager!");
+	}
+
 	void SceneManager::SetCurrentScene(glm::uint sceneIndex)
 	{
 		if (sceneIndex >= m_Scenes.size())
@@ -80,6 +94,24 @@ namespace flex
 		}
 
 		Logger::LogError("Attempt to set scene to " + sceneName + " failed, it does not exist in the SceneManager");
+	}
+
+	void SceneManager::SetNextSceneActive()
+	{
+		const size_t sceneCount = m_Scenes.size();
+		if (sceneCount == 1) return;
+
+		if (m_CurrentSceneIndex >= sceneCount - 1) m_CurrentSceneIndex = 0;
+		else ++m_CurrentSceneIndex;
+	}
+
+	void SceneManager::SetPreviousSceneActive()
+	{
+		const size_t sceneCount = m_Scenes.size();
+		if (sceneCount == 1) return;
+
+		if (m_CurrentSceneIndex == 0) m_CurrentSceneIndex = sceneCount - 1;
+		else --m_CurrentSceneIndex;
 	}
 
 	BaseScene* SceneManager::CurrentScene() const
