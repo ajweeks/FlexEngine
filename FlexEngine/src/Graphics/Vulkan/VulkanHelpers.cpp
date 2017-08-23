@@ -184,6 +184,8 @@ namespace flex
 		VkPipelineStageFlags srcStageMask,
 		VkPipelineStageFlags dstStageMask)
 	{
+		UNREFERENCED_PARAMETER(aspectMask);
+
 		// Create an image barrier object
 		VkImageMemoryBarrier imageMemoryBarrier = {};
 		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

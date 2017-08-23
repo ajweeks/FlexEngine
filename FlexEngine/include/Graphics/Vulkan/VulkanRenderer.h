@@ -64,7 +64,6 @@ namespace flex
 		void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture);
 		void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture);
 		void CreateTextureImage(const std::string& filePath, VulkanTexture** texture);
-		void CreateCubemapImage(const std::array<std::string, 6>& filePaths, VulkanTexture** texture);
 		void CreateTextureImageView(VulkanTexture* texture);
 		void CreateTextureSampler(VulkanTexture* texture);
 
