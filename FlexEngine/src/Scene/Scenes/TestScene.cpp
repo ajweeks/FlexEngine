@@ -79,28 +79,28 @@ namespace flex
 		m_TransformManipulator_1->GetTransform().position.x = -spacing * 2.0f;
 		m_TransformManipulator_1->GetTransform().position.z = -spacing * 1.0f;
 		AddChild(m_TransformManipulator_1);
-
+		
 		m_TransformManipulator_2 = new MeshPrefab();
 		m_TransformManipulator_2->SetUsedTextures(true, false, false);
 		m_TransformManipulator_2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_2->GetTransform().position.x = -spacing;
 		m_TransformManipulator_2->GetTransform().position.z = -spacing * 0.5f;
 		AddChild(m_TransformManipulator_2);
-
+		
 		m_TransformManipulator_3 = new MeshPrefab();
 		m_TransformManipulator_3->SetUsedTextures(false, true, false);
 		m_TransformManipulator_3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_3->GetTransform().position.x = 0.0f;
 		m_TransformManipulator_3->GetTransform().position.z = 0.0f;
 		AddChild(m_TransformManipulator_3);
-
+		
 		m_TransformManipulator_4 = new MeshPrefab();
 		m_TransformManipulator_4->SetUsedTextures(false, false, true);
 		m_TransformManipulator_4->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_4->GetTransform().position.x = spacing;
 		m_TransformManipulator_4->GetTransform().position.z = spacing * 0.5f;
 		AddChild(m_TransformManipulator_4);
-
+		
 		m_TransformManipulator_5 = new MeshPrefab();
 		m_TransformManipulator_5->SetUsedTextures(false, false, false);
 		m_TransformManipulator_5->SetShaderIndex(1);
@@ -108,8 +108,8 @@ namespace flex
 		m_TransformManipulator_5->GetTransform().position.x = spacing * 2.0f;
 		m_TransformManipulator_5->GetTransform().position.z = spacing * 1.0f;
 		AddChild(m_TransformManipulator_5);
-
-
+		
+		
 		m_Skybox = new MeshPrefab();
 		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 		AddChild(m_Skybox);

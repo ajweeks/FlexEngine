@@ -183,7 +183,7 @@ namespace flex
 		VulkanTexture* m_WorkSpecularTexture = nullptr;
 
 		VulkanTexture* m_BlankTexture = nullptr;
-		//VulkanTexture* m_Skybox = nullptr;
+		VulkanTexture* m_SkyboxTexture = nullptr;
 
 		VDeleter<VkImage> m_DepthImage; // { m_Device, vkDestroyImage };
 		VDeleter<VkDeviceMemory> m_DepthImageMemory;// { m_Device, vkFreeMemory };

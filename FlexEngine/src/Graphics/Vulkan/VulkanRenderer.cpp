@@ -64,21 +64,6 @@ namespace flex
 		CreateVulkanTexture(RESOURCE_LOCATION + "textures/work_s.jpg", &m_WorkSpecularTexture);
 
 		CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", &m_BlankTexture);
-
-		//const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
-		//const std::string fileName = "skybox";
-		//const std::string extension = ".jpg";
-		//
-		//std::array<std::string, 6> cubeMapFilePaths = {
-		//	directory + fileName + "_r" + extension,
-		//	directory + fileName + "_l" + extension,
-		//	directory + fileName + "_u" + extension,
-		//	directory + fileName + "_d" + extension,
-		//	directory + fileName + "_b" + extension,
-		//	directory + fileName + "_f" + extension,
-		//};
-		//
-		//CreateVulkanCubemap(cubeMapFilePaths, &m_Skybox);
 	}
 
 	void VulkanRenderer::PostInitialize()
@@ -116,6 +101,7 @@ namespace flex
 				_aligned_free(m_UniformBuffers[i].dynamicData.data);
 			}
 		}
+		m_UniformBuffers.clear();
 
 		{
 			auto iter = m_RenderObjects.begin();
@@ -132,21 +118,38 @@ namespace flex
 			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, *iter, nullptr);
 		}
 
+		m_ImageAvailableSemaphore.replace();
+		m_RenderFinishedSemaphore.replace();
+
 		for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 		{
 			SafeDelete(m_VertexIndexBufferPairs[i].vertexBuffer);
 			SafeDelete(m_VertexIndexBufferPairs[i].indexBuffer);
 		}
 
-		SafeDelete(m_BrickDiffuseTexture);
-		SafeDelete(m_BrickNormalTexture);
-		SafeDelete(m_BrickSpecularTexture);
-
-		SafeDelete(m_WorkDiffuseTexture);
-		SafeDelete(m_WorkNormalTexture);
-		SafeDelete(m_WorkSpecularTexture);
+		m_DescriptorPool.replace();
+		m_DepthImageView.replace();
+		m_DepthImageMemory.replace();
+		m_DepthImage.replace();
 
 		SafeDelete(m_BlankTexture);
+		SafeDelete(m_SkyboxTexture);
+
+		SafeDelete(m_WorkSpecularTexture);
+		SafeDelete(m_WorkNormalTexture);
+		SafeDelete(m_WorkDiffuseTexture);
+
+		SafeDelete(m_BrickSpecularTexture);
+		SafeDelete(m_BrickNormalTexture);
+		SafeDelete(m_BrickDiffuseTexture);
+
+		// TODO: Call freeCommandBuffers here?
+
+		m_RenderPass.replace();
+
+		m_SwapChain.replace();
+		m_SwapChainImageViews.clear();
+		m_SwapChainFramebuffers.clear();
 
 		vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
@@ -203,8 +206,23 @@ namespace flex
 
 		if (!createInfo->cubeMapFilePaths[0].empty())
 		{
-			CreateVulkanCubemap(createInfo->cubeMapFilePaths, &renderObject->diffuseTexture);
-			renderObject->useCubemapTexture = true;
+			if (m_SkyboxTexture == nullptr)
+			{
+				CreateVulkanCubemap(createInfo->cubeMapFilePaths, &m_SkyboxTexture);
+				renderObject->diffuseTexture = m_SkyboxTexture;
+				renderObject->useCubemapTexture = true;
+			}
+			else // A skybox has already been created
+			{
+				if (createInfo->cubeMapFilePaths[0].compare(m_SkyboxTexture->filePath) == 0)
+				{
+					renderObject->diffuseTexture = m_SkyboxTexture;
+				}
+				else
+				{
+					Logger::LogError("Only one skybox per scene is allowed by the Vulkan renderer! Memory leaks will occur!");
+				}
+			}
 		}
 
 		renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
@@ -1197,7 +1215,7 @@ namespace flex
 
 		VkDeviceSize imageSize = (VkDeviceSize)(textureWidth * textureHeight * 4);
 
-		VulkanBuffer stagingBuffer{ m_VulkanDevice->m_LogicalDevice };
+		VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 
 		CreateAndAllocateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
@@ -1662,7 +1680,7 @@ namespace flex
 
 	void VulkanRenderer::PrepareUniformBuffers()
 	{
-		m_UniformBuffers.resize(m_LoadedShaders.size(), m_VulkanDevice->m_LogicalDevice);
+		m_UniformBuffers.resize(m_LoadedShaders.size(), { m_VulkanDevice->m_LogicalDevice });
 
 		glm::uint shaderIndex = 0;
 
@@ -1714,7 +1732,7 @@ namespace flex
 			}
 
 			m_UniformBuffers[i].dynamicData.size = Uniform::CalculateSize(m_UniformBuffers[i].dynamicData.elements);
-			if (m_UniformBuffers[i].dynamicData.size > 0)
+			if (m_UniformBuffers[i].dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
 				const size_t dynamicBufferSize = AllocateUniformBuffer(
 					m_UniformBuffers[i].dynamicData.size * m_RenderObjects.size(), (void**)&m_UniformBuffers[i].dynamicData.data);

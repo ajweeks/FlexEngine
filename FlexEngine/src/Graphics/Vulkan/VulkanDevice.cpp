@@ -42,7 +42,6 @@ namespace flex
 		return m_LogicalDevice;
 	}
 
-
 	glm::uint VulkanDevice::GetMemoryType(glm::uint typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound)
 	{
 		for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
@@ -72,6 +71,4 @@ namespace flex
 			return 0;
 		}
 	}
-
-
 } // namespace flex
