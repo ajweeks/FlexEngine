@@ -9,6 +9,7 @@
 #include "ShaderUtils.h"
 #include "VDeleter.h"
 #include "VulkanBuffer.h"
+#include "VulkanDevice.h"
 #include "Window/Window.h"
 
 namespace flex
@@ -50,8 +51,8 @@ namespace flex
 		void CreateInstance(const GameContext& gameContext);
 		void SetupDebugCallback();
 		void CreateSurface(Window* window);
-		void PickPhysicalDevice();
-		void CreateLogicalDevice();
+		VkPhysicalDevice PickPhysicalDevice();
+		void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
 		void CreateSwapChain(Window* window);
 		void CreateImageViews();
 		void CreateRenderPass();
@@ -61,26 +62,30 @@ namespace flex
 		void CreateFramebuffers();
 
 		void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture);
+		void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture);
 		void CreateTextureImage(const std::string& filePath, VulkanTexture** texture);
+		void CreateCubemapImage(const std::array<std::string, 6>& filePaths, VulkanTexture** texture);
 		void CreateTextureImageView(VulkanTexture* texture);
 		void CreateTextureSampler(VulkanTexture* texture);
 
 		void CreateVertexBuffers();
-		void CreateVertexBuffer(VulkanBuffer& vertexBuffer, glm::uint shaderIndex);
+		void CreateVertexBuffer(VulkanBuffer* vertexBuffer, glm::uint shaderIndex);
 		void CreateIndexBuffers();
-		void CreateIndexBuffer(VulkanBuffer& indexBuffer, glm::uint shaderIndex);
+		void CreateIndexBuffer(VulkanBuffer* indexBuffer, glm::uint shaderIndex);
 		void PrepareUniformBuffers();
 		void CreateDescriptorPool();
 		glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
-		void PrepareUniformBuffer(VulkanBuffer& buffer, glm::uint bufferSize,
+		void PrepareUniformBuffer(VulkanBuffer* buffer, glm::uint bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 		void CreateDescriptorSet(RenderID renderID);
 
 		void CreateCommandPool();
 		void RebuildCommandBuffers();
 		void CreateCommandBuffers();
+		VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin);
 		void BuildCommandBuffers();
 		bool CheckCommandBuffers();
+		void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free);
 		void DestroyCommandBuffers();
 
 		void CreateSemaphores();
@@ -89,8 +94,9 @@ namespace flex
 		void RecreateSwapChain(Window* window);
 		VkCommandBuffer BeginSingleTimeCommands();
 		void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
-		void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-			VkMemoryPropertyFlags properties, VDeleter<VkImage>& image, VDeleter<VkDeviceMemory>& imageMemory);
+		void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, 
+			VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage>& image, VDeleter<VkDeviceMemory>& imageMemory, 
+			glm::uint arrayLayers = 1, glm::uint mipLevels = 1, VkImageCreateFlags flags = 0);
 		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 		VkFormat FindDepthFormat();
 		bool HasStencilComponent(VkFormat format);
@@ -98,7 +104,7 @@ namespace flex
 		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 		void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
 		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-		void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer& buffer);
+		void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 		void DrawFrame(Window* window);
 		void CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule);
@@ -122,6 +128,7 @@ namespace flex
 			const char* msg, void* userData);
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
+		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);
 
 		RenderObject* GetRenderObject(RenderID renderID);
 
@@ -150,27 +157,23 @@ namespace flex
 		VDeleter<VkDebugReportCallbackEXT> m_Callback{ m_Instance, DestroyDebugReportCallbackEXT };
 		VDeleter<VkSurfaceKHR> m_Surface{ m_Instance, vkDestroySurfaceKHR };
 
-		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
-		VkPhysicalDeviceProperties m_PhysicalDeviceProperties;
-		VDeleter<VkDevice> m_Device{ vkDestroyDevice };
+		VulkanDevice* m_VulkanDevice = nullptr;
 
 		VkQueue m_GraphicsQueue;
 		VkQueue m_PresentQueue;
 
-		VDeleter<VkSwapchainKHR> m_SwapChain{ m_Device, vkDestroySwapchainKHR };
+		VDeleter<VkSwapchainKHR> m_SwapChain; //{ m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
 		std::vector<VkImage> m_SwapChainImages;
 		VkFormat m_SwapChainImageFormat;
 		VkExtent2D m_SwapChainExtent;
 		std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 		std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
-		VDeleter<VkRenderPass> m_RenderPass{ m_Device, vkDestroyRenderPass };
+		VDeleter<VkRenderPass> m_RenderPass; // { m_Device, vkDestroyRenderPass };
 
-		std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts; // { m_Device, vkDestroyDescriptorSetLayout };
+		std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 
-		VDeleter<VkCommandPool> m_CommandPool{ m_Device, vkDestroyCommandPool };
 		std::vector<VkCommandBuffer> m_CommandBuffers;
-
 
 		VulkanTexture* m_BrickDiffuseTexture = nullptr;
 		VulkanTexture* m_BrickNormalTexture = nullptr;
@@ -181,24 +184,28 @@ namespace flex
 		VulkanTexture* m_WorkSpecularTexture = nullptr;
 
 		VulkanTexture* m_BlankTexture = nullptr;
+		//VulkanTexture* m_Skybox = nullptr;
 
+		VDeleter<VkImage> m_DepthImage; // { m_Device, vkDestroyImage };
+		VDeleter<VkDeviceMemory> m_DepthImageMemory;// { m_Device, vkFreeMemory };
+		VDeleter<VkImageView> m_DepthImageView;// { m_Device, vkDestroyImageView };
 
-		VDeleter<VkImage> m_DepthImage{ m_Device, vkDestroyImage };
-		VDeleter<VkDeviceMemory> m_DepthImageMemory{ m_Device, vkFreeMemory };
-		VDeleter<VkImageView> m_DepthImageView{ m_Device, vkDestroyImageView };
+		VDeleter<VkDescriptorPool> m_DescriptorPool; // { m_Device, vkDestroyDescriptorPool };
 
-		VDeleter<VkDescriptorPool> m_DescriptorPool{ m_Device, vkDestroyDescriptorPool };
+		// TODO: Collapse into vector
+		VulkanBuffer* m_VertexBuffer_Simple = nullptr;
+		VulkanBuffer* m_IndexBuffer_Simple = nullptr;
 
-		VulkanBuffer m_VertexBuffer_Simple;
-		VulkanBuffer m_IndexBuffer_Simple;
+		VulkanBuffer* m_VertexBuffer_Color = nullptr;
+		VulkanBuffer* m_IndexBuffer_Color = nullptr;
 
-		VulkanBuffer m_VertexBuffer_Color;
-		VulkanBuffer m_IndexBuffer_Color;
+		VulkanBuffer* m_VertexBuffer_Skybox = nullptr;
+		VulkanBuffer* m_IndexBuffer_Skybox = nullptr;
 
 		glm::uint m_DynamicAlignment;
 
-		VDeleter<VkSemaphore> m_ImageAvailableSemaphore{ m_Device, vkDestroySemaphore };
-		VDeleter<VkSemaphore> m_RenderFinishedSemaphore{ m_Device, vkDestroySemaphore };
+		VDeleter<VkSemaphore> m_ImageAvailableSemaphore; // { m_Device, vkDestroySemaphore };
+		VDeleter<VkSemaphore> m_RenderFinishedSemaphore; // { m_Device, vkDestroySemaphore };
 
 		VkClearColorValue m_ClearColor;
 

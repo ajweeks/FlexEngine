@@ -17,7 +17,7 @@ namespace flex
 		VDeleter(const VDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef);
 		~VDeleter();
 
-		const T* operator &() const;
+		T* operator &();
 		T* replace();
 		operator T() const;
 		void operator=(T rhs);
@@ -64,7 +64,7 @@ namespace flex
 	}
 
 	template<typename T>
-	const T* VDeleter<T>::operator &() const
+	T* VDeleter<T>::operator &()
 	{
 		return &object;
 	}

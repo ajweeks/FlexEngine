@@ -25,3 +25,6 @@ A huge thanks to the following people for their incredibly useful resources:
  - Sascha Willems of [github.com/SaschaWillems/Vulkan](https://github.com/SaschaWillems/Vulkan)
  - Baldur Karlsson of [github.com/baldurk/renderdoc](https://github.com/baldurk/renderdoc)
  - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
+
+## Backlog
+You can see a list of features I'm planning on adding [here](/backlog.md)

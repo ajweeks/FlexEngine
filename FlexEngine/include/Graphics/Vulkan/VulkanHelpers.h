@@ -75,11 +75,24 @@ namespace flex
 		VulkanTexture(const VDeleter<VkDevice>& device);
 
 		VDeleter<VkImage> image;
+		VkImageLayout imageLayout;
 		VDeleter<VkDeviceMemory> imageMemory;
 		VDeleter<VkImageView> imageView;
 		VDeleter<VkSampler> sampler;
+		glm::uint width;
+		glm::uint height;
 		std::string filePath;
 	};
+
+	void SetImageLayout(
+		VkCommandBuffer cmdbuffer,
+		VkImage image,
+		VkImageAspectFlags aspectMask,
+		VkImageLayout oldImageLayout,
+		VkImageLayout newImageLayout,
+		VkImageSubresourceRange subresourceRange,
+		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
 	struct RenderObject
 	{
@@ -100,9 +113,6 @@ namespace flex
 		std::vector<glm::uint>* indices = nullptr;
 		glm::uint indexOffset = 0;
 
-		std::string fragShaderFilePath;
-		std::string vertShaderFilePath;
-
 		glm::uint descriptorSetLayoutIndex;
 
 		glm::uint shaderIndex;
@@ -116,14 +126,17 @@ namespace flex
 		std::string specularTexturePath;
 		VulkanTexture* specularTexture = nullptr;
 
+		bool useCubemapTexture;
+
 		VkDescriptorSet descriptorSet;
+
+		VkCullModeFlagBits cullMode = VK_CULL_MODE_BACK_BIT;
 
 		VDeleter<VkPipelineLayout> pipelineLayout;
 		VDeleter<VkPipeline> graphicsPipeline;
 	};
 
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
-
 
 	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 		const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
