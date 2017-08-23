@@ -12,6 +12,7 @@ namespace flex
 		virtual ~GLRenderer();
 
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
+		virtual void PostInitializeRenderObject(RenderID renderID) override;
 
 		virtual void PostInitialize() override;
 
@@ -47,6 +48,8 @@ namespace flex
 
 		struct RenderObject
 		{
+			RenderObject(RenderID renderID);
+
 			RenderID renderID;
 
 			glm::uint VAO;
@@ -58,7 +61,7 @@ namespace flex
 			glm::uint vertexBuffer;
 			VertexBufferData* vertexBufferData = nullptr;
 
-			bool indexed;
+			bool indexed = false;
 			glm::uint indexBuffer;
 			std::vector<glm::uint>* indices = nullptr;
 
@@ -84,19 +87,19 @@ namespace flex
 
 			glm::uint shaderIndex;
 
-			bool useDiffuseTexture;
+			bool useDiffuseTexture = false;
 			std::string diffuseTexturePath;
 			glm::uint diffuseTextureID;
 
-			bool useSpecularTexture;
+			bool useSpecularTexture = false;
 			std::string specularTexturePath;
 			glm::uint specularTextureID;
 
-			bool useNormalTexture;
+			bool useNormalTexture = false;
 			std::string normalTexturePath;
 			glm::uint normalTextureID;
 
-			bool useCubemapTexture;
+			bool useCubemapTexture = false;
 
 			GLenum cullFace = GL_BACK;
 		};
@@ -104,7 +107,8 @@ namespace flex
 		typedef std::vector<RenderObject*>::iterator RenderObjectIter;
 
 		RenderObject* GetRenderObject(RenderID renderID);
-		RenderObjectIter Destroy(RenderObjectIter iter);
+		RenderID GetFirstAvailableRenderID() const;
+		void InsertNewRenderObject(RenderObject* renderObject);
 		void UnloadShaders();
 		void LoadShaders();
 

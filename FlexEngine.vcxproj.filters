@@ -42,9 +42,6 @@
     <ClCompile Include="FlexEngine\src\Graphics\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlexEngine\src\Scene\BaseScene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FlexEngine\src\Scene\GameObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -111,6 +108,9 @@
     <ClCompile Include="FlexEngine\src\Scene\Scenes\Scene_02.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FlexEngine\src\Scene\Scenes\BaseScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h">
@@ -147,9 +147,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Graphics\Renderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlexEngine\include\Scene\BaseScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Scene\GameObject.h">
@@ -222,6 +219,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Scene\Scenes\Scene_02.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\include\Scene\Scenes\BaseScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

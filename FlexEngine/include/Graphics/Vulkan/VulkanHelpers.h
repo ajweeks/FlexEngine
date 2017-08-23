@@ -96,7 +96,7 @@ namespace flex
 
 	struct RenderObject
 	{
-		RenderObject(const VDeleter<VkDevice>& device);
+		RenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
 
 		VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -113,8 +113,6 @@ namespace flex
 		std::vector<glm::uint>* indices = nullptr;
 		glm::uint indexOffset = 0;
 
-		glm::uint descriptorSetLayoutIndex;
-
 		glm::uint shaderIndex;
 
 		std::string diffuseTexturePath;
@@ -128,6 +126,7 @@ namespace flex
 
 		bool useCubemapTexture;
 
+		glm::uint descriptorSetLayoutIndex;
 		VkDescriptorSet descriptorSet;
 
 		VkCullModeFlagBits cullMode = VK_CULL_MODE_BACK_BIT;

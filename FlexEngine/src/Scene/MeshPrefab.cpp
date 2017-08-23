@@ -678,6 +678,11 @@ namespace flex
 		return m_Transform;
 	}
 
+	RenderID MeshPrefab::GetRenderID() const
+	{
+		return m_RenderID;
+	}
+
 	void MeshPrefab::DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData)
 	{
 		Renderer* renderer = gameContext.renderer;

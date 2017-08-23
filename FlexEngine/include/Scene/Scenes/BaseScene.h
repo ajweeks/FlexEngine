@@ -5,7 +5,7 @@
 
 #include "FreeCamera.h"
 #include "GameContext.h"
-#include "GameObject.h"
+#include "Scene\GameObject.h"
 
 namespace flex
 {
@@ -22,8 +22,8 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext) = 0;
 		virtual void Update(const GameContext& gameContext) = 0;
 
-		void AddChild(GameObject* pGameObject);
-		void RemoveChild(GameObject* pGameObject, bool deleteChild);
+		void AddChild(GameObject* gameObject);
+		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
 
 	private:

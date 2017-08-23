@@ -166,7 +166,7 @@
     <ClCompile Include="FlexEngine\src\Window\GL\GLWindowWrapper.cpp" />
     <ClCompile Include="FlexEngine\src\Window\Vulkan\VulkanWindowWrapper.cpp" />
     <ClCompile Include="FlexEngine\src\Window\Window.cpp" />
-    <ClCompile Include="FlexEngine\src\Scene\BaseScene.cpp" />
+    <ClCompile Include="FlexEngine\src\Scene\Scenes\BaseScene.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\Renderer.cpp" />
     <ClCompile Include="FlexEngine\src\InputManager.cpp" />
     <ClCompile Include="FlexEngine\src\FreeCamera.cpp" />
@@ -188,7 +188,7 @@
     <ClInclude Include="FlexEngine\include\Scene\GameObject.h" />
     <ClInclude Include="FlexEngine\include\Scene\MeshPrefab.h" />
     <ClInclude Include="FlexEngine\include\Transform.h" />
-    <ClInclude Include="FlexEngine\include\Scene\BaseScene.h" />
+    <ClInclude Include="FlexEngine\include\Scene\Scenes\BaseScene.h" />
     <ClInclude Include="FlexEngine\include\FreeCamera.h" />
     <ClInclude Include="FlexEngine\include\Colors.h" />
     <ClInclude Include="FlexEngine\include\GameContext.h" />

@@ -23,6 +23,7 @@ namespace flex
 		virtual void PostInitialize() override;
 
 		virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
+		virtual void PostInitializeRenderObject(RenderID renderID) override;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 		virtual void SetClearColor(float r, float g, float b) override;
@@ -48,6 +49,8 @@ namespace flex
 		virtual void Destroy(RenderID renderID) override;
 
 	private:
+		RenderID GetFirstAvailableRenderID() const;
+		void InsertNewRenderObject(RenderObject* renderObject);
 		void CreateInstance(const GameContext& gameContext);
 		void SetupDebugCallback();
 		void CreateSurface(Window* window);

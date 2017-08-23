@@ -132,6 +132,24 @@ namespace flex
 
 	void TestScene::Update(const GameContext& gameContext)
 	{
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_0))
+		{
+			if (m_Grid)
+			{
+				gameContext.renderer->Destroy(m_Grid->GetRenderID());
+				RemoveChild(m_Grid, true);
+				m_Grid = nullptr;
+			}
+			else
+			{
+				m_Grid = new MeshPrefab();
+				m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+				m_Grid->GetTransform().position.y -= 0.05f;
+				AddChild(m_Grid);
+				gameContext.renderer->PostInitializeRenderObject(m_Grid->GetRenderID());
+			}
+		}
+
 		//const float dt = gameContext.deltaTime;
 		//const float elapsed = gameContext.elapsedTime;
 

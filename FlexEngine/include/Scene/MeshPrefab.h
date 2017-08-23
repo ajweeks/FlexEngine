@@ -44,6 +44,8 @@ namespace flex
 		void SetTransform(const Transform& transform);
 		Transform& GetTransform();
 
+		RenderID GetRenderID() const;
+
 	private:
 		glm::uint CalculateVertexBufferStride() const;
 		void CreateVertexBuffer(VertexBufferData* vertexBufferData);

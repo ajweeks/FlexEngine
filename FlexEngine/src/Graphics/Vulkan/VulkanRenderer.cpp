@@ -143,8 +143,6 @@ namespace flex
 		SafeDelete(m_BrickNormalTexture);
 		SafeDelete(m_BrickDiffuseTexture);
 
-		// TODO: Call freeCommandBuffers here?
-
 		m_RenderPass.replace();
 
 		m_SwapChain.replace();
@@ -162,9 +160,9 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(gameContext);
 
-		RenderID renderID = m_RenderObjects.size();
-		RenderObject* renderObject = new RenderObject(m_VulkanDevice->m_LogicalDevice);
-		m_RenderObjects.push_back(renderObject);
+		RenderID renderID = GetFirstAvailableRenderID();
+		RenderObject* renderObject = new RenderObject(m_VulkanDevice->m_LogicalDevice, renderID);
+		InsertNewRenderObject(renderObject);
 
 		renderObject->vertexBufferData = createInfo->vertexBufferData;
 
@@ -233,6 +231,8 @@ namespace flex
 	void VulkanRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 	{
 		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
+
 		VkPrimitiveTopology vkTopology = TopologyModeToVkPrimitiveTopology(topology);
 
 		if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
@@ -338,18 +338,49 @@ namespace flex
 	{
 		for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 		{
-			if ((*iter)->renderID == renderID)
+			if (*iter && (*iter)->renderID == renderID)
 			{
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &((*iter)->descriptorSet));
+
 				SafeDelete(*iter);
-				iter = m_RenderObjects.erase(iter);
+				m_RenderObjects[renderID] = nullptr;
 				return;
 			}
 		}
 	}
 
+	void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
+	{
+		CreateDescriptorSet(renderID);
+		CreateGraphicsPipeline(renderID);
+	}
+
 	RenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
 	{
 		return m_RenderObjects[renderID];
+	}
+
+	RenderID VulkanRenderer::GetFirstAvailableRenderID() const
+	{
+		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+		{
+			if (!m_RenderObjects[i]) return i;
+		}
+
+		return m_RenderObjects.size();
+	}
+
+	void VulkanRenderer::InsertNewRenderObject(RenderObject* renderObject)
+	{
+		if (renderObject->renderID < m_RenderObjects.size())
+		{
+			assert(m_RenderObjects[renderObject->renderID] == nullptr);
+			m_RenderObjects[renderObject->renderID] = renderObject;
+		}
+		else
+		{
+			m_RenderObjects.push_back(renderObject);
+		}
 	}
 
 	void VulkanRenderer::CreateInstance(const GameContext& gameContext)
@@ -681,7 +712,7 @@ namespace flex
 	void VulkanRenderer::CreateGraphicsPipeline(RenderID renderID)
 	{
 		RenderObject* renderObject = GetRenderObject(renderID);
-
+		if (!renderObject) return;
 
 		Shader shaderCode = m_LoadedShaders[renderObject->shaderIndex];
 		std::vector<char> vertShaderCode = shaderCode.vertexShaderCode;
@@ -1061,6 +1092,7 @@ namespace flex
 		uint8_t *data;
 		VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingMemory, 0, memReqs.size, 0, (void**)&data));
 		memcpy(data, pixels, totalSize);
+		free(pixels);
 		vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingMemory);
 
 		// Create optimal tiled target image
@@ -1317,6 +1349,7 @@ namespace flex
 			for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 			{
 				RenderObject* renderObject = m_RenderObjects[j];
+				if (!renderObject) continue;
 
 				uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 
@@ -1582,7 +1615,7 @@ namespace flex
 		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 		{
 			RenderObject* renderObject = GetRenderObject(i);
-			if (renderObject->shaderIndex == shaderIndex)
+			if (renderObject && renderObject->shaderIndex == shaderIndex)
 			{
 				requiredMemory += renderObject->vertexBufferData->BufferSize;
 			}
@@ -1607,7 +1640,7 @@ namespace flex
 		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 		{
 			RenderObject* renderObject = GetRenderObject(i);
-			if (renderObject->shaderIndex == shaderIndex)
+			if (renderObject && renderObject->shaderIndex == shaderIndex)
 			{
 				renderObject->vertexOffset = vertexCount;
 
@@ -1654,7 +1687,7 @@ namespace flex
 		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 		{
 			RenderObject* renderObject = GetRenderObject(i);
-			if (renderObject->shaderIndex == shaderIndex && renderObject->indexed)
+			if (renderObject && renderObject->shaderIndex == shaderIndex && renderObject->indexed)
 			{
 				renderObject->indexOffset = indices.size();
 				indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -1809,6 +1842,7 @@ namespace flex
 	void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
 	{
 		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
 
 		VkDescriptorSetLayout layouts[] = { m_DescriptorSetLayouts[renderObject->descriptorSetLayoutIndex] };
 		VkDescriptorSetAllocateInfo allocInfo = {};
@@ -2446,6 +2480,7 @@ namespace flex
 		UNREFERENCED_PARAMETER(gameContext);
 
 		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
 
 		const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 

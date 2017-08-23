@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-#include "Scene/BaseScene.h"
+#include "Scene\Scenes\BaseScene.h"
 
-#include <glm/vec3.hpp>
+#include <glm\vec3.hpp>
 
 #include "Scene/GameObject.h"
 #include "Logger.h"
@@ -43,16 +43,16 @@ namespace flex
 		m_Children.push_back(pGameObject);
 	}
 
-	void BaseScene::RemoveChild(GameObject* pGameObject, bool deleteChild)
+	void BaseScene::RemoveChild(GameObject* gameObject, bool deleteChild)
 	{
 		auto iter = m_Children.begin();
 		while (iter != m_Children.end())
 		{
-			if (*iter == pGameObject)
+			if (*iter == gameObject)
 			{
 				if (deleteChild)
 				{
-					delete *iter;
+					SafeDelete(*iter);
 				}
 
 				iter = m_Children.erase(iter);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scene/BaseScene.h"
+#include "Scene/Scenes/BaseScene.h"
 
 #include <vector>
 

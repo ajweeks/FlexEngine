@@ -4,7 +4,7 @@
 
 #include <glm\integer.hpp>
 
-#include "BaseScene.h"
+#include "Scene\Scenes\BaseScene.h"
 #include "GameContext.h"
 
 namespace flex

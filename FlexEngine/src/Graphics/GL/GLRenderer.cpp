@@ -43,10 +43,9 @@ namespace flex
 	{
 		CheckGLErrorMessages();
 
-		auto iter = m_RenderObjects.begin();
-		while (iter != m_RenderObjects.end())
+		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 		{
-			iter = Destroy(iter);
+			Destroy(i);
 			CheckGLErrorMessages();
 		}
 		m_RenderObjects.clear();
@@ -59,11 +58,10 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(gameContext);
 
-		const RenderID renderID = m_RenderObjects.size();
+		const RenderID renderID = GetFirstAvailableRenderID();
 
-		RenderObject* renderObject = new RenderObject();
-		m_RenderObjects.push_back(renderObject);
-		renderObject->renderID = renderID;
+		RenderObject* renderObject = new RenderObject(renderID);
+		InsertNewRenderObject(renderObject);
 		renderObject->shaderIndex = createInfo->shaderIndex;
 
 		glUseProgram(m_LoadedShaders[renderObject->shaderIndex].program);
@@ -163,9 +161,16 @@ namespace flex
 		return renderID;
 	}
 
+	void GLRenderer::PostInitializeRenderObject(RenderID renderID)
+	{
+		UNREFERENCED_PARAMETER(renderID);
+	}
+
 	void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 	{
 		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
+
 		GLenum glMode = TopologyModeToGLMode(topology);
 
 		if (glMode == GL_INVALID_ENUM)
@@ -246,7 +251,7 @@ namespace flex
 			for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 			{
 				RenderObject* renderObject = GetRenderObject(j);
-				if (renderObject->shaderIndex == i)
+				if (renderObject && renderObject->shaderIndex == i)
 				{
 					sortedRenderObjects[i].push_back(renderObject);
 				}
@@ -391,6 +396,8 @@ namespace flex
 	void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
 	{
 		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
+
 		Shader* shader = &m_LoadedShaders[renderObject->shaderIndex];
 
 		glm::mat4 model = renderObject->model;
@@ -567,6 +574,8 @@ namespace flex
 		UNREFERENCED_PARAMETER(gameContext);
 
 		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
+
 		renderObject->model = model;
 	}
 
@@ -587,6 +596,7 @@ namespace flex
 		Renderer::Type renderType, bool normalized, int stride, void* pointer)
 	{
 		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
 
 		glm::uint program = m_LoadedShaders[renderObject->shaderIndex].program;
 
@@ -611,14 +621,18 @@ namespace flex
 
 	void GLRenderer::Destroy(RenderID renderID)
 	{
-		for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
+		RenderObject* renderObject = GetRenderObject(renderID);
+		if (!renderObject) return;
+
+		m_RenderObjects[renderObject->renderID] = nullptr;
+
+		glDeleteBuffers(1, &renderObject->VBO);
+		if (renderObject->indexed)
 		{
-			if ((*iter)->renderID == renderID)
-			{
-				Destroy(iter);
-				return;
-			}
+			glDeleteBuffers(1, &renderObject->IBO);
 		}
+
+		SafeDelete(renderObject);
 	}
 
 	GLuint GLRenderer::BufferTargetToGLTarget(BufferTarget bufferTarget)
@@ -691,20 +705,33 @@ namespace flex
 		return m_RenderObjects[renderID];
 	}
 
-	GLRenderer::RenderObjectIter GLRenderer::Destroy(RenderObjectIter iter)
+	void GLRenderer::InsertNewRenderObject(RenderObject* renderObject)
 	{
-		RenderObject* pRenderObject = *iter;
-		auto newIter = m_RenderObjects.erase(iter);
-
-		glDeleteBuffers(1, &pRenderObject->VBO);
-		if (pRenderObject->indexed)
+		if (renderObject->renderID < m_RenderObjects.size())
 		{
-			glDeleteBuffers(1, &pRenderObject->IBO);
+			assert(m_RenderObjects[renderObject->renderID] == nullptr);
+			m_RenderObjects[renderObject->renderID] = renderObject;
+		}
+		else
+		{
+			m_RenderObjects.push_back(renderObject);
+		}
+	}
+
+	RenderID GLRenderer::GetFirstAvailableRenderID() const
+	{
+		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+		{
+			if (!m_RenderObjects[i]) return i;
 		}
 
-		SafeDelete(pRenderObject);
+		return m_RenderObjects.size();
+	}
 
-		return newIter;
+
+	GLRenderer::RenderObject::RenderObject(RenderID renderID) :
+		renderID(renderID)
+	{
 	}
 } // namespace flex
 

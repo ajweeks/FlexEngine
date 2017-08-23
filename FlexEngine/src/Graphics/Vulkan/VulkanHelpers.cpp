@@ -123,9 +123,10 @@ namespace flex
 	{
 	}
 
-	RenderObject::RenderObject(const VDeleter<VkDevice>& device) :
+	RenderObject::RenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
 		pipelineLayout(device, vkDestroyPipelineLayout),
-		graphicsPipeline(device, vkDestroyPipeline)
+		graphicsPipeline(device, vkDestroyPipeline),
+		renderID(renderID)
 	{
 	}
 
