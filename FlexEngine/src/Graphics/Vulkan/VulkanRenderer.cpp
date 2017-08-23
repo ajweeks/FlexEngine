@@ -26,12 +26,6 @@ namespace flex
 		VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 		CreateLogicalDevice(physicalDevice);
 
-		m_VertexBuffer_Simple = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
-		m_IndexBuffer_Simple = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
-		m_VertexBuffer_Color = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
-		m_IndexBuffer_Color = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
-		m_VertexBuffer_Skybox = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
-		m_IndexBuffer_Skybox = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
 		m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
 		m_RenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 		m_DepthImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
@@ -50,6 +44,16 @@ namespace flex
 		CreateFramebuffers();
 
 		LoadDefaultShaderCode();
+
+		const glm::uint shaderCount = m_LoadedShaders.size();
+		m_VertexIndexBufferPairs.reserve(shaderCount);
+		for (size_t i = 0; i < shaderCount; ++i)
+		{
+			m_VertexIndexBufferPairs.push_back({
+				new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
+				new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
+			});
+		}
 
 		CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_d.png", &m_BrickDiffuseTexture);
 		CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_n.png", &m_BrickNormalTexture);
@@ -128,12 +132,11 @@ namespace flex
 			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, *iter, nullptr);
 		}
 
-		SafeDelete(m_VertexBuffer_Simple);
-		SafeDelete(m_IndexBuffer_Simple);
-		SafeDelete(m_VertexBuffer_Color);
-		SafeDelete(m_IndexBuffer_Color);
-		SafeDelete(m_VertexBuffer_Skybox);
-		SafeDelete(m_IndexBuffer_Skybox);
+		for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+		{
+			SafeDelete(m_VertexIndexBufferPairs[i].vertexBuffer);
+			SafeDelete(m_VertexIndexBufferPairs[i].indexBuffer);
+		}
 
 		SafeDelete(m_BrickDiffuseTexture);
 		SafeDelete(m_BrickNormalTexture);
@@ -1300,32 +1303,11 @@ namespace flex
 				uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 
 				VkDeviceSize offsets[1] = { 0 };
-				if (renderObject->shaderIndex == 0)
-				{
-					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer_Simple->m_Buffer, offsets);
+				vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[renderObject->shaderIndex].vertexBuffer->m_Buffer, offsets);
 
-					if (m_IndexBuffer_Simple->m_Size != 0)
-					{
-						vkCmdBindIndexBuffer(m_CommandBuffers[i], m_IndexBuffer_Simple->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-					}
-				}
-				else if (renderObject->shaderIndex == 1)
+				if (m_VertexIndexBufferPairs[renderObject->shaderIndex].indexBuffer->m_Size != 0)
 				{
-					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer_Color->m_Buffer, offsets);
-
-					if (m_IndexBuffer_Color->m_Size != 0)
-					{
-						vkCmdBindIndexBuffer(m_CommandBuffers[i], m_IndexBuffer_Color->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-					}
-				}
-				else if (renderObject->shaderIndex == 2)
-				{
-					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexBuffer_Skybox->m_Buffer, offsets);
-
-					if (m_IndexBuffer_Skybox->m_Size != 0)
-					{
-						vkCmdBindIndexBuffer(m_CommandBuffers[i], m_IndexBuffer_Skybox->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-					}
+					vkCmdBindIndexBuffer(m_CommandBuffers[i], m_VertexIndexBufferPairs[renderObject->shaderIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 				}
 
 				vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
@@ -1569,9 +1551,10 @@ namespace flex
 
 	void VulkanRenderer::CreateVertexBuffers()
 	{
-		CreateVertexBuffer(m_VertexBuffer_Simple, 0);
-		CreateVertexBuffer(m_VertexBuffer_Color, 1);
-		CreateVertexBuffer(m_VertexBuffer_Skybox, 2);
+		for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+		{
+			CreateVertexBuffer(m_VertexIndexBufferPairs[i].vertexBuffer, i);
+		}
 	}
 
 	void VulkanRenderer::CreateVertexBuffer(VulkanBuffer* vertexBuffer, glm::uint shaderIndex)
@@ -1640,9 +1623,10 @@ namespace flex
 
 	void VulkanRenderer::CreateIndexBuffers()
 	{
-		CreateIndexBuffer(m_IndexBuffer_Simple, 0);
-		CreateIndexBuffer(m_IndexBuffer_Color, 1);
-		CreateIndexBuffer(m_IndexBuffer_Skybox, 2);
+		for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+		{
+			CreateVertexBuffer(m_VertexIndexBufferPairs[i].indexBuffer, i);
+		}
 	}
 
 	void VulkanRenderer::CreateIndexBuffer(VulkanBuffer* indexBuffer, glm::uint shaderIndex)

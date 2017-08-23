@@ -161,7 +161,7 @@ namespace flex
 		VkQueue m_GraphicsQueue;
 		VkQueue m_PresentQueue;
 
-		VDeleter<VkSwapchainKHR> m_SwapChain; //{ m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
+		VDeleter<VkSwapchainKHR> m_SwapChain; //{ m_Device, vkDestroySwapchainKHR };
 		std::vector<VkImage> m_SwapChainImages;
 		VkFormat m_SwapChainImageFormat;
 		VkExtent2D m_SwapChainExtent;
@@ -191,15 +191,13 @@ namespace flex
 
 		VDeleter<VkDescriptorPool> m_DescriptorPool; // { m_Device, vkDestroyDescriptorPool };
 
-		// TODO: Collapse into vector
-		VulkanBuffer* m_VertexBuffer_Simple = nullptr;
-		VulkanBuffer* m_IndexBuffer_Simple = nullptr;
+		struct VertexIndexBufferPair
+		{
+			VulkanBuffer* vertexBuffer = nullptr;
+			VulkanBuffer* indexBuffer = nullptr;
+		};
 
-		VulkanBuffer* m_VertexBuffer_Color = nullptr;
-		VulkanBuffer* m_IndexBuffer_Color = nullptr;
-
-		VulkanBuffer* m_VertexBuffer_Skybox = nullptr;
-		VulkanBuffer* m_IndexBuffer_Skybox = nullptr;
+		std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 
 		glm::uint m_DynamicAlignment;
 
