@@ -1,17 +1,16 @@
 #version 400
 
+uniform vec4 in_CamPos;
 uniform vec4 in_LightDir;
 uniform vec4 in_AmbientColor;
 uniform vec4 in_SpecularColor;
-uniform vec4 in_CamPos;
+uniform bool in_UseDiffuseTexture;
+uniform bool in_UseNormalTexture;
+uniform bool in_UseSpecularTexture;
 
 uniform sampler2D in_DiffuseTexture;
 uniform sampler2D in_SpecularTexture;
 uniform sampler2D in_NormalTexture;
-
-uniform bool in_UseDiffuseTexture;
-uniform bool in_UseNormalTexture;
-uniform bool in_UseSpecularTexture;
 
 in vec3 ex_WorldPos;
 in vec4 ex_Color;

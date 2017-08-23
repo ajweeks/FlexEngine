@@ -5,8 +5,8 @@ uniform mat4 in_ModelInvTranspose;
 
 layout (std140) uniform ViewProjectionUBO
 {
-	uniform mat4 in_View;
-	uniform mat4 in_Projection;
+	mat4 in_View;
+	mat4 in_Projection;
 };
 
 in vec3 in_Position;

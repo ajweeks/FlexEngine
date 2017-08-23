@@ -30,7 +30,7 @@ namespace flex
 		CheckGLErrorMessages();
 
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		glDepthFunc(GL_LEQUAL);
 		CheckGLErrorMessages();
 
 		glEnable(GL_CULL_FACE);
@@ -95,6 +95,7 @@ namespace flex
 			{ Uniform::Type::USE_DIFFUSE_TEXTURE_INT,		&renderObject->uniformIDs.useDiffuseTexture,	"in_UseDiffuseTexture" },
 			{ Uniform::Type::USE_NORMAL_TEXTURE_INT,		&renderObject->uniformIDs.useNormalTexture,		"in_UseNormalTexture" },
 			{ Uniform::Type::USE_SPECULAR_TEXTURE_INT,		&renderObject->uniformIDs.useSpecularTexture,	"in_UseSpecularTexture" },
+			{ Uniform::Type::USE_CUBEMAP_TEXTURE_INT,		&renderObject->uniformIDs.useCubemapTexture,	"in_UseCubemapTexture" },
 		};
 
 		const glm::uint uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
@@ -153,6 +154,7 @@ namespace flex
 		if (!createInfo->cubeMapFilePaths[0].empty())
 		{
 			GenerateCubemapTextures(renderObject->diffuseTextureID, createInfo->cubeMapFilePaths);
+			renderObject->useCubemapTexture = true;
 		}
 
 		glBindVertexArray(0);
@@ -251,7 +253,7 @@ namespace flex
 			}
 		}
 
-		for (size_t i = 0; i < sortedRenderObjects.size() - 1 /*  DON'T RENDER SKY BOX IN THIS LOOP (- 1), do it after TODO make this nicer  */; ++i)
+		for (size_t i = 0; i < sortedRenderObjects.size(); ++i)
 		{
 			Shader* shader = &m_LoadedShaders[i];
 			glUseProgram(shader->program);
@@ -286,59 +288,22 @@ namespace flex
 					}
 				}
 
+				if (renderObject->useCubemapTexture)
+				{
+					glBindTexture(GL_TEXTURE_CUBE_MAP, renderObject->diffuseTextureID);
+				}
+
 				if (renderObject->indexed)
 				{
 					glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 				}
 				else
 				{
-					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->BufferSize);
+					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 				}
 				CheckGLErrorMessages();
 			}
 		}
-
-		// Skybox
-		glUseProgram(m_LoadedShaders[2].program);
-
-		// Truncate translation part to prevent leaving the skybox
-		glm::mat4 view = glm::mat4(glm::mat3(gameContext.camera->GetView()));
-		glm::mat4 projection = gameContext.camera->GetProjection();
-		glm::mat4 viewProjection = projection * view;
-
-		int skyboxViewLocation = glGetUniformLocation(m_LoadedShaders[2].program, "in_ViewProjection");
-		if (skyboxViewLocation == -1) Logger::LogWarning("Couldn't find in_ViewProjection in skybox shader");
-		glUniformMatrix4fv(skyboxViewLocation, 1, false, &viewProjection[0][0]);
-
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::rotate(model, gameContext.elapsedTime * 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
-		//glm::mat4 model = glm::mat4(1.0f);
-
-		int skyboxModelLocation = glGetUniformLocation(m_LoadedShaders[2].program, "in_Model");
-		if (skyboxModelLocation == -1) Logger::LogWarning("Couldn't find in_Model in skybox shader");
-		glUniformMatrix4fv(skyboxModelLocation, 1, false, &model[0][0]);
-
-		glDepthFunc(GL_LEQUAL);
-
-		for (size_t i = 0; i < sortedRenderObjects[2].size(); ++i)
-		{
-			RenderObject* renderObject = sortedRenderObjects[2][i];
-
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Skybox.textureID);
-			glCullFace(renderObject->cullFace);
-
-			if (renderObject->indexed)
-			{
-				glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
-			}
-			else
-			{
-				glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->BufferSize);
-			}
-		}
-
-		glDepthMask(GL_TRUE);
-
 
 		glUseProgram(0);
 		glBindVertexArray(0);
@@ -371,6 +336,7 @@ namespace flex
 		std::vector<std::pair<std::string, std::string>> shaderFilePaths = {
 			{ RESOURCE_LOCATION + "shaders/GLSL/simple.vert", RESOURCE_LOCATION + "shaders/GLSL/simple.frag" },
 			{ RESOURCE_LOCATION + "shaders/GLSL/color.vert", RESOURCE_LOCATION + "shaders/GLSL/color.frag" },
+			// NOTE: Skybox shader should be kept last to keep other objects rendering in front
 			{ RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/skybox.frag" },
 		};
 
@@ -403,7 +369,9 @@ namespace flex
 		// Skybox
 		m_LoadedShaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
 
-		m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type::NONE;
+		m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
+			Uniform::Type::USE_CUBEMAP_TEXTURE_INT |
+			Uniform::Type::MODEL_MAT4);
 		++shaderIndex;
 
 		for (size_t i = 0; i < shaderCount; ++i)
@@ -555,6 +523,13 @@ namespace flex
 			Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
 		{
 			glUniform1i(renderObject->uniformIDs.useSpecularTexture, renderObject->useSpecularTexture);
+			CheckGLErrorMessages();
+		}
+
+		if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::USE_CUBEMAP_TEXTURE_INT) ||
+			Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::USE_CUBEMAP_TEXTURE_INT))
+		{
+			glUniform1i(renderObject->uniformIDs.useCubemapTexture, renderObject->useCubemapTexture);
 			CheckGLErrorMessages();
 		}
 	}

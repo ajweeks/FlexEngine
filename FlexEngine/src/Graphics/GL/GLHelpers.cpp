@@ -39,7 +39,7 @@ namespace flex
 		}
 	}
 
-	GLFWimage LoadGLFWimage(const std::string filePath)
+	GLFWimage LoadGLFWimage(const std::string& filePath)
 	{
 		GLFWimage result = {};
 
@@ -64,7 +64,7 @@ namespace flex
 		SOIL_free_image_data(image.pixels);
 	}
 
-	void GenerateGLTexture(glm::uint VAO, glm::uint& textureID, const std::string filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+	void GenerateGLTexture(glm::uint VAO, glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
 	{
 		glBindVertexArray(VAO);
 

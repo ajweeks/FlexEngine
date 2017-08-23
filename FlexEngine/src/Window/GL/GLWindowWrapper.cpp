@@ -85,8 +85,6 @@ namespace flex
 		m_GameContextRef.renderer->OnWindowSize(width, height);
 	}
 
-#endif // COMPILE_OPEN_GL
-
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 		const GLchar* message, const void* userParam)
 	{
@@ -137,3 +135,5 @@ namespace flex
 		Logger::LogInfo(ss.str());
 	}
 } // namespace flex
+
+#endif // COMPILE_OPEN_GL

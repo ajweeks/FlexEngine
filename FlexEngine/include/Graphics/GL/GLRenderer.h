@@ -78,6 +78,7 @@ namespace flex
 				int useDiffuseTexture;
 				int useNormalTexture;
 				int useSpecularTexture;
+				int useCubemapTexture;
 			};
 			UniformIDs uniformIDs;
 
@@ -94,6 +95,8 @@ namespace flex
 			bool useNormalTexture;
 			std::string normalTexturePath;
 			glm::uint normalTextureID;
+
+			bool useCubemapTexture;
 
 			GLenum cullFace = GL_BACK;
 		};
@@ -145,8 +148,6 @@ namespace flex
 		{
 			glm::uint textureID;
 		};
-
-		Skybox m_Skybox;
 
 		// TODO: Clean up
 		glm::uint viewProjectionUBO;

@@ -26,6 +26,7 @@ namespace flex
 			USE_DIFFUSE_TEXTURE_INT = (1 << 12),
 			USE_NORMAL_TEXTURE_INT = (1 << 13),
 			USE_SPECULAR_TEXTURE_INT = (1 << 14),
+			USE_CUBEMAP_TEXTURE_INT = (1 << 15),
 		};
 
 		static bool HasUniform(Type elements, Type uniform);
