@@ -12,8 +12,10 @@ By supporting three different graphics APIs, I've challenged myself to designed 
 - Diffuse/specular/normal mapping
 - Per-object shader/texture selection
 
-<img src="http://i.imgur.com/CLRQ6tC.jpg" width="48%"/>
-<img src="http://i.imgur.com/sXbc0n5.jpg" width="48%" style="float: right"/>
+<div>
+  <img src="http://i.imgur.com/CLRQ6tC.jpg" width="48%"/>
+  <img src="http://i.imgur.com/sXbc0n5.jpg" width="48%" style="float: right"/>
+</div>
 
 ![](http://i.imgur.com/mz4mlmE.jpg)
 
