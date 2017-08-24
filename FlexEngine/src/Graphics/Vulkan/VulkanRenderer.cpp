@@ -92,16 +92,7 @@ namespace flex
 
 	VulkanRenderer::~VulkanRenderer()
 	{
-		for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
-		{
-			free(m_UniformBuffers[i].constantData.data);
-
-			if (m_UniformBuffers[i].dynamicData.data)
-			{
-				_aligned_free(m_UniformBuffers[i].dynamicData.data);
-			}
-		}
-		m_UniformBuffers.clear();
+		ReleaseUniformBuffers();
 
 		{
 			auto iter = m_RenderObjects.begin();
@@ -1728,6 +1719,11 @@ namespace flex
 
 	void VulkanRenderer::PrepareUniformBuffers()
 	{
+		if (!m_UniformBuffers.empty())
+		{
+			ReleaseUniformBuffers();
+		}
+
 		m_UniformBuffers.resize(m_LoadedShaderCode.size(), { m_VulkanDevice->m_LogicalDevice });
 
 		glm::uint shaderIndex = 0;
@@ -2029,6 +2025,20 @@ namespace flex
 		}
 
 		vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
+	}
+
+	void VulkanRenderer::ReleaseUniformBuffers()
+	{
+		for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
+		{
+			free(m_UniformBuffers[i].constantData.data);
+
+			if (m_UniformBuffers[i].dynamicData.data)
+			{
+				_aligned_free(m_UniformBuffers[i].dynamicData.data);
+			}
+		}
+		m_UniformBuffers.clear();
 	}
 
 	void VulkanRenderer::CreateDescriptorSetLayout(glm::uint shaderIndex)

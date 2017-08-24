@@ -81,6 +81,7 @@ namespace flex
 		void PrepareUniformBuffer(VulkanBuffer* buffer, glm::uint bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 		void CreateDescriptorSet(RenderID renderID);
+		void ReleaseUniformBuffers();
 
 		void CreateCommandPool();
 		void RebuildCommandBuffers();
