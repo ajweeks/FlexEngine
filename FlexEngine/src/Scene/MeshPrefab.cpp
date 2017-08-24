@@ -24,7 +24,13 @@ namespace flex
 	glm::vec3 MeshPrefab::m_DefaultNormal(0.0f, 1.0f, 0.0f);
 	glm::vec2 MeshPrefab::m_DefaultTexCoord(0.0f, 0.0f);
 
-	MeshPrefab::MeshPrefab()
+	MeshPrefab::MeshPrefab() :
+		m_MaterialID(0)
+	{
+	}
+
+	MeshPrefab::MeshPrefab(MaterialID materialID) :
+		m_MaterialID(materialID)
 	{
 	}
 
@@ -120,7 +126,7 @@ namespace flex
 		m_VertexBuffers.push_back({});
 		VertexBufferData* vertexBufferData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
 
-		if (m_ShaderIndex == 1)
+		if (m_MaterialID == 1)
 		{
 			m_Attributes = (glm::uint)VertexBufferData::VertexAttribute::POSITION | (glm::uint)VertexBufferData::VertexAttribute::COLOR;
 		}
@@ -129,10 +135,7 @@ namespace flex
 
 		Renderer::RenderObjectCreateInfo createInfo = {};
 		createInfo.vertexBufferData = vertexBufferData;
-		if (m_UseDiffuse) createInfo.diffuseMapPath = RESOURCE_LOCATION + m_DiffuseTextureFilePath;
-		if (m_UseNormal) createInfo.normalMapPath = RESOURCE_LOCATION + m_NormalTextureFilePath;
-		if (m_UseSpecular) createInfo.specularMapPath = RESOURCE_LOCATION + m_SpecularTextureFilePath;
-		createInfo.shaderIndex = m_ShaderIndex;
+		createInfo.materialID = m_MaterialID;
 
 		m_RenderID = renderer->InitializeRenderObject(gameContext, &createInfo);
 
@@ -149,8 +152,8 @@ namespace flex
 
 		m_VertexBuffers.push_back({});
 		VertexBufferData* vertexBufferData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
-		Renderer::RenderObjectCreateInfo createInfo = {};
-		createInfo.shaderIndex = 0;
+		Renderer::RenderObjectCreateInfo renderObjectCreateInfo = {};
+		renderObjectCreateInfo.materialID = 0;
 
 		Renderer::TopologyMode topologyMode = Renderer::TopologyMode::TRIANGLE_LIST;
 
@@ -158,10 +161,6 @@ namespace flex
 		{
 		case MeshPrefab::PrefabShape::CUBE:
 		{
-			createInfo.diffuseMapPath = RESOURCE_LOCATION + "textures/brick_d.png";
-			createInfo.specularMapPath = RESOURCE_LOCATION + "textures/brick_s.png";
-			createInfo.normalMapPath = RESOURCE_LOCATION + "textures/brick_n.png";
-
 			const std::array<glm::vec4, 6> colors = { Color::RED, Color::RED, Color::RED, Color::RED, Color::RED, Color::RED };
 			m_Positions =
 			{
@@ -395,6 +394,7 @@ namespace flex
 			};
 			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
 
+			renderObjectCreateInfo.materialID = 1;
 		} break;
 		case MeshPrefab::PrefabShape::SKYBOX:
 		{
@@ -456,21 +456,7 @@ namespace flex
 			};
 			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
 
-			createInfo.shaderIndex = 2;
-			createInfo.cullFace = Renderer::CullFace::FRONT;
-
-			const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
-			const std::string fileName = "skybox";
-			const std::string extension = ".jpg";
-
-			createInfo.cubeMapFilePaths = {
-				directory + fileName + "_r" + extension,
-				directory + fileName + "_l" + extension,
-				directory + fileName + "_u" + extension,
-				directory + fileName + "_d" + extension,
-				directory + fileName + "_b" + extension,
-				directory + fileName + "_f" + extension,
-			};
+			renderObjectCreateInfo.materialID = 2;
 
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:
@@ -572,7 +558,7 @@ namespace flex
 		case MeshPrefab::PrefabShape::GRID:
 		{
 			topologyMode = Renderer::TopologyMode::LINE_LIST;
-			createInfo.shaderIndex = 1;
+			renderObjectCreateInfo.materialID = 1;
 
 			float rowWidth = 10.0f;
 			glm::uint lineCount = 15;
@@ -621,9 +607,10 @@ namespace flex
 		}
 
 		CreateVertexBuffer(vertexBufferData);
-		createInfo.vertexBufferData = vertexBufferData;
+		renderObjectCreateInfo.vertexBufferData = vertexBufferData;
+		renderObjectCreateInfo.materialID = m_MaterialID;
 
-		m_RenderID = renderer->InitializeRenderObject(gameContext, &createInfo);
+		m_RenderID = renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
 
 		renderer->SetTopologyMode(m_RenderID, topologyMode);
 		DescribeShaderVariables(gameContext, vertexBufferData);
@@ -649,23 +636,9 @@ namespace flex
 		gameContext.renderer->Destroy(m_RenderID);
 	}
 
-	void MeshPrefab::SetUsedTextures(bool useDiffuse, bool useNormal, bool useSpecular)
+	void MeshPrefab::SetMaterialID(MaterialID materialID)
 	{
-		m_UseDiffuse = useDiffuse;
-		m_UseNormal = useNormal;
-		m_UseSpecular = useSpecular;
-	}
-
-	void MeshPrefab::SetTextureFilePaths(const std::string& diffuseTexture, const std::string& normalTexture, const std::string& specularTexture)
-	{
-		m_DiffuseTextureFilePath = diffuseTexture;
-		m_NormalTextureFilePath = normalTexture;
-		m_SpecularTextureFilePath = specularTexture;
-	}
-
-	void MeshPrefab::SetShaderIndex(glm::uint shaderIndex)
-	{
-		m_ShaderIndex = shaderIndex;
+		m_MaterialID = materialID;
 	}
 
 	void MeshPrefab::SetTransform(const Transform& transform)
@@ -689,7 +662,7 @@ namespace flex
 
 		constexpr size_t vertexTypeCount = 6;
 		std::string names[vertexTypeCount] = { "in_Position", "in_Color", "in_Tangent", "in_Bitangent", "in_Normal", "in_TexCoord" };
-		int sizes[vertexTypeCount] = { 3,             4,          3,            3,              3,           2 };
+		int sizes[vertexTypeCount] =		 { 3,             4,          3,            3,              3,           2 };
 
 		float* currentLocation = (float*)0;
 		for (size_t i = 0; i < vertexTypeCount; ++i)

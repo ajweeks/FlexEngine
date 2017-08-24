@@ -10,4 +10,5 @@ namespace glm
 namespace flex
 {
 	typedef glm::uint RenderID;
+	typedef glm::uint MaterialID;
 } // namespace flex

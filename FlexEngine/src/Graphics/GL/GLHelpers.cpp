@@ -64,10 +64,8 @@ namespace flex
 		SOIL_free_image_data(image.pixels);
 	}
 
-	void GenerateGLTexture(glm::uint VAO, glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+	void GenerateGLTexture(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
 	{
-		glBindVertexArray(VAO);
-
 		glGenTextures(1, &textureID);
 		glBindTexture(GL_TEXTURE_2D, textureID);
 
@@ -100,6 +98,7 @@ namespace flex
 			if (image.pixels)
 			{
 				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
+				CheckGLErrorMessages();
 
 				DestroyGLFWimage(image);
 			}

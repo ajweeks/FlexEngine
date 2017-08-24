@@ -100,7 +100,7 @@ namespace flex
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1) return;
-
+		
 		if (m_CurrentSceneIndex >= sceneCount - 1) m_CurrentSceneIndex = 0;
 		else ++m_CurrentSceneIndex;
 	}

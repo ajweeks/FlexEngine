@@ -18,24 +18,54 @@ namespace flex
 
 	void Scene_02::Initialize(const GameContext& gameContext)
 	{
-		m_Grid = new MeshPrefab();
+		Renderer::MaterialCreateInfo colorMatInfo = {};
+		colorMatInfo.shaderIndex = 1;
+		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
+
+
+		Renderer::MaterialCreateInfo brickMatInfo = {};
+		brickMatInfo.shaderIndex = 0;
+		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
+		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
+		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
+		const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
+
+
+		Renderer::MaterialCreateInfo skyboxMatInfo = {};
+		skyboxMatInfo.cullFace = Renderer::CullFace::FRONT;
+		skyboxMatInfo.shaderIndex = 2;
+
+		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
+		const std::string fileName = "skybox";
+		const std::string extension = ".jpg";
+
+		skyboxMatInfo.cubeMapFilePaths = {
+			directory + fileName + "_r" + extension,
+			directory + fileName + "_l" + extension,
+			directory + fileName + "_u" + extension,
+			directory + fileName + "_d" + extension,
+			directory + fileName + "_b" + extension,
+			directory + fileName + "_f" + extension,
+		};
+		const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
+
+
+		m_Grid = new MeshPrefab(colorMatID);
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 		m_Grid->GetTransform().position.y -= 0.05f;
 		AddChild(m_Grid);
 
-		m_Teapot = new MeshPrefab();
+		m_Teapot = new MeshPrefab(brickMatID);
 		m_Teapot->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/teapot.fbx");
 		m_Teapot->SetTransform(glm::vec3(-5.0f, 0.0f, 0.0f));
 		AddChild(m_Teapot);
 
-		m_Orb = new MeshPrefab();
-		m_Orb->SetTextureFilePaths("textures/work_s.jpg", "textures/work_n.jpg", "textures/work_s.jpg");
-		m_Orb->SetUsedTextures(false, false, false);
+		m_Orb = new MeshPrefab(brickMatID);
 		m_Orb->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/pedestal-object.fbx");
 		m_Orb->SetTransform(glm::vec3(5.0f, 0.0f, 0.0f));
 		AddChild(m_Orb);
 
-		m_Skybox = new MeshPrefab();
+		m_Skybox = new MeshPrefab(skyboxMatID);
 		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 		AddChild(m_Skybox);
 

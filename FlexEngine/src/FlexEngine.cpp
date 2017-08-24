@@ -15,7 +15,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::VULKAN;
+		RendererID preferredInitialRenderer = RendererID::GL;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -208,14 +208,25 @@ namespace flex
 				continue;
 			}
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
-			{
-				m_SceneManager->SetNextSceneActive();
-			}
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET) ||
+				m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
+				{
+				const std::string currentSceneName = m_SceneManager->CurrentScene()->GetName();
+				m_SceneManager->DestroyAllScenes(m_GameContext);
+				if (currentSceneName.compare("TestScene") == 0)
+				{
+					Scene_02* newScene = new Scene_02(m_GameContext);
+					m_SceneManager->AddScene(newScene, m_GameContext);
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
-			{
-				m_SceneManager->SetPreviousSceneActive();
+					m_GameContext.renderer->PostInitialize();
+				}
+				else
+				{
+					TestScene* newScene = new TestScene(m_GameContext);
+					m_SceneManager->AddScene(newScene, m_GameContext);
+
+					m_GameContext.renderer->PostInitialize();
+				}
 			}
 
 			// TODO: Figure out better
@@ -235,7 +246,8 @@ namespace flex
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
-			m_GameContext.renderer->Clear((int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL, m_GameContext);
+			static constexpr int clearFlags = (int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL;
+			m_GameContext.renderer->Clear(clearFlags, m_GameContext);
 			m_SceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.inputManager->Update();
 			m_GameContext.window->Update(m_GameContext);

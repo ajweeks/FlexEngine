@@ -20,6 +20,7 @@ namespace flex
 	{
 	public:
 		MeshPrefab();
+		MeshPrefab(MaterialID materialID);
 		~MeshPrefab();
 
 		enum class PrefabShape
@@ -37,9 +38,7 @@ namespace flex
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void Destroy(const GameContext& gameContext) override;
 
-		void SetUsedTextures(bool useDiffuse, bool useNormal, bool useSpecular);
-		void SetTextureFilePaths(const std::string& diffuseTexture, const std::string& normalTexture, const std::string& specularTexture);
-		void SetShaderIndex(glm::uint shaderIndex);
+		void SetMaterialID(MaterialID materialID);
 
 		void SetTransform(const Transform& transform);
 		Transform& GetTransform();
@@ -53,14 +52,7 @@ namespace flex
 
 		Transform m_Transform;
 		RenderID m_RenderID;
-
-		glm::uint m_ShaderIndex = 0;
-		std::string m_DiffuseTextureFilePath = "textures/brick_d.png";
-		bool m_UseDiffuse = true;
-		std::string m_NormalTextureFilePath = "textures/brick_n.png";
-		bool m_UseNormal = true;
-		std::string m_SpecularTextureFilePath = "textures/brick_s.png";
-		bool m_UseSpecular = true;
+		MaterialID m_MaterialID;
 
 		std::string m_Name;
 

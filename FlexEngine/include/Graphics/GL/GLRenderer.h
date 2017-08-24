@@ -11,6 +11,7 @@ namespace flex
 		GLRenderer(GameContext& gameContext);
 		virtual ~GLRenderer();
 
+		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 		virtual void PostInitializeRenderObject(RenderID renderID) override;
 
@@ -46,6 +47,59 @@ namespace flex
 		static glm::uint TopologyModeToGLMode(TopologyMode topology);
 		static glm::uint CullFaceToGLMode(CullFace cullFace);
 
+		struct Shader
+		{
+			glm::uint program;
+			glm::uint vertexShader;
+			glm::uint fragmentShader;
+
+			Uniform::Type constantBufferUniforms;
+			Uniform::Type dynamicBufferUniforms;
+		};
+
+		std::vector<Shader> m_LoadedShaders;
+
+		struct Material
+		{
+			glm::uint shaderIndex;
+
+			struct UniformIDs
+			{
+				int modelID;
+				int modelInvTranspose;
+				int modelViewProjection;
+				int camPos;
+				int viewDir;
+				int lightDir;
+				int ambientColor;
+				int specularColor;
+				int useDiffuseTexture;
+				int useNormalTexture;
+				int useSpecularTexture;
+				int useCubemapTexture;
+			};
+			UniformIDs uniformIDs;
+
+			bool useDiffuseTexture = false;
+			std::string diffuseTexturePath;
+			glm::uint diffuseTextureID;
+
+			bool useSpecularTexture = false;
+			std::string specularTexturePath;
+			glm::uint specularTextureID;
+
+			bool useNormalTexture = false;
+			std::string normalTexturePath;
+			glm::uint normalTextureID;
+
+			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+			bool useCubemapTexture = false;
+
+			GLenum cullFace = GL_BACK;
+		};
+		
+		std::vector<Material> m_LoadedMaterials;
+
 		struct RenderObject
 		{
 			RenderObject(RenderID renderID);
@@ -67,41 +121,7 @@ namespace flex
 
 			glm::mat4 model;
 
-			// Uniform IDs
-			struct UniformIDs
-			{
-				int modelID;
-				int modelInvTranspose;
-				int modelViewProjection;
-				int camPos;
-				int viewDir;
-				int lightDir;
-				int ambientColor;
-				int specularColor;
-				int useDiffuseTexture;
-				int useNormalTexture;
-				int useSpecularTexture;
-				int useCubemapTexture;
-			};
-			UniformIDs uniformIDs;
-
-			glm::uint shaderIndex;
-
-			bool useDiffuseTexture = false;
-			std::string diffuseTexturePath;
-			glm::uint diffuseTextureID;
-
-			bool useSpecularTexture = false;
-			std::string specularTexturePath;
-			glm::uint specularTextureID;
-
-			bool useNormalTexture = false;
-			std::string normalTexturePath;
-			glm::uint normalTextureID;
-
-			bool useCubemapTexture = false;
-
-			GLenum cullFace = GL_BACK;
+			glm::uint materialID;
 		};
 
 		typedef std::vector<RenderObject*>::iterator RenderObjectIter;
@@ -118,17 +138,6 @@ namespace flex
 
 		bool m_VSyncEnabled;
 
-		struct Shader
-		{
-			glm::uint program;
-			glm::uint vertexShader;
-			glm::uint fragmentShader;
-
-			Uniform::Type constantBufferUniforms;
-			Uniform::Type dynamicBufferUniforms;
-		};
-
-		std::vector<Shader> m_LoadedShaders;
 
 		struct UniformInfo
 		{

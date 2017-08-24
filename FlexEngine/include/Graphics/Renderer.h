@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 
 #include <glm\integer.hpp>
 #include <glm\vec4.hpp>
@@ -10,6 +11,7 @@
 #include "GameContext.h"
 #include "Typedefs.h"
 #include "VertexBufferData.h"
+#include "ShaderUtils.h"
 
 namespace flex
 {
@@ -73,10 +75,15 @@ namespace flex
 			VertexBufferData* vertexBufferData = nullptr;
 			std::vector<glm::uint>* indices = nullptr;
 
+			MaterialID materialID;
+		};
+		
+		struct MaterialCreateInfo
+		{
 			// Leave empty to not use
-			std::string diffuseMapPath;
-			std::string specularMapPath;
-			std::string normalMapPath;
+			std::string diffuseTexturePath;
+			std::string specularTexturePath;
+			std::string normalTexturePath;
 
 			glm::uint shaderIndex;
 
@@ -88,6 +95,7 @@ namespace flex
 
 		virtual void PostInitialize() = 0;
 
+		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
