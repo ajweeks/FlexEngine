@@ -2,9 +2,9 @@
 
 #include <vector>
 
-#include <glm\integer.hpp>
+#include <glm/integer.hpp>
 
-#include "Scene\Scenes\BaseScene.h"
+#include "Scene/Scenes/BaseScene.h"
 #include "GameContext.h"
 
 namespace flex

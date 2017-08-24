@@ -2,7 +2,7 @@
 
 #include <cstdlib>
 
-#include <glm\integer.hpp>
+#include <glm/integer.hpp>
 
 namespace flex
 {

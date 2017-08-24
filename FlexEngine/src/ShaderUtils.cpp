@@ -7,7 +7,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <glad\glad.h>
+#include <glad/glad.h>
 
 #include "Graphics/GL/GLHelpers.h"
 

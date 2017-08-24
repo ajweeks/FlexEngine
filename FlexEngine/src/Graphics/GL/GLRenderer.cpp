@@ -8,8 +8,8 @@
 #include <string>
 #include <utility>
 
-#include <glm\gtc\type_ptr.hpp>
-#include <glm\gtc\matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "FreeCamera.h"
 #include "Graphics/GL/GLHelpers.h"

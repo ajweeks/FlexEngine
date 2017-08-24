@@ -4,7 +4,7 @@
 
 #include <time.h>
 
-#include <glm\gtc\random.hpp>
+#include <glm/gtc/random.hpp>
 
 namespace flex
 {

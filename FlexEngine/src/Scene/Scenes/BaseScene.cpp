@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-#include "Scene\Scenes\BaseScene.h"
+#include "Scene/Scenes/BaseScene.h"
 
-#include <glm\vec3.hpp>
+#include <glm/vec3.hpp>
 
 #include "Scene/GameObject.h"
 #include "Logger.h"

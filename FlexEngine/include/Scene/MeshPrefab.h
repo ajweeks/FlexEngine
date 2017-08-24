@@ -1,15 +1,15 @@
 #pragma once
 
-#include "Scene\GameObject.h"
+#include "Scene/GameObject.h"
 
 #include <vector>
 
-#include <glm\integer.hpp>
-#include <glm\vec2.hpp>
-#include <glm\vec3.hpp>
-#include <glm\vec4.hpp>
+#include <glm/integer.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
-#include <assimp\scene.h>
+#include <assimp/scene.h>
 
 #include "Transform.h"
 #include "VertexBufferData.h"

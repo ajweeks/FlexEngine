@@ -1,7 +1,7 @@
 #pragma once
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
-#include <GLFW\glfw3.h>
+#include <GLFW/glfw3.h>
 
 #include "Window.h"
 

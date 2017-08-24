@@ -3,13 +3,13 @@
 #include <string>
 #include <vector>
 
-#include <glm\vec2.hpp>
-#include <glm\vec3.hpp>
-#include <glm\vec4.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
-#include <assimp\vector2.h>
-#include <assimp\vector3.h>
-#include <assimp\color4.h>
+#include <assimp/vector2.h>
+#include <assimp/vector3.h>
+#include <assimp/color4.h>
 
 namespace flex
 {

@@ -2,13 +2,13 @@
 
 #include <string>
 
-#include <glm\integer.hpp>
+#include <glm/integer.hpp>
 
 #include "GameContext.h"
 #include "FreeCamera.h"
 #include "InputManager.h"
-#include "Scene\SceneManager.h"
-#include "Window\Window.h"
+#include "Scene/SceneManager.h"
+#include "Window/Window.h"
 
 namespace flex
 {

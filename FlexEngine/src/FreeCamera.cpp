@@ -2,11 +2,11 @@
 
 #include "FreeCamera.h"
 
-#include <glm\vec2.hpp>
-#include <glm\gtc\matrix_transform.hpp>
+#include <glm/vec2.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "Logger.h"
-#include "Window\Window.h"
+#include "Window/Window.h"
 
 namespace flex
 {
