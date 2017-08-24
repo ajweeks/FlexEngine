@@ -62,7 +62,6 @@ namespace flex
 		Material mat = {};
 
 		mat.shaderIndex = createInfo->shaderIndex;
-		mat.cullFace = CullFaceToGLMode(createInfo->cullFace);
 		mat.diffuseTexturePath = createInfo->diffuseTexturePath;
 		mat.normalTexturePath = createInfo->normalTexturePath;
 		mat.specularTexturePath = createInfo->specularTexturePath;
@@ -182,6 +181,7 @@ namespace flex
 		RenderObject* renderObject = new RenderObject(renderID);
 		InsertNewRenderObject(renderObject);
 		renderObject->materialID = createInfo->materialID;
+		renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);
 
 		if (m_LoadedMaterials.empty()) Logger::LogError("No materials have been created!");
 		if (renderObject->materialID >= m_LoadedMaterials.size()) Logger::LogError("uninitialized material!");
@@ -332,7 +332,7 @@ namespace flex
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 				CheckGLErrorMessages();
 
-				glCullFace(material->cullFace);
+				glCullFace(renderObject->cullFace);
 
 				UpdatePerObjectUniforms(renderObject->renderID, gameContext);
 

@@ -24,7 +24,6 @@ namespace flex
 
 
 		Renderer::MaterialCreateInfo skyboxMatInfo = {};
-		skyboxMatInfo.cullFace = Renderer::CullFace::FRONT;
 		skyboxMatInfo.shaderIndex = 2;
 
 		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";

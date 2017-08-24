@@ -45,7 +45,7 @@ namespace flex
 
 		LoadDefaultShaderCode();
 
-		const glm::uint shaderCount = m_LoadedShaders.size();
+		const glm::uint shaderCount = m_LoadedShaderCode.size();
 		m_VertexIndexBufferPairs.reserve(shaderCount);
 		for (size_t i = 0; i < shaderCount; ++i)
 		{
@@ -156,6 +156,69 @@ namespace flex
 		glfwTerminate();
 	}
 
+	MaterialID VulkanRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
+	{
+		Material mat = {};
+
+		mat.shaderIndex = createInfo->shaderIndex;
+		mat.diffuseTexturePath = createInfo->diffuseTexturePath;
+		mat.normalTexturePath = createInfo->normalTexturePath;
+		mat.specularTexturePath = createInfo->specularTexturePath;
+		mat.cubeMapFilePaths = createInfo->cubeMapFilePaths;
+		
+		if (createInfo->diffuseTexturePath == m_BrickDiffuseTexture->filePath)
+		{
+			mat.diffuseTexture = m_BrickDiffuseTexture;
+		}
+		else if (createInfo->diffuseTexturePath == m_WorkDiffuseTexture->filePath)
+		{
+			mat.diffuseTexture= m_WorkDiffuseTexture;
+		}
+
+		if (createInfo->normalTexturePath == m_BrickNormalTexture->filePath)
+		{
+			mat.normalTexture = m_BrickNormalTexture;
+		}
+		else if (createInfo->normalTexturePath == m_WorkNormalTexture->filePath)
+		{
+			mat.normalTexture = m_WorkNormalTexture;
+		}
+
+		if (createInfo->specularTexturePath == m_BrickSpecularTexture->filePath)
+		{
+			mat.specularTexture = m_BrickSpecularTexture;
+		}
+		else if (createInfo->specularTexturePath == m_WorkSpecularTexture->filePath)
+		{
+			mat.specularTexture = m_WorkSpecularTexture;
+		}
+
+		if (!createInfo->cubeMapFilePaths[0].empty())
+		{
+			if (m_SkyboxTexture == nullptr)
+			{
+				CreateVulkanCubemap(createInfo->cubeMapFilePaths, &m_SkyboxTexture);
+				mat.diffuseTexture = m_SkyboxTexture;
+				mat.useCubemapTexture = true;
+			}
+			else // A skybox has already been created
+			{
+				if (createInfo->cubeMapFilePaths[0].compare(m_SkyboxTexture->filePath) == 0)
+				{
+					mat.diffuseTexture = m_SkyboxTexture;
+				}
+				else
+				{
+					Logger::LogError("Only one skybox per scene is allowed by the Vulkan renderer! Memory leaks will occur!");
+				}
+			}
+		}
+
+		m_LoadedMaterials.push_back(mat);
+
+		return m_LoadedMaterials.size() - 1;
+	}
+
 	glm::uint VulkanRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
@@ -165,6 +228,7 @@ namespace flex
 		InsertNewRenderObject(renderObject);
 
 		renderObject->vertexBufferData = createInfo->vertexBufferData;
+		renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
 
 		if (createInfo->indices != nullptr)
 		{
@@ -172,59 +236,8 @@ namespace flex
 			renderObject->indexed = true;
 		}
 
-		renderObject->descriptorSetLayoutIndex = createInfo->shaderIndex;
-		renderObject->shaderIndex = createInfo->shaderIndex;
-
-		if (createInfo->diffuseMapPath == m_BrickDiffuseTexture->filePath)
-		{
-			renderObject->diffuseTexture = m_BrickDiffuseTexture;
-		}
-		else if (createInfo->diffuseMapPath == m_WorkDiffuseTexture->filePath)
-		{
-			renderObject->diffuseTexture = m_WorkDiffuseTexture;
-		}
-
-		if (createInfo->normalMapPath == m_BrickNormalTexture->filePath)
-		{
-			renderObject->normalTexture = m_BrickNormalTexture;
-		}
-		else if (createInfo->normalMapPath == m_WorkNormalTexture->filePath)
-		{
-			renderObject->normalTexture = m_WorkNormalTexture;
-		}
-
-		if (createInfo->specularMapPath == m_BrickSpecularTexture->filePath)
-		{
-			renderObject->specularTexture = m_BrickSpecularTexture;
-		}
-		else if (createInfo->specularMapPath == m_WorkSpecularTexture->filePath)
-		{
-			renderObject->specularTexture = m_WorkSpecularTexture;
-		}
-
-		if (!createInfo->cubeMapFilePaths[0].empty())
-		{
-			if (m_SkyboxTexture == nullptr)
-			{
-				CreateVulkanCubemap(createInfo->cubeMapFilePaths, &m_SkyboxTexture);
-				renderObject->diffuseTexture = m_SkyboxTexture;
-				renderObject->useCubemapTexture = true;
-			}
-			else // A skybox has already been created
-			{
-				if (createInfo->cubeMapFilePaths[0].compare(m_SkyboxTexture->filePath) == 0)
-				{
-					renderObject->diffuseTexture = m_SkyboxTexture;
-				}
-				else
-				{
-					Logger::LogError("Only one skybox per scene is allowed by the Vulkan renderer! Memory leaks will occur!");
-				}
-			}
-		}
-
-		renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
-
+		renderObject->materialID = createInfo->materialID;
+		
 		return renderID;
 	}
 
@@ -714,7 +727,8 @@ namespace flex
 		RenderObject* renderObject = GetRenderObject(renderID);
 		if (!renderObject) return;
 
-		Shader shaderCode = m_LoadedShaders[renderObject->shaderIndex];
+		Material* material = &m_LoadedMaterials[renderObject->materialID];
+		ShaderCodePair shaderCode = m_LoadedShaderCode[material->shaderIndex];
 		std::vector<char> vertShaderCode = shaderCode.vertexShaderCode;
 		std::vector<char> fragShaderCode = shaderCode.fragmentShaderCode;
 
@@ -804,7 +818,7 @@ namespace flex
 		colorBlending.blendConstants[2] = 0.0f;
 		colorBlending.blendConstants[3] = 0.0f;
 
-		VkDescriptorSetLayout setLayouts[] = { m_DescriptorSetLayouts[renderObject->descriptorSetLayoutIndex] };
+		VkDescriptorSetLayout setLayouts[] = { m_DescriptorSetLayouts[material->descriptorSetLayoutIndex] };
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 1;
@@ -1348,17 +1362,18 @@ namespace flex
 
 			for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 			{
-				RenderObject* renderObject = m_RenderObjects[j];
+				RenderObject* renderObject = GetRenderObject(j);
 				if (!renderObject) continue;
 
 				uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 
+				Material* material = &m_LoadedMaterials[renderObject->materialID];
 				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[renderObject->shaderIndex].vertexBuffer->m_Buffer, offsets);
+				vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[material->shaderIndex].vertexBuffer->m_Buffer, offsets);
 
-				if (m_VertexIndexBufferPairs[renderObject->shaderIndex].indexBuffer->m_Size != 0)
+				if (m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Size != 0)
 				{
-					vkCmdBindIndexBuffer(m_CommandBuffers[i], m_VertexIndexBufferPairs[renderObject->shaderIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+					vkCmdBindIndexBuffer(m_CommandBuffers[i], m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 				}
 
 				vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
@@ -1615,7 +1630,7 @@ namespace flex
 		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 		{
 			RenderObject* renderObject = GetRenderObject(i);
-			if (renderObject && renderObject->shaderIndex == shaderIndex)
+			if (renderObject && m_LoadedMaterials[renderObject->materialID].shaderIndex == shaderIndex)
 			{
 				requiredMemory += renderObject->vertexBufferData->BufferSize;
 			}
@@ -1640,7 +1655,7 @@ namespace flex
 		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 		{
 			RenderObject* renderObject = GetRenderObject(i);
-			if (renderObject && renderObject->shaderIndex == shaderIndex)
+			if (renderObject && m_LoadedMaterials[renderObject->materialID].shaderIndex == shaderIndex)
 			{
 				renderObject->vertexOffset = vertexCount;
 
@@ -1687,7 +1702,7 @@ namespace flex
 		for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 		{
 			RenderObject* renderObject = GetRenderObject(i);
-			if (renderObject && renderObject->shaderIndex == shaderIndex && renderObject->indexed)
+			if (renderObject && m_LoadedMaterials[renderObject->materialID].shaderIndex == shaderIndex && renderObject->indexed)
 			{
 				renderObject->indexOffset = indices.size();
 				indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -1713,7 +1728,7 @@ namespace flex
 
 	void VulkanRenderer::PrepareUniformBuffers()
 	{
-		m_UniformBuffers.resize(m_LoadedShaders.size(), { m_VulkanDevice->m_LogicalDevice });
+		m_UniformBuffers.resize(m_LoadedShaderCode.size(), { m_VulkanDevice->m_LogicalDevice });
 
 		glm::uint shaderIndex = 0;
 
@@ -1844,7 +1859,8 @@ namespace flex
 		RenderObject* renderObject = GetRenderObject(renderID);
 		if (!renderObject) return;
 
-		VkDescriptorSetLayout layouts[] = { m_DescriptorSetLayouts[renderObject->descriptorSetLayoutIndex] };
+		Material* material = &m_LoadedMaterials[renderObject->materialID];
+		VkDescriptorSetLayout layouts[] = { m_DescriptorSetLayouts[material->descriptorSetLayoutIndex] };
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = m_DescriptorPool;
@@ -1856,8 +1872,8 @@ namespace flex
 
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets;
 
-		Uniform::Type constantBufferElements = m_UniformBuffers[renderObject->shaderIndex].constantData.elements;
-		Uniform::Type dynamicBufferElements = m_UniformBuffers[renderObject->shaderIndex].dynamicData.elements;
+		Uniform::Type constantBufferElements = m_UniformBuffers[material->shaderIndex].constantData.elements;
+		Uniform::Type dynamicBufferElements = m_UniformBuffers[material->shaderIndex].dynamicData.elements;
 
 		glm::uint descriptorSetIndex = 0;
 		glm::uint binding = 0;
@@ -1866,7 +1882,7 @@ namespace flex
 		// TODO: Should that be true?
 
 		VkDescriptorBufferInfo uniformBufferInfo = {};
-		uniformBufferInfo.buffer = m_UniformBuffers[renderObject->shaderIndex].constantBuffer.m_Buffer;
+		uniformBufferInfo.buffer = m_UniformBuffers[material->shaderIndex].constantBuffer.m_Buffer;
 		uniformBufferInfo.range = sizeof(UniformBufferObjectData);
 
 		writeDescriptorSets.push_back({});
@@ -1881,7 +1897,7 @@ namespace flex
 		++binding;
 
 		VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
-		uniformBufferDynamicInfo.buffer = m_UniformBuffers[renderObject->shaderIndex].dynamicBuffer.m_Buffer;
+		uniformBufferDynamicInfo.buffer = m_UniformBuffers[material->shaderIndex].dynamicBuffer.m_Buffer;
 		uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectData) * m_RenderObjects.size();
 
 		writeDescriptorSets.push_back({});
@@ -1900,10 +1916,10 @@ namespace flex
 		{
 			VkDescriptorImageInfo diffuseImageInfo = {};
 			diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			if (renderObject->diffuseTexture)
+			if (material->diffuseTexture)
 			{
-				diffuseImageInfo.imageView = renderObject->diffuseTexture->imageView;
-				diffuseImageInfo.sampler = renderObject->diffuseTexture->sampler;
+				diffuseImageInfo.imageView = material->diffuseTexture->imageView;
+				diffuseImageInfo.sampler = material->diffuseTexture->sampler;
 			}
 			else
 			{
@@ -1928,10 +1944,10 @@ namespace flex
 		{
 			VkDescriptorImageInfo normalImageInfo = {};
 			normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			if (renderObject->normalTexture)
+			if (material->normalTexture)
 			{
-				normalImageInfo.imageView = renderObject->normalTexture->imageView;
-				normalImageInfo.sampler = renderObject->normalTexture->sampler;
+				normalImageInfo.imageView = material->normalTexture->imageView;
+				normalImageInfo.sampler = material->normalTexture->sampler;
 			}
 			else
 			{
@@ -1956,10 +1972,10 @@ namespace flex
 		{
 			VkDescriptorImageInfo specularImageInfo = {};
 			specularImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			if (renderObject->specularTexture)
+			if (material->specularTexture)
 			{
-				specularImageInfo.imageView = renderObject->specularTexture->imageView;
-				specularImageInfo.sampler = renderObject->specularTexture->sampler;
+				specularImageInfo.imageView = material->specularTexture->imageView;
+				specularImageInfo.sampler = material->specularTexture->sampler;
 			}
 			else
 			{
@@ -1984,10 +2000,10 @@ namespace flex
 		{
 			VkDescriptorImageInfo cubemapImageInfo = {};
 			cubemapImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			if (renderObject->diffuseTexture)
+			if (material->diffuseTexture)
 			{
-				cubemapImageInfo.imageView = renderObject->diffuseTexture->imageView;
-				cubemapImageInfo.sampler = renderObject->diffuseTexture->sampler;
+				cubemapImageInfo.imageView = material->diffuseTexture->imageView;
+				cubemapImageInfo.sampler = material->diffuseTexture->sampler;
 			}
 			else
 			{
@@ -2481,15 +2497,16 @@ namespace flex
 
 		RenderObject* renderObject = GetRenderObject(renderID);
 		if (!renderObject) return;
+		Material* material = &m_LoadedMaterials[renderObject->materialID];
 
 		const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 
-		glm::uint useDiffuseTexture = renderObject->diffuseTexture == nullptr ? 0 : 1;
-		glm::uint useNormalTexture = renderObject->normalTexture == nullptr ? 0 : 1;
-		glm::uint useSpecularTexture = renderObject->specularTexture == nullptr ? 0 : 1;
-		glm::uint useCubemapTexture = renderObject->useCubemapTexture ? 1 : 0;
+		glm::uint useDiffuseTexture = material->diffuseTexture == nullptr ? 0 : 1;
+		glm::uint useNormalTexture = material->normalTexture == nullptr ? 0 : 1;
+		glm::uint useSpecularTexture = material->specularTexture == nullptr ? 0 : 1;
+		glm::uint useCubemapTexture = material->useCubemapTexture ? 1 : 0;
 
-		const int uniformBufferIndex = renderObject->shaderIndex;
+		const int uniformBufferIndex = material->shaderIndex;
 		UniformBuffer& uniformBuffer = m_UniformBuffers[uniformBufferIndex];
 
 		glm::uint offset = renderID * uniformBuffer.dynamicData.size;
@@ -2559,11 +2576,11 @@ namespace flex
 		};
 
 		const size_t shaderCount = m_ShaderFilePaths.size();
-		m_LoadedShaders.resize(shaderCount);
+		m_LoadedShaderCode.resize(shaderCount);
 		for (size_t i = 0; i < shaderCount; ++i)
 		{
-			m_LoadedShaders[i].vertexShaderCode = ReadFile(m_ShaderFilePaths[i].vertexShaderFilePath);
-			m_LoadedShaders[i].fragmentShaderCode = ReadFile(m_ShaderFilePaths[i].fragmentShaderFilePath);
+			m_LoadedShaderCode[i].vertexShaderCode = ReadFile(m_ShaderFilePaths[i].vertexShaderFilePath);
+			m_LoadedShaderCode[i].fragmentShaderCode = ReadFile(m_ShaderFilePaths[i].fragmentShaderFilePath);
 		}
 	}
 

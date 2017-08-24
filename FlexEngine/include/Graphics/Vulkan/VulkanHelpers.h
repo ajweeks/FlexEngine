@@ -94,6 +94,57 @@ namespace flex
 		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
+	struct ShaderFilePathPair
+	{
+		std::string vertexShaderFilePath;
+		std::string fragmentShaderFilePath;
+	};
+
+	struct ShaderCodePair
+	{
+		std::vector<char> vertexShaderCode;
+		std::vector<char> fragmentShaderCode;
+	};
+
+	struct Material
+	{
+		glm::uint shaderIndex;
+
+		struct UniformIDs
+		{
+			int modelID;
+			int modelInvTranspose;
+			int modelViewProjection;
+			int camPos;
+			int viewDir;
+			int lightDir;
+			int ambientColor;
+			int specularColor;
+			int useDiffuseTexture;
+			int useNormalTexture;
+			int useSpecularTexture;
+			int useCubemapTexture;
+		};
+		UniformIDs uniformIDs;
+
+		bool useDiffuseTexture = false;
+		std::string diffuseTexturePath;
+		VulkanTexture* diffuseTexture = nullptr;
+
+		bool useNormalTexture = false;
+		std::string normalTexturePath;
+		VulkanTexture* normalTexture = nullptr;
+
+		bool useSpecularTexture = false;
+		std::string specularTexturePath;
+		VulkanTexture* specularTexture = nullptr;
+
+		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+		bool useCubemapTexture = false;
+
+		glm::uint descriptorSetLayoutIndex;
+	};
+
 	struct RenderObject
 	{
 		RenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
@@ -101,6 +152,7 @@ namespace flex
 		VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
 		RenderID renderID;
+		MaterialID materialID;
 
 		glm::uint VAO;
 		glm::uint VBO;
@@ -113,20 +165,6 @@ namespace flex
 		std::vector<glm::uint>* indices = nullptr;
 		glm::uint indexOffset = 0;
 
-		glm::uint shaderIndex;
-
-		std::string diffuseTexturePath;
-		VulkanTexture* diffuseTexture = nullptr;
-
-		std::string normalTexturePath;
-		VulkanTexture* normalTexture = nullptr;
-
-		std::string specularTexturePath;
-		VulkanTexture* specularTexture = nullptr;
-
-		bool useCubemapTexture;
-
-		glm::uint descriptorSetLayoutIndex;
 		VkDescriptorSet descriptorSet;
 
 		VkCullModeFlagBits cullMode = VK_CULL_MODE_BACK_BIT;

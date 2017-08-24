@@ -22,6 +22,7 @@ namespace flex
 
 		virtual void PostInitialize() override;
 
+		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 		virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 		virtual void PostInitializeRenderObject(RenderID renderID) override;
 
@@ -135,6 +136,10 @@ namespace flex
 		RenderObject* GetRenderObject(RenderID renderID);
 
 		std::vector<RenderObject*> m_RenderObjects;
+		std::vector<UniformBuffer> m_UniformBuffers;
+		std::vector<ShaderFilePathPair> m_ShaderFilePaths;
+		std::vector<ShaderCodePair> m_LoadedShaderCode;
+		std::vector<Material> m_LoadedMaterials;
 
 		bool m_VSyncEnabled;
 		bool m_SwapChainNeedsRebuilding;
@@ -208,24 +213,6 @@ namespace flex
 		VDeleter<VkSemaphore> m_RenderFinishedSemaphore; // { m_Device, vkDestroySemaphore };
 
 		VkClearColorValue m_ClearColor;
-
-		// One per shader
-		std::vector<UniformBuffer> m_UniformBuffers;
-
-		struct ShaderFilePath
-		{
-			std::string vertexShaderFilePath;
-			std::string fragmentShaderFilePath;
-		};
-
-		struct Shader
-		{
-			std::vector<char> vertexShaderCode;
-			std::vector<char> fragmentShaderCode;
-		};
-
-		std::vector<ShaderFilePath> m_ShaderFilePaths;
-		std::vector<Shader> m_LoadedShaders;
 
 		VulkanRenderer(const VulkanRenderer&) = delete;
 		VulkanRenderer& operator=(const VulkanRenderer&) = delete;

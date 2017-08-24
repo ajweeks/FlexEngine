@@ -76,6 +76,8 @@ namespace flex
 			std::vector<glm::uint>* indices = nullptr;
 
 			MaterialID materialID;
+
+			CullFace cullFace = CullFace::BACK;
 		};
 		
 		struct MaterialCreateInfo
@@ -86,8 +88,6 @@ namespace flex
 			std::string normalTexturePath;
 
 			glm::uint shaderIndex;
-
-			CullFace cullFace = CullFace::BACK;
 
 			// Leave empty to not use
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT

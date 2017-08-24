@@ -15,7 +15,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::GL;
+		RendererID preferredInitialRenderer = RendererID::VULKAN;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;

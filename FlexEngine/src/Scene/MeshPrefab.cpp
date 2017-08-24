@@ -457,6 +457,7 @@ namespace flex
 			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
 
 			renderObjectCreateInfo.materialID = 2;
+			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
 
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:

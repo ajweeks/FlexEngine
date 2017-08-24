@@ -94,8 +94,6 @@ namespace flex
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 			bool useCubemapTexture = false;
-
-			GLenum cullFace = GL_BACK;
 		};
 		
 		std::vector<Material> m_LoadedMaterials;
@@ -111,6 +109,7 @@ namespace flex
 			glm::uint IBO;
 
 			GLenum topology = GL_TRIANGLES;
+			GLenum cullFace = GL_BACK;
 
 			glm::uint vertexBuffer;
 			VertexBufferData* vertexBufferData = nullptr;
