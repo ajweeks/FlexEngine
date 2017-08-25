@@ -97,6 +97,12 @@ namespace flex
 			gameContext.engineInstance->Stop();
 			return;
 		}
+
+		// ImGUI
+		ImGuiIO& io = ImGui::GetIO();
+
+		// Hide OS mouse cursor if ImGui is drawing it
+		glfwSetInputMode(m_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 	}
 
 
@@ -132,6 +138,12 @@ namespace flex
 		window->KeyCallback(inputKey, inputAction, inputMods);
 	}
 
+	void GLFWCharCallback(GLFWwindow* glfwWindow, unsigned int character)
+	{
+		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+		window->CharCallback(character);
+	}
+
 	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
@@ -164,6 +176,12 @@ namespace flex
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->WindowSizeCallback(width, height);
+	}
+
+	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height)
+	{
+		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+		window->FrameBufferSizeCallback(width, height);
 	}
 
 	InputManager::Action GLFWActionToInputManagerAction(int glfwAction)

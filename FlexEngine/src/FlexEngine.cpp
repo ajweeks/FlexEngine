@@ -2,6 +2,8 @@
 
 #include "FlexEngine.h"
 
+#include <imgui.h>
+
 #include "FreeCamera.h"
 #include "Logger.h"
 #include "Scene/SceneManager.h"
@@ -15,7 +17,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::VULKAN;
+		RendererID preferredInitialRenderer = RendererID::GL;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -42,10 +44,11 @@ namespace flex
 		}
 #endif
 
-		Logger::LogInfo(std::to_string(m_RendererCount) + " renderers enabled");
-		Logger::LogInfo("Current renderer: " + RenderIDToString(m_RendererIndex));
-		Logger::Assert(m_RendererCount != 0, "At least one renderer must be enabled! (see stdafx.h)");
+		m_RendererName = RenderIDToString(m_RendererIndex);
 
+		Logger::LogInfo(std::to_string(m_RendererCount) + " renderers enabled");
+		Logger::LogInfo("Current renderer: " + m_RendererName);
+		Logger::Assert(m_RendererCount != 0, "At least one renderer must be enabled! (see stdafx.h)");
 	}
 
 	FlexEngine::~FlexEngine()
@@ -71,10 +74,17 @@ namespace flex
 		m_GameContext.inputManager = new InputManager();
 
 		m_GameContext.renderer->PostInitialize();
+
+		m_GameContext.renderer->ImGui_Init(m_Window);
+
+		ImGuiIO& io = ImGui::GetIO();
+		io.MouseDrawCursor = false;
 	}
 
 	void FlexEngine::Destroy()
 	{
+		m_GameContext.renderer->ImGui_Shutdown();
+
 		if (m_SceneManager) m_SceneManager->DestroyAllScenes(m_GameContext);
 		SafeDelete(m_SceneManager);
 		SafeDelete(m_GameContext.inputManager);
@@ -169,7 +179,8 @@ namespace flex
 			if (m_RendererIndex == RendererID::GL) break;
 #endif
 		}
-		Logger::LogInfo("Current renderer: " + RenderIDToString(m_RendererIndex));
+		m_RendererName = RenderIDToString(m_RendererIndex);
+		Logger::LogInfo("Current renderer: " + m_RendererName);
 
 		InitializeWindowAndRenderer();
 		
@@ -194,6 +205,11 @@ namespace flex
 
 			m_GameContext.window->PollEvents();
 
+			// Call as early as possible in the frame
+			m_GameContext.renderer->ImGui_NewFrame(m_GameContext);
+
+			m_GameContext.inputManager->PostImGuiUpdate(m_GameContext);
+
 			// TODO: Bring keybindings out to external file (or at least variables)
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 			{
@@ -210,7 +226,7 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET) ||
 				m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
-				{
+			{
 				const std::string currentSceneName = m_SceneManager->CurrentScene()->GetName();
 				m_SceneManager->DestroyAllScenes(m_GameContext);
 				if (currentSceneName.compare("TestScene") == 0)
@@ -255,6 +271,54 @@ namespace flex
 
 			m_GameContext.renderer->Update(m_GameContext);
 			m_GameContext.renderer->Draw(m_GameContext);
+
+			bool windowOpen = true;
+			ImGui::Begin("", &windowOpen);
+			{
+				const std::string rendStr("Current renderer: " + m_RendererName);
+				ImGui::Text(rendStr.c_str());
+				if (ImGui::TreeNode("Scene info"))
+				{
+					const std::string sceneCountStr("Scene count: " + std::to_string(m_SceneManager->GetSceneCount()));
+					ImGui::Text(sceneCountStr.c_str());
+					const std::string currentSceneStr("Current scene: " + m_SceneManager->CurrentScene()->GetName());
+					ImGui::Text(currentSceneStr.c_str());
+					const glm::uint objectCount = m_GameContext.renderer->GetRenderObjectCount();
+					const glm::uint objectCapacity = m_GameContext.renderer->GetRenderObjectCapacity();
+					const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
+					ImGui::Text(objectCountStr.c_str());
+
+					if (ImGui::TreeNode("Objects"))
+					{
+						std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
+						m_GameContext.renderer->GetRenderObjectInfos(renderObjectInfos);
+						Logger::Assert(renderObjectInfos.size() == objectCount);
+						int i = 0;
+						for (Renderer::RenderObjectInfo& info : renderObjectInfos)
+						{
+							const std::string objectName(info.name + "##" + std::to_string(i));
+							if (ImGui::TreeNode(objectName.c_str()))
+							{
+								const std::string materialName("Mat: " + info.materialName);
+								ImGui::Text(materialName.c_str());
+								ImGui::TreePop();
+							}
+							++i;
+						}
+						ImGui::TreePop();
+					}
+
+					ImGui::TreePop();
+				}
+			}
+			ImGui::End();
+
+			//static bool open = true;
+			//ImGui::ShowTestWindow(&open);
+
+			// Call as late in the frame as possible
+			ImGui::Render();
+
 			m_GameContext.renderer->SwapBuffers(m_GameContext);
 		}
 	}

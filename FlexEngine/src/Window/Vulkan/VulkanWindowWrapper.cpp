@@ -30,11 +30,14 @@ namespace flex
 		glfwSetWindowUserPointer(m_Window, this);
 
 		glfwSetKeyCallback(m_Window, GLFWKeyCallback);
+		glfwSetCharCallback(m_Window, GLFWCharCallback);
 		glfwSetMouseButtonCallback(m_Window, GLFWMouseButtonCallback);
 		glfwSetCursorPosCallback(m_Window, VulkanCursorPosCallback);
-		glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
 		glfwSetScrollCallback(m_Window, GLFWScrollCallback);
 		glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
+		glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
+		glfwSetFramebufferSizeCallback(m_Window, GLFWFramebufferSizeCallback);
+		glfwSetCharCallback(m_Window, GLFWCharCallback);
 
 		glfwSetWindowPos(m_Window, pos.x, pos.y);
 
@@ -49,6 +52,13 @@ namespace flex
 	void VulkanWindowWrapper::SetSize(int width, int height)
 	{
 		m_Size = glm::vec2i(width, height);
+		m_GameContextRef.renderer->OnWindowSize(width, height);
+	}
+
+	void VulkanWindowWrapper::SetFrameBufferSize(int width, int height)
+	{
+		m_FrameBufferSize = glm::vec2i(width, height);
+		// TODO: Call OnFrameBufferSize here?
 		m_GameContextRef.renderer->OnWindowSize(width, height);
 	}
 

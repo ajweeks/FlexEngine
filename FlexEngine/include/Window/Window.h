@@ -31,6 +31,8 @@ namespace flex
 
 		glm::vec2i GetSize() const;
 		virtual void SetSize(int width, int height) = 0;
+		glm::vec2i GetFrameBufferSize() const;
+		virtual void SetFrameBufferSize(int width, int height) = 0;
 		bool HasFocus() const;
 
 		void SetTitleString(const std::string& title);
@@ -45,20 +47,24 @@ namespace flex
 
 		// Callbacks
 		virtual void KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, int mods);
+		virtual void CharCallback(unsigned int character);
 		virtual void MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods);
 		virtual void WindowFocusCallback(int focused);
 		virtual void CursorPosCallback(double x, double y);
 		virtual void ScrollCallback(double xoffset, double yoffset);
 		virtual void WindowSizeCallback(int width, int height);
+		virtual void FrameBufferSizeCallback(int width, int height);
 	protected:
 
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 		friend void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods);
+		friend void GLFWCharCallback(GLFWwindow* glfwWindow, unsigned int character);
 		friend void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods);
 		friend void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused);
 		friend void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 		friend void GLFWScrollCallback(GLFWwindow* glfwWindow, double xoffset, double yoffset);
 		friend void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
+		friend void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height);
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN
 
 #if COMPILE_D3D
@@ -80,6 +86,7 @@ namespace flex
 
 		std::string m_TitleString;
 		glm::vec2i m_Size;
+		glm::vec2i m_FrameBufferSize;
 		bool m_HasFocus;
 
 		bool m_ShowFPSInWindowTitle;

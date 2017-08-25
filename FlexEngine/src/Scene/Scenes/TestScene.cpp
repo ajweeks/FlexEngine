@@ -4,6 +4,8 @@
 
 #include <glm/vec3.hpp>
 
+#include <imgui.h>
+
 namespace flex
 {
 	TestScene::TestScene(const GameContext& gameContext) :
@@ -20,10 +22,12 @@ namespace flex
 	{
 		Renderer::MaterialCreateInfo colorMatInfo = {};
 		colorMatInfo.shaderIndex = 1;
+		colorMatInfo.name = "Color";
 		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
 
 
 		Renderer::MaterialCreateInfo skyboxMatInfo = {};
+		skyboxMatInfo.name = "Skybox";
 		skyboxMatInfo.shaderIndex = 2;
 
 		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
@@ -43,6 +47,7 @@ namespace flex
 
 		Renderer::MaterialCreateInfo brickMatInfo = {};
 		brickMatInfo.shaderIndex = 0;
+		brickMatInfo.name = "Brick";
 		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
 		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
 		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
@@ -51,6 +56,7 @@ namespace flex
 
 		Renderer::MaterialCreateInfo workMatInfo = {};
 		workMatInfo.shaderIndex = 0;
+		workMatInfo.name = "Work";
 		workMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/work_d.jpg";
 		workMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/work_s.jpg";
 		workMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/work_n.jpg";
@@ -112,31 +118,31 @@ namespace flex
 
 		float spacing = 14.0f;
 
-		m_TransformManipulator_1 = new MeshPrefab(brickMatID);
+		m_TransformManipulator_1 = new MeshPrefab(brickMatID, "Transform 1");
 		m_TransformManipulator_1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_1->GetTransform().position.x = -spacing * 2.0f;
 		m_TransformManipulator_1->GetTransform().position.z = -spacing * 1.0f;
 		AddChild(m_TransformManipulator_1);
 		
-		m_TransformManipulator_2 = new MeshPrefab(workMatID);
+		m_TransformManipulator_2 = new MeshPrefab(workMatID, "Transform 2");
 		m_TransformManipulator_2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_2->GetTransform().position.x = -spacing;
 		m_TransformManipulator_2->GetTransform().position.z = -spacing * 0.5f;
 		AddChild(m_TransformManipulator_2);
 		
-		m_TransformManipulator_3 = new MeshPrefab(brickMatID);
+		m_TransformManipulator_3 = new MeshPrefab(brickMatID, "Transform 3");
 		m_TransformManipulator_3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_3->GetTransform().position.x = 0.0f;
 		m_TransformManipulator_3->GetTransform().position.z = 0.0f;
 		AddChild(m_TransformManipulator_3);
 		
-		m_TransformManipulator_4 = new MeshPrefab(workMatID);
+		m_TransformManipulator_4 = new MeshPrefab(workMatID, "Transform 4");
 		m_TransformManipulator_4->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_4->GetTransform().position.x = spacing;
 		m_TransformManipulator_4->GetTransform().position.z = spacing * 0.5f;
 		AddChild(m_TransformManipulator_4);
 		
-		m_TransformManipulator_5 = new MeshPrefab(brickMatID);
+		m_TransformManipulator_5 = new MeshPrefab(brickMatID, "Transform 5");
 		m_TransformManipulator_5->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_5->GetTransform().position.x = spacing * 2.0f;
 		m_TransformManipulator_5->GetTransform().position.z = spacing * 1.0f;

@@ -149,6 +149,8 @@ namespace flex
 
 	MaterialID VulkanRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		Material mat = {};
 
 		mat.shaderIndex = createInfo->shaderIndex;

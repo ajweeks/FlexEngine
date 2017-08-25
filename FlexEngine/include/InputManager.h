@@ -184,15 +184,17 @@ namespace flex
 		~InputManager();
 
 		void Update();
+		void PostImGuiUpdate(const GameContext& gameContext);
 		void PostUpdate();
 
 		int GetKeyDown(KeyCode keyCode) const;
 		bool GetKeyPressed(KeyCode keyCode) const;
 
 		void CursorPosCallback(double x, double y);
-		void MouseButtonCallback(GameContext& gameContext, MouseButton button, Action action, int mods);
+		void MouseButtonCallback(const GameContext& gameContext, MouseButton button, Action action, int mods);
 		void ScrollCallback(double xOffset, double yOffset);
 		void KeyCallback(KeyCode keycode, Action action, int mods);
+		void CharCallback(unsigned int character);
 
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
@@ -202,6 +204,8 @@ namespace flex
 		float GetVerticalScrollDistance() const;
 
 		void ClearAllInputs(const GameContext& gameContext);
+		void ClearMouseInput(const GameContext& gameContext);
+		void ClearKeyboadInput(const GameContext& gameContext);
 
 	private:
 		std::map<KeyCode, Key> m_Keys;

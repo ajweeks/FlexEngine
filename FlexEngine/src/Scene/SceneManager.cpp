@@ -119,6 +119,11 @@ namespace flex
 		return m_Scenes[m_CurrentSceneIndex];
 	}
 
+	glm::uint SceneManager::GetSceneCount() const
+	{
+		return m_Scenes.size();
+	}
+
 	void SceneManager::DestroyAllScenes(const GameContext& gameContext)
 	{
 		auto iter = m_Scenes.begin();

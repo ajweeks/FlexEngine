@@ -20,11 +20,13 @@ namespace flex
 	{
 		Renderer::MaterialCreateInfo colorMatInfo = {};
 		colorMatInfo.shaderIndex = 1;
+		colorMatInfo.name = "Color";
 		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
 
 
 		Renderer::MaterialCreateInfo brickMatInfo = {};
 		brickMatInfo.shaderIndex = 0;
+		brickMatInfo.name = "Brick";
 		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
 		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
 		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
@@ -33,6 +35,7 @@ namespace flex
 
 		Renderer::MaterialCreateInfo skyboxMatInfo = {};
 		skyboxMatInfo.shaderIndex = 2;
+		skyboxMatInfo.name = "Skybox";
 
 		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
 		const std::string fileName = "skybox";

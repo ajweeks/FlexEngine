@@ -70,11 +70,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Debug;$(SolutionDir)FlexEngine\dependencies\soil\Debug;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\soil\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -147,6 +147,18 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="FlexEngine\dependencies\imgui\imgui.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="FlexEngine\dependencies\imgui\imgui_demo.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="FlexEngine\dependencies\imgui\imgui_draw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="FlexEngine\src\FlexEngine.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\D3D\D3DHelpers.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\GL\GLHelpers.cpp" />
@@ -184,6 +196,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FlexEngine\dependencies\glad\include\glad\glad.h" />
+    <ClInclude Include="FlexEngine\dependencies\imgui\imconfig.h" />
+    <ClInclude Include="FlexEngine\dependencies\imgui\imgui.h" />
+    <ClInclude Include="FlexEngine\dependencies\imgui\imgui_internal.h" />
+    <ClInclude Include="FlexEngine\dependencies\imgui\stb_rect_pack.h" />
+    <ClInclude Include="FlexEngine\dependencies\imgui\stb_textedit.h" />
+    <ClInclude Include="FlexEngine\dependencies\imgui\stb_truetype.h" />
     <ClInclude Include="FlexEngine\include\Graphics\GL\GLHelpers.h" />
     <ClInclude Include="FlexEngine\include\Graphics\D3D\D3DRenderer.h" />
     <ClInclude Include="FlexEngine\include\Graphics\GL\GLRenderer.h" />

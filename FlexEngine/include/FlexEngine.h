@@ -52,6 +52,7 @@ namespace flex
 		bool m_VSyncEnabled;
 
 		RendererID m_RendererIndex;
+		std::string m_RendererName;
 
 		bool m_Running;
 

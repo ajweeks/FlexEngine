@@ -2,6 +2,8 @@
 
 #include "Window/Window.h"
 
+#include <imgui.h>
+
 #include "Helpers.h"
 #include "Logger.h"
 
@@ -10,6 +12,7 @@ namespace flex
 	Window::Window(const std::string& title, glm::vec2 size, GameContext& gameContext) :
 		m_TitleString(title),
 		m_Size(size),
+		m_FrameBufferSize(size),
 		m_ShowFPSInWindowTitle(true),
 		m_ShowMSInWindowTitle(true),
 		m_GameContextRef(gameContext),
@@ -67,6 +70,11 @@ namespace flex
 		return m_Size;
 	}
 
+	glm::vec2i Window::GetFrameBufferSize() const
+	{
+		return m_FrameBufferSize;
+	}
+
 	bool Window::HasFocus() const
 	{
 		return m_HasFocus;
@@ -79,9 +87,12 @@ namespace flex
 
 	std::string Window::GenerateWindowTitle(float dt)
 	{
+		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
 		if (m_ShowMSInWindowTitle) result += "   " + FloatToString(dt, 3) + " ms";
-		if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(1.0f / dt, 0) + " FPS ";
+		if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable rolling average
+		//if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(1.0f / dt, 0) + " FPS ";
+
 		return result;
 	}
 
@@ -117,6 +128,11 @@ namespace flex
 		m_GameContextRef.inputManager->KeyCallback(keycode, action, mods);
 	}
 
+	void Window::CharCallback(unsigned int character)
+	{
+		m_GameContextRef.inputManager->CharCallback(character);
+	}
+
 	void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods)
 	{
 		m_GameContextRef.inputManager->MouseButtonCallback(m_GameContextRef, mouseButton, action, mods);
@@ -140,5 +156,10 @@ namespace flex
 	void Window::WindowSizeCallback(int width, int height)
 	{
 		SetSize(width, height);
+	}
+
+	void Window::FrameBufferSizeCallback(int width, int height)
+	{
+		SetFrameBufferSize(width, height);
 	}
 } // namespace flex

@@ -44,10 +44,12 @@ namespace flex
 
 	void GLFWErrorCallback(int error, const char* description);
 	void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods);
+	void GLFWCharCallback(GLFWwindow* glfwWindow, unsigned int character);
 	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods);
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused);
 	void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
+	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height);
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN

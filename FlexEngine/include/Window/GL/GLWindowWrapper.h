@@ -12,6 +12,7 @@ namespace flex
 		virtual ~GLWindowWrapper();
 
 		virtual void SetSize(int width, int height) override;
+		virtual void SetFrameBufferSize(int width, int height) override;
 
 	private:
 

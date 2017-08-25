@@ -13,6 +13,7 @@ namespace flex
 		virtual ~VulkanWindowWrapper();
 
 		virtual void SetSize(int width, int height) override;
+		virtual void SetFrameBufferSize(int width, int height) override;
 
 	private:
 		static void VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);

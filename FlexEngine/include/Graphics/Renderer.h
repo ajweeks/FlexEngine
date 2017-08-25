@@ -70,8 +70,19 @@ namespace flex
 			TRIANGLE_FAN
 		};
 
+		// Info that stays consistent across all renderers
+		struct RenderObjectInfo
+		{
+			std::string name;
+			std::string materialName;
+
+			// Parent, children, etc.
+		};
+
 		struct RenderObjectCreateInfo
 		{
+			std::string name;
+
 			VertexBufferData* vertexBufferData = nullptr;
 			std::vector<glm::uint>* indices = nullptr;
 
@@ -82,6 +93,8 @@ namespace flex
 		
 		struct MaterialCreateInfo
 		{
+			std::string name;
+
 			// Leave empty to not use
 			std::string diffuseTexturePath;
 			std::string specularTexturePath;
@@ -114,13 +127,23 @@ namespace flex
 
 		virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) = 0;
 
-		virtual int GetShaderUniformLocation(RenderID program, const std::string& uniformName) = 0;
+		virtual int GetShaderUniformLocation(glm::uint program, const std::string& uniformName) = 0;
 		virtual void SetUniform1f(int location, float val) = 0;
+
+		virtual glm::uint GetRenderObjectCount() const = 0;
+		virtual glm::uint GetRenderObjectCapacity() const = 0;
 
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
 			int stride, void* pointer) = 0;
 
 		virtual void Destroy(RenderID renderID) = 0;
+
+		virtual void GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec) = 0;
+
+		// ImGUI functions
+		virtual void ImGui_Init(Window* window) = 0;
+		virtual void ImGui_NewFrame(const GameContext& gameContext) = 0;
+		virtual void ImGui_Shutdown() = 0;
 
 		struct SceneInfo
 		{

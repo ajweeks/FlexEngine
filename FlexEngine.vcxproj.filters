@@ -111,6 +111,15 @@
     <ClCompile Include="FlexEngine\src\Scene\Scenes\BaseScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FlexEngine\dependencies\imgui\imgui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FlexEngine\dependencies\imgui\imgui_demo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FlexEngine\dependencies\imgui\imgui_draw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h">
@@ -222,6 +231,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Scene\Scenes\BaseScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\dependencies\imgui\imgui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\dependencies\imgui\imgui_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\dependencies\imgui\stb_rect_pack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\dependencies\imgui\stb_truetype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\dependencies\imgui\stb_textedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\dependencies\imgui\imconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

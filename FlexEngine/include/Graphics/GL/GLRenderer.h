@@ -3,6 +3,8 @@
 
 #include "Graphics/Renderer.h"
 
+#include <imgui.h>
+
 namespace flex
 {
 	class GLRenderer : public Renderer
@@ -32,13 +34,27 @@ namespace flex
 
 		virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
-		virtual int GetShaderUniformLocation(RenderID program, const std::string& uniformName) override;
+		virtual int GetShaderUniformLocation(glm::uint program, const std::string& uniformName) override;
 		virtual void SetUniform1f(int location, float val) override;
+
+		virtual glm::uint GetRenderObjectCount() const override;
+		virtual glm::uint GetRenderObjectCapacity() const override;
 
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
 			Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
 		virtual void Destroy(RenderID renderID) override;
+
+		virtual void GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec) override;
+
+		// ImGUI functions
+		virtual void ImGui_Init(Window* window) override;
+		virtual void ImGui_NewFrame(const GameContext& gameContext) override;
+		virtual void ImGui_Shutdown() override;
+
+		// Use if you want to reset your rendering device without losing ImGui state.
+		IMGUI_API void ImGui_InvalidateDeviceObjects();
+		IMGUI_API bool ImGui_CreateDeviceObjects();
 
 	private:
 		static glm::uint BufferTargetToGLTarget(BufferTarget bufferTarget);
@@ -46,6 +62,9 @@ namespace flex
 		static glm::uint UsageFlagToGLUsageFlag(UsageFlag usage);
 		static glm::uint TopologyModeToGLMode(TopologyMode topology);
 		static glm::uint CullFaceToGLMode(CullFace cullFace);
+
+		// ImGUI private member functions
+		bool ImGui_CreateFontsTexture();
 
 		struct Shader
 		{
@@ -61,6 +80,8 @@ namespace flex
 
 		struct Material
 		{
+			std::string name;
+
 			glm::uint shaderIndex;
 
 			struct UniformIDs
@@ -100,9 +121,11 @@ namespace flex
 
 		struct RenderObject
 		{
-			RenderObject(RenderID renderID);
+			RenderObject(RenderID renderID, std::string name = "");
 
 			RenderID renderID;
+
+			RenderObjectInfo info;
 
 			glm::uint VAO;
 			glm::uint VBO;
@@ -168,6 +191,17 @@ namespace flex
 		GLRenderer(const GLRenderer&) = delete;
 		GLRenderer& operator=(const GLRenderer&) = delete;
 	};
+
+
+	void ImGui_RenderDrawLists(ImDrawData* draw_data);
+	//static GLFWwindow*  g_Window = NULL;
+	static GLuint       g_FontTexture = 0;
+	static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
+	static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
+	static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
+	static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
+
+
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL

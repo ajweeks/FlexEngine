@@ -27,6 +27,7 @@ namespace flex
 		void SetPreviousSceneActive();
 
 		BaseScene* CurrentScene() const;
+		glm::uint GetSceneCount() const;
 
 		void DestroyAllScenes(const GameContext& gameContext);
 

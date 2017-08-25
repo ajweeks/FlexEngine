@@ -13,3 +13,6 @@
 [submodule "FlexEngine/dependencies/assimp"]
 	path = FlexEngine/dependencies/assimp
 	url = https://github.com/assimp/assimp
+[submodule "FlexEngine/dependencies/imgui"]
+	path = FlexEngine/dependencies/imgui
+	url = https://github.com/ocornut/imgui

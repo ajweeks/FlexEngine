@@ -19,8 +19,8 @@ namespace flex
 	class MeshPrefab : public GameObject
 	{
 	public:
-		MeshPrefab();
-		MeshPrefab(MaterialID materialID);
+		MeshPrefab(const std::string& name = "");
+		MeshPrefab(MaterialID materialID, const std::string& name = "");
 		~MeshPrefab();
 
 		enum class PrefabShape
@@ -54,6 +54,7 @@ namespace flex
 		RenderID m_RenderID;
 		MaterialID m_MaterialID;
 
+		static std::string m_DefaultName;
 		std::string m_Name;
 
 		std::vector<VertexBufferData> m_VertexBuffers;

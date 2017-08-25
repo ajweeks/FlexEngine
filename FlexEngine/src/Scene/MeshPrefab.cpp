@@ -17,6 +17,7 @@
 
 namespace flex
 {
+	std::string MeshPrefab::m_DefaultName = "Game Object";
 	glm::vec4 MeshPrefab::m_DefaultColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 	glm::vec3 MeshPrefab::m_DefaultTangent(1.0f, 0.0f, 0.0f);
@@ -24,14 +25,16 @@ namespace flex
 	glm::vec3 MeshPrefab::m_DefaultNormal(0.0f, 1.0f, 0.0f);
 	glm::vec2 MeshPrefab::m_DefaultTexCoord(0.0f, 0.0f);
 
-	MeshPrefab::MeshPrefab() :
-		m_MaterialID(0)
+	MeshPrefab::MeshPrefab(const std::string& name) :
+		MeshPrefab(0, name)
 	{
 	}
 
-	MeshPrefab::MeshPrefab(MaterialID materialID) :
-		m_MaterialID(materialID)
+	MeshPrefab::MeshPrefab(MaterialID materialID, const std::string& name) :
+		m_MaterialID(materialID),
+		m_Name(name)
 	{
+		if (m_Name.empty()) m_Name = m_DefaultName;
 	}
 
 	MeshPrefab::~MeshPrefab()
@@ -65,7 +68,8 @@ namespace flex
 
 		aiMesh* mesh = pScene->mMeshes[0];
 
-		m_Name = mesh->mName.C_Str();
+		std::string meshName(mesh->mName.C_Str());
+		if (!meshName.empty()) m_Name = meshName;
 
 		const size_t numVerts = mesh->mNumVertices;
 
@@ -136,6 +140,7 @@ namespace flex
 		Renderer::RenderObjectCreateInfo createInfo = {};
 		createInfo.vertexBufferData = vertexBufferData;
 		createInfo.materialID = m_MaterialID;
+		createInfo.name = m_Name;
 
 		m_RenderID = renderer->InitializeRenderObject(gameContext, &createInfo);
 
@@ -395,6 +400,7 @@ namespace flex
 			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
 
 			renderObjectCreateInfo.materialID = 1;
+			renderObjectCreateInfo.name = "Cube";
 		} break;
 		case MeshPrefab::PrefabShape::SKYBOX:
 		{
@@ -458,6 +464,7 @@ namespace flex
 
 			renderObjectCreateInfo.materialID = 2;
 			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
+			renderObjectCreateInfo.name = "Skybox";
 
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:
@@ -555,12 +562,11 @@ namespace flex
 				m_Indices.push_back(a);
 				m_Indices.push_back(b);
 			}
+
+			renderObjectCreateInfo.name = "UV Sphere";
 		} break;
 		case MeshPrefab::PrefabShape::GRID:
 		{
-			topologyMode = Renderer::TopologyMode::LINE_LIST;
-			renderObjectCreateInfo.materialID = 1;
-
 			float rowWidth = 10.0f;
 			glm::uint lineCount = 15;
 
@@ -599,6 +605,10 @@ namespace flex
 				m_Colors.push_back(color);
 				m_Colors.push_back(color);
 			}
+
+			topologyMode = Renderer::TopologyMode::LINE_LIST;
+			renderObjectCreateInfo.materialID = 1;
+			renderObjectCreateInfo.name = "Grid";
 		} break;
 		default:
 		{
@@ -610,6 +620,7 @@ namespace flex
 		CreateVertexBuffer(vertexBufferData);
 		renderObjectCreateInfo.vertexBufferData = vertexBufferData;
 		renderObjectCreateInfo.materialID = m_MaterialID;
+		if (!m_Name.empty() && m_Name.compare(m_DefaultName) != 0) renderObjectCreateInfo.name = m_Name;
 
 		m_RenderID = renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
 
