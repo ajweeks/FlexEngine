@@ -311,7 +311,7 @@ namespace flex
 		UpdateUniformBufferDynamic(gameContext, renderID, model);
 	}
 
-	int VulkanRenderer::GetShaderUniformLocation(glm::uint program, const std::string uniformName)
+	int VulkanRenderer::GetShaderUniformLocation(glm::uint program, const std::string& uniformName)
 	{
 		// TODO: Implement
 		UNREFERENCED_PARAMETER(program);

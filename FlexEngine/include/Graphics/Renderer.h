@@ -114,7 +114,7 @@ namespace flex
 
 		virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) = 0;
 
-		virtual int GetShaderUniformLocation(RenderID program, const std::string uniformName) = 0;
+		virtual int GetShaderUniformLocation(RenderID program, const std::string& uniformName) = 0;
 		virtual void SetUniform1f(int location, float val) = 0;
 
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,

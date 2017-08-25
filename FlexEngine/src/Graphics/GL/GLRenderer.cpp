@@ -643,7 +643,7 @@ namespace flex
 		renderObject->model = model;
 	}
 
-	int GLRenderer::GetShaderUniformLocation(glm::uint program, const std::string uniformName)
+	int GLRenderer::GetShaderUniformLocation(glm::uint program, const std::string& uniformName)
 	{
 		int uniformLocation = glGetUniformLocation(program, uniformName.c_str());
 		CheckGLErrorMessages();

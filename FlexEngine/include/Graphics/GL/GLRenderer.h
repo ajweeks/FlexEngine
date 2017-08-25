@@ -32,7 +32,7 @@ namespace flex
 
 		virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
-		virtual int GetShaderUniformLocation(RenderID program, const std::string uniformName) override;
+		virtual int GetShaderUniformLocation(RenderID program, const std::string& uniformName) override;
 		virtual void SetUniform1f(int location, float val) override;
 
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
