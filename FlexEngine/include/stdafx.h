@@ -4,7 +4,6 @@
 
 #define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 1
-#define COMPILE_D3D 0
 
 #pragma warning(disable : 4201)
 #pragma warning(disable : 4820)
@@ -44,67 +43,6 @@ void _CheckGLErrorMessages(const char *file, int line);
 
 
 #endif // COMPILE_OPEN_GL
-
-#if COMPILE_D3D
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
-#include <d3d11.h>
-	#pragma comment(lib, "d3d11.lib")
-	#include <d3dcompiler.h>
-	#pragma comment(lib, "d3dcompiler.lib")
-
-	#include "d3dx11effect.h"
-	#if defined(DEBUG) || defined(_DEBUG)
-		#pragma comment(lib, "DxEffects11_vc14_Debug.lib")
-	#else 
-		#pragma comment(lib, "DxEffects11_vc14_Release.lib")
-	#endif
-
-	// DirectXTK
-	#include "CommonStates.h"
-	#include "DDSTextureLoader.h"
-	#include "DirectXHelpers.h"
-	#include "Effects.h"
-	#include "GamePad.h"
-	#include "GeometricPrimitive.h"
-	#include "GraphicsMemory.h"
-	#include "Keyboard.h"
-	#include "Model.h"
-	#include "Mouse.h"
-	#include "PrimitiveBatch.h"
-	#include "ScreenGrab.h"
-	#include "SimpleMath.h"
-	#include "SpriteBatch.h"
-	#include "SpriteFont.h"
-	#include "VertexTypes.h"
-	#include "WICTextureLoader.h"
-#pragma warning(pop)
-
-	#include "Graphics/D3D/D3DRenderer.h"
-	#include "Window/D3D/D3DWindowWrapper.h"
-
-	namespace DX
-	{
-		inline void ThrowIfFailed(HRESULT hr)
-		{
-			if (FAILED(hr))
-			{
-				// Set a breakpoint on this line to catch DirectX API errors
-				throw std::exception();
-			}
-		}
-	}
-
-	template<class Interface>
-	inline void SafeRelease(Interface &pInterfaceToRelease)
-	{
-		if (pInterfaceToRelease != 0)
-		{
-			pInterfaceToRelease->Release();
-			pInterfaceToRelease = 0;
-		}
-	}
-#endif // COMPILE_D3D
-
 
 template<class T>
 inline void SafeDelete(T &pObjectToDelete)

@@ -18,12 +18,6 @@
     <ClCompile Include="FlexEngine\dependencies\glad\src\glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlexEngine\src\Graphics\D3D\D3DHelpers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FlexEngine\src\Graphics\D3D\D3DRenderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FlexEngine\src\Graphics\GL\GLHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -46,9 +40,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FlexEngine\src\Scene\SceneManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FlexEngine\src\Window\D3D\D3DWindowWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FlexEngine\src\Window\GL\GLWindowWrapper.cpp">
@@ -131,12 +122,6 @@
     <ClInclude Include="FlexEngine\dependencies\glad\include\glad\glad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FlexEngine\include\Graphics\D3D\D3DHelpers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlexEngine\include\Graphics\D3D\D3DRenderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FlexEngine\include\Graphics\GL\GLHelpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -162,9 +147,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Scene\SceneManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlexEngine\include\Window\D3D\D3DWindowWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Window\GL\GLWindowWrapper.h">

@@ -26,7 +26,6 @@ namespace flex
 		enum class RendererID
 		{
 			VULKAN,
-			D3D,
 			GL,
 
 			_LAST_ELEMENT

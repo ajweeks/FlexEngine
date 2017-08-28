@@ -22,13 +22,6 @@ namespace flex
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
 
-#if COMPILE_D3D
-		++m_RendererCount;
-		if (m_RendererIndex == RendererID::_LAST_ELEMENT || preferredInitialRenderer == RendererID::D3D)
-		{
-			m_RendererIndex = RendererID::D3D;
-		}
-#endif
 #if COMPILE_OPEN_GL
 		++m_RendererCount;
 		if (m_RendererIndex == RendererID::_LAST_ELEMENT || preferredInitialRenderer == RendererID::GL)
@@ -124,15 +117,6 @@ namespace flex
 			m_GameContext.renderer = glRenderer;
 		}
 #endif
-#if COMPILE_D3D
-		if (m_RendererIndex == RendererID::D3D)
-		{
-			D3DWindowWrapper* d3dWindow = new D3DWindowWrapper("Flex Engine - Direct3D", windowSize, windowPos, m_GameContext);
-			m_Window = d3dWindow;
-			D3DRenderer* d3dRenderer = new D3DRenderer(m_GameContext);
-			m_GameContext.renderer = d3dRenderer;
-		}
-#endif
 
 		m_Window->SetUpdateWindowTitleFrequency(0.4f);
 
@@ -160,7 +144,6 @@ namespace flex
 		switch (rendererID)
 		{
 		case RendererID::VULKAN: return "Vulkan";
-		case RendererID::D3D: return "D3D";
 		case RendererID::GL: return "Open GL";
 		case RendererID::_LAST_ELEMENT:  // Fallthrough
 		default:
@@ -179,9 +162,6 @@ namespace flex
 
 #if COMPILE_VULKAN
 			if (m_RendererIndex == RendererID::VULKAN) break;
-#endif
-#if COMPILE_D3D
-			if (m_RendererIndex == RendererID::D3D) break;
 #endif
 #if COMPILE_OPEN_GL
 			if (m_RendererIndex == RendererID::GL) break;

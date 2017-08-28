@@ -160,13 +160,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="FlexEngine\src\FlexEngine.cpp" />
-    <ClCompile Include="FlexEngine\src\Graphics\D3D\D3DHelpers.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\GL\GLHelpers.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanBuffer.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanDevice.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanHelpers.cpp" />
     <ClCompile Include="FlexEngine\src\Helpers.cpp" />
-    <ClCompile Include="FlexEngine\src\Graphics\D3D\D3DRenderer.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\GL\GLRenderer.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\Vulkan\VulkanRenderer.cpp" />
     <ClCompile Include="FlexEngine\src\Scene\GameObject.cpp" />
@@ -178,7 +176,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="FlexEngine\src\Window\D3D\D3DWindowWrapper.cpp" />
     <ClCompile Include="FlexEngine\src\Window\GLFWWindowWrapper.cpp" />
     <ClCompile Include="FlexEngine\src\Window\GL\GLWindowWrapper.cpp" />
     <ClCompile Include="FlexEngine\src\Window\Vulkan\VulkanWindowWrapper.cpp" />
@@ -203,7 +200,6 @@
     <ClInclude Include="FlexEngine\dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="FlexEngine\dependencies\imgui\stb_truetype.h" />
     <ClInclude Include="FlexEngine\include\Graphics\GL\GLHelpers.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\D3D\D3DRenderer.h" />
     <ClInclude Include="FlexEngine\include\Graphics\GL\GLRenderer.h" />
     <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanDevice.h" />
     <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanHelpers.h" />
@@ -224,7 +220,6 @@
     <ClInclude Include="FlexEngine\include\Typedefs.h" />
     <ClInclude Include="FlexEngine\include\InputManager.h" />
     <ClInclude Include="FlexEngine\include\VertexBufferData.h" />
-    <ClInclude Include="FlexEngine\include\Window\D3D\D3DWindowWrapper.h" />
     <ClInclude Include="FlexEngine\include\Window\GLFWWindowWrapper.h" />
     <ClInclude Include="FlexEngine\include\Window\Vulkan\VulkanWindowWrapper.h" />
     <ClInclude Include="FlexEngine\include\Window\Window.h" />
@@ -234,7 +229,6 @@
     <ClInclude Include="FlexEngine\include\Window\GL\GLWindowWrapper.h" />
     <ClInclude Include="FlexEngine\include\Scene\SceneManager.h" />
     <ClInclude Include="FlexEngine\include\Scene\Scenes\TestScene.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\D3D\D3DHelpers.h" />
     <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VDeleter.h" />
     <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanBuffer.h" />
     <ClInclude Include="FlexEngine\include\Scene\Scenes\Scene_02.h" />
