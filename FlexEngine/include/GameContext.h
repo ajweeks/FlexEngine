@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Window/Monitor.h"
+
 namespace flex
 {
 	class Window;
@@ -15,6 +17,7 @@ namespace flex
 		InputManager* inputManager;
 		Renderer* renderer;
 		FlexEngine* engineInstance;
+		Monitor monitor;
 
 		float elapsedTime;
 		float deltaTime;

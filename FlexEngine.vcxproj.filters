@@ -233,5 +233,8 @@
     <ClInclude Include="FlexEngine\dependencies\imgui\imconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FlexEngine\include\Window\Monitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -64,15 +64,15 @@ namespace flex
 			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 			CheckGLErrorMessages();
 
-			//GLint flags;
-			//glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-			//if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
-			//{
-			//	glEnable(GL_DEBUG_OUTPUT);
-			//	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-			//	glDebugMessageCallback(glDebugOutput, nullptr);
-			//	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-			//}
+			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
+
+			gameContext.monitor.width = vidMode->width;
+			gameContext.monitor.height = vidMode->height;
+			gameContext.monitor.redBits = vidMode->redBits;
+			gameContext.monitor.greenBits = vidMode->greenBits;
+			gameContext.monitor.blueBits = vidMode->blueBits;
+			gameContext.monitor.refreshRate = vidMode->refreshRate;
 
 			const std::string glVersion(reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 			Logger::LogInfo("OpenGL Version: " + glVersion);

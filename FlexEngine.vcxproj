@@ -221,6 +221,7 @@
     <ClInclude Include="FlexEngine\include\InputManager.h" />
     <ClInclude Include="FlexEngine\include\VertexBufferData.h" />
     <ClInclude Include="FlexEngine\include\Window\GLFWWindowWrapper.h" />
+    <ClInclude Include="FlexEngine\include\Window\Monitor.h" />
     <ClInclude Include="FlexEngine\include\Window\Vulkan\VulkanWindowWrapper.h" />
     <ClInclude Include="FlexEngine\include\Window\Window.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />

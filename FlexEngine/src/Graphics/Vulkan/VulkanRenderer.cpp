@@ -414,10 +414,9 @@ namespace flex
 			ImGui_InitResources();
 		}
 
-		void VulkanRenderer::ImGui_Shutdown()
+		void VulkanRenderer::ImGui_ReleaseRenderObjects()
 		{
 			ImGui_InvalidateDeviceObjects();
-			ImGui::Shutdown();
 		}
 
 		void VulkanRenderer::ImGui_NewFrame(const GameContext& gameContext)
@@ -567,7 +566,6 @@ namespace flex
 				vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
 				m_ImGuiPipelineCache = VK_NULL_HANDLE;
 			}
-
 		}
 
 		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
@@ -711,6 +709,8 @@ namespace flex
 			appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 			appInfo.apiVersion = VK_API_VERSION_1_0;
 
+			Logger::LogInfo("Vulkan Version: 1.0.0");
+			
 			VkInstanceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			createInfo.pApplicationInfo = &appInfo;

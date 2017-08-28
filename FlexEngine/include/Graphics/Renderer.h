@@ -144,7 +144,7 @@ namespace flex
 		virtual void ImGui_Init(const GameContext& gameContext) = 0;
 		virtual void ImGui_NewFrame(const GameContext& gameContext) = 0;
 		virtual void ImGui_Render() = 0;
-		virtual void ImGui_Shutdown() = 0;
+		virtual void ImGui_ReleaseRenderObjects() = 0;
 
 		struct SceneInfo
 		{

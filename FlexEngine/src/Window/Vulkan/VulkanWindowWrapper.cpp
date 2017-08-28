@@ -45,6 +45,17 @@ namespace flex
 
 			glfwFocusWindow(m_Window);
 			m_HasFocus = true;
+
+			// TODO: Move duplicated code between glfw window classes to consolidated functions
+			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
+
+			gameContext.monitor.width = vidMode->width;
+			gameContext.monitor.height = vidMode->height;
+			gameContext.monitor.redBits = vidMode->redBits;
+			gameContext.monitor.greenBits = vidMode->greenBits;
+			gameContext.monitor.blueBits = vidMode->blueBits;
+			gameContext.monitor.refreshRate = vidMode->refreshRate;
 		}
 
 		VulkanWindowWrapper::~VulkanWindowWrapper()

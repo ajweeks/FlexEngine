@@ -74,6 +74,13 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 
+		// Scale correctly on high DPI monitors
+		// TODO: Handle more cleanly
+		if (m_GameContext.monitor.width > 1920.0f)
+		{
+			io.FontGlobalScale = 2.0f;
+		}
+
 		ImGuiStyle& imGuiStyle = ImGui::GetStyle();
 		imGuiStyle.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
 		imGuiStyle.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
@@ -84,7 +91,8 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
-		m_GameContext.renderer->ImGui_Shutdown();
+		m_GameContext.renderer->ImGui_ReleaseRenderObjects();
+		ImGui::Shutdown();
 
 		if (m_SceneManager) m_SceneManager->DestroyAllScenes(m_GameContext);
 		SafeDelete(m_SceneManager);
@@ -153,6 +161,7 @@ namespace flex
 
 	void FlexEngine::CycleRenderer()
 	{
+		m_GameContext.renderer->ImGui_ReleaseRenderObjects();
 		m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
 		DestroyWindowAndRenderer();
 

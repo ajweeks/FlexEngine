@@ -61,7 +61,7 @@ namespace flex
 			virtual void ImGui_Init(const GameContext& gameContext) override;
 			virtual void ImGui_NewFrame(const GameContext& gameContext) override;
 			virtual void ImGui_Render() override;
-			virtual void ImGui_Shutdown() override;
+			virtual void ImGui_ReleaseRenderObjects() override;
 
 		private:
 			void ImGui_InitResources();

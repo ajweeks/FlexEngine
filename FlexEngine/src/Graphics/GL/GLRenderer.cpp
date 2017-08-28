@@ -928,10 +928,9 @@ namespace flex
 			ImGui::Render();
 		}
 
-		void GLRenderer::ImGui_Shutdown()
+		void GLRenderer::ImGui_ReleaseRenderObjects()
 		{
 			ImGui_InvalidateDeviceObjects();
-			ImGui::Shutdown();
 		}
 
 		bool GLRenderer::ImGui_CreateDeviceObjects()
