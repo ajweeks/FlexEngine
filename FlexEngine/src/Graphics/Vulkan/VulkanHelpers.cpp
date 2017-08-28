@@ -149,7 +149,7 @@ namespace flex
 
 	} // namespace Vulkan
 
-	UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device) :
+	VulkanUniformBuffer::VulkanUniformBuffer(const VDeleter<VkDevice>& device) :
 		constantBuffer(device),
 		dynamicBuffer(device)
 	{

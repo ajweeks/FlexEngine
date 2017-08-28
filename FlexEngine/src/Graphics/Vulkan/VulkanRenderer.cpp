@@ -153,7 +153,7 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(gameContext);
 
-		Material mat = {};
+		VulkanMaterial mat = {};
 
 		mat.shaderIndex = createInfo->shaderIndex;
 		mat.name = createInfo->name;
@@ -781,7 +781,7 @@ namespace flex
 
 	void VulkanRenderer::CreateLogicalDevice(VkPhysicalDevice physicalDevice)
 	{
-		QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
+		VulkanQueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
@@ -849,7 +849,7 @@ namespace flex
 
 	void VulkanRenderer::CreateSwapChain(Window* window)
 	{
-		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_VulkanDevice->m_PhysicalDevice);
+		VulkanSwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_VulkanDevice->m_PhysicalDevice);
 
 		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
 		VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes);
@@ -872,7 +872,7 @@ namespace flex
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		QueueFamilyIndices indices = FindQueueFamilies(m_VulkanDevice->m_PhysicalDevice);
+		VulkanQueueFamilyIndices indices = FindQueueFamilies(m_VulkanDevice->m_PhysicalDevice);
 		uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
 
 		if (indices.graphicsFamily != indices.presentFamily)
@@ -1023,7 +1023,7 @@ namespace flex
 	{
 		RenderObject* renderObject = GetRenderObject(renderID);
 		if (!renderObject) return;
-		Material* material = &m_LoadedMaterials[renderObject->materialID];
+		VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 
 		VkPipelineLayout* pipelineLayout = renderObject->pipelineLayout.replace();
 		VkPipeline* graphicsPipeline = renderObject->graphicsPipeline.replace();
@@ -1044,7 +1044,7 @@ namespace flex
 
 	void VulkanRenderer::CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo)
 	{
-		ShaderCodePair shaderCode = m_LoadedShaderCode[createInfo->shaderIndex];
+		VulkanShaderCodePair shaderCode = m_LoadedShaderCode[createInfo->shaderIndex];
 		std::vector<char> vertShaderCode = shaderCode.vertexShaderCode;
 		std::vector<char> fragShaderCode = shaderCode.fragmentShaderCode;
 
@@ -1236,7 +1236,7 @@ namespace flex
 
 	void VulkanRenderer::CreateCommandPool()
 	{
-		QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(m_VulkanDevice->m_PhysicalDevice);
+		VulkanQueueFamilyIndices queueFamilyIndices = FindQueueFamilies(m_VulkanDevice->m_PhysicalDevice);
 
 		VkCommandPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -1695,7 +1695,6 @@ namespace flex
 		renderPassBeginInfo.clearValueCount = clearValues.size();
 		renderPassBeginInfo.pClearValues = clearValues.data();
 
-		//ImGui_UpdateBuffers();
 
 		for (size_t i = 0; i < m_CommandBuffers.size(); ++i)
 		{
@@ -1722,7 +1721,7 @@ namespace flex
 
 				uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 
-				Material* material = &m_LoadedMaterials[renderObject->materialID];
+				VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 				VkDeviceSize offsets[1] = { 0 };
 				vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[material->shaderIndex].vertexBuffer->m_Buffer, offsets);
 
@@ -2314,7 +2313,7 @@ namespace flex
 		RenderObject* renderObject = GetRenderObject(renderID);
 		if (!renderObject) return;
 
-		Material* material = &m_LoadedMaterials[renderObject->materialID];
+		VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 
 		DescriptorSetCreateInfo createInfo = {};
 		createInfo.descriptorSet = &renderObject->descriptorSet;
@@ -2353,7 +2352,7 @@ namespace flex
 		{
 			VkDescriptorBufferInfo uniformBufferInfo = {};
 			uniformBufferInfo.buffer = m_UniformBuffers[createInfo->uniformBufferIndex].constantBuffer.m_Buffer;
-			uniformBufferInfo.range = sizeof(UniformBufferObjectData);
+			uniformBufferInfo.range = sizeof(VulkanUniformBufferObjectData);
 
 			writeDescriptorSets.push_back({});
 			writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2372,7 +2371,7 @@ namespace flex
 		{
 			VkDescriptorBufferInfo uniformBufferDynamicInfo = {};
 			uniformBufferDynamicInfo.buffer = m_UniformBuffers[createInfo->uniformBufferIndex].dynamicBuffer.m_Buffer;
-			uniformBufferDynamicInfo.range = sizeof(UniformBufferObjectData) * m_RenderObjects.size();
+			uniformBufferDynamicInfo.range = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
 
 			writeDescriptorSets.push_back({});
 			writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2523,7 +2522,7 @@ namespace flex
 		m_DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 		VkDescriptorSetLayout* descriptorSetLayout = &m_DescriptorSetLayouts.back();
 	
-		UniformBuffer* uniformBuffer = &m_UniformBuffers[shaderIndex];
+		VulkanUniformBuffer* uniformBuffer = &m_UniformBuffers[shaderIndex];
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
 		glm::uint binding = 0;
 		if (Uniform::HasUniform(uniformBuffer->constantData.elements, Uniform::Type::UNIFORM_BUFFER_CONSTANT) ||
@@ -2743,9 +2742,9 @@ namespace flex
 		}
 	}
 
-	SwapChainSupportDetails VulkanRenderer::QuerySwapChainSupport(VkPhysicalDevice device)
+	VulkanSwapChainSupportDetails VulkanRenderer::QuerySwapChainSupport(VkPhysicalDevice device)
 	{
-		SwapChainSupportDetails details;
+		VulkanSwapChainSupportDetails details;
 
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_Surface, &details.capabilities);
 
@@ -2772,14 +2771,14 @@ namespace flex
 
 	bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice device)
 	{
-		QueueFamilyIndices indices = FindQueueFamilies(device);
+		VulkanQueueFamilyIndices indices = FindQueueFamilies(device);
 
 		bool extensionsSupported = CheckDeviceExtensionSupport(device);
 
 		bool swapChainAdequate = false;
 		if (extensionsSupported)
 		{
-			SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
+			VulkanSwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
 			swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 		}
 
@@ -2807,10 +2806,10 @@ namespace flex
 		return requiredExtensions.empty();
 	}
 
-	QueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
+	VulkanQueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
 	{
 		// TODO: Move to VulkanDevice class?
-		QueueFamilyIndices indices;
+		VulkanQueueFamilyIndices indices;
 
 		uint32_t queueFamilyCount;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
@@ -2991,7 +2990,7 @@ namespace flex
 
 		RenderObject* renderObject = GetRenderObject(renderID);
 		if (!renderObject) return;
-		Material* material = &m_LoadedMaterials[renderObject->materialID];
+		VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 
 		const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 
@@ -3001,7 +3000,7 @@ namespace flex
 		glm::uint useCubemapTexture = material->useCubemapTexture ? 1 : 0;
 
 		const int uniformBufferIndex = material->shaderIndex;
-		UniformBuffer& uniformBuffer = m_UniformBuffers[uniformBufferIndex];
+		VulkanUniformBuffer& uniformBuffer = m_UniformBuffers[uniformBufferIndex];
 
 		glm::uint offset = renderID * uniformBuffer.dynamicData.size;
 		glm::uint index = 0;

@@ -673,19 +673,34 @@ namespace flex
 	{
 		Renderer* renderer = gameContext.renderer;
 
-		constexpr size_t vertexTypeCount = 6;
-		std::string names[vertexTypeCount] = { "in_Position", "in_Color", "in_Tangent", "in_Bitangent", "in_Normal", "in_TexCoord" };
-		int sizes[vertexTypeCount] =		 { 3,             4,          3,            3,              3,           2 };
+		struct VertexType
+		{
+			std::string name;
+			int size;
+		};
 
+		VertexType vertexTypes[] = { 
+			{ "in_Position", 3 },
+			{ "in_Position2D", 2 },
+			{ "in_TexCoord", 2 },
+			{ "in_TexCoord_UVW", 3 },
+			{ "in_Color_32", 1	},
+			{ "in_Color", 4 },
+			{ "in_Tangent", 3 },
+			{ "in_Bitangent", 3	},
+			{ "in_Normal", 3 },
+		};
+
+		const size_t vertexTypeCount = sizeof(vertexTypes) / sizeof(vertexTypes[0]);
 		float* currentLocation = (float*)0;
 		for (size_t i = 0; i < vertexTypeCount; ++i)
 		{
 			VertexBufferData::Attribute vertexType = VertexBufferData::Attribute(1 << i);
 			if (m_Attributes & (int)vertexType)
 			{
-				renderer->DescribeShaderVariable(m_RenderID, names[i], sizes[i], Renderer::Type::FLOAT, false,
+				renderer->DescribeShaderVariable(m_RenderID, vertexTypes[i].name, vertexTypes[i].size, Renderer::Type::FLOAT, false,
 					(int)vertexBufferData->VertexStride, currentLocation);
-				currentLocation += sizes[i];
+				currentLocation += vertexTypes[i].size;
 			}
 		}
 	}

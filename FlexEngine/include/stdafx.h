@@ -2,7 +2,7 @@
 
 #define NOMINMAX
 
-#define COMPILE_OPEN_GL 0
+#define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 1
 #define COMPILE_D3D 0
 
@@ -30,8 +30,19 @@
 	#include <GLFW/glfw3native.h>
 #pragma warning(pop)
 
+#if _DEBUG
+#ifndef CheckGLErrorMessages
+void _CheckGLErrorMessages(const char *file, int line);
+#define CheckGLErrorMessages() _CheckGLErrorMessages(__FILE__,__LINE__)
+#endif
+#else
+#define CheckGLErrorMessages() 
+#endif
+
 	#include "Graphics/GL/GLRenderer.h"
 	#include "Window/GL/GLWindowWrapper.h"
+
+
 #endif // COMPILE_OPEN_GL
 
 #if COMPILE_D3D

@@ -137,10 +137,10 @@ namespace flex
 		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 		VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
 		VkExtent2D ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities);
-		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
+		VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 		bool IsDeviceSuitable(VkPhysicalDevice device);
 		bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
-		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+		VulkanQueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 		std::vector<const char*> GetRequiredExtensions();
 		bool CheckValidationLayerSupport();
 
@@ -156,10 +156,10 @@ namespace flex
 		RenderObject* GetRenderObject(RenderID renderID);
 
 		std::vector<RenderObject*> m_RenderObjects;
-		std::vector<UniformBuffer> m_UniformBuffers;
-		std::vector<ShaderFilePathPair> m_ShaderFilePaths;
-		std::vector<ShaderCodePair> m_LoadedShaderCode;
-		std::vector<Material> m_LoadedMaterials;
+		std::vector<VulkanUniformBuffer> m_UniformBuffers;
+		std::vector<VulkanShaderFilePathPair> m_ShaderFilePaths;
+		std::vector<VulkanShaderCodePair> m_LoadedShaderCode;
+		std::vector<VulkanMaterial> m_LoadedMaterials;
 
 		bool m_VSyncEnabled;
 		bool m_SwapChainNeedsRebuilding;

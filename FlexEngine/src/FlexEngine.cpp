@@ -17,7 +17,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::VULKAN;
+		RendererID preferredInitialRenderer = RendererID::GL;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -118,9 +118,9 @@ namespace flex
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			GLWindowWrapper* glWindow = new GLWindowWrapper("Flex Engine - OpenGL", windowSize, windowPos, m_GameContext);
+			gl::GLWindowWrapper* glWindow = new gl::GLWindowWrapper("Flex Engine - OpenGL", windowSize, windowPos, m_GameContext);
 			m_Window = glWindow;
-			GLRenderer* glRenderer = new GLRenderer(m_GameContext);
+			gl::GLRenderer* glRenderer = new gl::GLRenderer(m_GameContext);
 			m_GameContext.renderer = glRenderer;
 		}
 #endif
@@ -322,10 +322,11 @@ namespace flex
 			//static bool open = true;
 			//ImGui::ShowTestWindow(&open);
 
+			m_GameContext.renderer->Update(m_GameContext);
+
 			// Call as late in the frame as possible
 			m_GameContext.renderer->ImGui_Render();
 
-			m_GameContext.renderer->Update(m_GameContext);
 			m_GameContext.renderer->Draw(m_GameContext);
 
 			m_GameContext.renderer->SwapBuffers(m_GameContext);

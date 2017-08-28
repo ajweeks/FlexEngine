@@ -36,7 +36,8 @@ namespace flex
 
 	} // namespace Vulkan
 
-	struct QueueFamilyIndices
+	// TODO: Move into vulkan namespace rather than prefix each type?
+	struct VulkanQueueFamilyIndices
 	{
 		int graphicsFamily = -1;
 		int presentFamily = -1;
@@ -47,28 +48,28 @@ namespace flex
 		}
 	};
 
-	struct SwapChainSupportDetails
+	struct VulkanSwapChainSupportDetails
 	{
 		VkSurfaceCapabilitiesKHR capabilities;
 		std::vector<VkSurfaceFormatKHR> formats;
 		std::vector<VkPresentModeKHR> presentModes;
 	};
 
-	struct UniformBufferObjectData
+	struct VulkanUniformBufferObjectData
 	{
 		Uniform::Type elements;
 		float* data = nullptr;
 		glm::uint size;
 	};
 
-	struct UniformBuffer
+	struct VulkanUniformBuffer
 	{
-		UniformBuffer(const VDeleter<VkDevice>& device);
+		VulkanUniformBuffer(const VDeleter<VkDevice>& device);
 
 		VulkanBuffer constantBuffer;
 		VulkanBuffer dynamicBuffer;
-		UniformBufferObjectData constantData;
-		UniformBufferObjectData dynamicData;
+		VulkanUniformBufferObjectData constantData;
+		VulkanUniformBufferObjectData dynamicData;
 	};
 
 	struct VertexIndexBufferPair
@@ -112,19 +113,19 @@ namespace flex
 		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
-	struct ShaderFilePathPair
+	struct VulkanShaderFilePathPair
 	{
 		std::string vertexShaderFilePath;
 		std::string fragmentShaderFilePath;
 	};
 
-	struct ShaderCodePair
+	struct VulkanShaderCodePair
 	{
 		std::vector<char> vertexShaderCode;
 		std::vector<char> fragmentShaderCode;
 	};
 
-	struct Material
+	struct VulkanMaterial
 	{
 		std::string name;
 
