@@ -30,6 +30,7 @@ By supporting three different graphics APIs, I've challenged myself to designed 
  - [glm](https://github.com/g-truc/glm)
  - [soil](https://github.com/kbranigan/Simple-OpenGL-Image-Library)
  - [stb](https://github.com/nothings/stb)
+ - [imgui](https://github.com/ocornut/imgui)
 
 ## Thanks
 A huge thanks to the following people for their incredibly useful resources:
@@ -37,6 +38,3 @@ A huge thanks to the following people for their incredibly useful resources:
  - Sascha Willems of [github.com/SaschaWillems/Vulkan](https://github.com/SaschaWillems/Vulkan)
  - Baldur Karlsson of [github.com/baldurk/renderdoc](https://github.com/baldurk/renderdoc)
  - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
-
-## Backlog
-You can see a list of features I'm planning on adding [here](/backlog.md)
