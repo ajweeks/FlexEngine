@@ -64,8 +64,6 @@ namespace flex
 			bool useCubemapTexture = false;
 		};
 
-		typedef std::vector<RenderObject*>::iterator RenderObjectIter;
-
 		struct RenderObject
 		{
 			RenderObject(RenderID renderID, std::string name = "");
@@ -92,6 +90,7 @@ namespace flex
 
 			glm::uint materialID;
 		};
+		typedef std::vector<RenderObject*>::iterator RenderObjectIter;
 
 		struct UniformInfo
 		{

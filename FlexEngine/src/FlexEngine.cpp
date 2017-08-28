@@ -109,9 +109,9 @@ namespace flex
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			VulkanWindowWrapper* vulkanWindow = new VulkanWindowWrapper("Flex Engine - Vulkan", windowSize, windowPos, m_GameContext);
+			vk::VulkanWindowWrapper* vulkanWindow = new vk::VulkanWindowWrapper("Flex Engine - Vulkan", windowSize, windowPos, m_GameContext);
 			m_Window = vulkanWindow;
-			VulkanRenderer* vulkanRenderer = new VulkanRenderer(m_GameContext);
+			vk::VulkanRenderer* vulkanRenderer = new vk::VulkanRenderer(m_GameContext);
 			m_GameContext.renderer = vulkanRenderer;
 		}
 #endif

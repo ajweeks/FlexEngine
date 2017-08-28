@@ -13,236 +13,234 @@
 
 namespace flex
 {
-	std::string VulkanErrorString(VkResult errorCode);
+	namespace vk
+	{
+		std::string VulkanErrorString(VkResult errorCode);
 
 #ifndef VK_CHECK_RESULT
 #define VK_CHECK_RESULT(f)																				\
-{																										\
-	VkResult res = (f);																					\
-	if (res != VK_SUCCESS)																				\
-	{																									\
-		std::cerr << "Vulkan fatal error: VkResult is \"" << VulkanErrorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
-		assert(res == VK_SUCCESS);																		\
-	}																									\
-}
+	{																										\
+		VkResult res = (f);																					\
+		if (res != VK_SUCCESS)																				\
+		{																									\
+			std::cerr << "Vulkan fatal error: VkResult is \"" << VulkanErrorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
+			assert(res == VK_SUCCESS);																		\
+		}																									\
+	}
 #endif // VK_CHECK_RESULT
 
-	namespace Vulkan
-	{
 		VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
 
 		void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
-	} // namespace Vulkan
-
-	// TODO: Move into vulkan namespace rather than prefix each type?
-	struct VulkanQueueFamilyIndices
-	{
-		int graphicsFamily = -1;
-		int presentFamily = -1;
-
-		bool IsComplete()
+		struct VulkanQueueFamilyIndices
 		{
-			return graphicsFamily >= 0 && presentFamily >= 0;
-		}
-	};
+			int graphicsFamily = -1;
+			int presentFamily = -1;
 
-	struct VulkanSwapChainSupportDetails
-	{
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentModes;
-	};
-
-	struct VulkanUniformBufferObjectData
-	{
-		Uniform::Type elements;
-		float* data = nullptr;
-		glm::uint size;
-	};
-
-	struct VulkanUniformBuffer
-	{
-		VulkanUniformBuffer(const VDeleter<VkDevice>& device);
-
-		VulkanBuffer constantBuffer;
-		VulkanBuffer dynamicBuffer;
-		VulkanUniformBufferObjectData constantData;
-		VulkanUniformBufferObjectData dynamicData;
-	};
-
-	struct VertexIndexBufferPair
-	{
-		VulkanBuffer* vertexBuffer = nullptr;
-		VulkanBuffer* indexBuffer = nullptr;
-		glm::uint vertexCount;
-		glm::uint indexCount;
-		bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (eg. ImGui vertex buffer)
-	};
-
-	struct VulkanTexture
-	{
-		VulkanTexture(const VDeleter<VkDevice>& device);
-
-		VDeleter<VkImage> image;
-		VkImageLayout imageLayout;
-		VDeleter<VkDeviceMemory> imageMemory;
-		VDeleter<VkImageView> imageView;
-		VDeleter<VkSampler> sampler;
-		glm::uint width;
-		glm::uint height;
-		std::string filePath;
-	};
-
-	void SetImageLayout(
-		VkCommandBuffer cmdbuffer,
-		VkImage image,
-		VkImageLayout oldImageLayout,
-		VkImageLayout newImageLayout,
-		VkImageSubresourceRange subresourceRange,
-		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-	void SetImageLayout(
-		VkCommandBuffer cmdbuffer,
-		VkImage image,
-		VkImageAspectFlags aspectMask,
-		VkImageLayout oldImageLayout,
-		VkImageLayout newImageLayout,
-		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-	struct VulkanShaderFilePathPair
-	{
-		std::string vertexShaderFilePath;
-		std::string fragmentShaderFilePath;
-	};
-
-	struct VulkanShaderCodePair
-	{
-		std::vector<char> vertexShaderCode;
-		std::vector<char> fragmentShaderCode;
-	};
-
-	struct VulkanMaterial
-	{
-		std::string name;
-
-		glm::uint shaderIndex;
-
-		struct UniformIDs
-		{
-			int modelID;
-			int modelInvTranspose;
-			int modelViewProjection;
-			int camPos;
-			int viewDir;
-			int lightDir;
-			int ambientColor;
-			int specularColor;
-			int useDiffuseTexture;
-			int useNormalTexture;
-			int useSpecularTexture;
-			int useCubemapTexture;
+			bool IsComplete()
+			{
+				return graphicsFamily >= 0 && presentFamily >= 0;
+			}
 		};
-		UniformIDs uniformIDs;
 
-		bool useDiffuseTexture = false;
-		std::string diffuseTexturePath;
-		VulkanTexture* diffuseTexture = nullptr;
+		struct VulkanSwapChainSupportDetails
+		{
+			VkSurfaceCapabilitiesKHR capabilities;
+			std::vector<VkSurfaceFormatKHR> formats;
+			std::vector<VkPresentModeKHR> presentModes;
+		};
 
-		bool useNormalTexture = false;
-		std::string normalTexturePath;
-		VulkanTexture* normalTexture = nullptr;
+		struct VulkanUniformBufferObjectData
+		{
+			Uniform::Type elements;
+			float* data = nullptr;
+			glm::uint size;
+		};
 
-		bool useSpecularTexture = false;
-		std::string specularTexturePath;
-		VulkanTexture* specularTexture = nullptr;
+		struct UniformBuffer
+		{
+			UniformBuffer(const VDeleter<VkDevice>& device);
 
-		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-		bool useCubemapTexture = false;
-		VulkanTexture* cubemapTexture = nullptr;
+			Buffer constantBuffer;
+			Buffer dynamicBuffer;
+			VulkanUniformBufferObjectData constantData;
+			VulkanUniformBufferObjectData dynamicData;
+		};
 
-		glm::uint descriptorSetLayoutIndex;
-	};
+		struct VertexIndexBufferPair
+		{
+			Buffer* vertexBuffer = nullptr;
+			Buffer* indexBuffer = nullptr;
+			glm::uint vertexCount;
+			glm::uint indexCount;
+			bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (eg. ImGui vertex buffer)
+		};
 
-	struct RenderObject
-	{
-		RenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
+		struct VulkanTexture
+		{
+			VulkanTexture(const VDeleter<VkDevice>& device);
 
-		VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			VDeleter<VkImage> image;
+			VkImageLayout imageLayout;
+			VDeleter<VkDeviceMemory> imageMemory;
+			VDeleter<VkImageView> imageView;
+			VDeleter<VkSampler> sampler;
+			glm::uint width;
+			glm::uint height;
+			std::string filePath;
+		};
 
-		RenderID renderID;
-		MaterialID materialID;
+		void SetImageLayout(
+			VkCommandBuffer cmdbuffer,
+			VkImage image,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkImageSubresourceRange subresourceRange,
+			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
-		Renderer::RenderObjectInfo info;
+		void SetImageLayout(
+			VkCommandBuffer cmdbuffer,
+			VkImage image,
+			VkImageAspectFlags aspectMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
-		glm::uint VAO;
-		glm::uint VBO;
-		glm::uint IBO;
+		struct ShaderFilePathPair
+		{
+			std::string vertexShaderFilePath;
+			std::string fragmentShaderFilePath;
+		};
 
-		VertexBufferData* vertexBufferData = nullptr;
-		glm::uint vertexOffset = 0;
+		struct ShaderCodePair
+		{
+			std::vector<char> vertexShaderCode;
+			std::vector<char> fragmentShaderCode;
+		};
 
-		bool indexed = false;
-		std::vector<glm::uint>* indices = nullptr;
-		glm::uint indexOffset = 0;
+		struct Material
+		{
+			std::string name;
 
-		VkDescriptorSet descriptorSet;
+			glm::uint shaderIndex;
 
-		VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+			struct UniformIDs
+			{
+				int modelID;
+				int modelInvTranspose;
+				int modelViewProjection;
+				int camPos;
+				int viewDir;
+				int lightDir;
+				int ambientColor;
+				int specularColor;
+				int useDiffuseTexture;
+				int useNormalTexture;
+				int useSpecularTexture;
+				int useCubemapTexture;
+			};
+			UniformIDs uniformIDs;
 
-		VDeleter<VkPipelineLayout> pipelineLayout;
-		VDeleter<VkPipeline> graphicsPipeline;
-	};
+			bool useDiffuseTexture = false;
+			std::string diffuseTexturePath;
+			VulkanTexture* diffuseTexture = nullptr;
 
-	struct GraphicsPipelineCreateInfo
-	{
-		glm::uint shaderIndex;
-		VertexBufferData* vertexBufferData = nullptr;
-		
-		VkPrimitiveTopology topology;
-		VkCullModeFlags cullMode;
-		
-		VkPushConstantRange* pushConstants = nullptr;
-		glm::uint pushConstantRangeCount = 0;
+			bool useNormalTexture = false;
+			std::string normalTexturePath;
+			VulkanTexture* normalTexture = nullptr;
 
-		glm::uint descriptorSetLayoutIndex;
-		
-		bool setDynamicStates = false;
-		bool enabledColorBlending = false;
+			bool useSpecularTexture = false;
+			std::string specularTexturePath;
+			VulkanTexture* specularTexture = nullptr;
 
-		// Out variables
-		VkPipelineCache* pipelineCache = nullptr;
-		VkPipelineLayout* pipelineLayout = nullptr;
-		VkPipeline* grahpicsPipeline = nullptr;
-	};
+			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+			bool useCubemapTexture = false;
+			VulkanTexture* cubemapTexture = nullptr;
 
-	struct DescriptorSetCreateInfo
-	{
-		glm::uint descriptorSetLayoutIndex;
-		glm::uint uniformBufferIndex;
-		VkDescriptorSet* descriptorSet;
-		VulkanTexture* diffuseTexture = nullptr;
-		VulkanTexture* normalTexture = nullptr;
-		VulkanTexture* specularTexture = nullptr;
-		VulkanTexture* cubemapTexture = nullptr;
-	};
+			glm::uint descriptorSetLayoutIndex;
+		};
 
-	struct PushConstBlock
-	{
-		glm::vec2 scale;
-		glm::vec2 translate;
-	};
+		struct RenderObject
+		{
+			RenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
 
-	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
+			VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode);
-	VkCullModeFlagBits CullFaceToVkCullMode(Renderer::CullFace cullFace);
+			RenderID renderID;
+			MaterialID materialID;
 
-	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
-		const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
+			Renderer::RenderObjectInfo info;
 
-	void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+			glm::uint VAO;
+			glm::uint VBO;
+			glm::uint IBO;
+
+			VertexBufferData* vertexBufferData = nullptr;
+			glm::uint vertexOffset = 0;
+
+			bool indexed = false;
+			std::vector<glm::uint>* indices = nullptr;
+			glm::uint indexOffset = 0;
+
+			VkDescriptorSet descriptorSet;
+
+			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+
+			VDeleter<VkPipelineLayout> pipelineLayout;
+			VDeleter<VkPipeline> graphicsPipeline;
+		};
+
+		struct GraphicsPipelineCreateInfo
+		{
+			glm::uint shaderIndex;
+			VertexBufferData* vertexBufferData = nullptr;
+
+			VkPrimitiveTopology topology;
+			VkCullModeFlags cullMode;
+
+			VkPushConstantRange* pushConstants = nullptr;
+			glm::uint pushConstantRangeCount = 0;
+
+			glm::uint descriptorSetLayoutIndex;
+
+			bool setDynamicStates = false;
+			bool enabledColorBlending = false;
+
+			// Out variables
+			VkPipelineCache* pipelineCache = nullptr;
+			VkPipelineLayout* pipelineLayout = nullptr;
+			VkPipeline* grahpicsPipeline = nullptr;
+		};
+
+		struct DescriptorSetCreateInfo
+		{
+			glm::uint descriptorSetLayoutIndex;
+			glm::uint uniformBufferIndex;
+			VkDescriptorSet* descriptorSet;
+			VulkanTexture* diffuseTexture = nullptr;
+			VulkanTexture* normalTexture = nullptr;
+			VulkanTexture* specularTexture = nullptr;
+			VulkanTexture* cubemapTexture = nullptr;
+		};
+
+		struct PushConstBlock
+		{
+			glm::vec2 scale;
+			glm::vec2 translate;
+		};
+
+		typedef std::vector<RenderObject*>::iterator RenderObjectIter;
+
+		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode);
+		VkCullModeFlagBits CullFaceToVkCullMode(Renderer::CullFace cullFace);
+
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
+			const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
+
+		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+	} // namespace vk
 } // namespace flex

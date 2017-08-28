@@ -57,16 +57,13 @@ namespace flex
 			virtual void ImGui_Render() override;
 			virtual void ImGui_Shutdown() override;
 
-			// Use if you want to reset your rendering device without losing ImGui state.
+		private:
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
-
-		private:
 			bool ImGui_CreateFontsTexture();
 
 			GLuint m_ImGuiFontTexture = 0;
 			int m_ImGuiShaderHandle = 0;
-			//int m_ImGuiShaderHandle = 0, m_ImGuiVertHandle = 0, m_ImGuiFragHandle = 0;
 			int m_ImGuiAttribLocationTex = 0, m_ImGuiAttribLocationProjMtx = 0;
 			int m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
 			unsigned int m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;

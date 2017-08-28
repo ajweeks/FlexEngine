@@ -6,24 +6,26 @@
 
 namespace flex
 {
-	struct VulkanDevice
+	namespace vk
 	{
-		VulkanDevice(VkPhysicalDevice physicalDevice);
-		
-		glm::uint GetMemoryType(glm::uint typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr);
+		struct VulkanDevice
+		{
+			VulkanDevice(VkPhysicalDevice physicalDevice);
 
-		operator VkDevice();
+			glm::uint GetMemoryType(glm::uint typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr);
 
-		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
-		VDeleter<VkDevice> m_LogicalDevice{ vkDestroyDevice };
-		VDeleter<VkCommandPool> m_CommandPool;
+			operator VkDevice();
 
-		VkPhysicalDeviceProperties m_PhysicalDeviceProperties;
-		VkPhysicalDeviceFeatures m_PhysicalDeviceFeatures;
-		VkPhysicalDeviceMemoryProperties m_MemoryProperties;
-		std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
-		std::vector<std::string> m_SupportedExtensions;
-		bool m_EnableDebugMarkers = false;
+			VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
+			VDeleter<VkDevice> m_LogicalDevice{ vkDestroyDevice };
+			VDeleter<VkCommandPool> m_CommandPool;
 
-	};
+			VkPhysicalDeviceProperties m_PhysicalDeviceProperties;
+			VkPhysicalDeviceFeatures m_PhysicalDeviceFeatures;
+			VkPhysicalDeviceMemoryProperties m_MemoryProperties;
+			std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
+			std::vector<std::string> m_SupportedExtensions;
+			bool m_EnableDebugMarkers = false;
+		};
+	} // namespace vk
 } // namespace flex

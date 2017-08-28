@@ -6,21 +6,24 @@
 
 namespace flex
 {
-	class VulkanWindowWrapper : public GLFWWindowWrapper
+	namespace vk
 	{
-	public:
-		VulkanWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
-		virtual ~VulkanWindowWrapper();
+		class VulkanWindowWrapper : public GLFWWindowWrapper
+		{
+		public:
+			VulkanWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
+			virtual ~VulkanWindowWrapper();
 
-		virtual void SetSize(int width, int height) override;
-		virtual void SetFrameBufferSize(int width, int height) override;
+			virtual void SetSize(int width, int height) override;
+			virtual void SetFrameBufferSize(int width, int height) override;
 
-	private:
-		static void VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
+		private:
+			static void VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 
-		VulkanWindowWrapper(const VulkanWindowWrapper&) = delete;
-		VulkanWindowWrapper& operator=(const VulkanWindowWrapper&) = delete;
-	};
+			VulkanWindowWrapper(const VulkanWindowWrapper&) = delete;
+			VulkanWindowWrapper& operator=(const VulkanWindowWrapper&) = delete;
+		};
+	} // namespace vk
 } // namespace flex
 
 #endif // COMPILE_VULKAN
