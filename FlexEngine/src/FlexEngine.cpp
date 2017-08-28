@@ -82,11 +82,14 @@ namespace flex
 		}
 
 		ImGuiStyle& imGuiStyle = ImGui::GetStyle();
-		imGuiStyle.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
-		imGuiStyle.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
-		imGuiStyle.Colors[ImGuiCol_MenuBarBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-		imGuiStyle.Colors[ImGuiCol_Header] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-		imGuiStyle.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+		imGuiStyle.Colors[ImGuiCol_TitleBg] = ImVec4(0.74f, 0.33f, 0.09f, 0.94f);
+		imGuiStyle.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.87f, 0.15f, 0.02f, 0.94f);
+		imGuiStyle.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.74f, 0.33f, 0.09f, 0.2f);
+		imGuiStyle.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.83f, 0.25f, 0.07f, 0.55f);
+		imGuiStyle.Colors[ImGuiCol_Header] = ImVec4(0.66f, 0.32f, 0.17f, 0.76f);
+		imGuiStyle.Colors[ImGuiCol_HeaderActive] = ImVec4(0.60f, 0.23f, 0.07f, 0.8f);
+		imGuiStyle.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.74f, 0.43f, 0.29f, 0.76f);
+		imGuiStyle.Colors[ImGuiCol_CheckMark] = ImVec4(0.2f, 0.8f, 0.01f, 1.0f);
 	}
 
 	void FlexEngine::Destroy()
@@ -273,7 +276,7 @@ namespace flex
 			{
 				const std::string rendStr("Current renderer: " + m_RendererName);
 				ImGui::Text(rendStr.c_str());
-				if (ImGui::TreeNode("Scene info"))
+				if (ImGui::CollapsingHeader("Scene info"))
 				{
 					const std::string sceneCountStr("Scene count: " + std::to_string(m_SceneManager->GetSceneCount()));
 					ImGui::Text(sceneCountStr.c_str());
@@ -302,14 +305,12 @@ namespace flex
 
 						ImGui::TreePop();
 					}
-
-					ImGui::TreePop();
 				}
 			}
 			ImGui::End();
 
-			//static bool open = true;
-			//ImGui::ShowTestWindow(&open);
+			static bool open = true;
+			ImGui::ShowTestWindow(&open);
 
 			m_GameContext.renderer->Update(m_GameContext);
 
