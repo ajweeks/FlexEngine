@@ -4,6 +4,8 @@
 #include <array>
 #include <map>
 
+#include <imgui.h>
+
 #include "Graphics/Renderer.h"
 #include "Graphics/Vulkan/VulkanHelpers.h"
 #include "ShaderUtils.h"
@@ -17,7 +19,7 @@ namespace flex
 	class VulkanRenderer : public Renderer
 	{
 	public:
-		VulkanRenderer(GameContext& gameContext);
+		VulkanRenderer(const GameContext& gameContext);
 		virtual ~VulkanRenderer();
 
 		virtual void PostInitialize() override;
@@ -44,12 +46,29 @@ namespace flex
 		virtual int GetShaderUniformLocation(glm::uint program, const std::string& uniformName) override;
 		virtual void SetUniform1f(int location, float val) override;
 
+		virtual glm::uint GetRenderObjectCount() const override;
+		virtual glm::uint GetRenderObjectCapacity() const override;
+
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
 			Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
 
 		virtual void Destroy(RenderID renderID) override;
 
+		virtual void GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec) override;
+
+		virtual void ImGui_Init(const GameContext& gameContext) override;
+		virtual void ImGui_NewFrame(const GameContext& gameContext) override;
+		virtual void ImGui_Render() override;
+		virtual void ImGui_Shutdown() override;
+
 	private:
+		void ImGui_InitResources();
+		bool ImGui_CreateFontsTexture(VkQueue copyQueue);
+		void ImGui_UpdateBuffers();
+		void ImGui_DrawFrame(VkCommandBuffer commandBuffer);
+		void ImGui_InvalidateDeviceObjects();
+		uint32_t ImGui_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits);
+
 		RenderID GetFirstAvailableRenderID() const;
 		void InsertNewRenderObject(RenderObject* renderObject);
 		void CreateInstance(const GameContext& gameContext);
@@ -62,44 +81,47 @@ namespace flex
 		void CreateRenderPass();
 		void CreateDescriptorSetLayout(glm::uint shaderIndex);
 		void CreateGraphicsPipeline(RenderID renderID);
-		void CreateDepthResources();
+		void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
+		void CreateDepthResources();	
 		void CreateFramebuffers();
 
 		void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture);
 		void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture);
 		void CreateTextureImage(const std::string& filePath, VulkanTexture** texture);
 		void CreateTextureImageView(VulkanTexture* texture);
-		void CreateTextureSampler(VulkanTexture* texture);
+		void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f);
 
-		void CreateVertexBuffers();
-		void CreateVertexBuffer(VulkanBuffer* vertexBuffer, glm::uint shaderIndex);
-		void CreateIndexBuffers();
-		void CreateIndexBuffer(VulkanBuffer* indexBuffer, glm::uint shaderIndex);
+		void CreateStaticVertexBuffers();
+		glm::uint CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, glm::uint shaderIndex, int size); // Returns vertex count
+		void CreateStaticIndexBuffers();
+		glm::uint CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, glm::uint shaderIndex); // Returns index count
 		void PrepareUniformBuffers();
 		void CreateDescriptorPool();
 		glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
 		void PrepareUniformBuffer(VulkanBuffer* buffer, glm::uint bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 		void CreateDescriptorSet(RenderID renderID);
+		void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 		void ReleaseUniformBuffers();
 
+		// TODO: Create command buffer class
 		void CreateCommandPool();
-		void RebuildCommandBuffers();
 		void CreateCommandBuffers();
 		VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin);
 		void BuildCommandBuffers();
+		void RebuildCommandBuffers();
 		bool CheckCommandBuffers();
 		void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free);
 		void DestroyCommandBuffers();
 
 		void CreateSemaphores();
 
-		void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VDeleter<VkImageView>& imageView);
+		void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView* imageView);
 		void RecreateSwapChain(Window* window);
 		VkCommandBuffer BeginSingleTimeCommands();
 		void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 		void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, 
-			VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage>& image, VDeleter<VkDeviceMemory>& imageMemory, 
+			VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory,
 			glm::uint arrayLayers = 1, glm::uint mipLevels = 1, VkImageCreateFlags flags = 0);
 		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 		VkFormat FindDepthFormat();
@@ -130,9 +152,6 @@ namespace flex
 		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 			VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix,
 			const char* msg, void* userData);
-
-		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
-		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);
 
 		RenderObject* GetRenderObject(RenderID renderID);
 
@@ -179,6 +198,7 @@ namespace flex
 
 		VDeleter<VkRenderPass> m_RenderPass; // { m_Device, vkDestroyRenderPass };
 
+		VDeleter<VkDescriptorPool> m_DescriptorPool; // { m_Device, vkDestroyDescriptorPool };
 		std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 
 		std::vector<VkCommandBuffer> m_CommandBuffers;
@@ -198,22 +218,28 @@ namespace flex
 		VDeleter<VkDeviceMemory> m_DepthImageMemory;// { m_Device, vkFreeMemory };
 		VDeleter<VkImageView> m_DepthImageView;// { m_Device, vkDestroyImageView };
 
-		VDeleter<VkDescriptorPool> m_DescriptorPool; // { m_Device, vkDestroyDescriptorPool };
-
-		struct VertexIndexBufferPair
-		{
-			VulkanBuffer* vertexBuffer = nullptr;
-			VulkanBuffer* indexBuffer = nullptr;
-		};
-
 		std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 
-		glm::uint m_DynamicAlignment;
+		glm::uint m_DynamicAlignment = 0;
 
 		VDeleter<VkSemaphore> m_ImageAvailableSemaphore; // { m_Device, vkDestroySemaphore };
 		VDeleter<VkSemaphore> m_RenderFinishedSemaphore; // { m_Device, vkDestroySemaphore };
 
 		VkClearColorValue m_ClearColor;
+
+
+		// ImGui members
+		VkPipelineLayout m_ImGui_PipelineLayout = VK_NULL_HANDLE;
+		VkPipeline m_ImGui_GraphicsPipeline = VK_NULL_HANDLE;
+
+		const int IMGUI_VK_QUEUED_FRAMES = 2;
+		const int IMGUI_MAX_POSSIBLE_BACK_BUFFERS = 16;
+
+		VkPipelineCache m_ImGuiPipelineCache = VK_NULL_HANDLE;
+		VkDescriptorSet m_ImGuiDescriptorSet = VK_NULL_HANDLE;
+		VulkanTexture* m_ImGuiFontTexture = nullptr;
+
+		PushConstBlock m_ImGuiPushConstBlock;
 
 		VulkanRenderer(const VulkanRenderer&) = delete;
 		VulkanRenderer& operator=(const VulkanRenderer&) = delete;

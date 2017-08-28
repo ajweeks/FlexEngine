@@ -79,7 +79,7 @@ namespace flex
 			glm::vec3 pos = ToVec3(mesh->mVertices[i]);
 			pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 			m_Positions.push_back(pos);
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
 
 			// Color
 			glm::vec4 col;
@@ -93,18 +93,18 @@ namespace flex
 				col = m_DefaultColor;
 			}
 			m_Colors.push_back(col);
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
 
 			// Tangent & Bitangent
 			if (mesh->HasTangentsAndBitangents())
 			{
 				glm::vec3 tangent = ToVec3(mesh->mTangents[i]);
 				m_Tangents.push_back(tangent);
-				m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::TANGENT;
+				m_Attributes |= (glm::uint)VertexBufferData::Attribute::TANGENT;
 
 				glm::vec3 bitangent = ToVec3(mesh->mBitangents[i]);
 				m_Bitangents.push_back(bitangent);
-				m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::BITANGENT;
+				m_Attributes |= (glm::uint)VertexBufferData::Attribute::BITANGENT;
 			}
 
 			// Normal
@@ -112,7 +112,7 @@ namespace flex
 			{
 				glm::vec3 norm = ToVec3(mesh->mNormals[i]);
 				m_Normals.push_back(norm);
-				m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::NORMAL;
+				m_Attributes |= (glm::uint)VertexBufferData::Attribute::NORMAL;
 			}
 
 			// TexCoord
@@ -121,7 +121,7 @@ namespace flex
 				// Truncate w component
 				glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 				m_TexCoords.push_back(texCoord);
-				m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
+				m_Attributes |= (glm::uint)VertexBufferData::Attribute::UV;
 			}
 		}
 
@@ -132,7 +132,7 @@ namespace flex
 
 		if (m_MaterialID == 1)
 		{
-			m_Attributes = (glm::uint)VertexBufferData::VertexAttribute::POSITION | (glm::uint)VertexBufferData::VertexAttribute::COLOR;
+			m_Attributes = (glm::uint)VertexBufferData::Attribute::POSITION | (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
 		}
 
 		CreateVertexBuffer(vertexBufferData);
@@ -223,7 +223,7 @@ namespace flex
 				{ -0.5f, -0.5f,  0.5f, },
 				{ -0.5f,  0.5f,  0.5f, },
 			};
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
 
 			m_Colors =
 			{
@@ -281,7 +281,7 @@ namespace flex
 				colors[5],
 				colors[5],
 			};
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
 
 			m_Normals =
 			{
@@ -339,7 +339,7 @@ namespace flex
 				{ -1.0f, 0.0f, 0.0f, },
 				{ -1.0f, 0.0f, 0.0f, },
 			};
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::NORMAL;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::NORMAL;
 
 			m_TexCoords =
 			{
@@ -397,7 +397,7 @@ namespace flex
 				{ 1.0f, 1.0f },
 				{ 1.0f, 0.0f },
 			};
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::UV;
 
 			renderObjectCreateInfo.materialID = 1;
 			renderObjectCreateInfo.name = "Cube";
@@ -460,9 +460,10 @@ namespace flex
 				{ -0.5f, -0.5f,  0.5f, },
 				{ -0.5f,  0.5f,  0.5f, },
 			};
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
 
-			renderObjectCreateInfo.materialID = 2;
+			// TODO: At *least* use strings rather than indices
+			renderObjectCreateInfo.materialID = 3;
 			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
 			renderObjectCreateInfo.name = "Skybox";
 
@@ -476,10 +477,10 @@ namespace flex
 			m_TexCoords.push_back({ 0.0f, 0.0f });
 			m_Normals.push_back({ 0.0f, 1.0f, 0.0f });
 
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD;
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::NORMAL;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::UV;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::NORMAL;
 
 			glm::uint parallelCount = 10;
 			glm::uint meridianCount = 5;
@@ -579,8 +580,8 @@ namespace flex
 			m_TexCoords.reserve(vertexCount);
 			m_Normals.reserve(vertexCount);
 
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::POSITION;
-			m_Attributes |= (glm::uint)VertexBufferData::VertexAttribute::COLOR;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
 
 			float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
 
@@ -679,7 +680,7 @@ namespace flex
 		float* currentLocation = (float*)0;
 		for (size_t i = 0; i < vertexTypeCount; ++i)
 		{
-			VertexBufferData::VertexAttribute vertexType = VertexBufferData::VertexAttribute(1 << i);
+			VertexBufferData::Attribute vertexType = VertexBufferData::Attribute(1 << i);
 			if (m_Attributes & (int)vertexType)
 			{
 				renderer->DescribeShaderVariable(m_RenderID, names[i], sizes[i], Renderer::Type::FLOAT, false,
@@ -689,12 +690,13 @@ namespace flex
 		}
 	}
 
+	// TODO: Move to helper file? (TODO: Handle pos_2d and uvw)
 	void MeshPrefab::CreateVertexBuffer(VertexBufferData* vertexBufferData)
 	{
 		vertexBufferData->VertexCount = m_Positions.size();
-		vertexBufferData->VertexStride = CalculateVertexBufferStride();
-		vertexBufferData->BufferSize = vertexBufferData->VertexCount * vertexBufferData->VertexStride;
 		vertexBufferData->Attributes = m_Attributes;
+		vertexBufferData->VertexStride = vertexBufferData->CalculateStride();
+		vertexBufferData->BufferSize = vertexBufferData->VertexCount * vertexBufferData->VertexStride;
 
 		const std::string errorMsg = "Unqeual number of vertex components in MeshPrefab!";
 		if (!m_Colors.empty()) Logger::Assert(m_Colors.size() == vertexBufferData->VertexCount, errorMsg);
@@ -714,60 +716,48 @@ namespace flex
 
 		for (UINT i = 0; i < vertexBufferData->VertexCount; ++i)
 		{
-			if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::POSITION)
+			if (m_Attributes & (glm::uint)VertexBufferData::Attribute::POSITION)
 			{
 				memcpy(pDataLocation, &m_Positions[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::COLOR)
+			if (m_Attributes & (glm::uint)VertexBufferData::Attribute::UV)
+			{
+				memcpy(pDataLocation, &m_TexCoords[i], sizeof(glm::vec2));
+				pDataLocation = (float*)pDataLocation + 2;
+			}
+
+			if (m_Attributes & (glm::uint)VertexBufferData::Attribute::UVW)
+			{
+				memcpy(pDataLocation, &m_TexCoords[i], sizeof(glm::vec3));
+				pDataLocation = (float*)pDataLocation + 3;
+			}
+
+			if (m_Attributes & (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT)
 			{
 				memcpy(pDataLocation, &m_Colors[i], sizeof(glm::vec4));
 				pDataLocation = (float*)pDataLocation + 4;
 			}
 
-			if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::TANGENT)
+			if (m_Attributes & (glm::uint)VertexBufferData::Attribute::TANGENT)
 			{
 				memcpy(pDataLocation, &m_Tangents[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::BITANGENT)
+			if (m_Attributes & (glm::uint)VertexBufferData::Attribute::BITANGENT)
 			{
 				memcpy(pDataLocation, &m_Bitangents[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::NORMAL)
+			if (m_Attributes & (glm::uint)VertexBufferData::Attribute::NORMAL)
 			{
 				memcpy(pDataLocation, &m_Normals[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD)
-			{
-				memcpy(pDataLocation, &m_TexCoords[i], sizeof(glm::vec2));
-				pDataLocation = (float*)pDataLocation + 2;
-			}
 		}
-	}
-
-	glm::uint MeshPrefab::CalculateVertexBufferStride() const
-	{
-		glm::uint stride = 0;
-
-		if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::POSITION) stride += sizeof(glm::vec3);
-		if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::COLOR) stride += sizeof(glm::vec4);
-		if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::TANGENT) stride += sizeof(glm::vec3);
-		if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::BITANGENT) stride += sizeof(glm::vec3);
-		if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::NORMAL) stride += sizeof(glm::vec3);
-		if (m_Attributes & (glm::uint)VertexBufferData::VertexAttribute::TEXCOORD) stride += sizeof(glm::vec2);
-
-		if (stride == 0)
-		{
-			Logger::LogWarning("MeshPrefab's vertex buffer stride is 0!");
-		}
-
-		return stride;
 	}
 } // namespace flex

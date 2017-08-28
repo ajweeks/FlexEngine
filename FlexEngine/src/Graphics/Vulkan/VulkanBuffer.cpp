@@ -25,6 +25,12 @@ namespace flex
 		}
 	}
 
+	void VulkanBuffer::Destroy()
+	{
+		m_Buffer.replace();
+		m_Memory.replace();
+	}
+
 	VkResult VulkanBuffer::Bind(VkDeviceSize offset)
 	{
 		return vkBindBufferMemory(m_Device, m_Buffer, m_Memory, offset);

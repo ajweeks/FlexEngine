@@ -6,6 +6,7 @@
 #include <vulkan/vulkan.h>
 
 #include "ShaderUtils.h"
+#include "Graphics/Renderer.h"
 #include "VulkanBuffer.h"
 #include "VertexBufferData.h"
 #include "VDeleter.h"
@@ -70,6 +71,15 @@ namespace flex
 		UniformBufferObjectData dynamicData;
 	};
 
+	struct VertexIndexBufferPair
+	{
+		VulkanBuffer* vertexBuffer = nullptr;
+		VulkanBuffer* indexBuffer = nullptr;
+		glm::uint vertexCount;
+		glm::uint indexCount;
+		bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (eg. ImGui vertex buffer)
+	};
+
 	struct VulkanTexture
 	{
 		VulkanTexture(const VDeleter<VkDevice>& device);
@@ -87,10 +97,18 @@ namespace flex
 	void SetImageLayout(
 		VkCommandBuffer cmdbuffer,
 		VkImage image,
-		VkImageAspectFlags aspectMask,
 		VkImageLayout oldImageLayout,
 		VkImageLayout newImageLayout,
 		VkImageSubresourceRange subresourceRange,
+		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+	void SetImageLayout(
+		VkCommandBuffer cmdbuffer,
+		VkImage image,
+		VkImageAspectFlags aspectMask,
+		VkImageLayout oldImageLayout,
+		VkImageLayout newImageLayout,
 		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
@@ -108,6 +126,8 @@ namespace flex
 
 	struct Material
 	{
+		std::string name;
+
 		glm::uint shaderIndex;
 
 		struct UniformIDs
@@ -141,6 +161,7 @@ namespace flex
 
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 		bool useCubemapTexture = false;
+		VulkanTexture* cubemapTexture = nullptr;
 
 		glm::uint descriptorSetLayoutIndex;
 	};
@@ -153,6 +174,8 @@ namespace flex
 
 		RenderID renderID;
 		MaterialID materialID;
+
+		Renderer::RenderObjectInfo info;
 
 		glm::uint VAO;
 		glm::uint VBO;
@@ -167,13 +190,55 @@ namespace flex
 
 		VkDescriptorSet descriptorSet;
 
-		VkCullModeFlagBits cullMode = VK_CULL_MODE_BACK_BIT;
+		VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 
 		VDeleter<VkPipelineLayout> pipelineLayout;
 		VDeleter<VkPipeline> graphicsPipeline;
 	};
 
+	struct GraphicsPipelineCreateInfo
+	{
+		glm::uint shaderIndex;
+		VertexBufferData* vertexBufferData = nullptr;
+		
+		VkPrimitiveTopology topology;
+		VkCullModeFlags cullMode;
+		
+		VkPushConstantRange* pushConstants = nullptr;
+		glm::uint pushConstantRangeCount = 0;
+
+		glm::uint descriptorSetLayoutIndex;
+		
+		bool setDynamicStates = false;
+		bool enabledColorBlending = false;
+
+		// Out variables
+		VkPipelineCache* pipelineCache = nullptr;
+		VkPipelineLayout* pipelineLayout = nullptr;
+		VkPipeline* grahpicsPipeline = nullptr;
+	};
+
+	struct DescriptorSetCreateInfo
+	{
+		glm::uint descriptorSetLayoutIndex;
+		glm::uint uniformBufferIndex;
+		VkDescriptorSet* descriptorSet;
+		VulkanTexture* diffuseTexture = nullptr;
+		VulkanTexture* normalTexture = nullptr;
+		VulkanTexture* specularTexture = nullptr;
+		VulkanTexture* cubemapTexture = nullptr;
+	};
+
+	struct PushConstBlock
+	{
+		glm::vec2 scale;
+		glm::vec2 translate;
+	};
+
 	typedef std::vector<RenderObject*>::iterator RenderObjectIter;
+
+	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode);
+	VkCullModeFlagBits CullFaceToVkCullMode(Renderer::CullFace cullFace);
 
 	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 		const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);

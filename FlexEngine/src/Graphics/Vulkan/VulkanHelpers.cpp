@@ -28,7 +28,9 @@ namespace flex
 			uint32_t offset = 0;
 			uint32_t location = 0;
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::POSITION))
+			// TODO: Roll into iteration over array
+
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::POSITION))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -41,7 +43,58 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::COLOR))
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::POSITION_2D))
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec2);
+				++location;
+			}
+
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::UV))
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec2);
+				++location;
+			}
+
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::UVW))
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec3);
+				++location;
+			}
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::COLOR_R8G8B8A8_UNORM))
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R8G8B8A8_UNORM;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::int32);
+				++location;
+			}
+
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -54,7 +107,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TANGENT))
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::TANGENT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -67,7 +120,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::BITANGENT))
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::BITANGENT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -80,7 +133,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::NORMAL))
+			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::NORMAL))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -90,19 +143,6 @@ namespace flex
 				attributeDescriptions.push_back(attributeDescription);
 
 				offset += sizeof(glm::vec3);
-				++location;
-			}
-
-			if (vertexBufferData->HasAttribute(VertexBufferData::VertexAttribute::TEXCOORD))
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec2);
 				++location;
 			}
 		}
@@ -178,15 +218,12 @@ namespace flex
 	void SetImageLayout(
 		VkCommandBuffer cmdbuffer,
 		VkImage image,
-		VkImageAspectFlags aspectMask,
 		VkImageLayout oldImageLayout,
 		VkImageLayout newImageLayout,
 		VkImageSubresourceRange subresourceRange,
 		VkPipelineStageFlags srcStageMask,
 		VkPipelineStageFlags dstStageMask)
 	{
-		UNREFERENCED_PARAMETER(aspectMask);
-
 		// Create an image barrier object
 		VkImageMemoryBarrier imageMemoryBarrier = {};
 		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -295,6 +332,55 @@ namespace flex
 			0, nullptr,
 			0, nullptr,
 			1, &imageMemoryBarrier);
+	}
+
+	// Fixed sub resource on first mip level and layer
+	void SetImageLayout(
+		VkCommandBuffer cmdbuffer,
+		VkImage image,
+		VkImageAspectFlags aspectMask,
+		VkImageLayout oldImageLayout,
+		VkImageLayout newImageLayout,
+		VkPipelineStageFlags srcStageMask,
+		VkPipelineStageFlags dstStageMask)
+	{
+		VkImageSubresourceRange subresourceRange = {};
+		subresourceRange.aspectMask = aspectMask;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.levelCount = 1;
+		subresourceRange.layerCount = 1;
+		SetImageLayout(cmdbuffer, image, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
+	}
+
+	VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode)
+	{
+		switch (mode)
+		{
+		case Renderer::TopologyMode::POINT_LIST: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+		case Renderer::TopologyMode::LINE_LIST: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+		case Renderer::TopologyMode::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+		case Renderer::TopologyMode::TRIANGLE_LIST: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		case Renderer::TopologyMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+		case Renderer::TopologyMode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+		case Renderer::TopologyMode::LINE_LOOP:
+		{
+			Logger::LogWarning("Unsupported TopologyMode passed to Vulkan Renderer: LINE_LOOP");
+			return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+		}
+		default: return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+		}
+	}
+
+	VkCullModeFlagBits CullFaceToVkCullMode(Renderer::CullFace cullFace)
+	{
+		switch (cullFace)
+		{
+		case Renderer::CullFace::BACK: return VK_CULL_MODE_BACK_BIT;
+		case Renderer::CullFace::FRONT: return VK_CULL_MODE_FRONT_BIT;
+		case Renderer::CullFace::NONE: // Fallthrough
+		default:
+			return VK_CULL_MODE_NONE;
+		}
 	}
 
 	VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)

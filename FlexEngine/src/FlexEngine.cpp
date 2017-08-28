@@ -17,7 +17,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::GL;
+		RendererID preferredInitialRenderer = RendererID::VULKAN;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -46,7 +46,7 @@ namespace flex
 
 		m_RendererName = RenderIDToString(m_RendererIndex);
 
-		Logger::LogInfo(std::to_string(m_RendererCount) + " renderers enabled");
+		Logger::LogInfo(std::to_string(m_RendererCount) + " renderer" + (m_RendererCount > 1 ? "s" : "") + " enabled");
 		Logger::LogInfo("Current renderer: " + m_RendererName);
 		Logger::Assert(m_RendererCount != 0, "At least one renderer must be enabled! (see stdafx.h)");
 	}
@@ -75,10 +75,18 @@ namespace flex
 
 		m_GameContext.renderer->PostInitialize();
 
-		m_GameContext.renderer->ImGui_Init(m_Window);
+		// TODO: remove this call and move code into renderer's constructor
+		m_GameContext.renderer->ImGui_Init(m_GameContext);
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
+
+		ImGuiStyle& imGuiStyle = ImGui::GetStyle();
+		imGuiStyle.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
+		imGuiStyle.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+		imGuiStyle.Colors[ImGuiCol_MenuBarBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+		imGuiStyle.Colors[ImGuiCol_Header] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+		imGuiStyle.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
 	}
 
 	void FlexEngine::Destroy()
@@ -187,6 +195,8 @@ namespace flex
 		LoadDefaultScenes();
 
 		m_GameContext.renderer->PostInitialize();
+
+		m_GameContext.renderer->ImGui_Init(m_GameContext);
 	}
 
 	void FlexEngine::UpdateAndRender()
@@ -269,9 +279,6 @@ namespace flex
 			m_GameContext.window->Update(m_GameContext);
 			m_GameContext.inputManager->PostUpdate();
 
-			m_GameContext.renderer->Update(m_GameContext);
-			m_GameContext.renderer->Draw(m_GameContext);
-
 			bool windowOpen = true;
 			ImGui::Begin("", &windowOpen);
 			{
@@ -293,18 +300,17 @@ namespace flex
 						std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
 						m_GameContext.renderer->GetRenderObjectInfos(renderObjectInfos);
 						Logger::Assert(renderObjectInfos.size() == objectCount);
-						int i = 0;
-						for (Renderer::RenderObjectInfo& info : renderObjectInfos)
+						for (size_t i = 0; i < objectCount; ++i)
 						{
-							const std::string objectName(info.name + "##" + std::to_string(i));
+							const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
 							if (ImGui::TreeNode(objectName.c_str()))
 							{
-								const std::string materialName("Mat: " + info.materialName);
+								const std::string materialName("Mat: " + renderObjectInfos[i].materialName);
 								ImGui::Text(materialName.c_str());
 								ImGui::TreePop();
 							}
-							++i;
 						}
+
 						ImGui::TreePop();
 					}
 
@@ -317,7 +323,10 @@ namespace flex
 			//ImGui::ShowTestWindow(&open);
 
 			// Call as late in the frame as possible
-			ImGui::Render();
+			m_GameContext.renderer->ImGui_Render();
+
+			m_GameContext.renderer->Update(m_GameContext);
+			m_GameContext.renderer->Draw(m_GameContext);
 
 			m_GameContext.renderer->SwapBuffers(m_GameContext);
 		}

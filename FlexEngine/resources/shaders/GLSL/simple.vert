@@ -10,11 +10,11 @@ layout (std140) uniform ViewProjectionUBO
 };
 
 in vec3 in_Position;
+in vec2 in_TexCoord;
 in vec4 in_Color;
 in vec3 in_Tangent;
 in vec3 in_Bitangent;
 in vec3 in_Normal;
-in vec2 in_TexCoord;
 
 out vec3 ex_WorldPos;
 out vec4 ex_Color;

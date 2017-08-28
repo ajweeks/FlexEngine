@@ -12,6 +12,7 @@ namespace flex
 
 		VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
 		void Unmap();
+		void Destroy();
 
 		VkResult Bind(VkDeviceSize offset = 0);
 		void SetupDescriptor(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);

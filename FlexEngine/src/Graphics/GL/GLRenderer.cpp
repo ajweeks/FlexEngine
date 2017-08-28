@@ -870,7 +870,7 @@ namespace flex
 		return true;
 	}
 
-	void GLRenderer::ImGui_Init(Window* /* window */)
+	void GLRenderer::ImGui_Init()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -886,12 +886,6 @@ namespace flex
 #endif
 	}
 
-	void GLRenderer::ImGui_Shutdown()
-	{
-		ImGui_InvalidateDeviceObjects();
-		ImGui::Shutdown();
-	}
-
 	void GLRenderer::ImGui_NewFrame(const GameContext& gameContext)
 	{
 		if (!g_FontTexture)
@@ -903,12 +897,23 @@ namespace flex
 		glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 		io.DisplaySize = ImVec2((float)windowSize.x, (float)windowSize.y);
 		io.DisplayFramebufferScale = ImVec2(
-			windowSize.x > 0 ? ((float)frameBufferSize.x / windowSize.x) : 0, 
+			windowSize.x > 0 ? ((float)frameBufferSize.x / windowSize.x) : 0,
 			windowSize.y > 0 ? ((float)frameBufferSize.y / windowSize.y) : 0);
 
 		io.DeltaTime = gameContext.deltaTime;
 
 		ImGui::NewFrame();
+	}
+
+	void ImGui_Render()
+	{
+		ImGui::Render();
+	}
+
+	void GLRenderer::ImGui_Shutdown()
+	{
+		ImGui_InvalidateDeviceObjects();
+		ImGui::Shutdown();
 	}
 
 	bool GLRenderer::ImGui_CreateDeviceObjects()

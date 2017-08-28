@@ -141,8 +141,9 @@ namespace flex
 		virtual void GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec) = 0;
 
 		// ImGUI functions
-		virtual void ImGui_Init(Window* window) = 0;
+		virtual void ImGui_Init(const GameContext& gameContext) = 0;
 		virtual void ImGui_NewFrame(const GameContext& gameContext) = 0;
+		virtual void ImGui_Render() = 0;
 		virtual void ImGui_Shutdown() = 0;
 
 		struct SceneInfo

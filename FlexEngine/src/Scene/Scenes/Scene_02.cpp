@@ -34,7 +34,7 @@ namespace flex
 
 
 		Renderer::MaterialCreateInfo skyboxMatInfo = {};
-		skyboxMatInfo.shaderIndex = 2;
+		skyboxMatInfo.shaderIndex = 3;
 		skyboxMatInfo.name = "Skybox";
 
 		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";

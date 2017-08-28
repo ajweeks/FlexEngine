@@ -46,7 +46,6 @@ namespace flex
 		RenderID GetRenderID() const;
 
 	private:
-		glm::uint CalculateVertexBufferStride() const;
 		void CreateVertexBuffer(VertexBufferData* vertexBufferData);
 		void DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData);
 

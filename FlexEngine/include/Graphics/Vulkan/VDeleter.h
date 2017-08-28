@@ -96,6 +96,8 @@ namespace flex
 	template<typename V>
 	inline bool VDeleter<T>::operator==(V rhs)
 	{
+		// TODO: Is this function needed?
+		UNREFERENCED_PARAMETER(rhs);
 		return false;
 	}
 

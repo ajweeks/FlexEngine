@@ -47,14 +47,15 @@ namespace flex
 
 		virtual void GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec) override;
 
-		// ImGUI functions
-		virtual void ImGui_Init(Window* window) override;
+		// ImGui functions
+		virtual void ImGui_Init() override;
 		virtual void ImGui_NewFrame(const GameContext& gameContext) override;
+		virtual void ImGui_Render() override;
 		virtual void ImGui_Shutdown() override;
 
 		// Use if you want to reset your rendering device without losing ImGui state.
-		IMGUI_API void ImGui_InvalidateDeviceObjects();
-		IMGUI_API bool ImGui_CreateDeviceObjects();
+		void ImGui_InvalidateDeviceObjects();
+		bool ImGui_CreateDeviceObjects();
 
 	private:
 		static glm::uint BufferTargetToGLTarget(BufferTarget bufferTarget);
@@ -63,7 +64,6 @@ namespace flex
 		static glm::uint TopologyModeToGLMode(TopologyMode topology);
 		static glm::uint CullFaceToGLMode(CullFace cullFace);
 
-		// ImGUI private member functions
 		bool ImGui_CreateFontsTexture();
 
 		struct Shader
@@ -192,7 +192,7 @@ namespace flex
 		GLRenderer& operator=(const GLRenderer&) = delete;
 	};
 
-
+	// TODO: Clean up
 	void ImGui_RenderDrawLists(ImDrawData* draw_data);
 	//static GLFWwindow*  g_Window = NULL;
 	static GLuint       g_FontTexture = 0;
@@ -200,7 +200,6 @@ namespace flex
 	static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 	static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
 	static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
-
 
 } // namespace flex
 
