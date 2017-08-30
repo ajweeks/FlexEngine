@@ -70,13 +70,13 @@ namespace flex
 			mat.specularTexturePath = createInfo->specularTexturePath;
 			mat.cubeMapFilePaths = createInfo->cubeMapFilePaths;
 
+			// TODO: Is this really needed? (do things dynamically instead?)
 			UniformInfo uniformInfo[] = {
 				{ Uniform::Type::MODEL_MAT4,					&mat.uniformIDs.modelID,				"in_Model" },
 				{ Uniform::Type::MODEL_INV_TRANSPOSE_MAT4,		&mat.uniformIDs.modelInvTranspose,		"in_ModelInvTranspose" },
 				{ Uniform::Type::MODEL_VIEW_PROJECTION_MAT4,	&mat.uniformIDs.modelViewProjection,	"in_ModelViewProjection" },
 				{ Uniform::Type::CAM_POS_VEC4,					&mat.uniformIDs.camPos,					"in_CamPos" },
 				{ Uniform::Type::VIEW_DIR_VEC4,					&mat.uniformIDs.viewDir,				"in_ViewDir" },
-				{ Uniform::Type::LIGHT_DIR_VEC4,				&mat.uniformIDs.lightDir,				"in_LightDir" },
 				{ Uniform::Type::AMBIENT_COLOR_VEC4,			&mat.uniformIDs.ambientColor,			"in_AmbientColor" },
 				{ Uniform::Type::SPECULAR_COLOR_VEC4,			&mat.uniformIDs.specularColor,			"in_SpecularColor" },
 				{ Uniform::Type::USE_DIFFUSE_TEXTURE_INT,		&mat.uniformIDs.useDiffuseTexture,		"in_UseDiffuseTexture" },
@@ -87,7 +87,7 @@ namespace flex
 
 			const glm::uint uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
 
-			Shader& shader = m_LoadedShaders[mat.shaderIndex];
+			Shader& shader = m_Shaders[mat.shaderIndex];
 
 			for (size_t i = 0; i < uniformCount; ++i)
 			{
@@ -95,7 +95,7 @@ namespace flex
 					Uniform::HasUniform(shader.constantBufferUniforms, uniformInfo[i].type))
 				{
 					*uniformInfo[i].id = glGetUniformLocation(shader.program, uniformInfo[i].name);
-					if (*uniformInfo[i].id == -1) Logger::LogError(std::string(uniformInfo[i].name) + " was not found!");
+					if (*uniformInfo[i].id == -1) Logger::LogWarning(std::string(uniformInfo[i].name) + " was not found for material " + createInfo->name + " (shader " + std::to_string(createInfo->shaderIndex) + ")");
 				}
 			}
 
@@ -168,11 +168,36 @@ namespace flex
 				mat.useCubemapTexture = true;
 			}
 
+			
+
+			//mat.pointLights.push_back({ glm::vec3(30.0f, 5.0f, 30.0f), 
+			//	1.0f, 0.022f, 0.0019f,
+			//	glm::vec3(0.1f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f) });
+			//
+			//mat.pointLights.push_back({ glm::vec3(-30.0f, 5.0f, 30.0f), 
+			//	1.0f, 0.022f, 0.0019f,
+			//	glm::vec3(0.1f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f) });
+			//
+			//mat.pointLights.push_back({ glm::vec3(30.0f, 5.0f, -30.0f), 
+			//	1.0f, 0.022f, 0.0019f,
+			//	glm::vec3(0.1f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f) });
+			//
+			//mat.pointLights.push_back({ glm::vec3(-30.0f, 5.0f, -30.0f), 
+			//	1.0f, 0.022f, 0.0019f,
+			//	glm::vec3(0.1f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f) });
+
+			//shader.dynamicBufferUniforms = Uniform::Type(
+			//	(glm::uint)shader.dynamicBufferUniforms | (glm::uint)Uniform::Type::POINT_LIGHTS_VEC);
+			//
+			//
+			//shader.dynamicBufferUniforms = Uniform::Type(
+			//	(glm::uint)shader.dynamicBufferUniforms | (glm::uint)Uniform::Type::DIR_LIGHT);
+
 			glUseProgram(0);
 
-			m_LoadedMaterials.push_back(mat);
+			m_Materials.push_back(mat);
 
-			return m_LoadedMaterials.size() - 1;
+			return m_Materials.size() - 1;
 		}
 
 		glm::uint GLRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
@@ -187,15 +212,15 @@ namespace flex
 			renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);
 
 			renderObject->info = {};
-			renderObject->info.materialName = m_LoadedMaterials[renderObject->materialID].name;
+			renderObject->info.materialName = m_Materials[renderObject->materialID].name;
 			renderObject->info.name = createInfo->name;
 
-			if (m_LoadedMaterials.empty()) Logger::LogError("No materials have been created!");
-			if (renderObject->materialID >= m_LoadedMaterials.size()) Logger::LogError("uninitialized material!");
+			if (m_Materials.empty()) Logger::LogError("No materials have been created!");
+			if (renderObject->materialID >= m_Materials.size()) Logger::LogError("uninitialized material!");
 
-			Material& material = m_LoadedMaterials[renderObject->materialID];
+			Material& material = m_Materials[renderObject->materialID];
 
-			Shader& shader = m_LoadedShaders[material.shaderIndex];
+			Shader& shader = m_Shaders[material.shaderIndex];
 			glUseProgram(shader.program);
 			CheckGLErrorMessages();
 
@@ -231,6 +256,30 @@ namespace flex
 			UNREFERENCED_PARAMETER(renderID);
 		}
 
+		DirectionalLightID GLRenderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
+		{
+			m_DirectionalLight = dirLight;
+			return 0;
+		}
+
+		PointLightID GLRenderer::InitializePointLight(const PointLight& pointLight)
+		{
+			m_PointLights.push_back(pointLight);
+			return m_PointLights.size() - 1;
+		}
+
+		Renderer::DirectionalLight& GLRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
+		{
+			// TODO: Add support for multiple directional lights
+			UNREFERENCED_PARAMETER(dirLightID);
+			return m_DirectionalLight;
+		}
+
+		Renderer::PointLight& GLRenderer::GetPointLight(PointLightID pointLightID)
+		{
+			return m_PointLights[pointLightID];
+		}
+
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 		{
 			RenderObject* renderObject = GetRenderObject(renderID);
@@ -257,21 +306,21 @@ namespace flex
 
 		void GLRenderer::PostInitialize()
 		{
-			int viewProjectionUBOLocation = glGetUniformBlockIndex(m_LoadedShaders[0].program, "ViewProjectionUBO");
+			int viewProjectionUBOLocation = glGetUniformBlockIndex(m_Shaders[0].program, "ViewProjectionUBO");
 			if (viewProjectionUBOLocation == -1)
 			{
-				Logger::LogWarning("Couldn't find ViewProjectionUBO in program " + std::to_string(m_LoadedShaders[0].program) + "!");
+				Logger::LogWarning("Couldn't find ViewProjectionUBO in program " + std::to_string(m_Shaders[0].program) + "!");
 			}
 			glm::uint simpleUBOBinding = 0;
-			glUniformBlockBinding(m_LoadedShaders[0].program, viewProjectionUBOLocation, simpleUBOBinding);
+			glUniformBlockBinding(m_Shaders[0].program, viewProjectionUBOLocation, simpleUBOBinding);
 
-			int viewProjectionCombinedUBOLocation = glGetUniformBlockIndex(m_LoadedShaders[1].program, "ViewProjectionCombinedUBO");
+			int viewProjectionCombinedUBOLocation = glGetUniformBlockIndex(m_Shaders[1].program, "ViewProjectionCombinedUBO");
 			if (viewProjectionCombinedUBOLocation == -1)
 			{
-				Logger::LogWarning("Couldn't find ViewProjectionCombinedUBO in program " + std::to_string(m_LoadedShaders[1].program) + "!");
+				Logger::LogWarning("Couldn't find ViewProjectionCombinedUBO in program " + std::to_string(m_Shaders[1].program) + "!");
 			}
 			glm::uint colorUBOBinding = 1;
-			glUniformBlockBinding(m_LoadedShaders[1].program, viewProjectionCombinedUBOLocation, colorUBOBinding);
+			glUniformBlockBinding(m_Shaders[1].program, viewProjectionCombinedUBOLocation, colorUBOBinding);
 
 			glGenBuffers(1, &viewProjectionUBO);
 			glBindBuffer(GL_UNIFORM_BUFFER, viewProjectionUBO);
@@ -311,7 +360,7 @@ namespace flex
 			// TODO: Only do this at startup and update when objects are added/removed?
 			// One vector per material containing all objects that use that material
 			std::vector<std::vector<RenderObject*>> sortedRenderObjects;
-			sortedRenderObjects.resize(m_LoadedMaterials.size());
+			sortedRenderObjects.resize(m_Materials.size());
 			for (size_t i = 0; i < sortedRenderObjects.size(); ++i)
 			{
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
@@ -326,8 +375,8 @@ namespace flex
 
 			for (size_t i = 0; i < sortedRenderObjects.size(); ++i)
 			{
-				Material* material = &m_LoadedMaterials[i];
-				Shader* shader = &m_LoadedShaders[material->shaderIndex];
+				Material* material = &m_Materials[i];
+				Shader* shader = &m_Shaders[material->shaderIndex];
 				glUseProgram(shader->program);
 				CheckGLErrorMessages();
 
@@ -351,13 +400,17 @@ namespace flex
 
 					for (glm::uint k = 0; k < texures.size(); ++k)
 					{
+						GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)k);
+						glActiveTexture(activeTexture);
 						if (texures[k] != -1)
 						{
-							GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)k);
-							glActiveTexture(activeTexture);
 							glBindTexture(GL_TEXTURE_2D, (GLuint)texures[k]);
-							CheckGLErrorMessages();
 						}
+						else
+						{
+							glBindTexture(GL_TEXTURE_2D, 0);
+						}
+						CheckGLErrorMessages();
 					}
 
 					if (material->useCubemapTexture)
@@ -491,13 +544,13 @@ namespace flex
 
 		void GLRenderer::UnloadShaders()
 		{
-			const size_t shaderCount = m_LoadedShaders.size();
+			const size_t shaderCount = m_Shaders.size();
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
-				glDeleteProgram(m_LoadedShaders[i].program);
+				glDeleteProgram(m_Shaders[i].program);
 				CheckGLErrorMessages();
 			}
-			m_LoadedShaders.clear();
+			m_Shaders.clear();
 		}
 
 		void GLRenderer::LoadShaders()
@@ -511,61 +564,57 @@ namespace flex
 			};
 
 			const size_t shaderCount = shaderFilePaths.size();
-			m_LoadedShaders.resize(shaderCount);
+			m_Shaders.resize(shaderCount);
 
 			glm::uint shaderIndex = 0;
 			// Simple
-			m_LoadedShaders[shaderIndex].constantBufferUniforms = Uniform::Type(
+			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
 				Uniform::Type::CAM_POS_VEC4 |
-				Uniform::Type::LIGHT_DIR_VEC4 |
-				Uniform::Type::AMBIENT_COLOR_VEC4 |
+				Uniform::Type::DIR_LIGHT |
+				Uniform::Type::POINT_LIGHTS_VEC |
 				Uniform::Type::SPECULAR_COLOR_VEC4 |
 				Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
 				Uniform::Type::USE_NORMAL_TEXTURE_INT |
 				Uniform::Type::USE_SPECULAR_TEXTURE_INT);
 
-			m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
+			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 				Uniform::Type::MODEL_MAT4 |
 				Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
 			++shaderIndex;
 
 			// Color
-			m_LoadedShaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
+			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
 
-			m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
+			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 				Uniform::Type::MODEL_MAT4);
 			++shaderIndex;
 
 			// ImGui
-			m_LoadedShaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
+			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
 
-			m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
+			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 				Uniform::Type::DIFFUSE_TEXTURE_SAMPLER);
 			++shaderIndex;
 
 			// Skybox
-			m_LoadedShaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
+			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
 
-			m_LoadedShaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
+			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 				Uniform::Type::USE_CUBEMAP_TEXTURE_INT |
 				Uniform::Type::MODEL_MAT4);
 			++shaderIndex;
 
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
-				m_LoadedShaders[i].program = glCreateProgram();
+				m_Shaders[i].program = glCreateProgram();
 				CheckGLErrorMessages();
 
-				// Load shaders located at shaderFilePaths[i] and store ID into m_LoadedShaders[i]
-				LoadGLShaders(
-					m_LoadedShaders[i].program,
-					shaderFilePaths[i].first, m_LoadedShaders[i].vertexShader,
-					shaderFilePaths[i].second, m_LoadedShaders[i].fragmentShader);
+				LoadGLShaders(m_Shaders[i].program, shaderFilePaths[i].first, shaderFilePaths[i].second);
 
-				LinkProgram(m_LoadedShaders[i].program);
+				LinkProgram(m_Shaders[i].program);
 			}
 
-			m_ImGuiShaderHandle = m_LoadedShaders[2].program;
+			m_ImGuiShaderHandle = m_Shaders[2].program;
 
 			CheckGLErrorMessages();
 		}
@@ -575,8 +624,8 @@ namespace flex
 			RenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
 
-			Material* material = &m_LoadedMaterials[renderObject->materialID];
-			Shader* shader = &m_LoadedShaders[material->shaderIndex];
+			Material* material = &m_Materials[renderObject->materialID];
+			Shader* shader = &m_Shaders[material->shaderIndex];
 
 			glm::mat4 model = renderObject->model;
 			glm::mat4 modelInv = glm::inverse(renderObject->model);
@@ -657,15 +706,43 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::LIGHT_DIR_VEC4) ||
-				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::LIGHT_DIR_VEC4))
+			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::DIR_LIGHT) ||
+				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::DIR_LIGHT))
 			{
-				glUniform4f(material->uniformIDs.lightDir,
-					m_SceneInfo.m_LightDir.x,
-					m_SceneInfo.m_LightDir.y,
-					m_SceneInfo.m_LightDir.z,
-					m_SceneInfo.m_LightDir.w);
+				SetVec3f(material->shaderIndex, "dirLight.direction", m_DirectionalLight.direction);
 				CheckGLErrorMessages();
+				SetVec3f(material->shaderIndex, "dirLight.ambientCol", m_DirectionalLight.ambientCol);
+				CheckGLErrorMessages();
+				SetVec3f(material->shaderIndex, "dirLight.diffuseCol", m_DirectionalLight.diffuseCol);
+				CheckGLErrorMessages();
+				SetVec3f(material->shaderIndex, "dirLight.specularCol", m_DirectionalLight.specularCol);
+				CheckGLErrorMessages();
+			}
+
+			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::POINT_LIGHTS_VEC) ||
+				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::POINT_LIGHTS_VEC))
+			{
+				for (size_t i = 0; i < m_PointLights.size(); ++i)
+				{
+					const std::string numberStr = std::to_string(i);
+					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
+					CheckGLErrorMessages();
+
+					SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constant);
+					CheckGLErrorMessages();
+					SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].linear);
+					CheckGLErrorMessages();
+					SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].quadratic);
+					CheckGLErrorMessages();
+
+					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);
+					CheckGLErrorMessages();
+					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].diffuseCol", m_PointLights[i].diffuseCol);
+					CheckGLErrorMessages();
+					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].specularCol", m_PointLights[i].specularCol);
+					CheckGLErrorMessages();
+
+				}
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::AMBIENT_COLOR_VEC4) ||
@@ -758,16 +835,53 @@ namespace flex
 			renderObject->model = model;
 		}
 
-		int GLRenderer::GetShaderUniformLocation(glm::uint program, const std::string& uniformName)
+		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, float val)
 		{
-			int uniformLocation = glGetUniformLocation(program, uniformName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			if (location == -1) Logger::LogWarning("Float " + valName + " couldn't be found!");
 			CheckGLErrorMessages();
-			return uniformLocation;
+
+			glUniform1f(location, val);
+			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetUniform1f(int location, float val)
+		void GLRenderer::SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec)
 		{
-			glUniform1f(location, val);
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			if (location == -1) Logger::LogWarning("Vec2f " + vecName + " couldn't be found!");
+			CheckGLErrorMessages();
+
+			glUniform2f(location, vec[0], vec[1]);
+			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec)
+		{
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			if (location == -1) Logger::LogWarning("Vec3f " + vecName + " couldn't be found!");
+			CheckGLErrorMessages();
+
+			glUniform3f(location, vec[0], vec[1], vec[2]);
+			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec)
+		{
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			if (location == -1) Logger::LogWarning("Vec4f " + vecName + " couldn't be found!");
+			CheckGLErrorMessages();
+
+			glUniform4f(location, vec[0], vec[1], vec[2], vec[3]);
+			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat)
+		{
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName.c_str());
+			if (location == -1) Logger::LogWarning("Mat4f " + matName + " couldn't be found!");
+			CheckGLErrorMessages();
+
+			glUniformMatrix4fv(location, 1, false, &mat[0][0]);
 			CheckGLErrorMessages();
 		}
 
@@ -794,8 +908,8 @@ namespace flex
 			RenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
 
-			Material* material = &m_LoadedMaterials[renderObject->materialID];
-			glm::uint program = m_LoadedShaders[material->shaderIndex].program;
+			Material* material = &m_Materials[renderObject->materialID];
+			glm::uint program = m_Shaders[material->shaderIndex].program;
 
 			glBindVertexArray(renderObject->VAO);
 			CheckGLErrorMessages();
@@ -1002,14 +1116,6 @@ namespace flex
 			if (m_ImGuiVboHandle) glDeleteBuffers(1, &m_ImGuiVboHandle);
 			if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
 			m_ImGuiVaoHandle = m_ImGuiVboHandle = g_ElementsHandle = 0;
-
-			//if (m_ImGuiShaderHandle && m_ImGuiVertHandle) glDetachShader(m_ImGuiShaderHandle, m_ImGuiVertHandle);
-			//if (m_ImGuiVertHandle) glDeleteShader(m_ImGuiVertHandle);
-			//m_ImGuiVertHandle = 0;
-			//
-			//if (m_ImGuiShaderHandle && m_ImGuiFragHandle) glDetachShader(m_ImGuiShaderHandle, m_ImGuiFragHandle);
-			//if (m_ImGuiFragHandle) glDeleteShader(m_ImGuiFragHandle);
-			//m_ImGuiFragHandle = 0;
 
 			if (m_ImGuiShaderHandle) glDeleteProgram(m_ImGuiShaderHandle);
 			m_ImGuiShaderHandle = 0;

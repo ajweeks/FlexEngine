@@ -7,7 +7,6 @@
 
 #include "Graphics/GL/GLHelpers.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 
 namespace flex
 {

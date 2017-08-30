@@ -11,7 +11,6 @@
 
 #include <assimp/scene.h>
 
-#include "Transform.h"
 #include "VertexBufferData.h"
 
 namespace flex
@@ -26,8 +25,9 @@ namespace flex
 		enum class PrefabShape
 		{
 			CUBE,
-			UV_SPHERE,
 			GRID,
+			PLANE,
+			UV_SPHERE,
 			SKYBOX
 		};
 
@@ -40,16 +40,12 @@ namespace flex
 
 		void SetMaterialID(MaterialID materialID);
 
-		void SetTransform(const Transform& transform);
-		Transform& GetTransform();
-
 		RenderID GetRenderID() const;
 
 	private:
 		void CreateVertexBuffer(VertexBufferData* vertexBufferData);
 		void DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData);
 
-		Transform m_Transform;
 		RenderID m_RenderID;
 		MaterialID m_MaterialID;
 

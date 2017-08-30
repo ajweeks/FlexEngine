@@ -89,7 +89,7 @@ namespace flex
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
-		if (m_ShowMSInWindowTitle) result += "   " + FloatToString(dt, 3) + " ms";
+		if (m_ShowMSInWindowTitle) result += "   " + FloatToString(dt * 1000.0f, 2) + " ms";
 		if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable rolling average
 		//if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(1.0f / dt, 0) + " FPS ";
 

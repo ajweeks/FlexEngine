@@ -21,24 +21,28 @@ namespace flex
 	private:
 		std::vector<MeshPrefab*> m_Cubes;
 
-		MeshPrefab* m_Grid;
-		MeshPrefab* m_Scene;
-		MeshPrefab* m_Landscape;
-		MeshPrefab* m_Cube;
-		MeshPrefab* m_Cube2;
-		MeshPrefab* m_ChamferBox;
-		MeshPrefab* m_UVSphere;
-		MeshPrefab* m_Capsule;
-		MeshPrefab* m_Teapot;
-		MeshPrefab* m_Rock1;
-		MeshPrefab* m_Rock2;
-		MeshPrefab* m_Skybox;
+		MeshPrefab* m_Grid = nullptr;
+		MeshPrefab* m_Plane = nullptr;
+		MeshPrefab* m_Scene = nullptr;
+		MeshPrefab* m_Landscape = nullptr;
+		MeshPrefab* m_Cube = nullptr;
+		MeshPrefab* m_Cube2 = nullptr;
+		MeshPrefab* m_ChamferBox = nullptr;
+		MeshPrefab* m_UVSphere = nullptr;
+		MeshPrefab* m_Capsule = nullptr;
+		MeshPrefab* m_Teapot = nullptr;
+		MeshPrefab* m_Rock1 = nullptr;
+		MeshPrefab* m_Rock2 = nullptr;
+		MeshPrefab* m_Skybox = nullptr;
 
-		MeshPrefab* m_TransformManipulator_1;
-		MeshPrefab* m_TransformManipulator_2;
-		MeshPrefab* m_TransformManipulator_3;
-		MeshPrefab* m_TransformManipulator_4;
-		MeshPrefab* m_TransformManipulator_5;
+		MeshPrefab* m_TransformManipulator_1 = nullptr;
+		MeshPrefab* m_TransformManipulator_2 = nullptr;
+		MeshPrefab* m_TransformManipulator_3 = nullptr;
+		MeshPrefab* m_TransformManipulator_4 = nullptr;
+		MeshPrefab* m_TransformManipulator_5 = nullptr;
+
+		PointLightID m_PointLight1ID;
+		PointLightID m_PointLight2ID;
 
 		TestScene(const TestScene&) = delete;
 		TestScene& operator=(const TestScene&) = delete;

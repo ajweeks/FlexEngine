@@ -319,19 +319,39 @@ namespace flex
 			UpdateUniformBufferDynamic(gameContext, renderID, model);
 		}
 
-		int VulkanRenderer::GetShaderUniformLocation(glm::uint program, const std::string& uniformName)
+		void VulkanRenderer::SetFloat(ShaderID shaderID, const std::string& valName, float val)
 		{
-			// TODO: Implement
-			UNREFERENCED_PARAMETER(program);
-			UNREFERENCED_PARAMETER(uniformName);
-			return 0;
+			UNREFERENCED_PARAMETER(shaderID);
+			UNREFERENCED_PARAMETER(valName);
+			UNREFERENCED_PARAMETER(val);
 		}
 
-		void VulkanRenderer::SetUniform1f(int location, float val)
+		void VulkanRenderer::SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec)
 		{
-			// TODO: Implement
-			UNREFERENCED_PARAMETER(location);
-			UNREFERENCED_PARAMETER(val);
+			UNREFERENCED_PARAMETER(shaderID);
+			UNREFERENCED_PARAMETER(vecName);
+			UNREFERENCED_PARAMETER(vec);
+		}
+
+		void VulkanRenderer::SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec)
+		{
+			UNREFERENCED_PARAMETER(shaderID);
+			UNREFERENCED_PARAMETER(vecName);
+			UNREFERENCED_PARAMETER(vec);
+		}
+
+		void VulkanRenderer::SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec)
+		{
+			UNREFERENCED_PARAMETER(shaderID);
+			UNREFERENCED_PARAMETER(vecName);
+			UNREFERENCED_PARAMETER(vec);
+		}
+
+		void VulkanRenderer::SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat)
+		{
+			UNREFERENCED_PARAMETER(shaderID);
+			UNREFERENCED_PARAMETER(matName);
+			UNREFERENCED_PARAMETER(mat);
 		}
 
 		glm::uint VulkanRenderer::GetRenderObjectCount() const
@@ -496,6 +516,8 @@ namespace flex
 
 		void VulkanRenderer::ImGui_InitResources()
 		{
+			const glm::uint shaderIndex = 2;
+
 			m_ImGuiPushConstBlock = { glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f) };
 
 			{
@@ -503,9 +525,9 @@ namespace flex
 
 				DescriptorSetCreateInfo createInfo = {};
 				createInfo.descriptorSet = &m_ImGuiDescriptorSet;
-				createInfo.descriptorSetLayoutIndex = 2;
+				createInfo.descriptorSetLayoutIndex = shaderIndex;
 				createInfo.diffuseTexture = m_ImGuiFontTexture;
-				createInfo.uniformBufferIndex = 2;
+				createInfo.uniformBufferIndex = shaderIndex;
 
 				CreateDescriptorSet(&createInfo);
 			}
@@ -515,7 +537,6 @@ namespace flex
 			pushConstants[0].offset = sizeof(float) * 0;
 			pushConstants[0].size = sizeof(float) * 4;
 
-			const glm::uint shaderIndex = 2;
 			VertexBufferData vertexBufferData = {};
 			vertexBufferData.Attributes =
 				(glm::uint)VertexBufferData::Attribute::POSITION_2D |
@@ -572,6 +593,29 @@ namespace flex
 		{
 			CreateDescriptorSet(renderID);
 			CreateGraphicsPipeline(renderID);
+		}
+
+		DirectionalLightID VulkanRenderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
+		{
+			m_DirectionalLight = dirLight;
+			return 0;
+		}
+
+		PointLightID VulkanRenderer::InitializePointLight(const PointLight& pointLight)
+		{
+			m_PointLights.push_back(pointLight);
+			return m_PointLights.size() - 1;
+		}
+
+		Renderer::DirectionalLight& VulkanRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
+		{
+			UNREFERENCED_PARAMETER(dirLightID);
+			return m_DirectionalLight;
+		}
+
+		Renderer::PointLight& VulkanRenderer::GetPointLight(PointLightID pointLightID)
+		{
+			return m_PointLights[pointLightID];
 		}
 
 		RenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
@@ -2161,7 +2205,8 @@ namespace flex
 				Uniform::Type::PROJECTION_MAT4 |
 				Uniform::Type::VIEW_MAT4 |
 				Uniform::Type::CAM_POS_VEC4 |
-				Uniform::Type::LIGHT_DIR_VEC4 |
+				Uniform::Type::DIR_LIGHT |
+				Uniform::Type::POINT_LIGHTS_VEC |
 				Uniform::Type::AMBIENT_COLOR_VEC4 |
 				Uniform::Type::SPECULAR_COLOR_VEC4);
 
@@ -2961,8 +3006,15 @@ namespace flex
 					index += 4;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::LIGHT_DIR_VEC4))
+				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::DIR_LIGHT))
 				{
+					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_LightDir[0], sizeof(glm::vec4));
+					index += 4;
+				}
+
+				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::POINT_LIGHTS_VEC))
+				{
+					// TODO:
 					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_LightDir[0], sizeof(glm::vec4));
 					index += 4;
 				}
@@ -3063,20 +3115,20 @@ namespace flex
 		{
 			const std::string shaderDirectory = RESOURCE_LOCATION + "shaders/GLSL/spv/";
 
-			m_ShaderFilePaths = {
-				{ shaderDirectory + "vk_simple_vert.spv", shaderDirectory + "vk_simple_frag.spv" },
-				{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
-				{ shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
+			m_Shaders = {
+				{ 0, shaderDirectory + "vk_simple_vert.spv", shaderDirectory + "vk_simple_frag.spv" },
+				{ 1, shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
+				{ 2, shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
 				// NOTE: Skybox shader should be kept last to keep other objects rendering in front
-				{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
+				{ 3, shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
 			};
 
-			const size_t shaderCount = m_ShaderFilePaths.size();
+			const size_t shaderCount = m_Shaders.size();
 			m_LoadedShaderCode.resize(shaderCount);
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
-				m_LoadedShaderCode[i].vertexShaderCode = ReadFile(m_ShaderFilePaths[i].vertexShaderFilePath);
-				m_LoadedShaderCode[i].fragmentShaderCode = ReadFile(m_ShaderFilePaths[i].fragmentShaderFilePath);
+				m_LoadedShaderCode[i].vertexShaderCode = ReadFile(m_Shaders[i].vertexShaderFilePath);
+				m_LoadedShaderCode[i].fragmentShaderCode = ReadFile(m_Shaders[i].fragmentShaderFilePath);
 			}
 		}
 

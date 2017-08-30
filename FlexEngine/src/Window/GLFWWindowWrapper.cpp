@@ -7,7 +7,6 @@
 #include "InputManager.h"
 #include "Logger.h"
 #include "FlexEngine.h"
-#include "ShaderUtils.h"
 
 namespace flex
 {

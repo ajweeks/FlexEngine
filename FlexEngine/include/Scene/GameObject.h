@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "GameContext.h"
+#include "Transform.h"
 
 namespace flex
 {
@@ -12,10 +13,15 @@ namespace flex
 		GameObject(GameObject* pParent = nullptr);
 		virtual ~GameObject();
 
+		void SetTransform(const Transform& transform);
+		Transform& GetTransform();
+
 	protected:
 		virtual void Initialize(const GameContext& gameContext) = 0;
 		virtual void Update(const GameContext& gameContext) = 0;
 		virtual void Destroy(const GameContext& gameContext) = 0;
+		
+		Transform m_Transform;
 
 	private:
 		void RootInitialize(const GameContext& gameContext);

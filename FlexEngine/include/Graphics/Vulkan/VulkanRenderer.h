@@ -8,7 +8,6 @@
 
 #include "Graphics/Renderer.h"
 #include "Graphics/Vulkan/VulkanHelpers.h"
-#include "ShaderUtils.h"
 #include "VDeleter.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
@@ -29,6 +28,11 @@ namespace flex
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
+			virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) override;
+			virtual PointLightID InitializePointLight(const PointLight& pointLight) override;
+
+			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
+			virtual PointLight& GetPointLight(PointLightID pointLightID) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(float r, float g, float b) override;
@@ -45,8 +49,11 @@ namespace flex
 
 			virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
-			virtual int GetShaderUniformLocation(glm::uint program, const std::string& uniformName) override;
-			virtual void SetUniform1f(int location, float val) override;
+			virtual void SetFloat(ShaderID shaderID, const std::string& valName, float val) override;
+			virtual void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec) override;
+			virtual void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec) override;
+			virtual void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec) override;
+			virtual void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat) override;
 
 			virtual glm::uint GetRenderObjectCount() const override;
 			virtual glm::uint GetRenderObjectCapacity() const override;
@@ -158,8 +165,10 @@ namespace flex
 			RenderObject* GetRenderObject(RenderID renderID);
 
 			std::vector<RenderObject*> m_RenderObjects;
+			DirectionalLight m_DirectionalLight;
+			std::vector<PointLight> m_PointLights;
 			std::vector<UniformBuffer> m_UniformBuffers;
-			std::vector<ShaderFilePathPair> m_ShaderFilePaths;
+			std::vector<Shader> m_Shaders;
 			std::vector<ShaderCodePair> m_LoadedShaderCode;
 			std::vector<Material> m_LoadedMaterials;
 
@@ -205,6 +214,7 @@ namespace flex
 
 			std::vector<VkCommandBuffer> m_CommandBuffers;
 
+			// TODO: Move into vector
 			VulkanTexture* m_BrickDiffuseTexture = nullptr;
 			VulkanTexture* m_BrickNormalTexture = nullptr;
 			VulkanTexture* m_BrickSpecularTexture = nullptr;

@@ -187,7 +187,6 @@
     <ClCompile Include="FlexEngine\src\Logger.cpp" />
     <ClCompile Include="FlexEngine\src\Colors.cpp" />
     <ClCompile Include="FlexEngine\src\Random.cpp" />
-    <ClCompile Include="FlexEngine\src\ShaderUtils.cpp" />
     <ClCompile Include="FlexEngine\src\main.cpp" />
     <ClCompile Include="FlexEngine\src\Scene\Scenes\Scene_02.cpp" />
   </ItemGroup>
@@ -215,7 +214,6 @@
     <ClInclude Include="FlexEngine\include\Logger.h" />
     <ClInclude Include="FlexEngine\include\stdafx.h" />
     <ClInclude Include="FlexEngine\include\FlexEngine.h" />
-    <ClInclude Include="FlexEngine\include\ShaderUtils.h" />
     <ClInclude Include="FlexEngine\include\Random.h" />
     <ClInclude Include="FlexEngine\include\Typedefs.h" />
     <ClInclude Include="FlexEngine\include\InputManager.h" />

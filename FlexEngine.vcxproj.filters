@@ -75,9 +75,6 @@
     <ClCompile Include="FlexEngine\src\Random.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlexEngine\src\ShaderUtils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FlexEngine\src\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -183,9 +180,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Random.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlexEngine\include\ShaderUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\stdafx.h">

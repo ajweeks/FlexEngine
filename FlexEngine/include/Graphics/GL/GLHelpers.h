@@ -15,16 +15,6 @@ namespace flex
 {
 	namespace gl
 	{
-		struct Shader
-		{
-			glm::uint program;
-			glm::uint vertexShader;
-			glm::uint fragmentShader;
-
-			Uniform::Type constantBufferUniforms;
-			Uniform::Type dynamicBufferUniforms;
-		};
-
 		struct Material
 		{
 			std::string name;
@@ -38,7 +28,6 @@ namespace flex
 				int modelViewProjection;
 				int camPos;
 				int viewDir;
-				int lightDir;
 				int ambientColor;
 				int specularColor;
 				int useDiffuseTexture;
@@ -62,6 +51,9 @@ namespace flex
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 			bool useCubemapTexture = false;
+
+			//Renderer::DirectionalLight directionalLight;
+			//std::vector<Renderer::PointLight> pointLights;
 		};
 
 		struct RenderObject
@@ -94,7 +86,7 @@ namespace flex
 
 		struct UniformInfo
 		{
-			Uniform::Type type;
+			Renderer::Uniform::Type type;
 			int* id;
 			const GLchar* name;
 		};
@@ -123,9 +115,7 @@ namespace flex
 
 		void GenerateCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths);
 
-		bool LoadGLShaders(glm::uint program,
-			std::string vertexShaderFilePath, glm::uint& vertexShaderID,
-			std::string fragmentShaderFilePath, glm::uint& fragmentShaderID);
+		bool LoadGLShaders(glm::uint program, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
 		void LinkProgram(glm::uint program);
 
 

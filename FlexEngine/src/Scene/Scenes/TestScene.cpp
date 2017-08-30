@@ -62,11 +62,21 @@ namespace flex
 		workMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/work_n.jpg";
 		const MaterialID workMatID = gameContext.renderer->InitializeMaterial(gameContext, &workMatInfo);
 
+		Renderer::MaterialCreateInfo plainNSimpleInfo = {};
+		plainNSimpleInfo.shaderIndex = 0;
+		plainNSimpleInfo.name = "Plain 'n Simple (simple with no textures set)";
+		const MaterialID plainNSimpleMatID = gameContext.renderer->InitializeMaterial(gameContext, &plainNSimpleInfo);
+
 
 		m_Grid = new MeshPrefab(colorMatID);
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-		m_Grid->GetTransform().position.y -= 0.05f;
+		m_Grid->GetTransform().position.y -= 0.1f;
 		AddChild(m_Grid);
+
+		m_Plane = new MeshPrefab(plainNSimpleMatID);
+		m_Plane->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::PLANE);
+		m_Plane->GetTransform().position.y -= 0.05f;
+		AddChild(m_Plane);
 
 		//m_Teapot = new MeshPrefab();
 		//m_Teapot->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/teapot.fbx");
@@ -91,11 +101,12 @@ namespace flex
 		//
 		//m_IcoSphere.Init(gameContext, SpherePrefab::Type::ICOSPHERE, vec3(2.0f, 1.0f, 0.0f), quat(vec3(0.0f)), vec3(0.5f, 0.5f, 0.5f));
 
-		//m_Cube = new MeshPrefab();
-		//m_Cube->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
-		//m_Cube->SetTransform(Transform(glm::vec3(-4.0f, 0.5f, 0.0f), glm::quat(glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(3.0f, 1.0f, 1.0f)));
-		//AddChild(m_Cube);
-		//
+		m_Cube = new MeshPrefab();
+		m_Cube->SetMaterialID(plainNSimpleMatID);
+		m_Cube->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
+		m_Cube->SetTransform(Transform(glm::vec3(-4.0f, 0.5f, 0.0f), glm::quat(glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(3.0f, 1.0f, 1.0f)));
+		AddChild(m_Cube);
+		
 		//m_Cube2 = new MeshPrefab();
 		//m_Cube2->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
 		//m_Cube2->SetTransform(Transform(glm::vec3(7.0f, 2.5f, 0.0f), glm::quat(glm::vec3(0.2f, 0.3f, 2.0f)), glm::vec3(1.0f, 5.0f, 1.0f)));
@@ -158,10 +169,21 @@ namespace flex
 		sceneInfo.m_AmbientColor = glm::vec4(0.02f, 0.03f, 0.025f, 1.0f);
 		sceneInfo.m_SpecularColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-		// Set in update:
-		//sceneInfo.m_LightDir = glm::vec4(0.9f, -0.11f, 0.12f, 0.0f);
 
-		//m_TimeID = gameContext.renderer->GetShaderUniformLocation(gameContext.program, "in_Time");
+		Renderer::PointLight light1 = {};
+		light1.position.y += 5.0f;
+		m_PointLight1ID = gameContext.renderer->InitializePointLight(light1);
+
+
+		Renderer::PointLight light2 = {};
+		light2.position.y += 5.0f;
+		m_PointLight2ID = gameContext.renderer->InitializePointLight(light2);
+
+
+		Renderer::DirectionalLight dirLight = {};
+		dirLight.direction = glm::vec3(-0.75f, -0.25f, -0.95f);
+		dirLight.diffuseCol = glm::vec3(0.5f);
+		gameContext.renderer->InitializeDirectionalLight(dirLight);
 	}
 
 	void TestScene::Destroy(const GameContext& gameContext)
@@ -188,6 +210,18 @@ namespace flex
 				gameContext.renderer->PostInitializeRenderObject(m_Grid->GetRenderID());
 			}
 		}
+
+		Renderer::PointLight& light1 = gameContext.renderer->GetPointLight(m_PointLight1ID);
+		light1.position.z = (sin(gameContext.elapsedTime)) * 25.0f;
+		light1.position.x = (cos(gameContext.elapsedTime)) * 25.0f;
+
+		Renderer::PointLight& light2 = gameContext.renderer->GetPointLight(m_PointLight2ID);
+		light2.position.z = (cos(gameContext.elapsedTime + glm::pi<float>())) * 40.0f + 15.0f;
+		light2.position.x = (sin(gameContext.elapsedTime + glm::pi<float>())) * 40.0f - 15.0f;
+		light2.diffuseCol = glm::vec3(
+			sin(gameContext.elapsedTime) * 0.5f + 0.5,
+			sin(gameContext.elapsedTime * 0.35f + 0.42f) * 0.5f + 0.5,
+			cos(gameContext.elapsedTime * 1.68f + 2.8f) * 0.5f + 0.5);
 
 		//const float dt = gameContext.deltaTime;
 		//const float elapsed = gameContext.elapsedTime;

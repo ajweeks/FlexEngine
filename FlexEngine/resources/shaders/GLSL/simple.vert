@@ -17,9 +17,9 @@ in vec3 in_Bitangent;
 in vec3 in_Normal;
 
 out vec3 ex_WorldPos;
+out vec2 ex_TexCoord;
 out vec4 ex_Color;
 out mat3 ex_TBN;
-out vec2 ex_TexCoord;
 
 void main()
 {

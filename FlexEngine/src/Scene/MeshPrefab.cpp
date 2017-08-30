@@ -402,71 +402,103 @@ namespace flex
 			renderObjectCreateInfo.materialID = 1;
 			renderObjectCreateInfo.name = "Cube";
 		} break;
-		case MeshPrefab::PrefabShape::SKYBOX:
+		case MeshPrefab::PrefabShape::GRID:
+		{
+			float rowWidth = 10.0f;
+			glm::uint lineCount = 15;
+
+			const glm::vec4 lineColor = Color::GRAY;
+			const glm::vec4 centerLineColor = Color::LIGHT_GRAY;
+
+			const size_t vertexCount = lineCount * 2 * 2;
+			m_Positions.reserve(vertexCount);
+			m_Colors.reserve(vertexCount);
+			m_TexCoords.reserve(vertexCount);
+			m_Normals.reserve(vertexCount);
+
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
+
+			float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
+
+			// Horizontal lines
+			for (glm::uint i = 0; i < lineCount; ++i)
+			{
+				m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, -halfWidth });
+				m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, halfWidth });
+
+				const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
+				m_Colors.push_back(color);
+				m_Colors.push_back(color);
+			}
+
+			// Vertical lines
+			for (glm::uint i = 0; i < lineCount; ++i)
+			{
+				m_Positions.push_back({ -halfWidth, 0.0f, i * rowWidth - halfWidth });
+				m_Positions.push_back({ halfWidth, 0.0f, i * rowWidth - halfWidth });
+
+				const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
+				m_Colors.push_back(color);
+				m_Colors.push_back(color);
+			}
+
+			topologyMode = Renderer::TopologyMode::LINE_LIST;
+			renderObjectCreateInfo.materialID = 1;
+			renderObjectCreateInfo.name = "Grid";
+		} break;
+		case MeshPrefab::PrefabShape::PLANE:
 		{
 			m_Positions =
 			{
-				// Front
-				{ -0.5f, -0.5f, -0.5f, },
-				{ -0.5f,  0.5f, -0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
+				{ -50.0f, 0.0f, -50.0f, },
+				{ -50.0f, 0.0f,  50.0f, },
+				{ 50.0f,  0.0f,  50.0f, },
 
-				{ -0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
-				{ 0.5f, -0.5f, -0.5f, },
-
-				// Top
-				{ -0.5f, 0.5f, -0.5f, },
-				{ -0.5f, 0.5f,  0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
-
-				{ -0.5f, 0.5f, -0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
-
-				// Back
-				{ 0.5f, -0.5f, 0.5f, },
-				{ 0.5f,  0.5f, 0.5f, },
-				{ -0.5f,  0.5f, 0.5f, },
-
-				{ 0.5f, -0.5f, 0.5f, },
-				{ -0.5f, 0.5f, 0.5f, },
-				{ -0.5f, -0.5f, 0.5f, },
-
-				// Bottom
-				{ -0.5f, -0.5f, -0.5f, },
-				{ 0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  -0.5f,  0.5f, },
-
-				{ -0.5f, -0.5f, -0.5f, },
-				{ 0.5f, -0.5f,  0.5f, },
-				{ -0.5f, -0.5f,  0.5f, },
-
-				// Right
-				{ 0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
-
-				{ 0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
-				{ 0.5f, -0.5f,  0.5f, },
-
-				// Left
-				{ -0.5f, -0.5f, -0.5f, },
-				{ -0.5f,  0.5f,  0.5f, },
-				{ -0.5f,  0.5f, -0.5f, },
-
-				{ -0.5f, -0.5f, -0.5f, },
-				{ -0.5f, -0.5f,  0.5f, },
-				{ -0.5f,  0.5f,  0.5f, },
+				{ -50.0f, 0.0f, -50.0f, },
+				{ 50.0f,  0.0f,  50.0f, },
+				{ 50.0f,  0.0f, -50.0f, },
 			};
 			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
 
-			// TODO: At *least* use strings rather than indices
-			renderObjectCreateInfo.materialID = 3;
-			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
-			renderObjectCreateInfo.name = "Skybox";
+			m_Normals =
+			{
+				{ 0.0f, 1.0f, 0.0f, },
+				{ 0.0f, 1.0f, 0.0f, },
+				{ 0.0f, 1.0f, 0.0f, },
 
+				{ 0.0f, 1.0f, 0.0f, },
+				{ 0.0f, 1.0f, 0.0f, },
+				{ 0.0f, 1.0f, 0.0f, },
+			};
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::NORMAL;
+
+			m_Colors =
+			{
+				{ 1.0f, 1.0f, 1.0f, 1.0f },
+				{ 1.0f, 1.0f, 1.0f, 1.0f },
+				{ 1.0f, 1.0f, 1.0f, 1.0f },
+
+				{ 1.0f, 1.0f, 1.0f, 1.0f },
+				{ 1.0f, 1.0f, 1.0f, 1.0f },
+				{ 1.0f, 1.0f, 1.0f, 1.0f },
+			};
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
+
+			m_TexCoords =
+			{
+				{ 0.0f, 0.0f },
+				{ 0.0f, 1.0f },
+				{ 1.0f, 1.0f },
+
+				{ 0.0f, 0.0f },
+				{ 1.0f, 1.0f },
+				{ 1.0f, 0.0f },
+			};
+			m_Attributes |= (glm::uint)VertexBufferData::Attribute::UV;
+
+			renderObjectCreateInfo.materialID = 1;
+			renderObjectCreateInfo.name = "Plane";
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:
 		{
@@ -566,50 +598,71 @@ namespace flex
 
 			renderObjectCreateInfo.name = "UV Sphere";
 		} break;
-		case MeshPrefab::PrefabShape::GRID:
+		case MeshPrefab::PrefabShape::SKYBOX:
 		{
-			float rowWidth = 10.0f;
-			glm::uint lineCount = 15;
+			m_Positions =
+			{
+				// Front
+				{ -0.5f, -0.5f, -0.5f, },
+				{ -0.5f,  0.5f, -0.5f, },
+				{ 0.5f,  0.5f, -0.5f, },
 
-			const glm::vec4 lineColor = Color::GRAY;
-			const glm::vec4 centerLineColor = Color::LIGHT_GRAY;
+				{ -0.5f, -0.5f, -0.5f, },
+				{ 0.5f,  0.5f, -0.5f, },
+				{ 0.5f, -0.5f, -0.5f, },
 
-			const size_t vertexCount = lineCount * 2 * 2;
-			m_Positions.reserve(vertexCount);
-			m_Colors.reserve(vertexCount);
-			m_TexCoords.reserve(vertexCount);
-			m_Normals.reserve(vertexCount);
+				// Top
+				{ -0.5f, 0.5f, -0.5f, },
+				{ -0.5f, 0.5f,  0.5f, },
+				{ 0.5f,  0.5f,  0.5f, },
 
+				{ -0.5f, 0.5f, -0.5f, },
+				{ 0.5f,  0.5f,  0.5f, },
+				{ 0.5f,  0.5f, -0.5f, },
+
+				// Back
+				{ 0.5f, -0.5f, 0.5f, },
+				{ 0.5f,  0.5f, 0.5f, },
+				{ -0.5f,  0.5f, 0.5f, },
+
+				{ 0.5f, -0.5f, 0.5f, },
+				{ -0.5f, 0.5f, 0.5f, },
+				{ -0.5f, -0.5f, 0.5f, },
+
+				// Bottom
+				{ -0.5f, -0.5f, -0.5f, },
+				{ 0.5f, -0.5f, -0.5f, },
+				{ 0.5f,  -0.5f,  0.5f, },
+
+				{ -0.5f, -0.5f, -0.5f, },
+				{ 0.5f, -0.5f,  0.5f, },
+				{ -0.5f, -0.5f,  0.5f, },
+
+				// Right
+				{ 0.5f, -0.5f, -0.5f, },
+				{ 0.5f,  0.5f, -0.5f, },
+				{ 0.5f,  0.5f,  0.5f, },
+
+				{ 0.5f, -0.5f, -0.5f, },
+				{ 0.5f,  0.5f,  0.5f, },
+				{ 0.5f, -0.5f,  0.5f, },
+
+				// Left
+				{ -0.5f, -0.5f, -0.5f, },
+				{ -0.5f,  0.5f,  0.5f, },
+				{ -0.5f,  0.5f, -0.5f, },
+
+				{ -0.5f, -0.5f, -0.5f, },
+				{ -0.5f, -0.5f,  0.5f, },
+				{ -0.5f,  0.5f,  0.5f, },
+			};
 			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
-			m_Attributes |= (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT;
 
-			float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
+			// TODO: At *least* use strings rather than indices
+			renderObjectCreateInfo.materialID = 3;
+			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
+			renderObjectCreateInfo.name = "Skybox";
 
-			// Horizontal lines
-			for (glm::uint i = 0; i < lineCount; ++i)
-			{
-				m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, -halfWidth });
-				m_Positions.push_back({ i * rowWidth - halfWidth, 0.0f, halfWidth });
-
-				const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
-				m_Colors.push_back(color);
-				m_Colors.push_back(color);
-			}
-
-			// Vertical lines
-			for (glm::uint i = 0; i < lineCount; ++i)
-			{
-				m_Positions.push_back({ -halfWidth, 0.0f, i * rowWidth - halfWidth });
-				m_Positions.push_back({ halfWidth, 0.0f, i * rowWidth - halfWidth });
-
-				const glm::vec4 color = (i == lineCount / 2 ? centerLineColor : lineColor);
-				m_Colors.push_back(color);
-				m_Colors.push_back(color);
-			}
-
-			topologyMode = Renderer::TopologyMode::LINE_LIST;
-			renderObjectCreateInfo.materialID = 1;
-			renderObjectCreateInfo.name = "Grid";
 		} break;
 		default:
 		{
@@ -652,16 +705,6 @@ namespace flex
 	void MeshPrefab::SetMaterialID(MaterialID materialID)
 	{
 		m_MaterialID = materialID;
-	}
-
-	void MeshPrefab::SetTransform(const Transform& transform)
-	{
-		m_Transform = transform;
-	}
-
-	Transform& MeshPrefab::GetTransform()
-	{
-		return m_Transform;
 	}
 
 	RenderID MeshPrefab::GetRenderID() const

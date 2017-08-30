@@ -17,6 +17,16 @@ namespace flex
 		}
 	}
 
+	void GameObject::SetTransform(const Transform& transform)
+	{
+		m_Transform = transform;
+	}
+
+	Transform& GameObject::GetTransform()
+	{
+		return m_Transform;
+	}
+
 	void GameObject::RootInitialize(const GameContext& gameContext)
 	{
 		Initialize(gameContext);

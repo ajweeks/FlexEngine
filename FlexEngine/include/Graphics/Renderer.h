@@ -11,7 +11,7 @@
 #include "GameContext.h"
 #include "Typedefs.h"
 #include "VertexBufferData.h"
-#include "ShaderUtils.h"
+#include "Transform.h"
 
 namespace flex
 {
@@ -70,6 +70,34 @@ namespace flex
 			TRIANGLE_FAN
 		};
 
+		enum class RenderingPipeline
+		{
+			FORWARD,
+			DEFERRED
+		};
+
+		struct DirectionalLight
+		{
+			glm::vec3 direction;
+
+			glm::vec3 ambientCol = glm::vec3(0.0f);
+			glm::vec3 diffuseCol = glm::vec3(1.0f);
+			glm::vec3 specularCol = glm::vec3(1.0f);
+		};
+
+		struct PointLight
+		{
+			glm::vec3 position = glm::vec3(0.0f);
+
+			float constant = 1.0f;
+			float linear = 0.022f;
+			float quadratic = 0.0019f;
+
+			glm::vec3 ambientCol = glm::vec3(0.0f);
+			glm::vec3 diffuseCol = glm::vec3(1.0f);
+			glm::vec3 specularCol = glm::vec3(1.0f);
+		};
+
 		// Info that stays consistent across all renderers
 		struct RenderObjectInfo
 		{
@@ -81,28 +109,75 @@ namespace flex
 
 		struct RenderObjectCreateInfo
 		{
-			std::string name;
+			MaterialID materialID;
 
 			VertexBufferData* vertexBufferData = nullptr;
 			std::vector<glm::uint>* indices = nullptr;
 
-			MaterialID materialID;
+			std::string name;
 
 			CullFace cullFace = CullFace::BACK;
 		};
-		
+
+		struct Uniform
+		{
+			enum Type : glm::uint
+			{
+				NONE = 0,
+				UNIFORM_BUFFER_CONSTANT = (1 << 0),
+				UNIFORM_BUFFER_DYNAMIC = (1 << 1),
+				PROJECTION_MAT4 = (1 << 2),
+				VIEW_MAT4 = (1 << 3),
+				VIEW_INV_MAT4 = (1 << 4),
+				VIEW_PROJECTION_MAT4 = (1 << 5),
+				MODEL_MAT4 = (1 << 6),
+				MODEL_INV_TRANSPOSE_MAT4 = (1 << 7),
+				MODEL_VIEW_PROJECTION_MAT4 = (1 << 8),
+				CAM_POS_VEC4 = (1 << 9),
+				VIEW_DIR_VEC4 = (1 << 10),
+				DIR_LIGHT = (1 << 11),
+				POINT_LIGHTS_VEC = (1 << 12),
+				AMBIENT_COLOR_VEC4 = (1 << 13),
+				SPECULAR_COLOR_VEC4 = (1 << 14),
+				USE_DIFFUSE_TEXTURE_INT = (1 << 15), // bool for toggling texture usage
+				DIFFUSE_TEXTURE_SAMPLER = (1 << 16), // texture itself
+				USE_NORMAL_TEXTURE_INT = (1 << 17),
+				NORMAL_TEXTURE_SAMPLER = (1 << 18),
+				USE_SPECULAR_TEXTURE_INT = (1 << 19),
+				SPECULAR_TEXTURE_SAMPLER = (1 << 20),
+				USE_CUBEMAP_TEXTURE_INT = (1 << 21),
+				CUBEMAP_TEXTURE_SAMPLER = (1 << 22),
+
+				MAX_ENUM = (1 << 30)
+			};
+
+			static bool HasUniform(Type elements, Type uniform);
+			static glm::uint CalculateSize(Type elements);
+		};
+
+		struct Shader
+		{
+			glm::uint program;
+
+			std::string vertexShaderFilePath;
+			std::string fragmentShaderFilePath;
+
+			Uniform::Type constantBufferUniforms;
+			Uniform::Type dynamicBufferUniforms;
+		};
+
 		struct MaterialCreateInfo
 		{
+			// Required fields:
+			glm::uint shaderIndex;
+
+			// Optional fields:
 			std::string name;
 
-			// Leave empty to not use
 			std::string diffuseTexturePath;
 			std::string specularTexturePath;
 			std::string normalTexturePath;
 
-			glm::uint shaderIndex;
-
-			// Leave empty to not use
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 		};
 
@@ -111,6 +186,11 @@ namespace flex
 		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
+		virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) = 0;
+		virtual PointLightID InitializePointLight(const PointLight& pointLight) = 0;
+
+		virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) = 0;
+		virtual PointLight& GetPointLight(PointLightID pointLightID) = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(float r, float g, float b) = 0;
@@ -127,8 +207,11 @@ namespace flex
 
 		virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) = 0;
 
-		virtual int GetShaderUniformLocation(glm::uint program, const std::string& uniformName) = 0;
-		virtual void SetUniform1f(int location, float val) = 0;
+		virtual void SetFloat(ShaderID shaderID, const std::string& valName, float val) = 0;
+		virtual void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec) = 0;
+		virtual void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec) = 0;
+		virtual void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec) = 0;
+		virtual void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat) = 0;
 
 		virtual glm::uint GetRenderObjectCount() const = 0;
 		virtual glm::uint GetRenderObjectCapacity() const = 0;
@@ -148,8 +231,8 @@ namespace flex
 
 		struct SceneInfo
 		{
-			// Everything has to be aligned (16 byte? aka vec4)
-			glm::vec4 m_LightDir;
+			// Everything has to be aligned (16 byte? aka vec4) ( Or not? )
+			glm::vec3 m_LightDir;
 			glm::vec4 m_AmbientColor;
 			glm::vec4 m_SpecularColor;
 			// sky box, other lights, wireframe, etc...
@@ -164,4 +247,7 @@ namespace flex
 		Renderer(const Renderer&) = delete;
 
 	};
+
+	Renderer::Uniform::Type operator|(const Renderer::Uniform::Type& lhs, const Renderer::Uniform::Type& rhs);
+
 } // namespace flex

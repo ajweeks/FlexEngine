@@ -89,16 +89,14 @@ namespace flex
 		}
 
 
-		bool LoadGLShaders(glm::uint program,
-			std::string vertexShaderFilePath, glm::uint& vertexShaderID,
-			std::string fragmentShaderFilePath, glm::uint& fragmentShaderID)
+		bool LoadGLShaders(glm::uint program, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath)
 		{
 			CheckGLErrorMessages();
 
-			vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+			GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 			CheckGLErrorMessages();
 
-			fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+			GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 			CheckGLErrorMessages();
 
 			std::stringstream vertexShaderCodeSS;
