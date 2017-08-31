@@ -33,6 +33,7 @@ namespace flex
 
 			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
 			virtual PointLight& GetPointLight(PointLightID pointLightID) override;
+			virtual std::vector<PointLight>& GetAllPointLights() override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(float r, float g, float b) override;
@@ -256,6 +257,9 @@ namespace flex
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 		};
+
+		void SetClipboardText(void* userData, const char* text);
+		const char* GetClipboardText(void* userData);
 	} // namespace vk
 } // namespace flex
 

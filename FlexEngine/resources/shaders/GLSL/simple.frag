@@ -28,7 +28,7 @@ struct PointLight
 	vec3 diffuseCol;
 	vec3 specularCol;
 };
-#define NUMBER_POINT_LIGHTS 2
+#define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 uniform sampler2D in_DiffuseTexture;
@@ -44,6 +44,8 @@ out vec4 fragmentColor;
 
 vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 normal, vec3 viewDir, float specStrength, float specShininess)
 {
+	if (dirLight.direction == vec3(0, 0, 0)) return vec3(0, 0, 0);
+
 	vec3 lightDir = normalize(-dirLight.direction);
 
 	float diffuseIntensity = max(dot(normal, lightDir), 0.0);
@@ -72,6 +74,8 @@ vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 normal, vec3 viewDir,
 
 vec3 DoPointLighting(PointLight pointLight, vec3 normal, vec3 worldPos, vec3 viewDir, float specStrength, float specShininess)
 {
+	if (pointLight.constant == 0.0f) return vec3(0, 0, 0);
+
 	vec3 lightDir = normalize(pointLight.position - worldPos);
 
 	float diffuseIntensity = max(dot(normal, lightDir), 0.0);

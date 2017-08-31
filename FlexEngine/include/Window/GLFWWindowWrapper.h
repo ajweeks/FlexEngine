@@ -21,6 +21,10 @@ namespace flex
 
 		GLFWwindow* GetWindow() const;
 
+		const char* GetClipboardText();
+		void SetClipboardText(const char* text);
+
+
 	protected:
 		virtual void SetWindowTitle(const std::string& title) override;
 		virtual void SetMousePosition(glm::vec2 mousePosition) override;
@@ -50,6 +54,7 @@ namespace flex
 	void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height);
+
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN

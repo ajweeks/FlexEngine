@@ -412,7 +412,6 @@ namespace flex
 		void VulkanRenderer::ImGui_Init(const GameContext& gameContext)
 		{
 			ImGuiIO& io = ImGui::GetIO();
-			io.UserData = this;
 
 			io.RenderDrawListsFn = NULL;
 
@@ -423,13 +422,9 @@ namespace flex
 				windowSize.x > 0 ? ((float)frameBufferSize.x / windowSize.x) : 0,
 				windowSize.y > 0 ? ((float)frameBufferSize.y / windowSize.y) : 0);
 
-			//io.SetClipboardTextFn = ImGui_SetClipboardText;
-			//io.GetClipboardTextFn = ImGui_GetClipboardText;
-
-			//io.ClipboardUserData = g_Window;
-	#ifdef _WIN32
-			//io.ImeWindowHandle = glfwGetWin32Window(g_Window);
-	#endif
+			io.SetClipboardTextFn = SetClipboardText;
+			io.GetClipboardTextFn = GetClipboardText;
+			io.ClipboardUserData = gameContext.window;
 
 			ImGui_InitResources();
 		}
@@ -616,6 +611,11 @@ namespace flex
 		Renderer::PointLight& VulkanRenderer::GetPointLight(PointLightID pointLightID)
 		{
 			return m_PointLights[pointLightID];
+		}
+
+		std::vector<Renderer::PointLight>& VulkanRenderer::GetAllPointLights()
+		{
+			return m_PointLights;
 		}
 
 		RenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
@@ -3147,7 +3147,21 @@ namespace flex
 
 			return VK_FALSE;
 		}
-	} // namespace vk
+
+
+		void SetClipboardText(void* userData, const char* text)
+		{
+			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
+			glfwWindow->SetClipboardText(text);
+		}
+
+		const char* GetClipboardText(void* userData)
+		{
+			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
+			return glfwWindow->GetClipboardText();
+		}
+
+} // namespace vk
 } // namespace flex
 
 #endif // COMPILE_VULKAN

@@ -43,6 +43,8 @@ namespace flex
 
 		PointLightID m_PointLight1ID;
 		PointLightID m_PointLight2ID;
+		PointLightID m_PointLight3ID;
+		PointLightID m_PointLight4ID;
 
 		TestScene(const TestScene&) = delete;
 		TestScene& operator=(const TestScene&) = delete;

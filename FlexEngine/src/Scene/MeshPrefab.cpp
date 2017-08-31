@@ -141,6 +141,7 @@ namespace flex
 		createInfo.vertexBufferData = vertexBufferData;
 		createInfo.materialID = m_MaterialID;
 		createInfo.name = m_Name;
+		createInfo.transform = &m_Transform;
 
 		m_RenderID = renderer->InitializeRenderObject(gameContext, &createInfo);
 
@@ -159,6 +160,7 @@ namespace flex
 		VertexBufferData* vertexBufferData = m_VertexBuffers.data() + (m_VertexBuffers.size() - 1);
 		Renderer::RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.materialID = 0;
+		renderObjectCreateInfo.transform = &m_Transform;
 
 		Renderer::TopologyMode topologyMode = Renderer::TopologyMode::TRIANGLE_LIST;
 
@@ -166,62 +168,62 @@ namespace flex
 		{
 		case MeshPrefab::PrefabShape::CUBE:
 		{
-			const std::array<glm::vec4, 6> colors = { Color::RED, Color::RED, Color::RED, Color::RED, Color::RED, Color::RED };
+			const std::array<glm::vec4, 6> colors = { Color::GREEN, Color::RED, Color::BLUE, Color::ORANGE, Color::YELLOW, Color::YELLOW };
 			m_Positions =
 			{
 				// Front
-				{ -0.5f, -0.5f, -0.5f, },
-				{ -0.5f,  0.5f, -0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
+				{ -5.0f, -5.0f, -5.0f, },
+				{ -5.0f,  5.0f, -5.0f, },
+				{ 5.0f,  5.0f, -5.0f, },
 
-				{ -0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
-				{ 0.5f, -0.5f, -0.5f, },
+				{ -5.0f, -5.0f, -5.0f, },
+				{ 5.0f,  5.0f, -5.0f, },
+				{ 5.0f, -5.0f, -5.0f, },
 
 				// Top
-				{ -0.5f, 0.5f, -0.5f, },
-				{ -0.5f, 0.5f,  0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
+				{ -5.0f, 5.0f, -5.0f, },
+				{ -5.0f, 5.0f,  5.0f, },
+				{ 5.0f,  5.0f,  5.0f, },
 
-				{ -0.5f, 0.5f, -0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
+				{ -5.0f, 5.0f, -5.0f, },
+				{ 5.0f,  5.0f,  5.0f, },
+				{ 5.0f,  5.0f, -5.0f, },
 
 				// Back
-				{ 0.5f, -0.5f, 0.5f, },
-				{ 0.5f,  0.5f, 0.5f, },
-				{ -0.5f,  0.5f, 0.5f, },
+				{ 5.0f, -5.0f, 5.0f, },
+				{ 5.0f,  5.0f, 5.0f, },
+				{ -5.0f,  5.0f, 5.0f, },
 
-				{ 0.5f, -0.5f, 0.5f, },
-				{ -0.5f, 0.5f, 0.5f, },
-				{ -0.5f, -0.5f, 0.5f, },
+				{ 5.0f, -5.0f, 5.0f, },
+				{ -5.0f, 5.0f, 5.0f, },
+				{ -5.0f, -5.0f, 5.0f, },
 
 				// Bottom
-				{ -0.5f, -0.5f, -0.5f, },
-				{ 0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  -0.5f,  0.5f, },
+				{ -5.0f, -5.0f, -5.0f, },
+				{ 5.0f, -5.0f, -5.0f, },
+				{ 5.0f,  -5.0f,  5.0f, },
 
-				{ -0.5f, -0.5f, -0.5f, },
-				{ 0.5f, -0.5f,  0.5f, },
-				{ -0.5f, -0.5f,  0.5f, },
+				{ -5.0f, -5.0f, -5.0f, },
+				{ 5.0f, -5.0f,  5.0f, },
+				{ -5.0f, -5.0f,  5.0f, },
 
 				// Right
-				{ 0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  0.5f, -0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
+				{ 5.0f, -5.0f, -5.0f, },
+				{ 5.0f,  5.0f, -5.0f, },
+				{ 5.0f,  5.0f,  5.0f, },
 
-				{ 0.5f, -0.5f, -0.5f, },
-				{ 0.5f,  0.5f,  0.5f, },
-				{ 0.5f, -0.5f,  0.5f, },
+				{ 5.0f, -5.0f, -5.0f, },
+				{ 5.0f,  5.0f,  5.0f, },
+				{ 5.0f, -5.0f,  5.0f, },
 
 				// Left
-				{ -0.5f, -0.5f, -0.5f, },
-				{ -0.5f,  0.5f,  0.5f, },
-				{ -0.5f,  0.5f, -0.5f, },
+				{ -5.0f, -5.0f, -5.0f, },
+				{ -5.0f,  5.0f,  5.0f, },
+				{ -5.0f,  5.0f, -5.0f, },
 
-				{ -0.5f, -0.5f, -0.5f, },
-				{ -0.5f, -0.5f,  0.5f, },
-				{ -0.5f,  0.5f,  0.5f, },
+				{ -5.0f, -5.0f, -5.0f, },
+				{ -5.0f, -5.0f,  5.0f, },
+				{ -5.0f,  5.0f,  5.0f, },
 			};
 			m_Attributes |= (glm::uint)VertexBufferData::Attribute::POSITION;
 

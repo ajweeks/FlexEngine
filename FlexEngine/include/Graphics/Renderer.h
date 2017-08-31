@@ -79,6 +79,8 @@ namespace flex
 		struct DirectionalLight
 		{
 			glm::vec3 direction;
+			
+			bool enabled = true;
 
 			glm::vec3 ambientCol = glm::vec3(0.0f);
 			glm::vec3 diffuseCol = glm::vec3(1.0f);
@@ -88,6 +90,8 @@ namespace flex
 		struct PointLight
 		{
 			glm::vec3 position = glm::vec3(0.0f);
+
+			bool enabled = true;
 
 			float constant = 1.0f;
 			float linear = 0.022f;
@@ -103,6 +107,7 @@ namespace flex
 		{
 			std::string name;
 			std::string materialName;
+			Transform* transform = nullptr;
 
 			// Parent, children, etc.
 		};
@@ -115,6 +120,7 @@ namespace flex
 			std::vector<glm::uint>* indices = nullptr;
 
 			std::string name;
+			Transform* transform;
 
 			CullFace cullFace = CullFace::BACK;
 		};
@@ -191,6 +197,7 @@ namespace flex
 
 		virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) = 0;
 		virtual PointLight& GetPointLight(PointLightID pointLightID) = 0;
+		virtual std::vector<PointLight>& GetAllPointLights() = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(float r, float g, float b) = 0;

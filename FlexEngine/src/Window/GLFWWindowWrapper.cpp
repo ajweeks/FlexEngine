@@ -110,6 +110,16 @@ namespace flex
 		return m_Window;
 	}
 
+	const char* GLFWWindowWrapper::GetClipboardText()
+	{
+		return glfwGetClipboardString(m_Window);
+	}
+
+	void GLFWWindowWrapper::SetClipboardText(const char* text)
+	{
+		glfwSetClipboardString(m_Window, text);
+	}
+
 	void GLFWWindowWrapper::SetWindowTitle(const std::string& title)
 	{
 		glfwSetWindowTitle(m_Window, title.c_str());

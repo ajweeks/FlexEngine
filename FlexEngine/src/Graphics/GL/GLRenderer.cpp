@@ -15,6 +15,7 @@
 #include "Graphics/GL/GLHelpers.h"
 #include "Logger.h"
 #include "Window/Window.h"
+#include "Window/GLFWWindowWrapper.h"
 
 namespace flex
 {
@@ -168,31 +169,6 @@ namespace flex
 				mat.useCubemapTexture = true;
 			}
 
-			
-
-			//mat.pointLights.push_back({ glm::vec3(30.0f, 5.0f, 30.0f), 
-			//	1.0f, 0.022f, 0.0019f,
-			//	glm::vec3(0.1f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f) });
-			//
-			//mat.pointLights.push_back({ glm::vec3(-30.0f, 5.0f, 30.0f), 
-			//	1.0f, 0.022f, 0.0019f,
-			//	glm::vec3(0.1f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f) });
-			//
-			//mat.pointLights.push_back({ glm::vec3(30.0f, 5.0f, -30.0f), 
-			//	1.0f, 0.022f, 0.0019f,
-			//	glm::vec3(0.1f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f) });
-			//
-			//mat.pointLights.push_back({ glm::vec3(-30.0f, 5.0f, -30.0f), 
-			//	1.0f, 0.022f, 0.0019f,
-			//	glm::vec3(0.1f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f) });
-
-			//shader.dynamicBufferUniforms = Uniform::Type(
-			//	(glm::uint)shader.dynamicBufferUniforms | (glm::uint)Uniform::Type::POINT_LIGHTS_VEC);
-			//
-			//
-			//shader.dynamicBufferUniforms = Uniform::Type(
-			//	(glm::uint)shader.dynamicBufferUniforms | (glm::uint)Uniform::Type::DIR_LIGHT);
-
 			glUseProgram(0);
 
 			m_Materials.push_back(mat);
@@ -206,7 +182,7 @@ namespace flex
 
 			const RenderID renderID = GetFirstAvailableRenderID();
 
-			RenderObject* renderObject = new RenderObject(renderID);
+			RenderObject* renderObject = new RenderObject(renderID, createInfo->name);
 			InsertNewRenderObject(renderObject);
 			renderObject->materialID = createInfo->materialID;
 			renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);
@@ -214,6 +190,7 @@ namespace flex
 			renderObject->info = {};
 			renderObject->info.materialName = m_Materials[renderObject->materialID].name;
 			renderObject->info.name = createInfo->name;
+			renderObject->info.transform = createInfo->transform;
 
 			if (m_Materials.empty()) Logger::LogError("No materials have been created!");
 			if (renderObject->materialID >= m_Materials.size()) Logger::LogError("uninitialized material!");
@@ -278,6 +255,11 @@ namespace flex
 		Renderer::PointLight& GLRenderer::GetPointLight(PointLightID pointLightID)
 		{
 			return m_PointLights[pointLightID];
+		}
+
+		std::vector<Renderer::PointLight>& GLRenderer::GetAllPointLights()
+		{
+			return m_PointLights;
 		}
 
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
@@ -709,14 +691,22 @@ namespace flex
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::DIR_LIGHT) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::DIR_LIGHT))
 			{
-				SetVec3f(material->shaderIndex, "dirLight.direction", m_DirectionalLight.direction);
-				CheckGLErrorMessages();
-				SetVec3f(material->shaderIndex, "dirLight.ambientCol", m_DirectionalLight.ambientCol);
-				CheckGLErrorMessages();
-				SetVec3f(material->shaderIndex, "dirLight.diffuseCol", m_DirectionalLight.diffuseCol);
-				CheckGLErrorMessages();
-				SetVec3f(material->shaderIndex, "dirLight.specularCol", m_DirectionalLight.specularCol);
-				CheckGLErrorMessages();
+				if (m_DirectionalLight.enabled)
+				{
+					SetVec3f(material->shaderIndex, "dirLight.direction", m_DirectionalLight.direction);
+					CheckGLErrorMessages();
+					SetVec3f(material->shaderIndex, "dirLight.ambientCol", m_DirectionalLight.ambientCol);
+					CheckGLErrorMessages();
+					SetVec3f(material->shaderIndex, "dirLight.diffuseCol", m_DirectionalLight.diffuseCol);
+					CheckGLErrorMessages();
+					SetVec3f(material->shaderIndex, "dirLight.specularCol", m_DirectionalLight.specularCol);
+					CheckGLErrorMessages();
+				}
+				else
+				{
+					SetVec3f(material->shaderIndex, "dirLight.direction", glm::vec3(0.0f));
+					CheckGLErrorMessages();
+				}
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::POINT_LIGHTS_VEC) ||
@@ -725,23 +715,31 @@ namespace flex
 				for (size_t i = 0; i < m_PointLights.size(); ++i)
 				{
 					const std::string numberStr = std::to_string(i);
-					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
-					CheckGLErrorMessages();
 
-					SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constant);
-					CheckGLErrorMessages();
-					SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].linear);
-					CheckGLErrorMessages();
-					SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].quadratic);
-					CheckGLErrorMessages();
+					if (m_PointLights[i].enabled)
+					{
+						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
+						CheckGLErrorMessages();
 
-					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);
-					CheckGLErrorMessages();
-					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].diffuseCol", m_PointLights[i].diffuseCol);
-					CheckGLErrorMessages();
-					SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].specularCol", m_PointLights[i].specularCol);
-					CheckGLErrorMessages();
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constant);
+						CheckGLErrorMessages();
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].linear);
+						CheckGLErrorMessages();
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].quadratic);
+						CheckGLErrorMessages();
 
+						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);
+						CheckGLErrorMessages();
+						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].diffuseCol", m_PointLights[i].diffuseCol);
+						CheckGLErrorMessages();
+						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].specularCol", m_PointLights[i].specularCol);
+						CheckGLErrorMessages();
+					}
+					else
+					{
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", 0.0f);
+						CheckGLErrorMessages();
+					}
 				}
 			}
 
@@ -825,6 +823,7 @@ namespace flex
 			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 		}
 
+		// TODO: Remove function
 		void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
@@ -957,17 +956,6 @@ namespace flex
 			}
 		}
 
-		// TODO: Add to GLFW window
-		static const char* ImGui_GetClipboardText(void* user_data)
-		{
-			return glfwGetClipboardString((GLFWwindow*)user_data);
-		}
-
-		static void ImGui_SetClipboardText(void* user_data, const char* text)
-		{
-			glfwSetClipboardString((GLFWwindow*)user_data, text);
-		}
-
 		bool GLRenderer::ImGui_CreateFontsTexture()
 		{
 			// Build texture atlas
@@ -1000,8 +988,9 @@ namespace flex
 
 			io.RenderDrawListsFn = NULL;
 
-			io.SetClipboardTextFn = ImGui_SetClipboardText;
-			io.GetClipboardTextFn = ImGui_GetClipboardText;
+			io.SetClipboardTextFn = SetClipboardText;
+			io.GetClipboardTextFn = GetClipboardText;
+			io.ClipboardUserData = gameContext.window;
 
 			glm::vec2i windowSize = gameContext.window->GetSize();
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
@@ -1155,7 +1144,21 @@ namespace flex
 
 			return m_RenderObjects.size();
 		}
-	} // namespace gl
+
+
+		void SetClipboardText(void* userData, const char* text)
+		{
+			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
+			glfwWindow->SetClipboardText(text);
+		}
+
+		const char* GetClipboardText(void* userData)
+		{
+			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
+			return glfwWindow->GetClipboardText();
+		}
+
+} // namespace gl
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL

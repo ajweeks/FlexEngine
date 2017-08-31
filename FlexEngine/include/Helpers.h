@@ -32,6 +32,7 @@ namespace flex
 
 		return vec.end();
 	}
+
 	template<class TReal>
 	glm::vec2 ToVec2(const aiVector2t<TReal>& vec)
 	{
@@ -49,4 +50,15 @@ namespace flex
 	{
 		return glm::vec4(color.r, color.g, color.b, color.a);
 	}
+
+	void ToString(const glm::vec2& vec, std::ostream& stream);
+	void ToString(const glm::vec3& vec, std::ostream& stream);
+	void ToString(const glm::vec4& vec, std::ostream& stream);
+
+	void CopyColorToClipboard(const glm::vec4& col);
+	void CopyColorToClipboard(const glm::vec3& col);
+
+	glm::vec3 PasteColor3FromClipboard();
+	glm::vec4 PasteColor4FromClipboard();
+
 } // namespace flex

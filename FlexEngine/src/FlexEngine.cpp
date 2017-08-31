@@ -2,10 +2,13 @@
 
 #include "FlexEngine.h"
 
+#include <sstream>
+
 #include <imgui.h>
 
 #include "FreeCamera.h"
 #include "Logger.h"
+#include "Helpers.h"
 #include "Scene/SceneManager.h"
 #include "Scene/Scenes/Scene_02.h"
 #include "Scene/Scenes/TestScene.h"
@@ -81,15 +84,50 @@ namespace flex
 			io.FontGlobalScale = 2.0f;
 		}
 
-		ImGuiStyle& imGuiStyle = ImGui::GetStyle();
-		imGuiStyle.Colors[ImGuiCol_TitleBg] = ImVec4(0.74f, 0.33f, 0.09f, 0.94f);
-		imGuiStyle.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.87f, 0.15f, 0.02f, 0.94f);
-		imGuiStyle.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.74f, 0.33f, 0.09f, 0.2f);
-		imGuiStyle.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.83f, 0.25f, 0.07f, 0.55f);
-		imGuiStyle.Colors[ImGuiCol_Header] = ImVec4(0.66f, 0.32f, 0.17f, 0.76f);
-		imGuiStyle.Colors[ImGuiCol_HeaderActive] = ImVec4(0.60f, 0.23f, 0.07f, 0.8f);
-		imGuiStyle.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.74f, 0.43f, 0.29f, 0.76f);
-		imGuiStyle.Colors[ImGuiCol_CheckMark] = ImVec4(0.2f, 0.8f, 0.01f, 1.0f);
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
+		style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
+		style.Colors[ImGuiCol_ChildWindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		style.Colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
+		style.Colors[ImGuiCol_Border] = ImVec4(0.70f, 0.70f, 0.70f, 0.40f);
+		style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		style.Colors[ImGuiCol_FrameBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);
+		style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
+		style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
+		style.Colors[ImGuiCol_TitleBg] = ImVec4(0.74f, 0.33f, 0.09f, 0.94f);
+		style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.74f, 0.33f, 0.09f, 0.20f);
+		style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.87f, 0.15f, 0.02f, 0.94f);
+		style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.83f, 0.25f, 0.07f, 0.55f);
+		style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.20f, 0.25f, 0.30f, 0.60f);
+		style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.75f, 0.40f, 0.40f);
+		style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.80f, 0.75f, 0.41f, 0.50f);
+		style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.92f, 0.82f, 0.29f, 0.60f);
+		style.Colors[ImGuiCol_ComboBg] = ImVec4(0.20f, 0.20f, 0.20f, 0.99f);
+		style.Colors[ImGuiCol_CheckMark] = ImVec4(0.97f, 0.54f, 0.03f, 1.00f);
+		style.Colors[ImGuiCol_SliderGrab] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
+		style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.82f, 0.61f, 0.37f, 1.00f);
+		style.Colors[ImGuiCol_Button] = ImVec4(0.95f, 0.53f, 0.22f, 0.60f);
+		style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.82f, 0.49f, 0.20f, 1.00f);
+		style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.71f, 0.37f, 0.11f, 1.00f);
+		style.Colors[ImGuiCol_Header] = ImVec4(0.66f, 0.32f, 0.17f, 0.76f);
+		style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.74f, 0.43f, 0.29f, 0.76f);
+		style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.60f, 0.23f, 0.07f, 0.80f);
+		style.Colors[ImGuiCol_Separator] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+		style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.70f, 0.62f, 0.60f, 1.00f);
+		style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.90f, 0.78f, 0.70f, 1.00f);
+		style.Colors[ImGuiCol_ResizeGrip] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
+		style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
+		style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
+		style.Colors[ImGuiCol_CloseButton] = ImVec4(0.47f, 0.00f, 0.00f, 0.63f);
+		style.Colors[ImGuiCol_CloseButtonHovered] = ImVec4(0.90f, 0.17f, 0.17f, 0.60f);
+		style.Colors[ImGuiCol_CloseButtonActive] = ImVec4(0.70f, 0.70f, 0.70f, 1.00f);
+		style.Colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+		style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+		style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+		style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+		style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(1.00f, 0.57f, 0.31f, 0.35f);
+		style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 	}
 
 	void FlexEngine::Destroy()
@@ -183,7 +221,7 @@ namespace flex
 		Logger::LogInfo("Current renderer: " + m_RendererName);
 
 		InitializeWindowAndRenderer();
-		
+
 		LoadDefaultScenes();
 
 		m_GameContext.renderer->PostInitialize();
@@ -287,7 +325,7 @@ namespace flex
 					const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
 					ImGui::Text(objectCountStr.c_str());
 
-					if (ImGui::TreeNode("Objects"))
+					if (ImGui::TreeNode("Render Objects"))
 					{
 						std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
 						m_GameContext.renderer->GetRenderObjectInfos(renderObjectInfos);
@@ -297,8 +335,62 @@ namespace flex
 							const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
 							if (ImGui::TreeNode(objectName.c_str()))
 							{
-								const std::string materialName("Mat: " + renderObjectInfos[i].materialName);
-								ImGui::Text(materialName.c_str());
+								ImGui::Text("Transform");
+
+								ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->position.x, 0.1f);
+								glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->rotation);
+								ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
+								renderObjectInfos[i].transform->rotation = glm::quat(rot);
+								ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
+
+								ImGui::TreePop();
+							}
+						}
+
+						ImGui::TreePop();
+					}
+
+					if (ImGui::TreeNode("Lights"))
+					{
+						ImGui::AlignFirstTextHeightToWidgets();
+
+
+						ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel;
+
+						Renderer::DirectionalLight& dirLight = m_GameContext.renderer->GetDirectionalLight(0);
+						std::vector<Renderer::PointLight>& pointLights = m_GameContext.renderer->GetAllPointLights();
+
+						ImGui::Checkbox("##dir-light-enabled", &dirLight.enabled);
+						ImGui::SameLine();
+						if (ImGui::TreeNode("Directional Light"))
+						{
+							CopyableColorEdit3("Diffuse ", dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+							CopyableColorEdit3("Specular", dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
+							CopyableColorEdit3("Ambient ", dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+
+							ImGui::TreePop();
+						}
+
+						for (size_t i = 0; i < pointLights.size(); ++i)
+						{
+
+							const std::string iStr = std::to_string(i);
+							const std::string objectName("Point Light##" + iStr);
+
+							ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLights[i].enabled);
+							ImGui::SameLine();
+							if (ImGui::TreeNode(objectName.c_str()))
+							{
+								CopyableColorEdit3("Diffuse ", pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+								CopyableColorEdit3("Specular", pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
+								CopyableColorEdit3("Ambient ", pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+
+								ImGui::PushItemWidth(150);
+								ImGui::SliderFloat("Linear", &pointLights[i].linear, 0.0014f, 0.7f);
+								ImGui::SameLine();
+								ImGui::SliderFloat("Quadratic", &pointLights[i].quadratic, 0.000007f, 1.8f);
+								ImGui::PopItemWidth();
+
 								ImGui::TreePop();
 							}
 						}
@@ -321,6 +413,13 @@ namespace flex
 
 			m_GameContext.renderer->SwapBuffers(m_GameContext);
 		}
+	}
+
+	void FlexEngine::CopyableColorEdit3(const char* label, glm::vec3& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags)
+	{
+		ImGui::ColorEdit3(label, &col.r, flags);
+		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
+		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor3FromClipboard();
 	}
 
 	void FlexEngine::Stop()

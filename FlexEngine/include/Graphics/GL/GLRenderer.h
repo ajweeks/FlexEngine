@@ -27,6 +27,7 @@ namespace flex
 
 			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
 			virtual PointLight& GetPointLight(PointLightID pointLightID) override;
+			virtual std::vector<PointLight>& GetAllPointLights() override;
 
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;
@@ -99,6 +100,9 @@ namespace flex
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;
 		};
+
+		void SetClipboardText(void* userData, const char* text);
+		const char* GetClipboardText(void* userData);
 	} // namespace gl
 } // namespace flex
 
