@@ -20,31 +20,31 @@ namespace flex
 
 	void TestScene::Initialize(const GameContext& gameContext)
 	{
-		Renderer::MaterialCreateInfo colorMatInfo = {};
-		colorMatInfo.shaderIndex = 1;
-		colorMatInfo.name = "Color";
-		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
-
-
-		Renderer::MaterialCreateInfo skyboxMatInfo = {};
-		skyboxMatInfo.name = "Skybox";
-		skyboxMatInfo.shaderIndex = 3;
-
-		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
-		const std::string fileName = "skybox";
-		const std::string extension = ".jpg";
-
-		skyboxMatInfo.cubeMapFilePaths = {
-			directory + fileName + "_r" + extension,
-			directory + fileName + "_l" + extension,
-			directory + fileName + "_u" + extension,
-			directory + fileName + "_d" + extension,
-			directory + fileName + "_b" + extension,
-			directory + fileName + "_f" + extension,
-		};
-		const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
-
-
+		//Renderer::MaterialCreateInfo colorMatInfo = {};
+		//colorMatInfo.shaderIndex = 1;
+		//colorMatInfo.name = "Color";
+		//const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
+		//
+		//
+		//Renderer::MaterialCreateInfo skyboxMatInfo = {};
+		//skyboxMatInfo.name = "Skybox";
+		//skyboxMatInfo.shaderIndex = 3;
+		//
+		//const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
+		//const std::string fileName = "skybox";
+		//const std::string extension = ".jpg";
+		//
+		//skyboxMatInfo.cubeMapFilePaths = {
+		//	directory + fileName + "_r" + extension,
+		//	directory + fileName + "_l" + extension,
+		//	directory + fileName + "_u" + extension,
+		//	directory + fileName + "_d" + extension,
+		//	directory + fileName + "_b" + extension,
+		//	directory + fileName + "_f" + extension,
+		//};
+		//const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
+		
+		
 		Renderer::MaterialCreateInfo brickMatInfo = {};
 		brickMatInfo.shaderIndex = 0;
 		brickMatInfo.name = "Brick";
@@ -52,31 +52,31 @@ namespace flex
 		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
 		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
 		const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
+		
+		
+		//Renderer::MaterialCreateInfo workMatInfo = {};
+		//workMatInfo.shaderIndex = 0;
+		//workMatInfo.name = "Work";
+		//workMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/work_d.jpg";
+		//workMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/work_s.jpg";
+		//workMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/work_n.jpg";
+		//const MaterialID workMatID = gameContext.renderer->InitializeMaterial(gameContext, &workMatInfo);
+
+		//Renderer::MaterialCreateInfo simpleTexturelessInfo = {};
+		//simpleTexturelessInfo.shaderIndex = 0;
+		//simpleTexturelessInfo.name = "Simple textureless";
+		//const MaterialID simpleTexturelessMatID = gameContext.renderer->InitializeMaterial(gameContext, &simpleTexturelessInfo);
 
 
-		Renderer::MaterialCreateInfo workMatInfo = {};
-		workMatInfo.shaderIndex = 0;
-		workMatInfo.name = "Work";
-		workMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/work_d.jpg";
-		workMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/work_s.jpg";
-		workMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/work_n.jpg";
-		const MaterialID workMatID = gameContext.renderer->InitializeMaterial(gameContext, &workMatInfo);
-
-		Renderer::MaterialCreateInfo simpleTexturelessInfo = {};
-		simpleTexturelessInfo.shaderIndex = 0;
-		simpleTexturelessInfo.name = "Simple textureless";
-		const MaterialID simpleTexturelessMatID = gameContext.renderer->InitializeMaterial(gameContext, &simpleTexturelessInfo);
-
-
-		m_Grid = new MeshPrefab(colorMatID);
-		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-		m_Grid->GetTransform().position.y -= 0.1f;
-		AddChild(m_Grid);
-
-		m_Plane = new MeshPrefab(simpleTexturelessMatID);
-		m_Plane->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::PLANE);
-		m_Plane->GetTransform().position.y -= 0.05f;
-		AddChild(m_Plane);
+		//m_Grid = new MeshPrefab(colorMatID);
+		//m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+		//m_Grid->GetTransform().position.y -= 0.1f;
+		//AddChild(m_Grid);
+		//
+		//m_Plane = new MeshPrefab(simpleTexturelessMatID);
+		//m_Plane->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::PLANE);
+		//m_Plane->GetTransform().position.y -= 0.05f;
+		//AddChild(m_Plane);
 
 		//m_Teapot = new MeshPrefab();
 		//m_Teapot->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/teapot.fbx");
@@ -101,15 +101,15 @@ namespace flex
 		//
 		//m_IcoSphere.Init(gameContext, SpherePrefab::Type::ICOSPHERE, vec3(2.0f, 1.0f, 0.0f), quat(vec3(0.0f)), vec3(0.5f, 0.5f, 0.5f));
 
-		m_Cube = new MeshPrefab();
-		m_Cube->SetMaterialID(simpleTexturelessMatID);
-		m_Cube->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
-		m_Cube->SetTransform({
-			glm::vec3(-25.0f, 5.0f, -6.0f),
-			glm::quat(glm::vec3(0.0f, 1.0f, 0.0f)),
-			glm::vec3(0.5f, 0.75f, 1.0f)
-			});
-		AddChild(m_Cube);
+		//m_Cube = new MeshPrefab();
+		//m_Cube->SetMaterialID(simpleTexturelessMatID);
+		//m_Cube->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
+		//m_Cube->SetTransform({
+		//	glm::vec3(-25.0f, 5.0f, -6.0f),
+		//	glm::quat(glm::vec3(0.0f, 1.0f, 0.0f)),
+		//	glm::vec3(0.5f, 0.75f, 1.0f)
+		//	});
+		//AddChild(m_Cube);
 		
 		//m_Cube2 = new MeshPrefab();
 		//m_Cube2->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
@@ -164,9 +164,9 @@ namespace flex
 		//AddChild(m_TransformManipulator_5);
 		
 		
-		m_Skybox = new MeshPrefab(skyboxMatID);
-		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(m_Skybox);
+		//m_Skybox = new MeshPrefab(skyboxMatID);
+		//m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+		//AddChild(m_Skybox);
 
 
 		Renderer::PointLight light1 = {};
@@ -212,6 +212,8 @@ namespace flex
 				gameContext.renderer->PostInitializeRenderObject(m_Grid->GetRenderID());
 			}
 		}
+		
+		return;
 
 		Renderer::PointLight& light1 = gameContext.renderer->GetPointLight(m_PointLight1ID);
 		light1.position.z = (sin(gameContext.elapsedTime)) * 25.0f;

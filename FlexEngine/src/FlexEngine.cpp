@@ -69,7 +69,7 @@ namespace flex
 
 		m_GameContext.inputManager = new InputManager();
 
-		m_GameContext.renderer->PostInitialize();
+		m_GameContext.renderer->PostInitialize(m_GameContext);
 
 		// TODO: remove this call and move code into renderer's constructor
 		m_GameContext.renderer->ImGui_Init(m_GameContext);
@@ -224,7 +224,7 @@ namespace flex
 
 		LoadDefaultScenes();
 
-		m_GameContext.renderer->PostInitialize();
+		m_GameContext.renderer->PostInitialize(m_GameContext);
 
 		m_GameContext.renderer->ImGui_Init(m_GameContext);
 	}
@@ -273,16 +273,14 @@ namespace flex
 				{
 					Scene_02* newScene = new Scene_02(m_GameContext);
 					m_SceneManager->AddScene(newScene, m_GameContext);
-
-					m_GameContext.renderer->PostInitialize();
 				}
 				else
 				{
 					TestScene* newScene = new TestScene(m_GameContext);
 					m_SceneManager->AddScene(newScene, m_GameContext);
-
-					m_GameContext.renderer->PostInitialize();
 				}
+
+				m_GameContext.renderer->PostInitialize(m_GameContext);
 			}
 
 			// TODO: Figure out better
@@ -298,12 +296,11 @@ namespace flex
 				TestScene* pDefaultScene = new TestScene(m_GameContext);
 				m_SceneManager->AddScene(pDefaultScene, m_GameContext);
 
-				m_GameContext.renderer->PostInitialize();
+				m_GameContext.renderer->PostInitialize(m_GameContext);
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
 			static constexpr int clearFlags = (int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL;
-			m_GameContext.renderer->Clear(clearFlags, m_GameContext);
 			m_SceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.inputManager->Update();
 			m_GameContext.window->Update(m_GameContext);
@@ -410,8 +407,6 @@ namespace flex
 			m_GameContext.renderer->ImGui_Render();
 
 			m_GameContext.renderer->Draw(m_GameContext);
-
-			m_GameContext.renderer->SwapBuffers(m_GameContext);
 		}
 	}
 

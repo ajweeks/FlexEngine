@@ -23,7 +23,7 @@ namespace flex
 			VulkanRenderer(const GameContext& gameContext);
 			virtual ~VulkanRenderer();
 
-			virtual void PostInitialize() override;
+			virtual void PostInitialize(const GameContext& gameContext) override;
 
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
@@ -45,8 +45,6 @@ namespace flex
 			virtual void OnWindowSize(int width, int height) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
-			virtual void Clear(int flags, const GameContext& gameContext) override;
-			virtual void SwapBuffers(const GameContext& gameContext) override;
 
 			virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 

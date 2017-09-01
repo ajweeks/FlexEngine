@@ -2,14 +2,14 @@
 
 in vec3 ex_TexCoord;
 
-uniform bool in_UseCubemapTexture;
-uniform samplerCube cubemap;
+uniform bool in_UseCubemapSampler;
+uniform samplerCube in_CubemapSampler;
 
 void main() 
 {
-	if (in_UseCubemapTexture)
+	if (in_UseCubemapSampler)
 	{
-		gl_FragColor = texture(cubemap, ex_TexCoord);
+		gl_FragColor = texture(in_CubemapSampler, ex_TexCoord);
 	}
 	else
 	{

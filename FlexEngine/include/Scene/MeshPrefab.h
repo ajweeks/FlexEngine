@@ -43,28 +43,17 @@ namespace flex
 		RenderID GetRenderID() const;
 
 	private:
-		void CreateVertexBuffer(VertexBufferData* vertexBufferData);
-		void DescribeShaderVariables(const GameContext& gameContext, VertexBufferData* vertexBufferData);
-
 		RenderID m_RenderID;
 		MaterialID m_MaterialID;
 
 		static std::string m_DefaultName;
 		std::string m_Name;
 
-		std::vector<VertexBufferData> m_VertexBuffers;
-
-		glm::uint m_Attributes;
-		std::vector<glm::vec3> m_Positions;
-		std::vector<glm::vec4> m_Colors;
-		std::vector<glm::vec3> m_Tangents;
-		std::vector<glm::vec3> m_Bitangents;
-		std::vector<glm::vec3> m_Normals;
-		std::vector<glm::vec2> m_TexCoords;
+		VertexBufferData m_VertexBufferData;
 
 		std::vector<glm::uint> m_Indices;
 
-		static glm::vec4 m_DefaultColor;
+		static glm::vec4 m_DefaultColor_4;
 		static glm::vec3 m_DefaultPosition;
 		static glm::vec3 m_DefaultTangent;
 		static glm::vec3 m_DefaultBitangent;

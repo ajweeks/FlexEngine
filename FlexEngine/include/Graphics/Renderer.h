@@ -70,12 +70,6 @@ namespace flex
 			TRIANGLE_FAN
 		};
 
-		enum class RenderingPipeline
-		{
-			FORWARD,
-			DEFERRED
-		};
-
 		struct DirectionalLight
 		{
 			glm::vec3 direction;
@@ -153,6 +147,8 @@ namespace flex
 				SPECULAR_TEXTURE_SAMPLER = (1 << 20),
 				USE_CUBEMAP_TEXTURE_INT = (1 << 21),
 				CUBEMAP_TEXTURE_SAMPLER = (1 << 22),
+				POSITION_TEXTURE_SAMPLER = (1 << 23),
+				DIFFUSE_SPECULAR_TEXTURE_SAMPLER = (1 << 24),
 
 				MAX_ENUM = (1 << 30)
 			};
@@ -184,10 +180,17 @@ namespace flex
 			std::string specularTexturePath;
 			std::string normalTexturePath;
 
+			bool usePositionSampler = false;
+			glm::uint positionSamplerID;
+			bool useNormalSampler = false;
+			glm::uint normalSamplerID;
+			bool useDiffuseSpecularSampler = false;
+			glm::uint diffuseSpecularSamplerID;
+
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 		};
 
-		virtual void PostInitialize() = 0;
+		virtual void PostInitialize(const GameContext& gameContext) = 0;
 
 		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
@@ -209,8 +212,6 @@ namespace flex
 		virtual void OnWindowSize(int width, int height) = 0;
 
 		virtual void SetVSyncEnabled(bool enableVSync) = 0;
-		virtual void Clear(int flags, const GameContext& gameContext) = 0;
-		virtual void SwapBuffers(const GameContext& gameContext) = 0;
 
 		virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) = 0;
 

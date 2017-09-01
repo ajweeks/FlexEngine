@@ -17,7 +17,7 @@ namespace flex
 			GLRenderer(GameContext& gameContext);
 			virtual ~GLRenderer();
 
-			virtual void PostInitialize() override;
+			virtual void PostInitialize(const GameContext& gameContext) override;
 
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
@@ -39,8 +39,6 @@ namespace flex
 			virtual void OnWindowSize(int width, int height) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
-			virtual void Clear(int flags, const GameContext& gameContext) override;
-			virtual void SwapBuffers(const GameContext& gameContext) override;
 
 			virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
@@ -88,14 +86,24 @@ namespace flex
 			void InsertNewRenderObject(RenderObject* renderObject);
 			void UnloadShaders();
 			void LoadShaders();
+			
+			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
 
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
 
 			bool m_VSyncEnabled;
 
-			// TODO: Clean up
+			// TODO: Clean up (make more dynamic)
 			glm::uint viewProjectionUBO;
 			glm::uint viewProjectionCombinedUBO;
+
+			RenderID m_GBufferQuadRenderID;
+			VertexBufferData m_gBufferQuadVertexBufferData;
+			Transform m_gBufferQuadTransform;
+			glm::uint m_gBufferHandle;
+			glm::uint m_gBuffer_PositionHandle;
+			glm::uint m_gBuffer_NormalHandle;
+			glm::uint m_gBuffer_DiffuseSpecularHandle;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

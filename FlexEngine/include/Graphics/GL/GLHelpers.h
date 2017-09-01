@@ -23,9 +23,13 @@ namespace flex
 
 			struct UniformIDs
 			{
-				int modelID;
+				int model;
 				int modelInvTranspose;
 				int modelViewProjection;
+				int viewProjection;
+				int view;
+				int viewInv;
+				int projection;
 				int camPos;
 				int viewDir;
 				int ambientColor;
@@ -37,17 +41,24 @@ namespace flex
 			};
 			UniformIDs uniformIDs;
 
-			bool useDiffuseTexture = false;
+			bool useDiffuseSampler = false;
 			std::string diffuseTexturePath;
 			glm::uint diffuseTextureID;
 
-			bool useSpecularTexture = false;
+			bool useSpecularSampler = false;
 			std::string specularTexturePath;
 			glm::uint specularTextureID;
 
-			bool useNormalTexture = false;
+			bool useNormalSampler = false;
 			std::string normalTexturePath;
 			glm::uint normalTextureID;
+
+			// GBuffer samplers
+			bool usePositionSampler = false;
+			glm::uint positionSamplerID;
+
+			bool useDiffuseSpecularSampler = false;
+			glm::uint diffuseSpecularSamplerID;
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 			bool useCubemapTexture = false;

@@ -70,8 +70,10 @@ namespace flex
 			CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", &m_BlankTexture);
 		}
 
-		void VulkanRenderer::PostInitialize()
+		void VulkanRenderer::PostInitialize(const GameContext& gameContext)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			PrepareUniformBuffers();
 
 			CreateDescriptorPool();
@@ -274,6 +276,16 @@ namespace flex
 
 			// TODO: Only call this when objects change
 			RebuildCommandBuffers();
+
+			if (m_SwapChainNeedsRebuilding)
+			{
+				m_SwapChainNeedsRebuilding = false;
+				RecreateSwapChain(gameContext.window);
+			}
+			else
+			{
+				DrawFrame(gameContext.window);
+			}
 		}
 
 		void VulkanRenderer::ReloadShaders(GameContext& gameContext)
@@ -293,25 +305,6 @@ namespace flex
 		void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
 		{
 			m_VSyncEnabled = enableVSync;
-		}
-
-		void VulkanRenderer::Clear(int flags, const GameContext& gameContext)
-		{
-			UNREFERENCED_PARAMETER(gameContext);
-			UNREFERENCED_PARAMETER(flags);
-		}
-
-		void VulkanRenderer::SwapBuffers(const GameContext& gameContext)
-		{
-			if (m_SwapChainNeedsRebuilding)
-			{
-				m_SwapChainNeedsRebuilding = false;
-				RecreateSwapChain(gameContext.window);
-			}
-			else
-			{
-				DrawFrame(gameContext.window);
-			}
 		}
 
 		void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
@@ -534,9 +527,9 @@ namespace flex
 
 			VertexBufferData vertexBufferData = {};
 			vertexBufferData.Attributes =
-				(glm::uint)VertexBufferData::Attribute::POSITION_2D |
-				(glm::uint)VertexBufferData::Attribute::UV |
-				(glm::uint)VertexBufferData::Attribute::COLOR_R8G8B8A8_UNORM;
+				(glm::uint)VertexBufferData::AttributeBit::POSITION_2D |
+				(glm::uint)VertexBufferData::AttributeBit::UV |
+				(glm::uint)VertexBufferData::AttributeBit::COLOR_R8G8B8A8_UNORM;
 			vertexBufferData.VertexStride = vertexBufferData.CalculateStride();
 		
 			assert(vertexBufferData.VertexStride == sizeof(ImDrawVert));

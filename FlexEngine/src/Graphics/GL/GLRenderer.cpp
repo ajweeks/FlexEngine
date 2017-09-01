@@ -53,6 +53,8 @@ namespace flex
 			m_RenderObjects.clear();
 			CheckGLErrorMessages();
 
+			m_gBufferQuadVertexBufferData.Destroy();
+
 			glfwTerminate();
 		}
 
@@ -73,17 +75,21 @@ namespace flex
 
 			// TODO: Is this really needed? (do things dynamically instead?)
 			UniformInfo uniformInfo[] = {
-				{ Uniform::Type::MODEL_MAT4,					&mat.uniformIDs.modelID,				"in_Model" },
+				{ Uniform::Type::MODEL_MAT4,					&mat.uniformIDs.model,					"in_Model" },
 				{ Uniform::Type::MODEL_INV_TRANSPOSE_MAT4,		&mat.uniformIDs.modelInvTranspose,		"in_ModelInvTranspose" },
 				{ Uniform::Type::MODEL_VIEW_PROJECTION_MAT4,	&mat.uniformIDs.modelViewProjection,	"in_ModelViewProjection" },
+				{ Uniform::Type::VIEW_MAT4,						&mat.uniformIDs.view,					"in_View" },
+				{ Uniform::Type::VIEW_INV_MAT4,					&mat.uniformIDs.viewInv,				"in_ViewInv" },
+				{ Uniform::Type::VIEW_PROJECTION_MAT4,			&mat.uniformIDs.viewProjection,			"in_ViewProjection" },
+				{ Uniform::Type::PROJECTION_MAT4,				&mat.uniformIDs.projection,				"in_Projection" },
 				{ Uniform::Type::CAM_POS_VEC4,					&mat.uniformIDs.camPos,					"in_CamPos" },
 				{ Uniform::Type::VIEW_DIR_VEC4,					&mat.uniformIDs.viewDir,				"in_ViewDir" },
 				{ Uniform::Type::AMBIENT_COLOR_VEC4,			&mat.uniformIDs.ambientColor,			"in_AmbientColor" },
 				{ Uniform::Type::SPECULAR_COLOR_VEC4,			&mat.uniformIDs.specularColor,			"in_SpecularColor" },
-				{ Uniform::Type::USE_DIFFUSE_TEXTURE_INT,		&mat.uniformIDs.useDiffuseTexture,		"in_UseDiffuseTexture" },
-				{ Uniform::Type::USE_NORMAL_TEXTURE_INT,		&mat.uniformIDs.useNormalTexture,		"in_UseNormalTexture" },
-				{ Uniform::Type::USE_SPECULAR_TEXTURE_INT,		&mat.uniformIDs.useSpecularTexture,		"in_UseSpecularTexture" },
-				{ Uniform::Type::USE_CUBEMAP_TEXTURE_INT,		&mat.uniformIDs.useCubemapTexture,		"in_UseCubemapTexture" },
+				{ Uniform::Type::USE_DIFFUSE_TEXTURE_INT,		&mat.uniformIDs.useDiffuseTexture,		"in_UseDiffuseSampler" },
+				{ Uniform::Type::USE_NORMAL_TEXTURE_INT,		&mat.uniformIDs.useNormalTexture,		"in_UseNormalSampler" },
+				{ Uniform::Type::USE_SPECULAR_TEXTURE_INT,		&mat.uniformIDs.useSpecularTexture,		"in_UseSpecularSampler" },
+				{ Uniform::Type::USE_CUBEMAP_TEXTURE_INT,		&mat.uniformIDs.useCubemapTexture,		"in_UseCubemapSampler" },
 			};
 
 			const glm::uint uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
@@ -106,22 +112,25 @@ namespace flex
 			CheckGLErrorMessages();
 
 			mat.diffuseTexturePath = createInfo->diffuseTexturePath;
-			mat.useDiffuseTexture = !createInfo->diffuseTexturePath.empty();
+			mat.useDiffuseSampler = !createInfo->diffuseTexturePath.empty();
 
 			mat.normalTexturePath = createInfo->normalTexturePath;
-			mat.useNormalTexture = !createInfo->normalTexturePath.empty();
+			mat.useNormalSampler = !createInfo->normalTexturePath.empty() || createInfo->useNormalSampler;
 
 			mat.specularTexturePath = createInfo->specularTexturePath;
-			mat.useSpecularTexture = !createInfo->specularTexturePath.empty();
+			mat.useSpecularSampler = !createInfo->specularTexturePath.empty();
 
-			if (mat.useDiffuseTexture)
+			mat.usePositionSampler = createInfo->usePositionSampler;
+			mat.useDiffuseSpecularSampler = createInfo->useDiffuseSpecularSampler;
+
+			if (mat.useDiffuseSampler)
 			{
 				GenerateGLTexture(mat.diffuseTextureID, createInfo->diffuseTexturePath);
-				int diffuseLocation = glGetUniformLocation(shader.program, "in_DiffuseTexture");
+				int diffuseLocation = glGetUniformLocation(shader.program, "in_DiffuseSampler");
 				CheckGLErrorMessages();
 				if (diffuseLocation == -1)
 				{
-					Logger::LogWarning("in_DiffuseTexture was not found in shader!");
+					Logger::LogWarning("in_DiffuseSampler was not found in shader!");
 				}
 				else
 				{
@@ -130,14 +139,21 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (mat.useNormalTexture)
+			if (mat.useNormalSampler)
 			{
-				GenerateGLTexture(mat.normalTextureID, createInfo->normalTexturePath);
-				int normalLocation = glGetUniformLocation(shader.program, "in_NormalTexture");
+				if (createInfo->normalTexturePath.empty())
+				{
+					mat.positionSamplerID = createInfo->normalSamplerID;
+				}
+				else
+				{
+					GenerateGLTexture(mat.normalTextureID, createInfo->normalTexturePath);
+				}
+				int normalLocation = glGetUniformLocation(shader.program, "in_NormalSampler");
 				CheckGLErrorMessages();
 				if (normalLocation == -1)
 				{
-					Logger::LogWarning("in_NormalTexture was not found in shader!");
+					Logger::LogWarning("in_NormalSampler was not found in shader!");
 				}
 				else
 				{
@@ -146,18 +162,50 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (mat.useSpecularTexture)
+			if (mat.useSpecularSampler)
 			{
 				GenerateGLTexture(mat.specularTextureID, createInfo->specularTexturePath);
-				int specularLocation = glGetUniformLocation(shader.program, "in_SpecularTexture");
+				int specularLocation = glGetUniformLocation(shader.program, "in_SpecularSampler");
 				CheckGLErrorMessages();
 				if (specularLocation == -1)
 				{
-					Logger::LogWarning("in_SpecularTexture was not found in shader!");
+					Logger::LogWarning("in_SpecularSampler was not found in shader!");
 				}
 				else
 				{
 					glUniform1i(specularLocation, 2);
+				}
+				CheckGLErrorMessages();
+			}
+
+			if (mat.usePositionSampler)
+			{
+				mat.positionSamplerID = createInfo->positionSamplerID;
+				int positionLocation = glGetUniformLocation(shader.program, "in_PositionSampler");
+				CheckGLErrorMessages();
+				if (positionLocation == -1)
+				{
+					Logger::LogWarning("in_PositionSampler was not found in shader!");
+				}
+				else
+				{
+					glUniform1i(positionLocation, 0);
+				}
+				CheckGLErrorMessages();
+			}
+
+			if (mat.useDiffuseSpecularSampler)
+			{
+				mat.positionSamplerID = createInfo->positionSamplerID;
+				int diffuseSpecularLocation = glGetUniformLocation(shader.program, "in_DiffuseSpecularSampler");
+				CheckGLErrorMessages();
+				if (diffuseSpecularLocation == -1)
+				{
+					Logger::LogWarning("in_DiffuseSpecularSampler was not found in shader!");
+				}
+				else
+				{
+					glUniform1i(diffuseSpecularLocation, 2);
 				}
 				CheckGLErrorMessages();
 			}
@@ -286,35 +334,112 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::PostInitialize()
+		void GLRenderer::PostInitialize(const GameContext& gameContext)
 		{
-			int viewProjectionUBOLocation = glGetUniformBlockIndex(m_Shaders[0].program, "ViewProjectionUBO");
-			if (viewProjectionUBOLocation == -1)
-			{
-				Logger::LogWarning("Couldn't find ViewProjectionUBO in program " + std::to_string(m_Shaders[0].program) + "!");
-			}
-			glm::uint simpleUBOBinding = 0;
-			glUniformBlockBinding(m_Shaders[0].program, viewProjectionUBOLocation, simpleUBOBinding);
+			//int viewProjectionUBOLocation = glGetUniformBlockIndex(m_Shaders[0].program, "ViewProjectionUBO");
+			//if (viewProjectionUBOLocation == -1)
+			//{
+			//	Logger::LogWarning("Couldn't find ViewProjectionUBO in program " + std::to_string(m_Shaders[0].program) + "!");
+			//}
+			//glm::uint simpleUBOBinding = 0;
+			//glUniformBlockBinding(m_Shaders[0].program, viewProjectionUBOLocation, simpleUBOBinding);
+			//
+			//int viewProjectionCombinedUBOLocation = glGetUniformBlockIndex(m_Shaders[1].program, "ViewProjectionCombinedUBO");
+			//if (viewProjectionCombinedUBOLocation == -1)
+			//{
+			//	Logger::LogWarning("Couldn't find ViewProjectionCombinedUBO in program " + std::to_string(m_Shaders[1].program) + "!");
+			//}
+			//glm::uint colorUBOBinding = 1;
+			//glUniformBlockBinding(m_Shaders[1].program, viewProjectionCombinedUBOLocation, colorUBOBinding);
+			//
+			//glGenBuffers(1, &viewProjectionUBO);
+			//glBindBuffer(GL_UNIFORM_BUFFER, viewProjectionUBO);
+			//glBufferData(GL_UNIFORM_BUFFER, sizeof(ViewProjectionUBO), NULL, GL_STATIC_DRAW);
+			//glBindBuffer(GL_UNIFORM_BUFFER, 0);
+			//glBindBufferRange(GL_UNIFORM_BUFFER, simpleUBOBinding, viewProjectionUBO, 0, sizeof(ViewProjectionUBO));
+			//
+			//glGenBuffers(1, &viewProjectionCombinedUBO);
+			//glBindBuffer(GL_UNIFORM_BUFFER, viewProjectionCombinedUBO);
+			//glBufferData(GL_UNIFORM_BUFFER, sizeof(ViewProjectionCombinedUBO), NULL, GL_STATIC_DRAW);
+			//glBindBuffer(GL_UNIFORM_BUFFER, 0);
+			//glBindBufferRange(GL_UNIFORM_BUFFER, colorUBOBinding, viewProjectionCombinedUBO, 0, sizeof(ViewProjectionCombinedUBO));
 
-			int viewProjectionCombinedUBOLocation = glGetUniformBlockIndex(m_Shaders[1].program, "ViewProjectionCombinedUBO");
-			if (viewProjectionCombinedUBOLocation == -1)
-			{
-				Logger::LogWarning("Couldn't find ViewProjectionCombinedUBO in program " + std::to_string(m_Shaders[1].program) + "!");
-			}
-			glm::uint colorUBOBinding = 1;
-			glUniformBlockBinding(m_Shaders[1].program, viewProjectionCombinedUBOLocation, colorUBOBinding);
+			// G-buffer objects
+			glGenFramebuffers(1, &m_gBufferHandle);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+			
+			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			
+			GenerateFrameBufferTexture(&m_gBuffer_PositionHandle, 0, GL_RGB16F, GL_RGB, frameBufferSize);
+			GenerateFrameBufferTexture(&m_gBuffer_NormalHandle, 1, GL_RGB16F, GL_RGB, frameBufferSize);
+			GenerateFrameBufferTexture(&m_gBuffer_DiffuseSpecularHandle, 2, GL_RGBA, GL_RGBA, frameBufferSize);
+			
+			constexpr int numBuffers = 3;
+			unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+			glDrawBuffers(numBuffers, attachments);
 
-			glGenBuffers(1, &viewProjectionUBO);
-			glBindBuffer(GL_UNIFORM_BUFFER, viewProjectionUBO);
-			glBufferData(GL_UNIFORM_BUFFER, sizeof(ViewProjectionUBO), NULL, GL_STATIC_DRAW);
-			glBindBuffer(GL_UNIFORM_BUFFER, 0);
-			glBindBufferRange(GL_UNIFORM_BUFFER, simpleUBOBinding, viewProjectionUBO, 0, sizeof(ViewProjectionUBO));
 
-			glGenBuffers(1, &viewProjectionCombinedUBO);
-			glBindBuffer(GL_UNIFORM_BUFFER, viewProjectionCombinedUBO);
-			glBufferData(GL_UNIFORM_BUFFER, sizeof(ViewProjectionCombinedUBO), NULL, GL_STATIC_DRAW);
-			glBindBuffer(GL_UNIFORM_BUFFER, 0);
-			glBindBufferRange(GL_UNIFORM_BUFFER, colorUBOBinding, viewProjectionCombinedUBO, 0, sizeof(ViewProjectionCombinedUBO));
+			MaterialCreateInfo gBufferMaterialCreateInfo = {};
+			gBufferMaterialCreateInfo.name = "GBuffer material";
+			gBufferMaterialCreateInfo.shaderIndex = m_Shaders.size() - 1;
+
+			gBufferMaterialCreateInfo.usePositionSampler = true;
+			gBufferMaterialCreateInfo.positionSamplerID = m_gBuffer_PositionHandle;
+
+			gBufferMaterialCreateInfo.useNormalSampler = true;
+			gBufferMaterialCreateInfo.normalSamplerID = m_gBuffer_NormalHandle;
+
+			gBufferMaterialCreateInfo.useDiffuseSpecularSampler = true;
+			gBufferMaterialCreateInfo.diffuseSpecularSamplerID = m_gBuffer_DiffuseSpecularHandle;
+
+			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
+
+			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
+			
+			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
+				glm::vec3(-1.0f,  1.0f, 0.0f),
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+				glm::vec3(1.0f,  1.0f, 0.0f), 
+			
+				glm::vec3(1.0f, -1.0f, 0.0f),
+				glm::vec3(1.0f,  1.0f, 0.0f),
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+			};
+			
+			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(1.0f, 1.0f),
+			
+				glm::vec2(1.0f, 0.0f),
+				glm::vec2(1.0f, 1.0f),
+				glm::vec2(0.0f, 0.0f),
+			};
+			
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexBufferData::AttributeBit::POSITION | (glm::uint)VertexBufferData::AttributeBit::UV;
+			
+			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+
+			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
+			gBufferQuadCreateInfo.name = "G Buffer Quad";
+			gBufferQuadCreateInfo.materialID = gBufferMatID;
+			m_gBufferQuadTransform = {}; // Identity transform
+			gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
+			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
+			
+			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
+
+			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
+		}
+
+		void GLRenderer::GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
+		{
+			glGenTextures(1, handle);
+			glBindTexture(GL_TEXTURE_2D, *handle);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, GL_FLOAT, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, *handle, 0);
 		}
 
 		void GLRenderer::Update(const GameContext& gameContext)
@@ -342,7 +467,7 @@ namespace flex
 			// TODO: Only do this at startup and update when objects are added/removed?
 			// One vector per material containing all objects that use that material
 			std::vector<std::vector<RenderObject*>> sortedRenderObjects;
-			sortedRenderObjects.resize(m_Materials.size());
+			sortedRenderObjects.resize(m_Materials.size() - 1); // Don't render gbuffer quad in this pass (it uses last material)
 			for (size_t i = 0; i < sortedRenderObjects.size(); ++i)
 			{
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
@@ -354,6 +479,13 @@ namespace flex
 					}
 				}
 			}
+
+
+			// Geometry pass - render scene's geometry into gbuffer render targets
+			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			CheckGLErrorMessages();
 
 			for (size_t i = 0; i < sortedRenderObjects.size(); ++i)
 			{
@@ -376,9 +508,9 @@ namespace flex
 
 					std::vector<int> texures;
 
-					texures.push_back(material->useDiffuseTexture ? material->diffuseTextureID : -1);
-					texures.push_back(material->useNormalTexture ? material->normalTextureID : -1);
-					texures.push_back(material->useSpecularTexture ? material->specularTextureID : -1);
+					texures.push_back(material->useDiffuseSampler ? material->diffuseTextureID : -1);
+					texures.push_back(material->useNormalSampler ? material->normalTextureID : -1);
+					texures.push_back(material->useSpecularSampler ? material->specularTextureID : -1);
 
 					for (glm::uint k = 0; k < texures.size(); ++k)
 					{
@@ -412,10 +544,35 @@ namespace flex
 				}
 			}
 
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 			glUseProgram(0);
 			glBindVertexArray(0);
 			CheckGLErrorMessages();
 
+
+			// Lighting pass - Calculate lighting based on the gbuffer's contents
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			RenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
+			glUseProgram(m_Shaders[m_Materials[gBufferQuad->materialID].shaderIndex].program);
+
+			glBindVertexArray(gBufferQuad->VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
+			CheckGLErrorMessages();
+			UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, m_gBuffer_PositionHandle);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, m_gBuffer_NormalHandle);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, m_gBuffer_DiffuseSpecularHandle);
+
+			glCullFace(gBufferQuad->cullFace);
+			glDrawArrays(GL_TRIANGLES, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
+			CheckGLErrorMessages();
+
+			// Draw UI
 			ImDrawData* drawData = ImGui::GetDrawData();
 
 			// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
@@ -512,6 +669,9 @@ namespace flex
 			if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
 			glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 			glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
+
+
+			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 		}
 
 		void GLRenderer::ReloadShaders(GameContext& gameContext)
@@ -538,30 +698,28 @@ namespace flex
 		void GLRenderer::LoadShaders()
 		{
 			std::vector<std::pair<std::string, std::string>> shaderFilePaths = {
-				{ RESOURCE_LOCATION + "shaders/GLSL/simple.vert", RESOURCE_LOCATION + "shaders/GLSL/simple.frag" },
+				{ RESOURCE_LOCATION + "shaders/GLSL/deferred_simple.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_simple.frag" },
 				{ RESOURCE_LOCATION + "shaders/GLSL/color.vert", RESOURCE_LOCATION + "shaders/GLSL/color.frag" },
 				{ RESOURCE_LOCATION + "shaders/GLSL/imgui.vert", RESOURCE_LOCATION + "shaders/GLSL/imgui.frag" },
-				// NOTE: Skybox shader should be kept last to keep other objects rendering in front
+				//{ RESOURCE_LOCATION + "shaders/GLSL/deferred-shading.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred-shading.frag" },
+
+				// NOTE: Skybox shader must be kept second last
 				{ RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/skybox.frag" },
+				
+				// NOTE: Deferred shader must be kept last
+				{ RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.frag" },
 			};
 
 			const size_t shaderCount = shaderFilePaths.size();
 			m_Shaders.resize(shaderCount);
 
 			glm::uint shaderIndex = 0;
-			// Simple
-			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
-				Uniform::Type::CAM_POS_VEC4 |
-				Uniform::Type::DIR_LIGHT |
-				Uniform::Type::POINT_LIGHTS_VEC |
-				Uniform::Type::SPECULAR_COLOR_VEC4 |
-				Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
-				Uniform::Type::USE_NORMAL_TEXTURE_INT |
-				Uniform::Type::USE_SPECULAR_TEXTURE_INT);
+			// Deferred Simple
+			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
 
 			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 				Uniform::Type::MODEL_MAT4 |
-				Uniform::Type::MODEL_INV_TRANSPOSE_MAT4);
+				Uniform::Type::VIEW_PROJECTION_MAT4);
 			++shaderIndex;
 
 			// Color
@@ -586,12 +744,29 @@ namespace flex
 				Uniform::Type::MODEL_MAT4);
 			++shaderIndex;
 
+			// Deferred combine (sample gbuffer
+			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
+				Uniform::Type::POSITION_TEXTURE_SAMPLER |
+				Uniform::Type::NORMAL_TEXTURE_SAMPLER |
+				Uniform::Type::DIFFUSE_SPECULAR_TEXTURE_SAMPLER |
+				Uniform::Type::POINT_LIGHTS_VEC |
+				Uniform::Type::DIR_LIGHT);
+
+			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type::NONE;
+			++shaderIndex;
+
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
 				m_Shaders[i].program = glCreateProgram();
 				CheckGLErrorMessages();
 
-				LoadGLShaders(m_Shaders[i].program, shaderFilePaths[i].first, shaderFilePaths[i].second);
+				m_Shaders[i].vertexShaderFilePath = shaderFilePaths[i].first;
+				m_Shaders[i].fragmentShaderFilePath = shaderFilePaths[i].second;
+
+				if (!LoadGLShaders(m_Shaders[i].program, m_Shaders[i].vertexShaderFilePath, m_Shaders[i].fragmentShaderFilePath))
+				{
+					Logger::LogError("Couldn't load shaders " + m_Shaders[i].vertexShaderFilePath + " and " + m_Shaders[i].fragmentShaderFilePath + "!");
+				}
 
 				LinkProgram(m_Shaders[i].program);
 			}
@@ -613,7 +788,9 @@ namespace flex
 			glm::mat4 modelInv = glm::inverse(renderObject->model);
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
-			glm::mat4 MVP = proj * view * model;
+			glm::mat4 viewInv = glm::inverse(view);
+			glm::mat4 viewProj = proj * view;
+			glm::mat4 MVP = viewProj * model;
 
 			// TODO: Move to uniform buffer
 			glm::vec4 viewDir = glm::vec4(gameContext.camera->GetViewDirection(), 0.0f);
@@ -622,7 +799,7 @@ namespace flex
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::MODEL_MAT4) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::MODEL_MAT4))
 			{
-				glUniformMatrix4fv(material->uniformIDs.modelID, 1, false, &model[0][0]);
+				glUniformMatrix4fv(material->uniformIDs.model, 1, false, &model[0][0]);
 				CheckGLErrorMessages();
 			}
 
@@ -637,20 +814,29 @@ namespace flex
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::VIEW_MAT4) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::VIEW_MAT4))
 			{
-				Logger::LogWarning("Shader uniforms should not contain view matrix!");
+				glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
+				CheckGLErrorMessages();
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::VIEW_INV_MAT4) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::VIEW_INV_MAT4))
 			{
-				Logger::LogWarning("Shader uniforms should not contain viewInv matrix!");
-
+				glUniformMatrix4fv(material->uniformIDs.viewInv, 1, false, &viewInv[0][0]);
+				CheckGLErrorMessages();
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::PROJECTION_MAT4) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::PROJECTION_MAT4))
 			{
-				Logger::LogWarning("Shader uniforms should not contain proj matrix!");
+				glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &proj[0][0]);
+				CheckGLErrorMessages();
+			}
+
+			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::VIEW_PROJECTION_MAT4) ||
+				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::VIEW_PROJECTION_MAT4))
+			{
+				glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, false, &viewProj[0][0]);
+				CheckGLErrorMessages();
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4) ||
@@ -658,12 +844,6 @@ namespace flex
 			{
 				glUniformMatrix4fv(material->uniformIDs.modelViewProjection, 1, false, &MVP[0][0]);
 				CheckGLErrorMessages();
-			}
-
-			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::VIEW_PROJECTION_MAT4) ||
-				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::VIEW_PROJECTION_MAT4))
-			{
-				Logger::LogWarning("Shader uniforms should not contain viewProj matrix!");
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::CAM_POS_VEC4) ||
@@ -768,21 +948,21 @@ namespace flex
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::USE_DIFFUSE_TEXTURE_INT) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
 			{
-				glUniform1i(material->uniformIDs.useDiffuseTexture, material->useDiffuseTexture);
+				glUniform1i(material->uniformIDs.useDiffuseTexture, material->useDiffuseSampler);
 				CheckGLErrorMessages();
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::USE_NORMAL_TEXTURE_INT) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::USE_NORMAL_TEXTURE_INT))
 			{
-				glUniform1i(material->uniformIDs.useNormalTexture, material->useNormalTexture);
+				glUniform1i(material->uniformIDs.useNormalTexture, material->useNormalSampler);
 				CheckGLErrorMessages();
 			}
 
 			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::USE_SPECULAR_TEXTURE_INT) ||
 				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
 			{
-				glUniform1i(material->uniformIDs.useSpecularTexture, material->useSpecularTexture);
+				glUniform1i(material->uniformIDs.useSpecularTexture, material->useSpecularSampler);
 				CheckGLErrorMessages();
 			}
 
@@ -805,22 +985,6 @@ namespace flex
 			m_VSyncEnabled = enableVSync;
 			glfwSwapInterval(enableVSync ? 1 : 0);
 			CheckGLErrorMessages();
-		}
-
-		void GLRenderer::Clear(int flags, const GameContext& gameContext)
-		{
-			UNREFERENCED_PARAMETER(gameContext);
-
-			GLbitfield mask = 0;
-			if ((int)flags & (int)ClearFlag::COLOR) mask |= GL_COLOR_BUFFER_BIT;
-			if ((int)flags & (int)ClearFlag::DEPTH) mask |= GL_DEPTH_BUFFER_BIT;
-			glClear(mask);
-			CheckGLErrorMessages();
-		}
-
-		void GLRenderer::SwapBuffers(const GameContext& gameContext)
-		{
-			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 		}
 
 		// TODO: Remove function
@@ -910,6 +1074,8 @@ namespace flex
 			Material* material = &m_Materials[renderObject->materialID];
 			glm::uint program = m_Shaders[material->shaderIndex].program;
 
+			glUseProgram(program);
+
 			glBindVertexArray(renderObject->VAO);
 			CheckGLErrorMessages();
 
@@ -927,6 +1093,8 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glBindVertexArray(0);
+
+			glUseProgram(0);
 		}
 
 		void GLRenderer::Destroy(RenderID renderID)

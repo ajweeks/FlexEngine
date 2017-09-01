@@ -1,72 +1,55 @@
 #pragma once
 
-#include <cstdlib>
-
 #include <glm/integer.hpp>
-
-#include "Logger.h"
 
 namespace flex
 {
-	struct VertexBufferData
+	class VertexBufferData
 	{
-		VertexBufferData() :
-			pDataStart(nullptr),
-			BufferSize(0),
-			VertexStride(0),
-			VertexCount(0)
-		{}
+	public:
+		VertexBufferData();
 
-		void VertexBufferData::Destroy()
-		{
-			free(pDataStart);
-		}
-
-		enum class Attribute : glm::uint
+		typedef glm::uint Attribute;
+		enum class AttributeBit : glm::uint
 		{
 			NONE = 0,
-			POSITION =					(1 << 0),
-			POSITION_2D =				(1 << 1),
-			UV =						(1 << 2),
-			UVW =						(1 << 3),
-			COLOR_R8G8B8A8_UNORM =		(1 << 4),
-			COLOR_R32G32B32A32_SFLOAT =	(1 << 5),
-			TANGENT =					(1 << 6),
-			BITANGENT =					(1 << 7),
-			NORMAL =					(1 << 8),
+			POSITION = (1 << 0),
+			POSITION_2D = (1 << 1),
+			UV = (1 << 2),
+			UVW = (1 << 3),
+			COLOR_R8G8B8A8_UNORM = (1 << 4),
+			COLOR_R32G32B32A32_SFLOAT = (1 << 5),
+			TANGENT = (1 << 6),
+			BITANGENT = (1 << 7),
+			NORMAL = (1 << 8),
 		};
 
-		inline bool HasAttribute(Attribute attribute) const
+		struct CreateInfo
 		{
-			return (Attributes & ((glm::uint)attribute));
-		}
+			Attribute attributes;
 
-		glm::uint CalculateStride() const
-		{
-			glm::uint stride = 0;
+			std::vector<glm::vec3> positions_3D;
+			std::vector<glm::vec2> positions_2D;
+			std::vector<glm::vec2> texCoords_UV;
+			std::vector<glm::vec3> texCoords_UVW;
+			std::vector<glm::int32> colors_R8G8B8A8;
+			std::vector<glm::vec4> colors_R32G32B32A32;
+			std::vector<glm::vec3> tangents;
+			std::vector<glm::vec3> bitangents;
+			std::vector<glm::vec3> normals;
+		};
 
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::POSITION) stride += sizeof(glm::vec3);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::POSITION_2D) stride += sizeof(glm::vec2);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::UV) stride += sizeof(glm::vec2);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::UVW) stride += sizeof(glm::vec3);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::COLOR_R8G8B8A8_UNORM) stride += sizeof(glm::int32);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT) stride += sizeof(glm::vec4);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::TANGENT) stride += sizeof(glm::vec3);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::BITANGENT) stride += sizeof(glm::vec3);
-			if (Attributes & (glm::uint)VertexBufferData::Attribute::NORMAL) stride += sizeof(glm::vec3);
+		void Initialize(CreateInfo* createInfo);
+		void Destroy();
 
-			if (stride == 0)
-			{
-				Logger::LogWarning("Vertex buffer stride is 0!");
-			}
-
-			return stride;
-		}
+		bool HasAttribute(AttributeBit attributeBits) const;
+		glm::uint CalculateStride() const;
+		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
 
 		void* pDataStart;
 		glm::uint BufferSize;
-		glm::uint VertexStride;
 		glm::uint VertexCount;
-		glm::uint Attributes;
+		glm::uint VertexStride;
+		Attribute Attributes;
 	};
 } // namespace flex

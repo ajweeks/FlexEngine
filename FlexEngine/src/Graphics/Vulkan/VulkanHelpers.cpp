@@ -30,7 +30,7 @@ namespace flex
 
 			// TODO: Roll into iteration over array
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::POSITION))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::POSITION))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -43,7 +43,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::POSITION_2D))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::POSITION_2D))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -56,7 +56,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::UV))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::UV))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -69,7 +69,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::UVW))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::UVW))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -81,7 +81,7 @@ namespace flex
 				offset += sizeof(glm::vec3);
 				++location;
 			}
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::COLOR_R8G8B8A8_UNORM))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::COLOR_R8G8B8A8_UNORM))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -94,7 +94,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::COLOR_R32G32B32A32_SFLOAT))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -107,7 +107,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::TANGENT))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::TANGENT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -120,7 +120,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::BITANGENT))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::BITANGENT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -133,7 +133,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::Attribute::NORMAL))
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::NORMAL))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
