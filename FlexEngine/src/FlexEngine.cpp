@@ -361,6 +361,8 @@ namespace flex
 						ImGui::SameLine();
 						if (ImGui::TreeNode("Directional Light"))
 						{
+							ImGui::DragFloat3("Rotation", &dirLight.direction.x, 0.01f);
+
 							CopyableColorEdit3("Diffuse ", dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
 							CopyableColorEdit3("Specular", dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
 							CopyableColorEdit3("Ambient ", dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
@@ -378,6 +380,8 @@ namespace flex
 							ImGui::SameLine();
 							if (ImGui::TreeNode(objectName.c_str()))
 							{
+								ImGui::DragFloat3("Translation", &pointLights[i].position.x, 0.1f);
+
 								CopyableColorEdit3("Diffuse ", pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
 								CopyableColorEdit3("Specular", pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
 								CopyableColorEdit3("Ambient ", pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);

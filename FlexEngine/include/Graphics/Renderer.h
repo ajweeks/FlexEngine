@@ -87,6 +87,7 @@ namespace flex
 
 			bool enabled = true;
 
+			// TODO: Just set brightness here and interpolate along correct values in shader
 			float constant = 1.0f;
 			float linear = 0.022f;
 			float quadratic = 0.0019f;
@@ -166,6 +167,8 @@ namespace flex
 
 			Uniform::Type constantBufferUniforms;
 			Uniform::Type dynamicBufferUniforms;
+
+			bool deferred = false;
 		};
 
 		struct MaterialCreateInfo

@@ -120,12 +120,7 @@ namespace flex
 			}
 		}
 
-		if (m_MaterialID == 1)
-		{
-			vertexBufferDataCreateInfo.attributes = (glm::uint)VertexBufferData::AttributeBit::POSITION | (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT;
-		}
-
-		if (m_MaterialID == 0)
+		if (m_MaterialID == 3 || m_MaterialID == 2  || m_MaterialID == 4)
 		{
 			vertexBufferDataCreateInfo.attributes = (glm::uint)VertexBufferData::AttributeBit::POSITION | (glm::uint)VertexBufferData::AttributeBit::UV | (glm::uint)VertexBufferData::AttributeBit::NORMAL;
 		}
@@ -494,7 +489,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::UV;
 
-			renderObjectCreateInfo.materialID = 1;
+			renderObjectCreateInfo.materialID = 0;
 			renderObjectCreateInfo.name = "Plane";
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:
@@ -655,7 +650,7 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
 
 			// TODO: At *least* use strings rather than indices
-			renderObjectCreateInfo.materialID = 3;
+			renderObjectCreateInfo.materialID = 1;
 			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
 			renderObjectCreateInfo.name = "Skybox";
 

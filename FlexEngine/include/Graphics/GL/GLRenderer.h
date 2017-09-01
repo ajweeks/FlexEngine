@@ -74,6 +74,8 @@ namespace flex
 			int m_ImGuiAttribLocationTex = 0, m_ImGuiAttribLocationProjMtx = 0;
 			int m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
 			unsigned int m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;
+			
+			void DrawRenderObjectBatch(const std::vector<RenderObject*>& batchedRenderObjects, const GameContext& gameContext);
 
 			std::vector<Shader> m_Shaders;
 			std::vector<Material> m_Materials;
@@ -88,6 +90,8 @@ namespace flex
 			void LoadShaders();
 			
 			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
+			void ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
+			void ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size);
 
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
 
@@ -101,6 +105,7 @@ namespace flex
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			Transform m_gBufferQuadTransform;
 			glm::uint m_gBufferHandle;
+			glm::uint m_gBufferDepthHandle;
 			glm::uint m_gBuffer_PositionHandle;
 			glm::uint m_gBuffer_NormalHandle;
 			glm::uint m_gBuffer_DiffuseSpecularHandle;

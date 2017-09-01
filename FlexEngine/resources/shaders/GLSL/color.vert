@@ -1,9 +1,6 @@
 #version 400
 
-layout (std140) uniform ViewProjectionCombinedUBO
-{
-	mat4 in_ViewProjection;
-};
+uniform mat4 in_ViewProjection;
 
 uniform mat4 in_Model;
 
