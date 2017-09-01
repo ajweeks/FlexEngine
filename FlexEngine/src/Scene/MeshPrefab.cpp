@@ -96,7 +96,7 @@ namespace flex
 				glm::vec3 tangent = ToVec3(mesh->mTangents[i]);
 				vertexBufferDataCreateInfo.tangents.push_back(tangent);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::TANGENT;
-
+			
 				glm::vec3 bitangent = ToVec3(mesh->mBitangents[i]);
 				vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::BITANGENT;
@@ -118,11 +118,6 @@ namespace flex
 				vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::UV;
 			}
-		}
-
-		if (m_MaterialID == 3 || m_MaterialID == 2  || m_MaterialID == 4)
-		{
-			vertexBufferDataCreateInfo.attributes = (glm::uint)VertexBufferData::AttributeBit::POSITION | (glm::uint)VertexBufferData::AttributeBit::UV | (glm::uint)VertexBufferData::AttributeBit::NORMAL;
 		}
 
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
@@ -405,8 +400,6 @@ namespace flex
 			const size_t vertexCount = lineCount * 2 * 2;
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
-			vertexBufferDataCreateInfo.texCoords_UV.reserve(vertexCount);
-			vertexBufferDataCreateInfo.normals.reserve(vertexCount);
 
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT;

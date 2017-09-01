@@ -796,7 +796,11 @@ namespace flex
 
 			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 				Uniform::Type::MODEL_MAT4 |
-				Uniform::Type::VIEW_PROJECTION_MAT4);
+				Uniform::Type::MODEL_INV_TRANSPOSE_MAT4 |
+				Uniform::Type::VIEW_PROJECTION_MAT4 |
+				Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
+				Uniform::Type::USE_NORMAL_TEXTURE_INT |
+				Uniform::Type::USE_SPECULAR_TEXTURE_INT);
 			++shaderIndex;
 
 			// Color
