@@ -168,7 +168,6 @@ namespace flex
 			std::vector<PointLight> m_PointLights;
 			std::vector<UniformBuffer> m_UniformBuffers;
 			std::vector<Shader> m_Shaders;
-			std::vector<ShaderCodePair> m_LoadedShaderCode;
 			std::vector<Material> m_LoadedMaterials;
 
 			bool m_VSyncEnabled;

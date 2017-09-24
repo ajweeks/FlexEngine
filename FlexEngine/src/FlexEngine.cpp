@@ -300,7 +300,6 @@ namespace flex
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
-			static constexpr int clearFlags = (int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL;
 			m_SceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.inputManager->Update();
 			m_GameContext.window->Update(m_GameContext);

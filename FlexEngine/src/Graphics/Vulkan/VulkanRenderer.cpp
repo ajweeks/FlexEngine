@@ -47,7 +47,7 @@ namespace flex
 
 			LoadDefaultShaderCode();
 
-			const glm::uint shaderCount = m_LoadedShaderCode.size();
+			const glm::uint shaderCount = m_Shaders.size();
 			m_VertexIndexBufferPairs.reserve(shaderCount);
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
@@ -1084,9 +1084,9 @@ namespace flex
 
 		void VulkanRenderer::CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo)
 		{
-			ShaderCodePair shaderCode = m_LoadedShaderCode[createInfo->shaderIndex];
-			std::vector<char> vertShaderCode = shaderCode.vertexShaderCode;
-			std::vector<char> fragShaderCode = shaderCode.fragmentShaderCode;
+			Shader& shader = m_Shaders[createInfo->shaderIndex];
+			std::vector<char> vertShaderCode = shader.vertexShaderCode;
+			std::vector<char> fragShaderCode = shader.fragmentShaderCode;
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			CreateShaderModule(vertShaderCode, vertShaderModule);
@@ -2189,7 +2189,7 @@ namespace flex
 				ReleaseUniformBuffers();
 			}
 
-			m_UniformBuffers.resize(m_LoadedShaderCode.size(), { m_VulkanDevice->m_LogicalDevice });
+			m_UniformBuffers.resize(m_Shaders.size(), { m_VulkanDevice->m_LogicalDevice });
 
 			glm::uint shaderIndex = 0;
 
@@ -3110,19 +3110,18 @@ namespace flex
 			const std::string shaderDirectory = RESOURCE_LOCATION + "shaders/GLSL/spv/";
 
 			m_Shaders = {
-				{ 0, shaderDirectory + "vk_simple_vert.spv", shaderDirectory + "vk_simple_frag.spv" },
-				{ 1, shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
-				{ 2, shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
+				{ shaderDirectory + "vk_simple_vert.spv", shaderDirectory + "vk_simple_frag.spv" },
+				{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
+				{ shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
 				// NOTE: Skybox shader should be kept last to keep other objects rendering in front
-				{ 3, shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
+				{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
 			};
 
 			const size_t shaderCount = m_Shaders.size();
-			m_LoadedShaderCode.resize(shaderCount);
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
-				m_LoadedShaderCode[i].vertexShaderCode = ReadFile(m_Shaders[i].vertexShaderFilePath);
-				m_LoadedShaderCode[i].fragmentShaderCode = ReadFile(m_Shaders[i].fragmentShaderFilePath);
+				m_Shaders[i].vertexShaderCode = ReadFile(m_Shaders[i].vertexShaderFilePath);
+				m_Shaders[i].fragmentShaderCode = ReadFile(m_Shaders[i].fragmentShaderFilePath);
 			}
 		}
 

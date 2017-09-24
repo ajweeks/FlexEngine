@@ -109,12 +109,6 @@ namespace flex
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
-		struct ShaderCodePair
-		{
-			std::vector<char> vertexShaderCode;
-			std::vector<char> fragmentShaderCode;
-		};
-
 		struct Material
 		{
 			std::string name;

@@ -838,9 +838,9 @@ namespace flex
 			// Deferred combine (sample gbuffer
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
-				Uniform::Type::POSITION_TEXTURE_SAMPLER |
+				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |
 				Uniform::Type::NORMAL_TEXTURE_SAMPLER |
-				Uniform::Type::DIFFUSE_SPECULAR_TEXTURE_SAMPLER |
+				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER |
 				Uniform::Type::POINT_LIGHTS_VEC |
 				Uniform::Type::DIR_LIGHT);
 
