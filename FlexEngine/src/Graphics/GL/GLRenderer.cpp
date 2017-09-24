@@ -459,6 +459,8 @@ namespace flex
 
 		void GLRenderer::ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
 		{
+			UNREFERENCED_PARAMETER(index);
+
 			glBindTexture(GL_TEXTURE_2D, handle);
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, GL_FLOAT, NULL);
 			CheckGLErrorMessages();
