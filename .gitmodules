@@ -1,6 +1,3 @@
-[submodule "FlexEngine/dependencies/glfw"]
-	path = FlexEngine/dependencies/glfw
-	url = https://github.com/glfw/glfw
 [submodule "FlexEngine/dependencies/glm"]
 	path = FlexEngine/dependencies/glm
 	url = https://github.com/g-truc/glm
@@ -16,3 +13,6 @@
 [submodule "FlexEngine/dependencies/imgui"]
 	path = FlexEngine/dependencies/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "FlexEngine/dependencies/glfw"]
+	path = FlexEngine/dependencies/glfw
+	url = https://github.com/glfw/glfw
