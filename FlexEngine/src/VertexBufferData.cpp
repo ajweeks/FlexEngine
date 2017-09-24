@@ -2,6 +2,7 @@
 #include "stdafx.h"
 
 #include "VertexBufferData.h"
+#include "VertexAttribute.h"
 
 #include <cstdlib>
 
@@ -22,7 +23,7 @@ namespace flex
 		VertexCount = createInfo->positions_3D.size();
 		if (VertexCount == 0) VertexCount = createInfo->positions_2D.size();
 		Attributes = createInfo->attributes;
-		VertexStride = CalculateStride();
+		VertexStride = CalculateVertexStride(Attributes);
 		BufferSize = VertexCount * VertexStride;
 
 		void *pDataLocation = malloc(BufferSize);
@@ -36,49 +37,49 @@ namespace flex
 
 		for (UINT i = 0; i < VertexCount; ++i)
 		{
-			if (Attributes & (glm::uint)AttributeBit::POSITION)
+			if (Attributes & (glm::uint)VertexAttribute::POSITION)
 			{
 				memcpy(pDataLocation, &createInfo->positions_3D[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)AttributeBit::UV)
+			if (Attributes & (glm::uint)VertexAttribute::UV)
 			{
 				memcpy(pDataLocation, &createInfo->texCoords_UV[i], sizeof(glm::vec2));
 				pDataLocation = (float*)pDataLocation + 2;
 			}
 
-			if (Attributes & (glm::uint)AttributeBit::UVW)
+			if (Attributes & (glm::uint)VertexAttribute::UVW)
 			{
 				memcpy(pDataLocation, &createInfo->texCoords_UVW[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)AttributeBit::COLOR_R8G8B8A8_UNORM)
+			if (Attributes & (glm::uint)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
 				memcpy(pDataLocation, &createInfo->colors_R8G8B8A8[i], sizeof(glm::int32));
 				pDataLocation = (float*)pDataLocation + 1;
 			}
 
-			if (Attributes & (glm::uint)AttributeBit::COLOR_R32G32B32A32_SFLOAT)
+			if (Attributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
 				memcpy(pDataLocation, &createInfo->colors_R32G32B32A32[i], sizeof(glm::vec4));
 				pDataLocation = (float*)pDataLocation + 4;
 			}
 
-			if (Attributes & (glm::uint)AttributeBit::TANGENT)
+			if (Attributes & (glm::uint)VertexAttribute::TANGENT)
 			{
 				memcpy(pDataLocation, &createInfo->tangents[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)AttributeBit::BITANGENT)
+			if (Attributes & (glm::uint)VertexAttribute::BITANGENT)
 			{
 				memcpy(pDataLocation, &createInfo->bitangents[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)AttributeBit::NORMAL)
+			if (Attributes & (glm::uint)VertexAttribute::NORMAL)
 			{
 				memcpy(pDataLocation, &createInfo->normals[i], sizeof(glm::vec3));
 				pDataLocation = (float*)pDataLocation + 3;
@@ -89,33 +90,6 @@ namespace flex
 	void VertexBufferData::Destroy()
 	{
 		free(pDataStart);
-	}
-
-	bool VertexBufferData::HasAttribute(AttributeBit attributeBits) const
-	{
-		return (Attributes & ((glm::uint)attributeBits));
-	}
-
-	glm::uint VertexBufferData::CalculateStride() const
-	{
-		glm::uint stride = 0;
-
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::POSITION) stride += sizeof(glm::vec3);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::POSITION_2D) stride += sizeof(glm::vec2);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::UV) stride += sizeof(glm::vec2);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::UVW) stride += sizeof(glm::vec3);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::COLOR_R8G8B8A8_UNORM) stride += sizeof(glm::int32);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT) stride += sizeof(glm::vec4);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::TANGENT) stride += sizeof(glm::vec3);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::BITANGENT) stride += sizeof(glm::vec3);
-		if (Attributes & (glm::uint)VertexBufferData::AttributeBit::NORMAL) stride += sizeof(glm::vec3);
-
-		if (stride == 0)
-		{
-			Logger::LogWarning("Vertex buffer stride is 0!");
-		}
-
-		return stride;
 	}
 
 	void VertexBufferData::DescribeShaderVariables(Renderer* renderer, RenderID renderID)
@@ -142,8 +116,8 @@ namespace flex
 		float* currentLocation = (float*)0;
 		for (size_t i = 0; i < vertexTypeCount; ++i)
 		{
-			VertexBufferData::Attribute vertexType = VertexBufferData::Attribute(1 << i);
-			if (Attributes & (int)vertexType)
+			VertexAttribute vertexAttribute = VertexAttribute(1 << i);
+			if (Attributes & (int)vertexAttribute)
 			{
 				renderer->DescribeShaderVariable(renderID, vertexTypes[i].name, vertexTypes[i].size, Renderer::Type::FLOAT, false,
 					(int)VertexStride, currentLocation);

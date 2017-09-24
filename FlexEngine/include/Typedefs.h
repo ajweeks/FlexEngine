@@ -9,6 +9,7 @@ namespace glm
 
 namespace flex
 {
+	typedef glm::uint VertexAttributes;
 	typedef glm::uint RenderID;
 	typedef glm::uint ShaderID;
 	typedef glm::uint MaterialID;

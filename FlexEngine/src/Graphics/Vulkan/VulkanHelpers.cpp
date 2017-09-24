@@ -3,7 +3,9 @@
 #include "Graphics/Vulkan/VulkanHelpers.h"
 
 #include "Logger.h"
+#include "VertexAttribute.h"
 #include "VertexBufferData.h"
+#include "VertexAttribute.h"
 
 namespace flex
 {
@@ -30,7 +32,7 @@ namespace flex
 
 			// TODO: Roll into iteration over array
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::POSITION))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::POSITION)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -43,7 +45,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::POSITION_2D))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::POSITION_2D)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -56,7 +58,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::UV))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::UV)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -69,7 +71,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::UVW))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::UVW)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -81,7 +83,7 @@ namespace flex
 				offset += sizeof(glm::vec3);
 				++location;
 			}
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::COLOR_R8G8B8A8_UNORM))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -94,7 +96,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -107,7 +109,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::TANGENT))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::TANGENT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -120,7 +122,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::BITANGENT))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::BITANGENT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -133,7 +135,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::NORMAL))
+			if (vertexBufferData->Attributes & (glm::uint)VertexAttribute::NORMAL)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;

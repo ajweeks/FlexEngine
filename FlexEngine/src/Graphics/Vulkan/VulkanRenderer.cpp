@@ -13,6 +13,7 @@
 #include "FreeCamera.h"
 #include "Helpers.h"
 #include "Logger.h"
+#include "VertexAttribute.h"
 #include "VertexBufferData.h"
 
 namespace flex
@@ -527,10 +528,10 @@ namespace flex
 
 			VertexBufferData vertexBufferData = {};
 			vertexBufferData.Attributes =
-				(glm::uint)VertexBufferData::AttributeBit::POSITION_2D |
-				(glm::uint)VertexBufferData::AttributeBit::UV |
-				(glm::uint)VertexBufferData::AttributeBit::COLOR_R8G8B8A8_UNORM;
-			vertexBufferData.VertexStride = vertexBufferData.CalculateStride();
+				(glm::uint)VertexAttribute::POSITION_2D |
+				(glm::uint)VertexAttribute::UV |
+				(glm::uint)VertexAttribute::COLOR_R8G8B8A8_UNORM;
+			vertexBufferData.VertexStride = CalculateVertexStride(vertexBufferData.Attributes);
 		
 			assert(vertexBufferData.VertexStride == sizeof(ImDrawVert));
 

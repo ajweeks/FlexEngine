@@ -16,6 +16,7 @@
 #include "Logger.h"
 #include "Window/Window.h"
 #include "Window/GLFWWindowWrapper.h"
+#include "VertexAttribute.h"
 
 namespace flex
 {
@@ -428,7 +429,7 @@ namespace flex
 				glm::vec2(0.0f, 0.0f),
 			};
 			
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexBufferData::AttributeBit::POSITION | (glm::uint)VertexBufferData::AttributeBit::UV;
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
 			
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
