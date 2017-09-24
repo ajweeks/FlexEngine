@@ -20,47 +20,47 @@ namespace flex
 
 	void TestScene::Initialize(const GameContext& gameContext)
 	{
-		Renderer::MaterialCreateInfo colorMatInfo = {};
-		colorMatInfo.shaderIndex = 1;
-		colorMatInfo.name = "Color";
-		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
-		
-		
-		Renderer::MaterialCreateInfo skyboxMatInfo = {};
-		skyboxMatInfo.name = "Skybox";
-		skyboxMatInfo.shaderIndex = 3;
-		
-		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
-		const std::string fileName = "skybox";
-		const std::string extension = ".jpg";
-		
-		skyboxMatInfo.cubeMapFilePaths = {
-			directory + fileName + "_r" + extension,
-			directory + fileName + "_l" + extension,
-			directory + fileName + "_u" + extension,
-			directory + fileName + "_d" + extension,
-			directory + fileName + "_b" + extension,
-			directory + fileName + "_f" + extension,
-		};
-		const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
-		
-		
-		Renderer::MaterialCreateInfo brickMatInfo = {};
-		brickMatInfo.shaderIndex = 0;
-		brickMatInfo.name = "Brick";
-		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
-		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
-		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
-		const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
-		
-		
-		Renderer::MaterialCreateInfo workMatInfo = {};
-		workMatInfo.shaderIndex = 0;
-		workMatInfo.name = "Work";
-		workMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/work_d.jpg";
-		workMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/work_s.jpg";
-		workMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/work_n.jpg";
-		const MaterialID workMatID = gameContext.renderer->InitializeMaterial(gameContext, &workMatInfo);
+		//Renderer::MaterialCreateInfo colorMatInfo = {};
+		//colorMatInfo.shaderIndex = 1;
+		//colorMatInfo.name = "Color";
+		//const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
+		//
+		//
+		//Renderer::MaterialCreateInfo skyboxMatInfo = {};
+		//skyboxMatInfo.name = "Skybox";
+		//skyboxMatInfo.shaderIndex = 3;
+		//
+		//const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
+		//const std::string fileName = "skybox";
+		//const std::string extension = ".jpg";
+		//
+		//skyboxMatInfo.cubeMapFilePaths = {
+		//	directory + fileName + "_r" + extension,
+		//	directory + fileName + "_l" + extension,
+		//	directory + fileName + "_u" + extension,
+		//	directory + fileName + "_d" + extension,
+		//	directory + fileName + "_b" + extension,
+		//	directory + fileName + "_f" + extension,
+		//};
+		//const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
+		//
+		//
+		//Renderer::MaterialCreateInfo brickMatInfo = {};
+		//brickMatInfo.shaderIndex = 0;
+		//brickMatInfo.name = "Brick";
+		//brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
+		//brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
+		//brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
+		//const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
+		//
+		//
+		//Renderer::MaterialCreateInfo workMatInfo = {};
+		//workMatInfo.shaderIndex = 0;
+		//workMatInfo.name = "Work";
+		//workMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/work_d.jpg";
+		//workMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/work_s.jpg";
+		//workMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/work_n.jpg";
+		//const MaterialID workMatID = gameContext.renderer->InitializeMaterial(gameContext, &workMatInfo);
 
 		Renderer::MaterialCreateInfo simpleTexturelessInfo = {};
 		simpleTexturelessInfo.shaderIndex = 0;
@@ -68,15 +68,15 @@ namespace flex
 		const MaterialID simpleTexturelessMatID = gameContext.renderer->InitializeMaterial(gameContext, &simpleTexturelessInfo);
 
 
-		m_Grid = new MeshPrefab(colorMatID);
-		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-		m_Grid->GetTransform().position.y -= 0.1f;
-		AddChild(m_Grid);
-		
-		m_Plane = new MeshPrefab(simpleTexturelessMatID);
-		m_Plane->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::PLANE);
-		m_Plane->GetTransform().position.y -= 0.05f;
-		AddChild(m_Plane);
+		//m_Grid = new MeshPrefab(colorMatID);
+		//m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+		//m_Grid->GetTransform().position.y -= 0.1f;
+		//AddChild(m_Grid);
+		//
+		//m_Plane = new MeshPrefab(simpleTexturelessMatID);
+		//m_Plane->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::PLANE);
+		//m_Plane->GetTransform().position.y -= 0.05f;
+		//AddChild(m_Plane);
 
 		//m_Teapot = new MeshPrefab();
 		//m_Teapot->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/teapot.fbx");
@@ -131,42 +131,42 @@ namespace flex
 		//m_Rock2->SetTransform(glm::vec3(10.0f, 0.0f, 8.0f));
 		//AddChild(m_Rock2);
 
-		float spacing = 14.0f;
+		//float spacing = 14.0f;
+		//
+		//m_TransformManipulator_1 = new MeshPrefab(brickMatID, "Transform 1");
+		//m_TransformManipulator_1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
+		//m_TransformManipulator_1->GetTransform().position.x = -spacing * 2.0f;
+		//m_TransformManipulator_1->GetTransform().position.z = -spacing * 1.0f;
+		//AddChild(m_TransformManipulator_1);
+		//
+		//m_TransformManipulator_2 = new MeshPrefab(workMatID, "Transform 2");
+		//m_TransformManipulator_2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
+		//m_TransformManipulator_2->GetTransform().position.x = -spacing;
+		//m_TransformManipulator_2->GetTransform().position.z = -spacing * 0.5f;
+		//AddChild(m_TransformManipulator_2);
 		
-		m_TransformManipulator_1 = new MeshPrefab(brickMatID, "Transform 1");
-		m_TransformManipulator_1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_1->GetTransform().position.x = -spacing * 2.0f;
-		m_TransformManipulator_1->GetTransform().position.z = -spacing * 1.0f;
-		AddChild(m_TransformManipulator_1);
+		//m_TransformManipulator_3 = new MeshPrefab(simpleTexturelessMatID, "Transform 3");
+		//m_TransformManipulator_3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
+		//m_TransformManipulator_3->GetTransform().position.x = 0.0f;
+		//m_TransformManipulator_3->GetTransform().position.z = 0.0f;
+		//AddChild(m_TransformManipulator_3);
 		
-		m_TransformManipulator_2 = new MeshPrefab(workMatID, "Transform 2");
-		m_TransformManipulator_2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_2->GetTransform().position.x = -spacing;
-		m_TransformManipulator_2->GetTransform().position.z = -spacing * 0.5f;
-		AddChild(m_TransformManipulator_2);
-		
-		m_TransformManipulator_3 = new MeshPrefab(brickMatID, "Transform 3");
-		m_TransformManipulator_3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_3->GetTransform().position.x = 0.0f;
-		m_TransformManipulator_3->GetTransform().position.z = 0.0f;
-		AddChild(m_TransformManipulator_3);
-		
-		m_TransformManipulator_4 = new MeshPrefab(workMatID, "Transform 4");
-		m_TransformManipulator_4->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_4->GetTransform().position.x = spacing;
-		m_TransformManipulator_4->GetTransform().position.z = spacing * 0.5f;
-		AddChild(m_TransformManipulator_4);
-		
-		m_TransformManipulator_5 = new MeshPrefab(brickMatID, "Transform 5");
-		m_TransformManipulator_5->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_5->GetTransform().position.x = spacing * 2.0f;
-		m_TransformManipulator_5->GetTransform().position.z = spacing * 1.0f;
-		AddChild(m_TransformManipulator_5);
+		//m_TransformManipulator_4 = new MeshPrefab(workMatID, "Transform 4");
+		//m_TransformManipulator_4->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
+		//m_TransformManipulator_4->GetTransform().position.x = spacing;
+		//m_TransformManipulator_4->GetTransform().position.z = spacing * 0.5f;
+		//AddChild(m_TransformManipulator_4);
+		//
+		//m_TransformManipulator_5 = new MeshPrefab(brickMatID, "Transform 5");
+		//m_TransformManipulator_5->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
+		//m_TransformManipulator_5->GetTransform().position.x = spacing * 2.0f;
+		//m_TransformManipulator_5->GetTransform().position.z = spacing * 1.0f;
+		//AddChild(m_TransformManipulator_5);
 		
 		
-		m_Skybox = new MeshPrefab(skyboxMatID);
-		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(m_Skybox);
+		//m_Skybox = new MeshPrefab(skyboxMatID);
+		//m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+		//AddChild(m_Skybox);
 
 
 		Renderer::PointLight light1 = {};

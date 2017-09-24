@@ -12,15 +12,15 @@ namespace flex
 		{
 		case Logger::LogLevel::LOG_INFO:
 		{
-			std::cout << "[INFO]: ";
+			std::cout << "[INFO] ";
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
-			std::cout << "[WARNING]: ";
+			std::cout << "[WARNING] ";
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
-			std::cout << "[ERROR]: ";
+			std::cout << "[ERROR] ";
 		} break;
 		default:
 		{
@@ -37,15 +37,15 @@ namespace flex
 		{
 		case Logger::LogLevel::LOG_INFO:
 		{
-			std::wcout << L"[INFO]: ";
+			std::wcout << L"[INFO] ";
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
-			std::wcout << L"[WARNING]: ";
+			std::wcout << L"[WARNING] ";
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
-			std::wcout << L"[ERROR]: ";
+			std::wcout << L"[ERROR] ";
 		} break;
 		default:
 		{
@@ -71,15 +71,6 @@ namespace flex
 		Log(message, LogLevel::LOG_ERROR);
 	}
 
-	void Logger::Assert(bool value, const std::string& onFailMessage)
-	{
-		if (!value)
-		{
-			Logger::LogError(onFailMessage);
-		}
-		assert(value);
-	}
-
 	void Logger::LogInfo(const std::wstring& message)
 	{
 		Log(message, LogLevel::LOG_INFO);
@@ -93,14 +84,5 @@ namespace flex
 	void Logger::LogError(const std::wstring& message)
 	{
 		Log(message, LogLevel::LOG_ERROR);
-	}
-
-	void Logger::Assert(bool value, const std::wstring& onFailMessage)
-	{
-		if (!value)
-		{
-			Logger::LogError(onFailMessage);
-		}
-		assert(value);
 	}
 } // namespace flex
