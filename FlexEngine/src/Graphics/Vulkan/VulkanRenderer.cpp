@@ -2120,8 +2120,8 @@ namespace flex
 				}
 			}
 
-			Logger::Assert(vertexBufferSize != 0);
-			Logger::Assert(vertexCount != 0);
+			assert(vertexBufferSize != 0);
+			assert(vertexCount != 0);
 
 			Buffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 			CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |

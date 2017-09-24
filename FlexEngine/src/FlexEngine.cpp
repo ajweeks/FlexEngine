@@ -44,7 +44,7 @@ namespace flex
 
 		Logger::LogInfo(std::to_string(m_RendererCount) + " renderer" + (m_RendererCount > 1 ? "s" : "") + " enabled");
 		Logger::LogInfo("Current renderer: " + m_RendererName);
-		Logger::Assert(m_RendererCount != 0, "At least one renderer must be enabled! (see stdafx.h)");
+		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
 	}
 
 	FlexEngine::~FlexEngine()
@@ -326,7 +326,7 @@ namespace flex
 					{
 						std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
 						m_GameContext.renderer->GetRenderObjectInfos(renderObjectInfos);
-						Logger::Assert(renderObjectInfos.size() == objectCount);
+						assert(renderObjectInfos.size() == objectCount);
 						for (size_t i = 0; i < objectCount; ++i)
 						{
 							const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));

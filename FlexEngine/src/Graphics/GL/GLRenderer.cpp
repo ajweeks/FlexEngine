@@ -496,7 +496,7 @@ namespace flex
 
 		void GLRenderer::DrawRenderObjectBatch(const std::vector<RenderObject*>& batchedRenderObjects, const GameContext& gameContext)
 		{
-			Logger::Assert(!batchedRenderObjects.empty());
+			assert(!batchedRenderObjects.empty());
 
 			Material* material = &m_Materials[batchedRenderObjects[0]->materialID];
 			Shader* shader = &m_Shaders[material->shaderIndex];

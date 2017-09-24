@@ -71,15 +71,6 @@ namespace flex
 		Log(message, LogLevel::LOG_ERROR);
 	}
 
-	void Logger::Assert(bool value, const std::string& onFailMessage)
-	{
-		if (!value)
-		{
-			Logger::LogError(onFailMessage);
-		}
-		assert(value);
-	}
-
 	void Logger::LogInfo(const std::wstring& message)
 	{
 		Log(message, LogLevel::LOG_INFO);
@@ -93,14 +84,5 @@ namespace flex
 	void Logger::LogError(const std::wstring& message)
 	{
 		Log(message, LogLevel::LOG_ERROR);
-	}
-
-	void Logger::Assert(bool value, const std::wstring& onFailMessage)
-	{
-		if (!value)
-		{
-			Logger::LogError(onFailMessage);
-		}
-		assert(value);
 	}
 } // namespace flex
