@@ -2,7 +2,6 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include <vulkan/vulkan.h>
 
@@ -15,8 +14,6 @@ namespace flex
 {
 	namespace vk
 	{
-		struct VulkanDevice;
-
 		std::string VulkanErrorString(VkResult errorCode);
 
 #ifndef VK_CHECK_RESULT
@@ -31,27 +28,9 @@ namespace flex
 	}
 #endif // VK_CHECK_RESULT
 
-		// Framebuffer for offscreen rendering
-		struct FrameBufferAttachment 
-		{
-			VkImage image;
-			VkDeviceMemory mem;
-			VkImageView view;
-			VkFormat format;
-		};
+		VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
 
-		struct FrameBuffer 
-		{
-			uint32_t width, height;
-			VkFramebuffer frameBuffer;
-			FrameBufferAttachment position, normal, albedo;
-			FrameBufferAttachment depth;
-			VkRenderPass renderPass;
-		};
-
-		VkVertexInputBindingDescription GetVertexBindingDescription(glm::uint vertexStride);
-
-		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
+		void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
 		struct VulkanQueueFamilyIndices
@@ -129,16 +108,12 @@ namespace flex
 			VkImageLayout newImageLayout,
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-		
-		void CreateAttachment(
-			VulkanDevice* device,
-			VkFormat format,
-			VkImageUsageFlagBits usage,
-			glm::uint width,
-			glm::uint height,
-			FrameBufferAttachment *attachment);
-		
-		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
+
+		struct ShaderCodePair
+		{
+			std::vector<char> vertexShaderCode;
+			std::vector<char> fragmentShaderCode;
+		};
 
 		struct Material
 		{
@@ -215,12 +190,10 @@ namespace flex
 		struct GraphicsPipelineCreateInfo
 		{
 			glm::uint shaderIndex;
-			VertexAttributes vertexAttributes;
+			VertexBufferData* vertexBufferData = nullptr;
 
 			VkPrimitiveTopology topology;
 			VkCullModeFlags cullMode;
-
-			VkRenderPass renderPass;
 
 			VkPushConstantRange* pushConstants = nullptr;
 			glm::uint pushConstantRangeCount = 0;
@@ -241,15 +214,10 @@ namespace flex
 			glm::uint descriptorSetLayoutIndex;
 			glm::uint uniformBufferIndex;
 			VkDescriptorSet* descriptorSet;
-			
 			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* specularTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
-
-			VkImageView* positionFrameBufferView = nullptr;
-			VkImageView* normalFrameBufferView = nullptr;
-			VkImageView* albedoFrameBufferView = nullptr;
 		};
 
 		struct PushConstBlock

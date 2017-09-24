@@ -12,7 +12,7 @@ namespace flex
 		{
 			VulkanDevice(VkPhysicalDevice physicalDevice);
 
-			glm::uint GetMemoryType(glm::uint typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr) const;
+			glm::uint GetMemoryType(glm::uint typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr);
 
 			operator VkDevice();
 

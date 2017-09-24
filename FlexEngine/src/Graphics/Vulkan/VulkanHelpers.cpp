@@ -4,23 +4,23 @@
 
 #include "Logger.h"
 #include "VertexBufferData.h"
-#include "VertexAttribute.h"
 
 namespace flex
 {
 	namespace vk
 	{
-		VkVertexInputBindingDescription GetVertexBindingDescription(glm::uint vertexStride)
+		VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData)
 		{
 			VkVertexInputBindingDescription bindingDesc = {};
 			bindingDesc.binding = 0;
-			bindingDesc.stride = vertexStride;
+			bindingDesc.stride = vertexBufferData->VertexStride;
 			bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			return bindingDesc;
 		}
 
-		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
+		void GetVertexAttributeDescriptions(
+			VertexBufferData* vertexBufferData,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 		{
 			attributeDescriptions.clear();
@@ -30,7 +30,7 @@ namespace flex
 
 			// TODO: Roll into iteration over array
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::POSITION)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::POSITION))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -43,7 +43,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::POSITION_2D)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::POSITION_2D))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -56,7 +56,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::UV)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::UV))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -69,7 +69,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::UVW)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::UVW))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -81,7 +81,7 @@ namespace flex
 				offset += sizeof(glm::vec3);
 				++location;
 			}
-			if (vertexAttributes & (glm::uint) VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::COLOR_R8G8B8A8_UNORM))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -94,7 +94,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint) VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -107,7 +107,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::TANGENT)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::TANGENT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -120,7 +120,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::BITANGENT)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::BITANGENT))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -133,7 +133,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::NORMAL)
+			if (vertexBufferData->HasAttribute(VertexBufferData::AttributeBit::NORMAL))
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -162,9 +162,10 @@ namespace flex
 		}
 
 		RenderObject::RenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
+			pipelineLayout(device, vkDestroyPipelineLayout),
+			graphicsPipeline(device, vkDestroyPipeline),
 			renderID(renderID)
 		{
-			UNREFERENCED_PARAMETER(device);
 		}
 
 		std::string VulkanErrorString(VkResult errorCode)
@@ -347,97 +348,6 @@ namespace flex
 			subresourceRange.levelCount = 1;
 			subresourceRange.layerCount = 1;
 			SetImageLayout(cmdbuffer, image, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
-		}
-
-		void CreateAttachment(
-			VulkanDevice* device,
-			VkFormat format,
-			VkImageUsageFlagBits usage, 
-			glm::uint width,
-			glm::uint height,
-			FrameBufferAttachment *attachment)
-		{
-			VkImageAspectFlags aspectMask = 0;
-			VkImageLayout imageLayout;
-
-			attachment->format = format;
-
-			if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-			{
-				aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			}
-			if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
-			{
-				aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-				imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			}
-
-			assert(aspectMask > 0);
-
-			VkImageCreateInfo imageCreateInfo = {};
-			imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-			imageCreateInfo.format = format;
-			imageCreateInfo.extent.width = width;
-			imageCreateInfo.extent.height = height;
-			imageCreateInfo.extent.depth = 1;
-			imageCreateInfo.mipLevels = 1;
-			imageCreateInfo.arrayLayers = 1;
-			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			imageCreateInfo.usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT;
-
-			VkMemoryAllocateInfo memAlloc = {};
-			memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			VkMemoryRequirements memReqs;
-
-			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, &attachment->image));
-			vkGetImageMemoryRequirements(device->m_LogicalDevice, attachment->image, &memReqs);
-			memAlloc.allocationSize = memReqs.size;
-			memAlloc.memoryTypeIndex = device->GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, &attachment->mem));
-			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, attachment->image, attachment->mem, 0));
-
-			VkImageViewCreateInfo imageView = {};
-			imageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			imageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			imageView.format = format;
-			imageView.subresourceRange = {};
-			imageView.subresourceRange.aspectMask = aspectMask;
-			imageView.subresourceRange.baseMipLevel = 0;
-			imageView.subresourceRange.levelCount = 1;
-			imageView.subresourceRange.baseArrayLayer = 0;
-			imageView.subresourceRange.layerCount = 1;
-			imageView.image = attachment->image;
-			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, &attachment->view));
-		}
-
-		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat *depthFormat)
-		{
-			// Since all depth formats may be optional, we need to find a suitable depth format to use
-			// Start with the highest precision packed format
-			std::vector<VkFormat> depthFormats = {
-				VK_FORMAT_D32_SFLOAT_S8_UINT,
-				VK_FORMAT_D32_SFLOAT,
-				VK_FORMAT_D24_UNORM_S8_UINT,
-				VK_FORMAT_D16_UNORM_S8_UINT,
-				VK_FORMAT_D16_UNORM
-			};
-
-			for (auto& format : depthFormats)
-			{
-				VkFormatProperties formatProps;
-				vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProps);
-				// Format must support depth stencil attachment for optimal tiling
-				if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
-				{
-					*depthFormat = format;
-					return true;
-				}
-			}
-
-			return false;
 		}
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode)

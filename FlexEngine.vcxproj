@@ -159,7 +159,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="FlexEngine\src\VertexAttribute.cpp" />
     <ClCompile Include="FlexEngine\src\VertexBufferData.cpp" />
     <ClCompile Include="FlexEngine\src\FlexEngine.cpp" />
     <ClCompile Include="FlexEngine\src\Graphics\GL\GLHelpers.cpp" />
@@ -219,7 +218,6 @@
     <ClInclude Include="FlexEngine\include\Random.h" />
     <ClInclude Include="FlexEngine\include\Typedefs.h" />
     <ClInclude Include="FlexEngine\include\InputManager.h" />
-    <ClInclude Include="FlexEngine\include\VertexAttribute.h" />
     <ClInclude Include="FlexEngine\include\VertexBufferData.h" />
     <ClInclude Include="FlexEngine\include\Window\GLFWWindowWrapper.h" />
     <ClInclude Include="FlexEngine\include\Window\Monitor.h" />

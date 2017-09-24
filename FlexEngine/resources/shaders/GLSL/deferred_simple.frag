@@ -1,5 +1,9 @@
 #version 400
 
+layout (location = 0) out vec3 out_Position;
+layout (location = 1) out vec3 out_Normal;
+layout (location = 2) out vec4 out_AlbedoSpec;
+
 in vec3 ex_FragPos;
 in vec2 ex_TexCoord;
 in vec3 ex_Color;
@@ -12,10 +16,6 @@ uniform bool in_UseSpecularSampler;
 uniform sampler2D in_DiffuseSampler;
 uniform sampler2D in_NormalSampler;
 uniform sampler2D in_SpecularSampler;
-
-layout (location = 0) out vec3 out_Position;
-layout (location = 1) out vec3 out_Normal;
-layout (location = 2) out vec4 out_AlbedoSpec;
 
 void main()
 {

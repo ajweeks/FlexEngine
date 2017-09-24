@@ -16,7 +16,6 @@
 #include "Logger.h"
 #include "Window/Window.h"
 #include "Window/GLFWWindowWrapper.h"
-#include "VertexAttribute.h"
 
 namespace flex
 {
@@ -429,7 +428,7 @@ namespace flex
 				glm::vec2(0.0f, 0.0f),
 			};
 			
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexBufferData::AttributeBit::POSITION | (glm::uint)VertexBufferData::AttributeBit::UV;
 			
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
@@ -460,8 +459,6 @@ namespace flex
 
 		void GLRenderer::ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
 		{
-			UNREFERENCED_PARAMETER(index);
-
 			glBindTexture(GL_TEXTURE_2D, handle);
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, GL_FLOAT, NULL);
 			CheckGLErrorMessages();
@@ -496,7 +493,7 @@ namespace flex
 
 		void GLRenderer::DrawRenderObjectBatch(const std::vector<RenderObject*>& batchedRenderObjects, const GameContext& gameContext)
 		{
-			assert(!batchedRenderObjects.empty());
+			Logger::Assert(!batchedRenderObjects.empty());
 
 			Material* material = &m_Materials[batchedRenderObjects[0]->materialID];
 			Shader* shader = &m_Shaders[material->shaderIndex];
@@ -793,7 +790,6 @@ namespace flex
 			m_Shaders.resize(shaderCount);
 
 			glm::uint shaderIndex = 0;
-
 			// Deferred Simple
 			m_Shaders[shaderIndex].deferred = true;
 			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type::NONE;
@@ -836,12 +832,12 @@ namespace flex
 				Uniform::Type::MODEL_MAT4);
 			++shaderIndex;
 
-			// Deferred combine (sample gbuffer)
+			// Deferred combine (sample gbuffer
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
-				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |
+				Uniform::Type::POSITION_TEXTURE_SAMPLER |
 				Uniform::Type::NORMAL_TEXTURE_SAMPLER |
-				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER |
+				Uniform::Type::DIFFUSE_SPECULAR_TEXTURE_SAMPLER |
 				Uniform::Type::POINT_LIGHTS_VEC |
 				Uniform::Type::DIR_LIGHT);
 

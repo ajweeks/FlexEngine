@@ -20,7 +20,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::VULKAN;
+		RendererID preferredInitialRenderer = RendererID::GL;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -44,7 +44,7 @@ namespace flex
 
 		Logger::LogInfo(std::to_string(m_RendererCount) + " renderer" + (m_RendererCount > 1 ? "s" : "") + " enabled");
 		Logger::LogInfo("Current renderer: " + m_RendererName);
-		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
+		Logger::Assert(m_RendererCount != 0, "At least one renderer must be enabled! (see stdafx.h)");
 	}
 
 	FlexEngine::~FlexEngine()
@@ -300,7 +300,7 @@ namespace flex
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
-			//static constexpr int clearFlags = (int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL;
+			static constexpr int clearFlags = (int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL;
 			m_SceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.inputManager->Update();
 			m_GameContext.window->Update(m_GameContext);
@@ -326,7 +326,7 @@ namespace flex
 					{
 						std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
 						m_GameContext.renderer->GetRenderObjectInfos(renderObjectInfos);
-						assert(renderObjectInfos.size() == objectCount);
+						Logger::Assert(renderObjectInfos.size() == objectCount);
 						for (size_t i = 0; i < objectCount; ++i)
 						{
 							const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
