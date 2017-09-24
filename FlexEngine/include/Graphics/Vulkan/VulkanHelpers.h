@@ -28,7 +28,7 @@ namespace flex
 	}
 #endif // VK_CHECK_RESULT
 
-		VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData);
+		VkVertexInputBindingDescription GetVertexBindingDescription(glm::uint vertexStride);
 
 		void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);

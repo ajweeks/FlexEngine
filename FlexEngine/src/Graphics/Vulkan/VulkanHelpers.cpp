@@ -11,11 +11,11 @@ namespace flex
 {
 	namespace vk
 	{
-		VkVertexInputBindingDescription GetVertexBindingDescription(VertexBufferData* vertexBufferData)
+		VkVertexInputBindingDescription GetVertexBindingDescription(glm::uint vertexStride)
 		{
 			VkVertexInputBindingDescription bindingDesc = {};
 			bindingDesc.binding = 0;
-			bindingDesc.stride = vertexBufferData->VertexStride;
+			bindingDesc.stride = vertexStride;
 			bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			return bindingDesc;

@@ -1108,7 +1108,7 @@ namespace flex
 
 			VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
-			VkVertexInputBindingDescription bindingDescription = GetVertexBindingDescription(createInfo->vertexBufferData);
+			VkVertexInputBindingDescription bindingDescription = GetVertexBindingDescription(createInfo->vertexBufferData->VertexStride);
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 			GetVertexAttributeDescriptions(createInfo->vertexBufferData, attributeDescriptions);
 
