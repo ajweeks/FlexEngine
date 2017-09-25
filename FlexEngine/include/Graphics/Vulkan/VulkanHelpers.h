@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include <vulkan/vulkan.h>
 
@@ -14,6 +15,8 @@ namespace flex
 {
 	namespace vk
 	{
+		struct VulkanDevice;
+
 		std::string VulkanErrorString(VkResult errorCode);
 
 #ifndef VK_CHECK_RESULT
@@ -30,8 +33,26 @@ namespace flex
 
 		VkVertexInputBindingDescription GetVertexBindingDescription(glm::uint vertexStride);
 
-		void GetVertexAttributeDescriptions(VertexBufferData* vertexBufferData,
+		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
+
+		// Framebuffer for offscreen rendering
+		struct FrameBufferAttachment
+		{
+			VkImage image;
+			VkDeviceMemory mem;
+			VkImageView view;
+			VkFormat format;
+		};
+
+		struct FrameBuffer
+		{
+			uint32_t width, height;
+			VkFramebuffer frameBuffer;
+			FrameBufferAttachment position, normal, albedo;
+			FrameBufferAttachment depth;
+			VkRenderPass renderPass;
+		};
 
 		struct VulkanQueueFamilyIndices
 		{
@@ -109,6 +130,16 @@ namespace flex
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
+		void CreateAttachment(
+			VulkanDevice* device,
+			VkFormat format,
+			VkImageUsageFlagBits usage,
+			glm::uint width,
+			glm::uint height,
+			FrameBufferAttachment *attachment);
+
+		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
+
 		struct Material
 		{
 			std::string name;
@@ -184,10 +215,12 @@ namespace flex
 		struct GraphicsPipelineCreateInfo
 		{
 			glm::uint shaderIndex;
-			VertexBufferData* vertexBufferData = nullptr;
+			VertexAttributes vertexAttributes;
 
 			VkPrimitiveTopology topology;
 			VkCullModeFlags cullMode;
+
+			VkRenderPass renderPass;
 
 			VkPushConstantRange* pushConstants = nullptr;
 			glm::uint pushConstantRangeCount = 0;
@@ -208,10 +241,15 @@ namespace flex
 			glm::uint descriptorSetLayoutIndex;
 			glm::uint uniformBufferIndex;
 			VkDescriptorSet* descriptorSet;
+
 			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* specularTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
+
+			VkImageView* positionFrameBufferView = nullptr;
+			VkImageView* normalFrameBufferView = nullptr;
+			VkImageView* albedoFrameBufferView = nullptr;
 		};
 
 		struct PushConstBlock

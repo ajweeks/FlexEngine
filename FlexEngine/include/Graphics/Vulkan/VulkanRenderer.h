@@ -92,6 +92,7 @@ namespace flex
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
 			void CreateFramebuffers();
+			void PrepareOffscreenFrameBuffer(Window* window);
 
 			void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture);
 			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture);
@@ -99,10 +100,22 @@ namespace flex
 			void CreateTextureImageView(VulkanTexture* texture);
 			void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f);
 
+			// Creates vertex buffers for all render objects
 			void CreateStaticVertexBuffers();
-			glm::uint CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, int size); // Returns vertex count
+			
+			// Creates vertex buffer for all render objects' verts which use specified shader index
+			// Returns vertex count
+			glm::uint CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, int size); 
+			void CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, void* vertexBufferData, glm::uint vertexBufferSize);
+			
+			// Creates static index buffers for all render objects
 			void CreateStaticIndexBuffers();
-			glm::uint CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex); // Returns index count
+
+			// Creates index buffer for all render objects' indices which use specified shader index
+			// Returns index count
+			glm::uint CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex); 
+			void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex, const std::vector<glm::uint>& indices);
+
 			void PrepareUniformBuffers();
 			void CreateDescriptorPool();
 			glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
@@ -117,6 +130,7 @@ namespace flex
 			void CreateCommandBuffers();
 			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin);
 			void BuildCommandBuffers();
+			void BuildDeferredCommandBuffers();
 			void RebuildCommandBuffers();
 			bool CheckCommandBuffers();
 			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free);
@@ -132,7 +146,7 @@ namespace flex
 				VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory,
 				glm::uint arrayLayers = 1, glm::uint mipLevels = 1, VkImageCreateFlags flags = 0);
 			VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-			VkFormat FindDepthFormat();
+			//VkFormat FindDepthFormat();
 			bool HasStencilComponent(VkFormat format);
 			uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 			void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
@@ -141,7 +155,7 @@ namespace flex
 			void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer* buffer);
 			void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 			void DrawFrame(Window* window);
-			void CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule);
+			bool CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule);
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
 			VkExtent2D ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities);
@@ -169,6 +183,14 @@ namespace flex
 			std::vector<UniformBuffer> m_UniformBuffers;
 			std::vector<Shader> m_Shaders;
 			std::vector<Material> m_LoadedMaterials;
+
+
+			FrameBuffer offScreenFrameBuf;
+			VkSampler colorSampler;
+			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
+			int m_DeferredQuadVertexBufferIndex;
+
+
 
 			bool m_VSyncEnabled;
 			bool m_SwapChainNeedsRebuilding;
@@ -205,7 +227,7 @@ namespace flex
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
-			VDeleter<VkRenderPass> m_RenderPass; // { m_Device, vkDestroyRenderPass };
+			VDeleter<VkRenderPass> m_FinalRenderPass; // { m_Device, vkDestroyRenderPass };
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool; // { m_Device, vkDestroyDescriptorPool };
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
@@ -234,6 +256,14 @@ namespace flex
 
 			VDeleter<VkSemaphore> m_ImageAvailableSemaphore; // { m_Device, vkDestroySemaphore };
 			VDeleter<VkSemaphore> m_RenderFinishedSemaphore; // { m_Device, vkDestroySemaphore };
+
+
+			VkPipelineLayout m_DeferredPipelineLayout = VK_NULL_HANDLE;
+			VkPipeline m_DeferredPipeline = VK_NULL_HANDLE;
+			VkCommandBuffer offScreenCmdBuffer = VK_NULL_HANDLE;
+			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
+			VertexIndexBufferPair offscreenQuadVertexIndexBufferPair;
+
 
 			VkClearColorValue m_ClearColor;
 
