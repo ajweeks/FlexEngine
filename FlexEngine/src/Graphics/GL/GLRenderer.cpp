@@ -622,12 +622,17 @@ namespace flex
 			// Lighting pass - Calculate lighting based on the gbuffer's contents
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			RenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
+
+			
+			// TODO: Draw offscreen quad once for each deferred material type (store deferred matID in shaders, remove gBufferQuad->materialID) 
+			
+
 			glUseProgram(m_Shaders[m_Materials[gBufferQuad->materialID].shaderIndex].program);
 
 			glBindVertexArray(gBufferQuad->VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
 			CheckGLErrorMessages();
-			UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
+			UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext); // TODO: Is this needed?
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_gBuffer_PositionHandle);
@@ -835,7 +840,7 @@ namespace flex
 				Uniform::Type::MODEL_MAT4);
 			++shaderIndex;
 
-			// Deferred combine (sample gbuffer
+			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
 				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |

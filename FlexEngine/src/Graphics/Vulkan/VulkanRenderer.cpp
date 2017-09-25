@@ -2194,16 +2194,13 @@ namespace flex
 			glm::uint shaderIndex = 0;
 
 			// Simple
+			m_Shaders[shaderIndex].numAttachments = 3;
+			m_Shaders[shaderIndex].deferred = true;
 			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
 				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-				Uniform::Type::PROJECTION_MAT4 |
-				Uniform::Type::VIEW_MAT4 |
-				Uniform::Type::CAM_POS_VEC4 |
-				Uniform::Type::DIR_LIGHT |
-				Uniform::Type::POINT_LIGHTS_VEC |
-				Uniform::Type::AMBIENT_COLOR_VEC4 |
-				Uniform::Type::SPECULAR_COLOR_VEC4);
+				Uniform::Type::VIEW_PROJECTION_MAT4);
 
+			// TODO: Remove duplication of data (shaders also store uniform elements)
 			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
 				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
 				Uniform::Type::MODEL_MAT4 |
@@ -2216,17 +2213,19 @@ namespace flex
 				Uniform::Type::SPECULAR_TEXTURE_SAMPLER);
 			++shaderIndex;
 
-			// Color
-			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-				Uniform::Type::VIEW_PROJECTION_MAT4);
-
-			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-				Uniform::Type::MODEL_MAT4);
-			++shaderIndex;
+			//// Color
+			//m_Shaders[shaderIndex].deferred = false;
+			//m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
+			//	Uniform::Type::UNIFORM_BUFFER_CONSTANT |
+			//	Uniform::Type::VIEW_PROJECTION_MAT4);
+			//
+			//m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
+			//	Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
+			//	Uniform::Type::MODEL_MAT4);
+			//++shaderIndex;
 
 			// ImGui
+			m_Shaders[shaderIndex].deferred = false;
 			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type::NONE;
 
 			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
@@ -2234,17 +2233,30 @@ namespace flex
 				);
 			++shaderIndex;
 
-			// Skybox
-			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-				Uniform::Type::VIEW_MAT4 |
-				Uniform::Type::PROJECTION_MAT4);
+			//// Skybox
+			//m_Shaders[shaderIndex].deferred = false;
+			//m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
+			//	Uniform::Type::UNIFORM_BUFFER_CONSTANT |
+			//	Uniform::Type::VIEW_MAT4 |
+			//	Uniform::Type::PROJECTION_MAT4);
+			//
+			//m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
+			//	Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
+			//	Uniform::Type::MODEL_MAT4 |
+			//	Uniform::Type::USE_CUBEMAP_TEXTURE_INT |
+			//	Uniform::Type::CUBEMAP_TEXTURE_SAMPLER);
+			//++shaderIndex;
 
-			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-				Uniform::Type::MODEL_MAT4 |
-				Uniform::Type::USE_CUBEMAP_TEXTURE_INT |
-				Uniform::Type::CUBEMAP_TEXTURE_SAMPLER);
+			// Deferred combine (sample gbuffer)
+			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
+			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
+				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |
+				Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER |
+				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER |
+				Uniform::Type::POINT_LIGHTS_VEC |
+				Uniform::Type::DIR_LIGHT);
+
+			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type::NONE;
 			++shaderIndex;
 
 			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
@@ -2938,6 +2950,9 @@ namespace flex
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext)
 		{
+			// TODO: FIXME: There is some kind of memory corruption happening in this function!
+			return;
+
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
@@ -3002,15 +3017,27 @@ namespace flex
 
 				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::DIR_LIGHT))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_LightDir[0], sizeof(glm::vec4));
-					index += 4;
+					if (!m_DirectionalLight.enabled)
+					{
+						m_DirectionalLight.direction = glm::vec3(0.0f);
+					}
+
+					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_DirectionalLight, sizeof(m_DirectionalLight));
+					index += sizeof(m_DirectionalLight) / 4;
 				}
 
 				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::POINT_LIGHTS_VEC))
 				{
-					// TODO:
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_LightDir[0], sizeof(glm::vec4));
-					index += 4;
+					for (size_t j = 0; j < m_PointLights.size(); ++j)
+					{
+						if (!m_PointLights[j].enabled)
+						{
+							m_PointLights[j].constant = 0.0f;
+						}
+
+						memcpy(&m_UniformBuffers[i].constantData.data[index], &m_PointLights[j], sizeof(m_PointLights[j]));
+						index += sizeof(m_PointLights[j]) / 4;
+					}
 				}
 
 				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::AMBIENT_COLOR_VEC4))
@@ -3110,11 +3137,15 @@ namespace flex
 			const std::string shaderDirectory = RESOURCE_LOCATION + "shaders/GLSL/spv/";
 
 			m_Shaders = {
-				{ shaderDirectory + "vk_simple_vert.spv", shaderDirectory + "vk_simple_frag.spv" },
-				{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
+				{ shaderDirectory + "vk_deferred_simple_vert.spv", shaderDirectory + "vk_deferred_simple_frag.spv" },
+				//{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
 				{ shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
-				// NOTE: Skybox shader should be kept last to keep other objects rendering in front
-				{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
+
+				// NOTE: Skybox shader should be kept second last to keep other objects rendering in front
+				//{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
+
+				// NOTE: Deferred combine pass is kept last to ensure all other objects have been drawn
+				{ shaderDirectory + "vk_deferred_combine_vert.spv", shaderDirectory + "vk_deferred_combine_frag.spv" },
 			};
 
 			const size_t shaderCount = m_Shaders.size();
