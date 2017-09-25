@@ -183,8 +183,8 @@ namespace flex
 
 
 		Renderer::DirectionalLight dirLight = {};
-		dirLight.direction = glm::vec3(0.75f, -0.25f, 0.95f);
-		dirLight.diffuseCol = glm::vec3(0.85f, 0.97f, 0.73f);
+		dirLight.direction = glm::vec4(0.75f, -0.25f, 0.95f, 1.0f);
+		dirLight.diffuseCol = glm::vec4(0.85f, 0.97f, 0.73f, 1.0f);
 		gameContext.renderer->InitializeDirectionalLight(dirLight);
 	}
 

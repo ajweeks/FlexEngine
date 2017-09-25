@@ -73,28 +73,35 @@ namespace flex
 		struct DirectionalLight
 		{
 			glm::vec3 direction;
+			float padding1;
 			
 			bool enabled = true;
+			float padding2[3];
 
-			glm::vec3 ambientCol = glm::vec3(0.0f);
-			glm::vec3 diffuseCol = glm::vec3(1.0f);
-			glm::vec3 specularCol = glm::vec3(1.0f);
+			// Vec4 for padding's sake
+			glm::vec4 ambientCol = glm::vec4(0.0f);
+			glm::vec4 diffuseCol = glm::vec4(1.0f);
+			glm::vec4 specularCol = glm::vec4(1.0f);
 		};
 
 		struct PointLight
 		{
 			glm::vec3 position = glm::vec3(0.0f);
+			float padding1;
 
 			bool enabled = true;
+			float padding2[3];
 
 			// TODO: Just set brightness here and interpolate along correct values in shader
 			float constant = 1.0f;
 			float linear = 0.022f;
 			float quadratic = 0.0019f;
+			float padding3;
 
-			glm::vec3 ambientCol = glm::vec3(0.0f);
-			glm::vec3 diffuseCol = glm::vec3(1.0f);
-			glm::vec3 specularCol = glm::vec3(1.0f);
+			// Vec4 for padding's sake
+			glm::vec4 ambientCol = glm::vec4(0.0f);
+			glm::vec4 diffuseCol = glm::vec4(1.0f);
+			glm::vec4 specularCol = glm::vec4(1.0f);
 		};
 
 		// Info that stays consistent across all renderers
@@ -156,7 +163,7 @@ namespace flex
 			};
 
 			static bool HasUniform(Type elements, Type uniform);
-			static glm::uint CalculateSize(Type elements);
+			static glm::uint CalculateSize(Type elements, int pointLightCount);
 		};
 
 		struct Shader

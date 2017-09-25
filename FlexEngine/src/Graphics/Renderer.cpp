@@ -27,7 +27,7 @@ namespace flex
 		return (elements & (glm::uint)uniform);
 	}
 
-	glm::uint Renderer::Uniform::CalculateSize(Type elements)
+	glm::uint Renderer::Uniform::CalculateSize(Type elements, int pointLightCount)
 	{
 		glm::uint size = 0;
 
@@ -40,8 +40,8 @@ namespace flex
 		if (HasUniform(elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4)) size += sizeof(glm::mat4);
 		if (HasUniform(elements, Uniform::Type::CAM_POS_VEC4)) size += sizeof(glm::vec4);
 		if (HasUniform(elements, Uniform::Type::VIEW_DIR_VEC4)) size += sizeof(glm::vec4);
-		if (HasUniform(elements, Uniform::Type::DIR_LIGHT)) size += sizeof(glm::vec4);
-		if (HasUniform(elements, Uniform::Type::POINT_LIGHTS_VEC)) size += sizeof(glm::vec4);
+		if (HasUniform(elements, Uniform::Type::DIR_LIGHT)) size += sizeof(DirectionalLight);
+		if (HasUniform(elements, Uniform::Type::POINT_LIGHTS_VEC)) size += sizeof(PointLight) * pointLightCount;
 		if (HasUniform(elements, Uniform::Type::AMBIENT_COLOR_VEC4)) size += sizeof(glm::vec4);
 		if (HasUniform(elements, Uniform::Type::SPECULAR_COLOR_VEC4)) size += sizeof(glm::vec4);
 		if (HasUniform(elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT)) size += sizeof(glm::int32);

@@ -362,9 +362,9 @@ namespace flex
 						{
 							ImGui::DragFloat3("Rotation", &dirLight.direction.x, 0.01f);
 
-							CopyableColorEdit3("Diffuse ", dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-							CopyableColorEdit3("Specular", dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
-							CopyableColorEdit3("Ambient ", dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+							CopyableColorEdit3("Diffuse ", (glm::vec3)dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+							CopyableColorEdit3("Specular", (glm::vec3)dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
+							CopyableColorEdit3("Ambient ", (glm::vec3)dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
 
 							ImGui::TreePop();
 						}
@@ -381,9 +381,9 @@ namespace flex
 							{
 								ImGui::DragFloat3("Translation", &pointLights[i].position.x, 0.1f);
 
-								CopyableColorEdit3("Diffuse ", pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-								CopyableColorEdit3("Specular", pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
-								CopyableColorEdit3("Ambient ", pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+								CopyableColorEdit3("Diffuse ", (glm::vec3)pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+								CopyableColorEdit3("Specular", (glm::vec3)pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
+								CopyableColorEdit3("Ambient ", (glm::vec3)pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
 
 								ImGui::PushItemWidth(150);
 								ImGui::SliderFloat("Linear", &pointLights[i].linear, 0.0014f, 0.7f);

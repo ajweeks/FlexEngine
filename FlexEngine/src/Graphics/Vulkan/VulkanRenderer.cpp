@@ -2250,6 +2250,7 @@ namespace flex
 			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
 			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
+				Uniform::Type::CAM_POS_VEC4 |
 				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |
 				Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER |
 				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER |
@@ -2261,7 +2262,7 @@ namespace flex
 
 			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 			{
-				m_UniformBuffers[i].constantData.size = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
+				m_UniformBuffers[i].constantData.size = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements, m_PointLights.size());
 				if (m_UniformBuffers[i].constantData.size > 0)
 				{
 					m_UniformBuffers[i].constantData.data = (float*)malloc(m_UniformBuffers[i].constantData.size);
@@ -2271,7 +2272,7 @@ namespace flex
 						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 				}
 
-				m_UniformBuffers[i].dynamicData.size = Uniform::CalculateSize(m_UniformBuffers[i].dynamicData.elements);
+				m_UniformBuffers[i].dynamicData.size = Uniform::CalculateSize(m_UniformBuffers[i].dynamicData.elements, m_PointLights.size());
 				if (m_UniformBuffers[i].dynamicData.size > 0 && m_RenderObjects.size() > 0)
 				{
 					const size_t dynamicBufferSize = AllocateUniformBuffer(
@@ -2951,7 +2952,6 @@ namespace flex
 		void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext)
 		{
 			// TODO: FIXME: There is some kind of memory corruption happening in this function!
-			return;
 
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
@@ -2964,69 +2964,71 @@ namespace flex
 			{
 				glm::uint index = 0;
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::PROJECTION_MAT4))
+				VulkanUniformBufferObjectData& constantData = m_UniformBuffers[i].constantData;
+
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::PROJECTION_MAT4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &proj[0][0], sizeof(glm::mat4));
+					memcpy(&constantData.data[index], &proj[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_MAT4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_MAT4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &view[0][0], sizeof(glm::mat4));
+					memcpy(&constantData.data[index], &view[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_INV_MAT4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_INV_MAT4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &viewInv[0], sizeof(glm::mat4));
+					memcpy(&constantData.data[index], &viewInv[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_PROJECTION_MAT4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_PROJECTION_MAT4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &viewProj[0], sizeof(glm::mat4));
+					memcpy(&constantData.data[index], &viewProj[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::MODEL_MAT4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::MODEL_MAT4))
 				{
 					Logger::LogError("Constant uniform buffer contains model matrix, which should be in the dynamic uniform buffer");
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
 				{
 					Logger::LogError("Constant uniform buffer contains modelInvTranspose matrix, which should be in the dynamic uniform buffer");
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4))
 				{
 					Logger::LogError("Constant uniform buffer contains MVP matrix, which should be in the dynamic uniform buffer");
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::CAM_POS_VEC4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::CAM_POS_VEC4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &camPos[0], sizeof(glm::vec4));
+					memcpy(&constantData.data[index], &camPos[0], sizeof(glm::vec4));
 					index += 4;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::VIEW_DIR_VEC4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_DIR_VEC4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &viewDir[0], sizeof(glm::vec4));
+					memcpy(&constantData.data[index], &viewDir[0], sizeof(glm::vec4));
 					index += 4;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::DIR_LIGHT))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::DIR_LIGHT))
 				{
 					if (!m_DirectionalLight.enabled)
 					{
 						m_DirectionalLight.direction = glm::vec3(0.0f);
 					}
 
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_DirectionalLight, sizeof(m_DirectionalLight));
+					memcpy(&constantData.data[index], &m_DirectionalLight, sizeof(m_DirectionalLight));
 					index += sizeof(m_DirectionalLight) / 4;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::POINT_LIGHTS_VEC))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::POINT_LIGHTS_VEC))
 				{
 					for (size_t j = 0; j < m_PointLights.size(); ++j)
 					{
@@ -3035,27 +3037,35 @@ namespace flex
 							m_PointLights[j].constant = 0.0f;
 						}
 
-						memcpy(&m_UniformBuffers[i].constantData.data[index], &m_PointLights[j], sizeof(m_PointLights[j]));
+						memcpy(&constantData.data[index], &m_PointLights[j], sizeof(m_PointLights[j]));
 						index += sizeof(m_PointLights[j]) / 4;
 					}
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::AMBIENT_COLOR_VEC4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::AMBIENT_COLOR_VEC4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_AmbientColor[0], sizeof(glm::vec4));
+					memcpy(&constantData.data[index], &m_SceneInfo.m_AmbientColor[0], sizeof(glm::vec4));
 					index += 4;
 				}
 
-				if (Uniform::HasUniform(m_UniformBuffers[i].constantData.elements, Uniform::Type::SPECULAR_COLOR_VEC4))
+				if (Uniform::HasUniform(constantData.elements, Uniform::Type::SPECULAR_COLOR_VEC4))
 				{
-					memcpy(&m_UniformBuffers[i].constantData.data[index], &m_SceneInfo.m_SpecularColor[0], sizeof(glm::vec4));
+					memcpy(&constantData.data[index], &m_SceneInfo.m_SpecularColor[0], sizeof(glm::vec4));
 					index += 4;
 				}
 
-				//glm::uint calculatedSize = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements);
-				glm::uint size = m_UniformBuffers[i].constantData.size;
+				glm::uint size = constantData.size;
 
-				memcpy(m_UniformBuffers[i].constantBuffer.m_Mapped, m_UniformBuffers[i].constantData.data, size);
+#if  _DEBUG
+				// All three size calculations should be the same
+				glm::uint calculatedSize1 = index * 4;
+				glm::uint calculatedSize2 = Uniform::CalculateSize(constantData.elements, m_PointLights.size());
+				assert(calculatedSize1 == calculatedSize2 &&
+					   calculatedSize1 == size);
+#endif // _DEBUG
+
+
+				memcpy(m_UniformBuffers[i].constantBuffer.m_Mapped, constantData.data, size);
 			}
 		}
 
