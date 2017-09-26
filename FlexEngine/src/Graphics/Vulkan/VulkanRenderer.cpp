@@ -1257,14 +1257,14 @@ namespace flex
 				createInfo->positionFrameBufferView ? *createInfo->positionFrameBufferView : 0u,
 				colorSampler },
 
-				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->albedoFrameBufferView ? *createInfo->albedoFrameBufferView : 0u,
-				colorSampler },
-
 				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->normalFrameBufferView ? *createInfo->normalFrameBufferView : 0u,
+				colorSampler },
+
+				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->albedoFrameBufferView ? *createInfo->albedoFrameBufferView : 0u,
 				colorSampler },
 			};
 			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
@@ -1362,12 +1362,11 @@ namespace flex
 				{ Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
 				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
+				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
 			};
 			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
 

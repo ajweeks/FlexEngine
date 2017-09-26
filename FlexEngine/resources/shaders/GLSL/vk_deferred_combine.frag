@@ -6,23 +6,32 @@
 struct DirectionalLight 
 {
 	vec3 direction;
+	float padding1;
 
-	vec3 ambientCol;
-	vec3 diffuseCol;
-	vec3 specularCol;
+	bool enabled;
+	float padding2[3];
+
+	vec4 ambientCol;
+	vec4 diffuseCol;
+	vec4 specularCol;
 };
 
-struct PointLight 
+layout (std140) struct PointLight 
 {
 	vec3 position;
+	float padding1;
+
+	bool enabled;
+	float padding2[3];
 
 	float constant;
 	float linear;
 	float quadratic;
+	float padding3;
 
-	vec3 ambientCol;
-	vec3 diffuseCol;
-	vec3 specularCol;
+	vec4 ambientCol;
+	vec4 diffuseCol;
+	vec4 specularCol;
 };
 #define NUMBER_POINT_LIGHTS 4
 
@@ -96,18 +105,21 @@ void main()
     vec3 diffuse = texture(in_DiffuseSpecularSampler, ex_TexCoord).rgb;
     float specular = texture(in_DiffuseSpecularSampler, ex_TexCoord).a;
 
+	//fragmentColor = vec4(normal, 1);
+	//return;
+
 	float specStrength = 0.5;
 	float specShininess = 32.0;
 	
 	vec3 viewDir = normalize(ubo.camPos.xyz - worldPos);
 
-	vec3 result = DoDirectionalLighting(ubo.dirLight.direction, ubo.dirLight.ambientCol, ubo.dirLight.diffuseCol, 
-										ubo.dirLight.specularCol, diffuse, specular, normal, viewDir, specStrength, specShininess);
+	vec3 result = DoDirectionalLighting(ubo.dirLight.direction, ubo.dirLight.ambientCol.rgb, ubo.dirLight.diffuseCol.rgb, 
+										ubo.dirLight.specularCol.rgb, diffuse, specular, normal, viewDir, specStrength, specShininess);
 
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
 		result += DoPointLighting(ubo.pointLights[i].constant, ubo.pointLights[i].linear, ubo.pointLights[i].quadratic, ubo.pointLights[i].position, 
-			ubo.pointLights[i].ambientCol, ubo.pointLights[i].diffuseCol, ubo.pointLights[i].specularCol, diffuse, specular, normal, worldPos, viewDir, specStrength, specShininess);
+			ubo.pointLights[i].ambientCol.rgb, ubo.pointLights[i].diffuseCol.rgb, ubo.pointLights[i].specularCol.rgb, diffuse, specular, normal, worldPos, viewDir, specStrength, specShininess);
 	}
 	
 	fragmentColor = vec4(result, 1.0);
