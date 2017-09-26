@@ -81,19 +81,19 @@ namespace flex
 			CreateDescriptorPool();
 
 			// Generate offscreen quad
-			float x = 0.0f;
-			float y = 0.0f;
+			float x = -1.0f;
+			float y = -1.0f;
 
-			// TODO: Remove constants
+			// TODO: Remove constants (at least use strings)
 			const glm::uint deferredCombineShaderIndex = m_Shaders.size() - 1; // Deferred combine shader should be last one loaded
 			const glm::uint offscreenShaderIndex = 0; // This shader outputs 3 frame buffers (GBuffer)
 
 			VertexBufferData::CreateInfo offscreenQuadVertexBufferDataCreateInfo = {};
 			offscreenQuadVertexBufferDataCreateInfo.positions_3D = {
-				{ x + 1.0f, y + 1.0f, 0.0f },
-				{ x, y + 1.0f, 0.0f },
+				{ x + 2.0f, y + 2.0f, 0.0f },
+				{ x, y + 2.0f, 0.0f },
 				{ x, y, 0.0f },
-				{ x + 1.0f, y, 0.0f },
+				{ x + 2.0f, y, 0.0f },
 			};
 			offscreenQuadVertexBufferDataCreateInfo.texCoords_UV = {
 				{ 1.0f, 1.0f },
@@ -127,6 +127,7 @@ namespace flex
 
 			CreateStaticIndexBuffer(offscreenQuadVertexIndexBufferPair.indexBuffer, offscreenShaderIndex, indexBuffer);
 
+			offscreenQuadVertexBufferData.Destroy();
 
 			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 			{
@@ -163,8 +164,8 @@ namespace flex
 
 			// Offscreen descriptor set
 			DescriptorSetCreateInfo offscreenDescriptorSetCreateInfo = {};
-			offscreenDescriptorSetCreateInfo.descriptorSetLayoutIndex = offscreenShaderIndex;
-			offscreenDescriptorSetCreateInfo.uniformBufferIndex = offscreenShaderIndex;
+			offscreenDescriptorSetCreateInfo.descriptorSetLayoutIndex = deferredCombineShaderIndex;
+			offscreenDescriptorSetCreateInfo.uniformBufferIndex = deferredCombineShaderIndex;
 			offscreenDescriptorSetCreateInfo.positionFrameBufferView = &offScreenFrameBuf.position.view;
 			offscreenDescriptorSetCreateInfo.normalFrameBufferView = &offScreenFrameBuf.normal.view;
 			offscreenDescriptorSetCreateInfo.albedoFrameBufferView = &offScreenFrameBuf.albedo.view;
@@ -243,6 +244,9 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_ImGui_PipelineLayout, nullptr);
 			
 			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
+
+			SafeDelete(offscreenQuadVertexIndexBufferPair.indexBuffer);
+			SafeDelete(offscreenQuadVertexIndexBufferPair.vertexBuffer);
 
 			m_DescriptorPool.replace();
 			m_DepthImageView.replace();
@@ -630,7 +634,7 @@ namespace flex
 		void VulkanRenderer::ImGui_InitResources()
 		{
 			// TODO: Remove hardcoded value
-			const glm::uint shaderIndex = 2;
+			const glm::uint shaderIndex = 1;
 
 			m_ImGuiPushConstBlock = { glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f) };
 
@@ -1289,9 +1293,16 @@ namespace flex
 					}
 					else
 					{
-						// TODO: Is this needed?
-						descriptorSets[i].imageInfo.imageView = m_BlankTexture->imageView;
-						descriptorSets[i].imageInfo.sampler = m_BlankTexture->sampler;
+						if (descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+						{
+							// If setting a sampler type, image info must be filled in
+							descriptorSets[i].imageInfo.imageView = m_BlankTexture->imageView;
+							descriptorSets[i].imageInfo.sampler = m_BlankTexture->sampler;
+						}
 					}
 
 					writeDescriptorSets.push_back({});
@@ -1303,19 +1314,6 @@ namespace flex
 					writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
 					writeDescriptorSets[descriptorSetIndex].pBufferInfo = descriptorSets[i].bufferInfo.buffer ? &descriptorSets[i].bufferInfo : nullptr;
 					writeDescriptorSets[descriptorSetIndex].pImageInfo = descriptorSets[i].imageInfo.imageView ? &descriptorSets[i].imageInfo : nullptr;
-
-					// If setting a sampler type, image info must be filled in
-					if (descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
-					{
-						if (descriptorSets[i].imageInfo.imageView == VK_NULL_HANDLE)
-						{
-							Logger::LogError("CreateDescriptorSet: Sampler descriptor type is being set without image info");
-						}
-					}
 
 					++descriptorSetIndex;
 					++binding;
@@ -2300,6 +2298,8 @@ namespace flex
 				vkCmdSetScissor(m_CommandBuffers[i], 0, 1, &scissor);
 
 
+				vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipelineLayout, 0, 1, &m_OffscreenBufferDescriptorSet, 0, nullptr);
+
 				// Final composition as full screen quad
 				vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipeline);
 				VkDeviceSize offsets[1] = { 0 };
@@ -2827,6 +2827,7 @@ namespace flex
 			// TODO: Remove duplication of data (shaders also store uniform elements)
 			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
 				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
+				Uniform::Type::MODEL_MAT4 |
 				Uniform::Type::MODEL_INV_TRANSPOSE_MAT4 |
 				Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
 				Uniform::Type::DIFFUSE_TEXTURE_SAMPLER |
@@ -3410,6 +3411,8 @@ namespace flex
 
 		void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 		{
+
+
 			UNREFERENCED_PARAMETER(gameContext);
 
 			RenderObject* renderObject = GetRenderObject(renderID);

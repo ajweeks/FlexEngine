@@ -22,6 +22,7 @@ layout (binding = 0) uniform UBOConstant
 
 layout (binding = 1) uniform UBODynamic
 {
+    mat4 model;
     mat4 modelInvTranspose;
     bool useDiffuseTexture;
     bool useNormalTexture;
@@ -30,8 +31,7 @@ layout (binding = 1) uniform UBODynamic
 
 void main()
 {
-    vec4 worldPos = ubo.viewProjection * vec4(in_Position, 1.0);
-    ex_FragPos = worldPos.xyz; 
+    ex_FragPos = vec3(uboDynamic.model * vec4(in_Position, 1.0)); 
     
     ex_TexCoord = in_TexCoord;
     
@@ -43,7 +43,8 @@ void main()
         normalize(mat3(uboDynamic.modelInvTranspose) * in_Bitangent), 
         normalize(mat3(uboDynamic.modelInvTranspose) * in_Normal));
 
-    gl_Position = ubo.viewProjection * worldPos;
+    mat4 MVP = ubo.viewProjection * uboDynamic.model;
+    gl_Position = MVP * vec4(in_Position, 1.0);
 
     // Convert from GL coordinates to Vulkan coordinates
     // TODO: Move out to external function in helper file
