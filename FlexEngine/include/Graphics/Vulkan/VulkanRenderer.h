@@ -88,6 +88,8 @@ namespace flex
 			void CreateImageViews();
 			void CreateRenderPass();
 			void CreateDescriptorSetLayout(glm::uint shaderIndex);
+			void CreateDescriptorSet(RenderID renderID);
+			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void CreateGraphicsPipeline(RenderID renderID);
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
@@ -121,8 +123,6 @@ namespace flex
 			glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
 			void PrepareUniformBuffer(Buffer* buffer, glm::uint bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
-			void CreateDescriptorSet(RenderID renderID);
-			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void ReleaseUniformBuffers();
 
 			// TODO: Create command buffer class
@@ -227,7 +227,7 @@ namespace flex
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
-			VDeleter<VkRenderPass> m_FinalRenderPass; // { m_Device, vkDestroyRenderPass };
+			VDeleter<VkRenderPass> m_DeferredCombineRenderPass; // { m_Device, vkDestroyRenderPass };
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool; // { m_Device, vkDestroyDescriptorPool };
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
@@ -254,8 +254,8 @@ namespace flex
 
 			glm::uint m_DynamicAlignment = 0;
 
-			VDeleter<VkSemaphore> m_ImageAvailableSemaphore; // { m_Device, vkDestroySemaphore };
-			VDeleter<VkSemaphore> m_RenderFinishedSemaphore; // { m_Device, vkDestroySemaphore };
+			VDeleter<VkSemaphore> m_PresentCompleteSemaphore; // { m_Device, vkDestroySemaphore };
+			VDeleter<VkSemaphore> m_RenderCompleteSemaphore; // { m_Device, vkDestroySemaphore };
 
 
 			VkPipelineLayout m_DeferredPipelineLayout = VK_NULL_HANDLE;

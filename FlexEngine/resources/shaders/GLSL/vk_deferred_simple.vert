@@ -22,7 +22,6 @@ layout (binding = 0) uniform UBOConstant
 
 layout (binding = 1) uniform UBODynamic
 {
-    mat4 model;
     mat4 modelInvTranspose;
     bool useDiffuseTexture;
     bool useNormalTexture;

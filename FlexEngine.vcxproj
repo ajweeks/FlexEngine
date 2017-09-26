@@ -77,6 +77,14 @@
     <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\soil\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Debug;$(SolutionDir)FlexEngine\dependencies\soil\Debug;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\soil\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
@@ -105,6 +113,9 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -140,6 +151,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -29,13 +29,13 @@ namespace flex
 			CreateLogicalDevice(physicalDevice);
 
 			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
-			m_FinalRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
+			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 			m_DepthImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
 			m_DepthImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
 			m_DepthImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
 			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
-			m_ImageAvailableSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
-			m_RenderFinishedSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
+			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
+			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 
 			CreateSwapChain(gameContext.window);
 			CreateImageViews();
@@ -80,13 +80,13 @@ namespace flex
 
 			CreateDescriptorPool();
 
-
 			// Generate offscreen quad
 			float x = 0.0f;
 			float y = 0.0f;
 
-			// TODO: Remove constant
-			const glm::uint offscreenShaderIndex = m_Shaders.size() - 1; // Deferred shader should be last one loaded
+			// TODO: Remove constants
+			const glm::uint deferredCombineShaderIndex = m_Shaders.size() - 1; // Deferred combine shader should be last one loaded
+			const glm::uint offscreenShaderIndex = 0; // This shader outputs 3 frame buffers (GBuffer)
 
 			VertexBufferData::CreateInfo offscreenQuadVertexBufferDataCreateInfo = {};
 			offscreenQuadVertexBufferDataCreateInfo.positions_3D = {
@@ -146,20 +146,19 @@ namespace flex
 			deferredQuadVertexBufferData.VertexStride = CalculateVertexStride(deferredQuadVertexBufferData.Attributes);
 
 			GraphicsPipelineCreateInfo deferredPipelineCreateInfo = {};
-			deferredPipelineCreateInfo.shaderIndex = offscreenShaderIndex;
-
+			deferredPipelineCreateInfo.shaderIndex = deferredCombineShaderIndex;
+			deferredPipelineCreateInfo.descriptorSetLayoutIndex = deferredCombineShaderIndex;
 			deferredPipelineCreateInfo.vertexAttributes = deferredQuadVertexBufferData.Attributes;
 			deferredPipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			deferredPipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-			deferredPipelineCreateInfo.descriptorSetLayoutIndex = offscreenShaderIndex;
-			deferredPipelineCreateInfo.renderPass = m_FinalRenderPass;
+			deferredPipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
 			deferredPipelineCreateInfo.setDynamicStates = false; // ?
 			deferredPipelineCreateInfo.enabledColorBlending = false;
 			deferredPipelineCreateInfo.pipelineLayout = &m_DeferredPipelineLayout;
 			deferredPipelineCreateInfo.grahpicsPipeline = &m_DeferredPipeline;
 			// TODO: Use pipeline cache?
-
 			CreateGraphicsPipeline(&deferredPipelineCreateInfo);
+
 
 
 			// Offscreen descriptor set
@@ -199,8 +198,8 @@ namespace flex
 				vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, *iter, nullptr);
 			}
 
-			m_ImageAvailableSemaphore.replace();
-			m_RenderFinishedSemaphore.replace();
+			m_PresentCompleteSemaphore.replace();
+			m_RenderCompleteSemaphore.replace();
 
 			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
@@ -233,11 +232,17 @@ namespace flex
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.frameBuffer, nullptr);
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.renderPass, nullptr);
 
-			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, m_OffscreenBufferDescriptorSet, nullptr);
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, offscreenSemaphore, nullptr);
 
 			vkDestroySampler(m_VulkanDevice->m_LogicalDevice, colorSampler, nullptr);
 
+			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_DeferredPipeline, nullptr);
+			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_ImGui_GraphicsPipeline, nullptr);
+
+			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_DeferredPipelineLayout, nullptr);
+			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_ImGui_PipelineLayout, nullptr);
+			
+			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
 
 			m_DescriptorPool.replace();
 			m_DepthImageView.replace();
@@ -255,7 +260,7 @@ namespace flex
 			SafeDelete(m_BrickNormalTexture);
 			SafeDelete(m_BrickDiffuseTexture);
 
-			m_FinalRenderPass.replace();
+			m_DeferredCombineRenderPass.replace();
 
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
@@ -671,7 +676,7 @@ namespace flex
 			createInfo.pipelineLayout = &m_ImGui_PipelineLayout;
 			createInfo.grahpicsPipeline = &m_ImGui_GraphicsPipeline;
 			createInfo.pipelineCache = &m_ImGuiPipelineCache;
-			createInfo.renderPass = m_FinalRenderPass;
+			createInfo.renderPass = m_DeferredCombineRenderPass;
 
 			CreateGraphicsPipeline(&createInfo);
 		}
@@ -813,7 +818,7 @@ namespace flex
 			CreateTextureSampler(m_ImGuiFontTexture, 1.0f, -1000.0f, 1000.0f);
 
 			// Store our identifier
-			io.Fonts->TexID = (void *)(intptr_t)m_ImGuiFontTexture->image;
+			io.Fonts->TexID = (void *)(intptr_t)&m_ImGuiFontTexture->image;
 
 			return true;
 		}
@@ -998,7 +1003,7 @@ namespace flex
 
 			CreateSwapChain(window);
 			//CreateImageViews();
-			PrepareOffscreenFrameBuffer(window);
+			//PrepareOffscreenFrameBuffer(window);
 
 			//CreateRenderPass();
 			//for (size_t i = 0; i < m_RenderObjects.size(); ++i)
@@ -1159,7 +1164,239 @@ namespace flex
 			renderPassInfo.dependencyCount = 1;
 			renderPassInfo.pDependencies = &dependency;
 
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_FinalRenderPass.replace()));
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_DeferredCombineRenderPass.replace()));
+		}
+
+		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
+		{
+			RenderObject* renderObject = GetRenderObject(renderID);
+			if (!renderObject) return;
+
+			Material* material = &m_LoadedMaterials[renderObject->materialID];
+
+			DescriptorSetCreateInfo createInfo = {};
+			createInfo.descriptorSet = &renderObject->descriptorSet;
+			createInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
+			createInfo.uniformBufferIndex = material->shaderIndex;
+			createInfo.diffuseTexture = m_LoadedMaterials[renderObject->materialID].diffuseTexture;
+			createInfo.normalTexture = m_LoadedMaterials[renderObject->materialID].normalTexture;
+			createInfo.specularTexture = m_LoadedMaterials[renderObject->materialID].specularTexture;
+			createInfo.cubemapTexture = m_LoadedMaterials[renderObject->materialID].cubemapTexture;
+
+			CreateDescriptorSet(&createInfo);
+		}
+
+		void VulkanRenderer::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
+		{
+			VkDescriptorSetLayout layouts[] = { m_DescriptorSetLayouts[createInfo->descriptorSetLayoutIndex] };
+			VkDescriptorSetAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = m_DescriptorPool;
+			allocInfo.descriptorSetCount = 1;
+			allocInfo.pSetLayouts = layouts;
+
+			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &allocInfo, createInfo->descriptorSet));
+
+
+			Uniform::Type constantBufferElements = m_UniformBuffers[createInfo->uniformBufferIndex].constantData.elements;
+			Uniform::Type dynamicBufferElements = m_UniformBuffers[createInfo->uniformBufferIndex].dynamicData.elements;
+
+			UniformBuffer& uniformBuffer = m_UniformBuffers[createInfo->uniformBufferIndex];
+
+			struct DescriptorSetInfo
+			{
+				Uniform::Type uniformType;
+				VkDescriptorType descriptorType;
+
+				VkBuffer buffer = VK_NULL_HANDLE;
+				VkDeviceSize bufferSize = 0;
+
+				VkImageView imageView = VK_NULL_HANDLE;
+				VkSampler imageSampler = VK_NULL_HANDLE;
+
+				// These should not be filled in, they are just here so that they are kept around until the call
+				// to vkUpdateDescriptorSets, and can not be local to the following for loop
+				VkDescriptorBufferInfo bufferInfo;
+				VkDescriptorImageInfo imageInfo;
+			};
+
+			// TODO: Clean up nullptr checks somehow?
+			DescriptorSetInfo descriptorSets[] = {
+				{ Uniform::Type::UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				uniformBuffer.constantBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) },
+
+				{ Uniform::Type::UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				uniformBuffer.dynamicBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size() },
+
+				{ Uniform::Type::DIFFUSE_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->diffuseTexture ? createInfo->diffuseTexture->imageView : 0u,
+				createInfo->diffuseTexture ? createInfo->diffuseTexture->sampler : 0u },
+
+				{ Uniform::Type::NORMAL_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->normalTexture ? createInfo->normalTexture->imageView : 0u,
+				createInfo->normalTexture ? createInfo->normalTexture->sampler : 0u },
+
+				{ Uniform::Type::SPECULAR_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->specularTexture ? createInfo->specularTexture->imageView : 0u,
+				createInfo->specularTexture ? createInfo->specularTexture->sampler : 0u },
+
+				{ Uniform::Type::CUBEMAP_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->cubemapTexture ? createInfo->cubemapTexture->imageView : 0u,
+				createInfo->cubemapTexture ? createInfo->cubemapTexture->sampler : 0u },
+
+				{ Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->positionFrameBufferView ? *createInfo->positionFrameBufferView : 0u,
+				colorSampler },
+
+				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->albedoFrameBufferView ? *createInfo->albedoFrameBufferView : 0u,
+				colorSampler },
+
+				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->normalFrameBufferView ? *createInfo->normalFrameBufferView : 0u,
+				colorSampler },
+			};
+			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
+
+			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
+			writeDescriptorSets.reserve(descSetCount);
+
+			glm::uint descriptorSetIndex = 0;
+			glm::uint binding = 0;
+
+			for (size_t i = 0; i < descSetCount; ++i)
+			{
+				if (Uniform::HasUniform(constantBufferElements, descriptorSets[i].uniformType) ||
+					Uniform::HasUniform(dynamicBufferElements, descriptorSets[i].uniformType))
+				{
+					descriptorSets[i].bufferInfo = {};
+					descriptorSets[i].bufferInfo.buffer = descriptorSets[i].buffer;
+					descriptorSets[i].bufferInfo.range = descriptorSets[i].bufferSize;
+
+					descriptorSets[i].imageInfo = {};
+					descriptorSets[i].imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					if (descriptorSets[i].imageView)
+					{
+						descriptorSets[i].imageInfo.imageView = descriptorSets[i].imageView;
+						descriptorSets[i].imageInfo.sampler = descriptorSets[i].imageSampler;
+					}
+					else
+					{
+						// TODO: Is this needed?
+						descriptorSets[i].imageInfo.imageView = m_BlankTexture->imageView;
+						descriptorSets[i].imageInfo.sampler = m_BlankTexture->sampler;
+					}
+
+					writeDescriptorSets.push_back({});
+					writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptorSets[descriptorSetIndex].dstSet = *createInfo->descriptorSet;
+					writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
+					writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
+					writeDescriptorSets[descriptorSetIndex].descriptorType = descriptorSets[i].descriptorType;
+					writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
+					writeDescriptorSets[descriptorSetIndex].pBufferInfo = descriptorSets[i].bufferInfo.buffer ? &descriptorSets[i].bufferInfo : nullptr;
+					writeDescriptorSets[descriptorSetIndex].pImageInfo = descriptorSets[i].imageInfo.imageView ? &descriptorSets[i].imageInfo : nullptr;
+
+					// If setting a sampler type, image info must be filled in
+					if (descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+					{
+						if (descriptorSets[i].imageInfo.imageView == VK_NULL_HANDLE)
+						{
+							Logger::LogError("CreateDescriptorSet: Sampler descriptor type is being set without image info");
+						}
+					}
+
+					++descriptorSetIndex;
+					++binding;
+				}
+			}
+
+			if (!writeDescriptorSets.empty())
+			{
+				vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
+			}
+		}
+
+		void VulkanRenderer::CreateDescriptorSetLayout(glm::uint shaderIndex)
+		{
+			m_DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+			VkDescriptorSetLayout* descriptorSetLayout = &m_DescriptorSetLayouts.back();
+
+			UniformBuffer* uniformBuffer = &m_UniformBuffers[shaderIndex];
+
+			struct DescriptorSetInfo
+			{
+				Uniform::Type uniformType;
+				VkDescriptorType descriptorType;
+				VkShaderStageFlags shaderStageFlags;
+			};
+
+			static DescriptorSetInfo descriptorSets[] = {
+				{ Uniform::Type::UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::DIFFUSE_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::NORMAL_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::SPECULAR_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::CUBEMAP_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+			};
+			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
+
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+			glm::uint binding = 0;
+
+			for (size_t i = 0; i < descSetCount; ++i)
+			{
+				if (Uniform::HasUniform(uniformBuffer->constantData.elements, descriptorSets[i].uniformType) ||
+					Uniform::HasUniform(uniformBuffer->dynamicData.elements, descriptorSets[i].uniformType))
+				{
+					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
+					descSetLayoutBinding.binding = binding;
+					descSetLayoutBinding.descriptorCount = 1;
+					descSetLayoutBinding.descriptorType = descriptorSets[i].descriptorType;
+					descSetLayoutBinding.stageFlags = descriptorSets[i].shaderStageFlags;
+					bindings.push_back(descSetLayoutBinding);
+					++binding;
+				}
+			}
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = bindings.size();
+			layoutInfo.pBindings = bindings.data();
+
+			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
 		}
 
 		void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy, float minLod, float maxLod)
@@ -1398,7 +1635,7 @@ namespace flex
 
 				VkFramebufferCreateInfo framebufferInfo = {};
 				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebufferInfo.renderPass = m_FinalRenderPass;
+				framebufferInfo.renderPass = m_DeferredCombineRenderPass;
 				framebufferInfo.attachmentCount = attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
@@ -1465,7 +1702,7 @@ namespace flex
 			std::array<VkAttachmentDescription, 4> attachmentDescs = {};
 
 			// Init attachment properties
-			for (uint32_t i = 0; i < 4; ++i)
+			for (uint32_t i = 0; i < attachmentDescs.size(); ++i)
 			{
 				attachmentDescs[i].samples = VK_SAMPLE_COUNT_1_BIT;
 				attachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -2038,7 +2275,7 @@ namespace flex
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = m_FinalRenderPass;
+			renderPassBeginInfo.renderPass = m_DeferredCombineRenderPass;
 			renderPassBeginInfo.renderArea.offset = { 0, 0 };
 			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
 			renderPassBeginInfo.clearValueCount = clearValues.size();
@@ -2087,9 +2324,12 @@ namespace flex
 				offScreenCmdBuffer = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
 			}
 
-			VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-			semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreCreateInfo, nullptr, &offscreenSemaphore));
+			if (offscreenSemaphore == VK_NULL_HANDLE)
+			{
+				VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+				semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+				VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreCreateInfo, nullptr, &offscreenSemaphore));
+			}
 
 			std::array<VkClearValue, 4> clearValues = {};
 			clearValues[0].color = m_ClearColor;
@@ -2587,7 +2827,6 @@ namespace flex
 			// TODO: Remove duplication of data (shaders also store uniform elements)
 			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
 				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-				Uniform::Type::MODEL_MAT4 |
 				Uniform::Type::MODEL_INV_TRANSPOSE_MAT4 |
 				Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
 				Uniform::Type::DIFFUSE_TEXTURE_SAMPLER |
@@ -2633,13 +2872,15 @@ namespace flex
 
 			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
+			// TODO: Specify that this is only used in the frag shader here
 			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
+				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
 				Uniform::Type::CAM_POS_VEC4 |
+				Uniform::Type::DIR_LIGHT |
+				Uniform::Type::POINT_LIGHTS_VEC |
 				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |
 				Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER |
-				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER |
-				Uniform::Type::POINT_LIGHTS_VEC |
-				Uniform::Type::DIR_LIGHT);
+				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER);
 
 			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type::NONE;
 			++shaderIndex;
@@ -2721,21 +2962,6 @@ namespace flex
 				{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, descriptorSetCount },
 			};
 
-			//poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			//poolSizes[1].descriptorCount = descriptorSetCount;
-
-			//poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Diffuse map
-			//poolSizes[2].descriptorCount = descriptorSetCount;
-
-			//poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Normal map
-			//poolSizes[3].descriptorCount = descriptorSetCount;
-
-			//poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Specular map
-			//poolSizes[4].descriptorCount = descriptorSetCount;
-
-			//poolSizes[5].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Cubemap
-			//poolSizes[5].descriptorCount = descriptorSetCount;
-
 			VkDescriptorPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			poolInfo.poolSizeCount = poolSizes.size();
@@ -2744,167 +2970,6 @@ namespace flex
 			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_DescriptorPool.replace()));
-		}
-
-		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
-		{
-			RenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject) return;
-
-			Material* material = &m_LoadedMaterials[renderObject->materialID];
-
-			DescriptorSetCreateInfo createInfo = {};
-			createInfo.descriptorSet = &renderObject->descriptorSet;
-			createInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
-			createInfo.uniformBufferIndex = material->shaderIndex;
-			createInfo.diffuseTexture = m_LoadedMaterials[renderObject->materialID].diffuseTexture;
-			createInfo.normalTexture = m_LoadedMaterials[renderObject->materialID].normalTexture;
-			createInfo.specularTexture = m_LoadedMaterials[renderObject->materialID].specularTexture;
-			createInfo.cubemapTexture = m_LoadedMaterials[renderObject->materialID].cubemapTexture;
-
-			CreateDescriptorSet(&createInfo);
-		}
-
-		void VulkanRenderer::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
-		{
-			VkDescriptorSetLayout layouts[] = { m_DescriptorSetLayouts[createInfo->descriptorSetLayoutIndex] };
-			VkDescriptorSetAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = m_DescriptorPool;
-			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = layouts;
-
-			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &allocInfo, createInfo->descriptorSet));
-
-
-			Uniform::Type constantBufferElements = m_UniformBuffers[createInfo->uniformBufferIndex].constantData.elements;
-			Uniform::Type dynamicBufferElements = m_UniformBuffers[createInfo->uniformBufferIndex].dynamicData.elements;
-
-			UniformBuffer& uniformBuffer = m_UniformBuffers[createInfo->uniformBufferIndex];
-
-			struct DescriptorSetInfo
-			{
-				Uniform::Type uniformType;
-				VkDescriptorType descriptorType;
-
-				VkBuffer buffer = VK_NULL_HANDLE;
-				VkDeviceSize bufferSize = 0;
-
-				VkImageView imageView = VK_NULL_HANDLE;
-				VkSampler imageSampler = VK_NULL_HANDLE;
-
-				// These should not be filled in, they are just here so that they are kept around until the call
-				// to vkUpdateDescriptorSets, and can not be local to the following for loop
-				VkDescriptorBufferInfo bufferInfo;
-				VkDescriptorImageInfo imageInfo;
-			};
-
-			// TODO: Clean up nullptr checks somehow?
-			DescriptorSetInfo descriptorSets[] = {
-				{ Uniform::Type::UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				uniformBuffer.constantBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) },
-
-				{ Uniform::Type::UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				uniformBuffer.dynamicBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size() },
-
-				{ Uniform::Type::DIFFUSE_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->diffuseTexture ? createInfo->diffuseTexture->imageView : 0u,
-				createInfo->diffuseTexture ? createInfo->diffuseTexture->sampler : 0u },
-
-				{ Uniform::Type::NORMAL_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->normalTexture ? createInfo->normalTexture->imageView : 0u,
-				createInfo->normalTexture ? createInfo->normalTexture->sampler : 0u },
-
-				{ Uniform::Type::SPECULAR_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->specularTexture ? createInfo->specularTexture->imageView : 0u,
-				createInfo->specularTexture ? createInfo->specularTexture->sampler : 0u },
-
-				{ Uniform::Type::CUBEMAP_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->cubemapTexture ? createInfo->cubemapTexture->imageView : 0u,
-				createInfo->cubemapTexture ? createInfo->cubemapTexture->sampler : 0u },
-
-				{ Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->positionFrameBufferView ? *createInfo->positionFrameBufferView : 0u,
-				colorSampler },
-
-				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->albedoFrameBufferView ? *createInfo->albedoFrameBufferView : 0u,
-				colorSampler },
-
-				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->normalFrameBufferView ? *createInfo->normalFrameBufferView : 0u,
-				colorSampler },
-			};
-			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
-
-			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
-			writeDescriptorSets.reserve(descSetCount);
-
-			glm::uint descriptorSetIndex = 0;
-			glm::uint binding = 0;
-
-			for (size_t i = 0; i < descSetCount; ++i)
-			{
-				if (Uniform::HasUniform(constantBufferElements, descriptorSets[i].uniformType) ||
-					Uniform::HasUniform(dynamicBufferElements, descriptorSets[i].uniformType))
-				{
-					descriptorSets[i].bufferInfo = {};
-					descriptorSets[i].bufferInfo.buffer = descriptorSets[i].buffer;
-					descriptorSets[i].bufferInfo.range = descriptorSets[i].bufferSize;
-
-					descriptorSets[i].imageInfo = {};
-					descriptorSets[i].imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					if (descriptorSets[i].imageView)
-					{
-						descriptorSets[i].imageInfo.imageView = descriptorSets[i].imageView;
-						descriptorSets[i].imageInfo.sampler = descriptorSets[i].imageSampler;
-					}
-					else
-					{
-						// TODO: Is this needed?
-						descriptorSets[i].imageInfo.imageView = m_BlankTexture->imageView;
-						descriptorSets[i].imageInfo.sampler = m_BlankTexture->sampler;
-					}
-
-					writeDescriptorSets.push_back({});
-					writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptorSets[descriptorSetIndex].dstSet = *createInfo->descriptorSet;
-					writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
-					writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
-					writeDescriptorSets[descriptorSetIndex].descriptorType = descriptorSets[i].descriptorType;
-					writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
-					writeDescriptorSets[descriptorSetIndex].pBufferInfo = descriptorSets[i].bufferInfo.buffer ? &descriptorSets[i].bufferInfo : nullptr;
-					writeDescriptorSets[descriptorSetIndex].pImageInfo = descriptorSets[i].imageInfo.imageView ? &descriptorSets[i].imageInfo : nullptr;
-
-					// If setting a sampler type, image info must be filled in
-					if (descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-						descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
-					{
-						if (descriptorSets[i].imageInfo.imageView == VK_NULL_HANDLE)
-						{
-							Logger::LogError("CreateDescriptorSet: Sampler descriptor type is being set without image info");
-						}
-					}
-
-					++descriptorSetIndex;
-					++binding;
-				}
-			}
-
-			if (!writeDescriptorSets.empty())
-			{
-				vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
-			}
 		}
 
 		void VulkanRenderer::ReleaseUniformBuffers()
@@ -2921,90 +2986,19 @@ namespace flex
 			m_UniformBuffers.clear();
 		}
 
-		void VulkanRenderer::CreateDescriptorSetLayout(glm::uint shaderIndex)
-		{
-			m_DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
-			VkDescriptorSetLayout* descriptorSetLayout = &m_DescriptorSetLayouts.back();
-
-			UniformBuffer* uniformBuffer = &m_UniformBuffers[shaderIndex];
-
-			struct DescriptorSetInfo
-			{
-				Uniform::Type uniformType;
-				VkDescriptorType descriptorType;
-				VkShaderStageFlags shaderStageFlags;
-			};
-
-			DescriptorSetInfo descriptorSets[] = {
-				{ Uniform::Type::UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::DIFFUSE_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::NORMAL_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::SPECULAR_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::CUBEMAP_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-			};
-			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
-
-			std::vector<VkDescriptorSetLayoutBinding> bindings;
-			glm::uint binding = 0;
-
-			for (size_t i = 0; i < descSetCount; ++i)
-			{
-				if (Uniform::HasUniform(uniformBuffer->constantData.elements, descriptorSets[i].uniformType) ||
-					Uniform::HasUniform(uniformBuffer->dynamicData.elements, descriptorSets[i].uniformType))
-				{
-					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
-					descSetLayoutBinding.binding = binding;
-					descSetLayoutBinding.descriptorCount = 1;
-					descSetLayoutBinding.descriptorType = descriptorSets[i].descriptorType;
-					descSetLayoutBinding.stageFlags = descriptorSets[i].shaderStageFlags;
-					bindings.push_back(descSetLayoutBinding);
-					++binding;
-				}
-			}
-
-			VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			layoutInfo.bindingCount = bindings.size();
-			layoutInfo.pBindings = bindings.data();
-
-			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
-		}
-
 		void VulkanRenderer::CreateSemaphores()
 		{
 			VkSemaphoreCreateInfo semaphoreInfo = {};
 			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_ImageAvailableSemaphore.replace()));
-			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderFinishedSemaphore.replace()));
+			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_PresentCompleteSemaphore.replace()));
+			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
 		}
 
 		void VulkanRenderer::DrawFrame(Window* window)
 		{
 			uint32_t imageIndex;
-			VkResult result = vkAcquireNextImageKHR(m_VulkanDevice->m_LogicalDevice, m_SwapChain, std::numeric_limits<uint64_t>::max(), m_ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+			VkResult result = vkAcquireNextImageKHR(m_VulkanDevice->m_LogicalDevice, m_SwapChain, std::numeric_limits<uint64_t>::max(), m_PresentCompleteSemaphore, VK_NULL_HANDLE, &imageIndex);
 
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
@@ -3016,33 +3010,44 @@ namespace flex
 				throw std::runtime_error("failed to acquire swap chain image!");
 			}
 
+			// Offscreen rendering
+
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-			VkSemaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
-			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+			VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			submitInfo.pWaitDstStageMask = &waitStages;
+
 			submitInfo.waitSemaphoreCount = 1;
-			submitInfo.pWaitSemaphores = waitSemaphores;
-			submitInfo.pWaitDstStageMask = waitStages;
+			submitInfo.pWaitSemaphores = &m_PresentCompleteSemaphore;
+
+			submitInfo.signalSemaphoreCount = 1;
+			submitInfo.pSignalSemaphores = &offscreenSemaphore;
 
 			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &m_CommandBuffers[imageIndex];
-
-			VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
-			submitInfo.signalSemaphoreCount = 1;
-			submitInfo.pSignalSemaphores = signalSemaphores;
+			submitInfo.pCommandBuffers = &offScreenCmdBuffer;
 
 			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+			
+			// Scene rendering
+
+			submitInfo.pWaitSemaphores = &offscreenSemaphore;
+			submitInfo.pSignalSemaphores = &m_RenderCompleteSemaphore;
+
+			submitInfo.pCommandBuffers = &m_CommandBuffers[imageIndex];
+			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+
 
 			VkPresentInfoKHR presentInfo = {};
 			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 			presentInfo.waitSemaphoreCount = 1;
-			presentInfo.pWaitSemaphores = signalSemaphores;
+			presentInfo.pWaitSemaphores = &m_RenderCompleteSemaphore;
 
-			VkSwapchainKHR swapChains[] = { m_SwapChain };
 			presentInfo.swapchainCount = 1;
-			presentInfo.pSwapchains = swapChains;
+			presentInfo.pSwapchains = &m_SwapChain;
 
 			presentInfo.pImageIndices = &imageIndex;
 
@@ -3287,9 +3292,6 @@ namespace flex
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext)
 		{
-			// TODO: FIXME: There is some kind of memory corruption happening in this function!
-			return;
-
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
@@ -3408,8 +3410,6 @@ namespace flex
 
 		void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 		{
-			return;
-
 			UNREFERENCED_PARAMETER(gameContext);
 
 			RenderObject* renderObject = GetRenderObject(renderID);

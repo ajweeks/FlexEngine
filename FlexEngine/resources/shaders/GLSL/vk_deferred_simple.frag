@@ -10,7 +10,6 @@ layout (location = 3) in mat3 ex_TBN;
 
 layout (binding = 1) uniform UBODynamic
 {
-    mat4 model;
     mat4 modelInvTranspose;
     bool useDiffuseSampler;
     bool useNormalSampler;

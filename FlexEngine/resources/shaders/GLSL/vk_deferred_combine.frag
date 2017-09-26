@@ -33,28 +33,21 @@ layout (binding = 0) uniform UBOConstant
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
 } ubo;
 
-layout (binding = 1) uniform UBODynamic
-{
-	mat4 model;
-	mat4 modelInvTranspose;
-	bool useDiffuseTexture;
-	bool useNormalTexture;
-	bool useSpecularTexture;
-} uboDynamic;
-
-uniform sampler2D in_PositionSampler;
-uniform sampler2D in_NormalSampler;
-uniform sampler2D in_DiffuseSpecularSampler;
+layout (binding = 1) uniform sampler2D in_PositionSampler;
+layout (binding = 2) uniform sampler2D in_NormalSampler;
+layout (binding = 3) uniform sampler2D in_DiffuseSpecularSampler;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
 layout (location = 0) out vec4 fragmentColor;
 
-vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 diffuseSample, float specularSample, vec3 normal, vec3 viewDir, float specStrength, float specShininess)
+// For some reason passing in the whole DirectionalLight struct causes errors when compiling to spir-v, look into later
+vec3 DoDirectionalLighting(vec3 dirLightDir, vec3 dirLightAmbient, vec3 dirLightDiffuse, vec3 dirLightSpecular, vec3 diffuseSample, float specularSample, vec3 normal, vec3 viewDir, float specStrength, float specShininess)
 {
-	if (dirLight.direction == vec3(0, 0, 0)) return vec3(0, 0, 0);
+	// Check if this light is disabled
+	if (dirLightDir.x == 0.0 && dirLightDir.y == 0.0 && dirLightDir.z == 0.0) return vec3(0, 0, 0);
 
-	vec3 lightDir = normalize(-dirLight.direction);
+	vec3 lightDir = normalize(-dirLightDir);
 
 	float diffuseIntensity = max(dot(normal, lightDir), 0.0);
 
@@ -63,18 +56,20 @@ vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 diffuseSample, float 
 	
 	float specularCol = specStrength * specularIntensity * specularSample;
 
-	vec3 ambient = dirLight.ambientCol * diffuseSample;
-	vec3 diffuse = dirLight.diffuseCol * diffuseSample * diffuseIntensity;
-	vec3 specular = dirLight.specularCol * specularCol * specularIntensity;
+	vec3 ambient = dirLightAmbient * diffuseSample;
+	vec3 diffuse = dirLightDiffuse * diffuseSample * diffuseIntensity;
+	vec3 specular = dirLightSpecular * specularCol * specularIntensity;
 
 	return (ambient + diffuse + specular);
 }
 
-vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSample, vec3 normal, vec3 worldPos, vec3 viewDir, float specStrength, float specShininess)
+vec3 DoPointLighting(float plConst, float plLin, float plQuad, vec3 plPos, vec3 plAmbient, vec3 plDiffuse, vec3 plSpecular, vec3 diffuseSample,
+					 float specularSample, vec3 normal, vec3 worldPos, vec3 viewDir, float specStrength, float specShininess)
 {
-	if (pointLight.constant == 0.0f) return vec3(0, 0, 0);
+	// Check if this light is disabled
+	if (plConst == 0.0f) return vec3(0, 0, 0);
 
-	vec3 lightDir = normalize(pointLight.position - worldPos);
+	vec3 lightDir = normalize(plPos - worldPos);
 
 	float diffuseIntensity = max(dot(normal, lightDir), 0.0);
 
@@ -83,21 +78,18 @@ vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSa
 
 	float specularCol = specStrength * specularIntensity * specularSample;
 
-	float distance = length(pointLight.position - worldPos);
-	float attenuation = 1.0 / (pointLight.constant + pointLight.linear * distance + pointLight.quadratic * (distance * distance)); 
+	float distance = length(plPos - worldPos);
+	float attenuation = 1.0 / (plConst + plLin * distance + plQuad * (distance * distance)); 
 
-	vec3 ambient = pointLight.ambientCol * diffuseSample * attenuation;
-	vec3 diffuse = pointLight.diffuseCol * diffuseSample * diffuseIntensity * attenuation;
-	vec3 specular = pointLight.specularCol * specularCol * specularIntensity * attenuation;
+	vec3 ambient = plAmbient * diffuseSample * attenuation;
+	vec3 diffuse = plDiffuse * diffuseSample * diffuseIntensity * attenuation;
+	vec3 specular = plSpecular * specularCol * specularIntensity * attenuation;
 
 	return (ambient + diffuse + specular);
 }
 
 void main()
 {
-	fragmentColor = vec4(1, 1, 1, 1);
-	return;
-
     // retrieve data from gbuffer
     vec3 worldPos = texture(in_PositionSampler, ex_TexCoord).rgb;
     vec3 normal = texture(in_NormalSampler, ex_TexCoord).rgb;
@@ -109,11 +101,13 @@ void main()
 	
 	vec3 viewDir = normalize(ubo.camPos.xyz - worldPos);
 
-	vec3 result = DoDirectionalLighting(ubo.dirLight, diffuse, specular, normal, viewDir, specStrength, specShininess);
+	vec3 result = DoDirectionalLighting(ubo.dirLight.direction, ubo.dirLight.ambientCol, ubo.dirLight.diffuseCol, 
+										ubo.dirLight.specularCol, diffuse, specular, normal, viewDir, specStrength, specShininess);
 
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		result += DoPointLighting(ubo.pointLights[i], diffuse, specular, normal, worldPos, viewDir, specStrength, specShininess);
+		result += DoPointLighting(ubo.pointLights[i].constant, ubo.pointLights[i].linear, ubo.pointLights[i].quadratic, ubo.pointLights[i].position, 
+			ubo.pointLights[i].ambientCol, ubo.pointLights[i].diffuseCol, ubo.pointLights[i].specularCol, diffuse, specular, normal, worldPos, viewDir, specStrength, specShininess);
 	}
 	
 	fragmentColor = vec4(result, 1.0);
