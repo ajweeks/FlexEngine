@@ -184,7 +184,7 @@ namespace flex
 			std::vector<Material> m_LoadedMaterials;
 
 
-			FrameBuffer offScreenFrameBuf;
+			FrameBuffer* offScreenFrameBuf = nullptr;
 			VkSampler colorSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 			int m_DeferredQuadVertexBufferIndex;

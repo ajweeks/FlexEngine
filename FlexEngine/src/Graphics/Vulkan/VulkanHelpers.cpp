@@ -394,11 +394,11 @@ namespace flex
 			memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			VkMemoryRequirements memReqs;
 
-			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, &attachment->image));
+			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, attachment->image.replace()));
 			vkGetImageMemoryRequirements(device->m_LogicalDevice, attachment->image, &memReqs);
 			memAlloc.allocationSize = memReqs.size;
 			memAlloc.memoryTypeIndex = device->GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, &attachment->mem));
+			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, attachment->mem.replace()));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, attachment->image, attachment->mem, 0));
 
 			VkImageViewCreateInfo imageView = {};
@@ -412,7 +412,7 @@ namespace flex
 			imageView.subresourceRange.baseArrayLayer = 0;
 			imageView.subresourceRange.layerCount = 1;
 			imageView.image = attachment->image;
-			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, &attachment->view));
+			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, attachment->view.replace()));
 		}
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat *depthFormat)
@@ -495,5 +495,19 @@ namespace flex
 				func(instance, callback, pAllocator);
 			}
 		}
-	} // namespace vk
+
+		FrameBufferAttachment::FrameBufferAttachment(const VDeleter<VkDevice>& device) :
+			image(device, vkDestroyImage),
+			mem(device, vkFreeMemory),
+			view(device, vkDestroyImageView)
+		{
+		}
+
+		FrameBuffer::FrameBuffer(const VDeleter<VkDevice>& device) :
+			position(device),
+			normal(device),
+			albedo(device)
+		{
+		}
+} // namespace vk
 } // namespace flex

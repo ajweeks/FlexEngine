@@ -39,14 +39,18 @@ namespace flex
 		// Framebuffer for offscreen rendering
 		struct FrameBufferAttachment
 		{
-			VkImage image;
-			VkDeviceMemory mem;
-			VkImageView view;
+			FrameBufferAttachment(const VDeleter<VkDevice>& device);
+
+			VDeleter<VkImage> image;
+			VDeleter<VkDeviceMemory> mem;
+			VDeleter<VkImageView> view;
 			VkFormat format;
 		};
 
 		struct FrameBuffer
 		{
+			FrameBuffer(const VDeleter<VkDevice>& device);
+
 			uint32_t width, height;
 			VkFramebuffer frameBuffer;
 			FrameBufferAttachment position, normal, albedo;
