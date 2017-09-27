@@ -72,29 +72,30 @@ namespace flex
 
 		struct DirectionalLight
 		{
-			glm::vec3 direction;
+			glm::vec4 direction;
 			
-			bool enabled = true;
+			glm::vec4 ambientCol = glm::vec4(0.0f);
+			glm::vec4 diffuseCol = glm::vec4(1.0f);
+			glm::vec4 specularCol = glm::vec4(1.0f);
 
-			glm::vec3 ambientCol = glm::vec3(0.0f);
-			glm::vec3 diffuseCol = glm::vec3(1.0f);
-			glm::vec3 specularCol = glm::vec3(1.0f);
+			glm::uint enabled = 1;
+			float padding[3];
 		};
 
 		struct PointLight
 		{
-			glm::vec3 position = glm::vec3(0.0f);
-
-			bool enabled = true;
+			glm::vec4 position = glm::vec4(0.0f);
 
 			// TODO: Just set brightness here and interpolate along correct values in shader
-			float constant = 1.0f;
-			float linear = 0.022f;
-			float quadratic = 0.0019f;
+			glm::vec4 constantLinearQuadraticPadding = glm::vec4(1.0f, 0.022f, 0.0019f, 0.0f);
 
-			glm::vec3 ambientCol = glm::vec3(0.0f);
-			glm::vec3 diffuseCol = glm::vec3(1.0f);
-			glm::vec3 specularCol = glm::vec3(1.0f);
+			// Vec4 for padding's sake
+			glm::vec4 ambientCol = glm::vec4(0.0f);
+			glm::vec4 diffuseCol = glm::vec4(1.0f);
+			glm::vec4 specularCol = glm::vec4(1.0f);
+
+			glm::uint enabled = 1;
+			float padding[3];
 		};
 
 		// Info that stays consistent across all renderers
@@ -124,51 +125,61 @@ namespace flex
 		{
 			enum Type : glm::uint
 			{
-				NONE = 0,
-				UNIFORM_BUFFER_CONSTANT = (1 << 0),
-				UNIFORM_BUFFER_DYNAMIC = (1 << 1),
-				PROJECTION_MAT4 = (1 << 2),
-				VIEW_MAT4 = (1 << 3),
-				VIEW_INV_MAT4 = (1 << 4),
-				VIEW_PROJECTION_MAT4 = (1 << 5),
-				MODEL_MAT4 = (1 << 6),
-				MODEL_INV_TRANSPOSE_MAT4 = (1 << 7),
-				MODEL_VIEW_PROJECTION_MAT4 = (1 << 8),
-				CAM_POS_VEC4 = (1 << 9),
-				VIEW_DIR_VEC4 = (1 << 10),
-				DIR_LIGHT = (1 << 11),
-				POINT_LIGHTS_VEC = (1 << 12),
-				AMBIENT_COLOR_VEC4 = (1 << 13),
-				SPECULAR_COLOR_VEC4 = (1 << 14),
-				USE_DIFFUSE_TEXTURE_INT = (1 << 15), // bool for toggling texture usage
-				DIFFUSE_TEXTURE_SAMPLER = (1 << 16), // texture itself
-				USE_NORMAL_TEXTURE_INT = (1 << 17),
-				NORMAL_TEXTURE_SAMPLER = (1 << 18),
-				USE_SPECULAR_TEXTURE_INT = (1 << 19),
-				SPECULAR_TEXTURE_SAMPLER = (1 << 20),
-				USE_CUBEMAP_TEXTURE_INT = (1 << 21),
-				CUBEMAP_TEXTURE_SAMPLER = (1 << 22),
-				POSITION_TEXTURE_SAMPLER = (1 << 23),
-				DIFFUSE_SPECULAR_TEXTURE_SAMPLER = (1 << 24),
+				NONE										= 0,
+				UNIFORM_BUFFER_CONSTANT						= (1 << 0),
+				UNIFORM_BUFFER_DYNAMIC						= (1 << 1),
+				PROJECTION_MAT4								= (1 << 2),
+				VIEW_MAT4									= (1 << 3),
+				VIEW_INV_MAT4								= (1 << 4),
+				VIEW_PROJECTION_MAT4						= (1 << 5),
+				MODEL_MAT4									= (1 << 6),
+				MODEL_INV_TRANSPOSE_MAT4					= (1 << 7),
+				MODEL_VIEW_PROJECTION_MAT4					= (1 << 8),
+				CAM_POS_VEC4								= (1 << 9),
+				VIEW_DIR_VEC4								= (1 << 10),
+				DIR_LIGHT									= (1 << 11),
+				POINT_LIGHTS_VEC							= (1 << 12),
+				AMBIENT_COLOR_VEC4							= (1 << 13),
+				SPECULAR_COLOR_VEC4							= (1 << 14),
+				USE_DIFFUSE_TEXTURE_INT						= (1 << 15), // bool for toggling texture usage
+				DIFFUSE_TEXTURE_SAMPLER						= (1 << 16), // texture itself
+				USE_NORMAL_TEXTURE_INT						= (1 << 17),
+				NORMAL_TEXTURE_SAMPLER						= (1 << 18),
+				USE_SPECULAR_TEXTURE_INT					= (1 << 19),
+				SPECULAR_TEXTURE_SAMPLER					= (1 << 20),
+				USE_CUBEMAP_TEXTURE_INT						= (1 << 21),
+				CUBEMAP_TEXTURE_SAMPLER						= (1 << 22),
+				POSITION_FRAME_BUFFER_SAMPLER				= (1 << 23),
+				DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER		= (1 << 24),
+				NORMAL_FRAME_BUFFER_SAMPLER					= (1 << 25),
 
 				MAX_ENUM = (1 << 30)
 			};
 
 			static bool HasUniform(Type elements, Type uniform);
-			static glm::uint CalculateSize(Type elements);
+			static glm::uint CalculateSize(Type elements, int pointLightCount);
 		};
 
 		struct Shader
 		{
+			Shader();
+			Shader(const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
+
 			glm::uint program;
 
 			std::string vertexShaderFilePath;
 			std::string fragmentShaderFilePath;
 
+			std::vector<char> vertexShaderCode;
+			std::vector<char> fragmentShaderCode;
+
 			Uniform::Type constantBufferUniforms;
 			Uniform::Type dynamicBufferUniforms;
 
-			bool deferred = false;
+			bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+
+			VertexAttributes vertexAttributes;
+			int numAttachments = 1; // How many output textures the fragment shader has
 		};
 
 		struct MaterialCreateInfo

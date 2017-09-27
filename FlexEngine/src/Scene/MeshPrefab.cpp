@@ -14,6 +14,7 @@
 #include "Helpers.h"
 #include "Logger.h"
 #include "Typedefs.h"
+#include "VertexAttribute.h"
 
 namespace flex
 {
@@ -42,6 +43,7 @@ namespace flex
 		m_VertexBufferData.Destroy();
 	}
 
+	// TODO: Add option to force certain components (Bitangents, UVs, ...)
 	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath)
 	{
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
@@ -78,7 +80,7 @@ namespace flex
 			glm::vec3 pos = ToVec3(mesh->mVertices[i]);
 			pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 			vertexBufferDataCreateInfo.positions_3D.push_back(pos);
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
 
 			// Color
 			glm::vec4 col;
@@ -87,7 +89,7 @@ namespace flex
 				col = ToVec4(mesh->mColors[0][i]);
 
 				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
-				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT;
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 			}
 
 			// Tangent & Bitangent
@@ -95,11 +97,11 @@ namespace flex
 			{
 				glm::vec3 tangent = ToVec3(mesh->mTangents[i]);
 				vertexBufferDataCreateInfo.tangents.push_back(tangent);
-				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::TANGENT;
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::TANGENT;
 			
 				glm::vec3 bitangent = ToVec3(mesh->mBitangents[i]);
 				vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
-				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::BITANGENT;
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
 			}
 
 			// Normal
@@ -107,7 +109,7 @@ namespace flex
 			{
 				glm::vec3 norm = ToVec3(mesh->mNormals[i]);
 				vertexBufferDataCreateInfo.normals.push_back(norm);
-				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::NORMAL;
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
 			}
 
 			// TexCoord
@@ -116,7 +118,7 @@ namespace flex
 				// Truncate w component
 				glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 				vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
-				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::UV;
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 			}
 		}
 
@@ -210,7 +212,7 @@ namespace flex
 				{ -5.0f, -5.0f,  5.0f, },
 				{ -5.0f,  5.0f,  5.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
 
 			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
 			{
@@ -268,7 +270,7 @@ namespace flex
 				colors[5],
 				colors[5],
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			vertexBufferDataCreateInfo.normals =
 			{
@@ -326,7 +328,7 @@ namespace flex
 				{ -1.0f, 0.0f, 0.0f, },
 				{ -1.0f, 0.0f, 0.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::NORMAL;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
 
 			vertexBufferDataCreateInfo.texCoords_UV =
 			{
@@ -384,7 +386,7 @@ namespace flex
 				{ 1.0f, 1.0f },
 				{ 1.0f, 0.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::UV;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 
 			renderObjectCreateInfo.materialID = 1;
 			renderObjectCreateInfo.name = "Cube";
@@ -401,8 +403,8 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
 
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
 
@@ -444,7 +446,7 @@ namespace flex
 				{ 50.0f,  0.0f,  50.0f, },
 				{ 50.0f,  0.0f, -50.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
 
 			vertexBufferDataCreateInfo.normals =
 			{
@@ -456,7 +458,31 @@ namespace flex
 				{ 0.0f, 1.0f, 0.0f, },
 				{ 0.0f, 1.0f, 0.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::NORMAL;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+
+			vertexBufferDataCreateInfo.bitangents =
+			{
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+			};
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
+
+			vertexBufferDataCreateInfo.tangents =
+			{
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+			};
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::TANGENT;
 
 			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
 			{
@@ -468,7 +494,7 @@ namespace flex
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			vertexBufferDataCreateInfo.texCoords_UV =
 			{
@@ -480,7 +506,7 @@ namespace flex
 				{ 1.0f, 1.0f },
 				{ 1.0f, 0.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::UV;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 
 			renderObjectCreateInfo.materialID = 0;
 			renderObjectCreateInfo.name = "Plane";
@@ -494,10 +520,10 @@ namespace flex
 			vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
 			vertexBufferDataCreateInfo.normals.push_back({ 0.0f, 1.0f, 0.0f });
 
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::COLOR_R32G32B32A32_SFLOAT;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::UV;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::NORMAL;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
 
 			glm::uint parallelCount = 10;
 			glm::uint meridianCount = 5;
@@ -640,7 +666,7 @@ namespace flex
 				{ -0.5f, -0.5f,  0.5f, },
 				{ -0.5f,  0.5f,  0.5f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexBufferData::AttributeBit::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
 
 			// TODO: At *least* use strings rather than indices
 			renderObjectCreateInfo.materialID = 1;

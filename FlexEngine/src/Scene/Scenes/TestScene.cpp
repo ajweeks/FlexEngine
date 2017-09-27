@@ -78,6 +78,7 @@ namespace flex
 		m_Plane->GetTransform().position.y -= 0.05f;
 		AddChild(m_Plane);
 
+
 		//m_Teapot = new MeshPrefab();
 		//m_Teapot->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/teapot.fbx");
 		//m_Teapot->SetTransform(glm::vec3(20.0f, 5.0f, 0.0f));
@@ -101,36 +102,6 @@ namespace flex
 		//
 		//m_IcoSphere.Init(gameContext, SpherePrefab::Type::ICOSPHERE, vec3(2.0f, 1.0f, 0.0f), quat(vec3(0.0f)), vec3(0.5f, 0.5f, 0.5f));
 
-		//m_Cube = new MeshPrefab();
-		//m_Cube->SetMaterialID(simpleTexturelessMatID);
-		//m_Cube->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
-		//m_Cube->SetTransform({
-		//	glm::vec3(-25.0f, 5.0f, -6.0f),
-		//	glm::quat(glm::vec3(0.0f, 1.0f, 0.0f)),
-		//	glm::vec3(0.5f, 0.75f, 1.0f)
-		//	});
-		//AddChild(m_Cube);
-		
-		//m_Cube2 = new MeshPrefab();
-		//m_Cube2->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::CUBE);
-		//m_Cube2->SetTransform(Transform(glm::vec3(7.0f, 2.5f, 0.0f), glm::quat(glm::vec3(0.2f, 0.3f, 2.0f)), glm::vec3(1.0f, 5.0f, 1.0f)));
-		//AddChild(m_Cube2);
-
-		//m_ChamferBox = new MeshPrefab();
-		//m_ChamferBox->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/chamfer-box.fbx");
-		//m_ChamferBox->SetTransform(glm::vec3(-8.0f, 0.0f, 2.0f));
-		//AddChild(m_ChamferBox);
-
-		//m_Rock1 = new MeshPrefab();
-		//m_Rock1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/rock-01.fbx");
-		//m_Rock1->SetTransform(glm::vec3(10.0f, 0.0f, 4.0f));
-		//AddChild(m_Rock1);
-		//
-		//m_Rock2 = new MeshPrefab();
-		//m_Rock2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/rock-02.fbx");
-		//m_Rock2->SetTransform(glm::vec3(10.0f, 0.0f, 8.0f));
-		//AddChild(m_Rock2);
-
 		float spacing = 14.0f;
 		
 		m_TransformManipulator_1 = new MeshPrefab(brickMatID, "Transform 1");
@@ -145,7 +116,7 @@ namespace flex
 		m_TransformManipulator_2->GetTransform().position.z = -spacing * 0.5f;
 		AddChild(m_TransformManipulator_2);
 		
-		m_TransformManipulator_3 = new MeshPrefab(brickMatID, "Transform 3");
+		m_TransformManipulator_3 = new MeshPrefab(simpleTexturelessMatID, "Transform 3");
 		m_TransformManipulator_3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
 		m_TransformManipulator_3->GetTransform().position.x = 0.0f;
 		m_TransformManipulator_3->GetTransform().position.z = 0.0f;
@@ -183,8 +154,8 @@ namespace flex
 
 
 		Renderer::DirectionalLight dirLight = {};
-		dirLight.direction = glm::vec3(0.75f, -0.25f, 0.95f);
-		dirLight.diffuseCol = glm::vec3(0.85f, 0.97f, 0.73f);
+		dirLight.direction = glm::vec4(0.75f, -0.25f, 0.95f, 1.0f);
+		dirLight.diffuseCol = glm::vec4(0.85f, 0.97f, 0.73f, 1.0f);
 		gameContext.renderer->InitializeDirectionalLight(dirLight);
 	}
 

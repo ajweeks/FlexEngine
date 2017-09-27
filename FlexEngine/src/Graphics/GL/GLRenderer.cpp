@@ -16,6 +16,7 @@
 #include "Logger.h"
 #include "Window/Window.h"
 #include "Window/GLFWWindowWrapper.h"
+#include "VertexAttribute.h"
 
 namespace flex
 {
@@ -428,7 +429,7 @@ namespace flex
 				glm::vec2(0.0f, 0.0f),
 			};
 			
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexBufferData::AttributeBit::POSITION | (glm::uint)VertexBufferData::AttributeBit::UV;
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
 			
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
@@ -459,6 +460,8 @@ namespace flex
 
 		void GLRenderer::ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
 		{
+			UNREFERENCED_PARAMETER(index);
+
 			glBindTexture(GL_TEXTURE_2D, handle);
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, GL_FLOAT, NULL);
 			CheckGLErrorMessages();
@@ -493,7 +496,7 @@ namespace flex
 
 		void GLRenderer::DrawRenderObjectBatch(const std::vector<RenderObject*>& batchedRenderObjects, const GameContext& gameContext)
 		{
-			Logger::Assert(!batchedRenderObjects.empty());
+			assert(!batchedRenderObjects.empty());
 
 			Material* material = &m_Materials[batchedRenderObjects[0]->materialID];
 			Shader* shader = &m_Shaders[material->shaderIndex];
@@ -619,12 +622,17 @@ namespace flex
 			// Lighting pass - Calculate lighting based on the gbuffer's contents
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			RenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
+
+			
+			// TODO: Draw offscreen quad once for each deferred material type (store deferred matID in shaders, remove gBufferQuad->materialID) 
+			
+
 			glUseProgram(m_Shaders[m_Materials[gBufferQuad->materialID].shaderIndex].program);
 
 			glBindVertexArray(gBufferQuad->VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
 			CheckGLErrorMessages();
-			UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
+			UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext); // TODO: Is this needed?
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_gBuffer_PositionHandle);
@@ -832,12 +840,12 @@ namespace flex
 				Uniform::Type::MODEL_MAT4);
 			++shaderIndex;
 
-			// Deferred combine (sample gbuffer
+			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
-				Uniform::Type::POSITION_TEXTURE_SAMPLER |
+				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |
 				Uniform::Type::NORMAL_TEXTURE_SAMPLER |
-				Uniform::Type::DIFFUSE_SPECULAR_TEXTURE_SAMPLER |
+				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER |
 				Uniform::Type::POINT_LIGHTS_VEC |
 				Uniform::Type::DIR_LIGHT);
 
@@ -990,11 +998,11 @@ namespace flex
 						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
 						CheckGLErrorMessages();
 
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constant);
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constantLinearQuadraticPadding.x);
 						CheckGLErrorMessages();
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].linear);
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].constantLinearQuadraticPadding.y);
 						CheckGLErrorMessages();
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].quadratic);
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].constantLinearQuadraticPadding.z);
 						CheckGLErrorMessages();
 
 						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);

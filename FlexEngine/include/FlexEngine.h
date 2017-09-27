@@ -39,7 +39,8 @@ namespace flex
 		void LoadDefaultScenes();
 
 		// ImGui helpers
-		void FlexEngine::CopyableColorEdit3(const char* label, glm::vec3& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags = 0);
+		void CopyableColorEdit3(const char* label, glm::vec3& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags = 0);
+		void CopyableColorEdit4(const char* label, glm::vec4& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags);
 
 		std::string RenderIDToString(RendererID rendererID) const;
 

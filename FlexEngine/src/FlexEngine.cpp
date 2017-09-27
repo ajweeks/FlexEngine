@@ -20,7 +20,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::GL;
+		RendererID preferredInitialRenderer = RendererID::VULKAN;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -44,7 +44,7 @@ namespace flex
 
 		Logger::LogInfo(std::to_string(m_RendererCount) + " renderer" + (m_RendererCount > 1 ? "s" : "") + " enabled");
 		Logger::LogInfo("Current renderer: " + m_RendererName);
-		Logger::Assert(m_RendererCount != 0, "At least one renderer must be enabled! (see stdafx.h)");
+		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
 	}
 
 	FlexEngine::~FlexEngine()
@@ -300,7 +300,6 @@ namespace flex
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
-			static constexpr int clearFlags = (int)Renderer::ClearFlag::COLOR | (int)Renderer::ClearFlag::DEPTH | (int)Renderer::ClearFlag::STENCIL;
 			m_SceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.inputManager->Update();
 			m_GameContext.window->Update(m_GameContext);
@@ -326,7 +325,7 @@ namespace flex
 					{
 						std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
 						m_GameContext.renderer->GetRenderObjectInfos(renderObjectInfos);
-						Logger::Assert(renderObjectInfos.size() == objectCount);
+						assert(renderObjectInfos.size() == objectCount);
 						for (size_t i = 0; i < objectCount; ++i)
 						{
 							const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
@@ -357,15 +356,17 @@ namespace flex
 						Renderer::DirectionalLight& dirLight = m_GameContext.renderer->GetDirectionalLight(0);
 						std::vector<Renderer::PointLight>& pointLights = m_GameContext.renderer->GetAllPointLights();
 
-						ImGui::Checkbox("##dir-light-enabled", &dirLight.enabled);
+						bool dirLightEnabled = dirLight.enabled;
+						ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
+						dirLight.enabled = dirLightEnabled ? 1 : 0;
 						ImGui::SameLine();
 						if (ImGui::TreeNode("Directional Light"))
 						{
 							ImGui::DragFloat3("Rotation", &dirLight.direction.x, 0.01f);
 
-							CopyableColorEdit3("Diffuse ", dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-							CopyableColorEdit3("Specular", dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
-							CopyableColorEdit3("Ambient ", dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+							CopyableColorEdit4("Diffuse ", dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+							CopyableColorEdit4("Specular", dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
+							CopyableColorEdit4("Ambient ", dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
 
 							ImGui::TreePop();
 						}
@@ -376,20 +377,24 @@ namespace flex
 							const std::string iStr = std::to_string(i);
 							const std::string objectName("Point Light##" + iStr);
 
-							ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLights[i].enabled);
+							bool pointLightEnabled = pointLights[i].enabled;
+							ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLightEnabled);
+							pointLights[i].enabled = pointLightEnabled ? 1 : 0;
 							ImGui::SameLine();
 							if (ImGui::TreeNode(objectName.c_str()))
 							{
 								ImGui::DragFloat3("Translation", &pointLights[i].position.x, 0.1f);
 
-								CopyableColorEdit3("Diffuse ", pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-								CopyableColorEdit3("Specular", pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
-								CopyableColorEdit3("Ambient ", pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+								CopyableColorEdit4("Diffuse ", pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+								CopyableColorEdit4("Specular", pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
+								CopyableColorEdit4("Ambient ", pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
 
 								ImGui::PushItemWidth(150);
-								ImGui::SliderFloat("Linear", &pointLights[i].linear, 0.0014f, 0.7f);
+								ImGui::SliderFloat("Constant", &pointLights[i].constantLinearQuadraticPadding.x, 0.0f, 1.0f);
 								ImGui::SameLine();
-								ImGui::SliderFloat("Quadratic", &pointLights[i].quadratic, 0.000007f, 1.8f);
+								ImGui::SliderFloat("Linear", &pointLights[i].constantLinearQuadraticPadding.y, 0.0014f, 0.7f);
+								ImGui::SameLine();
+								ImGui::SliderFloat("Quadratic", &pointLights[i].constantLinearQuadraticPadding.z, 0.000007f, 1.8f);
 								ImGui::PopItemWidth();
 
 								ImGui::TreePop();
@@ -419,6 +424,13 @@ namespace flex
 		ImGui::ColorEdit3(label, &col.r, flags);
 		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
 		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor3FromClipboard();
+	}
+
+	void FlexEngine::CopyableColorEdit4(const char* label, glm::vec4& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags)
+	{
+		ImGui::ColorEdit4(label, &col.r, flags);
+		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
+		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor4FromClipboard();
 	}
 
 	void FlexEngine::Stop()
