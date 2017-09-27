@@ -47,6 +47,7 @@ namespace flex
 		if (HasUniform(elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT)) size += sizeof(glm::int32);
 		if (HasUniform(elements, Uniform::Type::USE_NORMAL_TEXTURE_INT)) size += sizeof(glm::int32);
 		if (HasUniform(elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT)) size += sizeof(glm::int32);
+		if (HasUniform(elements, Uniform::Type::USE_CUBEMAP_TEXTURE_INT)) size += sizeof(glm::int32);
 
 		return size;
 	}

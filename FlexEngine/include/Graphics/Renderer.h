@@ -72,36 +72,30 @@ namespace flex
 
 		struct DirectionalLight
 		{
-			glm::vec3 direction;
-			float padding1;
+			glm::vec4 direction;
 			
-			bool enabled = true;
-			float padding2[3];
-
-			// Vec4 for padding's sake
 			glm::vec4 ambientCol = glm::vec4(0.0f);
 			glm::vec4 diffuseCol = glm::vec4(1.0f);
 			glm::vec4 specularCol = glm::vec4(1.0f);
+
+			glm::uint enabled = 1;
+			float padding[3];
 		};
 
 		struct PointLight
 		{
-			glm::vec3 position = glm::vec3(0.0f);
-			float padding1;
-
-			bool enabled = true;
-			float padding2[3];
+			glm::vec4 position = glm::vec4(0.0f);
 
 			// TODO: Just set brightness here and interpolate along correct values in shader
-			float constant = 1.0f;
-			float linear = 0.022f;
-			float quadratic = 0.0019f;
-			float padding3;
+			glm::vec4 constantLinearQuadraticPadding = glm::vec4(1.0f, 0.022f, 0.0019f, 0.0f);
 
 			// Vec4 for padding's sake
 			glm::vec4 ambientCol = glm::vec4(0.0f);
 			glm::vec4 diffuseCol = glm::vec4(1.0f);
 			glm::vec4 specularCol = glm::vec4(1.0f);
+
+			glm::uint enabled = 1;
+			float padding[3];
 		};
 
 		// Info that stays consistent across all renderers

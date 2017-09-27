@@ -13,10 +13,10 @@ layout (binding = 0) uniform UBO
 } ubo;
 
 // Updated once per object
-layout (binding = 1) uniform UBOInstance
+layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
-} uboInstance;
+} uboDynamic;
 
 layout (location = 0) out vec4 outColor;
 
@@ -27,7 +27,7 @@ out gl_PerVertex
 
 void main() 
 {
-	gl_Position = ubo.viewProjection * uboInstance.model * vec4(inWorldPos, 1.0);
+	gl_Position = ubo.viewProjection * uboDynamic.model * vec4(inWorldPos, 1.0);
 
 	outColor = inColor;
 	

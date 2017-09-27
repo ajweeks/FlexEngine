@@ -50,7 +50,6 @@ namespace flex
 			uint32_t width, height;
 			VkFramebuffer frameBuffer;
 			FrameBufferAttachment position, normal, albedo;
-			FrameBufferAttachment depth;
 			VkRenderPass renderPass;
 		};
 
@@ -221,6 +220,7 @@ namespace flex
 			VkCullModeFlags cullMode;
 
 			VkRenderPass renderPass;
+			glm::uint subpass = 0;
 
 			VkPushConstantRange* pushConstants = nullptr;
 			glm::uint pushConstantRangeCount = 0;
@@ -229,6 +229,11 @@ namespace flex
 
 			bool setDynamicStates = false;
 			bool enabledColorBlending = false;
+
+			VkBool32 depthTestEnable = VK_TRUE;
+			VkBool32 depthWriteEnable = VK_TRUE;
+			VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+			VkBool32 stencilTestEnable = VK_FALSE;
 
 			// Out variables
 			VkPipelineCache* pipelineCache = nullptr;

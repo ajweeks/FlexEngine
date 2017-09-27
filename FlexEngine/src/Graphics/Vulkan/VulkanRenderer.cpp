@@ -40,11 +40,12 @@ namespace flex
 			CreateSwapChain(gameContext.window);
 			CreateImageViews();
 			CreateRenderPass();
-			PrepareOffscreenFrameBuffer(gameContext.window);
 
 			CreateCommandPool();
 			CreateDepthResources();
 			CreateFramebuffers();
+
+			PrepareOffscreenFrameBuffer(gameContext.window);
 
 			LoadDefaultShaderCode();
 
@@ -123,9 +124,9 @@ namespace flex
 			offscreenQuadVertexIndexBufferPair.vertexBuffer = new Buffer(m_VulkanDevice->m_LogicalDevice);
 			offscreenQuadVertexIndexBufferPair.indexBuffer = new Buffer(m_VulkanDevice->m_LogicalDevice);
 
-			CreateStaticVertexBuffer(offscreenQuadVertexIndexBufferPair.vertexBuffer, offscreenShaderIndex, offscreenQuadVertexBufferData.pDataStart, offscreenQuadVertexBufferData.BufferSize);
+			CreateStaticVertexBuffer(offscreenQuadVertexIndexBufferPair.vertexBuffer, offscreenQuadVertexBufferData.pDataStart, offscreenQuadVertexBufferData.BufferSize);
 
-			CreateStaticIndexBuffer(offscreenQuadVertexIndexBufferPair.indexBuffer, offscreenShaderIndex, indexBuffer);
+			CreateStaticIndexBuffer(offscreenQuadVertexIndexBufferPair.indexBuffer, indexBuffer);
 
 			offscreenQuadVertexBufferData.Destroy();
 
@@ -157,9 +158,10 @@ namespace flex
 			deferredPipelineCreateInfo.enabledColorBlending = false;
 			deferredPipelineCreateInfo.pipelineLayout = &m_DeferredPipelineLayout;
 			deferredPipelineCreateInfo.grahpicsPipeline = &m_DeferredPipeline;
+			deferredPipelineCreateInfo.depthTestEnable = VK_FALSE;
+			deferredPipelineCreateInfo.depthWriteEnable = VK_FALSE;
 			// TODO: Use pipeline cache?
 			CreateGraphicsPipeline(&deferredPipelineCreateInfo);
-
 
 
 			// Offscreen descriptor set
@@ -226,10 +228,10 @@ namespace flex
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.albedo.mem, nullptr);
 
 			// Depth attachment
-			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.depth.view, nullptr);
-			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.depth.image, nullptr);
-			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.depth.mem, nullptr);
-
+			//vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.depth.view, nullptr);
+			//vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.depth.image, nullptr);
+			//vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.depth.mem, nullptr);
+			
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.frameBuffer, nullptr);
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf.renderPass, nullptr);
 
@@ -402,7 +404,7 @@ namespace flex
 
 			// TODO: Only call this when objects change
 			BuildCommandBuffers();
-			BuildDeferredCommandBuffers(); // TODO: Only call this once at startup?
+			BuildDeferredCommandBuffer(); // TODO: Only call this once at startup?
 
 			if (m_SwapChainNeedsRebuilding)
 			{
@@ -634,7 +636,7 @@ namespace flex
 		void VulkanRenderer::ImGui_InitResources()
 		{
 			// TODO: Remove hardcoded value
-			const glm::uint shaderIndex = 1;
+			const glm::uint shaderIndex = 2;
 
 			m_ImGuiPushConstBlock = { glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f) };
 
@@ -666,23 +668,26 @@ namespace flex
 
 			glm::uint descriptorSetLayoutIndex = shaderIndex;
 
-			GraphicsPipelineCreateInfo createInfo = {};
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 
-			createInfo.shaderIndex = shaderIndex;
-			createInfo.vertexAttributes = vertexBufferData.Attributes;
-			createInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			createInfo.cullMode = VK_CULL_MODE_NONE;
-			createInfo.descriptorSetLayoutIndex = descriptorSetLayoutIndex;
-			createInfo.setDynamicStates = true;
-			createInfo.enabledColorBlending = true;
-			createInfo.pushConstants = pushConstants;
-			createInfo.pushConstantRangeCount = 1;
-			createInfo.pipelineLayout = &m_ImGui_PipelineLayout;
-			createInfo.grahpicsPipeline = &m_ImGui_GraphicsPipeline;
-			createInfo.pipelineCache = &m_ImGuiPipelineCache;
-			createInfo.renderPass = m_DeferredCombineRenderPass;
+			pipelineCreateInfo.shaderIndex = shaderIndex;
+			pipelineCreateInfo.vertexAttributes = vertexBufferData.Attributes;
+			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+			pipelineCreateInfo.descriptorSetLayoutIndex = descriptorSetLayoutIndex;
+			pipelineCreateInfo.setDynamicStates = true;
+			pipelineCreateInfo.enabledColorBlending = true;
+			pipelineCreateInfo.pushConstants = pushConstants;
+			pipelineCreateInfo.pushConstantRangeCount = 1;
+			pipelineCreateInfo.pipelineLayout = &m_ImGui_PipelineLayout;
+			pipelineCreateInfo.grahpicsPipeline = &m_ImGui_GraphicsPipeline;
+			pipelineCreateInfo.pipelineCache = &m_ImGuiPipelineCache;
+			pipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
+			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+			pipelineCreateInfo.depthTestEnable = VK_FALSE;
+			pipelineCreateInfo.subpass = 1;
 
-			CreateGraphicsPipeline(&createInfo);
+			CreateGraphicsPipeline(&pipelineCreateInfo);
 		}
 
 		void VulkanRenderer::ImGui_InvalidateDeviceObjects()
@@ -1010,10 +1015,6 @@ namespace flex
 			//PrepareOffscreenFrameBuffer(window);
 
 			//CreateRenderPass();
-			//for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			//{
-			//	CreateGraphicsPipeline(i);
-			//}
 
 			CreateDepthResources();
 			CreateFramebuffers();
@@ -1129,10 +1130,10 @@ namespace flex
 
 			VkAttachmentDescription depthAttachment = {};
 			VkFormat depthFormat;
-			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat); // TODO: Double check
+			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 			depthAttachment.format = depthFormat;
 			depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; 
 			depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 			depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1143,19 +1144,64 @@ namespace flex
 			depthAttachmentRef.attachment = 1;
 			depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-			VkSubpassDescription subpass = {};
-			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.colorAttachmentCount = 1;
-			subpass.pColorAttachments = &colorAttachmentRef;
-			subpass.pDepthStencilAttachment = &depthAttachmentRef;
+			std::array<VkSubpassDescription, 2> subpasses;
+			subpasses[0] = {};
+			subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpasses[0].colorAttachmentCount = 1;
+			subpasses[0].pColorAttachments = &colorAttachmentRef;
+			subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
 
-			VkSubpassDependency dependency = {};
-			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependency.dstSubpass = 0;
-			dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.srcAccessMask = 0;
-			dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			subpasses[1] = {};
+			subpasses[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpasses[1].colorAttachmentCount = 1;
+			subpasses[1].pColorAttachments = &colorAttachmentRef;
+			subpasses[1].pDepthStencilAttachment = &depthAttachmentRef;
+
+			
+			std::array<VkSubpassDependency, 3> dependencies;
+			dependencies[0] = {};
+			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[0].dstSubpass = 0;
+			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[0].srcAccessMask = 0;
+			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+			dependencies[1] = {};
+			dependencies[1].srcSubpass = 0;
+			dependencies[1].dstSubpass = 1;
+			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[1].srcAccessMask = 0;
+			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+			dependencies[2] = {};
+			dependencies[2].srcSubpass = 1;
+			dependencies[2].dstSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[2].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[2].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dependencies[2].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			dependencies[2].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+
+			/*
+			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[0].dstSubpass = 0;
+			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+			dependencies[1].srcSubpass = 0;
+			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+			*/
+
 
 			std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 
@@ -1163,10 +1209,10 @@ namespace flex
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 			renderPassInfo.attachmentCount = attachments.size();
 			renderPassInfo.pAttachments = attachments.data();
-			renderPassInfo.subpassCount = 1;
-			renderPassInfo.pSubpasses = &subpass;
-			renderPassInfo.dependencyCount = 1;
-			renderPassInfo.pDependencies = &dependency;
+			renderPassInfo.subpassCount = subpasses.size();
+			renderPassInfo.pSubpasses = subpasses.data();
+			renderPassInfo.dependencyCount = dependencies.size();
+			renderPassInfo.pDependencies = dependencies.data();
 
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_DeferredCombineRenderPass.replace()));
 		}
@@ -1424,20 +1470,23 @@ namespace flex
 			RenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
 			Material* material = &m_LoadedMaterials[renderObject->materialID];
+			Shader& shader = m_Shaders[material->shaderIndex];
 
-			GraphicsPipelineCreateInfo createInfo = {};
-			createInfo.shaderIndex = material->shaderIndex;
-			createInfo.vertexAttributes = renderObject->vertexBufferData->Attributes;
-			createInfo.topology = renderObject->topology;
-			createInfo.cullMode = renderObject->cullMode;
-			createInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
-			createInfo.setDynamicStates = false;
-			createInfo.enabledColorBlending = false;
-			createInfo.pipelineLayout = renderObject->pipelineLayout.replace();
-			createInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
-			createInfo.renderPass = offScreenFrameBuf.renderPass;
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.shaderIndex = material->shaderIndex;
+			pipelineCreateInfo.vertexAttributes = renderObject->vertexBufferData->Attributes;
+			pipelineCreateInfo.topology = renderObject->topology;
+			pipelineCreateInfo.cullMode = renderObject->cullMode;
+			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
+			pipelineCreateInfo.setDynamicStates = false;
+			pipelineCreateInfo.enabledColorBlending = false;
+			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
+			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
+			// Deferred objects get drawn in a different render pass
+			pipelineCreateInfo.renderPass = shader.deferred ? offScreenFrameBuf.renderPass : m_DeferredCombineRenderPass;
+			pipelineCreateInfo.subpass = shader.deferred ? 0 : 1;
 
-			CreateGraphicsPipeline(&createInfo);
+			CreateGraphicsPipeline(&pipelineCreateInfo);
 		}
 
 		void VulkanRenderer::CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo)
@@ -1575,13 +1624,13 @@ namespace flex
 
 			VkPipelineDepthStencilStateCreateInfo depthStencil{};
 			depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			depthStencil.depthTestEnable = VK_TRUE;
-			depthStencil.depthWriteEnable = VK_TRUE;
-			depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+			depthStencil.depthTestEnable = createInfo->depthTestEnable;
+			depthStencil.depthWriteEnable = createInfo->depthWriteEnable;
+			depthStencil.depthCompareOp = createInfo->depthCompareOp;
 			depthStencil.depthBoundsTestEnable = VK_FALSE;
+			depthStencil.stencilTestEnable = createInfo->stencilTestEnable;
 			depthStencil.minDepthBounds = 0.0f;
 			depthStencil.maxDepthBounds = 1.0f;
-			depthStencil.stencilTestEnable = VK_FALSE;
 			depthStencil.front = {};
 			depthStencil.back = {};
 
@@ -1611,7 +1660,7 @@ namespace flex
 			pipelineInfo.layout = *createInfo->pipelineLayout;
 			pipelineInfo.renderPass = createInfo->renderPass;
 			pipelineInfo.pDynamicState = pDynamicState;
-			pipelineInfo.subpass = 0;
+			pipelineInfo.subpass = createInfo->subpass;
 			pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 			VkPipelineCache pipelineCache = createInfo->pipelineCache ? *createInfo->pipelineCache : VK_NULL_HANDLE;
@@ -1632,7 +1681,8 @@ namespace flex
 
 				VkFramebufferCreateInfo framebufferInfo = {};
 				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebufferInfo.renderPass = m_DeferredCombineRenderPass;
+				// Just defines which render passes this frame buffer is compatible with (can be either deferredCombine or forward)
+				framebufferInfo.renderPass = m_DeferredCombineRenderPass; 
 				framebufferInfo.attachmentCount = attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
@@ -1687,13 +1737,13 @@ namespace flex
 			VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &attDepthFormat);
 			assert(validDepthFormat);
 
-			CreateAttachment(
+			/*CreateAttachment(
 				m_VulkanDevice,
 				attDepthFormat,
 				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 				offScreenFrameBuf.width,
 				offScreenFrameBuf.height,
-				&offScreenFrameBuf.depth);
+				&offScreenFrameBuf.depth);*/
 
 			// Set up separate renderpass with references to the color and depth attachments
 			std::array<VkAttachmentDescription, 4> attachmentDescs = {};
@@ -1722,7 +1772,7 @@ namespace flex
 			attachmentDescs[0].format = offScreenFrameBuf.position.format;
 			attachmentDescs[1].format = offScreenFrameBuf.normal.format;
 			attachmentDescs[2].format = offScreenFrameBuf.albedo.format;
-			attachmentDescs[3].format = offScreenFrameBuf.depth.format;
+			attachmentDescs[3].format = m_DepthImageFormat;
 
 			std::vector<VkAttachmentReference> colorReferences;
 			colorReferences.push_back({ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
@@ -1773,7 +1823,7 @@ namespace flex
 			attachments[0] = offScreenFrameBuf.position.view;
 			attachments[1] = offScreenFrameBuf.normal.view;
 			attachments[2] = offScreenFrameBuf.albedo.view;
-			attachments[3] = offScreenFrameBuf.depth.view;
+			attachments[3] = m_DepthImageView;
 
 			VkFramebufferCreateInfo fbufCreateInfo = {};
 			fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -1906,16 +1956,6 @@ namespace flex
 			throw std::runtime_error("failed to find supported formats!");
 		}
 
-		// TODO: Remove? Duplicate of GetSupportedDepthFormat
-		//VkFormat VulkanRenderer::FindDepthFormat()
-		//{
-		//	return FindSupportedFormat(
-		//	{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-		//		VK_IMAGE_TILING_OPTIMAL,
-		//		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-		//	);
-		//}
-
 		bool VulkanRenderer::HasStencilComponent(VkFormat format)
 		{
 			return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
@@ -1925,6 +1965,8 @@ namespace flex
 		{
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
+
+			m_DepthImageFormat = depthFormat;
 
 			// Swapchain images
 			CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
@@ -1936,12 +1978,12 @@ namespace flex
 
 
 			// Deferred images
-			CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, &offScreenFrameBuf.depth.image, &offScreenFrameBuf.depth.mem);
-			CreateImageView(offScreenFrameBuf.depth.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, &offScreenFrameBuf.depth.view);
-
-			TransitionImageLayout(offScreenFrameBuf.depth.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
+			//CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+			//	VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, //&offScreenFrameBuf.depth.image, &offScreenFrameBuf.depth.mem);
+			//CreateImageView(offScreenFrameBuf.depth.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, &offScreenFrameBuf.depth.view);
+			//
+			//TransitionImageLayout(offScreenFrameBuf.depth.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, //VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			
 		}
 
 		void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture)
@@ -2299,13 +2341,54 @@ namespace flex
 
 				vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipelineLayout, 0, 1, &m_OffscreenBufferDescriptorSet, 0, nullptr);
 
-				// Final composition as full screen quad
+				// Final composition as full screen quad (deferred combine)
 				vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipeline);
 				VkDeviceSize offsets[1] = { 0 };
 				vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &offscreenQuadVertexIndexBufferPair.vertexBuffer->m_Buffer, offsets);
 				vkCmdBindIndexBuffer(m_CommandBuffers[i], offscreenQuadVertexIndexBufferPair.indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 				vkCmdDrawIndexed(m_CommandBuffers[i], 6, 1, 0, 0, 1);
 
+
+				vkCmdNextSubpass(m_CommandBuffers[i], VK_SUBPASS_CONTENTS_INLINE);
+
+
+				// Forward rendered objects
+
+				// TODO: Batch objects with same materials together like in GL renderer
+				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+				{
+					RenderObject* renderObject = GetRenderObject(j);
+					if (!renderObject) continue;
+
+					Material* material = &m_LoadedMaterials[renderObject->materialID];
+
+					// Only render non-deferred (forward) objects in this pass
+					if (m_Shaders[material->shaderIndex].deferred) continue;
+					
+					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[material->shaderIndex].vertexBuffer->m_Buffer, offsets);
+
+
+					if (m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Size != 0)
+					{
+						vkCmdBindIndexBuffer(m_CommandBuffers[i], m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+					}
+
+					vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
+
+					uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
+					vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
+						0, 1, &renderObject->descriptorSet,
+						1, &dynamicOffset);
+
+					if (renderObject->indexed)
+					{
+						vkCmdDrawIndexed(m_CommandBuffers[i], renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
+					}
+					else
+					{
+						vkCmdDraw(m_CommandBuffers[i], renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+					}
+				}
 
 				ImGui_DrawFrame(m_CommandBuffers[i]);
 
@@ -2316,7 +2399,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::BuildDeferredCommandBuffers()
+		void VulkanRenderer::BuildDeferredCommandBuffer()
 		{
 			if (offScreenCmdBuffer == VK_NULL_HANDLE)
 			{
@@ -2369,9 +2452,11 @@ namespace flex
 				RenderObject* renderObject = GetRenderObject(j);
 				if (!renderObject) continue;
 
-				uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
-
 				Material* material = &m_LoadedMaterials[renderObject->materialID];
+
+				// Only render deferred objects in this pass
+				if (!m_Shaders[material->shaderIndex].deferred) continue;
+
 				vkCmdBindVertexBuffers(offScreenCmdBuffer, 0, 1, &m_VertexIndexBufferPairs[material->shaderIndex].vertexBuffer->m_Buffer, offsets);
 
 				if (m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Size != 0)
@@ -2381,6 +2466,7 @@ namespace flex
 
 				vkCmdBindPipeline(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
+				uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
 				vkCmdBindDescriptorSets(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
 					0, 1, &renderObject->descriptorSet,
 					1, &dynamicOffset);
@@ -2396,11 +2482,9 @@ namespace flex
 			}
 
 			vkCmdEndRenderPass(offScreenCmdBuffer);
-
+			
 			VK_CHECK_RESULT(vkEndCommandBuffer(offScreenCmdBuffer));
 		}
-
-
 
 		void VulkanRenderer::ImGui_UpdateBuffers()
 		{
@@ -2734,11 +2818,13 @@ namespace flex
 				return 0;
 			}
 			
-			CreateStaticVertexBuffer(vertexBuffer, shaderIndex, vertexDataStart, vertexBufferSize);
+			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
 			free(vertexDataStart);
+
+			return vertexCount;
 		}
 
-		void VulkanRenderer::CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, void* vertexBufferData, glm::uint vertexBufferSize)
+		void VulkanRenderer::CreateStaticVertexBuffer(Buffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize)
 		{
 			Buffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 			CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -2782,12 +2868,12 @@ namespace flex
 				return 0;
 			}
 
-			CreateStaticIndexBuffer(indexBuffer, shaderIndex, indices);
+			CreateStaticIndexBuffer(indexBuffer, indices);
 
 			return indices.size();
 		}
 		
-		void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex, const std::vector<glm::uint>& indices)
+		void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, const std::vector<glm::uint>& indices)
 		{
 			const size_t bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -2836,16 +2922,16 @@ namespace flex
 				Uniform::Type::SPECULAR_TEXTURE_SAMPLER);
 			++shaderIndex;
 
-			//// Color
-			//m_Shaders[shaderIndex].deferred = false;
-			//m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-			//	Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-			//	Uniform::Type::VIEW_PROJECTION_MAT4);
-			//
-			//m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-			//	Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-			//	Uniform::Type::MODEL_MAT4);
-			//++shaderIndex;
+			// Color
+			m_Shaders[shaderIndex].deferred = false;
+			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
+				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
+				Uniform::Type::VIEW_PROJECTION_MAT4);
+			
+			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
+				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
+				Uniform::Type::MODEL_MAT4);
+			++shaderIndex;
 
 			// ImGui
 			m_Shaders[shaderIndex].deferred = false;
@@ -2857,18 +2943,18 @@ namespace flex
 			++shaderIndex;
 
 			//// Skybox
-			//m_Shaders[shaderIndex].deferred = false;
-			//m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-			//	Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-			//	Uniform::Type::VIEW_MAT4 |
-			//	Uniform::Type::PROJECTION_MAT4);
-			//
-			//m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-			//	Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-			//	Uniform::Type::MODEL_MAT4 |
-			//	Uniform::Type::USE_CUBEMAP_TEXTURE_INT |
-			//	Uniform::Type::CUBEMAP_TEXTURE_SAMPLER);
-			//++shaderIndex;
+			m_Shaders[shaderIndex].deferred = false;
+			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
+				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
+				Uniform::Type::VIEW_MAT4 |
+				Uniform::Type::PROJECTION_MAT4);
+			
+			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
+				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
+				Uniform::Type::MODEL_MAT4 |
+				Uniform::Type::USE_CUBEMAP_TEXTURE_INT |
+				Uniform::Type::CUBEMAP_TEXTURE_SAMPLER);
+			++shaderIndex;
 
 			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
@@ -3358,11 +3444,6 @@ namespace flex
 
 				if (Uniform::HasUniform(constantData.elements, Uniform::Type::DIR_LIGHT))
 				{
-					if (!m_DirectionalLight.enabled)
-					{
-						m_DirectionalLight.direction = glm::vec3(0.0f);
-					}
-
 					memcpy(&constantData.data[index], &m_DirectionalLight, sizeof(m_DirectionalLight));
 					index += sizeof(m_DirectionalLight) / 4;
 				}
@@ -3371,11 +3452,6 @@ namespace flex
 				{
 					for (size_t j = 0; j < m_PointLights.size(); ++j)
 					{
-						if (!m_PointLights[j].enabled)
-						{
-							m_PointLights[j].constant = 0.0f;
-						}
-
 						memcpy(&constantData.data[index], &m_PointLights[j], sizeof(m_PointLights[j]));
 						index += sizeof(m_PointLights[j]) / 4;
 					}
@@ -3498,11 +3574,11 @@ namespace flex
 
 			m_Shaders = {
 				{ shaderDirectory + "vk_deferred_simple_vert.spv", shaderDirectory + "vk_deferred_simple_frag.spv" },
-				//{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
+				{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
 				{ shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
 
 				// NOTE: Skybox shader should be kept second last to keep other objects rendering in front
-				//{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
+				{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
 
 				// NOTE: Deferred combine pass is kept last to ensure all other objects have been drawn
 				{ shaderDirectory + "vk_deferred_combine_vert.spv", shaderDirectory + "vk_deferred_combine_frag.spv" },

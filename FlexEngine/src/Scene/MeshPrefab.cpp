@@ -43,6 +43,7 @@ namespace flex
 		m_VertexBufferData.Destroy();
 	}
 
+	// TODO: Add option to force certain components (Bitangents, UVs, ...)
 	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath)
 	{
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
@@ -458,6 +459,30 @@ namespace flex
 				{ 0.0f, 1.0f, 0.0f, },
 			};
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+
+			vertexBufferDataCreateInfo.bitangents =
+			{
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+				{ 1.0f, 0.0f, 0.0f, },
+			};
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
+
+			vertexBufferDataCreateInfo.tangents =
+			{
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+				{ 0.0f, 0.0f, 1.0f, },
+			};
+			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::TANGENT;
 
 			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
 			{

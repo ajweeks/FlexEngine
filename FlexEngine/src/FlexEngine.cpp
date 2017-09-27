@@ -356,15 +356,17 @@ namespace flex
 						Renderer::DirectionalLight& dirLight = m_GameContext.renderer->GetDirectionalLight(0);
 						std::vector<Renderer::PointLight>& pointLights = m_GameContext.renderer->GetAllPointLights();
 
-						ImGui::Checkbox("##dir-light-enabled", &dirLight.enabled);
+						bool dirLightEnabled = dirLight.enabled;
+						ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
+						dirLight.enabled = dirLightEnabled ? 1 : 0;
 						ImGui::SameLine();
 						if (ImGui::TreeNode("Directional Light"))
 						{
 							ImGui::DragFloat3("Rotation", &dirLight.direction.x, 0.01f);
 
-							CopyableColorEdit3("Diffuse ", (glm::vec3)dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-							CopyableColorEdit3("Specular", (glm::vec3)dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
-							CopyableColorEdit3("Ambient ", (glm::vec3)dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+							CopyableColorEdit4("Diffuse ", dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+							CopyableColorEdit4("Specular", dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
+							CopyableColorEdit4("Ambient ", dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
 
 							ImGui::TreePop();
 						}
@@ -375,20 +377,24 @@ namespace flex
 							const std::string iStr = std::to_string(i);
 							const std::string objectName("Point Light##" + iStr);
 
-							ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLights[i].enabled);
+							bool pointLightEnabled = pointLights[i].enabled;
+							ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLightEnabled);
+							pointLights[i].enabled = pointLightEnabled ? 1 : 0;
 							ImGui::SameLine();
 							if (ImGui::TreeNode(objectName.c_str()))
 							{
 								ImGui::DragFloat3("Translation", &pointLights[i].position.x, 0.1f);
 
-								CopyableColorEdit3("Diffuse ", (glm::vec3)pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-								CopyableColorEdit3("Specular", (glm::vec3)pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
-								CopyableColorEdit3("Ambient ", (glm::vec3)pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+								CopyableColorEdit4("Diffuse ", pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
+								CopyableColorEdit4("Specular", pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
+								CopyableColorEdit4("Ambient ", pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
 
 								ImGui::PushItemWidth(150);
-								ImGui::SliderFloat("Linear", &pointLights[i].linear, 0.0014f, 0.7f);
+								ImGui::SliderFloat("Constant", &pointLights[i].constantLinearQuadraticPadding.x, 0.0f, 1.0f);
 								ImGui::SameLine();
-								ImGui::SliderFloat("Quadratic", &pointLights[i].quadratic, 0.000007f, 1.8f);
+								ImGui::SliderFloat("Linear", &pointLights[i].constantLinearQuadraticPadding.y, 0.0014f, 0.7f);
+								ImGui::SameLine();
+								ImGui::SliderFloat("Quadratic", &pointLights[i].constantLinearQuadraticPadding.z, 0.000007f, 1.8f);
 								ImGui::PopItemWidth();
 
 								ImGui::TreePop();
@@ -418,6 +424,13 @@ namespace flex
 		ImGui::ColorEdit3(label, &col.r, flags);
 		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
 		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor3FromClipboard();
+	}
+
+	void FlexEngine::CopyableColorEdit4(const char* label, glm::vec4& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags)
+	{
+		ImGui::ColorEdit4(label, &col.r, flags);
+		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
+		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor4FromClipboard();
 	}
 
 	void FlexEngine::Stop()

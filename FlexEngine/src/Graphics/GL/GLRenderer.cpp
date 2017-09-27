@@ -998,11 +998,11 @@ namespace flex
 						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
 						CheckGLErrorMessages();
 
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constant);
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constantLinearQuadraticPadding.x);
 						CheckGLErrorMessages();
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].linear);
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].constantLinearQuadraticPadding.y);
 						CheckGLErrorMessages();
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].quadratic);
+						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].constantLinearQuadraticPadding.z);
 						CheckGLErrorMessages();
 
 						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);

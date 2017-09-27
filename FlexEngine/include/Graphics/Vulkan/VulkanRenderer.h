@@ -108,7 +108,7 @@ namespace flex
 			// Creates vertex buffer for all render objects' verts which use specified shader index
 			// Returns vertex count
 			glm::uint CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, int size); 
-			void CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, void* vertexBufferData, glm::uint vertexBufferSize);
+			void CreateStaticVertexBuffer(Buffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize);
 			
 			// Creates static index buffers for all render objects
 			void CreateStaticIndexBuffers();
@@ -116,7 +116,7 @@ namespace flex
 			// Creates index buffer for all render objects' indices which use specified shader index
 			// Returns index count
 			glm::uint CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex); 
-			void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex, const std::vector<glm::uint>& indices);
+			void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, const std::vector<glm::uint>& indices);
 
 			void PrepareUniformBuffers();
 			void CreateDescriptorPool();
@@ -130,7 +130,7 @@ namespace flex
 			void CreateCommandBuffers();
 			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin);
 			void BuildCommandBuffers();
-			void BuildDeferredCommandBuffers();
+			void BuildDeferredCommandBuffer();
 			void RebuildCommandBuffers();
 			bool CheckCommandBuffers();
 			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free);
@@ -146,7 +146,6 @@ namespace flex
 				VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory,
 				glm::uint arrayLayers = 1, glm::uint mipLevels = 1, VkImageCreateFlags flags = 0);
 			VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-			//VkFormat FindDepthFormat();
 			bool HasStencilComponent(VkFormat format);
 			uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 			void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
@@ -220,16 +219,16 @@ namespace flex
 			VkQueue m_GraphicsQueue;
 			VkQueue m_PresentQueue;
 
-			VDeleter<VkSwapchainKHR> m_SwapChain; //{ m_Device, vkDestroySwapchainKHR };
+			VDeleter<VkSwapchainKHR> m_SwapChain;
 			std::vector<VkImage> m_SwapChainImages;
 			VkFormat m_SwapChainImageFormat;
 			VkExtent2D m_SwapChainExtent;
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
-			VDeleter<VkRenderPass> m_DeferredCombineRenderPass; // { m_Device, vkDestroyRenderPass };
+			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
 
-			VDeleter<VkDescriptorPool> m_DescriptorPool; // { m_Device, vkDestroyDescriptorPool };
+			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 
 			std::vector<VkCommandBuffer> m_CommandBuffers;
@@ -246,16 +245,18 @@ namespace flex
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_SkyboxTexture = nullptr;
 
-			VDeleter<VkImage> m_DepthImage; // { m_Device, vkDestroyImage };
-			VDeleter<VkDeviceMemory> m_DepthImageMemory;// { m_Device, vkFreeMemory };
-			VDeleter<VkImageView> m_DepthImageView;// { m_Device, vkDestroyImageView };
+			// TODO: Use FrameBufferAttachment
+			VDeleter<VkImage> m_DepthImage;
+			VDeleter<VkDeviceMemory> m_DepthImageMemory;
+			VDeleter<VkImageView> m_DepthImageView;
+			VkFormat m_DepthImageFormat;
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 
 			glm::uint m_DynamicAlignment = 0;
 
-			VDeleter<VkSemaphore> m_PresentCompleteSemaphore; // { m_Device, vkDestroySemaphore };
-			VDeleter<VkSemaphore> m_RenderCompleteSemaphore; // { m_Device, vkDestroySemaphore };
+			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
+			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
 
 			VkPipelineLayout m_DeferredPipelineLayout = VK_NULL_HANDLE;
@@ -264,7 +265,7 @@ namespace flex
 			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
 			VertexIndexBufferPair offscreenQuadVertexIndexBufferPair;
 
-
+			
 			VkClearColorValue m_ClearColor;
 
 
