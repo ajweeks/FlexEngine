@@ -20,6 +20,7 @@ namespace flex
 
 	void TestScene::Initialize(const GameContext& gameContext)
 	{
+		// Materials
 		Renderer::MaterialCreateInfo colorMatInfo = {};
 		colorMatInfo.shaderIndex = 1;
 		colorMatInfo.name = "Color";
@@ -28,7 +29,7 @@ namespace flex
 		
 		Renderer::MaterialCreateInfo skyboxMatInfo = {};
 		skyboxMatInfo.name = "Skybox";
-		skyboxMatInfo.shaderIndex = 3;
+		skyboxMatInfo.shaderIndex = 4;
 		
 		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
 		const std::string fileName = "skybox";
@@ -67,7 +68,7 @@ namespace flex
 		simpleTexturelessInfo.name = "Simple textureless";
 		const MaterialID simpleTexturelessMatID = gameContext.renderer->InitializeMaterial(gameContext, &simpleTexturelessInfo);
 
-
+		// Render objects
 		m_Grid = new MeshPrefab(colorMatID);
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 		m_Grid->GetTransform().position.y -= 0.1f;
@@ -155,7 +156,7 @@ namespace flex
 
 		Renderer::DirectionalLight dirLight = {};
 		dirLight.direction = glm::vec4(0.75f, -0.25f, 0.95f, 1.0f);
-		dirLight.diffuseCol = glm::vec4(0.85f, 0.97f, 0.73f, 1.0f);
+		dirLight.color = glm::vec4(0.85f, 0.97f, 0.73f, 1.0f);
 		gameContext.renderer->InitializeDirectionalLight(dirLight);
 	}
 
@@ -188,42 +189,20 @@ namespace flex
 		light1.position.z = (sin(gameContext.elapsedTime)) * 25.0f;
 		light1.position.x = (cos(gameContext.elapsedTime)) * 25.0f;
 		light1.position.y = (cos(gameContext.elapsedTime * 0.6f + 1.5f) * 0.4f + 0.6f) * 20.0f;
-		//light1.diffuseCol = glm::vec3(
-		//	cos(gameContext.elapsedTime * 1.13f) * 0.5f + 0.5,
-		//	cos(gameContext.elapsedTime * 0.55f + 0.2f) * 0.5f + 0.5,
-		//	sin(gameContext.elapsedTime * 2.61f + 1.25f) * 0.5f + 0.5);
-		//light1.specularCol = light1.diffuseCol;
 
 		Renderer::PointLight& light2 = gameContext.renderer->GetPointLight(m_PointLight2ID);
 		light2.position.z = (cos(gameContext.elapsedTime + glm::pi<float>())) * 30.0f + 15.0f;
 		light2.position.x = (sin(gameContext.elapsedTime + glm::pi<float>())) * 30.0f - 15.0f;
 		light2.position.y = (cos(gameContext.elapsedTime * 0.23f + 2.51f) * 0.4f + 0.6f) * 20.0f;
-		//light2.diffuseCol = glm::vec3(
-		//	sin(gameContext.elapsedTime) * 0.5f + 0.5,
-		//	sin(gameContext.elapsedTime * 0.35f + 0.42f) * 0.5f + 0.5,
-		//	cos(gameContext.elapsedTime * 1.68f + 2.8f) * 0.5f + 0.5);
-		//light2.specularCol = light2.diffuseCol;
 
 		Renderer::PointLight& light3 = gameContext.renderer->GetPointLight(m_PointLight3ID);
 		light3.position.z = (sin(gameContext.elapsedTime)) * 10.0f;
 		light3.position.x = (cos(gameContext.elapsedTime)) * 10.0f;
 		light3.position.y = (cos(gameContext.elapsedTime * 2.56f + 1.2f) * 0.4f + 0.6f) * 20.0f;
-		
-		//light3.diffuseCol = glm::vec3(
-		//	sin(gameContext.elapsedTime) * 0.5f + 0.5,
-		//	sin(gameContext.elapsedTime * 0.15f + 3.42f) * 0.5f + 0.5,
-		//	cos(gameContext.elapsedTime * 3.08f + 1.8f) * 0.5f + 0.5f);
-		//light3.specularCol = light3.diffuseCol;
 
 		Renderer::PointLight& light4 = gameContext.renderer->GetPointLight(m_PointLight4ID);
 		light4.position.z = (cos(gameContext.elapsedTime + glm::three_over_two_pi<float>())) * 20.0f + 5.0f;
 		light4.position.x = (sin(gameContext.elapsedTime + glm::three_over_two_pi<float>())) * 20.0f - 5.0f;
 		light4.position.y = (cos(gameContext.elapsedTime * 1.1f + 3.6f) * 0.4f + 0.6f) * 20.0f;
-		
-		//light4.diffuseCol = glm::vec3(
-		//	sin(gameContext.elapsedTime) * 0.5f + 0.5,
-		//	sin(gameContext.elapsedTime * 0.95f + 2.22f) * 0.5f + 0.5,
-		//	cos(gameContext.elapsedTime * 2.1f + 0.2f) * 0.5f + 0.5);
-		//light4.specularCol = light4.diffuseCol;
 	}
 } // namespace flex

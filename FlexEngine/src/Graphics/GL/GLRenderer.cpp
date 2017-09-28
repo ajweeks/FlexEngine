@@ -91,6 +91,10 @@ namespace flex
 				{ Uniform::Type::USE_NORMAL_TEXTURE_INT,		&mat.uniformIDs.useNormalTexture,		"in_UseNormalSampler" },
 				{ Uniform::Type::USE_SPECULAR_TEXTURE_INT,		&mat.uniformIDs.useSpecularTexture,		"in_UseSpecularSampler" },
 				{ Uniform::Type::USE_CUBEMAP_TEXTURE_INT,		&mat.uniformIDs.useCubemapTexture,		"in_UseCubemapSampler" },
+				{ Uniform::Type::ALBEDO_VEC3,		&mat.uniformIDs.albedo,		"albedo" },
+				{ Uniform::Type::METALLIC_FLOAT,		&mat.uniformIDs.metallic,		"metallic" },
+				{ Uniform::Type::ROUGHNESS_FLOAT,		&mat.uniformIDs.roughness,		"roughness" },
+				{ Uniform::Type::AO_FLOAT,		&mat.uniformIDs.ao,		"ao" },
 			};
 
 			const glm::uint uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
@@ -217,6 +221,11 @@ namespace flex
 				GenerateCubemapTextures(mat.diffuseTextureID, mat.cubeMapFilePaths);
 				mat.useCubemapTexture = true;
 			}
+
+			mat.albedo = createInfo->albedo;
+			mat.metallic = createInfo->metallic;
+			mat.roughness = createInfo->roughness;
+			mat.ao = createInfo->ao;
 
 			glUseProgram(0);
 
@@ -787,7 +796,7 @@ namespace flex
 				{ RESOURCE_LOCATION + "shaders/GLSL/imgui.vert", RESOURCE_LOCATION + "shaders/GLSL/imgui.frag" },
 				//{ RESOURCE_LOCATION + "shaders/GLSL/deferred-shading.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred-shading.frag" },
 
-				// NOTE: Skybox shader must be kept second last
+				{ RESOURCE_LOCATION + "shaders/GLSL/pbr.vert", RESOURCE_LOCATION + "shaders/GLSL/pbr.frag" },
 				{ RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/skybox.frag" },
 				
 				// NOTE: Deferred shader must be kept last
@@ -826,6 +835,22 @@ namespace flex
 
 			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
 				Uniform::Type::DIFFUSE_TEXTURE_SAMPLER);
+			++shaderIndex;
+
+			// PBR
+			m_Shaders[shaderIndex].deferred = false;
+			m_Shaders[shaderIndex].constantBufferUniforms = Uniform::Type(
+				Uniform::Type::MODEL_MAT4 |
+				Uniform::Type::MODEL_INV_TRANSPOSE_MAT4 |
+				Uniform::Type::VIEW_PROJECTION_MAT4);
+
+			m_Shaders[shaderIndex].dynamicBufferUniforms = Uniform::Type(
+				Uniform::Type::CAM_POS_VEC4 |
+				Uniform::Type::ALBEDO_VEC3 |
+				Uniform::Type::METALLIC_FLOAT |
+				Uniform::Type::ROUGHNESS_FLOAT |
+				Uniform::Type::AO_FLOAT |
+				Uniform::Type::POINT_LIGHTS_VEC);
 			++shaderIndex;
 
 			// Skybox
@@ -974,11 +999,7 @@ namespace flex
 					CheckGLErrorMessages();
 					SetVec4f(material->shaderIndex, "dirLight.direction", m_DirectionalLight.direction);
 					CheckGLErrorMessages();
-					SetVec4f(material->shaderIndex, "dirLight.ambientCol", m_DirectionalLight.ambientCol);
-					CheckGLErrorMessages();
-					SetVec4f(material->shaderIndex, "dirLight.diffuseCol", m_DirectionalLight.diffuseCol);
-					CheckGLErrorMessages();
-					SetVec4f(material->shaderIndex, "dirLight.specularCol", m_DirectionalLight.specularCol);
+					SetVec4f(material->shaderIndex, "dirLight.color", m_DirectionalLight.color);
 					CheckGLErrorMessages();
 				}
 				else
@@ -1003,14 +1024,7 @@ namespace flex
 						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
 						CheckGLErrorMessages();
 
-						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].constantLinearQuadraticPadding", m_PointLights[i].constantLinearQuadraticPadding);
-						CheckGLErrorMessages();
-
-						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);
-						CheckGLErrorMessages();
-						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].diffuseCol", m_PointLights[i].diffuseCol);
-						CheckGLErrorMessages();
-						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].specularCol", m_PointLights[i].specularCol);
+						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].color", m_PointLights[i].color);
 						CheckGLErrorMessages();
 					}
 					else
@@ -1070,6 +1084,35 @@ namespace flex
 				glUniform1i(material->uniformIDs.useCubemapTexture, material->useCubemapTexture);
 				CheckGLErrorMessages();
 			}
+
+			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::ALBEDO_VEC3) ||
+				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::ALBEDO_VEC3))
+			{
+				glUniform3f(material->uniformIDs.albedo, material->albedo.x, material->albedo.y, material->albedo.z);
+				CheckGLErrorMessages();
+			}
+
+			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::METALLIC_FLOAT) ||
+				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::METALLIC_FLOAT))
+			{
+				glUniform1f(material->uniformIDs.metallic, material->metallic);
+				CheckGLErrorMessages();
+			}
+
+			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::ROUGHNESS_FLOAT) ||
+				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::ROUGHNESS_FLOAT))
+			{
+				glUniform1f(material->uniformIDs.roughness, material->roughness);
+				CheckGLErrorMessages();
+			}
+
+			if (Uniform::HasUniform(shader->dynamicBufferUniforms, Uniform::Type::AO_FLOAT) ||
+				Uniform::HasUniform(shader->constantBufferUniforms, Uniform::Type::AO_FLOAT))
+			{
+				glUniform1f(material->uniformIDs.ao, material->ao);
+				CheckGLErrorMessages();
+			}
+
 		}
 
 		void GLRenderer::OnWindowSize(int width, int height)
@@ -1199,7 +1242,7 @@ namespace flex
 			GLint location = glGetAttribLocation(program, variableName.c_str());
 			if (location == -1)
 			{
-				Logger::LogWarning("Invalid shader variable name: " + variableName);
+				//Logger::LogWarning("Invalid shader variable name: " + variableName);
 				glBindVertexArray(0);
 				return;
 			}

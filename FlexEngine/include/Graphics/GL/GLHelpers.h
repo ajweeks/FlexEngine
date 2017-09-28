@@ -38,6 +38,10 @@ namespace flex
 				int useNormalTexture;
 				int useSpecularTexture;
 				int useCubemapTexture;
+				int albedo;
+				int metallic;
+				int roughness;
+				int ao;
 			};
 			UniformIDs uniformIDs;
 
@@ -62,6 +66,11 @@ namespace flex
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 			bool useCubemapTexture = false;
+
+			glm::vec3 albedo;
+			float metallic;
+			float roughness;
+			float ao;
 		};
 
 		struct RenderObject

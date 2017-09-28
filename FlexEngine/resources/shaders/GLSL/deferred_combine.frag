@@ -4,9 +4,7 @@ struct DirectionalLight
 {
 	vec4 direction;
 
-	vec4 ambientCol;
-	vec4 diffuseCol;
-	vec4 specularCol;
+	vec4 color;
 
 	bool enabled;
 	float padding[3];
@@ -17,12 +15,7 @@ struct PointLight
 {
 	vec4 position;
 
-	// Only first three floats are used (last is padding)
-	vec4 constantLinearQuadraticPadding;
-
-	vec4 ambientCol;
-	vec4 diffuseCol;
-	vec4 specularCol;
+	vec4 color;
 
 	bool enabled;
 	float padding[3];
@@ -51,11 +44,10 @@ vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 diffuseSample, float 
 	
 	float specularCol = specStrength * specularIntensity * specularSample;
 
-	vec3 ambient = dirLight.ambientCol.rgb * diffuseSample;
-	vec3 diffuse = dirLight.diffuseCol.rgb * diffuseSample * diffuseIntensity;
-	vec3 specular = dirLight.specularCol.rgb * specularCol * specularIntensity;
+	vec3 diffuse = dirLight.color.rgb * diffuseSample * diffuseIntensity;
+	vec3 specular = vec3(specularCol * specularIntensity);
 
-	return (ambient + diffuse + specular);
+	return (diffuse + specular);
 }
 
 vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSample, vec3 normal, vec3 worldPos, vec3 viewDir, float specStrength, float specShininess)
@@ -70,14 +62,12 @@ vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSa
 	float specularCol = specStrength * specularIntensity * specularSample;
 
 	float distance = length(pointLight.position.xyz - worldPos);
-	float attenuation = 1.0 / (pointLight.constantLinearQuadraticPadding.x + pointLight.constantLinearQuadraticPadding.y * distance +
-	 		pointLight.constantLinearQuadraticPadding.z * (distance * distance)); 
+	float attenuation = 1.0 / (distance * distance); 
 
-	vec3 ambient = pointLight.ambientCol.rgb * diffuseSample * attenuation;
-	vec3 diffuse = pointLight.diffuseCol.rgb * diffuseSample * diffuseIntensity * attenuation;
-	vec3 specular = pointLight.specularCol.rgb * specularCol * specularIntensity * attenuation;
+	vec3 diffuse = pointLight.color.rgb * diffuseSample * diffuseIntensity * attenuation;
+	vec3 specular = vec3(specularCol * specularIntensity * attenuation);
 
-	return (ambient + diffuse + specular);
+	return (diffuse + specular);
 }
 
 void main()

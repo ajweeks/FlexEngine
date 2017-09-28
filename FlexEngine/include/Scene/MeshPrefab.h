@@ -31,7 +31,7 @@ namespace flex
 			SKYBOX
 		};
 
-		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath);
+		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false);
 		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
 
 		virtual void Initialize(const GameContext& gameContext) override;

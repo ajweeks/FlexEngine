@@ -74,9 +74,7 @@ namespace flex
 		{
 			glm::vec4 direction;
 			
-			glm::vec4 ambientCol = glm::vec4(0.0f);
-			glm::vec4 diffuseCol = glm::vec4(1.0f);
-			glm::vec4 specularCol = glm::vec4(1.0f);
+			glm::vec4 color = glm::vec4(1.0f);
 
 			glm::uint enabled = 1;
 			float padding[3];
@@ -86,13 +84,8 @@ namespace flex
 		{
 			glm::vec4 position = glm::vec4(0.0f);
 
-			// TODO: Just set brightness here and interpolate along correct values in shader
-			glm::vec4 constantLinearQuadraticPadding = glm::vec4(1.0f, 0.022f, 0.0019f, 0.0f);
-
 			// Vec4 for padding's sake
-			glm::vec4 ambientCol = glm::vec4(0.0f);
-			glm::vec4 diffuseCol = glm::vec4(1.0f);
-			glm::vec4 specularCol = glm::vec4(1.0f);
+			glm::vec4 color = glm::vec4(1.0f);
 
 			glm::uint enabled = 1;
 			float padding[3];
@@ -153,6 +146,12 @@ namespace flex
 				DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER		= (1 << 24),
 				NORMAL_FRAME_BUFFER_SAMPLER					= (1 << 25),
 
+				// Temp
+				ALBEDO_VEC3 = (1 << 26),
+				METALLIC_FLOAT = (1 << 27),
+				ROUGHNESS_FLOAT = (1 << 28),
+				AO_FLOAT = (1 << 29),
+
 				MAX_ENUM = (1 << 30)
 			};
 
@@ -202,6 +201,11 @@ namespace flex
 			glm::uint diffuseSpecularSamplerID;
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+
+			glm::vec3 albedo;
+			float metallic;
+			float roughness;
+			float ao;
 		};
 
 		virtual void PostInitialize(const GameContext& gameContext) = 0;

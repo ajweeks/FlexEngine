@@ -44,7 +44,7 @@ namespace flex
 	}
 
 	// TODO: Add option to force certain components (Bitangents, UVs, ...)
-	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath)
+	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ)
 	{
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
@@ -108,6 +108,8 @@ namespace flex
 			if (mesh->HasNormals())
 			{
 				glm::vec3 norm = ToVec3(mesh->mNormals[i]);
+				if (flipNormalYZ) std::swap(norm.y, norm.z);
+				if (flipZ) norm.z = -norm.z;
 				vertexBufferDataCreateInfo.normals.push_back(norm);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
 			}
@@ -120,6 +122,14 @@ namespace flex
 				vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 			}
+		}
+		
+		if (m_MaterialID == 5)
+		{
+			vertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION |
+				(glm::uint)VertexAttribute::UV | (glm::uint)VertexAttribute::TANGENT | (glm::uint)VertexAttribute::BITANGENT |
+				(glm::uint)VertexAttribute::NORMAL;
+			
 		}
 
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);

@@ -100,7 +100,7 @@ namespace flex
 			int size;
 		};
 
-		VertexType vertexTypes[] = {
+		static VertexType vertexTypes[] = {
 			{ "in_Position", 3 },
 			{ "in_Position2D", 2 },
 			{ "in_TexCoord", 2 },

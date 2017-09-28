@@ -19,12 +19,7 @@ namespace flex
 		virtual void Update(const GameContext& gameContext) override;
 
 	private:
-		std::vector<MeshPrefab*> m_Cubes;
-
-		MeshPrefab* m_Grid;
-
-		MeshPrefab* m_Teapot;
-		MeshPrefab* m_Orb;
+		std::vector<MeshPrefab*> m_Spheres;
 
 		MeshPrefab* m_Skybox;
 

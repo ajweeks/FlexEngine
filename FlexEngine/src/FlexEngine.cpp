@@ -181,11 +181,11 @@ namespace flex
 
 	void FlexEngine::LoadDefaultScenes()
 	{
-		TestScene* pDefaultScene = new TestScene(m_GameContext);
-		m_SceneManager->AddScene(pDefaultScene, m_GameContext);
+		//TestScene* pDefaultScene = new TestScene(m_GameContext);
+		//m_SceneManager->AddScene(pDefaultScene, m_GameContext);
 
-		//Scene_02* scene02 = new Scene_02(m_GameContext);
-		//m_SceneManager->AddScene(scene02, m_GameContext);
+		Scene_02* scene02 = new Scene_02(m_GameContext);
+		m_SceneManager->AddScene(scene02, m_GameContext);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
@@ -286,6 +286,7 @@ namespace flex
 			// TODO: Figure out better
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
 			{
+				const std::string sceneName = m_SceneManager->CurrentScene()->GetName();
 				m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
 
 				DestroyWindowAndRenderer();
@@ -293,8 +294,16 @@ namespace flex
 
 				//m_GameContext.renderer->ReloadShaders(m_GameContext);
 
-				TestScene* pDefaultScene = new TestScene(m_GameContext);
-				m_SceneManager->AddScene(pDefaultScene, m_GameContext);
+				if (sceneName.compare("TestScene") == 0)
+				{
+					TestScene* newScene = new TestScene(m_GameContext);
+					m_SceneManager->AddScene(newScene, m_GameContext);
+				}
+				else
+				{
+					Scene_02* newScene = new Scene_02(m_GameContext);
+					m_SceneManager->AddScene(newScene, m_GameContext);
+				}
 
 				m_GameContext.renderer->PostInitialize(m_GameContext);
 			}
@@ -364,9 +373,7 @@ namespace flex
 						{
 							ImGui::DragFloat3("Rotation", &dirLight.direction.x, 0.01f);
 
-							CopyableColorEdit4("Diffuse ", dirLight.diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-							CopyableColorEdit4("Specular", dirLight.specularCol, "c##specular", "p##specular", colorEditFlags);
-							CopyableColorEdit4("Ambient ", dirLight.ambientCol, "c##ambient", "p##ambient", colorEditFlags);
+							CopyableColorEdit4("Color ", dirLight.color, "c##diffuse", "p##color", colorEditFlags);
 
 							ImGui::TreePop();
 						}
@@ -385,17 +392,7 @@ namespace flex
 							{
 								ImGui::DragFloat3("Translation", &pointLights[i].position.x, 0.1f);
 
-								CopyableColorEdit4("Diffuse ", pointLights[i].diffuseCol, "c##diffuse", "p##diffuse", colorEditFlags);
-								CopyableColorEdit4("Specular", pointLights[i].specularCol, "c##specular", "p##specular", colorEditFlags);
-								CopyableColorEdit4("Ambient ", pointLights[i].ambientCol, "c##ambient", "p##ambient", colorEditFlags);
-
-								ImGui::PushItemWidth(150);
-								ImGui::SliderFloat("Constant", &pointLights[i].constantLinearQuadraticPadding.x, 0.0f, 1.0f);
-								ImGui::SameLine();
-								ImGui::SliderFloat("Linear", &pointLights[i].constantLinearQuadraticPadding.y, 0.0014f, 0.7f);
-								ImGui::SameLine();
-								ImGui::SliderFloat("Quadratic", &pointLights[i].constantLinearQuadraticPadding.z, 0.000007f, 1.8f);
-								ImGui::PopItemWidth();
+								CopyableColorEdit4("Color ", pointLights[i].color, "c##diffuse", "p##color", colorEditFlags);
 
 								ImGui::TreePop();
 							}
