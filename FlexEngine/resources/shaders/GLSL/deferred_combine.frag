@@ -2,25 +2,30 @@
 
 struct DirectionalLight 
 {
-	vec3 direction;
+	vec4 direction;
 
-	vec3 ambientCol;
-	vec3 diffuseCol;
-	vec3 specularCol;
+	vec4 ambientCol;
+	vec4 diffuseCol;
+	vec4 specularCol;
+
+	bool enabled;
+	float padding[3];
 };
 uniform DirectionalLight dirLight;
 
 struct PointLight 
 {
-	vec3 position;
+	vec4 position;
 
-	float constant;
-	float linear;
-	float quadratic;
+	// Only first three floats are used (last is padding)
+	vec4 constantLinearQuadraticPadding;
 
-	vec3 ambientCol;
-	vec3 diffuseCol;
-	vec3 specularCol;
+	vec4 ambientCol;
+	vec4 diffuseCol;
+	vec4 specularCol;
+
+	bool enabled;
+	float padding[3];
 };
 #define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
@@ -37,9 +42,7 @@ out vec4 fragmentColor;
 
 vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 diffuseSample, float specularSample, vec3 normal, vec3 viewDir, float specStrength, float specShininess)
 {
-	if (dirLight.direction == vec3(0, 0, 0)) return vec3(0, 0, 0);
-
-	vec3 lightDir = normalize(-dirLight.direction);
+	vec3 lightDir = normalize(-dirLight.direction.xyz);
 
 	float diffuseIntensity = max(dot(normal, lightDir), 0.0);
 
@@ -48,18 +51,16 @@ vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 diffuseSample, float 
 	
 	float specularCol = specStrength * specularIntensity * specularSample;
 
-	vec3 ambient = dirLight.ambientCol * diffuseSample;
-	vec3 diffuse = dirLight.diffuseCol * diffuseSample * diffuseIntensity;
-	vec3 specular = dirLight.specularCol * specularCol * specularIntensity;
+	vec3 ambient = dirLight.ambientCol.rgb * diffuseSample;
+	vec3 diffuse = dirLight.diffuseCol.rgb * diffuseSample * diffuseIntensity;
+	vec3 specular = dirLight.specularCol.rgb * specularCol * specularIntensity;
 
 	return (ambient + diffuse + specular);
 }
 
 vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSample, vec3 normal, vec3 worldPos, vec3 viewDir, float specStrength, float specShininess)
 {
-	if (pointLight.constant == 0.0f) return vec3(0, 0, 0);
-
-	vec3 lightDir = normalize(pointLight.position - worldPos);
+	vec3 lightDir = normalize(pointLight.position.xyz - worldPos);
 
 	float diffuseIntensity = max(dot(normal, lightDir), 0.0);
 
@@ -68,12 +69,13 @@ vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSa
 
 	float specularCol = specStrength * specularIntensity * specularSample;
 
-	float distance = length(pointLight.position - worldPos);
-	float attenuation = 1.0 / (pointLight.constant + pointLight.linear * distance + pointLight.quadratic * (distance * distance)); 
+	float distance = length(pointLight.position.xyz - worldPos);
+	float attenuation = 1.0 / (pointLight.constantLinearQuadraticPadding.x + pointLight.constantLinearQuadraticPadding.y * distance +
+	 		pointLight.constantLinearQuadraticPadding.z * (distance * distance)); 
 
-	vec3 ambient = pointLight.ambientCol * diffuseSample * attenuation;
-	vec3 diffuse = pointLight.diffuseCol * diffuseSample * diffuseIntensity * attenuation;
-	vec3 specular = pointLight.specularCol * specularCol * specularIntensity * attenuation;
+	vec3 ambient = pointLight.ambientCol.rgb * diffuseSample * attenuation;
+	vec3 diffuse = pointLight.diffuseCol.rgb * diffuseSample * diffuseIntensity * attenuation;
+	vec3 specular = pointLight.specularCol.rgb * specularCol * specularIntensity * attenuation;
 
 	return (ambient + diffuse + specular);
 }
@@ -91,11 +93,15 @@ void main()
 	
 	vec3 viewDir = normalize(in_CamPos.xyz - worldPos);
 
-	vec3 result = DoDirectionalLighting(dirLight, diffuse, specular, normal, viewDir, specStrength, specShininess);
+	vec3 result = vec3(0.0);
+	if (dirLight.enabled) result += DoDirectionalLighting(dirLight, diffuse, specular, normal, viewDir, specStrength, specShininess);
 
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		result += DoPointLighting(pointLights[i], diffuse, specular, normal, worldPos, viewDir, specStrength, specShininess);
+		if (pointLights[i].enabled)
+		{
+			result += DoPointLighting(pointLights[i], diffuse, specular, normal, worldPos, viewDir, specStrength, specShininess);
+		}
 	}
 	
 	fragmentColor = vec4(result, 1.0);

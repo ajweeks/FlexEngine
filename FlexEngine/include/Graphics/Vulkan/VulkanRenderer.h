@@ -48,12 +48,6 @@ namespace flex
 
 			virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
-			virtual void SetFloat(ShaderID shaderID, const std::string& valName, float val) override;
-			virtual void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec) override;
-			virtual void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec) override;
-			virtual void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec) override;
-			virtual void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat) override;
-
 			virtual glm::uint GetRenderObjectCount() const override;
 			virtual glm::uint GetRenderObjectCapacity() const override;
 

@@ -42,12 +42,6 @@ namespace flex
 
 			virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
 
-			virtual void SetFloat(ShaderID shaderID, const std::string& valName, float val) override;
-			virtual void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec) override;
-			virtual void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec) override;
-			virtual void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec) override;
-			virtual void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat) override;
-
 			virtual glm::uint GetRenderObjectCount() const override;
 			virtual glm::uint GetRenderObjectCapacity() const override;
 
@@ -65,6 +59,14 @@ namespace flex
 			virtual void ImGui_ReleaseRenderObjects() override;
 
 		private:
+			void SetFloat(ShaderID shaderID, const std::string& valName, float val);
+			void SetUInt(ShaderID shaderID, const std::string& valName, glm::uint val);
+			void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec);
+			void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec);
+			void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec);
+			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
+
+
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
 			bool ImGui_CreateFontsTexture();

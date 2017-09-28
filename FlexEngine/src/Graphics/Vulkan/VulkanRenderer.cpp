@@ -437,41 +437,6 @@ namespace flex
 			UpdateUniformBufferDynamic(gameContext, renderID, model);
 		}
 
-		void VulkanRenderer::SetFloat(ShaderID shaderID, const std::string& valName, float val)
-		{
-			UNREFERENCED_PARAMETER(shaderID);
-			UNREFERENCED_PARAMETER(valName);
-			UNREFERENCED_PARAMETER(val);
-		}
-
-		void VulkanRenderer::SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec)
-		{
-			UNREFERENCED_PARAMETER(shaderID);
-			UNREFERENCED_PARAMETER(vecName);
-			UNREFERENCED_PARAMETER(vec);
-		}
-
-		void VulkanRenderer::SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec)
-		{
-			UNREFERENCED_PARAMETER(shaderID);
-			UNREFERENCED_PARAMETER(vecName);
-			UNREFERENCED_PARAMETER(vec);
-		}
-
-		void VulkanRenderer::SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec)
-		{
-			UNREFERENCED_PARAMETER(shaderID);
-			UNREFERENCED_PARAMETER(vecName);
-			UNREFERENCED_PARAMETER(vec);
-		}
-
-		void VulkanRenderer::SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat)
-		{
-			UNREFERENCED_PARAMETER(shaderID);
-			UNREFERENCED_PARAMETER(matName);
-			UNREFERENCED_PARAMETER(mat);
-		}
-
 		glm::uint VulkanRenderer::GetRenderObjectCount() const
 		{
 			glm::uint count = 0;

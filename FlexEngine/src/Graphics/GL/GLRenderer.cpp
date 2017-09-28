@@ -970,18 +970,20 @@ namespace flex
 			{
 				if (m_DirectionalLight.enabled)
 				{
-					SetVec3f(material->shaderIndex, "dirLight.direction", m_DirectionalLight.direction);
+					SetUInt(material->shaderIndex, "dirLight.enabled", 1);
 					CheckGLErrorMessages();
-					SetVec3f(material->shaderIndex, "dirLight.ambientCol", m_DirectionalLight.ambientCol);
+					SetVec4f(material->shaderIndex, "dirLight.direction", m_DirectionalLight.direction);
 					CheckGLErrorMessages();
-					SetVec3f(material->shaderIndex, "dirLight.diffuseCol", m_DirectionalLight.diffuseCol);
+					SetVec4f(material->shaderIndex, "dirLight.ambientCol", m_DirectionalLight.ambientCol);
 					CheckGLErrorMessages();
-					SetVec3f(material->shaderIndex, "dirLight.specularCol", m_DirectionalLight.specularCol);
+					SetVec4f(material->shaderIndex, "dirLight.diffuseCol", m_DirectionalLight.diffuseCol);
+					CheckGLErrorMessages();
+					SetVec4f(material->shaderIndex, "dirLight.specularCol", m_DirectionalLight.specularCol);
 					CheckGLErrorMessages();
 				}
 				else
 				{
-					SetVec3f(material->shaderIndex, "dirLight.direction", glm::vec3(0.0f));
+					SetUInt(material->shaderIndex, "dirLight.enabled", 0);
 					CheckGLErrorMessages();
 				}
 			}
@@ -995,26 +997,25 @@ namespace flex
 
 					if (m_PointLights[i].enabled)
 					{
-						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
+						SetUInt(material->shaderIndex, "pointLights[" + numberStr + "].enabled", 1);
 						CheckGLErrorMessages();
 
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", m_PointLights[i].constantLinearQuadraticPadding.x);
-						CheckGLErrorMessages();
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].linear", m_PointLights[i].constantLinearQuadraticPadding.y);
-						CheckGLErrorMessages();
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].quadratic", m_PointLights[i].constantLinearQuadraticPadding.z);
+						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
 						CheckGLErrorMessages();
 
-						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);
+						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].constantLinearQuadraticPadding", m_PointLights[i].constantLinearQuadraticPadding);
 						CheckGLErrorMessages();
-						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].diffuseCol", m_PointLights[i].diffuseCol);
+
+						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].ambientCol", m_PointLights[i].ambientCol);
 						CheckGLErrorMessages();
-						SetVec3f(material->shaderIndex, "pointLights[" + numberStr + "].specularCol", m_PointLights[i].specularCol);
+						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].diffuseCol", m_PointLights[i].diffuseCol);
+						CheckGLErrorMessages();
+						SetVec4f(material->shaderIndex, "pointLights[" + numberStr + "].specularCol", m_PointLights[i].specularCol);
 						CheckGLErrorMessages();
 					}
 					else
 					{
-						SetFloat(material->shaderIndex, "pointLights[" + numberStr + "].constant", 0.0f);
+						SetUInt(material->shaderIndex, "pointLights[" + numberStr + "].enabled", 0);
 						CheckGLErrorMessages();
 					}
 				}
@@ -1111,6 +1112,16 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glUniform1f(location, val);
+			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::SetUInt(ShaderID shaderID, const std::string& valName, glm::uint val)
+		{
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			if (location == -1) Logger::LogWarning("Unsigned int " + valName + " couldn't be found!");
+			CheckGLErrorMessages();
+
+			glUniform1ui(location, val);
 			CheckGLErrorMessages();
 		}
 
