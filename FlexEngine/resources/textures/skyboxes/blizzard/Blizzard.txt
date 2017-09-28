@@ -1,0 +1,93 @@
+
+                          _// _//    _//                                           _//
+                          _/    _//  _// _/                                        _//
+                          _/     _// _//   _//// _//_//// _//   _//    _/ _///     _//
+                          _/// _/    _//_//     _//      _//  _//  _//  _//    _// _//
+                          _/     _// _//_//   _//      _//   _//   _//  _//   _/   _//
+                          _/      _/ _//_//  _//      _//    _//   _//  _//   _/   _//
+                          _//// _// _///_//_////////_////////  _// _///_///    _// _//
+
+
+                                                                                                     
+
+                                       From the Mind of the Mighty Pete !
+
+
+                                                    Enjoy !
+
+            
+                                     http://www.geocities.com/petes-oasis/
+
+
+                                    http://www.planethalflife.com/wadfather/
+
+                    
+                                  
+
+
+                                                   $,  $,     ,            
+                                                   "ss.$ss. .s'     
+                                           ,     .ss$$$$$$$$$$s,              
+                                           $. s$$$$$$$$$$$$$$`$$Ss       
+                                           "$$$$$$$$$$$$$$$$$$o$$$       ,       
+                                          s$$$$$$$$$$$$$$$$$$$$$$$$s,  ,s  
+                                         s$$$$$$$$$"$$$$$$""""$$$$$$"$$$$$,     
+                                         s$$$$$$$$$$s""$$$$ssssss"$$$$$$$$"   
+                                        s$$$$$$$$$$'         `"""ss"$"$s""      
+                                        s$$$$$$$$$$,              `"""""$  .s$$s
+                                        s$$$$$$$$$$$$s,...               `s$$'  `
+                                    `ssss$$$$$$$$$$$$$$$$$$$$####s.     .$$"$.   , s-
+                                      `""""$$$$$$$$$$$$$$$$$$$$#####$$$$$$"     $.$'
+                                            "$$$$$$$$$$$$$$$$$$$$$####s""     .$$$|
+                                             "$$$$$$$$$$$$$$$$$$$$$$$$##s    .$$" $ 
+                                              $$""$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"   `
+                                             $$"  "$"$$$$$$$$$$$$$$$$$$$$S""""' 
+                                        ,   ,"     '  $$$$$$$$$$$$$$$$####s  
+                                        $.          .s$$$$$$$$$$$$$$$$$####"
+                            ,           "$s.   ..ssS$$$$$$$$$$$$$$$$$$$####"
+                            $           .$$$S$$$$$$$$$$$$$$$$$$$$$$$$#####"
+                            Ss     ..sS$$$$$$$$$$$$$$$$$$$$$$$$$$$######""
+                             "$$sS$$$$$$$$$$$$$$$$$$$$$$$$$$$########"
+                      ,      s$$$$$$$$$$$$$$$$$$$$$$$$#########""'
+                      $    s$$$$$$$$$$$$$$$$$$$$$#######""'      s'         ,
+                      $$..$$$$$$$$$$$$$$$$$$######"'       ....,$$....    ,$
+                       "$$$$$$$$$$$$$$$######"' ,     .sS$$$$$$$$$$$$$$$$s$$
+                         $$$$$$$$$$$$#####"     $, .s$$$$$$$$$$$$$$$$$$$$$$$$s.
+              )          $$$$$$$$$$$#####'      `$$$$$$$$$###########$$$$$$$$$$$.
+             ((          $$$$$$$$$$$#####       $$$$$$$$###"       "####$$$$$$$$$$ 
+             ) \         $$$$$$$$$$$$####.     $$$$$$###"            "###$$$$$$$$$   s'
+            (   )        $$$$$$$$$$$$$####.   $$$$$###"  The Mighty    ####$$$$$$$$s$$'
+            )  ( (       $$"$$$$$$$$$$$#####.$$$$$###'      Pete      .###$$$$$$$$$$"
+            (  )  )   _,$"   $$$$$$$$$$$$######.$$##'              .###$$$$$$$$$$
+            ) (  ( \.         "$$$$$$$$$$$$$#######,,,.          ..####$$$$$$$$$$$"
+           (   )$ )  )        ,$$$$$$$$$$$$$$$$$$####################$$$$$$$$$$$"        
+           (   ($$  ( \     _sS"  `"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$S$$,       
+            )  )$$$s ) )  .      .   `$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"'  `$$   
+             (   $$$Ss/  .$,    .$,,s$$$$$$##S$$$$$$$$$$$$$$$$$$$$$$$$S""        ' 
+               \)_$$$$$$$$$$$$$$$$$$$$$$$##"  $$        `$$.        `$$.
+                   `"S$$$$$$$$$$$$$$$$$#"      $          `$          `$
+                       `"""""""""""""'         '           '           '
+
+
+You do not have the right to convert this skybox to a lossy type like jpg. Sorry but if I waited for 4 days for it
+ to render you can put up with the bigger cleaner files. Besides it only saves disk space, it takes just as much space
+ in memory and and is actually slower to convert on the game engine.
+
+
+This box was suggested by somebody on the forum at the Wadfather. He noticed that there was no forest skyboxes.
+There is a reason for that in that making a entire forest is really difficult. Trees are huge poly pigs and having
+hundreds of them in a scene and then rendering it is almost impossible. So I sugessted Mr. Gib give it a try to render !
+Ha Ha, Well he seeing that comming countered with a challenge that we both should try to make one and the best sky wins
+sort of. Well I couldn't put in the time so I declined at first. So Mr. Gib extended the deadline by a month. Low and 
+behold I found the time and had it done by the original first date but Mr. Gib's skybox was no were to be seen.
+So I just kept rendering it over and over again. Oh well we got lots of forests now !  They're all winter though.
+
+ 
+
+Have Fun !
+
+Your Pal
+
+The Mighty Pete
+
+
