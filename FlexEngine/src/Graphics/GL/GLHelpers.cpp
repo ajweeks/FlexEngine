@@ -2,6 +2,7 @@
 #if COMPILE_OPEN_GL
 
 #include "Graphics/GL/GLHelpers.h"
+#include "Helpers.h"
 
 #include <sstream>
 #include <fstream>
@@ -89,7 +90,7 @@ namespace flex
 		}
 
 
-		bool LoadGLShaders(glm::uint program, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath)
+		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader)
 		{
 			CheckGLErrorMessages();
 
@@ -98,48 +99,17 @@ namespace flex
 
 			GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 			CheckGLErrorMessages();
-
-			std::stringstream vertexShaderCodeSS;
-			std::ifstream vertexShaderFileStream(vertexShaderFilePath, std::ios::in);
-			if (vertexShaderFileStream.is_open())
-			{
-				std::string line;
-				while (getline(vertexShaderFileStream, line))
-				{
-					vertexShaderCodeSS << "\n" << line;
-				}
-				vertexShaderFileStream.close();
-			}
-			else
-			{
-				Logger::LogError("Could not open vertex shader: " + vertexShaderFilePath);
-				return 0;
-			}
-			std::string vertexShaderCode = vertexShaderCodeSS.str();
-
-			std::stringstream fragmentShaderCodeSS;
-			std::ifstream fragmentShaderFileStream(fragmentShaderFilePath, std::ios::in);
-			if (fragmentShaderFileStream.is_open())
-			{
-				std::string line;
-				while (getline(fragmentShaderFileStream, line))
-				{
-					fragmentShaderCodeSS << "\n" << line;
-				}
-				fragmentShaderFileStream.close();
-			}
-			else
-			{
-				Logger::LogError("Could not open fragment shader: " + fragmentShaderFilePath);
-				return 0;
-			}
-			std::string fragmentShaderCode = fragmentShaderCodeSS.str();
+			
+			shader.vertexShaderCode = ReadFile(shader.vertexShaderFilePath);
+			shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
+			shader.fragmentShaderCode = ReadFile(shader.fragmentShaderFilePath);
+			shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
 
 			GLint result = GL_FALSE;
 			int infoLogLength;
 
 			// Compile vertex shader
-			char const* vertexSourcePointer = vertexShaderCode.c_str();
+			char const* vertexSourcePointer = shader.vertexShaderCode.data(); // TODO: Test
 			glShaderSource(vertexShaderID, 1, &vertexSourcePointer, NULL);
 			glCompileShader(vertexShaderID);
 
@@ -154,7 +124,7 @@ namespace flex
 			}
 
 			// Compile Fragment Shader
-			char const* fragmentSourcePointer = fragmentShaderCode.c_str();
+			char const* fragmentSourcePointer = shader.fragmentShaderCode.data();
 			glShaderSource(fragmentShaderID, 1, &fragmentSourcePointer, NULL);
 			glCompileShader(fragmentShaderID);
 

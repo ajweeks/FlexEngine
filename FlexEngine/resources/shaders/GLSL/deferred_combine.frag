@@ -23,11 +23,11 @@ struct PointLight
 #define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
-uniform sampler2D in_PositionSampler;
-uniform sampler2D in_NormalSampler;
-uniform sampler2D in_DiffuseSpecularSampler;
+uniform sampler2D positionFrameBufferSampler;
+uniform sampler2D normalFrameBufferSampler;
+uniform sampler2D diffuseSpecularFrameBufferSampler;
 
-uniform vec4 in_CamPos;
+uniform vec4 camPos;
 
 in vec2 ex_TexCoord;
 
@@ -73,15 +73,15 @@ vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSa
 void main()
 {
     // retrieve data from gbuffer
-    vec3 worldPos = texture(in_PositionSampler, ex_TexCoord).rgb;
-    vec3 normal = texture(in_NormalSampler, ex_TexCoord).rgb;
-    vec3 diffuse = texture(in_DiffuseSpecularSampler, ex_TexCoord).rgb;
-    float specular = texture(in_DiffuseSpecularSampler, ex_TexCoord).a;
+    vec3 worldPos = texture(positionFrameBufferSampler, ex_TexCoord).rgb;
+    vec3 normal = texture(normalFrameBufferSampler, ex_TexCoord).rgb;
+    vec3 diffuse = texture(diffuseSpecularFrameBufferSampler, ex_TexCoord).rgb;
+    float specular = texture(diffuseSpecularFrameBufferSampler, ex_TexCoord).a;
 
 	float specStrength = 0.5;
 	float specShininess = 32.0;
 	
-	vec3 viewDir = normalize(in_CamPos.xyz - worldPos);
+	vec3 viewDir = normalize(camPos.xyz - worldPos);
 
 	vec3 result = vec3(0.0);
 	if (dirLight.enabled) result += DoDirectionalLighting(dirLight, diffuse, specular, normal, viewDir, specStrength, specShininess);

@@ -12,23 +12,34 @@ struct PointLight
 #define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
-// struct Material
-// {
-// 	sampler2D albedo;
-// 	sampler2D roughness;
-// 	sampler2D metallic;
-// 	sampler2D ao;
-// };
-// uniform Material material;
+// TODO: Merge samplers together
+struct Material
+{
+	bool useAlbedoSampler;
+	vec3 constAlbedo;
 
-uniform vec4 in_CamPos;
+	bool useMetallicSampler;
+	float constMetallic;
 
-uniform vec3 albedo;
-uniform float metallic;
-uniform float roughness;
-uniform float ao;
+	bool useRoughnessSampler;
+	float constRoughness;
 
-in vec2 ex_TexCoords;
+	bool useAOSampler;
+	float constAO;
+
+	bool useNormalSampler;
+};
+uniform Material material;
+
+uniform sampler2D albedoSampler;
+uniform sampler2D metallicSampler;
+uniform sampler2D roughnessSampler;
+uniform sampler2D aoSampler;
+uniform sampler2D normalSampler;
+
+uniform vec4 camPos;
+
+in vec2 ex_TexCoord;
 in vec3 ex_WorldPos;
 in mat3 ex_TBN;
 
@@ -78,13 +89,21 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 void main() 
 {
-	vec3 Normal = ex_TBN[2];
+	vec3 albedo = material.useAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(material.constAlbedo);
+	float metallic = material.useMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : material.constMetallic;
+	float roughness = material.useRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : material.constRoughness;
+	float ao = material.useAOSampler ? texture(aoSampler, ex_TexCoord).r : material.constAO;
+
+	vec3 Normal = material.useNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
 
 	vec3 N = normalize(Normal);
-	vec3 V = normalize(in_CamPos.xyz - ex_WorldPos);
+	vec3 V = normalize(camPos.xyz - ex_WorldPos);
 
 	// Visualize normals:
 	//fragColor = vec4(N, 1); return;
+
+	// Visualize texCoords:
+	//fragColor = vec4(ex_TexCoord, 0, 1); return;
 
 	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
 	vec3 F0 = vec3(0.04);

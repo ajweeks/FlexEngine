@@ -12,13 +12,13 @@ out vec2 ex_TexCoord;
 out vec3 ex_Color;
 out mat3 ex_TBN;
 
-uniform mat4 in_Model;
-uniform mat4 in_ModelInvTranspose;
-uniform mat4 in_ViewProjection;
+uniform mat4 model;
+uniform mat4 modelInvTranspose;
+uniform mat4 viewProjection;
 
 void main()
 {
-    vec4 worldPos = in_Model * vec4(in_Position, 1.0);
+    vec4 worldPos = model * vec4(in_Position, 1.0);
     ex_FragPos = worldPos.xyz; 
 	
 	ex_TexCoord = in_TexCoord;
@@ -27,11 +27,11 @@ void main()
 
    	// Convert normal to model-space and prevent non-uniform scale issues
 	ex_TBN = mat3(
-		normalize(mat3(in_ModelInvTranspose) * in_Tangent), 
-		normalize(mat3(in_ModelInvTranspose) * in_Bitangent), 
-		normalize(mat3(in_ModelInvTranspose) * in_Normal));
+		normalize(mat3(modelInvTranspose) * in_Tangent), 
+		normalize(mat3(modelInvTranspose) * in_Bitangent), 
+		normalize(mat3(modelInvTranspose) * in_Normal));
 
-    gl_Position = in_ViewProjection * worldPos;
+    gl_Position = viewProjection * worldPos;
 
 	// Convert normal to model-space and prevent non-uniform scale issues
 	//ex_TBN = mat3(

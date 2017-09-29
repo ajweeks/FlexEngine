@@ -149,7 +149,7 @@ namespace flex
 			deferredQuadVertexBufferData.VertexStride = CalculateVertexStride(deferredQuadVertexBufferData.Attributes);
 
 			GraphicsPipelineCreateInfo deferredPipelineCreateInfo = {};
-			deferredPipelineCreateInfo.shaderIndex = deferredCombineShaderIndex;
+			deferredPipelineCreateInfo.shaderID = deferredCombineShaderIndex;
 			deferredPipelineCreateInfo.descriptorSetLayoutIndex = deferredCombineShaderIndex;
 			deferredPipelineCreateInfo.vertexAttributes = deferredQuadVertexBufferData.Attributes;
 			deferredPipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -170,7 +170,7 @@ namespace flex
 			offscreenDescriptorSetCreateInfo.uniformBufferIndex = deferredCombineShaderIndex;
 			offscreenDescriptorSetCreateInfo.positionFrameBufferView = &offScreenFrameBuf->position.view;
 			offscreenDescriptorSetCreateInfo.normalFrameBufferView = &offScreenFrameBuf->normal.view;
-			offscreenDescriptorSetCreateInfo.albedoFrameBufferView = &offScreenFrameBuf->albedo.view;
+			offscreenDescriptorSetCreateInfo.diffuseSpecularFrameBufferView = &offScreenFrameBuf->albedo.view;
 			offscreenDescriptorSetCreateInfo.descriptorSet = &m_OffscreenBufferDescriptorSet;
 			CreateDescriptorSet(&offscreenDescriptorSetCreateInfo);
 
@@ -279,15 +279,17 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			Material mat = {};
+			VulkanMaterial mat = {};
+			mat.material = {};
 
-			mat.shaderIndex = createInfo->shaderIndex;
-			mat.descriptorSetLayoutIndex = createInfo->shaderIndex;
-			mat.name = createInfo->name;
-			mat.diffuseTexturePath = createInfo->diffuseTexturePath;
-			mat.normalTexturePath = createInfo->normalTexturePath;
-			mat.specularTexturePath = createInfo->specularTexturePath;
-			mat.cubeMapFilePaths = createInfo->cubeMapFilePaths;
+			mat.material.shaderID = createInfo->shaderID;
+			mat.material.name = createInfo->name;
+			mat.material.diffuseTexturePath = createInfo->diffuseTexturePath;
+			mat.material.normalTexturePath = createInfo->normalTexturePath;
+			mat.material.specularTexturePath = createInfo->specularTexturePath;
+			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
+
+			mat.descriptorSetLayoutIndex = createInfo->shaderID;
 
 			if (createInfo->diffuseTexturePath == m_BrickDiffuseTexture->filePath)
 			{
@@ -322,7 +324,7 @@ namespace flex
 				{
 					CreateVulkanCubemap(createInfo->cubeMapFilePaths, &m_SkyboxTexture);
 					mat.cubemapTexture = m_SkyboxTexture;
-					mat.useCubemapTexture = true;
+					mat.material.useCubemapTexture = true;
 				}
 				else // A skybox has already been created
 				{
@@ -354,7 +356,7 @@ namespace flex
 			renderObject->materialID = createInfo->materialID;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
 			renderObject->info.name = createInfo->name;
-			renderObject->info.materialName = m_LoadedMaterials[renderObject->materialID].name;
+			renderObject->info.materialName = m_LoadedMaterials[renderObject->materialID].material.name;
 			renderObject->info.transform = createInfo->transform;
 
 			if (createInfo->indices != nullptr)
@@ -631,7 +633,7 @@ namespace flex
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 
-			pipelineCreateInfo.shaderIndex = shaderIndex;
+			pipelineCreateInfo.shaderID = shaderIndex;
 			pipelineCreateInfo.vertexAttributes = vertexBufferData.Attributes;
 			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
@@ -1184,12 +1186,12 @@ namespace flex
 			RenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
 
-			Material* material = &m_LoadedMaterials[renderObject->materialID];
+			VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 
 			DescriptorSetCreateInfo createInfo = {};
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 			createInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
-			createInfo.uniformBufferIndex = material->shaderIndex;
+			createInfo.uniformBufferIndex = material->material.shaderID;
 			createInfo.diffuseTexture = m_LoadedMaterials[renderObject->materialID].diffuseTexture;
 			createInfo.normalTexture = m_LoadedMaterials[renderObject->materialID].normalTexture;
 			createInfo.specularTexture = m_LoadedMaterials[renderObject->materialID].specularTexture;
@@ -1210,14 +1212,14 @@ namespace flex
 			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &allocInfo, createInfo->descriptorSet));
 
 
-			Uniform::Type constantBufferElements = m_UniformBuffers[createInfo->uniformBufferIndex].constantData.elements;
-			Uniform::Type dynamicBufferElements = m_UniformBuffers[createInfo->uniformBufferIndex].dynamicData.elements;
+			Uniforms constantBufferUniforms = m_Shaders[createInfo->uniformBufferIndex].constantBufferUniforms;
+			Uniforms dynamicBufferUniforms = m_Shaders[createInfo->uniformBufferIndex].dynamicBufferUniforms;
 
 			UniformBuffer& uniformBuffer = m_UniformBuffers[createInfo->uniformBufferIndex];
 
 			struct DescriptorSetInfo
 			{
-				Uniform::Type uniformType;
+				std::string uniformName;
 				VkDescriptorType descriptorType;
 
 				VkBuffer buffer = VK_NULL_HANDLE;
@@ -1234,46 +1236,66 @@ namespace flex
 
 			// TODO: Clean up nullptr checks somehow?
 			DescriptorSetInfo descriptorSets[] = {
-				{ Uniform::Type::UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				{ "uniformBufferConstant", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				uniformBuffer.constantBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) },
 
-				{ Uniform::Type::UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				{ "uniformBufferDynamic", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 				uniformBuffer.dynamicBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size() },
 
-				{ Uniform::Type::DIFFUSE_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "diffuseSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->diffuseTexture ? createInfo->diffuseTexture->imageView : 0u,
 				createInfo->diffuseTexture ? createInfo->diffuseTexture->sampler : 0u },
 
-				{ Uniform::Type::NORMAL_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "normalSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->normalTexture ? createInfo->normalTexture->imageView : 0u,
 				createInfo->normalTexture ? createInfo->normalTexture->sampler : 0u },
 
-				{ Uniform::Type::SPECULAR_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "specularSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->specularTexture ? createInfo->specularTexture->imageView : 0u,
 				createInfo->specularTexture ? createInfo->specularTexture->sampler : 0u },
 
-				{ Uniform::Type::CUBEMAP_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "cubemapSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->cubemapTexture ? createInfo->cubemapTexture->imageView : 0u,
 				createInfo->cubemapTexture ? createInfo->cubemapTexture->sampler : 0u },
 
-				{ Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "positionFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->positionFrameBufferView ? *createInfo->positionFrameBufferView : 0u,
 				colorSampler },
 
-				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "normalFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->normalFrameBufferView ? *createInfo->normalFrameBufferView : 0u,
 				colorSampler },
 
-				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "diffuseSpecularFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->albedoFrameBufferView ? *createInfo->albedoFrameBufferView : 0u,
+				createInfo->diffuseSpecularFrameBufferView ? *createInfo->diffuseSpecularFrameBufferView : 0u,
 				colorSampler },
+
+				{ "albedoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->albedoTexture ? createInfo->albedoTexture->imageView : 0u,
+				createInfo->albedoTexture ? createInfo->albedoTexture->sampler : 0u },
+
+				{ "metallicFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->metallicTexture ? createInfo->metallicTexture->imageView : 0u,
+				createInfo->metallicTexture ? createInfo->metallicTexture->sampler : 0u },
+
+				{ "roughnessFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->roughnessTexture ? createInfo->roughnessTexture->imageView : 0u,
+				createInfo->roughnessTexture ? createInfo->roughnessTexture->sampler : 0u },
+
+				{ "aoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->aoTexture ? createInfo->aoTexture->imageView : 0u,
+				createInfo->aoTexture ? createInfo->aoTexture->sampler : 0u },
 			};
 			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
 
@@ -1285,8 +1307,8 @@ namespace flex
 
 			for (size_t i = 0; i < descSetCount; ++i)
 			{
-				if (Uniform::HasUniform(constantBufferElements, descriptorSets[i].uniformType) ||
-					Uniform::HasUniform(dynamicBufferElements, descriptorSets[i].uniformType))
+				if (constantBufferUniforms.HasUniform(descriptorSets[i].uniformName) ||
+					dynamicBufferUniforms.HasUniform(descriptorSets[i].uniformName))
 				{
 					descriptorSets[i].bufferInfo = {};
 					descriptorSets[i].bufferInfo.buffer = descriptorSets[i].buffer;
@@ -1339,41 +1361,53 @@ namespace flex
 			m_DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 			VkDescriptorSetLayout* descriptorSetLayout = &m_DescriptorSetLayouts.back();
 
-			UniformBuffer* uniformBuffer = &m_UniformBuffers[shaderIndex];
+			Shader* shader = &m_Shaders[shaderIndex];
 
 			struct DescriptorSetInfo
 			{
-				Uniform::Type uniformType;
+				std::string uniformName;
 				VkDescriptorType descriptorType;
 				VkShaderStageFlags shaderStageFlags;
 			};
 
 			static DescriptorSetInfo descriptorSets[] = {
-				{ Uniform::Type::UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				{ "uniformBufferConstant", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				{ "uniformBufferDynamic", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::DIFFUSE_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "diffuseSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::NORMAL_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "normalSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::SPECULAR_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "specularSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::CUBEMAP_TEXTURE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "cubemapSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "positionFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "normalFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ "diffuseSpecularFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "albedoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "metallicFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "roughnessFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "aoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 			};
 			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
@@ -1383,8 +1417,8 @@ namespace flex
 
 			for (size_t i = 0; i < descSetCount; ++i)
 			{
-				if (Uniform::HasUniform(uniformBuffer->constantData.elements, descriptorSets[i].uniformType) ||
-					Uniform::HasUniform(uniformBuffer->dynamicData.elements, descriptorSets[i].uniformType))
+				if (shader->constantBufferUniforms.HasUniform(descriptorSets[i].uniformName) ||
+					shader->dynamicBufferUniforms.HasUniform(descriptorSets[i].uniformName))
 				{
 					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
 					descSetLayoutBinding.binding = binding;
@@ -1431,11 +1465,11 @@ namespace flex
 		{
 			RenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
-			Material* material = &m_LoadedMaterials[renderObject->materialID];
-			Shader& shader = m_Shaders[material->shaderIndex];
+			VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
+			Shader& shader = m_Shaders[material->material.shaderID];
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.shaderIndex = material->shaderIndex;
+			pipelineCreateInfo.shaderID = material->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = renderObject->vertexBufferData->Attributes;
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
@@ -1453,7 +1487,7 @@ namespace flex
 
 		void VulkanRenderer::CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo)
 		{
-			Shader& shader = m_Shaders[createInfo->shaderIndex];
+			Shader& shader = m_Shaders[createInfo->shaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(shader.vertexShaderCode, vertShaderModule))
@@ -2322,17 +2356,17 @@ namespace flex
 					RenderObject* renderObject = GetRenderObject(j);
 					if (!renderObject) continue;
 
-					Material* material = &m_LoadedMaterials[renderObject->materialID];
+					VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 
 					// Only render non-deferred (forward) objects in this pass
-					if (m_Shaders[material->shaderIndex].deferred) continue;
+					if (m_Shaders[material->material.shaderID].deferred) continue;
 					
-					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[material->shaderIndex].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[material->material.shaderID].vertexBuffer->m_Buffer, offsets);
 
 
-					if (m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Size != 0)
+					if (m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Size != 0)
 					{
-						vkCmdBindIndexBuffer(m_CommandBuffers[i], m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdBindIndexBuffer(m_CommandBuffers[i], m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 					}
 
 					vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
@@ -2414,16 +2448,16 @@ namespace flex
 				RenderObject* renderObject = GetRenderObject(j);
 				if (!renderObject) continue;
 
-				Material* material = &m_LoadedMaterials[renderObject->materialID];
+				VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 
 				// Only render deferred objects in this pass
-				if (!m_Shaders[material->shaderIndex].deferred) continue;
+				if (!m_Shaders[material->material.shaderID].deferred) continue;
 
-				vkCmdBindVertexBuffers(offScreenCmdBuffer, 0, 1, &m_VertexIndexBufferPairs[material->shaderIndex].vertexBuffer->m_Buffer, offsets);
+				vkCmdBindVertexBuffers(offScreenCmdBuffer, 0, 1, &m_VertexIndexBufferPairs[material->material.shaderID].vertexBuffer->m_Buffer, offsets);
 
-				if (m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Size != 0)
+				if (m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Size != 0)
 				{
-					vkCmdBindIndexBuffer(offScreenCmdBuffer, m_VertexIndexBufferPairs[material->shaderIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+					vkCmdBindIndexBuffer(offScreenCmdBuffer, m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 				}
 
 				vkCmdBindPipeline(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
@@ -2728,7 +2762,7 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						RenderObject* renderObject = GetRenderObject(j);
-						if (renderObject && m_LoadedMaterials[renderObject->materialID].shaderIndex == i)
+						if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == i)
 						{
 							requiredMemory += renderObject->vertexBufferData->BufferSize;
 						}
@@ -2761,7 +2795,7 @@ namespace flex
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				RenderObject* renderObject = GetRenderObject(i);
-				if (renderObject && m_LoadedMaterials[renderObject->materialID].shaderIndex == shaderIndex)
+				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderIndex)
 				{
 					renderObject->vertexOffset = vertexCount;
 
@@ -2817,7 +2851,7 @@ namespace flex
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				RenderObject* renderObject = GetRenderObject(i);
-				if (renderObject && m_LoadedMaterials[renderObject->materialID].shaderIndex == shaderIndex && renderObject->indexed)
+				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderIndex && renderObject->indexed)
 				{
 					renderObject->indexOffset = indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -2864,78 +2898,69 @@ namespace flex
 
 			glm::uint shaderIndex = 0;
 
-			// Simple
+			// Deferred Simple
 			m_Shaders[shaderIndex].numAttachments = 3;
 			m_Shaders[shaderIndex].deferred = true;
-			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-				Uniform::Type::VIEW_PROJECTION_MAT4);
 
-			// TODO: Remove duplication of data (shaders also store uniform elements)
-			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-				Uniform::Type::MODEL_MAT4 |
-				Uniform::Type::MODEL_INV_TRANSPOSE_MAT4 |
-				Uniform::Type::USE_DIFFUSE_TEXTURE_INT |
-				Uniform::Type::DIFFUSE_TEXTURE_SAMPLER |
-				Uniform::Type::USE_NORMAL_TEXTURE_INT |
-				Uniform::Type::NORMAL_TEXTURE_SAMPLER |
-				Uniform::Type::USE_SPECULAR_TEXTURE_INT |
-				Uniform::Type::SPECULAR_TEXTURE_SAMPLER);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("viewProjection", true);
+
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useDiffuseSampler", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("diffuseSampler", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("normalSampler", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useSpecularSampler", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("specularSampler", true);
 			++shaderIndex;
 
 			// Color
 			m_Shaders[shaderIndex].deferred = false;
-			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-				Uniform::Type::VIEW_PROJECTION_MAT4);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("viewProjection", true);
 			
-			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-				Uniform::Type::MODEL_MAT4);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("model", true);
 			++shaderIndex;
 
 			// ImGui
 			m_Shaders[shaderIndex].deferred = false;
-			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type::NONE;
+			m_Shaders[shaderIndex].constantBufferUniforms = {};
 
-			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-				Uniform::Type::DIFFUSE_TEXTURE_SAMPLER
-			);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("diffuseSampler", true);
 			++shaderIndex;
 
-			//// Skybox
+			// Skybox
 			m_Shaders[shaderIndex].deferred = false;
-			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-				Uniform::Type::VIEW_MAT4 |
-				Uniform::Type::PROJECTION_MAT4);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("view", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("projection", true);
 			
-			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_DYNAMIC |
-				Uniform::Type::MODEL_MAT4 |
-				Uniform::Type::USE_CUBEMAP_TEXTURE_INT |
-				Uniform::Type::CUBEMAP_TEXTURE_SAMPLER);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useCubemapSampler", true);
+			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("cubemapSampler", true);
 			++shaderIndex;
 
 			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
 			// TODO: Specify that this is only used in the frag shader here
-			m_UniformBuffers[shaderIndex].constantData.elements = Uniform::Type(
-				Uniform::Type::UNIFORM_BUFFER_CONSTANT |
-				Uniform::Type::CAM_POS_VEC4 |
-				Uniform::Type::DIR_LIGHT |
-				Uniform::Type::POINT_LIGHTS_VEC |
-				Uniform::Type::POSITION_FRAME_BUFFER_SAMPLER |
-				Uniform::Type::NORMAL_FRAME_BUFFER_SAMPLER |
-				Uniform::Type::DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("camPos", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("dirLight", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("pointLights", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("positionFrameBufferSampler", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("normalFrameBufferSampler", true);
+			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("diffuseSpecularFrameBufferSampler", true);
 
-			m_UniformBuffers[shaderIndex].dynamicData.elements = Uniform::Type::NONE;
+			m_Shaders[shaderIndex].dynamicBufferUniforms = {};
 			++shaderIndex;
+
 
 			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 			{
-				m_UniformBuffers[i].constantData.size = Uniform::CalculateSize(m_UniformBuffers[i].constantData.elements, m_PointLights.size());
+				m_UniformBuffers[i].constantData.size = m_Shaders[i].constantBufferUniforms.CalculateSize(m_PointLights.size());
 				if (m_UniformBuffers[i].constantData.size > 0)
 				{
 					m_UniformBuffers[i].constantData.data = (float*)malloc(m_UniformBuffers[i].constantData.size);
@@ -2945,7 +2970,7 @@ namespace flex
 						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 				}
 
-				m_UniformBuffers[i].dynamicData.size = Uniform::CalculateSize(m_UniformBuffers[i].dynamicData.elements, m_PointLights.size());
+				m_UniformBuffers[i].dynamicData.size = m_Shaders[i].dynamicBufferUniforms.CalculateSize(m_PointLights.size());
 				if (m_UniformBuffers[i].dynamicData.size > 0 && m_RenderObjects.size() > 0)
 				{
 					const size_t dynamicBufferSize = AllocateUniformBuffer(
@@ -3351,66 +3376,67 @@ namespace flex
 			{
 				glm::uint index = 0;
 
+				Uniforms& constantUniforms = m_Shaders[i].constantBufferUniforms;
 				VulkanUniformBufferObjectData& constantData = m_UniformBuffers[i].constantData;
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::PROJECTION_MAT4))
+				if (constantUniforms.HasUniform("projection"))
 				{
 					memcpy(&constantData.data[index], &proj[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_MAT4))
+				if (constantUniforms.HasUniform("view"))
 				{
 					memcpy(&constantData.data[index], &view[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_INV_MAT4))
+				if (constantUniforms.HasUniform("viewInv"))
 				{
 					memcpy(&constantData.data[index], &viewInv[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_PROJECTION_MAT4))
+				if (constantUniforms.HasUniform("viewProj"))
 				{
 					memcpy(&constantData.data[index], &viewProj[0][0], sizeof(glm::mat4));
 					index += 16;
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::MODEL_MAT4))
+				if (constantUniforms.HasUniform("model"))
 				{
 					Logger::LogError("Constant uniform buffer contains model matrix, which should be in the dynamic uniform buffer");
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
+				if (constantUniforms.HasUniform("modelInvTranspose"))
 				{
 					Logger::LogError("Constant uniform buffer contains modelInvTranspose matrix, which should be in the dynamic uniform buffer");
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4))
+				if (constantUniforms.HasUniform("modelViewProjection"))
 				{
 					Logger::LogError("Constant uniform buffer contains MVP matrix, which should be in the dynamic uniform buffer");
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::CAM_POS_VEC4))
+				if (constantUniforms.HasUniform("camPos"))
 				{
 					memcpy(&constantData.data[index], &camPos[0], sizeof(glm::vec4));
 					index += 4;
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::VIEW_DIR_VEC4))
+				if (constantUniforms.HasUniform("viewDir"))
 				{
 					memcpy(&constantData.data[index], &viewDir[0], sizeof(glm::vec4));
 					index += 4;
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::DIR_LIGHT))
+				if (constantUniforms.HasUniform("dirLight"))
 				{
 					memcpy(&constantData.data[index], &m_DirectionalLight, sizeof(m_DirectionalLight));
 					index += sizeof(m_DirectionalLight) / 4;
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::POINT_LIGHTS_VEC))
+				if (constantUniforms.HasUniform("pointLights"))
 				{
 					for (size_t j = 0; j < m_PointLights.size(); ++j)
 					{
@@ -3419,24 +3445,12 @@ namespace flex
 					}
 				}
 
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::AMBIENT_COLOR_VEC4))
-				{
-					memcpy(&constantData.data[index], &m_SceneInfo.m_AmbientColor[0], sizeof(glm::vec4));
-					index += 4;
-				}
-
-				if (Uniform::HasUniform(constantData.elements, Uniform::Type::SPECULAR_COLOR_VEC4))
-				{
-					memcpy(&constantData.data[index], &m_SceneInfo.m_SpecularColor[0], sizeof(glm::vec4));
-					index += 4;
-				}
-
 				glm::uint size = constantData.size;
 
 #if  _DEBUG
 				// All three size calculations should be the same
 				glm::uint calculatedSize1 = index * 4;
-				glm::uint calculatedSize2 = Uniform::CalculateSize(constantData.elements, m_PointLights.size());
+				glm::uint calculatedSize2 = constantUniforms.CalculateSize(m_PointLights.size());
 				assert(calculatedSize1 == calculatedSize2 &&
 					calculatedSize1 == size);
 #endif // _DEBUG
@@ -3448,59 +3462,67 @@ namespace flex
 
 		void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 		{
-
-
 			UNREFERENCED_PARAMETER(gameContext);
 
 			RenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
-			Material* material = &m_LoadedMaterials[renderObject->materialID];
+			VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
+			Shader* shader = &m_Shaders[material->material.shaderID];
 
 			const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
-
+			glm::mat4 proj = gameContext.camera->GetProjection();
+			glm::mat4 view = gameContext.camera->GetView();
+			glm::mat4 modelViewProjection = proj * view * model;
 			glm::uint useDiffuseTexture = material->diffuseTexture == nullptr ? 0 : 1;
 			glm::uint useNormalTexture = material->normalTexture == nullptr ? 0 : 1;
 			glm::uint useSpecularTexture = material->specularTexture == nullptr ? 0 : 1;
-			glm::uint useCubemapTexture = material->useCubemapTexture ? 1 : 0;
+			glm::uint useCubemapTexture = material->material.useCubemapTexture ? 1 : 0;
 
-			const int uniformBufferIndex = material->shaderIndex;
+			const int uniformBufferIndex = material->material.shaderID;
 			UniformBuffer& uniformBuffer = m_UniformBuffers[uniformBufferIndex];
+			Uniforms dynamicUniforms = shader->dynamicBufferUniforms;
 
 			glm::uint offset = renderID * uniformBuffer.dynamicData.size;
 			glm::uint index = 0;
 
 			// TODO: Flatten into single loop over array
-			if (Uniform::HasUniform(uniformBuffer.dynamicData.elements, Uniform::Type::MODEL_MAT4))
+			if (dynamicUniforms.HasUniform("model"))
 			{
 				memcpy(&uniformBuffer.dynamicData.data[offset + index], &model, sizeof(model));
 				index += 16;
 			}
 
-			if (Uniform::HasUniform(uniformBuffer.dynamicData.elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4))
+			if (dynamicUniforms.HasUniform("modelInvTranspose"))
 			{
 				memcpy(&uniformBuffer.dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose));
 				index += 16;
 			}
 
-			if (Uniform::HasUniform(uniformBuffer.dynamicData.elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT))
+			if (dynamicUniforms.HasUniform("modelViewProjection"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &modelViewProjection, sizeof(modelViewProjection));
+				index += 16;
+			}
+
+			if (dynamicUniforms.HasUniform("useDiffuseSampler"))
 			{
 				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useDiffuseTexture, sizeof(useDiffuseTexture));
 				index += 1;
 			}
 
-			if (Uniform::HasUniform(uniformBuffer.dynamicData.elements, Uniform::Type::USE_NORMAL_TEXTURE_INT))
+			if (dynamicUniforms.HasUniform("useNormalSampler"))
 			{
 				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useNormalTexture, sizeof(useNormalTexture));
 				index += 1;
 			}
 
-			if (Uniform::HasUniform(uniformBuffer.dynamicData.elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT))
+			if (dynamicUniforms.HasUniform("useSpecularSampler"))
 			{
 				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useSpecularTexture, sizeof(useSpecularTexture));
 				index += 1;
 			}
 
-			if (Uniform::HasUniform(uniformBuffer.dynamicData.elements, Uniform::Type::USE_CUBEMAP_TEXTURE_INT))
+			if (dynamicUniforms.HasUniform("useCubemapSampler"))
 			{
 				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useCubemapTexture, sizeof(useCubemapTexture));
 				index += 1;
@@ -3512,7 +3534,7 @@ namespace flex
 #if  _DEBUG
 			// All three size calculations should be the same
 			glm::uint calculatedSize1 = index * 4;
-			glm::uint calculatedSize2 = Uniform::CalculateSize(uniformBuffer.dynamicData.elements, m_PointLights.size());
+			glm::uint calculatedSize2 = dynamicUniforms.CalculateSize(m_PointLights.size());
 			assert(calculatedSize1 == calculatedSize2 &&
 				calculatedSize1 == size);
 #endif // _DEBUG

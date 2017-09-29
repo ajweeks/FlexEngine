@@ -175,7 +175,7 @@ namespace flex
 			std::vector<PointLight> m_PointLights;
 			std::vector<UniformBuffer> m_UniformBuffers;
 			std::vector<Shader> m_Shaders;
-			std::vector<Material> m_LoadedMaterials;
+			std::vector<VulkanMaterial> m_LoadedMaterials;
 
 
 			FrameBuffer* offScreenFrameBuf = nullptr;

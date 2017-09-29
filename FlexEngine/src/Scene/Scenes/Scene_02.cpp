@@ -19,10 +19,9 @@ namespace flex
 	void Scene_02::Initialize(const GameContext& gameContext)
 	{
 		// Materials
-
 		Renderer::MaterialCreateInfo skyboxMatInfo = {};
 		skyboxMatInfo.name = "Skybox";
-		skyboxMatInfo.shaderIndex = 4;
+		skyboxMatInfo.shaderID = 4;
 
 		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/ame_starfield/";
 		const std::string fileName = "ame_starfield";
@@ -38,6 +37,22 @@ namespace flex
 		};
 		const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
 
+
+		Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
+		pbrMatTexturedInfo.shaderID = 3;
+		pbrMatTexturedInfo.name = "PBR textured";
+		pbrMatTexturedInfo.useAlbedoSampler = true;
+		pbrMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
+		pbrMatTexturedInfo.useMetallicSampler= true;
+		pbrMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_metallic.png";
+		pbrMatTexturedInfo.useRoughnessSampler = true;
+		pbrMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_roughness.png";
+		pbrMatTexturedInfo.useAOSampler = true;
+		pbrMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_ao.png";
+		pbrMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
+		const MaterialID pbrMatTexturedID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatTexturedInfo);
+
+
 		const int sphereCountX = 7;
 		const int sphereCountY = 7;
 		const float sphereSpacing = 2.5f;
@@ -51,17 +66,17 @@ namespace flex
 
 			const std::string iStr = std::to_string(i);
 
-			Renderer::MaterialCreateInfo pbrMatInfo = {};
-			pbrMatInfo.shaderIndex = 3;
-			pbrMatInfo.name = "PBR simple " + iStr;
-			pbrMatInfo.albedo = glm::vec3(0.1f, 0.1f, 0.5f);
-			pbrMatInfo.metallic = float(x) / (sphereCountX - 1);
-			pbrMatInfo.roughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
-			pbrMatInfo.ao = 1.0f;
-			const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+			//Renderer::MaterialCreateInfo pbrMatInfo = {};
+			//pbrMatInfo.shaderIndex = 3;
+			//pbrMatInfo.name = "PBR simple " + iStr;
+			//pbrMatInfo.albedo = glm::vec3(0.1f, 0.1f, 0.5f);
+			//pbrMatInfo.metallic = float(x) / (sphereCountX - 1);
+			//pbrMatInfo.roughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
+			//pbrMatInfo.ao = 1.0f;
+			//const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
 
-			m_Spheres[i] = new MeshPrefab(pbrMatID, "PBR sphere " + iStr);
+			m_Spheres[i] = new MeshPrefab(pbrMatTexturedID, "PBR sphere " + iStr);
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
 			AddChild(m_Spheres[i]);

@@ -15,11 +15,9 @@ namespace flex
 {
 	namespace gl
 	{
-		struct Material
+		struct GLMaterial
 		{
-			std::string name;
-
-			glm::uint shaderIndex;
+			Renderer::Material material; // More info is stored in the generic material struct
 
 			struct UniformIDs
 			{
@@ -32,45 +30,35 @@ namespace flex
 				int projection;
 				int camPos;
 				int viewDir;
-				int ambientColor;
-				int specularColor;
 				int useDiffuseTexture;
 				int useNormalTexture;
 				int useSpecularTexture;
 				int useCubemapTexture;
-				int albedo;
-				int metallic;
-				int roughness;
-				int ao;
+				int constAlbedo;
+				int useAlbedoSampler;
+				int constMetallic;
+				int useMetallicSampler;
+				int constRoughness;
+				int useRoughnessSampler;
+				int constAO;
+				int useAOSampler;
 			};
 			UniformIDs uniformIDs;
 
-			bool useDiffuseSampler = false;
-			std::string diffuseTexturePath;
-			glm::uint diffuseTextureID;
-
-			bool useSpecularSampler = false;
-			std::string specularTexturePath;
-			glm::uint specularTextureID;
-
-			bool useNormalSampler = false;
-			std::string normalTexturePath;
-			glm::uint normalTextureID;
+			glm::uint diffuseSamplerID;
+			glm::uint specularSamplerID;
+			glm::uint normalSamplerID;
 
 			// GBuffer samplers
-			bool usePositionSampler = false;
-			glm::uint positionSamplerID;
-
-			bool useDiffuseSpecularSampler = false;
-			glm::uint diffuseSpecularSamplerID;
-
-			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-			bool useCubemapTexture = false;
-
-			glm::vec3 albedo;
-			float metallic;
-			float roughness;
-			float ao;
+			glm::uint positionFrameBufferSamplerID;
+			glm::uint normalFrameBufferSamplerID;
+			glm::uint diffuseSpecularFrameBufferSamplerID;
+			
+			// PBR samplers
+			glm::uint albedoSamplerID;
+			glm::uint metallicSamplerID;
+			glm::uint roughnessSamplerID;
+			glm::uint aoSamplerID;
 		};
 
 		struct RenderObject
@@ -103,9 +91,8 @@ namespace flex
 
 		struct UniformInfo
 		{
-			Renderer::Uniform::Type type;
-			int* id;
 			const GLchar* name;
+			int* id;
 		};
 
 		struct ViewProjectionUBO
@@ -132,7 +119,7 @@ namespace flex
 
 		void GenerateCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths);
 
-		bool LoadGLShaders(glm::uint program, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
+		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader);
 		void LinkProgram(glm::uint program);
 
 

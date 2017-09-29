@@ -80,7 +80,7 @@ namespace flex
 			void DrawRenderObjectBatch(const std::vector<RenderObject*>& batchedRenderObjects, const GameContext& gameContext);
 
 			std::vector<Shader> m_Shaders;
-			std::vector<Material> m_Materials;
+			std::vector<GLMaterial> m_Materials;
 			std::vector<RenderObject*> m_RenderObjects;
 			DirectionalLight m_DirectionalLight;
 			std::vector<PointLight> m_PointLights;
@@ -95,6 +95,7 @@ namespace flex
 			void ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
 			void ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size);
 
+			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
 
 			bool m_VSyncEnabled;

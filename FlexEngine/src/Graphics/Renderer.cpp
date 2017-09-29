@@ -12,42 +12,37 @@ namespace flex
 	{
 	}
 
-	Renderer::SceneInfo& Renderer::GetSceneInfo()
+	inline bool Renderer::Uniforms::HasUniform(const std::string& name) const
 	{
-		return m_SceneInfo;
+		return (types.find(name) != types.end());
 	}
 
-	Renderer::Uniform::Type operator|(const Renderer::Uniform::Type& lhs, const Renderer::Uniform::Type& rhs)
+	void Renderer::Uniforms::AddUniform(const std::string& name, bool value)
 	{
-		return Renderer::Uniform::Type((glm::uint)lhs | (glm::uint)rhs);
+		types.insert(std::pair<std::string, bool>(name, value));
 	}
 
-	bool Renderer::Uniform::HasUniform(Uniform::Type elements, Uniform::Type uniform)
-	{
-		return (elements & (glm::uint)uniform);
-	}
-
-	glm::uint Renderer::Uniform::CalculateSize(Type elements, int pointLightCount)
+	glm::uint Renderer::Uniforms::CalculateSize(int pointLightCount)
 	{
 		glm::uint size = 0;
 
-		if (HasUniform(elements, Uniform::Type::PROJECTION_MAT4)) size += sizeof(glm::mat4);
-		if (HasUniform(elements, Uniform::Type::VIEW_MAT4)) size += sizeof(glm::mat4);
-		if (HasUniform(elements, Uniform::Type::VIEW_INV_MAT4)) size += sizeof(glm::mat4);
-		if (HasUniform(elements, Uniform::Type::VIEW_PROJECTION_MAT4)) size += sizeof(glm::mat4);
-		if (HasUniform(elements, Uniform::Type::MODEL_MAT4)) size += sizeof(glm::mat4);
-		if (HasUniform(elements, Uniform::Type::MODEL_INV_TRANSPOSE_MAT4)) size += sizeof(glm::mat4);
-		if (HasUniform(elements, Uniform::Type::MODEL_VIEW_PROJECTION_MAT4)) size += sizeof(glm::mat4);
-		if (HasUniform(elements, Uniform::Type::CAM_POS_VEC4)) size += sizeof(glm::vec4);
-		if (HasUniform(elements, Uniform::Type::VIEW_DIR_VEC4)) size += sizeof(glm::vec4);
-		if (HasUniform(elements, Uniform::Type::DIR_LIGHT)) size += sizeof(DirectionalLight);
-		if (HasUniform(elements, Uniform::Type::POINT_LIGHTS_VEC)) size += sizeof(PointLight) * pointLightCount;
-		if (HasUniform(elements, Uniform::Type::AMBIENT_COLOR_VEC4)) size += sizeof(glm::vec4);
-		if (HasUniform(elements, Uniform::Type::SPECULAR_COLOR_VEC4)) size += sizeof(glm::vec4);
-		if (HasUniform(elements, Uniform::Type::USE_DIFFUSE_TEXTURE_INT)) size += sizeof(glm::int32);
-		if (HasUniform(elements, Uniform::Type::USE_NORMAL_TEXTURE_INT)) size += sizeof(glm::int32);
-		if (HasUniform(elements, Uniform::Type::USE_SPECULAR_TEXTURE_INT)) size += sizeof(glm::int32);
-		if (HasUniform(elements, Uniform::Type::USE_CUBEMAP_TEXTURE_INT)) size += sizeof(glm::int32);
+		if (HasUniform("model")) size += sizeof(glm::mat4);
+		if (HasUniform("modelInvTranspose")) size += sizeof(glm::mat4);
+		if (HasUniform("modelViewProjection")) size += sizeof(glm::mat4);
+		if (HasUniform("view")) size += sizeof(glm::mat4);
+		if (HasUniform("viewInv")) size += sizeof(glm::mat4);
+		if (HasUniform("viewProjection")) size += sizeof(glm::mat4);
+		if (HasUniform("projection")) size += sizeof(glm::mat4);
+		if (HasUniform("camPos")) size += sizeof(glm::vec3);
+		if (HasUniform("viewDir")) size += sizeof(glm::vec3);
+		if (HasUniform("dirLight")) size += sizeof(DirectionalLight);
+		if (HasUniform("pointLights")) size += sizeof(PointLight) * pointLightCount;
+		if (HasUniform("useDiffuseSampler")) size += sizeof(glm::uint);
+		if (HasUniform("useNormalSampler")) size += sizeof(glm::uint);
+		if (HasUniform("useSpecularSampler")) size += sizeof(glm::uint);
+		if (HasUniform("useCubemapSampler")) size += sizeof(glm::uint);
+		if (HasUniform("useAlbedoSampler")) size += sizeof(glm::uint);
+		if (HasUniform("material")) size += sizeof(Material);
 
 		return size;
 	}

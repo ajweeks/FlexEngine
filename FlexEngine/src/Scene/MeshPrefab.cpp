@@ -124,14 +124,6 @@ namespace flex
 			}
 		}
 		
-		if (m_MaterialID == 5)
-		{
-			vertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION |
-				(glm::uint)VertexAttribute::UV | (glm::uint)VertexAttribute::TANGENT | (glm::uint)VertexAttribute::BITANGENT |
-				(glm::uint)VertexAttribute::NORMAL;
-			
-		}
-
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		Renderer::RenderObjectCreateInfo createInfo = {};

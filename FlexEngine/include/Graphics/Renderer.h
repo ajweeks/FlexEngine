@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <map>
 
 #include <glm/integer.hpp>
 #include <glm/vec4.hpp>
@@ -91,6 +92,49 @@ namespace flex
 			float padding[3];
 		};
 
+		struct Material
+		{
+			std::string name;
+
+			ShaderID shaderID;
+
+			bool useDiffuseSampler = false;
+			std::string diffuseTexturePath;
+
+			bool useSpecularSampler = false;
+			std::string specularTexturePath;
+
+			bool useNormalSampler = false;
+			std::string normalTexturePath;
+
+			// GBuffer samplers
+			bool usePositionFrameBufferSampler = false;
+			bool useNormalFrameBufferSampler = false;
+			bool useDiffuseSpecularFrameBufferSampler = false;
+
+			bool useCubemapTexture = false;
+			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+
+			// PBR constants
+			glm::vec3 constAlbedo;
+			float constMetallic;
+			float constRoughness;
+			float constAO;
+
+			// PBR samplers
+			bool useAlbedoSampler = false;
+			std::string albedoTexturePath;
+
+			bool useMetallicSampler = false;
+			std::string metallicTexturePath;
+
+			bool useRoughnessSampler = false;
+			std::string roughnessTexturePath;
+
+			bool useAOSampler = false;
+			std::string aoTexturePath;
+		};
+
 		// Info that stays consistent across all renderers
 		struct RenderObjectInfo
 		{
@@ -114,49 +158,52 @@ namespace flex
 			CullFace cullFace = CullFace::BACK;
 		};
 
-		struct Uniform
+		struct Uniforms
 		{
-			enum Type : glm::uint
-			{
-				NONE										= 0,
-				UNIFORM_BUFFER_CONSTANT						= (1 << 0),
-				UNIFORM_BUFFER_DYNAMIC						= (1 << 1),
-				PROJECTION_MAT4								= (1 << 2),
-				VIEW_MAT4									= (1 << 3),
-				VIEW_INV_MAT4								= (1 << 4),
-				VIEW_PROJECTION_MAT4						= (1 << 5),
-				MODEL_MAT4									= (1 << 6),
-				MODEL_INV_TRANSPOSE_MAT4					= (1 << 7),
-				MODEL_VIEW_PROJECTION_MAT4					= (1 << 8),
-				CAM_POS_VEC4								= (1 << 9),
-				VIEW_DIR_VEC4								= (1 << 10),
-				DIR_LIGHT									= (1 << 11),
-				POINT_LIGHTS_VEC							= (1 << 12),
-				AMBIENT_COLOR_VEC4							= (1 << 13),
-				SPECULAR_COLOR_VEC4							= (1 << 14),
-				USE_DIFFUSE_TEXTURE_INT						= (1 << 15), // bool for toggling texture usage
-				DIFFUSE_TEXTURE_SAMPLER						= (1 << 16), // texture itself
-				USE_NORMAL_TEXTURE_INT						= (1 << 17),
-				NORMAL_TEXTURE_SAMPLER						= (1 << 18),
-				USE_SPECULAR_TEXTURE_INT					= (1 << 19),
-				SPECULAR_TEXTURE_SAMPLER					= (1 << 20),
-				USE_CUBEMAP_TEXTURE_INT						= (1 << 21),
-				CUBEMAP_TEXTURE_SAMPLER						= (1 << 22),
-				POSITION_FRAME_BUFFER_SAMPLER				= (1 << 23),
-				DIFFUSE_SPECULAR_FRAME_BUFFER_SAMPLER		= (1 << 24),
-				NORMAL_FRAME_BUFFER_SAMPLER					= (1 << 25),
+			/*
+			Possible uniform names:
 
-				// Temp
-				ALBEDO_VEC3 = (1 << 26),
-				METALLIC_FLOAT = (1 << 27),
-				ROUGHNESS_FLOAT = (1 << 28),
-				AO_FLOAT = (1 << 29),
+				model
+				modelInvTranspose
+				modelViewProj
+				projection
+				view
+				viewInv
+				viewProjection
+				camPos
+				viewDir
+				dirLight
+				pointLights
+				useDiffuseSampler
+				diffuseSampler
+				useNormalSampler
+				normalSampler
+				useSpecularSampler
+				specularSampler
+				useCubemapSampler
+				cubemapSampler
+				positionFrameBufferSampler
+				diffuseSpecularFrameBufferSampler
+				normalFrameBufferSampler
+				material
+					useAlbedoSampler
+					albedoSampler
+					albedo				(constant value to use when not using sampler)
+					useMetallicSampler
+					metallicSampler
+					metallic			(constant value to use when not using sampler)
+					useRoughnessSampler
+					roughnessSampler
+					roughness			(constant value to use when not using sampler)
+					useAOSampler
+					aoSampler
+					ao
+			*/
+			std::map<std::string, bool> types;
 
-				MAX_ENUM = (1 << 30)
-			};
-
-			static bool HasUniform(Type elements, Type uniform);
-			static glm::uint CalculateSize(Type elements, int pointLightCount);
+			inline bool HasUniform(const std::string& name) const;
+			void AddUniform(const std::string& name, bool value);
+			glm::uint CalculateSize(int pointLightCount);
 		};
 
 		struct Shader
@@ -172,8 +219,8 @@ namespace flex
 			std::vector<char> vertexShaderCode;
 			std::vector<char> fragmentShaderCode;
 
-			Uniform::Type constantBufferUniforms;
-			Uniform::Type dynamicBufferUniforms;
+			Uniforms constantBufferUniforms;
+			Uniforms dynamicBufferUniforms;
 
 			bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 
@@ -184,7 +231,7 @@ namespace flex
 		struct MaterialCreateInfo
 		{
 			// Required fields:
-			glm::uint shaderIndex;
+			ShaderID shaderID;
 
 			// Optional fields:
 			std::string name;
@@ -192,20 +239,35 @@ namespace flex
 			std::string diffuseTexturePath;
 			std::string specularTexturePath;
 			std::string normalTexturePath;
+			std::string albedoTexturePath;
+			std::string metallicTexturePath;
+			std::string roughnessTexturePath;
+			std::string aoTexturePath;
 
-			bool usePositionSampler = false;
-			glm::uint positionSamplerID;
-			bool useNormalSampler = false;
-			glm::uint normalSamplerID;
-			bool useDiffuseSpecularSampler = false;
-			glm::uint diffuseSpecularSamplerID;
+			bool usePositionFrameBufferSampler = false;
+			glm::uint positionFrameBufferSamplerID;
+			bool useNormalFrameBufferSampler = false;
+			glm::uint normalFrameBufferSamplerID;
+			bool useDiffuseSpecularFrameBufferSampler = false;
+			glm::uint diffuseSpecularFrameBufferSamplerID;
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
-			glm::vec3 albedo;
-			float metallic;
-			float roughness;
-			float ao;
+			// PBR Constant colors
+			glm::vec3 constAlbedo;
+			float constMetallic;
+			float constRoughness;
+			float constAO;
+
+			// PBR textures
+			bool useAlbedoSampler = false;
+			glm::vec3 albedoSamplerID;
+			bool useMetallicSampler = false;
+			glm::uint metallicSamplerID;
+			bool useRoughnessSampler = false;
+			glm::uint roughnessSamplerID;
+			bool useAOSampler = false;
+			glm::uint aoSamplerID;
 		};
 
 		virtual void PostInitialize(const GameContext& gameContext) = 0;
@@ -249,25 +311,9 @@ namespace flex
 		virtual void ImGui_Render() = 0;
 		virtual void ImGui_ReleaseRenderObjects() = 0;
 
-		struct SceneInfo
-		{
-			// Everything has to be aligned (16 byte? aka vec4) ( Or not? )
-			glm::vec3 m_LightDir;
-			glm::vec4 m_AmbientColor;
-			glm::vec4 m_SpecularColor;
-			// sky box, other lights, wireframe, etc...
-		};
-		SceneInfo& GetSceneInfo();
-
-	protected:
-		SceneInfo m_SceneInfo;
-
 	private:
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer(const Renderer&) = delete;
 
 	};
-
-	Renderer::Uniform::Type operator|(const Renderer::Uniform::Type& lhs, const Renderer::Uniform::Type& rhs);
-
 } // namespace flex

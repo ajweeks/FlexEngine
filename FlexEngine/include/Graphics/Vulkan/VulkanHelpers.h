@@ -77,7 +77,7 @@ namespace flex
 
 		struct VulkanUniformBufferObjectData
 		{
-			Renderer::Uniform::Type elements;
+			//Renderer::Uniforms uniforms;
 			float* data = nullptr;
 			glm::uint size;
 		};
@@ -143,43 +143,13 @@ namespace flex
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
-		struct Material
+		struct VulkanMaterial
 		{
-			std::string name;
+			Renderer::Material material; // More info is stored in the generic material struct
 
-			glm::uint shaderIndex;
-
-			struct UniformIDs
-			{
-				int modelID;
-				int modelInvTranspose;
-				int modelViewProjection;
-				int camPos;
-				int viewDir;
-				int lightDir;
-				int ambientColor;
-				int specularColor;
-				int useDiffuseTexture;
-				int useNormalTexture;
-				int useSpecularTexture;
-				int useCubemapTexture;
-			};
-			UniformIDs uniformIDs;
-
-			bool useDiffuseTexture = false;
-			std::string diffuseTexturePath;
 			VulkanTexture* diffuseTexture = nullptr;
-
-			bool useNormalTexture = false;
-			std::string normalTexturePath;
 			VulkanTexture* normalTexture = nullptr;
-
-			bool useSpecularTexture = false;
-			std::string specularTexturePath;
 			VulkanTexture* specularTexture = nullptr;
-
-			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-			bool useCubemapTexture = false;
 			VulkanTexture* cubemapTexture = nullptr;
 
 			glm::uint descriptorSetLayoutIndex;
@@ -217,7 +187,7 @@ namespace flex
 
 		struct GraphicsPipelineCreateInfo
 		{
-			glm::uint shaderIndex;
+			ShaderID shaderID;
 			VertexAttributes vertexAttributes;
 
 			VkPrimitiveTopology topology;
@@ -255,10 +225,14 @@ namespace flex
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* specularTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
+			VulkanTexture* albedoTexture = nullptr;
+			VulkanTexture* metallicTexture = nullptr;
+			VulkanTexture* roughnessTexture = nullptr;
+			VulkanTexture* aoTexture = nullptr;
 
 			VkImageView* positionFrameBufferView = nullptr;
 			VkImageView* normalFrameBufferView = nullptr;
-			VkImageView* albedoFrameBufferView = nullptr;
+			VkImageView* diffuseSpecularFrameBufferView = nullptr;
 		};
 
 		struct PushConstBlock

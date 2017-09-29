@@ -22,14 +22,14 @@ namespace flex
 	{
 		// Materials
 		Renderer::MaterialCreateInfo colorMatInfo = {};
-		colorMatInfo.shaderIndex = 1;
+		colorMatInfo.shaderID = 1;
 		colorMatInfo.name = "Color";
 		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
 		
 		
 		Renderer::MaterialCreateInfo skyboxMatInfo = {};
 		skyboxMatInfo.name = "Skybox";
-		skyboxMatInfo.shaderIndex = 4;
+		skyboxMatInfo.shaderID = 4;
 		
 		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/box_01/";
 		const std::string fileName = "skybox";
@@ -47,7 +47,7 @@ namespace flex
 		
 		
 		Renderer::MaterialCreateInfo brickMatInfo = {};
-		brickMatInfo.shaderIndex = 0;
+		brickMatInfo.shaderID = 0;
 		brickMatInfo.name = "Brick";
 		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
 		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
@@ -56,7 +56,7 @@ namespace flex
 		
 		
 		Renderer::MaterialCreateInfo workMatInfo = {};
-		workMatInfo.shaderIndex = 0;
+		workMatInfo.shaderID = 0;
 		workMatInfo.name = "Work";
 		workMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/work_d.jpg";
 		workMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/work_s.jpg";
@@ -64,7 +64,7 @@ namespace flex
 		const MaterialID workMatID = gameContext.renderer->InitializeMaterial(gameContext, &workMatInfo);
 
 		Renderer::MaterialCreateInfo simpleTexturelessInfo = {};
-		simpleTexturelessInfo.shaderIndex = 0;
+		simpleTexturelessInfo.shaderID = 0;
 		simpleTexturelessInfo.name = "Simple textureless";
 		const MaterialID simpleTexturelessMatID = gameContext.renderer->InitializeMaterial(gameContext, &simpleTexturelessInfo);
 
