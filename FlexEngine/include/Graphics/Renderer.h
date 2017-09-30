@@ -171,7 +171,6 @@ namespace flex
 				viewInv
 				viewProjection
 				camPos
-				viewDir
 				dirLight
 				pointLights
 				useDiffuseSampler

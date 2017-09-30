@@ -29,7 +29,6 @@ namespace flex
 				int viewInv;
 				int projection;
 				int camPos;
-				int viewDir;
 				int useDiffuseTexture;
 				int useNormalTexture;
 				int useSpecularTexture;

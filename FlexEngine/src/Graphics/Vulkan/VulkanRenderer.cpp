@@ -3370,7 +3370,6 @@ namespace flex
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProj = proj * view;
 			glm::vec4 camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
-			glm::vec4 viewDir = glm::vec4(gameContext.camera->GetViewDirection(), 0.0f);
 
 			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
 			{
@@ -3421,12 +3420,6 @@ namespace flex
 				if (constantUniforms.HasUniform("camPos"))
 				{
 					memcpy(&constantData.data[index], &camPos[0], sizeof(glm::vec4));
-					index += 4;
-				}
-
-				if (constantUniforms.HasUniform("viewDir"))
-				{
-					memcpy(&constantData.data[index], &viewDir[0], sizeof(glm::vec4));
 					index += 4;
 				}
 

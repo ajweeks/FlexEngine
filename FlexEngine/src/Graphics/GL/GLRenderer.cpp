@@ -85,7 +85,6 @@ namespace flex
 				{ "viewProjection", 				&mat.uniformIDs.viewProjection },
 				{ "projection", 					&mat.uniformIDs.projection },
 				{ "camPos", 						&mat.uniformIDs.camPos },
-				{ "viewDir", 						&mat.uniformIDs.viewDir },
 				{ "useDiffuseSampler", 				&mat.uniformIDs.useDiffuseTexture },
 				{ "material.useNormalSampler", 		&mat.uniformIDs.useNormalTexture },
 				{ "useSpecularSampler", 			&mat.uniformIDs.useSpecularTexture },
@@ -894,8 +893,6 @@ namespace flex
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProj = proj * view;
-
-			glm::vec4 viewDir = glm::vec4(gameContext.camera->GetViewDirection(), 0.0f);
 			glm::vec4 camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
 
 
@@ -930,16 +927,6 @@ namespace flex
 					camPos.y,
 					camPos.z,
 					camPos.w);
-				CheckGLErrorMessages();
-			}
-
-			if (shader->constantBufferUniforms.HasUniform("viewDir"))
-			{
-				glUniform4f(material->uniformIDs.viewDir,
-					viewDir.x,
-					viewDir.y,
-					viewDir.z,
-					viewDir.w);
 				CheckGLErrorMessages();
 			}
 
