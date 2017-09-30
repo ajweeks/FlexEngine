@@ -506,7 +506,9 @@ namespace flex
 		FrameBuffer::FrameBuffer(const VDeleter<VkDevice>& device) :
 			position(device),
 			normal(device),
-			albedo(device)
+			albedo(device),
+			frameBuffer(device, vkDestroyFramebuffer),
+			renderPass(device, vkDestroyRenderPass)
 		{
 		}
 } // namespace vk

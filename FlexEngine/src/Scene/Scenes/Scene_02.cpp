@@ -37,20 +37,34 @@ namespace flex
 		};
 		const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
 
+		//Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
+		//pbrMatTexturedInfo.shaderID = 3;
+		//pbrMatTexturedInfo.name = "PBR textured";
+		//pbrMatTexturedInfo.useAlbedoSampler = true;
+		//pbrMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
+		//pbrMatTexturedInfo.useMetallicSampler= true;
+		//pbrMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_metallic.png";
+		//pbrMatTexturedInfo.useRoughnessSampler = true;
+		//pbrMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_roughness.png";
+		//pbrMatTexturedInfo.useAOSampler = true;
+		//pbrMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_ao.png";
+		//pbrMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
+		//const MaterialID pbrMatTexturedID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatTexturedInfo);
 
-		Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
-		pbrMatTexturedInfo.shaderID = 3;
-		pbrMatTexturedInfo.name = "PBR textured";
-		pbrMatTexturedInfo.useAlbedoSampler = true;
-		pbrMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
-		pbrMatTexturedInfo.useMetallicSampler= true;
-		pbrMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_metallic.png";
-		pbrMatTexturedInfo.useRoughnessSampler = true;
-		pbrMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_roughness.png";
-		pbrMatTexturedInfo.useAOSampler = true;
-		pbrMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_ao.png";
-		pbrMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
-		const MaterialID pbrMatTexturedID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatTexturedInfo);
+
+		Renderer::MaterialCreateInfo arisakaMatInfo = {};
+		arisakaMatInfo.shaderID = 3;
+		arisakaMatInfo.name = "PBR textured";
+		arisakaMatInfo.useAlbedoSampler = true;
+		arisakaMatInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/arisaka/arisaka_base_color_1.png";
+		arisakaMatInfo.useMetallicSampler= true;
+		arisakaMatInfo.metallicTexturePath = RESOURCE_LOCATION + "textures/arisaka/arisaka_metalness_1.png";
+		arisakaMatInfo.useRoughnessSampler = true;
+		arisakaMatInfo.roughnessTexturePath = RESOURCE_LOCATION + "textures/arisaka/arisaka_roughness_1.png";
+		arisakaMatInfo.useAOSampler = false;
+		arisakaMatInfo.constAO = 1.0f;
+		arisakaMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/arisaka/arisaka_normal_1.png";
+		const MaterialID arisakaMatID = gameContext.renderer->InitializeMaterial(gameContext, &arisakaMatInfo);
 
 
 		const int sphereCountX = 7;
@@ -63,25 +77,31 @@ namespace flex
 		{
 			int x = i % sphereCountX;
 			int y = int(i / sphereCountY);
-
+		
 			const std::string iStr = std::to_string(i);
-
-			//Renderer::MaterialCreateInfo pbrMatInfo = {};
-			//pbrMatInfo.shaderIndex = 3;
-			//pbrMatInfo.name = "PBR simple " + iStr;
-			//pbrMatInfo.albedo = glm::vec3(0.1f, 0.1f, 0.5f);
-			//pbrMatInfo.metallic = float(x) / (sphereCountX - 1);
-			//pbrMatInfo.roughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
-			//pbrMatInfo.ao = 1.0f;
-			//const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-
-
-			m_Spheres[i] = new MeshPrefab(pbrMatTexturedID, "PBR sphere " + iStr);
+		
+			Renderer::MaterialCreateInfo pbrMatInfo = {};
+			pbrMatInfo.shaderID = 3;
+			pbrMatInfo.name = "PBR simple " + iStr;
+			pbrMatInfo.constAlbedo = glm::vec3(0.1f, 0.1f, 0.5f);
+			pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
+			pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
+			pbrMatInfo.constAO = 1.0f;
+			const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+		
+		
+			m_Spheres[i] = new MeshPrefab(pbrMatID, "PBR sphere " + iStr);
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
 			AddChild(m_Spheres[i]);
 		}
-
+		
+		//m_Arisaka = new MeshPrefab(arisakaMatID, "Arisaka Type 99");
+		//m_Arisaka->SetUVScale(2.0f, 1.0f);
+		//m_Arisaka->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Arisaka_Type_99_gun_low.fbx", true, true);
+		//m_Arisaka->GetTransform().Translate({ 0, 0, -10.0f });
+		//m_Arisaka->GetTransform().Rotate({ glm::half_pi<float>(), 0, glm::pi<float>() });
+		//AddChild(m_Arisaka);
 
 		m_Skybox = new MeshPrefab(skyboxMatID);
 		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);

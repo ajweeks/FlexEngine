@@ -36,12 +36,18 @@ namespace flex
 		if (HasUniform("camPos")) size += sizeof(glm::vec4);
 		if (HasUniform("dirLight")) size += sizeof(DirectionalLight);
 		if (HasUniform("pointLights")) size += sizeof(PointLight) * pointLightCount;
-		if (HasUniform("useDiffuseSampler")) size += sizeof(glm::uint);
+		if (HasUniform("useAlbedoSampler")) size += sizeof(glm::uint);
+		if (HasUniform("constAlbedo")) size += sizeof(glm::vec4);
+		if (HasUniform("useMetallicSampler")) size += sizeof(glm::uint);
+		if (HasUniform("constMetallic")) size += sizeof(float);
+		if (HasUniform("useRoughnessSampler")) size += sizeof(glm::uint);
+		if (HasUniform("constRoughness")) size += sizeof(float);
+		if (HasUniform("useAOSampler")) size += sizeof(glm::uint);
+		if (HasUniform("constAO")) size += sizeof(float);
 		if (HasUniform("useNormalSampler")) size += sizeof(glm::uint);
+		if (HasUniform("useDiffuseSampler")) size += sizeof(glm::uint);
 		if (HasUniform("useSpecularSampler")) size += sizeof(glm::uint);
 		if (HasUniform("useCubemapSampler")) size += sizeof(glm::uint);
-		if (HasUniform("useAlbedoSampler")) size += sizeof(glm::uint);
-		if (HasUniform("material")) size += sizeof(Material);
 
 		return size;
 	}

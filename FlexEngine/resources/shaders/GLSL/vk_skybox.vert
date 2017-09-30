@@ -8,8 +8,8 @@ layout (location = 0) in vec3 in_Position;
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
-	mat4 projection;
 	mat4 view;
+	mat4 projection;
 } uboConstant;
 
 // Updated once per object

@@ -44,9 +44,9 @@ namespace flex
 		position += deltaPosition;
 	}
 
-	void Transform::Rotate(glm::quat deltaRotation)
+	void Transform::Rotate(glm::quat deltaQuatRotation)
 	{
-		rotation *= deltaRotation;
+		rotation *= deltaQuatRotation;
 	}
 
 	void Transform::Rotate(glm::vec3 deltaEulerRotationRad)

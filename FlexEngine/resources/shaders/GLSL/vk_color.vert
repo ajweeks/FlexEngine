@@ -7,10 +7,10 @@ layout (location = 0) in vec3 inWorldPos;
 layout (location = 1) in vec4 inColor;
 
 // Updated once per frame
-layout (binding = 0) uniform UBO
+layout (binding = 0) uniform UBOConstant
 {
 	mat4 viewProjection;
-} ubo;
+} uboConstant;
 
 // Updated once per object
 layout (binding = 1) uniform UBODynamic
@@ -27,7 +27,7 @@ out gl_PerVertex
 
 void main() 
 {
-	gl_Position = ubo.viewProjection * uboDynamic.model * vec4(inWorldPos, 1.0);
+	gl_Position = uboConstant.viewProjection * uboDynamic.model * vec4(inWorldPos, 1.0);
 
 	outColor = inColor;
 	

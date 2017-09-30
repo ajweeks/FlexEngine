@@ -116,7 +116,7 @@ namespace flex
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 			// PBR constants
-			glm::vec3 constAlbedo;
+			glm::vec4 constAlbedo;
 			float constMetallic;
 			float constRoughness;
 			float constAO;
@@ -260,7 +260,7 @@ namespace flex
 
 			// PBR textures
 			bool useAlbedoSampler = false;
-			glm::vec3 albedoSamplerID;
+			glm::uint albedoSamplerID;
 			bool useMetallicSampler = false;
 			glm::uint metallicSamplerID;
 			bool useRoughnessSampler = false;

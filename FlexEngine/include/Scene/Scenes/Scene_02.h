@@ -21,7 +21,9 @@ namespace flex
 	private:
 		std::vector<MeshPrefab*> m_Spheres;
 
-		MeshPrefab* m_Skybox;
+		MeshPrefab* m_Arisaka = nullptr;
+
+		MeshPrefab* m_Skybox = nullptr;
 
 		Scene_02(const Scene_02&) = delete;
 		Scene_02& operator=(const Scene_02&) = delete;

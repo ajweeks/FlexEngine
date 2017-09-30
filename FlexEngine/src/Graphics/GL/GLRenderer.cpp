@@ -131,7 +131,7 @@ namespace flex
 			mat.material.useNormalFrameBufferSampler = createInfo->useNormalFrameBufferSampler;
 			mat.material.useDiffuseSpecularFrameBufferSampler = createInfo->useDiffuseSpecularFrameBufferSampler;
 
-			mat.material.constAlbedo = createInfo->constAlbedo;
+			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
 			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
 			mat.material.useAlbedoSampler = createInfo->useAlbedoSampler;
 
@@ -1034,7 +1034,7 @@ namespace flex
 
 			if (shader->dynamicBufferUniforms.HasUniform("material.constAlbedo"))
 			{
-				glUniform3f(material->uniformIDs.constAlbedo, material->material.constAlbedo.x, material->material.constAlbedo.y, material->material.constAlbedo.z);
+				glUniform4f(material->uniformIDs.constAlbedo, material->material.constAlbedo.x, material->material.constAlbedo.y, material->material.constAlbedo.z, 0);
 				CheckGLErrorMessages();
 			}
 

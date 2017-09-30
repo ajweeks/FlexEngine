@@ -63,14 +63,6 @@ namespace flex
 			// ImGui buffers are dynamic, they shouldn't use the staging buffer
 			m_VertexIndexBufferPairs[2].useStagingBuffer = false;
 
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_d.png", &m_BrickDiffuseTexture);
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_n.png", &m_BrickNormalTexture);
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/brick_s.png", &m_BrickSpecularTexture);
-
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/work_d.jpg", &m_WorkDiffuseTexture);
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/work_n.jpg", &m_WorkNormalTexture);
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/work_s.jpg", &m_WorkSpecularTexture);
-
 			CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", &m_BlankTexture);
 		}
 
@@ -87,8 +79,8 @@ namespace flex
 			float y = -1.0f;
 
 			// TODO: Remove constants (at least use strings)
-			const glm::uint deferredCombineShaderIndex = m_Shaders.size() - 1; // Deferred combine shader should be last one loaded
-			const glm::uint offscreenShaderIndex = 0; // This shader outputs 3 frame buffers (GBuffer)
+			const ShaderID deferredCombineShaderID = m_Shaders.size() - 1; // Deferred combine shader should be last one loaded
+			const ShaderID offscreenShaderID = 0; // This shader outputs 3 frame buffers (GBuffer)
 
 			VertexBufferData::CreateInfo offscreenQuadVertexBufferDataCreateInfo = {};
 			offscreenQuadVertexBufferDataCreateInfo.positions_3D = {
@@ -149,8 +141,8 @@ namespace flex
 			deferredQuadVertexBufferData.VertexStride = CalculateVertexStride(deferredQuadVertexBufferData.Attributes);
 
 			GraphicsPipelineCreateInfo deferredPipelineCreateInfo = {};
-			deferredPipelineCreateInfo.shaderID = deferredCombineShaderIndex;
-			deferredPipelineCreateInfo.descriptorSetLayoutIndex = deferredCombineShaderIndex;
+			deferredPipelineCreateInfo.shaderID = deferredCombineShaderID;
+			deferredPipelineCreateInfo.descriptorSetLayoutIndex = deferredCombineShaderID;
 			deferredPipelineCreateInfo.vertexAttributes = deferredQuadVertexBufferData.Attributes;
 			deferredPipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			deferredPipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
@@ -166,8 +158,8 @@ namespace flex
 
 			// Offscreen descriptor set
 			DescriptorSetCreateInfo offscreenDescriptorSetCreateInfo = {};
-			offscreenDescriptorSetCreateInfo.descriptorSetLayoutIndex = deferredCombineShaderIndex;
-			offscreenDescriptorSetCreateInfo.uniformBufferIndex = deferredCombineShaderIndex;
+			offscreenDescriptorSetCreateInfo.descriptorSetLayoutIndex = deferredCombineShaderID;
+			offscreenDescriptorSetCreateInfo.uniformBufferIndex = deferredCombineShaderID;
 			offscreenDescriptorSetCreateInfo.positionFrameBufferView = &offScreenFrameBuf->position.view;
 			offscreenDescriptorSetCreateInfo.normalFrameBufferView = &offScreenFrameBuf->normal.view;
 			offscreenDescriptorSetCreateInfo.diffuseSpecularFrameBufferView = &offScreenFrameBuf->albedo.view;
@@ -213,22 +205,6 @@ namespace flex
 
 
 			// Frame buffer
-
-			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->position.view, nullptr);
-			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->position.image, nullptr);
-			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->position.mem, nullptr);
-
-			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->normal.view, nullptr);
-			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->normal.image, nullptr);
-			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->normal.mem, nullptr);
-
-			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->albedo.view, nullptr);
-			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->albedo.image, nullptr);
-			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->albedo.mem, nullptr);
-
-			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->frameBuffer, nullptr);
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, offScreenFrameBuf->renderPass, nullptr);
-			
 			SafeDelete(offScreenFrameBuf);
 
 			SafeDelete(offscreenQuadVertexIndexBufferPair.indexBuffer);
@@ -243,7 +219,7 @@ namespace flex
 
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_DeferredPipelineLayout, nullptr);
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_ImGui_PipelineLayout, nullptr);
-			
+
 			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
 
 			m_DescriptorPool.replace();
@@ -252,15 +228,12 @@ namespace flex
 			m_DepthImage.replace();
 
 			SafeDelete(m_BlankTexture);
-			SafeDelete(m_SkyboxTexture);
 
-			SafeDelete(m_WorkSpecularTexture);
-			SafeDelete(m_WorkNormalTexture);
-			SafeDelete(m_WorkDiffuseTexture);
-
-			SafeDelete(m_BrickSpecularTexture);
-			SafeDelete(m_BrickNormalTexture);
-			SafeDelete(m_BrickDiffuseTexture);
+			for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
+			{
+				SafeDelete(m_LoadedTextures[i]);
+			}
+			m_LoadedTextures.clear();
 
 			m_DeferredCombineRenderPass.replace();
 
@@ -289,54 +262,79 @@ namespace flex
 			mat.material.specularTexturePath = createInfo->specularTexturePath;
 			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
 
+			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
+			mat.material.constMetallic = createInfo->constMetallic;
+			mat.material.constRoughness = createInfo->constRoughness;
+			mat.material.constAO = createInfo->constAO;
+
 			mat.descriptorSetLayoutIndex = createInfo->shaderID;
 
-			if (createInfo->diffuseTexturePath == m_BrickDiffuseTexture->filePath)
+			struct TextureInfo
 			{
-				mat.diffuseTexture = m_BrickDiffuseTexture;
-			}
-			else if (createInfo->diffuseTexturePath == m_WorkDiffuseTexture->filePath)
+				std::string filePath;
+				VulkanTexture** texture = nullptr;
+				bool* enabled;
+			};
+
+			TextureInfo textureInfos[] =
 			{
-				mat.diffuseTexture = m_WorkDiffuseTexture;
+				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.useDiffuseSampler },
+				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.useNormalSampler },
+				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.useSpecularSampler },
+				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.useAlbedoSampler },
+				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.useMetallicSampler },
+				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.useRoughnessSampler },
+				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.useAOSampler },
+			};
+			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
+
+			// Check if any of the textures have already been loaded
+			for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
+			{
+				for (size_t j = 0; j < textureCount; ++j)
+				{
+					if (!textureInfos[j].filePath.empty() &&
+						textureInfos[j].filePath.compare(m_LoadedTextures[i]->filePath) == 0)
+					{
+						*textureInfos[j].texture = m_LoadedTextures[i];
+						*textureInfos[j].enabled = true;
+					}
+				}
 			}
 
-			if (createInfo->normalTexturePath == m_BrickNormalTexture->filePath)
+			// Create any textures that haven't been created yet
+			for (size_t j = 0; j < textureCount; ++j)
 			{
-				mat.normalTexture = m_BrickNormalTexture;
-			}
-			else if (createInfo->normalTexturePath == m_WorkNormalTexture->filePath)
-			{
-				mat.normalTexture = m_WorkNormalTexture;
-			}
-
-			if (createInfo->specularTexturePath == m_BrickSpecularTexture->filePath)
-			{
-				mat.specularTexture = m_BrickSpecularTexture;
-			}
-			else if (createInfo->specularTexturePath == m_WorkSpecularTexture->filePath)
-			{
-				mat.specularTexture = m_WorkSpecularTexture;
+				if (!textureInfos[j].filePath.empty() && *textureInfos[j].texture == nullptr)
+				{
+					m_LoadedTextures.push_back(new VulkanTexture(m_VulkanDevice->m_LogicalDevice));
+					CreateVulkanTexture(textureInfos[j].filePath, &m_LoadedTextures.back());
+					*textureInfos[j].texture = m_LoadedTextures.back();
+					*textureInfos[j].enabled = true;
+				}
 			}
 
+			// Cubemaps are treated differently than regular textures because they require 6 filepaths
 			if (!createInfo->cubeMapFilePaths[0].empty())
 			{
-				if (m_SkyboxTexture == nullptr)
+				for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
 				{
-					CreateVulkanCubemap(createInfo->cubeMapFilePaths, &m_SkyboxTexture);
-					mat.cubemapTexture = m_SkyboxTexture;
-					mat.material.useCubemapTexture = true;
+					if (createInfo->cubeMapFilePaths[0].compare(m_LoadedTextures[i]->filePath) == 0)
+					{
+						mat.cubemapTexture = m_LoadedTextures[i];
+					}
+
+					break;
 				}
-				else // A skybox has already been created
+
+				if (mat.cubemapTexture == nullptr) // This cubemap hasn't been loaded before
 				{
-					if (createInfo->cubeMapFilePaths[0].compare(m_SkyboxTexture->filePath) == 0)
-					{
-						mat.cubemapTexture = m_SkyboxTexture;
-					}
-					else
-					{
-						Logger::LogError("Only one skybox per scene is allowed by the Vulkan renderer! Memory leaks will occur!");
-					}
+					m_LoadedTextures.push_back(new VulkanTexture(m_VulkanDevice->m_LogicalDevice));
+					CreateVulkanCubemap(createInfo->cubeMapFilePaths, &m_LoadedTextures.back());
+					mat.cubemapTexture = m_LoadedTextures.back();
 				}
+
+				mat.material.useCubemapTexture = true;
 			}
 
 			m_LoadedMaterials.push_back(mat);
@@ -436,7 +434,7 @@ namespace flex
 
 		void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 		{
-			UpdateUniformBufferDynamic(gameContext, renderID, model);
+			UpdateDynamicUniformBuffer(gameContext, renderID, model);
 		}
 
 		glm::uint VulkanRenderer::GetRenderObjectCount() const
@@ -599,7 +597,7 @@ namespace flex
 		void VulkanRenderer::ImGui_InitResources()
 		{
 			// TODO: Remove hardcoded value
-			const glm::uint shaderIndex = 2;
+			const ShaderID shaderID = 2;
 
 			m_ImGuiPushConstBlock = { glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f) };
 
@@ -608,9 +606,9 @@ namespace flex
 
 				DescriptorSetCreateInfo createInfo = {};
 				createInfo.descriptorSet = &m_ImGuiDescriptorSet;
-				createInfo.descriptorSetLayoutIndex = shaderIndex;
+				createInfo.descriptorSetLayoutIndex = shaderID;
 				createInfo.diffuseTexture = m_ImGuiFontTexture;
-				createInfo.uniformBufferIndex = shaderIndex;
+				createInfo.uniformBufferIndex = shaderID;
 
 				CreateDescriptorSet(&createInfo);
 			}
@@ -629,11 +627,11 @@ namespace flex
 
 			assert(vertexBufferData.VertexStride == sizeof(ImDrawVert));
 
-			glm::uint descriptorSetLayoutIndex = shaderIndex;
+			glm::uint descriptorSetLayoutIndex = shaderID;
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 
-			pipelineCreateInfo.shaderID = shaderIndex;
+			pipelineCreateInfo.shaderID = shaderID;
 			pipelineCreateInfo.vertexAttributes = vertexBufferData.Attributes;
 			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
@@ -975,7 +973,7 @@ namespace flex
 
 			CreateSwapChain(window);
 			CreateImageViews();
-			
+
 			CreateDepthResources();
 
 			PrepareOffscreenFrameBuffer(window);
@@ -1055,12 +1053,12 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateTextureImageView(VulkanTexture* texture)
+		void VulkanRenderer::CreateTextureImageView(VulkanTexture* texture) const
 		{
 			CreateImageView(texture->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, texture->imageView.replace());
 		}
 
-		void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView* imageView)
+		void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView* imageView) const
 		{
 			VkImageViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1097,7 +1095,7 @@ namespace flex
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 			depthAttachment.format = depthFormat;
 			depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; 
+			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 			depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1121,7 +1119,7 @@ namespace flex
 			subpasses[1].pColorAttachments = &colorAttachmentRef;
 			subpasses[1].pDepthStencilAttachment = &depthAttachmentRef;
 
-			
+
 			std::array<VkSubpassDependency, 3> dependencies;
 			dependencies[0] = {};
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -1196,6 +1194,10 @@ namespace flex
 			createInfo.normalTexture = m_LoadedMaterials[renderObject->materialID].normalTexture;
 			createInfo.specularTexture = m_LoadedMaterials[renderObject->materialID].specularTexture;
 			createInfo.cubemapTexture = m_LoadedMaterials[renderObject->materialID].cubemapTexture;
+			createInfo.albedoTexture = m_LoadedMaterials[renderObject->materialID].albedoTexture;
+			createInfo.metallicTexture = m_LoadedMaterials[renderObject->materialID].metallicTexture;
+			createInfo.roughnessTexture = m_LoadedMaterials[renderObject->materialID].roughnessTexture;
+			createInfo.aoTexture = m_LoadedMaterials[renderObject->materialID].aoTexture;
 
 			CreateDescriptorSet(&createInfo);
 		}
@@ -1242,6 +1244,26 @@ namespace flex
 				{ "uniformBufferDynamic", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 				uniformBuffer.dynamicBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size() },
 
+				{ "albedoSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->albedoTexture ? createInfo->albedoTexture->imageView : 0u,
+				createInfo->albedoTexture ? createInfo->albedoTexture->sampler : 0u },
+
+				{ "metallicSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->metallicTexture ? createInfo->metallicTexture->imageView : 0u,
+				createInfo->metallicTexture ? createInfo->metallicTexture->sampler : 0u },
+
+				{ "roughnessSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->roughnessTexture ? createInfo->roughnessTexture->imageView : 0u,
+				createInfo->roughnessTexture ? createInfo->roughnessTexture->sampler : 0u },
+
+				{ "aoSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->aoTexture ? createInfo->aoTexture->imageView : 0u,
+				createInfo->aoTexture ? createInfo->aoTexture->sampler : 0u },
+
 				{ "diffuseSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->diffuseTexture ? createInfo->diffuseTexture->imageView : 0u,
@@ -1276,26 +1298,6 @@ namespace flex
 				VK_NULL_HANDLE, 0,
 				createInfo->diffuseSpecularFrameBufferView ? *createInfo->diffuseSpecularFrameBufferView : 0u,
 				colorSampler },
-
-				{ "albedoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->albedoTexture ? createInfo->albedoTexture->imageView : 0u,
-				createInfo->albedoTexture ? createInfo->albedoTexture->sampler : 0u },
-
-				{ "metallicFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->metallicTexture ? createInfo->metallicTexture->imageView : 0u,
-				createInfo->metallicTexture ? createInfo->metallicTexture->sampler : 0u },
-
-				{ "roughnessFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->roughnessTexture ? createInfo->roughnessTexture->imageView : 0u,
-				createInfo->roughnessTexture ? createInfo->roughnessTexture->sampler : 0u },
-
-				{ "aoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->aoTexture ? createInfo->aoTexture->imageView : 0u,
-				createInfo->aoTexture ? createInfo->aoTexture->sampler : 0u },
 			};
 			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
 
@@ -1356,12 +1358,12 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateDescriptorSetLayout(glm::uint shaderIndex)
+		void VulkanRenderer::CreateDescriptorSetLayout(ShaderID shaderID)
 		{
 			m_DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 			VkDescriptorSetLayout* descriptorSetLayout = &m_DescriptorSetLayouts.back();
 
-			Shader* shader = &m_Shaders[shaderIndex];
+			Shader* shader = &m_Shaders[shaderID];
 
 			struct DescriptorSetInfo
 			{
@@ -1376,6 +1378,18 @@ namespace flex
 
 				{ "uniformBufferDynamic", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "albedoSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "metallicSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "roughnessSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ "aoSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ "diffuseSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -1396,18 +1410,6 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ "diffuseSpecularFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ "albedoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ "metallicFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ "roughnessFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ "aoFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 			};
 			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
@@ -1438,7 +1440,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
 		}
 
-		void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy, float minLod, float maxLod)
+		void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy, float minLod, float maxLod) const
 		{
 			VkSamplerCreateInfo samplerInfo = {};
 			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1678,7 +1680,7 @@ namespace flex
 				VkFramebufferCreateInfo framebufferInfo = {};
 				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 				// Just defines which render passes this frame buffer is compatible with (can be either deferredCombine or forward)
-				framebufferInfo.renderPass = m_DeferredCombineRenderPass; 
+				framebufferInfo.renderPass = m_DeferredCombineRenderPass;
 				framebufferInfo.attachmentCount = attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
@@ -1732,14 +1734,6 @@ namespace flex
 			VkFormat attDepthFormat;
 			VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &attDepthFormat);
 			assert(validDepthFormat);
-
-			/*CreateAttachment(
-				m_VulkanDevice,
-				attDepthFormat,
-				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-				offScreenFrameBuf->width,
-				offScreenFrameBuf->height,
-				&offScreenFrameBuf->depth);*/
 
 			// Set up separate renderpass with references to the color and depth attachments
 			std::array<VkAttachmentDescription, 4> attachmentDescs = {};
@@ -1862,7 +1856,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateCommandPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_VulkanDevice->m_CommandPool.replace()));
 		}
 
-		VkCommandBuffer VulkanRenderer::BeginSingleTimeCommands()
+		VkCommandBuffer VulkanRenderer::BeginSingleTimeCommands() const
 		{
 			VkCommandBufferAllocateInfo allocInfo = {};
 			allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1883,7 +1877,7 @@ namespace flex
 			return commandBuffer;
 		}
 
-		void VulkanRenderer::EndSingleTimeCommands(VkCommandBuffer commandBuffer)
+		void VulkanRenderer::EndSingleTimeCommands(VkCommandBuffer commandBuffer) const
 		{
 			vkEndCommandBuffer(commandBuffer);
 
@@ -1899,7 +1893,7 @@ namespace flex
 		}
 
 		void VulkanRenderer::CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-			VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory, glm::uint arrayLayers, glm::uint mipLevels, VkImageCreateFlags flags)
+			VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory, glm::uint arrayLayers, glm::uint mipLevels, VkImageCreateFlags flags) const
 		{
 			VkImageCreateInfo imageInfo = {};
 			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1932,7 +1926,7 @@ namespace flex
 			vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, *image, *imageMemory, 0);
 		}
 
-		VkFormat VulkanRenderer::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+		VkFormat VulkanRenderer::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
 		{
 			for (VkFormat format : candidates)
 			{
@@ -1952,7 +1946,7 @@ namespace flex
 			throw std::runtime_error("failed to find supported formats!");
 		}
 
-		bool VulkanRenderer::HasStencilComponent(VkFormat format)
+		bool VulkanRenderer::HasStencilComponent(VkFormat format) const
 		{
 			return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 		}
@@ -1979,10 +1973,10 @@ namespace flex
 			//CreateImageView(offScreenFrameBuf->depth.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, &offScreenFrameBuf->depth.view);
 			//
 			//TransitionImageLayout(offScreenFrameBuf->depth.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, //VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-			
+
 		}
 
-		void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture)
+		void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture) const
 		{
 			CreateTextureImage(filePath, texture);
 			if (*texture != nullptr)
@@ -1994,7 +1988,7 @@ namespace flex
 			(*texture)->filePath = filePath;
 		}
 
-		void VulkanRenderer::CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture)
+		void VulkanRenderer::CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture) const
 		{
 			int textureWidth = 0;
 			int textureHeight = 0;
@@ -2220,7 +2214,7 @@ namespace flex
 			(*texture)->height = textureHeight;
 		}
 
-		void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTexture** texture)
+		void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTexture** texture) const
 		{
 			int textureWidth, textureHeight, textureChannels;
 			unsigned char* pixels = SOIL_load_image(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, SOIL_LOAD_RGBA);
@@ -2280,7 +2274,7 @@ namespace flex
 			VK_CHECK_RESULT(vkAllocateCommandBuffers(m_VulkanDevice->m_LogicalDevice, &allocInfo, m_CommandBuffers.data()));
 		}
 
-		VkCommandBuffer VulkanRenderer::CreateCommandBuffer(VkCommandBufferLevel level, bool begin)
+		VkCommandBuffer VulkanRenderer::CreateCommandBuffer(VkCommandBufferLevel level, bool begin) const
 		{
 			VkCommandBuffer commandBuffer;
 
@@ -2360,7 +2354,7 @@ namespace flex
 
 					// Only render non-deferred (forward) objects in this pass
 					if (m_Shaders[material->material.shaderID].deferred) continue;
-					
+
 					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[material->material.shaderID].vertexBuffer->m_Buffer, offsets);
 
 
@@ -2478,7 +2472,7 @@ namespace flex
 			}
 
 			vkCmdEndRenderPass(offScreenCmdBuffer);
-			
+
 			VK_CHECK_RESULT(vkEndCommandBuffer(offScreenCmdBuffer));
 		}
 
@@ -2534,7 +2528,7 @@ namespace flex
 			bufferPair.indexBuffer->Flush();
 		}
 
-		bool VulkanRenderer::CheckCommandBuffers()
+		bool VulkanRenderer::CheckCommandBuffers() const
 		{
 			for (auto& cmdBuffer : m_CommandBuffers)
 			{
@@ -2546,7 +2540,7 @@ namespace flex
 			return true;
 		}
 
-		void VulkanRenderer::FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free)
+		void VulkanRenderer::FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free) const
 		{
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -2574,7 +2568,7 @@ namespace flex
 			vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, static_cast<uint32_t>(m_CommandBuffers.size()), m_CommandBuffers.data());
 		}
 
-		uint32_t VulkanRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+		uint32_t VulkanRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
 		{
 			VkPhysicalDeviceMemoryProperties memProperties;
 			vkGetPhysicalDeviceMemoryProperties(m_VulkanDevice->m_PhysicalDevice, &memProperties);
@@ -2590,7 +2584,7 @@ namespace flex
 			throw std::runtime_error("failed to find any suitable memory type!");
 		}
 
-		void VulkanRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+		void VulkanRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -2655,7 +2649,7 @@ namespace flex
 			EndSingleTimeCommands(commandBuffer);
 		}
 
-		void VulkanRenderer::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height)
+		void VulkanRenderer::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -2680,7 +2674,7 @@ namespace flex
 			EndSingleTimeCommands(commandBuffer);
 		}
 
-		void VulkanRenderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+		void VulkanRenderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -2704,7 +2698,7 @@ namespace flex
 			EndSingleTimeCommands(commandBuffer);
 		}
 
-		void VulkanRenderer::CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer* buffer)
+		void VulkanRenderer::CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer* buffer) const
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -2738,7 +2732,7 @@ namespace flex
 			vkBindBufferMemory(m_VulkanDevice->m_LogicalDevice, buffer->m_Buffer, buffer->m_Memory, 0);
 		}
 
-		void VulkanRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+		void VulkanRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -2779,12 +2773,12 @@ namespace flex
 			}
 		}
 
-		glm::uint VulkanRenderer::CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, int size)
+		glm::uint VulkanRenderer::CreateStaticVertexBuffer(Buffer* vertexBuffer, ShaderID shaderID, int size)
 		{
 			void* vertexDataStart = malloc(size);
 			if (!vertexDataStart)
 			{
-				Logger::LogError("Failed to allocate memory for vertex buffer " + std::to_string(shaderIndex) + "! Attempted to allocate " + std::to_string(size) + " bytes");
+				Logger::LogError("Failed to allocate memory for vertex buffer " + std::to_string(shaderID) + "! Attempted to allocate " + std::to_string(size) + " bytes");
 				return 0;
 			}
 
@@ -2795,7 +2789,7 @@ namespace flex
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				RenderObject* renderObject = GetRenderObject(i);
-				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderIndex)
+				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderID)
 				{
 					renderObject->vertexOffset = vertexCount;
 
@@ -2810,10 +2804,10 @@ namespace flex
 
 			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
-				Logger::LogError("Failed to create static vertex buffer (no verts use shader index " + std::to_string(shaderIndex) + "!)");
+				Logger::LogError("Failed to create static vertex buffer (no verts use shader index " + std::to_string(shaderID) + "!)");
 				return 0;
 			}
-			
+
 			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
 			free(vertexDataStart);
 
@@ -2844,14 +2838,14 @@ namespace flex
 			}
 		}
 
-		glm::uint VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex)
+		glm::uint VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, ShaderID shaderID)
 		{
 			std::vector<glm::uint> indices;
 
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				RenderObject* renderObject = GetRenderObject(i);
-				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderIndex && renderObject->indexed)
+				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderID && renderObject->indexed)
 				{
 					renderObject->indexOffset = indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -2868,7 +2862,7 @@ namespace flex
 
 			return indices.size();
 		}
-		
+
 		void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, const std::vector<glm::uint>& indices)
 		{
 			const size_t bufferSize = sizeof(indices[0]) * indices.size();
@@ -2896,66 +2890,92 @@ namespace flex
 
 			m_UniformBuffers.resize(m_Shaders.size(), { m_VulkanDevice->m_LogicalDevice });
 
-			glm::uint shaderIndex = 0;
+			ShaderID shaderID = 0;
 
 			// Deferred Simple
-			m_Shaders[shaderIndex].numAttachments = 3;
-			m_Shaders[shaderIndex].deferred = true;
+			m_Shaders[shaderID].numAttachments = 3;
+			m_Shaders[shaderID].deferred = true;
 
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("viewProjection", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("viewProjection", true);
 
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useDiffuseSampler", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("diffuseSampler", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("normalSampler", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useSpecularSampler", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("specularSampler", true);
-			++shaderIndex;
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useDiffuseSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("diffuseSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("normalSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useSpecularSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("specularSampler", true);
+			++shaderID;
 
 			// Color
-			m_Shaders[shaderIndex].deferred = false;
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("viewProjection", true);
-			
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("model", true);
-			++shaderIndex;
+			m_Shaders[shaderID].deferred = false;
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("viewProjection", true);
+
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
+			++shaderID;
 
 			// ImGui
-			m_Shaders[shaderIndex].deferred = false;
-			m_Shaders[shaderIndex].constantBufferUniforms = {};
+			m_Shaders[shaderID].deferred = false;
+			m_Shaders[shaderID].constantBufferUniforms = {};
 
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("diffuseSampler", true);
-			++shaderIndex;
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("diffuseSampler", true);
+			++shaderID;
+
+			// PBR
+			m_Shaders[shaderID].deferred = false;
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("viewProjection", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("camPos", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("pointLights", true);
+
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("modelInvTranspose", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAlbedoSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAlbedo", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useMetallicSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constMetallic", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useRoughnessSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constRoughness", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAOSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAO", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("albedoSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("metallicSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("roughnessSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("aoSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("normalSampler", true);
+			++shaderID;
 
 			// Skybox
-			m_Shaders[shaderIndex].deferred = false;
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("view", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("projection", true);
-			
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("useCubemapSampler", true);
-			m_Shaders[shaderIndex].dynamicBufferUniforms.AddUniform("cubemapSampler", true);
-			++shaderIndex;
+			m_Shaders[shaderID].deferred = false;
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("view", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("projection", true);
+
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useCubemapSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("cubemapSampler", true);
+			++shaderID;
 
 			// Deferred combine (sample gbuffer)
-			m_Shaders[shaderIndex].deferred = false; // Sounds strange but this isn't deferred
+			m_Shaders[shaderID].deferred = false; // Sounds strange but this isn't deferred
 			// TODO: Specify that this is only used in the frag shader here
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("camPos", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("dirLight", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("pointLights", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("positionFrameBufferSampler", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("normalFrameBufferSampler", true);
-			m_Shaders[shaderIndex].constantBufferUniforms.AddUniform("diffuseSpecularFrameBufferSampler", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("uniformBufferConstant", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("camPos", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("dirLight", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("pointLights", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("positionFrameBufferSampler", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("normalFrameBufferSampler", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("diffuseSpecularFrameBufferSampler", true);
 
-			m_Shaders[shaderIndex].dynamicBufferUniforms = {};
-			++shaderIndex;
+			m_Shaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
 
 
 			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
@@ -3102,7 +3122,7 @@ namespace flex
 
 			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-			
+
 			// Scene rendering
 
 			submitInfo.pWaitSemaphores = &offscreenSemaphore;
@@ -3138,7 +3158,7 @@ namespace flex
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
 		}
 
-		bool VulkanRenderer::CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule)
+		bool VulkanRenderer::CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const
 		{
 			VkShaderModuleCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -3151,7 +3171,7 @@ namespace flex
 			return (result == VK_SUCCESS);
 		}
 
-		VkSurfaceFormatKHR VulkanRenderer::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+		VkSurfaceFormatKHR VulkanRenderer::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const
 		{
 			if (availableFormats.size() == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED)
 			{
@@ -3168,7 +3188,7 @@ namespace flex
 			return availableFormats[0];
 		}
 
-		VkPresentModeKHR VulkanRenderer::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes)
+		VkPresentModeKHR VulkanRenderer::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes) const
 		{
 			const VkPresentModeKHR bestMode = (m_VSyncEnabled ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR);
 			VkPresentModeKHR secondBestMode = bestMode;
@@ -3190,7 +3210,7 @@ namespace flex
 			return secondBestMode;
 		}
 
-		VkExtent2D VulkanRenderer::ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities)
+		VkExtent2D VulkanRenderer::ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities) const
 		{
 			if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 			{
@@ -3210,7 +3230,7 @@ namespace flex
 			}
 		}
 
-		VulkanSwapChainSupportDetails VulkanRenderer::QuerySwapChainSupport(VkPhysicalDevice device)
+		VulkanSwapChainSupportDetails VulkanRenderer::QuerySwapChainSupport(VkPhysicalDevice device) const
 		{
 			VulkanSwapChainSupportDetails details;
 
@@ -3237,7 +3257,7 @@ namespace flex
 			return details;
 		}
 
-		bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice device)
+		bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice device) const
 		{
 			VulkanQueueFamilyIndices indices = FindQueueFamilies(device);
 
@@ -3256,7 +3276,7 @@ namespace flex
 			return indices.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 		}
 
-		bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
+		bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device) const
 		{
 			uint32_t extensionCount;
 			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -3274,7 +3294,7 @@ namespace flex
 			return requiredExtensions.empty();
 		}
 
-		VulkanQueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device)
+		VulkanQueueFamilyIndices VulkanRenderer::FindQueueFamilies(VkPhysicalDevice device) const
 		{
 			// TODO: Move to VulkanDevice class?
 			VulkanQueueFamilyIndices indices;
@@ -3312,7 +3332,7 @@ namespace flex
 			return indices;
 		}
 
-		std::vector<const char*> VulkanRenderer::GetRequiredExtensions()
+		std::vector<const char*> VulkanRenderer::GetRequiredExtensions() const
 		{
 			std::vector<const char*> extensions;
 
@@ -3333,7 +3353,7 @@ namespace flex
 			return extensions;
 		}
 
-		bool VulkanRenderer::CheckValidationLayerSupport()
+		bool VulkanRenderer::CheckValidationLayerSupport() const
 		{
 			uint32_t layerCount;
 			vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -3378,11 +3398,7 @@ namespace flex
 				Uniforms& constantUniforms = m_Shaders[i].constantBufferUniforms;
 				VulkanUniformBufferObjectData& constantData = m_UniformBuffers[i].constantData;
 
-				if (constantUniforms.HasUniform("projection"))
-				{
-					memcpy(&constantData.data[index], &proj[0][0], sizeof(glm::mat4));
-					index += 16;
-				}
+				if (constantData.size == 0) continue; // No constant uniforms to update
 
 				if (constantUniforms.HasUniform("view"))
 				{
@@ -3396,7 +3412,13 @@ namespace flex
 					index += 16;
 				}
 
-				if (constantUniforms.HasUniform("viewProj"))
+				if (constantUniforms.HasUniform("projection"))
+				{
+					memcpy(&constantData.data[index], &proj[0][0], sizeof(glm::mat4));
+					index += 16;
+				}
+
+				if (constantUniforms.HasUniform("viewProjection"))
 				{
 					memcpy(&constantData.data[index], &viewProj[0][0], sizeof(glm::mat4));
 					index += 16;
@@ -3453,7 +3475,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateUniformBufferDynamic(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
@@ -3462,18 +3484,24 @@ namespace flex
 			VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 			Shader* shader = &m_Shaders[material->material.shaderID];
 
+			const int uniformBufferIndex = material->material.shaderID;
+			UniformBuffer& uniformBuffer = m_UniformBuffers[uniformBufferIndex];
+			Uniforms dynamicUniforms = shader->dynamicBufferUniforms;
+
+			if (uniformBuffer.dynamicBuffer.m_Size == 0) return; // There are no dynamic uniforms to update
+
 			const glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 modelViewProjection = proj * view * model;
-			glm::uint useDiffuseTexture = material->diffuseTexture == nullptr ? 0 : 1;
-			glm::uint useNormalTexture = material->normalTexture == nullptr ? 0 : 1;
-			glm::uint useSpecularTexture = material->specularTexture == nullptr ? 0 : 1;
-			glm::uint useCubemapTexture = material->material.useCubemapTexture ? 1 : 0;
-
-			const int uniformBufferIndex = material->material.shaderID;
-			UniformBuffer& uniformBuffer = m_UniformBuffers[uniformBufferIndex];
-			Uniforms dynamicUniforms = shader->dynamicBufferUniforms;
+			glm::uint useAlbedoTexture = material->material.useAlbedoSampler;
+			glm::uint useMetallicTexture = material->material.useMetallicSampler;
+			glm::uint useRoughnessTexture = material->material.useRoughnessSampler;
+			glm::uint useAOTexture = material->material.useAOSampler;
+			glm::uint useDiffuseTexture = material->material.useDiffuseSampler;
+			glm::uint useNormalTexture = material->material.useNormalSampler;
+			glm::uint useSpecularTexture = material->material.useSpecularSampler;
+			glm::uint useCubemapTexture = material->material.useCubemapTexture;
 
 			glm::uint offset = renderID * uniformBuffer.dynamicData.size;
 			glm::uint index = 0;
@@ -3495,6 +3523,54 @@ namespace flex
 			{
 				memcpy(&uniformBuffer.dynamicData.data[offset + index], &modelViewProjection, sizeof(modelViewProjection));
 				index += 16;
+			}
+
+			if (dynamicUniforms.HasUniform("constAlbedo"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constAlbedo, sizeof(material->material.constAlbedo));
+				index += 4;
+			}
+
+			if (dynamicUniforms.HasUniform("constMetallic"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constMetallic, sizeof(material->material.constMetallic));
+				index += 1;
+			}
+
+			if (dynamicUniforms.HasUniform("constRoughness"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constRoughness, sizeof(material->material.constRoughness));
+				index += 1;
+			}
+
+			if (dynamicUniforms.HasUniform("constAO"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constAO, sizeof(material->material.constAO));
+				index += 1;
+			}
+
+			if (dynamicUniforms.HasUniform("useAlbedoSampler"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useAlbedoTexture, sizeof(useAlbedoTexture));
+				index += 1;
+			}
+
+			if (dynamicUniforms.HasUniform("useMetallicSampler"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useMetallicTexture, sizeof(useMetallicTexture));
+				index += 1;
+			}
+
+			if (dynamicUniforms.HasUniform("useRoughnessSampler"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useRoughnessTexture, sizeof(useRoughnessTexture));
+				index += 1;
+			}
+
+			if (dynamicUniforms.HasUniform("useAOSampler"))
+			{
+				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useAOTexture, sizeof(useAOTexture));
+				index += 1;
 			}
 
 			if (dynamicUniforms.HasUniform("useDiffuseSampler"))
@@ -3554,6 +3630,7 @@ namespace flex
 				{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
 				{ shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
 
+				{ shaderDirectory + "vk_pbr_vert.spv", shaderDirectory + "vk_pbr_frag.spv" },
 				// NOTE: Skybox shader should be kept second last to keep other objects rendering in front
 				{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
 

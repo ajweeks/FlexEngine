@@ -52,9 +52,9 @@ namespace flex
 			FrameBuffer(const VDeleter<VkDevice>& device);
 
 			uint32_t width, height;
-			VkFramebuffer frameBuffer;
+			VDeleter<VkFramebuffer> frameBuffer;
 			FrameBufferAttachment position, normal, albedo;
-			VkRenderPass renderPass;
+			VDeleter<VkRenderPass> renderPass;
 		};
 
 		struct VulkanQueueFamilyIndices
@@ -151,6 +151,10 @@ namespace flex
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* specularTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
+			VulkanTexture* albedoTexture = nullptr;
+			VulkanTexture* metallicTexture = nullptr;
+			VulkanTexture* roughnessTexture = nullptr;
+			VulkanTexture* aoTexture = nullptr;
 
 			glm::uint descriptorSetLayoutIndex;
 		};

@@ -81,7 +81,7 @@ namespace flex
 			void CreateSwapChain(Window* window);
 			void CreateImageViews();
 			void CreateRenderPass();
-			void CreateDescriptorSetLayout(glm::uint shaderIndex);
+			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void CreateGraphicsPipeline(RenderID renderID);
@@ -90,18 +90,18 @@ namespace flex
 			void CreateFramebuffers();
 			void PrepareOffscreenFrameBuffer(Window* window);
 
-			void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture);
-			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture);
-			void CreateTextureImage(const std::string& filePath, VulkanTexture** texture);
-			void CreateTextureImageView(VulkanTexture* texture);
-			void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f);
+			void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture)const;
+			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture) const;
+			void CreateTextureImage(const std::string& filePath, VulkanTexture** texture) const;
+			void CreateTextureImageView(VulkanTexture* texture) const;
+			void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f) const;
 
 			// Creates vertex buffers for all render objects
 			void CreateStaticVertexBuffers();
 			
 			// Creates vertex buffer for all render objects' verts which use specified shader index
 			// Returns vertex count
-			glm::uint CreateStaticVertexBuffer(Buffer* vertexBuffer, glm::uint shaderIndex, int size); 
+			glm::uint CreateStaticVertexBuffer(Buffer* vertexBuffer, ShaderID shaderID, int size);
 			void CreateStaticVertexBuffer(Buffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize);
 			
 			// Creates static index buffers for all render objects
@@ -109,7 +109,7 @@ namespace flex
 
 			// Creates index buffer for all render objects' indices which use specified shader index
 			// Returns index count
-			glm::uint CreateStaticIndexBuffer(Buffer* indexBuffer, glm::uint shaderIndex); 
+			glm::uint CreateStaticIndexBuffer(Buffer* indexBuffer, ShaderID shaderID);
 			void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, const std::vector<glm::uint>& indices);
 
 			void PrepareUniformBuffers();
@@ -122,45 +122,44 @@ namespace flex
 			// TODO: Create command buffer class
 			void CreateCommandPool();
 			void CreateCommandBuffers();
-			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin);
+			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin) const;
 			void BuildCommandBuffers();
 			void BuildDeferredCommandBuffer();
 			void RebuildCommandBuffers();
-			bool CheckCommandBuffers();
-			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free);
+			bool CheckCommandBuffers() const;
+			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free) const;
 			void DestroyCommandBuffers();
 
 			void CreateSemaphores();
 
-			void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView* imageView);
+			void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView* imageView) const;
 			void RecreateSwapChain(Window* window);
-			VkCommandBuffer BeginSingleTimeCommands();
-			void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+			VkCommandBuffer BeginSingleTimeCommands() const;
+			void EndSingleTimeCommands(VkCommandBuffer commandBuffer) const;
 			void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
-				VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory,
-				glm::uint arrayLayers = 1, glm::uint mipLevels = 1, VkImageCreateFlags flags = 0);
-			VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-			bool HasStencilComponent(VkFormat format);
-			uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-			void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-			void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
-			void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-			void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer* buffer);
-			void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
+				VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory, glm::uint arrayLayers = 1, glm::uint mipLevels = 1, VkImageCreateFlags flags = 0) const;
+			VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
+			bool HasStencilComponent(VkFormat format) const;
+			uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
+			void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+			void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) const;
+			void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const;
+			void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer* buffer) const;
+			void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0) const;
 			void DrawFrame(Window* window);
-			bool CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule);
-			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
-			VkExtent2D ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities);
-			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
-			bool IsDeviceSuitable(VkPhysicalDevice device);
-			bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
-			VulkanQueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
-			std::vector<const char*> GetRequiredExtensions();
-			bool CheckValidationLayerSupport();
+			bool CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const;
+			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
+			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes) const;
+			VkExtent2D ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities) const;
+			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
+			bool IsDeviceSuitable(VkPhysicalDevice device) const;
+			bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
+			VulkanQueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) const;
+			std::vector<const char*> GetRequiredExtensions() const;
+			bool CheckValidationLayerSupport() const;
 
 			void UpdateConstantUniformBuffers(const GameContext& gameContext);
-			void UpdateUniformBufferDynamic(const GameContext& gameContext, RenderID renderID, const glm::mat4& model);
+			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, const glm::mat4& model);
 
 			void LoadDefaultShaderCode();
 
@@ -227,17 +226,9 @@ namespace flex
 
 			std::vector<VkCommandBuffer> m_CommandBuffers;
 
-			// TODO: Move into vector
-			VulkanTexture* m_BrickDiffuseTexture = nullptr;
-			VulkanTexture* m_BrickNormalTexture = nullptr;
-			VulkanTexture* m_BrickSpecularTexture = nullptr;
-
-			VulkanTexture* m_WorkDiffuseTexture = nullptr;
-			VulkanTexture* m_WorkNormalTexture = nullptr;
-			VulkanTexture* m_WorkSpecularTexture = nullptr;
-
+			std::vector<VulkanTexture*> m_LoadedTextures;
+			
 			VulkanTexture* m_BlankTexture = nullptr;
-			VulkanTexture* m_SkyboxTexture = nullptr;
 
 			// TODO: Use FrameBufferAttachment
 			VDeleter<VkImage> m_DepthImage;

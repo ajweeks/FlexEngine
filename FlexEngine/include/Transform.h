@@ -15,7 +15,7 @@ namespace flex
 		~Transform();
 
 		void Translate(glm::vec3 deltaPosition);
-		void Rotate(glm::quat deltaRotation);
+		void Rotate(glm::quat deltaQuatRotation);
 		void Rotate(glm::vec3 deltaEulerRotationRad);
 		void Scale(glm::vec3 deltaScale);
 		void SetAsIdentity();

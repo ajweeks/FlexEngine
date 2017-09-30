@@ -16,7 +16,7 @@ uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 struct Material
 {
 	bool useAlbedoSampler;
-	vec3 constAlbedo;
+	vec4 constAlbedo;
 
 	bool useMetallicSampler;
 	float constMetallic;
@@ -39,8 +39,8 @@ uniform sampler2D normalSampler;
 
 uniform vec4 camPos;
 
-in vec2 ex_TexCoord;
 in vec3 ex_WorldPos;
+in vec2 ex_TexCoord;
 in mat3 ex_TBN;
 
 out vec4 fragColor;

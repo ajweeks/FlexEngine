@@ -14,6 +14,9 @@
 @ glslangvalidator -V vk_deferred_simple.vert -o spv/vk_deferred_simple_vert.spv
 @ glslangvalidator -V vk_deferred_simple.frag -o spv/vk_deferred_simple_frag.spv
 
+@ glslangvalidator -V vk_pbr.vert -o spv/vk_pbr_vert.spv
+@ glslangvalidator -V vk_pbr.frag -o spv/vk_pbr_frag.spv
+
 @REM ImGui
 @ glslangValidator -V vk_imgui.frag -o spv/vk_imgui_frag.spv
 @ glslangValidator -V vk_imgui.vert -o spv/vk_imgui_vert.spv

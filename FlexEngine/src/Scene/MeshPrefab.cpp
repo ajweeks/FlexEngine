@@ -33,7 +33,8 @@ namespace flex
 
 	MeshPrefab::MeshPrefab(MaterialID materialID, const std::string& name) :
 		m_MaterialID(materialID),
-		m_Name(name)
+		m_Name(name),
+		m_UVScale(1.0f, 1.0f)
 	{
 		if (m_Name.empty()) m_Name = m_DefaultName;
 	}
@@ -119,6 +120,7 @@ namespace flex
 			{
 				// Truncate w component
 				glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
+				texCoord *= m_UVScale;
 				vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 			}
@@ -146,7 +148,7 @@ namespace flex
 		Renderer* renderer = gameContext.renderer;
 
 		Renderer::RenderObjectCreateInfo renderObjectCreateInfo = {};
-		renderObjectCreateInfo.materialID = 0;
+		renderObjectCreateInfo.materialID = m_MaterialID;
 		renderObjectCreateInfo.transform = &m_Transform;
 
 		Renderer::TopologyMode topologyMode = Renderer::TopologyMode::TRIANGLE_LIST;
@@ -390,7 +392,6 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 
-			renderObjectCreateInfo.materialID = 1;
 			renderObjectCreateInfo.name = "Cube";
 		} break;
 		case MeshPrefab::PrefabShape::GRID:
@@ -433,7 +434,6 @@ namespace flex
 			}
 
 			topologyMode = Renderer::TopologyMode::LINE_LIST;
-			renderObjectCreateInfo.materialID = 1;
 			renderObjectCreateInfo.name = "Grid";
 		} break;
 		case MeshPrefab::PrefabShape::PLANE:
@@ -510,7 +510,6 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 
-			renderObjectCreateInfo.materialID = 0;
 			renderObjectCreateInfo.name = "Plane";
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:
@@ -671,7 +670,6 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
 
 			// TODO: At *least* use strings rather than indices
-			renderObjectCreateInfo.materialID = 1;
 			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
 			renderObjectCreateInfo.name = "Skybox";
 
@@ -686,7 +684,6 @@ namespace flex
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		renderObjectCreateInfo.materialID = m_MaterialID;
 		if (!m_Name.empty() && m_Name.compare(m_DefaultName) != 0) renderObjectCreateInfo.name = m_Name;
 
 		m_RenderID = renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
@@ -718,6 +715,11 @@ namespace flex
 	void MeshPrefab::SetMaterialID(MaterialID materialID)
 	{
 		m_MaterialID = materialID;
+	}
+
+	void MeshPrefab::SetUVScale(float uScale, float vScale)
+	{
+		m_UVScale = glm::vec2(uScale, vScale);
 	}
 
 	RenderID MeshPrefab::GetRenderID() const
