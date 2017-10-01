@@ -112,7 +112,7 @@ namespace flex
 			bool useNormalFrameBufferSampler = false;
 			bool useDiffuseSpecularFrameBufferSampler = false;
 
-			bool useCubemapTexture = false;
+			bool useCubemapSampler = false;
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 			// PBR constants

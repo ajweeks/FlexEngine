@@ -77,7 +77,6 @@ namespace flex
 
 		struct VulkanUniformBufferObjectData
 		{
-			//Renderer::Uniforms uniforms;
 			float* data = nullptr;
 			glm::uint size;
 		};
@@ -86,16 +85,16 @@ namespace flex
 		{
 			UniformBuffer(const VDeleter<VkDevice>& device);
 
-			Buffer constantBuffer;
-			Buffer dynamicBuffer;
+			VulkanBuffer constantBuffer;
+			VulkanBuffer dynamicBuffer;
 			VulkanUniformBufferObjectData constantData;
 			VulkanUniformBufferObjectData dynamicData;
 		};
 
 		struct VertexIndexBufferPair
 		{
-			Buffer* vertexBuffer = nullptr;
-			Buffer* indexBuffer = nullptr;
+			VulkanBuffer* vertexBuffer = nullptr;
+			VulkanBuffer* indexBuffer = nullptr;
 			glm::uint vertexCount;
 			glm::uint indexCount;
 			bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (eg. ImGui vertex buffer)

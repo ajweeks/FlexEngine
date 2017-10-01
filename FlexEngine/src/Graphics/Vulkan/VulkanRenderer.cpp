@@ -55,8 +55,8 @@ namespace flex
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
 				m_VertexIndexBufferPairs.push_back({
-					new Buffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
-					new Buffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
+					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
+					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
 				});
 			}
 
@@ -114,8 +114,8 @@ namespace flex
 			}
 			offscreenQuadVertexIndexBufferPair.indexCount = static_cast<uint32_t>(indexBuffer.size());
 
-			offscreenQuadVertexIndexBufferPair.vertexBuffer = new Buffer(m_VulkanDevice->m_LogicalDevice);
-			offscreenQuadVertexIndexBufferPair.indexBuffer = new Buffer(m_VulkanDevice->m_LogicalDevice);
+			offscreenQuadVertexIndexBufferPair.vertexBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
+			offscreenQuadVertexIndexBufferPair.indexBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
 
 			CreateStaticVertexBuffer(offscreenQuadVertexIndexBufferPair.vertexBuffer, offscreenQuadVertexBufferData.pDataStart, offscreenQuadVertexBufferData.BufferSize);
 
@@ -289,52 +289,51 @@ namespace flex
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
 			// Check if any of the textures have already been loaded
-			for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
+			for (VulkanTexture* vulkanTexture : m_LoadedTextures)
 			{
-				for (size_t j = 0; j < textureCount; ++j)
+				for (TextureInfo& textureInfo : textureInfos)
 				{
-					if (!textureInfos[j].filePath.empty() &&
-						textureInfos[j].filePath.compare(m_LoadedTextures[i]->filePath) == 0)
+					if (!textureInfo.filePath.empty() &&
+						textureInfo.filePath.compare(vulkanTexture->filePath) == 0)
 					{
-						*textureInfos[j].texture = m_LoadedTextures[i];
-						*textureInfos[j].enabled = true;
+						*textureInfo.texture = vulkanTexture;
+						*textureInfo.enabled = true;
 					}
 				}
 			}
 
 			// Create any textures that haven't been created yet
-			for (size_t j = 0; j < textureCount; ++j)
+			for (TextureInfo& textureInfo : textureInfos)
 			{
-				if (!textureInfos[j].filePath.empty() && *textureInfos[j].texture == nullptr)
+				if (!textureInfo.filePath.empty() && *textureInfo.texture == nullptr)
 				{
-					m_LoadedTextures.push_back(new VulkanTexture(m_VulkanDevice->m_LogicalDevice));
-					CreateVulkanTexture(textureInfos[j].filePath, &m_LoadedTextures.back());
-					*textureInfos[j].texture = m_LoadedTextures.back();
-					*textureInfos[j].enabled = true;
+					m_LoadedTextures.push_back(nullptr);
+					CreateVulkanTexture(textureInfo.filePath, &m_LoadedTextures.back());
+					*textureInfo.texture = m_LoadedTextures.back();
+					*textureInfo.enabled = true;
 				}
 			}
 
 			// Cubemaps are treated differently than regular textures because they require 6 filepaths
 			if (!createInfo->cubeMapFilePaths[0].empty())
 			{
-				for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
+				for (VulkanTexture* vulkanTexture : m_LoadedTextures)
 				{
-					if (createInfo->cubeMapFilePaths[0].compare(m_LoadedTextures[i]->filePath) == 0)
+					if (createInfo->cubeMapFilePaths[0].compare(vulkanTexture->filePath) == 0)
 					{
-						mat.cubemapTexture = m_LoadedTextures[i];
+						mat.cubemapTexture = vulkanTexture;
+						break;
 					}
-
-					break;
 				}
 
 				if (mat.cubemapTexture == nullptr) // This cubemap hasn't been loaded before
 				{
-					m_LoadedTextures.push_back(new VulkanTexture(m_VulkanDevice->m_LogicalDevice));
+					m_LoadedTextures.push_back(nullptr);
 					CreateVulkanCubemap(createInfo->cubeMapFilePaths, &m_LoadedTextures.back());
 					mat.cubemapTexture = m_LoadedTextures.back();
 				}
 
-				mat.material.useCubemapTexture = true;
+				mat.material.useCubemapSampler = true;
 			}
 
 			m_LoadedMaterials.push_back(mat);
@@ -441,9 +440,9 @@ namespace flex
 		{
 			glm::uint count = 0;
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (RenderObject* renderObject : m_RenderObjects)
 			{
-				if (m_RenderObjects[i] != nullptr) ++count;
+				if (renderObject != nullptr) ++count;
 			}
 
 			return count;
@@ -729,7 +728,7 @@ namespace flex
 			CreateImageView(m_ImGuiFontTexture->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &m_ImGuiFontTexture->imageView);
 
 			// Staging buffers for font data upload
-			Buffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 
 			CreateAndAllocateBuffer(
 				uploadSize,
@@ -1307,33 +1306,33 @@ namespace flex
 			glm::uint descriptorSetIndex = 0;
 			glm::uint binding = 0;
 
-			for (size_t i = 0; i < descSetCount; ++i)
+			for (DescriptorSetInfo& descriptorSetInfo : descriptorSets)
 			{
-				if (constantBufferUniforms.HasUniform(descriptorSets[i].uniformName) ||
-					dynamicBufferUniforms.HasUniform(descriptorSets[i].uniformName))
+				if (constantBufferUniforms.HasUniform(descriptorSetInfo.uniformName) ||
+					dynamicBufferUniforms.HasUniform(descriptorSetInfo.uniformName))
 				{
-					descriptorSets[i].bufferInfo = {};
-					descriptorSets[i].bufferInfo.buffer = descriptorSets[i].buffer;
-					descriptorSets[i].bufferInfo.range = descriptorSets[i].bufferSize;
+					descriptorSetInfo.bufferInfo = {};
+					descriptorSetInfo.bufferInfo.buffer = descriptorSetInfo.buffer;
+					descriptorSetInfo.bufferInfo.range = descriptorSetInfo.bufferSize;
 
-					descriptorSets[i].imageInfo = {};
-					descriptorSets[i].imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					if (descriptorSets[i].imageView)
+					descriptorSetInfo.imageInfo = {};
+					descriptorSetInfo.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					if (descriptorSetInfo.imageView)
 					{
-						descriptorSets[i].imageInfo.imageView = descriptorSets[i].imageView;
-						descriptorSets[i].imageInfo.sampler = descriptorSets[i].imageSampler;
+						descriptorSetInfo.imageInfo.imageView = descriptorSetInfo.imageView;
+						descriptorSetInfo.imageInfo.sampler = descriptorSetInfo.imageSampler;
 					}
 					else
 					{
-						if (descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
-							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-							descriptorSets[i].descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+						if (descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
 						{
 							// If setting a sampler type, image info must be filled in
-							descriptorSets[i].imageInfo.imageView = m_BlankTexture->imageView;
-							descriptorSets[i].imageInfo.sampler = m_BlankTexture->sampler;
+							descriptorSetInfo.imageInfo.imageView = m_BlankTexture->imageView;
+							descriptorSetInfo.imageInfo.sampler = m_BlankTexture->sampler;
 						}
 					}
 
@@ -1342,10 +1341,10 @@ namespace flex
 					writeDescriptorSets[descriptorSetIndex].dstSet = *createInfo->descriptorSet;
 					writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
 					writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
-					writeDescriptorSets[descriptorSetIndex].descriptorType = descriptorSets[i].descriptorType;
+					writeDescriptorSets[descriptorSetIndex].descriptorType = descriptorSetInfo.descriptorType;
 					writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
-					writeDescriptorSets[descriptorSetIndex].pBufferInfo = descriptorSets[i].bufferInfo.buffer ? &descriptorSets[i].bufferInfo : nullptr;
-					writeDescriptorSets[descriptorSetIndex].pImageInfo = descriptorSets[i].imageInfo.imageView ? &descriptorSets[i].imageInfo : nullptr;
+					writeDescriptorSets[descriptorSetIndex].pBufferInfo = descriptorSetInfo.bufferInfo.buffer ? &descriptorSetInfo.bufferInfo : nullptr;
+					writeDescriptorSets[descriptorSetIndex].pImageInfo = descriptorSetInfo.imageInfo.imageView ? &descriptorSetInfo.imageInfo : nullptr;
 
 					++descriptorSetIndex;
 					++binding;
@@ -1412,21 +1411,20 @@ namespace flex
 				{ "diffuseSpecularFrameBufferSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 			};
-			const size_t descSetCount = sizeof(descriptorSets) / sizeof(descriptorSets[0]);
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 			glm::uint binding = 0;
 
-			for (size_t i = 0; i < descSetCount; ++i)
+			for (DescriptorSetInfo& descSetInfo : descriptorSets)
 			{
-				if (shader->constantBufferUniforms.HasUniform(descriptorSets[i].uniformName) ||
-					shader->dynamicBufferUniforms.HasUniform(descriptorSets[i].uniformName))
+				if (shader->constantBufferUniforms.HasUniform(descSetInfo.uniformName) ||
+					shader->dynamicBufferUniforms.HasUniform(descSetInfo.uniformName))
 				{
 					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
 					descSetLayoutBinding.binding = binding;
 					descSetLayoutBinding.descriptorCount = 1;
-					descSetLayoutBinding.descriptorType = descriptorSets[i].descriptorType;
-					descSetLayoutBinding.stageFlags = descriptorSets[i].shaderStageFlags;
+					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
+					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
 					bindings.push_back(descSetLayoutBinding);
 					++binding;
 				}
@@ -1570,25 +1568,24 @@ namespace flex
 			multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
 			std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments = {};
-			for (int i = 0; i < shader.numAttachments; ++i)
+			colorBlendAttachments.resize(shader.numAttachments, {});
+			for (VkPipelineColorBlendAttachmentState& colorBlendAttachment : colorBlendAttachments)
 			{
-				colorBlendAttachments.push_back({});
-
-				colorBlendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+				colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 				if (createInfo->enabledColorBlending)
 				{
-					colorBlendAttachments[i].blendEnable = VK_TRUE;
-					colorBlendAttachments[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-					colorBlendAttachments[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-					colorBlendAttachments[i].colorBlendOp = VK_BLEND_OP_ADD;
-					colorBlendAttachments[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-					colorBlendAttachments[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-					colorBlendAttachments[i].alphaBlendOp = VK_BLEND_OP_ADD;
+					colorBlendAttachment.blendEnable = VK_TRUE;
+					colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+					colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+					colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+					colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+					colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+					colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 				}
 				else
 				{
-					colorBlendAttachments[i].blendEnable = VK_FALSE;
+					colorBlendAttachment.blendEnable = VK_FALSE;
 				}
 			}
 
@@ -2007,12 +2004,12 @@ namespace flex
 			glm::uint totalSize = 0;
 
 			images.reserve(filePaths.size());
-			for (size_t i = 0; i < filePaths.size(); ++i)
+			for (const std::string& filePath : filePaths)
 			{
-				unsigned char* pixels = SOIL_load_image(filePaths[i].c_str(), &textureWidth, &textureHeight, &textureChannels, SOIL_LOAD_RGBA);
+				unsigned char* pixels = SOIL_load_image(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, SOIL_LOAD_RGBA);
 				if (!pixels)
 				{
-					Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + ", image filepath: " + filePaths[i]);
+					Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + ", image filepath: " + filePath);
 					return;
 				}
 
@@ -2027,15 +2024,11 @@ namespace flex
 
 			unsigned char* pixels = (unsigned char*)malloc(totalSize);
 			unsigned char* pixelData = pixels;
-			for (size_t i = 0; i < images.size(); ++i)
+			for (Image& image : images)
 			{
-				memcpy(pixelData, images[i].pixels, images[i].size);
-				pixelData += (images[i].size / sizeof(unsigned char));
-			}
-
-			for (size_t i = 0; i < images.size(); ++i)
-			{
-				SOIL_free_image_data(images[i].pixels);
+				memcpy(pixelData, image.pixels, image.size);
+				pixelData += (image.size / sizeof(unsigned char));
+				SOIL_free_image_data(image.pixels);
 			}
 
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
@@ -2049,7 +2042,7 @@ namespace flex
 			VkMemoryRequirements memReqs;
 
 			// Create a host-visible staging buffer that contains the raw image data
-			Buffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 
 			VkBufferCreateInfo bufferCreateInfo = {};
 			bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -2229,7 +2222,7 @@ namespace flex
 
 			VkDeviceSize imageSize = (VkDeviceSize)(textureWidth * textureHeight * 4);
 
-			Buffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 
 			CreateAndAllocateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
@@ -2312,34 +2305,36 @@ namespace flex
 
 			for (size_t i = 0; i < m_CommandBuffers.size(); ++i)
 			{
+				VkCommandBuffer& commandBuffer = m_CommandBuffers[i];
+
 				renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
 				VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
 				cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 				cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-				VK_CHECK_RESULT(vkBeginCommandBuffer(m_CommandBuffers[i], &cmdBufferbeginInfo));
+				VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
 
-				vkCmdBeginRenderPass(m_CommandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 				VkViewport viewport = VkViewport{ 0.0f, 1.0f, (float)m_SwapChainExtent.width, (float)m_SwapChainExtent.height, 0.1f, 1000.0f };
-				vkCmdSetViewport(m_CommandBuffers[i], 0, 1, &viewport);
+				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 				VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
-				vkCmdSetScissor(m_CommandBuffers[i], 0, 1, &scissor);
+				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 
-				vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipelineLayout, 0, 1, &m_OffscreenBufferDescriptorSet, 0, nullptr);
+				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipelineLayout, 0, 1, &m_OffscreenBufferDescriptorSet, 0, nullptr);
 
 				// Final composition as full screen quad (deferred combine)
-				vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipeline);
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipeline);
 				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &offscreenQuadVertexIndexBufferPair.vertexBuffer->m_Buffer, offsets);
-				vkCmdBindIndexBuffer(m_CommandBuffers[i], offscreenQuadVertexIndexBufferPair.indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(m_CommandBuffers[i], 6, 1, 0, 0, 1);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &offscreenQuadVertexIndexBufferPair.vertexBuffer->m_Buffer, offsets);
+				vkCmdBindIndexBuffer(commandBuffer, offscreenQuadVertexIndexBufferPair.indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 1);
 
 
-				vkCmdNextSubpass(m_CommandBuffers[i], VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 
 				// Forward rendered objects
@@ -2355,37 +2350,37 @@ namespace flex
 					// Only render non-deferred (forward) objects in this pass
 					if (m_Shaders[material->material.shaderID].deferred) continue;
 
-					vkCmdBindVertexBuffers(m_CommandBuffers[i], 0, 1, &m_VertexIndexBufferPairs[material->material.shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[material->material.shaderID].vertexBuffer->m_Buffer, offsets);
 
 
 					if (m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Size != 0)
 					{
-						vkCmdBindIndexBuffer(m_CommandBuffers[i], m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 					}
 
-					vkCmdBindPipeline(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
 					uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
-					vkCmdBindDescriptorSets(m_CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
 						0, 1, &renderObject->descriptorSet,
 						1, &dynamicOffset);
 
 					if (renderObject->indexed)
 					{
-						vkCmdDrawIndexed(m_CommandBuffers[i], renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
+						vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
 					}
 					else
 					{
-						vkCmdDraw(m_CommandBuffers[i], renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+						vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 					}
 				}
 
-				ImGui_DrawFrame(m_CommandBuffers[i]);
+				ImGui_DrawFrame(commandBuffer);
 
 
-				vkCmdEndRenderPass(m_CommandBuffers[i]);
+				vkCmdEndRenderPass(commandBuffer);
 
-				VK_CHECK_RESULT(vkEndCommandBuffer(m_CommandBuffers[i]));
+				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 			}
 		}
 
@@ -2437,9 +2432,9 @@ namespace flex
 			VkDeviceSize offsets[1] = { 0 };
 
 			// TODO: Batch objects with same materials together like in GL renderer
-			for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				RenderObject* renderObject = GetRenderObject(j);
+				RenderObject* renderObject = GetRenderObject(i);
 				if (!renderObject) continue;
 
 				VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
@@ -2456,7 +2451,7 @@ namespace flex
 
 				vkCmdBindPipeline(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
-				uint32_t dynamicOffset = j * static_cast<uint32_t>(m_DynamicAlignment);
+				uint32_t dynamicOffset = i * static_cast<uint32_t>(m_DynamicAlignment);
 				vkCmdBindDescriptorSets(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
 					0, 1, &renderObject->descriptorSet,
 					1, &dynamicOffset);
@@ -2698,7 +2693,7 @@ namespace flex
 			EndSingleTimeCommands(commandBuffer);
 		}
 
-		void VulkanRenderer::CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer* buffer) const
+		void VulkanRenderer::CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer) const
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -2753,9 +2748,8 @@ namespace flex
 				{
 					size_t requiredMemory = 0;
 
-					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+					for (RenderObject* renderObject : m_RenderObjects)
 					{
-						RenderObject* renderObject = GetRenderObject(j);
 						if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == i)
 						{
 							requiredMemory += renderObject->vertexBufferData->BufferSize;
@@ -2773,7 +2767,7 @@ namespace flex
 			}
 		}
 
-		glm::uint VulkanRenderer::CreateStaticVertexBuffer(Buffer* vertexBuffer, ShaderID shaderID, int size)
+		glm::uint VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, int size)
 		{
 			void* vertexDataStart = malloc(size);
 			if (!vertexDataStart)
@@ -2786,9 +2780,8 @@ namespace flex
 
 			glm::uint vertexCount = 0;
 			glm::uint vertexBufferSize = 0;
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (RenderObject* renderObject : m_RenderObjects)
 			{
-				RenderObject* renderObject = GetRenderObject(i);
 				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderID)
 				{
 					renderObject->vertexOffset = vertexCount;
@@ -2814,9 +2807,9 @@ namespace flex
 			return vertexCount;
 		}
 
-		void VulkanRenderer::CreateStaticVertexBuffer(Buffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize)
+		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize)
 		{
-			Buffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 			CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
 
@@ -2838,13 +2831,12 @@ namespace flex
 			}
 		}
 
-		glm::uint VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, ShaderID shaderID)
+		glm::uint VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID)
 		{
 			std::vector<glm::uint> indices;
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (RenderObject* renderObject : m_RenderObjects)
 			{
-				RenderObject* renderObject = GetRenderObject(i);
 				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderID && renderObject->indexed)
 				{
 					renderObject->indexOffset = indices.size();
@@ -2863,11 +2855,11 @@ namespace flex
 			return indices.size();
 		}
 
-		void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, const std::vector<glm::uint>& indices)
+		void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<glm::uint>& indices)
 		{
 			const size_t bufferSize = sizeof(indices[0]) * indices.size();
 
-			Buffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 			CreateAndAllocateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
 
@@ -2936,18 +2928,18 @@ namespace flex
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("modelInvTranspose", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAlbedoSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("albedoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAlbedo", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useMetallicSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("metallicSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constMetallic", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useRoughnessSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("roughnessSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constRoughness", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAOSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("aoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAO", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("albedoSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("metallicSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("roughnessSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("aoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("normalSampler", true);
 			++shaderID;
 
@@ -3029,7 +3021,7 @@ namespace flex
 			return dynamicBufferSize;
 		}
 
-		void VulkanRenderer::PrepareUniformBuffer(Buffer* buffer, glm::uint bufferSize,
+		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, glm::uint bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits)
 		{
 			CreateAndAllocateBuffer(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer);
@@ -3067,13 +3059,13 @@ namespace flex
 
 		void VulkanRenderer::ReleaseUniformBuffers()
 		{
-			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
+			for (UniformBuffer& uniformBuffer : m_UniformBuffers)
 			{
-				free(m_UniformBuffers[i].constantData.data);
+				free(uniformBuffer.constantData.data);
 
-				if (m_UniformBuffers[i].dynamicData.data)
+				if (uniformBuffer.dynamicData.data)
 				{
-					_aligned_free(m_UniformBuffers[i].dynamicData.data);
+					_aligned_free(uniformBuffer.dynamicData.data);
 				}
 			}
 			m_UniformBuffers.clear();
@@ -3385,10 +3377,10 @@ namespace flex
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext)
 		{
-			glm::mat4 proj = gameContext.camera->GetProjection();
+			glm::mat4 projection = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
-			glm::mat4 viewProj = proj * view;
+			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
 
 			for (size_t i = 0; i < m_UniformBuffers.size(); ++i)
@@ -3398,78 +3390,49 @@ namespace flex
 				Uniforms& constantUniforms = m_Shaders[i].constantBufferUniforms;
 				VulkanUniformBufferObjectData& constantData = m_UniformBuffers[i].constantData;
 
-				if (constantData.size == 0) continue; // No constant uniforms to update
-
-				if (constantUniforms.HasUniform("view"))
+				void* pointLightsDataStart = nullptr;
+				size_t pointLightsSize = 0;
+				size_t pointLightsMoveInBytes = 0;
+				if (!m_PointLights.empty())
 				{
-					memcpy(&constantData.data[index], &view[0][0], sizeof(glm::mat4));
-					index += 16;
+					pointLightsDataStart = (void*)&m_PointLights[0];
+					pointLightsSize = sizeof(m_PointLights[0]) * m_PointLights.size();
+					pointLightsMoveInBytes = pointLightsSize / sizeof(float);
 				}
 
-				if (constantUniforms.HasUniform("viewInv"))
+				struct UniformInfo
 				{
-					memcpy(&constantData.data[index], &viewInv[0][0], sizeof(glm::mat4));
-					index += 16;
-				}
+					std::string uniformName;
+					void* dataStart = nullptr;
+					size_t copySize;
+					size_t moveInBytes;
+				};
+				UniformInfo uniformInfos[] = {
+					{ "view", (void*)&view, 64, 16 },
+					{ "viewInv", (void*)&viewInv, 64, 16 },
+					{ "projection", (void*)&projection, 64, 16 },
+					{ "viewProjection", (void*)&viewProjection, 64, 16 },
+					{ "camPos", (void*)&camPos, 16, 4 },
+					{ "dirLight", (void*)&m_DirectionalLight, sizeof(m_DirectionalLight), sizeof(m_DirectionalLight) / sizeof(float) },
+					{ "pointLights", (void*)pointLightsDataStart, pointLightsSize, pointLightsMoveInBytes },
+				};
+				const size_t uniformCount = sizeof(uniformInfos) / sizeof(uniformInfos[0]);
 
-				if (constantUniforms.HasUniform("projection"))
+				for (size_t i = 0; i < uniformCount; ++i)
 				{
-					memcpy(&constantData.data[index], &proj[0][0], sizeof(glm::mat4));
-					index += 16;
-				}
-
-				if (constantUniforms.HasUniform("viewProjection"))
-				{
-					memcpy(&constantData.data[index], &viewProj[0][0], sizeof(glm::mat4));
-					index += 16;
-				}
-
-				if (constantUniforms.HasUniform("model"))
-				{
-					Logger::LogError("Constant uniform buffer contains model matrix, which should be in the dynamic uniform buffer");
-				}
-
-				if (constantUniforms.HasUniform("modelInvTranspose"))
-				{
-					Logger::LogError("Constant uniform buffer contains modelInvTranspose matrix, which should be in the dynamic uniform buffer");
-				}
-
-				if (constantUniforms.HasUniform("modelViewProjection"))
-				{
-					Logger::LogError("Constant uniform buffer contains MVP matrix, which should be in the dynamic uniform buffer");
-				}
-
-				if (constantUniforms.HasUniform("camPos"))
-				{
-					memcpy(&constantData.data[index], &camPos[0], sizeof(glm::vec4));
-					index += 4;
-				}
-
-				if (constantUniforms.HasUniform("dirLight"))
-				{
-					memcpy(&constantData.data[index], &m_DirectionalLight, sizeof(m_DirectionalLight));
-					index += sizeof(m_DirectionalLight) / 4;
-				}
-
-				if (constantUniforms.HasUniform("pointLights"))
-				{
-					for (size_t j = 0; j < m_PointLights.size(); ++j)
+					if (constantUniforms.HasUniform(uniformInfos[i].uniformName))
 					{
-						memcpy(&constantData.data[index], &m_PointLights[j], sizeof(m_PointLights[j]));
-						index += sizeof(m_PointLights[j]) / 4;
+						memcpy(&constantData.data[index], uniformInfos[i].dataStart, uniformInfos[i].copySize);
+						index += uniformInfos[i].moveInBytes;
 					}
 				}
 
 				glm::uint size = constantData.size;
 
 #if  _DEBUG
-				// All three size calculations should be the same
 				glm::uint calculatedSize1 = index * 4;
-				glm::uint calculatedSize2 = constantUniforms.CalculateSize(m_PointLights.size());
-				assert(calculatedSize1 == calculatedSize2 &&
-					calculatedSize1 == size);
+				assert(calculatedSize1 == size);
 #endif // _DEBUG
-
 
 				memcpy(m_UniformBuffers[i].constantBuffer.m_Mapped, constantData.data, size);
 			}
@@ -3494,118 +3457,60 @@ namespace flex
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 modelViewProjection = proj * view * model;
-			glm::uint useAlbedoTexture = material->material.useAlbedoSampler;
-			glm::uint useMetallicTexture = material->material.useMetallicSampler;
-			glm::uint useRoughnessTexture = material->material.useRoughnessSampler;
-			glm::uint useAOTexture = material->material.useAOSampler;
-			glm::uint useDiffuseTexture = material->material.useDiffuseSampler;
-			glm::uint useNormalTexture = material->material.useNormalSampler;
-			glm::uint useSpecularTexture = material->material.useSpecularSampler;
-			glm::uint useCubemapTexture = material->material.useCubemapTexture;
+			glm::uint useAlbedoSampler = material->material.useAlbedoSampler;
+			glm::uint useMetallicSampler = material->material.useMetallicSampler;
+			glm::uint useRoughnessSampler = material->material.useRoughnessSampler;
+			glm::uint useAOSampler = material->material.useAOSampler;
+			glm::uint useDiffuseSampler = material->material.useDiffuseSampler;
+			glm::uint useNormalSampler = material->material.useNormalSampler;
+			glm::uint useSpecularSampler = material->material.useSpecularSampler;
+			glm::uint useCubemapSampler = material->material.useCubemapSampler;
 
 			glm::uint offset = renderID * uniformBuffer.dynamicData.size;
 			glm::uint index = 0;
 
-			// TODO: Flatten into single loop over array
-			if (dynamicUniforms.HasUniform("model"))
+			struct UniformInfo
 			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &model, sizeof(model));
-				index += 16;
-			}
+				std::string uniformName;
+				void* dataStart = nullptr;
+				size_t copySize;
+				size_t moveInBytes;
+			};
+			UniformInfo uniformInfos[] = {
+				{ "model", (void*)&model, 64, 16 },
+				{ "modelInvTranspose", (void*)&modelInvTranspose, 64, 16 },
+				{ "modelViewProjection", (void*)&modelViewProjection, 64, 16 },
+				// view, viewInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
+				{ "constAlbedo", (void*)&material->material.constAlbedo, 16, 4 },
+				{ "constMetallic", (void*)&material->material.constMetallic, 4, 1 },
+				{ "constRoughness", (void*)&material->material.constRoughness, 4, 1 },
+				{ "constAO", (void*)&material->material.constAO, 4, 1 },
+				{ "useAlbedoSampler", (void*)&useAlbedoSampler, 4, 1 },
+				{ "useMetallicSampler", (void*)&useMetallicSampler, 4, 1 },
+				{ "useRoughnessSampler", (void*)&useRoughnessSampler, 4, 1 },
+				{ "useAOSampler", (void*)&useAOSampler, 4, 1 },
+				{ "useDiffuseSampler", (void*)&useDiffuseSampler, 4, 1 },
+				{ "useNormalSampler", (void*)&useNormalSampler, 4, 1 },
+				{ "useSpecularSampler", (void*)&useSpecularSampler, 4, 1 },
+				{ "useCubemapSampler", (void*)&useCubemapSampler, 4, 1 },
+			};
+			const size_t uniformCount = sizeof(uniformInfos) / sizeof(uniformInfos[0]);
 
-			if (dynamicUniforms.HasUniform("modelInvTranspose"))
+			for (size_t i = 0; i < uniformCount; ++i)
 			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &modelInvTranspose, sizeof(modelInvTranspose));
-				index += 16;
-			}
-
-			if (dynamicUniforms.HasUniform("modelViewProjection"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &modelViewProjection, sizeof(modelViewProjection));
-				index += 16;
-			}
-
-			if (dynamicUniforms.HasUniform("constAlbedo"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constAlbedo, sizeof(material->material.constAlbedo));
-				index += 4;
-			}
-
-			if (dynamicUniforms.HasUniform("constMetallic"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constMetallic, sizeof(material->material.constMetallic));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("constRoughness"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constRoughness, sizeof(material->material.constRoughness));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("constAO"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &material->material.constAO, sizeof(material->material.constAO));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useAlbedoSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useAlbedoTexture, sizeof(useAlbedoTexture));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useMetallicSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useMetallicTexture, sizeof(useMetallicTexture));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useRoughnessSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useRoughnessTexture, sizeof(useRoughnessTexture));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useAOSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useAOTexture, sizeof(useAOTexture));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useDiffuseSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useDiffuseTexture, sizeof(useDiffuseTexture));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useNormalSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useNormalTexture, sizeof(useNormalTexture));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useSpecularSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useSpecularTexture, sizeof(useSpecularTexture));
-				index += 1;
-			}
-
-			if (dynamicUniforms.HasUniform("useCubemapSampler"))
-			{
-				memcpy(&uniformBuffer.dynamicData.data[offset + index], &useCubemapTexture, sizeof(useCubemapTexture));
-				index += 1;
+				if (dynamicUniforms.HasUniform(uniformInfos[i].uniformName))
+				{
+					memcpy(&uniformBuffer.dynamicData.data[offset + index], uniformInfos[i].dataStart, uniformInfos[i].copySize);
+					index += uniformInfos[i].moveInBytes;
+				}
 			}
 
 			// Aligned offset
 			glm::uint size = uniformBuffer.dynamicData.size;
 
 #if  _DEBUG
-			// All three size calculations should be the same
 			glm::uint calculatedSize1 = index * 4;
-			glm::uint calculatedSize2 = dynamicUniforms.CalculateSize(m_PointLights.size());
-			assert(calculatedSize1 == calculatedSize2 &&
-				calculatedSize1 == size);
+			assert(calculatedSize1 == size);
 #endif // _DEBUG
 
 			void* firstIndex = uniformBuffer.dynamicBuffer.m_Mapped;

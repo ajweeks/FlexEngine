@@ -90,7 +90,9 @@ namespace flex
 			void CreateFramebuffers();
 			void PrepareOffscreenFrameBuffer(Window* window);
 
+			// Expects *texture == nullptr
 			void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture)const;
+			// Expects *texture == nullptr
 			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture) const;
 			void CreateTextureImage(const std::string& filePath, VulkanTexture** texture) const;
 			void CreateTextureImageView(VulkanTexture* texture) const;
@@ -101,21 +103,21 @@ namespace flex
 			
 			// Creates vertex buffer for all render objects' verts which use specified shader index
 			// Returns vertex count
-			glm::uint CreateStaticVertexBuffer(Buffer* vertexBuffer, ShaderID shaderID, int size);
-			void CreateStaticVertexBuffer(Buffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize);
+			glm::uint CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, int size);
+			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize);
 			
 			// Creates static index buffers for all render objects
 			void CreateStaticIndexBuffers();
 
 			// Creates index buffer for all render objects' indices which use specified shader index
 			// Returns index count
-			glm::uint CreateStaticIndexBuffer(Buffer* indexBuffer, ShaderID shaderID);
-			void VulkanRenderer::CreateStaticIndexBuffer(Buffer* indexBuffer, const std::vector<glm::uint>& indices);
+			glm::uint CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
+			void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<glm::uint>& indices);
 
 			void PrepareUniformBuffers();
 			void CreateDescriptorPool();
 			glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
-			void PrepareUniformBuffer(Buffer* buffer, glm::uint bufferSize,
+			void PrepareUniformBuffer(VulkanBuffer* buffer, glm::uint bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 			void ReleaseUniformBuffers();
 
@@ -144,7 +146,7 @@ namespace flex
 			void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 			void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) const;
 			void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const;
-			void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, Buffer* buffer) const;
+			void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer) const;
 			void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0) const;
 			void DrawFrame(Window* window);
 			bool CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const;

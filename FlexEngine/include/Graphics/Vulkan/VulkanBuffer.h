@@ -8,9 +8,9 @@ namespace flex
 {
 	namespace vk
 	{
-		struct Buffer
+		struct VulkanBuffer
 		{
-			Buffer(const VDeleter<VkDevice>& device);
+			VulkanBuffer(const VDeleter<VkDevice>& device);
 
 			VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
 			void Unmap();

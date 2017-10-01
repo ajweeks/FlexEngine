@@ -39,6 +39,7 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext) override;
 
 		void SetMaterialID(MaterialID materialID);
+		void SetUVScale(float uScale, float vScale);
 
 		RenderID GetRenderID() const;
 
@@ -48,6 +49,8 @@ namespace flex
 
 		static std::string m_DefaultName;
 		std::string m_Name;
+
+		glm::vec2 m_UVScale;
 
 		VertexBufferData m_VertexBufferData;
 

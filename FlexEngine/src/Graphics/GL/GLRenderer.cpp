@@ -246,7 +246,7 @@ namespace flex
 			if (!createInfo->cubeMapFilePaths[0].empty())
 			{
 				GenerateCubemapTextures(mat.diffuseSamplerID, mat.material.cubeMapFilePaths);
-				mat.material.useCubemapTexture = true;
+				mat.material.useCubemapSampler = true;
 			}
 
 			glUseProgram(0);
@@ -526,7 +526,7 @@ namespace flex
 					CheckGLErrorMessages();
 				}
 
-				if (material->material.useCubemapTexture)
+				if (material->material.useCubemapSampler)
 				{
 					glBindTexture(GL_TEXTURE_CUBE_MAP, material->diffuseSamplerID);
 				}
@@ -1022,7 +1022,7 @@ namespace flex
 
 			if (shader->dynamicBufferUniforms.HasUniform("useCubemapSampler"))
 			{
-				glUniform1i(material->uniformIDs.useCubemapTexture, material->material.useCubemapTexture);
+				glUniform1i(material->uniformIDs.useCubemapTexture, material->material.useCubemapSampler);
 				CheckGLErrorMessages();
 			}
 
