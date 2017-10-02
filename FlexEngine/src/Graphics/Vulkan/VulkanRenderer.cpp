@@ -3416,14 +3416,13 @@ namespace flex
 					{ "dirLight", (void*)&m_DirectionalLight, sizeof(m_DirectionalLight), sizeof(m_DirectionalLight) / sizeof(float) },
 					{ "pointLights", (void*)pointLightsDataStart, pointLightsSize, pointLightsMoveInBytes },
 				};
-				const size_t uniformCount = sizeof(uniformInfos) / sizeof(uniformInfos[0]);
 
-				for (size_t i = 0; i < uniformCount; ++i)
+				for (UniformInfo& uniformInfo : uniformInfos)
 				{
-					if (constantUniforms.HasUniform(uniformInfos[i].uniformName))
+					if (constantUniforms.HasUniform(uniformInfo.uniformName))
 					{
-						memcpy(&constantData.data[index], uniformInfos[i].dataStart, uniformInfos[i].copySize);
-						index += uniformInfos[i].moveInBytes;
+						memcpy(&constantData.data[index], uniformInfo.dataStart, uniformInfo.copySize);
+						index += uniformInfo.moveInBytes;
 					}
 				}
 
@@ -3494,14 +3493,13 @@ namespace flex
 				{ "useSpecularSampler", (void*)&useSpecularSampler, 4, 1 },
 				{ "useCubemapSampler", (void*)&useCubemapSampler, 4, 1 },
 			};
-			const size_t uniformCount = sizeof(uniformInfos) / sizeof(uniformInfos[0]);
 
-			for (size_t i = 0; i < uniformCount; ++i)
+			for (UniformInfo& uniformInfo : uniformInfos)
 			{
-				if (dynamicUniforms.HasUniform(uniformInfos[i].uniformName))
+				if (dynamicUniforms.HasUniform(uniformInfo.uniformName))
 				{
-					memcpy(&uniformBuffer.dynamicData.data[offset + index], uniformInfos[i].dataStart, uniformInfos[i].copySize);
-					index += uniformInfos[i].moveInBytes;
+					memcpy(&uniformBuffer.dynamicData.data[offset + index], uniformInfo.dataStart, uniformInfo.copySize);
+					index += uniformInfo.moveInBytes;
 				}
 			}
 
