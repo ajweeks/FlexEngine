@@ -70,20 +70,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Debug;$(SolutionDir)FlexEngine\dependencies\soil\Debug;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Debug;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\soil\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Debug;$(SolutionDir)FlexEngine\dependencies\soil\Debug;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Debug;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Debug;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\soil\src;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\soil\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)FlexEngine\include;$(SolutionDir)FlexEngine\dependencies\glad\include;$(SolutionDir)FlexEngine\dependencies\glfw\include;$(SolutionDir)FlexEngine\dependencies\glm;$(SolutionDir)FlexEngine\dependencies\stb;$(SolutionDir)FlexEngine\dependencies\assimp\include;$(SolutionDir)FlexEngine\dependencies\imgui;$(VULKAN)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)FlexEngine\dependencies\glfw\Release;$(SolutionDir)FlexEngine\dependencies\assimp\lib\code\Release;$(VULKAN)\Lib32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -97,7 +97,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <AdditionalOptions>/NODEFAULTLIB:"MSVCRT"   /ignore:4099 %(AdditionalOptions)</AdditionalOptions>
@@ -112,9 +112,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -131,7 +132,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ShowProgress>NotSet</ShowProgress>
       <SubSystem>Console</SubSystem>
@@ -147,11 +148,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;SOIL.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -189,6 +191,8 @@
     <ClCompile Include="FlexEngine\src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="FlexEngine\src\Window\GLFWWindowWrapper.cpp" />
     <ClCompile Include="FlexEngine\src\Window\GL\GLWindowWrapper.cpp" />

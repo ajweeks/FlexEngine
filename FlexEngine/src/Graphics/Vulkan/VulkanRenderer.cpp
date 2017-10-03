@@ -8,7 +8,7 @@
 #include <iostream>
 #include <unordered_map>
 
-#include <SOIL.h>
+#include "stb_image.h"
 
 #include "FreeCamera.h"
 #include "Helpers.h"
@@ -2027,10 +2027,11 @@ namespace flex
 			images.reserve(filePaths.size());
 			for (const std::string& filePath : filePaths)
 			{
-				unsigned char* pixels = SOIL_load_image(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, SOIL_LOAD_RGBA);
+				unsigned char* pixels = stbi_load(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 				if (!pixels)
 				{
-					Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + ", image filepath: " + filePath);
+					const char* failureReasonStr = stbi_failure_reason();
+					Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
 					return;
 				}
 
@@ -2049,7 +2050,7 @@ namespace flex
 			{
 				memcpy(pixelData, image.pixels, image.size);
 				pixelData += (image.size / sizeof(unsigned char));
-				SOIL_free_image_data(image.pixels);
+				stbi_image_free(image.pixels);
 			}
 
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
@@ -2231,11 +2232,12 @@ namespace flex
 		void VulkanRenderer::CreateTextureImage(const std::string& filePath, VulkanTexture** texture) const
 		{
 			int textureWidth, textureHeight, textureChannels;
-			unsigned char* pixels = SOIL_load_image(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, SOIL_LOAD_RGBA);
+			unsigned char* pixels = stbi_load(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 
 			if (!pixels)
 			{
-				Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + ", image filepath: " + filePath);
+				const char* failureReasonStr = stbi_failure_reason();
+				Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
 				return;
 			}
 
@@ -2253,7 +2255,7 @@ namespace flex
 			memcpy(data, pixels, (size_t)imageSize);
 			vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
-			SOIL_free_image_data(pixels);
+			stbi_image_free(pixels);
 
 			CreateImage((glm::uint32)textureWidth, (glm::uint32)textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,

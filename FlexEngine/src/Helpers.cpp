@@ -10,6 +10,7 @@
 
 #include "Logger.h"
 
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 namespace flex
@@ -116,7 +117,7 @@ namespace flex
 	{
 		filePath = hdrFilePath;
 
-		//stbi_set_flip_vertically_on_load(true); // ?
+		stbi_set_flip_vertically_on_load(true);
 		int channelCount;
 		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, 0);
 

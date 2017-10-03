@@ -7,8 +7,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <SOIL.h>
-
 #include "Logger.h"
 
 namespace flex

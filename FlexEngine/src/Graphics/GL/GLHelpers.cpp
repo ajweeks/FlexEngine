@@ -6,6 +6,8 @@
 #include <sstream>
 #include <fstream>
 
+#include "stb_image.h"
+
 #include "Helpers.h"
 
 namespace flex
@@ -17,11 +19,12 @@ namespace flex
 			GLFWimage result = {};
 
 			int channels;
-			unsigned char* data = SOIL_load_image(filePath.c_str(), &result.width, &result.height, &channels, SOIL_LOAD_RGB);
+			unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, STBI_rgb);
 
 			if (data == 0)
 			{
-				Logger::LogError("SOIL loading error: " + std::string(SOIL_last_result()) + "\nimage filepath: " + filePath);
+				const char* failureReasonStr = stbi_failure_reason();
+				Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
 				return result;
 			}
 			else
@@ -34,7 +37,7 @@ namespace flex
 
 		void DestroyGLFWimage(const GLFWimage& image)
 		{
-			SOIL_free_image_data(image.pixels);
+			stbi_image_free(image.pixels);
 		}
 
 		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath)
