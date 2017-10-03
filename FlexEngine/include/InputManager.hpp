@@ -4,7 +4,7 @@
 
 #include <glm/vec2.hpp>
 
-#include "GameContext.h"
+#include "GameContext.hpp"
 
 namespace flex
 {

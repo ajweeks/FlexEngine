@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Scene/Scenes/BaseScene.h"
+#include "Scene/Scenes/BaseScene.hpp"
 
 #include <vector>
 
-#include "Scene/MeshPrefab.h"
+#include "Scene/MeshPrefab.hpp"
 
 namespace flex
 {

@@ -1,8 +1,8 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
 #include <iostream>
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 namespace flex
 {

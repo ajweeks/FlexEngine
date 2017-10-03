@@ -2,7 +2,7 @@
 
 #include <glm/integer.hpp>
 
-#include "Typedefs.h"
+#include "Typedefs.hpp"
 
 namespace flex
 {

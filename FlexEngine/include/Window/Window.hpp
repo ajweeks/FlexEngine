@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include "GameContext.h"
-#include "InputManager.h"
-#include "Typedefs.h"
+#include "GameContext.hpp"
+#include "InputManager.hpp"
+#include "Typedefs.hpp"
 
 struct GLFWwindow;
 

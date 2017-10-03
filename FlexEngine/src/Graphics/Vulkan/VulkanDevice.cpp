@@ -1,8 +1,8 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Graphics/Vulkan/VulkanDevice.h"
+#include "Graphics/Vulkan/VulkanDevice.hpp"
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 namespace flex
 {

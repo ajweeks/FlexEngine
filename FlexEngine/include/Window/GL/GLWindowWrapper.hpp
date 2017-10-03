@@ -1,7 +1,7 @@
 ﻿#pragma once
 #if COMPILE_OPEN_GL
 
-#include "Window/GLFWWindowWrapper.h"
+#include "Window/GLFWWindowWrapper.hpp"
 
 namespace flex
 {

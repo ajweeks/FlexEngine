@@ -4,11 +4,11 @@
 
 #include <glm/integer.hpp>
 
-#include "GameContext.h"
-#include "FreeCamera.h"
-#include "InputManager.h"
-#include "Scene/SceneManager.h"
-#include "Window/Window.h"
+#include "GameContext.hpp"
+#include "FreeCamera.hpp"
+#include "InputManager.hpp"
+#include "Scene/SceneManager.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

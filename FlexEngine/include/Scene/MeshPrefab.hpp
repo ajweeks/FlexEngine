@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scene/GameObject.h"
+#include "Scene/GameObject.hpp"
 
 #include <vector>
 
@@ -11,7 +11,7 @@
 
 #include <assimp/scene.h>
 
-#include "VertexBufferData.h"
+#include "VertexBufferData.hpp"
 
 namespace flex
 {

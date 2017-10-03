@@ -94,7 +94,7 @@
       <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>false</TreatWarningAsError>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>stdafx.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -113,6 +113,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;vulkan-1.lib;assimp-vc140-mt.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -127,7 +128,7 @@
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>stdafx.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -149,6 +150,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.hpp</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -216,40 +218,40 @@
     <ClInclude Include="FlexEngine\dependencies\imgui\stb_rect_pack.h" />
     <ClInclude Include="FlexEngine\dependencies\imgui\stb_textedit.h" />
     <ClInclude Include="FlexEngine\dependencies\imgui\stb_truetype.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\GL\GLHelpers.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\GL\GLRenderer.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanDevice.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanHelpers.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanRenderer.h" />
-    <ClInclude Include="FlexEngine\include\Scene\GameObject.h" />
-    <ClInclude Include="FlexEngine\include\Scene\MeshPrefab.h" />
-    <ClInclude Include="FlexEngine\include\Transform.h" />
-    <ClInclude Include="FlexEngine\include\Scene\Scenes\BaseScene.h" />
-    <ClInclude Include="FlexEngine\include\FreeCamera.h" />
-    <ClInclude Include="FlexEngine\include\Colors.h" />
-    <ClInclude Include="FlexEngine\include\GameContext.h" />
-    <ClInclude Include="FlexEngine\include\Helpers.h" />
-    <ClInclude Include="FlexEngine\include\Logger.h" />
-    <ClInclude Include="FlexEngine\include\stdafx.h" />
-    <ClInclude Include="FlexEngine\include\FlexEngine.h" />
-    <ClInclude Include="FlexEngine\include\Random.h" />
-    <ClInclude Include="FlexEngine\include\Typedefs.h" />
-    <ClInclude Include="FlexEngine\include\InputManager.h" />
-    <ClInclude Include="FlexEngine\include\VertexAttribute.h" />
-    <ClInclude Include="FlexEngine\include\VertexBufferData.h" />
-    <ClInclude Include="FlexEngine\include\Window\GLFWWindowWrapper.h" />
-    <ClInclude Include="FlexEngine\include\Window\Monitor.h" />
-    <ClInclude Include="FlexEngine\include\Window\Vulkan\VulkanWindowWrapper.h" />
-    <ClInclude Include="FlexEngine\include\Window\Window.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\GL\GLHelpers.hpp" />
+    <ClInclude Include="FlexEngine\include\Graphics\GL\GLRenderer.hpp" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanDevice.hpp" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanHelpers.hpp" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanRenderer.hpp" />
+    <ClInclude Include="FlexEngine\include\Scene\GameObject.hpp" />
+    <ClInclude Include="FlexEngine\include\Scene\MeshPrefab.hpp" />
+    <ClInclude Include="FlexEngine\include\Transform.hpp" />
+    <ClInclude Include="FlexEngine\include\Scene\Scenes\BaseScene.hpp" />
+    <ClInclude Include="FlexEngine\include\FreeCamera.hpp" />
+    <ClInclude Include="FlexEngine\include\Colors.hpp" />
+    <ClInclude Include="FlexEngine\include\GameContext.hpp" />
+    <ClInclude Include="FlexEngine\include\Helpers.hpp" />
+    <ClInclude Include="FlexEngine\include\Logger.hpp" />
+    <ClInclude Include="FlexEngine\include\stdafx.hpp" />
+    <ClInclude Include="FlexEngine\include\FlexEngine.hpp" />
+    <ClInclude Include="FlexEngine\include\Random.hpp" />
+    <ClInclude Include="FlexEngine\include\Typedefs.hpp" />
+    <ClInclude Include="FlexEngine\include\InputManager.hpp" />
+    <ClInclude Include="FlexEngine\include\VertexAttribute.hpp" />
+    <ClInclude Include="FlexEngine\include\VertexBufferData.hpp" />
+    <ClInclude Include="FlexEngine\include\Window\GLFWWindowWrapper.hpp" />
+    <ClInclude Include="FlexEngine\include\Window\Monitor.hpp" />
+    <ClInclude Include="FlexEngine\include\Window\Vulkan\VulkanWindowWrapper.hpp" />
+    <ClInclude Include="FlexEngine\include\Window\Window.hpp" />
     <ClInclude Include="lib\gl3w-master\include\GL\gl3w.h" />
     <ClInclude Include="lib\gl3w-master\include\GL\glcorearb.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\Renderer.h" />
-    <ClInclude Include="FlexEngine\include\Window\GL\GLWindowWrapper.h" />
-    <ClInclude Include="FlexEngine\include\Scene\SceneManager.h" />
-    <ClInclude Include="FlexEngine\include\Scene\Scenes\TestScene.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VDeleter.h" />
-    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanBuffer.h" />
-    <ClInclude Include="FlexEngine\include\Scene\Scenes\Scene_02.h" />
+    <ClInclude Include="FlexEngine\include\Graphics\Renderer.hpp" />
+    <ClInclude Include="FlexEngine\include\Window\GL\GLWindowWrapper.hpp" />
+    <ClInclude Include="FlexEngine\include\Scene\SceneManager.hpp" />
+    <ClInclude Include="FlexEngine\include\Scene\Scenes\TestScene.hpp" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VDeleter.hpp" />
+    <ClInclude Include="FlexEngine\include\Graphics\Vulkan\VulkanBuffer.hpp" />
+    <ClInclude Include="FlexEngine\include\Scene\Scenes\Scene_02.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

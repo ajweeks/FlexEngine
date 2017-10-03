@@ -6,12 +6,12 @@
 
 #include <imgui.h>
 
-#include "Graphics/Renderer.h"
-#include "Graphics/Vulkan/VulkanHelpers.h"
-#include "VDeleter.h"
-#include "VulkanBuffer.h"
-#include "VulkanDevice.h"
-#include "Window/Window.h"
+#include "Graphics/Renderer.hpp"
+#include "Graphics/Vulkan/VulkanHelpers.hpp"
+#include "VDeleter.hpp"
+#include "VulkanBuffer.hpp"
+#include "VulkanDevice.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

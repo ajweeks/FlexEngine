@@ -1,18 +1,18 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "FlexEngine.h"
+#include "FlexEngine.hpp"
 
 #include <sstream>
 
 #include <imgui.h>
 
-#include "FreeCamera.h"
-#include "Logger.h"
-#include "Helpers.h"
-#include "Scene/SceneManager.h"
-#include "Scene/Scenes/Scene_02.h"
-#include "Scene/Scenes/TestScene.h"
-#include "Typedefs.h"
+#include "FreeCamera.hpp"
+#include "Logger.hpp"
+#include "Helpers.hpp"
+#include "Scene/SceneManager.hpp"
+#include "Scene/Scenes/Scene_02.hpp"
+#include "Scene/Scenes/TestScene.hpp"
+#include "Typedefs.hpp"
 
 namespace flex
 {

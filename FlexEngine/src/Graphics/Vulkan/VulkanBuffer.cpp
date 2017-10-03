@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Graphics/Vulkan/VulkanBuffer.h"
+#include "Graphics/Vulkan/VulkanBuffer.hpp"
 
 namespace flex
 {

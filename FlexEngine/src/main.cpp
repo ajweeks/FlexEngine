@@ -1,8 +1,8 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
 #include <windows.h>
 
-#include "FlexEngine.h"
+#include "FlexEngine.hpp"
 
 // Memory leak checking includes
 #if defined(DEBUG) | defined(_DEBUG)

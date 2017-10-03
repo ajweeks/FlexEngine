@@ -1,11 +1,11 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include "Graphics/Renderer.h"
+#include "Graphics/Renderer.hpp"
 
 #include <imgui.h>
 
-#include "Graphics/GL/GLHelpers.h"
+#include "Graphics/GL/GLHelpers.hpp"
 
 namespace flex
 {

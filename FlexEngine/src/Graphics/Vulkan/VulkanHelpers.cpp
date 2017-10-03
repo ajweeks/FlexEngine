@@ -1,11 +1,11 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Graphics/Vulkan/VulkanHelpers.h"
+#include "Graphics/Vulkan/VulkanHelpers.hpp"
 
-#include "Logger.h"
-#include "VertexAttribute.h"
-#include "VertexBufferData.h"
-#include "VertexAttribute.h"
+#include "Logger.hpp"
+#include "VertexAttribute.hpp"
+#include "VertexBufferData.hpp"
+#include "VertexAttribute.hpp"
 
 namespace flex
 {

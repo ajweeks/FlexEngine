@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Window/Monitor.h"
+#include "Window/Monitor.hpp"
 
 namespace flex
 {

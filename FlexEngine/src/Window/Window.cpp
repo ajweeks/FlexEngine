@@ -1,11 +1,11 @@
-﻿#include "stdafx.h"
+﻿#include "stdafx.hpp"
 
-#include "Window/Window.h"
+#include "Window/Window.hpp"
 
 #include <imgui.h>
 
-#include "Helpers.h"
-#include "Logger.h"
+#include "Helpers.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {

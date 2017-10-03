@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Random.h"
+#include "Random.hpp"
 
 #include <time.h>
 #include <random>

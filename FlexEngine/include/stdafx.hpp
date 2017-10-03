@@ -17,8 +17,8 @@
 	#include <GLFW/glfw3.h>
 #pragma warning(pop)
 
-	#include "Graphics/Vulkan/VulkanRenderer.h"
-	#include "Window/Vulkan/VulkanWindowWrapper.h"
+	#include "Graphics/Vulkan/VulkanRenderer.hpp"
+	#include "Window/Vulkan/VulkanWindowWrapper.hpp"
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
@@ -38,8 +38,8 @@ void _CheckGLErrorMessages(const char *file, int line);
 #define CheckGLErrorMessages() 
 #endif
 
-	#include "Graphics/GL/GLRenderer.h"
-	#include "Window/GL/GLWindowWrapper.h"
+	#include "Graphics/GL/GLRenderer.hpp"
+	#include "Window/GL/GLWindowWrapper.hpp"
 
 
 #endif // COMPILE_OPEN_GL

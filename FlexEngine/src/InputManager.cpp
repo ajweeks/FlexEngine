@@ -1,13 +1,13 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "InputManager.h"
+#include "InputManager.hpp"
 
 #include <assert.h>
 
 #include <imgui.h>
 
-#include "Logger.h"
-#include "Window/Window.h"
+#include "Logger.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

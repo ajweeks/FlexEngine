@@ -1,14 +1,14 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 #if COMPILE_OPEN_GL
 
-#include "Graphics/GL/GLHelpers.h"
+#include "Graphics/GL/GLHelpers.hpp"
 
 #include <sstream>
 #include <fstream>
 
 #include "stb_image.h"
 
-#include "Helpers.h"
+#include "Helpers.hpp"
 
 namespace flex
 {

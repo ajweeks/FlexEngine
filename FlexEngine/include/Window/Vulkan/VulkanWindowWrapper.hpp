@@ -2,7 +2,7 @@
 #if COMPILE_VULKAN
 
 #define GLFW_INCLUDE_VULKAN
-#include "Window/GLFWWindowWrapper.h"
+#include "Window/GLFWWindowWrapper.hpp"
 
 namespace flex
 {

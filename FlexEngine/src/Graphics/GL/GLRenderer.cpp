@@ -1,7 +1,7 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 #if COMPILE_OPEN_GL
 
-#include "Graphics/GL/GLRenderer.h"
+#include "Graphics/GL/GLRenderer.hpp"
 
 #include <array>
 #include <algorithm>
@@ -11,12 +11,12 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "FreeCamera.h"
-#include "Graphics/GL/GLHelpers.h"
-#include "Logger.h"
-#include "Window/Window.h"
-#include "Window/GLFWWindowWrapper.h"
-#include "VertexAttribute.h"
+#include "FreeCamera.hpp"
+#include "Graphics/GL/GLHelpers.hpp"
+#include "Logger.hpp"
+#include "Window/Window.hpp"
+#include "Window/GLFWWindowWrapper.hpp"
+#include "VertexAttribute.hpp"
 
 namespace flex
 {

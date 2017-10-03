@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Helpers.h"
+#include "Helpers.hpp"
 
 #include <sstream>
 #include <iomanip>
@@ -8,7 +8,7 @@
 
 #include <imgui.h>
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"

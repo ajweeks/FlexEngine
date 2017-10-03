@@ -1,7 +1,7 @@
 #pragma once
 
-#include "GameContext.h"
-#include "InputManager.h"
+#include "GameContext.hpp"
+#include "InputManager.hpp"
 
 namespace flex
 {

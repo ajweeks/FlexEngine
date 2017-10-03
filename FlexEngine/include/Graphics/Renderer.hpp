@@ -9,10 +9,10 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-#include "GameContext.h"
-#include "Typedefs.h"
-#include "VertexBufferData.h"
-#include "Transform.h"
+#include "GameContext.hpp"
+#include "Typedefs.hpp"
+#include "VertexBufferData.hpp"
+#include "Transform.hpp"
 
 namespace flex
 {

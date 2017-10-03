@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "GameContext.h"
-#include "Transform.h"
+#include "GameContext.hpp"
+#include "Transform.hpp"
 
 namespace flex
 {

@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "VDeleter.h"
+#include "VDeleter.hpp"
 
 namespace flex
 {

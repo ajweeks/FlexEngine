@@ -1,12 +1,12 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
-#include "Window/GLFWWindowWrapper.h"
+#include "Window/GLFWWindowWrapper.hpp"
 
-#include "Graphics/GL/GLHelpers.h"
-#include "InputManager.h"
-#include "Logger.h"
-#include "FlexEngine.h"
+#include "Graphics/GL/GLHelpers.hpp"
+#include "InputManager.hpp"
+#include "Logger.hpp"
+#include "FlexEngine.hpp"
 
 namespace flex
 {

@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 #if _DEBUG
 void _CheckGLErrorMessages(const char *file, int line)

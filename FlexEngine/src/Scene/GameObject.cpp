@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Scene/GameObject.h"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {

@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Graphics/Renderer.h"
+#include "Graphics/Renderer.hpp"
 
 namespace flex
 {

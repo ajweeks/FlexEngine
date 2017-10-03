@@ -1,12 +1,12 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "FreeCamera.h"
+#include "FreeCamera.hpp"
 
 #include <glm/vec2.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Logger.h"
-#include "Window/Window.h"
+#include "Logger.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

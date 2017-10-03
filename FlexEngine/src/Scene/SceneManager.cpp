@@ -1,10 +1,10 @@
-﻿#include "stdafx.h"
+﻿#include "stdafx.hpp"
 
-#include "Scene/SceneManager.h"
+#include "Scene/SceneManager.hpp"
 
 #include <algorithm>
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 namespace flex
 {

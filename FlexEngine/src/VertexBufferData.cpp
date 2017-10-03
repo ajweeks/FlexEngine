@@ -1,12 +1,12 @@
 
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "VertexBufferData.h"
-#include "VertexAttribute.h"
+#include "VertexBufferData.hpp"
+#include "VertexAttribute.hpp"
 
 #include <cstdlib>
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 namespace flex
 {

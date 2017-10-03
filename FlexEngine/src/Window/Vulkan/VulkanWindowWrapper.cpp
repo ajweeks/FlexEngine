@@ -1,9 +1,9 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 #if COMPILE_VULKAN
 
-#include "Window/Vulkan/VulkanWindowWrapper.h"
+#include "Window/Vulkan/VulkanWindowWrapper.hpp"
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 namespace flex
 {

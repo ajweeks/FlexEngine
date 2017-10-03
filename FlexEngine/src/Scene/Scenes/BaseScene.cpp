@@ -1,11 +1,11 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Scene/Scenes/BaseScene.h"
+#include "Scene/Scenes/BaseScene.hpp"
 
 #include <glm/vec3.hpp>
 
-#include "Scene/GameObject.h"
-#include "Logger.h"
+#include "Scene/GameObject.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {

@@ -6,10 +6,10 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Graphics/Renderer.h"
-#include "VulkanBuffer.h"
-#include "VertexBufferData.h"
-#include "VDeleter.h"
+#include "Graphics/Renderer.hpp"
+#include "VulkanBuffer.hpp"
+#include "VertexBufferData.hpp"
+#include "VDeleter.hpp"
 
 namespace flex
 {

@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "FreeCamera.h"
-#include "GameContext.h"
-#include "Scene/GameObject.h"
+#include "FreeCamera.hpp"
+#include "GameContext.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {

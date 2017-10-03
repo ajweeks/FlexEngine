@@ -7,7 +7,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Logger.h"
+#include "Logger.hpp"
 
 namespace flex
 {

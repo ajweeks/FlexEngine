@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Scene/MeshPrefab.h"
+#include "Scene/MeshPrefab.hpp"
 
 #include <assimp/Importer.hpp>
 #include <assimp/vector3.h>
@@ -9,12 +9,12 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Colors.h"
-#include "GameContext.h"
-#include "Helpers.h"
-#include "Logger.h"
-#include "Typedefs.h"
-#include "VertexAttribute.h"
+#include "Colors.hpp"
+#include "GameContext.hpp"
+#include "Helpers.hpp"
+#include "Logger.hpp"
+#include "Typedefs.hpp"
+#include "VertexAttribute.hpp"
 
 namespace flex
 {

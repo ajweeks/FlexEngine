@@ -1,7 +1,7 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 #if COMPILE_VULKAN
 
-#include "Graphics/Vulkan/VulkanRenderer.h"
+#include "Graphics/Vulkan/VulkanRenderer.hpp"
 
 #include <algorithm>
 #include <set>
@@ -10,11 +10,11 @@
 
 #include "stb_image.h"
 
-#include "FreeCamera.h"
-#include "Helpers.h"
-#include "Logger.h"
-#include "VertexAttribute.h"
-#include "VertexBufferData.h"
+#include "FreeCamera.hpp"
+#include "Helpers.hpp"
+#include "Logger.hpp"
+#include "VertexAttribute.hpp"
+#include "VertexBufferData.hpp"
 
 namespace flex
 {

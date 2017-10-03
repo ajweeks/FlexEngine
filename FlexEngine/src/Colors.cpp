@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Colors.h"
+#include "Colors.hpp"
 
 namespace flex
 {

@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "Scene/Scenes/Scene_02.h"
+#include "Scene/Scenes/Scene_02.hpp"
 
 #include <glm/vec3.hpp>
 

@@ -1,7 +1,7 @@
-#include "stdafx.h"
+#include "stdafx.hpp"
 
-#include "VertexAttribute.h"
-#include "Logger.h"
+#include "VertexAttribute.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {
