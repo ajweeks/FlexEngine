@@ -145,8 +145,6 @@ namespace flex
 
 	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape)
 	{
-		Renderer* renderer = gameContext.renderer;
-
 		Renderer::RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.materialID = m_MaterialID;
 		renderObjectCreateInfo.transform = &m_Transform;
@@ -669,7 +667,6 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
 
-			// TODO: At *least* use strings rather than indices
 			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
 			renderObjectCreateInfo.name = "Skybox";
 
@@ -686,9 +683,9 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		if (!m_Name.empty() && m_Name.compare(m_DefaultName) != 0) renderObjectCreateInfo.name = m_Name;
 
-		m_RenderID = renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
 
-		renderer->SetTopologyMode(m_RenderID, topologyMode);
+		gameContext.renderer->SetTopologyMode(m_RenderID, topologyMode);
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
 
 		return true;
@@ -701,10 +698,8 @@ namespace flex
 
 	void MeshPrefab::Update(const GameContext& gameContext)
 	{
-		Renderer* renderer = gameContext.renderer;
-
 		glm::mat4 model = m_Transform.GetModelMatrix();
-		renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
+		gameContext.renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
 	}
 
 	void MeshPrefab::Destroy(const GameContext& gameContext)
@@ -720,10 +715,5 @@ namespace flex
 	void MeshPrefab::SetUVScale(float uScale, float vScale)
 	{
 		m_UVScale = glm::vec2(uScale, vScale);
-	}
-
-	RenderID MeshPrefab::GetRenderID() const
-	{
-		return m_RenderID;
 	}
 } // namespace flex

@@ -22,7 +22,7 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext) = 0;
 		virtual void Update(const GameContext& gameContext) = 0;
 
-		void AddChild(GameObject* gameObject);
+		void AddChild(const GameContext& gameContext, GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
 

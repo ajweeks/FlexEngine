@@ -12,24 +12,20 @@ struct PointLight
 #define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
-// TODO: Merge samplers together
-struct Material
-{
-	bool useAlbedoSampler;
-	vec4 constAlbedo;
+// Material variables
+uniform bool useAlbedoSampler;
+uniform vec4 constAlbedo;
 
-	bool useMetallicSampler;
-	float constMetallic;
+uniform bool useMetallicSampler;
+uniform float constMetallic;
 
-	bool useRoughnessSampler;
-	float constRoughness;
+uniform bool useRoughnessSampler;
+uniform float constRoughness;
 
-	bool useAOSampler;
-	float constAO;
+uniform bool useAOSampler;
+uniform float constAO;
 
-	bool useNormalSampler;
-};
-uniform Material material;
+uniform bool useNormalSampler;
 
 uniform sampler2D albedoSampler;
 uniform sampler2D metallicSampler;
@@ -89,12 +85,12 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 void main() 
 {
-	vec3 albedo = material.useAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(material.constAlbedo);
-	float metallic = material.useMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : material.constMetallic;
-	float roughness = material.useRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : material.constRoughness;
-	float ao = material.useAOSampler ? texture(aoSampler, ex_TexCoord).r : material.constAO;
+	vec3 albedo = useAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(constAlbedo);
+	float metallic = useMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : constMetallic;
+	float roughness = useRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : constRoughness;
+	float ao = useAOSampler ? texture(aoSampler, ex_TexCoord).r : constAO;
 
-	vec3 Normal = material.useNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
+	vec3 Normal = useNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
 
 	vec3 N = normalize(Normal);
 	vec3 V = normalize(camPos.xyz - ex_WorldPos);

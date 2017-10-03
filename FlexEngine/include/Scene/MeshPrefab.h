@@ -41,10 +41,7 @@ namespace flex
 		void SetMaterialID(MaterialID materialID);
 		void SetUVScale(float uScale, float vScale);
 
-		RenderID GetRenderID() const;
-
 	private:
-		RenderID m_RenderID;
 		MaterialID m_MaterialID;
 
 		static std::string m_DefaultName;

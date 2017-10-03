@@ -133,6 +133,9 @@ namespace flex
 
 			bool useAOSampler = false;
 			std::string aoTexturePath;
+
+			bool useEquirectangularSampler = false;
+			std::string equirectangularTexturePath;
 		};
 
 		// Info that stays consistent across all renderers
@@ -208,8 +211,9 @@ namespace flex
 		struct Shader
 		{
 			Shader();
-			Shader(const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
+			Shader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
 
+			std::string name;
 			glm::uint program;
 
 			std::string vertexShaderFilePath;
@@ -230,7 +234,7 @@ namespace flex
 		struct MaterialCreateInfo
 		{
 			// Required fields:
-			ShaderID shaderID;
+			std::string shaderName;
 
 			// Optional fields:
 			std::string name;
@@ -242,6 +246,7 @@ namespace flex
 			std::string metallicTexturePath;
 			std::string roughnessTexturePath;
 			std::string aoTexturePath;
+			std::string equirectangularTexturePath;
 
 			bool usePositionFrameBufferSampler = false;
 			glm::uint positionFrameBufferSamplerID;
@@ -251,6 +256,7 @@ namespace flex
 			glm::uint diffuseSpecularFrameBufferSamplerID;
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+			bool useCubemapSampler; // Set to true if no cubemaps need to be generated but a sampler uniform needs to be found
 
 			// PBR Constant colors
 			glm::vec3 constAlbedo;
@@ -260,20 +266,17 @@ namespace flex
 
 			// PBR textures
 			bool useAlbedoSampler = false;
-			glm::uint albedoSamplerID;
 			bool useMetallicSampler = false;
-			glm::uint metallicSamplerID;
 			bool useRoughnessSampler = false;
-			glm::uint roughnessSamplerID;
 			bool useAOSampler = false;
-			glm::uint aoSamplerID;
+			bool useEquirectangularSampler = false;
 		};
 
 		virtual void PostInitialize(const GameContext& gameContext) = 0;
 
 		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
-		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
+		virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 		virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) = 0;
 		virtual PointLightID InitializePointLight(const PointLight& pointLight) = 0;
 

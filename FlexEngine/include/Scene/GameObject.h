@@ -15,6 +15,8 @@ namespace flex
 
 		void SetTransform(const Transform& transform);
 		Transform& GetTransform();
+		
+		RenderID GetRenderID() const;
 
 	protected:
 		virtual void Initialize(const GameContext& gameContext) = 0;
@@ -22,6 +24,7 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext) = 0;
 		
 		Transform m_Transform;
+		RenderID m_RenderID;
 
 	private:
 		void RootInitialize(const GameContext& gameContext);

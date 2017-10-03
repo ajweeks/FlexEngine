@@ -27,6 +27,11 @@ namespace flex
 		return m_Transform;
 	}
 
+	RenderID GameObject::GetRenderID() const
+	{
+		return m_RenderID;
+	}
+
 	void GameObject::RootInitialize(const GameContext& gameContext)
 	{
 		Initialize(gameContext);

@@ -13,6 +13,17 @@
 
 namespace flex
 {
+	struct HDRImage
+	{
+		bool Load(const std::string& hdrFilePath);
+		void Free();
+
+		int width;
+		int height;
+		std::string filePath;
+		float* pixels;
+	};
+
 	std::string FloatToString(float f, int precision);
 
 	std::vector<char> ReadFile(const std::string& filePath);

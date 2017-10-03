@@ -27,7 +27,7 @@ namespace flex
 
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual glm::uint InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
-			virtual void PostInitializeRenderObject(RenderID renderID) override;
+			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
 			virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) override;
 			virtual PointLightID InitializePointLight(const PointLight& pointLight) override;
 

@@ -41,12 +41,15 @@ namespace flex
 				int useRoughnessSampler;
 				int constAO;
 				int useAOSampler;
+				int equirectangularSampler;
 			};
 			UniformIDs uniformIDs;
 
 			glm::uint diffuseSamplerID;
 			glm::uint specularSamplerID;
 			glm::uint normalSamplerID;
+
+			glm::uint cubemapSamplerID;
 
 			// GBuffer samplers
 			glm::uint positionFrameBufferSamplerID;
@@ -58,6 +61,8 @@ namespace flex
 			glm::uint metallicSamplerID;
 			glm::uint roughnessSamplerID;
 			glm::uint aoSamplerID;
+
+			glm::uint hdrTextureID;
 		};
 
 		struct RenderObject
@@ -113,13 +118,16 @@ namespace flex
 		GLFWimage LoadGLFWimage(const std::string& filePath);
 		void DestroyGLFWimage(const GLFWimage& image);
 
-		void GenerateGLTexture(glm::uint& textureID, const std::string& filePath,
-			int sWrap = GL_REPEAT, int tWrap = GL_REPEAT, int minFilter = GL_LINEAR, int magFilter = GL_LINEAR);
+		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath);
+		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter);
+		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath);
+		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter);
 
-		void GenerateCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths);
+		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths);
+		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight);
 
 		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader);
-		void LinkProgram(glm::uint program);
+		bool LinkProgram(glm::uint program);
 
 
 		GLuint BufferTargetToGLTarget(Renderer::BufferTarget bufferTarget);

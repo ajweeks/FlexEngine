@@ -2,10 +2,11 @@
 #if COMPILE_OPEN_GL
 
 #include "Graphics/GL/GLHelpers.h"
-#include "Helpers.h"
 
 #include <sstream>
 #include <fstream>
+
+#include "Helpers.h"
 
 namespace flex
 {
@@ -36,29 +37,87 @@ namespace flex
 			SOIL_free_image_data(image.pixels);
 		}
 
-		void GenerateGLTexture(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath)
 		{
+			return GenerateGLTextureWithParams(textureID, filePath, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+		}
+
+		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+		{
+			GLFWimage image = LoadGLFWimage(filePath);
+
+			if (!image.pixels)
+			{
+				return false;
+			}
+
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
+			CheckGLErrorMessages();
 
-			GLFWimage image = LoadGLFWimage(filePath);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
 			glGenerateMipmap(GL_TEXTURE_2D);
+			CheckGLErrorMessages();
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
+			CheckGLErrorMessages();
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 
 			glBindVertexArray(0);
 
 			DestroyGLFWimage(image);
+
+			CheckGLErrorMessages();
+
+			return true;
 		}
 
-		void GenerateCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths)
+		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath)
 		{
+			return GenerateHDRGLTextureWithParams(textureID, filePath, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+		}
+
+		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+		{
+			HDRImage image = {};
+			if (!image.Load(filePath))
+			{
+				return false;
+			}
+
+			glGenTextures(1, &textureID);
+			glBindTexture(GL_TEXTURE_2D, textureID);
+			CheckGLErrorMessages();
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, image.width, image.height, 0, GL_RGB, GL_FLOAT, image.pixels);
+			glGenerateMipmap(GL_TEXTURE_2D);
+			CheckGLErrorMessages();
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
+			CheckGLErrorMessages();
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			glBindVertexArray(0);
+
+			image.Free();
+
+			CheckGLErrorMessages();
+
+			return true;
+		}
+
+		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths)
+		{
+			bool success = true;
+
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 			CheckGLErrorMessages();
@@ -77,7 +136,7 @@ namespace flex
 				else
 				{
 					Logger::LogError("Could not load cube map at " + filePaths[i]);
-					DestroyGLFWimage(image);
+					success = false;
 				}
 			}
 
@@ -87,8 +146,31 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 			CheckGLErrorMessages();
+
+			return success;
 		}
 
+		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight)
+		{
+			glGenTextures(1, &textureID);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+			CheckGLErrorMessages();
+
+			for (unsigned int i = 0; i < 6; ++i)
+			{
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+					textureWidth, textureHeight, 0, GL_RGB, GL_FLOAT, nullptr);
+			}
+
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			CheckGLErrorMessages();
+
+			return true;
+		}
 
 		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader)
 		{
@@ -145,7 +227,7 @@ namespace flex
 			return true;
 		}
 
-		void LinkProgram(glm::uint program)
+		bool LinkProgram(glm::uint program)
 		{
 			glLinkProgram(program);
 
@@ -159,7 +241,11 @@ namespace flex
 				programErrorMessage.resize((size_t)infoLogLength);
 				glGetProgramInfoLog(program, infoLogLength, NULL, (GLchar*)programErrorMessage.data());
 				Logger::LogError(programErrorMessage);
+
+				return false;
 			}
+
+			return true;
 		}
 
 		GLuint BufferTargetToGLTarget(Renderer::BufferTarget bufferTarget)

@@ -29,7 +29,7 @@ namespace flex
 		return m_Name;
 	}
 
-	void BaseScene::AddChild(GameObject* pGameObject)
+	void BaseScene::AddChild(const GameContext& gameContext, GameObject* pGameObject)
 	{
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
@@ -41,6 +41,7 @@ namespace flex
 		}
 
 		m_Children.push_back(pGameObject);
+		gameContext.renderer->PostInitializeRenderObject(gameContext, pGameObject->m_RenderID);
 	}
 
 	void BaseScene::RemoveChild(GameObject* gameObject, bool deleteChild)

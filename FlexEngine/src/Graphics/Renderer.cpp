@@ -56,7 +56,8 @@ namespace flex
 	{
 	}
 
-	Renderer::Shader::Shader(const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :
+	Renderer::Shader::Shader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :
+		name(name),
 		vertexShaderFilePath(vertexShaderFilePath),
 		fragmentShaderFilePath(fragmentShaderFilePath)
 	{

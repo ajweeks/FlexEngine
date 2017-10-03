@@ -10,6 +10,8 @@
 
 #include "Logger.h"
 
+#include "stb_image.h"
+
 namespace flex
 {
 	std::string FloatToString(float f, int precision)
@@ -110,4 +112,26 @@ namespace flex
 		return result;
 	}
 	
+	bool HDRImage::Load(const std::string& hdrFilePath)
+	{
+		filePath = hdrFilePath;
+
+		//stbi_set_flip_vertically_on_load(true); // ?
+		int channelCount;
+		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, 0);
+
+		if (!pixels)
+		{
+			Logger::LogError("Failed to load HDR image at " + filePath);
+			return false;
+		}
+
+		return true;
+	}
+
+	void HDRImage::Free()
+	{
+		stbi_image_free(pixels);
+	}
+
 } // namespace flex

@@ -19,23 +19,32 @@ namespace flex
 	void Scene_02::Initialize(const GameContext& gameContext)
 	{
 		// Materials
-		Renderer::MaterialCreateInfo skyboxMatInfo = {};
-		skyboxMatInfo.name = "Skybox";
-		skyboxMatInfo.shaderID = 4;
+		//Renderer::MaterialCreateInfo skyboxMatInfo = {};
+		//skyboxMatInfo.name = "Skybox";
+		//skyboxMatInfo.shaderName = "skybox";
 
-		const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/ame_starfield/";
-		const std::string fileName = "ame_starfield";
-		const std::string extension = ".tga";
+		//const std::string directory = RESOURCE_LOCATION + "textures/skyboxes/ame_starfield/";
+		//const std::string fileName = "ame_starfield";
+		//const std::string extension = ".tga";
+		//
+		//skyboxMatInfo.cubeMapFilePaths = {
+		//	directory + fileName + "_r" + extension,
+		//	directory + fileName + "_l" + extension,
+		//	directory + fileName + "_u" + extension,
+		//	directory + fileName + "_d" + extension,
+		//	directory + fileName + "_b" + extension,
+		//	directory + fileName + "_f" + extension,
+		//};
+		//const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
 
-		skyboxMatInfo.cubeMapFilePaths = {
-			directory + fileName + "_r" + extension,
-			directory + fileName + "_l" + extension,
-			directory + fileName + "_u" + extension,
-			directory + fileName + "_d" + extension,
-			directory + fileName + "_b" + extension,
-			directory + fileName + "_f" + extension,
-		};
-		const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
+
+		Renderer::MaterialCreateInfo skyboxHDRMatInfo = {};
+		skyboxHDRMatInfo.name = "HDR Skybox";
+		skyboxHDRMatInfo.shaderName = "background"; // renders once using equirectangular shader to generate cubemap, then every frame using background shader
+		skyboxHDRMatInfo.useCubemapSampler = true;
+
+		const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+
 
 		//Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
 		//pbrMatTexturedInfo.shaderID = 3;
@@ -53,7 +62,7 @@ namespace flex
 
 
 		Renderer::MaterialCreateInfo arisakaMatInfo = {};
-		arisakaMatInfo.shaderID = 3;
+		arisakaMatInfo.shaderName = "pbr";
 		arisakaMatInfo.name = "PBR textured";
 		arisakaMatInfo.useAlbedoSampler = true;
 		arisakaMatInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/arisaka/arisaka_base_color_1.png";
@@ -81,7 +90,7 @@ namespace flex
 			const std::string iStr = std::to_string(i);
 		
 			Renderer::MaterialCreateInfo pbrMatInfo = {};
-			pbrMatInfo.shaderID = 3;
+			pbrMatInfo.shaderName = "pbr";
 			pbrMatInfo.name = "PBR simple " + iStr;
 			pbrMatInfo.constAlbedo = glm::vec3(0.1f, 0.1f, 0.5f);
 			pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
@@ -93,7 +102,7 @@ namespace flex
 			m_Spheres[i] = new MeshPrefab(pbrMatID, "PBR sphere " + iStr);
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
-			AddChild(m_Spheres[i]);
+			AddChild(gameContext, m_Spheres[i]);
 		}
 		
 		//m_Arisaka = new MeshPrefab(arisakaMatID, "Arisaka Type 99");
@@ -103,9 +112,11 @@ namespace flex
 		//m_Arisaka->GetTransform().Rotate({ glm::half_pi<float>(), 0, glm::pi<float>() });
 		//AddChild(m_Arisaka);
 
-		m_Skybox = new MeshPrefab(skyboxMatID);
+		
+		m_Skybox = new MeshPrefab(skyboxHDRMatID);
 		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(m_Skybox);
+		AddChild(gameContext, m_Skybox);
+
 
 		// Lights
 		Renderer::PointLight light1 = {};

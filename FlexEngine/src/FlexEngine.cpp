@@ -20,7 +20,7 @@ namespace flex
 		m_ClearColor(0.08f, 0.13f, 0.2f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::VULKAN;
+		RendererID preferredInitialRenderer = RendererID::GL;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -59,13 +59,13 @@ namespace flex
 
 		InitializeWindowAndRenderer();
 
-		m_SceneManager = new SceneManager();
-
-		LoadDefaultScenes();
-
 		m_DefaultCamera = new FreeCamera(m_GameContext);
 		m_DefaultCamera->SetPosition(glm::vec3(0.0f, 5.0f, -15.0f));
 		m_GameContext.camera = m_DefaultCamera;
+
+		m_SceneManager = new SceneManager();
+
+		LoadDefaultScenes();
 
 		m_GameContext.inputManager = new InputManager();
 

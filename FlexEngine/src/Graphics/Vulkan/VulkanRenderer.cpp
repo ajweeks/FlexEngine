@@ -255,7 +255,26 @@ namespace flex
 			VulkanMaterial mat = {};
 			mat.material = {};
 
-			mat.material.shaderID = createInfo->shaderID;
+			bool shaderIDSet = false;
+			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			{
+				if (m_Shaders[i].name.compare(createInfo->shaderName) == 0)
+				{
+					mat.material.shaderID = i;
+					shaderIDSet = true;
+				}
+			}
+			if (!shaderIDSet)
+			{
+				if (createInfo->shaderName.empty())
+				{
+					Logger::LogError("Material's shader not set! MaterialCreateInfo::shaderName must be filled in");
+				}
+				else
+				{
+					Logger::LogError("Material's shader not set! Shader name " + createInfo->shaderName + " not found");
+				}
+			}
 			mat.material.name = createInfo->name;
 			mat.material.diffuseTexturePath = createInfo->diffuseTexturePath;
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
@@ -267,7 +286,7 @@ namespace flex
 			mat.material.constRoughness = createInfo->constRoughness;
 			mat.material.constAO = createInfo->constAO;
 
-			mat.descriptorSetLayoutIndex = createInfo->shaderID;
+			mat.descriptorSetLayoutIndex = mat.material.shaderID;
 
 			struct TextureInfo
 			{
@@ -673,8 +692,10 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
+		void VulkanRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			CreateDescriptorSet(renderID);
 			CreateGraphicsPipeline(renderID);
 		}
@@ -3529,16 +3550,16 @@ namespace flex
 			const std::string shaderDirectory = RESOURCE_LOCATION + "shaders/GLSL/spv/";
 
 			m_Shaders = {
-				{ shaderDirectory + "vk_deferred_simple_vert.spv", shaderDirectory + "vk_deferred_simple_frag.spv" },
-				{ shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
-				{ shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
+				{ "deferred_simple", shaderDirectory + "vk_deferred_simple_vert.spv", shaderDirectory + "vk_deferred_simple_frag.spv" },
+				{ "color",  shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv" },
+				{ "imgui", shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv" },
 
-				{ shaderDirectory + "vk_pbr_vert.spv", shaderDirectory + "vk_pbr_frag.spv" },
+				{ "pbr", shaderDirectory + "vk_pbr_vert.spv", shaderDirectory + "vk_pbr_frag.spv" },
 				// NOTE: Skybox shader should be kept second last to keep other objects rendering in front
-				{ shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
+				{ "skybox", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv" },
 
 				// NOTE: Deferred combine pass is kept last to ensure all other objects have been drawn
-				{ shaderDirectory + "vk_deferred_combine_vert.spv", shaderDirectory + "vk_deferred_combine_frag.spv" },
+				{ "deferred_combine", shaderDirectory + "vk_deferred_combine_vert.spv", shaderDirectory + "vk_deferred_combine_frag.spv" },
 			};
 
 			const size_t shaderCount = m_Shaders.size();
