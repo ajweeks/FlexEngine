@@ -28,7 +28,6 @@ By supporting three different graphics APIs, I've challenged myself to designed 
  - [glad](https://github.com/Dav1dde/glad)
  - [glfw](https://github.com/glfw/glfw)
  - [glm](https://github.com/g-truc/glm)
- - [soil](https://github.com/kbranigan/Simple-OpenGL-Image-Library)
  - [stb](https://github.com/nothings/stb)
  - [imgui](https://github.com/ocornut/imgui)
 
