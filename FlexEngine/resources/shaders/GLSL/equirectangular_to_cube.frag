@@ -1,6 +1,7 @@
 #version 400
 
 out vec4 FragColor;
+
 in vec3 ex_SampleDirection;
 
 uniform sampler2D equirectangularSampler;

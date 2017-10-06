@@ -41,7 +41,6 @@ namespace flex
 		}
 
 		m_Children.push_back(pGameObject);
-		gameContext.renderer->PostInitializeRenderObject(gameContext, pGameObject->m_RenderID);
 	}
 
 	void BaseScene::RemoveChild(GameObject* gameObject, bool deleteChild)
@@ -89,6 +88,16 @@ namespace flex
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->Initialize(gameContext);
+		}
+	}
+
+	void BaseScene::RootPostInitialize(const GameContext& gameContext)
+	{
+		PostInitialize(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->PostInitialize(gameContext);
 		}
 	}
 

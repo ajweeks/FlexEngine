@@ -63,7 +63,7 @@ namespace flex
 		m_DefaultCamera->SetPosition(glm::vec3(0.0f, 5.0f, -15.0f));
 		m_GameContext.camera = m_DefaultCamera;
 
-		m_SceneManager = new SceneManager();
+		m_GameContext.sceneManager = new SceneManager();
 
 		LoadDefaultScenes();
 
@@ -135,8 +135,8 @@ namespace flex
 		m_GameContext.renderer->ImGui_ReleaseRenderObjects();
 		ImGui::Shutdown();
 
-		if (m_SceneManager) m_SceneManager->DestroyAllScenes(m_GameContext);
-		SafeDelete(m_SceneManager);
+		if (m_GameContext.sceneManager) m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
+		SafeDelete(m_GameContext.sceneManager);
 		SafeDelete(m_GameContext.inputManager);
 		SafeDelete(m_DefaultCamera);
 
@@ -185,7 +185,7 @@ namespace flex
 		//m_SceneManager->AddScene(pDefaultScene, m_GameContext);
 
 		Scene_02* scene02 = new Scene_02(m_GameContext);
-		m_SceneManager->AddScene(scene02, m_GameContext);
+		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
@@ -203,7 +203,7 @@ namespace flex
 	void FlexEngine::CycleRenderer()
 	{
 		m_GameContext.renderer->ImGui_ReleaseRenderObjects();
-		m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
+		m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
 		DestroyWindowAndRenderer();
 
 		while (true)
@@ -267,17 +267,17 @@ namespace flex
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET) ||
 				m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
-				const std::string currentSceneName = m_SceneManager->CurrentScene()->GetName();
-				m_SceneManager->DestroyAllScenes(m_GameContext);
+				const std::string currentSceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
+				m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
 				if (currentSceneName.compare("TestScene") == 0)
 				{
 					Scene_02* newScene = new Scene_02(m_GameContext);
-					m_SceneManager->AddScene(newScene, m_GameContext);
+					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
 				}
 				else
 				{
 					TestScene* newScene = new TestScene(m_GameContext);
-					m_SceneManager->AddScene(newScene, m_GameContext);
+					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
 				}
 
 				m_GameContext.renderer->PostInitialize(m_GameContext);
@@ -286,8 +286,8 @@ namespace flex
 			// TODO: Figure out better
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
 			{
-				const std::string sceneName = m_SceneManager->CurrentScene()->GetName();
-				m_SceneManager->RemoveScene(m_SceneManager->CurrentScene(), m_GameContext);
+				const std::string sceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
+				m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
 
 				DestroyWindowAndRenderer();
 				InitializeWindowAndRenderer();
@@ -297,19 +297,19 @@ namespace flex
 				if (sceneName.compare("TestScene") == 0)
 				{
 					TestScene* newScene = new TestScene(m_GameContext);
-					m_SceneManager->AddScene(newScene, m_GameContext);
+					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
 				}
 				else
 				{
 					Scene_02* newScene = new Scene_02(m_GameContext);
-					m_SceneManager->AddScene(newScene, m_GameContext);
+					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
 				}
 
 				m_GameContext.renderer->PostInitialize(m_GameContext);
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
-			m_SceneManager->UpdateAndRender(m_GameContext);
+			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.inputManager->Update();
 			m_GameContext.window->Update(m_GameContext);
 			m_GameContext.inputManager->PostUpdate();
@@ -319,88 +319,7 @@ namespace flex
 			{
 				const std::string rendStr("Current renderer: " + m_RendererName);
 				ImGui::Text(rendStr.c_str());
-				if (ImGui::CollapsingHeader("Scene info"))
-				{
-					const std::string sceneCountStr("Scene count: " + std::to_string(m_SceneManager->GetSceneCount()));
-					ImGui::Text(sceneCountStr.c_str());
-					const std::string currentSceneStr("Current scene: " + m_SceneManager->CurrentScene()->GetName());
-					ImGui::Text(currentSceneStr.c_str());
-					const glm::uint objectCount = m_GameContext.renderer->GetRenderObjectCount();
-					const glm::uint objectCapacity = m_GameContext.renderer->GetRenderObjectCapacity();
-					const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
-					ImGui::Text(objectCountStr.c_str());
-
-					if (ImGui::TreeNode("Render Objects"))
-					{
-						std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
-						m_GameContext.renderer->GetRenderObjectInfos(renderObjectInfos);
-						assert(renderObjectInfos.size() == objectCount);
-						for (size_t i = 0; i < objectCount; ++i)
-						{
-							const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
-							if (ImGui::TreeNode(objectName.c_str()))
-							{
-								ImGui::Text("Transform");
-
-								ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->position.x, 0.1f);
-								glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->rotation);
-								ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
-								renderObjectInfos[i].transform->rotation = glm::quat(rot);
-								ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
-
-								ImGui::TreePop();
-							}
-						}
-
-						ImGui::TreePop();
-					}
-
-					if (ImGui::TreeNode("Lights"))
-					{
-						ImGui::AlignFirstTextHeightToWidgets();
-
-
-						ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel;
-
-						Renderer::DirectionalLight& dirLight = m_GameContext.renderer->GetDirectionalLight(0);
-						std::vector<Renderer::PointLight>& pointLights = m_GameContext.renderer->GetAllPointLights();
-
-						bool dirLightEnabled = dirLight.enabled;
-						ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
-						dirLight.enabled = dirLightEnabled ? 1 : 0;
-						ImGui::SameLine();
-						if (ImGui::TreeNode("Directional Light"))
-						{
-							ImGui::DragFloat3("Rotation", &dirLight.direction.x, 0.01f);
-
-							CopyableColorEdit4("Color ", dirLight.color, "c##diffuse", "p##color", colorEditFlags);
-
-							ImGui::TreePop();
-						}
-
-						for (size_t i = 0; i < pointLights.size(); ++i)
-						{
-
-							const std::string iStr = std::to_string(i);
-							const std::string objectName("Point Light##" + iStr);
-
-							bool pointLightEnabled = pointLights[i].enabled;
-							ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLightEnabled);
-							pointLights[i].enabled = pointLightEnabled ? 1 : 0;
-							ImGui::SameLine();
-							if (ImGui::TreeNode(objectName.c_str()))
-							{
-								ImGui::DragFloat3("Translation", &pointLights[i].position.x, 0.1f);
-
-								CopyableColorEdit4("Color ", pointLights[i].color, "c##diffuse", "p##color", colorEditFlags);
-
-								ImGui::TreePop();
-							}
-						}
-
-						ImGui::TreePop();
-					}
-				}
+				m_GameContext.renderer->DrawImGuiItems(m_GameContext);
 			}
 			ImGui::End();
 
@@ -414,20 +333,6 @@ namespace flex
 
 			m_GameContext.renderer->Draw(m_GameContext);
 		}
-	}
-
-	void FlexEngine::CopyableColorEdit3(const char* label, glm::vec3& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags)
-	{
-		ImGui::ColorEdit3(label, &col.r, flags);
-		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
-		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor3FromClipboard();
-	}
-
-	void FlexEngine::CopyableColorEdit4(const char* label, glm::vec4& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags)
-	{
-		ImGui::ColorEdit4(label, &col.r, flags);
-		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
-		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor4FromClipboard();
 	}
 
 	void FlexEngine::Stop()

@@ -14,24 +14,26 @@ uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 // Material variables
 uniform bool useAlbedoSampler;
+uniform sampler2D albedoSampler;
 uniform vec4 constAlbedo;
 
 uniform bool useMetallicSampler;
+uniform sampler2D metallicSampler;
 uniform float constMetallic;
 
 uniform bool useRoughnessSampler;
+uniform sampler2D roughnessSampler;
 uniform float constRoughness;
 
 uniform bool useAOSampler;
+uniform sampler2D aoSampler;
 uniform float constAO;
 
 uniform bool useNormalSampler;
-
-uniform sampler2D albedoSampler;
-uniform sampler2D metallicSampler;
-uniform sampler2D roughnessSampler;
-uniform sampler2D aoSampler;
 uniform sampler2D normalSampler;
+
+uniform bool useIrradianceSampler;
+uniform samplerCube irradianceSampler;
 
 uniform vec4 camPos;
 
@@ -46,6 +48,11 @@ const float PI = 3.14159265359;
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
 	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
@@ -134,7 +141,22 @@ void main()
 		Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 	}
 
-	vec3 ambient = vec3(0.03) * albedo * ao;
+	vec3 ambient;
+	if (useIrradianceSampler)
+	{
+		// Ambient term (IBL)
+		vec3 kS = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+	    vec3 kD = 1.0 - kS;
+	    kD *= 1.0 - metallic;	  
+	    vec3 irradiance = texture(irradianceSampler, N).rgb;
+	    vec3 diffuse = irradiance * albedo;
+	    ambient = (kD * diffuse) * ao;
+	}
+	else
+	{
+		ambient = vec3(0.03) * albedo * ao;
+	}
+
 	vec3 color = ambient + Lo;
 
 	// TODO: Once we add post processing that requires HDR don't do this calculation here:

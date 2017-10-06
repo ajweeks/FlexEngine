@@ -11,6 +11,8 @@
 #include <assimp/vector3.h>
 #include <assimp/color4.h>
 
+#include <imgui.h>
+
 namespace flex
 {
 	struct HDRImage
@@ -71,5 +73,10 @@ namespace flex
 
 	glm::vec3 PasteColor3FromClipboard();
 	glm::vec4 PasteColor4FromClipboard();
+
+	// ImGui helpers
+	void CopyableColorEdit3(const char* label, glm::vec3& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags = 0);
+	void CopyableColorEdit4(const char* label, glm::vec4& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags);
+
 
 } // namespace flex

@@ -11,6 +11,8 @@
 
 #include <assimp/scene.h>
 
+#include "Typedefs.hpp"
+#include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
 
 namespace flex
@@ -31,10 +33,13 @@ namespace flex
 			SKYBOX
 		};
 
+		void ForceAttributes(VertexAttributes attributes); // Call this before loading to force certain attributes to be filled
+
 		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false);
 		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
 
 		virtual void Initialize(const GameContext& gameContext) override;
+		virtual void PostInitialize(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void Destroy(const GameContext& gameContext) override;
 
@@ -49,6 +54,7 @@ namespace flex
 
 		glm::vec2 m_UVScale;
 
+		VertexAttributes m_ForcedAttributes = (glm::uint)VertexAttribute::NONE;
 		VertexBufferData m_VertexBufferData;
 
 		std::vector<glm::uint> m_Indices;

@@ -108,8 +108,6 @@ namespace flex
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 
-			glBindVertexArray(0);
-
 			image.Free();
 
 			CheckGLErrorMessages();
@@ -149,6 +147,8 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 			CheckGLErrorMessages();
+			
+			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
 			return success;
 		}
@@ -172,12 +172,16 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			CheckGLErrorMessages();
 
+			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
 			return true;
 		}
 
 		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader)
 		{
 			CheckGLErrorMessages();
+
+			bool success = true;
 
 			GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 			CheckGLErrorMessages();
@@ -206,6 +210,7 @@ namespace flex
 				vertexShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(vertexShaderID, infoLogLength, NULL, (GLchar*)vertexShaderErrorMessage.data());
 				Logger::LogError(vertexShaderErrorMessage);
+				success = false;
 			}
 
 			// Compile Fragment Shader
@@ -221,13 +226,14 @@ namespace flex
 				fragmentShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(fragmentShaderID, infoLogLength, NULL, (GLchar*)fragmentShaderErrorMessage.data());
 				Logger::LogError(fragmentShaderErrorMessage);
+				success = false;
 			}
 
 			glAttachShader(program, vertexShaderID);
 			glAttachShader(program, fragmentShaderID);
 			CheckGLErrorMessages();
 
-			return true;
+			return success;
 		}
 
 		bool LinkProgram(glm::uint program)

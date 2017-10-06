@@ -9,6 +9,7 @@ namespace flex
 	class InputManager;
 	class Renderer;
 	class FlexEngine;
+	class SceneManager;
 
 	struct GameContext
 	{
@@ -17,6 +18,7 @@ namespace flex
 		InputManager* inputManager;
 		Renderer* renderer;
 		FlexEngine* engineInstance;
+		SceneManager* sceneManager;
 		Monitor monitor;
 
 		float elapsedTime;

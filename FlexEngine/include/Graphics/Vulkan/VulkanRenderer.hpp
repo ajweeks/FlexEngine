@@ -40,6 +40,8 @@ namespace flex
 
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;
+			virtual void DrawImGuiItems(const GameContext& gameContext) override;
+
 			virtual void ReloadShaders(GameContext& gameContext) override;
 
 			virtual void OnWindowSize(int width, int height) override;

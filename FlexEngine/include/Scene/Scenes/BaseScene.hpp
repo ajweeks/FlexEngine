@@ -19,6 +19,7 @@ namespace flex
 
 	protected:
 		virtual void Initialize(const GameContext& gameContext) = 0;
+		virtual void PostInitialize(const GameContext& gameContext) = 0;
 		virtual void Destroy(const GameContext& gameContext) = 0;
 		virtual void Update(const GameContext& gameContext) = 0;
 
@@ -28,6 +29,7 @@ namespace flex
 
 	private:
 		void RootInitialize(const GameContext& gameContext);
+		void RootPostInitialize(const GameContext& gameContext);
 		void RootUpdate(const GameContext& gameContext);
 		void RootDestroy(const GameContext& gameContext);
 

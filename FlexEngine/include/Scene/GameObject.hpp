@@ -20,6 +20,7 @@ namespace flex
 
 	protected:
 		virtual void Initialize(const GameContext& gameContext) = 0;
+		virtual void PostInitialize(const GameContext& gameContext) = 0;
 		virtual void Update(const GameContext& gameContext) = 0;
 		virtual void Destroy(const GameContext& gameContext) = 0;
 		

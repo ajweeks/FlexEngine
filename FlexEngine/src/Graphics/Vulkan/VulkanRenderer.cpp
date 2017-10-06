@@ -15,6 +15,8 @@
 #include "Logger.hpp"
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
+#include "GameContext.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -428,6 +430,94 @@ namespace flex
 			else
 			{
 				DrawFrame(gameContext.window);
+			}
+		}
+
+		void VulkanRenderer::DrawImGuiItems(const GameContext& gameContext)
+		{
+			// TODO: Consolidate renderer ImGui code
+			if (ImGui::CollapsingHeader("Scene info"))
+			{
+				const std::string sceneCountStr("Scene count: " + std::to_string(gameContext.sceneManager->GetSceneCount()));
+				ImGui::Text(sceneCountStr.c_str());
+				const std::string currentSceneStr("Current scene: " + gameContext.sceneManager->CurrentScene()->GetName());
+				ImGui::Text(currentSceneStr.c_str());
+				const glm::uint objectCount = GetRenderObjectCount();
+				const glm::uint objectCapacity = GetRenderObjectCapacity();
+				const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
+				ImGui::Text(objectCountStr.c_str());
+
+				if (ImGui::TreeNode("Render Objects"))
+				{
+					std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
+					GetRenderObjectInfos(renderObjectInfos);
+					assert(renderObjectInfos.size() == objectCount);
+					for (size_t i = 0; i < objectCount; ++i)
+					{
+						const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
+						if (ImGui::TreeNode(objectName.c_str()))
+						{
+							ImGui::Text("Transform");
+
+							ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->position.x, 0.1f);
+							glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->rotation);
+							ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
+							renderObjectInfos[i].transform->rotation = glm::quat(rot);
+							ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
+
+							VulkanMaterial* material = &m_LoadedMaterials[m_RenderObjects[i]->materialID];
+							//if (material->uniformIDs.useIrradianceSampler)
+							//{
+							//	ImGui::Checkbox("Use Irradiance Sampler", &material->material.useIrradianceSampler);
+							//}
+
+							ImGui::TreePop();
+						}
+					}
+
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Lights"))
+				{
+					ImGui::AlignFirstTextHeightToWidgets();
+
+					ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel;
+
+					bool dirLightEnabled = m_DirectionalLight.enabled;
+					ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
+					m_DirectionalLight.enabled = dirLightEnabled ? 1 : 0;
+					ImGui::SameLine();
+					if (ImGui::TreeNode("Directional Light"))
+					{
+						ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
+
+						CopyableColorEdit4("Color ", m_DirectionalLight.color, "c##diffuse", "p##color", colorEditFlags);
+
+						ImGui::TreePop();
+					}
+
+					for (size_t i = 0; i < m_PointLights.size(); ++i)
+					{
+						const std::string iStr = std::to_string(i);
+						const std::string objectName("Point Light##" + iStr);
+
+						bool pointLightEnabled = m_PointLights[i].enabled;
+						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLightEnabled);
+						m_PointLights[i].enabled = pointLightEnabled ? 1 : 0;
+						ImGui::SameLine();
+						if (ImGui::TreeNode(objectName.c_str()))
+						{
+							ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
+
+							CopyableColorEdit4("Color ", m_PointLights[i].color, "c##diffuse", "p##color", colorEditFlags);
+
+							ImGui::TreePop();
+						}
+					}
+
+					ImGui::TreePop();
+				}
 			}
 		}
 

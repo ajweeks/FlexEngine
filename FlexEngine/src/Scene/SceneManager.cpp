@@ -34,6 +34,7 @@ namespace flex
 		{
 			m_Scenes.push_back(newScene);
 			newScene->RootInitialize(gameContext);
+			newScene->RootPostInitialize(gameContext);
 		}
 		else
 		{

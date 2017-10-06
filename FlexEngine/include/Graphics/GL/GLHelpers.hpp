@@ -40,6 +40,7 @@ namespace flex
 				int constAO;
 				int useAOSampler;
 				int equirectangularSampler;
+				int useIrradianceSampler;
 			};
 			UniformIDs uniformIDs;
 
@@ -61,6 +62,8 @@ namespace flex
 			glm::uint aoSamplerID;
 
 			glm::uint hdrTextureID;
+
+			glm::uint irradianceSamplerID;
 		};
 
 		struct RenderObject

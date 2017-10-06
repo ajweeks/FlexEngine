@@ -160,6 +160,11 @@ namespace flex
 		gameContext.renderer->InitializeDirectionalLight(dirLight);
 	}
 
+	void TestScene::PostInitialize(const GameContext& gameContext)
+	{
+		UNREFERENCED_PARAMETER(gameContext);
+	}
+
 	void TestScene::Destroy(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);

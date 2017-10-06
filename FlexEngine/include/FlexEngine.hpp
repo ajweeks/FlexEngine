@@ -38,16 +38,11 @@ namespace flex
 		void DestroyWindowAndRenderer();
 		void LoadDefaultScenes();
 
-		// ImGui helpers
-		void CopyableColorEdit3(const char* label, glm::vec3& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags = 0);
-		void CopyableColorEdit4(const char* label, glm::vec4& col, const char* copyBtnLabel, const char* pasteBtnLabel, ImGuiColorEditFlags flags);
-
 		std::string RenderIDToString(RendererID rendererID) const;
 
 		glm::uint m_RendererCount;
 
 		Window* m_Window;
-		SceneManager* m_SceneManager;
 		GameContext m_GameContext;
 		FreeCamera* m_DefaultCamera;
 

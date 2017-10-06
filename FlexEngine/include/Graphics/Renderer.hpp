@@ -136,6 +136,9 @@ namespace flex
 
 			bool useEquirectangularSampler = false;
 			std::string equirectangularTexturePath;
+
+			bool useIrradianceSampler = false;
+			bool generateIrradianceSampler = false;
 		};
 
 		// Info that stays consistent across all renderers
@@ -187,19 +190,19 @@ namespace flex
 				positionFrameBufferSampler
 				diffuseSpecularFrameBufferSampler
 				normalFrameBufferSampler
-				material
-					useAlbedoSampler
-					albedoSampler
-					albedo				(constant value to use when not using sampler)
-					useMetallicSampler
-					metallicSampler
-					metallic			(constant value to use when not using sampler)
-					useRoughnessSampler
-					roughnessSampler
-					roughness			(constant value to use when not using sampler)
-					useAOSampler
-					aoSampler
-					ao
+				useAlbedoSampler
+				albedoSampler
+				albedo				(constant value to use when not using sampler)
+				useMetallicSampler
+				metallicSampler
+				metallic			(constant value to use when not using sampler)
+				useRoughnessSampler
+				roughnessSampler
+				roughness			(constant value to use when not using sampler)
+				useAOSampler
+				aoSampler
+				ao
+				useIrradianceSampler
 			*/
 			std::map<std::string, bool> types;
 
@@ -231,6 +234,7 @@ namespace flex
 			int numAttachments = 1; // How many output textures the fragment shader has
 		};
 
+		// TODO: Is setting all the members to false necessary?
 		struct MaterialCreateInfo
 		{
 			// Required fields:
@@ -254,9 +258,16 @@ namespace flex
 			glm::uint normalFrameBufferSamplerID;
 			bool useDiffuseSpecularFrameBufferSampler = false;
 			glm::uint diffuseSpecularFrameBufferSamplerID;
+			
+			bool useIrradianceSampler = false;
+			bool generateIrradianceSampler = false;
+			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-			bool useCubemapSampler; // Set to true if no cubemaps need to be generated but a sampler uniform needs to be found
+			bool useCubemapSampler;
+			bool generateCubemapSampler;
+			glm::vec2i generatedCubemapSize;
+			glm::vec2i generatedIrradianceCubemapSize;
 
 			// PBR Constant colors
 			glm::vec3 constAlbedo;
@@ -289,6 +300,8 @@ namespace flex
 
 		virtual void Update(const GameContext& gameContext) = 0;
 		virtual void Draw(const GameContext& gameContext) = 0;
+		virtual void DrawImGuiItems(const GameContext& gameContext) = 0;
+
 		virtual void ReloadShaders(GameContext& gameContext) = 0;
 
 		virtual void OnWindowSize(int width, int height) = 0;

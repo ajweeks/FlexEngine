@@ -13,8 +13,6 @@
 #include "GameContext.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
-#include "Typedefs.hpp"
-#include "VertexAttribute.hpp"
 
 namespace flex
 {
@@ -36,12 +34,17 @@ namespace flex
 		m_Name(name),
 		m_UVScale(1.0f, 1.0f)
 	{
-		if (m_Name.empty()) m_Name = m_DefaultName;
+		if (name.empty()) m_Name = m_DefaultName;
 	}
 
 	MeshPrefab::~MeshPrefab()
 	{
 		m_VertexBufferData.Destroy();
+	}
+
+	void MeshPrefab::ForceAttributes(VertexAttributes attributes)
+	{
+		m_ForcedAttributes = attributes;
 	}
 
 	// TODO: Add option to force certain components (Bitangents, UVs, ...)
@@ -84,12 +87,15 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
 
 			// Color
-			glm::vec4 col;
 			if (mesh->HasVertexColors(0))
 			{
-				col = ToVec4(mesh->mColors[0][i]);
-
+				glm::vec4 col = ToVec4(mesh->mColors[0][i]);
 				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			}
+			else if (m_ForcedAttributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			{
+				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 			}
 
@@ -104,6 +110,19 @@ namespace flex
 				vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
 			}
+			else 
+			{
+				if (m_ForcedAttributes & (glm::uint)VertexAttribute::TANGENT)
+				{
+					vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
+					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::TANGENT;
+				}
+				if (m_ForcedAttributes & (glm::uint)VertexAttribute::BITANGENT)
+				{
+					vertexBufferDataCreateInfo.bitangents.push_back(m_DefaultBitangent);
+					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
+				}
+			}
 
 			// Normal
 			if (mesh->HasNormals())
@@ -114,6 +133,11 @@ namespace flex
 				vertexBufferDataCreateInfo.normals.push_back(norm);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
 			}
+			else if (m_ForcedAttributes & (glm::uint)VertexAttribute::NORMAL)
+			{
+				vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+			}
 
 			// TexCoord
 			if (mesh->HasTextureCoords(0))
@@ -122,6 +146,11 @@ namespace flex
 				glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 				texCoord *= m_UVScale;
 				vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
+				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
+			}
+			else if (m_ForcedAttributes & (glm::uint)VertexAttribute::UV)
+			{
+				vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 			}
 		}
@@ -694,6 +723,11 @@ namespace flex
 	void MeshPrefab::Initialize(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	void MeshPrefab::PostInitialize(const GameContext& gameContext)
+	{
+		gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
 	}
 
 	void MeshPrefab::Update(const GameContext& gameContext)

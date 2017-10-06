@@ -31,6 +31,8 @@ namespace flex
 
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;
+			virtual void DrawImGuiItems(const GameContext& gameContext) override;
+
 			virtual void ReloadShaders(GameContext& gameContext) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
@@ -119,6 +121,8 @@ namespace flex
 			glm::uint m_CaptureFBO;
 			glm::uint m_CaptureRBO;
 
+			glm::vec2i m_EquirectangularCubemapCaptureSize;
+			glm::vec2i m_IrradianceCubemapCaptureSize;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;
