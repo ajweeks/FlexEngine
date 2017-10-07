@@ -7,29 +7,31 @@ This is a rendering engine which supports both Vulkan and OpenGL. The goal of th
 By supporting three different graphics APIs, I've challenged myself to designed the renderer interface in an API-agnostic way, such that any code calling into the renderer knows nothing about which API is being used.
 
 #### Notable features
-- API-agnostic rendering interface
-- Sky boxes
+- Support for both Vulkan and OpenGL, switchable at runtime
+- Physically Based Rendering (PBR)
+- Image Based lighting
 - Diffuse/specular/normal mapping
-- Per-object shader/texture selection
+- UI interface (using [ImGui](https://github.com/ocornut/imgui))
+- Sky boxes
 
 <div>
-  <img src="http://i.imgur.com/CLRQ6tC.jpg" width="49%"/>
-  <img src="http://i.imgur.com/sXbc0n5.jpg" width="49%" style="float: right"/>
+  <img src="http://i.imgur.com/KOKpDgO.png" width="51%"/>
+  <img src="http://i.imgur.com/OVFW6s3.png" width="47%" style="float: right"/>
 </div>
 
-![](http://i.imgur.com/mz4mlmE.jpg)
+![](http://i.imgur.com/weOiqnU.png)
 
-![](http://i.imgur.com/pb8KjRA.png)
+![](http://i.imgur.com/WCios65.png)
 
-![](http://i.imgur.com/uRPPjTa.png)
+![](http://i.imgur.com/NoiEoNY.png)
 
 ## Dependencies
- - [assimp](https://github.com/assimp/assimp)
+ - [Assimp](https://github.com/assimp/assimp)
  - [glad](https://github.com/Dav1dde/glad)
  - [glfw](https://github.com/glfw/glfw)
  - [glm](https://github.com/g-truc/glm)
  - [stb](https://github.com/nothings/stb)
- - [imgui](https://github.com/ocornut/imgui)
+ - [ImGui](https://github.com/ocornut/imgui)
 
 ## Thanks
 A huge thanks to the following people for their incredibly useful resources:
