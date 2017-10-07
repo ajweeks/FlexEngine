@@ -3,12 +3,12 @@
 out vec4 FragColor;
 in vec3 ex_SampleDirection;
 
-uniform bool useCubemapSampler;
+uniform bool enableCubemapSampler;
 uniform samplerCube cubemapSampler;
 
 void main() 
 {
-	if (useCubemapSampler)
+	if (enableCubemapSampler)
 	{
 		FragColor = texture(cubemapSampler, ex_SampleDirection);
 	}

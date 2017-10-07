@@ -1,5 +1,8 @@
 #version 400
 
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
 struct PointLight 
 {
 	vec4 position;
@@ -13,27 +16,31 @@ struct PointLight
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 // Material variables
-uniform bool useAlbedoSampler;
-uniform sampler2D albedoSampler;
 uniform vec4 constAlbedo;
+uniform bool enableAlbedoSampler;
+layout (binding = 0) uniform sampler2D albedoSampler;
 
-uniform bool useMetallicSampler;
-uniform sampler2D metallicSampler;
 uniform float constMetallic;
+uniform bool enableMetallicSampler;
+layout (binding = 1) uniform sampler2D metallicSampler;
 
-uniform bool useRoughnessSampler;
-uniform sampler2D roughnessSampler;
 uniform float constRoughness;
+uniform bool enableRoughnessSampler;
+layout (binding = 2) uniform sampler2D roughnessSampler;
 
-uniform bool useAOSampler;
-uniform sampler2D aoSampler;
 uniform float constAO;
+uniform bool enableAOSampler;
+layout (binding = 3) uniform sampler2D aoSampler;
 
-uniform bool useNormalSampler;
-uniform sampler2D normalSampler;
+uniform bool enableNormalSampler;
+layout (binding = 4) uniform sampler2D normalSampler;
 
-uniform bool useIrradianceSampler;
-uniform samplerCube irradianceSampler;
+layout (binding = 5) uniform sampler2D brdfLUT;
+
+uniform bool enableIrradianceSampler;
+layout (binding = 6) uniform samplerCube irradianceSampler;
+
+layout (binding = 7) uniform samplerCube prefilterMap;
 
 uniform vec4 camPos;
 
@@ -92,15 +99,16 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 void main() 
 {
-	vec3 albedo = useAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(constAlbedo);
-	float metallic = useMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : constMetallic;
-	float roughness = useRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : constRoughness;
-	float ao = useAOSampler ? texture(aoSampler, ex_TexCoord).r : constAO;
+	vec3 albedo = enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(constAlbedo);
+	float metallic = enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : constMetallic;
+	float roughness = enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : constRoughness;
+	float ao = enableAOSampler ? texture(aoSampler, ex_TexCoord).r : constAO;
 
-	vec3 Normal = useNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
+	vec3 Normal = enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
 
 	vec3 N = normalize(Normal);
 	vec3 V = normalize(camPos.xyz - ex_WorldPos);
+	vec3 R = reflect(-V, N);
 
 	// Visualize normals:
 	//fragColor = vec4(N, 1); return;
@@ -141,16 +149,25 @@ void main()
 		Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 	}
 
+	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+
 	vec3 ambient;
-	if (useIrradianceSampler)
+	if (enableIrradianceSampler)
 	{
-		// Ambient term (IBL)
-		vec3 kS = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+		// Diffse ambient term (IBL)
+		vec3 kS = F;
 	    vec3 kD = 1.0 - kS;
 	    kD *= 1.0 - metallic;	  
 	    vec3 irradiance = texture(irradianceSampler, N).rgb;
 	    vec3 diffuse = irradiance * albedo;
-	    ambient = (kD * diffuse) * ao;
+
+		// Specular ambient term (IBL)
+		const float MAX_REFLECTION_LOAD = 5.0;
+		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+	    ambient = (kD * diffuse + specular) * ao;
 	}
 	else
 	{

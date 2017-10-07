@@ -17,6 +17,7 @@ namespace flex
 		return (types.find(name) != types.end());
 	}
 
+	// TODO: Remove second variable in place of extra function, RemoveUniform which removes pair from map
 	void Renderer::Uniforms::AddUniform(const std::string& name, bool value)
 	{
 		types.insert(std::pair<std::string, bool>(name, value));

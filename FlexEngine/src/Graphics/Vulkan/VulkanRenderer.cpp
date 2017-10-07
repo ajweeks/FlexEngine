@@ -299,13 +299,13 @@ namespace flex
 
 			TextureInfo textureInfos[] =
 			{
-				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.useDiffuseSampler },
-				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.useNormalSampler },
-				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.useSpecularSampler },
-				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.useAlbedoSampler },
-				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.useMetallicSampler },
-				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.useRoughnessSampler },
-				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.useAOSampler },
+				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.needDiffuseSampler },
+				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.needNormalSampler },
+				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.needSpecularSampler },
+				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.needAlbedoSampler },
+				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.needMetallicSampler },
+				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.needRoughnessSampler },
+				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.needAOSampler },
 			};
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
@@ -354,7 +354,8 @@ namespace flex
 					mat.cubemapTexture = m_LoadedTextures.back();
 				}
 
-				mat.material.useCubemapSampler = true;
+				mat.material.needCubemapSampler = true;
+				mat.material.enableCubemapSampler = true;
 			}
 
 			m_LoadedMaterials.push_back(mat);
@@ -465,7 +466,7 @@ namespace flex
 							renderObjectInfos[i].transform->rotation = glm::quat(rot);
 							ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
 
-							VulkanMaterial* material = &m_LoadedMaterials[m_RenderObjects[i]->materialID];
+							//VulkanMaterial* material = &m_LoadedMaterials[m_RenderObjects[i]->materialID];
 							//if (material->uniformIDs.useIrradianceSampler)
 							//{
 							//	ImGui::Checkbox("Use Irradiance Sampler", &material->material.useIrradianceSampler);
@@ -3006,11 +3007,11 @@ namespace flex
 
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useDiffuseSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableDiffuseSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("diffuseSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableNormalSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("normalSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useSpecularSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableSpecularSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("specularSampler", true);
 			++shaderID;
 
@@ -3040,19 +3041,19 @@ namespace flex
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("modelInvTranspose", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAlbedoSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableAlbedoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("albedoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAlbedo", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useMetallicSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableMetallicSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("metallicSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constMetallic", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useRoughnessSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableRoughnessSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("roughnessSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constRoughness", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAOSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableAOSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("aoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAO", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableNormalSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("normalSampler", true);
 			++shaderID;
 
@@ -3064,7 +3065,7 @@ namespace flex
 
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("uniformBufferDynamic", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useCubemapSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableCubemapSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("cubemapSampler", true);
 			++shaderID;
 
@@ -3569,14 +3570,14 @@ namespace flex
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 modelViewProjection = proj * view * model;
-			glm::uint useAlbedoSampler = material->material.useAlbedoSampler;
-			glm::uint useMetallicSampler = material->material.useMetallicSampler;
-			glm::uint useRoughnessSampler = material->material.useRoughnessSampler;
-			glm::uint useAOSampler = material->material.useAOSampler;
-			glm::uint useDiffuseSampler = material->material.useDiffuseSampler;
-			glm::uint useNormalSampler = material->material.useNormalSampler;
-			glm::uint useSpecularSampler = material->material.useSpecularSampler;
-			glm::uint useCubemapSampler = material->material.useCubemapSampler;
+			glm::uint enableAlbedoSampler = material->material.enableAlbedoSampler;
+			glm::uint enableMetallicSampler = material->material.enableMetallicSampler;
+			glm::uint enableRoughnessSampler = material->material.enableRoughnessSampler;
+			glm::uint enableAOSampler = material->material.enableAOSampler;
+			glm::uint enableDiffuseSampler = material->material.enableDiffuseSampler;
+			glm::uint enableNormalSampler = material->material.enableNormalSampler;
+			glm::uint enableSpecularSampler = material->material.enableSpecularSampler;
+			glm::uint enableCubemapSampler = material->material.enableCubemapSampler;
 
 			glm::uint offset = renderID * uniformBuffer.dynamicData.size;
 			glm::uint index = 0;
@@ -3597,14 +3598,14 @@ namespace flex
 				{ "constMetallic", (void*)&material->material.constMetallic, 4, 1 },
 				{ "constRoughness", (void*)&material->material.constRoughness, 4, 1 },
 				{ "constAO", (void*)&material->material.constAO, 4, 1 },
-				{ "useAlbedoSampler", (void*)&useAlbedoSampler, 4, 1 },
-				{ "useMetallicSampler", (void*)&useMetallicSampler, 4, 1 },
-				{ "useRoughnessSampler", (void*)&useRoughnessSampler, 4, 1 },
-				{ "useAOSampler", (void*)&useAOSampler, 4, 1 },
-				{ "useDiffuseSampler", (void*)&useDiffuseSampler, 4, 1 },
-				{ "useNormalSampler", (void*)&useNormalSampler, 4, 1 },
-				{ "useSpecularSampler", (void*)&useSpecularSampler, 4, 1 },
-				{ "useCubemapSampler", (void*)&useCubemapSampler, 4, 1 },
+				{ "enableAlbedoSampler", (void*)&enableAlbedoSampler, 4, 1 },
+				{ "enableMetallicSampler", (void*)&enableMetallicSampler, 4, 1 },
+				{ "enableRoughnessSampler", (void*)&enableRoughnessSampler, 4, 1 },
+				{ "enableAOSampler", (void*)&enableAOSampler, 4, 1 },
+				{ "enableDiffuseSampler", (void*)&enableDiffuseSampler, 4, 1 },
+				{ "enableNormalSampler", (void*)&enableNormalSampler, 4, 1 },
+				{ "enableSpecularSampler", (void*)&enableSpecularSampler, 4, 1 },
+				{ "enableCubemapSampler", (void*)&enableCubemapSampler, 4, 1 },
 			};
 
 			for (UniformInfo& uniformInfo : uniformInfos)

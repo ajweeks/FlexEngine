@@ -26,8 +26,7 @@ namespace flex
 	namespace gl
 	{
 		GLRenderer::GLRenderer(GameContext& gameContext) :
-			m_EquirectangularCubemapCaptureSize(512, 512),
-			m_IrradianceCubemapCaptureSize(32, 32)
+			m_EquirectangularCubemapCaptureSize(512, 512)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
@@ -51,14 +50,23 @@ namespace flex
 			glGenRenderbuffers(1, &m_CaptureRBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+			// TODO: Remove?
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_EquirectangularCubemapCaptureSize.x, m_EquirectangularCubemapCaptureSize.y);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
+
+			// Prevent seams from appearing on lower mip map levels of cubemaps
+			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		}
 
 		GLRenderer::~GLRenderer()
 		{
 			CheckGLErrorMessages();
+
+			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
+			{
+				m_1x1_NDC_QuadVertexBufferData.Destroy();
+			}
 
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
@@ -85,7 +93,7 @@ namespace flex
 
 			const MaterialID materialID = m_Materials.size() - 1;
 
-			if (!GetShader(createInfo->shaderName, mat.material.shaderID))
+			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
 			{
 				if (createInfo->shaderName.empty())
 				{
@@ -116,20 +124,20 @@ namespace flex
 				{ "viewProjection", 				&mat.uniformIDs.viewProjection },
 				{ "projection", 					&mat.uniformIDs.projection },
 				{ "camPos", 						&mat.uniformIDs.camPos },
-				{ "useDiffuseSampler", 				&mat.uniformIDs.useDiffuseTexture },
-				{ "useNormalSampler", 				&mat.uniformIDs.useNormalTexture },
-				{ "useSpecularSampler", 			&mat.uniformIDs.useSpecularTexture },
-				{ "useCubemapSampler", 				&mat.uniformIDs.useCubemapTexture },
-				{ "useAlbedoSampler", 				&mat.uniformIDs.useAlbedoSampler },
+				{ "enableDiffuseSampler", 			&mat.uniformIDs.enableDiffuseTexture },
+				{ "enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
+				{ "enableSpecularSampler", 			&mat.uniformIDs.enableSpecularTexture },
+				{ "enableCubemapSampler", 			&mat.uniformIDs.enableCubemapTexture },
+				{ "enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
 				{ "constAlbedo", 					&mat.uniformIDs.constAlbedo },
-				{ "useMetallicSampler", 			&mat.uniformIDs.useMetallicSampler },
+				{ "enableMetallicSampler", 			&mat.uniformIDs.enableMetallicSampler },
 				{ "constMetallic", 					&mat.uniformIDs.constMetallic },
-				{ "useRoughnessSampler", 			&mat.uniformIDs.useRoughnessSampler },
+				{ "enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
 				{ "constRoughness", 				&mat.uniformIDs.constRoughness },
-				{ "useAOSampler",					&mat.uniformIDs.useAOSampler },
+				{ "enableAOSampler",				&mat.uniformIDs.enableAOSampler },
 				{ "constAO",						&mat.uniformIDs.constAO },
 				{ "equirectangularSampler",			&mat.uniformIDs.equirectangularSampler },
-				{ "useIrradianceSampler",			&mat.uniformIDs.useIrradianceSampler },
+				{ "enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
 			};
 
 			const glm::uint uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
@@ -147,43 +155,73 @@ namespace flex
 			CheckGLErrorMessages();
 
 			mat.material.diffuseTexturePath = createInfo->diffuseTexturePath;
-			mat.material.useDiffuseSampler = !createInfo->diffuseTexturePath.empty();
+			mat.material.needDiffuseSampler = !createInfo->diffuseTexturePath.empty(); // This isn't quite right
+			mat.material.enableDiffuseSampler = !createInfo->diffuseTexturePath.empty();
 
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
-			mat.material.useNormalSampler = !createInfo->normalTexturePath.empty();
+			mat.material.needNormalSampler = !createInfo->normalTexturePath.empty(); // This isn't quite right
+			mat.material.enableNormalSampler = !createInfo->normalTexturePath.empty();
 
 			mat.material.specularTexturePath = createInfo->specularTexturePath;
-			mat.material.useSpecularSampler = !createInfo->specularTexturePath.empty();
+			mat.material.needSpecularSampler = !createInfo->specularTexturePath.empty(); // This isn't quite right
+			mat.material.enableSpecularSampler = !createInfo->specularTexturePath.empty();
 
-			mat.material.usePositionFrameBufferSampler = createInfo->usePositionFrameBufferSampler;
-			mat.material.useNormalFrameBufferSampler = createInfo->useNormalFrameBufferSampler;
-			mat.material.useDiffuseSpecularFrameBufferSampler = createInfo->useDiffuseSpecularFrameBufferSampler;
+			mat.material.needPositionFrameBufferSampler = createInfo->needPositionFrameBufferSampler;
+			mat.material.enablePositionFrameBufferSampler = createInfo->enablePositionFrameBufferSampler;
+			mat.material.needNormalFrameBufferSampler = createInfo->needNormalFrameBufferSampler;
+			mat.material.enableNormalFrameBufferSampler = createInfo->enableNormalFrameBufferSampler;
+			mat.material.needDiffuseSpecularFrameBufferSampler = createInfo->needDiffuseSpecularFrameBufferSampler;
+			mat.material.enableDiffuseSpecularFrameBufferSampler = createInfo->enableDiffuseSpecularFrameBufferSampler;
 
-			mat.material.useCubemapSampler = createInfo->useCubemapSampler || !createInfo->cubeMapFilePaths[0].empty();
+			mat.material.needCubemapSampler = createInfo->needCubemapSampler;
+			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler || !createInfo->cubeMapFilePaths[0].empty();
+			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
 
 			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
 			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
-			mat.material.useAlbedoSampler = createInfo->useAlbedoSampler;
+			mat.material.needAlbedoSampler = createInfo->needAlbedoSampler;
+			mat.material.enableAlbedoSampler = createInfo->enableAlbedoSampler;
 
 			mat.material.constMetallic = createInfo->constMetallic;
 			mat.material.metallicTexturePath = createInfo->metallicTexturePath;
-			mat.material.useMetallicSampler = createInfo->useMetallicSampler;
+			mat.material.needMetallicSampler = createInfo->needMetallicSampler;
+			mat.material.enableMetallicSampler = createInfo->enableMetallicSampler;
 
 			mat.material.constRoughness = createInfo->constRoughness;
 			mat.material.roughnessTexturePath = createInfo->roughnessTexturePath;
-			mat.material.useRoughnessSampler = createInfo->useRoughnessSampler;
+			mat.material.needRoughnessSampler = createInfo->needRoughnessSampler;
+			mat.material.enableRoughnessSampler = createInfo->enableRoughnessSampler;
 
 			mat.material.constAO = createInfo->constAO;
 			mat.material.aoTexturePath = createInfo->aoTexturePath;
-			mat.material.useAOSampler = createInfo->useAOSampler;
+			mat.material.needAOSampler = createInfo->needAOSampler;
+			mat.material.enableAOSampler = createInfo->enableAOSampler;
 
-			mat.material.useEquirectangularSampler = createInfo->useEquirectangularSampler;
+			mat.material.needEquirectangularSampler = createInfo->needEquirectangularSampler;
+			mat.material.enableEquirectangularSampler = createInfo->enableEquirectangularSampler;
 			mat.material.equirectangularTexturePath = createInfo->equirectangularTexturePath;
 			
-			mat.material.useIrradianceSampler = createInfo->useIrradianceSampler;
+			mat.material.needIrradianceSampler = createInfo->needIrradianceSampler;
+			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
-			mat.irradianceSamplerID = (createInfo->irradianceSamplerMatID < m_Materials.size() ?  
+			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
+
+			mat.irradianceSamplerID = (createInfo->irradianceSamplerMatID < m_Materials.size() ?
 				m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID : 0);
+			mat.brdfLUTSamplerID = (createInfo->brdfLUTSamplerMatID < m_Materials.size() ?
+				m_Materials[createInfo->brdfLUTSamplerMatID].brdfLUTSamplerID : 0);
+			mat.prefilterMapSamplerID = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ?
+				m_Materials[createInfo->prefilterMapSamplerMatID].prefilterMapSamplerID : 0);
+
+			mat.material.needPrefilteredMap = createInfo->needPrefilteredMap;
+			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
+			mat.material.generatePrefilteredMap = createInfo->generatePrefilteredMap;
+			mat.material.prefilterMapSize = createInfo->generatedPrefilterCubemapSize;
+
+			mat.material.needBRDFLUT = createInfo->needBRDFLUT;
+			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
+			mat.material.generateBRDFLUT = createInfo->generateBRDFLUT;
+			mat.material.brdfLUTSize = createInfo->brdfLUTSize;
 
 			struct SamplerCreateInfo
 			{
@@ -191,20 +229,20 @@ namespace flex
 				glm::uint* id;
 				std::string filepath;
 				std::string textureName;
-				std::function<bool(glm::uint&, const std::string&)> createFunction;
+				std::function<bool(glm::uint&, const std::string&, bool)> createFunction;
 			};
 
 			// Samplers that need to be loaded from file, and their GL counter parts generated (glGenTextures)
 			SamplerCreateInfo samplerCreateInfos[] =
 			{
-				{ mat.material.useAlbedoSampler, &mat.albedoSamplerID, createInfo->albedoTexturePath, "albedoSampler", GenerateGLTexture },
-				{ mat.material.useMetallicSampler, &mat.metallicSamplerID, createInfo->metallicTexturePath, "metallicSampler", GenerateGLTexture },
-				{ mat.material.useRoughnessSampler, &mat.roughnessSamplerID, createInfo->roughnessTexturePath, "roughnessSampler" , GenerateGLTexture },
-				{ mat.material.useAOSampler, &mat.aoSamplerID, createInfo->aoTexturePath, "aoSampler", GenerateGLTexture },
-				{ mat.material.useDiffuseSampler, &mat.diffuseSamplerID, createInfo->diffuseTexturePath, "diffuseSampler", GenerateGLTexture },
-				{ mat.material.useNormalSampler, &mat.normalSamplerID, createInfo->normalTexturePath, "normalSampler", GenerateGLTexture },
-				{ mat.material.useSpecularSampler, &mat.specularSamplerID, createInfo->specularTexturePath, "specularSampler", GenerateGLTexture },
-				{ mat.material.useEquirectangularSampler, &mat.hdrTextureID, createInfo->equirectangularTexturePath, "equirectangularSampler", GenerateHDRGLTexture },
+				{ mat.material.needAlbedoSampler, &mat.albedoSamplerID, createInfo->albedoTexturePath, "albedoSampler", GenerateGLTexture },
+				{ mat.material.needMetallicSampler, &mat.metallicSamplerID, createInfo->metallicTexturePath, "metallicSampler", GenerateGLTexture },
+				{ mat.material.needRoughnessSampler, &mat.roughnessSamplerID, createInfo->roughnessTexturePath, "roughnessSampler" , GenerateGLTexture },
+				{ mat.material.needAOSampler, &mat.aoSamplerID, createInfo->aoTexturePath, "aoSampler", GenerateGLTexture },
+				{ mat.material.needDiffuseSampler, &mat.diffuseSamplerID, createInfo->diffuseTexturePath, "diffuseSampler", GenerateGLTexture },
+				{ mat.material.needNormalSampler, &mat.normalSamplerID, createInfo->normalTexturePath, "normalSampler", GenerateGLTexture },
+				{ mat.material.needSpecularSampler, &mat.specularSamplerID, createInfo->specularTexturePath, "specularSampler", GenerateGLTexture },
+				{ mat.material.needEquirectangularSampler, &mat.hdrTextureID, createInfo->equirectangularTexturePath, "equirectangularSampler", GenerateHDRGLTexture },
 			};
 
 			int binding = 0;
@@ -213,7 +251,8 @@ namespace flex
 			{
 				if (samplerCreateInfo.create)
 				{
-					samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath);
+					// TODO: Generate mip maps? (add member to SamplerCreateInfo if needed)
+					samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, false);
 					int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, samplerCreateInfo.textureName.c_str());
 					CheckGLErrorMessages();
 					if (uniformLocation == -1)
@@ -231,7 +270,7 @@ namespace flex
 
 			// TODO: Condense following uniform checks (pos, norm, diffSpec, irradiance)
 			// Samplers that don't need to be loaded from file, but need to be located in shaders
-			if (mat.material.usePositionFrameBufferSampler)
+			if (mat.material.needPositionFrameBufferSampler)
 			{
 				mat.positionFrameBufferSamplerID = createInfo->positionFrameBufferSamplerID;
 				int positionLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "positionFrameBufferSampler");
@@ -248,7 +287,7 @@ namespace flex
 				++binding;
 			}
 
-			if (mat.material.useNormalFrameBufferSampler)
+			if (mat.material.needNormalFrameBufferSampler)
 			{
 				mat.normalFrameBufferSamplerID = createInfo->normalFrameBufferSamplerID;
 				int normalLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "normalFrameBufferSampler");
@@ -265,7 +304,7 @@ namespace flex
 				++binding;
 			}
 
-			if (mat.material.useDiffuseSpecularFrameBufferSampler)
+			if (mat.material.needDiffuseSpecularFrameBufferSampler)
 			{
 				mat.diffuseSpecularFrameBufferSamplerID = createInfo->diffuseSpecularFrameBufferSamplerID;
 				int diffuseSpecularLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "diffuseSpecularFrameBufferSampler");
@@ -303,10 +342,10 @@ namespace flex
 			}
 			else if (createInfo->generateCubemapSampler) // Cubemap is needed, but doesn't need to loaded from file
 			{
-				GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y);
+				GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, false, createInfo->enableCubemapTrilinearFiltering);
 			}
 
-			if (mat.material.useCubemapSampler)
+			if (mat.material.needCubemapSampler)
 			{
 				// TODO: Save location for binding later?
 				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "cubemapSampler");
@@ -322,19 +361,61 @@ namespace flex
 				CheckGLErrorMessages();
 				++binding;
 			}
-			
+
+			if (mat.material.generateBRDFLUT)
+			{
+				GenerateGLTexture_Empty(mat.brdfLUTSamplerID, createInfo->brdfLUTSize, false, GL_RG16F, GL_RG, GL_FLOAT);
+			}
+
+			if (mat.material.needBRDFLUT)
+			{
+				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "brdfLUT");
+				CheckGLErrorMessages();
+				if (uniformLocation == -1)
+				{
+					Logger::LogWarning("brdfLUT was not found in material " + mat.material.name + " (shader " + m_Shaders[mat.material.shaderID].name + ")");
+				}
+				else
+				{
+					glUniform1i(uniformLocation, binding);
+				}
+				CheckGLErrorMessages();
+				++binding;
+			}
+
 			if (mat.material.generateIrradianceSampler)
 			{
 				GenerateGLCubemap_Empty(mat.irradianceSamplerID, createInfo->generatedIrradianceCubemapSize.x, createInfo->generatedIrradianceCubemapSize.y);
 			}
 
-			if (mat.material.useIrradianceSampler)
+			if (mat.material.needIrradianceSampler)
 			{
 				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "irradianceSampler");
 				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
 					Logger::LogWarning("irradianceSampler was not found in material " + mat.material.name + " (shader " + m_Shaders[mat.material.shaderID].name + ")");
+				}
+				else
+				{
+					glUniform1i(uniformLocation, binding);
+				}
+				CheckGLErrorMessages();
+				++binding;
+			}
+
+			if (mat.material.generatePrefilteredMap)
+			{
+				GenerateGLCubemap_Empty(mat.prefilterMapSamplerID, createInfo->generatedPrefilterCubemapSize.x, createInfo->generatedPrefilterCubemapSize.y, true);
+			}
+
+			if (mat.material.needPrefilteredMap)
+			{
+				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "prefilterMap");
+				CheckGLErrorMessages();
+				if (uniformLocation == -1)
+				{
+					Logger::LogWarning("prefilterMap was not found in material " + mat.material.name + " (shader " + m_Shaders[mat.material.shaderID].name + ")");
 				}
 				else
 				{
@@ -411,11 +492,14 @@ namespace flex
 
 			if (m_Materials[renderObject->materialID].material.generateIrradianceSampler)
 			{
+				// Diffuse IBL map generation
+
 				// TODO: Consider not generating two materials here but rather just do things manually? (generate cubemap, get uniform locations)
 				MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 				equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
 				equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
-				equirectangularToCubeMatCreateInfo.useEquirectangularSampler = true;
+				equirectangularToCubeMatCreateInfo.needEquirectangularSampler = true;
+				equirectangularToCubeMatCreateInfo.enableEquirectangularSampler = true;
 				equirectangularToCubeMatCreateInfo.equirectangularTexturePath = RESOURCE_LOCATION + "textures/skyboxes/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
 				MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
@@ -449,8 +533,8 @@ namespace flex
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_EquirectangularCubemapCaptureSize.x, m_EquirectangularCubemapCaptureSize.y);
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
+				//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_IrradianceCubemapCaptureSize.x, m_IrradianceCubemapCaptureSize.y);
+
 				CheckGLErrorMessages();
 
 				glViewport(0, 0, m_EquirectangularCubemapCaptureSize.x, m_EquirectangularCubemapCaptureSize.y);
@@ -476,9 +560,13 @@ namespace flex
 					glCullFace(renderObject->cullFace);
 					CheckGLErrorMessages();
 
-					glDrawArrays(GL_TRIANGLES, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 				}
+
+				// Generate mip maps for generated cubemap
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[renderObject->materialID].cubemapSamplerID);
+				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 				glUseProgram(0);
 				glBindVertexArray(0);
@@ -492,7 +580,8 @@ namespace flex
 				MaterialCreateInfo irrandianceMatCreateInfo = {};
 				irrandianceMatCreateInfo.name = "Irradiance";
 				irrandianceMatCreateInfo.shaderName = "irradiance";
-				irrandianceMatCreateInfo.useCubemapSampler = true;
+				irrandianceMatCreateInfo.needCubemapSampler = true;
+				irrandianceMatCreateInfo.enableCubemapSampler = true;
 				MaterialID irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
 
 				glUseProgram(m_Shaders[m_Materials[irrandianceMatID].material.shaderID].program);
@@ -510,13 +599,13 @@ namespace flex
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_IrradianceCubemapCaptureSize.x, m_IrradianceCubemapCaptureSize.y);
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
+				// TODO: Why is this swapped with the other call?
+				//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_EquirectangularCubemapCaptureSize.x, m_EquirectangularCubemapCaptureSize.y);
 				CheckGLErrorMessages();
 
-				glViewport(0, 0, m_IrradianceCubemapCaptureSize.x, m_IrradianceCubemapCaptureSize.y);
+				glViewport(0, 0, m_Materials[renderObject->materialID].material.irradianceSamplerSize.x, m_Materials[renderObject->materialID].material.irradianceSamplerSize.y);
 				CheckGLErrorMessages();
-				
+
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 
 				for (unsigned int i = 0; i < 6; ++i)
@@ -538,13 +627,168 @@ namespace flex
 
 					glCullFace(renderObject->cullFace);
 
-					glDrawArrays(GL_TRIANGLES, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 				}
 
 				glUseProgram(0);
 				glBindVertexArray(0);
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+				// Specular IBL map generation
+				// Prefilter
+				MaterialCreateInfo prefilterMaterialCreateInfo = {};
+				prefilterMaterialCreateInfo.name = "Prefilter";
+				prefilterMaterialCreateInfo.shaderName = "prefilter";
+				MaterialID prefilterMatID = InitializeMaterial(gameContext, &prefilterMaterialCreateInfo);
+
+				glUseProgram(m_Shaders[m_Materials[prefilterMatID].material.shaderID].program);
+				CheckGLErrorMessages();
+
+				glUniformMatrix4fv(m_Materials[prefilterMatID].uniformIDs.model, 1, false, &renderObject->model[0][0]);
+				CheckGLErrorMessages();
+
+				glUniformMatrix4fv(m_Materials[prefilterMatID].uniformIDs.projection, 1, false, &captureProjection[0][0]);
+				CheckGLErrorMessages();
+
+				glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[renderObject->materialID].cubemapSamplerID);
+				CheckGLErrorMessages();
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				CheckGLErrorMessages();
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+
+				unsigned int maxMipLevels = 5;
+				for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
+				{
+					glBindVertexArray(renderObject->VAO);
+					CheckGLErrorMessages();
+					glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+					CheckGLErrorMessages();
+
+					unsigned int mipWidth = (unsigned int)(m_Materials[renderObject->materialID].material.prefilterMapSize.x * pow(0.5f, mip));
+					unsigned int mipHeight = (unsigned int)(m_Materials[renderObject->materialID].material.prefilterMapSize.y * pow(0.5f, mip));
+
+					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+					//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+					CheckGLErrorMessages();
+
+					glViewport(0, 0, mipWidth, mipHeight);
+					CheckGLErrorMessages();
+
+					float roughness = (float)mip / (float(maxMipLevels - 1));
+					int roughnessUniformLocation = glGetUniformLocation(m_Shaders[m_Materials[prefilterMatID].material.shaderID].program, "roughness");
+					glUniform1f(roughnessUniformLocation, roughness);
+					CheckGLErrorMessages();
+
+					for (unsigned int i = 0; i < 6; ++i)
+					{
+						glUniformMatrix4fv(m_Materials[prefilterMatID].uniformIDs.view, 1, false, &captureViews[i][0][0]);
+						CheckGLErrorMessages();
+
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+							GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].prefilterMapSamplerID, mip);
+						CheckGLErrorMessages();
+
+						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+						CheckGLErrorMessages();
+
+						glCullFace(renderObject->cullFace);
+
+						glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+						CheckGLErrorMessages();
+					}
+				}
+				
+				// Visualize prefiltered map as skybox:
+				//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[prefilterMatID].prefilterMapSamplerID;
+
+				glUseProgram(0);
+				glBindVertexArray(0);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+				// BRDF pre-comutation
+				MaterialCreateInfo brdfMaterialCreateInfo = {};
+				brdfMaterialCreateInfo.name = "BRDF";
+				brdfMaterialCreateInfo.shaderName = "brdf";
+				MaterialID brdfMatID = InitializeMaterial(gameContext, &brdfMaterialCreateInfo);
+
+				if (m_1x1_NDC_Quad == nullptr)
+				{
+					VertexBufferData::CreateInfo quadVertexBufferDataCreateInfo = {};
+					quadVertexBufferDataCreateInfo.positions_3D = {
+						{ -1.0f,  1.0f, 0.0f },
+						{ -1.0f, -1.0f, 0.0f },
+						{ 1.0f,  1.0f, 0.0f },
+						{ 1.0f, -1.0f, 0.0f },
+					};
+					quadVertexBufferDataCreateInfo.texCoords_UV = {
+						{ 0.0f, 1.0f },
+						{ 0.0f, 0.0f },
+						{ 1.0f, 1.0f },
+						{ 1.0f, 0.0f },
+					};
+					quadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
+
+					m_1x1_NDC_QuadVertexBufferData = {};
+					m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
+
+					RenderObjectCreateInfo quadCreateInfo = {};
+					quadCreateInfo.name = "1x1 Quad";
+					quadCreateInfo.materialID = brdfMatID;
+					quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
+
+					RenderID quadRenderID = InitializeRenderObject(gameContext, &quadCreateInfo);
+					m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
+
+					if (!m_1x1_NDC_Quad)
+					{
+						Logger::LogError("Failed to create 1x1 NDC quad!");
+					}
+					else
+					{
+						SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
+						m_1x1_NDC_Quad->visible = false; // Don't render this normally, we'll draw it manually
+						m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(gameContext.renderer, quadRenderID);
+					}
+				}
+
+				glUseProgram(m_Shaders[m_Materials[brdfMatID].material.shaderID].program);
+				CheckGLErrorMessages();
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				CheckGLErrorMessages();
+				//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+				CheckGLErrorMessages();
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_Materials[renderObject->materialID].brdfLUTSamplerID, 0);
+				CheckGLErrorMessages();
+
+				glBindVertexArray(m_1x1_NDC_Quad->VAO);
+				CheckGLErrorMessages();
+				glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
+				CheckGLErrorMessages();
+
+				glViewport(0, 0, m_Materials[renderObject->materialID].material.brdfLUTSize.x, m_Materials[renderObject->materialID].material.brdfLUTSize.y);
+				CheckGLErrorMessages();
+
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				CheckGLErrorMessages();
+
+				glCullFace(m_1x1_NDC_Quad->cullFace);
+
+				// Render quad
+				glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
+				CheckGLErrorMessages();
+
+				glUseProgram(0);
+				glBindVertexArray(0);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 				glViewport(0, 0, frameBufferSize.x, frameBufferSize.y);
@@ -637,13 +881,16 @@ namespace flex
 			gBufferMaterialCreateInfo.name = "GBuffer material";
 			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
 
-			gBufferMaterialCreateInfo.usePositionFrameBufferSampler = true;
+			gBufferMaterialCreateInfo.needPositionFrameBufferSampler = true;
+			gBufferMaterialCreateInfo.enablePositionFrameBufferSampler = true;
 			gBufferMaterialCreateInfo.positionFrameBufferSamplerID = m_gBuffer_PositionHandle;
 
-			gBufferMaterialCreateInfo.useNormalFrameBufferSampler = true;
+			gBufferMaterialCreateInfo.needNormalFrameBufferSampler = true;
+			gBufferMaterialCreateInfo.enableNormalFrameBufferSampler = true;
 			gBufferMaterialCreateInfo.normalFrameBufferSamplerID = m_gBuffer_NormalHandle;
 
-			gBufferMaterialCreateInfo.useDiffuseSpecularFrameBufferSampler = true;
+			gBufferMaterialCreateInfo.needDiffuseSpecularFrameBufferSampler = true;
+			gBufferMaterialCreateInfo.enableDiffuseSpecularFrameBufferSampler = true;
 			gBufferMaterialCreateInfo.diffuseSpecularFrameBufferSamplerID = m_gBuffer_DiffuseSpecularHandle;
 
 			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
@@ -684,6 +931,10 @@ namespace flex
 			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
 
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
+
+			RenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
+
 			CheckGLErrorMessages();
 		}
 
@@ -722,16 +973,23 @@ namespace flex
 
 		void GLRenderer::Draw(const GameContext& gameContext)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
 			CheckGLErrorMessages();
 
+			// TODO: Don't create two nested vectors every frame, just sort things by deferred/forward, then by material ID
+			/*
+			  Eg. deferred | matID
+				  yes		 0
+				  yes		 2
+				  no		 1
+				  no		 3
+				  no		 5
+			*/
 			// Sort render objects into deferred + forward buckets
 			std::vector<std::vector<RenderObject*>> deferredRenderObjectBatches;
 			std::vector<std::vector<RenderObject*>> forwardRenderObjectBatches;
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
 				Shader* shader = &m_Shaders[m_Materials[i].material.shaderID];
-				if (shader->name.compare("deferred_combine") == 0) continue; // This shader is handled later, don't draw add the gbuffer quad to either batch
 
 				UpdateMaterialUniforms(gameContext, i);
 
@@ -741,7 +999,7 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						RenderObject* renderObject = GetRenderObject(j);
-						if (renderObject && renderObject->materialID == i)
+						if (renderObject && renderObject->visible && renderObject->materialID == i)
 						{
 							deferredRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -753,7 +1011,7 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						RenderObject* renderObject = GetRenderObject(j);
-						if (renderObject && renderObject->materialID == i)
+						if (renderObject && renderObject->visible && renderObject->materialID == i)
 						{
 							forwardRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -786,6 +1044,7 @@ namespace flex
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+			CheckGLErrorMessages();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			// Don't write gbuffer quad into depth buffer
@@ -814,12 +1073,15 @@ namespace flex
 			glBindTexture(GL_TEXTURE_2D, m_gBuffer_NormalHandle);
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, m_gBuffer_DiffuseSpecularHandle);
+			CheckGLErrorMessages();
 
 			glCullFace(gBufferQuad->cullFace);
-			glDrawArrays(GL_TRIANGLES, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
+			CheckGLErrorMessages();
+			glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
 
 			glDepthMask(GL_TRUE);
+			CheckGLErrorMessages();
 
 			// Forward pass - draw all objects which don't use deferred shading
 			for (size_t i = 0; i < forwardRenderObjectBatches.size(); ++i)
@@ -946,67 +1208,100 @@ namespace flex
 				RenderObject* renderObject = batchedRenderObjects[i];
 
 				glBindVertexArray(renderObject->VAO);
+				CheckGLErrorMessages();
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 				CheckGLErrorMessages();
 
 				glCullFace(renderObject->cullFace);
+				CheckGLErrorMessages();
 
 				UpdatePerObjectUniforms(renderObject->renderID, gameContext);
 
-				std::vector<int> texures;
+				struct Tex
+				{
+					bool needed;
+					bool enabled;
+					glm::uint textureID;
+				};
 
-				texures.push_back(material->material.useAlbedoSampler ? material->albedoSamplerID : -1);
-				texures.push_back(material->material.useMetallicSampler ? material->metallicSamplerID : -1);
-				texures.push_back(material->material.useRoughnessSampler ? material->roughnessSamplerID : -1);
-				texures.push_back(material->material.useAOSampler ? material->aoSamplerID : -1);
-				texures.push_back(material->material.useDiffuseSampler ? material->diffuseSamplerID : -1);
-				texures.push_back(material->material.useNormalSampler ? material->normalSamplerID : -1);
-				texures.push_back(material->material.useSpecularSampler ? material->specularSamplerID : -1);
+				std::vector<Tex> textures;
+
+				textures.push_back({ material->material.needAlbedoSampler, material->material.enableAlbedoSampler, material->albedoSamplerID });
+				textures.push_back({ material->material.needMetallicSampler, material->material.enableMetallicSampler, material->metallicSamplerID });
+				textures.push_back({ material->material.needRoughnessSampler, material->material.enableRoughnessSampler, material->roughnessSamplerID });
+				textures.push_back({ material->material.needAOSampler, material->material.enableAOSampler, material->aoSamplerID });
+				textures.push_back({ material->material.needDiffuseSampler, material->material.enableDiffuseSampler, material->diffuseSamplerID });
+				textures.push_back({ material->material.needNormalSampler, material->material.enableNormalSampler, material->normalSamplerID });
+				textures.push_back({ material->material.needSpecularSampler, material->material.enableSpecularSampler, material->specularSamplerID });
+				textures.push_back({ material->material.needBRDFLUT, material->material.enableBRDFLUT, material->brdfLUTSamplerID });
 
 				glm::uint location = 0;
-				for (glm::uint j = 0; j < texures.size(); ++j)
+				for (Tex& tex : textures)
 				{
-					if (texures[j] != -1)
+					if (tex.needed)
+					{
+						if (tex.enabled)
+						{
+							GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)location);
+							glActiveTexture(activeTexture);
+							glBindTexture(GL_TEXTURE_2D, (GLuint)tex.textureID);
+							CheckGLErrorMessages();
+						}
+						++location;
+					}
+				}
+
+				// TODO: Batch together cubemaps like textures
+				if (material->material.needCubemapSampler)
+				{
+					if (material->material.enableCubemapSampler)
 					{
 						GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)location);
 						glActiveTexture(activeTexture);
-						glBindTexture(GL_TEXTURE_2D, (GLuint)texures[j]);
-						++location;
+						glBindTexture(GL_TEXTURE_CUBE_MAP, material->cubemapSamplerID);
+						CheckGLErrorMessages();
 					}
-					CheckGLErrorMessages();
-				}
-
-				if (material->material.useCubemapSampler)
-				{
-					GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)location);
-					glActiveTexture(activeTexture);
-					glBindTexture(GL_TEXTURE_CUBE_MAP, material->cubemapSamplerID);
-					CheckGLErrorMessages();
 					++location;
 				}
 
-				if (material->material.useIrradianceSampler)
+				if (material->material.needIrradianceSampler)
 				{
-					GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)location);
-					glActiveTexture(activeTexture);
-					glBindTexture(GL_TEXTURE_CUBE_MAP, material->irradianceSamplerID);
-					CheckGLErrorMessages();
+					if (material->material.enableIrradianceSampler)
+					{
+						GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)location);
+						glActiveTexture(activeTexture);
+						glBindTexture(GL_TEXTURE_CUBE_MAP, material->irradianceSamplerID);
+						CheckGLErrorMessages();
+					}
+					++location;
+				}
+
+				if (material->material.needPrefilteredMap)
+				{
+					if (material->material.enablePrefilteredMap)
+					{
+						GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)location);
+						glActiveTexture(activeTexture);
+						glBindTexture(GL_TEXTURE_CUBE_MAP, material->prefilterMapSamplerID);
+						CheckGLErrorMessages();
+					}
 					++location;
 				}
 
 				if (renderObject->indexed)
 				{
 					glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+					CheckGLErrorMessages();
 				}
 				else
 				{
 					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+					CheckGLErrorMessages();
 				}
-				CheckGLErrorMessages();
 			}
 		}
 
-		bool GLRenderer::GetShader(const std::string& shaderName, ShaderID& shaderID)
+		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
 			for (size_t i = 0; i < m_Shaders.size(); ++i)
@@ -1052,6 +1347,8 @@ namespace flex
 				{ "skybox", RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/skybox.frag" },
 				{ "equirectangular_to_cube", RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/equirectangular_to_cube.frag" },
 				{ "irradiance", RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/irradiance.frag" },
+				{ "prefilter", RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/prefilter.frag" },
+				{ "brdf", RESOURCE_LOCATION + "shaders/GLSL/brdf.vert", RESOURCE_LOCATION + "shaders/GLSL/brdf.frag" },
 				{ "background", RESOURCE_LOCATION + "shaders/GLSL/background.vert", RESOURCE_LOCATION + "shaders/GLSL/background.frag" },
 				{ "deferred_combine", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.frag" },
 			};
@@ -1064,9 +1361,9 @@ namespace flex
 
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("modelInvTranspose", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useDiffuseSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useSpecularSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableDiffuseSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableNormalSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableSpecularSampler", true);
 			++shaderID;
 
 			// Color
@@ -1089,24 +1386,26 @@ namespace flex
 			m_Shaders[shaderID].constantBufferUniforms.AddUniform("pointLights", true);
 			m_Shaders[shaderID].constantBufferUniforms.AddUniform("camPos", true);
 			m_Shaders[shaderID].constantBufferUniforms.AddUniform("irradianceSampler", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("prefilterMap", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("brdfLUT", true);
 
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("modelInvTranspose", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAlbedoSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableAlbedoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAlbedo", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useMetallicSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableMetallicSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constMetallic", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useRoughnessSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableRoughnessSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constRoughness", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useAOSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableAOSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("constAO", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useNormalSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableNormalSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("albedoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("metallicSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("roughnessSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("aoSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("normalSampler", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useIrradianceSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableIrradianceSampler", true);
 			++shaderID;
 
 			// Skybox
@@ -1115,7 +1414,7 @@ namespace flex
 			m_Shaders[shaderID].constantBufferUniforms.AddUniform("projection", true);
 
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("useCubemapSampler", true);
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("enableCubemapSampler", true);
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("cubemapSampler", true);
 			++shaderID;
 
@@ -1135,6 +1434,22 @@ namespace flex
 			m_Shaders[shaderID].constantBufferUniforms.AddUniform("cubemapSampler", true);
 
 			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
+			++shaderID;
+
+			// Prefilter
+			m_Shaders[shaderID].deferred = false;
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("view", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("projection", true);
+			m_Shaders[shaderID].constantBufferUniforms.AddUniform("cubemapSampler", true);
+
+			m_Shaders[shaderID].dynamicBufferUniforms.AddUniform("model", true);
+			++shaderID;
+
+			// BRDF
+			m_Shaders[shaderID].deferred = false;
+			m_Shaders[shaderID].constantBufferUniforms = {};
+
+			m_Shaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Background
@@ -1171,7 +1486,15 @@ namespace flex
 				LinkProgram(m_Shaders[i].program);
 			}
 
-			m_ImGuiShaderHandle = m_Shaders[2].program;
+			glm::uint imGuiShaderID;
+			if (!GetShaderID("imgui", imGuiShaderID))
+			{
+				Logger::LogError("Could not get imgui shader ID!");
+			}
+			else
+			{
+				m_ImGuiShaderHandle = m_Shaders[imGuiShaderID].program;
+			}
 
 			CheckGLErrorMessages();
 		}
@@ -1296,33 +1619,33 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useDiffuseSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableDiffuseSampler"))
 			{
-				glUniform1i(material->uniformIDs.useDiffuseTexture, material->material.useDiffuseSampler);
+				glUniform1i(material->uniformIDs.enableDiffuseTexture, material->material.enableDiffuseSampler);
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useNormalSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableNormalSampler"))
 			{
-				glUniform1i(material->uniformIDs.useNormalTexture, material->material.useNormalSampler);
+				glUniform1i(material->uniformIDs.enableNormalTexture, material->material.enableNormalSampler);
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useSpecularSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableSpecularSampler"))
 			{
-				glUniform1i(material->uniformIDs.useSpecularTexture, material->material.useSpecularSampler);
+				glUniform1i(material->uniformIDs.enableSpecularTexture, material->material.enableSpecularSampler);
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useCubemapSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableCubemapSampler"))
 			{
-				glUniform1i(material->uniformIDs.useCubemapTexture, material->material.useCubemapSampler);
+				glUniform1i(material->uniformIDs.enableCubemapTexture, material->material.enableCubemapSampler);
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useAlbedoSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
 			{
-				glUniform1ui(material->uniformIDs.useAlbedoSampler, material->material.useAlbedoSampler);
+				glUniform1ui(material->uniformIDs.enableAlbedoSampler, material->material.enableAlbedoSampler);
 				CheckGLErrorMessages();
 			}
 
@@ -1332,9 +1655,9 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useMetallicSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableMetallicSampler"))
 			{
-				glUniform1ui(material->uniformIDs.useMetallicSampler, material->material.useMetallicSampler);
+				glUniform1ui(material->uniformIDs.enableMetallicSampler, material->material.enableMetallicSampler);
 				CheckGLErrorMessages();
 			}
 
@@ -1344,9 +1667,9 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useRoughnessSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableRoughnessSampler"))
 			{
-				glUniform1ui(material->uniformIDs.useRoughnessSampler, material->material.useRoughnessSampler);
+				glUniform1ui(material->uniformIDs.enableRoughnessSampler, material->material.enableRoughnessSampler);
 				CheckGLErrorMessages();
 			}
 
@@ -1356,9 +1679,9 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useAOSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableAOSampler"))
 			{
-				glUniform1ui(material->uniformIDs.useAOSampler, material->material.useAOSampler);
+				glUniform1ui(material->uniformIDs.enableAOSampler, material->material.enableAOSampler);
 				CheckGLErrorMessages();
 			}
 
@@ -1368,9 +1691,9 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (shader->dynamicBufferUniforms.HasUniform("useIrradianceSampler"))
+			if (shader->dynamicBufferUniforms.HasUniform("enableIrradianceSampler"))
 			{
-				glUniform1i(material->uniformIDs.useIrradianceSampler, material->material.useIrradianceSampler);
+				glUniform1i(material->uniformIDs.enableIrradianceSampler, material->material.enableIrradianceSampler);
 				CheckGLErrorMessages();
 			}
 		}
@@ -1590,12 +1913,6 @@ namespace flex
 			io.DeltaTime = gameContext.deltaTime;
 
 			ImGui_CreateDeviceObjects();
-
-			// TODO:
-			//io.ClipboardUserData = g_Window;
-#ifdef _WIN32
-		//io.ImeWindowHandle = glfwGetWin32Window(g_Window);
-#endif
 		}
 
 		void GLRenderer::ImGui_NewFrame(const GameContext& gameContext)
@@ -1656,9 +1973,9 @@ namespace flex
 							ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
 
 							GLMaterial* material = &m_Materials[m_RenderObjects[i]->materialID];
-							if (material->uniformIDs.useIrradianceSampler)
+							if (material->uniformIDs.enableIrradianceSampler)
 							{
-								ImGui::Checkbox("Use Irradiance Sampler", &material->material.useIrradianceSampler);
+								ImGui::Checkbox("Enable Irradiance Sampler", &material->material.enableIrradianceSampler);
 							}
 
 							ImGui::TreePop();
@@ -1672,7 +1989,7 @@ namespace flex
 				{
 					ImGui::AlignFirstTextHeightToWidgets();
 
-					ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel;
+					ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
 
 					bool dirLightEnabled = m_DirectionalLight.enabled;
 					ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);

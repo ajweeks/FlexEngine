@@ -39,41 +39,55 @@ namespace flex
 		//const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
 
 
+
+		// TODO: Specify "need" variables in renderers (when setting up uniforms) rather than here
+
+
+
 		Renderer::MaterialCreateInfo skyboxHDRMatInfo = {};
 		skyboxHDRMatInfo.name = "HDR Skybox";
 		skyboxHDRMatInfo.shaderName = "background";
-		skyboxHDRMatInfo.useCubemapSampler = true;
+		skyboxHDRMatInfo.needCubemapSampler = true;
+		skyboxHDRMatInfo.enableCubemapSampler = true;
 		skyboxHDRMatInfo.generateCubemapSampler = true;
 		skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
-		skyboxHDRMatInfo.useIrradianceSampler = false; // Doesn't use irradiance sampler, just generate it (pbr uses it)
+		skyboxHDRMatInfo.enableCubemapTrilinearFiltering = true;
 		skyboxHDRMatInfo.generateIrradianceSampler = true;
 		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
+		skyboxHDRMatInfo.generatePrefilteredMap = true;
+		skyboxHDRMatInfo.generatedPrefilterCubemapSize = { 128, 128 };
+		skyboxHDRMatInfo.generateBRDFLUT = true;
+		skyboxHDRMatInfo.brdfLUTSize = { 512, 512 };
 		const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
 
-		Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
-		pbrMatTexturedInfo.shaderName = "pbr";
-		pbrMatTexturedInfo.name = "PBR textured";
-		pbrMatTexturedInfo.useAlbedoSampler = true;
-		pbrMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
-		pbrMatTexturedInfo.useMetallicSampler= true;
-		pbrMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_metallic.png";
-		pbrMatTexturedInfo.useRoughnessSampler = true;
-		pbrMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_roughness.png";
-		pbrMatTexturedInfo.useAOSampler = true;
-		pbrMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_ao.png";
-		pbrMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
-
-		pbrMatTexturedInfo.generateIrradianceSampler = false; // Don't generate irradiance sampler, just 
-		pbrMatTexturedInfo.useIrradianceSampler = true;		  // use skybox's irradiance sampler
-		pbrMatTexturedInfo.irradianceSamplerMatID = skyboxHDRMatID; // here
-
-		const MaterialID pbrMatTexturedID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatTexturedInfo);
-
-
-		m_Skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
-		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(gameContext, m_Skybox);
+		//Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
+		//pbrMatTexturedInfo.shaderName = "pbr";
+		//pbrMatTexturedInfo.name = "PBR textured";
+		//pbrMatTexturedInfo.needAlbedoSampler = true;
+		//pbrMatTexturedInfo.enableAlbedoSampler = true;
+		//pbrMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
+		//pbrMatTexturedInfo.needMetallicSampler = true;
+		//pbrMatTexturedInfo.enableMetallicSampler= true;
+		//pbrMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_metallic.png";
+		//pbrMatTexturedInfo.needRoughnessSampler = true;
+		//pbrMatTexturedInfo.enableRoughnessSampler = true;
+		//pbrMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_roughness.png";
+		//pbrMatTexturedInfo.needAOSampler = true;
+		//pbrMatTexturedInfo.enableAOSampler = true;
+		//pbrMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_ao.png";
+		//pbrMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
+		//pbrMatTexturedInfo.generateIrradianceSampler = false; // Don't generate irradiance sampler, just 
+		//pbrMatTexturedInfo.needIrradianceSampler = true;		  // use skybox's irradiance sampler
+		//pbrMatTexturedInfo.enableIrradianceSampler = true;		  // use skybox's irradiance sampler
+		//pbrMatTexturedInfo.irradianceSamplerMatID = skyboxHDRMatID; // here
+		//pbrMatTexturedInfo.needPrefilteredMap = true;
+		//pbrMatTexturedInfo.enablePrefilteredMap = true;
+		//pbrMatTexturedInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
+		//pbrMatTexturedInfo.needBRDFLUT = true;
+		//pbrMatTexturedInfo.enableBRDFLUT = true;
+		//pbrMatTexturedInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
+		//const MaterialID pbrMatTexturedID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatTexturedInfo);
 
 
 		//Renderer::MaterialCreateInfo arisakaMatInfo = {};
@@ -99,9 +113,13 @@ namespace flex
 		//brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
 		//const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
 
+		m_Skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
+		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+		AddChild(gameContext, m_Skybox);
 
-		const int sphereCountX = 2;
-		const int sphereCountY = 2;
+
+		const int sphereCountX = 5;
+		const int sphereCountY = 5;
 		const float sphereSpacing = 2.5f;
 		const glm::vec3 offset = glm::vec3(-sphereCountX / 2 * sphereSpacing, -sphereCountY / 2 * sphereSpacing, 0.0f);
 		const size_t sphereCount = sphereCountX * sphereCountY;
@@ -113,18 +131,26 @@ namespace flex
 		
 			const std::string iStr = std::to_string(i);
 		
-			//Renderer::MaterialCreateInfo pbrMatInfo = {};
-			//pbrMatInfo.shaderName = "pbr";
-			//pbrMatInfo.name = "PBR simple " + iStr;
-			//pbrMatInfo.constAlbedo = glm::vec3(0.175f, 0.12f, 0.8f);
-			//pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
-			//pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
-			//pbrMatInfo.constAO = 1.0f;
-			//pbrMatInfo.useIrradianceSampler = true;
-			//pbrMatInfo.generatedCubemapSize = { 512, 512  };
-			//const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+			Renderer::MaterialCreateInfo pbrMatInfo = {};
+			pbrMatInfo.shaderName = "pbr";
+			pbrMatInfo.name = "PBR simple " + iStr;
+			pbrMatInfo.constAlbedo = glm::vec3(0.175f, 0.12f, 0.8f);
+			pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
+			pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
+			pbrMatInfo.constAO = 1.0f;
+			pbrMatInfo.needIrradianceSampler = true;
+			pbrMatInfo.enableIrradianceSampler = true;
+			pbrMatInfo.irradianceSamplerMatID = skyboxHDRMatID;
+			pbrMatInfo.needPrefilteredMap = true;
+			pbrMatInfo.enablePrefilteredMap = true;
+			pbrMatInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
+			pbrMatInfo.needBRDFLUT = true;
+			pbrMatInfo.enableBRDFLUT = true;
+			pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
+
+			const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 			
-			m_Spheres[i] = new MeshPrefab(pbrMatTexturedID, "Sphere " + iStr);
+			m_Spheres[i] = new MeshPrefab(pbrMatID, "Sphere " + iStr);
 			m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT); // Force white
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);

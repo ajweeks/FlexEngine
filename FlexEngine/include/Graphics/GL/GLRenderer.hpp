@@ -81,7 +81,7 @@ namespace flex
 			
 			void DrawRenderObjectBatch(const std::vector<RenderObject*>& batchedRenderObjects, const GameContext& gameContext);
 
-			bool GetShader(const std::string& shaderName, ShaderID& shaderID);
+			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
 			std::vector<Shader> m_Shaders;
 			std::vector<GLMaterial> m_Materials;
@@ -122,7 +122,9 @@ namespace flex
 			glm::uint m_CaptureRBO;
 
 			glm::vec2i m_EquirectangularCubemapCaptureSize;
-			glm::vec2i m_IrradianceCubemapCaptureSize;
+
+			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
+			RenderObject* m_1x1_NDC_Quad; // A 1x1 quad in NDC space
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

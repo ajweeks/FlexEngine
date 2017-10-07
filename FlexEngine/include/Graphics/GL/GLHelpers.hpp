@@ -27,20 +27,20 @@ namespace flex
 				int viewInv;
 				int projection;
 				int camPos;
-				int useDiffuseTexture;
-				int useNormalTexture;
-				int useSpecularTexture;
-				int useCubemapTexture;
+				int enableDiffuseTexture;
+				int enableNormalTexture;
+				int enableSpecularTexture;
+				int enableCubemapTexture;
 				int constAlbedo;
-				int useAlbedoSampler;
+				int enableAlbedoSampler;
 				int constMetallic;
-				int useMetallicSampler;
+				int enableMetallicSampler;
 				int constRoughness;
-				int useRoughnessSampler;
+				int enableRoughnessSampler;
 				int constAO;
-				int useAOSampler;
+				int enableAOSampler;
 				int equirectangularSampler;
-				int useIrradianceSampler;
+				int enableIrradianceSampler;
 			};
 			UniformIDs uniformIDs;
 
@@ -64,6 +64,8 @@ namespace flex
 			glm::uint hdrTextureID;
 
 			glm::uint irradianceSamplerID;
+			glm::uint prefilterMapSamplerID;
+			glm::uint brdfLUTSamplerID;
 		};
 
 		struct RenderObject
@@ -73,6 +75,8 @@ namespace flex
 			RenderID renderID;
 
 			Renderer::RenderObjectInfo info;
+
+			bool visible = true;
 
 			glm::uint VAO;
 			glm::uint VBO;
@@ -119,13 +123,15 @@ namespace flex
 		GLFWimage LoadGLFWimage(const std::string& filePath);
 		void DestroyGLFWimage(const GLFWimage& image);
 
-		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath);
-		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter);
-		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath);
-		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter);
+		bool GenerateGLTexture_Empty(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
+		bool GenerateGLTexture_EmptyWithParams(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, int sWrap, int tWrap, int minFilter, int magFilter);
+		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps);
+		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
+		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps);
+		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
 
-		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths);
-		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight);
+		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths, bool generateMipmap = false);
+		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight, bool generateMipmap = false, bool enableCubemapTrilinearFiltering = false);
 
 		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader);
 		bool LinkProgram(glm::uint program);

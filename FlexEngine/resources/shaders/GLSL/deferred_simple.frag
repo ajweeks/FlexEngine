@@ -9,9 +9,9 @@ in vec2 ex_TexCoord;
 in vec3 ex_Color;
 in mat3 ex_TBN;
 
-uniform bool useDiffuseSampler;
-uniform bool useNormalSampler;
-uniform bool useSpecularSampler;
+uniform bool enableDiffuseSampler;
+uniform bool enableNormalSampler;
+uniform bool enableSpecularSampler;
 
 uniform sampler2D diffuseSampler;
 uniform sampler2D normalSampler;
@@ -22,7 +22,7 @@ void main()
 	// Render to all GBuffers
     out_Position = ex_FragPos;
 
-	if (useNormalSampler)
+	if (enableNormalSampler)
 	{
 		vec4 normalSample = texture(normalSampler, ex_TexCoord);
 		out_Normal = normalize(ex_TBN * (normalSample.xyz * 2 - 1));
@@ -32,7 +32,7 @@ void main()
 		out_Normal = normalize(ex_TBN[2]);
 	}
     
-    out_AlbedoSpec.rgb = (useDiffuseSampler ? texture(diffuseSampler, ex_TexCoord).rgb : vec3(1, 1, 1)) * ex_Color;
+    out_AlbedoSpec.rgb = (enableDiffuseSampler ? texture(diffuseSampler, ex_TexCoord).rgb : vec3(1, 1, 1)) * ex_Color;
     
-    out_AlbedoSpec.a = (useSpecularSampler ? texture(specularSampler, ex_TexCoord).r : 1);
+    out_AlbedoSpec.a = (enableSpecularSampler ? texture(specularSampler, ex_TexCoord).r : 1);
 }

@@ -40,12 +40,46 @@ namespace flex
 			stbi_image_free(image.pixels);
 		}
 
-		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath)
+		bool GenerateGLTexture_Empty(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
 		{
-			return GenerateGLTextureWithParams(textureID, filePath, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateGLTexture_EmptyWithParams(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, int sWrap, int tWrap, int minFilter, int magFilter)
+		{
+			glGenTextures(1, &textureID);
+			glBindTexture(GL_TEXTURE_2D, textureID);
+			CheckGLErrorMessages();
+
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, dimensions.x, dimensions.y, 0, format, type, 0);
+			CheckGLErrorMessages();
+			if (generateMipMaps)
+			{
+				glGenerateMipmap(GL_TEXTURE_2D);
+				CheckGLErrorMessages();
+			}
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
+			CheckGLErrorMessages();
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			glBindVertexArray(0);
+
+			CheckGLErrorMessages();
+
+			return true;
+		}
+
+		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps)
+		{
+			return GenerateGLTextureWithParams(textureID, filePath, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+		}
+
+		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
 		{
 			GLFWimage image = LoadGLFWimage(filePath);
 
@@ -59,12 +93,19 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
-			glGenerateMipmap(GL_TEXTURE_2D);
 			CheckGLErrorMessages();
+			if (generateMipMaps)
+			{
+				glGenerateMipmap(GL_TEXTURE_2D);
+				CheckGLErrorMessages();
+			}
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
+			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
+			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
+			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
 			CheckGLErrorMessages();
 
@@ -79,12 +120,12 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath)
+		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps)
 		{
-			return GenerateHDRGLTextureWithParams(textureID, filePath, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+			return GenerateHDRGLTextureWithParams(textureID, filePath, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
 		{
 			HDRImage image = {};
 			if (!image.Load(filePath))
@@ -97,12 +138,19 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, image.width, image.height, 0, GL_RGB, GL_FLOAT, image.pixels);
-			glGenerateMipmap(GL_TEXTURE_2D);
 			CheckGLErrorMessages();
+			if (generateMipMaps)
+			{
+				glGenerateMipmap(GL_TEXTURE_2D);
+				CheckGLErrorMessages();
+			}
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
+			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
+			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
+			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
 			CheckGLErrorMessages();
 
@@ -115,7 +163,7 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths)
+		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths, bool generateMipmap)
 		{
 			bool success = true;
 
@@ -147,13 +195,18 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 			CheckGLErrorMessages();
-			
+
+			if (generateMipmap)
+			{
+				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+			}
+
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
 			return success;
 		}
 
-		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight)
+		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight, bool generateMipmap, bool enableTrilinearFiltering)
 		{
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
@@ -168,9 +221,14 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, (generateMipmap || enableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR); // Enable trilinear filtering when mip maps are enabled
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			CheckGLErrorMessages();
+
+			if (generateMipmap)
+			{
+				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+			}
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 

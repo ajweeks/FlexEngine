@@ -31,6 +31,8 @@ namespace flex
 
 	void BaseScene::AddChild(const GameContext& gameContext, GameObject* pGameObject)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			if (*iter == pGameObject)

@@ -92,27 +92,107 @@ namespace flex
 			float padding[3];
 		};
 
+		// TODO: Is setting all the members to false necessary?
+		struct MaterialCreateInfo
+		{
+			// Required fields:
+			std::string shaderName;
+
+			// Optional fields:
+			std::string name;
+
+			std::string diffuseTexturePath;
+			std::string specularTexturePath;
+			std::string normalTexturePath;
+			std::string albedoTexturePath;
+			std::string metallicTexturePath;
+			std::string roughnessTexturePath;
+			std::string aoTexturePath;
+			std::string equirectangularTexturePath;
+
+			bool needPositionFrameBufferSampler = false;
+			bool enablePositionFrameBufferSampler = false;
+			glm::uint positionFrameBufferSamplerID;
+			bool needNormalFrameBufferSampler = false;
+			bool enableNormalFrameBufferSampler = false;
+			glm::uint normalFrameBufferSamplerID;
+			bool needDiffuseSpecularFrameBufferSampler = false;
+			bool enableDiffuseSpecularFrameBufferSampler = false;
+			glm::uint diffuseSpecularFrameBufferSamplerID;
+
+			bool needIrradianceSampler = false;
+			bool enableIrradianceSampler = false;
+			bool generateIrradianceSampler = false;
+			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object
+
+			bool needBRDFLUT = false;
+			bool enableBRDFLUT = false;
+			bool generateBRDFLUT = false;
+			glm::vec2i brdfLUTSize;
+			MaterialID brdfLUTSamplerMatID; // The id of the material who has a brdf texture that we want to use
+
+			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+			bool needCubemapSampler;
+			bool enableCubemapSampler;
+			bool generateCubemapSampler;
+			bool enableCubemapTrilinearFiltering;
+			glm::vec2i generatedCubemapSize;
+			glm::vec2i generatedIrradianceCubemapSize;
+
+			bool generatePrefilteredMap = false;
+			bool needPrefilteredMap = false;
+			bool enablePrefilteredMap = false;
+			glm::vec2i generatedPrefilterCubemapSize;
+			MaterialID prefilterMapSamplerMatID;
+
+			// PBR Constant colors
+			glm::vec3 constAlbedo;
+			float constMetallic;
+			float constRoughness;
+			float constAO;
+
+			// PBR textures
+			bool needAlbedoSampler = false;
+			bool enableAlbedoSampler = false;
+			bool needMetallicSampler = false;
+			bool enableMetallicSampler = false;
+			bool needRoughnessSampler = false;
+			bool enableRoughnessSampler = false;
+			bool needAOSampler = false;
+			bool enableAOSampler = false;
+			bool needEquirectangularSampler = false;
+			bool enableEquirectangularSampler = false;
+		};
+
 		struct Material
 		{
 			std::string name;
 
 			ShaderID shaderID;
 
-			bool useDiffuseSampler = false;
+			bool needDiffuseSampler = false;
+			bool enableDiffuseSampler = false;
 			std::string diffuseTexturePath;
 
-			bool useSpecularSampler = false;
+			bool needSpecularSampler = false;
+			bool enableSpecularSampler = false;
 			std::string specularTexturePath;
 
-			bool useNormalSampler = false;
+			bool needNormalSampler = false;
+			bool enableNormalSampler = false;
 			std::string normalTexturePath;
 
 			// GBuffer samplers
-			bool usePositionFrameBufferSampler = false;
-			bool useNormalFrameBufferSampler = false;
-			bool useDiffuseSpecularFrameBufferSampler = false;
+			bool needPositionFrameBufferSampler = false;
+			bool enablePositionFrameBufferSampler = false; // Would one ever want to disable this?
+			bool needNormalFrameBufferSampler = false;
+			bool enableNormalFrameBufferSampler = false;
+			bool needDiffuseSpecularFrameBufferSampler = false;
+			bool enableDiffuseSpecularFrameBufferSampler = false;
 
-			bool useCubemapSampler = false;
+			bool needCubemapSampler = false; // Shader has a cubemap sampler
+			bool enableCubemapSampler = false;   // Cubemap is enabled 
+			glm::vec2i cubemapSamplerSize;
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 			// PBR constants
@@ -122,23 +202,40 @@ namespace flex
 			float constAO;
 
 			// PBR samplers
-			bool useAlbedoSampler = false;
+			bool needAlbedoSampler = false;
+			bool enableAlbedoSampler = false;
 			std::string albedoTexturePath;
 
-			bool useMetallicSampler = false;
+			bool needMetallicSampler = false;
+			bool enableMetallicSampler = false;
 			std::string metallicTexturePath;
 
-			bool useRoughnessSampler = false;
+			bool needRoughnessSampler = false;
+			bool enableRoughnessSampler = false;
 			std::string roughnessTexturePath;
 
-			bool useAOSampler = false;
+			bool needAOSampler = false;
+			bool enableAOSampler = false;
 			std::string aoTexturePath;
 
-			bool useEquirectangularSampler = false;
+			bool needEquirectangularSampler = false;
+			bool enableEquirectangularSampler = false;
 			std::string equirectangularTexturePath;
 
-			bool useIrradianceSampler = false;
+			bool needIrradianceSampler = false;
+			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
+			glm::vec2i irradianceSamplerSize;
+			
+			bool needPrefilteredMap = false;
+			bool enablePrefilteredMap = false;
+			bool generatePrefilteredMap = false;
+			glm::vec2i prefilterMapSize;
+
+			bool needBRDFLUT = false;
+			bool enableBRDFLUT = false;
+			bool generateBRDFLUT = false;
+			glm::vec2i brdfLUTSize;
 		};
 
 		// Info that stays consistent across all renderers
@@ -179,30 +276,30 @@ namespace flex
 				camPos
 				dirLight
 				pointLights
-				useDiffuseSampler
+				enableDiffuseSampler
 				diffuseSampler
-				useNormalSampler
+				enableNormalSampler
 				normalSampler
-				useSpecularSampler
+				enableSpecularSampler
 				specularSampler
-				useCubemapSampler
+				enableCubemapSampler
 				cubemapSampler
 				positionFrameBufferSampler
 				diffuseSpecularFrameBufferSampler
 				normalFrameBufferSampler
-				useAlbedoSampler
+				enableAlbedoSampler
 				albedoSampler
 				albedo				(constant value to use when not using sampler)
-				useMetallicSampler
+				enableMetallicSampler
 				metallicSampler
 				metallic			(constant value to use when not using sampler)
-				useRoughnessSampler
+				enableRoughnessSampler
 				roughnessSampler
 				roughness			(constant value to use when not using sampler)
-				useAOSampler
+				enableAOSampler
 				aoSampler
 				ao
-				useIrradianceSampler
+				enableIrradianceSampler
 			*/
 			std::map<std::string, bool> types;
 
@@ -232,55 +329,6 @@ namespace flex
 
 			VertexAttributes vertexAttributes;
 			int numAttachments = 1; // How many output textures the fragment shader has
-		};
-
-		// TODO: Is setting all the members to false necessary?
-		struct MaterialCreateInfo
-		{
-			// Required fields:
-			std::string shaderName;
-
-			// Optional fields:
-			std::string name;
-
-			std::string diffuseTexturePath;
-			std::string specularTexturePath;
-			std::string normalTexturePath;
-			std::string albedoTexturePath;
-			std::string metallicTexturePath;
-			std::string roughnessTexturePath;
-			std::string aoTexturePath;
-			std::string equirectangularTexturePath;
-
-			bool usePositionFrameBufferSampler = false;
-			glm::uint positionFrameBufferSamplerID;
-			bool useNormalFrameBufferSampler = false;
-			glm::uint normalFrameBufferSamplerID;
-			bool useDiffuseSpecularFrameBufferSampler = false;
-			glm::uint diffuseSpecularFrameBufferSamplerID;
-			
-			bool useIrradianceSampler = false;
-			bool generateIrradianceSampler = false;
-			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object
-
-			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-			bool useCubemapSampler;
-			bool generateCubemapSampler;
-			glm::vec2i generatedCubemapSize;
-			glm::vec2i generatedIrradianceCubemapSize;
-
-			// PBR Constant colors
-			glm::vec3 constAlbedo;
-			float constMetallic;
-			float constRoughness;
-			float constAO;
-
-			// PBR textures
-			bool useAlbedoSampler = false;
-			bool useMetallicSampler = false;
-			bool useRoughnessSampler = false;
-			bool useAOSampler = false;
-			bool useEquirectangularSampler = false;
 		};
 
 		virtual void PostInitialize(const GameContext& gameContext) = 0;

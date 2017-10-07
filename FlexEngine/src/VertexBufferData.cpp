@@ -89,7 +89,15 @@ namespace flex
 
 	void VertexBufferData::Destroy()
 	{
-		free(pDataStart);
+		if (pDataStart)
+		{
+			free(pDataStart);
+			pDataStart = nullptr;
+		}
+		VertexCount = 0;
+		BufferSize = 0;
+		VertexStride = 0;
+		Attributes = 0;
 	}
 
 	void VertexBufferData::DescribeShaderVariables(Renderer* renderer, RenderID renderID)
