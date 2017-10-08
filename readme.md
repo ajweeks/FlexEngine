@@ -21,18 +21,14 @@ Flex Engine is my personal rendering engine which currently supports Vulkan and 
 
 ![](http://i.imgur.com/oSIsXt7.png)
 
-<div style="display: inline-block;">
+![](http://i.imgur.com/KBCXvKs.png)
+
+<div style="display: inline-block; padding-bottom: 20px">
   <img src="http://i.imgur.com/ACLLZ5B.png" width="49%"/>
   <img src="http://i.imgur.com/e0mKpDX.png" width="49%" style="float: right"/>
 </div>
 
-<div style="display: inline-block; padding-top: 20px; padding-bottom: 20px">
-  <img src="http://i.imgur.com/mqszTPr.gif" width="49%"/>
-  <img src="http://i.imgur.com/S5c9F2E.png" width="49%" style="float: right"/>
-</div>
-
-
-![](http://i.imgur.com/XJH0tZ7.png)
+![](http://i.imgur.com/mqszTPr.gif)
 
 ## Dependencies
  - [Assimp](https://github.com/assimp/assimp) - Model loading
