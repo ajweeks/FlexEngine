@@ -1,0 +1,9 @@
+/* -*- c++ -*- */
+ArticulatedModel::Specification {
+    filename = "testObj.obj";
+    preprocess = {
+     	    removeMesh("LTELogo/LTELogo");
+	        removeMesh("Material/Material");
+            removeMesh("BackGroundMat/BackGroundMat");		
+    };
+}

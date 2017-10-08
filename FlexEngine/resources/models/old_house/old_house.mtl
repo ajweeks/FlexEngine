@@ -1,0 +1,48 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 18.05.2016 20:36:55
+
+newmtl Standard_2
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka C:\tdg\3D Models\House\Old House Texture\Plants 2.jpg
+	map_Kd C:\tdg\3D Models\House\Old House Texture\Plants 2.jpg
+	map_d C:\tdg\3D Models\House\Old House Texture\Plants 2 mask.jpg
+
+newmtl Standard_3
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka C:\tdg\3D Models\House\Old House Texture\Plants1.jpg
+	map_Kd C:\tdg\3D Models\House\Old House Texture\Plants1.jpg
+	map_d C:\tdg\3D Models\House\Old House Texture\Plants 1 mask .jpg
+
+newmtl Standard_1
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka C:\tdg\3D Models\House\Old House Texture\House body .jpg
+	map_Kd C:\tdg\3D Models\House\Old House Texture\House body .jpg
+	map_bump C:\tdg\3D Models\House\Old House Texture\House Bump.jpg
+	bump C:\tdg\3D Models\House\Old House Texture\House Bump.jpg

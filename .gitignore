@@ -1,5 +1,7 @@
 
 FlexEngine/resources/textures/skyboxes/
+FlexEngine/resources/textures/hdri/
+FlexEngine/resources/models/Cerberus_by_Andrew_Maximov/
 
 *.spv
 imgui.ini

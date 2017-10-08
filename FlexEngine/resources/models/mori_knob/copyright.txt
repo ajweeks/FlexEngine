@@ -1,0 +1,12 @@
+Open source model by Yasutoshi "Mirage" Mori
+Creative Commons Attribution 4.0 International License
+
+
+Blender source file available at:
+ https://github.com/lighttransport/lighttransportequation-orb
+
+Converted to OBJ and G3D format by Kenny Jones and Morgan McGuire
+ http://cs.williams.edu/~morgan
+
+Preview render by Syoyo Fujita
+ https://github.com/lighttransport/lighttransportequation-orb
