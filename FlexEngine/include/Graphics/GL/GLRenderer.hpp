@@ -124,6 +124,7 @@ namespace flex
 			glm::vec2i m_EquirectangularCubemapCaptureSize;
 
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
+			Transform m_1x1_NDC_QuadTransform;
 			RenderObject* m_1x1_NDC_Quad; // A 1x1 quad in NDC space
 
 			GLRenderer(const GLRenderer&) = delete;

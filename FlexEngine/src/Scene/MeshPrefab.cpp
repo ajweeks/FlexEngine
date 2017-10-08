@@ -48,7 +48,7 @@ namespace flex
 	}
 
 	// TODO: Add option to force certain components (Bitangents, UVs, ...)
-	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ)
+	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV)
 	{
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
@@ -56,7 +56,8 @@ namespace flex
 
 		const aiScene* pScene = importer.ReadFile(filepath,
 			aiProcess_FindInvalidData |
-			aiProcess_GenNormals
+			aiProcess_GenNormals |
+			aiProcess_CalcTangentSpace
 		);
 
 		if (!pScene)
@@ -145,6 +146,8 @@ namespace flex
 				// Truncate w component
 				glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 				texCoord *= m_UVScale;
+				if (flipU) texCoord.x = 1.0f - texCoord.x;
+				if (flipV) texCoord.y = 1.0f - texCoord.y;
 				vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
 				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
 			}

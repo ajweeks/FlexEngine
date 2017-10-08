@@ -319,6 +319,14 @@ namespace flex
 			{
 				const std::string rendStr("Current renderer: " + m_RendererName);
 				ImGui::Text(rendStr.c_str());
+
+				if (ImGui::CollapsingHeader("Renderer settings"))
+				{
+					std::string vsyncEnabledStr = "VSync " + std::string(m_VSyncEnabled ? "enabled" : "disabled");
+					ImGui::Checkbox(vsyncEnabledStr.c_str(), &m_VSyncEnabled);
+					m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+				}
+
 				m_GameContext.renderer->DrawImGuiItems(m_GameContext);
 			}
 			ImGui::End();

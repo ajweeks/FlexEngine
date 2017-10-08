@@ -45,8 +45,8 @@ layout (binding = 7) uniform samplerCube prefilterMap;
 uniform vec4 camPos;
 
 in vec3 ex_WorldPos;
-in vec2 ex_TexCoord;
 in mat3 ex_TBN;
+in vec2 ex_TexCoord;
 
 out vec4 fragColor;
 
@@ -104,14 +104,21 @@ void main()
 	float roughness = enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : constRoughness;
 	float ao = enableAOSampler ? texture(aoSampler, ex_TexCoord).r : constAO;
 
-	vec3 Normal = enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
+	vec3 Normal = enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) :
+					 ex_TBN[2];
 
 	vec3 N = normalize(Normal);
 	vec3 V = normalize(camPos.xyz - ex_WorldPos);
 	vec3 R = reflect(-V, N);
 
+	// Visualize normal map:
+	//fragColor = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;
+
 	// Visualize normals:
 	//fragColor = vec4(N, 1); return;
+
+	// Visualize tangents:
+	//fragColor = vec4(vec3(ex_TBN[0]), 1); return;
 
 	// Visualize texCoords:
 	//fragColor = vec4(ex_TexCoord, 0, 1); return;

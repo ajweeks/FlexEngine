@@ -35,7 +35,7 @@ namespace flex
 
 		void ForceAttributes(VertexAttributes attributes); // Call this before loading to force certain attributes to be filled
 
-		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false);
+		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false);
 		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
 
 		virtual void Initialize(const GameContext& gameContext) override;

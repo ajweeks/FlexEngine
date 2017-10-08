@@ -500,7 +500,11 @@ namespace flex
 				equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
 				equirectangularToCubeMatCreateInfo.needEquirectangularSampler = true;
 				equirectangularToCubeMatCreateInfo.enableEquirectangularSampler = true;
-				equirectangularToCubeMatCreateInfo.equirectangularTexturePath = RESOURCE_LOCATION + "textures/skyboxes/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
+				equirectangularToCubeMatCreateInfo.equirectangularTexturePath = 
+					RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
+					//RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
+					//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
+					RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 				MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
 				// Convert HDR equirectangular texture to cubemap using six snapshots
@@ -742,6 +746,8 @@ namespace flex
 					quadCreateInfo.name = "1x1 Quad";
 					quadCreateInfo.materialID = brdfMatID;
 					quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
+					m_1x1_NDC_QuadTransform = Transform::Identity(); // Should we even have this member?
+					quadCreateInfo.transform = &m_1x1_NDC_QuadTransform;
 
 					RenderID quadRenderID = InitializeRenderObject(gameContext, &quadCreateInfo);
 					m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
@@ -1964,13 +1970,20 @@ namespace flex
 						const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
 						if (ImGui::TreeNode(objectName.c_str()))
 						{
-							ImGui::Text("Transform");
-
-							ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->position.x, 0.1f);
-							glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->rotation);
-							ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
-							renderObjectInfos[i].transform->rotation = glm::quat(rot);
-							ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
+							if (renderObjectInfos[i].transform)
+							{
+								ImGui::Text("Transform");
+								
+								ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->position.x, 0.1f);
+								glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->rotation);
+								ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
+								renderObjectInfos[i].transform->rotation = glm::quat(rot);
+								ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
+							}
+							else
+							{
+								ImGui::Text("Transform not set");
+							}
 
 							GLMaterial* material = &m_Materials[m_RenderObjects[i]->materialID];
 							if (material->uniformIDs.enableIrradianceSampler)

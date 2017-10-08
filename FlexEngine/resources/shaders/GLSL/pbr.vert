@@ -7,8 +7,8 @@ layout (location = 3) in vec3 in_Bitangent;
 layout (location = 4) in vec3 in_Normal;
 
 out vec3 ex_WorldPos;
-out vec2 ex_TexCoord;
 out mat3 ex_TBN;
+out vec2 ex_TexCoord;
 
 uniform mat4 model;
 uniform mat4 modelInvTranspose;
