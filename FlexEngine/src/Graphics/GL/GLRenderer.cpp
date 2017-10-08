@@ -708,7 +708,7 @@ namespace flex
 				}
 				
 				// Visualize prefiltered map as skybox:
-				//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[prefilterMatID].prefilterMapSamplerID;
+				m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[prefilterMatID].prefilterMapSamplerID;
 
 				glUseProgram(0);
 				glBindVertexArray(0);
