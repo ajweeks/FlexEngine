@@ -2,40 +2,54 @@
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
-This is a rendering engine which supports both Vulkan and OpenGL. The goal of this project is to learn about each API and have a test bed for future demos/games.
+Flex Engine is my personal rendering engine which currently supports Vulkan and OpenGL. It was started in February 2017 as a way for me to better understand how graphics engines work.
 
-By supporting three different graphics APIs, I've challenged myself to designed the renderer interface in an API-agnostic way, such that any code calling into the renderer knows nothing about which API is being used.
-
-#### Notable features
+#### Notable Features
 - Support for both Vulkan and OpenGL, switchable at runtime
 - Physically Based Rendering (PBR)
-- Image Based lighting
-- Diffuse/specular/normal mapping
-- UI interface (using [ImGui](https://github.com/ocornut/imgui))
-- Sky boxes
+- Image Based lighting (IBL)
+- Irradiance map generation
 
-<div>
-  <img src="http://i.imgur.com/KOKpDgO.png" width="51%"/>
-  <img src="http://i.imgur.com/OVFW6s3.png" width="47%" style="float: right"/>
+#### Planned Features
+ - Reflection probes
+ - Mesh animation
+ - Cascading shadow maps
+ - Post-processing effects
+ - ...
+
+![](http://i.imgur.com/qtP8Mmm.png)
+
+![](http://i.imgur.com/oSIsXt7.png)
+
+<div style="display: inline-block;">
+  <img src="http://i.imgur.com/ACLLZ5B.png" width="49%"/>
+  <img src="http://i.imgur.com/e0mKpDX.png" width="49%" style="float: right"/>
 </div>
 
-![](http://i.imgur.com/weOiqnU.png)
+<div style="display: inline-block; padding-top: 20px; padding-bottom: 20px">
+  <img src="http://i.imgur.com/mqszTPr.gif" width="49%"/>
+  <img src="http://i.imgur.com/S5c9F2E.png" width="49%" style="float: right"/>
+</div>
 
-![](http://i.imgur.com/WCios65.png)
 
-![](http://i.imgur.com/NoiEoNY.png)
+![](http://i.imgur.com/XJH0tZ7.png)
 
 ## Dependencies
- - [Assimp](https://github.com/assimp/assimp)
- - [glad](https://github.com/Dav1dde/glad)
- - [glfw](https://github.com/glfw/glfw)
- - [glm](https://github.com/g-truc/glm)
- - [stb](https://github.com/nothings/stb)
- - [ImGui](https://github.com/ocornut/imgui)
+ - [Assimp](https://github.com/assimp/assimp) - Model loading
+ - [ImGui](https://github.com/ocornut/imgui) - User interface
+ - [stb](https://github.com/nothings/stb) - Image loading
+ - [glfw](https://github.com/glfw/glfw) - Window creation, input handling
+ - [glad](https://github.com/Dav1dde/glad) - OpenGL profile loading
+ - [glm](https://github.com/g-truc/glm) - Math operations
 
 ## Thanks
-A huge thanks to the following people for their incredibly useful resources:
+A huge thanks to the following people/organizations for their incredibly useful resources:
  - Alexander Overvoorde of [vulkan-tutorial.com](https://vulkan-tutorial.com/)
  - Sascha Willems of [github.com/SaschaWillems/Vulkan](https://github.com/SaschaWillems/Vulkan)
  - Baldur Karlsson of [github.com/baldurk/renderdoc](https://github.com/baldurk/renderdoc)
  - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
+ - Andrew Maximov for the pistol model and textures [artisaverb.info/PBT.html ](http://artisaverb.info/PBT.html)
+ - [FreePBR.com](http://FreePBR.com) for the wonderful PBR textures
+
+## Blog
+ Stay up to date about this project on my blog at [ajweeks.wordpress.com/tag/flex-engine/](https://ajweeks.wordpress.com/tag/flex-engine/)
