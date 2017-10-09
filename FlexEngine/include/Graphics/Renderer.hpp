@@ -93,12 +93,10 @@ namespace flex
 		};
 
 		// TODO: Is setting all the members to false necessary?
+		// TODO: Straight up copy most of these with a memcpy?
 		struct MaterialCreateInfo
 		{
-			// Required fields:
 			std::string shaderName;
-
-			// Optional fields:
 			std::string name;
 
 			std::string diffuseTexturePath;
@@ -110,39 +108,51 @@ namespace flex
 			std::string aoTexturePath;
 			std::string equirectangularTexturePath;
 
-			bool needPositionFrameBufferSampler = false;
+			bool generateDiffuseSampler = false;
+			bool enableDiffuseSampler;
+			bool generateSpecularSampler = false;
+			bool enableSpecularSampler;
+			bool generateNormalSampler = false;
+			bool enableNormalSampler;
+			bool generateAlbedoSampler = false;
+			bool enableAlbedoSampler;
+			bool generateMetallicSampler = false;
+			bool enableMetallicSampler;
+			bool generateRoughnessSampler = false;
+			bool enableRoughnessSampler;
+			bool generateAOSampler = false;
+			bool enableAOSampler;
+			bool generateEquirectangularSampler = false;
+			bool enableEquirectangularSampler;
+
 			bool enablePositionFrameBufferSampler = false;
 			glm::uint positionFrameBufferSamplerID;
-			bool needNormalFrameBufferSampler = false;
+
 			bool enableNormalFrameBufferSampler = false;
 			glm::uint normalFrameBufferSamplerID;
-			bool needDiffuseSpecularFrameBufferSampler = false;
+			
 			bool enableDiffuseSpecularFrameBufferSampler = false;
 			glm::uint diffuseSpecularFrameBufferSamplerID;
 
-			bool needIrradianceSampler = false;
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
-			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object
+			glm::vec2i generatedIrradianceCubemapSize;
+			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 
-			bool needBRDFLUT = false;
 			bool enableBRDFLUT = false;
 			bool generateBRDFLUT = false;
-			glm::vec2i brdfLUTSize;
-			MaterialID brdfLUTSamplerMatID; // The id of the material who has a brdf texture that we want to use
+			glm::vec2i generatedBRDFLUTSize;
+			MaterialID brdfLUTSamplerMatID; // The id of the material who has a brdf texture that we want to use (generateBRDFLUT must be false)
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-			bool needCubemapSampler;
 			bool enableCubemapSampler;
-			bool generateCubemapSampler;
 			bool enableCubemapTrilinearFiltering;
+			bool generateCubemapSampler;
 			glm::vec2i generatedCubemapSize;
-			glm::vec2i generatedIrradianceCubemapSize;
 
 			bool generatePrefilteredMap = false;
-			bool needPrefilteredMap = false;
 			bool enablePrefilteredMap = false;
-			glm::vec2i generatedPrefilterCubemapSize;
+			glm::vec2i generatedPrefilteredCubemapSize;
 			MaterialID prefilterMapSamplerMatID;
 
 			// PBR Constant colors
@@ -150,18 +160,6 @@ namespace flex
 			float constMetallic;
 			float constRoughness;
 			float constAO;
-
-			// PBR textures
-			bool needAlbedoSampler = false;
-			bool enableAlbedoSampler = false;
-			bool needMetallicSampler = false;
-			bool enableMetallicSampler = false;
-			bool needRoughnessSampler = false;
-			bool enableRoughnessSampler = false;
-			bool needAOSampler = false;
-			bool enableAOSampler = false;
-			bool needEquirectangularSampler = false;
-			bool enableEquirectangularSampler = false;
 		};
 
 		struct Material
@@ -170,27 +168,27 @@ namespace flex
 
 			ShaderID shaderID;
 
-			bool needDiffuseSampler = false;
+			bool generateDiffuseSampler = false;
 			bool enableDiffuseSampler = false;
 			std::string diffuseTexturePath;
 
-			bool needSpecularSampler = false;
+			bool generateSpecularSampler = false;
 			bool enableSpecularSampler = false;
 			std::string specularTexturePath;
 
-			bool needNormalSampler = false;
+			bool generateNormalSampler = false;
 			bool enableNormalSampler = false;
 			std::string normalTexturePath;
 
 			// GBuffer samplers
-			bool needPositionFrameBufferSampler = false;
+			bool generatePositionFrameBufferSampler = false; // Would one ever want to disable this?
 			bool enablePositionFrameBufferSampler = false; // Would one ever want to disable this?
-			bool needNormalFrameBufferSampler = false;
+			bool generateNormalFrameBufferSampler = false;
 			bool enableNormalFrameBufferSampler = false;
-			bool needDiffuseSpecularFrameBufferSampler = false;
+			bool generateDiffuseSpecularFrameBufferSampler = false;
 			bool enableDiffuseSpecularFrameBufferSampler = false;
 
-			bool needCubemapSampler = false; // Shader has a cubemap sampler
+			bool generateCubemapSampler = false;   // Cubemap is enabled 
 			bool enableCubemapSampler = false;   // Cubemap is enabled 
 			glm::vec2i cubemapSamplerSize;
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
@@ -202,40 +200,37 @@ namespace flex
 			float constAO;
 
 			// PBR samplers
-			bool needAlbedoSampler = false;
+			bool generateAlbedoSampler = false;
 			bool enableAlbedoSampler = false;
 			std::string albedoTexturePath;
 
-			bool needMetallicSampler = false;
+			bool generateMetallicSampler = false;
 			bool enableMetallicSampler = false;
 			std::string metallicTexturePath;
 
-			bool needRoughnessSampler = false;
+			bool generateRoughnessSampler = false;
 			bool enableRoughnessSampler = false;
 			std::string roughnessTexturePath;
 
-			bool needAOSampler = false;
+			bool generateAOSampler = false;
 			bool enableAOSampler = false;
 			std::string aoTexturePath;
 
-			bool needEquirectangularSampler = false;
+			bool generateEquirectangularSampler = false;
 			bool enableEquirectangularSampler = false;
 			std::string equirectangularTexturePath;
 
-			bool needIrradianceSampler = false;
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
 			glm::vec2i irradianceSamplerSize;
 			
-			bool needPrefilteredMap = false;
 			bool enablePrefilteredMap = false;
 			bool generatePrefilteredMap = false;
-			glm::vec2i prefilterMapSize;
+			glm::vec2i prefilteredMapSize;
 
-			bool needBRDFLUT = false;
 			bool enableBRDFLUT = false;
 			bool generateBRDFLUT = false;
-			glm::vec2i brdfLUTSize;
+			glm::vec2i generatedBRDFLUTSize;
 		};
 
 		// Info that stays consistent across all renderers
@@ -326,6 +321,23 @@ namespace flex
 			Uniforms dynamicBufferUniforms;
 
 			bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+
+			// These variables should be set to true when the shader has these uniforms
+			bool needDiffuseSampler = false;
+			bool needSpecularSampler = false;
+			bool needNormalSampler = false;
+			bool needPositionFrameBufferSampler = false;
+			bool needNormalFrameBufferSampler = false;
+			bool needDiffuseSpecularFrameBufferSampler = false;
+			bool needCubemapSampler = false;
+			bool needAlbedoSampler = false;
+			bool needMetallicSampler = false;
+			bool needRoughnessSampler = false;
+			bool needAOSampler = false;
+			bool needEquirectangularSampler = false;
+			bool needIrradianceSampler = false;
+			bool needPrefilteredMap = false;
+			bool needBRDFLUT = false;
 
 			VertexAttributes vertexAttributes;
 			int numAttachments = 1; // How many output textures the fragment shader has

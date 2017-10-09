@@ -299,13 +299,13 @@ namespace flex
 
 			TextureInfo textureInfos[] =
 			{
-				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.needDiffuseSampler },
-				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.needNormalSampler },
-				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.needSpecularSampler },
-				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.needAlbedoSampler },
-				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.needMetallicSampler },
-				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.needRoughnessSampler },
-				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.needAOSampler },
+				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.enableDiffuseSampler },
+				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.enableNormalSampler },
+				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.enableSpecularSampler },
+				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.enableAlbedoSampler },
+				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.enableMetallicSampler },
+				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.enableRoughnessSampler },
+				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.enableAOSampler },
 			};
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
@@ -354,7 +354,6 @@ namespace flex
 					mat.cubemapTexture = m_LoadedTextures.back();
 				}
 
-				mat.material.needCubemapSampler = true;
 				mat.material.enableCubemapSampler = true;
 			}
 

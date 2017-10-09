@@ -64,7 +64,7 @@ namespace flex
 			glm::uint hdrTextureID;
 
 			glm::uint irradianceSamplerID;
-			glm::uint prefilterMapSamplerID;
+			glm::uint prefilteredMapSamplerID;
 			glm::uint brdfLUTSamplerID;
 		};
 
