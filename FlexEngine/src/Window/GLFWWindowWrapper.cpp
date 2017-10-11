@@ -19,12 +19,12 @@ namespace flex
 		{
 			// The following four variables store the bounding rectangle of all monitors
 			int virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-			int virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+			//int virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
 			int virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-			int virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+			//int virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
 			int monitorWidth = GetSystemMetrics(SM_CXSCREEN);
-			int monitorHeight = GetSystemMetrics(SM_CYSCREEN);
+			//int monitorHeight = GetSystemMetrics(SM_CYSCREEN);
 
 			// If another monitor is present, move the console to it
 			if (virtualScreenWidth > monitorWidth)
