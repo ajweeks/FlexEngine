@@ -17,34 +17,39 @@ namespace flex
 
 		if (moveConsoleToExtraMonitor)
 		{
-			int otherMonitorX = GetSystemMetrics(SM_XVIRTUALSCREEN);
-			//int otherMonitorY = GetSystemMetrics(SM_YVIRTUALSCREEN);
+			// The following four variables store the bounding rectangle of all monitors
+			int virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
+			int virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+			int virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+			int virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-			// If another monitor is present (assumed to be to the left), move the console to it
-			if (otherMonitorX != 0)
+			int monitorWidth = GetSystemMetrics(SM_CXSCREEN);
+			int monitorHeight = GetSystemMetrics(SM_CYSCREEN);
+
+			// If another monitor is present, move the console to it
+			if (virtualScreenWidth > monitorWidth)
 			{
-				int monitorWidth = GetSystemMetrics(SM_CXSCREEN);
-				int monitorHeight = GetSystemMetrics(SM_CYSCREEN);
-
-				int consoleWidth = (int)(monitorWidth);
-				int consoleHeight = (int)(monitorHeight);
-				int newX = otherMonitorX / 2;
+				int consoleWidth = (int)(700);
+				int consoleHeight = (int)(800);
+				int newX;
 				int newY = 10;
+				
+				if (virtualScreenLeft < 0) 
+				{
+					// The other monitor is to the left of the main one
+					newX = -(consoleWidth + 10);
+				}
+				else 
+				{
+					// The other monitor is to the right of the main one
+					newX = virtualScreenWidth - monitorWidth + 10;
+				}
 
 				HWND hWnd = GetConsoleWindow();
-				// Move once to get onto other monitor
+
 				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-
-				consoleWidth = (int)(700);
-				consoleHeight = (int)(800);
-				newX = -(consoleWidth + 10);
-				newY = 10;
-
-				// Move again (which now should use the correctly DPI scaling)
-				// Yes, windows is *that* awful
-				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-
-				// One more time and it does what it's supposed to do
+				
+				// Call again to set size correctly (based on other monitor's DPI)
 				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
 			}
 		}
