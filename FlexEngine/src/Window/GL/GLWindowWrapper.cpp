@@ -73,8 +73,10 @@ namespace flex
 			gameContext.monitor.blueBits = vidMode->blueBits;
 			gameContext.monitor.refreshRate = vidMode->refreshRate;
 
-			const std::string glVersion(reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-			Logger::LogInfo("OpenGL Version: " + glVersion);
+			Logger::LogInfo("OpenGL loaded");
+			Logger::LogInfo("Vendor:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
+			Logger::LogInfo("Renderer:\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
+			Logger::LogInfo("Version:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))) + "\n");
 			CheckGLErrorMessages();
 		}
 
