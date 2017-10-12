@@ -68,9 +68,9 @@ namespace flex
 			glm::uint brdfLUTSamplerID;
 		};
 
-		struct RenderObject
+		struct GLRenderObject
 		{
-			RenderObject(RenderID renderID, std::string name = "");
+			GLRenderObject(RenderID renderID, std::string name = "");
 
 			RenderID renderID;
 
@@ -96,7 +96,7 @@ namespace flex
 
 			glm::uint materialID;
 		};
-		typedef std::vector<RenderObject*>::iterator RenderObjectIter;
+		typedef std::vector<GLRenderObject*>::iterator RenderObjectIter;
 
 		struct UniformInfo
 		{

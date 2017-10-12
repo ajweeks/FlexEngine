@@ -79,19 +79,14 @@ namespace flex
 			int m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
 			unsigned int m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;
 			
-			void DrawRenderObjectBatch(const std::vector<RenderObject*>& batchedRenderObjects, const GameContext& gameContext);
+			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext);
 
-			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
-
-			std::vector<Shader> m_Shaders;
 			std::vector<GLMaterial> m_Materials;
-			std::vector<RenderObject*> m_RenderObjects;
-			DirectionalLight m_DirectionalLight;
-			std::vector<PointLight> m_PointLights;
+			std::vector<GLRenderObject*> m_RenderObjects;
 
-			RenderObject* GetRenderObject(RenderID renderID);
+			GLRenderObject* GetRenderObject(RenderID renderID);
 			RenderID GetFirstAvailableRenderID() const;
-			void InsertNewRenderObject(RenderObject* renderObject);
+			void InsertNewRenderObject(GLRenderObject* renderObject);
 			void UnloadShaders();
 			void LoadShaders();
 			
@@ -125,7 +120,7 @@ namespace flex
 
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;
-			RenderObject* m_1x1_NDC_Quad; // A 1x1 quad in NDC space
+			GLRenderObject* m_1x1_NDC_Quad; // A 1x1 quad in NDC space
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

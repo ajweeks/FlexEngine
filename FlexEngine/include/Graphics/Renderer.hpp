@@ -386,6 +386,15 @@ namespace flex
 		virtual void ImGui_Render() = 0;
 		virtual void ImGui_ReleaseRenderObjects() = 0;
 
+
+		bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
+
+	protected:
+		std::vector<Shader> m_Shaders;
+		std::vector<PointLight> m_PointLights;
+		DirectionalLight m_DirectionalLight;
+
+
 	private:
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer(const Renderer&) = delete;

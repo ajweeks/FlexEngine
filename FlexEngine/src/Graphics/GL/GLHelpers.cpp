@@ -380,7 +380,7 @@ namespace flex
 			}
 		}
 
-		RenderObject::RenderObject(RenderID renderID, std::string name) :
+		GLRenderObject::GLRenderObject(RenderID renderID, std::string name) :
 			renderID(renderID)
 		{
 			info = {};

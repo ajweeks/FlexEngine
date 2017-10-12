@@ -37,18 +37,19 @@ namespace flex
 		if (HasUniform("camPos")) size += sizeof(glm::vec4);
 		if (HasUniform("dirLight")) size += sizeof(DirectionalLight);
 		if (HasUniform("pointLights")) size += sizeof(PointLight) * pointLightCount;
-		if (HasUniform("useAlbedoSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableAlbedoSampler")) size += sizeof(glm::uint);
 		if (HasUniform("constAlbedo")) size += sizeof(glm::vec4);
-		if (HasUniform("useMetallicSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableMetallicSampler")) size += sizeof(glm::uint);
 		if (HasUniform("constMetallic")) size += sizeof(float);
-		if (HasUniform("useRoughnessSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableRoughnessSampler")) size += sizeof(glm::uint);
 		if (HasUniform("constRoughness")) size += sizeof(float);
-		if (HasUniform("useAOSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableAOSampler")) size += sizeof(glm::uint);
 		if (HasUniform("constAO")) size += sizeof(float);
-		if (HasUniform("useNormalSampler")) size += sizeof(glm::uint);
-		if (HasUniform("useDiffuseSampler")) size += sizeof(glm::uint);
-		if (HasUniform("useSpecularSampler")) size += sizeof(glm::uint);
-		if (HasUniform("useCubemapSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableNormalSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableDiffuseSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableSpecularSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableCubemapSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableIrradianceSampler")) size += sizeof(glm::uint);
 
 		return size;
 	}
@@ -62,6 +63,21 @@ namespace flex
 		vertexShaderFilePath(vertexShaderFilePath),
 		fragmentShaderFilePath(fragmentShaderFilePath)
 	{
+	}
+
+	bool Renderer::GetShaderID(const std::string & shaderName, ShaderID & shaderID)
+	{
+		// TODO: Store shaders using sorted data structure?
+		for (size_t i = 0; i < m_Shaders.size(); ++i)
+		{
+			if (m_Shaders[i].name.compare(shaderName) == 0)
+			{
+				shaderID = i;
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 } // namespace flex

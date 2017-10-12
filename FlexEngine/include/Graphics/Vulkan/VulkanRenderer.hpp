@@ -174,10 +174,7 @@ namespace flex
 			RenderObject* GetRenderObject(RenderID renderID);
 
 			std::vector<RenderObject*> m_RenderObjects;
-			DirectionalLight m_DirectionalLight;
-			std::vector<PointLight> m_PointLights;
 			std::vector<UniformBuffer> m_UniformBuffers;
-			std::vector<Shader> m_Shaders;
 			std::vector<VulkanMaterial> m_LoadedMaterials;
 
 
