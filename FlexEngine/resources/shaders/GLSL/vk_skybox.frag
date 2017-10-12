@@ -4,11 +4,10 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 // Updated once per object
-layout (binding = 1) uniform UBOInstance
+layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
-	bool useCubemapTexture;
-} uboInstance;
+} uboDynamic;
 
 layout (binding = 2) uniform samplerCube cubemap;
 
@@ -18,12 +17,5 @@ layout (location = 0) out vec4 fragmentColor;
 
 void main()
 {
-	if (uboInstance.useCubemapTexture)
-	{
-		fragmentColor = texture(cubemap, ex_TexCoord);
-	}
-	else
-	{
-		fragmentColor = vec4(0, 0, 0, 0);
-	}
+	fragmentColor = texture(cubemap, ex_TexCoord);
 }

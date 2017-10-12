@@ -74,7 +74,7 @@ namespace flex
 		struct DirectionalLight
 		{
 			glm::vec4 direction;
-			
+
 			glm::vec4 color = glm::vec4(1.0f);
 
 			glm::uint enabled = 1;
@@ -130,29 +130,29 @@ namespace flex
 
 			bool enableNormalFrameBufferSampler = false;
 			glm::uint normalFrameBufferSamplerID;
-			
+
 			bool enableDiffuseSpecularFrameBufferSampler = false;
 			glm::uint diffuseSpecularFrameBufferSamplerID;
 
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
-			glm::vec2i generatedIrradianceCubemapSize;
+			glm::uvec2 generatedIrradianceCubemapSize;
 			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 
 			bool enableBRDFLUT = false;
 			bool generateBRDFLUT = false;
-			glm::vec2i generatedBRDFLUTSize;
+			glm::uvec2 generatedBRDFLUTSize;
 			MaterialID brdfLUTSamplerMatID; // The id of the material who has a brdf texture that we want to use (generateBRDFLUT must be false)
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 			bool enableCubemapSampler;
 			bool enableCubemapTrilinearFiltering;
 			bool generateCubemapSampler;
-			glm::vec2i generatedCubemapSize;
+			glm::uvec2 generatedCubemapSize;
 
 			bool generatePrefilteredMap = false;
 			bool enablePrefilteredMap = false;
-			glm::vec2i generatedPrefilteredCubemapSize;
+			glm::uvec2 generatedPrefilteredCubemapSize;
 			MaterialID prefilterMapSamplerMatID;
 
 			// PBR Constant colors
@@ -190,7 +190,7 @@ namespace flex
 
 			bool generateCubemapSampler = false;   // Cubemap is enabled 
 			bool enableCubemapSampler = false;   // Cubemap is enabled 
-			glm::vec2i cubemapSamplerSize;
+			glm::uvec2 cubemapSamplerSize;
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 			// PBR constants
@@ -222,15 +222,15 @@ namespace flex
 
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
-			glm::vec2i irradianceSamplerSize;
-			
+			glm::uvec2 irradianceSamplerSize;
+
 			bool enablePrefilteredMap = false;
 			bool generatePrefilteredMap = false;
-			glm::vec2i prefilteredMapSize;
+			glm::uvec2 prefilteredMapSize;
 
 			bool enableBRDFLUT = false;
 			bool generateBRDFLUT = false;
-			glm::vec2i generatedBRDFLUTSize;
+			glm::uvec2 generatedBRDFLUTSize;
 		};
 
 		// Info that stays consistent across all renderers

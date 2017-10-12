@@ -6,9 +6,7 @@
 struct PointLight 
 {
 	vec4 position;
-
 	vec4 color;
-
 	bool enabled;
 	float padding[3];
 };

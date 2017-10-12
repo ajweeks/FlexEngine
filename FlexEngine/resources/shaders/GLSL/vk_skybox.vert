@@ -16,7 +16,6 @@ layout (binding = 0) uniform UBOConstant
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
-	bool useCubemapTexture;
 } uboDynamic;
 
 layout (location = 0) out vec3 ex_TexCoord;
