@@ -195,8 +195,8 @@ namespace flex
 		light1.position.y = (cos(gameContext.elapsedTime * 0.6f + 1.5f) * 0.4f + 0.6f) * 20.0f;
 
 		Renderer::PointLight& light2 = gameContext.renderer->GetPointLight(m_PointLight2ID);
-		light2.position.z = (cos(gameContext.elapsedTime + glm::pi<float>())) * 30.0f + 15.0f;
-		light2.position.x = (sin(gameContext.elapsedTime + glm::pi<float>())) * 30.0f - 15.0f;
+		light2.position.z = (cos(gameContext.elapsedTime + PI)) * 30.0f + 15.0f;
+		light2.position.x = (sin(gameContext.elapsedTime + PI)) * 30.0f - 15.0f;
 		light2.position.y = (cos(gameContext.elapsedTime * 0.23f + 2.51f) * 0.4f + 0.6f) * 20.0f;
 
 		Renderer::PointLight& light3 = gameContext.renderer->GetPointLight(m_PointLight3ID);

@@ -45,7 +45,7 @@ namespace flex
 			m_Yaw += look.x * m_RotationSpeed;
 			m_Pitch += look.y * m_RotationSpeed;
 
-			float pitchLimit = glm::half_pi<float>() - 0.017f;
+			float pitchLimit = PI - 0.017f;
 			if (m_Pitch > pitchLimit) m_Pitch = pitchLimit;
 			if (m_Pitch < -pitchLimit) m_Pitch = -pitchLimit;
 		}
@@ -182,7 +182,7 @@ namespace flex
 	void FreeCamera::ResetOrientation()
 	{
 		m_Pitch = 0.0f;
-		m_Yaw = glm::half_pi<float>();
+		m_Yaw = PI;
 	}
 
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)

@@ -165,7 +165,7 @@ namespace flex
 		//m_Arisaka->SetUVScale(2.0f, 1.0f);
 		//m_Arisaka->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Arisaka_Type_99_gun_low.fbx", true, true);
 		//m_Arisaka->GetTransform().Translate({ 0, 0, -10.0f });
-		//m_Arisaka->GetTransform().Rotate({ glm::half_pi<float>(), 0, glm::pi<float>() });
+		//m_Arisaka->GetTransform().Rotate({ PI, 0, PI });
 		//AddChild(m_Arisaka);
 
 

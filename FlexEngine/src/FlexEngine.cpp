@@ -193,7 +193,7 @@ namespace flex
 		switch (rendererID)
 		{
 		case RendererID::VULKAN: return "Vulkan";
-		case RendererID::GL: return "Open GL";
+		case RendererID::GL: return "OpenGL";
 		case RendererID::_LAST_ELEMENT:  // Fallthrough
 		default:
 			return "Unknown";

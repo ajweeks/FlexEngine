@@ -560,10 +560,6 @@ namespace flex
 			glm::uint meridianCount = 5;
 
 			assert(parallelCount > 0 && meridianCount > 0);
-
-			const float PI = glm::pi<float>();
-			const float TWO_PI = glm::two_pi<float>();
-
 			for (glm::uint j = 0; j < parallelCount - 1; ++j)
 			{
 				float polar = PI * float(j + 1) / (float)parallelCount;

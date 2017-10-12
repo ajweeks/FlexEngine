@@ -62,6 +62,12 @@ inline void SafeDelete(T &pObjectToDelete)
 #include <glm/glm.hpp>
 #pragma warning(pop)
 
+#define PI (glm::pi<float>())
+#define TWO_PI (glm::two_pi<float>())
+#define PI_DIV_TWO (glm::half_pi<float>())
+#define PI_DIV_FOUR (glm::quarter_pi<float>())
+#define THREE_OVER_TWO_PI (glm::three_over_two_pi<float>())
+
 namespace flex
 {
 	static const std::string RESOURCE_LOCATION = "FlexEngine/resources/";
