@@ -18,6 +18,10 @@ namespace flex
 		{
 			GLFWimage result = {};
 
+			std::string fileName = filePath;
+			StripLeadingDirectories(fileName);
+			Logger::LogInfo("Loading texture " + fileName);
+
 			int channels;
 			unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, STBI_rgb);
 
@@ -137,7 +141,7 @@ namespace flex
 			glBindTexture(GL_TEXTURE_2D, textureID);
 			CheckGLErrorMessages();
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, image.width, image.height, 0, GL_RGB, GL_FLOAT, image.pixels);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, image.width, image.height, 0, GL_RGBA, GL_FLOAT, image.pixels);
 			CheckGLErrorMessages();
 			if (generateMipMaps)
 			{
@@ -246,7 +250,13 @@ namespace flex
 
 			GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 			CheckGLErrorMessages();
-			
+
+			std::string vertFileName = shader.shader.vertexShaderFilePath;
+			StripLeadingDirectories(vertFileName);
+			std::string fragFileName = shader.shader.fragmentShaderFilePath;
+			StripLeadingDirectories(fragFileName);
+			Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+
 			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode))
 			{
 				Logger::LogError("Could not find vertex shader " + shader.shader.name);

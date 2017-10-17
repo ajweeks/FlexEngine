@@ -385,6 +385,11 @@ namespace flex
 				}
 			}
 
+			if (createInfo->generateHDRCubemapSampler)
+			{
+				GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedHDRCubemapSize.x, createInfo->generatedHDRCubemapSize.y, false, createInfo->enableCubemapTrilinearFiltering);
+			}
+
 			if (m_Shaders[mat.material.shaderID].shader.needCubemapSampler)
 			{
 				// TODO: Save location for binding later?
@@ -688,7 +693,7 @@ namespace flex
 
 			// TODO: Make this a togglable bool param for the shader (or roughness param)
 			// Visualize prefiltered map as skybox:
-			m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
+			//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
 
 			glUseProgram(0);
 			glBindVertexArray(0);
@@ -1000,6 +1005,8 @@ namespace flex
 			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
 
 			CheckGLErrorMessages();
+
+			Logger::LogInfo("Ready!\n");
 		}
 
 		void GLRenderer::GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
