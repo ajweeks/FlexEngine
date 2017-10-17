@@ -249,30 +249,7 @@ namespace flex
 			CreateGraphicsPipeline(&deferredPipelineCreateInfo);
 
 			VulkanShader* deferredCombineShader = &m_Shaders[deferredCombineShaderID];
-			// TODO: Move to function
-			{
-				deferredCombineShader->uniformBuffer.constantData.size = deferredCombineShader->shader.constantBufferUniforms.CalculateSize(m_PointLights.size(), sizeof(Material::PushConstantBlock));
-				if (deferredCombineShader->uniformBuffer.constantData.size > 0)
-				{
-					deferredCombineShader->uniformBuffer.constantData.data = (float*)malloc(deferredCombineShader->uniformBuffer.constantData.size);
-					assert(deferredCombineShader->uniformBuffer.constantData.data);
-
-					PrepareUniformBuffer(&deferredCombineShader->uniformBuffer.constantBuffer, deferredCombineShader->uniformBuffer.constantData.size,
-						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-				}
-
-				deferredCombineShader->uniformBuffer.dynamicData.size = deferredCombineShader->shader.dynamicBufferUniforms.CalculateSize(m_PointLights.size(), sizeof(Material::PushConstantBlock));
-				if (deferredCombineShader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
-				{
-					const size_t dynamicBufferSize = AllocateUniformBuffer(
-						deferredCombineShader->uniformBuffer.dynamicData.size * m_RenderObjects.size(), (void**)&deferredCombineShader->uniformBuffer.dynamicData.data);
-					if (dynamicBufferSize > 0)
-					{
-						PrepareUniformBuffer(&deferredCombineShader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
-							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-					}
-				}
-			}
+			CreateUniformBuffers(deferredCombineShader, sizeof(Material::PushConstantBlock));
 
 			// Offscreen descriptor set
 			DescriptorSetCreateInfo offscreenDescriptorSetCreateInfo = {};
@@ -458,33 +435,6 @@ namespace flex
 			descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
 			
-			// Descriptor Pool
-			//std::array<VkDescriptorPoolSize, 1> poolSizes = {};
-			//poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			//poolSizes[0].descriptorCount = 1;
-			//
-			//VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-			//descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			//descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
-			//descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-			//descriptorPoolCreateInfo.maxSets = 2;
-			//VkDescriptorPool descriptorPool;
-			//VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
-			
-			// Descriptor sets
-			//VkDescriptorSet descriptorSet;
-			//VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
-			//descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			//descriptorSetAllocateInfo.descriptorPool = descriptorPool;
-			//descriptorSetAllocateInfo.pSetLayouts = &descriptorsetlayout;
-			//descriptorSetAllocateInfo.descriptorSetCount = 1;
-			//VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
-			//
-			//VkDescriptorImageInfo descriptorImageInfo = {};
-			//descriptorImageInfo.imageView = offscreen.view;
-			//descriptorImageInfo.imageLayout = m_LoadedMaterials[renderObject->materialID].cubemapTexture->imageLayout;
-			
-
 			ShaderID equirectangularToCubeShaderID;
 			if (!GetShaderID(equirectangularToCubeMatCreateInfo.shaderName, equirectangularToCubeShaderID))
 			{
@@ -499,27 +449,6 @@ namespace flex
 			equirectangularToCubeDescriptorCreateInfo.uniformBuffer = &m_Shaders[equirectangularToCubeShaderID].uniformBuffer;
 			equirectangularToCubeDescriptorCreateInfo.hdrEquirectangularTexture = m_LoadedMaterials[equirectangularToCubeMatID].hdrEquirectangularTexture;
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
-
-			//VkDescriptorBufferInfo dynamicBufferInfo = {};
-			//dynamicBufferInfo.buffer = uniformBuffer.dynamicBuffer.m_Buffer;
-			//dynamicBufferInfo.range = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
-			//
-			//std::array<VkWriteDescriptorSet, 1> writeDescriptorSets = {};
-			//writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			//writeDescriptorSets[0].dstSet = descriptorSet;
-			//writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			//writeDescriptorSets[0].dstBinding = 0;
-			//writeDescriptorSets[0].pImageInfo = &m_LoadedMaterials[equirectangularToCubeMatID].hdrEquirectangularTexture->imageInfoDescriptor;
-			//writeDescriptorSets[0].descriptorCount = 1;
-			//vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
-
-			// Pipeline layout
-			//struct PushBlock {
-			//	glm::mat4 mvp;
-			//	// Sampling deltas
-			//	float deltaPhi = (2.0f * float(PI)) / 180.0f;
-			//	float deltaTheta = (0.5f * float(PI)) / 64.0f;
-			//} pushBlock;
 
 			VkPipelineLayout pipelinelayout;
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -791,7 +720,6 @@ namespace flex
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
-			//vkDestroyDescriptorPool(m_VulkanDevice->m_LogicalDevice, descriptorPool, nullptr);
 			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorsetlayout, nullptr);
 			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
@@ -971,16 +899,8 @@ namespace flex
 			writeDescriptorSet.descriptorCount = 1;
 			vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, 1, &writeDescriptorSet, 0, nullptr);
 
-			// Pipeline layout
-			//struct PushBlock {
-			//	glm::mat4 mvp;
-			//	// Sampling deltas
-			//	float deltaPhi = (2.0f * float(PI)) / 180.0f;
-			//	float deltaTheta = (0.5f * float(PI)) / 64.0f;
-			//} pushBlock;
-
 			VkPipelineLayout pipelinelayout;
-			std::array<VkPushConstantRange, 1> pushConstantRanges;
+			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
@@ -1262,6 +1182,8 @@ namespace flex
 
 		void VulkanRenderer::GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			const uint32_t dim = m_LoadedMaterials[renderObject->materialID].material.prefilteredMapSize.x;
 			const uint32_t numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
@@ -1399,73 +1321,6 @@ namespace flex
 				Logger::LogError("Failed to compile fragment shader located at: " + m_Shaders[prefilterShaderID].shader.fragmentShaderFilePath);
 			}
 
-			// Descriptors
-			//std::array<VkDescriptorSetLayoutBinding, 2> setLayoutBindings = {};
-			//setLayoutBindings[0].binding = 0;
-			//setLayoutBindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			//setLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			//setLayoutBindings[0].descriptorCount = 1;
-			//setLayoutBindings[1].binding = 1;
-			//setLayoutBindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			//setLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			//setLayoutBindings[1].descriptorCount = 1;
-			//
-			//VkDescriptorSetLayoutCreateInfo descriptorsetlayoutCreateInfo = {};
-			//descriptorsetlayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			//descriptorsetlayoutCreateInfo.pBindings = setLayoutBindings.data();
-			//descriptorsetlayoutCreateInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
-			//
-			//VkDescriptorSetLayout descriptorsetlayout;
-			//VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorsetlayoutCreateInfo, nullptr, &descriptorsetlayout));
-
-			
-			// TODO: Update descriptor set??
-			
-			//// Descriptor Pool
-			//std::array<VkDescriptorPoolSize, 2> poolSizes = {};
-			//poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			//poolSizes[0].descriptorCount = 1;
-			//poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			//poolSizes[1].descriptorCount = 1;
-			//
-			//VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-			//descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			//descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-			//descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
-			//descriptorPoolCreateInfo.maxSets = 2;
-			//
-			//VkDescriptorPool descriptorpool;
-			//VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorpool));
-			
-			//// Descriptor sets
-			//VkDescriptorSet descriptorSet;
-			//VkDescriptorSetAllocateInfo allocInfo = {};
-			//allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			//allocInfo.descriptorPool = descriptorpool;
-			//allocInfo.descriptorSetCount = 1;
-			//allocInfo.pSetLayouts = &descriptorsetlayout;
-			//
-			//VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &allocInfo, &descriptorSet));
-			//
-			//UniformBuffer& uniformBuffer = m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID].uniformBuffer;
-			//VkDescriptorBufferInfo dynamicBufferInfo = {};
-			//dynamicBufferInfo.buffer = uniformBuffer.dynamicBuffer.m_Buffer;
-			//dynamicBufferInfo.range = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
-			//
-			//std::array<VkWriteDescriptorSet, 2> writeDescriptorSets = {};
-			//writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			//writeDescriptorSets[0].dstSet = descriptorSet;
-			//writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			//writeDescriptorSets[0].dstBinding = 0;
-			//writeDescriptorSets[0].pBufferInfo = &dynamicBufferInfo;
-			//writeDescriptorSets[0].descriptorCount = 1;
-			//writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			//writeDescriptorSets[1].dstSet = descriptorSet;
-			//writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			//writeDescriptorSets[1].dstBinding = 1;
-			//writeDescriptorSets[1].pImageInfo = &m_LoadedMaterials[renderObject->materialID].prefilterTexture->imageInfoDescriptor;
-			//writeDescriptorSets[1].descriptorCount = 1;
-			//vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
 			CreateUniformBuffers(&m_Shaders[prefilterShaderID], sizeof(Material::PushConstantBlock));
 
 			VkDescriptorSet descriptorSet;
@@ -1476,13 +1331,6 @@ namespace flex
 			equirectangularToCubeDescriptorCreateInfo.uniformBuffer = &m_Shaders[prefilterShaderID].uniformBuffer; 
 			equirectangularToCubeDescriptorCreateInfo.cubemapTexture = m_LoadedMaterials[renderObject->materialID].cubemapTexture;
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
-
-
-			struct PushBlock {
-				glm::mat4 mvp;
-				float roughness;
-				uint32_t numSamples = 32u;
-			} pushBlock;
 			
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].offset = 0;
@@ -1589,7 +1437,6 @@ namespace flex
 			pipelineCreateInfo.pStages = shaderStages.data();
 			pipelineCreateInfo.pVertexInputState = &vertexInputState;
 			pipelineCreateInfo.renderPass = renderpass;
-
 
 			shaderStages[0] = {};
 			shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1740,14 +1587,11 @@ namespace flex
 
 			FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-			// todo: cleanup
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderpass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
-			//vkDestroyDescriptorPool(m_VulkanDevice->m_LogicalDevice, descriptorpool, nullptr);
-			//vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorsetlayout, nullptr);
 			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
@@ -2005,8 +1849,6 @@ namespace flex
 
 			vkQueueWaitIdle(m_GraphicsQueue);
 
-
-
 			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderpass, nullptr);
@@ -2191,8 +2033,8 @@ namespace flex
 
 			if (mat.material.generateBRDFLUT)
 			{
-				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedBRDFLUTSize.x))) + 1;
-				CreateVulkanTexture_Empty(createInfo->generatedBRDFLUTSize.x, createInfo->generatedBRDFLUTSize.y, VK_FORMAT_R16G16_SFLOAT, mipLevels, &mat.brdfLUT);
+				//const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedBRDFLUTSize.x))) + 1;
+				CreateVulkanTexture_Empty(createInfo->generatedBRDFLUTSize.x, createInfo->generatedBRDFLUTSize.y, VK_FORMAT_R16G16_SFLOAT, 1, &mat.brdfLUT);
 				m_LoadedTextures.push_back(mat.brdfLUT);
 			}
 
@@ -5564,11 +5406,11 @@ namespace flex
 				size_t moveInBytes;
 			};
 			UniformInfo uniformInfos[] = {
-				{ "view", (void*)&view, 64, 16 },
-				{ "viewInv", (void*)&viewInv, 64, 16 },
-				{ "projection", (void*)&projection, 64, 16 },
-				{ "viewProjection", (void*)&viewProjection, 64, 16 },
-				{ "camPos", (void*)&camPos, 16, 4 },
+				{ "view", (void*)&view, sizeof(glm::mat4), 16 },
+				{ "viewInv", (void*)&viewInv, sizeof(glm::mat4), 16 },
+				{ "projection", (void*)&projection, sizeof(glm::mat4), 16 },
+				{ "viewProjection", (void*)&viewProjection, sizeof(glm::mat4), 16 },
+				{ "camPos", (void*)&camPos, sizeof(glm::vec4), 4 },
 				{ "dirLight", (void*)&m_DirectionalLight, sizeof(m_DirectionalLight), sizeof(m_DirectionalLight) / sizeof(float) },
 				{ "pointLights", (void*)pointLightsDataStart, pointLightsSize, pointLightsMoveInBytes },
 			};
@@ -5624,6 +5466,7 @@ namespace flex
 			glm::uint enableCubemapSampler = material->material.enableCubemapSampler;
 			glm::uint enableIrradianceSampler = material->material.enableIrradianceSampler;
 
+			// TODO: Roll into array?
 			if (uniformOverrides)
 			{
 				if (uniformOverrides->overridenUniforms.HasUniform("model"))

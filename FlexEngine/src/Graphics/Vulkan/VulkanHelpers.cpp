@@ -150,7 +150,9 @@ namespace flex
 
 		UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device) :
 			constantBuffer(device),
-			dynamicBuffer(device)
+			constantData{},
+			dynamicBuffer(device),
+			dynamicData{}
 		{
 		}
 
@@ -506,12 +508,10 @@ namespace flex
 		{
 			switch (cullFace)
 			{
-				// TODO: THis is swapped for a test!!
-			case Renderer::CullFace::BACK: return VK_CULL_MODE_FRONT_BIT; 
-			case Renderer::CullFace::FRONT: return VK_CULL_MODE_BACK_BIT;
-			case Renderer::CullFace::NONE: // Fallthrough
-			default:
-				return VK_CULL_MODE_NONE;
+			case Renderer::CullFace::BACK: return VK_CULL_MODE_BACK_BIT;
+			case Renderer::CullFace::FRONT: return VK_CULL_MODE_FRONT_BIT;
+			case Renderer::CullFace::NONE: return VK_CULL_MODE_NONE;
+			default: return VK_CULL_MODE_NONE;
 			}
 		}
 
