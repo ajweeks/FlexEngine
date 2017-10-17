@@ -34,6 +34,7 @@ namespace flex
 		};
 
 		void ForceAttributes(VertexAttributes attributes); // Call this before loading to force certain attributes to be filled
+		void IgnoreAttributes(VertexAttributes attributes); // Call this before loading to ignore certain attributes
 
 		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false);
 		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
@@ -55,6 +56,7 @@ namespace flex
 		glm::vec2 m_UVScale;
 
 		VertexAttributes m_ForcedAttributes = (glm::uint)VertexAttribute::NONE;
+		VertexAttributes m_IgnoredAttributes = (glm::uint)VertexAttribute::NONE;
 		VertexBufferData m_VertexBufferData;
 
 		std::vector<glm::uint> m_Indices;

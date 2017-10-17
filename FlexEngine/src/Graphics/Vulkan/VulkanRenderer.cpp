@@ -83,7 +83,7 @@ namespace flex
 			m_VertexIndexBufferPairs[2].useStagingBuffer = false;
 			//m_ImGuiUniformBuffer = new UniformBuffer(m_VulkanDevice->m_LogicalDevice);
 
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, &m_BlankTexture);
+			CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, 1, &m_BlankTexture);
 		}
 
 		VulkanRenderer::~VulkanRenderer()
@@ -274,12 +274,22 @@ namespace flex
 			{
 				if (m_LoadedMaterials[renderObject->materialID].material.generateIrradianceSampler)
 				{
+					// TODO: Specify certain log levels to be able to set a verbosity desired
+					Logger::LogInfo("Generating cubemap from HDRI");
 					GenerateCubemapFromHDR(gameContext, renderObject);
+
+					Logger::LogInfo("Generating irradiance sampler from cubemap");
 					GenerateIrradianceSampler(gameContext, renderObject);
+
+					Logger::LogInfo("Generating prefilter map from cubemap");
 					GeneratePrefilteredCube(gameContext, renderObject);
+
+					Logger::LogInfo("Generating BRDF LUT");
 					GenerateBRDFLUT(gameContext, renderObject);
 				}
 			}
+
+			Logger::LogInfo("Ready!");
 		}
 
 		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject * renderObject)
@@ -299,8 +309,8 @@ namespace flex
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.hdrCubemapSamplerSize.x;
-			// TODO: Generate mip maps if you please
-			const uint32_t numMips = 1;// static_cast<uint32_t>(floor(log2(dim))) + 1;
+			
+			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
 
 			VkAttachmentDescription attDesc = {};
 			// HDR texture color attachment
@@ -366,7 +376,7 @@ namespace flex
 			offscreenImageCreateInfo.extent.width = dim;
 			offscreenImageCreateInfo.extent.height = dim;
 			offscreenImageCreateInfo.extent.depth = 1;
-			offscreenImageCreateInfo.mipLevels = 1;
+			offscreenImageCreateInfo.mipLevels = mipLevels;
 			offscreenImageCreateInfo.arrayLayers = 1;
 			offscreenImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 			offscreenImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -613,7 +623,7 @@ namespace flex
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			subresourceRange.baseMipLevel = 0;
-			subresourceRange.levelCount = numMips;
+			subresourceRange.levelCount = mipLevels;
 			subresourceRange.layerCount = 6;
 
 			// Change image layout for all cubemap faces to transfer destination
@@ -624,7 +634,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
 
-			for (uint32_t mip = 0; mip < numMips; ++mip)
+			for (uint32_t mip = 0; mip < mipLevels; ++mip)
 			{
 				for (uint32_t face = 0; face < 6; ++face)
 				{
@@ -731,7 +741,7 @@ namespace flex
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.irradianceSamplerSize.x;
-			const uint32_t numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
+			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
 
 			// FB, Att, RP, Pipe, etc.
 			VkAttachmentDescription attDesc = {};
@@ -797,7 +807,7 @@ namespace flex
 			offscreenImageCreateInfo.extent.width = dim;
 			offscreenImageCreateInfo.extent.height = dim;
 			offscreenImageCreateInfo.extent.depth = 1;
-			offscreenImageCreateInfo.mipLevels = 1;
+			offscreenImageCreateInfo.mipLevels = mipLevels;
 			offscreenImageCreateInfo.arrayLayers = 1;
 			offscreenImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 			offscreenImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -888,7 +898,6 @@ namespace flex
 			VkDescriptorImageInfo descriptorImageInfo = {};
 			descriptorImageInfo.imageView = offscreen.view;
 			descriptorImageInfo.imageLayout = m_LoadedMaterials[renderObject->materialID].cubemapTexture->imageLayout;
-			descriptorImageInfo.imageView = offscreen.view;
 			
 			VkWriteDescriptorSet writeDescriptorSet = {};
 			writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1066,7 +1075,7 @@ namespace flex
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			subresourceRange.baseMipLevel = 0;
-			subresourceRange.levelCount = numMips;
+			subresourceRange.levelCount = mipLevels;
 			subresourceRange.layerCount = 6;
 
 			// Change image layout for all cubemap faces to transfer destination
@@ -1078,7 +1087,7 @@ namespace flex
 				subresourceRange);
 			m_LoadedMaterials[renderObject->materialID].irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-			for (uint32_t mip = 0; mip < numMips; ++mip) 
+			for (uint32_t mip = 0; mip < mipLevels; ++mip)
 			{
 				for (uint32_t face = 0; face < 6; ++face) 
 				{
@@ -1186,7 +1195,7 @@ namespace flex
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			const uint32_t dim = m_LoadedMaterials[renderObject->materialID].material.prefilteredMapSize.x;
-			const uint32_t numMips = static_cast<uint32_t>(floor(log2(dim))) + 1;
+			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
 
 			VkAttachmentDescription attDesc = {};
 			// Color attachment
@@ -1251,7 +1260,7 @@ namespace flex
 				imageCreateInfo.extent.width = dim;
 				imageCreateInfo.extent.height = dim;
 				imageCreateInfo.extent.depth = 1;
-				imageCreateInfo.mipLevels = 1;
+				imageCreateInfo.mipLevels = mipLevels;
 				imageCreateInfo.arrayLayers = 1;
 				imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -1488,7 +1497,7 @@ namespace flex
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			subresourceRange.baseMipLevel = 0;
-			subresourceRange.levelCount = numMips;
+			subresourceRange.levelCount = mipLevels;
 			subresourceRange.layerCount = 6;
 
 			// Change image layout for all cubemap faces to transfer destination
@@ -1499,7 +1508,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
 
-			for (uint32_t mip = 0; mip < numMips; ++mip) {
+			for (uint32_t mip = 0; mip < mipLevels; ++mip) {
 				//pushBlock.roughness = (float)m / (float)(numMips - 1);
 				for (uint32_t face = 0; face < 6; ++face) {
 					viewport.width = static_cast<float>(dim * std::pow(0.5f, mip));
@@ -1960,19 +1969,20 @@ namespace flex
 				VulkanTexture** texture = nullptr;
 				bool* generate;
 				VkFormat format;
+				glm::uint mipLevels;
 				VulkanTextureCreateFunction createFunction;
 			};
 
 			TextureInfo textureInfos[] =
 			{
-				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.generateDiffuseSampler, VK_FORMAT_R8G8B8A8_UNORM, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.generateNormalSampler, VK_FORMAT_R8G8B8A8_UNORM, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.generateSpecularSampler, VK_FORMAT_R8G8B8A8_UNORM, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.generateAlbedoSampler, VK_FORMAT_R8G8B8A8_UNORM, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.generateMetallicSampler, VK_FORMAT_R8G8B8A8_UNORM, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.generateRoughnessSampler, VK_FORMAT_R8G8B8A8_UNORM, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.generateAOSampler, VK_FORMAT_R8G8B8A8_UNORM, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->hdrEquirectangularTexturePath, &mat.hdrEquirectangularTexture, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, &VulkanRenderer::CreateVulkanTexture_HDR },
+				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.generateDiffuseSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
+				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.generateNormalSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
+				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.generateSpecularSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
+				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.generateAlbedoSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
+				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.generateMetallicSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
+				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.generateRoughnessSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
+				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.generateAOSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
+				{ createInfo->hdrEquirectangularTexturePath, &mat.hdrEquirectangularTexture, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, 1, &VulkanRenderer::CreateVulkanTexture_HDR },
 			};
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
@@ -1990,7 +2000,7 @@ namespace flex
 					if (*textureInfo.texture == nullptr)
 					{
 						// Texture hasn't been loaded yet, load it now
-						std::invoke(textureInfo.createFunction, this, textureInfo.filePath, textureInfo.format, textureInfo.texture);
+						std::invoke(textureInfo.createFunction, this, textureInfo.filePath, textureInfo.format, textureInfo.mipLevels, textureInfo.texture);
 						m_LoadedTextures.push_back(*textureInfo.texture);
 
 						(*textureInfo.texture)->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -2005,7 +2015,8 @@ namespace flex
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
 					// Cubemap is needed, but doesn't need to loaded from file
-					CreateVulkanCubemap_Empty(createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, 4, 1, createInfo->enableCubemapTrilinearFiltering, VK_FORMAT_R8G8B8A8_UNORM, &mat.cubemapTexture);
+					const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
+					CreateVulkanCubemap_Empty(createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, 4, mipLevels, createInfo->enableCubemapTrilinearFiltering, VK_FORMAT_R8G8B8A8_UNORM, &mat.cubemapTexture);
 					m_LoadedTextures.push_back(mat.cubemapTexture);
 				}
 				else
@@ -2014,7 +2025,7 @@ namespace flex
 
 					if (mat.cubemapTexture == nullptr)
 					{
-						CreateVulkanCubemap(createInfo->cubeMapFilePaths, VK_FORMAT_R8G8B8A8_UNORM, &mat.cubemapTexture);
+						CreateVulkanCubemap(createInfo->cubeMapFilePaths, VK_FORMAT_R8G8B8A8_UNORM, &mat.cubemapTexture, true);
 						m_LoadedTextures.push_back(mat.cubemapTexture);
 					}
 				}
@@ -2022,7 +2033,8 @@ namespace flex
 
 			if (createInfo->generateHDRCubemapSampler)
 			{
-				CreateVulkanCubemap_Empty(createInfo->generatedHDRCubemapSize.x, createInfo->generatedHDRCubemapSize.y, 4, 1, false, VK_FORMAT_R32G32B32A32_SFLOAT, &mat.cubemapTexture);
+				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedHDRCubemapSize.x))) + 1;
+				CreateVulkanCubemap_Empty(createInfo->generatedHDRCubemapSize.x, createInfo->generatedHDRCubemapSize.y, 4, mipLevels, false, VK_FORMAT_R32G32B32A32_SFLOAT, &mat.cubemapTexture);
 				m_LoadedTextures.push_back(mat.cubemapTexture);
 			}
 
@@ -2033,7 +2045,6 @@ namespace flex
 
 			if (mat.material.generateBRDFLUT)
 			{
-				//const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedBRDFLUTSize.x))) + 1;
 				CreateVulkanTexture_Empty(createInfo->generatedBRDFLUTSize.x, createInfo->generatedBRDFLUTSize.y, VK_FORMAT_R16G16_SFLOAT, 1, &mat.brdfLUT);
 				m_LoadedTextures.push_back(mat.brdfLUT);
 			}
@@ -2586,7 +2597,7 @@ namespace flex
 
 			CreateImage(textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, &m_ImGuiFontTexture->image, &m_ImGuiFontTexture->imageMemory);
 
-			CreateImageView(m_ImGuiFontTexture->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &m_ImGuiFontTexture->imageView);
+			CreateImageView(m_ImGuiFontTexture->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, m_ImGuiFontTexture->mipLevels, &m_ImGuiFontTexture->imageView);
 
 			// Staging buffers for font data upload
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
@@ -2909,16 +2920,16 @@ namespace flex
 
 			for (uint32_t i = 0; i < m_SwapChainImages.size(); ++i)
 			{
-				CreateImageView(m_SwapChainImages[i], m_SwapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_SwapChainImageViews[i].replace());
+				CreateImageView(m_SwapChainImages[i], m_SwapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1, m_SwapChainImageViews[i].replace());
 			}
 		}
 
 		void VulkanRenderer::CreateTextureImageView(VulkanTexture* texture, VkFormat format) const
 		{
-			CreateImageView(texture->image, format, VK_IMAGE_ASPECT_COLOR_BIT, texture->imageView.replace());
+			CreateImageView(texture->image, format, VK_IMAGE_ASPECT_COLOR_BIT, texture->mipLevels, texture->imageView.replace());
 		}
 
-		void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView* imageView) const
+		void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, glm::uint mipLevels, VkImageView* imageView) const
 		{
 			VkImageViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -2927,7 +2938,7 @@ namespace flex
 			viewInfo.format = format;
 			viewInfo.subresourceRange.aspectMask = aspectFlags;
 			viewInfo.subresourceRange.baseMipLevel = 0;
-			viewInfo.subresourceRange.levelCount = 1;
+			viewInfo.subresourceRange.levelCount = mipLevels;
 			viewInfo.subresourceRange.baseArrayLayer = 0;
 			viewInfo.subresourceRange.layerCount = 1;
 
@@ -3722,9 +3733,9 @@ namespace flex
 			CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				m_DepthImage.replace(), m_DepthImageMemory.replace());
-			CreateImageView(m_DepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, m_DepthImageView.replace());
+			CreateImageView(m_DepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1, m_DepthImageView.replace());
 
-			TransitionImageLayout(m_DepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			TransitionImageLayout(m_DepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 
 
 			// Deferred images
@@ -3764,6 +3775,10 @@ namespace flex
 		void VulkanRenderer::PrepareOffscreenFrameBuffer(Window* window)
 		{
 			// TODO: This should be setting up the m_SwapChainFrameBuffers?
+
+			// Is this needed?
+			SafeDelete(offScreenFrameBuf);
+			offScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
 
 			const glm::vec2i frameBufferSize = window->GetFrameBufferSize();
 			offScreenFrameBuf->width = frameBufferSize.x;
@@ -3924,9 +3939,9 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VkFormat format, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
 		{
-			CreateTextureImage(filePath, format, texture);
+			CreateTextureImage(filePath, format, mipLevels, texture);
 			if (*texture != nullptr)
 			{
 				CreateTextureImageView(*texture, format);
@@ -3936,9 +3951,9 @@ namespace flex
 			(*texture)->filePath = filePath;
 		}
 
-		void VulkanRenderer::CreateVulkanTexture_HDR(const std::string & filePath, VkFormat format, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanTexture_HDR(const std::string & filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
 		{
-			CreateTextureImage_HDR(filePath, format, texture);
+			CreateTextureImage_HDR(filePath, format, mipLevels, texture);
 			if (*texture != nullptr)
 			{
 				CreateTextureImageView(*texture, format);
@@ -3955,8 +3970,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(enableTrilinearFiltering);
 
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
-
-			//glm::uint totalSize = width * height * channels;
+			(*texture)->mipLevels = mipLevels;
 
 			VkMemoryAllocateInfo memAllocInfo = {};
 			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -4033,7 +4047,7 @@ namespace flex
 			(*texture)->height = height;
 		}
 
-		void VulkanRenderer::CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VkFormat format, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VkFormat format, VulkanTexture** texture, bool generateMipMaps) const
 		{
 			int textureWidth = 0;
 			int textureHeight = 0;
@@ -4050,6 +4064,10 @@ namespace flex
 
 			std::vector<Image> images;
 			glm::uint totalSize = 0;
+
+			std::string fileName = filePaths[0];
+			StripLeadingDirectories(fileName);
+			Logger::LogInfo("Loading cubemap textures " + filePaths[0] + " , " + filePaths[1] + " , " + filePaths[2] + " , " + filePaths[3] + " , " + filePaths[4] + " , " + filePaths[5]);
 
 			images.reserve(filePaths.size());
 			for (const std::string& filePath : filePaths)
@@ -4080,9 +4098,10 @@ namespace flex
 				stbi_image_free(image.pixels);
 			}
 
-			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
+			const glm::uint mipLevels = generateMipMaps ? static_cast<uint32_t>(floor(log2(std::min(textureWidth, textureHeight)))) + 1 : 0;
 
-			glm::uint mipLevels = 1;
+			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
+			(*texture)->mipLevels = mipLevels;
 
 			VkMemoryAllocateInfo memAllocInfo = {};
 			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -4250,8 +4269,12 @@ namespace flex
 			(*texture)->height = textureHeight;
 		}
 
-		void VulkanRenderer::CreateTextureImage(const std::string& filePath, VkFormat format, VulkanTexture** texture) const
+		void VulkanRenderer::CreateTextureImage(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
 		{
+			std::string fileName = filePath;
+			StripLeadingDirectories(fileName);
+			Logger::LogInfo("Loading texture " + fileName);
+
 			int textureWidth, textureHeight, textureChannels;
 			unsigned char* pixels = stbi_load(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 
@@ -4263,6 +4286,7 @@ namespace flex
 			}
 
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
+			(*texture)->mipLevels = mipLevels;
 
 			VkDeviceSize imageSize = (VkDeviceSize)(textureWidth * textureHeight * 4);
 
@@ -4282,21 +4306,22 @@ namespace flex
 				VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				(*texture)->image.replace(), (*texture)->imageMemory.replace());
 
-			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 			CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (glm::uint32)textureWidth, (glm::uint32)textureHeight);
-			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 		}
 
-		void VulkanRenderer::CreateTextureImage_Empty(glm::uint width, glm::uint height, VkFormat format, uint32_t mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateTextureImage_Empty(glm::uint width, glm::uint height, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
 		{
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
+			(*texture)->mipLevels = mipLevels;
 
 			CreateImage((glm::uint32)width, (glm::uint32)height, format, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				(*texture)->image.replace(), (*texture)->imageMemory.replace(), 1, mipLevels);
 		}
 
-		void VulkanRenderer::CreateTextureImage_HDR(const std::string& filePath, VkFormat format, VulkanTexture ** texture) const
+		void VulkanRenderer::CreateTextureImage_HDR(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
 		{
 			HDRImage image = {};
 			if (!image.Load(filePath, false))
@@ -4307,10 +4332,11 @@ namespace flex
 			}
 
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
+			(*texture)->mipLevels = mipLevels;
 
 			VkDeviceSize imageSize = CreateImage((glm::uint32)image.width, (glm::uint32)image.height, format, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
-				(*texture)->image.replace(), (*texture)->imageMemory.replace());
+				(*texture)->image.replace(), (*texture)->imageMemory.replace(), 1, mipLevels);
 
 			const int numChannels = 4;
 			VkDeviceSize calculatedImageSize = (VkDeviceSize)(image.width * image.height * numChannels * sizeof(float));
@@ -4327,9 +4353,9 @@ namespace flex
 
 			image.Free();
 
-			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 			CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (glm::uint32)image.width, (glm::uint32)image.height);
-			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 		}
 
 		// TODO: Remove unused function:
@@ -4699,7 +4725,7 @@ namespace flex
 			throw std::runtime_error("failed to find any suitable memory type!");
 		}
 
-		void VulkanRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const
+		void VulkanRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, glm::uint mipLevels) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -4726,7 +4752,7 @@ namespace flex
 			}
 
 			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = 1;
+			barrier.subresourceRange.levelCount = mipLevels;
 			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 
@@ -5534,6 +5560,7 @@ namespace flex
 			if (updateMVP)
 			{
 				modelViewProjection = projection * view * model;
+				modelInvTranspose = glm::transpose(glm::inverse(model));
 			}
 
 			glm::uint offset = renderID * uniformBuffer.dynamicData.size;
@@ -5776,6 +5803,12 @@ namespace flex
 			const size_t shaderCount = m_Shaders.size();
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
+				std::string vertFileName = m_Shaders[i].shader.vertexShaderFilePath;
+				StripLeadingDirectories(vertFileName);
+				std::string fragFileName = m_Shaders[i].shader.fragmentShaderFilePath;
+				StripLeadingDirectories(fragFileName);
+				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+
 				if (!ReadFile(m_Shaders[i].shader.vertexShaderFilePath, m_Shaders[i].shader.vertexShaderCode))
 				{
 					Logger::LogError("Could not find vertex shader " + m_Shaders[i].shader.name);

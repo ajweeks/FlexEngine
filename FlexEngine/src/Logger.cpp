@@ -6,7 +6,7 @@
 
 namespace flex
 {
-	void Logger::Log(const std::string& message, LogLevel logLevel)
+	void Logger::Log(const std::string& message, LogLevel logLevel, bool newline)
 	{
 		switch (logLevel)
 		{
@@ -28,10 +28,11 @@ namespace flex
 		} break;
 		}
 
-		std::cout << message << std::endl;
+		std::cout << message;
+		if (newline) std::cout << std::endl;
 	}
 
-	void Logger::Log(const std::wstring& message, LogLevel logLevel)
+	void Logger::Log(const std::wstring& message, LogLevel logLevel, bool newline)
 	{
 		switch (logLevel)
 		{
@@ -53,36 +54,37 @@ namespace flex
 		} break;
 		}
 
-		std::wcout << message << std::endl;
+		std::wcout << message;
+		if (newline) std::wcout << std::endl;
 	}
 
-	void Logger::LogInfo(const std::string& message)
+	void Logger::LogInfo(const std::string& message, bool newline)
 	{
-		Log(message, LogLevel::LOG_INFO);
+		Log(message, LogLevel::LOG_INFO, newline);
 	}
 
-	void Logger::LogWarning(const std::string& message)
+	void Logger::LogWarning(const std::string& message, bool newline)
 	{
-		Log(message, LogLevel::LOG_WARNING);
+		Log(message, LogLevel::LOG_WARNING, newline);
 	}
 
-	void Logger::LogError(const std::string& message)
+	void Logger::LogError(const std::string& message, bool newline)
 	{
-		Log(message, LogLevel::LOG_ERROR);
+		Log(message, LogLevel::LOG_ERROR, newline);
 	}
 
-	void Logger::LogInfo(const std::wstring& message)
+	void Logger::LogInfo(const std::wstring& message, bool newline)
 	{
-		Log(message, LogLevel::LOG_INFO);
+		Log(message, LogLevel::LOG_INFO, newline);
 	}
 
-	void Logger::LogWarning(const std::wstring& message)
+	void Logger::LogWarning(const std::wstring& message, bool newline)
 	{
-		Log(message, LogLevel::LOG_WARNING);
+		Log(message, LogLevel::LOG_WARNING, newline);
 	}
 
-	void Logger::LogError(const std::wstring& message)
+	void Logger::LogError(const std::wstring& message, bool newline)
 	{
-		Log(message, LogLevel::LOG_ERROR);
+		Log(message, LogLevel::LOG_ERROR, newline);
 	}
 } // namespace flex

@@ -115,6 +115,7 @@ namespace flex
 			glm::uint width;
 			glm::uint height;
 			std::string filePath;
+			glm::uint mipLevels = 1;
 		};
 
 		void SetImageLayout(

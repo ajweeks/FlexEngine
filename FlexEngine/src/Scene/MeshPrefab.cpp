@@ -44,7 +44,12 @@ namespace flex
 
 	void MeshPrefab::ForceAttributes(VertexAttributes attributes)
 	{
-		m_ForcedAttributes = attributes;
+		m_ForcedAttributes |= attributes;
+	}
+
+	void MeshPrefab::IgnoreAttributes(VertexAttributes attributes)
+	{
+		m_IgnoredAttributes |= attributes;
 	}
 
 	// TODO: Add option to force certain components (Bitangents, UVs, ...)
@@ -53,6 +58,10 @@ namespace flex
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
 		Assimp::Importer importer;
+
+		std::string fileName = filepath;
+		StripLeadingDirectories(fileName);
+		Logger::LogInfo("Loading mesh " + fileName);
 
 		const aiScene* pScene = importer.ReadFile(filepath,
 			aiProcess_FindInvalidData |

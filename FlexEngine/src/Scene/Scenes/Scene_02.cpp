@@ -44,10 +44,6 @@ namespace flex
 		Renderer::MaterialCreateInfo skyboxHDRMatInfo = {};
 		skyboxHDRMatInfo.name = "HDR Skybox";
 		skyboxHDRMatInfo.shaderName = "background";
-		//skyboxHDRMatInfo.enableCubemapSampler = true;
-		//skyboxHDRMatInfo.generateCubemapSampler = true;
-		//skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
-		//skyboxHDRMatInfo.enableCubemapTrilinearFiltering = true;
 		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
 		skyboxHDRMatInfo.enableHDRCubemapSampler = true;
 		skyboxHDRMatInfo.generatedHDRCubemapSize = { 512, 512 };
@@ -122,10 +118,6 @@ namespace flex
 		//brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
 		//const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
 
-		m_Skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
-		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(gameContext, m_Skybox);
-
 		//Renderer::MaterialCreateInfo pbrMatInfo = {};
 		//pbrMatInfo.name = "PBR";
 		//pbrMatInfo.shaderName = "pbr";
@@ -145,11 +137,17 @@ namespace flex
 		//const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
 
-		//n_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
-		//n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", false, false, false, //true);
-		//AddChild(gameContext, n_Cerberus);
-		//n_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
-		//n_Cerberus->GetTransform().Translate({ 0, 10.0f, 0.0f });
+		m_Skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
+		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+		AddChild(gameContext, m_Skybox);
+
+
+		n_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
+		n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", false, false, false, true);
+		AddChild(gameContext, n_Cerberus);
+		n_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
+		n_Cerberus->GetTransform().Translate({ 0, 10.0f, 0.0f });
+
 
 		const int sphereCountX = 8;
 		const int sphereCountY = 2;
@@ -181,7 +179,6 @@ namespace flex
 			const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 			
 			m_Spheres[i] = new MeshPrefab(pbrMatID, "Sphere " + iStr);
-			m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT); // Force white
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
 			AddChild(gameContext, m_Spheres[i]);
@@ -193,8 +190,6 @@ namespace flex
 		//m_Arisaka->GetTransform().Translate({ 0, 0, -10.0f });
 		//m_Arisaka->GetTransform().Rotate({ PI, 0, PI });
 		//AddChild(m_Arisaka);
-
-
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
@@ -209,8 +204,6 @@ namespace flex
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
-
 		//n_Cerberus->GetTransform().Rotate({ 0, gameContext.elapsedTime * 0.00075f, 0 });
-
 	}
 } // namespace flex

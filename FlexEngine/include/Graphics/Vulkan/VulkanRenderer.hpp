@@ -66,7 +66,7 @@ namespace flex
 			virtual void ImGui_ReleaseRenderObjects() override;
 
 		private:
-			typedef void (VulkanRenderer::*VulkanTextureCreateFunction)(const std::string&, VkFormat, VulkanTexture**) const;
+			typedef void (VulkanRenderer::*VulkanTextureCreateFunction)(const std::string&, VkFormat, glm::uint, VulkanTexture**) const;
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
 			{
@@ -124,16 +124,16 @@ namespace flex
 
 			void CreateVulkanTexture_Empty(glm::uint width, glm::uint height, VkFormat format, uint32_t mipLevels, VulkanTexture** texture) const;
 			// Expects *texture == nullptr
-			void CreateVulkanTexture(const std::string& filePath, VkFormat format, VulkanTexture** texture)const;
-			void CreateVulkanTexture_HDR(const std::string& filePath, VkFormat format, VulkanTexture** texture)const;
+			void CreateVulkanTexture(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture)const;
+			void CreateVulkanTexture_HDR(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture)const;
 
 			void CreateVulkanCubemap_Empty(glm::uint width, glm::uint height, glm::uint channels, glm::uint mipLevels, bool enableTrilinearFiltering, VkFormat format, VulkanTexture** texture) const;
 			// Expects *texture == nullptr
-			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VkFormat format, VulkanTexture** texture) const;
+			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VkFormat format, VulkanTexture** texture, bool generateMipMaps) const;
 
-			void CreateTextureImage(const std::string& filePath, VkFormat format, VulkanTexture** texture) const;
-			void CreateTextureImage_Empty(glm::uint width, glm::uint height, VkFormat format, uint32_t mipLevels, VulkanTexture** texture) const;
-			void CreateTextureImage_HDR(const std::string& filePath, VkFormat format, VulkanTexture** texture) const;
+			void CreateTextureImage(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const;
+			void CreateTextureImage_Empty(glm::uint width, glm::uint height, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const;
+			void CreateTextureImage_HDR(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const;
 			void CreateTextureImageView(VulkanTexture* texture, VkFormat format) const;
 			void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK) const;
 
@@ -178,7 +178,7 @@ namespace flex
 
 			void CreateSemaphores();
 
-			void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView* imageView) const;
+			void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, glm::uint mipLevels, VkImageView* imageView) const;
 			void RecreateSwapChain(Window* window);
 			VkCommandBuffer BeginSingleTimeCommands() const;
 			void EndSingleTimeCommands(VkCommandBuffer commandBuffer) const;
@@ -187,7 +187,7 @@ namespace flex
 			VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 			bool HasStencilComponent(VkFormat format) const;
 			uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
-			void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+			void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, glm::uint mipLevels) const;
 			void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) const;
 			void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const;
 			void CreateAndAllocateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer) const;

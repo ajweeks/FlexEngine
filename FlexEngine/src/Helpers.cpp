@@ -45,6 +45,21 @@ namespace flex
 		return true;
 	}
 
+	void StripLeadingDirectories(std::string& filePath)
+	{
+		size_t finalSlash = filePath.rfind('/');
+		if (finalSlash == std::string::npos) finalSlash = filePath.rfind('\\');
+
+		if (finalSlash == std::string::npos)
+		{
+			return; // There are no directories to remove
+		}
+		else
+		{
+			filePath = filePath.substr(finalSlash + 1);
+		}
+	}
+
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
 	{
 		return a * (1.0f - t) + b * t;
@@ -129,6 +144,10 @@ namespace flex
 	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)
 	{
 		filePath = hdrFilePath;
+
+		std::string fileName = hdrFilePath;
+		StripLeadingDirectories(fileName);
+		Logger::LogInfo("Loading HDR texture " + fileName);
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 		int channelCount;

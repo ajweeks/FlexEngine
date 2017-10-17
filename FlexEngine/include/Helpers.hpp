@@ -30,6 +30,9 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec);
 
+	// Removes all content before the final '/' or '\' 
+	void StripLeadingDirectories(std::string& filePath);
+
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t);
 
 	template<class T>
