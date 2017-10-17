@@ -11,7 +11,6 @@ out mat3 ex_TBN;
 out vec2 ex_TexCoord;
 
 uniform mat4 model;
-uniform mat4 modelInvTranspose;
 uniform mat4 viewProjection;
 
 void main()
@@ -21,11 +20,10 @@ void main()
 	
 	ex_TexCoord = in_TexCoord;
 
-   	// Convert normal to model-space and prevent non-uniform scale issues
 	ex_TBN = mat3(
-		normalize(mat3(modelInvTranspose) * in_Tangent), 
-		normalize(mat3(modelInvTranspose) * in_Bitangent), 
-		normalize(mat3(modelInvTranspose) * in_Normal));
+		normalize(mat3(model) * in_Tangent), 
+		normalize(mat3(model) * in_Bitangent), 
+		normalize(mat3(model) * in_Normal));
 
     gl_Position = viewProjection * worldPos;
 }

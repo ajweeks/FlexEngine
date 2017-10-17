@@ -1461,7 +1461,6 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAlbedo");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("albedoSampler");

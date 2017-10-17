@@ -33,7 +33,6 @@ layout (binding = 0) uniform UBOConstant
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
-	mat4 modelInvTranspose;
 
 	// Constant values to use when not using samplers
 	vec4 constAlbedo;
@@ -57,11 +56,10 @@ void main()
 	
 	ex_TexCoord = in_TexCoord;
 
-   	// Convert normal to model-space and prevent non-uniform scale issues
 	ex_TBN = mat3(
-		normalize(mat3(uboDynamic.modelInvTranspose) * in_Tangent), 
-		normalize(mat3(uboDynamic.modelInvTranspose) * in_Bitangent), 
-		normalize(mat3(uboDynamic.modelInvTranspose) * in_Normal));
+		normalize(mat3(uboDynamic.model) * in_Tangent), 
+		normalize(mat3(uboDynamic.model) * in_Bitangent), 
+		normalize(mat3(uboDynamic.model) * in_Normal));
 
     gl_Position = uboConstant.viewProjection * worldPos;
     
