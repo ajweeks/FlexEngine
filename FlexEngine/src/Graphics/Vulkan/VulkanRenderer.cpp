@@ -289,7 +289,7 @@ namespace flex
 				}
 			}
 
-			Logger::LogInfo("Ready!");
+			Logger::LogInfo("Ready!\n");
 		}
 
 		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject * renderObject)
@@ -429,8 +429,6 @@ namespace flex
 			FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 
 
-			// TODO: Use CreateDescriptorSet function here?
-
 			// Descriptors
 			std::array<VkDescriptorSetLayoutBinding, 1> setLayoutBindings = {};
 			setLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -533,7 +531,6 @@ namespace flex
 			vertexInputAttribute.location = 0;
 			vertexInputAttribute.offset = 0;
 
-			// TODO: use render object's vertex input state
 			VkPipelineVertexInputStateCreateInfo vertexInputState = {};
 			vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 			vertexInputState.vertexBindingDescriptionCount = 1;
@@ -585,7 +582,6 @@ namespace flex
 			shaderStages[1].module = fragShaderModule;
 			shaderStages[1].pName = "main";
 
-			// TODO: use newly created material's graphics pipeline?  (does it have one?)
 			VkPipeline pipeline;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
@@ -925,14 +921,14 @@ namespace flex
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
 			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // TODO: renderObject->topology?
+			inputAssemblyState.topology = renderObject->topology;
 			inputAssemblyState.flags = 0;
 			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
 
 			VkPipelineRasterizationStateCreateInfo rasterizationState = {};
 			rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-			rasterizationState.cullMode = VK_CULL_MODE_NONE; // TODO: renderObject->cullMode ?
+			rasterizationState.cullMode = VK_CULL_MODE_NONE;
 			rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
 			rasterizationState.depthClampEnable = VK_FALSE;
 			rasterizationState.lineWidth = 1.0f;
@@ -972,7 +968,7 @@ namespace flex
 			// Vertex input state
 			VkVertexInputBindingDescription vertexInputBinding = {};
 			vertexInputBinding.binding = 0;
-			vertexInputBinding.stride = renderObject->vertexBufferData->VertexStride; // Hopefully this is correct
+			vertexInputBinding.stride = renderObject->vertexBufferData->VertexStride;
 			vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			VkVertexInputAttributeDescription vertexInputAttribute = {};
@@ -1049,7 +1045,6 @@ namespace flex
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			// Reuse render pass from example pass
 			renderPassBeginInfo.renderPass = renderpass;
 			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
 			renderPassBeginInfo.renderArea.extent.width = dim;
@@ -1062,7 +1057,7 @@ namespace flex
 			VkViewport viewport = {};
 			viewport.width = (float)dim;
 			viewport.height = (float)dim;
-			viewport.minDepth = 0.0;
+			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
 			VkRect2D scissor = {};
@@ -1359,14 +1354,14 @@ namespace flex
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
 			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;// TODO: renderObject->topology ?
+			inputAssemblyState.topology = renderObject->topology;
 			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
 			inputAssemblyState.flags = 0;
 
 			VkPipelineRasterizationStateCreateInfo rasterizationState = {};
 			rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-			rasterizationState.cullMode = VK_CULL_MODE_NONE;// TODO: renderObject->cullMode ?
+			rasterizationState.cullMode = renderObject->cullMode;
 			rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			rasterizationState.flags = 0;
 			rasterizationState.depthClampEnable = VK_FALSE;
@@ -1715,14 +1710,14 @@ namespace flex
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {};
 			pipelineInputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			pipelineInputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;// TODO: renderObject->topology ?
+			pipelineInputAssemblyStateCreateInfo.topology = renderObject->topology;
 			pipelineInputAssemblyStateCreateInfo.flags = 0;
 			pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
 
 			VkPipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo = {};
 			pipelineRasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			pipelineRasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-			pipelineRasterizationStateCreateInfo.cullMode = VK_CULL_MODE_NONE;// TODO: renderObject->cullMode ?
+			pipelineRasterizationStateCreateInfo.cullMode = VK_CULL_MODE_NONE;
 			pipelineRasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			pipelineRasterizationStateCreateInfo.flags = 0;
 			pipelineRasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
@@ -1837,8 +1832,6 @@ namespace flex
 			VkCommandBuffer cmdBuf = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			// NOTE: No need to update dynamic uniforms here, this shader doesn't have any
-
 			VkViewport viewport = {};
 			viewport.width = (float)dim;
 			viewport.height = (float)dim;
@@ -1854,7 +1847,7 @@ namespace flex
 			vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 			vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 			vkCmdEndRenderPass(cmdBuf);
-			FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true); // TODO: Is this the right queue?
+			FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true); 
 
 			vkQueueWaitIdle(m_GraphicsQueue);
 
@@ -1933,6 +1926,9 @@ namespace flex
 			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
 			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
 
+			mat.material.enableHDRCubemapSampler = createInfo->enableHDRCubemapSampler;
+			mat.material.generateHDRCubemapSampler = createInfo->generateHDRCubemapSampler;
+
 			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
@@ -2010,7 +2006,7 @@ namespace flex
 			}
 
 			// Cubemaps are treated differently than regular textures because they require 6 filepaths
-			if (createInfo->generateCubemapSampler)
+			if (mat.material.generateCubemapSampler)
 			{
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
@@ -2031,7 +2027,7 @@ namespace flex
 				}
 			}
 
-			if (createInfo->generateHDRCubemapSampler)
+			if (mat.material.generateHDRCubemapSampler)
 			{
 				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedHDRCubemapSize.x))) + 1;
 				CreateVulkanCubemap_Empty(createInfo->generatedHDRCubemapSize.x, createInfo->generatedHDRCubemapSize.y, 4, mipLevels, false, VK_FORMAT_R32G32B32A32_SFLOAT, &mat.cubemapTexture);
@@ -2173,8 +2169,7 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			// TODO: Only call this when objects change
-			BuildCommandBuffers(gameContext);
+			BuildCommandBuffers(gameContext); // TODO: Only call this when objects change
 			BuildDeferredCommandBuffer(gameContext); // TODO: Only call this once at startup?
 
 			if (m_SwapChainNeedsRebuilding)
@@ -2413,7 +2408,6 @@ namespace flex
 			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ImGui_PipelineLayout, 0, 1, &m_ImGuiDescriptorSet, 0, nullptr);
 			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ImGui_GraphicsPipeline);
 
-			// TODO: Remove constant
 			ShaderID imGuiShaderID;
 			if (!GetShaderID("imgui", imGuiShaderID))
 			{
@@ -2666,7 +2660,6 @@ namespace flex
 
 		uint32_t VulkanRenderer::ImGui_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits)
 		{
-			// TODO: Merge with existing memory type function
 			VkPhysicalDeviceMemoryProperties prop;
 			vkGetPhysicalDeviceMemoryProperties(m_VulkanDevice->m_PhysicalDevice, &prop);
 			for (uint32_t i = 0; i < prop.memoryTypeCount; ++i)
@@ -4722,7 +4715,7 @@ namespace flex
 				}
 			}
 
-			throw std::runtime_error("failed to find any suitable memory type!");
+			throw std::runtime_error("Failed to find any suitable memory type!");
 		}
 
 		void VulkanRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, glm::uint mipLevels) const
@@ -5723,12 +5716,11 @@ namespace flex
 			// Skybox
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
-			m_Shaders[shaderID].shader.needPushConstantBlock = true; // TODO: Remove in place of needPushConstantBlock uniform?
+			m_Shaders[shaderID].shader.needPushConstantBlock = true;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("cubemapSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("needPushConstantBlock");
 			++shaderID;
 
 			// Equirectangular to cube
@@ -5738,7 +5730,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("hdrEquirectangularSampler");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("needPushConstantBlock");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Irradiance
@@ -5748,7 +5740,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("needPushConstantBlock");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Prefilter
@@ -5760,7 +5752,6 @@ namespace flex
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("uniformBufferDynamic");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("roughness");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("needPushConstantBlock");
 			++shaderID;
 
 			// BRDF
@@ -5778,7 +5769,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("needPushConstantBlock");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Deferred combine (sample gbuffer)

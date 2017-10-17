@@ -71,6 +71,8 @@ namespace flex
 		cerebusMatTexturedInfo.enableAOSampler = true;
 		cerebusMatTexturedInfo.generateAOSampler = true;
 		cerebusMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga";
+		cerebusMatTexturedInfo.enableNormalSampler = true;
+		cerebusMatTexturedInfo.generateNormalSampler = true;
 		cerebusMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
 		cerebusMatTexturedInfo.enableIrradianceSampler = true;
 		cerebusMatTexturedInfo.irradianceSamplerMatID = skyboxHDRMatID;
