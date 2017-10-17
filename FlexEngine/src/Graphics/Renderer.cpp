@@ -35,7 +35,7 @@ namespace flex
 		}
 	}
 
-	glm::uint Renderer::Uniforms::CalculateSize(int pointLightCount, size_t pushConstantBlockSize)
+	glm::uint Renderer::Uniforms::CalculateSize(int pointLightCount)
 	{
 		glm::uint size = 0;
 
@@ -63,8 +63,6 @@ namespace flex
 		if (HasUniform("enableSpecularSampler")) size += sizeof(glm::uint);
 		if (HasUniform("enableCubemapSampler")) size += sizeof(glm::uint);
 		if (HasUniform("enableIrradianceSampler")) size += sizeof(glm::uint);
-		// This isn't needed, right?
-		//if (HasUniform("needPushConstantBlock")) size += pushConstantBlockSize;
 
 		return size;
 	}

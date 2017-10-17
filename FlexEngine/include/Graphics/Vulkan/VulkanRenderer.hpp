@@ -138,7 +138,7 @@ namespace flex
 			void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK) const;
 
 			bool GetShaderID(const std::string shaderName, ShaderID& shaderID);
-			void CreateUniformBuffers(VulkanShader* shader, size_t pushConstantBlockSize);
+			void CreateUniformBuffers(VulkanShader* shader);
 
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);

@@ -249,7 +249,7 @@ namespace flex
 			CreateGraphicsPipeline(&deferredPipelineCreateInfo);
 
 			VulkanShader* deferredCombineShader = &m_Shaders[deferredCombineShaderID];
-			CreateUniformBuffers(deferredCombineShader, sizeof(Material::PushConstantBlock));
+			CreateUniformBuffers(deferredCombineShader);
 
 			// Offscreen descriptor set
 			DescriptorSetCreateInfo offscreenDescriptorSetCreateInfo = {};
@@ -1330,7 +1330,7 @@ namespace flex
 				Logger::LogError("Failed to compile fragment shader located at: " + m_Shaders[prefilterShaderID].shader.fragmentShaderFilePath);
 			}
 
-			CreateUniformBuffers(&m_Shaders[prefilterShaderID], sizeof(Material::PushConstantBlock));
+			CreateUniformBuffers(&m_Shaders[prefilterShaderID]);
 
 			VkDescriptorSet descriptorSet;
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
@@ -2107,14 +2107,14 @@ namespace flex
 			// Create uniform buffers (if not empty)
 			VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 			VulkanShader* shader = &m_Shaders[material->material.shaderID];
-			CreateUniformBuffers(shader, sizeof(material->material.pushConstantBlock));
+			CreateUniformBuffers(shader);
 
 			return renderID;
 		}
 
-		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader, size_t pushConstantBlockSize)
+		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
 		{
-			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSize(m_PointLights.size(), pushConstantBlockSize);
+			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSize(m_PointLights.size());
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
 				if (shader->uniformBuffer.constantData.data) free(shader->uniformBuffer.constantData.data);
@@ -2126,7 +2126,7 @@ namespace flex
 					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			}
 
-			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSize(m_PointLights.size(), pushConstantBlockSize);
+			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSize(m_PointLights.size());
 			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
 				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
