@@ -128,7 +128,7 @@ namespace flex
 		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
 		{
 			HDRImage image = {};
-			if (!image.Load(filePath))
+			if (!image.Load(filePath, true))
 			{
 				return false;
 			}

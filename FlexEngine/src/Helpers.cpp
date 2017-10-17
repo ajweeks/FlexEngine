@@ -126,11 +126,11 @@ namespace flex
 		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor4FromClipboard();
 	}
 
-	bool HDRImage::Load(const std::string& hdrFilePath)
+	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)
 	{
 		filePath = hdrFilePath;
 
-		stbi_set_flip_vertically_on_load(true);
+		stbi_set_flip_vertically_on_load(flipVertically);
 		int channelCount;
 		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
 

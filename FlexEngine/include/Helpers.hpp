@@ -17,7 +17,7 @@ namespace flex
 {
 	struct HDRImage
 	{
-		bool Load(const std::string& hdrFilePath);
+		bool Load(const std::string& hdrFilePath, bool flipVertically);
 		void Free();
 
 		int width;

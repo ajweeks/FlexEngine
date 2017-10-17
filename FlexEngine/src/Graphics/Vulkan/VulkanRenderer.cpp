@@ -4457,7 +4457,7 @@ namespace flex
 		void VulkanRenderer::CreateTextureImage_HDR(const std::string& filePath, VkFormat format, VulkanTexture ** texture) const
 		{
 			HDRImage image = {};
-			if (!image.Load(filePath))
+			if (!image.Load(filePath, false))
 			{
 				const char* failureReasonStr = stbi_failure_reason();
 				Logger::LogError("Couldn't load HDR image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
