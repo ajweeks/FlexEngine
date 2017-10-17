@@ -278,7 +278,7 @@ namespace flex
 			VkImageView* diffuseSpecularFrameBufferView = nullptr;
 		};
 
-		struct PushConstBlock
+		struct ImGui_PushConstBlock
 		{
 			glm::vec2 scale;
 			glm::vec2 translate;

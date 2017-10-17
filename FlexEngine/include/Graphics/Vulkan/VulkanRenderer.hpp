@@ -312,7 +312,7 @@ namespace flex
 			VkDescriptorSet m_ImGuiDescriptorSet = VK_NULL_HANDLE;
 			VulkanTexture* m_ImGuiFontTexture = nullptr;
 
-			PushConstBlock m_ImGuiPushConstBlock;
+			ImGui_PushConstBlock m_ImGuiPushConstBlock;
 
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;

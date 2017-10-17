@@ -2585,7 +2585,7 @@ namespace flex
 			// UI scale and translate via push constants
 			m_ImGuiPushConstBlock.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
 			m_ImGuiPushConstBlock.translate = glm::vec2(-1.0f);
-			vkCmdPushConstants(commandBuffer, m_ImGui_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstBlock), &m_ImGuiPushConstBlock);
+			vkCmdPushConstants(commandBuffer, m_ImGui_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGui_PushConstBlock), &m_ImGuiPushConstBlock);
 
 			// Render commands
 			ImDrawData* imDrawData = ImGui::GetDrawData();
