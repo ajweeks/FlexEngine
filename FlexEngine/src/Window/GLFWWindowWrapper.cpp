@@ -17,6 +17,10 @@ namespace flex
 
 		if (moveConsoleToExtraMonitor)
 		{
+			HWND hWnd = GetConsoleWindow();
+			int consoleWidth = 700;
+			int consoleHeight = 800;
+
 			// The following four variables store the bounding rectangle of all monitors
 			int virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
 			//int virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
@@ -29,8 +33,6 @@ namespace flex
 			// If another monitor is present, move the console to it
 			if (virtualScreenWidth > monitorWidth)
 			{
-				int consoleWidth = (int)(700);
-				int consoleHeight = (int)(800);
 				int newX;
 				int newY = 10;
 				
@@ -45,14 +47,19 @@ namespace flex
 					newX = virtualScreenWidth - monitorWidth + 10;
 				}
 
-				HWND hWnd = GetConsoleWindow();
-
 				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
 				
 				// Call again to set size correctly (based on other monitor's DPI)
 				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
 			}
+			else // There's only one monitor, move the console to the top left corner
+			{
+				// A negative value is needed to line the console up to the left side of my monitor
+				MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
+			}
 		}
+
+		// TODO: Move window to previous location/size (save to disk)
 	}
 
 	GLFWWindowWrapper::~GLFWWindowWrapper()

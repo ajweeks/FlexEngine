@@ -84,6 +84,7 @@ namespace flex
 		struct UniformBuffer
 		{
 			UniformBuffer(const VDeleter<VkDevice>& device);
+			~UniformBuffer();
 
 			VulkanBuffer constantBuffer;
 			VulkanBuffer dynamicBuffer;
@@ -103,12 +104,14 @@ namespace flex
 		struct VulkanTexture
 		{
 			VulkanTexture(const VDeleter<VkDevice>& device);
+			void UpdateImageDescriptor();
 
 			VDeleter<VkImage> image;
 			VkImageLayout imageLayout;
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
+			VkDescriptorImageInfo imageInfoDescriptor;
 			glm::uint width;
 			glm::uint height;
 			std::string filePath;
@@ -125,7 +128,25 @@ namespace flex
 
 		void SetImageLayout(
 			VkCommandBuffer cmdbuffer,
+			VulkanTexture* texture,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkImageSubresourceRange subresourceRange,
+			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+		void SetImageLayout(
+			VkCommandBuffer cmdbuffer,
 			VkImage image,
+			VkImageAspectFlags aspectMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+		void SetImageLayout(
+			VkCommandBuffer cmdbuffer,
+			VulkanTexture* texture,
 			VkImageAspectFlags aspectMask,
 			VkImageLayout oldImageLayout,
 			VkImageLayout newImageLayout,
@@ -142,6 +163,15 @@ namespace flex
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
+		struct VulkanShader
+		{
+			VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device);
+
+			Renderer::Shader shader;
+
+			UniformBuffer uniformBuffer;
+		};
+
 		struct VulkanMaterial
 		{
 			Renderer::Material material; // More info is stored in the generic material struct
@@ -154,13 +184,18 @@ namespace flex
 			VulkanTexture* metallicTexture = nullptr;
 			VulkanTexture* roughnessTexture = nullptr;
 			VulkanTexture* aoTexture = nullptr;
+			VulkanTexture* hdrEquirectangularTexture = nullptr;
+			VulkanTexture* irradianceTexture = nullptr;
+			VulkanTexture* brdfLUT = nullptr;
+			VulkanTexture* prefilterTexture = nullptr;
+			VkFramebuffer hdrCubemapFramebuffer;
 
 			glm::uint descriptorSetLayoutIndex;
 		};
 
-		struct RenderObject
+		struct VulkanRenderObject
 		{
-			RenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
+			VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
 
 			VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -220,9 +255,10 @@ namespace flex
 
 		struct DescriptorSetCreateInfo
 		{
-			glm::uint descriptorSetLayoutIndex;
-			glm::uint uniformBufferIndex;
-			VkDescriptorSet* descriptorSet;
+			VkDescriptorSet* descriptorSet = nullptr;
+			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
+			ShaderID shaderID;
+			UniformBuffer* uniformBuffer = nullptr;
 
 			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
@@ -231,7 +267,11 @@ namespace flex
 			VulkanTexture* albedoTexture = nullptr;
 			VulkanTexture* metallicTexture = nullptr;
 			VulkanTexture* roughnessTexture = nullptr;
+			VulkanTexture* hdrEquirectangularTexture = nullptr;
 			VulkanTexture* aoTexture = nullptr;
+			VulkanTexture* irradianceTexture = nullptr;
+			VulkanTexture* brdfLUT = nullptr;
+			VulkanTexture* prefilterTexture = nullptr;
 
 			VkImageView* positionFrameBufferView = nullptr;
 			VkImageView* normalFrameBufferView = nullptr;
@@ -244,7 +284,7 @@ namespace flex
 			glm::vec2 translate;
 		};
 
-		typedef std::vector<RenderObject*>::iterator RenderObjectIter;
+		typedef std::vector<VulkanRenderObject*>::iterator RenderObjectIter;
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(Renderer::CullFace cullFace);

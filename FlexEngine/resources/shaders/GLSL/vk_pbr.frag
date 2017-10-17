@@ -6,9 +6,7 @@
 struct PointLight 
 {
 	vec4 position;
-
 	vec4 color;
-
 	bool enabled;
 };
 #define NUMBER_POINT_LIGHTS 4
@@ -34,11 +32,12 @@ layout (binding = 1) uniform UBODynamic
 	float constAO;
 
 	// PBR samplers
-	bool useAlbedoSampler;
-	bool useMetallicSampler;
-	bool useRoughnessSampler;
-	bool useAOSampler;
-	bool useNormalSampler;
+	bool enableAlbedoSampler;
+	bool enableMetallicSampler;
+	bool enableRoughnessSampler;
+	bool enableAOSampler;
+	bool enableNormalSampler;
+	bool enableIrradianceSampler;
 } uboDynamic;
 
 layout (binding = 2) uniform sampler2D albedoSampler;
@@ -46,6 +45,9 @@ layout (binding = 3) uniform sampler2D metallicSampler;
 layout (binding = 4) uniform sampler2D roughnessSampler;
 layout (binding = 5) uniform sampler2D aoSampler;
 layout (binding = 6) uniform sampler2D normalSampler;
+layout (binding = 7) uniform sampler2D brdfLUT;
+layout (binding = 8) uniform samplerCube irradianceSampler;
+layout (binding = 9) uniform samplerCube prefilterMap;
 
 layout (location = 0) in vec3 ex_WorldPos;
 layout (location = 1) in vec2 ex_TexCoord;
@@ -58,6 +60,11 @@ const float PI = 3.14159265359;
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
 	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
@@ -97,18 +104,26 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 void main() 
 {
-	vec3 albedo = uboDynamic.useAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(uboDynamic.constAlbedo);
-	float metallic = uboDynamic.useMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
-	float roughness = uboDynamic.useRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
-	float ao = uboDynamic.useAOSampler ? texture(aoSampler, ex_TexCoord).r : uboDynamic.constAO;
+	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(uboDynamic.constAlbedo);
+	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
+	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
+	float ao = uboDynamic.enableAOSampler ? texture(aoSampler, ex_TexCoord).r : uboDynamic.constAO;
 
-	vec3 Normal = uboDynamic.useNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
+	vec3 Normal = uboDynamic.enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : 
+						ex_TBN[2];
 
 	vec3 N = normalize(Normal);
 	vec3 V = normalize(uboConstant.camPos.xyz - ex_WorldPos);
+	vec3 R = reflect(-V, N);
+
+	// Visualize normal map:
+	//fragColor = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;
 
 	// Visualize normals:
 	//fragColor = vec4(N, 1); return;
+
+	// Visualize tangents:
+	//fragColor = vec4(vec3(ex_TBN[0]), 1); return;
 
 	// Visualize texCoords:
 	//fragColor = vec4(ex_TexCoord, 0, 1); return;
@@ -146,7 +161,31 @@ void main()
 		Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 	}
 
-	vec3 ambient = vec3(0.03) * albedo * ao;
+	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+
+	vec3 ambient;
+	if (uboDynamic.enableIrradianceSampler)
+	{
+		// Diffse ambient term (IBL)
+		vec3 kS = F;
+	    vec3 kD = 1.0 - kS;
+	    kD *= 1.0 - metallic;	  
+	    vec3 irradiance = texture(irradianceSampler, N).rgb;
+	    vec3 diffuse = irradiance * albedo;
+
+		// Specular ambient term (IBL)
+		const float MAX_REFLECTION_LOAD = 5.0;
+		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+	    ambient = (kD * diffuse + specular) * ao;
+	}
+	else
+	{
+		ambient = vec3(0.03) * albedo * ao;
+	}
+
 	vec3 color = ambient + Lo;
 
 	// TODO: Once we add post processing that requires HDR don't do this calculation here:

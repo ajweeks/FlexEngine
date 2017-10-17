@@ -17,7 +17,7 @@
 namespace flex
 {
 	FlexEngine::FlexEngine() :
-		m_ClearColor(0.08f, 0.13f, 0.2f),
+		m_ClearColor(1.0f, 0.0, 1.0f),
 		m_VSyncEnabled(false)
 	{
 		RendererID preferredInitialRenderer = RendererID::VULKAN;

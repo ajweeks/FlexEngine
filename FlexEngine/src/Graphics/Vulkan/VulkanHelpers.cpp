@@ -154,15 +154,38 @@ namespace flex
 		{
 		}
 
+		UniformBuffer::~UniformBuffer()
+		{
+			if (constantData.data)
+			{
+				free(constantData.data);
+				constantData.data = nullptr;
+			}
+
+			if (dynamicData.data)
+			{
+				_aligned_free(dynamicData.data);
+				dynamicData.data = nullptr;
+			}
+		}
+
 		VulkanTexture::VulkanTexture(const VDeleter<VkDevice>& device) :
 			image(device, vkDestroyImage),
 			imageMemory(device, vkFreeMemory),
 			imageView(device, vkDestroyImageView),
 			sampler(device, vkDestroySampler)
 		{
+			UpdateImageDescriptor();
 		}
 
-		RenderObject::RenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
+		void VulkanTexture::UpdateImageDescriptor()
+		{
+			imageInfoDescriptor.imageLayout = imageLayout;
+			imageInfoDescriptor.imageView = imageView;
+			imageInfoDescriptor.sampler = sampler;
+		}
+
+		VulkanRenderObject::VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
 			pipelineLayout(device, vkDestroyPipelineLayout),
 			graphicsPipeline(device, vkDestroyPipeline),
 			renderID(renderID)
@@ -226,6 +249,8 @@ namespace flex
 			// Create an image barrier object
 			VkImageMemoryBarrier imageMemoryBarrier = {};
 			imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			imageMemoryBarrier.oldLayout = oldImageLayout;
 			imageMemoryBarrier.newLayout = newImageLayout;
 			imageMemoryBarrier.image = image;
@@ -279,6 +304,9 @@ namespace flex
 				// Make sure any shader reads from the image have been finished
 				imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
 				break;
+			default:
+				// Other source layouts aren't handled (yet)
+				break;
 			}
 
 			// Target layouts (new)
@@ -293,15 +321,13 @@ namespace flex
 
 			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 				// Image will be used as a transfer source
-				// Make sure any reads from and writes to the image have been finished
-				imageMemoryBarrier.srcAccessMask = imageMemoryBarrier.srcAccessMask | VK_ACCESS_TRANSFER_READ_BIT;
+				// Make sure any reads from the image have been finished
 				imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 				break;
 
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 				// Image will be used as a color attachment
 				// Make sure any writes to the color buffer have been finished
-				imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 				imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 				break;
 
@@ -320,6 +346,9 @@ namespace flex
 				}
 				imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 				break;
+			default:
+				// Other source layouts aren't handled (yet)
+				break;
 			}
 
 			// Put barrier inside setup command buffer
@@ -331,6 +360,12 @@ namespace flex
 				0, nullptr,
 				0, nullptr,
 				1, &imageMemoryBarrier);
+		}
+
+		void SetImageLayout(VkCommandBuffer cmdbuffer, VulkanTexture* texture, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkImageSubresourceRange subresourceRange, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
+		{
+			SetImageLayout(cmdbuffer, texture->image, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
+			texture->imageLayout = newImageLayout;
 		}
 
 		// Fixed sub resource on first mip level and layer
@@ -349,6 +384,12 @@ namespace flex
 			subresourceRange.levelCount = 1;
 			subresourceRange.layerCount = 1;
 			SetImageLayout(cmdbuffer, image, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
+		}
+
+		void SetImageLayout(VkCommandBuffer cmdbuffer, VulkanTexture* texture, VkImageAspectFlags aspectMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
+		{
+			SetImageLayout(cmdbuffer, texture->image, aspectMask, oldImageLayout, newImageLayout, srcStageMask, dstStageMask);
+			texture->imageLayout = newImageLayout;
 		}
 
 		void CreateAttachment(
@@ -465,8 +506,9 @@ namespace flex
 		{
 			switch (cullFace)
 			{
-			case Renderer::CullFace::BACK: return VK_CULL_MODE_BACK_BIT;
-			case Renderer::CullFace::FRONT: return VK_CULL_MODE_FRONT_BIT;
+				// TODO: THis is swapped for a test!!
+			case Renderer::CullFace::BACK: return VK_CULL_MODE_FRONT_BIT; 
+			case Renderer::CullFace::FRONT: return VK_CULL_MODE_BACK_BIT;
 			case Renderer::CullFace::NONE: // Fallthrough
 			default:
 				return VK_CULL_MODE_NONE;
@@ -509,6 +551,12 @@ namespace flex
 			albedo(device),
 			frameBuffer(device, vkDestroyFramebuffer),
 			renderPass(device, vkDestroyRenderPass)
+		{
+		}
+		
+		VulkanShader::VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device) :
+			uniformBuffer(device),
+			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
 		{
 		}
 } // namespace vk

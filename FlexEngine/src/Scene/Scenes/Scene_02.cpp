@@ -23,10 +23,13 @@ namespace flex
 		Renderer::MaterialCreateInfo skyboxHDRMatInfo = {};
 		skyboxHDRMatInfo.name = "HDR Skybox";
 		skyboxHDRMatInfo.shaderName = "background";
-		skyboxHDRMatInfo.enableCubemapSampler = true;
-		skyboxHDRMatInfo.generateCubemapSampler = true;
-		skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
-		skyboxHDRMatInfo.enableCubemapTrilinearFiltering = true;
+		//skyboxHDRMatInfo.enableCubemapSampler = true;
+		//skyboxHDRMatInfo.generateCubemapSampler = true;
+		//skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
+		//skyboxHDRMatInfo.enableCubemapTrilinearFiltering = true;
+		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
+		skyboxHDRMatInfo.enableHDRCubemapSampler = true;
+		skyboxHDRMatInfo.generatedHDRCubemapSize = { 512, 512 };
 		skyboxHDRMatInfo.generateIrradianceSampler = true;
 		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
 		skyboxHDRMatInfo.generatePrefilteredMap = true;
@@ -122,44 +125,46 @@ namespace flex
 
 
 		//n_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
-		//n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", false, false, false, //true);
+		//n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", false, false, false, true);
 		//AddChild(gameContext, n_Cerberus);
+		//n_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
+		//n_Cerberus->GetTransform().Translate({ 0, 10.0f, 0.0f });
 
-		const int sphereCountX = 8;
-		const int sphereCountY = 2;
-		const float sphereSpacing = 2.5f;
-		const glm::vec3 offset = glm::vec3(-sphereCountX / 2 * sphereSpacing, -sphereCountY / 2 * sphereSpacing, 0.0f);
-		const size_t sphereCount = sphereCountX * sphereCountY;
-		m_Spheres.resize(sphereCount);
-		for (size_t i = 0; i < sphereCount; ++i)
-		{
-			int x = i % sphereCountX;
-			int y = int(i / sphereCountX);
-		
-			const std::string iStr = std::to_string(i);
-		
-			Renderer::MaterialCreateInfo pbrMatInfo = {};
-			pbrMatInfo.shaderName = "pbr";
-			pbrMatInfo.name = "PBR simple " + iStr;
-			//pbrMatInfo.constAlbedo = glm::vec3(0.175f, 0.12f, 0.8f);
-			pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.75f, 0.14f);
-			pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
-			pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
-			pbrMatInfo.constAO = 1.0f;
-			pbrMatInfo.enableIrradianceSampler = true;
-			pbrMatInfo.irradianceSamplerMatID = skyboxHDRMatID;
-			pbrMatInfo.enablePrefilteredMap = true;
-			pbrMatInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
-			pbrMatInfo.enableBRDFLUT = true;
-			pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
-			const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-			
-			m_Spheres[i] = new MeshPrefab(pbrMatID, "Sphere " + iStr);
-			m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT); // Force white
-			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
-			AddChild(gameContext, m_Spheres[i]);
-		}
+		//const int sphereCountX = 8;
+		//const int sphereCountY = 2;
+		//const float sphereSpacing = 2.5f;
+		//const glm::vec3 offset = glm::vec3(-sphereCountX / 2 * sphereSpacing, -sphereCountY / 2 * sphereSpacing, 0.0f);
+		//const size_t sphereCount = sphereCountX * sphereCountY;
+		//m_Spheres.resize(sphereCount);
+		//for (size_t i = 0; i < sphereCount; ++i)
+		//{
+		//	int x = i % sphereCountX;
+		//	int y = int(i / sphereCountX);
+		//
+		//	const std::string iStr = std::to_string(i);
+		//
+		//	Renderer::MaterialCreateInfo pbrMatInfo = {};
+		//	pbrMatInfo.shaderName = "pbr";
+		//	pbrMatInfo.name = "PBR simple " + iStr;
+		//	//pbrMatInfo.constAlbedo = glm::vec3(0.175f, 0.12f, 0.8f);
+		//	pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.75f, 0.14f);
+		//	pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
+		//	pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
+		//	pbrMatInfo.constAO = 1.0f;
+		//	pbrMatInfo.enableIrradianceSampler = true;
+		//	pbrMatInfo.irradianceSamplerMatID = skyboxHDRMatID;
+		//	pbrMatInfo.enablePrefilteredMap = true;
+		//	pbrMatInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
+		//	pbrMatInfo.enableBRDFLUT = true;
+		//	pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
+		//	const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+		//	
+		//	m_Spheres[i] = new MeshPrefab(pbrMatID, "Sphere " + iStr);
+		//	m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT); // Force white
+		//	m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
+		//	m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
+		//	AddChild(gameContext, m_Spheres[i]);
+		//}
 		
 		//m_Arisaka = new MeshPrefab(arisakaMatID, "Arisaka Type 99");
 		//m_Arisaka->SetUVScale(2.0f, 1.0f);
@@ -203,6 +208,8 @@ namespace flex
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+
+		//n_Cerberus->GetTransform().Rotate({ 0, gameContext.elapsedTime * 0.00075f, 0 });
+
 	}
 } // namespace flex

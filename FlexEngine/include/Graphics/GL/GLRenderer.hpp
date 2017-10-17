@@ -61,6 +61,7 @@ namespace flex
 			virtual void ImGui_ReleaseRenderObjects() override;
 
 		private:
+			// TODO: Either use these functions or remove them
 			void SetFloat(ShaderID shaderID, const std::string& valName, float val);
 			void SetUInt(ShaderID shaderID, const std::string& valName, glm::uint val);
 			void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec);
@@ -68,6 +69,12 @@ namespace flex
 			void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec);
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
+			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject);
+			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
+			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
+			void GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject);
+			
+			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
@@ -99,6 +106,8 @@ namespace flex
 
 			bool m_VSyncEnabled;
 
+			std::vector<GLShader> m_Shaders;
+
 			// TODO: Clean up (make more dynamic)
 			glm::uint viewProjectionUBO;
 			glm::uint viewProjectionCombinedUBO;
@@ -116,7 +125,10 @@ namespace flex
 			glm::uint m_CaptureFBO;
 			glm::uint m_CaptureRBO;
 
-			glm::vec2i m_EquirectangularCubemapCaptureSize;
+			glm::mat4 m_CaptureProjection;
+			std::array<glm::mat4, 6> m_CaptureViews;
+
+			glm::vec2i m_HDREquirectangularCubemapCaptureSize;
 
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;

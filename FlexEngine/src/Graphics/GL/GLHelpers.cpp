@@ -235,7 +235,7 @@ namespace flex
 			return true;
 		}
 
-		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader)
+		bool LoadGLShaders(glm::uint program, GLShader& shader)
 		{
 			CheckGLErrorMessages();
 
@@ -247,16 +247,23 @@ namespace flex
 			GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 			CheckGLErrorMessages();
 			
-			shader.vertexShaderCode = ReadFile(shader.vertexShaderFilePath);
-			shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
-			shader.fragmentShaderCode = ReadFile(shader.fragmentShaderFilePath);
-			shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
+			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode))
+			{
+				Logger::LogError("Could not find vertex shader " + shader.shader.name);
+			}
+			shader.shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
+
+			if (!ReadFile(shader.shader.fragmentShaderFilePath, shader.shader.fragmentShaderCode))
+			{
+				Logger::LogError("Could not find fragment shader " + shader.shader.name);
+			}
+			shader.shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
 
 			GLint result = GL_FALSE;
 			int infoLogLength;
 
 			// Compile vertex shader
-			char const* vertexSourcePointer = shader.vertexShaderCode.data(); // TODO: Test
+			char const* vertexSourcePointer = shader.shader.vertexShaderCode.data(); // TODO: Test
 			glShaderSource(vertexShaderID, 1, &vertexSourcePointer, NULL);
 			glCompileShader(vertexShaderID);
 
@@ -272,7 +279,7 @@ namespace flex
 			}
 
 			// Compile Fragment Shader
-			char const* fragmentSourcePointer = shader.fragmentShaderCode.data();
+			char const* fragmentSourcePointer = shader.shader.fragmentShaderCode.data();
 			glShaderSource(fragmentShaderID, 1, &fragmentSourcePointer, NULL);
 			glCompileShader(fragmentShaderID);
 
@@ -386,7 +393,12 @@ namespace flex
 			info = {};
 			info.name = name;
 		}
-	} // namespace gl
+
+		GLShader::GLShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :
+			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
+		{
+		}
+} // namespace gl
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL

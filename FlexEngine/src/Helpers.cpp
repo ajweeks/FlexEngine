@@ -24,26 +24,25 @@ namespace flex
 		return stream.str();
 	}
 
-	std::vector<char> ReadFile(const std::string& filePath)
+	bool ReadFile(const std::string& filePath, std::vector<char>& vec)
 	{
 		std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
 
 		if (!file)
 		{
 			Logger::LogError("Unable to read file " + filePath);
-			return{};
+			return false;
 		}
 
 		std::streampos length = file.tellg();
 
-		std::vector<char> chars;
-		chars.resize((size_t)length);
+		vec.resize((size_t)length);
 
 		file.seekg(0, std::ios::beg);
-		file.read(chars.data(), length);
+		file.read(vec.data(), length);
 		file.close();
 
-		return chars;
+		return true;
 	}
 
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
@@ -133,7 +132,7 @@ namespace flex
 
 		stbi_set_flip_vertically_on_load(true);
 		int channelCount;
-		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, 0);
+		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
 
 		if (!pixels)
 		{

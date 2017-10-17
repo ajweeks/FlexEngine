@@ -17,6 +17,16 @@
 @ glslangvalidator -V vk_pbr.vert -o spv/vk_pbr_vert.spv
 @ glslangvalidator -V vk_pbr.frag -o spv/vk_pbr_frag.spv
 
+@ glslangvalidator -V vk_background.vert -o spv/vk_background_vert.spv
+@ glslangvalidator -V vk_background.frag -o spv/vk_background_frag.spv
+
+@ glslangvalidator -V vk_brdf.vert -o spv/vk_brdf_vert.spv
+@ glslangvalidator -V vk_brdf.frag -o spv/vk_brdf_frag.spv
+
+@ glslangvalidator -V vk_irradiance.frag -o spv/vk_irradiance_frag.spv
+@ glslangvalidator -V vk_equirectangular_to_cube.frag -o spv/vk_equirectangular_to_cube_frag.spv
+@ glslangvalidator -V vk_prefilter.frag -o spv/vk_prefilter_frag.spv
+
 @REM ImGui
 @ glslangValidator -V vk_imgui.frag -o spv/vk_imgui_frag.spv
 @ glslangValidator -V vk_imgui.vert -o spv/vk_imgui_vert.spv

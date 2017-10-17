@@ -106,7 +106,7 @@ namespace flex
 			std::string metallicTexturePath;
 			std::string roughnessTexturePath;
 			std::string aoTexturePath;
-			std::string equirectangularTexturePath;
+			std::string hdrEquirectangularTexturePath;
 
 			bool generateDiffuseSampler = false;
 			bool enableDiffuseSampler;
@@ -122,8 +122,10 @@ namespace flex
 			bool enableRoughnessSampler;
 			bool generateAOSampler = false;
 			bool enableAOSampler;
-			bool generateEquirectangularSampler = false;
-			bool enableEquirectangularSampler;
+			bool generateHDREquirectangularSampler = false;
+			bool enableHDREquirectangularSampler;
+			bool generateHDRCubemapSampler = false;
+			bool enableHDRCubemapSampler;
 
 			bool enablePositionFrameBufferSampler = false;
 			glm::uint positionFrameBufferSamplerID;
@@ -154,6 +156,8 @@ namespace flex
 			bool enablePrefilteredMap = false;
 			glm::uvec2 generatedPrefilteredCubemapSize;
 			MaterialID prefilterMapSamplerMatID;
+			
+			glm::uvec2 generatedHDRCubemapSize;
 
 			// PBR Constant colors
 			glm::vec3 constAlbedo;
@@ -192,6 +196,8 @@ namespace flex
 			bool enableCubemapSampler = false;   // Cubemap is enabled 
 			glm::uvec2 cubemapSamplerSize;
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+			
+			glm::uvec2 hdrCubemapSamplerSize;
 
 			// PBR constants
 			glm::vec4 constAlbedo;
@@ -216,9 +222,12 @@ namespace flex
 			bool enableAOSampler = false;
 			std::string aoTexturePath;
 
-			bool generateEquirectangularSampler = false;
-			bool enableEquirectangularSampler = false;
-			std::string equirectangularTexturePath;
+			bool generateHDREquirectangularSampler = false;
+			bool enableHDREquirectangularSampler = false;
+			std::string hdrEquirectangularTexturePath;
+
+			bool generateHDRCubemapSampler = false;
+			bool enableHDRCubemapSampler = false;
 
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
@@ -231,6 +240,13 @@ namespace flex
 			bool enableBRDFLUT = false;
 			bool generateBRDFLUT = false;
 			glm::uvec2 generatedBRDFLUTSize;
+
+			// TODO: Make this more dynamic!
+			struct PushConstantBlock
+			{
+				glm::mat4 mvp;
+			};
+			PushConstantBlock pushConstantBlock;
 		};
 
 		// Info that stays consistent across all renderers
@@ -300,7 +316,7 @@ namespace flex
 
 			inline bool HasUniform(const std::string& name) const;
 			void AddUniform(const std::string& name, bool value);
-			glm::uint CalculateSize(int pointLightCount);
+			glm::uint CalculateSize(int pointLightCount, size_t pushConstantBlockSize);
 		};
 
 		struct Shader
@@ -309,7 +325,6 @@ namespace flex
 			Shader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
 
 			std::string name;
-			glm::uint program;
 
 			std::string vertexShaderFilePath;
 			std::string fragmentShaderFilePath;
@@ -334,10 +349,11 @@ namespace flex
 			bool needMetallicSampler = false;
 			bool needRoughnessSampler = false;
 			bool needAOSampler = false;
-			bool needEquirectangularSampler = false;
+			bool needHDREquirectangularSampler = false;
 			bool needIrradianceSampler = false;
 			bool needPrefilteredMap = false;
 			bool needBRDFLUT = false;
+			bool needPushConstantBlock = false;
 
 			VertexAttributes vertexAttributes;
 			int numAttachments = 1; // How many output textures the fragment shader has
@@ -390,7 +406,6 @@ namespace flex
 		bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
 	protected:
-		std::vector<Shader> m_Shaders;
 		std::vector<PointLight> m_PointLights;
 		DirectionalLight m_DirectionalLight;
 

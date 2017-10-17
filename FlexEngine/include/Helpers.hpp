@@ -28,7 +28,7 @@ namespace flex
 
 	std::string FloatToString(float f, int precision);
 
-	std::vector<char> ReadFile(const std::string& filePath);
+	bool ReadFile(const std::string& filePath, std::vector<char>& vec);
 
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t);
 

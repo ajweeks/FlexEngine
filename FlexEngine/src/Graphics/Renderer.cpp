@@ -23,7 +23,7 @@ namespace flex
 		types.insert(std::pair<std::string, bool>(name, value));
 	}
 
-	glm::uint Renderer::Uniforms::CalculateSize(int pointLightCount)
+	glm::uint Renderer::Uniforms::CalculateSize(int pointLightCount, size_t pushConstantBlockSize)
 	{
 		glm::uint size = 0;
 
@@ -43,6 +43,7 @@ namespace flex
 		if (HasUniform("constMetallic")) size += sizeof(float);
 		if (HasUniform("enableRoughnessSampler")) size += sizeof(glm::uint);
 		if (HasUniform("constRoughness")) size += sizeof(float);
+		if (HasUniform("roughness")) size += sizeof(float);
 		if (HasUniform("enableAOSampler")) size += sizeof(glm::uint);
 		if (HasUniform("constAO")) size += sizeof(float);
 		if (HasUniform("enableNormalSampler")) size += sizeof(glm::uint);
@@ -50,6 +51,8 @@ namespace flex
 		if (HasUniform("enableSpecularSampler")) size += sizeof(glm::uint);
 		if (HasUniform("enableCubemapSampler")) size += sizeof(glm::uint);
 		if (HasUniform("enableIrradianceSampler")) size += sizeof(glm::uint);
+		// This isn't needed, right?
+		//if (HasUniform("needPushConstantBlock")) size += pushConstantBlockSize;
 
 		return size;
 	}
@@ -63,21 +66,6 @@ namespace flex
 		vertexShaderFilePath(vertexShaderFilePath),
 		fragmentShaderFilePath(fragmentShaderFilePath)
 	{
-	}
-
-	bool Renderer::GetShaderID(const std::string & shaderName, ShaderID & shaderID)
-	{
-		// TODO: Store shaders using sorted data structure?
-		for (size_t i = 0; i < m_Shaders.size(); ++i)
-		{
-			if (m_Shaders[i].name.compare(shaderName) == 0)
-			{
-				shaderID = i;
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 } // namespace flex

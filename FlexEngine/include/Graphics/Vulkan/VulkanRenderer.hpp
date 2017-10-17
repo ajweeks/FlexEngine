@@ -66,6 +66,31 @@ namespace flex
 			virtual void ImGui_ReleaseRenderObjects() override;
 
 		private:
+			typedef void (VulkanRenderer::*VulkanTextureCreateFunction)(const std::string&, VkFormat, VulkanTexture**) const;
+
+			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
+			{
+				Uniforms overridenUniforms; // To override a uniform, add it to this object, then set the overriden value to the respective member
+
+				glm::mat4 projection;
+				glm::mat4 view;
+				glm::mat4 viewInv;
+				glm::mat4 viewProjection;
+				glm::vec4 camPos;
+				glm::mat4 model;
+				glm::mat4 modelInvTranspose;
+				glm::mat4 modelViewProjection;
+				glm::uint enableAlbedoSampler;
+				glm::uint enableMetallicSampler;
+				glm::uint enableRoughnessSampler;
+				glm::uint enableAOSampler;
+				glm::uint enableDiffuseSampler;
+				glm::uint enableNormalSampler;
+				glm::uint enableSpecularSampler;
+				glm::uint enableCubemapSampler;
+				glm::uint enableIrradianceSampler;
+			};
+
 			void ImGui_InitResources();
 			bool ImGui_CreateFontsTexture(VkQueue copyQueue);
 			void ImGui_UpdateBuffers();
@@ -73,8 +98,13 @@ namespace flex
 			void ImGui_InvalidateDeviceObjects();
 			uint32_t ImGui_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits);
 
+			void GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject);
+			void GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject);
+			void GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject);
+			void GenerateBRDFLUT(const GameContext& gameContext, VulkanRenderObject* renderObject);
+
 			RenderID GetFirstAvailableRenderID() const;
-			void InsertNewRenderObject(RenderObject* renderObject);
+			void InsertNewRenderObject(VulkanRenderObject* renderObject);
 			void CreateInstance(const GameContext& gameContext);
 			void SetupDebugCallback();
 			void CreateSurface(Window* window);
@@ -92,22 +122,35 @@ namespace flex
 			void CreateFramebuffers();
 			void PrepareOffscreenFrameBuffer(Window* window);
 
+			void CreateVulkanTexture_Empty(glm::uint width, glm::uint height, VkFormat format, uint32_t mipLevels, VulkanTexture** texture) const;
 			// Expects *texture == nullptr
-			void CreateVulkanTexture(const std::string& filePath, VulkanTexture** texture)const;
+			void CreateVulkanTexture(const std::string& filePath, VkFormat format, VulkanTexture** texture)const;
+			void CreateVulkanTexture_HDR(const std::string& filePath, VkFormat format, VulkanTexture** texture)const;
+
+			void CreateVulkanCubemap_Empty(glm::uint width, glm::uint height, glm::uint channels, glm::uint mipLevels, bool enableTrilinearFiltering, VkFormat format, VulkanTexture** texture) const;
 			// Expects *texture == nullptr
-			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VulkanTexture** texture) const;
-			void CreateTextureImage(const std::string& filePath, VulkanTexture** texture) const;
-			void CreateTextureImageView(VulkanTexture* texture) const;
-			void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f) const;
+			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VkFormat format, VulkanTexture** texture) const;
+
+			void CreateTextureImage(const std::string& filePath, VkFormat format, VulkanTexture** texture) const;
+			void CreateTextureImage_Empty(glm::uint width, glm::uint height, VkFormat format, uint32_t mipLevels, VulkanTexture** texture) const;
+			void CreateTextureImage_HDR(const std::string& filePath, VkFormat format, VulkanTexture** texture) const;
+			void CreateTextureImageView(VulkanTexture* texture, VkFormat format) const;
+			void CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy = 16.0f, float minLod = 0.0f, float maxLod = 0.0f, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK) const;
+
+			bool GetShaderID(const std::string shaderName, ShaderID& shaderID);
+			void CreateUniformBuffers(VulkanShader* shader, size_t pushConstantBlockSize);
+
+			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
+			VulkanTexture* GetLoadedTexture(const std::string& filePath);
 
 			// Creates vertex buffers for all render objects
 			void CreateStaticVertexBuffers();
-			
+
 			// Creates vertex buffer for all render objects' verts which use specified shader index
 			// Returns vertex count
 			glm::uint CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, int size);
 			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize);
-			
+
 			// Creates static index buffers for all render objects
 			void CreateStaticIndexBuffers();
 
@@ -116,20 +159,18 @@ namespace flex
 			glm::uint CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
 			void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<glm::uint>& indices);
 
-			void PrepareUniformBuffers();
 			void CreateDescriptorPool();
 			glm::uint AllocateUniformBuffer(glm::uint dynamicDataSize, void** data);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, glm::uint bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
-			void ReleaseUniformBuffers();
 
 			// TODO: Create command buffer class
 			void CreateCommandPool();
 			void CreateCommandBuffers();
 			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin) const;
-			void BuildCommandBuffers();
-			void BuildDeferredCommandBuffer();
-			void RebuildCommandBuffers();
+			void BuildCommandBuffers(const GameContext& gameContext);
+			void BuildDeferredCommandBuffer(const GameContext& gameContext);
+			void RebuildCommandBuffers(const GameContext& gameContext);
 			bool CheckCommandBuffers() const;
 			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free) const;
 			void DestroyCommandBuffers();
@@ -140,7 +181,7 @@ namespace flex
 			void RecreateSwapChain(Window* window);
 			VkCommandBuffer BeginSingleTimeCommands() const;
 			void EndSingleTimeCommands(VkCommandBuffer commandBuffer) const;
-			void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+			VkDeviceSize CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
 				VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory, glm::uint arrayLayers = 1, glm::uint mipLevels = 1, VkImageCreateFlags flags = 0) const;
 			VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 			bool HasStencilComponent(VkFormat format) const;
@@ -162,8 +203,9 @@ namespace flex
 			std::vector<const char*> GetRequiredExtensions() const;
 			bool CheckValidationLayerSupport() const;
 
-			void UpdateConstantUniformBuffers(const GameContext& gameContext);
-			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, const glm::mat4& model);
+			void UpdateConstantUniformBuffers(const GameContext& gameContext, UniformOverrides const * overridenUniforms = nullptr);
+			void UpdateConstantUniformBuffer(const GameContext& gameContext, UniformOverrides const* overridenUniforms, size_t bufferIndex);
+			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, const glm::mat4& modelIn, UniformOverrides const * overridenUniforms = nullptr);
 
 			void LoadDefaultShaderCode();
 
@@ -171,20 +213,19 @@ namespace flex
 				VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix,
 				const char* msg, void* userData);
 
-			RenderObject* GetRenderObject(RenderID renderID);
+			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
-			std::vector<RenderObject*> m_RenderObjects;
-			std::vector<UniformBuffer> m_UniformBuffers;
+			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::vector<VulkanMaterial> m_LoadedMaterials;
 
 
 			FrameBuffer* offScreenFrameBuf = nullptr;
 			VkSampler colorSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
+			//UniformBuffer* m_OffscreenBufferUniformBuffer = nullptr;
 			int m_DeferredQuadVertexBufferIndex;
 
-
-
+			
 			bool m_VSyncEnabled;
 			bool m_SwapChainNeedsRebuilding;
 
@@ -226,9 +267,10 @@ namespace flex
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 
 			std::vector<VkCommandBuffer> m_CommandBuffers;
+			std::vector<VulkanShader> m_Shaders;
 
 			std::vector<VulkanTexture*> m_LoadedTextures;
-			
+
 			VulkanTexture* m_BlankTexture = nullptr;
 
 			// TODO: Use FrameBufferAttachment
@@ -244,6 +286,7 @@ namespace flex
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
+			VkPipelineCache m_PipelineCache;
 
 			VkPipelineLayout m_DeferredPipelineLayout = VK_NULL_HANDLE;
 			VkPipeline m_DeferredPipeline = VK_NULL_HANDLE;
@@ -251,9 +294,12 @@ namespace flex
 			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
 			VertexIndexBufferPair offscreenQuadVertexIndexBufferPair;
 
-			
 			VkClearColorValue m_ClearColor;
 
+			ShaderID m_IGuiShaderID;
+			//UniformBuffer* m_ImGuiUniformBuffer = nullptr;
+
+			static std::array<glm::mat4, 6> m_CaptureViews;
 
 			// ImGui members
 			VkPipelineLayout m_ImGui_PipelineLayout = VK_NULL_HANDLE;

@@ -16,9 +16,7 @@ layout (location = 2) out mat3 ex_TBN;
 struct PointLight 
 {
 	vec4 position;
-
 	vec4 color;
-
 	bool enabled;
 };
 #define NUMBER_POINT_LIGHTS 4
@@ -36,6 +34,20 @@ layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
 	mat4 modelInvTranspose;
+
+	// Constant values to use when not using samplers
+	vec4 constAlbedo;
+	float constMetallic;
+	float constRoughness;
+	float constAO;
+
+	// PBR samplers
+	bool enableAlbedoSampler;
+	bool enableMetallicSampler;
+	bool enableRoughnessSampler;
+	bool enableAOSampler;
+	bool enableNormalSampler;
+	bool enableIrradianceSampler;
 } uboDynamic;
 
 void main()

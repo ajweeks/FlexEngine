@@ -5,18 +5,10 @@
 
 layout (location = 0) in vec3 in_Position;
 
-// Updated once per frame
-layout (binding = 0) uniform UBOConstant
+layout (push_constant) uniform PushConstants
 {
-	mat4 view;
-	mat4 projection;
-} uboConstant;
-
-// Updated once per object
-layout (binding = 1) uniform UBODynamic
-{
-	mat4 model;
-} uboDynamic;
+	layout (offset = 0) mat4 mvp;
+} pushConsts;
 
 layout (location = 0) out vec3 ex_TexCoord;
 
@@ -28,9 +20,7 @@ out gl_PerVertex
 void main() 
 {
 	ex_TexCoord = in_Position;
-	// Truncate translation part of view matrix to center skybox around viewport
-	vec4 pos = uboConstant.projection * mat4(mat3(uboConstant.view)) * 
-	uboDynamic.model * vec4(in_Position, 1.0);
+	vec4 pos = pushConsts.mvp * vec4(in_Position, 1.0);
 	gl_Position = pos.xyww; // Clip coords to NDC to ensure skybox is rendered at far plane
 
 	// Convert from GL coordinates to Vulkan coordinates

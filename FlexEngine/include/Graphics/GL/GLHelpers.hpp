@@ -13,6 +13,15 @@ namespace flex
 {
 	namespace gl
 	{
+		struct GLShader
+		{
+			GLShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
+
+			Renderer::Shader shader;
+
+			glm::uint program;
+		};
+
 		struct GLMaterial
 		{
 			Renderer::Material material; // More info is stored in the generic material struct
@@ -39,7 +48,7 @@ namespace flex
 				int enableRoughnessSampler;
 				int constAO;
 				int enableAOSampler;
-				int equirectangularSampler;
+				int hdrEquirectangularSampler;
 				int enableIrradianceSampler;
 			};
 			UniformIDs uniformIDs;
@@ -133,7 +142,7 @@ namespace flex
 		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths, bool generateMipmap = false);
 		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight, bool generateMipmap = false, bool enableCubemapTrilinearFiltering = false);
 
-		bool LoadGLShaders(glm::uint program, Renderer::Shader& shader);
+		bool LoadGLShaders(glm::uint program, GLShader& shader);
 		bool LinkProgram(glm::uint program);
 
 
