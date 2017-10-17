@@ -174,6 +174,7 @@ namespace flex
 			bool CheckCommandBuffers() const;
 			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free) const;
 			void DestroyCommandBuffers();
+			void BindDescriptorSet(VulkanShader* shader, RenderID renderID, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 
 			void CreateSemaphores();
 

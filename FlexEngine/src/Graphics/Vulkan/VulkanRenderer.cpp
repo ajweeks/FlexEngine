@@ -713,9 +713,7 @@ namespace flex
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					// TODO: Determine if this is needed dynamically
-					//uint32_t dynamicOffset = renderObject->renderID * static_cast<uint32_t>(m_DynamicAlignment);
-					vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinelayout, 0, 1, &descriptorSet, 0, nullptr);
+					BindDescriptorSet(&m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID], renderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
@@ -1177,8 +1175,8 @@ namespace flex
 						&m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-					//uint32_t dynamicOffset = renderObject->renderID * static_cast<uint32_t>(m_DynamicAlignment);
-					vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinelayout, 0, 1, &descriptorSet, 0, nullptr);
+
+					BindDescriptorSet(&m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID], renderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
@@ -1468,8 +1466,7 @@ namespace flex
 			//writeDescriptorSets[1].pImageInfo = &m_LoadedMaterials[renderObject->materialID].prefilterTexture->imageInfoDescriptor;
 			//writeDescriptorSets[1].descriptorCount = 1;
 			//vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
-
-			CreateUniformBuffers(&m_Shaders[prefilterShaderID], sizeof(PushConstBlock));
+			CreateUniformBuffers(&m_Shaders[prefilterShaderID], sizeof(Material::PushConstantBlock));
 
 			VkDescriptorSet descriptorSet;
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
@@ -1489,7 +1486,7 @@ namespace flex
 			
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].offset = 0;
-			pushConstantRanges[0].size = sizeof(PushBlock);
+			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 			// Pipeline layout
@@ -1672,8 +1669,7 @@ namespace flex
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					uint32_t dynamicOffset = renderObject->renderID * static_cast<uint32_t>(m_DynamicAlignment);
-					vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelinelayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
+					BindDescriptorSet(&m_Shaders[prefilterShaderID], renderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
@@ -2268,6 +2264,8 @@ namespace flex
 			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSize(m_PointLights.size(), pushConstantBlockSize);
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
+				if (shader->uniformBuffer.constantData.data) free(shader->uniformBuffer.constantData.data);
+				
 				shader->uniformBuffer.constantData.data = (float*)malloc(shader->uniformBuffer.constantData.size);
 				assert(shader->uniformBuffer.constantData.data);
 
@@ -2278,6 +2276,8 @@ namespace flex
 			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSize(m_PointLights.size(), pushConstantBlockSize);
 			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
+				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
+
 				const size_t dynamicBufferSize = AllocateUniformBuffer(
 					shader->uniformBuffer.dynamicData.size * m_RenderObjects.size(), (void**)&shader->uniformBuffer.dynamicData.data);
 				if (dynamicBufferSize > 0)
@@ -4617,22 +4617,7 @@ namespace flex
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
 					}
 
-					const bool isDynamic = false; // TODO: Store this in VulkanRenderObject
-
-					uint32_t dynamicOffset = 0;
-					uint32_t* dynamicOffsetPtr = nullptr;
-					uint32_t dynamicOffsetCount = 0;
-					if (isDynamic)
-					{
-						dynamicOffset = i * static_cast<uint32_t>(m_DynamicAlignment);
-						dynamicOffsetPtr = &dynamicOffset;
-						dynamicOffsetCount = 1;
-					}
-
-					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
-						0, 1, &renderObject->descriptorSet,
-						dynamicOffsetCount, dynamicOffsetPtr);
-
+					BindDescriptorSet(&m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID], renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					if (renderObject->indexed)
 					{
@@ -4730,22 +4715,7 @@ namespace flex
 					vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
 				}
 
-				const bool isDynamic = false; // TODO: Store this in VulkanRenderObject
-
-				uint32_t dynamicOffset = 0;
-				uint32_t* dynamicOffsetPtr = nullptr;
-				uint32_t dynamicOffsetCount = 0;
-				if (isDynamic)
-				{
-					dynamicOffset = i * static_cast<uint32_t>(m_DynamicAlignment);
-					dynamicOffsetPtr = &dynamicOffset;
-					dynamicOffsetCount = 1;
-				}
-
-				vkCmdBindDescriptorSets(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->pipelineLayout,
-					0, 1, &renderObject->descriptorSet,
-					dynamicOffsetCount, dynamicOffsetPtr);
-
+				BindDescriptorSet(&m_Shaders[material->material.shaderID], renderObject->renderID, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 				if (renderObject->indexed)
 				{
@@ -4852,6 +4822,23 @@ namespace flex
 		void VulkanRenderer::DestroyCommandBuffers()
 		{
 			vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, static_cast<uint32_t>(m_CommandBuffers.size()), m_CommandBuffers.data());
+		}
+
+		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, RenderID renderID, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
+		{
+			uint32_t dynamicOffset = renderID * static_cast<uint32_t>(m_DynamicAlignment);
+			uint32_t* dynamicOffsetPtr = nullptr;
+			uint32_t dynamicOffsetCount = 0;
+			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
+			{
+				// This shader uses a dynamic buffer, so it needs a dynamic offset
+				dynamicOffsetPtr = &dynamicOffset;
+				dynamicOffsetCount = 1;
+			}
+
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
+				0, 1, &descriptorSet,
+				dynamicOffsetCount, dynamicOffsetPtr);
 		}
 
 		uint32_t VulkanRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
