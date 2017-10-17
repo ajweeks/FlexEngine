@@ -24,9 +24,6 @@ namespace flex
 			operator T() const;
 			void operator=(T rhs);
 
-			template<typename V>
-			bool operator==(V rhs);
-
 		private:
 			T object{ VK_NULL_HANDLE };
 			std::function<void(T)> deleter;
@@ -92,15 +89,6 @@ namespace flex
 				cleanup();
 				object = rhs;
 			}
-		}
-
-		template<typename T>
-		template<typename V>
-		inline bool VDeleter<T>::operator==(V rhs)
-		{
-			// TODO: Is this function needed?
-			UNREFERENCED_PARAMETER(rhs);
-			return false;
 		}
 
 		template<typename T>
