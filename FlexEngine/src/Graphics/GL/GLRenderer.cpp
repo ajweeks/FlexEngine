@@ -1690,7 +1690,6 @@ namespace flex
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 MVP = proj * view * model;
 
-			// TODO: Wrap into array
 			if (shader->shader.dynamicBufferUniforms.HasUniform("model"))
 			{
 				glUniformMatrix4fv(material->uniformIDs.model, 1, false, &model[0][0]);

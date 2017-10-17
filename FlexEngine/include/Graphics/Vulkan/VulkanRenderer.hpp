@@ -111,7 +111,7 @@ namespace flex
 			VkPhysicalDevice PickPhysicalDevice();
 			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
 			void CreateSwapChain(Window* window);
-			void CreateImageViews();
+			void CreateSwapChainImageViews();
 			void CreateRenderPass();
 			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);

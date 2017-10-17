@@ -75,6 +75,7 @@ namespace flex
 		cerebusMatTexturedInfo.generateNormalSampler = true;
 		cerebusMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
 		cerebusMatTexturedInfo.enableIrradianceSampler = true;
+		// TODO: Don't make user specify all this
 		cerebusMatTexturedInfo.irradianceSamplerMatID = skyboxHDRMatID;
 		cerebusMatTexturedInfo.enablePrefilteredMap = true;
 		cerebusMatTexturedInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
@@ -167,7 +168,6 @@ namespace flex
 			Renderer::MaterialCreateInfo pbrMatInfo = {};
 			pbrMatInfo.shaderName = "pbr";
 			pbrMatInfo.name = "PBR simple " + iStr;
-			//pbrMatInfo.constAlbedo = glm::vec3(0.175f, 0.12f, 0.8f);
 			pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.75f, 0.14f);
 			pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
 			pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);

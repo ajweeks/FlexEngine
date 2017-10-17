@@ -58,7 +58,7 @@ namespace flex
 
 
 			CreateSwapChain(gameContext.window);
-			CreateImageViews();
+			CreateSwapChainImageViews();
 			CreateRenderPass();
 
 			CreateCommandPool();
@@ -139,7 +139,6 @@ namespace flex
 			m_DepthImage.replace();
 
 			SafeDelete(m_BlankTexture);
-			//SafeDelete(m_ImGuiUniformBuffer);
 
 			for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
 			{
@@ -240,7 +239,7 @@ namespace flex
 			deferredPipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			deferredPipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
 			deferredPipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
-			deferredPipelineCreateInfo.setDynamicStates = false; // ?
+			deferredPipelineCreateInfo.setDynamicStates = false;
 			deferredPipelineCreateInfo.enabledColorBlending = false;
 			deferredPipelineCreateInfo.pipelineLayout = &m_DeferredPipelineLayout;
 			deferredPipelineCreateInfo.grahpicsPipeline = &m_DeferredPipeline;
@@ -589,7 +588,7 @@ namespace flex
 			// Render
 
 			VkClearValue clearValues[1];
-			clearValues[0].color = { { 1.0f, 0.0f, 1.0f, 0.0f } };
+			clearValues[0].color = m_ClearColor;
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -739,7 +738,6 @@ namespace flex
 			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.irradianceSamplerSize.x;
 			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
 
-			// FB, Att, RP, Pipe, etc.
 			VkAttachmentDescription attDesc = {};
 			// Color attachment
 			attDesc.format = format;
@@ -1041,7 +1039,7 @@ namespace flex
 			// Render
 
 			VkClearValue clearValues[1];
-			clearValues[0].color = { { 0.0f, 0.0f, 0.2f, 0.0f } };
+			clearValues[0].color = m_ClearColor;
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1460,7 +1458,7 @@ namespace flex
 			// Render
 
 			VkClearValue clearValues[1];
-			clearValues[0].color = { { 0.0f, 0.0f, 0.2f, 0.0f } };
+			clearValues[0].color = m_ClearColor;
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1503,9 +1501,10 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
 
-			for (uint32_t mip = 0; mip < mipLevels; ++mip) {
-				//pushBlock.roughness = (float)m / (float)(numMips - 1);
-				for (uint32_t face = 0; face < 6; ++face) {
+			for (uint32_t mip = 0; mip < mipLevels; ++mip) 
+			{
+				for (uint32_t face = 0; face < 6; ++face) 
+				{
 					viewport.width = static_cast<float>(dim * std::pow(0.5f, mip));
 					viewport.height = static_cast<float>(dim * std::pow(0.5f, mip));
 					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
@@ -1604,12 +1603,11 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			const VkFormat format = VK_FORMAT_R16G16_SFLOAT;	// R16G16 is supported pretty much everywhere
+			const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
 			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.generatedBRDFLUTSize.x;
 
-			// Frame Buffer, Attachments, Render Pass, Pipeline, etc.
-			VkAttachmentDescription attachmentDesc = {};
 			// Color attachment
+			VkAttachmentDescription attachmentDesc = {};
 			attachmentDesc.format = format;
 			attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
 			attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1782,7 +1780,6 @@ namespace flex
 			pipelineCreateInfo.pStages = shaderStages.data();
 			pipelineCreateInfo.pVertexInputState = &emptyInputState;
 
-			// Look-up-table (from BRDF) pipeline
 			ShaderID brdfShaderID;
 			if (!GetShaderID("brdf", brdfShaderID))
 			{
@@ -1817,8 +1814,9 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 			// Render
+
 			VkClearValue clearValues[1];
-			clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+			clearValues[0].color = m_ClearColor;
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -2836,7 +2834,7 @@ namespace flex
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
 			CreateSwapChain(window);
-			CreateImageViews();
+			CreateSwapChainImageViews();
 
 			CreateDepthResources();
 
@@ -2907,7 +2905,7 @@ namespace flex
 			m_SwapChainExtent = extent;
 		}
 
-		void VulkanRenderer::CreateImageViews()
+		void VulkanRenderer::CreateSwapChainImageViews()
 		{
 			m_SwapChainImageViews.resize(m_SwapChainImages.size(), VDeleter<VkImageView>{ m_VulkanDevice->m_LogicalDevice, vkDestroyImageView });
 
@@ -3729,15 +3727,6 @@ namespace flex
 			CreateImageView(m_DepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1, m_DepthImageView.replace());
 
 			TransitionImageLayout(m_DepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
-
-
-			// Deferred images
-			//CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-			//	VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED, //&offScreenFrameBuf->depth.image, &offScreenFrameBuf->depth.mem);
-			//CreateImageView(offScreenFrameBuf->depth.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, &offScreenFrameBuf->depth.view);
-			//
-			//TransitionImageLayout(offScreenFrameBuf->depth.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, //VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
 		}
 
 		void VulkanRenderer::CreateFramebuffers()
@@ -3976,7 +3965,7 @@ namespace flex
 			imageCreateInfo.mipLevels = mipLevels;
 			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: ?
+			imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			imageCreateInfo.extent = { (glm::uint)width, (glm::uint)height, 1u };
 			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -4106,30 +4095,25 @@ namespace flex
 
 			VkBufferCreateInfo bufferCreateInfo = {};
 			bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			bufferCreateInfo.size = totalSize; // TODO: size1?
-											   // This buffer is used as a transfer source for the buffer copy
+			bufferCreateInfo.size = totalSize;
 			bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 
 			VK_CHECK_RESULT(vkCreateBuffer(m_VulkanDevice->m_LogicalDevice, &bufferCreateInfo, nullptr, &stagingBuffer.m_Buffer));
 
-			// Get memory requirements for the staging buffer (alignment, memory type bits)
 			vkGetBufferMemoryRequirements(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Buffer, &memReqs);
 			memAllocInfo.allocationSize = memReqs.size;
-			// Get memory type index for a host visible buffer
 			memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAllocInfo, nullptr, &stagingBuffer.m_Memory));
 			stagingBuffer.Bind();
 
-			// Copy texture data into staging buffer
 			stagingBuffer.Map(memReqs.size);
 			memcpy(stagingBuffer.m_Mapped, pixels, totalSize);
 			free(pixels);
 			stagingBuffer.Unmap();
 
-			// Create optimal tiled target image
 			VkImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -4142,9 +4126,7 @@ namespace flex
 			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			imageCreateInfo.extent = { (glm::uint)textureWidth, (glm::uint)textureHeight, 1u };
 			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-			// Cube faces count as array layers in Vulkan
 			imageCreateInfo.arrayLayers = 6;
-			// This flag is required for cube map images
 			imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
 			VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, &(*texture)->image));
@@ -4172,8 +4154,8 @@ namespace flex
 					bufferCopyRegion.imageSubresource.mipLevel = mipLevel;
 					bufferCopyRegion.imageSubresource.baseArrayLayer = face;
 					bufferCopyRegion.imageSubresource.layerCount = 1;
-					bufferCopyRegion.imageExtent.width = textureWidth; // TODO: Use correct values here when using mipmapping
-					bufferCopyRegion.imageExtent.height = textureHeight;
+					bufferCopyRegion.imageExtent.width = static_cast<uint32_t>(textureWidth * std::pow(0.5f, mipLevel));
+					bufferCopyRegion.imageExtent.height = static_cast<uint32_t>(textureHeight * std::pow(0.5f, mipLevel));
 					bufferCopyRegion.imageExtent.depth = 1;
 					bufferCopyRegion.bufferOffset = offset;
 
@@ -4219,7 +4201,6 @@ namespace flex
 
 			FlushCommandBuffer(copyCmd, m_GraphicsQueue, true);
 
-			// Create sampler
 			VkSamplerCreateInfo sampler = {};
 			sampler.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 			sampler.maxAnisotropy = 1.0f;
@@ -4242,17 +4223,13 @@ namespace flex
 
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &sampler, nullptr, &(*texture)->sampler));
 
-			// Create image view
 			VkImageViewCreateInfo imageViewCreateInfo = {};
 			imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			// Cube map view type
 			imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 			imageViewCreateInfo.format = format;
 			imageViewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 			imageViewCreateInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-			// 6 array layers (faces)
 			imageViewCreateInfo.subresourceRange.layerCount = 6;
-			// Set number of mip levels
 			imageViewCreateInfo.subresourceRange.levelCount = mipLevels;
 			imageViewCreateInfo.image = (*texture)->image;
 			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageViewCreateInfo, nullptr, &(*texture)->imageView));
@@ -5047,7 +5024,7 @@ namespace flex
 
 		void VulkanRenderer::CreateDescriptorPool()
 		{
-			const size_t descriptorSetCount = 1000; // m_RenderObjects.size();
+			const size_t descriptorSetCount = 1000;
 
 			std::vector<VkDescriptorPoolSize> poolSizes{
 				{ VK_DESCRIPTOR_TYPE_SAMPLER, descriptorSetCount },
