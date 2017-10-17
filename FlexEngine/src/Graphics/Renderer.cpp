@@ -17,10 +17,22 @@ namespace flex
 		return (types.find(name) != types.end());
 	}
 
-	// TODO: Remove second variable in place of extra function, RemoveUniform which removes pair from map
-	void Renderer::Uniforms::AddUniform(const std::string& name, bool value)
+	void Renderer::Uniforms::AddUniform(const std::string& name)
 	{
-		types.insert(std::pair<std::string, bool>(name, value));
+		types.insert(std::pair<std::string, bool>(name, true));
+	}
+
+	void Renderer::Uniforms::RemoveUniform(const std::string& name)
+	{
+		auto location = types.find(name);
+		if (location == types.end())
+		{
+			Logger::LogWarning("Attempted to remove uniform that doesn't exist! " + name);
+		}
+		else
+		{
+			types.erase(location);
+		}
 	}
 
 	glm::uint Renderer::Uniforms::CalculateSize(int pointLightCount, size_t pushConstantBlockSize)

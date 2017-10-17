@@ -1412,27 +1412,27 @@ namespace flex
 			m_Shaders[shaderID].shader.needNormalSampler = true;
 			m_Shaders[shaderID].shader.needSpecularSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableDiffuseSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableSpecularSampler", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableDiffuseSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableSpecularSampler");
 			++shaderID;
 
 			// Color
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
 			// ImGui
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
 			// PBR
@@ -1446,75 +1446,75 @@ namespace flex
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAlbedo", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("albedoSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constMetallic", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableMetallicSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("metallicSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constRoughness", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableRoughnessSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("roughnessSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAOSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAO", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("aoSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("normalSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAlbedo");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("albedoSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constMetallic");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableMetallicSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("metallicSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constRoughness");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableRoughnessSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("roughnessSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAOSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAO");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("aoSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("normalSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
 			++shaderID;
 
 			// Skybox
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableCubemapSampler", true);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("cubemapSampler", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableCubemapSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("cubemapSampler");
 			++shaderID;
 
 			// Equirectangular to Cube
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needHDREquirectangularSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("hdrEquirectangularSampler", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("hdrEquirectangularSampler");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
 			// Irradiance
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
 			// Prefilter
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
 			// BRDF
@@ -1528,11 +1528,11 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model", true);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
 			// Deferred combine (sample gbuffer)
@@ -1541,12 +1541,12 @@ namespace flex
 			m_Shaders[shaderID].shader.needNormalFrameBufferSampler = true;
 			m_Shaders[shaderID].shader.needDiffuseSpecularFrameBufferSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("positionFrameBufferSampler", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("normalFrameBufferSampler", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("diffuseSpecularFrameBufferSampler", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight", true);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos", true);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("positionFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("normalFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("diffuseSpecularFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;

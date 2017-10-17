@@ -315,7 +315,8 @@ namespace flex
 			std::map<std::string, bool> types;
 
 			inline bool HasUniform(const std::string& name) const;
-			void AddUniform(const std::string& name, bool value);
+			void AddUniform(const std::string& name);
+			void RemoveUniform(const std::string& name);
 			glm::uint CalculateSize(int pointLightCount, size_t pushConstantBlockSize);
 		};
 
