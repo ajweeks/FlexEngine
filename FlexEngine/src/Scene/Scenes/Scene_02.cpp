@@ -206,6 +206,7 @@ namespace flex
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
 		//n_Cerberus->GetTransform().Rotate({ 0, gameContext.elapsedTime * 0.00075f, 0 });
 	}
 } // namespace flex

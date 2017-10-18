@@ -18,6 +18,7 @@ namespace flex
 		if (moveConsoleToExtraMonitor)
 		{
 			HWND hWnd = GetConsoleWindow();
+			// TODO: Set these based on display resolution
 			int consoleWidth = 700;
 			int consoleHeight = 800;
 
@@ -54,8 +55,13 @@ namespace flex
 			}
 			else // There's only one monitor, move the console to the top left corner
 			{
-				// A negative value is needed to line the console up to the left side of my monitor
-				MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
+				RECT rect;
+				GetWindowRect(hWnd, &rect);
+				if (rect.top != 0)
+				{
+					// A negative value is needed to line the console up to the left side of my monitor
+					MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
+				}
 			}
 		}
 
