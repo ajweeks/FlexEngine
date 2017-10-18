@@ -67,7 +67,6 @@ namespace flex
 		}
 	}
 
-	// TODO: Add option to force certain components (Bitangents, UVs, ...)
 	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV)
 	{
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
