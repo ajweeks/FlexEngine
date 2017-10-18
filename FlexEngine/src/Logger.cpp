@@ -6,9 +6,13 @@
 
 namespace flex
 {
-	bool Logger::m_LogInfo = true;
-	bool Logger::m_LogWarnings = true;
-	bool Logger::m_LogErrors = true;
+	bool Logger::m_SuppressInfo = false;
+	bool Logger::m_SuppressWarnings = false;
+	bool Logger::m_SuppressErrors = false;
+
+	int Logger::m_SuppressedInfoCount = 0;
+	int Logger::m_SuppressedWarningCount = 0;
+	int Logger::m_SuppressedErrorCount = 0;
 
 	void Logger::Log(const std::string& message, LogLevel logLevel, bool newline)
 	{
@@ -16,19 +20,31 @@ namespace flex
 		{
 		case Logger::LogLevel::LOG_INFO:
 		{
-			if (!m_LogInfo) return;
+			if (m_SuppressInfo)
+			{
+				++m_SuppressedInfoCount;
+				return;
+			}
 
 			std::cout << "[INFO] ";
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
-			if (!m_LogWarnings) return;
-			
+			if (m_SuppressWarnings)
+			{
+				++m_SuppressedWarningCount;
+				return;
+			}
+
 			std::cout << "[WARNING] ";
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
-			if (!m_LogErrors) return;
+			if (m_SuppressErrors)
+			{
+				++m_SuppressedErrorCount;
+				return;
+			}
 
 			std::cout << "[ERROR] ";
 		} break;
@@ -48,19 +64,31 @@ namespace flex
 		{
 		case Logger::LogLevel::LOG_INFO:
 		{
-			if (!m_LogInfo) return;
+			if (m_SuppressInfo)
+			{
+				++m_SuppressedInfoCount;
+				return;
+			}
 
 			std::wcout << L"[INFO] ";
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
-			if (!m_LogWarnings) return;
+			if (m_SuppressWarnings)
+			{
+				++m_SuppressedWarningCount;
+				return;
+			}
 
 			std::wcout << L"[WARNING] ";
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
-			if (!m_LogErrors) return;
+			if (m_SuppressErrors)
+			{
+				++m_SuppressedErrorCount;
+				return;
+			}
 
 			std::wcout << L"[ERROR] ";
 		} break;
@@ -74,32 +102,68 @@ namespace flex
 		if (newline) std::wcout << std::endl;
 	}
 
-	void Logger::SetLogInfo(bool logInfo)
+	void Logger::SetSuppressInfo(bool suppressInfo)
 	{
-		m_LogInfo = true; // Enable info logging to display message
-		LogInfo(logInfo ? "Enabled" : "Disabled" + std::string(" info logging"));
+		if (m_SuppressInfo == suppressInfo) return;
 
-		m_LogInfo = logInfo;
+		m_SuppressInfo = false; // Enable info logging to display message
+		LogInfo((suppressInfo ? "Enabled" : "Disabled") + std::string(" info suppression"));
+
+		m_SuppressInfo = suppressInfo;
 	}
 
-	void Logger::SetLogWarnings(bool logWarnings)
+	bool Logger::GetSuppressInfo()
 	{
-		const bool prevLogInfo = m_LogInfo;
-		m_LogInfo = true; // Enable info logging to display message
-		LogInfo(logWarnings ? "Enabled" : "Disabled" + std::string(" warning logging"));
-		m_LogInfo = prevLogInfo;
-
-		m_LogWarnings = logWarnings;
+		return m_SuppressInfo;
 	}
 
-	void Logger::SetLogErrors(bool logErrors)
+	void Logger::SetSuppressWarnings(bool suppressWarnings)
 	{
-		const bool prevLogInfo = m_LogInfo;
-		m_LogInfo = true; // Enable info logging to display message
-		LogInfo(logErrors ? "Enabled" : "Disabled" + std::string(" error logging"));
-		m_LogInfo = prevLogInfo;
+		if (m_SuppressWarnings == suppressWarnings) return;
 
-		m_LogErrors = logErrors;
+		const bool prevSuppressLog = m_SuppressInfo;
+		m_SuppressInfo = false; // Enable info logging to display message
+		LogInfo((suppressWarnings ? "Enabled" : "Disabled") + std::string(" warning suppression"));
+		m_SuppressInfo = prevSuppressLog;
+
+		m_SuppressWarnings = suppressWarnings;
+	}
+
+	bool Logger::GetSuppressWarnings()
+	{
+		return m_SuppressWarnings;
+	}
+
+	void Logger::SetSuppressErrors(bool suppressErrors)
+	{
+		if (m_SuppressErrors == suppressErrors) return;
+
+		const bool prevSuppressLog = m_SuppressInfo;
+		m_SuppressInfo = false; // Enable info logging to display message
+		LogInfo((suppressErrors ? "Enabled" : "Disabled") + std::string(" error suppression"));
+		m_SuppressInfo = prevSuppressLog;
+
+		m_SuppressErrors = suppressErrors;
+	}
+
+	bool Logger::GetSuppressErrors()
+	{
+		return m_SuppressErrors;
+	}
+
+	int Logger::GetSuppressedInfoCount()
+	{
+		return m_SuppressedInfoCount;
+	}
+
+	int Logger::GetSuppressedWarningCount()
+	{
+		return m_SuppressedWarningCount;
+	}
+
+	int Logger::GetSuppressedErrorCount()
+	{
+		return m_SuppressedErrorCount;
 	}
 
 	void Logger::LogInfo(const std::string& message, bool newline)

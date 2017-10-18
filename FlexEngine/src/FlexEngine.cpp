@@ -46,7 +46,7 @@ namespace flex
 		Logger::LogInfo("Current renderer: " + m_RendererName);
 		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
 
-		Logger::SetLogWarnings(false);
+		//Logger::SetLogWarnings(false);
 	}
 
 	FlexEngine::~FlexEngine()
@@ -355,6 +355,30 @@ namespace flex
 						{
 							m_GameContext.camera->ResetPosition();
 						}
+
+						ImGui::TreePop();
+					}
+
+					if (ImGui::TreeNode("Logging"))
+					{
+						bool suppressInfo = Logger::GetSuppressInfo();
+						int suppressedInfoCount = Logger::GetSuppressedInfoCount();
+						bool suppressWarnings = Logger::GetSuppressWarnings();
+						int suppressedWarningCount = Logger::GetSuppressedWarningCount();
+						bool suppressErrors = Logger::GetSuppressErrors();
+						int suppressedErrorCount = Logger::GetSuppressedErrorCount();
+
+						ImGui::Checkbox("Suppress Info", &suppressInfo);
+						Logger::SetSuppressInfo(suppressInfo);
+						ImGui::Text(std::string("Suppressed info count: " + std::to_string(suppressedInfoCount)).c_str());
+
+						ImGui::Checkbox("Suppress Warnings", &suppressWarnings);
+						Logger::SetSuppressWarnings(suppressWarnings);
+						ImGui::Text(std::string("Suppressed warning count: " + std::to_string(suppressedWarningCount)).c_str());
+
+						ImGui::Checkbox("Suppress Errors", &suppressErrors);
+						Logger::SetSuppressErrors(suppressErrors);
+						ImGui::Text(std::string("Suppressed error count: " + std::to_string(suppressedErrorCount)).c_str());
 
 						ImGui::TreePop();
 					}

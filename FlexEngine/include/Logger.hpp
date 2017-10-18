@@ -25,14 +25,27 @@ namespace flex
 		static void Log(const std::string& message, LogLevel logLevel, bool newline);
 		static void Log(const std::wstring& message, LogLevel logLevel, bool newline);
 
-		static void SetLogInfo(bool logInfo);
-		static void SetLogWarnings(bool logWarnings);
-		static void SetLogErrors(bool logErrors);
+
+		static void SetSuppressInfo(bool suppressInfo);
+		static bool GetSuppressInfo();
+		static int GetSuppressedInfoCount();
+
+		static void SetSuppressWarnings(bool suppressWarnings);
+		static bool GetSuppressWarnings();
+		static int GetSuppressedWarningCount();
+		
+		static void SetSuppressErrors(bool suppressErrors);
+		static bool GetSuppressErrors();
+		static int GetSuppressedErrorCount();
 
 	private:
-		static bool m_LogInfo;
-		static bool m_LogWarnings;
-		static bool m_LogErrors;
+		static bool m_SuppressInfo;
+		static bool m_SuppressWarnings;
+		static bool m_SuppressErrors;
+
+		static int m_SuppressedInfoCount;
+		static int m_SuppressedWarningCount;
+		static int m_SuppressedErrorCount;
 
 	};
 } // namespace flex
