@@ -284,8 +284,13 @@ namespace flex
 				{
 					if (samplerCreateInfo.create)
 					{
-						// TODO: Generate mip maps? (add member to SamplerCreateInfo if needed)
-						samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, false);
+						if (!GetLoadedTexture(samplerCreateInfo.filepath, *samplerCreateInfo.id))
+						{
+							// Texture hasn't been loaded yet, load it now
+							samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, false);
+							m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
+						}
+
 						int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, samplerCreateInfo.textureName.c_str());
 						CheckGLErrorMessages();
 						if (uniformLocation == -1)
@@ -1369,6 +1374,20 @@ namespace flex
 					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 				}
+			}
+		}
+
+		bool GLRenderer::GetLoadedTexture(const std::string& filePath, glm::uint& handle)
+		{
+			auto location = m_LoadedTextures.find(filePath);
+			if (location == m_LoadedTextures.end())
+			{
+				return false;
+			}
+			else
+			{
+				handle = location->second;
+				return true;
 			}
 		}
 

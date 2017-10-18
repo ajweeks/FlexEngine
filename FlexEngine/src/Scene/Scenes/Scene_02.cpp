@@ -84,6 +84,33 @@ namespace flex
 		const MaterialID cerebusMatID = gameContext.renderer->InitializeMaterial(gameContext, &cerebusMatTexturedInfo);
 
 
+		Renderer::MaterialCreateInfo cerebusMatTexturedInfo2 = {};
+		cerebusMatTexturedInfo2.name = "Cerebus";
+		cerebusMatTexturedInfo2.shaderName = "pbr";
+		cerebusMatTexturedInfo2.enableAlbedoSampler = true;
+		cerebusMatTexturedInfo2.generateAlbedoSampler = true;
+		cerebusMatTexturedInfo2.albedoTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga";
+		cerebusMatTexturedInfo2.enableMetallicSampler = true;
+		cerebusMatTexturedInfo2.generateMetallicSampler = true;
+		cerebusMatTexturedInfo2.metallicTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga";
+		cerebusMatTexturedInfo2.enableRoughnessSampler = true;
+		cerebusMatTexturedInfo2.generateRoughnessSampler = true;
+		cerebusMatTexturedInfo2.roughnessTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga";
+		cerebusMatTexturedInfo2.enableAOSampler = true;
+		cerebusMatTexturedInfo2.generateAOSampler = true;
+		cerebusMatTexturedInfo2.aoTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga";
+		cerebusMatTexturedInfo2.enableNormalSampler = true;
+		cerebusMatTexturedInfo2.generateNormalSampler = true;
+		cerebusMatTexturedInfo2.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
+		cerebusMatTexturedInfo2.enableIrradianceSampler = true;
+		cerebusMatTexturedInfo2.irradianceSamplerMatID = skyboxHDRMatID;
+		cerebusMatTexturedInfo2.enablePrefilteredMap = true;
+		cerebusMatTexturedInfo2.prefilterMapSamplerMatID = skyboxHDRMatID;
+		cerebusMatTexturedInfo2.enableBRDFLUT = true;
+		cerebusMatTexturedInfo2.brdfLUTSamplerMatID = skyboxHDRMatID;
+		const MaterialID cerebusMatID2 = gameContext.renderer->InitializeMaterial(gameContext, &cerebusMatTexturedInfo2);
+
+
 		//Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
 		//pbrMatTexturedInfo.shaderName = "pbr";
 		//pbrMatTexturedInfo.name = "PBR textured";
@@ -149,7 +176,14 @@ namespace flex
 		n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, n_Cerberus);
 		n_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
-		n_Cerberus->GetTransform().Translate({ 0, 10.0f, 0.0f });
+		n_Cerberus->GetTransform().Translate({ 0.0f, 10.0f, 0.0f });
+
+
+		MeshPrefab* extraCerberus = new MeshPrefab(cerebusMatID2, "Cerberus 2");
+		extraCerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
+		AddChild(gameContext, extraCerberus);
+		extraCerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
+		extraCerberus->GetTransform().Translate({ 0.0f, 3.0f, 5.0f });
 
 
 		const int sphereCountX = 8;

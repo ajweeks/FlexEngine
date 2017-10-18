@@ -2,7 +2,6 @@
 
 #include "Scene/MeshPrefab.hpp"
 
-#include <assimp/Importer.hpp>
 #include <assimp/vector3.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -16,6 +15,8 @@
 
 namespace flex
 {
+	std::map<std::string, MeshPrefab::LoadedMesh> MeshPrefab::m_LoadedMeshes;
+
 	std::string MeshPrefab::m_DefaultName = "Game Object";
 	glm::vec4 MeshPrefab::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
@@ -52,28 +53,52 @@ namespace flex
 		m_IgnoredAttributes |= attributes;
 	}
 
+	bool MeshPrefab::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
+	{
+		auto location = m_LoadedMeshes.find(filePath);
+		if (location == m_LoadedMeshes.end())
+		{
+			return false;
+		}
+		else
+		{
+			*scene = location->second.scene;
+			return true;
+		}
+	}
+
 	// TODO: Add option to force certain components (Bitangents, UVs, ...)
 	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV)
 	{
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
-		Assimp::Importer importer;
-
-		std::string fileName = filepath;
-		StripLeadingDirectories(fileName);
-		Logger::LogInfo("Loading mesh " + fileName);
-
-		const aiScene* pScene = importer.ReadFile(filepath,
-			aiProcess_FindInvalidData |
-			aiProcess_GenNormals |
-			aiProcess_CalcTangentSpace
-		);
-
-		if (!pScene)
+		const aiScene* pScene = nullptr;
+		if (!GetLoadedMesh(filepath, &pScene))
 		{
-			Logger::LogError(importer.GetErrorString());
-			return false;
+			// Mesh hasn't been loaded before, load it now
+
+			std::string fileName = filepath;
+			StripLeadingDirectories(fileName);
+			Logger::LogInfo("Loading mesh " + fileName);
+
+			auto meshObj = m_LoadedMeshes.insert({ filepath, LoadedMesh{ {}, nullptr } });
+			LoadedMesh& loadedMesh = meshObj.first->second;
+
+			loadedMesh.scene = loadedMesh.importer.ReadFile(filepath,
+				aiProcess_FindInvalidData |
+				aiProcess_GenNormals |
+				aiProcess_CalcTangentSpace
+			);
+
+			pScene = loadedMesh.scene;
+
+			if (!pScene)
+			{
+				Logger::LogError(loadedMesh.importer.GetErrorString());
+				return false;
+			}
 		}
+
 
 		if (!pScene->HasMeshes())
 		{

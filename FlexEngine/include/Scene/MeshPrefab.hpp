@@ -10,6 +10,7 @@
 #include <glm/vec4.hpp>
 
 #include <assimp/scene.h>
+#include <assimp/Importer.hpp>
 
 #include "Typedefs.hpp"
 #include "VertexAttribute.hpp"
@@ -48,6 +49,14 @@ namespace flex
 		void SetUVScale(float uScale, float vScale);
 
 	private:
+		struct LoadedMesh
+		{
+			Assimp::Importer importer;
+			const aiScene* scene;
+		};
+		static bool GetLoadedMesh(const std::string& filePath, const aiScene** scene);
+		static std::map<std::string, LoadedMesh> m_LoadedMeshes;
+
 		MaterialID m_MaterialID;
 
 		static std::string m_DefaultName;

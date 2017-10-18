@@ -88,6 +88,8 @@ namespace flex
 			
 			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext);
 
+			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
+
 			std::vector<GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
 
@@ -107,6 +109,7 @@ namespace flex
 			bool m_VSyncEnabled;
 
 			std::vector<GLShader> m_Shaders;
+			std::map<std::string, glm::uint> m_LoadedTextures; // Key is filepath, value is texture id
 
 			// TODO: Clean up (make more dynamic)
 			glm::uint viewProjectionUBO;
