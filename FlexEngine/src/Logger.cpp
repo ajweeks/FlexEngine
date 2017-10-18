@@ -6,20 +6,30 @@
 
 namespace flex
 {
+	bool Logger::m_LogInfo = true;
+	bool Logger::m_LogWarnings = true;
+	bool Logger::m_LogErrors = true;
+
 	void Logger::Log(const std::string& message, LogLevel logLevel, bool newline)
 	{
 		switch (logLevel)
 		{
 		case Logger::LogLevel::LOG_INFO:
 		{
+			if (!m_LogInfo) return;
+
 			std::cout << "[INFO] ";
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
+			if (!m_LogWarnings) return;
+			
 			std::cout << "[WARNING] ";
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
+			if (!m_LogErrors) return;
+
 			std::cout << "[ERROR] ";
 		} break;
 		default:
@@ -38,14 +48,20 @@ namespace flex
 		{
 		case Logger::LogLevel::LOG_INFO:
 		{
+			if (!m_LogInfo) return;
+
 			std::wcout << L"[INFO] ";
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
+			if (!m_LogWarnings) return;
+
 			std::wcout << L"[WARNING] ";
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
+			if (!m_LogErrors) return;
+
 			std::wcout << L"[ERROR] ";
 		} break;
 		default:
@@ -56,6 +72,34 @@ namespace flex
 
 		std::wcout << message;
 		if (newline) std::wcout << std::endl;
+	}
+
+	void Logger::SetLogInfo(bool logInfo)
+	{
+		m_LogInfo = true; // Enable info logging to display message
+		LogInfo(logInfo ? "Enabled" : "Disabled" + std::string(" info logging"));
+
+		m_LogInfo = logInfo;
+	}
+
+	void Logger::SetLogWarnings(bool logWarnings)
+	{
+		const bool prevLogInfo = m_LogInfo;
+		m_LogInfo = true; // Enable info logging to display message
+		LogInfo(logWarnings ? "Enabled" : "Disabled" + std::string(" warning logging"));
+		m_LogInfo = prevLogInfo;
+
+		m_LogWarnings = logWarnings;
+	}
+
+	void Logger::SetLogErrors(bool logErrors)
+	{
+		const bool prevLogInfo = m_LogInfo;
+		m_LogInfo = true; // Enable info logging to display message
+		LogInfo(logErrors ? "Enabled" : "Disabled" + std::string(" error logging"));
+		m_LogInfo = prevLogInfo;
+
+		m_LogErrors = logErrors;
 	}
 
 	void Logger::LogInfo(const std::string& message, bool newline)

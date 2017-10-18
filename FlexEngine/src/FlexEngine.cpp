@@ -45,6 +45,8 @@ namespace flex
 		Logger::LogInfo(std::to_string(m_RendererCount) + " renderer" + (m_RendererCount > 1 ? "s" : "") + " enabled");
 		Logger::LogInfo("Current renderer: " + m_RendererName);
 		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
+
+		Logger::SetLogWarnings(false);
 	}
 
 	FlexEngine::~FlexEngine()

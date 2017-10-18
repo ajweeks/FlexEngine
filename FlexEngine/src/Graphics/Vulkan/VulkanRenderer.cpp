@@ -273,7 +273,6 @@ namespace flex
 			{
 				if (m_LoadedMaterials[renderObject->materialID].material.generateIrradianceSampler)
 				{
-					// TODO: Specify certain log levels to be able to set a verbosity desired
 					Logger::LogInfo("Generating cubemap from HDRI");
 					GenerateCubemapFromHDR(gameContext, renderObject);
 
