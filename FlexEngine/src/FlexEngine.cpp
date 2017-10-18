@@ -327,6 +327,37 @@ namespace flex
 					std::string vsyncEnabledStr = "VSync " + std::string(m_VSyncEnabled ? "enabled" : "disabled");
 					ImGui::Checkbox(vsyncEnabledStr.c_str(), &m_VSyncEnabled);
 					m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+
+					if (ImGui::TreeNode("Camera"))
+					{
+						glm::vec3 camPos = m_GameContext.camera->GetPosition();
+						ImGui::DragFloat3("Position", &camPos.x, 0.1f);
+						m_GameContext.camera->SetPosition(camPos);
+
+						glm::vec2 camYawPitch;
+						camYawPitch[0] = m_GameContext.camera->GetYaw();
+						camYawPitch[1] = m_GameContext.camera->GetPitch();
+						ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.01f);
+						m_GameContext.camera->SetYaw(camYawPitch[0]);
+						m_GameContext.camera->SetPitch(camYawPitch[1]);
+
+						float camFOV = glm::degrees(m_GameContext.camera->GetFOV());
+						ImGui::DragFloat("FOV", &camFOV, 0.01f, 10.0f, 150.0f);
+						m_GameContext.camera->SetFOV(glm::radians(camFOV));
+
+						if (ImGui::Button("Reset orientation"))
+						{
+							m_GameContext.camera->ResetOrientation();
+						}
+
+						ImGui::SameLine();
+						if (ImGui::Button("Reset position"))
+						{
+							m_GameContext.camera->ResetPosition();
+						}
+
+						ImGui::TreePop();
+					}
 				}
 
 				m_GameContext.renderer->DrawImGuiItems(m_GameContext);

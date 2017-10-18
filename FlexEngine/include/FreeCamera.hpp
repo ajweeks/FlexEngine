@@ -8,31 +8,42 @@ namespace flex
 	class FreeCamera final
 	{
 	public:
-		FreeCamera(GameContext& gameContext, float FOV = 45.0f, float zNear = 0.1f, float zFar = 10000.0f);
+		FreeCamera(GameContext& gameContext, float FOV = glm::radians(45.0f), float zNear = 0.1f, float zFar = 10000.0f);
 		~FreeCamera();
 
 		void Update(const GameContext& gameContext);
 
 		void SetFOV(float FOV);
+		float GetFOV() const;
 		void SetZNear(float zNear);
+		float GetZNear() const;
 		void SetZFar(float zFar);
+		float GetZFar() const;
 		glm::mat4 GetViewProjection() const;
 		glm::mat4 GetView() const;
 		glm::mat4 GetProjection() const;
 
 		void SetMoveSpeed(float moveSpeed);
+		float GetMoveSpeed() const;
 		void SetRotationSpeed(float rotationSpeed);
+		float GetRotationSpeed() const;
 
 		void Translate(glm::vec3 translation);
 		void SetPosition(glm::vec3 position);
-		glm::vec3 GetViewDirection() const;
 		glm::vec3 GetPosition() const;
+		void SetViewDirection(glm::vec3 viewDir);
+		glm::vec3 GetViewDirection() const;
 
 		void ResetPosition();
 		void ResetOrientation();
 
 		void LoadDefaultKeybindings();
 		void LoadAzertyKeybindings();
+
+		void SetYaw(float yaw);
+		float GetYaw() const;
+		void SetPitch(float pitch);
+		float GetPitch() const;
 
 	private:
 		void RecalculateViewProjection(const GameContext& gameContext);

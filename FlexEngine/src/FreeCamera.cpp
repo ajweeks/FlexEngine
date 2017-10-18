@@ -119,14 +119,29 @@ namespace flex
 		m_FOV = FOV;
 	}
 
+	float FreeCamera::GetFOV() const
+	{
+		return m_FOV;
+	}
+
 	void FreeCamera::SetZNear(float zNear)
 	{
 		m_ZNear = zNear;
 	}
 
+	float FreeCamera::GetZNear() const
+	{
+		return m_ZNear;
+	}
+
 	void FreeCamera::SetZFar(float zFar)
 	{
 		m_ZFar = zFar;
+	}
+
+	float FreeCamera::GetZFar() const
+	{
+		return m_ZFar;
 	}
 
 	glm::mat4 FreeCamera::GetViewProjection() const
@@ -149,9 +164,19 @@ namespace flex
 		m_MoveSpeed = moveSpeed;
 	}
 
+	float FreeCamera::GetMoveSpeed() const
+	{
+		return m_MoveSpeed;
+	}
+
 	void FreeCamera::SetRotationSpeed(float rotationSpeed)
 	{
 		m_RotationSpeed = rotationSpeed;
+	}
+
+	float FreeCamera::GetRotationSpeed() const
+	{
+		return m_RotationSpeed;
 	}
 
 	void FreeCamera::Translate(glm::vec3 translation)
@@ -164,14 +189,20 @@ namespace flex
 		m_Position = position;
 	}
 
-	glm::vec3 FreeCamera::GetViewDirection() const
-	{
-		return m_Forward;
-	}
-
 	glm::vec3 FreeCamera::GetPosition() const
 	{
 		return m_Position;
+	}
+
+	void FreeCamera::SetViewDirection(glm::vec3 viewDir)
+	{
+		m_Yaw = viewDir.x;
+		m_Pitch = viewDir.y;
+	}
+
+	glm::vec3 FreeCamera::GetViewDirection() const
+	{
+		return m_Forward;
 	}
 
 	void FreeCamera::ResetPosition()
@@ -219,5 +250,25 @@ namespace flex
 		m_MoveDownKey = InputManager::KeyCode::KEY_A;
 		m_MoveFasterKey = InputManager::KeyCode::KEY_LEFT_SHIFT;
 		m_MoveSlowerKey = InputManager::KeyCode::KEY_LEFT_CONTROL;
+	}
+
+	float FreeCamera::GetYaw() const
+	{
+		return m_Yaw;
+	}
+
+	void FreeCamera::SetYaw(float yaw)
+	{
+		m_Yaw = yaw;
+	}
+
+	float FreeCamera::GetPitch() const
+	{
+		return m_Pitch;
+	}
+
+	void FreeCamera::SetPitch(float pitch)
+	{
+		m_Pitch = pitch;
 	}
 } // namespace flex
