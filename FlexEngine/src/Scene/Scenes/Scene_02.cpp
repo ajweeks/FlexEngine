@@ -146,7 +146,7 @@ namespace flex
 
 
 		n_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
-		n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", false, false, false, true);
+		n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, n_Cerberus);
 		n_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
 		n_Cerberus->GetTransform().Translate({ 0, 10.0f, 0.0f });
