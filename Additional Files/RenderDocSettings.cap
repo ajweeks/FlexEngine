@@ -16,7 +16,7 @@
   </Options>
   <Inject>false</Inject>
   <AutoStart>false</AutoStart>
-  <Executable>D:\MEGASync\Code\C++\FlexEngine\FlexEngine\Debug\FlexEngine.exe</Executable>
+  <Executable>D:\MEGASync\Code\C++\FlexEngine\FlexEngine\Build\Debug\FlexEngine.exe</Executable>
   <WorkingDir>D:\MEGASync\Code\C++\FlexEngine\FlexEngine</WorkingDir>
   <CmdLine />
   <Environment />
