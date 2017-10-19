@@ -30,6 +30,10 @@ Flex Engine is my personal rendering engine which currently supports Vulkan and 
 
 ![](http://i.imgur.com/mqszTPr.gif)
 
+![](https://i.imgur.com/LbRIVav.jpg)
+**GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
+
+
 ## Dependencies
  - [Assimp](https://github.com/assimp/assimp) - Model loading
  - [ImGui](https://github.com/ocornut/imgui) - User interface
