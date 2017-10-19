@@ -59,11 +59,6 @@ namespace flex
 
 			glm::uint cubemapSamplerID;
 
-			// GBuffer samplers
-			glm::uint positionFrameBufferSamplerID;
-			glm::uint normalFrameBufferSamplerID;
-			glm::uint diffuseSpecularFrameBufferSamplerID;
-			
 			// PBR samplers
 			glm::uint albedoSamplerID;
 			glm::uint metallicSamplerID;
@@ -86,6 +81,7 @@ namespace flex
 			Renderer::RenderObjectInfo info;
 
 			bool visible = true;
+			bool isStatic = true; // If true, this object will be rendered to reflection probes
 
 			glm::uint VAO;
 			glm::uint VBO;

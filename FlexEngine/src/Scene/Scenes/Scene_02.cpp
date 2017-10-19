@@ -224,12 +224,6 @@ namespace flex
 				pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
 				pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
 				pbrMatInfo.constAO = 1.0f;
-				pbrMatInfo.enableIrradianceSampler = true;
-				pbrMatInfo.irradianceSamplerMatID = skyboxHDRMatID;
-				pbrMatInfo.enablePrefilteredMap = true;
-				pbrMatInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
-				pbrMatInfo.enableBRDFLUT = true;
-				pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
 				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 			}
 

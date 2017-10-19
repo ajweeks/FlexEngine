@@ -127,14 +127,7 @@ namespace flex
 			bool generateHDRCubemapSampler = false;
 			bool enableHDRCubemapSampler;
 
-			bool enablePositionFrameBufferSampler = false;
-			glm::uint positionFrameBufferSamplerID;
-
-			bool enableNormalFrameBufferSampler = false;
-			glm::uint normalFrameBufferSamplerID;
-
-			bool enableDiffuseSpecularFrameBufferSampler = false;
-			glm::uint diffuseSpecularFrameBufferSamplerID;
+			std::vector<std::pair<std::string, glm::uint>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
@@ -185,12 +178,7 @@ namespace flex
 			std::string normalTexturePath;
 
 			// GBuffer samplers
-			bool generatePositionFrameBufferSampler = false; // Would one ever want to disable this?
-			bool enablePositionFrameBufferSampler = false; // Would one ever want to disable this?
-			bool generateNormalFrameBufferSampler = false;
-			bool enableNormalFrameBufferSampler = false;
-			bool generateDiffuseSpecularFrameBufferSampler = false;
-			bool enableDiffuseSpecularFrameBufferSampler = false;
+			std::vector<std::pair<std::string, glm::uint>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
 			bool generateCubemapSampler = false;   // Cubemap is enabled 
 			bool enableCubemapSampler = false;   // Cubemap is enabled 
@@ -274,44 +262,6 @@ namespace flex
 
 		struct Uniforms
 		{
-			/*
-			Possible uniform names:
-
-				model
-				modelInvTranspose
-				modelViewProj
-				projection
-				view
-				viewInv
-				viewProjection
-				camPos
-				dirLight
-				pointLights
-				enableDiffuseSampler
-				diffuseSampler
-				enableNormalSampler
-				normalSampler
-				enableSpecularSampler
-				specularSampler
-				enableCubemapSampler
-				cubemapSampler
-				positionFrameBufferSampler
-				diffuseSpecularFrameBufferSampler
-				normalFrameBufferSampler
-				enableAlbedoSampler
-				albedoSampler
-				albedo				(constant value to use when not using sampler)
-				enableMetallicSampler
-				metallicSampler
-				metallic			(constant value to use when not using sampler)
-				enableRoughnessSampler
-				roughnessSampler
-				roughness			(constant value to use when not using sampler)
-				enableAOSampler
-				aoSampler
-				ao
-				enableIrradianceSampler
-			*/
 			std::map<std::string, bool> types;
 
 			inline bool HasUniform(const std::string& name) const;
@@ -342,9 +292,6 @@ namespace flex
 			bool needDiffuseSampler = false;
 			bool needSpecularSampler = false;
 			bool needNormalSampler = false;
-			bool needPositionFrameBufferSampler = false;
-			bool needNormalFrameBufferSampler = false;
-			bool needDiffuseSpecularFrameBufferSampler = false;
 			bool needCubemapSampler = false;
 			bool needAlbedoSampler = false;
 			bool needMetallicSampler = false;

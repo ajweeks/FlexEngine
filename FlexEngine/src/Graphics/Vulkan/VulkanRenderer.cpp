@@ -1888,9 +1888,7 @@ namespace flex
 			mat.material.generateSpecularSampler = createInfo->generateSpecularSampler;
 			mat.material.enableSpecularSampler = createInfo->enableSpecularSampler;
 
-			mat.material.enablePositionFrameBufferSampler = createInfo->enablePositionFrameBufferSampler;
-			mat.material.enableNormalFrameBufferSampler = createInfo->enableNormalFrameBufferSampler;
-			mat.material.enableDiffuseSpecularFrameBufferSampler = createInfo->enableDiffuseSpecularFrameBufferSampler;
+			mat.material.frameBuffers = createInfo->frameBuffers;
 
 			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
 			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler;
@@ -5750,9 +5748,6 @@ namespace flex
 
 			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
-			m_Shaders[shaderID].shader.needPositionFrameBufferSampler = true;
-			m_Shaders[shaderID].shader.needNormalFrameBufferSampler = true;
-			m_Shaders[shaderID].shader.needDiffuseSpecularFrameBufferSampler = true;
 			// TODO: Specify that this buffer is only used in the frag shader here
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");

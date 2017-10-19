@@ -107,6 +107,11 @@ namespace flex
 			void DrawForwardObjects(const GameContext& gameContext);
 			void DrawUI();
 
+			// Returns the next binding that would be used
+			glm::uint BindTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding = 0);
+			// Returns the next binding that would be used
+			glm::uint BindFrameBufferTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding = 0);
+
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
 			bool ImGui_CreateFontsTexture();
@@ -134,9 +139,17 @@ namespace flex
 			Transform m_gBufferQuadTransform;
 			glm::uint m_gBufferHandle;
 			glm::uint m_gBufferDepthHandle;
-			glm::uint m_gBuffer_PositionHandle;
-			glm::uint m_gBuffer_NormalHandle;
-			glm::uint m_gBuffer_DiffuseSpecularHandle;
+
+			struct GBufferHandle
+			{
+				glm::uint id;
+				GLenum format;
+				GLenum internalFormat;
+			};
+
+			GBufferHandle m_gBuffer_PositionMetallicHandle;
+			GBufferHandle m_gBuffer_NormalRoughnessHandle;
+			GBufferHandle m_gBuffer_DiffuseAOHandle;
 
 			// Equirectangular to cubemap frame buffer objects
 			glm::uint m_CaptureFBO;

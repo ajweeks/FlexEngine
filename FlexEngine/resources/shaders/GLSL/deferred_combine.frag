@@ -1,31 +1,32 @@
 #version 400
 
+// Deferred PBR combine
+
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
 struct DirectionalLight 
 {
 	vec4 direction;
-
 	vec4 color;
-
 	bool enabled;
 	float padding[3];
 };
 uniform DirectionalLight dirLight;
 
-struct PointLight 
+struct PointLight
 {
 	vec4 position;
-
 	vec4 color;
-
 	bool enabled;
 	float padding[3];
 };
 #define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
-uniform sampler2D positionFrameBufferSampler;
-uniform sampler2D normalFrameBufferSampler;
-uniform sampler2D diffuseSpecularFrameBufferSampler;
+layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
+layout (binding = 1) uniform sampler2D normalRoughnessFrameBufferSampler;
+layout (binding = 2) uniform sampler2D albedoAOFrameBufferSampler;
 
 uniform vec4 camPos;
 
@@ -33,81 +34,155 @@ in vec2 ex_TexCoord;
 
 out vec4 fragmentColor;
 
-vec3 DoDirectionalLighting(DirectionalLight dirLight, vec3 diffuseSample, float specularSample, vec3 normal, vec3 viewDir, float specStrength, float specShininess)
+const float PI = 3.14159265359;
+
+layout (binding = 3) uniform sampler2D brdfLUT;
+
+uniform bool enableIrradianceSampler;
+layout (binding = 4) uniform samplerCube irradianceSampler;
+
+layout (binding = 5) uniform samplerCube prefilterMap;
+
+vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
-	vec3 lightDir = normalize(-dirLight.direction.xyz);
-
-	float diffuseIntensity = max(dot(normal, lightDir), 0.0);
-
-	vec3 reflectDir = reflect(-lightDir, normal);
-	float specularIntensity = pow(max(dot(viewDir, reflectDir), 0.0), specShininess);
-	
-	float specularCol = specStrength * specularIntensity * specularSample;
-
-	vec3 diffuse = dirLight.color.rgb * diffuseSample * diffuseIntensity;
-	vec3 specular = vec3(specularCol * specularIntensity);
-
-	return (diffuse + specular);
+	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-vec3 DoPointLighting(PointLight pointLight, vec3 diffuseSample, float specularSample, vec3 normal, vec3 worldPos, vec3 viewDir, float specStrength, float specShininess)
+vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 {
-	vec3 lightDir = normalize(pointLight.position.xyz - worldPos);
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
 
-	float diffuseIntensity = max(dot(normal, lightDir), 0.0);
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
+	float a = roughness * roughness;
+	float a2 = a * a;
+	float NdotH = max(dot(N, H), 0.0);
+	float NdotH2 = NdotH * NdotH;
 
-	vec3 reflectDir = reflect(-lightDir, normal);
-	float specularIntensity = pow(max(dot(viewDir, reflectDir), 0.0), specShininess);
+	float nom = a2;
+	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+	denom = PI * denom * denom;
 
-	float specularCol = specStrength * specularIntensity * specularSample;
+	return nom / denom;
+}
 
-	float distance = length(pointLight.position.xyz - worldPos);
-	float attenuation = 1.0 / (distance * distance); 
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+	float r = (roughness + 1.0);
+	float k = (r * r) / 8.0;
 
-	vec3 diffuse = pointLight.color.rgb * diffuseSample * diffuseIntensity * attenuation;
-	vec3 specular = vec3(specularCol * specularIntensity * attenuation);
+	float nom = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
 
-	return (diffuse + specular);
+	return nom / denom;
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+	float NdotV = max(dot(N, V), 0.0);
+	float NdotL = max(dot(N, L), 0.0);
+	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+
+	return ggx1 * ggx2;
+}
+
+vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, 
+	float roughness, float metallic, vec3 F0, vec3 albedo)
+{
+	vec3 H = normalize(V + L);
+
+	// Cook-Torrance BRDF
+	float NDF = DistributionGGX(N, H, roughness);
+	float G = GeometrySmith(N, V, L, roughness);
+	vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+
+	vec3 kS = F;
+	vec3 kD = vec3(1.0) - kS;
+	kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
+
+	vec3 nominator = NDF * G * F;
+	float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
+	vec3 specular = nominator / denominator;
+
+	float NdotL = max(dot(N, L), 0.0);
+
+	return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 
 void main()
 {
-    // retrieve data from gbuffer
-    vec3 worldPos = texture(positionFrameBufferSampler, ex_TexCoord).rgb;
-    vec3 normal = texture(normalFrameBufferSampler, ex_TexCoord).rgb;
-    vec3 diffuse = texture(diffuseSpecularFrameBufferSampler, ex_TexCoord).rgb;
-    float specular = texture(diffuseSpecularFrameBufferSampler, ex_TexCoord).a;
+    // Retrieve data from gbuffer
+    vec3 worldPos = texture(positionMetallicFrameBufferSampler, ex_TexCoord).rgb;
+    float metallic = texture(positionMetallicFrameBufferSampler, ex_TexCoord).a;
 
-	float specStrength = 0.5;
-	float specShininess = 32.0;
-	
-	vec3 viewDir = normalize(camPos.xyz - worldPos);
+    vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
+    float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
 
-	vec3 result = vec3(0.0);
-	if (dirLight.enabled) result += DoDirectionalLighting(dirLight, diffuse, specular, normal, viewDir, specStrength, specShininess);
+    vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;
+    float ao = texture(albedoAOFrameBufferSampler, ex_TexCoord).a;
 
+	vec3 V = normalize(camPos.xyz - worldPos);
+	vec3 R = reflect(-V, N);
+
+	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
+	vec3 F0 = vec3(0.04);
+	F0 = mix(F0, albedo, metallic);
+
+	// Reflectance equation
+	vec3 Lo = vec3(0.0);
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		if (pointLights[i].enabled)
-		{
-			result += DoPointLighting(pointLights[i], diffuse, specular, normal, worldPos, viewDir, specStrength, specShininess);
-		}
-	}
-	
-	fragmentColor = vec4(result, 1.0);
-	
-	// visualize diffuse lighting:
-	//fragmentColor = vec4(vec3(lightIntensity), 1); return;
-	
-	// visualize normals:
-	//fragmentColor = vec4(normal * 0.5 + 0.5, 1); return;
-	
-	// visualize specular:
-	//fragmentColor = specular; return;
+		if (!pointLights[i].enabled) continue;
 
-	// visualize tex coords:
-	//fragmentColor = vec4(ex_TexCoord.xy, 0, 1); return;
+		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
+		
+		float distance = length(pointLights[i].position.xyz - worldPos);
+		float attenuation = 1.0 / (distance * distance);
+		vec3 radiance = pointLights[i].color.rgb * attenuation;
 	
-	// no lighting:
-	//fragmentColor = ex_Color; return;
+		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
+	}
+
+	if (dirLight.enabled)
+	{
+		vec3 L = normalize(dirLight.direction.xyz);
+		vec3 radiance = dirLight.color.rgb;
+		
+		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
+	}
+
+	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+
+	vec3 ambient;
+	if (enableIrradianceSampler)
+	{
+		// Diffse ambient term (IBL)
+		vec3 kS = F;
+	    vec3 kD = 1.0 - kS;
+	    kD *= 1.0 - metallic;	  
+	    vec3 irradiance = texture(irradianceSampler, N).rgb;
+	    vec3 diffuse = irradiance * albedo;
+
+		// Specular ambient term (IBL)
+		const float MAX_REFLECTION_LOAD = 5.0;
+		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+	    ambient = (kD * diffuse + specular) * ao;
+	}
+	else
+	{
+		ambient = vec3(0.03) * albedo * ao;
+	}
+
+	vec3 color = ambient + Lo;
+
+	// TODO: Once we add post processing that requires HDR don't do this calculation here:
+	color = color / (color + vec3(1.0)); // Reinhard
+	color = pow(color, vec3(1.0 / 2.2)); // Gamma correct
+
+	fragmentColor = vec4(color, 1.0);
 }
