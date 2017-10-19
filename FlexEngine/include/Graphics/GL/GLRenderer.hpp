@@ -70,11 +70,29 @@ namespace flex
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject);
+			void CaptureCubemap(GLRenderObject* renderObject, glm::uint program, glm::uint hdrTextureID, GLMaterial::UniformIDs uniformIDs, glm::vec2i viewportSize, bool genMipMaps);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject);
 			
 			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
+
+			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext);
+
+			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
+
+			GLRenderObject* GetRenderObject(RenderID renderID);
+			RenderID GetFirstAvailableRenderID() const;
+			void InsertNewRenderObject(GLRenderObject* renderObject);
+			void UnloadShaders();
+			void LoadShaders();
+
+			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
+			void ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
+			void ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size);
+
+			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
+			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
 
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
@@ -86,25 +104,8 @@ namespace flex
 			int m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
 			unsigned int m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;
 			
-			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext);
-
-			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
-
 			std::vector<GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
-
-			GLRenderObject* GetRenderObject(RenderID renderID);
-			RenderID GetFirstAvailableRenderID() const;
-			void InsertNewRenderObject(GLRenderObject* renderObject);
-			void UnloadShaders();
-			void LoadShaders();
-			
-			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
-			void ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
-			void ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size);
-
-			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
-			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
 
 			bool m_VSyncEnabled;
 

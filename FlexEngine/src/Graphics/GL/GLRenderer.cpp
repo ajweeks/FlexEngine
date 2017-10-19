@@ -564,21 +564,36 @@ namespace flex
 				RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
-			// Convert HDR equirectangular texture to cubemap using six snapshots
-			glUseProgram(m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID].program);
+			GLShader* equirectangularToCubemapShader = &m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID];
+			GLMaterial* equirectangularToCubemapMaterial = &m_Materials[equirectangularToCubeMatID];
+
+			CaptureCubemap(
+				renderObject, 
+				equirectangularToCubemapShader->program, 
+				m_Materials[equirectangularToCubeMatID].hdrTextureID, 
+				equirectangularToCubemapMaterial->uniformIDs, 
+				m_HDREquirectangularCubemapCaptureSize, 
+				true);
+		}
+
+		void GLRenderer::CaptureCubemap(GLRenderObject* renderObject, glm::uint program, glm::uint hdrTextureID, GLMaterial::UniformIDs uniformIDs, glm::vec2i viewportSize, bool genMipMaps)
+		{
+			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+
+			glUseProgram(program);
 			CheckGLErrorMessages();
 
 			// Update object's uniforms under this shader's program
 			renderObject->model = glm::mat4(1.0f);
-			glUniformMatrix4fv(m_Materials[equirectangularToCubeMatID].uniformIDs.model, 1, false, &renderObject->model[0][0]);
+			glUniformMatrix4fv(uniformIDs.model, 1, false, &renderObject->model[0][0]);
 			CheckGLErrorMessages();
 
-			glUniformMatrix4fv(m_Materials[equirectangularToCubeMatID].uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
+			glUniformMatrix4fv(uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
 			CheckGLErrorMessages();
 
 			// TODO: Store what location this texture is at (might not be 0)
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
+			glBindTexture(GL_TEXTURE_2D, hdrTextureID);
 			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
@@ -587,7 +602,7 @@ namespace flex
 
 			CheckGLErrorMessages();
 
-			glViewport(0, 0, m_HDREquirectangularCubemapCaptureSize.x, m_HDREquirectangularCubemapCaptureSize.y);
+			glViewport(0, 0, viewportSize.x, viewportSize.y);
 			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
@@ -598,7 +613,7 @@ namespace flex
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 				CheckGLErrorMessages();
 
-				glUniformMatrix4fv(m_Materials[equirectangularToCubeMatID].uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
+				glUniformMatrix4fv(uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
 				CheckGLErrorMessages();
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].cubemapSamplerID, 0);
@@ -614,9 +629,12 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			// Generate mip maps for generated cubemap
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[renderObject->materialID].cubemapSamplerID);
-			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+			if (genMipMaps)
+			{
+				// Generate mip maps for generated cubemap
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[renderObject->materialID].cubemapSamplerID);
+				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+			}
 
 			glUseProgram(0);
 			glBindVertexArray(0);
@@ -625,12 +643,13 @@ namespace flex
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			glViewport(0, 0, frameBufferSize.x, frameBufferSize.y);
+			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
 		void GLRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject)
 		{
+			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+
 			MaterialCreateInfo prefilterMaterialCreateInfo = {};
 			prefilterMaterialCreateInfo.name = "Prefilter";
 			prefilterMaterialCreateInfo.shaderName = "prefilter";
@@ -704,12 +723,13 @@ namespace flex
 			glBindVertexArray(0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			glViewport(0, 0, frameBufferSize.x, frameBufferSize.y);
+			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
 		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject)
 		{
+			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+
 			MaterialCreateInfo brdfMaterialCreateInfo = {};
 			brdfMaterialCreateInfo.name = "BRDF";
 			brdfMaterialCreateInfo.shaderName = "brdf";
@@ -788,27 +808,12 @@ namespace flex
 			glBindVertexArray(0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			glViewport(0, 0, frameBufferSize.x, frameBufferSize.y);
-		}
-
-		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
-		{
-			// TODO: Store shaders using sorted data structure?
-			for (size_t i = 0; i < m_Shaders.size(); ++i)
-			{
-				if (m_Shaders[i].shader.name.compare(shaderName) == 0)
-				{
-					shaderID = i;
-					return true;
-				}
-			}
-
-			return false;
+			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
 		void GLRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject)
 		{
+			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
 			// Irradiance sampler generation
 			MaterialCreateInfo irrandianceMatCreateInfo = {};
@@ -868,8 +873,22 @@ namespace flex
 			glBindVertexArray(0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			glViewport(0, 0, frameBufferSize.x, frameBufferSize.y);
+			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
+		}
+
+		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
+		{
+			// TODO: Store shaders using sorted data structure?
+			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			{
+				if (m_Shaders[i].shader.name.compare(shaderName) == 0)
+				{
+					shaderID = i;
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		DirectionalLightID GLRenderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
