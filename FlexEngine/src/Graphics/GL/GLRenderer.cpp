@@ -567,45 +567,41 @@ namespace flex
 			GLShader* equirectangularToCubemapShader = &m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID];
 			GLMaterial* equirectangularToCubemapMaterial = &m_Materials[equirectangularToCubeMatID];
 
+			glUseProgram(equirectangularToCubemapShader->program);
+			CheckGLErrorMessages();
+
+			// TODO: Store what location this texture is at (might not be 0)
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
+			CheckGLErrorMessages();
+
+			renderObject->model = glm::mat4(1.0f);
+
 			CaptureCubemap(
 				renderObject, 
-				equirectangularToCubemapShader->program, 
-				m_Materials[equirectangularToCubeMatID].hdrTextureID, 
 				equirectangularToCubemapMaterial->uniformIDs, 
 				m_HDREquirectangularCubemapCaptureSize, 
 				true);
 		}
 
-		void GLRenderer::CaptureCubemap(GLRenderObject* renderObject, glm::uint program, glm::uint hdrTextureID, GLMaterial::UniformIDs uniformIDs, glm::vec2i viewportSize, bool genMipMaps)
+		void GLRenderer::CaptureCubemap(GLRenderObject* renderObject, GLMaterial::UniformIDs uniformIDs, glm::vec2i viewportSize, bool genMipMaps)
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
-			glUseProgram(program);
-			CheckGLErrorMessages();
-
 			// Update object's uniforms under this shader's program
-			renderObject->model = glm::mat4(1.0f);
 			glUniformMatrix4fv(uniformIDs.model, 1, false, &renderObject->model[0][0]);
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
 			CheckGLErrorMessages();
 
-			// TODO: Store what location this texture is at (might not be 0)
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, hdrTextureID);
-			CheckGLErrorMessages();
-
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_IrradianceCubemapCaptureSize.x, m_IrradianceCubemapCaptureSize.y);
-
+			//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, viewportSize.x, viewportSize.y);
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, viewportSize.x, viewportSize.y);
 			CheckGLErrorMessages();
-
-			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 
 			for (unsigned int i = 0; i < 6; ++i)
 			{
@@ -1070,18 +1066,34 @@ namespace flex
 		{
 			CheckGLErrorMessages();
 
-			// TODO: Don't create two nested vectors every frame, just sort things by deferred/forward, then by material ID
+			// TODO: Don't sort render objects frame! Only when things are added/removed
+			SortRenderObjects(gameContext);
+
+			DrawDeferredObjects(gameContext);
+			DrawGBufferQuad(gameContext);
+			DrawForwardObjects(gameContext);
+			DrawUI();
+
+			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
+		}
+
+		void GLRenderer::SortRenderObjects(const GameContext& gameContext)
+		{
 			/*
-			  Eg. deferred | matID
-				  yes		 0
-				  yes		 2
-				  no		 1
-				  no		 3
-				  no		 5
+			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
+			
+
+			Eg. deferred | matID
+			yes		 0
+			yes		 2
+			no		 1
+			no		 3
+			no		 5
 			*/
+			m_DeferredRenderObjectBatches.clear();
+			m_ForwardRenderObjectBatches.clear();
+			
 			// Sort render objects into deferred + forward buckets
-			std::vector<std::vector<GLRenderObject*>> deferredRenderObjectBatches;
-			std::vector<std::vector<GLRenderObject*>> forwardRenderObjectBatches;
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
 				GLShader* shader = &m_Shaders[m_Materials[i].material.shaderID];
@@ -1090,42 +1102,44 @@ namespace flex
 
 				if (shader->shader.deferred)
 				{
-					deferredRenderObjectBatches.push_back({});
+					m_DeferredRenderObjectBatches.push_back({});
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject && renderObject->visible && renderObject->materialID == i)
 						{
-							deferredRenderObjectBatches.back().push_back(renderObject);
+							m_DeferredRenderObjectBatches.back().push_back(renderObject);
 						}
 					}
 				}
 				else
 				{
-					forwardRenderObjectBatches.push_back({});
+					m_ForwardRenderObjectBatches.push_back({});
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject && renderObject->visible && renderObject->materialID == i)
 						{
-							forwardRenderObjectBatches.back().push_back(renderObject);
+							m_ForwardRenderObjectBatches.back().push_back(renderObject);
 						}
 					}
 				}
 			}
+		}
 
-			// Geometry pass - Render scene's geometry into gbuffer render targets
+		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext)
+		{
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 			CheckGLErrorMessages();
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
 
-			for (size_t i = 0; i < deferredRenderObjectBatches.size(); ++i)
+			for (size_t i = 0; i < m_DeferredRenderObjectBatches.size(); ++i)
 			{
-				if (!deferredRenderObjectBatches[i].empty())
+				if (!m_DeferredRenderObjectBatches[i].empty())
 				{
-					DrawRenderObjectBatch(deferredRenderObjectBatches[i], gameContext);
+					DrawRenderObjectBatch(m_DeferredRenderObjectBatches[i], gameContext);
 				}
 			}
 
@@ -1141,17 +1155,17 @@ namespace flex
 			glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			CheckGLErrorMessages();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
 
-			// Don't write gbuffer quad into depth buffer
+		void GLRenderer::DrawGBufferQuad(const GameContext& gameContext)
+		{
+			// Disable depth buffer writing for gbuffer quad
 			glDepthMask(GL_FALSE);
 
-			// Lighting pass - Calculate lighting based on the gbuffer's contents
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
 
-
 			// TODO: Draw offscreen quad once for each deferred material type (store deferred matID in shaders, remove gBufferQuad->materialID) 
-
 
 			glUseProgram(m_Shaders[m_Materials[gBufferQuad->materialID].material.shaderID].program);
 
@@ -1177,17 +1191,21 @@ namespace flex
 
 			glDepthMask(GL_TRUE);
 			CheckGLErrorMessages();
+		}
 
-			// Forward pass - draw all objects which don't use deferred shading
-			for (size_t i = 0; i < forwardRenderObjectBatches.size(); ++i)
+		void GLRenderer::DrawForwardObjects(const GameContext& gameContext)
+		{
+			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
 			{
-				if (!forwardRenderObjectBatches[i].empty())
+				if (!m_ForwardRenderObjectBatches[i].empty())
 				{
-					DrawRenderObjectBatch(forwardRenderObjectBatches[i], gameContext);
+					DrawRenderObjectBatch(m_ForwardRenderObjectBatches[i], gameContext);
 				}
 			}
+		}
 
-			// Draw UI
+		void GLRenderer::DrawUI()
+		{
 			ImDrawData* drawData = ImGui::GetDrawData();
 
 			// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
@@ -1285,8 +1303,6 @@ namespace flex
 			glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 			glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 
-
-			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 		}
 
 		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext)

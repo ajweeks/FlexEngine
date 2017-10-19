@@ -70,7 +70,14 @@ namespace flex
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject);
-			void CaptureCubemap(GLRenderObject* renderObject, glm::uint program, glm::uint hdrTextureID, GLMaterial::UniformIDs uniformIDs, glm::vec2i viewportSize, bool genMipMaps);
+			/*
+			 Captures a cubemap to the specified renderObject's cubemap texture 
+			 Before this function is called:
+				 - renderObject's cubemap texture must already be initialized
+			     - GL program must already be set to correct shader
+				 - any textures being used must be bound
+			 */
+			void CaptureCubemap(GLRenderObject* renderObject, GLMaterial::UniformIDs uniformIDs, glm::vec2i viewportSize, bool genMipMaps);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject);
@@ -93,6 +100,12 @@ namespace flex
 
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
+
+			void SortRenderObjects(const GameContext& gameContext);
+			void DrawDeferredObjects(const GameContext& gameContext);
+			void DrawGBufferQuad(const GameContext& gameContext);
+			void DrawForwardObjects(const GameContext& gameContext);
+			void DrawUI();
 
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
@@ -137,6 +150,9 @@ namespace flex
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;
 			GLRenderObject* m_1x1_NDC_Quad; // A 1x1 quad in NDC space
+
+			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
+			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

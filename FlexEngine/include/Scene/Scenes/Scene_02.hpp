@@ -23,7 +23,7 @@ namespace flex
 		std::vector<MeshPrefab*> m_Spheres;
 
 		MeshPrefab* m_Arisaka = nullptr;
-		MeshPrefab* n_Cerberus = nullptr;
+		MeshPrefab* m_Cerberus = nullptr;
 
 		MeshPrefab* m_Skybox = nullptr;
 

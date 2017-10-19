@@ -32,10 +32,4 @@ void main()
 		normalize(mat3(modelInvTranspose) * in_Normal));
 
     gl_Position = viewProjection * worldPos;
-
-	// Convert normal to model-space and prevent non-uniform scale issues
-	//ex_TBN = mat3(
-	//	normalize(mat3(in_ModelInvTranspose) * in_Tangent), 
-	//	normalize(mat3(in_ModelInvTranspose) * in_Bitangent), 
-	//	normalize(mat3(in_ModelInvTranspose) * in_Normal));
 }

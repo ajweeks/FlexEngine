@@ -111,6 +111,20 @@ namespace flex
 		const MaterialID cerebusMatID2 = gameContext.renderer->InitializeMaterial(gameContext, &cerebusMatTexturedInfo2);
 
 
+		Renderer::MaterialCreateInfo brickMatInfo = {};
+		brickMatInfo.shaderName = "deferred_simple";
+		brickMatInfo.name = "Brick";
+		brickMatInfo.enableDiffuseSampler = true;
+		brickMatInfo.generateDiffuseSampler = true;
+		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
+		brickMatInfo.enableSpecularSampler = true;
+		brickMatInfo.generateSpecularSampler = true;
+		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
+		brickMatInfo.enableNormalSampler = true;
+		brickMatInfo.generateNormalSampler = true;
+		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
+		const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
+
 		//Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
 		//pbrMatTexturedInfo.shaderName = "pbr";
 		//pbrMatTexturedInfo.name = "PBR textured";
@@ -172,11 +186,11 @@ namespace flex
 		AddChild(gameContext, m_Skybox);
 
 
-		n_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
-		n_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
-		AddChild(gameContext, n_Cerberus);
-		n_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
-		n_Cerberus->GetTransform().Translate({ 0.0f, 10.0f, 0.0f });
+		m_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
+		m_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
+		AddChild(gameContext, m_Cerberus);
+		m_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
+		m_Cerberus->GetTransform().Translate({ 0.0f, 10.0f, 0.0f });
 
 
 		MeshPrefab* extraCerberus = new MeshPrefab(cerebusMatID2, "Cerberus 2");
@@ -199,22 +213,28 @@ namespace flex
 		
 			const std::string iStr = std::to_string(i);
 		
-			Renderer::MaterialCreateInfo pbrMatInfo = {};
-			pbrMatInfo.shaderName = "pbr";
-			pbrMatInfo.name = "PBR simple " + iStr;
-			pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.75f, 0.14f);
-			pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
-			pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
-			pbrMatInfo.constAO = 1.0f;
-			pbrMatInfo.enableIrradianceSampler = true;
-			pbrMatInfo.irradianceSamplerMatID = skyboxHDRMatID;
-			pbrMatInfo.enablePrefilteredMap = true;
-			pbrMatInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
-			pbrMatInfo.enableBRDFLUT = true;
-			pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
-			const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-			
-			m_Spheres[i] = new MeshPrefab(pbrMatID, "Sphere " + iStr);
+			MaterialID matID = brickMatID;
+
+			if ((x + y) % 2 == 0)
+			{
+				Renderer::MaterialCreateInfo pbrMatInfo = {};
+				pbrMatInfo.shaderName = "pbr";
+				pbrMatInfo.name = "PBR simple " + iStr;
+				pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.75f, 0.14f);
+				pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
+				pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
+				pbrMatInfo.constAO = 1.0f;
+				pbrMatInfo.enableIrradianceSampler = true;
+				pbrMatInfo.irradianceSamplerMatID = skyboxHDRMatID;
+				pbrMatInfo.enablePrefilteredMap = true;
+				pbrMatInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
+				pbrMatInfo.enableBRDFLUT = true;
+				pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
+				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+			}
+
+			m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
+			m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
 			AddChild(gameContext, m_Spheres[i]);
