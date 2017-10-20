@@ -1385,7 +1385,7 @@ namespace flex
 			return binding;
 		}
 
-		glm::uint GLRenderer::BindFrameBufferTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding)
+		glm::uint GLRenderer::BindFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding)
 		{
 			Material* material = &glMaterial->material;
 

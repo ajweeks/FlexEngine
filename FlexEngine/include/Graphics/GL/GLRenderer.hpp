@@ -110,7 +110,7 @@ namespace flex
 			// Returns the next binding that would be used
 			glm::uint BindTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding = 0);
 			// Returns the next binding that would be used
-			glm::uint BindFrameBufferTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding = 0);
+			glm::uint BindFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding = 0);
 
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
