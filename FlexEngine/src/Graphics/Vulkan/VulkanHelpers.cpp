@@ -545,10 +545,15 @@ namespace flex
 		{
 		}
 
+		FrameBufferAttachment::FrameBufferAttachment(const VDeleter<VkDevice>& device, VkFormat format) :
+			image(device, vkDestroyImage),
+			mem(device, vkFreeMemory),
+			view(device, vkDestroyImageView),
+			format(format)
+		{
+		}
+
 		FrameBuffer::FrameBuffer(const VDeleter<VkDevice>& device) :
-			position(device),
-			normal(device),
-			albedo(device),
 			frameBuffer(device, vkDestroyFramebuffer),
 			renderPass(device, vkDestroyRenderPass)
 		{

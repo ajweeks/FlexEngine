@@ -223,7 +223,6 @@ namespace flex
 			FrameBuffer* offScreenFrameBuf = nullptr;
 			VkSampler colorSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
-			//UniformBuffer* m_OffscreenBufferUniformBuffer = nullptr;
 			int m_DeferredQuadVertexBufferIndex;
 
 			
@@ -289,16 +288,17 @@ namespace flex
 
 			VkPipelineCache m_PipelineCache;
 
-			VkPipelineLayout m_DeferredPipelineLayout = VK_NULL_HANDLE;
-			VkPipeline m_DeferredPipeline = VK_NULL_HANDLE;
 			VkCommandBuffer offScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
-			VertexIndexBufferPair offscreenQuadVertexIndexBufferPair;
+
+			RenderID m_GBufferQuadRenderID;
+			VertexBufferData m_gBufferQuadVertexBufferData;
+			Transform m_gBufferQuadTransform;
+
 
 			VkClearColorValue m_ClearColor;
 
 			ShaderID m_IGuiShaderID;
-			//UniformBuffer* m_ImGuiUniformBuffer = nullptr;
 
 			static std::array<glm::mat4, 6> m_CaptureViews;
 

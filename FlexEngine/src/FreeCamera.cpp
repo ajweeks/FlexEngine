@@ -21,7 +21,9 @@ namespace flex
 		m_RotationSpeed(0.0011f),
 		m_View(glm::mat4(0.0f)),
 		m_Proj(glm::mat4(0.0f)),
-		m_ViewProjection(glm::mat4(0.0f))
+		m_ViewProjection(glm::mat4(0.0f)),
+		m_Yaw(0.0f),
+		m_Pitch(0.0f)
 	{
 		gameContext.camera = this;
 		ResetOrientation();
@@ -194,10 +196,10 @@ namespace flex
 		return m_Position;
 	}
 
-	void FreeCamera::SetViewDirection(glm::vec3 viewDir)
+	void FreeCamera::SetViewDirection(float yawRad, float pitchRad)
 	{
-		m_Yaw = viewDir.x;
-		m_Pitch = viewDir.y;
+		m_Yaw = yawRad;
+		m_Pitch = pitchRad;
 	}
 
 	glm::vec3 FreeCamera::GetViewDirection() const
@@ -257,9 +259,9 @@ namespace flex
 		return m_Yaw;
 	}
 
-	void FreeCamera::SetYaw(float yaw)
+	void FreeCamera::SetYaw(float yawRad)
 	{
-		m_Yaw = yaw;
+		m_Yaw = yawRad;
 	}
 
 	float FreeCamera::GetPitch() const
@@ -267,8 +269,8 @@ namespace flex
 		return m_Pitch;
 	}
 
-	void FreeCamera::SetPitch(float pitch)
+	void FreeCamera::SetPitch(float pitchRad)
 	{
-		m_Pitch = pitch;
+		m_Pitch = pitchRad;
 	}
 } // namespace flex

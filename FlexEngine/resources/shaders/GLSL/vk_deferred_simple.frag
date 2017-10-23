@@ -12,9 +12,9 @@ layout (binding = 1) uniform UBODynamic
 {
     mat4 model;
     mat4 modelInvTranspose;
-    bool useDiffuseSampler;
-    bool useNormalSampler;
-    bool useSpecularSampler;
+    bool enableDiffuseSampler;
+    bool enableNormalSampler;
+    bool enableSpecularSampler;
 } uboDynamic;
 
 layout (binding = 2) uniform sampler2D in_DiffuseSampler;
@@ -30,7 +30,7 @@ void main()
     // Render to all GBuffers
     out_Position = ex_FragPos;
 
-    if (uboDynamic.useNormalSampler)
+    if (uboDynamic.enableNormalSampler)
     {
         vec4 normalSample = texture(in_NormalSampler, ex_TexCoord);
         out_Normal = normalize(ex_TBN * (normalSample.xyz * 2 - 1));
@@ -40,7 +40,7 @@ void main()
         out_Normal = normalize(ex_TBN[2]);
     }
     
-    out_AlbedoSpec.rgb = (uboDynamic.useDiffuseSampler ? texture(in_DiffuseSampler, ex_TexCoord).rgb : vec3(1, 1, 1)) * ex_Color;
+    out_AlbedoSpec.rgb = (uboDynamic.enableDiffuseSampler ? texture(in_DiffuseSampler, ex_TexCoord).rgb : vec3(1, 1, 1)) * ex_Color;
     
-    out_AlbedoSpec.a = (uboDynamic.useSpecularSampler ? texture(in_SpecularSampler, ex_TexCoord).r : 1);
+    out_AlbedoSpec.a = (uboDynamic.enableSpecularSampler ? texture(in_SpecularSampler, ex_TexCoord).r : 1);
 }

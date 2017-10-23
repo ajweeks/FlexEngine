@@ -49,20 +49,4 @@ void main()
 	
 	outAlbedoAO.rgb = albedo;
 	outAlbedoAO.a = ao;
-
-	// Visualize normal map:
-	//fragColor = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;
-
-	// Visualize normals:
-	//fragColor = vec4(N, 1); return;
-
-	// Visualize tangents:
-	//fragColor = vec4(vec3(ex_TBN[0]), 1); return;
-
-	// Visualize texCoords:
-	//fragColor = vec4(ex_TexCoord, 0, 1); return;
-
-	// Visualize metallic:
-	//fragColor = vec4(metallic, metallic, metallic, 1); return;
-
 }

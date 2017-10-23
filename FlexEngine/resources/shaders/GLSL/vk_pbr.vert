@@ -1,5 +1,7 @@
 #version 450
 
+// Deferred PBR
+
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
@@ -13,20 +15,10 @@ layout (location = 0) out vec3 ex_WorldPos;
 layout (location = 1) out vec2 ex_TexCoord;
 layout (location = 2) out mat3 ex_TBN;
 
-struct PointLight 
-{
-	vec4 position;
-	vec4 color;
-	bool enabled;
-};
-#define NUMBER_POINT_LIGHTS 4
-
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
 	mat4 viewProjection;
-    vec4 camPos;
-	PointLight pointLights[NUMBER_POINT_LIGHTS];
 } uboConstant;
 
 // Updated once per object
@@ -46,7 +38,6 @@ layout (binding = 1) uniform UBODynamic
 	bool enableRoughnessSampler;
 	bool enableAOSampler;
 	bool enableNormalSampler;
-	bool enableIrradianceSampler;
 } uboDynamic;
 
 void main()

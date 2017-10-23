@@ -20,7 +20,7 @@ namespace flex
 		m_ClearColor(1.0f, 0.0, 1.0f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::GL;
+		RendererID preferredInitialRenderer = RendererID::VULKAN;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -64,7 +64,9 @@ namespace flex
 		InitializeWindowAndRenderer();
 
 		m_DefaultCamera = new FreeCamera(m_GameContext);
-		m_DefaultCamera->SetPosition(glm::vec3(0.0f, 5.0f, -15.0f));
+		m_DefaultCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
+		m_DefaultCamera->SetYaw(glm::radians(130.0f));
+		m_DefaultCamera->SetPitch(glm::radians(-10.0f));
 		m_GameContext.camera = m_DefaultCamera;
 
 		m_GameContext.sceneManager = new SceneManager();
@@ -337,14 +339,14 @@ namespace flex
 						m_GameContext.camera->SetPosition(camPos);
 
 						glm::vec2 camYawPitch;
-						camYawPitch[0] = m_GameContext.camera->GetYaw();
-						camYawPitch[1] = m_GameContext.camera->GetPitch();
-						ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.01f);
-						m_GameContext.camera->SetYaw(camYawPitch[0]);
-						m_GameContext.camera->SetPitch(camYawPitch[1]);
+						camYawPitch[0] = glm::degrees(m_GameContext.camera->GetYaw());
+						camYawPitch[1] = glm::degrees(m_GameContext.camera->GetPitch());
+						ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f);
+						m_GameContext.camera->SetYaw(glm::radians(camYawPitch[0]));
+						m_GameContext.camera->SetPitch(glm::radians(camYawPitch[1]));
 
 						float camFOV = glm::degrees(m_GameContext.camera->GetFOV());
-						ImGui::DragFloat("FOV", &camFOV, 0.01f, 10.0f, 150.0f);
+						ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f);
 						m_GameContext.camera->SetFOV(glm::radians(camFOV));
 
 						if (ImGui::Button("Reset orientation"))

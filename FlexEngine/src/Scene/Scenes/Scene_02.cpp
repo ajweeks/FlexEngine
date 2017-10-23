@@ -74,7 +74,6 @@ namespace flex
 		cerebusMatTexturedInfo.enableNormalSampler = true;
 		cerebusMatTexturedInfo.generateNormalSampler = true;
 		cerebusMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
-		cerebusMatTexturedInfo.enableIrradianceSampler = true;
 		// TODO: Don't make user specify all this
 		cerebusMatTexturedInfo.irradianceSamplerMatID = skyboxHDRMatID;
 		cerebusMatTexturedInfo.enablePrefilteredMap = true;
@@ -102,7 +101,6 @@ namespace flex
 		cerebusMatTexturedInfo2.enableNormalSampler = true;
 		cerebusMatTexturedInfo2.generateNormalSampler = true;
 		cerebusMatTexturedInfo2.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
-		cerebusMatTexturedInfo2.enableIrradianceSampler = true;
 		cerebusMatTexturedInfo2.irradianceSamplerMatID = skyboxHDRMatID;
 		cerebusMatTexturedInfo2.enablePrefilteredMap = true;
 		cerebusMatTexturedInfo2.prefilterMapSamplerMatID = skyboxHDRMatID;
@@ -228,7 +226,12 @@ namespace flex
 			}
 
 			m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
-			m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+
+			if (matID == brickMatID)
+			{
+				m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+			}
+
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
 			AddChild(gameContext, m_Spheres[i]);

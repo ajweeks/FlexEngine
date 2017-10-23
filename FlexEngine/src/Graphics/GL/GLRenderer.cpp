@@ -954,7 +954,9 @@ namespace flex
 			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			// TODO: Remove this :grimmacing:
+
+
+			// TODO: FIXME: Remove this :grimmacing:
 			MaterialID skyboxMatID = 0;
 			for (size_t i = 0; i < m_Materials.size(); i++)
 			{
@@ -964,6 +966,8 @@ namespace flex
 					break;
 				}
 			}
+
+
 
 			MaterialCreateInfo gBufferMaterialCreateInfo = {};
 			gBufferMaterialCreateInfo.name = "GBuffer material";
@@ -976,9 +980,9 @@ namespace flex
 			gBufferMaterialCreateInfo.brdfLUTSamplerMatID = skyboxMatID;
 
 			gBufferMaterialCreateInfo.frameBuffers = {
-				{ "positionMetallicFrameBufferSampler",  m_gBuffer_PositionMetallicHandle.id },
-				{ "normalRoughnessFrameBufferSampler",  m_gBuffer_NormalRoughnessHandle.id },
-				{ "albedoAOFrameBufferSampler",  m_gBuffer_DiffuseAOHandle.id },
+				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },
+				{ "normalRoughnessFrameBufferSampler",  &m_gBuffer_NormalRoughnessHandle.id },
+				{ "albedoAOFrameBufferSampler",  &m_gBuffer_DiffuseAOHandle.id },
 			};
 
 			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
@@ -1164,8 +1168,6 @@ namespace flex
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
 
-			// TODO: Draw offscreen quad once for each deferred material type (store deferred matID in shaders, remove gBufferQuad->materialID) 
-
 			GLMaterial* material = &m_Materials[gBufferQuad->materialID];
 			GLShader* glShader = &m_Shaders[material->material.shaderID];
 			Shader* shader = &glShader->shader;
@@ -1178,7 +1180,7 @@ namespace flex
 			UpdateMaterialUniforms(gameContext, gBufferQuad->materialID);
 			UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
 
-			glm::uint bindingOffset = BindFrameBufferTextures(shader, material);
+			glm::uint bindingOffset = BindFrameBufferTextures(material);
 			BindTextures(shader, material, bindingOffset);
 
 			glCullFace(gBufferQuad->cullFace);
@@ -1401,7 +1403,7 @@ namespace flex
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
-				glBindTexture(GL_TEXTURE_2D, (GLuint)frameBuffer.second);
+				glBindTexture(GL_TEXTURE_2D, *((GLuint*)frameBuffer.second));
 				CheckGLErrorMessages();
 				++binding;
 			}

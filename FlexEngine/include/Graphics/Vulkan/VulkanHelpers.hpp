@@ -40,6 +40,7 @@ namespace flex
 		struct FrameBufferAttachment
 		{
 			FrameBufferAttachment(const VDeleter<VkDevice>& device);
+			FrameBufferAttachment(const VDeleter<VkDevice>& device, VkFormat format);
 
 			VDeleter<VkImage> image;
 			VDeleter<VkDeviceMemory> mem;
@@ -53,7 +54,7 @@ namespace flex
 
 			uint32_t width, height;
 			VDeleter<VkFramebuffer> frameBuffer;
-			FrameBufferAttachment position, normal, albedo;
+			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
 			VDeleter<VkRenderPass> renderPass;
 		};
 
@@ -203,6 +204,8 @@ namespace flex
 			RenderID renderID;
 			MaterialID materialID;
 
+			bool visible = true;
+
 			Renderer::RenderObjectInfo info;
 
 			glm::uint VAO;
@@ -274,9 +277,7 @@ namespace flex
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
 
-			VkImageView* positionFrameBufferView = nullptr;
-			VkImageView* normalFrameBufferView = nullptr;
-			VkImageView* diffuseSpecularFrameBufferView = nullptr;
+			std::vector<std::pair<std::string, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view into frame buffer
 		};
 
 		struct ImGui_PushConstBlock

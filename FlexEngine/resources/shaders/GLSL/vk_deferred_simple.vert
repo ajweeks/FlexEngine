@@ -24,9 +24,9 @@ layout (binding = 1) uniform UBODynamic
 {
     mat4 model;
     mat4 modelInvTranspose;
-    bool useDiffuseSampler;
-    bool useNormalSampler;
-    bool useSpecularSampler;
+    bool enableDiffuseSampler;
+    bool enableNormalSampler;
+    bool enableSpecularSampler;
 } uboDynamic;
 
 void main()

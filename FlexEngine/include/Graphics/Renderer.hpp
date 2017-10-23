@@ -127,7 +127,7 @@ namespace flex
 			bool generateHDRCubemapSampler = false;
 			bool enableHDRCubemapSampler;
 
-			std::vector<std::pair<std::string, glm::uint>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+			std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
@@ -178,7 +178,7 @@ namespace flex
 			std::string normalTexturePath;
 
 			// GBuffer samplers
-			std::vector<std::pair<std::string, glm::uint>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+			std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
 			bool generateCubemapSampler = false;   // Cubemap is enabled 
 			bool enableCubemapSampler = false;   // Cubemap is enabled 
@@ -243,6 +243,7 @@ namespace flex
 			std::string name;
 			std::string materialName;
 			Transform* transform = nullptr;
+			bool visible;
 
 			// Parent, children, etc.
 		};
@@ -287,6 +288,8 @@ namespace flex
 			Uniforms dynamicBufferUniforms;
 
 			bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+			int subpass = 0;
+			VkBool32 depthWriteEnable = VK_TRUE;
 
 			// These variables should be set to true when the shader has these uniforms
 			bool needDiffuseSampler = false;

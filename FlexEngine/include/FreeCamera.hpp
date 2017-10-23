@@ -31,7 +31,7 @@ namespace flex
 		void Translate(glm::vec3 translation);
 		void SetPosition(glm::vec3 position);
 		glm::vec3 GetPosition() const;
-		void SetViewDirection(glm::vec3 viewDir);
+		void SetViewDirection(float yawRad, float pitchRad);
 		glm::vec3 GetViewDirection() const;
 
 		void ResetPosition();
@@ -40,10 +40,10 @@ namespace flex
 		void LoadDefaultKeybindings();
 		void LoadAzertyKeybindings();
 
-		void SetYaw(float yaw);
-		float GetYaw() const;
-		void SetPitch(float pitch);
-		float GetPitch() const;
+		void SetYaw(float yawRad);
+		float GetYaw() const; // Returns the yaw of the camera in radians
+		void SetPitch(float pitchRad);
+		float GetPitch() const; // Returns the pitch of the camera in radians
 
 	private:
 		void RecalculateViewProjection(const GameContext& gameContext);
