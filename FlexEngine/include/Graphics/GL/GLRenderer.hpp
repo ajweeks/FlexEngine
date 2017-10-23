@@ -85,6 +85,7 @@ namespace flex
 			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
 			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext);
+			void DrawSpriteQuad(const GameContext& gameContext);
 
 			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
 
@@ -166,6 +167,11 @@ namespace flex
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
+
+			glm::uint m_LoadingImageHandle;
+			VertexBufferData m_SpriteQuadVertexBufferData;
+			RenderID m_SpriteQuadRenderID;
+			ShaderID m_SpriteQuadShaderID;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

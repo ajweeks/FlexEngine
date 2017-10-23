@@ -159,7 +159,7 @@ namespace flex
 
 		void VulkanRenderer::PostInitialize(const GameContext& gameContext)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
+			ImGui_Init(gameContext);
 
 			CreateDescriptorPool();
 
@@ -2199,11 +2199,11 @@ namespace flex
 						{
 							ImGui::Text("Transform");
 
-							ImGui::DragFloat3("Translation", &renderObject->info.transform->position.x, 0.1f);
-							glm::vec3 rot = glm::eulerAngles(renderObject->info.transform->rotation);
+							ImGui::DragFloat3("Translation", &renderObject->info.transform->localPosition.x, 0.1f);
+							glm::vec3 rot = glm::eulerAngles(renderObject->info.transform->localRotation);
 							ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
-							renderObject->info.transform->rotation = glm::quat(rot);
-							ImGui::DragFloat3("Scale", &renderObject->info.transform->scale.x, 0.01f);
+							renderObject->info.transform->localRotation = glm::quat(rot);
+							ImGui::DragFloat3("Scale", &renderObject->info.transform->localScale.x, 0.01f);
 
 
 							if (shader->shader.needIrradianceSampler)

@@ -79,6 +79,104 @@ namespace flex
 				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
+
+			// Sprite quad
+			GenerateGLTexture(m_LoadingImageHandle, RESOURCE_LOCATION + "textures/loading.png", false);
+
+			GetShaderID("sprite", m_SpriteQuadShaderID);
+
+			MaterialCreateInfo spriteQuadMatCreateInfo = {};
+			spriteQuadMatCreateInfo.name = "Sprite renderer";
+			spriteQuadMatCreateInfo.shaderName = "sprite";
+
+			MaterialID spriteQuadMatID = InitializeMaterial(gameContext, &spriteQuadMatCreateInfo);
+
+			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
+
+			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
+				glm::vec2(-1.0f,  1.0f),
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(1.0f,  1.0f),
+
+				glm::vec2(1.0f,  1.0f),
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(1.0f, -1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 0.0f),
+
+				glm::vec2(1.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION_2D | (glm::uint)VertexAttribute::UV | (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			m_SpriteQuadVertexBufferData = {};
+			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
+
+			RenderObjectCreateInfo spriteQuadCreateInfo = {};
+			spriteQuadCreateInfo.name = "Sprite quad";
+			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
+			spriteQuadCreateInfo.materialID = spriteQuadMatID;
+			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
+			
+			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
+
+			DrawSpriteQuad(gameContext);
+		}
+
+		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext)
+		{
+			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
+			if (!spriteRenderObject) return;
+
+			spriteRenderObject->visible = false;
+			GLMaterial* spriteMaterial = &m_Materials[spriteRenderObject->materialID];
+			GLShader* spriteShader = &m_Shaders[spriteMaterial->material.shaderID];
+
+			// Draw loading texture
+			glUseProgram(spriteShader->program);
+			CheckGLErrorMessages();
+
+			glBindVertexArray(spriteRenderObject->VAO);
+			CheckGLErrorMessages();
+			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
+			CheckGLErrorMessages();
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, m_LoadingImageHandle);
+			CheckGLErrorMessages();
+
+			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			CheckGLErrorMessages();
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			CheckGLErrorMessages();
+
+			glCullFace(spriteRenderObject->cullFace);
+			CheckGLErrorMessages();
+
+			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
+			CheckGLErrorMessages();
+
+			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 		}
 
 		GLRenderer::~GLRenderer()
@@ -99,6 +197,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			m_gBufferQuadVertexBufferData.Destroy();
+			m_SpriteQuadVertexBufferData.Destroy();
 
 			glfwTerminate();
 		}
@@ -255,32 +354,24 @@ namespace flex
 				std::function<bool(glm::uint&, const std::string&, bool)> createFunction;
 			};
 
-			// Samplers that need to be loaded from file, and their GL counter parts generated (glGenTextures)
+			// Samplers that need to be loaded from file
 			SamplerCreateInfo samplerCreateInfos[] =
 			{
-				{ m_Shaders[mat.material.shaderID].shader.needAlbedoSampler,
-				mat.material.generateAlbedoSampler, &mat.albedoSamplerID, 
+				{ m_Shaders[mat.material.shaderID].shader.needAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID, 
 				createInfo->albedoTexturePath, "albedoSampler", GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needMetallicSampler,  
-				mat.material.generateMetallicSampler, &mat.metallicSamplerID, 
+				{ m_Shaders[mat.material.shaderID].shader.needMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID, 
 				createInfo->metallicTexturePath, "metallicSampler", GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needRoughnessSampler, 
-				mat.material.generateRoughnessSampler, &mat.roughnessSamplerID, 
+				{ m_Shaders[mat.material.shaderID].shader.needRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID, 
 				createInfo->roughnessTexturePath, "roughnessSampler" , GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needAOSampler, 
-				mat.material.generateAOSampler, &mat.aoSamplerID, 
+				{ m_Shaders[mat.material.shaderID].shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID, 
 				createInfo->aoTexturePath, "aoSampler", GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needDiffuseSampler, 
-				mat.material.generateDiffuseSampler, &mat.diffuseSamplerID, 
+				{ m_Shaders[mat.material.shaderID].shader.needDiffuseSampler, mat.material.generateDiffuseSampler, &mat.diffuseSamplerID, 
 				createInfo->diffuseTexturePath, "diffuseSampler", GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needNormalSampler, 
-				mat.material.generateNormalSampler, &mat.normalSamplerID, 
+				{ m_Shaders[mat.material.shaderID].shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID, 
 				createInfo->normalTexturePath, "normalSampler", GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needSpecularSampler, 
-				mat.material.generateSpecularSampler, &mat.specularSamplerID, 
+				{ m_Shaders[mat.material.shaderID].shader.needSpecularSampler, mat.material.generateSpecularSampler, &mat.specularSamplerID, 
 				createInfo->specularTexturePath, "specularSampler", GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needHDREquirectangularSampler, 
-				mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
+				{ m_Shaders[mat.material.shaderID].shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
 				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", GenerateHDRGLTexture },
 			};
 
@@ -677,6 +768,7 @@ namespace flex
 					CheckGLErrorMessages();
 
 					glCullFace(renderObject->cullFace);
+					CheckGLErrorMessages();
 
 					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
@@ -767,6 +859,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glCullFace(m_1x1_NDC_Quad->cullFace);
+			CheckGLErrorMessages();
 
 			// Render quad
 			glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
@@ -828,10 +921,8 @@ namespace flex
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].irradianceSamplerID, 0);
 				CheckGLErrorMessages();
 
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				CheckGLErrorMessages();
-
 				glCullFace(renderObject->cullFace);
+				CheckGLErrorMessages();
 
 				glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 				CheckGLErrorMessages();
@@ -914,6 +1005,8 @@ namespace flex
 
 		void GLRenderer::PostInitialize(const GameContext& gameContext)
 		{
+			ImGui_Init(gameContext);
+
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
@@ -1062,7 +1155,6 @@ namespace flex
 		void GLRenderer::Update(const GameContext& gameContext)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::Draw(const GameContext& gameContext)
@@ -1450,6 +1542,7 @@ namespace flex
 		{
 			m_Shaders = {
 				{ "deferred_simple", RESOURCE_LOCATION + "shaders/GLSL/deferred_simple.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_simple.frag" },
+				{ "deferred_combine", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.frag" },
 				{ "color", RESOURCE_LOCATION + "shaders/GLSL/color.vert", RESOURCE_LOCATION + "shaders/GLSL/color.frag" },
 				{ "imgui", RESOURCE_LOCATION + "shaders/GLSL/imgui.vert", RESOURCE_LOCATION + "shaders/GLSL/imgui.frag" },
 				{ "pbr", RESOURCE_LOCATION + "shaders/GLSL/pbr.vert", RESOURCE_LOCATION + "shaders/GLSL/pbr.frag" },
@@ -1459,7 +1552,7 @@ namespace flex
 				{ "prefilter", RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/prefilter.frag" },
 				{ "brdf", RESOURCE_LOCATION + "shaders/GLSL/brdf.vert", RESOURCE_LOCATION + "shaders/GLSL/brdf.frag" },
 				{ "background", RESOURCE_LOCATION + "shaders/GLSL/background.vert", RESOURCE_LOCATION + "shaders/GLSL/background.frag" },
-				{ "deferred_combine", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.frag" },
+				{ "sprite", RESOURCE_LOCATION + "shaders/GLSL/sprite.vert", RESOURCE_LOCATION + "shaders/GLSL/sprite.frag" },
 			};
 
 			ShaderID shaderID = 0;
@@ -1479,6 +1572,22 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableDiffuseSampler");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableSpecularSampler");
+			++shaderID;
+
+			// Deferred combine (sample gbuffer)
+			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
+			m_Shaders[shaderID].shader.needBRDFLUT = true;
+			m_Shaders[shaderID].shader.needIrradianceSampler = true;
+			m_Shaders[shaderID].shader.needPrefilteredMap = true;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
 			++shaderID;
 
 			// Color
@@ -1585,20 +1694,11 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
-			// Deferred combine (sample gbuffer)
-			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
-			m_Shaders[shaderID].shader.needBRDFLUT = true;
-			m_Shaders[shaderID].shader.needIrradianceSampler = true;
-			m_Shaders[shaderID].shader.needPrefilteredMap = true;
+			// Sprite
+			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			for (size_t i = 0; i < m_Shaders.size(); ++i)
@@ -2109,11 +2209,11 @@ namespace flex
 							{
 								ImGui::Text("Transform");
 								
-								ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->position.x, 0.1f);
-								glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->rotation);
+								ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->localPosition.x, 0.1f);
+								glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->localRotation);
 								ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
-								renderObjectInfos[i].transform->rotation = glm::quat(rot);
-								ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->scale.x, 0.01f);
+								renderObjectInfos[i].transform->localRotation = glm::quat(rot);
+								ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->localScale.x, 0.01f);
 							}
 							else
 							{

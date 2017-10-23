@@ -20,7 +20,7 @@ namespace flex
 		m_ClearColor(1.0f, 0.0, 1.0f),
 		m_VSyncEnabled(false)
 	{
-		RendererID preferredInitialRenderer = RendererID::VULKAN;
+		RendererID preferredInitialRenderer = RendererID::GL;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;
 		m_RendererCount = 0;
@@ -391,9 +391,6 @@ namespace flex
 				m_GameContext.renderer->DrawImGuiItems(m_GameContext);
 			}
 			ImGui::End();
-
-			static bool open = true;
-			ImGui::ShowTestWindow(&open);
 
 			m_GameContext.renderer->Update(m_GameContext);
 

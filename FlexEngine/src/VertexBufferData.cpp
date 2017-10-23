@@ -43,6 +43,12 @@ namespace flex
 				pDataLocation = (float*)pDataLocation + 3;
 			}
 
+			if (Attributes & (glm::uint)VertexAttribute::POSITION_2D)
+			{
+				memcpy(pDataLocation, &createInfo->positions_2D[i], sizeof(glm::vec2));
+				pDataLocation = (float*)pDataLocation + 2;
+			}
+
 			if (Attributes & (glm::uint)VertexAttribute::UV)
 			{
 				memcpy(pDataLocation, &createInfo->texCoords_UV[i], sizeof(glm::vec2));

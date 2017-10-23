@@ -187,15 +187,15 @@ namespace flex
 		m_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
 		m_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, m_Cerberus);
-		m_Cerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
-		m_Cerberus->GetTransform().Translate({ 0.0f, 10.0f, 0.0f });
+		m_Cerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
+		m_Cerberus->GetTransform().Translate(0.0f, 10.0f, 0.0f);
 
 
 		MeshPrefab* extraCerberus = new MeshPrefab(cerebusMatID2, "Cerberus 2");
 		extraCerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, extraCerberus);
-		extraCerberus->GetTransform().Scale({ 0.075f, 0.075f, 0.075f });
-		extraCerberus->GetTransform().Translate({ 0.0f, 3.0f, 5.0f });
+		extraCerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
+		extraCerberus->GetTransform().Translate(0.0f, 3.0f, 5.0f);
 
 
 		const int sphereCountX = 8;
@@ -233,15 +233,15 @@ namespace flex
 			}
 
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-			m_Spheres[i]->GetTransform().position = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
+			m_Spheres[i]->GetTransform().localPosition = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
 			AddChild(gameContext, m_Spheres[i]);
 		}
 		
 		//m_Arisaka = new MeshPrefab(arisakaMatID, "Arisaka Type 99");
 		//m_Arisaka->SetUVScale(2.0f, 1.0f);
 		//m_Arisaka->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Arisaka_Type_99_gun_low.fbx", true, true);
-		//m_Arisaka->GetTransform().Translate({ 0, 0, -10.0f });
-		//m_Arisaka->GetTransform().Rotate({ PI, 0, PI });
+		//m_Arisaka->GetTransform().Translate(0.0f, 0.0f, -10.0f);
+		//m_Arisaka->GetTransform().Rotate({ PI, 0.0f, PI });
 		//AddChild(m_Arisaka);
 	}
 
