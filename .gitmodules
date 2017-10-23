@@ -11,5 +11,5 @@
 	path = FlexEngine/dependencies/imgui
 	url = https://github.com/ocornut/imgui
 [submodule "FlexEngine/dependencies/glfw"]
-	path = FlexEngine/dependencies/glfw
+	path = FlexEngine/dependencies/glfw/glfw
 	url = https://github.com/glfw/glfw
