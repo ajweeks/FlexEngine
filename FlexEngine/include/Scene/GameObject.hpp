@@ -13,7 +13,11 @@ namespace flex
 		GameObject(GameObject* pParent = nullptr);
 		virtual ~GameObject();
 
-		void SetTransform(const Transform& transform);
+		void SetParent(GameObject* parent);
+		void AddChild(GameObject* child);
+		bool RemoveChild(GameObject* child);
+		void RemoveAllChildren();
+
 		Transform& GetTransform();
 		
 		RenderID GetRenderID() const;
@@ -34,7 +38,7 @@ namespace flex
 
 		friend class BaseScene;
 
-		GameObject* m_pParent = nullptr;
+		GameObject* m_Parent = nullptr;
 
 		std::vector<GameObject*> m_Children;
 
