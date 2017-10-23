@@ -125,9 +125,6 @@ namespace flex
 			glm::uint textureID;
 		};
 
-		GLFWimage LoadGLFWimage(const std::string& filePath);
-		void DestroyGLFWimage(const GLFWimage& image);
-
 		bool GenerateGLTexture_Empty(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
 		bool GenerateGLTexture_EmptyWithParams(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, int sWrap, int tWrap, int minFilter, int magFilter);
 		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps);

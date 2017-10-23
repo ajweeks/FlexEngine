@@ -31,9 +31,9 @@ namespace flex
 
 		GLFWwindow* m_Window;
 
+		std::vector<GLFWimage> m_WindowIcons;
+
 	private:
-		static const int NUM_ICONS = 3;
-		GLFWimage icons[NUM_ICONS];
 
 		float m_PreviousFrameTime;
 

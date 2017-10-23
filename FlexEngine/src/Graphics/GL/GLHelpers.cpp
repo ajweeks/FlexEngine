@@ -14,36 +14,6 @@ namespace flex
 {
 	namespace gl
 	{
-		GLFWimage LoadGLFWimage(const std::string& filePath)
-		{
-			GLFWimage result = {};
-
-			std::string fileName = filePath;
-			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Loading texture " + fileName);
-
-			int channels;
-			unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, STBI_rgb);
-
-			if (data == 0)
-			{
-				const char* failureReasonStr = stbi_failure_reason();
-				Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
-				return result;
-			}
-			else
-			{
-				result.pixels = static_cast<unsigned char*>(data);
-			}
-
-			return result;
-		}
-
-		void DestroyGLFWimage(const GLFWimage& image)
-		{
-			stbi_image_free(image.pixels);
-		}
-
 		bool GenerateGLTexture_Empty(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
 		{
 			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);

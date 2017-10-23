@@ -2,7 +2,6 @@
 #if COMPILE_VULKAN
 
 #include "Window/Vulkan/VulkanWindowWrapper.hpp"
-
 #include "Logger.hpp"
 
 namespace flex
@@ -49,13 +48,19 @@ namespace flex
 			// TODO: Move duplicated code between glfw window classes to consolidated functions
 			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 			const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
-
+			
 			gameContext.monitor.width = vidMode->width;
 			gameContext.monitor.height = vidMode->height;
 			gameContext.monitor.redBits = vidMode->redBits;
 			gameContext.monitor.greenBits = vidMode->greenBits;
 			gameContext.monitor.blueBits = vidMode->blueBits;
 			gameContext.monitor.refreshRate = vidMode->refreshRate;
+
+
+			if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
+			{
+				glfwSetWindowIcon(m_Window, m_WindowIcons.size(), m_WindowIcons.data());
+			}
 		}
 
 		VulkanWindowWrapper::~VulkanWindowWrapper()

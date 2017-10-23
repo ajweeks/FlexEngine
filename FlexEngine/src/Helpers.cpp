@@ -15,6 +15,36 @@
 
 namespace flex
 {
+	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha)
+	{
+		GLFWimage result = {};
+
+		std::string fileName = filePath;
+		StripLeadingDirectories(fileName);
+		Logger::LogInfo("Loading texture " + fileName);
+
+		int channels;
+		unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, alpha ? STBI_rgb_alpha : STBI_rgb);
+
+		if (data == 0)
+		{
+			const char* failureReasonStr = stbi_failure_reason();
+			Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
+			return result;
+		}
+		else
+		{
+			result.pixels = static_cast<unsigned char*>(data);
+		}
+
+		return result;
+	}
+
+	void DestroyGLFWimage(const GLFWimage& image)
+	{
+		stbi_image_free(image.pixels);
+	}
+
 	std::string FloatToString(float f, int precision)
 	{
 		std::stringstream stream;

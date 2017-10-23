@@ -5,6 +5,7 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 #include "InputManager.hpp"
+#include "Helpers.hpp"
 #include "Logger.hpp"
 #include "FlexEngine.hpp"
 
@@ -66,14 +67,24 @@ namespace flex
 		}
 
 		// TODO: Move window to previous location/size (save to disk)
+
+		
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_128.png", true));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_64.png", true));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_48.png", true));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_32.png", true));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_16.png", true));
 	}
 
 	GLFWWindowWrapper::~GLFWWindowWrapper()
 	{
+		for (size_t i = 0; i < m_WindowIcons.size(); ++i)
+		{
+			SafeDelete(m_WindowIcons[i].pixels);
+		}
+
 		if (m_Window)
 		{
-			// Not needed: (?)
-			//glfwDestroyWindow(m_Window);
 			m_Window = nullptr;
 		}
 	}

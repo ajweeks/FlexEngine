@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "Graphics/GL/GLHelpers.hpp"
+#include "Helpers.hpp"
 #include "Logger.hpp"
 
 namespace flex
@@ -78,6 +79,11 @@ namespace flex
 			Logger::LogInfo("Renderer:\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
 			Logger::LogInfo("Version:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))) + "\n");
 			CheckGLErrorMessages();
+
+			if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
+			{
+				glfwSetWindowIcon(m_Window, m_WindowIcons.size(), m_WindowIcons.data());
+			}
 		}
 
 		GLWindowWrapper::~GLWindowWrapper()
