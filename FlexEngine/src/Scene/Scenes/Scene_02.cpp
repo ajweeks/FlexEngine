@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "Scene/Scenes/Scene_02.hpp"
+#include "Scene/ReflectionProbe.hpp"
 
 #include <glm/vec3.hpp>
 
@@ -237,6 +238,11 @@ namespace flex
 			AddChild(gameContext, m_Spheres[i]);
 		}
 		
+
+		m_ReflectionProbe = new ReflectionProbe();
+		AddChild(gameContext, m_ReflectionProbe);
+		m_ReflectionProbe->GetTransform().Translate(0.0f, 2.5f, 0.0f);
+
 		//m_Arisaka = new MeshPrefab(arisakaMatID, "Arisaka Type 99");
 		//m_Arisaka->SetUVScale(2.0f, 1.0f);
 		//m_Arisaka->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Arisaka_Type_99_gun_low.fbx", true, true);

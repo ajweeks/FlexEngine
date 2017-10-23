@@ -8,6 +8,8 @@
 
 namespace flex
 {
+	class ReflectionProbe;
+
 	class Scene_02 : public BaseScene
 	{
 	public:
@@ -26,6 +28,8 @@ namespace flex
 		MeshPrefab* m_Cerberus = nullptr;
 
 		MeshPrefab* m_Skybox = nullptr;
+
+		ReflectionProbe* m_ReflectionProbe = nullptr;
 
 		Scene_02(const Scene_02&) = delete;
 		Scene_02& operator=(const Scene_02&) = delete;
