@@ -123,8 +123,14 @@ namespace flex
 		auto iter = childrenTransforms.begin();
 		while (iter != childrenTransforms.end())
 		{
+			(*iter)->RemoveAllChildTransforms();
 			iter = childrenTransforms.erase(iter);
 		}
+	}
+
+	void Transform::Update()
+	{
+		UpdateParentTransform();
 	}
 
 	void Transform::SetAsIdentity()
@@ -183,6 +189,146 @@ namespace flex
 
 			childTransform->UpdateChildTransforms();
 		}
+	}
+
+	glm::vec3 Transform::GetLocalPosition()
+	{
+		return localPosition;
+	}
+
+	glm::vec3 Transform::GetGlobalPosition()
+	{
+		return globalPosition;
+	}
+
+	glm::quat Transform::GetLocalRotation()
+	{
+		return localRotation;
+	}
+
+	glm::quat Transform::GetGlobalRotation()
+	{
+		return globalRotation;
+	}
+
+	glm::vec3 Transform::GetLocalScale()
+	{
+		return localScale;
+	}
+
+	glm::vec3 Transform::GetGlobalScale()
+	{
+		return globalScale;
+	}
+
+	void Transform::SetLocalPosition(glm::vec3 position)
+	{
+		localPosition = position;
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetGlobalPosition(glm::vec3 position)
+	{
+		if (parentTransform)
+		{
+			localPosition = position- parentTransform->GetGlobalPosition();
+		}
+		else
+		{
+			localPosition = position;
+			// Global position will be set in next function call
+		}
+		
+		UpdateParentTransform();
+	}
+
+	void Transform::SetLocalRotation(glm::quat quatRotation)
+	{
+		localRotation = quatRotation;
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetGlobalRotation(glm::quat quatRotation)
+	{
+		if (parentTransform)
+		{
+			localRotation = quatRotation + -parentTransform->GetGlobalRotation();
+		}
+		else
+		{
+			localRotation = quatRotation;
+			// Global rotation will be set in next function call
+		}
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetLocalRotation(glm::vec3 eulerAnglesRad)
+	{
+		localRotation = glm::quat(eulerAnglesRad);
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetGlobalRotation(glm::vec3 eulerAnglesRad)
+	{
+		if (parentTransform)
+		{
+			localRotation = glm::quat(eulerAnglesRad) + -parentTransform->GetGlobalRotation();
+		}
+		else
+		{
+			localRotation = glm::quat(eulerAnglesRad);
+			// Global rotation will be set in next function call
+		}
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetLocalRotation(float eulerXRad, float eulerYRad, float eulerZRad)
+	{
+		localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad));
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetGlobalRotation(float eulerXRad, float eulerYRad, float eulerZRad)
+	{
+		if (parentTransform)
+		{
+			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad)) + -parentTransform->GetGlobalRotation();
+		}
+		else
+		{
+			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad));
+			// Global rotation will be set in next function call
+		}
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetLocalScale(glm::vec3 scale)
+	{
+		localScale = scale;
+
+		UpdateParentTransform();
+	}
+
+	void Transform::SetGlobalScale(glm::vec3 scale)
+	{
+		if (parentTransform)
+		{
+			localScale = scale / parentTransform->GetGlobalScale();
+		}
+		else
+		{
+			localScale = scale;
+			// Global scale will be set in next function call
+		}
+
+		UpdateParentTransform();
 	}
 
 } // namespace flex

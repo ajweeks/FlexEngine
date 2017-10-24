@@ -14,7 +14,33 @@ namespace flex
 		Transform(const glm::vec3& position);
 		~Transform();
 		
+		// Call when parent-child trees need to be updated
+		void Update(); 
+
 		void SetAsIdentity();
+
+		glm::vec3 GetLocalPosition();
+		glm::vec3 GetGlobalPosition();
+
+		glm::quat GetLocalRotation();
+		glm::quat GetGlobalRotation();
+
+		glm::vec3 GetLocalScale();
+		glm::vec3 GetGlobalScale();
+
+		void SetLocalPosition(glm::vec3 position);
+		void SetGlobalPosition(glm::vec3 position);
+
+		void SetLocalRotation(glm::quat quatRotation);
+		void SetGlobalRotation(glm::quat quatRotation);
+		void SetLocalRotation(glm::vec3 eulerAnglesRad);
+		void SetGlobalRotation(glm::vec3 eulerAnglesRad);
+		void SetLocalRotation(float eulerXRad, float eulerYRad, float eulerZRad);
+		void SetGlobalRotation(float eulerXRad, float eulerYRad, float eulerZRad);
+
+		void SetLocalScale(glm::vec3 scale);
+		void SetGlobalScale(glm::vec3 scale);
+
 
 		void Translate(glm::vec3 deltaPosition);
 		void Translate(float deltaX, float deltaY, float deltaZ);
@@ -35,6 +61,10 @@ namespace flex
 
 		static Transform Identity();
 
+	private:
+		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
+		void UpdateChildTransforms(); // Used to go back down to the lowest node of the parent-child tree
+
 		glm::vec3 localPosition;
 		glm::quat localRotation;
 		glm::vec3 localScale;
@@ -45,10 +75,6 @@ namespace flex
 
 		Transform* parentTransform = nullptr;
 		std::vector<Transform*> childrenTransforms;
-
-	private:
-		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
-		void UpdateChildTransforms(); // Used to go back down to the lowest node of the parent-child tree
 
 	};
 } // namespace flex

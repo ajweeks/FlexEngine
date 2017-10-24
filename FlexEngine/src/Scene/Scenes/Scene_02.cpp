@@ -234,7 +234,7 @@ namespace flex
 			}
 
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-			m_Spheres[i]->GetTransform().localPosition = offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f);
+			m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f));
 			AddChild(gameContext, m_Spheres[i]);
 		}
 		

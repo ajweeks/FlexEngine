@@ -34,6 +34,8 @@ namespace flex
 		{
 			m_Transform.SetParentTransform(&parent->m_Transform);
 		}
+
+		m_Transform.Update();
 	}
 
 	void GameObject::AddChild(GameObject* child)
@@ -48,6 +50,9 @@ namespace flex
 
 		m_Children.push_back(child);
 		m_Transform.AddChildTransform(&child->m_Transform);
+		child->m_Transform.SetParentTransform(&m_Transform);
+
+		m_Transform.Update();
 	}
 
 	bool GameObject::RemoveChild(GameObject* child)
@@ -56,6 +61,7 @@ namespace flex
 		{
 			if (*iter == child)
 			{
+				(*iter)->m_Transform.RemoveAllChildTransforms();
 				m_Transform.RemoveChildTransform(&(*iter)->m_Transform);
 				m_Children.erase(iter);
 				return true;
@@ -72,6 +78,7 @@ namespace flex
 		auto iter = m_Children.begin();
 		while (iter != m_Children.end())
 		{
+			(*iter)->m_Transform.RemoveAllChildTransforms();
 			iter = m_Children.erase(iter);
 		}
 	}

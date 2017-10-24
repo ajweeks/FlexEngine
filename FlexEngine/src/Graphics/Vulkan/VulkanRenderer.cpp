@@ -2197,14 +2197,36 @@ namespace flex
 						ImGui::SameLine();
 						if (ImGui::TreeNode(objectName.c_str()))
 						{
-							ImGui::Text("Transform");
+							static const char* localTransformStr = "Transform (local)";
+							static const char* globalTransformStr = "Transform (global)";
 
-							ImGui::DragFloat3("Translation", &renderObject->info.transform->localPosition.x, 0.1f);
-							glm::vec3 rot = glm::eulerAngles(renderObject->info.transform->localRotation);
-							ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
-							renderObject->info.transform->localRotation = glm::quat(rot);
-							ImGui::DragFloat3("Scale", &renderObject->info.transform->localScale.x, 0.01f);
+							bool local = true;
 
+							ImGui::Text(local ? localTransformStr : globalTransformStr);
+
+							Transform* transform = renderObject->info.transform;
+
+
+							glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
+							glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
+							glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
+
+							ImGui::DragFloat3("Translation", &translation[0], 0.1f);
+							ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
+							ImGui::DragFloat3("Scale", &scale[0], 0.01f);
+
+							if (local)
+							{
+								transform->SetLocalPosition(translation);
+								transform->SetLocalRotation(glm::quat(rotation));
+								transform->SetLocalScale(scale);
+							}
+							else
+							{
+								transform->SetGlobalPosition(translation);
+								transform->SetGlobalRotation(glm::quat(rotation));
+								transform->SetGlobalScale(scale);
+							}
 
 							if (shader->shader.needIrradianceSampler)
 							{

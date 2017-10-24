@@ -71,12 +71,12 @@ namespace flex
 		// Render objects
 		m_Grid = new MeshPrefab(colorMatID);
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-		m_Grid->GetTransform().localPosition.y -= 0.1f;
+		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
 		AddChild(gameContext, m_Grid);
 		
 		m_Plane = new MeshPrefab(simpleTexturelessMatID);
 		m_Plane->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::PLANE);
-		m_Plane->GetTransform().localPosition.y -= 0.05f;
+		m_Plane->GetTransform().Translate(0.0f, -0.05f, 0.0f);
 		AddChild(gameContext, m_Plane);
 
 
@@ -107,32 +107,27 @@ namespace flex
 		
 		m_TransformManipulator_1 = new MeshPrefab(brickMatID, "Transform 1");
 		m_TransformManipulator_1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_1->GetTransform().localPosition.x = -spacing * 2.0f;
-		m_TransformManipulator_1->GetTransform().localPosition.z = -spacing * 1.0f;
+		m_TransformManipulator_1->GetTransform().Translate(-spacing * 2.0f, 0.0f, -spacing * 1.0f);
 		AddChild(gameContext, m_TransformManipulator_1);
 		
 		m_TransformManipulator_2 = new MeshPrefab(workMatID, "Transform 2");
 		m_TransformManipulator_2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_2->GetTransform().localPosition.x = -spacing;
-		m_TransformManipulator_2->GetTransform().localPosition.z = -spacing * 0.5f;
+		m_TransformManipulator_1->GetTransform().Translate(-spacing, 0.0f, -spacing * 0.5f);
 		AddChild(gameContext, m_TransformManipulator_2);
 		
 		m_TransformManipulator_3 = new MeshPrefab(simpleTexturelessMatID, "Transform 3");
 		m_TransformManipulator_3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_3->GetTransform().localPosition.x = 0.0f;
-		m_TransformManipulator_3->GetTransform().localPosition.z = 0.0f;
+		m_TransformManipulator_1->GetTransform().Translate(0.0f, 0.0f, 0.0f);
 		AddChild(gameContext, m_TransformManipulator_3);
 		
 		m_TransformManipulator_4 = new MeshPrefab(workMatID, "Transform 4");
 		m_TransformManipulator_4->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_4->GetTransform().localPosition.x = spacing;
-		m_TransformManipulator_4->GetTransform().localPosition.z = spacing * 0.5f;
+		m_TransformManipulator_1->GetTransform().Translate(spacing, 0.0f, spacing * 0.5f);
 		AddChild(gameContext, m_TransformManipulator_4);
 		
 		m_TransformManipulator_5 = new MeshPrefab(brickMatID, "Transform 5");
 		m_TransformManipulator_5->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/transform-manipulator-position-with-planes.fbx");
-		m_TransformManipulator_5->GetTransform().localPosition.x = spacing * 2.0f;
-		m_TransformManipulator_5->GetTransform().localPosition.z = spacing * 1.0f;
+		m_TransformManipulator_1->GetTransform().Translate(spacing * 2.0f, 0.0f, spacing * 1.0f);
 		AddChild(gameContext, m_TransformManipulator_5);
 		
 		
@@ -184,7 +179,7 @@ namespace flex
 			{
 				m_Grid = new MeshPrefab();
 				m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-				m_Grid->GetTransform().localPosition.y -= 0.05f;
+				m_Grid->GetTransform().Translate(0.0f, -0.05f, 0.0f);
 				AddChild(gameContext, m_Grid);
 			}
 		}

@@ -2197,23 +2197,48 @@ namespace flex
 
 				if (ImGui::TreeNode("Render Objects"))
 				{
-					std::vector<Renderer::RenderObjectInfo> renderObjectInfos;
-					GetRenderObjectInfos(renderObjectInfos);
-					assert(renderObjectInfos.size() == objectCount);
-					for (size_t i = 0; i < objectCount; ++i)
+					for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 					{
-						const std::string objectName(renderObjectInfos[i].name + "##" + std::to_string(i));
+						GLRenderObject* renderObject = GetRenderObject(i);
+
+						const std::string objectName(renderObject->info.name + "##" + std::to_string(i));
+
+						const std::string objectID("##" + objectName + "-visble");
+						ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
+						ImGui::SameLine();
 						if (ImGui::TreeNode(objectName.c_str()))
 						{
-							if (renderObjectInfos[i].transform)
+							Transform* transform = renderObject->info.transform;
+							if (transform)
 							{
-								ImGui::Text("Transform");
-								
-								ImGui::DragFloat3("Translation", &renderObjectInfos[i].transform->localPosition.x, 0.1f);
-								glm::vec3 rot = glm::eulerAngles(renderObjectInfos[i].transform->localRotation);
-								ImGui::DragFloat3("Rotation", &rot.x, 0.01f);
-								renderObjectInfos[i].transform->localRotation = glm::quat(rot);
-								ImGui::DragFloat3("Scale", &renderObjectInfos[i].transform->localScale.x, 0.01f);
+								static const char* localTransformStr = "Transform (local)";
+								static const char* globalTransformStr = "Transform (global)";
+
+								bool local = true;
+
+								ImGui::Text(local ? localTransformStr : globalTransformStr);
+
+
+								glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
+								glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
+								glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
+
+								ImGui::DragFloat3("Translation", &translation[0], 0.1f);
+								ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
+								ImGui::DragFloat3("Scale", &scale[0], 0.01f);
+
+								if (local)
+								{
+									transform->SetLocalPosition(translation);
+									transform->SetLocalRotation(glm::quat(rotation));
+									transform->SetLocalScale(scale);
+								}
+								else
+								{
+									transform->SetGlobalPosition(translation);
+									transform->SetGlobalRotation(glm::quat(rotation));
+									transform->SetGlobalScale(scale);
+								}
 							}
 							else
 							{
