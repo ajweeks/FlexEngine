@@ -26,11 +26,16 @@ namespace flex
 		reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
 		reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
 		reflectionProbeMaterialCreateInfo.constAO = 1.0f;
+		reflectionProbeMaterialCreateInfo.generateHDRCubemapSampler = true;
+		reflectionProbeMaterialCreateInfo.enableCubemapSampler = true;
+		reflectionProbeMaterialCreateInfo.generatedCubemapSize = glm::uvec2(512.0f, 512.0f);
 		MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 
 		m_MeshPrefab = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe");
 		m_MeshPrefab->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 		AddChild(m_MeshPrefab);
+
+		gameContext.renderer->UpdateTransformMatrix(gameContext, m_MeshPrefab->GetRenderID(), m_MeshPrefab->GetTransform().GetModelMatrix());
 	}
 
 	void ReflectionProbe::PostInitialize(const GameContext& gameContext)
@@ -47,6 +52,4 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(gameContext);
 	}
-
-
 }

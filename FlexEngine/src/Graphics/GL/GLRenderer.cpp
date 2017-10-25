@@ -69,7 +69,9 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 
 
-			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+			const float captureProjectionNearPlane = 0.1f;
+			const float captureProjectionFarPlane = 1000.0f;
+			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
 				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
@@ -163,6 +165,7 @@ namespace flex
 
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			CheckGLErrorMessages();
@@ -171,6 +174,12 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glCullFace(spriteRenderObject->cullFace);
+			CheckGLErrorMessages();
+
+			glDepthFunc(spriteRenderObject->depthTestReadFunc);
+			CheckGLErrorMessages();
+
+			glDepthMask(spriteRenderObject->depthWriteEnable);
 			CheckGLErrorMessages();
 
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
@@ -313,7 +322,6 @@ namespace flex
 			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
 			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
 
-			mat.material.enableHDRCubemapSampler = createInfo->enableHDRCubemapSampler;
 			mat.material.generateHDRCubemapSampler = createInfo->generateHDRCubemapSampler;
 
 			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
@@ -430,6 +438,7 @@ namespace flex
 			{
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
+					// TODO: Specify that this cubemap isn't HDR here!
 					// Cubemap is needed, but doesn't need to loaded from file
 					GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, false, createInfo->enableCubemapTrilinearFiltering);
 				}
@@ -455,7 +464,7 @@ namespace flex
 
 			if (createInfo->generateHDRCubemapSampler)
 			{
-				GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedHDRCubemapSize.x, createInfo->generatedHDRCubemapSize.y, false, createInfo->enableCubemapTrilinearFiltering);
+				GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, false, createInfo->enableCubemapTrilinearFiltering);
 			}
 
 			if (m_Shaders[mat.material.shaderID].shader.needCubemapSampler)
@@ -553,6 +562,8 @@ namespace flex
 			InsertNewRenderObject(renderObject);
 			renderObject->materialID = createInfo->materialID;
 			renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);
+			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
+			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
 
 			renderObject->info = {};
 			renderObject->info.materialName = m_Materials[renderObject->materialID].material.name;
@@ -669,6 +680,7 @@ namespace flex
 			for (unsigned int i = 0; i < 6; ++i)
 			{
 				glBindVertexArray(renderObject->VAO);
+				CheckGLErrorMessages();
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 				CheckGLErrorMessages();
 
@@ -682,6 +694,12 @@ namespace flex
 				CheckGLErrorMessages();
 
 				glCullFace(renderObject->cullFace);
+				CheckGLErrorMessages();
+
+				glDepthFunc(renderObject->depthTestReadFunc);
+				CheckGLErrorMessages();
+
+				glDepthMask(renderObject->depthWriteEnable);
 				CheckGLErrorMessages();
 
 				glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
@@ -770,6 +788,12 @@ namespace flex
 					glCullFace(renderObject->cullFace);
 					CheckGLErrorMessages();
 
+					glDepthFunc(renderObject->depthTestReadFunc);
+					CheckGLErrorMessages();
+
+					glDepthMask(renderObject->depthWriteEnable);
+					CheckGLErrorMessages();
+
 					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 				}
@@ -815,12 +839,15 @@ namespace flex
 				m_1x1_NDC_QuadVertexBufferData = {};
 				m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
 
+				m_1x1_NDC_QuadTransform = Transform::Identity();
+
 				RenderObjectCreateInfo quadCreateInfo = {};
 				quadCreateInfo.name = "1x1 Quad";
 				quadCreateInfo.materialID = brdfMatID;
 				quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
-				m_1x1_NDC_QuadTransform = Transform::Identity(); // Should we even have this member?
 				quadCreateInfo.transform = &m_1x1_NDC_QuadTransform;
+				quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				quadCreateInfo.depthWriteEnable = false;
 
 				RenderID quadRenderID = InitializeRenderObject(gameContext, &quadCreateInfo);
 				m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
@@ -861,10 +888,16 @@ namespace flex
 			glCullFace(m_1x1_NDC_Quad->cullFace);
 			CheckGLErrorMessages();
 
+			glDepthFunc(m_1x1_NDC_Quad->depthTestReadFunc);
+			CheckGLErrorMessages();
+
+			glDepthMask(m_1x1_NDC_Quad->depthWriteEnable);
+			CheckGLErrorMessages();
+
 			// Render quad
 			glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
-
+			
 			glUseProgram(0);
 			glBindVertexArray(0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -905,6 +938,15 @@ namespace flex
 			glViewport(0, 0, m_Materials[renderObject->materialID].material.irradianceSamplerSize.x, m_Materials[renderObject->materialID].material.irradianceSamplerSize.y);
 			CheckGLErrorMessages();
 
+			glCullFace(renderObject->cullFace);
+			CheckGLErrorMessages();
+
+			glDepthFunc(renderObject->depthTestReadFunc);
+			CheckGLErrorMessages();
+
+			glDepthMask(renderObject->depthWriteEnable);
+			CheckGLErrorMessages();
+
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 
 			for (unsigned int i = 0; i < 6; ++i)
@@ -921,9 +963,6 @@ namespace flex
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].irradianceSamplerID, 0);
 				CheckGLErrorMessages();
 
-				glCullFace(renderObject->cullFace);
-				CheckGLErrorMessages();
-
 				glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 				CheckGLErrorMessages();
 			}
@@ -933,6 +972,24 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
+		}
+
+		void GLRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
+		{
+			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+
+			BatchRenderObjects(gameContext);
+
+			DrawCallInfo drawCallInfo = {};
+			drawCallInfo.renderToCubemap = true;
+			drawCallInfo.cubemapObjectRenerID = cubemapRenderID;
+
+			DrawForwardObjects(gameContext, drawCallInfo);
+
+			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
+
+			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
+			CheckGLErrorMessages();
 		}
 
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
@@ -1106,12 +1163,15 @@ namespace flex
 
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
+			m_gBufferQuadTransform = Transform::Identity();
+
 			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
 			gBufferQuadCreateInfo.name = "G Buffer Quad";
 			gBufferQuadCreateInfo.materialID = gBufferMatID;
-			m_gBufferQuadTransform = {}; // Identity transform
 			gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
+			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
+			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
 
 			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
 
@@ -1123,6 +1183,25 @@ namespace flex
 			CheckGLErrorMessages();
 
 			Logger::LogInfo("Ready!\n");
+
+			RenderID cubemapID = 0;
+			RenderID reflectionProbeID = 0;
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				if (m_RenderObjects[i]->info.name.compare("Reflection probe") == 0)
+				{
+					reflectionProbeID = i;
+				}
+				else if (m_RenderObjects[i]->info.name.compare("Skybox") == 0)
+				{
+					cubemapID = i;
+				}
+			}
+
+			CaptureSceneToCubemap(gameContext, reflectionProbeID);
+
+			m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID = 
+				m_Materials[m_RenderObjects[reflectionProbeID]->materialID].cubemapSamplerID;
 		}
 
 		void GLRenderer::GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
@@ -1162,17 +1241,19 @@ namespace flex
 			CheckGLErrorMessages();
 
 			// TODO: Don't sort render objects frame! Only when things are added/removed
-			SortRenderObjects(gameContext);
+			BatchRenderObjects(gameContext);
 
-			DrawDeferredObjects(gameContext);
+			DrawCallInfo drawCallInfo = {};
+
+			DrawDeferredObjects(gameContext, drawCallInfo);
 			DrawGBufferQuad(gameContext);
-			DrawForwardObjects(gameContext);
+			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawUI();
 
 			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 		}
 
-		void GLRenderer::SortRenderObjects(const GameContext& gameContext)
+		void GLRenderer::BatchRenderObjects(const GameContext& gameContext)
 		{
 			/*
 			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
@@ -1222,7 +1303,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext)
+		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 			CheckGLErrorMessages();
@@ -1234,7 +1315,7 @@ namespace flex
 			{
 				if (!m_DeferredRenderObjectBatches[i].empty())
 				{
-					DrawRenderObjectBatch(m_DeferredRenderObjectBatches[i], gameContext);
+					DrawRenderObjectBatch(gameContext, m_DeferredRenderObjectBatches[i], drawCallInfo);
 				}
 			}
 
@@ -1254,10 +1335,7 @@ namespace flex
 
 		void GLRenderer::DrawGBufferQuad(const GameContext& gameContext)
 		{
-			// Disable depth buffer writing for gbuffer quad
-			glDepthMask(GL_FALSE);
-
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT); // Don't clear depth - we just copied it over from the GBuffer
 			GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
 
 			GLMaterial* material = &m_Materials[gBufferQuad->materialID];
@@ -1277,20 +1355,24 @@ namespace flex
 
 			glCullFace(gBufferQuad->cullFace);
 			CheckGLErrorMessages();
-			glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
+
+			glDepthFunc(gBufferQuad->depthTestReadFunc);
 			CheckGLErrorMessages();
 
-			glDepthMask(GL_TRUE);
+			glDepthMask(gBufferQuad->depthWriteEnable);
+			CheckGLErrorMessages();
+
+			glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::DrawForwardObjects(const GameContext& gameContext)
+		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
 			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
 			{
 				if (!m_ForwardRenderObjectBatches[i].empty())
 				{
-					DrawRenderObjectBatch(m_ForwardRenderObjectBatches[i], gameContext);
+					DrawRenderObjectBatch(gameContext, m_ForwardRenderObjectBatches[i], drawCallInfo);
 				}
 			}
 		}
@@ -1396,7 +1478,7 @@ namespace flex
 
 		}
 
-		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext)
+		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
 			assert(!batchedRenderObjects.empty());
 
@@ -1409,6 +1491,7 @@ namespace flex
 			for (size_t i = 0; i < batchedRenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = batchedRenderObjects[i];
+				if (!renderObject->visible) continue;
 
 				glBindVertexArray(renderObject->VAO);
 				CheckGLErrorMessages();
@@ -1418,20 +1501,77 @@ namespace flex
 				glCullFace(renderObject->cullFace);
 				CheckGLErrorMessages();
 
+				glDepthFunc(renderObject->depthTestReadFunc);
+				CheckGLErrorMessages();
+
+				glDepthMask(renderObject->depthWriteEnable);
+				CheckGLErrorMessages();
+
 				UpdatePerObjectUniforms(renderObject->renderID, gameContext);
 
 				BindTextures(shader, material);
 
-				if (renderObject->indexed)
+				if (drawCallInfo.renderToCubemap)
 				{
-					glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+					// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
+
+					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenerID);
+					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
+
+					glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+
+					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 					CheckGLErrorMessages();
+					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+					CheckGLErrorMessages();
+					glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
+					CheckGLErrorMessages();
+					glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
+					CheckGLErrorMessages();
+
+					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+					CheckGLErrorMessages();
+
+					// Use capture projection matrix
+					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
+					CheckGLErrorMessages();
+
+					glm::vec3 cubemapTranslation = RetrieveTranslation(cubemapRenderObject->model);
+					for (size_t face = 0; face < 6; ++face)
+					{
+						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
+						glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
+						CheckGLErrorMessages();
+
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+						CheckGLErrorMessages();
+
+						if (renderObject->indexed)
+						{
+							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+							CheckGLErrorMessages();
+						}
+						else
+						{
+							glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+							CheckGLErrorMessages();
+						}
+					}
 				}
 				else
 				{
-					glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
+					if (renderObject->indexed)
+					{
+						glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+						CheckGLErrorMessages();
+					}
+					else
+					{
+						glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+						CheckGLErrorMessages();
+					}
 				}
+
 			}
 		}
 
@@ -1565,7 +1705,8 @@ namespace flex
 			m_Shaders[shaderID].shader.needNormalSampler = true;
 			m_Shaders[shaderID].shader.needSpecularSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose");
@@ -1592,7 +1733,8 @@ namespace flex
 
 			// Color
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
@@ -1612,7 +1754,8 @@ namespace flex
 			m_Shaders[shaderID].shader.needAOSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAlbedo");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler");

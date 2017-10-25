@@ -41,13 +41,17 @@ namespace flex
 		gameContext.renderer->InitializePointLight(light4);
 
 		// Materials
+		Renderer::MaterialCreateInfo colorMatInfo = {};
+		colorMatInfo.shaderName = "color";
+		colorMatInfo.name = "Color";
+		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
 
 		Renderer::MaterialCreateInfo skyboxHDRMatInfo = {};
 		skyboxHDRMatInfo.name = "HDR Skybox";
 		skyboxHDRMatInfo.shaderName = "background";
 		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
-		skyboxHDRMatInfo.enableHDRCubemapSampler = true;
-		skyboxHDRMatInfo.generatedHDRCubemapSize = { 512, 512 };
+		skyboxHDRMatInfo.enableCubemapSampler = true;
+		skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
 		skyboxHDRMatInfo.generateIrradianceSampler = true;
 		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
 		skyboxHDRMatInfo.generatePrefilteredMap = true;
@@ -179,6 +183,10 @@ namespace flex
 		//pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
 		//const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
+		m_Grid = new MeshPrefab(colorMatID);
+		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
+		AddChild(gameContext, m_Grid);
 
 		m_Skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
 		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);

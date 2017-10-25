@@ -81,10 +81,18 @@ namespace flex
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject);
-			
+			// Draw all static geometry to the given render object's cubemap texture
+			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
+
 			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
-			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const GameContext& gameContext);
+			struct DrawCallInfo
+			{
+				bool renderToCubemap = false;
+				RenderID cubemapObjectRenerID;
+			};
+
+			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 			void DrawSpriteQuad(const GameContext& gameContext);
 
 			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
@@ -102,10 +110,10 @@ namespace flex
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
 
-			void SortRenderObjects(const GameContext& gameContext);
-			void DrawDeferredObjects(const GameContext& gameContext);
+			void BatchRenderObjects(const GameContext& gameContext);
+			void DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawGBufferQuad(const GameContext& gameContext);
-			void DrawForwardObjects(const GameContext& gameContext);
+			void DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawUI();
 
 			// Returns the next binding that would be used

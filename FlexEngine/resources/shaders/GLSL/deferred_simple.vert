@@ -14,7 +14,8 @@ out mat3 ex_TBN;
 
 uniform mat4 model;
 uniform mat4 modelInvTranspose;
-uniform mat4 viewProjection;
+uniform mat4 view;
+uniform mat4 projection;
 
 void main()
 {
@@ -31,5 +32,5 @@ void main()
 		normalize(mat3(modelInvTranspose) * in_Bitangent), 
 		normalize(mat3(modelInvTranspose) * in_Normal));
 
-    gl_Position = viewProjection * worldPos;
+    gl_Position = projection * view * worldPos;
 }

@@ -28,6 +28,7 @@ namespace flex
 		MeshPrefab* m_Cerberus = nullptr;
 
 		MeshPrefab* m_Skybox = nullptr;
+		MeshPrefab* m_Grid = nullptr;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 

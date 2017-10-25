@@ -4,8 +4,8 @@ layout (location = 0) in vec3 in_Position;
 
 out vec3 WorldPos;
 
-uniform mat4 projection;
 uniform mat4 view;
+uniform mat4 projection;
 
 uniform mat4 model;
 

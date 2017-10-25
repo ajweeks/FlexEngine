@@ -11,8 +11,8 @@ void main()
     // TODO: Make this a uniform
     vec3 envColor = textureLod(cubemapSampler, WorldPos, 1.2).rgb;
     
-    envColor = envColor / (envColor + vec3(1.0)); // HDR tonemapping
-    envColor = pow(envColor, vec3(1.0 / 2.2)); // Gamma correction
+    //envColor = envColor / (envColor + vec3(1.0)); // HDR tonemapping
+    //envColor = pow(envColor, vec3(1.0 / 2.2)); // Gamma correction
     
     FragColor = vec4(envColor, 1.0);
 }

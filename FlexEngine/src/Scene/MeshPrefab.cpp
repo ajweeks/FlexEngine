@@ -204,6 +204,9 @@ namespace flex
 		gameContext.renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::TRIANGLE_LIST);
 
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
+		
+		glm::mat4 model = m_Transform.GetModelMatrix();
+		gameContext.renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
 
 		return true;
 	}
@@ -748,6 +751,9 @@ namespace flex
 
 		gameContext.renderer->SetTopologyMode(m_RenderID, topologyMode);
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
+
+		glm::mat4 model = m_Transform.GetModelMatrix();
+		gameContext.renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
 
 		return true;
 	}

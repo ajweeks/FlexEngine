@@ -90,6 +90,9 @@ namespace flex
 			GLenum topology = GL_TRIANGLES;
 			GLenum cullFace = GL_BACK;
 
+			GLenum depthTestReadFunc = GL_LEQUAL;
+			GLboolean depthWriteEnable = GL_TRUE;
+
 			glm::uint vertexBuffer;
 			VertexBufferData* vertexBufferData = nullptr;
 
@@ -139,11 +142,14 @@ namespace flex
 		bool LinkProgram(glm::uint program);
 
 
+		GLboolean BoolToGLBoolean(bool value);
 		GLuint BufferTargetToGLTarget(Renderer::BufferTarget bufferTarget);
 		GLenum TypeToGLType(Renderer::Type type);
 		GLenum UsageFlagToGLUsageFlag(Renderer::UsageFlag usage);
 		GLenum TopologyModeToGLMode(Renderer::TopologyMode topology);
 		glm::uint CullFaceToGLMode(Renderer::CullFace cullFace);
+		GLenum DepthTestFuncToGlenum(Renderer::DepthTestFunc func);
+
 	} // namespace gl
 } // namespace flex
 

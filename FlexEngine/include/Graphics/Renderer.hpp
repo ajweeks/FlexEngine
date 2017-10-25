@@ -22,6 +22,7 @@ namespace flex
 		Renderer();
 		virtual ~Renderer();
 
+		// TODO: Remove unused enums
 		enum class ClearFlag
 		{
 			COLOR = (1 << 0),
@@ -33,6 +34,19 @@ namespace flex
 		{
 			BACK,
 			FRONT,
+			NONE
+		};
+
+		enum class DepthTestFunc
+		{
+			ALWAYS,
+			NEVER,
+			LESS,
+			LEQUAL,
+			GREATER,
+			GEQUAL,
+			EQUAL,
+			NOTEQUAL,
 			NONE
 		};
 
@@ -125,7 +139,6 @@ namespace flex
 			bool generateHDREquirectangularSampler = false;
 			bool enableHDREquirectangularSampler;
 			bool generateHDRCubemapSampler = false;
-			bool enableHDRCubemapSampler;
 
 			std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
@@ -149,8 +162,6 @@ namespace flex
 			bool enablePrefilteredMap = false;
 			glm::uvec2 generatedPrefilteredCubemapSize;
 			MaterialID prefilterMapSamplerMatID;
-			
-			glm::uvec2 generatedHDRCubemapSize;
 
 			// PBR Constant colors
 			glm::vec3 constAlbedo;
@@ -184,8 +195,6 @@ namespace flex
 			bool enableCubemapSampler = false;   // Cubemap is enabled 
 			glm::uvec2 cubemapSamplerSize;
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-			
-			glm::uvec2 hdrCubemapSamplerSize;
 
 			// PBR constants
 			glm::vec4 constAlbedo;
@@ -215,7 +224,6 @@ namespace flex
 			std::string hdrEquirectangularTexturePath;
 
 			bool generateHDRCubemapSampler = false;
-			bool enableHDRCubemapSampler = false;
 
 			bool enableIrradianceSampler = false;
 			bool generateIrradianceSampler = false;
@@ -259,6 +267,9 @@ namespace flex
 			Transform* transform;
 
 			CullFace cullFace = CullFace::BACK;
+
+			DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
+			bool depthWriteEnable = true;
 		};
 
 		struct Uniforms

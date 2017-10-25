@@ -297,7 +297,7 @@ namespace flex
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.hdrCubemapSamplerSize.x;
+			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.cubemapSamplerSize.x;
 			
 			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
 
@@ -1886,8 +1886,6 @@ namespace flex
 			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
 			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
 
-			mat.material.hdrCubemapSamplerSize = createInfo->generatedHDRCubemapSize;
-
 			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
 			mat.material.generateAlbedoSampler = createInfo->generateAlbedoSampler;
 			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
@@ -1912,7 +1910,6 @@ namespace flex
 			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
 			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
 
-			mat.material.enableHDRCubemapSampler = createInfo->enableHDRCubemapSampler;
 			mat.material.generateHDRCubemapSampler = createInfo->generateHDRCubemapSampler;
 
 			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
@@ -2014,8 +2011,8 @@ namespace flex
 
 			if (mat.material.generateHDRCubemapSampler)
 			{
-				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedHDRCubemapSize.x))) + 1;
-				CreateVulkanCubemap_Empty(createInfo->generatedHDRCubemapSize.x, createInfo->generatedHDRCubemapSize.y, 4, mipLevels, false, VK_FORMAT_R32G32B32A32_SFLOAT, &mat.cubemapTexture);
+				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
+				CreateVulkanCubemap_Empty(createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, 4, mipLevels, false, VK_FORMAT_R32G32B32A32_SFLOAT, &mat.cubemapTexture);
 				m_LoadedTextures.push_back(mat.cubemapTexture);
 			}
 

@@ -8,6 +8,8 @@ namespace flex
 	GameObject::GameObject(GameObject* pParent) :
 		m_Parent(pParent)
 	{
+		m_Transform.SetAsIdentity();
+
 		if (pParent)
 		{
 			m_Transform.SetParentTransform(&pParent->m_Transform);

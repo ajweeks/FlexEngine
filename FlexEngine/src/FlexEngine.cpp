@@ -63,17 +63,19 @@ namespace flex
 
 		InitializeWindowAndRenderer();
 
+		m_GameContext.inputManager = new InputManager();
+
 		m_DefaultCamera = new FreeCamera(m_GameContext);
 		m_DefaultCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		m_DefaultCamera->SetYaw(glm::radians(130.0f));
 		m_DefaultCamera->SetPitch(glm::radians(-10.0f));
+		m_GameContext.camera->Update(m_GameContext); // Update to set initial values
 		m_GameContext.camera = m_DefaultCamera;
 
 		m_GameContext.sceneManager = new SceneManager();
 
 		LoadDefaultScenes();
 
-		m_GameContext.inputManager = new InputManager();
 
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 

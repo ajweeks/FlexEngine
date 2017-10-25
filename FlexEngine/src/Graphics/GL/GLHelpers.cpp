@@ -182,6 +182,9 @@ namespace flex
 
 		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight, bool generateMipmap, bool enableTrilinearFiltering)
 		{
+			assert(textureWidth != 0);
+			assert(textureHeight != 0);
+
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 			CheckGLErrorMessages();
@@ -302,6 +305,11 @@ namespace flex
 			return true;
 		}
 
+		GLboolean BoolToGLBoolean(bool value)
+		{
+			return value ? GL_TRUE : GL_FALSE;
+		}
+
 		GLuint BufferTargetToGLTarget(Renderer::BufferTarget bufferTarget)
 		{
 			GLuint glTarget = 0;
@@ -363,6 +371,23 @@ namespace flex
 			case Renderer::CullFace::BACK: return GL_BACK;
 			case Renderer::CullFace::FRONT: return GL_FRONT;
 			case Renderer::CullFace::NONE: return GL_NONE; // TODO: This doesn't work, does it?
+			default: return GL_FALSE;
+			}
+		}
+
+		GLenum DepthTestFuncToGlenum(Renderer::DepthTestFunc func)
+		{
+			switch (func)
+			{
+			case Renderer::DepthTestFunc::ALWAYS: return GL_ALWAYS;
+			case Renderer::DepthTestFunc::NEVER: return GL_NEVER;
+			case Renderer::DepthTestFunc::LESS: return GL_LESS;
+			case Renderer::DepthTestFunc::LEQUAL: return GL_LEQUAL;
+			case Renderer::DepthTestFunc::GREATER: return GL_GREATER;
+			case Renderer::DepthTestFunc::GEQUAL: return GL_GEQUAL;
+			case Renderer::DepthTestFunc::EQUAL: return GL_EQUAL;
+			case Renderer::DepthTestFunc::NOTEQUAL: return GL_NOTEQUAL;
+			case Renderer::DepthTestFunc::NONE: return GL_FALSE;
 			default: return GL_FALSE;
 			}
 		}
