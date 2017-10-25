@@ -59,6 +59,9 @@ inline void SafeDelete(T &pObjectToDelete)
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
 
+// For matrix_decompose
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/glm.hpp>
 #pragma warning(pop)
 

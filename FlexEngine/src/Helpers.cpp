@@ -8,6 +8,8 @@
 
 #include <imgui.h>
 
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include "Logger.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -93,6 +95,42 @@ namespace flex
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
 	{
 		return a * (1.0f - t) + b * t;
+	}
+
+	glm::vec3 RetrieveTranslation(const glm::mat4& matrix)
+	{
+		glm::vec3 scale;
+		glm::quat rotation;
+		glm::vec3 translation;
+		glm::vec3 skew;
+		glm::vec4 perspective;
+		glm::decompose(matrix, scale, rotation, translation, skew, perspective);
+
+		return translation;
+	}
+
+	glm::vec3 RetrieveScale(const glm::mat4& matrix)
+	{
+		glm::vec3 scale;
+		glm::quat rotation;
+		glm::vec3 translation;
+		glm::vec3 skew;
+		glm::vec4 perspective;
+		glm::decompose(matrix, scale, rotation, translation, skew, perspective);
+
+		return scale;
+	}
+
+	glm::quat RetrieveRotation(const glm::mat4& matrix)
+	{
+		glm::vec3 scale;
+		glm::quat rotation;
+		glm::vec3 translation;
+		glm::vec3 skew;
+		glm::vec4 perspective;
+		glm::decompose(matrix, scale, rotation, translation, skew, perspective);
+
+		return rotation;
 	}
 
 	void ToString(const glm::vec2& vec, std::ostream& stream)
