@@ -205,9 +205,6 @@ namespace flex
 
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
 		
-		glm::mat4 model = m_Transform.GetModelMatrix();
-		gameContext.renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
-
 		return true;
 	}
 
@@ -752,9 +749,6 @@ namespace flex
 		gameContext.renderer->SetTopologyMode(m_RenderID, topologyMode);
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
 
-		glm::mat4 model = m_Transform.GetModelMatrix();
-		gameContext.renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
-
 		return true;
 	}
 
@@ -770,8 +764,7 @@ namespace flex
 
 	void MeshPrefab::Update(const GameContext& gameContext)
 	{
-		glm::mat4 model = m_Transform.GetModelMatrix();
-		gameContext.renderer->UpdateTransformMatrix(gameContext, m_RenderID, model);
+		UNREFERENCED_PARAMETER(gameContext);
 	}
 
 	void MeshPrefab::Destroy(const GameContext& gameContext)

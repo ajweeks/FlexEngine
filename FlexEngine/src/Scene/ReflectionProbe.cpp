@@ -34,8 +34,6 @@ namespace flex
 		m_MeshPrefab = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe");
 		m_MeshPrefab->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 		AddChild(m_MeshPrefab);
-
-		gameContext.renderer->UpdateTransformMatrix(gameContext, m_MeshPrefab->GetRenderID(), m_MeshPrefab->GetTransform().GetModelMatrix());
 	}
 
 	void ReflectionProbe::PostInitialize(const GameContext& gameContext)

@@ -2299,11 +2299,6 @@ namespace flex
 			m_VSyncEnabled = enableVSync;
 		}
 
-		void VulkanRenderer::UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
-		{
-			UpdateDynamicUniformBuffer(gameContext, renderID, model);
-		}
-
 		glm::uint VulkanRenderer::GetRenderObjectCount() const
 		{
 			glm::uint count = 0;

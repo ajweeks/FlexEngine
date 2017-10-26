@@ -70,10 +70,6 @@ namespace flex
 		return glm::vec4(color.r, color.g, color.b, color.a);
 	}
 
-	glm::vec3 RetrieveTranslation(const glm::mat4& matrix);
-	glm::vec3 RetrieveScale(const glm::mat4& matrix);
-	glm::quat RetrieveRotation(const glm::mat4& matrix);
-
 	void ToString(const glm::vec2& vec, std::ostream& stream);
 	void ToString(const glm::vec3& vec, std::ostream& stream);
 	void ToString(const glm::vec4& vec, std::ostream& stream);

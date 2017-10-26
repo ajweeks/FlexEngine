@@ -42,8 +42,6 @@ namespace flex
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 
-			virtual void UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model) override;
-
 			virtual glm::uint GetRenderObjectCount() const override;
 			virtual glm::uint GetRenderObjectCapacity() const override;
 

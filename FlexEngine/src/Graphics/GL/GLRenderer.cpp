@@ -2104,17 +2104,6 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		// TODO: Remove function
-		void GLRenderer::UpdateTransformMatrix(const GameContext& gameContext, RenderID renderID, const glm::mat4& model)
-		{
-			UNREFERENCED_PARAMETER(gameContext);
-
-			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject) return;
-
-			renderObject->model = model;
-		}
-
 		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, float val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
