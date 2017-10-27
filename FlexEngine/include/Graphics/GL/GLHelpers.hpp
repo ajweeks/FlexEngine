@@ -100,8 +100,6 @@ namespace flex
 			glm::uint indexBuffer;
 			std::vector<glm::uint>* indices = nullptr;
 
-			glm::mat4 model;
-
 			glm::uint materialID;
 		};
 		typedef std::vector<GLRenderObject*>::iterator RenderObjectIter;
@@ -135,8 +133,17 @@ namespace flex
 		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps);
 		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
 
-		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths, bool generateMipmap = false);
-		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight, bool generateMipmap = false, bool enableCubemapTrilinearFiltering = false);
+		struct GLCubemapCreateInfo
+		{
+			int textureWidth;
+			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
+			int textureHeight;
+			bool generateMipmaps = false;
+			bool enableTrilinearFiltering = false;
+			bool HDR = false;
+		};
+
+		bool GenerateGLCubemap(glm::uint& textureID, const GLCubemapCreateInfo& createInfo);
 
 		bool LoadGLShaders(glm::uint program, GLShader& shader);
 		bool LinkProgram(glm::uint program);

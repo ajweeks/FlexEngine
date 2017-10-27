@@ -294,7 +294,7 @@ namespace flex
 			mat.material.frameBuffers = createInfo->frameBuffers;
 
 			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
-			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler;
+			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler || createInfo->generateHDRCubemapSampler;
 			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
 			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
 
@@ -436,16 +436,22 @@ namespace flex
 			// Skybox
 			if (createInfo->generateCubemapSampler)
 			{
+				GLCubemapCreateInfo cubemapCreateInfo = {};
+				cubemapCreateInfo.HDR = false;
+				cubemapCreateInfo.generateMipmaps = false;
+				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.filePaths = mat.material.cubeMapFilePaths;
+
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
-					// TODO: Specify that this cubemap isn't HDR here!
-					// Cubemap is needed, but doesn't need to loaded from file
-					GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, false, createInfo->enableCubemapTrilinearFiltering);
+					cubemapCreateInfo.textureWidth = createInfo->generatedCubemapSize.x;
+					cubemapCreateInfo.textureHeight = createInfo->generatedCubemapSize.y;
+					GenerateGLCubemap(mat.cubemapSamplerID, cubemapCreateInfo);
 				}
 				else
 				{
 					// Load from file
-					GenerateGLCubemapTextures(mat.cubemapSamplerID, mat.material.cubeMapFilePaths);
+					GenerateGLCubemap(mat.cubemapSamplerID, cubemapCreateInfo);
 
 					int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "cubemapSampler");
 					CheckGLErrorMessages();
@@ -464,7 +470,14 @@ namespace flex
 
 			if (createInfo->generateHDRCubemapSampler)
 			{
-				GenerateGLCubemap_Empty(mat.cubemapSamplerID, createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, false, createInfo->enableCubemapTrilinearFiltering);
+				GLCubemapCreateInfo cubemapCreateInfo = {};
+				cubemapCreateInfo.HDR = true;
+				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.generateMipmaps = false;
+				cubemapCreateInfo.textureWidth = createInfo->generatedCubemapSize.x;
+				cubemapCreateInfo.textureHeight = createInfo->generatedCubemapSize.y;
+
+				GenerateGLCubemap(mat.cubemapSamplerID, cubemapCreateInfo);
 			}
 
 			if (m_Shaders[mat.material.shaderID].shader.needCubemapSampler)
@@ -507,7 +520,14 @@ namespace flex
 
 			if (mat.material.generateIrradianceSampler)
 			{
-				GenerateGLCubemap_Empty(mat.irradianceSamplerID, createInfo->generatedIrradianceCubemapSize.x, createInfo->generatedIrradianceCubemapSize.y);
+				GLCubemapCreateInfo cubemapCreateInfo = {};
+				cubemapCreateInfo.HDR = true;
+				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.generateMipmaps = false;
+				cubemapCreateInfo.textureWidth = createInfo->generatedIrradianceCubemapSize.x;
+				cubemapCreateInfo.textureHeight = createInfo->generatedIrradianceCubemapSize.y;
+
+				GenerateGLCubemap(mat.irradianceSamplerID, cubemapCreateInfo);
 			}
 
 			if (m_Shaders[mat.material.shaderID].shader.needIrradianceSampler)
@@ -528,7 +548,14 @@ namespace flex
 
 			if (mat.material.generatePrefilteredMap)
 			{
-				GenerateGLCubemap_Empty(mat.prefilteredMapSamplerID, createInfo->generatedPrefilteredCubemapSize.x, createInfo->generatedPrefilteredCubemapSize.y, true);
+				GLCubemapCreateInfo cubemapCreateInfo = {};
+				cubemapCreateInfo.HDR = true;
+				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.generateMipmaps = true;
+				cubemapCreateInfo.textureWidth = createInfo->generatedPrefilteredCubemapSize.x;
+				cubemapCreateInfo.textureHeight = createInfo->generatedPrefilteredCubemapSize.y;
+
+				GenerateGLCubemap(mat.prefilteredMapSamplerID, cubemapCreateInfo);
 			}
 
 			if (m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)

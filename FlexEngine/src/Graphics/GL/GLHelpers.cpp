@@ -137,7 +137,7 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateGLCubemapTextures(glm::uint& textureID, const std::array<std::string, 6> filePaths, bool generateMipmap)
+		bool GenerateGLCubemap(glm::uint& textureID, const GLCubemapCreateInfo& createInfo)
 		{
 			bool success = true;
 
@@ -145,32 +145,57 @@ namespace flex
 			glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 			CheckGLErrorMessages();
 
-			for (size_t i = 0; i < filePaths.size(); ++i)
+			const GLint internalFormat = createInfo.HDR ? GL_RGB16F : GL_RGB;
+			const GLenum format = GL_RGB;
+			const GLenum type = createInfo.HDR ? GL_FLOAT : GL_UNSIGNED_BYTE;
+
+			if (createInfo.filePaths[0].empty()) // Don't generate pixel data
 			{
-				GLFWimage image = LoadGLFWimage(filePaths[i]);
-
-				if (image.pixels)
+				if (createInfo.textureWidth <= 0 || createInfo.textureHeight <= 0)
 				{
-					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
-					CheckGLErrorMessages();
-
-					DestroyGLFWimage(image);
+					Logger::LogError("Invalid cubemap dimensions: " + 
+						std::to_string(createInfo.textureWidth) + "x" + std::to_string(createInfo.textureHeight));
+					success = false;
 				}
 				else
 				{
-					Logger::LogError("Could not load cube map at " + filePaths[i]);
-					success = false;
+					for (size_t i = 0; i < 6; ++i)
+					{
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat,
+							createInfo.textureWidth, createInfo.textureHeight, 0, format, type, nullptr);
+					}
+				}
+			}
+			else // Load in 6 images to the generated cubemap
+			{
+				for (size_t i = 0; i < createInfo.filePaths.size(); ++i)
+				{
+					GLFWimage image = LoadGLFWimage(createInfo.filePaths[i]);
+
+					if (image.pixels)
+					{
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, image.width, image.height, 0, format, type, image.pixels);
+						CheckGLErrorMessages();
+
+						DestroyGLFWimage(image);
+					}
+					else
+					{
+						Logger::LogError("Could not load cube map at " + createInfo.filePaths[i]);
+						success = false;
+					}
 				}
 			}
 
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
+				(createInfo.generateMipmaps || createInfo.enableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			CheckGLErrorMessages();
 
-			if (generateMipmap)
+			if (createInfo.generateMipmaps)
 			{
 				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 			}
@@ -178,38 +203,6 @@ namespace flex
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
 			return success;
-		}
-
-		bool GenerateGLCubemap_Empty(glm::uint& textureID, int textureWidth, int textureHeight, bool generateMipmap, bool enableTrilinearFiltering)
-		{
-			assert(textureWidth != 0);
-			assert(textureHeight != 0);
-
-			glGenTextures(1, &textureID);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-			CheckGLErrorMessages();
-
-			for (unsigned int i = 0; i < 6; ++i)
-			{
-				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
-					textureWidth, textureHeight, 0, GL_RGB, GL_FLOAT, nullptr);
-			}
-
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, (generateMipmap || enableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR); // Enable trilinear filtering when mip maps are enabled
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			CheckGLErrorMessages();
-
-			if (generateMipmap)
-			{
-				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-			}
-
-			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
-			return true;
 		}
 
 		bool LoadGLShaders(glm::uint program, GLShader& shader)

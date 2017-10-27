@@ -42,9 +42,10 @@ namespace flex
 		return result;
 	}
 
-	void DestroyGLFWimage(const GLFWimage& image)
+	void DestroyGLFWimage(GLFWimage& image)
 	{
 		stbi_image_free(image.pixels);
+		image.pixels = nullptr;
 	}
 
 	std::string FloatToString(float f, int precision)
