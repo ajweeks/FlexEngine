@@ -2144,8 +2144,14 @@ namespace flex
 			// Update uniform buffer
 			UpdateConstantUniformBuffers(gameContext);
 
+			// TODO: Only update when things have changed
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				UpdateDynamicUniformBuffer(gameContext, i);
+			}
+
 			// Update g-buffer uniforms
-			UpdateDynamicUniformBuffer(gameContext, m_GBufferQuadRenderID, glm::mat4(1.0f));
+			UpdateDynamicUniformBuffer(gameContext, m_GBufferQuadRenderID);
 		}
 
 		void VulkanRenderer::Draw(const GameContext& gameContext)
@@ -5427,7 +5433,7 @@ namespace flex
 			memcpy(m_Shaders[m_LoadedMaterials[bufferIndex].material.shaderID].uniformBuffer.constantBuffer.m_Mapped, constantData.data, size);
 		}
 			
-		void VulkanRenderer::UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, const glm::mat4& modelIn, UniformOverrides const* uniformOverrides)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const* uniformOverrides)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
@@ -5442,7 +5448,7 @@ namespace flex
 
 			bool updateMVP = false; // This is set to true when either the view or projection matrix get overriden
 
-			glm::mat4 model = modelIn;
+			glm::mat4 model = renderObject->info.transform->GetModelMatrix();
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 projection = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();

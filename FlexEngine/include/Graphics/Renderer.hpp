@@ -122,6 +122,7 @@ namespace flex
 			std::string aoTexturePath;
 			std::string hdrEquirectangularTexturePath;
 
+			// TODO: REMOVE ALL = falseS!!!
 			bool generateDiffuseSampler = false;
 			bool enableDiffuseSampler;
 			bool generateSpecularSampler = false;
@@ -157,11 +158,14 @@ namespace flex
 			bool enableCubemapTrilinearFiltering;
 			bool generateCubemapSampler;
 			glm::uvec2 generatedCubemapSize;
+			bool generateCubemapDepthBuffers;
 
 			bool generatePrefilteredMap = false;
 			bool enablePrefilteredMap = false;
 			glm::uvec2 generatedPrefilteredCubemapSize;
 			MaterialID prefilterMapSamplerMatID;
+
+			bool generateReflectionProbeMaps = false;
 
 			// PBR Constant colors
 			glm::vec3 constAlbedo;
@@ -236,6 +240,8 @@ namespace flex
 			bool enableBRDFLUT = false;
 			bool generateBRDFLUT = false;
 			glm::uvec2 generatedBRDFLUTSize;
+
+			bool generateReflectionProbeMaps = false;
 
 			// TODO: Make this more dynamic!
 			struct PushConstantBlock

@@ -58,6 +58,7 @@ namespace flex
 			glm::uint normalSamplerID;
 
 			glm::uint cubemapSamplerID;
+			glm::uint cubemapDepthSamplerID;
 
 			// PBR samplers
 			glm::uint albedoSamplerID;
@@ -135,15 +136,18 @@ namespace flex
 
 		struct GLCubemapCreateInfo
 		{
+			glm::uint* textureID;
+			glm::uint* depthTextureID;
 			int textureWidth;
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
 			int textureHeight;
 			bool generateMipmaps = false;
 			bool enableTrilinearFiltering = false;
 			bool HDR = false;
+			bool generateDepthBuffers = false;
 		};
 
-		bool GenerateGLCubemap(glm::uint& textureID, const GLCubemapCreateInfo& createInfo);
+		bool GenerateGLCubemap(GLCubemapCreateInfo& createInfo);
 
 		bool LoadGLShaders(glm::uint program, GLShader& shader);
 		bool LinkProgram(glm::uint program);

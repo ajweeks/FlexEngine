@@ -9,6 +9,8 @@
 
 namespace flex
 {
+	class MeshPrefab;
+
 	namespace gl
 	{
 		class GLRenderer : public Renderer
@@ -67,15 +69,9 @@ namespace flex
 			void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec);
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
+			void GenerateSkybox(const GameContext& gameContext);
+
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject);
-			/*
-			 Captures a cubemap to the specified renderObject's cubemap texture 
-			 Before this function is called:
-				 - renderObject's cubemap texture must already be initialized
-			     - GL program must already be set to correct shader
-				 - any textures being used must be bound
-			 */
-			void CaptureCubemap(GLRenderObject* renderObject, GLMaterial::UniformIDs uniformIDs, glm::vec2i viewportSize, bool genMipMaps);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject);
@@ -87,7 +83,9 @@ namespace flex
 			struct DrawCallInfo
 			{
 				bool renderToCubemap = false;
-				RenderID cubemapObjectRenerID;
+				RenderID cubemapObjectRenderID;
+				bool clearColor = false;
+				bool clearDepth = false;
 			};
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
@@ -158,24 +156,27 @@ namespace flex
 			GBufferHandle m_gBuffer_NormalRoughnessHandle;
 			GBufferHandle m_gBuffer_DiffuseAOHandle;
 
-			// Equirectangular to cubemap frame buffer objects
-			glm::uint m_CaptureFBO;
-			glm::uint m_CaptureRBO;
+			glm::uint m_CaptureFBO; // Frame buffer containing:
+			glm::uint m_CaptureRBO; // Render buffer which contains the rendered data
 
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
 
-			glm::vec2i m_HDREquirectangularCubemapCaptureSize;
+			//glm::vec2i m_HDREquirectangularCubemapCaptureSize;
+
+			MeshPrefab* m_SkyBoxMesh = nullptr;
 
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;
-			GLRenderObject* m_1x1_NDC_Quad; // A 1x1 quad in NDC space
+			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
 
 			glm::uint m_LoadingImageHandle;
+			// TODO: Use a mesh prefab here
 			VertexBufferData m_SpriteQuadVertexBufferData;
+			Transform m_SpriteQuadTransform;
 			RenderID m_SpriteQuadRenderID;
 			ShaderID m_SpriteQuadShaderID;
 

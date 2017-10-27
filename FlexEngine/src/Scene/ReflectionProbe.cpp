@@ -27,8 +27,15 @@ namespace flex
 		reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
 		reflectionProbeMaterialCreateInfo.constAO = 1.0f;
 		reflectionProbeMaterialCreateInfo.generateHDRCubemapSampler = true;
-		reflectionProbeMaterialCreateInfo.enableCubemapSampler = true;
-		reflectionProbeMaterialCreateInfo.generatedCubemapSize = glm::uvec2(512.0f, 512.0f);
+		reflectionProbeMaterialCreateInfo.generatedCubemapSize = glm::uvec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
+		reflectionProbeMaterialCreateInfo.generateCubemapDepthBuffers = true;
+		reflectionProbeMaterialCreateInfo.generateIrradianceSampler = true;
+		reflectionProbeMaterialCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
+		reflectionProbeMaterialCreateInfo.generatePrefilteredMap = true;
+		reflectionProbeMaterialCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
+		reflectionProbeMaterialCreateInfo.generateBRDFLUT = true;
+		reflectionProbeMaterialCreateInfo.generatedBRDFLUTSize = { 512, 512 };
+		reflectionProbeMaterialCreateInfo.generateReflectionProbeMaps = true;
 		MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 
 		m_MeshPrefab = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe");
@@ -38,7 +45,8 @@ namespace flex
 
 	void ReflectionProbe::PostInitialize(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
+		gameContext.renderer->PostInitializeRenderObject(gameContext, m_MeshPrefab->GetRenderID());
 	}
 
 	void ReflectionProbe::Update(const GameContext& gameContext)
@@ -49,5 +57,9 @@ namespace flex
 	void ReflectionProbe::Destroy(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+	}
+	MeshPrefab* ReflectionProbe::GetMesh()
+	{
+		return m_MeshPrefab;
 	}
 }

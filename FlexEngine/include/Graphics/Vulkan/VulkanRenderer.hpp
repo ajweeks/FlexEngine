@@ -204,7 +204,7 @@ namespace flex
 
 			void UpdateConstantUniformBuffers(const GameContext& gameContext, UniformOverrides const * overridenUniforms = nullptr);
 			void UpdateConstantUniformBuffer(const GameContext& gameContext, UniformOverrides const* overridenUniforms, size_t bufferIndex);
-			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, const glm::mat4& modelIn, UniformOverrides const * overridenUniforms = nullptr);
+			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
 			void LoadDefaultShaderCode();
 

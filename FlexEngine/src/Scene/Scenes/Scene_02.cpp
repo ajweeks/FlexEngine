@@ -60,7 +60,6 @@ namespace flex
 		skyboxHDRMatInfo.generatedBRDFLUTSize = { 512, 512 };
 		const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-
 		Renderer::MaterialCreateInfo cerebusMatTexturedInfo = {};
 		cerebusMatTexturedInfo.name = "Cerebus";
 		cerebusMatTexturedInfo.shaderName = "pbr";
@@ -79,14 +78,7 @@ namespace flex
 		cerebusMatTexturedInfo.enableNormalSampler = true;
 		cerebusMatTexturedInfo.generateNormalSampler = true;
 		cerebusMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
-		// TODO: Don't make user specify all this
-		cerebusMatTexturedInfo.irradianceSamplerMatID = skyboxHDRMatID;
-		cerebusMatTexturedInfo.enablePrefilteredMap = true;
-		cerebusMatTexturedInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
-		cerebusMatTexturedInfo.enableBRDFLUT = true;
-		cerebusMatTexturedInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
 		const MaterialID cerebusMatID = gameContext.renderer->InitializeMaterial(gameContext, &cerebusMatTexturedInfo);
-
 
 		Renderer::MaterialCreateInfo cerebusMatTexturedInfo2 = {};
 		cerebusMatTexturedInfo2.name = "Cerebus";
@@ -106,13 +98,7 @@ namespace flex
 		cerebusMatTexturedInfo2.enableNormalSampler = true;
 		cerebusMatTexturedInfo2.generateNormalSampler = true;
 		cerebusMatTexturedInfo2.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
-		cerebusMatTexturedInfo2.irradianceSamplerMatID = skyboxHDRMatID;
-		cerebusMatTexturedInfo2.enablePrefilteredMap = true;
-		cerebusMatTexturedInfo2.prefilterMapSamplerMatID = skyboxHDRMatID;
-		cerebusMatTexturedInfo2.enableBRDFLUT = true;
-		cerebusMatTexturedInfo2.brdfLUTSamplerMatID = skyboxHDRMatID;
 		const MaterialID cerebusMatID2 = gameContext.renderer->InitializeMaterial(gameContext, &cerebusMatTexturedInfo2);
-
 
 		Renderer::MaterialCreateInfo brickMatInfo = {};
 		brickMatInfo.shaderName = "deferred_simple";
@@ -128,60 +114,6 @@ namespace flex
 		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
 		const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
 
-		//Renderer::MaterialCreateInfo pbrMatTexturedInfo = {};
-		//pbrMatTexturedInfo.shaderName = "pbr";
-		//pbrMatTexturedInfo.name = "PBR textured";
-		//pbrMatTexturedInfo.needAlbedoSampler = true;
-		//pbrMatTexturedInfo.enableAlbedoSampler = true;
-		//pbrMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
-		//pbrMatTexturedInfo.needMetallicSampler = true;
-		//pbrMatTexturedInfo.enableMetallicSampler = true;
-		//pbrMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_metallic.png";
-		//pbrMatTexturedInfo.needRoughnessSampler = true;
-		//pbrMatTexturedInfo.enableRoughnessSampler = true;
-		//pbrMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_roughness.png";
-		//pbrMatTexturedInfo.needAOSampler = true;
-		//pbrMatTexturedInfo.enableAOSampler = true;
-		//pbrMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
-		//pbrMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
-		//pbrMatTexturedInfo.generateIrradianceSampler = false; // Don't generate irradiance sampler, just 
-		//pbrMatTexturedInfo.needIrradianceSampler = true;		  // use skybox's irradiance sampler
-		//pbrMatTexturedInfo.enableIrradianceSampler = true;		  // use skybox's irradiance sampler
-		//pbrMatTexturedInfo.irradianceSamplerMatID = skyboxHDRMatID; // here
-		//pbrMatTexturedInfo.needPrefilteredMap = true;
-		//pbrMatTexturedInfo.enablePrefilteredMap = true;
-		//pbrMatTexturedInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
-		//pbrMatTexturedInfo.needBRDFLUT = true;
-		//pbrMatTexturedInfo.enableBRDFLUT = true;
-		//pbrMatTexturedInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
-		//const MaterialID pbrMatTexturedID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatTexturedInfo);
-
-
-		//Renderer::MaterialCreateInfo brickMatInfo = {};
-		//brickMatInfo.shaderName = "deferred_simple";
-		//brickMatInfo.name = "Brick";
-		//brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_basecolor.png";
-		//brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_metallic.png";
-		//brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/rusted_iron/rusted_iron_normal.png";
-		//const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
-
-		//Renderer::MaterialCreateInfo pbrMatInfo = {};
-		//pbrMatInfo.name = "PBR";
-		//pbrMatInfo.shaderName = "pbr";
-		//pbrMatInfo.constAlbedo = glm::vec3(0.32f, 0.45f, 0.54f);
-		//pbrMatInfo.constMetallic = 0.0f;
-		//pbrMatInfo.constRoughness = 0.65f;
-		//pbrMatInfo.constAO = 1.0f;
-		//pbrMatInfo.needIrradianceSampler = true;
-		//pbrMatInfo.enableIrradianceSampler = true;
-		//pbrMatInfo.irradianceSamplerMatID = skyboxHDRMatID;
-		//pbrMatInfo.needPrefilteredMap = true;
-		//pbrMatInfo.enablePrefilteredMap = true;
-		//pbrMatInfo.prefilterMapSamplerMatID = skyboxHDRMatID;
-		//pbrMatInfo.needBRDFLUT = true;
-		//pbrMatInfo.enableBRDFLUT = true;
-		//pbrMatInfo.brdfLUTSamplerMatID = skyboxHDRMatID;
-		//const MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
 		m_Grid = new MeshPrefab(colorMatID);
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
@@ -192,20 +124,17 @@ namespace flex
 		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 		AddChild(gameContext, m_Skybox);
 
-
 		m_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
 		m_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, m_Cerberus);
 		m_Cerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
 		m_Cerberus->GetTransform().Translate(0.0f, 10.0f, 0.0f);
 
-
 		MeshPrefab* extraCerberus = new MeshPrefab(cerebusMatID2, "Cerberus 2");
 		extraCerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, extraCerberus);
 		extraCerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
 		extraCerberus->GetTransform().Translate(0.0f, 3.0f, 5.0f);
-
 
 		const int sphereCountX = 8;
 		const int sphereCountY = 2;
@@ -217,9 +146,9 @@ namespace flex
 		{
 			int x = i % sphereCountX;
 			int y = int(i / sphereCountX);
-		
+
 			const std::string iStr = std::to_string(i);
-		
+
 			MaterialID matID = brickMatID;
 
 			if ((x + y) % 2 == 0)
@@ -245,18 +174,12 @@ namespace flex
 			m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f));
 			AddChild(gameContext, m_Spheres[i]);
 		}
-		
 
+		// Reflection probes
+		// Generate last so it can use generated skybox maps
 		m_ReflectionProbe = new ReflectionProbe();
 		AddChild(gameContext, m_ReflectionProbe);
 		m_ReflectionProbe->GetTransform().Translate(0.0f, 2.5f, 0.0f);
-
-		//m_Arisaka = new MeshPrefab(arisakaMatID, "Arisaka Type 99");
-		//m_Arisaka->SetUVScale(2.0f, 1.0f);
-		//m_Arisaka->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Arisaka_Type_99_gun_low.fbx", true, true);
-		//m_Arisaka->GetTransform().Translate(0.0f, 0.0f, -10.0f);
-		//m_Arisaka->GetTransform().Rotate({ PI, 0.0f, PI });
-		//AddChild(m_Arisaka);
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
@@ -272,6 +195,5 @@ namespace flex
 	void Scene_02::Update(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
-		//n_Cerberus->GetTransform().Rotate({ 0, gameContext.elapsedTime * 0.00075f, 0 });
 	}
 } // namespace flex

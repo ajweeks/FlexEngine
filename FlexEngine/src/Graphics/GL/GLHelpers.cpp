@@ -137,12 +137,17 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateGLCubemap(glm::uint& textureID, const GLCubemapCreateInfo& createInfo)
+		bool GenerateGLCubemap(GLCubemapCreateInfo& createInfo)
 		{
 			bool success = true;
 
-			glGenTextures(1, &textureID);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+			if (createInfo.textureID == nullptr)
+			{
+				return false;
+			}
+
+			glGenTextures(1, createInfo.textureID);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.textureID);
 			CheckGLErrorMessages();
 
 			const GLint internalFormat = createInfo.HDR ? GL_RGB16F : GL_RGB;
@@ -163,6 +168,7 @@ namespace flex
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat,
 							createInfo.textureWidth, createInfo.textureHeight, 0, format, type, nullptr);
+						CheckGLErrorMessages();
 					}
 				}
 			}
@@ -187,17 +193,38 @@ namespace flex
 				}
 			}
 
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
-				(createInfo.generateMipmaps || createInfo.enableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			CheckGLErrorMessages();
-
-			if (createInfo.generateMipmaps)
+			if (success) // Only proceed when generation succeeded
 			{
-				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
+					(createInfo.generateMipmaps || createInfo.enableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				CheckGLErrorMessages();
+
+				if (createInfo.generateMipmaps)
+				{
+					glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+					CheckGLErrorMessages();
+				}
+
+				if (createInfo.generateDepthBuffers && createInfo.depthTextureID)
+				{
+					glGenTextures(1, createInfo.depthTextureID);
+					glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.depthTextureID);
+					CheckGLErrorMessages();
+
+					for (size_t i = 0; i < 6; ++i)
+					{
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24,
+							createInfo.textureWidth, createInfo.textureHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+						CheckGLErrorMessages();
+					}
+
+					// Set this parameter when wanting to sample from this cubemap
+					//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+				}
 			}
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);

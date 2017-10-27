@@ -17,10 +17,12 @@ namespace flex
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void Destroy(const GameContext& gameContext) override;
 
+		MeshPrefab* GetMesh();
+
 	private:
 		MeshPrefab* m_MeshPrefab = nullptr;
 
-		// bool enabled, float influenceRadius, bool update (float updateFrequency?), ...
+		// bool enabled, ivec4 influenceBoundingBox, bool update (float updateFrequency?), ...
 
 		ReflectionProbe(const ReflectionProbe&) = delete;
 		ReflectionProbe& operator=(const ReflectionProbe&) = delete;
