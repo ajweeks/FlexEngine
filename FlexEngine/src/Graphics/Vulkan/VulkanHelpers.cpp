@@ -560,9 +560,12 @@ namespace flex
 		}
 		
 		VulkanShader::VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device) :
-			uniformBuffer(device),
-			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
+			uniformBuffer(device)
 		{
+			shader = {};
+			shader.name = name;
+			shader.vertexShaderFilePath = vertexShaderFilePath;
+			shader.fragmentShaderFilePath = fragmentShaderFilePath;
 		}
 } // namespace vk
 } // namespace flex

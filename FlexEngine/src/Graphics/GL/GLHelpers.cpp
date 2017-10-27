@@ -411,18 +411,6 @@ namespace flex
 			default: return GL_FALSE;
 			}
 		}
-
-		GLRenderObject::GLRenderObject(RenderID renderID, std::string name) :
-			renderID(renderID)
-		{
-			info = {};
-			info.name = name;
-		}
-
-		GLShader::GLShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :
-			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
-		{
-		}
 } // namespace gl
 } // namespace flex
 

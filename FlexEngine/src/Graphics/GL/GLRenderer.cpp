@@ -610,7 +610,8 @@ namespace flex
 
 			const RenderID renderID = GetFirstAvailableRenderID();
 
-			GLRenderObject* renderObject = new GLRenderObject(renderID, createInfo->name);
+			GLRenderObject* renderObject = new GLRenderObject();
+			renderObject->renderID = renderID;
 			InsertNewRenderObject(renderObject);
 			renderObject->materialID = createInfo->materialID;
 			renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);

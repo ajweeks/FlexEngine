@@ -169,14 +169,14 @@ namespace flex
 		{
 			VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device);
 
-			Renderer::Shader shader;
+			Renderer::Shader shader = {};
 
 			UniformBuffer uniformBuffer;
 		};
 
 		struct VulkanMaterial
 		{
-			Renderer::Material material; // More info is stored in the generic material struct
+			Renderer::Material material = {}; // More info is stored in the generic material struct
 
 			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;

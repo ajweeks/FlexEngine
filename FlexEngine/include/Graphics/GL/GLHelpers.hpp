@@ -15,16 +15,14 @@ namespace flex
 	{
 		struct GLShader
 		{
-			GLShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath);
-
-			Renderer::Shader shader;
+			Renderer::Shader shader = {};
 
 			glm::uint program;
 		};
 
 		struct GLMaterial
 		{
-			Renderer::Material material; // More info is stored in the generic material struct
+			Renderer::Material material = {}; // More info is stored in the generic material struct
 
 			struct UniformIDs
 			{
@@ -75,11 +73,9 @@ namespace flex
 
 		struct GLRenderObject
 		{
-			GLRenderObject(RenderID renderID, std::string name = "");
-
 			RenderID renderID;
 
-			Renderer::RenderObjectInfo info;
+			Renderer::RenderObjectInfo info = {};
 
 			bool visible = true;
 			bool isStatic = true; // If true, this object will be rendered to reflection probes
