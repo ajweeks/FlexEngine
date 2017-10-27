@@ -2073,11 +2073,10 @@ namespace flex
 			renderObject->materialID = createInfo->materialID;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
 			
-			// TODO: Get rid of info struct
-			renderObject->info.name = createInfo->name;
-			renderObject->info.materialName = m_LoadedMaterials[renderObject->materialID].material.name;
-			renderObject->info.transform = createInfo->transform;
-			renderObject->info.visible = true;
+			renderObject->name = createInfo->name;
+			renderObject->materialName = m_LoadedMaterials[renderObject->materialID].material.name;
+			renderObject->transform = createInfo->transform;
+			renderObject->visible = true;
 
 			if (createInfo->indices != nullptr)
 			{
@@ -2193,7 +2192,7 @@ namespace flex
 						VulkanRenderObject* renderObject = GetRenderObject(i);
 						VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 						VulkanShader* shader = &m_Shaders[material->material.shaderID];
-						const std::string objectName(renderObject->info.name + "##" + std::to_string(i));
+						const std::string objectName(renderObject->name + "##" + std::to_string(i));
 
 						const std::string objectID("##" + objectName + "-visble");
 						ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
@@ -2207,7 +2206,7 @@ namespace flex
 
 							ImGui::Text(local ? localTransformStr : globalTransformStr);
 
-							Transform* transform = renderObject->info.transform;
+							Transform* transform = renderObject->transform;
 
 
 							glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
@@ -2346,17 +2345,6 @@ namespace flex
 					m_RenderObjects[renderID] = nullptr;
 					return;
 				}
-			}
-		}
-
-		void VulkanRenderer::GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec)
-		{
-			vec.clear();
-			vec.resize(GetRenderObjectCount());
-
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				vec[i] = m_RenderObjects[i]->info;
 			}
 		}
 
@@ -5448,7 +5436,7 @@ namespace flex
 
 			bool updateMVP = false; // This is set to true when either the view or projection matrix get overriden
 
-			glm::mat4 model = renderObject->info.transform->GetModelMatrix();
+			glm::mat4 model = renderObject->transform->GetModelMatrix();
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 projection = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();

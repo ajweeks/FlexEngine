@@ -250,17 +250,6 @@ namespace flex
 			PushConstantBlock pushConstantBlock;
 		};
 
-		// Info that stays consistent across all renderers
-		struct RenderObjectInfo
-		{
-			std::string name;
-			std::string materialName;
-			Transform* transform = nullptr;
-			bool visible;
-
-			// Parent, children, etc.
-		};
-
 		struct RenderObjectCreateInfo
 		{
 			MaterialID materialID;
@@ -356,16 +345,11 @@ namespace flex
 
 		virtual void Destroy(RenderID renderID) = 0;
 
-		virtual void GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec) = 0;
-
 		// ImGUI functions
 		virtual void ImGui_Init(const GameContext& gameContext) = 0;
 		virtual void ImGui_NewFrame(const GameContext& gameContext) = 0;
 		virtual void ImGui_Render() = 0;
 		virtual void ImGui_ReleaseRenderObjects() = 0;
-
-
-		bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
 	protected:
 		std::vector<PointLight> m_PointLights;

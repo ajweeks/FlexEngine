@@ -206,7 +206,9 @@ namespace flex
 
 			bool visible = true;
 
-			Renderer::RenderObjectInfo info;
+			std::string name;
+			std::string materialName;
+			Transform* transform = nullptr;
 
 			glm::uint VAO;
 			glm::uint VBO;

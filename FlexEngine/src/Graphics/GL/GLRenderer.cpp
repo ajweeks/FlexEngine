@@ -620,10 +620,9 @@ namespace flex
 
 			assert(createInfo->transform);
 			
-			renderObject->info = {};
-			renderObject->info.materialName = m_Materials[renderObject->materialID].material.name;
-			renderObject->info.name = createInfo->name;
-			renderObject->info.transform = createInfo->transform;
+			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
+			renderObject->name = createInfo->name;
+			renderObject->transform = createInfo->transform;
 
 			if (m_Materials.empty()) Logger::LogError("Render object is being created before any materials have been created!");
 			if (renderObject->materialID >= m_Materials.size())
@@ -675,7 +674,7 @@ namespace flex
 				RenderID cubemapID = 0;
 				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 				{
-					if (m_RenderObjects[i]->info.name.compare("Skybox") == 0)
+					if (m_RenderObjects[i]->name.compare("Skybox") == 0)
 					{
 						cubemapID = i;
 					}
@@ -1132,7 +1131,7 @@ namespace flex
 						// TODO: FIXME:
 						// Negative? (Probably incorrect)
 						//
-						glm::vec3 cubemapTranslation = -cubemapRenderObject->info.transform->GetGlobalPosition();
+						glm::vec3 cubemapTranslation = -cubemapRenderObject->transform->GetGlobalPosition();
 						for (size_t face = 0; face < 6; ++face)
 						{
 							glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
@@ -1700,7 +1699,7 @@ namespace flex
 					// TODO: FIXME:
 					// Negative? (Probably incorrect)
 					//
-					glm::vec3 cubemapTranslation = -cubemapRenderObject->info.transform->GetGlobalPosition();
+					glm::vec3 cubemapTranslation = -cubemapRenderObject->transform->GetGlobalPosition();
 					for (size_t face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
@@ -2142,7 +2141,7 @@ namespace flex
 			GLMaterial* material = &m_Materials[renderObject->materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
-			glm::mat4 model = renderObject->info.transform->GetModelMatrix();
+			glm::mat4 model = renderObject->transform->GetModelMatrix();
 			glm::mat4 modelInv = glm::inverse(model);
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
@@ -2430,17 +2429,6 @@ namespace flex
 			SafeDelete(renderObject);
 		}
 
-		void GLRenderer::GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec)
-		{
-			vec.clear();
-			vec.resize(GetRenderObjectCount());
-
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				vec[i] = m_RenderObjects[i]->info;
-			}
-		}
-
 		bool GLRenderer::ImGui_CreateFontsTexture()
 		{
 			// Build texture atlas
@@ -2534,14 +2522,14 @@ namespace flex
 					{
 						GLRenderObject* renderObject = GetRenderObject(i);
 
-						const std::string objectName(renderObject->info.name + "##" + std::to_string(i));
+						const std::string objectName(renderObject->name + "##" + std::to_string(i));
 
 						const std::string objectID("##" + objectName + "-visble");
 						ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
 						ImGui::SameLine();
 						if (ImGui::TreeNode(objectName.c_str()))
 						{
-							Transform* transform = renderObject->info.transform;
+							Transform* transform = renderObject->transform;
 							if (transform)
 							{
 								static const char* localTransformStr = "Transform (local)";

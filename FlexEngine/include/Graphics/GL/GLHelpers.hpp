@@ -75,7 +75,9 @@ namespace flex
 		{
 			RenderID renderID;
 
-			Renderer::RenderObjectInfo info = {};
+			std::string name;
+			std::string materialName;
+			Transform* transform = nullptr;
 
 			bool visible = true;
 			bool isStatic = true; // If true, this object will be rendered to reflection probes

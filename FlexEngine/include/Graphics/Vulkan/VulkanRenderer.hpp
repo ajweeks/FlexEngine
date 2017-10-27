@@ -56,8 +56,6 @@ namespace flex
 
 			virtual void Destroy(RenderID renderID) override;
 
-			virtual void GetRenderObjectInfos(std::vector<RenderObjectInfo>& vec) override;
-
 			virtual void ImGui_Init(const GameContext& gameContext) override;
 			virtual void ImGui_NewFrame(const GameContext& gameContext) override;
 			virtual void ImGui_Render() override;
