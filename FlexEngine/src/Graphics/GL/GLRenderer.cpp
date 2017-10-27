@@ -679,17 +679,15 @@ namespace flex
 						cubemapID = i;
 					}
 				}
-			
+
 				CaptureSceneToCubemap(gameContext, renderID);
-				// TODO: Model matrix is causing skybox to be offset 
-				// FIX IT!
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
 				GenerateBRDFLUT(gameContext, renderObject);
-			
-				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
-				//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
-			
+
+				// Display captured cubemap as skybox
+				m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
+					m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
 			}
 			else if (material->material.generateIrradianceSampler)
 			{
@@ -844,7 +842,6 @@ namespace flex
 			glDepthMask(skybox->depthWriteEnable);
 			CheckGLErrorMessages();
 
-
 			unsigned int maxMipLevels = 5;
 			for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
 			{
@@ -870,9 +867,7 @@ namespace flex
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].prefilteredMapSamplerID, mip);
 					CheckGLErrorMessages();
-
-					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-					CheckGLErrorMessages();
+					
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 				}
@@ -960,9 +955,6 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, m_Materials[renderObject->materialID].material.generatedBRDFLUTSize.x, m_Materials[renderObject->materialID].material.generatedBRDFLUTSize.y);
-			CheckGLErrorMessages();
-
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
 
 			glCullFace(m_1x1_NDC_Quad->cullFace);
@@ -1072,93 +1064,42 @@ namespace flex
 			drawCallInfo.renderToCubemap = true;
 			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
 
+			// Clear cubemap faces
 			if (drawCallInfo.renderToCubemap)
 			{
-				for (auto batchedRenderObjects : m_ForwardRenderObjectBatches)
-				{
-					if (batchedRenderObjects.empty()) continue;
+				GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+				GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
-					// Clear cubemap values
-					GLMaterial* material = &m_Materials[batchedRenderObjects[0]->materialID];
-					GLShader* glShader = &m_Shaders[material->material.shaderID];
-					Shader* shader = &glShader->shader;
-					glUseProgram(glShader->program);
+				glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+
+				// Must be enabled to clear depth buffer
+				glDepthMask(GL_TRUE);
+				CheckGLErrorMessages();
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				CheckGLErrorMessages();
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				CheckGLErrorMessages();
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
+				CheckGLErrorMessages();
+
+				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+				CheckGLErrorMessages();
+
+				for (size_t face = 0; face < 6; ++face)
+				{
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+					CheckGLErrorMessages();
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 					CheckGLErrorMessages();
 
-					for (auto renderObject : batchedRenderObjects)
-					{
-						if (!renderObject->visible) continue;
-
-						// This stuff isn't neecssary right?
-						glBindVertexArray(renderObject->VAO);
-						CheckGLErrorMessages();
-						glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-						CheckGLErrorMessages();
-
-						glCullFace(renderObject->cullFace);
-						CheckGLErrorMessages();
-
-						glDepthFunc(renderObject->depthTestReadFunc);
-						CheckGLErrorMessages();
-
-						glDepthMask(renderObject->depthWriteEnable);
-						CheckGLErrorMessages();
-
-						UpdatePerObjectUniforms(renderObject->renderID, gameContext);
-
-						BindTextures(shader, material);
-
-						GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
-						GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
-
-						glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
-
-						glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-						CheckGLErrorMessages();
-						glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-						CheckGLErrorMessages();
-						glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
-						CheckGLErrorMessages();
-
-						glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-						CheckGLErrorMessages();
-
-						// Use capture projection matrix
-						glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-						CheckGLErrorMessages();
-
-						//
-						// TODO: FIXME:
-						// Negative? (Probably incorrect)
-						//
-						glm::vec3 cubemapTranslation = -cubemapRenderObject->transform->GetGlobalPosition();
-						for (size_t face = 0; face < 6; ++face)
-						{
-							glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
-
-							// This doesn't work because it flips the winding order of things (I think), maybe just account for that?
-							// Flip vertically to match cubemap, cubemap shouldn't even be captured here eventually?
-							//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
-
-							glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
-							CheckGLErrorMessages();
-
-							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-							CheckGLErrorMessages();
-							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
-							CheckGLErrorMessages();
-
-							glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-							CheckGLErrorMessages();
-						}
-					}
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+					CheckGLErrorMessages();
 				}
 			}
 
-
 			DrawForwardObjects(gameContext, drawCallInfo);
 
-			//glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 			CheckGLErrorMessages();
