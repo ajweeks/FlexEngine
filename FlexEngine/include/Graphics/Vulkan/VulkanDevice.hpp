@@ -1,4 +1,5 @@
 #pragma once
+#if COMPILE_VULKAN
 
 #include <vulkan/vulkan.h>
 
@@ -29,3 +30,5 @@ namespace flex
 		};
 	} // namespace vk
 } // namespace flex
+
+#endif COMPILE_VULKAN

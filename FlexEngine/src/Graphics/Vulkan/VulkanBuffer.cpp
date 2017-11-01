@@ -1,4 +1,5 @@
 #include "stdafx.hpp"
+#if COMPILE_VULKAN
 
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
 
@@ -62,3 +63,5 @@ namespace flex
 		}
 	} // namespace vk
 } // namespace flex
+
+#endif // COMPILE_VULKAN

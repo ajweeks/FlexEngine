@@ -1,4 +1,5 @@
 #pragma once
+#if COMPILE_VULKAN
 
 #include <string>
 #include <vector>
@@ -299,3 +300,5 @@ namespace flex
 		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 	} // namespace vk
 } // namespace flex
+
+#endif // COMPILE_VULKAN
