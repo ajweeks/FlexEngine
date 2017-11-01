@@ -1219,10 +1219,6 @@ namespace flex
 				m_gBuffer_NormalRoughnessHandle.format,
 				frameBufferSize);
 
-			constexpr int numBuffers = 3;
-			unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-			glDrawBuffers(numBuffers, attachments);
-
 			// Create and attach depth buffer
 			glGenRenderbuffers(1, &m_gBufferDepthHandle);
 			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
@@ -1424,6 +1420,13 @@ namespace flex
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
 
+			// TODO: Make more dynamic (based on framebuffer count)
+			{
+				constexpr int numBuffers = 3;
+				unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+				glDrawBuffers(numBuffers, attachments);
+			}
+
 			for (size_t i = 0; i < m_DeferredRenderObjectBatches.size(); ++i)
 			{
 				if (!m_DeferredRenderObjectBatches[i].empty())
@@ -1435,6 +1438,12 @@ namespace flex
 			glUseProgram(0);
 			glBindVertexArray(0);
 			CheckGLErrorMessages();
+
+			{
+				constexpr int numBuffers = 1;
+				unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0 };
+				glDrawBuffers(numBuffers, attachments);
+			}
 
 			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 
@@ -1448,40 +1457,112 @@ namespace flex
 
 		void GLRenderer::DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			CheckGLErrorMessages();
+			if (drawCallInfo.renderToCubemap)
+			{
+				if (!m_gBufferQuadVertexBufferData.pDataStart)
+				{
+					// Generate GBuffer if not already generated
+					//GenerateGBuffer(gameContext);
+				}
 
-			glClear(GL_COLOR_BUFFER_BIT); // Don't clear depth - we just copied it over from the GBuffer
-			CheckGLErrorMessages();
+				GLRenderObject* cubemapObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+				GLMaterial* cubemapMaterial = &m_Materials[cubemapObject->materialID];
+				GLShader* cubemapShader = &m_Shaders[cubemapMaterial->material.shaderID];
 
-			GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
+				if (!m_SkyBoxMesh)
+				{
+					GenerateSkybox(gameContext);
+				}
 
-			GLMaterial* material = &m_Materials[gBufferQuad->materialID];
-			GLShader* glShader = &m_Shaders[material->material.shaderID];
-			Shader* shader = &glShader->shader;
-			glUseProgram(glShader->program);
+				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
-			glBindVertexArray(gBufferQuad->VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
-			CheckGLErrorMessages();
+				CheckGLErrorMessages();
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				CheckGLErrorMessages();
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				CheckGLErrorMessages();
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapMaterial->material.cubemapSamplerSize.x, cubemapMaterial->material.cubemapSamplerSize.y);
+				CheckGLErrorMessages();
 
-			UpdateMaterialUniforms(gameContext, gBufferQuad->materialID);
-			UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
+				glm::uint deferredCombineCubemapShaderID;
+				GetShaderID("deferred_combine_cubemap", deferredCombineCubemapShaderID);
+				GLShader* deferredCombineCubemapShader = &m_Shaders[deferredCombineCubemapShaderID];
+				GLMaterial* deferredCombineCubemapMaterial = &m_Materials[m_DeferredCombineCubemapMatID];
 
-			glm::uint bindingOffset = BindFrameBufferTextures(material);
-			BindTextures(shader, material, bindingOffset);
+				//GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
+				//GLMaterial* gbufferMaterial = &m_Materials[gBufferQuad->materialID];
+				//GLShader* gbufferGLShader = &m_Shaders[gbufferMaterial->material.shaderID];
 
-			glCullFace(gBufferQuad->cullFace);
-			CheckGLErrorMessages();
+				glUseProgram(deferredCombineCubemapShader->program);
 
-			glDepthFunc(gBufferQuad->depthTestReadFunc);
-			CheckGLErrorMessages();
+				glBindVertexArray(skybox->VAO);
+				CheckGLErrorMessages();
+				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
+				CheckGLErrorMessages();
 
-			glDepthMask(gBufferQuad->depthWriteEnable);
-			CheckGLErrorMessages();
+				UpdateMaterialUniforms(gameContext, m_DeferredCombineCubemapMatID);
+				UpdatePerObjectUniforms(m_DeferredCombineCubemapMatID, skybox->transform->GetModelMatrix(), gameContext);
 
-			glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
-			CheckGLErrorMessages();
+				glm::uint bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
+				BindTextures(&deferredCombineCubemapShader->shader, deferredCombineCubemapMaterial, bindingOffset);
+
+				glCullFace(skybox->cullFace);
+				CheckGLErrorMessages();
+
+				glDepthFunc(skybox->depthTestReadFunc);
+				CheckGLErrorMessages();
+
+				glDepthMask(skybox->depthWriteEnable);
+				CheckGLErrorMessages();
+
+				for (int face = 0; face < 6; ++face)
+				{
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+					CheckGLErrorMessages();
+					//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
+					//CheckGLErrorMessages();
+
+					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
+					CheckGLErrorMessages();
+				}
+			}
+			else
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				CheckGLErrorMessages();
+
+				glClear(GL_COLOR_BUFFER_BIT); // Don't clear depth - we just copied it over from the GBuffer
+				CheckGLErrorMessages();
+
+				GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
+
+				GLMaterial* material = &m_Materials[gBufferQuad->materialID];
+				GLShader* glShader = &m_Shaders[material->material.shaderID];
+				Shader* shader = &glShader->shader;
+				glUseProgram(glShader->program);
+
+				glBindVertexArray(gBufferQuad->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
+				CheckGLErrorMessages();
+
+				UpdateMaterialUniforms(gameContext, gBufferQuad->materialID);
+				UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
+
+				glm::uint bindingOffset = BindFrameBufferTextures(material);
+				BindTextures(shader, material, bindingOffset);
+
+				glCullFace(gBufferQuad->cullFace);
+				CheckGLErrorMessages();
+
+				glDepthFunc(gBufferQuad->depthTestReadFunc);
+				CheckGLErrorMessages();
+
+				glDepthMask(gBufferQuad->depthWriteEnable);
+				CheckGLErrorMessages();
+
+				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
+				CheckGLErrorMessages();
+			}
 		}
 
 		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
@@ -1668,8 +1749,20 @@ namespace flex
 						glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
 						CheckGLErrorMessages();
 
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-						CheckGLErrorMessages();
+						if (drawCallInfo.deferred)
+						{
+							for (size_t j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
+							{
+								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
+								CheckGLErrorMessages();
+							}
+						}
+						else
+						{
+							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+							CheckGLErrorMessages();
+						}
+
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 						CheckGLErrorMessages();
 
@@ -1832,6 +1925,7 @@ namespace flex
 			m_Shaders = {
 				{ "deferred_simple", RESOURCE_LOCATION + "shaders/GLSL/deferred_simple.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_simple.frag" },
 				{ "deferred_combine", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.frag" },
+				{ "deferred_combine_cubemap", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine_cubemap.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine_cubemap.frag" },
 				{ "color", RESOURCE_LOCATION + "shaders/GLSL/color.vert", RESOURCE_LOCATION + "shaders/GLSL/color.frag" },
 				{ "imgui", RESOURCE_LOCATION + "shaders/GLSL/imgui.vert", RESOURCE_LOCATION + "shaders/GLSL/imgui.frag" },
 				{ "pbr", RESOURCE_LOCATION + "shaders/GLSL/pbr.vert", RESOURCE_LOCATION + "shaders/GLSL/pbr.frag" },
@@ -1877,6 +1971,25 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
 
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
+			++shaderID;
+
+			// Deferred combine cubemap
+			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.needBRDFLUT = true;
+			m_Shaders[shaderID].shader.needIrradianceSampler = true;
+			m_Shaders[shaderID].shader.needPrefilteredMap = true;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
 			++shaderID;
 
@@ -2021,6 +2134,8 @@ namespace flex
 
 		void GLRenderer::UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID)
 		{
+			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+
 			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 			
@@ -2109,6 +2224,9 @@ namespace flex
 					}
 				}
 			}
+
+			glUseProgram(last_program);
+			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
