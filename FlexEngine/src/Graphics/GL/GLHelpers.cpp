@@ -156,10 +156,10 @@ namespace flex
 
 			if (createInfo.filePaths[0].empty()) // Don't generate pixel data
 			{
-				if (createInfo.textureWidth <= 0 || createInfo.textureHeight <= 0)
+				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0)
 				{
 					Logger::LogError("Invalid cubemap dimensions: " + 
-						std::to_string(createInfo.textureWidth) + "x" + std::to_string(createInfo.textureHeight));
+						std::to_string(createInfo.textureSize.x) + "x" + std::to_string(createInfo.textureSize.y));
 					success = false;
 				}
 				else
@@ -167,7 +167,7 @@ namespace flex
 					for (size_t i = 0; i < 6; ++i)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat,
-							createInfo.textureWidth, createInfo.textureHeight, 0, format, type, nullptr);
+							createInfo.textureSize.x, createInfo.textureSize.y, 0, format, type, nullptr);
 						CheckGLErrorMessages();
 					}
 				}
@@ -218,7 +218,7 @@ namespace flex
 					for (size_t i = 0; i < 6; ++i)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24,
-							createInfo.textureWidth, createInfo.textureHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+							createInfo.textureSize.x, createInfo.textureSize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 						CheckGLErrorMessages();
 					}
 

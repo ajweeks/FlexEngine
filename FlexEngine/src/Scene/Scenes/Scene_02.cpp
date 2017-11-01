@@ -56,8 +56,6 @@ namespace flex
 		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
 		skyboxHDRMatInfo.generatePrefilteredMap = true;
 		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		skyboxHDRMatInfo.generateBRDFLUT = true;
-		skyboxHDRMatInfo.generatedBRDFLUTSize = { 512, 512 };
 		const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
 		Renderer::MaterialCreateInfo cerebusMatTexturedInfo = {};

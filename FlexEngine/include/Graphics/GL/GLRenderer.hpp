@@ -72,7 +72,7 @@ namespace flex
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
-			void GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject);
+			void GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
 
@@ -82,8 +82,7 @@ namespace flex
 			{
 				bool renderToCubemap = false;
 				RenderID cubemapObjectRenderID;
-				bool clearColor = false;
-				bool clearDepth = false;
+				bool deferred;
 			};
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
@@ -103,10 +102,11 @@ namespace flex
 
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
+			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model, const GameContext& gameContext);
 
 			void BatchRenderObjects(const GameContext& gameContext);
 			void DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
-			void DrawGBufferQuad(const GameContext& gameContext);
+			void DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawUI();
 
@@ -114,6 +114,8 @@ namespace flex
 			glm::uint BindTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding = 0);
 			// Returns the next binding that would be used
 			glm::uint BindFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding = 0);
+			// Returns the next binding that would be used
+			glm::uint BindDeferredFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding);
 
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
@@ -153,6 +155,17 @@ namespace flex
 			GBufferHandle m_gBuffer_PositionMetallicHandle;
 			GBufferHandle m_gBuffer_NormalRoughnessHandle;
 			GBufferHandle m_gBuffer_DiffuseAOHandle;
+
+			MaterialID m_DeferredCombineCubemapMatID;
+
+			GBufferHandle m_gBufferCubemap_PositionMetallicHandle;
+			GBufferHandle m_gBufferCubemap_NormalRoughnessHandle;
+			GBufferHandle m_gBufferCubemap_DiffuseAOHandle;
+
+
+			glm::uint m_BRDFTextureID;
+			glm::uvec2 m_BRDFTextureSize;
+
 
 			glm::uint m_CaptureFBO; // Frame buffer containing:
 			glm::uint m_CaptureRBO; // Render buffer which contains the rendered data

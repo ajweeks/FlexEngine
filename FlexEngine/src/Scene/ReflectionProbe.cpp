@@ -33,8 +33,6 @@ namespace flex
 		reflectionProbeMaterialCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
 		reflectionProbeMaterialCreateInfo.generatePrefilteredMap = true;
 		reflectionProbeMaterialCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		reflectionProbeMaterialCreateInfo.generateBRDFLUT = true;
-		reflectionProbeMaterialCreateInfo.generatedBRDFLUTSize = { 512, 512 };
 		reflectionProbeMaterialCreateInfo.generateReflectionProbeMaps = true;
 		MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 

@@ -20,6 +20,13 @@ namespace flex
 			glm::uint program;
 		};
 
+		struct GLCubemapGBuffer
+		{
+			glm::uint id;
+			GLint internalFormat;
+			GLenum format;
+		};
+
 		struct GLMaterial
 		{
 			Renderer::Material material = {}; // More info is stored in the generic material struct
@@ -56,6 +63,7 @@ namespace flex
 			glm::uint normalSamplerID;
 
 			glm::uint cubemapSamplerID;
+			std::vector<GLCubemapGBuffer> cubemapSamplerGBuffersIDs;
 			glm::uint cubemapDepthSamplerID;
 
 			// PBR samplers
@@ -136,9 +144,9 @@ namespace flex
 		{
 			glm::uint* textureID;
 			glm::uint* depthTextureID;
-			int textureWidth;
+			std::vector<GLCubemapGBuffer>* textureGBufferIDs;
+			glm::uvec2 textureSize;
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
-			int textureHeight;
 			bool generateMipmaps = false;
 			bool enableTrilinearFiltering = false;
 			bool HDR = false;

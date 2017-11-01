@@ -355,8 +355,7 @@ namespace flex
 			}
 			if (m_Shaders[mat.material.shaderID].shader.needBRDFLUT)
 			{
-				mat.brdfLUTSamplerID = (createInfo->brdfLUTSamplerMatID < m_Materials.size() ?
-					m_Materials[createInfo->brdfLUTSamplerMatID].brdfLUTSamplerID : 0);
+				mat.brdfLUTSamplerID = m_BRDFTextureID;
 			}
 			if (m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
 			{
@@ -369,8 +368,6 @@ namespace flex
 			mat.material.prefilteredMapSize = createInfo->generatedPrefilteredCubemapSize;
 
 			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
-			mat.material.generateBRDFLUT = createInfo->generateBRDFLUT;
-			mat.material.generatedBRDFLUTSize = createInfo->generatedBRDFLUTSize;
 
 			struct SamplerCreateInfo
 			{
@@ -465,8 +462,7 @@ namespace flex
 
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
-					cubemapCreateInfo.textureWidth = createInfo->generatedCubemapSize.x;
-					cubemapCreateInfo.textureHeight = createInfo->generatedCubemapSize.y;
+					cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
 					GenerateGLCubemap(cubemapCreateInfo);
 				}
 				else
@@ -497,8 +493,7 @@ namespace flex
 				cubemapCreateInfo.HDR = true;
 				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
-				cubemapCreateInfo.textureWidth = createInfo->generatedCubemapSize.x;
-				cubemapCreateInfo.textureHeight = createInfo->generatedCubemapSize.y;
+				cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
 				cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
 
 				GenerateGLCubemap(cubemapCreateInfo);
@@ -519,11 +514,6 @@ namespace flex
 				}
 				CheckGLErrorMessages();
 				++binding;
-			}
-
-			if (mat.material.generateBRDFLUT)
-			{
-				GenerateGLTexture_Empty(mat.brdfLUTSamplerID, createInfo->generatedBRDFLUTSize, false, GL_RG16F, GL_RG, GL_FLOAT);
 			}
 
 			if (m_Shaders[mat.material.shaderID].shader.needBRDFLUT)
@@ -549,8 +539,7 @@ namespace flex
 				cubemapCreateInfo.HDR = true;
 				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
-				cubemapCreateInfo.textureWidth = createInfo->generatedIrradianceCubemapSize.x;
-				cubemapCreateInfo.textureHeight = createInfo->generatedIrradianceCubemapSize.y;
+				cubemapCreateInfo.textureSize = createInfo->generatedIrradianceCubemapSize;
 
 				GenerateGLCubemap(cubemapCreateInfo);
 			}
@@ -578,8 +567,7 @@ namespace flex
 				cubemapCreateInfo.HDR = true;
 				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = true;
-				cubemapCreateInfo.textureWidth = createInfo->generatedPrefilteredCubemapSize.x;
-				cubemapCreateInfo.textureHeight = createInfo->generatedPrefilteredCubemapSize.y;
+				cubemapCreateInfo.textureSize = createInfo->generatedPrefilteredCubemapSize;
 
 				GenerateGLCubemap(cubemapCreateInfo);
 			}
@@ -669,8 +657,7 @@ namespace flex
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 
-			GLMaterial* material = &m_Materials[renderObject->materialID];
-			if (material->material.generateReflectionProbeMaps)
+			if (m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 			{
 				RenderID cubemapID = 0;
 				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
@@ -684,18 +671,16 @@ namespace flex
 				CaptureSceneToCubemap(gameContext, renderID);
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
-				GenerateBRDFLUT(gameContext, renderObject);
 
 				// Display captured cubemap as skybox
 				m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
 					m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
 			}
-			else if (material->material.generateIrradianceSampler)
+			else if (m_Materials[renderObject->materialID].material.generateIrradianceSampler)
 			{
 				GenerateCubemapFromHDREquirectangular(gameContext, renderObject);
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
-				GenerateBRDFLUT(gameContext, renderObject);
 			}
 		}
 
@@ -885,7 +870,7 @@ namespace flex
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, GLRenderObject* renderObject)
+		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
@@ -947,7 +932,7 @@ namespace flex
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 			CheckGLErrorMessages();
 
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_Materials[renderObject->materialID].brdfLUTSamplerID, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTextureID, 0);
 			CheckGLErrorMessages();
 
 			glBindVertexArray(m_1x1_NDC_Quad->VAO);
@@ -955,7 +940,7 @@ namespace flex
 			glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
 			CheckGLErrorMessages();
 
-			glViewport(0, 0, m_Materials[renderObject->materialID].material.generatedBRDFLUTSize.x, m_Materials[renderObject->materialID].material.generatedBRDFLUTSize.y);
+			glViewport(0, 0, BRDFLUTSize.x, BRDFLUTSize.y);
 			CheckGLErrorMessages();
 
 			glCullFace(m_1x1_NDC_Quad->cullFace);
@@ -1176,6 +1161,10 @@ namespace flex
 
 		void GLRenderer::PostInitialize(const GameContext& gameContext)
 		{
+			m_BRDFTextureSize = { 512, 512 };
+			GenerateGLTexture_Empty(m_BRDFTextureID, m_BRDFTextureSize, false, GL_RG16F, GL_RG, GL_FLOAT);
+			GenerateBRDFLUT(gameContext, m_BRDFTextureID, m_BRDFTextureSize);
+
 			ImGui_Init(gameContext);
 
 			// G-buffer objects
@@ -1241,8 +1230,6 @@ namespace flex
 			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = reflectionProbeMatID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
-			gBufferMaterialCreateInfo.brdfLUTSamplerMatID = reflectionProbeMatID;
-
 			gBufferMaterialCreateInfo.frameBuffers = {
 				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },
 				{ "normalRoughnessFrameBufferSampler",  &m_gBuffer_NormalRoughnessHandle.id },
@@ -1341,7 +1328,7 @@ namespace flex
 			DrawCallInfo drawCallInfo = {};
 
 			DrawDeferredObjects(gameContext, drawCallInfo);
-			DrawGBufferQuad(gameContext);
+			DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawUI();
 
@@ -1431,7 +1418,7 @@ namespace flex
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		}
 
-		void GLRenderer::DrawGBufferQuad(const GameContext& gameContext)
+		void GLRenderer::DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			CheckGLErrorMessages();
@@ -1748,6 +1735,28 @@ namespace flex
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
 				glBindTexture(GL_TEXTURE_2D, *((GLuint*)frameBuffer.second));
+				CheckGLErrorMessages();
+				++binding;
+			}
+
+			return binding;
+		}
+
+		glm::uint GLRenderer::BindDeferredFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding)
+		{
+			struct Tex
+			{
+				bool needed;
+				bool enabled;
+				glm::uint textureID;
+			};
+
+			glm::uint binding = startingBinding;
+			for (auto& cubemapGBuffer : glMaterial->cubemapSamplerGBuffersIDs)
+			{
+				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
+				glActiveTexture(activeTexture);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapGBuffer.id);
 				CheckGLErrorMessages();
 				++binding;
 			}
@@ -2074,16 +2083,20 @@ namespace flex
 			}
 		}
 
-
 		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
 
-			GLMaterial* material = &m_Materials[renderObject->materialID];
+			glm::mat4 model = renderObject->transform->GetModelMatrix();
+			UpdatePerObjectUniforms(renderObject->materialID, model, gameContext);
+		}
+
+		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model, const GameContext& gameContext)
+		{
+			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
-			glm::mat4 model = renderObject->transform->GetModelMatrix();
 			glm::mat4 modelInv = glm::inverse(model);
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();

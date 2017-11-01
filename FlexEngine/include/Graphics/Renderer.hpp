@@ -148,9 +148,6 @@ namespace flex
 			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 
 			bool enableBRDFLUT;
-			bool generateBRDFLUT;
-			glm::uvec2 generatedBRDFLUTSize;
-			MaterialID brdfLUTSamplerMatID; // The id of the material who has a brdf texture that we want to use (generateBRDFLUT must be false)
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 			bool enableCubemapSampler;
@@ -237,8 +234,6 @@ namespace flex
 			glm::uvec2 prefilteredMapSize;
 
 			bool enableBRDFLUT;
-			bool generateBRDFLUT;
-			glm::uvec2 generatedBRDFLUTSize;
 
 			bool generateReflectionProbeMaps;
 
