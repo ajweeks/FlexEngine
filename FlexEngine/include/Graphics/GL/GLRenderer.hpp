@@ -68,6 +68,7 @@ namespace flex
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
 			void GenerateSkybox(const GameContext& gameContext);
+			void GenerateGBuffer(const GameContext& gameContext);
 
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);

@@ -1231,79 +1231,7 @@ namespace flex
 			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-
-			// TODO: FIXME: Remove this :grimmacing:
-			MaterialID reflectionProbeMatID = 0;
-			for (size_t i = 0; i < m_Materials.size(); i++)
-			{
-				if (m_Materials[i].material.name.compare("Reflection probe") == 0)
-				{
-					reflectionProbeMatID = i;
-					break;
-				}
-			}
-
-
-
-			MaterialCreateInfo gBufferMaterialCreateInfo = {};
-			gBufferMaterialCreateInfo.name = "GBuffer material";
-			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
-			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
-			gBufferMaterialCreateInfo.irradianceSamplerMatID = reflectionProbeMatID;
-			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
-			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = reflectionProbeMatID;
-			gBufferMaterialCreateInfo.enableBRDFLUT = true;
-			gBufferMaterialCreateInfo.frameBuffers = {
-				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },
-				{ "normalRoughnessFrameBufferSampler",  &m_gBuffer_NormalRoughnessHandle.id },
-				{ "albedoAOFrameBufferSampler",  &m_gBuffer_DiffuseAOHandle.id },
-			};
-
-			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
-
-			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
-
-			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
-				glm::vec3(-1.0f,  1.0f, 0.0f),
-				glm::vec3(-1.0f, -1.0f, 0.0f),
-				glm::vec3(1.0f,  1.0f, 0.0f),
-
-				glm::vec3(1.0f, -1.0f, 0.0f),
-				glm::vec3(1.0f,  1.0f, 0.0f),
-				glm::vec3(-1.0f, -1.0f, 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(0.0f, 0.0f),
-				glm::vec2(1.0f, 1.0f),
-
-				glm::vec2(1.0f, 0.0f),
-				glm::vec2(1.0f, 1.0f),
-				glm::vec2(0.0f, 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
-
-			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
-
-			m_gBufferQuadTransform = Transform::Identity();
-
-			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
-			gBufferQuadCreateInfo.name = "G Buffer Quad";
-			gBufferQuadCreateInfo.materialID = gBufferMatID;
-			gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
-			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
-			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
-			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
-
-			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
-
-			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
-
-			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
+			GenerateGBuffer(gameContext);
 
 			CheckGLErrorMessages();
 
@@ -1448,10 +1376,17 @@ namespace flex
 			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 
 			// Copy depth from gbuffer to default render target
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-			CheckGLErrorMessages();
+			if (drawCallInfo.renderToCubemap)
+			{
+				// No blit is needed, right? We already drew to the cubemap depth?
+			}
+			else
+			{
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+				CheckGLErrorMessages();
+			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		}
 
@@ -1462,7 +1397,7 @@ namespace flex
 				if (!m_gBufferQuadVertexBufferData.pDataStart)
 				{
 					// Generate GBuffer if not already generated
-					//GenerateGBuffer(gameContext);
+					GenerateGBuffer(gameContext);
 				}
 
 				GLRenderObject* cubemapObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
@@ -2460,6 +2395,109 @@ namespace flex
 				// This object is just used as a framebuffer target, don't render it normally
 				GetRenderObject(m_SkyBoxMesh->GetRenderID())->visible = false;
 			}
+		}
+
+		void GLRenderer::GenerateGBuffer(const GameContext& gameContext)
+		{
+			if (m_gBufferQuadVertexBufferData.pDataStart)
+			{
+				// It's already been generated
+				return;
+			}
+
+			// TODO: FIXME: Remove this
+			MaterialID reflectionProbeMatID = 0;
+			bool found = false;
+			for (size_t i = 0; i < m_Materials.size(); i++)
+			{
+				if (m_Materials[i].material.name.compare("Reflection probe") == 0)
+				{
+					reflectionProbeMatID = i;
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				Logger::LogWarning("Reflection probe material wasn't found! It must be added before gbuffer can be generated!");
+			}
+
+			MaterialCreateInfo gBufferMaterialCreateInfo = {};
+			gBufferMaterialCreateInfo.name = "GBuffer material";
+			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
+			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
+			gBufferMaterialCreateInfo.irradianceSamplerMatID = reflectionProbeMatID;
+			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
+			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = reflectionProbeMatID;
+			gBufferMaterialCreateInfo.enableBRDFLUT = true;
+			gBufferMaterialCreateInfo.frameBuffers = {
+				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },
+				{ "normalRoughnessFrameBufferSampler",  &m_gBuffer_NormalRoughnessHandle.id },
+				{ "albedoAOFrameBufferSampler",  &m_gBuffer_DiffuseAOHandle.id },
+			};
+
+			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
+
+			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
+
+			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
+				glm::vec3(-1.0f,  1.0f, 0.0f),
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+				glm::vec3(1.0f,  1.0f, 0.0f),
+
+				glm::vec3(1.0f, -1.0f, 0.0f),
+				glm::vec3(1.0f,  1.0f, 0.0f),
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+			};
+
+			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(1.0f, 1.0f),
+
+				glm::vec2(1.0f, 0.0f),
+				glm::vec2(1.0f, 1.0f),
+				glm::vec2(0.0f, 0.0f),
+			};
+
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
+
+			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+
+			m_gBufferQuadTransform = Transform::Identity();
+
+			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
+			gBufferQuadCreateInfo.name = "G Buffer Quad";
+			gBufferQuadCreateInfo.materialID = gBufferMatID;
+			gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
+			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
+			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
+			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
+
+			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
+
+			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
+
+			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
+
+												  // Also generate deferred combine cubemap material here
+			MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
+			gBufferCubemapMaterialCreateInfo.name = "GBuffer Cubemap material";
+			gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
+			gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
+			gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = reflectionProbeMatID;
+			gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
+			gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = reflectionProbeMatID;
+			gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
+			gBufferCubemapMaterialCreateInfo.frameBuffers = {
+				{ "positionMetallicFrameBufferSampler",  &m_gBufferCubemap_PositionMetallicHandle.id },
+				{ "normalRoughnessFrameBufferSampler",  &m_gBufferCubemap_NormalRoughnessHandle.id },
+				{ "albedoAOFrameBufferSampler",  &m_gBufferCubemap_DiffuseAOHandle.id },
+			};
+
+			m_DeferredCombineCubemapMatID = InitializeMaterial(gameContext, &gBufferCubemapMaterialCreateInfo);
+
 		}
 
 		glm::uint GLRenderer::GetRenderObjectCount() const
