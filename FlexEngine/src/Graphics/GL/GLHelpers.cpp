@@ -193,6 +193,28 @@ namespace flex
 				}
 			}
 
+			if (createInfo.textureGBufferIDs && !createInfo.textureGBufferIDs->empty())
+			{
+				const GLint gbufInternalFormat = GL_RGBA16F;
+				const GLenum gbufFormat = GL_RGBA;
+				const GLenum gbufType = GL_FLOAT;
+
+				// Generate GBuffers
+				for (auto& gbuffer : *createInfo.textureGBufferIDs)
+				{
+					glGenTextures(1, &gbuffer.id);
+					glBindTexture(GL_TEXTURE_CUBE_MAP, gbuffer.id);
+					CheckGLErrorMessages();
+					for (int i = 0; i < 6; i++)
+					{
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, createInfo.textureSize.x, createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
+						CheckGLErrorMessages();
+					}
+				}
+
+				glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.textureID);
+			}
+
 			if (success) // Only proceed when generation succeeded
 			{
 				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

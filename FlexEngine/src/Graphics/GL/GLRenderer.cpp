@@ -485,10 +485,38 @@ namespace flex
 				}
 			}
 
-			if (createInfo->generateHDRCubemapSampler)
+			//if (mat.material.generateReflectionProbeMaps)
+			//{
+			//	mat.cubemapSamplerGBuffersIDs = {
+			//		{ 0, GL_RGBA16F, GL_RGBA },
+			//		{ 0, GL_RGBA16F, GL_RGBA },
+			//		{ 0, GL_RGBA, GL_RGBA },
+			//	};
+			//
+			//	GLCubemapCreateInfo cubemapCreateInfo = {};
+			//	cubemapCreateInfo.textureID = &mat.cubemapSamplerID;
+			//	cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
+			//	cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
+			//	cubemapCreateInfo.HDR = true;
+			//	cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+			//	cubemapCreateInfo.generateMipmaps = false;
+			//	cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
+			//	cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
+			//
+			//	GenerateGLCubemap(cubemapCreateInfo);
+			//}
+			//else 
+				if (createInfo->generateHDRCubemapSampler)
 			{
+				mat.cubemapSamplerGBuffersIDs = {
+					{ 0, GL_RGBA16F, GL_RGBA },
+					{ 0, GL_RGBA16F, GL_RGBA },
+					{ 0, GL_RGBA, GL_RGBA },
+				};
+
 				GLCubemapCreateInfo cubemapCreateInfo = {};
 				cubemapCreateInfo.textureID = &mat.cubemapSamplerID;
+				cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
 				cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
 				cubemapCreateInfo.HDR = true;
 				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
