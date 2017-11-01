@@ -291,7 +291,7 @@ namespace flex
 
 			bool deferred; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 			int subpass = 0;
-			VkBool32 depthWriteEnable = VK_TRUE;
+			bool depthWriteEnable = true;
 
 			// These variables should be set to true when the shader has these uniforms
 			bool needDiffuseSampler;

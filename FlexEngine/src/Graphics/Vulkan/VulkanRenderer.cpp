@@ -3413,7 +3413,7 @@ namespace flex
 			// Deferred objects get drawn in a different render pass
 			pipelineCreateInfo.renderPass = shader.shader.deferred ? offScreenFrameBuf->renderPass : m_DeferredCombineRenderPass;
 			pipelineCreateInfo.subpass = shader.shader.subpass;
-			pipelineCreateInfo.depthWriteEnable = shader.shader.depthWriteEnable;
+			pipelineCreateInfo.depthWriteEnable = shader.shader.depthWriteEnable ? VK_TRUE : VK_FALSE;
 
 			VkPushConstantRange pushConstantRange = {};
 			if (m_Shaders[material->material.shaderID].shader.needPushConstantBlock)
@@ -3563,7 +3563,7 @@ namespace flex
 			VkPipelineDepthStencilStateCreateInfo depthStencil{};
 			depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 			depthStencil.depthTestEnable = createInfo->depthTestEnable;
-			depthStencil.depthWriteEnable = createInfo->depthWriteEnable;
+			depthStencil.depthWriteEnable = createInfo->depthWriteEnable ? VK_TRUE : VK_FALSE;
 			depthStencil.depthCompareOp = createInfo->depthCompareOp;
 			depthStencil.depthBoundsTestEnable = VK_FALSE;
 			depthStencil.stencilTestEnable = createInfo->stencilTestEnable;
@@ -5752,7 +5752,7 @@ namespace flex
 			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.depthWriteEnable = VK_FALSE; // Disable depth writing
+			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
