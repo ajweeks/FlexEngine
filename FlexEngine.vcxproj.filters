@@ -72,9 +72,6 @@
     <ClCompile Include="FlexEngine\src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlexEngine\src\Random.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FlexEngine\src\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -222,9 +219,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\Logger.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlexEngine\include\Random.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\stdafx.hpp">

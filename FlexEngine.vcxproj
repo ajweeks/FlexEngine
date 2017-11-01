@@ -225,7 +225,6 @@
     <ClCompile Include="FlexEngine\src\FreeCamera.cpp" />
     <ClCompile Include="FlexEngine\src\Logger.cpp" />
     <ClCompile Include="FlexEngine\src\Colors.cpp" />
-    <ClCompile Include="FlexEngine\src\Random.cpp" />
     <ClCompile Include="FlexEngine\src\main.cpp" />
     <ClCompile Include="FlexEngine\src\Scene\Scenes\Scene_02.cpp" />
   </ItemGroup>
@@ -254,7 +253,6 @@
     <ClInclude Include="FlexEngine\include\Logger.hpp" />
     <ClInclude Include="FlexEngine\include\stdafx.hpp" />
     <ClInclude Include="FlexEngine\include\FlexEngine.hpp" />
-    <ClInclude Include="FlexEngine\include\Random.hpp" />
     <ClInclude Include="FlexEngine\include\Typedefs.hpp" />
     <ClInclude Include="FlexEngine\include\InputManager.hpp" />
     <ClInclude Include="FlexEngine\include\VertexAttribute.hpp" />
