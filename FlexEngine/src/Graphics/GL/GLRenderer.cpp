@@ -1101,6 +1101,20 @@ namespace flex
 
 				for (size_t face = 0; face < 6; ++face)
 				{
+					// Clear all gbuffers
+					if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
+					{
+						for (size_t i = 0; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
+						{
+							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
+							CheckGLErrorMessages();
+
+							glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+							CheckGLErrorMessages();
+						}
+					}
+
+					// Clear base cubemap framebuffer + depth buffer
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 					CheckGLErrorMessages();
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
@@ -1111,6 +1125,11 @@ namespace flex
 				}
 			}
 
+			BatchRenderObjects(gameContext);
+			//drawCallInfo.deferred = true;
+			//DrawDeferredObjects(gameContext, drawCallInfo);
+			drawCallInfo.deferred = false;
+			//DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1274,11 +1293,10 @@ namespace flex
 		{
 			CheckGLErrorMessages();
 
-			// TODO: Don't sort render objects frame! Only when things are added/removed
-			BatchRenderObjects(gameContext);
-
 			DrawCallInfo drawCallInfo = {};
 
+			// TODO: Don't sort render objects frame! Only when things are added/removed
+			BatchRenderObjects(gameContext);
 			DrawDeferredObjects(gameContext, drawCallInfo);
 			DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
@@ -1344,16 +1362,15 @@ namespace flex
 			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
 			CheckGLErrorMessages();
 
-			// TODO: This doesn't clear the first frame - but that doesn't really matter much
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
-
 			// TODO: Make more dynamic (based on framebuffer count)
 			{
 				constexpr int numBuffers = 3;
 				unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 				glDrawBuffers(numBuffers, attachments);
 			}
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			CheckGLErrorMessages();
 
 			for (size_t i = 0; i < m_DeferredRenderObjectBatches.size(); ++i)
 			{
@@ -2481,7 +2498,7 @@ namespace flex
 			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
 
-												  // Also generate deferred combine cubemap material here
+			// Also generate deferred combine cubemap material here
 			MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
 			gBufferCubemapMaterialCreateInfo.name = "GBuffer Cubemap material";
 			gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
@@ -2497,7 +2514,6 @@ namespace flex
 			};
 
 			m_DeferredCombineCubemapMatID = InitializeMaterial(gameContext, &gBufferCubemapMaterialCreateInfo);
-
 		}
 
 		glm::uint GLRenderer::GetRenderObjectCount() const
