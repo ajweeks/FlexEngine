@@ -5,6 +5,8 @@
 
 #include <imgui.h>
 
+#include <map>
+
 #include "Graphics/GL/GLHelpers.hpp"
 
 namespace flex
@@ -77,8 +79,6 @@ namespace flex
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
 
-			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
-
 			struct DrawCallInfo
 			{
 				bool renderToCubemap = false;
@@ -91,8 +91,11 @@ namespace flex
 
 			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
 
+			MaterialID GetNextAvailableMaterialID();
+			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
+
 			GLRenderObject* GetRenderObject(RenderID renderID);
-			RenderID GetFirstAvailableRenderID() const;
+			RenderID GetNextAvailableRenderID() const;
 			void InsertNewRenderObject(GLRenderObject* renderObject);
 			void UnloadShaders();
 			void LoadShaders();
@@ -128,8 +131,8 @@ namespace flex
 			int m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
 			unsigned int m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;
 			
-			std::vector<GLMaterial> m_Materials;
-			std::vector<GLRenderObject*> m_RenderObjects;
+			std::map<MaterialID, GLMaterial> m_Materials;
+			std::map<RenderID, GLRenderObject*> m_RenderObjects;
 
 			bool m_VSyncEnabled;
 

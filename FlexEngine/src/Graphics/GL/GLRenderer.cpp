@@ -244,8 +244,9 @@ namespace flex
 
 			CheckGLErrorMessages();
 
-			m_Materials.push_back({});
-			GLMaterial& mat = m_Materials.back();
+			MaterialID matID = GetNextAvailableMaterialID();
+			m_Materials.insert(std::pair<MaterialID, GLMaterial>(matID, {}));
+			GLMaterial& mat = m_Materials.at(matID);
 			mat.material = {};
 			mat.material.name = createInfo->name;
 
@@ -639,7 +640,7 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			const RenderID renderID = GetFirstAvailableRenderID();
+			const RenderID renderID = GetNextAvailableRenderID();
 
 			GLRenderObject* renderObject = new GLRenderObject();
 			renderObject->renderID = renderID;
@@ -1141,10 +1142,10 @@ namespace flex
 			}
 
 			BatchRenderObjects(gameContext);
-			//drawCallInfo.deferred = true;
-			//DrawDeferredObjects(gameContext, drawCallInfo);
+			drawCallInfo.deferred = true;
+			DrawDeferredObjects(gameContext, drawCallInfo);
 			drawCallInfo.deferred = false;
-			//DrawGBufferQuad(gameContext, drawCallInfo);
+			DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -2541,11 +2542,12 @@ namespace flex
 
 		glm::uint GLRenderer::GetRenderObjectCount() const
 		{
+			// TODO: Replace function with m_RenderObjects.size()? (only if no nullptr objects exist)
 			glm::uint count = 0;
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (auto renderObject : m_RenderObjects)
 			{
-				if (m_RenderObjects[i]) ++count;
+				if (renderObject.second) ++count;
 			}
 
 			return count;
@@ -2895,17 +2897,17 @@ namespace flex
 			}
 			else
 			{
-				m_RenderObjects.push_back(renderObject);
+				m_RenderObjects.insert({ renderObject->renderID, renderObject });
 			}
 		}
 
-		RenderID GLRenderer::GetFirstAvailableRenderID() const
+		MaterialID GLRenderer::GetNextAvailableMaterialID()
 		{
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				if (!m_RenderObjects[i]) return i;
-			}
+			return m_Materials.size();
+		}
 
+		RenderID GLRenderer::GetNextAvailableRenderID() const
+		{
 			return m_RenderObjects.size();
 		}
 
