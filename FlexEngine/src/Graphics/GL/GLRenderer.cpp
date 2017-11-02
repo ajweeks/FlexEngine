@@ -100,7 +100,7 @@ namespace flex
 			};
 
 			// Sprite quad
-			GenerateGLTexture(m_LoadingImageHandle, RESOURCE_LOCATION + "textures/loading.png", false);
+			GenerateGLTexture(m_LoadingImageHandle, RESOURCE_LOCATION + "textures/loading_1.png", false);
 
 			GetShaderID("sprite", m_SpriteQuadShaderID);
 
