@@ -31,7 +31,6 @@ namespace flex
 
 			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
 			virtual PointLight& GetPointLight(PointLightID pointLightID) override;
-			virtual std::vector<PointLight>& GetAllPointLights() override;
 
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;

@@ -2564,11 +2564,6 @@ namespace flex
 			return m_PointLights[pointLightID];
 		}
 
-		std::vector<Renderer::PointLight>& VulkanRenderer::GetAllPointLights()
-		{
-			return m_PointLights;
-		}
-
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
 		{
 			return m_RenderObjects[renderID];

@@ -317,7 +317,6 @@ namespace flex
 
 		virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) = 0;
 		virtual PointLight& GetPointLight(PointLightID pointLightID) = 0;
-		virtual std::vector<PointLight>& GetAllPointLights() = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(float r, float g, float b) = 0;

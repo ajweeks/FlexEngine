@@ -1193,11 +1193,6 @@ namespace flex
 			return m_PointLights[pointLightID];
 		}
 
-		std::vector<Renderer::PointLight>& GLRenderer::GetAllPointLights()
-		{
-			return m_PointLights;
-		}
-
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
