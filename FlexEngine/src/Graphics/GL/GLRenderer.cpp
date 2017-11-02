@@ -66,15 +66,24 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 			CheckGLErrorMessages();
+			
+			m_BRDFTextureSize = { 512, 512 };
+			m_BRDFTextureHandle = {};
+			m_BRDFTextureHandle.internalFormat = GL_RG16F;
+			m_BRDFTextureHandle.format = GL_RG;
+			m_BRDFTextureHandle.type = GL_FLOAT;
 
 			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
 			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
+			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
 
 			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
 			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
+			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
 
 			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
 
 			const float captureProjectionNearPlane = 0.1f;
@@ -355,7 +364,12 @@ namespace flex
 			}
 			if (m_Shaders[mat.material.shaderID].shader.needBRDFLUT)
 			{
-				mat.brdfLUTSamplerID = m_BRDFTextureID;
+				if (m_BRDFTextureHandle.id == 0)
+				{
+					GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+					GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+				}
+				mat.brdfLUTSamplerID = m_BRDFTextureHandle.id;
 			}
 			if (m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
 			{
@@ -444,8 +458,8 @@ namespace flex
 				else
 				{
 					glUniform1i(positionLocation, binding);
+					CheckGLErrorMessages();
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
 
@@ -900,6 +914,7 @@ namespace flex
 
 		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
 		{
+			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
 			MaterialCreateInfo brdfMaterialCreateInfo = {};
@@ -984,10 +999,10 @@ namespace flex
 			glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
 			
-			glUseProgram(0);
 			glBindVertexArray(0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+			glUseProgram(last_program);
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
@@ -1208,10 +1223,6 @@ namespace flex
 
 		void GLRenderer::PostInitialize(const GameContext& gameContext)
 		{
-			m_BRDFTextureSize = { 512, 512 };
-			GenerateGLTexture_Empty(m_BRDFTextureID, m_BRDFTextureSize, false, GL_RG16F, GL_RG, GL_FLOAT);
-			GenerateBRDFLUT(gameContext, m_BRDFTextureID, m_BRDFTextureSize);
-
 			ImGui_Init(gameContext);
 
 			// G-buffer objects
@@ -1224,18 +1235,21 @@ namespace flex
 				0,
 				m_gBuffer_PositionMetallicHandle.internalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
+				m_gBuffer_PositionMetallicHandle.type,
 				frameBufferSize);
 
 			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
 				1,
 				m_gBuffer_NormalRoughnessHandle.internalFormat,
 				m_gBuffer_NormalRoughnessHandle.format,
+				m_gBuffer_NormalRoughnessHandle.type,
 				frameBufferSize);
 
 			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
 				2,
 				m_gBuffer_NormalRoughnessHandle.internalFormat,
 				m_gBuffer_NormalRoughnessHandle.format,
+				m_gBuffer_NormalRoughnessHandle.type,
 				frameBufferSize);
 
 			// Create and attach depth buffer
@@ -1251,17 +1265,23 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			GenerateGBuffer(gameContext);
+			
+			if (m_BRDFTextureHandle.id == 0)
+			{
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+			}
 
 			CheckGLErrorMessages();
 
 			Logger::LogInfo("Ready!\n");
 		}
 
-		void GLRenderer::GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
+		void GLRenderer::GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glGenTextures(1, handle);
 			glBindTexture(GL_TEXTURE_2D, *handle);
-			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, *handle, 0);
@@ -1269,12 +1289,12 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size)
+		void GLRenderer::ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			UNREFERENCED_PARAMETER(index);
 
 			glBindTexture(GL_TEXTURE_2D, handle);
-			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
 			CheckGLErrorMessages();
 		}
 
@@ -2303,18 +2323,21 @@ namespace flex
 				0,
 				m_gBuffer_PositionMetallicHandle.internalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
+				m_gBuffer_PositionMetallicHandle.type,
 				newFrameBufferSize);
 			
 			ResizeFrameBufferTexture(m_gBuffer_NormalRoughnessHandle.id,
 				1,
 				m_gBuffer_NormalRoughnessHandle.internalFormat,
 				m_gBuffer_NormalRoughnessHandle.format,
+				m_gBuffer_NormalRoughnessHandle.type,
 				newFrameBufferSize);
 
 			ResizeFrameBufferTexture(m_gBuffer_DiffuseAOHandle.id,
 				2,
 				m_gBuffer_DiffuseAOHandle.internalFormat,
 				m_gBuffer_DiffuseAOHandle.format,
+				m_gBuffer_DiffuseAOHandle.type,
 				newFrameBufferSize);
 
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);

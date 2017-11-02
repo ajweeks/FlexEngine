@@ -97,8 +97,8 @@ namespace flex
 			void UnloadShaders();
 			void LoadShaders();
 
-			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
-			void ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, const glm::vec2i& size);
+			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size);
 
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
@@ -151,6 +151,7 @@ namespace flex
 				glm::uint id;
 				GLenum format;
 				GLenum internalFormat;
+				GLenum type;
 			};
 
 			GBufferHandle m_gBuffer_PositionMetallicHandle;
@@ -164,7 +165,7 @@ namespace flex
 			GBufferHandle m_gBufferCubemap_DiffuseAOHandle;
 
 
-			glm::uint m_BRDFTextureID;
+			GBufferHandle m_BRDFTextureHandle;
 			glm::uvec2 m_BRDFTextureSize;
 
 
