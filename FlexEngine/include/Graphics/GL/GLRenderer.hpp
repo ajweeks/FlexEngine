@@ -135,6 +135,7 @@ namespace flex
 
 			bool m_VSyncEnabled;
 
+			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
 			std::map<std::string, glm::uint> m_LoadedTextures; // Key is filepath, value is texture id
 

@@ -16,5 +16,5 @@ void main()
     WorldPos = in_Position;
 
 	vec4 clipPos = projection * mat4(mat3(view)) * model * vec4(in_Position, 1.0);
-	gl_Position = clipPos.xyww;
+	gl_Position = clipPos;
 }
