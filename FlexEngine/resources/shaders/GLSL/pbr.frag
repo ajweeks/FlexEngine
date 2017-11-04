@@ -5,6 +5,14 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+in vec3 ex_WorldPos;
+in mat3 ex_TBN;
+in vec2 ex_TexCoord;
+
+out vec4 outPositionMetallic;
+out vec4 outNormalRoughness;
+out vec4 outAlbedoAO;
+
 // Material variables
 uniform vec4 constAlbedo;
 uniform bool enableAlbedoSampler;
@@ -24,14 +32,6 @@ layout (binding = 3) uniform sampler2D aoSampler;
 
 uniform bool enableNormalSampler;
 layout (binding = 4) uniform sampler2D normalSampler;
-
-in vec3 ex_WorldPos;
-in mat3 ex_TBN;
-in vec2 ex_TexCoord;
-
-out vec4 outPositionMetallic;
-out vec4 outNormalRoughness;
-out vec4 outAlbedoAO;
 
 void main() 
 {

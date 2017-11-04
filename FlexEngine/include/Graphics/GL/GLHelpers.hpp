@@ -23,6 +23,7 @@ namespace flex
 		struct GLCubemapGBuffer
 		{
 			glm::uint id;
+			const char* name;
 			GLint internalFormat;
 			GLenum format;
 		};
@@ -142,6 +143,7 @@ namespace flex
 
 		struct GLCubemapCreateInfo
 		{
+			glm::uint program;
 			glm::uint* textureID;
 			glm::uint* depthTextureID;
 			std::vector<GLCubemapGBuffer>* textureGBufferIDs;

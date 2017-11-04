@@ -5,6 +5,10 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+in vec2 ex_TexCoord;
+
+out vec4 fragmentColor;
+
 struct DirectionalLight 
 {
 	vec4 direction;
@@ -24,23 +28,16 @@ struct PointLight
 #define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
+uniform vec4 camPos;
+
+const float PI = 3.14159265359;
+uniform bool enableIrradianceSampler;
+
 layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
 layout (binding = 1) uniform sampler2D normalRoughnessFrameBufferSampler;
 layout (binding = 2) uniform sampler2D albedoAOFrameBufferSampler;
-
-uniform vec4 camPos;
-
-in vec2 ex_TexCoord;
-
-out vec4 fragmentColor;
-
-const float PI = 3.14159265359;
-
 layout (binding = 3) uniform sampler2D brdfLUT;
-
-uniform bool enableIrradianceSampler;
 layout (binding = 4) uniform samplerCube irradianceSampler;
-
 layout (binding = 5) uniform samplerCube prefilterMap;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)

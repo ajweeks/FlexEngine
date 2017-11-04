@@ -21,14 +21,16 @@ namespace flex
 		Transform& GetTransform();
 		
 		RenderID GetRenderID() const;
+		void SetRenderID(RenderID renderID);
 
 	protected:
-		virtual void Initialize(const GameContext& gameContext) = 0;
-		virtual void PostInitialize(const GameContext& gameContext) = 0;
-		virtual void Update(const GameContext& gameContext) = 0;
-		virtual void Destroy(const GameContext& gameContext) = 0;
+		virtual void Initialize(const GameContext& gameContext);
+		virtual void PostInitialize(const GameContext& gameContext);
+		virtual void Update(const GameContext& gameContext);
+		virtual void Destroy(const GameContext& gameContext);
 		
 		Transform m_Transform;
+		// TODO: Make public?
 		RenderID m_RenderID;
 
 	private:

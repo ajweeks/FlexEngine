@@ -44,6 +44,8 @@ namespace flex
 			virtual void ReloadShaders(GameContext& gameContext) override;
 
 			virtual void OnWindowSize(int width, int height) override;
+			
+			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 

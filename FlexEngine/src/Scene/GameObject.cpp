@@ -52,6 +52,7 @@ namespace flex
 
 		m_Children.push_back(child);
 		m_Transform.AddChildTransform(&child->m_Transform);
+		child->SetParent(this);
 		child->m_Transform.SetParentTransform(&m_Transform);
 
 		m_Transform.Update();
@@ -63,6 +64,7 @@ namespace flex
 		{
 			if (*iter == child)
 			{
+				(*iter)->m_Parent = nullptr;
 				(*iter)->m_Transform.RemoveAllChildTransforms();
 				m_Transform.RemoveChildTransform(&(*iter)->m_Transform);
 				m_Children.erase(iter);
@@ -80,6 +82,7 @@ namespace flex
 		auto iter = m_Children.begin();
 		while (iter != m_Children.end())
 		{
+			(*iter)->m_Parent = nullptr;
 			(*iter)->m_Transform.RemoveAllChildTransforms();
 			iter = m_Children.erase(iter);
 		}
@@ -93,6 +96,31 @@ namespace flex
 	RenderID GameObject::GetRenderID() const
 	{
 		return m_RenderID;
+	}
+
+	void GameObject::Initialize(const GameContext& gameContext)
+	{
+		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	void GameObject::PostInitialize(const GameContext& gameContext)
+	{
+		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	void GameObject::Update(const GameContext& gameContext)
+	{
+		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	void GameObject::Destroy(const GameContext& gameContext)
+	{
+		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	void GameObject::SetRenderID(RenderID renderID)
+	{
+		m_RenderID = renderID;
 	}
 
 	void GameObject::RootInitialize(const GameContext& gameContext)

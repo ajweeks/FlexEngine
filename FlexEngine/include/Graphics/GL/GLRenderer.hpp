@@ -42,6 +42,8 @@ namespace flex
 			virtual void SetClearColor(float r, float g, float b) override;
 
 			virtual void OnWindowSize(int width, int height) override;
+			
+			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 
@@ -157,16 +159,10 @@ namespace flex
 				GLenum type;
 			};
 
+			// TODO: Remove ??
 			GBufferHandle m_gBuffer_PositionMetallicHandle;
 			GBufferHandle m_gBuffer_NormalRoughnessHandle;
 			GBufferHandle m_gBuffer_DiffuseAOHandle;
-
-			MaterialID m_DeferredCombineCubemapMatID;
-
-			GBufferHandle m_gBufferCubemap_PositionMetallicHandle;
-			GBufferHandle m_gBufferCubemap_NormalRoughnessHandle;
-			GBufferHandle m_gBufferCubemap_DiffuseAOHandle;
-
 
 			GBufferHandle m_BRDFTextureHandle;
 			glm::uvec2 m_BRDFTextureSize;
@@ -177,8 +173,6 @@ namespace flex
 
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
-
-			//glm::vec2i m_HDREquirectangularCubemapCaptureSize;
 
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 

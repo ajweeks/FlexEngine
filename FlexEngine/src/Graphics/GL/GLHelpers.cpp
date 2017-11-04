@@ -199,6 +199,8 @@ namespace flex
 				const GLenum gbufFormat = GL_RGBA;
 				const GLenum gbufType = GL_FLOAT;
 
+				int binding = 0;
+
 				// Generate GBuffers
 				for (auto& gbuffer : *createInfo.textureGBufferIDs)
 				{
@@ -210,6 +212,27 @@ namespace flex
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, createInfo.textureSize.x, createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
 						CheckGLErrorMessages();
 					}
+
+					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // This parameter is *absolutely* necessary for sampling to work
+					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					CheckGLErrorMessages();
+
+					
+					int uniformLocation = glGetUniformLocation(createInfo.program, gbuffer.name);
+					CheckGLErrorMessages();
+					if (uniformLocation == -1)
+					{
+						Logger::LogWarning(std::string(gbuffer.name) + " was not found!");
+					}
+					else
+					{
+						glUniform1i(uniformLocation, binding);
+					}
+					CheckGLErrorMessages();
+					++binding;
 				}
 
 				glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.textureID);

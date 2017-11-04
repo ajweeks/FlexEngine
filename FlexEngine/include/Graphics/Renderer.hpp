@@ -329,6 +329,8 @@ namespace flex
 
 		virtual void OnWindowSize(int width, int height) = 0;
 
+		virtual void SetRenderObjectVisible(RenderID renderID, bool visible) = 0;
+
 		virtual void SetVSyncEnabled(bool enableVSync) = 0;
 
 		virtual glm::uint GetRenderObjectCount() const = 0;
