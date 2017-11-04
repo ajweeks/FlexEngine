@@ -9,12 +9,12 @@ Flex Engine is my personal rendering engine which currently supports Vulkan and 
 - Physically Based Rendering (PBR)
 - Image Based lighting (IBL)
 - Irradiance map generation
+- Reflection probes
+- Post-processing stage
 
 #### Planned Features
- - Reflection probes
  - Mesh animation
  - Cascading shadow maps
- - Post-processing effects
  - ...
 
 ![](http://i.imgur.com/qtP8Mmm.png)
