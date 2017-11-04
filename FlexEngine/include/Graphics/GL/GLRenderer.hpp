@@ -80,6 +80,8 @@ namespace flex
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
 
+			void SwapBuffers(const GameContext& gameContext);
+
 			struct DrawCallInfo
 			{
 				bool renderToCubemap = false;
@@ -88,7 +90,7 @@ namespace flex
 			};
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
-			void DrawSpriteQuad(const GameContext& gameContext);
+			void DrawSpriteQuad(const GameContext& gameContext, glm::uint textureHandle);
 
 			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
 

@@ -156,10 +156,12 @@ namespace flex
 			spriteQuadCreateInfo.materialID = spriteQuadMatID;
 			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
-			
+			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
+
 			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
 
-			DrawSpriteQuad(gameContext);
+			DrawSpriteQuad(gameContext, m_LoadingImageHandle);
+			SwapBuffers(gameContext);
 
 			if (m_BRDFTextureHandle.id == 0)
 			{
@@ -168,12 +170,11 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext)
+		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, glm::uint textureHandle)
 		{
 			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
 			if (!spriteRenderObject) return;
 
-			spriteRenderObject->visible = false;
 			GLMaterial* spriteMaterial = &m_Materials[spriteRenderObject->materialID];
 			GLShader* spriteShader = &m_Shaders[spriteMaterial->material.shaderID];
 
@@ -187,7 +188,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, m_LoadingImageHandle);
+			glBindTexture(GL_TEXTURE_2D, textureHandle);
 			CheckGLErrorMessages();
 
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
@@ -211,8 +212,6 @@ namespace flex
 
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
-
-			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
 		}
 
 		GLRenderer::~GLRenderer()
@@ -1166,6 +1165,11 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
+		void GLRenderer::SwapBuffers(const GameContext& gameContext)
+		{
+			glfwSwapBuffers(static_cast<GLWindowWrapper*>(gameContext.window)->GetWindow());
+		}
+
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
@@ -1330,7 +1334,7 @@ namespace flex
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawUI();
 
-			glfwSwapBuffers(((GLWindowWrapper*)gameContext.window)->GetWindow());
+			SwapBuffers(gameContext);
 		}
 
 		void GLRenderer::BatchRenderObjects(const GameContext& gameContext)
@@ -1410,11 +1414,13 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			// TODO: Make more dynamic (based on framebuffer count)
-			constexpr int numBuffers = 3;
-			unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-			glDrawBuffers(numBuffers, attachments);
-			CheckGLErrorMessages();
+			{
+				// TODO: Make more dynamic (based on framebuffer count)
+				constexpr int numBuffers = 3;
+				unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+				glDrawBuffers(numBuffers, attachments);
+				CheckGLErrorMessages();
+			}
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
