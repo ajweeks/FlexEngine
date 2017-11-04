@@ -48,14 +48,14 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps)
+		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
 		{
-			return GenerateGLTextureWithParams(textureID, filePath, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+			return GenerateGLTextureWithParams(textureID, filePath, flipVertically, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
 		{
-			GLFWimage image = LoadGLFWimage(filePath);
+			GLFWimage image = LoadGLFWimage(filePath, false, flipVertically);
 
 			if (!image.pixels)
 			{
@@ -94,15 +94,15 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps)
+		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
 		{
-			return GenerateHDRGLTextureWithParams(textureID, filePath, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+			return GenerateHDRGLTextureWithParams(textureID, filePath, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
 		{
 			HDRImage image = {};
-			if (!image.Load(filePath, true))
+			if (!image.Load(filePath, flipVertically))
 			{
 				return false;
 			}
@@ -435,7 +435,7 @@ namespace flex
 			{
 			case Renderer::CullFace::BACK: return GL_BACK;
 			case Renderer::CullFace::FRONT: return GL_FRONT;
-			case Renderer::CullFace::NONE: return GL_NONE; // TODO: This doesn't work, does it?
+			case Renderer::CullFace::FRONT_AND_BACK: return GL_FRONT_AND_BACK;
 			default: return GL_FALSE;
 			}
 		}

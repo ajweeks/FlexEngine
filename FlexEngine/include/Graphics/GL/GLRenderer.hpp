@@ -90,7 +90,7 @@ namespace flex
 			};
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
-			void DrawSpriteQuad(const GameContext& gameContext, glm::uint textureHandle);
+			void DrawSpriteQuad(const GameContext& gameContext, glm::uint textureHandle, MaterialID materialID, bool flipVertically = false);
 
 			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
 
@@ -104,7 +104,7 @@ namespace flex
 			void LoadShaders();
 
 			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
-			void ResizeFrameBufferTexture(glm::uint handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void ResizeFrameBufferTexture(glm::uint handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size);
 
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
@@ -115,6 +115,7 @@ namespace flex
 			void DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
+			void DrawOffscreenTexture(const GameContext& gameContext);
 			void DrawUI();
 
 			// Returns the next binding that would be used
@@ -153,7 +154,7 @@ namespace flex
 			glm::uint m_gBufferHandle;
 			glm::uint m_gBufferDepthHandle;
 
-			struct GBufferHandle
+			struct FrameBufferHandle
 			{
 				glm::uint id;
 				GLenum format;
@@ -161,17 +162,32 @@ namespace flex
 				GLenum type;
 			};
 
+			// TODO: Resize all framebuffers automatically by inserting into container
 			// TODO: Remove ??
-			GBufferHandle m_gBuffer_PositionMetallicHandle;
-			GBufferHandle m_gBuffer_NormalRoughnessHandle;
-			GBufferHandle m_gBuffer_DiffuseAOHandle;
+			FrameBufferHandle m_gBuffer_PositionMetallicHandle;
+			FrameBufferHandle m_gBuffer_NormalRoughnessHandle;
+			FrameBufferHandle m_gBuffer_DiffuseAOHandle;
 
-			GBufferHandle m_BRDFTextureHandle;
+			FrameBufferHandle m_BRDFTextureHandle;
 			glm::uvec2 m_BRDFTextureSize;
 
+			// Everything is drawn to this texture before being drawn to the default 
+			// frame buffer through some post-processing effects
+			FrameBufferHandle m_OffscreenTextureHandle; 
+			glm::uint m_OffscreenFBO;
+			glm::uint m_OffscreenRBO;
 
-			glm::uint m_CaptureFBO; // Frame buffer containing:
-			glm::uint m_CaptureRBO; // Render buffer which contains the rendered data
+			FrameBufferHandle m_LoadingTextureHandle;
+			// TODO: Use a mesh prefab here
+			VertexBufferData m_SpriteQuadVertexBufferData;
+			Transform m_SpriteQuadTransform;
+			RenderID m_SpriteQuadRenderID;
+			
+			MaterialID m_SpriteMatID;
+			MaterialID m_PostProcessMatID;
+
+			glm::uint m_CaptureFBO;
+			glm::uint m_CaptureRBO;
 
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
@@ -184,13 +200,6 @@ namespace flex
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
-
-			glm::uint m_LoadingImageHandle;
-			// TODO: Use a mesh prefab here
-			VertexBufferData m_SpriteQuadVertexBufferData;
-			Transform m_SpriteQuadTransform;
-			RenderID m_SpriteQuadRenderID;
-			ShaderID m_SpriteQuadShaderID;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

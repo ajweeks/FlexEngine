@@ -166,12 +166,7 @@ void main()
 
 	vec3 color = ambient + Lo;
 
-	// TODO: Once we add post processing that requires HDR don't do this calculation here:
-	color = color / (color + vec3(1.0)); // Reinhard
-	color = pow(color, vec3(1.0 / 2.2)); // Gamma correct
-
 	fragColor = vec4(color, 1.0);
-
 
 	// Visualize normal map:
 	//fragColor = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;

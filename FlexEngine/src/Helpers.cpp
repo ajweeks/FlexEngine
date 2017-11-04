@@ -17,13 +17,15 @@
 
 namespace flex
 {
-	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha)
+	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha, bool flipVertically)
 	{
 		GLFWimage result = {};
 
 		std::string fileName = filePath;
 		StripLeadingDirectories(fileName);
 		Logger::LogInfo("Loading texture " + fileName);
+
+		stbi_set_flip_vertically_on_load(flipVertically);
 
 		int channels;
 		unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, alpha ? STBI_rgb_alpha : STBI_rgb);
@@ -183,6 +185,7 @@ namespace flex
 		Logger::LogInfo("Loading HDR texture " + fileName);
 
 		stbi_set_flip_vertically_on_load(flipVertically);
+
 		int channelCount;
 		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
 

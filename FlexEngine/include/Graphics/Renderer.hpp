@@ -34,7 +34,7 @@ namespace flex
 		{
 			BACK,
 			FRONT,
-			NONE
+			FRONT_AND_BACK
 		};
 
 		enum class DepthTestFunc
@@ -256,6 +256,7 @@ namespace flex
 			Transform* transform;
 
 			CullFace cullFace = CullFace::BACK;
+			bool enableCulling = true;
 
 			DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
 			bool depthWriteEnable = true;

@@ -202,7 +202,7 @@ namespace flex
 		{
 		case RendererID::VULKAN: return "Vulkan";
 		case RendererID::GL: return "OpenGL";
-		case RendererID::_LAST_ELEMENT:  // Fallthrough
+		case RendererID::_LAST_ELEMENT:  return "Invalid renderer ID";
 		default:
 			return "Unknown";
 		}

@@ -15,7 +15,7 @@
 
 namespace flex
 {
-	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha = false);
+	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha = false, bool flipVertically = false);
 	void DestroyGLFWimage(GLFWimage& image);
 
 	struct HDRImage

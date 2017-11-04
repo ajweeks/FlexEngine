@@ -25,13 +25,6 @@ namespace flex
 		reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
 		reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
 		reflectionProbeMaterialCreateInfo.constAO = 1.0f;
-		//reflectionProbeMaterialCreateInfo.generateHDRCubemapSampler = true;
-		//reflectionProbeMaterialCreateInfo.generatedCubemapSize = glm::uvec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-		//reflectionProbeMaterialCreateInfo.generateCubemapDepthBuffers = true;
-		//reflectionProbeMaterialCreateInfo.generateIrradianceSampler = true;
-		//reflectionProbeMaterialCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-		//reflectionProbeMaterialCreateInfo.generatePrefilteredMap = true;
-		//reflectionProbeMaterialCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
 		MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 
 		// Probe capture material

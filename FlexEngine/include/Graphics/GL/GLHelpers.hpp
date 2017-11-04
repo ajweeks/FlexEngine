@@ -56,6 +56,7 @@ namespace flex
 				int enableAOSampler;
 				int hdrEquirectangularSampler;
 				int enableIrradianceSampler;
+				int verticalScale;
 			};
 			UniformIDs uniformIDs;
 
@@ -97,6 +98,7 @@ namespace flex
 
 			GLenum topology = GL_TRIANGLES;
 			GLenum cullFace = GL_BACK;
+			GLboolean enableCulling = GL_TRUE;
 
 			GLenum depthTestReadFunc = GL_LEQUAL;
 			GLboolean depthWriteEnable = GL_TRUE;
@@ -136,10 +138,10 @@ namespace flex
 
 		bool GenerateGLTexture_Empty(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
 		bool GenerateGLTexture_EmptyWithParams(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, int sWrap, int tWrap, int minFilter, int magFilter);
-		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps);
-		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
-		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool generateMipMaps);
-		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
+		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
+		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
+		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
+		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
 
 		struct GLCubemapCreateInfo
 		{
