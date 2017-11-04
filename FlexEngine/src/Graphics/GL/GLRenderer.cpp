@@ -2478,6 +2478,8 @@ namespace flex
 
 		void GLRenderer::OnWindowSize(int width, int height)
 		{
+			if (width == 0 || height == 0) return;
+
 			glViewport(0, 0, width, height);
 			CheckGLErrorMessages();
 

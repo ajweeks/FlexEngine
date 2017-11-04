@@ -222,6 +222,8 @@ namespace flex
 	void FreeCamera::RecalculateViewProjection(const GameContext& gameContext)
 	{
 		const glm::vec2 windowSize = gameContext.window->GetSize();
+		if (windowSize.x == 0.0f || windowSize.y == 0.0f) return;
+
 		float aspectRatio = windowSize.x / (float)windowSize.y;
 		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
 
