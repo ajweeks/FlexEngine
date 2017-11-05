@@ -266,18 +266,41 @@ namespace flex
 			CreateCommandBuffers();
 			CreateSemaphores();
 
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			if (!m_SkyBoxMesh)
 			{
-				// Generate reflection probe data
-				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.generateIrradianceSampler)
+				GenerateSkybox(gameContext);
+			}
+
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				VulkanRenderObject* renderObject = GetRenderObject(i);
+				if (!renderObject) continue;
+
+				// TOOD:
+				//if (m_LoadedMaterials[renderObject->materialID].material.g.generateReflectionProbeMaps)
+				//{
+				//	Logger::LogInfo("Capturing reflection probe");
+				//	CaptureSceneToCubemap(gameContext, renderID);
+				//	GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
+				//	GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+				//	Logger::LogInfo("Done");
+
+				//	// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
+				//	Logger::LogInfo("Capturing reflection probe");
+				//	CaptureSceneToCubemap(gameContext, renderID);
+				//	GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
+				//	GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+				//	Logger::LogInfo("Done");
+
+				//	// Display captured cubemap as skybox
+				//	//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
+				//	//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
+				//}
+				//else 
+				if (m_LoadedMaterials[renderObject->materialID].material.generateIrradianceSampler)
 				{
-					Logger::LogInfo("Generating cubemap from HDRI");
 					GenerateCubemapFromHDR(gameContext, renderObject);
-
-					Logger::LogInfo("Generating irradiance sampler from cubemap");
 					GenerateIrradianceSampler(gameContext, renderObject);
-
-					Logger::LogInfo("Generating prefilter map from cubemap");
 					GeneratePrefilteredCube(gameContext, renderObject);
 				}
 			}
@@ -287,11 +310,6 @@ namespace flex
 
 		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
-
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
@@ -734,11 +752,6 @@ namespace flex
 		void VulkanRenderer::GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
-
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
@@ -1193,11 +1206,6 @@ namespace flex
 
 		void VulkanRenderer::GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
-
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;

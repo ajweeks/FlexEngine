@@ -51,6 +51,7 @@ namespace flex
 		skyboxHDRMatInfo.shaderName = "background";
 		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
 		skyboxHDRMatInfo.enableCubemapSampler = true;
+		skyboxHDRMatInfo.enableCubemapTrilinearFiltering = true;
 		skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
 		skyboxHDRMatInfo.generateIrradianceSampler = true;
 		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
@@ -58,36 +59,36 @@ namespace flex
 		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
 		const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-		Renderer::MaterialCreateInfo cerebusMatTexturedInfo = {};
-		cerebusMatTexturedInfo.name = "Cerebus";
-		cerebusMatTexturedInfo.shaderName = "pbr";
-		cerebusMatTexturedInfo.enableAlbedoSampler = true;
-		cerebusMatTexturedInfo.generateAlbedoSampler = true;
-		cerebusMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga";
-		cerebusMatTexturedInfo.enableMetallicSampler = true;
-		cerebusMatTexturedInfo.generateMetallicSampler = true;
-		cerebusMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga";
-		cerebusMatTexturedInfo.enableRoughnessSampler = true;
-		cerebusMatTexturedInfo.generateRoughnessSampler = true;
-		cerebusMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga";
-		cerebusMatTexturedInfo.enableAOSampler = true;
-		cerebusMatTexturedInfo.generateAOSampler = true;
-		cerebusMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga";
-		cerebusMatTexturedInfo.enableNormalSampler = true;
-		cerebusMatTexturedInfo.generateNormalSampler = true;
-		cerebusMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
-		const MaterialID cerebusMatID = gameContext.renderer->InitializeMaterial(gameContext, &cerebusMatTexturedInfo);
+		//Renderer::MaterialCreateInfo cerebusMatTexturedInfo = {};
+		//cerebusMatTexturedInfo.name = "Cerebus";
+		//cerebusMatTexturedInfo.shaderName = "pbr";
+		//cerebusMatTexturedInfo.enableAlbedoSampler = true;
+		//cerebusMatTexturedInfo.generateAlbedoSampler = true;
+		//cerebusMatTexturedInfo.albedoTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga";
+		//cerebusMatTexturedInfo.enableMetallicSampler = true;
+		//cerebusMatTexturedInfo.generateMetallicSampler = true;
+		//cerebusMatTexturedInfo.metallicTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga";
+		//cerebusMatTexturedInfo.enableRoughnessSampler = true;
+		//cerebusMatTexturedInfo.generateRoughnessSampler = true;
+		//cerebusMatTexturedInfo.roughnessTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga";
+		//cerebusMatTexturedInfo.enableAOSampler = true;
+		//cerebusMatTexturedInfo.generateAOSampler = true;
+		//cerebusMatTexturedInfo.aoTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga";
+		//cerebusMatTexturedInfo.enableNormalSampler = true;
+		//cerebusMatTexturedInfo.generateNormalSampler = true;
+		//cerebusMatTexturedInfo.normalTexturePath = RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga";
+		//const MaterialID cerebusMatID = gameContext.renderer->InitializeMaterial(gameContext, &cerebusMatTexturedInfo);
 
-		Renderer::MaterialCreateInfo brickMatInfo = {};
-		brickMatInfo.shaderName = "deferred_simple";
-		brickMatInfo.name = "Brick";
-		brickMatInfo.enableDiffuseSampler = true;
-		brickMatInfo.generateDiffuseSampler = true;
-		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
-		brickMatInfo.enableNormalSampler = true;
-		brickMatInfo.generateNormalSampler = true;
-		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
-		const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
+		//Renderer::MaterialCreateInfo brickMatInfo = {};
+		//brickMatInfo.shaderName = "deferred_simple";
+		//brickMatInfo.name = "Brick";
+		//brickMatInfo.enableDiffuseSampler = true;
+		//brickMatInfo.generateDiffuseSampler = true;
+		//brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
+		//brickMatInfo.enableNormalSampler = true;
+		//brickMatInfo.generateNormalSampler = true;
+		//brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
+		//const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
 
 		Renderer::MaterialCreateInfo cornellBoxMatInfo = {};
 		cornellBoxMatInfo.shaderName = "deferred_simple";
@@ -137,26 +138,32 @@ namespace flex
 
 		//	const std::string iStr = std::to_string(i);
 
-		//	MaterialID matID = brickMatID;
+		//	MaterialID matID;
 
 		//	if ((x + y) % 2 == 0)
 		//	{
 		//		Renderer::MaterialCreateInfo pbrMatInfo = {};
 		//		pbrMatInfo.shaderName = "pbr";
 		//		pbrMatInfo.name = "PBR simple " + iStr;
-		//		pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.75f, 0.14f);
-		//		pbrMatInfo.constMetallic = float(x) / (sphereCountX - 1);
-		//		pbrMatInfo.constRoughness = glm::clamp(float(y) / (sphereCountY - 1), 0.05f, 1.0f);
+		//		pbrMatInfo.constAlbedo = glm::vec3(0.98f, 0.24f, 0.15f);
+		//		pbrMatInfo.constMetallic = 0.98f;
+		//		pbrMatInfo.constRoughness = glm::clamp(float(x) / (sphereCountX - 1), 0.05f, 0.9f);
+		//		pbrMatInfo.constAO = 1.0f;
+		//		matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+		//	}
+		//	else
+		//	{
+		//		Renderer::MaterialCreateInfo pbrMatInfo = {};
+		//		pbrMatInfo.shaderName = "pbr";
+		//		pbrMatInfo.name = "PBR simple " + iStr;
+		//		pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.95f, 0.95f);
+		//		pbrMatInfo.constMetallic = 1.0f;
+		//		pbrMatInfo.constRoughness = glm::clamp(float(x) / (sphereCountX - 1), 0.05f, 0.9f);
 		//		pbrMatInfo.constAO = 1.0f;
 		//		matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 		//	}
 
 		//	m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
-
-		//	if (matID == brickMatID)
-		//	{
-		//		m_Spheres[i]->ForceAttributes((glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-		//	}
 
 		//	m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 		//	m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f));
