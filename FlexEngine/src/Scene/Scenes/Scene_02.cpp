@@ -198,6 +198,16 @@ namespace flex
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		float moveSpeed = 1.25f;
+		float hDist = 10.0f;
+		float vDist = 8.0f;
+
+		const glm::vec3 pPos = gameContext.camera->GetPosition();
+
+		gameContext.camera->SetPosition({
+			cos(gameContext.elapsedTime * moveSpeed) * hDist + 0.0f, 
+			sin(gameContext.elapsedTime * moveSpeed) * vDist + 10.0f,
+			pPos.z });
+		gameContext.camera->LookAt(glm::vec3(0.0f, 12.5f, 0.0f));
 	}
 } // namespace flex

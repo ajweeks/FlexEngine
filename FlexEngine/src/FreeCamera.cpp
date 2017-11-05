@@ -161,6 +161,18 @@ namespace flex
 		return m_Proj;
 	}
 
+	void FreeCamera::LookAt(glm::vec3 point)
+	{
+		glm::vec3 dPos = point - m_Position;
+		glm::vec3 dDir = glm::normalize(dPos);
+
+		const float targetYaw = glm::atan(dDir.z, dDir.x);
+		const float targetPitch = glm::atan(dDir.y, dDir.z);
+
+		m_Yaw = targetYaw;
+		m_Pitch = targetPitch;
+	}
+
 	void FreeCamera::SetMoveSpeed(float moveSpeed)
 	{
 		m_MoveSpeed = moveSpeed;

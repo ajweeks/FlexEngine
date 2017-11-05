@@ -23,6 +23,8 @@ namespace flex
 		glm::mat4 GetView() const;
 		glm::mat4 GetProjection() const;
 
+		void LookAt(glm::vec3 point);
+
 		void SetMoveSpeed(float moveSpeed);
 		float GetMoveSpeed() const;
 		void SetRotationSpeed(float rotationSpeed);
