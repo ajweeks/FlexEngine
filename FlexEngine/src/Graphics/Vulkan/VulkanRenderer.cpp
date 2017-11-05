@@ -2179,8 +2179,6 @@ namespace flex
 
 		void VulkanRenderer::Draw(const GameContext& gameContext)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			BuildCommandBuffers(gameContext); // TODO: Only call this when objects change
 			BuildDeferredCommandBuffer(gameContext); // TODO: Only call this once at startup?
 
@@ -3787,13 +3785,6 @@ namespace flex
 		void VulkanRenderer::PrepareOffscreenFrameBuffer(Window* window)
 		{
 			// TODO: This should be setting up the m_SwapChainFrameBuffers?
-
-			auto oldFrameBufferAttachments = offScreenFrameBuf->frameBufferAttachments;
-
-			// Is this needed?
-			SafeDelete(offScreenFrameBuf);
-			offScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
-			offScreenFrameBuf->frameBufferAttachments = oldFrameBufferAttachments;
 
 			const glm::vec2i frameBufferSize = window->GetFrameBufferSize();
 			offScreenFrameBuf->width = frameBufferSize.x;

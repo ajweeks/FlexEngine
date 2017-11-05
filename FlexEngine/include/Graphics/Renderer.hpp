@@ -343,7 +343,6 @@ namespace flex
 		virtual void Destroy(RenderID renderID) = 0;
 
 		// ImGUI functions
-		virtual void ImGui_Init(const GameContext& gameContext) = 0;
 		virtual void ImGui_NewFrame(const GameContext& gameContext) = 0;
 		virtual void ImGui_Render() = 0;
 		virtual void ImGui_ReleaseRenderObjects() = 0;

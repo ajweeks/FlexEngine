@@ -59,12 +59,13 @@ namespace flex
 
 			virtual void Destroy(RenderID renderID) override;
 
-			virtual void ImGui_Init(const GameContext& gameContext) override;
 			virtual void ImGui_NewFrame(const GameContext& gameContext) override;
 			virtual void ImGui_Render() override;
 			virtual void ImGui_ReleaseRenderObjects() override;
 
 		private:
+			virtual void ImGui_Init(const GameContext& gameContext);
+
 			typedef void (VulkanRenderer::*VulkanTextureCreateFunction)(const std::string&, VkFormat, glm::uint, VulkanTexture**) const;
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults

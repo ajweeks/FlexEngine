@@ -56,12 +56,13 @@ namespace flex
 			virtual void Destroy(RenderID renderID) override;
 
 			// ImGui functions
-			virtual void ImGui_Init(const GameContext& gameContext) override;
 			virtual void ImGui_NewFrame(const GameContext& gameContext) override;
 			virtual void ImGui_Render() override;
 			virtual void ImGui_ReleaseRenderObjects() override;
 
 		private:
+			virtual void ImGui_Init(const GameContext& gameContext);
+
 			// TODO: Either use these functions or remove them
 			void SetFloat(ShaderID shaderID, const std::string& valName, float val);
 			void SetUInt(ShaderID shaderID, const std::string& valName, glm::uint val);

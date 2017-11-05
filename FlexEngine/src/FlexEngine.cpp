@@ -79,9 +79,6 @@ namespace flex
 
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 
-		// TODO: remove this call and move code into renderer's constructor
-		m_GameContext.renderer->ImGui_Init(m_GameContext);
-
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 
@@ -233,8 +230,6 @@ namespace flex
 		LoadDefaultScenes();
 
 		m_GameContext.renderer->PostInitialize(m_GameContext);
-
-		m_GameContext.renderer->ImGui_Init(m_GameContext);
 	}
 
 	void FlexEngine::UpdateAndRender()
