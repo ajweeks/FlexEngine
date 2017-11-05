@@ -528,7 +528,6 @@ namespace flex
 			}
 
 
-			// Skybox
 			if (createInfo->generateCubemapSampler)
 			{
 				GLCubemapCreateInfo cubemapCreateInfo = {};
@@ -767,24 +766,19 @@ namespace flex
 			
 			if (m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 			{
-				RenderID cubemapID = 0;
-				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-				{
-					if (m_RenderObjects[i]->name.compare("Skybox") == 0)
-					{
-						cubemapID = i;
-					}
-				}
-
+				Logger::LogInfo("Capturing reflection probe");
 				CaptureSceneToCubemap(gameContext, renderID);
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+				Logger::LogInfo("Done");
 
 				// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
+				Logger::LogInfo("Capturing reflection probe");
 				CaptureSceneToCubemap(gameContext, renderID);
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
-				
+				Logger::LogInfo("Done");
+
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
 				//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
@@ -808,10 +802,12 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			// TODO: Make cyclable at runtime
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath =
+				//RESOURCE_LOCATION + "textures/hdri/rustig_koppie_8k.hdr";
+				RESOURCE_LOCATION + "textures/hdri/wobbly_bridge_8k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
-				RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
+				//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
 			GLShader* equirectangularToCubemapShader = &m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID];
@@ -1389,7 +1385,21 @@ namespace flex
 
 		void GLRenderer::Update(const GameContext& gameContext)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
+			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
+			{
+				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
+				{
+					GLRenderObject* renderObject = iter->second;
+					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
+					{
+						Logger::LogInfo("Capturing reflection probe");
+						CaptureSceneToCubemap(gameContext, renderObject->renderID);
+						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
+						GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+						Logger::LogInfo("Done");
+					}
+				}
+			}
 		}
 
 		void GLRenderer::Draw(const GameContext& gameContext)
