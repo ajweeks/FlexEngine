@@ -181,7 +181,6 @@ namespace flex
 
 			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
-			VulkanTexture* specularTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
 			VulkanTexture* albedoTexture = nullptr;
 			VulkanTexture* metallicTexture = nullptr;
@@ -271,7 +270,6 @@ namespace flex
 
 			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
-			VulkanTexture* specularTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
 			VulkanTexture* albedoTexture = nullptr;
 			VulkanTexture* metallicTexture = nullptr;

@@ -86,7 +86,6 @@ namespace flex
 				glm::uint enableAOSampler;
 				glm::uint enableDiffuseSampler;
 				glm::uint enableNormalSampler;
-				glm::uint enableSpecularSampler;
 				glm::uint enableCubemapSampler;
 				glm::uint enableIrradianceSampler;
 			};

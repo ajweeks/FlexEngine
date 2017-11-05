@@ -50,7 +50,6 @@ namespace flex
 		brickMatInfo.shaderName = "deferred_simple";
 		brickMatInfo.name = "Brick";
 		brickMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/brick_d.png";
-		brickMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/brick_s.png";
 		brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
 		const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
 		
@@ -59,7 +58,6 @@ namespace flex
 		workMatInfo.shaderName = "deferred_simple";
 		workMatInfo.name = "Work";
 		workMatInfo.diffuseTexturePath = RESOURCE_LOCATION + "textures/work_d.jpg";
-		workMatInfo.specularTexturePath = RESOURCE_LOCATION + "textures/work_s.jpg";
 		workMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/work_n.jpg";
 		const MaterialID workMatID = gameContext.renderer->InitializeMaterial(gameContext, &workMatInfo);
 

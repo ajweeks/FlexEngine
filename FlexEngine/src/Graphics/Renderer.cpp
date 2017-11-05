@@ -60,7 +60,6 @@ namespace flex
 		if (HasUniform("constAO")) size += sizeof(float);
 		if (HasUniform("enableNormalSampler")) size += sizeof(glm::uint);
 		if (HasUniform("enableDiffuseSampler")) size += sizeof(glm::uint);
-		if (HasUniform("enableSpecularSampler")) size += sizeof(glm::uint);
 		if (HasUniform("enableCubemapSampler")) size += sizeof(glm::uint);
 		if (HasUniform("enableIrradianceSampler")) size += sizeof(glm::uint);
 

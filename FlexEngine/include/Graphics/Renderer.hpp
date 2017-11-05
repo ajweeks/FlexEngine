@@ -114,7 +114,6 @@ namespace flex
 			std::string name;
 
 			std::string diffuseTexturePath;
-			std::string specularTexturePath;
 			std::string normalTexturePath;
 			std::string albedoTexturePath;
 			std::string metallicTexturePath;
@@ -124,8 +123,6 @@ namespace flex
 
 			bool generateDiffuseSampler;
 			bool enableDiffuseSampler;
-			bool generateSpecularSampler;
-			bool enableSpecularSampler;
 			bool generateNormalSampler;
 			bool enableNormalSampler;
 			bool generateAlbedoSampler;
@@ -179,10 +176,6 @@ namespace flex
 			bool generateDiffuseSampler;
 			bool enableDiffuseSampler;
 			std::string diffuseTexturePath;
-
-			bool generateSpecularSampler;
-			bool enableSpecularSampler;
-			std::string specularTexturePath;
 
 			bool generateNormalSampler;
 			bool enableNormalSampler;
@@ -291,7 +284,6 @@ namespace flex
 
 			// These variables should be set to true when the shader has these uniforms
 			bool needDiffuseSampler;
-			bool needSpecularSampler;
 			bool needNormalSampler;
 			bool needCubemapSampler;
 			bool needAlbedoSampler;

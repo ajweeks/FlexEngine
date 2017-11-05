@@ -216,6 +216,7 @@ namespace flex
 
 			if (m_BRDFTextureHandle.id == 0)
 			{
+				Logger::LogInfo("Generating BRDF LUT");
 				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
@@ -289,8 +290,7 @@ namespace flex
 			if (m_SkyBoxMesh)
 			{
 				Destroy(m_SkyBoxMesh->GetRenderID());
-				delete m_SkyBoxMesh;
-				m_SkyBoxMesh = nullptr;
+				SafeDelete(m_SkyBoxMesh);
 			}
 
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
@@ -348,7 +348,6 @@ namespace flex
 				{ "camPos", 						&mat.uniformIDs.camPos },
 				{ "enableDiffuseSampler", 			&mat.uniformIDs.enableDiffuseTexture },
 				{ "enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
-				{ "enableSpecularSampler", 			&mat.uniformIDs.enableSpecularTexture },
 				{ "enableCubemapSampler", 			&mat.uniformIDs.enableCubemapTexture },
 				{ "enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
 				{ "constAlbedo", 					&mat.uniformIDs.constAlbedo },
@@ -384,10 +383,6 @@ namespace flex
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
 			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
 			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
-
-			mat.material.specularTexturePath = createInfo->specularTexturePath;
-			mat.material.generateSpecularSampler = createInfo->generateSpecularSampler;
-			mat.material.enableSpecularSampler = createInfo->enableSpecularSampler;
 
 			mat.material.frameBuffers = createInfo->frameBuffers;
 
@@ -480,8 +475,6 @@ namespace flex
 				createInfo->diffuseTexturePath, "diffuseSampler", false,GenerateGLTexture },
 				{ m_Shaders[mat.material.shaderID].shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID, 
 				createInfo->normalTexturePath, "normalSampler",false, GenerateGLTexture },
-				{ m_Shaders[mat.material.shaderID].shader.needSpecularSampler, mat.material.generateSpecularSampler, &mat.specularSamplerID, 
-				createInfo->specularTexturePath, "specularSampler", false,GenerateGLTexture },
 				{ m_Shaders[mat.material.shaderID].shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
 				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", true, GenerateHDRGLTexture },
 			};
@@ -771,7 +764,7 @@ namespace flex
 		void GLRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-
+			
 			if (m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 			{
 				RenderID cubemapID = 0;
@@ -839,8 +832,6 @@ namespace flex
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
 			CheckGLErrorMessages();
-
-			//*renderObject->transform = Transform::Identity();
 
 			// Update object's uniforms under this shader's program
 			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.model, 1, false, &m_SkyBoxMesh->GetTransform().GetModelMatrix()[0][0]);
@@ -1823,8 +1814,6 @@ namespace flex
 
 				if (drawCallInfo.renderToCubemap)
 				{
-					// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
-
 					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
@@ -1844,10 +1833,7 @@ namespace flex
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
 					CheckGLErrorMessages();
 					
-					//
-					// TODO: FIXME:
-					// Negative? (Probably incorrect)
-					//
+					// TODO: Test if this is actually correct
 					glm::vec3 cubemapTranslation = -cubemapRenderObject->transform->GetGlobalPosition();
 					for (size_t face = 0; face < 6; ++face)
 					{
@@ -1929,7 +1915,6 @@ namespace flex
 			textures.push_back({ shader->needAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D });
 			textures.push_back({ shader->needDiffuseSampler, material->enableDiffuseSampler, glMaterial->diffuseSamplerID, GL_TEXTURE_2D });
 			textures.push_back({ shader->needNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needSpecularSampler, material->enableSpecularSampler, glMaterial->specularSamplerID, GL_TEXTURE_2D });
 			textures.push_back({ shader->needBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D });
 			textures.push_back({ shader->needIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP });
 			textures.push_back({ shader->needPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP });
@@ -2074,7 +2059,6 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = true;
 			m_Shaders[shaderID].shader.needDiffuseSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
-			m_Shaders[shaderID].shader.needSpecularSampler = true;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -2083,7 +2067,6 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableDiffuseSampler");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableSpecularSampler");
 			++shaderID;
 
 			// Deferred combine (sample gbuffer)
@@ -2409,12 +2392,6 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableSpecularSampler"))
-			{
-				glUniform1i(material->uniformIDs.enableSpecularTexture, material->material.enableSpecularSampler);
-				CheckGLErrorMessages();
-			}
-
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableCubemapSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableCubemapTexture, material->material.enableCubemapSampler);
@@ -2702,23 +2679,6 @@ namespace flex
 
 			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
-
-			// Also generate deferred combine cubemap material here
-			//MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
-			//gBufferCubemapMaterialCreateInfo.name = "GBuffer Cubemap material";
-			//gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
-			//gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
-			//gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = reflectionProbeMatID;
-			//gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
-			//gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = reflectionProbeMatID;
-			//gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
-			//gBufferCubemapMaterialCreateInfo.frameBuffers = {
-			//	{ "positionMetallicFrameBufferSampler",  &m_gBufferCubemap_PositionMetallicHandle.id },
-			//	{ "normalRoughnessFrameBufferSampler",  &m_gBufferCubemap_NormalRoughnessHandle.id },
-			//	{ "albedoAOFrameBufferSampler",  &m_gBufferCubemap_DiffuseAOHandle.id },
-			//};
-			//
-			//m_DeferredCombineCubemapMatID = InitializeMaterial(gameContext, &gBufferCubemapMaterialCreateInfo);
 		}
 
 		glm::uint GLRenderer::GetRenderObjectCount() const

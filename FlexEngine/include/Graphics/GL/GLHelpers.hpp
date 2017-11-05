@@ -44,7 +44,6 @@ namespace flex
 				int camPos;
 				int enableDiffuseTexture;
 				int enableNormalTexture;
-				int enableSpecularTexture;
 				int enableCubemapTexture;
 				int constAlbedo;
 				int enableAlbedoSampler;
@@ -61,7 +60,6 @@ namespace flex
 			UniformIDs uniformIDs;
 
 			glm::uint diffuseSamplerID;
-			glm::uint specularSamplerID;
 			glm::uint normalSamplerID;
 
 			glm::uint cubemapSamplerID;

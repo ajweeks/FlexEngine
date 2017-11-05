@@ -1900,10 +1900,6 @@ namespace flex
 			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
 			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
 
-			mat.material.specularTexturePath = createInfo->specularTexturePath;
-			mat.material.generateSpecularSampler = createInfo->generateSpecularSampler;
-			mat.material.enableSpecularSampler = createInfo->enableSpecularSampler;
-
 			mat.material.frameBuffers = createInfo->frameBuffers;
 
 			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
@@ -1985,7 +1981,6 @@ namespace flex
 			{
 				{ createInfo->diffuseTexturePath, &mat.diffuseTexture, &mat.material.generateDiffuseSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
 				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.generateNormalSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
-				{ createInfo->specularTexturePath, &mat.specularTexture, &mat.material.generateSpecularSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
 				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.generateAlbedoSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
 				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.generateMetallicSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
 				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.generateRoughnessSampler, VK_FORMAT_R8G8B8A8_UNORM, 1, &VulkanRenderer::CreateVulkanTexture },
@@ -1995,7 +1990,7 @@ namespace flex
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
 			// Calculate how many textures need to be allocated to prevent texture vector from resizing
-			const size_t usedTextureCount = createInfo->generateAlbedoSampler + createInfo->generateAOSampler + createInfo->generateCubemapSampler + createInfo->generateDiffuseSampler + createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler + createInfo->generateNormalSampler + createInfo->generatePrefilteredMap + createInfo->generateRoughnessSampler + createInfo->generateSpecularSampler + createInfo->generateHDREquirectangularSampler; 
+			const size_t usedTextureCount = createInfo->generateAlbedoSampler + createInfo->generateAOSampler + createInfo->generateCubemapSampler + createInfo->generateDiffuseSampler + createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler + createInfo->generateNormalSampler + createInfo->generatePrefilteredMap + createInfo->generateRoughnessSampler + createInfo->generateHDREquirectangularSampler; 
 			m_LoadedTextures.reserve(usedTextureCount);
 
 			for (TextureInfo& textureInfo : textureInfos)
@@ -3060,7 +3055,6 @@ namespace flex
 			createInfo.uniformBuffer = &m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID].uniformBuffer;
 			createInfo.diffuseTexture = material->diffuseTexture;
 			createInfo.normalTexture = material->normalTexture;
-			createInfo.specularTexture = material->specularTexture;
 			createInfo.cubemapTexture = material->cubemapTexture;
 			createInfo.hdrEquirectangularTexture = material->hdrEquirectangularTexture;
 			createInfo.albedoTexture = material->albedoTexture;
@@ -3159,12 +3153,6 @@ namespace flex
 				createInfo->normalTexture ? createInfo->normalTexture->imageView : 0u,
 				createInfo->normalTexture ? createInfo->normalTexture->sampler : 0u,
 				createInfo->normalTexture ? &createInfo->normalTexture->imageInfoDescriptor : nullptr },
-
-				{ "specularSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->specularTexture ? createInfo->specularTexture->imageView : 0u,
-				createInfo->specularTexture ? createInfo->specularTexture->sampler : 0u,
-				createInfo->specularTexture ? &createInfo->specularTexture->imageInfoDescriptor : nullptr },
 
 				{ "hdrEquirectangularSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
@@ -3308,9 +3296,6 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ "normalSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ "specularSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ "hdrEquirectangularSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -5466,7 +5451,6 @@ namespace flex
 			glm::uint enableAOSampler = material->material.enableAOSampler;
 			glm::uint enableDiffuseSampler = material->material.enableDiffuseSampler;
 			glm::uint enableNormalSampler = material->material.enableNormalSampler;
-			glm::uint enableSpecularSampler = material->material.enableSpecularSampler;
 			glm::uint enableCubemapSampler = material->material.enableCubemapSampler;
 			glm::uint enableIrradianceSampler = material->material.enableIrradianceSampler;
 
@@ -5521,10 +5505,6 @@ namespace flex
 				{
 					enableNormalSampler = uniformOverrides->enableNormalSampler;
 				}
-				if (uniformOverrides->overridenUniforms.HasUniform("enableSpecularSampler"))
-				{
-					enableSpecularSampler = uniformOverrides->enableSpecularSampler;
-				}
 				if (uniformOverrides->overridenUniforms.HasUniform("enableCubemapSampler"))
 				{
 					enableCubemapSampler = uniformOverrides->enableCubemapSampler;
@@ -5574,7 +5554,6 @@ namespace flex
 				{ "enableAOSampler", (void*)&enableAOSampler, 4, 1 },
 				{ "enableDiffuseSampler", (void*)&enableDiffuseSampler, 4, 1 },
 				{ "enableNormalSampler", (void*)&enableNormalSampler, 4, 1 },
-				{ "enableSpecularSampler", (void*)&enableSpecularSampler, 4, 1 },
 				{ "enableCubemapSampler", (void*)&enableCubemapSampler, 4, 1 },
 				{ "enableIrradianceSampler", (void*)&enableIrradianceSampler, 4, 1 },
 			};
@@ -5640,7 +5619,6 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.needDiffuseSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
-			m_Shaders[shaderID].shader.needSpecularSampler = true;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
@@ -5652,8 +5630,6 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("diffuseSampler");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("normalSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableSpecularSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("specularSampler");
 			++shaderID;
 
 			// Color

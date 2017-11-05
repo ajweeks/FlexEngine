@@ -120,7 +120,7 @@ namespace flex
 			{ "in_TexCoord", 2 },
 			{ "in_TexCoord_UVW", 3 },
 			{ "in_Color_32", 1 },
-			{ "in_Color", 3 },
+			{ "in_Color", 4 },
 			{ "in_Tangent", 3 },
 			{ "in_Bitangent", 3 },
 			{ "in_Normal", 3 },
