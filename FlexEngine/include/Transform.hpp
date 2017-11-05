@@ -50,6 +50,7 @@ namespace flex
 		void Rotate(float deltaX, float deltaY, float deltaZ);
 		
 		void Scale(glm::vec3 deltaScale);
+		void Scale(float deltaScale);
 		void Scale(float deltaX, float deltaY, float deltaZ);
 
 		void SetParentTransform(Transform* parent);

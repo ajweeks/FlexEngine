@@ -85,13 +85,14 @@ namespace flex
 		UpdateParentTransform();
 	}
 
+	void Transform::Scale(float deltaScale)
+	{
+		Scale(glm::vec3(deltaScale));
+	}
+
 	void Transform::Scale(float deltaX, float deltaY, float deltaZ)
 	{
-		localScale.x *= deltaX;
-		localScale.y *= deltaY;
-		localScale.z *= deltaZ;
-
-		UpdateParentTransform();
+		Scale(glm::vec3(deltaX, deltaY, deltaZ));
 	}
 
 	void Transform::SetParentTransform(Transform* parent)
