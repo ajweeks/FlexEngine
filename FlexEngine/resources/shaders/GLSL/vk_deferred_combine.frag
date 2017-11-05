@@ -5,6 +5,12 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+layout (location = 0) in vec2 ex_TexCoord;
+
+layout (location = 0) out vec4 fragColor;
+
+const float PI = 3.14159265359;
+
 struct DirectionalLight 
 {
 	vec4 direction;
@@ -19,8 +25,6 @@ struct PointLight
 	bool enabled;
 };
 #define NUMBER_POINT_LIGHTS 4
-
-layout (location = 0) in vec2 ex_TexCoord;
 
 layout (binding = 0) uniform UBOConstant
 {
@@ -41,10 +45,6 @@ layout (binding = 4) uniform samplerCube prefilterMap;
 layout (binding = 5) uniform sampler2D positionMetallicFrameBufferSampler;
 layout (binding = 6) uniform sampler2D normalRoughnessFrameBufferSampler;
 layout (binding = 7) uniform sampler2D albedoAOFrameBufferSampler;
-
-layout (location = 0) out vec4 fragColor;
-
-const float PI = 3.14159265359;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -165,6 +165,9 @@ void main()
 	}
 
 	vec3 color = ambient + Lo;
+
+	color = color / (color + vec3(1.0f)); // Reinhard tone-mapping
+	color = pow(color, vec3(1.0f / 2.2f)); // Gamma correction
 
 	fragColor = vec4(color, 1.0);
 

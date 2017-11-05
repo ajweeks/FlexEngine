@@ -511,7 +511,7 @@ namespace flex
 			{
 			case Renderer::CullFace::BACK: return VK_CULL_MODE_BACK_BIT;
 			case Renderer::CullFace::FRONT: return VK_CULL_MODE_FRONT_BIT;
-			case Renderer::CullFace::NONE: return VK_CULL_MODE_NONE;
+			case Renderer::CullFace::FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
 			default: return VK_CULL_MODE_NONE;
 			}
 		}

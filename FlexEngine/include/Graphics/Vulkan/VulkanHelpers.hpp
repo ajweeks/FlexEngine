@@ -225,6 +225,7 @@ namespace flex
 			VkDescriptorSet descriptorSet;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+			bool enableCulling;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;
@@ -237,6 +238,7 @@ namespace flex
 
 			VkPrimitiveTopology topology;
 			VkCullModeFlags cullMode;
+			bool enableCulling = true;
 
 			VkRenderPass renderPass;
 			glm::uint subpass = 0;

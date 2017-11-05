@@ -20,6 +20,7 @@
 #include "VertexBufferData.hpp"
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Scene/MeshPrefab.hpp"
 
 namespace flex
 {
@@ -34,6 +35,8 @@ namespace flex
 			CreateSurface(gameContext.window);
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			CreateLogicalDevice(physicalDevice);
+
+			m_BRDFSize = { 512, 512 };
 
 			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
 			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
@@ -116,6 +119,12 @@ namespace flex
 				SafeDelete(m_VertexIndexBufferPairs[i].indexBuffer);
 			}
 
+			if (m_SkyBoxMesh)
+			{
+				Destroy(m_SkyBoxMesh->GetRenderID());
+				SafeDelete(m_SkyBoxMesh);
+			}
+
 			m_Shaders.clear();
 
 			SafeDelete(offScreenFrameBuf);
@@ -159,8 +168,6 @@ namespace flex
 
 		void VulkanRenderer::PostInitialize(const GameContext& gameContext)
 		{
-			ImGui_Init(gameContext);
-
 			CreateDescriptorPool();
 
 			ShaderID deferredCombineShaderID;
@@ -172,7 +179,7 @@ namespace flex
 
 
 
-			// TODO: FIXME: Remove this :grimmacing:
+			// TODO: FIXME: Remove this
 			MaterialID skyboxMatID = 0;
 			for (size_t i = 0; i < m_LoadedMaterials.size(); ++i)
 			{
@@ -193,7 +200,6 @@ namespace flex
 			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMatID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
-			gBufferMaterialCreateInfo.brdfLUTSamplerMatID = skyboxMatID;
 			for (size_t i = 0; i < offScreenFrameBuf->frameBufferAttachments.size(); ++i)
 			{
 				gBufferMaterialCreateInfo.frameBuffers.push_back({ 
@@ -226,7 +232,7 @@ namespace flex
 			m_gBufferQuadTransform = Transform::Identity();
 			gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
-			gBufferQuadCreateInfo.cullFace = CullFace::NONE;
+			gBufferQuadCreateInfo.enableCulling = false;
 
 			std::vector<glm::uint> indexBuffer = { 0, 1, 2,  2, 1, 3 };
 			gBufferQuadCreateInfo.indices = &indexBuffer;
@@ -252,6 +258,7 @@ namespace flex
 				CreateGraphicsPipeline(i);
 			}
 
+			ImGui_Init(gameContext);
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
@@ -259,10 +266,10 @@ namespace flex
 			CreateCommandBuffers();
 			CreateSemaphores();
 
-			// Generate reflection probe data
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (m_LoadedMaterials[renderObject->materialID].material.generateIrradianceSampler)
+				// Generate reflection probe data
+				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.generateIrradianceSampler)
 				{
 					Logger::LogInfo("Generating cubemap from HDRI");
 					GenerateCubemapFromHDR(gameContext, renderObject);
@@ -272,17 +279,21 @@ namespace flex
 
 					Logger::LogInfo("Generating prefilter map from cubemap");
 					GeneratePrefilteredCube(gameContext, renderObject);
-
-					Logger::LogInfo("Generating BRDF LUT");
-					GenerateBRDFLUT(gameContext, renderObject);
 				}
 			}
 
 			Logger::LogInfo("Ready!\n");
 		}
 
-		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject * renderObject)
+		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
+			if (!m_SkyBoxMesh)
+			{
+				GenerateSkybox(gameContext);
+			}
+
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
+
 			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 			equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
 			equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
@@ -464,7 +475,7 @@ namespace flex
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
 			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = renderObject->topology;
+			inputAssemblyState.topology = skyboxRenderObject->topology;
 			inputAssemblyState.flags = 0;
 			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
 
@@ -511,7 +522,7 @@ namespace flex
 			// Vertex input state
 			VkVertexInputBindingDescription vertexInputBinding = {};
 			vertexInputBinding.binding = 0;
-			vertexInputBinding.stride = renderObject->vertexBufferData->VertexStride;
+			vertexInputBinding.stride = skyboxRenderObject->vertexBufferData->VertexStride;
 			vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			VkVertexInputAttributeDescription vertexInputAttribute = {};
@@ -630,27 +641,27 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock.mvp = 
+					m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock.mvp =
 						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (float)dim) * m_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
-						&m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
+						&m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID], renderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&m_Shaders[m_LoadedMaterials[skyboxRenderObject->materialID].material.shaderID], skyboxRenderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					const ShaderID shaderID = m_LoadedMaterials[renderObject->materialID].material.shaderID;
+					const ShaderID shaderID = m_LoadedMaterials[skyboxRenderObject->materialID].material.shaderID;
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[shaderID].vertexBuffer->m_Buffer, offsets);
-					if (renderObject->indexed)
+					if (skyboxRenderObject->indexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexCount, 1, 0, 0, 0);
 					}
 					else
 					{
-						vkCmdDraw(cmdBuf, renderObject->vertexBufferData->VertexCount, 1, 0, 0);
+						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, 0, 0);
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -723,6 +734,13 @@ namespace flex
 		void VulkanRenderer::GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
+
+			if (!m_SkyBoxMesh)
+			{
+				GenerateSkybox(gameContext);
+			}
+
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.irradianceSamplerSize.x;
@@ -879,10 +897,11 @@ namespace flex
 			descriptorSetAllocateInfo.descriptorSetCount = 1;
 			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
 			
+			m_LoadedMaterials[renderObject->materialID].cubemapTexture->UpdateImageDescriptor();
+
 			VkDescriptorImageInfo descriptorImageInfo = {};
 			descriptorImageInfo.imageView = offscreen.view;
 			descriptorImageInfo.imageLayout = m_LoadedMaterials[renderObject->materialID].cubemapTexture->imageLayout;
-			
 			VkWriteDescriptorSet writeDescriptorSet = {};
 			writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			writeDescriptorSet.dstSet = descriptorSet;
@@ -909,7 +928,7 @@ namespace flex
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
 			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = renderObject->topology;
+			inputAssemblyState.topology = skyboxRenderObject->topology;
 			inputAssemblyState.flags = 0;
 			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
 
@@ -956,7 +975,7 @@ namespace flex
 			// Vertex input state
 			VkVertexInputBindingDescription vertexInputBinding = {};
 			vertexInputBinding.binding = 0;
-			vertexInputBinding.stride = renderObject->vertexBufferData->VertexStride;
+			vertexInputBinding.stride = skyboxRenderObject->vertexBufferData->VertexStride;
 			vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			VkVertexInputAttributeDescription vertexInputAttribute = {};
@@ -1081,27 +1100,27 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock.mvp =
+					m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock.mvp =
 						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (float)dim) * m_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
-						&m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
+						&m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID], renderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&m_Shaders[m_LoadedMaterials[skyboxRenderObject->materialID].material.shaderID], skyboxRenderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					const ShaderID shaderID = m_LoadedMaterials[renderObject->materialID].material.shaderID;
+					const ShaderID shaderID = m_LoadedMaterials[skyboxRenderObject->materialID].material.shaderID;
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[shaderID].vertexBuffer->m_Buffer, offsets);
-					if (renderObject->indexed)
+					if (skyboxRenderObject->indexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexCount, 1, 0, 0, 0);
 					}
 					else
 					{
-						vkCmdDraw(cmdBuf, renderObject->vertexBufferData->VertexCount, 1, 0, 0);
+						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, 0, 0);
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -1174,7 +1193,12 @@ namespace flex
 
 		void VulkanRenderer::GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
+			if (!m_SkyBoxMesh)
+			{
+				GenerateSkybox(gameContext);
+			}
+
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			const uint32_t dim = m_LoadedMaterials[renderObject->materialID].material.prefilteredMapSize.x;
@@ -1342,14 +1366,14 @@ namespace flex
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
 			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = renderObject->topology;
+			inputAssemblyState.topology = skyboxRenderObject->topology;
 			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
 			inputAssemblyState.flags = 0;
 
 			VkPipelineRasterizationStateCreateInfo rasterizationState = {};
 			rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-			rasterizationState.cullMode = renderObject->cullMode;
+			rasterizationState.cullMode = skyboxRenderObject->cullMode;
 			rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			rasterizationState.flags = 0;
 			rasterizationState.depthClampEnable = VK_FALSE;
@@ -1393,7 +1417,7 @@ namespace flex
 			// Vertex input state
 			VkVertexInputBindingDescription vertexInputBinding = {};
 			vertexInputBinding.binding = 0;
-			vertexInputBinding.stride = renderObject->vertexBufferData->VertexStride;
+			vertexInputBinding.stride = skyboxRenderObject->vertexBufferData->VertexStride;
 			vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 			VkVertexInputAttributeDescription vertexInputAttribute = {};
@@ -1502,26 +1526,27 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock.mvp =
+					m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock.mvp =
 						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (float)dim) * m_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
-						&m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
+						&m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&m_Shaders[prefilterShaderID], renderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&m_Shaders[prefilterShaderID], skyboxRenderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[m_LoadedMaterials[renderObject->materialID].material.shaderID].vertexBuffer->m_Buffer, offsets);
-					if (renderObject->indexed)
+					ShaderID shaderID = m_LoadedMaterials[skyboxRenderObject->materialID].material.shaderID;
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[m_LoadedMaterials[skyboxRenderObject->materialID].material.shaderID].vertexBuffer->m_Buffer, offsets);
+					if (skyboxRenderObject->indexed)
 					{
-						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[m_LoadedMaterials[renderObject->materialID].material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, m_VertexIndexBufferPairs[m_LoadedMaterials[renderObject->materialID].material.shaderID].indexCount, 1, 0, 0, 0);
+						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdDrawIndexed(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexCount, 1, 0, 0, 0);
 					}
 					else
 					{
-						vkCmdDraw(cmdBuf, m_VertexIndexBufferPairs[m_LoadedMaterials[renderObject->materialID].material.shaderID].vertexCount, 1, 0, 0);
+						vkCmdDraw(cmdBuf, m_VertexIndexBufferPairs[shaderID].vertexCount, 1, 0, 0);
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -1589,12 +1614,12 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, VulkanRenderObject* renderObject)
+		void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, VulkanTexture* brdfTexture)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
 			const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
-			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.generatedBRDFLUTSize.x;
+			const uint32_t dim = (uint32_t)m_BRDFSize.x;
 
 			// Color attachment
 			VkAttachmentDescription attachmentDesc = {};
@@ -1647,7 +1672,7 @@ namespace flex
 			framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferCreateInfo.renderPass = renderpass;
 			framebufferCreateInfo.attachmentCount = 1;
-			framebufferCreateInfo.pAttachments = &m_LoadedMaterials[renderObject->materialID].brdfLUT->imageView;
+			framebufferCreateInfo.pAttachments = &brdfTexture->imageView;
 			framebufferCreateInfo.width = dim;
 			framebufferCreateInfo.height = dim;
 			framebufferCreateInfo.layers = 1;
@@ -1698,7 +1723,7 @@ namespace flex
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {};
 			pipelineInputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			pipelineInputAssemblyStateCreateInfo.topology = renderObject->topology;
+			pipelineInputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			pipelineInputAssemblyStateCreateInfo.flags = 0;
 			pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
 
@@ -1923,8 +1948,14 @@ namespace flex
 			}
 			if (m_Shaders[mat.material.shaderID].shader.needBRDFLUT)
 			{
-				mat.brdfLUT = (createInfo->brdfLUTSamplerMatID < m_LoadedMaterials.size() ?
-					m_LoadedMaterials[createInfo->brdfLUTSamplerMatID].brdfLUT : nullptr);
+				if (!m_BRDFTexture)
+				{
+					Logger::LogInfo("Generating BRDF LUT");
+					CreateVulkanTexture_Empty(m_BRDFSize.x, m_BRDFSize.y, VK_FORMAT_R16G16_SFLOAT, 1, &m_BRDFTexture);
+					m_LoadedTextures.push_back(m_BRDFTexture);
+					GenerateBRDFLUT(gameContext, m_BRDFTexture);
+				}
+				mat.brdfLUT = m_BRDFTexture;
 			}
 			if (m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
 			{
@@ -1937,8 +1968,6 @@ namespace flex
 			mat.material.prefilteredMapSize = createInfo->generatedPrefilteredCubemapSize;
 
 			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
-			mat.material.generateBRDFLUT = createInfo->generateBRDFLUT;
-			mat.material.generatedBRDFLUTSize = createInfo->generatedBRDFLUTSize;
 
 			mat.descriptorSetLayoutIndex = mat.material.shaderID;
 
@@ -1966,7 +1995,7 @@ namespace flex
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
 			// Calculate how many textures need to be allocated to prevent texture vector from resizing
-			const size_t usedTextureCount = createInfo->generateAlbedoSampler + createInfo->generateAOSampler + createInfo->generateBRDFLUT + createInfo->generateCubemapSampler + createInfo->generateDiffuseSampler + createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler + createInfo->generateNormalSampler + createInfo->generatePrefilteredMap + createInfo->generateRoughnessSampler + createInfo->generateSpecularSampler + createInfo->generateHDREquirectangularSampler; 
+			const size_t usedTextureCount = createInfo->generateAlbedoSampler + createInfo->generateAOSampler + createInfo->generateCubemapSampler + createInfo->generateDiffuseSampler + createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler + createInfo->generateNormalSampler + createInfo->generatePrefilteredMap + createInfo->generateRoughnessSampler + createInfo->generateSpecularSampler + createInfo->generateHDREquirectangularSampler; 
 			m_LoadedTextures.reserve(usedTextureCount);
 
 			for (TextureInfo& textureInfo : textureInfos)
@@ -2021,11 +2050,6 @@ namespace flex
 				
 			}
 
-			if (mat.material.generateBRDFLUT)
-			{
-				CreateVulkanTexture_Empty(createInfo->generatedBRDFLUTSize.x, createInfo->generatedBRDFLUTSize.y, VK_FORMAT_R16G16_SFLOAT, 1, &mat.brdfLUT);
-				m_LoadedTextures.push_back(mat.brdfLUT);
-			}
 
 			if (m_Shaders[mat.material.shaderID].shader.needBRDFLUT)
 			{
@@ -2072,7 +2096,7 @@ namespace flex
 			renderObject->vertexBufferData = createInfo->vertexBufferData;
 			renderObject->materialID = createInfo->materialID;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
-			
+			renderObject->enableCulling = createInfo->enableCulling;
 			renderObject->name = createInfo->name;
 			renderObject->materialName = m_LoadedMaterials[renderObject->materialID].material.name;
 			renderObject->transform = createInfo->transform;
@@ -2297,6 +2321,15 @@ namespace flex
 			UNREFERENCED_PARAMETER(height);
 
 			m_SwapChainNeedsRebuilding = true;
+		}
+
+		void VulkanRenderer::SetRenderObjectVisible(RenderID renderID, bool visible)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				renderObject->visible = visible;
+			}
 		}
 
 		void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
@@ -2535,10 +2568,6 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(renderID);
-
-			//CreateDescriptorSet(renderID);
-			//CreateGraphicsPipeline(renderID);
-
 		}
 
 		DirectionalLightID VulkanRenderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
@@ -3392,6 +3421,9 @@ namespace flex
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject) return;
+			
+			if (!renderObject->vertexBufferData) return;
+
 			VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 			VulkanShader& shader = m_Shaders[material->material.shaderID];
 
@@ -3400,6 +3432,7 @@ namespace flex
 			pipelineCreateInfo.vertexAttributes = renderObject->vertexBufferData->Attributes;
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
+			pipelineCreateInfo.enableCulling = renderObject->enableCulling;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
 			pipelineCreateInfo.setDynamicStates = false;
 			pipelineCreateInfo.enabledColorBlending = false;
@@ -3495,7 +3528,7 @@ namespace flex
 			rasterizer.rasterizerDiscardEnable = VK_FALSE;
 			rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 			rasterizer.lineWidth = 1.0f;
-			rasterizer.cullMode = createInfo->cullMode;
+			rasterizer.cullMode = createInfo->enableCulling ? createInfo->cullMode : VK_CULL_MODE_NONE;
 			rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -4851,7 +4884,7 @@ namespace flex
 
 					for (VulkanRenderObject* renderObject : m_RenderObjects)
 					{
-						if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == i)
+						if (renderObject && renderObject->vertexBufferData && m_LoadedMaterials[renderObject->materialID].material.shaderID == i)
 						{
 							requiredMemory += renderObject->vertexBufferData->BufferSize;
 						}
@@ -4883,7 +4916,7 @@ namespace flex
 			glm::uint vertexBufferSize = 0;
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderID)
+				if (renderObject && renderObject->vertexBufferData && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderID)
 				{
 					renderObject->vertexOffset = vertexCount;
 
@@ -5600,6 +5633,8 @@ namespace flex
 				{ "brdf", shaderDirectory + "vk_brdf_vert.spv", shaderDirectory + "vk_brdf_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "background", shaderDirectory + "vk_background_vert.spv", shaderDirectory + "vk_background_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "deferred_combine", shaderDirectory + "vk_deferred_combine_vert.spv", shaderDirectory + "vk_deferred_combine_frag.spv", m_VulkanDevice->m_LogicalDevice },
+				//{ "deferred_combine_cubemap", shaderDirectory + "vk_deferred_combine_cubemap_vert.spv", shaderDirectory + "vk_deferred_combine_cubemap_frag.spv", m_VulkanDevice->m_LogicalDevice },
+				//{ "post_process", shaderDirectory + "vk_post_process_vert.spv", shaderDirectory + "vk_post_process_frag.spv", m_VulkanDevice->m_LogicalDevice },
 			};
 
 			// TODO: Specify vertex attributes expected here as well?
@@ -5791,6 +5826,33 @@ namespace flex
 			if (!GetShaderID("imgui", m_IGuiShaderID))
 			{
 				Logger::LogError("Failed to find imgui shader!");
+			}
+		}
+
+		void VulkanRenderer::GenerateSkybox(const GameContext& gameContext)
+		{
+			if (!m_SkyBoxMesh)
+			{
+				// TODO: FIXME: Clean this up
+				ShaderID skyboxShaderID = 0;
+				if (!GetShaderID("background", skyboxShaderID))
+				{
+					Logger::LogError("Ruh roh");
+				}
+				MaterialID skyboxMaterialID = 0;
+				for (size_t i = 0; i < m_LoadedMaterials.size(); ++i)
+				{
+					if (m_LoadedMaterials[i].material.shaderID == skyboxShaderID)
+					{
+						skyboxMaterialID = i;
+					}
+				}
+
+				m_SkyBoxMesh = new MeshPrefab(skyboxMaterialID, "Skybox Mesh");
+				m_SkyBoxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+				m_SkyBoxMesh->Initialize(gameContext);
+				// This object is just used as a framebuffer target, don't render it normally
+				GetRenderObject(m_SkyBoxMesh->GetRenderID())->visible = false;
 			}
 		}
 

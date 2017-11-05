@@ -15,6 +15,8 @@
 
 namespace flex
 {
+	class MeshPrefab;
+
 	namespace vk
 	{
 		class VulkanRenderer : public Renderer
@@ -98,7 +100,7 @@ namespace flex
 			void GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject);
 			void GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject);
-			void GenerateBRDFLUT(const GameContext& gameContext, VulkanRenderObject* renderObject);
+			void GenerateBRDFLUT(const GameContext& gameContext, VulkanTexture* brdfTexture);
 
 			RenderID GetFirstAvailableRenderID() const;
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
@@ -201,11 +203,12 @@ namespace flex
 			std::vector<const char*> GetRequiredExtensions() const;
 			bool CheckValidationLayerSupport() const;
 
-			void UpdateConstantUniformBuffers(const GameContext& gameContext, UniformOverrides const * overridenUniforms = nullptr);
+			void UpdateConstantUniformBuffers(const GameContext& gameContext, UniformOverrides const* overridenUniforms = nullptr);
 			void UpdateConstantUniformBuffer(const GameContext& gameContext, UniformOverrides const* overridenUniforms, size_t bufferIndex);
 			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
 			void LoadDefaultShaderCode();
+			void GenerateSkybox(const GameContext& gameContext);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix,
@@ -216,6 +219,8 @@ namespace flex
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::vector<VulkanMaterial> m_LoadedMaterials;
 
+			glm::vec2i m_BRDFSize;
+			VulkanTexture* m_BRDFTexture = nullptr;
 
 			FrameBuffer* offScreenFrameBuf = nullptr;
 			VkSampler colorSampler;
@@ -292,6 +297,7 @@ namespace flex
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			Transform m_gBufferQuadTransform;
 
+			MeshPrefab* m_SkyBoxMesh = nullptr;
 
 			VkClearColorValue m_ClearColor;
 
