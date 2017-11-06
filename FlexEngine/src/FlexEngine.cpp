@@ -311,13 +311,14 @@ namespace flex
 
 			m_GameContext.camera->Update(m_GameContext);
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
-			m_GameContext.inputManager->Update();
 			m_GameContext.window->Update(m_GameContext);
-			m_GameContext.inputManager->PostUpdate();
 
-			bool windowOpen = true;
-			ImGui::Begin("", &windowOpen);
+			static bool windowOpen = true;
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1)) windowOpen = !windowOpen;
+			if (windowOpen)
 			{
+				ImGui::Begin("Flex Engine", &windowOpen);
+
 				const std::string rendStr("Current renderer: " + m_RendererName);
 				ImGui::Text(rendStr.c_str());
 
@@ -422,8 +423,13 @@ namespace flex
 				}
 
 				m_GameContext.renderer->DrawImGuiItems(m_GameContext);
+
+				ImGui::End();
 			}
-			ImGui::End();
+
+			// TODO: Consolidate functions?
+			m_GameContext.inputManager->Update();
+			m_GameContext.inputManager->PostUpdate();
 
 			m_GameContext.renderer->Update(m_GameContext);
 
