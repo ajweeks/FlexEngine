@@ -1,7 +1,9 @@
 *.gif
 *.webm
 *.psd
+
 *.fbx
+*.mtl
 
 sh.exe.stackdump
 
