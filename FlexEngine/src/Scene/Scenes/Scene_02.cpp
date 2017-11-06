@@ -90,17 +90,17 @@ namespace flex
 		//brickMatInfo.normalTexturePath = RESOURCE_LOCATION + "textures/brick_n.png";
 		//const MaterialID brickMatID = gameContext.renderer->InitializeMaterial(gameContext, &brickMatInfo);
 
-		Renderer::MaterialCreateInfo cornellBoxMatInfo = {};
-		cornellBoxMatInfo.shaderName = "deferred_simple";
-		cornellBoxMatInfo.name = "Cornell Box";
-		const MaterialID cornellBoxMatID = gameContext.renderer->InitializeMaterial(gameContext, &cornellBoxMatInfo);
+		//Renderer::MaterialCreateInfo cornellBoxMatInfo = {};
+		//cornellBoxMatInfo.shaderName = "deferred_simple";
+		//cornellBoxMatInfo.name = "Cornell Box";
+		//const MaterialID cornellBoxMatID = gameContext.renderer->InitializeMaterial(gameContext, &cornellBoxMatInfo);
 
 
-		MeshPrefab* cornellBoxMesh = new MeshPrefab(cornellBoxMatID, "Cornell Box");
-		cornellBoxMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/CornellBox/CornellBox-01.fbx", true, true);
-		cornellBoxMesh->GetTransform().Scale(15.0f);
-		cornellBoxMesh->GetTransform().Rotate(0.0f, glm::radians(180.0f), 0.0f);
-		AddChild(gameContext, cornellBoxMesh);
+		//MeshPrefab* cornellBoxMesh = new MeshPrefab(cornellBoxMatID, "Cornell Box");
+		//cornellBoxMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/CornellBox/CornellBox-01.fbx", true, true);
+		//cornellBoxMesh->GetTransform().Scale(15.0f);
+		//cornellBoxMesh->GetTransform().Rotate(0.0f, glm::radians(180.0f), 0.0f);
+		//AddChild(gameContext, cornellBoxMesh);
 
 		//m_Grid = new MeshPrefab(colorMatID, "Grid");
 		//m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
@@ -125,65 +125,71 @@ namespace flex
 		//extraCerberus->GetTransform().Translate(10.0f, 18.0f, -5.0f);
 		//m_Cerberus->GetTransform().Rotate(0.0, -0.5f, 0.0f);
 
-		//const int sphereCountX = 7;
-		//const int sphereCountY = 2;
-		//const float sphereSpacing = 2.5f;
-		//const glm::vec3 offset = glm::vec3(-sphereCountX / 2 * sphereSpacing, -sphereCountY / 2 * sphereSpacing + 4.0f, 0.0f);
-		//const size_t sphereCount = sphereCountX * sphereCountY;
-		//m_Spheres.resize(sphereCount);
-		//for (size_t i = 0; i < sphereCount; ++i)
-		//{
-		//	int x = i % sphereCountX;
-		//	int y = int(i / sphereCountX);
+		const int sphereCountX = 3;
+		const int sphereCountY = 3;
+		const int sphereCountZ = 3;
+		const float sphereSpacing = 3.0f;
+		const glm::vec3 offset = glm::vec3(
+			-sphereCountX / 2 * sphereSpacing, 
+			-sphereCountY / 2 * sphereSpacing + 4.0f, 
+			-sphereCountZ / 2 * sphereSpacing);
+		const size_t sphereCount = sphereCountX * sphereCountY * sphereCountZ;
+		m_Spheres.resize(sphereCount);
+		for (size_t i = 0; i < sphereCount; ++i)
+		{
+			int x = i % sphereCountX;
+			int y = int(i / sphereCountX) % sphereCountY;
+			int z = int(i / (sphereCountX * sphereCountY));
 
-		//	const std::string iStr = std::to_string(i);
+			const std::string iStr = std::to_string(i);
 
-		//	MaterialID matID;
+			MaterialID matID;
 
-		//	if ((x + y) % 2 == 0)
-		//	{
-		//		Renderer::MaterialCreateInfo pbrMatInfo = {};
-		//		pbrMatInfo.shaderName = "pbr";
-		//		pbrMatInfo.name = "PBR simple " + iStr;
-		//		pbrMatInfo.constAlbedo = glm::vec3(0.98f, 0.24f, 0.15f);
-		//		pbrMatInfo.constMetallic = 0.98f;
-		//		pbrMatInfo.constRoughness = glm::clamp(float(x) / (sphereCountX - 1), 0.05f, 0.9f);
-		//		pbrMatInfo.constAO = 1.0f;
-		//		matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-		//	}
-		//	else
-		//	{
-		//		Renderer::MaterialCreateInfo pbrMatInfo = {};
-		//		pbrMatInfo.shaderName = "pbr";
-		//		pbrMatInfo.name = "PBR simple " + iStr;
-		//		pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.95f, 0.95f);
-		//		pbrMatInfo.constMetallic = 1.0f;
-		//		pbrMatInfo.constRoughness = glm::clamp(float(x) / (sphereCountX - 1), 0.05f, 0.9f);
-		//		pbrMatInfo.constAO = 1.0f;
-		//		matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-		//	}
+			if ((x + y + z) % 2 == 0)
+			{
+				Renderer::MaterialCreateInfo pbrMatInfo = {};
+				pbrMatInfo.shaderName = "pbr";
+				pbrMatInfo.name = "PBR " + iStr;
+				pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.5f);
+				pbrMatInfo.constMetallic = 0.98f;
+				pbrMatInfo.constRoughness = glm::clamp(float(x) / (sphereCountX - 1) * 0.25f, 0.05f, 0.9f);
+				pbrMatInfo.constAO = 1.0f;
+				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+			}
+			else
+			{
+				Renderer::MaterialCreateInfo pbrMatInfo = {};
+				pbrMatInfo.shaderName = "pbr";
+				pbrMatInfo.name = "PBR " + iStr;
+				//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.95f, 0.95f); // Chrome
+				pbrMatInfo.constAlbedo = glm::vec3(1.0f, .71f, 0.29f); // Gold
+				pbrMatInfo.constMetallic = 1.0f;
+				pbrMatInfo.constRoughness = glm::clamp(float(x) / (sphereCountX - 1) * 0.25f, 0.05f, 0.9f);
+				pbrMatInfo.constAO = 1.0f;
+				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+			}
 
-		//	m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
+			m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
 
-		//	m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-		//	m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, 0.0f));
-		//	AddChild(gameContext, m_Spheres[i]);
-		//}
+			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
+			m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, z * sphereSpacing));
+			AddChild(gameContext, m_Spheres[i]);
+		}
 
-		Renderer::MaterialCreateInfo pbrMatInfo = {};
-		pbrMatInfo.shaderName = "pbr";
-		pbrMatInfo.name = "White PBR";
-		pbrMatInfo.constAlbedo = glm::vec3(0.95, 0.95, 0.95f);
-		pbrMatInfo.constMetallic = 0.0f;
-		pbrMatInfo.constRoughness = 0.95f;
-		pbrMatInfo.constAO = 1.0f;
-		MaterialID whiteSphereMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+		//Renderer::MaterialCreateInfo pbrMatInfo = {};
+		//pbrMatInfo.shaderName = "pbr";
+		//pbrMatInfo.name = "White PBR";
+		//pbrMatInfo.constAlbedo = glm::vec3(0.95, 0.95, 0.95f);
+		//pbrMatInfo.constMetallic = 0.0f;
+		//pbrMatInfo.constRoughness = 0.95f;
+		//pbrMatInfo.constAO = 1.0f;
+		//MaterialID whiteSphereMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
-		MeshPrefab* whiteSphere = new MeshPrefab(whiteSphereMatID, "White sphere");
-		whiteSphere->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-		whiteSphere->GetTransform().Translate(0.0, 19.0, 0.0f);
-		whiteSphere->GetTransform().Scale(3.5f);
-		AddChild(gameContext, whiteSphere);
+		//MeshPrefab* whiteSphere = new MeshPrefab(whiteSphereMatID, "White sphere");
+		//whiteSphere->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
+		//whiteSphere->GetTransform().Translate(0.0, 19.0, 0.0f);
+		//whiteSphere->GetTransform().Scale(3.5f);
+		//AddChild(gameContext, whiteSphere);
 
 		// Reflection probes
 		// Generate last so it can use generated skybox maps
@@ -231,7 +237,7 @@ namespace flex
 		{
 			const float moveSpeed = 0.075f;
 
-		const glm::vec3 pPos = gameContext.camera->GetPosition();
+			const glm::vec3 pPos = gameContext.camera->GetPosition();
 			startCamPos.z = pPos.z;
 			const glm::vec2 mouseMove = gameContext.inputManager->GetMousePosition() - startMousePos;
 			//Logger::LogInfo(std::to_string(mouseMove.x) + " " + std::to_string(mouseMove.y));
