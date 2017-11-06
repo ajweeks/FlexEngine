@@ -186,11 +186,11 @@ namespace flex
 
 	void FlexEngine::LoadDefaultScenes()
 	{
-		//TestScene* pDefaultScene = new TestScene(m_GameContext);
-		//m_SceneManager->AddScene(pDefaultScene, m_GameContext);
-
 		Scene_02* scene02 = new Scene_02(m_GameContext);
 		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
+
+		//TestScene* pDefaultScene = new TestScene(m_GameContext);
+		//m_GameContext.sceneManager->AddScene(pDefaultScene, m_GameContext);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
@@ -273,23 +273,15 @@ namespace flex
 				continue;
 			}
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET) ||
-				m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
-				const std::string currentSceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
-				m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
-				if (currentSceneName.compare("TestScene") == 0)
-				{
-					Scene_02* newScene = new Scene_02(m_GameContext);
-					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
-				}
-				else
-				{
-					TestScene* newScene = new TestScene(m_GameContext);
-					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
-				}
-
-				m_GameContext.renderer->PostInitialize(m_GameContext);
+				m_GameContext.sceneManager->SetNextSceneActive();
+			
+				//m_GameContext.renderer->PostInitialize(m_GameContext);
+			}
+			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
+			{
+				m_GameContext.sceneManager->SetPreviousSceneActive();
 			}
 
 			// TODO: Figure out better
@@ -329,66 +321,104 @@ namespace flex
 				const std::string rendStr("Current renderer: " + m_RendererName);
 				ImGui::Text(rendStr.c_str());
 
-				if (ImGui::CollapsingHeader("Renderer settings"))
+				if (ImGui::TreeNode("Renderer settings"))
 				{
 					std::string vsyncEnabledStr = "VSync " + std::string(m_VSyncEnabled ? "enabled" : "disabled");
 					ImGui::Checkbox(vsyncEnabledStr.c_str(), &m_VSyncEnabled);
 					m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
 
-					if (ImGui::TreeNode("Camera"))
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Camera"))
+				{
+					glm::vec3 camPos = m_GameContext.camera->GetPosition();
+					ImGui::DragFloat3("Position", &camPos.x, 0.1f);
+					m_GameContext.camera->SetPosition(camPos);
+
+					glm::vec2 camYawPitch;
+					camYawPitch[0] = glm::degrees(m_GameContext.camera->GetYaw());
+					camYawPitch[1] = glm::degrees(m_GameContext.camera->GetPitch());
+					ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f);
+					m_GameContext.camera->SetYaw(glm::radians(camYawPitch[0]));
+					m_GameContext.camera->SetPitch(glm::radians(camYawPitch[1]));
+
+					float camFOV = glm::degrees(m_GameContext.camera->GetFOV());
+					ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f);
+					m_GameContext.camera->SetFOV(glm::radians(camFOV));
+
+					if (ImGui::Button("Reset orientation"))
 					{
-						glm::vec3 camPos = m_GameContext.camera->GetPosition();
-						ImGui::DragFloat3("Position", &camPos.x, 0.1f);
-						m_GameContext.camera->SetPosition(camPos);
-
-						glm::vec2 camYawPitch;
-						camYawPitch[0] = glm::degrees(m_GameContext.camera->GetYaw());
-						camYawPitch[1] = glm::degrees(m_GameContext.camera->GetPitch());
-						ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f);
-						m_GameContext.camera->SetYaw(glm::radians(camYawPitch[0]));
-						m_GameContext.camera->SetPitch(glm::radians(camYawPitch[1]));
-
-						float camFOV = glm::degrees(m_GameContext.camera->GetFOV());
-						ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f);
-						m_GameContext.camera->SetFOV(glm::radians(camFOV));
-
-						if (ImGui::Button("Reset orientation"))
-						{
-							m_GameContext.camera->ResetOrientation();
-						}
-
-						ImGui::SameLine();
-						if (ImGui::Button("Reset position"))
-						{
-							m_GameContext.camera->ResetPosition();
-						}
-
-						ImGui::TreePop();
+						m_GameContext.camera->ResetOrientation();
 					}
 
-					if (ImGui::TreeNode("Logging"))
+					ImGui::SameLine();
+					if (ImGui::Button("Reset position"))
 					{
-						bool suppressInfo = Logger::GetSuppressInfo();
-						int suppressedInfoCount = Logger::GetSuppressedInfoCount();
-						bool suppressWarnings = Logger::GetSuppressWarnings();
-						int suppressedWarningCount = Logger::GetSuppressedWarningCount();
-						bool suppressErrors = Logger::GetSuppressErrors();
-						int suppressedErrorCount = Logger::GetSuppressedErrorCount();
-
-						ImGui::Checkbox("Suppress Info", &suppressInfo);
-						Logger::SetSuppressInfo(suppressInfo);
-						ImGui::Text(std::string("Suppressed info count: " + std::to_string(suppressedInfoCount)).c_str());
-
-						ImGui::Checkbox("Suppress Warnings", &suppressWarnings);
-						Logger::SetSuppressWarnings(suppressWarnings);
-						ImGui::Text(std::string("Suppressed warning count: " + std::to_string(suppressedWarningCount)).c_str());
-
-						ImGui::Checkbox("Suppress Errors", &suppressErrors);
-						Logger::SetSuppressErrors(suppressErrors);
-						ImGui::Text(std::string("Suppressed error count: " + std::to_string(suppressedErrorCount)).c_str());
-
-						ImGui::TreePop();
+						m_GameContext.camera->ResetPosition();
 					}
+
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Logging"))
+				{
+					bool suppressInfo = Logger::GetSuppressInfo();
+					int suppressedInfoCount = Logger::GetSuppressedInfoCount();
+					bool suppressWarnings = Logger::GetSuppressWarnings();
+					int suppressedWarningCount = Logger::GetSuppressedWarningCount();
+					bool suppressErrors = Logger::GetSuppressErrors();
+					int suppressedErrorCount = Logger::GetSuppressedErrorCount();
+
+					const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")");
+					ImGui::Checkbox(infoStr.c_str(), &suppressInfo);
+					Logger::SetSuppressInfo(suppressInfo);
+
+					const std::string warningStr("Suppress Warnings (" + std::to_string(suppressedWarningCount) + ")");
+					ImGui::Checkbox(warningStr.c_str(), &suppressWarnings);
+					Logger::SetSuppressWarnings(suppressWarnings);
+
+					const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")");
+					ImGui::Checkbox(errorStr.c_str(), &suppressErrors);
+					Logger::SetSuppressErrors(suppressErrors);
+
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Scenes"))
+				{
+					if (ImGui::Button("<")) // Enter previous scene
+					{
+						m_GameContext.sceneManager->SetPreviousSceneActive();
+					}
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						ImGui::Text("Previous scene");
+						ImGui::EndTooltip();
+					}
+
+					ImGui::SameLine();
+					
+					const glm::uint currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
+					const glm::uint sceneCount = m_GameContext.sceneManager->GetSceneCount();
+					const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() + 
+						" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
+					ImGui::Text(currentSceneStr.c_str());
+
+					ImGui::SameLine();
+					if (ImGui::Button(">"))
+					{
+						m_GameContext.sceneManager->SetNextSceneActive();
+					}
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						ImGui::Text("Next scene");
+						ImGui::EndTooltip();
+					}
+
+					ImGui::TreePop();
 				}
 
 				m_GameContext.renderer->DrawImGuiItems(m_GameContext);

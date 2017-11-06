@@ -1206,6 +1206,8 @@ namespace flex
 
 		void VulkanRenderer::GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
@@ -2198,13 +2200,11 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiItems(const GameContext& gameContext)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			// TODO: Consolidate renderer ImGui code
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				const std::string sceneCountStr("Scene count: " + std::to_string(gameContext.sceneManager->GetSceneCount()));
-				ImGui::Text(sceneCountStr.c_str());
-				const std::string currentSceneStr("Current scene: " + gameContext.sceneManager->CurrentScene()->GetName());
-				ImGui::Text(currentSceneStr.c_str());
 				const glm::uint objectCount = GetRenderObjectCount();
 				const glm::uint objectCapacity = GetRenderObjectCapacity();
 				const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));

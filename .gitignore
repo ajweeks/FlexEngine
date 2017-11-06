@@ -4,6 +4,7 @@
 
 *.fbx
 *.mtl
+*.max
 
 sh.exe.stackdump
 

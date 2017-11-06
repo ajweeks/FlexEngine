@@ -26,6 +26,7 @@ namespace flex
 		void SetNextSceneActive();
 		void SetPreviousSceneActive();
 
+		glm::uint CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
 		glm::uint GetSceneCount() const;
 

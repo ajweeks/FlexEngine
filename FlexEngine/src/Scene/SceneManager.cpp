@@ -115,6 +115,11 @@ namespace flex
 		else --m_CurrentSceneIndex;
 	}
 
+	glm::uint SceneManager::CurrentSceneIndex() const
+	{
+		return m_CurrentSceneIndex;
+	}
+
 	BaseScene* SceneManager::CurrentScene() const
 	{
 		return m_Scenes[m_CurrentSceneIndex];

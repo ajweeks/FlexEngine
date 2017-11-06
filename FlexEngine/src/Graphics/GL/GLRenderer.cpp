@@ -802,8 +802,8 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			// TODO: Make cyclable at runtime
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath =
-				//RESOURCE_LOCATION + "textures/hdri/rustig_koppie_8k.hdr";
-				RESOURCE_LOCATION + "textures/hdri/wobbly_bridge_8k.hdr";
+				RESOURCE_LOCATION + "textures/hdri/rustig_koppie_1k.hdr";
+				//RESOURCE_LOCATION + "textures/hdri/wobbly_bridge_8k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
@@ -2836,15 +2836,13 @@ namespace flex
 
 		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				const std::string sceneCountStr("Scene count: " + std::to_string(gameContext.sceneManager->GetSceneCount()));
-				ImGui::Text(sceneCountStr.c_str());
-				const std::string currentSceneStr("Current scene: " + gameContext.sceneManager->CurrentScene()->GetName());
-				ImGui::Text(currentSceneStr.c_str());
 				const glm::uint objectCount = GetRenderObjectCount();
 				const glm::uint objectCapacity = GetRenderObjectCapacity();
-				const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
+				const std::string objectCountStr("Render object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
 				ImGui::Text(objectCountStr.c_str());
 
 				if (ImGui::TreeNode("Render Objects"))
