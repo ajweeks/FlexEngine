@@ -33,8 +33,12 @@ namespace flex
 		void Translate(glm::vec3 translation);
 		void SetPosition(glm::vec3 position);
 		glm::vec3 GetPosition() const;
+
 		void SetViewDirection(float yawRad, float pitchRad);
-		glm::vec3 GetViewDirection() const;
+
+		glm::vec3 GetRight() const;
+		glm::vec3 GetUp() const;
+		glm::vec3 GetForward() const;
 
 		void ResetPosition();
 		void ResetOrientation();

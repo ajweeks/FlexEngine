@@ -15,7 +15,7 @@ namespace flex
 		m_Position(glm::vec3(0.0f)),
 		m_MoveSpeed(50.0f),
 		m_MoveSpeedFastMultiplier(3.5f),
-		m_MoveSpeedSlowMultiplier(0.1f),
+		m_MoveSpeedSlowMultiplier(0.05f),
 		m_ScrollDollySpeed(2.0f),
 		m_DragDollySpeed(0.1f),
 		m_RotationSpeed(0.0011f),
@@ -214,7 +214,17 @@ namespace flex
 		m_Pitch = pitchRad;
 	}
 
-	glm::vec3 FreeCamera::GetViewDirection() const
+	glm::vec3 FreeCamera::GetRight() const
+	{
+		return m_Right;
+	}
+
+	glm::vec3 FreeCamera::GetUp() const
+	{
+		return m_Up;
+	}
+
+	glm::vec3 FreeCamera::GetForward() const
 	{
 		return m_Forward;
 	}

@@ -205,16 +205,48 @@ namespace flex
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
-		float moveSpeed = 1.25f;
-		float hDist = 10.0f;
-		float vDist = 8.0f;
+		// Circle
+		//float moveSpeed = 1.25f;
+		//float hDist = 10.0f;
+		//float vDist = 8.0f;
+
+		//const glm::vec3 pPos = gameContext.camera->GetPosition();
+
+		//gameContext.camera->SetPosition({
+		//	cos(gameContext.elapsedTime * moveSpeed) * hDist + 0.0f, 
+		//	sin(gameContext.elapsedTime * moveSpeed) * vDist + 10.0f,
+		//	pPos.z });
+		//gameContext.camera->LookAt(glm::vec3(0.0f, 12.5f, 0.0f));
+
+		// Orbit
+		static glm::vec3 startCamPos(0.0f);
+		static glm::vec2 startMousePos(0.0f);
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_CONTROL))
+		{
+			startMousePos = gameContext.inputManager->GetMousePosition();
+			startCamPos = gameContext.camera->GetPosition();
+			//Logger::LogInfo(std::to_string(startMousePos.x) + " " + std::to_string(startMousePos.y));
+		}
+		else if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+		{
+			const float moveSpeed = 0.075f;
 
 		const glm::vec3 pPos = gameContext.camera->GetPosition();
+			startCamPos.z = pPos.z;
+			const glm::vec2 mouseMove = gameContext.inputManager->GetMousePosition() - startMousePos;
+			//Logger::LogInfo(std::to_string(mouseMove.x) + " " + std::to_string(mouseMove.y));
 
-		gameContext.camera->SetPosition({
-			cos(gameContext.elapsedTime * moveSpeed) * hDist + 0.0f, 
-			sin(gameContext.elapsedTime * moveSpeed) * vDist + 10.0f,
-			pPos.z });
-		gameContext.camera->LookAt(glm::vec3(0.0f, 12.5f, 0.0f));
+			const glm::uvec2 windowSize = gameContext.window->GetSize();
+
+			const glm::vec3 camRight = gameContext.camera->GetRight();
+			const glm::vec3 camUp = gameContext.camera->GetUp();
+			const glm::vec3 camForward = gameContext.camera->GetForward();
+
+			gameContext.camera->SetPosition(pPos + 
+				camRight * (mouseMove.x / windowSize.x * moveSpeed) +
+				camUp  * (-mouseMove.y / windowSize.y * moveSpeed) +
+				camForward * (0.0f));
+			gameContext.camera->LookAt(glm::vec3(0.0f, 4.0f, 0.0f));
+		}
 	}
 } // namespace flex
