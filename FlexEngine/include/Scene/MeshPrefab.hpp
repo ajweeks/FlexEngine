@@ -45,7 +45,7 @@ namespace flex
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void Destroy(const GameContext& gameContext) override;
 
-		void SetMaterialID(MaterialID materialID);
+		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
 		void SetUVScale(float uScale, float vScale);
 
 	private:
@@ -56,6 +56,8 @@ namespace flex
 		};
 		static bool GetLoadedMesh(const std::string& filePath, const aiScene** scene);
 		static std::map<std::string, LoadedMesh> m_LoadedMeshes;
+
+		bool m_Initialized = false;
 
 		MaterialID m_MaterialID;
 

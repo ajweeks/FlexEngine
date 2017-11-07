@@ -143,6 +143,7 @@ namespace flex
 			bool generateIrradianceSampler;
 			glm::uvec2 generatedIrradianceCubemapSize;
 			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
+			std::string environmentMapPath;
 
 			bool enableBRDFLUT;
 
@@ -221,6 +222,7 @@ namespace flex
 			bool enableIrradianceSampler;
 			bool generateIrradianceSampler;
 			glm::uvec2 irradianceSamplerSize;
+			std::string environmentMapPath;
 
 			bool enablePrefilteredMap;
 			bool generatePrefilteredMap;
@@ -331,6 +333,9 @@ namespace flex
 
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
 			int stride, void* pointer) = 0;
+
+		virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) = 0;
+		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
 
 		virtual void Destroy(RenderID renderID) = 0;
 

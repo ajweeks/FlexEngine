@@ -27,6 +27,13 @@ namespace flex
 		MeshPrefab* m_Arisaka = nullptr;
 		MeshPrefab* m_Cerberus = nullptr;
 
+		MaterialID m_SkyboxMatID_1;
+		MaterialID m_SkyboxMatID_2;
+		MaterialID m_SkyboxMatID_3;
+		MaterialID m_SkyboxMatID_4;
+		MaterialID m_SkyboxMatID_5;
+		int m_CurrentSkyboxMatID;
+
 		MeshPrefab* m_Skybox = nullptr;
 		MeshPrefab* m_Grid = nullptr;
 

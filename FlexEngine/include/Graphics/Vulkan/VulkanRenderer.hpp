@@ -56,6 +56,9 @@ namespace flex
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
 				Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
+			
+			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
+			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual void Destroy(RenderID renderID) override;
 

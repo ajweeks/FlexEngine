@@ -2367,6 +2367,19 @@ namespace flex
 			UNREFERENCED_PARAMETER(pointer);
 		}
 
+		void VulkanRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID)
+		{
+			UNREFERENCED_PARAMETER(skyboxMaterialID);
+			// TODO: FIXME: IMPLEMENT:
+		}
+
+		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
+		{
+			UNREFERENCED_PARAMETER(renderID);
+			UNREFERENCED_PARAMETER(materialID);
+			// TODO: FIXME: IMPLEMENT:
+		}
+
 		void VulkanRenderer::Destroy(RenderID renderID)
 		{
 			for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)

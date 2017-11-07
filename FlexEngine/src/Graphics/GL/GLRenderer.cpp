@@ -421,6 +421,8 @@ namespace flex
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
 
+			mat.material.environmentMapPath = createInfo->environmentMapPath;
+
 			mat.material.generateReflectionProbeMaps = createInfo->generateReflectionProbeMaps;
 
 			if (m_Shaders[mat.material.shaderID].shader.needIrradianceSampler)
@@ -768,15 +770,15 @@ namespace flex
 			{
 				Logger::LogInfo("Capturing reflection probe");
 				CaptureSceneToCubemap(gameContext, renderID);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
 				Logger::LogInfo("Done");
 
 				// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
 				Logger::LogInfo("Capturing reflection probe");
 				CaptureSceneToCubemap(gameContext, renderID);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
 				Logger::LogInfo("Done");
 
 				// Display captured cubemap as skybox
@@ -785,13 +787,13 @@ namespace flex
 			}
 			else if (m_Materials[renderObject->materialID].material.generateIrradianceSampler)
 			{
-				GenerateCubemapFromHDREquirectangular(gameContext, renderObject);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+				GenerateCubemapFromHDREquirectangular(gameContext, renderObject->materialID, m_Materials[renderObject->materialID].material.environmentMapPath);
+				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
 			}
 		}
 
-		void GLRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject)
+		void GLRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath)
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
@@ -801,13 +803,7 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			// TODO: Make cyclable at runtime
-			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath =
-				//RESOURCE_LOCATION + "textures/hdri/rustig_koppie_1k.hdr";
-				//RESOURCE_LOCATION + "textures/hdri/wobbly_bridge_8k.hdr";
-				//RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
-				RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
-				//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
-				//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
+			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
 			GLShader* equirectangularToCubemapShader = &m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID];
@@ -870,7 +866,7 @@ namespace flex
 				glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
 				CheckGLErrorMessages();
 
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].cubemapSamplerID, 0);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
 				CheckGLErrorMessages();
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -881,7 +877,7 @@ namespace flex
 			}
 
 			// Generate mip maps for generated cubemap
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[renderObject->materialID].cubemapSamplerID);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 			glUseProgram(0);
@@ -894,7 +890,7 @@ namespace flex
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject)
+		void GLRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
@@ -920,7 +916,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[renderObject->materialID].cubemapSamplerID);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
@@ -946,8 +942,8 @@ namespace flex
 			unsigned int maxMipLevels = 5;
 			for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
 			{
-				unsigned int mipWidth = (unsigned int)(m_Materials[renderObject->materialID].material.prefilteredMapSize.x * pow(0.5f, mip));
-				unsigned int mipHeight = (unsigned int)(m_Materials[renderObject->materialID].material.prefilteredMapSize.y * pow(0.5f, mip));
+				unsigned int mipWidth = (unsigned int)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.x * pow(0.5f, mip));
+				unsigned int mipHeight = (unsigned int)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.y * pow(0.5f, mip));
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
@@ -966,7 +962,7 @@ namespace flex
 					CheckGLErrorMessages();
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].prefilteredMapSamplerID, mip);
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].prefilteredMapSamplerID, mip);
 					CheckGLErrorMessages();
 					
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
@@ -1082,7 +1078,7 @@ namespace flex
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject)
+		void GLRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
@@ -1110,10 +1106,10 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[renderObject->materialID].cubemapSamplerID);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			CheckGLErrorMessages();
 
-			glm::uvec2 cubemapSize = m_Materials[renderObject->materialID].material.irradianceSamplerSize;
+			glm::uvec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
@@ -1145,7 +1141,7 @@ namespace flex
 				CheckGLErrorMessages();
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[renderObject->materialID].irradianceSamplerID, 0);
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].irradianceSamplerID, 0);
 				CheckGLErrorMessages();
 
 				// Should be drawing cube here, not object (relfection probe's sphere is being drawn
@@ -1394,8 +1390,8 @@ namespace flex
 					{
 						Logger::LogInfo("Capturing reflection probe");
 						CaptureSceneToCubemap(gameContext, renderObject->renderID);
-						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
-						GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
+						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
 						Logger::LogInfo("Done");
 					}
 				}
@@ -2583,22 +2579,7 @@ namespace flex
 		{
 			if (!m_SkyBoxMesh)
 			{
-				// TODO: FIXME: Clean this up
-				ShaderID skyboxShaderID = 0;
-				if (!GetShaderID("background", skyboxShaderID))
-				{
-					Logger::LogError("Ruh roh");
-				}
-				MaterialID skyboxMaterialID = 0;
-				for (size_t i = 0; i < m_Materials.size(); ++i)
-				{
-					if (m_Materials[i].material.shaderID == skyboxShaderID)
-					{
-						skyboxMaterialID = i;
-					}
-				}
-
-				m_SkyBoxMesh = new MeshPrefab(skyboxMaterialID, "Skybox Mesh");
+				m_SkyBoxMesh = new MeshPrefab(m_SkyBoxMaterialID, "Skybox Mesh");
 				m_SkyBoxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 				m_SkyBoxMesh->Initialize(gameContext);
 				// This object is just used as a framebuffer target, don't render it normally
@@ -2742,6 +2723,33 @@ namespace flex
 			glBindVertexArray(0);
 
 			glUseProgram(last_program);
+		}
+
+		void GLRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID)
+		{
+			assert(skyboxMaterialID > 0 && skyboxMaterialID < m_Materials.size());
+
+			m_SkyBoxMaterialID = skyboxMaterialID;
+
+			for (glm::uint i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				GLRenderObject* renderObject = GetRenderObject(i);
+				if (renderObject && m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+				{
+					GLMaterial* mat = &m_Materials[renderObject->materialID];
+					mat->irradianceSamplerID = m_Materials[m_SkyBoxMaterialID].irradianceSamplerID;
+					mat->prefilteredMapSamplerID = m_Materials[m_SkyBoxMaterialID].prefilteredMapSamplerID;
+				}
+			}
+		}
+
+		void GLRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
+		{
+			GLRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				renderObject->materialID = materialID;
+			}
 		}
 
 		void GLRenderer::Destroy(RenderID renderID)

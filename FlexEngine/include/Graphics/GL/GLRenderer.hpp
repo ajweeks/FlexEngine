@@ -52,6 +52,9 @@ namespace flex
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
 				Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
+			
+			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
+			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual void Destroy(RenderID renderID) override;
 
@@ -74,9 +77,9 @@ namespace flex
 			void GenerateSkybox(const GameContext& gameContext);
 			void GenerateGBuffer(const GameContext& gameContext);
 
-			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, GLRenderObject* renderObject);
-			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
-			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, GLRenderObject* renderObject);
+			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
+			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
+			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
 			void GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
@@ -193,6 +196,7 @@ namespace flex
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
 
+			MaterialID m_SkyBoxMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;

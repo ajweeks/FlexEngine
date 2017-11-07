@@ -9,7 +9,7 @@ namespace flex
 	class ReflectionProbe : public GameObject
 	{
 	public:
-		ReflectionProbe();
+		ReflectionProbe(bool visible = true);
 		~ReflectionProbe();
 
 		virtual void Initialize(const GameContext& gameContext) override;
@@ -17,10 +17,13 @@ namespace flex
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void Destroy(const GameContext& gameContext) override;
 
+		void SetSphereVisible(bool visible, const GameContext& gameContext);
+
 	private:
 		MeshPrefab* m_SphereMesh = nullptr; // The object visible in the scene
 		GameObject* m_Capture = nullptr; // The object doing the capturing
-		RenderID m_CaptureRenderID;
+
+		bool m_Visible;
 
 		// bool enabled, ivec4 influenceBoundingBox, bool update (float updateFrequency?), ...
 

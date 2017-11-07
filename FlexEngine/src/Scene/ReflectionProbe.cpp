@@ -7,7 +7,8 @@
 
 namespace flex
 {
-	ReflectionProbe::ReflectionProbe()
+	ReflectionProbe::ReflectionProbe(bool visible) :
+		m_Visible(visible)
 	{
 	}
 
@@ -54,7 +55,11 @@ namespace flex
 		m_SphereMesh = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe");
 		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 		AddChild(m_SphereMesh);
-		
+		if (!m_Visible)
+		{
+			gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), m_Visible);
+		}
+
 		m_Capture = new GameObject();
 		Renderer::RenderObjectCreateInfo captuerObjectCreateInfo = {};
 		captuerObjectCreateInfo.vertexBufferData = nullptr;
@@ -62,9 +67,9 @@ namespace flex
 		captuerObjectCreateInfo.name = "Reflection probe capture object";
 		captuerObjectCreateInfo.transform = &m_Transform;
 		
-		m_CaptureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captuerObjectCreateInfo);
-		m_Capture->SetRenderID(m_CaptureRenderID);
-		gameContext.renderer->SetRenderObjectVisible(m_CaptureRenderID, false);
+		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captuerObjectCreateInfo);
+		m_Capture->SetRenderID(captureRenderID);
+		gameContext.renderer->SetRenderObjectVisible(captureRenderID, false);
 
 		AddChild(m_Capture);
 	}
@@ -85,5 +90,11 @@ namespace flex
 	void ReflectionProbe::Destroy(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	void ReflectionProbe::SetSphereVisible(bool visible, const GameContext& gameContext)
+	{
+		m_Visible = visible;
+		gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), visible);
 	}
 }

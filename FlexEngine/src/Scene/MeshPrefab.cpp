@@ -220,7 +220,9 @@ namespace flex
 		gameContext.renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::TRIANGLE_LIST);
 
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
-		
+
+		m_Initialized = true;
+
 		return true;
 	}
 
@@ -765,6 +767,8 @@ namespace flex
 		gameContext.renderer->SetTopologyMode(m_RenderID, topologyMode);
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
 
+		m_Initialized = true;
+
 		return true;
 	}
 
@@ -788,9 +792,13 @@ namespace flex
 		gameContext.renderer->Destroy(m_RenderID);
 	}
 
-	void MeshPrefab::SetMaterialID(MaterialID materialID)
+	void MeshPrefab::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
 	{
 		m_MaterialID = materialID;
+		if (m_Initialized)
+		{
+			gameContext.renderer->SetRenderObjectMaterialID(m_RenderID, materialID);
+		}
 	}
 
 	void MeshPrefab::SetUVScale(float uScale, float vScale)
