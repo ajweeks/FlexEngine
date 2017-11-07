@@ -252,7 +252,7 @@ namespace flex
 				camRight * (mouseMove.x / windowSize.x * moveSpeed) +
 				camUp  * (-mouseMove.y / windowSize.y * moveSpeed) +
 				camForward * (0.0f));
-			gameContext.camera->LookAt(glm::vec3(0.0f, 4.0f, 0.0f));
+			gameContext.camera->LookAt(glm::vec3(0.0f, 4.0f, 0.0f), gameContext.deltaTime * 5.0f);
 		}
 	}
 } // namespace flex

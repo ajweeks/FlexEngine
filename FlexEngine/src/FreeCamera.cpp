@@ -7,6 +7,7 @@
 
 #include "Logger.hpp"
 #include "Window/Window.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -47,7 +48,7 @@ namespace flex
 			m_Yaw += look.x * m_RotationSpeed;
 			m_Pitch += look.y * m_RotationSpeed;
 
-			float pitchLimit = PI - 0.017f;
+			float pitchLimit = PI - 0.02f;
 			if (m_Pitch > pitchLimit) m_Pitch = pitchLimit;
 			if (m_Pitch < -pitchLimit) m_Pitch = -pitchLimit;
 		}
@@ -161,16 +162,22 @@ namespace flex
 		return m_Proj;
 	}
 
-	void FreeCamera::LookAt(glm::vec3 point)
+	void FreeCamera::LookAt(glm::vec3 point, float speed)
 	{
-		glm::vec3 dPos = point - m_Position;
+		glm::vec3 dPos = glm::normalize(point - m_Position);
 		glm::vec3 dDir = glm::normalize(dPos);
+
+		glm::vec3 targetRight = glm::cross(dPos, m_Up);
+		glm::vec3 targetForward = glm::cross(targetRight, m_Up);
+
+		//float dYaw = glm::acos(glm::dot(glm::vec2(dPos.x, dPos.z), glm::vec2(m_Forward.x, m_Forward.z)));
+		//float dPitch = glm::dot(glm::vec2(dPos.y, dPos.x), glm::vec2(m_Forward.y, m_Forward.x));
 
 		const float targetYaw = glm::atan(dDir.z, dDir.x);
 		const float targetPitch = glm::atan(dDir.y, dDir.z);
 
-		m_Yaw = targetYaw;
-		m_Pitch = targetPitch;
+		m_Yaw = Lerp(m_Yaw, targetYaw, glm::clamp(speed, 0.0f, 1.0f));
+		m_Pitch = Lerp(m_Pitch, targetPitch, glm::clamp(speed, 0.0f, 1.0f));
 	}
 
 	void FreeCamera::SetMoveSpeed(float moveSpeed)
