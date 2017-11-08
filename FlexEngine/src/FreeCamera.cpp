@@ -15,10 +15,11 @@ namespace flex
 		m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
 		m_Position(glm::vec3(0.0f)),
 		m_MoveSpeed(50.0f),
+		m_PanSpeed(10.0f),
+		m_DragDollySpeed(0.1f),
+		m_ScrollDollySpeed(2.0f),
 		m_MoveSpeedFastMultiplier(3.5f),
 		m_MoveSpeedSlowMultiplier(0.05f),
-		m_ScrollDollySpeed(2.0f),
-		m_DragDollySpeed(0.1f),
 		m_RotationSpeed(0.0011f),
 		m_View(glm::mat4(0.0f)),
 		m_Proj(glm::mat4(0.0f)),
@@ -90,6 +91,18 @@ namespace flex
 			translation -= m_Up;
 		}
 
+		if (gameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::MIDDLE))
+		{
+			m_DragStartPosition = m_Position;
+		}
+		else if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::MIDDLE))
+		{
+			glm::vec2 dragDist = gameContext.inputManager->GetMouseDragDistance(InputManager::MouseButton::MIDDLE);
+			glm::vec2 frameBufferSize = (glm::vec2)gameContext.window->GetFrameBufferSize();
+			glm::vec2 normDragDist = dragDist / frameBufferSize;
+			m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
+		}
+
 		float scrollDistance = gameContext.inputManager->GetVerticalScrollDistance();
 		if (scrollDistance != 0.0f)
 		{
@@ -112,7 +125,9 @@ namespace flex
 			speedMultiplier = m_MoveSpeedSlowMultiplier;
 		}
 
-		Translate(translation * m_MoveSpeed * speedMultiplier * gameContext.deltaTime);
+		glm::vec3 finalTranslation = translation * m_MoveSpeed * speedMultiplier * gameContext.deltaTime;
+		Translate(finalTranslation);
+		m_DragStartPosition += finalTranslation;
 
 		RecalculateViewProjection(gameContext);
 	}

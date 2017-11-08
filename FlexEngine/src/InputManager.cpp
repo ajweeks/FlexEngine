@@ -57,6 +57,7 @@ namespace flex
 			if (m_MouseButtons[i].down > 0)
 			{
 				++m_MouseButtons[i].down;
+				m_MouseButtonDrags[i].endLocation = m_MousePosition;
 			}
 		}
 	}
@@ -105,25 +106,28 @@ namespace flex
 		io.MousePos = m_MousePosition;
 	}
 
-	void InputManager::MouseButtonCallback(const GameContext& gameContext, MouseButton button, Action action, int mods)
+	void InputManager::MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, int mods)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
 		UNREFERENCED_PARAMETER(mods);
 
-		assert((int)button < MOUSE_BUTTON_COUNT);
+		assert((int)mouseButton < MOUSE_BUTTON_COUNT);
 
 		if (action == Action::PRESS)
 		{
-			++m_MouseButtons[(int)button].down;
-
+			++m_MouseButtons[(int)mouseButton].down;
+			m_MouseButtonDrags[(int)mouseButton].startLocation = m_MousePosition;
+			m_MouseButtonDrags[(int)mouseButton].endLocation = m_MousePosition;
 			//if (button == MouseButton::LEFT)
 			//{
 			//	gameContext.window->SetCursorMode(Window::CursorMode::HIDDEN);
 			//}
 		}
-		else
+		else if (action == Action::RELEASE)
 		{
-			m_MouseButtons[(int)button].down = 0;
+			m_MouseButtons[(int)mouseButton].down = 0;
+			m_MouseButtonDrags[(int)mouseButton].startLocation = m_MousePosition;
+			m_MouseButtonDrags[(int)mouseButton].endLocation = m_MousePosition;
 
 			//if (button == MouseButton::LEFT)
 			//{
@@ -132,8 +136,8 @@ namespace flex
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.MouseDown[(int)button] = m_MouseButtons[(int)button].down > 0;
-		io.MouseClicked[(int)button] = m_MouseButtons[(int)button].down == 1;
+		io.MouseDown[(int)mouseButton] = m_MouseButtons[(int)mouseButton].down > 0;
+		io.MouseClicked[(int)mouseButton] = m_MouseButtons[(int)mouseButton].down == 1;
 	}
 
 	void InputManager::ScrollCallback(double xOffset, double yOffset)
@@ -197,23 +201,30 @@ namespace flex
 		return m_MousePosition - m_PrevMousePosition;
 	}
 
-	int InputManager::GetMouseButtonDown(MouseButton button) const
+	int InputManager::GetMouseButtonDown(MouseButton mouseButton) const
 	{
-		assert((int)button >= 0 && (int)button <= MOUSE_BUTTON_COUNT - 1);
+		assert((int)mouseButton >= 0 && (int)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
-		return m_MouseButtons[(int)button].down;
+		return m_MouseButtons[(int)mouseButton].down;
 	}
 
-	bool InputManager::GetMouseButtonClicked(MouseButton button) const
+	bool InputManager::GetMouseButtonClicked(MouseButton mouseButton) const
 	{
-		assert((int)button >= 0 && (int)button <= MOUSE_BUTTON_COUNT - 1);
+		assert((int)mouseButton >= 0 && (int)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
-		return m_MouseButtons[(int)button].down == 1;
+		return (m_MouseButtons[(int)mouseButton].down == 1);
 	}
 
 	float InputManager::GetVerticalScrollDistance() const
 	{
 		return m_ScrollYOffset;
+	}
+
+	glm::vec2 InputManager::GetMouseDragDistance(MouseButton mouseButton)
+	{
+		assert((int)mouseButton >= 0 && (int)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+
+		return (m_MouseButtonDrags[(int)mouseButton].endLocation - m_MouseButtonDrags[(int)mouseButton].startLocation);
 	}
 
 	void InputManager::ClearAllInputs(const GameContext& gameContext)

@@ -180,6 +180,12 @@ namespace flex
 			int down; // A count of how many frames this key has been down for (0 means not down)
 		};
 
+		struct MouseDrag
+		{
+			glm::vec2 startLocation;
+			glm::vec2 endLocation;
+		};
+
 		InputManager();
 		~InputManager();
 
@@ -191,7 +197,7 @@ namespace flex
 		bool GetKeyPressed(KeyCode keyCode) const;
 
 		void CursorPosCallback(double x, double y);
-		void MouseButtonCallback(const GameContext& gameContext, MouseButton button, Action action, int mods);
+		void MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, int mods);
 		void ScrollCallback(double xOffset, double yOffset);
 		void KeyCallback(KeyCode keycode, Action action, int mods);
 		void CharCallback(unsigned int character);
@@ -199,9 +205,11 @@ namespace flex
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		glm::vec2 GetMouseMovement() const;
-		int GetMouseButtonDown(MouseButton button) const;
-		bool GetMouseButtonClicked(MouseButton button) const;
+		int GetMouseButtonDown(MouseButton mouseButton) const;
+		bool GetMouseButtonClicked(MouseButton mouseButton) const;
 		float GetVerticalScrollDistance() const;
+
+		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
 
 		void ClearAllInputs(const GameContext& gameContext);
 		void ClearMouseInput(const GameContext& gameContext);
@@ -212,6 +220,7 @@ namespace flex
 
 		static const int MOUSE_BUTTON_COUNT = (int)MouseButton::_NONE;
 		Key m_MouseButtons[MOUSE_BUTTON_COUNT];
+		MouseDrag m_MouseButtonDrags[MOUSE_BUTTON_COUNT];
 		glm::vec2 m_MousePosition;
 		glm::vec2 m_PrevMousePosition;
 		float m_ScrollXOffset;

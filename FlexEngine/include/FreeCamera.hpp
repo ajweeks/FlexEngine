@@ -64,6 +64,7 @@ namespace flex
 		float m_ZFar;
 
 		glm::vec3 m_Position;
+		glm::vec3 m_DragStartPosition;
 
 		float m_Yaw;
 		float m_Pitch;
@@ -71,9 +72,10 @@ namespace flex
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;
 
-		float m_MoveSpeed;
-		float m_ScrollDollySpeed;
-		float m_DragDollySpeed;
+		float m_MoveSpeed; // Keyboard
+		float m_PanSpeed; // MMB
+		float m_DragDollySpeed; // RMB
+		float m_ScrollDollySpeed; // Scroll wheel
 		float m_MoveSpeedFastMultiplier;
 		float m_MoveSpeedSlowMultiplier;
 		float m_RotationSpeed;
