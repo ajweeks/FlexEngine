@@ -2372,9 +2372,15 @@ namespace flex
 
 		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
 		{
-			UNREFERENCED_PARAMETER(renderID);
-			UNREFERENCED_PARAMETER(materialID);
-			// TODO: FIXME: IMPLEMENT:
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				renderObject->materialID = materialID;
+			}
+			else
+			{
+				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
+			}
 		}
 
 		void VulkanRenderer::Destroy(RenderID renderID)

@@ -77,21 +77,14 @@ namespace flex
 			void GenerateSkybox(const GameContext& gameContext);
 			void GenerateGBuffer(const GameContext& gameContext);
 
+			// Draw all static geometry to the given render object's cubemap texture
+			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
 			void GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
-			// Draw all static geometry to the given render object's cubemap texture
-			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
 
 			void SwapBuffers(const GameContext& gameContext);
-
-			struct DrawCallInfo
-			{
-				bool renderToCubemap = false;
-				RenderID cubemapObjectRenderID;
-				bool deferred;
-			};
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 			void DrawSpriteQuad(const GameContext& gameContext, glm::uint textureHandle, MaterialID materialID, bool flipVertically = false);

@@ -348,6 +348,12 @@ namespace flex
 		std::vector<PointLight> m_PointLights;
 		DirectionalLight m_DirectionalLight;
 
+		struct DrawCallInfo
+		{
+			bool renderToCubemap = false;
+			RenderID cubemapObjectRenderID;
+			bool deferred;
+		};
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

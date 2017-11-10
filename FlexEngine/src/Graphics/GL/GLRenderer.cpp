@@ -1210,7 +1210,6 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			BatchRenderObjects(gameContext);
 			drawCallInfo.deferred = true;
 			DrawDeferredObjects(gameContext, drawCallInfo);
 			drawCallInfo.deferred = false;
@@ -1407,9 +1406,6 @@ namespace flex
 			// TODO: Don't sort render objects frame! Only when things are added/removed
 			BatchRenderObjects(gameContext);
 			DrawDeferredObjects(gameContext, drawCallInfo);
-
-			// TODO: Depth isn't being bound correctly!
-			
 			DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawOffscreenTexture(gameContext);
@@ -2749,6 +2745,10 @@ namespace flex
 			if (renderObject)
 			{
 				renderObject->materialID = materialID;
+			}
+			else
+			{
+				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
 			}
 		}
 
