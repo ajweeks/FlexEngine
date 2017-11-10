@@ -300,6 +300,7 @@ namespace flex
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			Transform m_gBufferQuadTransform;
 
+			MaterialID m_SkyBoxMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 
 			VkClearColorValue m_ClearColor;

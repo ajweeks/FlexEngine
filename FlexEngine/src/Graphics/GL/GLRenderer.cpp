@@ -2727,7 +2727,7 @@ namespace flex
 
 		void GLRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID)
 		{
-			assert(skyboxMaterialID > 0 && skyboxMaterialID < m_Materials.size());
+			assert(skyboxMaterialID >= 0 && skyboxMaterialID < m_Materials.size());
 
 			m_SkyBoxMaterialID = skyboxMaterialID;
 

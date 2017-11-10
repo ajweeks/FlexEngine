@@ -176,29 +176,13 @@ namespace flex
 				Logger::LogError("Failed to find deferred_combine shader!");
 			}
 
-
-
-
-			// TODO: FIXME: Remove this
-			MaterialID skyboxMatID = 0;
-			for (size_t i = 0; i < m_LoadedMaterials.size(); ++i)
-			{
-				if (m_LoadedMaterials[i].material.name.compare("HDR Skybox") == 0)
-				{
-					skyboxMatID = i;
-					break;
-				}
-			}
-
-
-
 			MaterialCreateInfo gBufferMaterialCreateInfo = {};
 			gBufferMaterialCreateInfo.name = "GBuffer material";
 			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
 			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
-			gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMatID;
+			gBufferMaterialCreateInfo.irradianceSamplerMatID = m_SkyBoxMaterialID;
 			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
-			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMatID;
+			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = m_SkyBoxMaterialID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
 			for (size_t i = 0; i < offScreenFrameBuf->frameBufferAttachments.size(); ++i)
 			{
@@ -2369,8 +2353,21 @@ namespace flex
 
 		void VulkanRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID)
 		{
-			UNREFERENCED_PARAMETER(skyboxMaterialID);
-			// TODO: FIXME: IMPLEMENT:
+			assert(skyboxMaterialID >= 0 && skyboxMaterialID < m_LoadedMaterials.size());
+
+			m_SkyBoxMaterialID = skyboxMaterialID;
+
+			// TODO: IMPLEMENT:
+			//for (glm::uint i = 0; i < m_RenderObjects.size(); ++i)
+			//{
+			//	VulkanRenderObject* renderObject = GetRenderObject(i);
+			//	if (renderObject && m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+			//	{
+			//		VulkanMaterial* mat = &m_LoadedMaterials[renderObject->materialID];
+			//		mat->irradianceSamplerID = m_LoadedMaterials[m_SkyBoxMaterialID].irradianceSamplerID;
+			//		mat->prefilteredMapSamplerID = m_LoadedMaterials[m_SkyBoxMaterialID].prefilteredMapSamplerID;
+			//	}
+			//}
 		}
 
 		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
@@ -5821,22 +5818,7 @@ namespace flex
 		{
 			if (!m_SkyBoxMesh)
 			{
-				// TODO: FIXME: Clean this up
-				ShaderID skyboxShaderID = 0;
-				if (!GetShaderID("background", skyboxShaderID))
-				{
-					Logger::LogError("Ruh roh");
-				}
-				MaterialID skyboxMaterialID = 0;
-				for (size_t i = 0; i < m_LoadedMaterials.size(); ++i)
-				{
-					if (m_LoadedMaterials[i].material.shaderID == skyboxShaderID)
-					{
-						skyboxMaterialID = i;
-					}
-				}
-
-				m_SkyBoxMesh = new MeshPrefab(skyboxMaterialID, "Skybox Mesh");
+				m_SkyBoxMesh = new MeshPrefab(m_SkyBoxMaterialID, "Skybox Mesh");
 				m_SkyBoxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 				m_SkyBoxMesh->Initialize(gameContext);
 				// This object is just used as a framebuffer target, don't render it normally
