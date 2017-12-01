@@ -150,29 +150,61 @@ namespace flex
 
 	void FlexEngine::InitializeWindowAndRenderer()
 	{
-		const glm::vec2i windowSize(1920, 1080);
-		glm::vec2i windowPos(300, 300);
+		// TODO: Determine user's display size before creating a window
+		glm::vec2i desiredWindowSize(1920, 1080);
+		glm::vec2i desiredWindowPos(300, 300);
 
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			vk::VulkanWindowWrapper* vulkanWindow = new vk::VulkanWindowWrapper("Flex Engine - Vulkan", windowSize, windowPos, m_GameContext);
-			m_Window = vulkanWindow;
-			vk::VulkanRenderer* vulkanRenderer = new vk::VulkanRenderer(m_GameContext);
-			m_GameContext.renderer = vulkanRenderer;
+			m_GameContext.window = new vk::VulkanWindowWrapper("Flex Engine - Vulkan", desiredWindowSize, desiredWindowPos, m_GameContext);
 		}
 #endif
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			gl::GLWindowWrapper* glWindow = new gl::GLWindowWrapper("Flex Engine - OpenGL", windowSize, windowPos, m_GameContext);
-			m_Window = glWindow;
-			gl::GLRenderer* glRenderer = new gl::GLRenderer(m_GameContext);
-			m_GameContext.renderer = glRenderer;
+			m_GameContext.window = new gl::GLWindowWrapper("Flex Engine - OpenGL", desiredWindowSize, desiredWindowPos, m_GameContext);
 		}
 #endif
+		if (m_GameContext.window == nullptr)
+		{
+			Logger::LogError("Failed to create a window! Are any compile flags set in stdafx.hpp?");
+			return;
+		}
 
-		m_Window->SetUpdateWindowTitleFrequency(0.4f);
+		m_GameContext.window->Initialize();
+		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
+
+		int newWindowSizeY = int(m_GameContext.monitor.height * 0.75f);
+		int newWindowSizeX = int(newWindowSizeY * 16.0f / 9.0f);
+		m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
+
+		int newWindowPosX = int(newWindowSizeX * 0.1f);
+		int newWindowPosY = int(newWindowSizeY * 0.1f);
+		m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
+
+		m_GameContext.window->Create();
+
+
+#if COMPILE_VULKAN
+		if (m_RendererIndex == RendererID::VULKAN)
+		{
+			m_GameContext.renderer = new vk::VulkanRenderer(m_GameContext);
+		}
+#endif
+#if COMPILE_OPEN_GL
+		if (m_RendererIndex == RendererID::GL)
+		{
+			m_GameContext.renderer = new gl::GLRenderer(m_GameContext);
+		}
+#endif
+		if (m_GameContext.renderer == nullptr)
+		{
+			Logger::LogError("Failed to create a renderer!");
+			return;
+		}
+
+		m_GameContext.window->SetUpdateWindowTitleFrequency(0.4f);
 
 		m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
 		m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
@@ -180,7 +212,7 @@ namespace flex
 
 	void FlexEngine::DestroyWindowAndRenderer()
 	{
-		SafeDelete(m_Window);
+		SafeDelete(m_GameContext.window);
 		SafeDelete(m_GameContext.renderer);
 	}
 
@@ -235,10 +267,10 @@ namespace flex
 	void FlexEngine::UpdateAndRender()
 	{
 		m_Running = true;
-		float previousTime = (float)m_Window->GetTime();
+		float previousTime = (float)m_GameContext.window->GetTime();
 		while (m_Running)
 		{
-			float currentTime = (float)m_Window->GetTime();
+			float currentTime = (float)m_GameContext.window->GetTime();
 			float dt = (currentTime - previousTime);
 			previousTime = currentTime;
 			if (dt < 0.0f) dt = 0.0f;

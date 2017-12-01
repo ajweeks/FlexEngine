@@ -9,9 +9,11 @@
 
 namespace flex
 {
-	Window::Window(const std::string& title, glm::vec2 size, GameContext& gameContext) :
+	Window::Window(const std::string& title, glm::vec2 size, glm::vec2 startingPos, GameContext& gameContext) :
 		m_TitleString(title),
 		m_Size(size),
+		m_StartingPosition(startingPos),
+		m_Position(startingPos),
 		m_FrameBufferSize(size),
 		m_ShowFPSInWindowTitle(true),
 		m_ShowMSInWindowTitle(true),
@@ -70,6 +72,12 @@ namespace flex
 		return m_Size;
 	}
 
+
+	glm::vec2i Window::GetPosition() const
+	{
+		return m_Position;
+	}	
+	
 	glm::vec2i Window::GetFrameBufferSize() const
 	{
 		return m_FrameBufferSize;
@@ -156,6 +164,11 @@ namespace flex
 	void Window::WindowSizeCallback(int width, int height)
 	{
 		SetSize(width, height);
+	}
+
+	void Window::WindowPosCallback(int newX, int newY)
+	{
+		m_Position = { newX, newY };
 	}
 
 	void Window::FrameBufferSizeCallback(int width, int height)

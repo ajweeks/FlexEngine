@@ -14,11 +14,10 @@ namespace flex
 			VulkanWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
 			virtual ~VulkanWindowWrapper();
 
-			virtual void SetSize(int width, int height) override;
+			virtual void Create() override;
 			virtual void SetFrameBufferSize(int width, int height) override;
 
 		private:
-			static void VulkanCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 
 			VulkanWindowWrapper(const VulkanWindowWrapper&) = delete;
 			VulkanWindowWrapper& operator=(const VulkanWindowWrapper&) = delete;

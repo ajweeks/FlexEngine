@@ -13,17 +13,17 @@ namespace flex
 {
 	namespace gl
 	{
-		GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext) :
-			GLFWWindowWrapper(title, size, gameContext)
+		GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i startingPos, GameContext& gameContext) :
+			GLFWWindowWrapper(title, size, startingPos, gameContext)
 		{
-			glfwSetErrorCallback(GLFWErrorCallback);
+		}
 
-			if (!glfwInit())
-			{
-				Logger::LogError("Failed to initialize glfw! Exiting");
-				exit(EXIT_FAILURE);
-			}
+		GLWindowWrapper::~GLWindowWrapper()
+		{
+		}
 
+		void GLWindowWrapper::Create()
+		{
 #if _DEBUG
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif
@@ -33,7 +33,7 @@ namespace flex
 
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-			m_Window = glfwCreateWindow(size.x, size.y, title.c_str(), NULL, NULL);
+			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), NULL, NULL);
 			if (!m_Window)
 			{
 				Logger::LogError("Failed to create glfw Window! Exiting");
@@ -44,17 +44,9 @@ namespace flex
 
 			glfwSetWindowUserPointer(m_Window, this);
 
-			glfwSetKeyCallback(m_Window, GLFWKeyCallback);
-			glfwSetCharCallback(m_Window, GLFWCharCallback);
-			glfwSetMouseButtonCallback(m_Window, GLFWMouseButtonCallback);
-			glfwSetCursorPosCallback(m_Window, GLFWCursorPosCallback);
-			glfwSetScrollCallback(m_Window, GLFWScrollCallback);
-			glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
-			glfwSetFramebufferSizeCallback(m_Window, GLFWFramebufferSizeCallback);
+			SetUpCallbacks();
 
-			glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
-
-			glfwSetWindowPos(m_Window, pos.x, pos.y);
+			glfwSetWindowPos(m_Window, m_StartingPosition.x, m_StartingPosition.y);
 
 			glfwFocusWindow(m_Window);
 			m_HasFocus = true;
@@ -63,16 +55,6 @@ namespace flex
 
 			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 			CheckGLErrorMessages();
-
-			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-			const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
-
-			gameContext.monitor.width = vidMode->width;
-			gameContext.monitor.height = vidMode->height;
-			gameContext.monitor.redBits = vidMode->redBits;
-			gameContext.monitor.greenBits = vidMode->greenBits;
-			gameContext.monitor.blueBits = vidMode->blueBits;
-			gameContext.monitor.refreshRate = vidMode->refreshRate;
 
 			Logger::LogInfo("OpenGL loaded");
 			Logger::LogInfo("Vendor:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
@@ -84,16 +66,6 @@ namespace flex
 			{
 				glfwSetWindowIcon(m_Window, m_WindowIcons.size(), m_WindowIcons.data());
 			}
-		}
-
-		GLWindowWrapper::~GLWindowWrapper()
-		{
-		}
-
-		void GLWindowWrapper::SetSize(int width, int height)
-		{
-			m_Size = glm::vec2i(width, height);
-			m_GameContextRef.renderer->OnWindowSize(width, height);
 		}
 
 		void GLWindowWrapper::SetFrameBufferSize(int width, int height)

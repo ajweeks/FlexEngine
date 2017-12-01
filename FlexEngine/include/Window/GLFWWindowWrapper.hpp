@@ -10,10 +10,17 @@ namespace flex
 	class GLFWWindowWrapper : public Window
 	{
 	public:
-		GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext);
+		GLFWWindowWrapper(std::string title, glm::vec2i size, glm::vec2i startingPos, GameContext& gameContext);
 		virtual ~GLFWWindowWrapper();
 
+		virtual void Initialize() override;
+		virtual void RetrieveMonitorInfo(GameContext& gameContext) override;
+		void SetUpCallbacks();
+
 		virtual float GetTime() override;
+
+		virtual void SetSize(int width, int height) override;
+		virtual void SetPosition(int newX, int newY) override;
 
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void PollEvents() override;
@@ -53,6 +60,7 @@ namespace flex
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused);
 	void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
+	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, int newX, int newY);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height);
 
 } // namespace flex

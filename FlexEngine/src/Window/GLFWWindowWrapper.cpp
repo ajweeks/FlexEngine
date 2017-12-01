@@ -11,8 +11,8 @@
 
 namespace flex
 {
-	GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, GameContext& gameContext) :
-		Window(title, size, gameContext)
+	GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, glm::vec2i startingPos, GameContext& gameContext) :
+		Window(title, size, startingPos, gameContext)
 	{
 		const bool moveConsoleToExtraMonitor = true;
 
@@ -66,8 +66,7 @@ namespace flex
 			}
 		}
 
-		// TODO: Move window to previous location/size (save to disk)
-
+		// TODO: Move window to previous location/size (load from disk)
 		
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_128.png", true));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_64.png", true));
@@ -89,9 +88,91 @@ namespace flex
 		}
 	}
 
+	void GLFWWindowWrapper::Initialize()
+	{
+		glfwSetErrorCallback(GLFWErrorCallback);
+
+		if (!glfwInit())
+		{
+			Logger::LogError("Failed to initialize glfw! Exiting...");
+			exit(EXIT_FAILURE);
+		}
+
+		// TODO: Look into supporting system-DPI awareness
+		SetProcessDPIAware();
+	}
+
+	void GLFWWindowWrapper::RetrieveMonitorInfo(GameContext& gameContext)
+	{
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		if (!monitor)
+		{
+			Logger::LogError("Failed to find primary monitor!");
+			return;
+		}
+
+		const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
+		if (!vidMode)
+		{
+			Logger::LogError("Failed to get monitor's video mode!");
+			return;
+		}
+
+		gameContext.monitor.width = vidMode->width;
+		gameContext.monitor.height = vidMode->height;
+		gameContext.monitor.redBits = vidMode->redBits;
+		gameContext.monitor.greenBits = vidMode->greenBits;
+		gameContext.monitor.blueBits = vidMode->blueBits;
+		gameContext.monitor.refreshRate = vidMode->refreshRate;
+	}
+
+	void GLFWWindowWrapper::SetUpCallbacks()
+	{
+		if (!m_Window)
+		{
+			Logger::LogError("SetUpCallbacks was called before m_Window was set!");
+			return;
+		}
+
+		glfwSetKeyCallback(m_Window, GLFWKeyCallback);
+		glfwSetCharCallback(m_Window, GLFWCharCallback);
+		glfwSetMouseButtonCallback(m_Window, GLFWMouseButtonCallback);
+		glfwSetCursorPosCallback(m_Window, GLFWCursorPosCallback);
+		glfwSetScrollCallback(m_Window, GLFWScrollCallback);
+		glfwSetWindowSizeCallback(m_Window, GLFWWindowSizeCallback);
+		glfwSetFramebufferSizeCallback(m_Window, GLFWFramebufferSizeCallback);
+		glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
+		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
+	}
+
 	float GLFWWindowWrapper::GetTime()
 	{
 		return (float)glfwGetTime();
+	}
+
+	void GLFWWindowWrapper::SetSize(int width, int height)
+	{
+		m_Size = glm::vec2i(width, height);
+		m_FrameBufferSize = m_Size; // TODO: Remove redundant variable?
+
+		if (m_GameContextRef.renderer)
+		{
+			m_GameContextRef.renderer->OnWindowSize(width, height);
+		}
+	}
+
+	void GLFWWindowWrapper::SetPosition(int newX, int newY)
+	{
+		if (m_Window)
+		{
+			glfwSetWindowPos(m_Window, newX, newY);
+			m_Position = { newX, newY };
+		}
+		else
+		{
+			m_StartingPosition = { newX, newY };
+			m_Position = { newX, newY };
+		}
 	}
 
 	void GLFWWindowWrapper::PollEvents()
@@ -196,6 +277,12 @@ namespace flex
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->WindowFocusCallback(focused);
+	}
+
+	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, int newX, int newY)
+	{
+		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+		window->WindowPosCallback(newX, newY);
 	}
 
 	void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y)

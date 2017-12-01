@@ -42,7 +42,6 @@ namespace flex
 
 		glm::uint m_RendererCount;
 
-		Window* m_Window;
 		GameContext m_GameContext;
 		FreeCamera* m_DefaultCamera;
 

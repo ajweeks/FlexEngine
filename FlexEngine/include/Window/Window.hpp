@@ -20,8 +20,12 @@ namespace flex
 			DISABLED
 		};
 
-		Window(const std::string& title, glm::vec2 size, GameContext& gameContext);
+		Window(const std::string& title, glm::vec2 size, glm::vec2 startingPos, GameContext& gameContext);
 		virtual ~Window();
+		
+		virtual void Initialize() = 0;
+		virtual void RetrieveMonitorInfo(GameContext& gameContext) = 0;
+		virtual void Create() = 0;
 
 		// Return time in miliseconds since app start
 		virtual float GetTime() = 0;
@@ -31,6 +35,8 @@ namespace flex
 
 		glm::vec2i GetSize() const;
 		virtual void SetSize(int width, int height) = 0;
+		glm::vec2i GetPosition() const;
+		virtual void SetPosition(int newX, int newY) = 0;
 		glm::vec2i GetFrameBufferSize() const;
 		virtual void SetFrameBufferSize(int width, int height) = 0;
 		bool HasFocus() const;
@@ -53,6 +59,7 @@ namespace flex
 		virtual void CursorPosCallback(double x, double y);
 		virtual void ScrollCallback(double xoffset, double yoffset);
 		virtual void WindowSizeCallback(int width, int height);
+		virtual void WindowPosCallback(int newX, int newY);
 		virtual void FrameBufferSizeCallback(int width, int height);
 	protected:
 
@@ -64,6 +71,7 @@ namespace flex
 		friend void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
 		friend void GLFWScrollCallback(GLFWwindow* glfwWindow, double xoffset, double yoffset);
 		friend void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
+		friend void GLFWWindowPosCallback(GLFWwindow* glfwWindow, int width, int height);
 		friend void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height);
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN
 
@@ -86,6 +94,8 @@ namespace flex
 
 		std::string m_TitleString;
 		glm::vec2i m_Size;
+		glm::vec2i m_StartingPosition;
+		glm::vec2i m_Position;
 		glm::vec2i m_FrameBufferSize;
 		bool m_HasFocus;
 

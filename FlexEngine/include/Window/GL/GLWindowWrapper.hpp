@@ -13,7 +13,7 @@ namespace flex
 			GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
 			virtual ~GLWindowWrapper();
 
-			virtual void SetSize(int width, int height) override;
+			virtual void Create() override;
 			virtual void SetFrameBufferSize(int width, int height) override;
 
 		private:
