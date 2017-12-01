@@ -65,4 +65,9 @@ namespace flex
 
 		return size;
 	}
+
+	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
+	{
+		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
+	}
 } // namespace flex

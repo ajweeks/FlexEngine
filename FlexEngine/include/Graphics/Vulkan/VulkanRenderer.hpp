@@ -170,8 +170,8 @@ namespace flex
 			void CreateCommandPool();
 			void CreateCommandBuffers();
 			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin) const;
-			void BuildCommandBuffers(const GameContext& gameContext);
-			void BuildDeferredCommandBuffer(const GameContext& gameContext);
+			void BuildCommandBuffers(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
+			void BuildDeferredCommandBuffer(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void RebuildCommandBuffers(const GameContext& gameContext);
 			bool CheckCommandBuffers() const;
 			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free) const;
@@ -212,6 +212,13 @@ namespace flex
 
 			void LoadDefaultShaderCode();
 			void GenerateSkybox(const GameContext& gameContext);
+
+			// Draw all static geometry to the given render object's cubemap texture
+			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
+			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
+			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
+			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
+			void GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix,
@@ -302,7 +309,7 @@ namespace flex
 
 			MaterialID m_SkyBoxMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
-
+			
 			VkClearColorValue m_ClearColor;
 
 			ShaderID m_IGuiShaderID;

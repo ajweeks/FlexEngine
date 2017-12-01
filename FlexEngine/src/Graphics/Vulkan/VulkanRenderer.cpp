@@ -260,27 +260,26 @@ namespace flex
 				VulkanRenderObject* renderObject = GetRenderObject(i);
 				if (!renderObject) continue;
 
-				// TOOD:
-				//if (m_LoadedMaterials[renderObject->materialID].material.g.generateReflectionProbeMaps)
-				//{
-				//	Logger::LogInfo("Capturing reflection probe");
-				//	CaptureSceneToCubemap(gameContext, renderID);
-				//	GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
-				//	GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
-				//	Logger::LogInfo("Done");
+				if (m_LoadedMaterials[renderObject->materialID].material.generateReflectionProbeMaps)
+				{
+					Logger::LogInfo("Capturing reflection probe");
+					CaptureSceneToCubemap(gameContext, i);
+					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+					Logger::LogInfo("Done");
 
-				//	// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-				//	Logger::LogInfo("Capturing reflection probe");
-				//	CaptureSceneToCubemap(gameContext, renderID);
-				//	GenerateIrradianceSamplerFromCubemap(gameContext, renderObject);
-				//	GeneratePrefilteredMapFromCubemap(gameContext, renderObject);
-				//	Logger::LogInfo("Done");
+					// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
+					Logger::LogInfo("Capturing reflection probe");
+					CaptureSceneToCubemap(gameContext, i);
+					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+					Logger::LogInfo("Done");
 
-				//	// Display captured cubemap as skybox
-				//	//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
-				//	//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
-				//}
-				//else 
+					// Display captured cubemap as skybox
+					//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
+					//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
+				}
+				else 
 				if (m_LoadedMaterials[renderObject->materialID].material.generateIrradianceSampler)
 				{
 					GenerateCubemapFromHDR(gameContext, renderObject);
@@ -2168,8 +2167,10 @@ namespace flex
 
 		void VulkanRenderer::Draw(const GameContext& gameContext)
 		{
-			BuildCommandBuffers(gameContext); // TODO: Only call this when objects change
-			BuildDeferredCommandBuffer(gameContext); // TODO: Only call this once at startup?
+			DrawCallInfo drawCallInfo = {};
+
+			BuildCommandBuffers(gameContext, drawCallInfo); // TODO: Only call this when objects change
+			BuildDeferredCommandBuffer(gameContext, drawCallInfo); // TODO: Only call this when objects change
 
 			if (m_SwapChainNeedsRebuilding)
 			{
@@ -4353,7 +4354,9 @@ namespace flex
 				DestroyCommandBuffers();
 				CreateCommandBuffers();
 			}
-			BuildCommandBuffers(gameContext);
+			DrawCallInfo drawCallInfo = {};
+
+			BuildCommandBuffers(gameContext, drawCallInfo);
 		}
 
 		void VulkanRenderer::CreateCommandBuffers()
@@ -4392,8 +4395,11 @@ namespace flex
 			return commandBuffer;
 		}
 
-		void VulkanRenderer::BuildCommandBuffers(const GameContext& gameContext)
+		void VulkanRenderer::BuildCommandBuffers(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
+			// TODO: Remove unused param
+			UNREFERENCED_PARAMETER(drawCallInfo);
+
 			std::array<VkClearValue, 2> clearValues = {};
 			clearValues[0].color = m_ClearColor;
 			clearValues[1].depthStencil = { 1.0f, 0 };
@@ -4495,8 +4501,11 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::BuildDeferredCommandBuffer(const GameContext& gameContext)
+		void VulkanRenderer::BuildDeferredCommandBuffer(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
+			// TODO: Remove unused param
+			UNREFERENCED_PARAMETER(drawCallInfo);
+
 			if (offScreenCmdBuffer == VK_NULL_HANDLE)
 			{
 				offScreenCmdBuffer = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
@@ -5830,6 +5839,68 @@ namespace flex
 				// This object is just used as a framebuffer target, don't render it normally
 				GetRenderObject(m_SkyBoxMesh->GetRenderID())->visible = false;
 			}
+		}
+
+		void VulkanRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
+		{
+			DrawCallInfo drawCallInfo = {};
+			drawCallInfo.renderToCubemap = true;
+			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
+
+			VulkanRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+			VulkanMaterial* cubemapMaterial = &m_LoadedMaterials[cubemapRenderObject->materialID];
+
+			glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+
+			for (size_t face = 0; face < 6; ++face)
+			{
+				// Clear all gbuffers
+				//if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
+				//{
+				//	for (size_t i = 0; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
+				//	{
+				//		// Bind color CUBE_MAP_POSITIVE_X + face to cubemapMaterial->cubemapSamplerGBuffersIDs[i].id
+				//		// Clear
+				//	}
+				//}
+
+				// Clear base cubemap framebuffer + depth buffer
+				// Bind color CUBE_MAP_POSITIVE_X + face to cubemapMaterial->cubemapSamplerID
+				// Bind depth CUBE_MAP_POSITIVE_X + face to cubemapMaterial->cubemapDepthSamplerID
+				// Clear
+			}
+
+			drawCallInfo.deferred = true;
+			BuildDeferredCommandBuffer(gameContext, drawCallInfo);
+			drawCallInfo.deferred = false;
+			//DrawGBufferQuad(gameContext, drawCallInfo);
+			BuildCommandBuffers(gameContext, drawCallInfo);
+		}
+
+		void VulkanRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath)
+		{
+			UNREFERENCED_PARAMETER(gameContext);
+			UNREFERENCED_PARAMETER(cubemapMaterialID);
+			UNREFERENCED_PARAMETER(environmentMapPath);
+		}
+
+		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		{
+			UNREFERENCED_PARAMETER(gameContext);
+			UNREFERENCED_PARAMETER(cubemapMaterialID);
+		}
+
+		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		{
+			UNREFERENCED_PARAMETER(gameContext);
+			UNREFERENCED_PARAMETER(cubemapMaterialID);
+		}
+
+		void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
+		{
+			UNREFERENCED_PARAMETER(gameContext);
+			UNREFERENCED_PARAMETER(brdfLUTTextureID);
+			UNREFERENCED_PARAMETER(BRDFLUTSize);
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,

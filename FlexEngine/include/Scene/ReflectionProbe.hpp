@@ -17,11 +17,13 @@ namespace flex
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void Destroy(const GameContext& gameContext) override;
 
+		MaterialID GetCaptureMaterialID() const;
 		void SetSphereVisible(bool visible, const GameContext& gameContext);
 
 	private:
 		MeshPrefab* m_SphereMesh = nullptr; // The object visible in the scene
 		GameObject* m_Capture = nullptr; // The object doing the capturing
+		MaterialID m_CaptureMatID;
 
 		bool m_Visible;
 

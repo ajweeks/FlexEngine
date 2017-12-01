@@ -48,7 +48,7 @@ namespace flex
 			{ "normalRoughnessFrameBufferSampler", nullptr },
 			{ "albedoAOFrameBufferSampler", nullptr },
 		};
-		MaterialID probeCaptureMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
+		m_CaptureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
 
 
@@ -63,7 +63,7 @@ namespace flex
 		m_Capture = new GameObject();
 		Renderer::RenderObjectCreateInfo captuerObjectCreateInfo = {};
 		captuerObjectCreateInfo.vertexBufferData = nullptr;
-		captuerObjectCreateInfo.materialID = probeCaptureMaterialID;
+		captuerObjectCreateInfo.materialID = m_CaptureMatID;
 		captuerObjectCreateInfo.name = "Reflection probe capture object";
 		captuerObjectCreateInfo.transform = &m_Transform;
 		
@@ -90,6 +90,11 @@ namespace flex
 	void ReflectionProbe::Destroy(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	MaterialID ReflectionProbe::GetCaptureMaterialID() const
+	{
+		return m_CaptureMatID;
 	}
 
 	void ReflectionProbe::SetSphereVisible(bool visible, const GameContext& gameContext)

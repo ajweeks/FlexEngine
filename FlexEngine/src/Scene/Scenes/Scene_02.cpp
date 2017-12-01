@@ -94,7 +94,7 @@ namespace flex
 		AddChild(gameContext, cornellBoxMesh);
 #endif
 
-#if 0 // Grid
+#if 1 // Grid
 		Renderer::MaterialCreateInfo colorMatInfo = {};
 		colorMatInfo.shaderName = "color";
 		colorMatInfo.name = "Color";
@@ -107,7 +107,7 @@ namespace flex
 		AddChild(gameContext, m_Grid);
 #endif
 
-#if 1 // Cerebus
+#if 0 // Cerebus
 		Renderer::MaterialCreateInfo cerebusMatTexturedInfo = {};
 		cerebusMatTexturedInfo.name = "Cerebus";
 		cerebusMatTexturedInfo.shaderName = "pbr";
@@ -147,8 +147,8 @@ namespace flex
 #endif
 
 #if 1 // Spheres
-		const int sphereCountX = 5;
-		const int sphereCountY = 5;
+		const int sphereCountX = 7;
+		const int sphereCountY = 2;
 		const int sphereCountZ = 1;
 		const float sphereSpacing = 3.0f;
 		const glm::vec3 offset = glm::vec3(
@@ -173,9 +173,10 @@ namespace flex
 				pbrMatInfo.shaderName = "pbr";
 				pbrMatInfo.name = "PBR " + iStr;
 				//pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.95f);
-				pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.22f, 0.2f);
-				pbrMatInfo.constMetallic = 0.98f;
-				pbrMatInfo.constRoughness = glm::clamp(float(x + y) / (sphereCountX + sphereCountY - 2) * 0.5f, 0.05f, 0.9f);
+				//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.22f, 0.2f);
+				pbrMatInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.5f);
+				pbrMatInfo.constMetallic = 1.0f;
+				pbrMatInfo.constRoughness = glm::clamp(float(x + y) / (sphereCountX + sphereCountY - 2) * 0.75f, 0.05f, 0.9f);
 				pbrMatInfo.constAO = 1.0f;
 				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 			}
@@ -184,10 +185,10 @@ namespace flex
 				Renderer::MaterialCreateInfo pbrMatInfo = {};
 				pbrMatInfo.shaderName = "pbr";
 				pbrMatInfo.name = "PBR " + iStr;
-				pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.95f, 0.95f); // Chrome
-				//pbrMatInfo.constAlbedo = glm::vec3(1.0f, .71f, 0.29f); // Gold
+				//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.95f, 0.95f); // Chrome
+				pbrMatInfo.constAlbedo = glm::vec3(1.0f, .71f, 0.29f); // Gold
 				pbrMatInfo.constMetallic = 1.0f;
-				pbrMatInfo.constRoughness = glm::clamp((1.0f - float(x + y) / (sphereCountX + sphereCountY - 2)) * 0.5f, 0.05f, 0.9f);
+				pbrMatInfo.constRoughness = glm::clamp((float(x + y) / (sphereCountX + sphereCountY - 2)) * 0.5f, 0.05f, 0.9f);
 				pbrMatInfo.constAO = 1.0f;
 				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 			}
@@ -219,7 +220,7 @@ namespace flex
 
 #if 1 // Reflection probe
 		// Generated last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe(false);
+		m_ReflectionProbe = new ReflectionProbe(true);
 		AddChild(gameContext, m_ReflectionProbe);
 		m_ReflectionProbe->GetTransform().Translate(0.0f, 10.0f, 0.0f);
 		m_ReflectionProbe->GetTransform().Scale(3.5f);
@@ -228,7 +229,7 @@ namespace flex
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
 	}
 
 	void Scene_02::Destroy(const GameContext& gameContext)

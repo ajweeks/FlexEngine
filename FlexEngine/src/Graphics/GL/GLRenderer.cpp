@@ -2587,34 +2587,16 @@ namespace flex
 		{
 			if (m_gBufferQuadVertexBufferData.pDataStart)
 			{
-				// It's already been generated
-				return;
-			}
-
-			// TODO: FIXME: Remove this
-			MaterialID reflectionProbeCaptureMatID = 0;
-			bool found = false;
-			for (size_t i = 0; i < m_Materials.size(); i++)
-			{
-				if (m_Materials[i].material.name.compare("Reflection probe capture") == 0)
-				{
-					reflectionProbeCaptureMatID = i;
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-			{
-				Logger::LogWarning("Reflection probe capture material wasn't found! It must be added before gbuffer can be generated!");
+				return; // GBuffer quad has already been generated
 			}
 
 			MaterialCreateInfo gBufferMaterialCreateInfo = {};
 			gBufferMaterialCreateInfo.name = "GBuffer material";
 			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
 			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
-			gBufferMaterialCreateInfo.irradianceSamplerMatID = reflectionProbeCaptureMatID;
+			gBufferMaterialCreateInfo.irradianceSamplerMatID = m_ReflectionProbeMaterialID;
 			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
-			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = reflectionProbeCaptureMatID;
+			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = m_ReflectionProbeMaterialID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
 			gBufferMaterialCreateInfo.frameBuffers = {
 				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },

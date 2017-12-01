@@ -336,6 +336,7 @@ namespace flex
 
 		virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) = 0;
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
+		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
 		virtual void Destroy(RenderID renderID) = 0;
 
@@ -343,6 +344,7 @@ namespace flex
 		virtual void ImGui_NewFrame(const GameContext& gameContext) = 0;
 		virtual void ImGui_Render() = 0;
 		virtual void ImGui_ReleaseRenderObjects() = 0;
+		
 
 	protected:
 		std::vector<PointLight> m_PointLights;
@@ -354,6 +356,8 @@ namespace flex
 			RenderID cubemapObjectRenderID;
 			bool deferred;
 		};
+		
+		MaterialID m_ReflectionProbeMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;
