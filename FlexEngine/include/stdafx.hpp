@@ -10,6 +10,8 @@
 #pragma warning(disable : 4868)
 #pragma warning(disable : 4710)
 
+#include "Typedefs.hpp"
+
 #if COMPILE_VULKAN
 #pragma warning(push, 0) // Don't generate warnings for 3rd party code    
 	#include <glad/glad.h>
@@ -31,7 +33,7 @@
 
 #if _DEBUG
 #ifndef CheckGLErrorMessages
-void _CheckGLErrorMessages(const char *file, int line);
+void _CheckGLErrorMessages(const char *file, flex::i32 line);
 #define CheckGLErrorMessages() _CheckGLErrorMessages(__FILE__,__LINE__)
 #endif
 #else
@@ -65,11 +67,11 @@ inline void SafeDelete(T &pObjectToDelete)
 #include <glm/glm.hpp>
 #pragma warning(pop)
 
-#define PI (glm::pi<float>())
-#define TWO_PI (glm::two_pi<float>())
-#define PI_DIV_TWO (glm::half_pi<float>())
-#define PI_DIV_FOUR (glm::quarter_pi<float>())
-#define THREE_OVER_TWO_PI (glm::three_over_two_pi<float>())
+#define PI (glm::pi<real>())
+#define TWO_PI (glm::two_pi<real>())
+#define PI_DIV_TWO (glm::half_pi<real>())
+#define PI_DIV_FOUR (glm::quarter_pi<real>())
+#define THREE_OVER_TWO_PI (glm::three_over_two_pi<real>())
 
 namespace flex
 {

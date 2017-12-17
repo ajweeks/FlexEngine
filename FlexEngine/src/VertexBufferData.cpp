@@ -2,10 +2,10 @@
 #include "stdafx.hpp"
 
 #include "VertexBufferData.hpp"
-#include "VertexAttribute.hpp"
 
 #include <cstdlib>
 
+#include "VertexAttribute.hpp"
 #include "Logger.hpp"
 
 namespace flex
@@ -35,60 +35,60 @@ namespace flex
 
 		pDataStart = pDataLocation;
 
-		for (UINT i = 0; i < VertexCount; ++i)
+		for (u32 i = 0; i < VertexCount; ++i)
 		{
-			if (Attributes & (glm::uint)VertexAttribute::POSITION)
+			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
 				memcpy(pDataLocation, &createInfo->positions_3D[i], sizeof(glm::vec3));
-				pDataLocation = (float*)pDataLocation + 3;
+				pDataLocation = (real*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::POSITION_2D)
+			if (Attributes & (u32)VertexAttribute::POSITION_2D)
 			{
 				memcpy(pDataLocation, &createInfo->positions_2D[i], sizeof(glm::vec2));
-				pDataLocation = (float*)pDataLocation + 2;
+				pDataLocation = (real*)pDataLocation + 2;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::UV)
+			if (Attributes & (u32)VertexAttribute::UV)
 			{
 				memcpy(pDataLocation, &createInfo->texCoords_UV[i], sizeof(glm::vec2));
-				pDataLocation = (float*)pDataLocation + 2;
+				pDataLocation = (real*)pDataLocation + 2;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::UVW)
+			if (Attributes & (u32)VertexAttribute::UVW)
 			{
 				memcpy(pDataLocation, &createInfo->texCoords_UVW[i], sizeof(glm::vec3));
-				pDataLocation = (float*)pDataLocation + 3;
+				pDataLocation = (real*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
-				memcpy(pDataLocation, &createInfo->colors_R8G8B8A8[i], sizeof(glm::int32));
-				pDataLocation = (float*)pDataLocation + 1;
+				memcpy(pDataLocation, &createInfo->colors_R8G8B8A8[i], sizeof(i32));
+				pDataLocation = (real*)pDataLocation + 1;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
 				memcpy(pDataLocation, &createInfo->colors_R32G32B32A32[i], sizeof(glm::vec4));
-				pDataLocation = (float*)pDataLocation + 4;
+				pDataLocation = (real*)pDataLocation + 4;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::TANGENT)
+			if (Attributes & (u32)VertexAttribute::TANGENT)
 			{
 				memcpy(pDataLocation, &createInfo->tangents[i], sizeof(glm::vec3));
-				pDataLocation = (float*)pDataLocation + 3;
+				pDataLocation = (real*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::BITANGENT)
+			if (Attributes & (u32)VertexAttribute::BITANGENT)
 			{
 				memcpy(pDataLocation, &createInfo->bitangents[i], sizeof(glm::vec3));
-				pDataLocation = (float*)pDataLocation + 3;
+				pDataLocation = (real*)pDataLocation + 3;
 			}
 
-			if (Attributes & (glm::uint)VertexAttribute::NORMAL)
+			if (Attributes & (u32)VertexAttribute::NORMAL)
 			{
 				memcpy(pDataLocation, &createInfo->normals[i], sizeof(glm::vec3));
-				pDataLocation = (float*)pDataLocation + 3;
+				pDataLocation = (real*)pDataLocation + 3;
 			}
 		}
 	}
@@ -111,7 +111,7 @@ namespace flex
 		struct VertexType
 		{
 			std::string name;
-			int size;
+			i32 size;
 		};
 
 		static VertexType vertexTypes[] = {
@@ -127,14 +127,14 @@ namespace flex
 		};
 
 		const size_t vertexTypeCount = sizeof(vertexTypes) / sizeof(vertexTypes[0]);
-		float* currentLocation = (float*)0;
+		real* currentLocation = (real*)0;
 		for (size_t i = 0; i < vertexTypeCount; ++i)
 		{
 			VertexAttribute vertexAttribute = VertexAttribute(1 << i);
-			if (Attributes & (int)vertexAttribute)
+			if (Attributes & (i32)vertexAttribute)
 			{
 				renderer->DescribeShaderVariable(renderID, vertexTypes[i].name, vertexTypes[i].size, Renderer::Type::FLOAT, false,
-					(int)VertexStride, currentLocation);
+					(i32)VertexStride, currentLocation);
 				currentLocation += vertexTypes[i].size;
 			}
 		}

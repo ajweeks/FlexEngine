@@ -27,7 +27,7 @@ namespace flex
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
-		int channels;
+		i32 channels;
 		unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, alpha ? STBI_rgb_alpha : STBI_rgb);
 
 		if (data == 0)
@@ -50,7 +50,7 @@ namespace flex
 		image.pixels = nullptr;
 	}
 
-	std::string FloatToString(float f, int precision)
+	std::string FloatToString(real f, i32 precision)
 	{
 		std::stringstream stream;
 
@@ -95,17 +95,17 @@ namespace flex
 		}
 	}
 
-	float Lerp(float a, float b, float t)
+	real Lerp(real a, real b, real t)
 	{
 		return a * (1.0f - t) + b * t;
 	}
 
-	glm::vec2 Lerp(const glm::vec2 & a, const glm::vec2 & b, float t)
+	glm::vec2 Lerp(const glm::vec2 & a, const glm::vec2 & b, real t)
 	{
 		return a * (1.0f - t) + b * t;
 	}
 
-	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
+	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t)
 	{
 		return a * (1.0f - t) + b * t;
 	}
@@ -196,7 +196,7 @@ namespace flex
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
-		int channelCount;
+		i32 channelCount;
 		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
 
 		if (!pixels)

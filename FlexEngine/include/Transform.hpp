@@ -4,6 +4,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+
+
 namespace flex
 {
 	struct Transform
@@ -35,23 +37,23 @@ namespace flex
 		void SetGlobalRotation(glm::quat quatRotation);
 		void SetLocalRotation(glm::vec3 eulerAnglesRad);
 		void SetGlobalRotation(glm::vec3 eulerAnglesRad);
-		void SetLocalRotation(float eulerXRad, float eulerYRad, float eulerZRad);
-		void SetGlobalRotation(float eulerXRad, float eulerYRad, float eulerZRad);
+		void SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad);
+		void SetGlobalRotation(real eulerXRad, real eulerYRad, real eulerZRad);
 
 		void SetLocalScale(glm::vec3 scale);
 		void SetGlobalScale(glm::vec3 scale);
 
 
 		void Translate(glm::vec3 deltaPosition);
-		void Translate(float deltaX, float deltaY, float deltaZ);
+		void Translate(real deltaX, real deltaY, real deltaZ);
 
 		void Rotate(glm::quat deltaQuatRotation);
 		void Rotate(glm::vec3 deltaEulerRotationRad);
-		void Rotate(float deltaX, float deltaY, float deltaZ);
+		void Rotate(real deltaX, real deltaY, real deltaZ);
 		
 		void Scale(glm::vec3 deltaScale);
-		void Scale(float deltaScale);
-		void Scale(float deltaX, float deltaY, float deltaZ);
+		void Scale(real deltaScale);
+		void Scale(real deltaX, real deltaY, real deltaZ);
 
 		void SetParentTransform(Transform* parent);
 		void AddChildTransform(Transform* child);

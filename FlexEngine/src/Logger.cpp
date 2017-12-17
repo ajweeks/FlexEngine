@@ -10,9 +10,9 @@ namespace flex
 	bool Logger::m_SuppressWarnings = false;
 	bool Logger::m_SuppressErrors = false;
 
-	int Logger::m_SuppressedInfoCount = 0;
-	int Logger::m_SuppressedWarningCount = 0;
-	int Logger::m_SuppressedErrorCount = 0;
+	i32 Logger::m_SuppressedInfoCount = 0;
+	i32 Logger::m_SuppressedWarningCount = 0;
+	i32 Logger::m_SuppressedErrorCount = 0;
 
 #ifdef _WIN32
 	HANDLE Logger::m_ConsoleHandle;
@@ -70,7 +70,7 @@ namespace flex
 		} break;
 		default:
 		{
-			std::cout << "UNHANDLED LOG LEVEL!: " + std::to_string(int(logLevel)) + ", message: ";
+			std::cout << "UNHANDLED LOG LEVEL!: " + std::to_string(i32(logLevel)) + ", message: ";
 		} break;
 		}
 
@@ -123,7 +123,7 @@ namespace flex
 		} break;
 		default:
 		{
-			std::wcout << L"UNHANDLED LOG LEVEL!: " + std::to_wstring(int(logLevel)) + L", message: ";
+			std::wcout << L"UNHANDLED LOG LEVEL!: " + std::to_wstring(i32(logLevel)) + L", message: ";
 		} break;
 		}
 
@@ -180,17 +180,17 @@ namespace flex
 		return m_SuppressErrors;
 	}
 
-	int Logger::GetSuppressedInfoCount()
+	i32 Logger::GetSuppressedInfoCount()
 	{
 		return m_SuppressedInfoCount;
 	}
 
-	int Logger::GetSuppressedWarningCount()
+	i32 Logger::GetSuppressedWarningCount()
 	{
 		return m_SuppressedWarningCount;
 	}
 
-	int Logger::GetSuppressedErrorCount()
+	i32 Logger::GetSuppressedErrorCount()
 	{
 		return m_SuppressedErrorCount;
 	}

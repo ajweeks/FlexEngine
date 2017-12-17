@@ -4,7 +4,6 @@
 
 #include <vector>
 
-#include <glm/integer.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -12,7 +11,7 @@
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
 
-#include "Typedefs.hpp"
+
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
 
@@ -46,7 +45,7 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext) override;
 
 		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
-		void SetUVScale(float uScale, float vScale);
+		void SetUVScale(real uScale, real vScale);
 
 	private:
 		struct LoadedMesh
@@ -66,11 +65,11 @@ namespace flex
 
 		glm::vec2 m_UVScale;
 
-		VertexAttributes m_ForcedAttributes = (glm::uint)VertexAttribute::NONE;
-		VertexAttributes m_IgnoredAttributes = (glm::uint)VertexAttribute::NONE;
+		VertexAttributes m_ForcedAttributes = (u32)VertexAttribute::NONE;
+		VertexAttributes m_IgnoredAttributes = (u32)VertexAttribute::NONE;
 		VertexBufferData m_VertexBufferData;
 
-		std::vector<glm::uint> m_Indices;
+		std::vector<u32> m_Indices;
 
 		static glm::vec4 m_DefaultColor_4;
 		static glm::vec3 m_DefaultPosition;

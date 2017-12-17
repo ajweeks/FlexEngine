@@ -68,7 +68,7 @@ namespace flex
 			}
 		}
 
-		void GLWindowWrapper::SetFrameBufferSize(int width, int height)
+		void GLWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
 		{
 			m_FrameBufferSize = glm::vec2i(width, height);
 			// TODO: Call OnFrameBufferSize here?

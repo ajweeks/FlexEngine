@@ -6,6 +6,7 @@
 
 #include "GameContext.hpp"
 
+
 namespace flex
 {
 	class InputManager
@@ -177,7 +178,7 @@ namespace flex
 
 		struct Key
 		{
-			int down; // A count of how many frames this key has been down for (0 means not down)
+			i32 down; // A count of how many frames this key has been down for (0 means not down)
 		};
 
 		struct MouseDrag
@@ -193,21 +194,21 @@ namespace flex
 		void PostImGuiUpdate(const GameContext& gameContext);
 		void PostUpdate();
 
-		int GetKeyDown(KeyCode keyCode) const;
+		i32 GetKeyDown(KeyCode keyCode) const;
 		bool GetKeyPressed(KeyCode keyCode) const;
 
 		void CursorPosCallback(double x, double y);
-		void MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, int mods);
+		void MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, i32 mods);
 		void ScrollCallback(double xOffset, double yOffset);
-		void KeyCallback(KeyCode keycode, Action action, int mods);
-		void CharCallback(unsigned int character);
+		void KeyCallback(KeyCode keycode, Action action, i32 mods);
+		void CharCallback(u32 character);
 
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		glm::vec2 GetMouseMovement() const;
-		int GetMouseButtonDown(MouseButton mouseButton) const;
+		i32 GetMouseButtonDown(MouseButton mouseButton) const;
 		bool GetMouseButtonClicked(MouseButton mouseButton) const;
-		float GetVerticalScrollDistance() const;
+		real GetVerticalScrollDistance() const;
 
 		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
 
@@ -218,12 +219,12 @@ namespace flex
 	private:
 		std::map<KeyCode, Key> m_Keys;
 
-		static const int MOUSE_BUTTON_COUNT = (int)MouseButton::_NONE;
+		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		Key m_MouseButtons[MOUSE_BUTTON_COUNT];
 		MouseDrag m_MouseButtonDrags[MOUSE_BUTTON_COUNT];
 		glm::vec2 m_MousePosition;
 		glm::vec2 m_PrevMousePosition;
-		float m_ScrollXOffset;
-		float m_ScrollYOffset;
+		real m_ScrollXOffset;
+		real m_ScrollYOffset;
 	};
 } // namespace flex

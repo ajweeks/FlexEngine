@@ -20,23 +20,23 @@ namespace flex
 		{
 			HWND hWnd = GetConsoleWindow();
 			// TODO: Set these based on display resolution
-			int consoleWidth = 700;
-			int consoleHeight = 800;
+			i32 consoleWidth = 700;
+			i32 consoleHeight = 800;
 
 			// The following four variables store the bounding rectangle of all monitors
-			int virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-			//int virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-			int virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-			//int virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+			i32 virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
+			//i32 virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+			i32 virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+			//i32 virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-			int monitorWidth = GetSystemMetrics(SM_CXSCREEN);
-			//int monitorHeight = GetSystemMetrics(SM_CYSCREEN);
+			i32 monitorWidth = GetSystemMetrics(SM_CXSCREEN);
+			//i32 monitorHeight = GetSystemMetrics(SM_CYSCREEN);
 
 			// If another monitor is present, move the console to it
 			if (virtualScreenWidth > monitorWidth)
 			{
-				int newX;
-				int newY = 10;
+				i32 newX;
+				i32 newY = 10;
 				
 				if (virtualScreenLeft < 0) 
 				{
@@ -98,7 +98,7 @@ namespace flex
 			exit(EXIT_FAILURE);
 		}
 
-		// TODO: Look into supporting system-DPI awareness
+		// TODO: Look i32o supporting system-DPI awareness
 		SetProcessDPIAware();
 	}
 
@@ -145,12 +145,7 @@ namespace flex
 		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
 	}
 
-	float GLFWWindowWrapper::GetTime()
-	{
-		return (float)glfwGetTime();
-	}
-
-	void GLFWWindowWrapper::SetSize(int width, int height)
+	void GLFWWindowWrapper::SetSize(i32 width, i32 height)
 	{
 		m_Size = glm::vec2i(width, height);
 		m_FrameBufferSize = m_Size; // TODO: Remove redundant variable?
@@ -161,7 +156,7 @@ namespace flex
 		}
 	}
 
-	void GLFWWindowWrapper::SetPosition(int newX, int newY)
+	void GLFWWindowWrapper::SetPosition(i32 newX, i32 newY)
 	{
 		if (m_Window)
 		{
@@ -184,14 +179,14 @@ namespace flex
 	{
 		Window::SetCursorMode(mode);
 
-		int glfwCursorMode = 0;
+		i32 glfwCursorMode = 0;
 
 		switch (mode)
 		{
 		case Window::CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
 		case Window::CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
 		case Window::CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-		default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((int)mode)); break;
+		default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((i32)mode)); break;
 		}
 
 		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
@@ -240,46 +235,46 @@ namespace flex
 		glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
 	}
 
-	void GLFWErrorCallback(int error, const char* description)
+	void GLFWErrorCallback(i32 error, const char* description)
 	{
 		Logger::LogError("GLFW Error: " + std::to_string(error) + ": " + std::string(description));
 	}
 
-	void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods)
+	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods)
 	{
 		UNREFERENCED_PARAMETER(scancode);
 
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		const InputManager::Action inputAction = GLFWActionToInputManagerAction(action);
 		const InputManager::KeyCode inputKey = GLFWKeyToInputManagerKey(key);
-		const int inputMods = GLFWModsToInputManagerMods(mods);
+		const i32 inputMods = GLFWModsToInputManagerMods(mods);
 
 		window->KeyCallback(inputKey, inputAction, inputMods);
 	}
 
-	void GLFWCharCallback(GLFWwindow* glfwWindow, unsigned int character)
+	void GLFWCharCallback(GLFWwindow* glfwWindow, u32 character)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->CharCallback(character);
 	}
 
-	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods)
+	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, i32 button, i32 action, i32 mods)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		const InputManager::Action inputAction = GLFWActionToInputManagerAction(action);
-		const int inputMods = GLFWModsToInputManagerMods(mods);
+		const i32 inputMods = GLFWModsToInputManagerMods(mods);
 		const InputManager::MouseButton mouseButton = GLFWButtonToInputManagerMouseButton(button);
 
 		window->MouseButtonCallback(mouseButton, inputAction, inputMods);
 	}
 
-	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused)
+	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->WindowFocusCallback(focused);
 	}
 
-	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, int newX, int newY)
+	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->WindowPosCallback(newX, newY);
@@ -297,19 +292,19 @@ namespace flex
 		window->ScrollCallback(xoffset, yoffset);
 	}
 
-	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height)
+	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->WindowSizeCallback(width, height);
 	}
 
-	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height)
+	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->FrameBufferSizeCallback(width, height);
 	}
 
-	InputManager::Action GLFWActionToInputManagerAction(int glfwAction)
+	InputManager::Action GLFWActionToInputManagerAction(i32 glfwAction)
 	{
 		InputManager::Action inputAction = InputManager::Action::_NONE;
 
@@ -325,7 +320,7 @@ namespace flex
 		return inputAction;
 	}
 
-	InputManager::KeyCode GLFWKeyToInputManagerKey(int glfwKey)
+	InputManager::KeyCode GLFWKeyToInputManagerKey(i32 glfwKey)
 	{
 		InputManager::KeyCode inputKey = InputManager::KeyCode::_NONE;
 
@@ -460,19 +455,19 @@ namespace flex
 		return inputKey;
 	}
 
-	int GLFWModsToInputManagerMods(int glfwMods)
+	i32 GLFWModsToInputManagerMods(i32 glfwMods)
 	{
-		int inputMods = 0;
+		i32 inputMods = 0;
 
-		if (glfwMods & GLFW_MOD_SHIFT) inputMods |= (int)InputManager::Mod::SHIFT;
-		if (glfwMods & GLFW_MOD_ALT) inputMods |= (int)InputManager::Mod::ALT;
-		if (glfwMods & GLFW_MOD_CONTROL) inputMods |= (int)InputManager::Mod::CONTROL;
-		if (glfwMods & GLFW_MOD_SUPER) inputMods |= (int)InputManager::Mod::SUPER;
+		if (glfwMods & GLFW_MOD_SHIFT) inputMods |= (i32)InputManager::Mod::SHIFT;
+		if (glfwMods & GLFW_MOD_ALT) inputMods |= (i32)InputManager::Mod::ALT;
+		if (glfwMods & GLFW_MOD_CONTROL) inputMods |= (i32)InputManager::Mod::CONTROL;
+		if (glfwMods & GLFW_MOD_SUPER) inputMods |= (i32)InputManager::Mod::SUPER;
 
 		return inputMods;
 	}
 
-	InputManager::MouseButton GLFWButtonToInputManagerMouseButton(int glfwButton)
+	InputManager::MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton)
 	{
 		InputManager::MouseButton inputMouseButton = InputManager::MouseButton::_NONE;
 

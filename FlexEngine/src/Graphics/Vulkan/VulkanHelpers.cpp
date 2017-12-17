@@ -12,7 +12,7 @@ namespace flex
 {
 	namespace vk
 	{
-		VkVertexInputBindingDescription GetVertexBindingDescription(glm::uint vertexStride)
+		VkVertexInputBindingDescription GetVertexBindingDescription(u32 vertexStride)
 		{
 			VkVertexInputBindingDescription bindingDesc = {};
 			bindingDesc.binding = 0;
@@ -27,12 +27,12 @@ namespace flex
 		{
 			attributeDescriptions.clear();
 
-			uint32_t offset = 0;
-			uint32_t location = 0;
+			u32 offset = 0;
+			u32 location = 0;
 
-			// TODO: Roll into iteration over array
+			// TODO: Roll i32o iteration over array
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::POSITION)
+			if (vertexAttributes & (u32)VertexAttribute::POSITION)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -45,7 +45,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::POSITION_2D)
+			if (vertexAttributes & (u32)VertexAttribute::POSITION_2D)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -58,7 +58,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::UV)
+			if (vertexAttributes & (u32)VertexAttribute::UV)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -71,7 +71,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::UVW)
+			if (vertexAttributes & (u32)VertexAttribute::UVW)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -83,7 +83,7 @@ namespace flex
 				offset += sizeof(glm::vec3);
 				++location;
 			}
-			if (vertexAttributes & (glm::uint)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (vertexAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -92,11 +92,11 @@ namespace flex
 				attributeDescription.offset = offset;
 				attributeDescriptions.push_back(attributeDescription);
 
-				offset += sizeof(glm::int32);
+				offset += sizeof(i32);
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (vertexAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -109,7 +109,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::TANGENT)
+			if (vertexAttributes & (u32)VertexAttribute::TANGENT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -122,7 +122,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::BITANGENT)
+			if (vertexAttributes & (u32)VertexAttribute::BITANGENT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -135,7 +135,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (glm::uint)VertexAttribute::NORMAL)
+			if (vertexAttributes & (u32)VertexAttribute::NORMAL)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -228,7 +228,7 @@ namespace flex
 					STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 	#undef STR
 				case VK_SUCCESS:
-					// No error to print
+					// No error to pri32
 					return "";
 				case VK_RESULT_RANGE_SIZE:
 				case VK_RESULT_MAX_ENUM:
@@ -399,8 +399,8 @@ namespace flex
 			VulkanDevice* device,
 			VkFormat format,
 			VkImageUsageFlagBits usage,
-			glm::uint width,
-			glm::uint height,
+			u32 width,
+			u32 height,
 			FrameBufferAttachment *attachment)
 		{
 			VkImageAspectFlags aspectMask = 0;

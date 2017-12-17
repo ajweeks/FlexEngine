@@ -194,6 +194,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="FlexEngine\src\Scene\ReflectionProbe.cpp" />
+    <ClCompile Include="FlexEngine\src\Time.cpp" />
     <ClCompile Include="FlexEngine\src\VertexAttribute.cpp" />
     <ClCompile Include="FlexEngine\src\VertexBufferData.cpp" />
     <ClCompile Include="FlexEngine\src\FlexEngine.cpp" />
@@ -244,6 +245,7 @@
     <ClInclude Include="FlexEngine\include\Scene\GameObject.hpp" />
     <ClInclude Include="FlexEngine\include\Scene\MeshPrefab.hpp" />
     <ClInclude Include="FlexEngine\include\Scene\ReflectionProbe.hpp" />
+    <ClInclude Include="FlexEngine\include\Time.hpp" />
     <ClInclude Include="FlexEngine\include\Transform.hpp" />
     <ClInclude Include="FlexEngine\include\Scene\Scenes\BaseScene.hpp" />
     <ClInclude Include="FlexEngine\include\FreeCamera.hpp" />

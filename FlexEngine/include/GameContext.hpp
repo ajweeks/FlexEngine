@@ -21,7 +21,7 @@ namespace flex
 		SceneManager* sceneManager;
 		Monitor monitor;
 
-		float elapsedTime;
-		float deltaTime;
+		sec elapsedTime;
+		sec deltaTime;
 	};
 } // namespace flex

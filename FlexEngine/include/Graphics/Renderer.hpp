@@ -5,12 +5,11 @@
 #include <array>
 #include <map>
 
-#include <glm/integer.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
 #include "GameContext.hpp"
-#include "Typedefs.hpp"
+
 #include "VertexBufferData.hpp"
 #include "Transform.hpp"
 
@@ -91,8 +90,8 @@ namespace flex
 
 			glm::vec4 color = glm::vec4(1.0f);
 
-			glm::uint enabled = 1;
-			float padding[3];
+			u32 enabled = 1;
+			real padding[3];
 		};
 
 		struct PointLight
@@ -102,8 +101,8 @@ namespace flex
 			// Vec4 for padding's sake
 			glm::vec4 color = glm::vec4(1.0f);
 
-			glm::uint enabled = 1;
-			float padding[3];
+			u32 enabled = 1;
+			real padding[3];
 		};
 
 		// TODO: Is setting all the members to false necessary?
@@ -163,9 +162,9 @@ namespace flex
 
 			// PBR Constant colors
 			glm::vec3 constAlbedo;
-			float constMetallic;
-			float constRoughness;
-			float constAO;
+			real constMetallic;
+			real constRoughness;
+			real constAO;
 		};
 
 		struct Material
@@ -192,9 +191,9 @@ namespace flex
 
 			// PBR constants
 			glm::vec4 constAlbedo;
-			float constMetallic;
-			float constRoughness;
-			float constAO;
+			real constMetallic;
+			real constRoughness;
+			real constAO;
 
 			// PBR samplers
 			bool generateAlbedoSampler;
@@ -245,7 +244,7 @@ namespace flex
 			MaterialID materialID;
 
 			VertexBufferData* vertexBufferData = nullptr;
-			std::vector<glm::uint>* indices = nullptr;
+			std::vector<u32>* indices = nullptr;
 
 			std::string name;
 			Transform* transform;
@@ -264,7 +263,7 @@ namespace flex
 			inline bool HasUniform(const std::string& name) const;
 			void AddUniform(const std::string& name);
 			void RemoveUniform(const std::string& name);
-			glm::uint CalculateSize(int pointLightCount);
+			u32 CalculateSize(i32 PointLightCount);
 		};
 
 		struct Shader
@@ -281,7 +280,7 @@ namespace flex
 			Uniforms dynamicBufferUniforms;
 
 			bool deferred; // TODO: Replace this bool with just checking if numAttachments is larger than 1
-			int subpass = 0;
+			i32 subpass = 0;
 			bool depthWriteEnable = true;
 
 			// These variables should be set to true when the shader has these uniforms
@@ -299,7 +298,7 @@ namespace flex
 			bool needPushConstantBlock;
 
 			VertexAttributes vertexAttributes;
-			int numAttachments = 1; // How many output textures the fragment shader has
+			i32 numAttachments = 1; // How many output textures the fragment shader has
 		};
 
 		virtual void PostInitialize(const GameContext& gameContext) = 0;
@@ -311,10 +310,10 @@ namespace flex
 		virtual PointLightID InitializePointLight(const PointLight& pointLight) = 0;
 
 		virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) = 0;
-		virtual PointLight& GetPointLight(PointLightID pointLightID) = 0;
+		virtual PointLight& GetPointLight(PointLightID pointLight) = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
-		virtual void SetClearColor(float r, float g, float b) = 0;
+		virtual void SetClearColor(real r, real g, real b) = 0;
 
 		virtual void Update(const GameContext& gameContext) = 0;
 		virtual void Draw(const GameContext& gameContext) = 0;
@@ -322,17 +321,17 @@ namespace flex
 
 		virtual void ReloadShaders(GameContext& gameContext) = 0;
 
-		virtual void OnWindowSize(int width, int height) = 0;
+		virtual void OnWindowSize(i32 width, i32 height) = 0;
 
 		virtual void SetRenderObjectVisible(RenderID renderID, bool visible) = 0;
 
 		virtual void SetVSyncEnabled(bool enableVSync) = 0;
 
-		virtual glm::uint GetRenderObjectCount() const = 0;
-		virtual glm::uint GetRenderObjectCapacity() const = 0;
+		virtual u32 GetRenderObjectCount() const = 0;
+		virtual u32 GetRenderObjectCapacity() const = 0;
 
-		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized,
-			int stride, void* pointer) = 0;
+		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, Renderer::Type renderType, bool normalized,
+			i32 stride, void* pointer) = 0;
 
 		virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) = 0;
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;

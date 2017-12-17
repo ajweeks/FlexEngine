@@ -11,7 +11,7 @@
 
 namespace flex
 {
-	FreeCamera::FreeCamera(GameContext& gameContext, float FOV, float zNear, float zFar) :
+	FreeCamera::FreeCamera(GameContext& gameContext, real FOV, real zNear, real zFar) :
 		m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
 		m_Position(glm::vec3(0.0f)),
 		m_MoveSpeed(50.0f),
@@ -49,7 +49,7 @@ namespace flex
 			m_Yaw += look.x * m_RotationSpeed;
 			m_Pitch += look.y * m_RotationSpeed;
 
-			float pitchLimit = PI - 0.02f;
+			real pitchLimit = PI - 0.02f;
 			if (m_Pitch > pitchLimit) m_Pitch = pitchLimit;
 			if (m_Pitch < -pitchLimit) m_Pitch = -pitchLimit;
 		}
@@ -103,7 +103,7 @@ namespace flex
 			m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
 		}
 
-		float scrollDistance = gameContext.inputManager->GetVerticalScrollDistance();
+		real scrollDistance = gameContext.inputManager->GetVerticalScrollDistance();
 		if (scrollDistance != 0.0f)
 		{
 			translation += m_Forward * scrollDistance * m_ScrollDollySpeed;
@@ -115,7 +115,7 @@ namespace flex
 			translation += m_Forward * -zoom.y * m_DragDollySpeed;
 		}
 
-		float speedMultiplier = 1.0f;
+		real speedMultiplier = 1.0f;
 		if (gameContext.inputManager->GetKeyDown(m_MoveFasterKey))
 		{
 			speedMultiplier = m_MoveSpeedFastMultiplier;
@@ -132,32 +132,32 @@ namespace flex
 		RecalculateViewProjection(gameContext);
 	}
 
-	void FreeCamera::SetFOV(float FOV)
+	void FreeCamera::SetFOV(real FOV)
 	{
 		m_FOV = FOV;
 	}
 
-	float FreeCamera::GetFOV() const
+	real FreeCamera::GetFOV() const
 	{
 		return m_FOV;
 	}
 
-	void FreeCamera::SetZNear(float zNear)
+	void FreeCamera::SetZNear(real zNear)
 	{
 		m_ZNear = zNear;
 	}
 
-	float FreeCamera::GetZNear() const
+	real FreeCamera::GetZNear() const
 	{
 		return m_ZNear;
 	}
 
-	void FreeCamera::SetZFar(float zFar)
+	void FreeCamera::SetZFar(real zFar)
 	{
 		m_ZFar = zFar;
 	}
 
-	float FreeCamera::GetZFar() const
+	real FreeCamera::GetZFar() const
 	{
 		return m_ZFar;
 	}
@@ -177,7 +177,7 @@ namespace flex
 		return m_Proj;
 	}
 
-	void FreeCamera::LookAt(glm::vec3 point, float speed)
+	void FreeCamera::LookAt(glm::vec3 point, real speed)
 	{
 		glm::vec3 dPos = glm::normalize(point - m_Position);
 		glm::vec3 dDir = glm::normalize(dPos);
@@ -185,32 +185,32 @@ namespace flex
 		glm::vec3 targetRight = glm::cross(dPos, m_Up);
 		glm::vec3 targetForward = glm::cross(targetRight, m_Up);
 
-		//float dYaw = glm::acos(glm::dot(glm::vec2(dPos.x, dPos.z), glm::vec2(m_Forward.x, m_Forward.z)));
-		//float dPitch = glm::dot(glm::vec2(dPos.y, dPos.x), glm::vec2(m_Forward.y, m_Forward.x));
+		//real dYaw = glm::acos(glm::dot(glm::vec2(dPos.x, dPos.z), glm::vec2(m_Forward.x, m_Forward.z)));
+		//real dPitch = glm::dot(glm::vec2(dPos.y, dPos.x), glm::vec2(m_Forward.y, m_Forward.x));
 
-		const float targetYaw = glm::atan(dDir.z, dDir.x);
-		const float targetPitch = glm::atan(dDir.y, dDir.z);
+		const real targetYaw = glm::atan(dDir.z, dDir.x);
+		const real targetPitch = glm::atan(dDir.y, dDir.z);
 
 		m_Yaw = Lerp(m_Yaw, targetYaw, glm::clamp(speed, 0.0f, 1.0f));
 		m_Pitch = Lerp(m_Pitch, targetPitch, glm::clamp(speed, 0.0f, 1.0f));
 	}
 
-	void FreeCamera::SetMoveSpeed(float moveSpeed)
+	void FreeCamera::SetMoveSpeed(real moveSpeed)
 	{
 		m_MoveSpeed = moveSpeed;
 	}
 
-	float FreeCamera::GetMoveSpeed() const
+	real FreeCamera::GetMoveSpeed() const
 	{
 		return m_MoveSpeed;
 	}
 
-	void FreeCamera::SetRotationSpeed(float rotationSpeed)
+	void FreeCamera::SetRotationSpeed(real rotationSpeed)
 	{
 		m_RotationSpeed = rotationSpeed;
 	}
 
-	float FreeCamera::GetRotationSpeed() const
+	real FreeCamera::GetRotationSpeed() const
 	{
 		return m_RotationSpeed;
 	}
@@ -230,7 +230,7 @@ namespace flex
 		return m_Position;
 	}
 
-	void FreeCamera::SetViewDirection(float yawRad, float pitchRad)
+	void FreeCamera::SetViewDirection(real yawRad, real pitchRad)
 	{
 		m_Yaw = yawRad;
 		m_Pitch = pitchRad;
@@ -268,7 +268,7 @@ namespace flex
 		const glm::vec2 windowSize = gameContext.window->GetSize();
 		if (windowSize.x == 0.0f || windowSize.y == 0.0f) return;
 
-		float aspectRatio = windowSize.x / (float)windowSize.y;
+		real aspectRatio = windowSize.x / (real)windowSize.y;
 		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
 
 		m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
@@ -300,22 +300,22 @@ namespace flex
 		m_MoveSlowerKey = InputManager::KeyCode::KEY_LEFT_CONTROL;
 	}
 
-	float FreeCamera::GetYaw() const
+	real FreeCamera::GetYaw() const
 	{
 		return m_Yaw;
 	}
 
-	void FreeCamera::SetYaw(float yawRad)
+	void FreeCamera::SetYaw(real yawRad)
 	{
 		m_Yaw = yawRad;
 	}
 
-	float FreeCamera::GetPitch() const
+	real FreeCamera::GetPitch() const
 	{
 		return m_Pitch;
 	}
 
-	void FreeCamera::SetPitch(float pitchRad)
+	void FreeCamera::SetPitch(real pitchRad)
 	{
 		m_Pitch = pitchRad;
 	}

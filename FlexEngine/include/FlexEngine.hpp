@@ -2,8 +2,6 @@
 
 #include <string>
 
-#include <glm/integer.hpp>
-
 #include "GameContext.hpp"
 #include "FreeCamera.hpp"
 #include "InputManager.hpp"
@@ -40,7 +38,7 @@ namespace flex
 
 		std::string RenderIDToString(RendererID rendererID) const;
 
-		glm::uint m_RendererCount;
+		u32 m_RendererCount;
 
 		GameContext m_GameContext;
 		FreeCamera* m_DefaultCamera;

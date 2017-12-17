@@ -3,7 +3,7 @@
 #include "Logger.hpp"
 
 #if _DEBUG
-void _CheckGLErrorMessages(const char *file, int line)
+void _CheckGLErrorMessages(const char *file, flex::i32 line)
 {
 GLenum errorType(glGetError());
 

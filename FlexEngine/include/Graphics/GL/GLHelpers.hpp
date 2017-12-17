@@ -9,6 +9,7 @@
 
 #include "Logger.hpp"
 
+
 namespace flex
 {
 	namespace gl
@@ -17,14 +18,14 @@ namespace flex
 		{
 			Renderer::Shader shader = {};
 
-			glm::uint program;
+			u32 program;
 		};
 
 		struct GLCubemapGBuffer
 		{
-			glm::uint id;
+			u32 id;
 			const char* name;
-			GLint internalFormat;
+			GLint i32ernalFormat;
 			GLenum format;
 		};
 
@@ -34,49 +35,49 @@ namespace flex
 
 			struct UniformIDs
 			{
-				int model;
-				int modelInvTranspose;
-				int modelViewProjection;
-				int viewProjection;
-				int view;
-				int viewInv;
-				int projection;
-				int camPos;
-				int enableDiffuseTexture;
-				int enableNormalTexture;
-				int enableCubemapTexture;
-				int constAlbedo;
-				int enableAlbedoSampler;
-				int constMetallic;
-				int enableMetallicSampler;
-				int constRoughness;
-				int enableRoughnessSampler;
-				int constAO;
-				int enableAOSampler;
-				int hdrEquirectangularSampler;
-				int enableIrradianceSampler;
-				int verticalScale;
+				i32 model;
+				i32 modelInvTranspose;
+				i32 modelViewProjection;
+				i32 viewProjection;
+				i32 view;
+				i32 viewInv;
+				i32 projection;
+				i32 camPos;
+				i32 enableDiffuseTexture;
+				i32 enableNormalTexture;
+				i32 enableCubemapTexture;
+				i32 constAlbedo;
+				i32 enableAlbedoSampler;
+				i32 constMetallic;
+				i32 enableMetallicSampler;
+				i32 constRoughness;
+				i32 enableRoughnessSampler;
+				i32 constAO;
+				i32 enableAOSampler;
+				i32 hdrEquirectangularSampler;
+				i32 enableIrradianceSampler;
+				i32 verticalScale;
 			};
 			UniformIDs uniformIDs;
 
-			glm::uint diffuseSamplerID;
-			glm::uint normalSamplerID;
+			u32 diffuseSamplerID;
+			u32 normalSamplerID;
 
-			glm::uint cubemapSamplerID;
+			u32 cubemapSamplerID;
 			std::vector<GLCubemapGBuffer> cubemapSamplerGBuffersIDs;
-			glm::uint cubemapDepthSamplerID;
+			u32 cubemapDepthSamplerID;
 
 			// PBR samplers
-			glm::uint albedoSamplerID;
-			glm::uint metallicSamplerID;
-			glm::uint roughnessSamplerID;
-			glm::uint aoSamplerID;
+			u32 albedoSamplerID;
+			u32 metallicSamplerID;
+			u32 roughnessSamplerID;
+			u32 aoSamplerID;
 
-			glm::uint hdrTextureID;
+			u32 hdrTextureID;
 
-			glm::uint irradianceSamplerID;
-			glm::uint prefilteredMapSamplerID;
-			glm::uint brdfLUTSamplerID;
+			u32 irradianceSamplerID;
+			u32 prefilteredMapSamplerID;
+			u32 brdfLUTSamplerID;
 		};
 
 		struct GLRenderObject
@@ -90,9 +91,9 @@ namespace flex
 			bool visible = true;
 			bool isStatic = true; // If true, this object will be rendered to reflection probes
 
-			glm::uint VAO;
-			glm::uint VBO;
-			glm::uint IBO;
+			u32 VAO;
+			u32 VBO;
+			u32 IBO;
 
 			GLenum topology = GL_TRIANGLES;
 			GLenum cullFace = GL_BACK;
@@ -101,21 +102,21 @@ namespace flex
 			GLenum depthTestReadFunc = GL_LEQUAL;
 			GLboolean depthWriteEnable = GL_TRUE;
 
-			glm::uint vertexBuffer;
+			u32 vertexBuffer;
 			VertexBufferData* vertexBufferData = nullptr;
 
 			bool indexed = false;
-			glm::uint indexBuffer;
-			std::vector<glm::uint>* indices = nullptr;
+			u32 indexBuffer;
+			std::vector<u32>* indices = nullptr;
 
-			glm::uint materialID;
+			u32 materialID;
 		};
 		typedef std::vector<GLRenderObject*>::iterator RenderObjectIter;
 
 		struct UniformInfo
 		{
 			const GLchar* name;
-			int* id;
+			i32* id;
 		};
 
 		struct ViewProjectionUBO
@@ -129,18 +130,18 @@ namespace flex
 			glm::mat4 viewProj;
 		};
 
-		bool GenerateGLTexture_Empty(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
-		bool GenerateGLTexture_EmptyWithParams(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, int sWrap, int tWrap, int minFilter, int magFilter);
-		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
-		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
-		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
-		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter);
+		bool GenerateGLTexture_Empty(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type);
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
+		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
 
 		struct GLCubemapCreateInfo
 		{
-			glm::uint program;
-			glm::uint* textureID;
-			glm::uint* depthTextureID;
+			u32 program;
+			u32* textureID;
+			u32* depthTextureID;
 			std::vector<GLCubemapGBuffer>* textureGBufferIDs;
 			glm::uvec2 textureSize;
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
@@ -152,8 +153,8 @@ namespace flex
 
 		bool GenerateGLCubemap(GLCubemapCreateInfo& createInfo);
 
-		bool LoadGLShaders(glm::uint program, GLShader& shader);
-		bool LinkProgram(glm::uint program);
+		bool LoadGLShaders(u32 program, GLShader& shader);
+		bool LinkProgram(u32 program);
 
 
 		GLboolean BoolToGLBoolean(bool value);
@@ -161,7 +162,7 @@ namespace flex
 		GLenum TypeToGLType(Renderer::Type type);
 		GLenum UsageFlagToGLUsageFlag(Renderer::UsageFlag usage);
 		GLenum TopologyModeToGLMode(Renderer::TopologyMode topology);
-		glm::uint CullFaceToGLMode(Renderer::CullFace cullFace);
+		u32 CullFaceToGLMode(Renderer::CullFace cullFace);
 		GLenum DepthTestFuncToGlenum(Renderer::DepthTestFunc func);
 
 	} // namespace gl

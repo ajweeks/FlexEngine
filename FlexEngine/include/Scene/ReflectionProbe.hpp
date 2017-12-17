@@ -27,7 +27,7 @@ namespace flex
 
 		bool m_Visible;
 
-		// bool enabled, ivec4 influenceBoundingBox, bool update (float updateFrequency?), ...
+		// bool enabled, ivec4 influenceBoundingBox, bool update (real updateFrequency?), ...
 
 		ReflectionProbe(const ReflectionProbe&) = delete;
 		ReflectionProbe& operator=(const ReflectionProbe&) = delete;

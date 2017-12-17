@@ -9,6 +9,7 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 
+
 namespace flex
 {
 	class MeshPrefab;
@@ -27,10 +28,10 @@ namespace flex
 			virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
 			virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) override;
-			virtual PointLightID InitializePointLight(const PointLight& pointLight) override;
+			virtual PointLightID InitializePointLight(const PointLight& PointLight) override;
 
 			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
-			virtual PointLight& GetPointLight(PointLightID pointLightID) override;
+			virtual PointLight& GetPointLight(PointLightID PointLightID) override;
 
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;
@@ -39,19 +40,19 @@ namespace flex
 			virtual void ReloadShaders(GameContext& gameContext) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
-			virtual void SetClearColor(float r, float g, float b) override;
+			virtual void SetClearColor(real r, real g, real b) override;
 
-			virtual void OnWindowSize(int width, int height) override;
+			virtual void OnWindowSize(i32 width, i32 height) override;
 			
 			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 
-			virtual glm::uint GetRenderObjectCount() const override;
-			virtual glm::uint GetRenderObjectCapacity() const override;
+			virtual u32 GetRenderObjectCount() const override;
+			virtual u32 GetRenderObjectCapacity() const override;
 
-			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
-				Renderer::Type renderType, bool normalized, int stride, void* pointer) override;
+			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
+				Renderer::Type renderType, bool normalized, i32 stride, void* pointer) override;
 			
 			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
@@ -67,8 +68,8 @@ namespace flex
 			virtual void ImGui_Init(const GameContext& gameContext);
 
 			// TODO: Either use these functions or remove them
-			void SetFloat(ShaderID shaderID, const std::string& valName, float val);
-			void SetUInt(ShaderID shaderID, const std::string& valName, glm::uint val);
+			void SetFloat(ShaderID shaderID, const std::string& valName, real val);
+			void SetUInt(ShaderID shaderID, const std::string& valName, u32 val);
 			void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec);
 			void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec);
 			void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec);
@@ -82,14 +83,14 @@ namespace flex
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
-			void GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
+			void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
 
 			void SwapBuffers(const GameContext& gameContext);
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
-			void DrawSpriteQuad(const GameContext& gameContext, glm::uint textureHandle, MaterialID materialID, bool flipVertically = false);
+			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically = false);
 
-			bool GetLoadedTexture(const std::string& filePath, glm::uint& handle);
+			bool GetLoadedTexture(const std::string& filePath, u32& handle);
 
 			MaterialID GetNextAvailableMaterialID();
 			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
@@ -100,9 +101,9 @@ namespace flex
 			void UnloadShaders();
 			void LoadShaders();
 
-			void GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
-			void ResizeFrameBufferTexture(glm::uint handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
-			void ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size);
+			void GenerateFrameBufferTexture(u32* handle, i32 index, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void ResizeFrameBufferTexture(u32 handle, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size);
 
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
@@ -116,21 +117,21 @@ namespace flex
 			void DrawUI();
 
 			// Returns the next binding that would be used
-			glm::uint BindTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding = 0);
+			u32 BindTextures(Shader* shader, GLMaterial* glMaterial, u32 startingBinding = 0);
 			// Returns the next binding that would be used
-			glm::uint BindFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding = 0);
+			u32 BindFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 			// Returns the next binding that would be used
-			glm::uint BindDeferredFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding = 0);
+			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
 			void ImGui_InvalidateDeviceObjects();
 			bool ImGui_CreateDeviceObjects();
 			bool ImGui_CreateFontsTexture();
 
 			GLuint m_ImGuiFontTexture = 0;
-			int m_ImGuiShaderHandle = 0;
-			int m_ImGuiAttribLocationTex = 0, m_ImGuiAttribLocationProjMtx = 0;
-			int m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
-			unsigned int m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;
+			i32 m_ImGuiShaderHandle = 0;
+			i32 m_ImGuiAttribLocationTex = 0, m_ImGuiAttribLocationProjMtx = 0;
+			i32 m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
+			u32 m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;
 			
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::map<RenderID, GLRenderObject*> m_RenderObjects;
@@ -139,27 +140,27 @@ namespace flex
 
 			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
-			std::map<std::string, glm::uint> m_LoadedTextures; // Key is filepath, value is texture id
+			std::map<std::string, u32> m_LoadedTextures; // Key is filepath, value is texture id
 
 			// TODO: Clean up (make more dynamic)
-			glm::uint viewProjectionUBO;
-			glm::uint viewProjectionCombinedUBO;
+			u32 viewProjectionUBO;
+			u32 viewProjectionCombinedUBO;
 
 			RenderID m_GBufferQuadRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			Transform m_gBufferQuadTransform;
-			glm::uint m_gBufferHandle;
-			glm::uint m_gBufferDepthHandle;
+			u32 m_gBufferHandle;
+			u32 m_gBufferDepthHandle;
 
 			struct FrameBufferHandle
 			{
-				glm::uint id;
+				u32 id;
 				GLenum format;
-				GLenum internalFormat;
+				GLenum i32ernalFormat;
 				GLenum type;
 			};
 
-			// TODO: Resize all framebuffers automatically by inserting into container
+			// TODO: Resize all framebuffers automatically by inserting i32o container
 			// TODO: Remove ??
 			FrameBufferHandle m_gBuffer_PositionMetallicHandle;
 			FrameBufferHandle m_gBuffer_NormalRoughnessHandle;
@@ -171,8 +172,8 @@ namespace flex
 			// Everything is drawn to this texture before being drawn to the default 
 			// frame buffer through some post-processing effects
 			FrameBufferHandle m_OffscreenTextureHandle; 
-			glm::uint m_OffscreenFBO;
-			glm::uint m_OffscreenRBO;
+			u32 m_OffscreenFBO;
+			u32 m_OffscreenRBO;
 
 			FrameBufferHandle m_LoadingTextureHandle;
 			// TODO: Use a mesh prefab here
@@ -183,8 +184,8 @@ namespace flex
 			MaterialID m_SpriteMatID;
 			MaterialID m_PostProcessMatID;
 
-			glm::uint m_CaptureFBO;
-			glm::uint m_CaptureRBO;
+			u32 m_CaptureFBO;
+			u32 m_CaptureRBO;
 
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;

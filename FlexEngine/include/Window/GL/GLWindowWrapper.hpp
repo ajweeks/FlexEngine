@@ -14,7 +14,7 @@ namespace flex
 			virtual ~GLWindowWrapper();
 
 			virtual void Create() override;
-			virtual void SetFrameBufferSize(int width, int height) override;
+			virtual void SetFrameBufferSize(i32 width, i32 height) override;
 
 		private:
 

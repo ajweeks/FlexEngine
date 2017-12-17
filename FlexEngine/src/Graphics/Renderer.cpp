@@ -35,9 +35,9 @@ namespace flex
 		}
 	}
 
-	glm::uint Renderer::Uniforms::CalculateSize(int pointLightCount)
+	u32 Renderer::Uniforms::CalculateSize(i32 PointLightCount)
 	{
-		glm::uint size = 0;
+		u32 size = 0;
 
 		if (HasUniform("model")) size += sizeof(glm::mat4);
 		if (HasUniform("modelInvTranspose")) size += sizeof(glm::mat4);
@@ -48,20 +48,20 @@ namespace flex
 		if (HasUniform("projection")) size += sizeof(glm::mat4);
 		if (HasUniform("camPos")) size += sizeof(glm::vec4);
 		if (HasUniform("dirLight")) size += sizeof(DirectionalLight);
-		if (HasUniform("pointLights")) size += sizeof(PointLight) * pointLightCount;
-		if (HasUniform("enableAlbedoSampler")) size += sizeof(glm::uint);
+		if (HasUniform("pointLights")) size += sizeof(PointLight) * PointLightCount;
+		if (HasUniform("enableAlbedoSampler")) size += sizeof(u32);
 		if (HasUniform("constAlbedo")) size += sizeof(glm::vec4);
-		if (HasUniform("enableMetallicSampler")) size += sizeof(glm::uint);
-		if (HasUniform("constMetallic")) size += sizeof(float);
-		if (HasUniform("enableRoughnessSampler")) size += sizeof(glm::uint);
-		if (HasUniform("constRoughness")) size += sizeof(float);
-		if (HasUniform("roughness")) size += sizeof(float);
-		if (HasUniform("enableAOSampler")) size += sizeof(glm::uint);
-		if (HasUniform("constAO")) size += sizeof(float);
-		if (HasUniform("enableNormalSampler")) size += sizeof(glm::uint);
-		if (HasUniform("enableDiffuseSampler")) size += sizeof(glm::uint);
-		if (HasUniform("enableCubemapSampler")) size += sizeof(glm::uint);
-		if (HasUniform("enableIrradianceSampler")) size += sizeof(glm::uint);
+		if (HasUniform("enableMetallicSampler")) size += sizeof(u32);
+		if (HasUniform("constMetallic")) size += sizeof(real);
+		if (HasUniform("enableRoughnessSampler")) size += sizeof(u32);
+		if (HasUniform("constRoughness")) size += sizeof(real);
+		if (HasUniform("roughness")) size += sizeof(real);
+		if (HasUniform("enableAOSampler")) size += sizeof(u32);
+		if (HasUniform("constAO")) size += sizeof(real);
+		if (HasUniform("enableNormalSampler")) size += sizeof(u32);
+		if (HasUniform("enableDiffuseSampler")) size += sizeof(u32);
+		if (HasUniform("enableCubemapSampler")) size += sizeof(u32);
+		if (HasUniform("enableIrradianceSampler")) size += sizeof(u32);
 
 		return size;
 	}

@@ -5,6 +5,7 @@
 
 #include "Window.hpp"
 
+
 namespace flex
 {
 	class GLFWWindowWrapper : public Window
@@ -17,10 +18,8 @@ namespace flex
 		virtual void RetrieveMonitorInfo(GameContext& gameContext) override;
 		void SetUpCallbacks();
 
-		virtual float GetTime() override;
-
-		virtual void SetSize(int width, int height) override;
-		virtual void SetPosition(int newX, int newY) override;
+		virtual void SetSize(i32 width, i32 height) override;
+		virtual void SetPosition(i32 newX, i32 newY) override;
 
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void PollEvents() override;
@@ -42,26 +41,26 @@ namespace flex
 
 	private:
 
-		float m_PreviousFrameTime;
+		real m_PreviousFrameTime;
 
 		GLFWWindowWrapper(const GLFWWindowWrapper&) = delete;
 		GLFWWindowWrapper& operator=(const GLFWWindowWrapper&) = delete;
 	};
 
-	InputManager::Action GLFWActionToInputManagerAction(int glfwAction);
-	InputManager::KeyCode GLFWKeyToInputManagerKey(int glfwKey);
-	int GLFWModsToInputManagerMods(int glfwMods);
-	InputManager::MouseButton GLFWButtonToInputManagerMouseButton(int glfwButton);
+	InputManager::Action GLFWActionToInputManagerAction(i32 glfwAction);
+	InputManager::KeyCode GLFWKeyToInputManagerKey(i32 glfwKey);
+	i32 GLFWModsToInputManagerMods(i32 glfwMods);
+	InputManager::MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton);
 
-	void GLFWErrorCallback(int error, const char* description);
-	void GLFWKeyCallback(GLFWwindow* glfwWindow, int key, int scancode, int action, int mods);
-	void GLFWCharCallback(GLFWwindow* glfwWindow, unsigned int character);
-	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods);
-	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, int focused);
+	void GLFWErrorCallback(i32 error, const char* description);
+	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods);
+	void GLFWCharCallback(GLFWwindow* glfwWindow, u32 character);
+	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, i32 button, i32 action, i32 mods);
+	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused);
 	void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
-	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, int width, int height);
-	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, int newX, int newY);
-	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, int width, int height);
+	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
+	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY);
+	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 
 } // namespace flex
 

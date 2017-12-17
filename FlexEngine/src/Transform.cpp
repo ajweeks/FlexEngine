@@ -46,7 +46,7 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::Translate(float deltaX, float deltaY, float deltaZ)
+	void Transform::Translate(real deltaX, real deltaY, real deltaZ)
 	{
 		localPosition.x += deltaX;
 		localPosition.y += deltaY;
@@ -70,7 +70,7 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::Rotate(float deltaX, float deltaY, float deltaZ)
+	void Transform::Rotate(real deltaX, real deltaY, real deltaZ)
 	{
 		glm::quat rotationQuat(glm::vec3(deltaX, deltaY, deltaZ));
 		localRotation *= rotationQuat;
@@ -85,12 +85,12 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::Scale(float deltaScale)
+	void Transform::Scale(real deltaScale)
 	{
 		Scale(glm::vec3(deltaScale));
 	}
 
-	void Transform::Scale(float deltaX, float deltaY, float deltaZ)
+	void Transform::Scale(real deltaX, real deltaY, real deltaZ)
 	{
 		Scale(glm::vec3(deltaX, deltaY, deltaZ));
 	}
@@ -288,14 +288,14 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::SetLocalRotation(float eulerXRad, float eulerYRad, float eulerZRad)
+	void Transform::SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad)
 	{
 		localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad));
 
 		UpdateParentTransform();
 	}
 
-	void Transform::SetGlobalRotation(float eulerXRad, float eulerYRad, float eulerZRad)
+	void Transform::SetGlobalRotation(real eulerXRad, real eulerYRad, real eulerZRad)
 	{
 		if (parentTransform)
 		{

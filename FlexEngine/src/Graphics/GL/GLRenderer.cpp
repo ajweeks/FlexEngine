@@ -49,33 +49,33 @@ namespace flex
 
 			m_BRDFTextureSize = { 512, 512 };
 			m_BRDFTextureHandle = {};
-			m_BRDFTextureHandle.internalFormat = GL_RG16F;
+			m_BRDFTextureHandle.i32ernalFormat = GL_RG16F;
 			m_BRDFTextureHandle.format = GL_RG;
 			m_BRDFTextureHandle.type = GL_FLOAT;
 
 			m_OffscreenTextureHandle = {};
-			m_OffscreenTextureHandle.internalFormat = GL_RGBA16F;
+			m_OffscreenTextureHandle.i32ernalFormat = GL_RGBA16F;
 			m_OffscreenTextureHandle.format = GL_RGBA;
 			m_OffscreenTextureHandle.type = GL_FLOAT;
 
 			m_LoadingTextureHandle = {};
-			m_LoadingTextureHandle.internalFormat = GL_RGBA;
+			m_LoadingTextureHandle.i32ernalFormat = GL_RGBA;
 			m_LoadingTextureHandle.format = GL_RGBA;
 			m_LoadingTextureHandle.type = GL_FLOAT;
 
 
 			m_gBuffer_PositionMetallicHandle = {};
-			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
+			m_gBuffer_PositionMetallicHandle.i32ernalFormat = GL_RGBA16F;
 			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
 			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
 
 			m_gBuffer_NormalRoughnessHandle = {};
-			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
+			m_gBuffer_NormalRoughnessHandle.i32ernalFormat = GL_RGBA16F;
 			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
 			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
 
 			m_gBuffer_DiffuseAOHandle = {};
-			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.i32ernalFormat = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
@@ -120,7 +120,7 @@ namespace flex
 
 				GenerateFrameBufferTexture(&m_OffscreenTextureHandle.id,
 					0,
-					m_OffscreenTextureHandle.internalFormat,
+					m_OffscreenTextureHandle.i32ernalFormat,
 					m_OffscreenTextureHandle.format,
 					m_OffscreenTextureHandle.type,
 					frameBufferSize);
@@ -135,8 +135,8 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 			
-			const float captureProjectionNearPlane = 0.1f;
-			const float captureProjectionFarPlane = 1000.0f;
+			const real captureProjectionNearPlane = 0.1f;
+			const real captureProjectionFarPlane = 1000.0f;
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
@@ -193,7 +193,7 @@ namespace flex
 				glm::vec4(1.0f),
 			};
 
-			spriteQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION_2D | (glm::uint)VertexAttribute::UV | (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			spriteQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION_2D | (u32)VertexAttribute::UV | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 			
 			m_SpriteQuadVertexBufferData = {};
 			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
@@ -217,12 +217,12 @@ namespace flex
 			if (m_BRDFTextureHandle.id == 0)
 			{
 				Logger::LogInfo("Generating BRDF LUT");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.i32ernalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
 		}
 
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, glm::uint textureHandle, MaterialID materialID, bool flipVertically)
+		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
 		{
 			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
 			if (!spriteRenderObject) return;
@@ -235,7 +235,7 @@ namespace flex
 			glUseProgram(spriteShader->program);
 			CheckGLErrorMessages();
 
-			float verticalScale = flipVertically ? -1.0f : 1.0f;
+			real verticalScale = flipVertically ? -1.0f : 1.0f;
 
 			if (spriteShader->shader.constantBufferUniforms.HasUniform("verticalScale"))
 			{
@@ -362,7 +362,7 @@ namespace flex
 				{ "verticalScale",					&mat.uniformIDs.verticalScale },
 			};
 
-			const glm::uint uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
+			const u32 uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
 
 			for (size_t i = 0; i < uniformCount; ++i)
 			{
@@ -434,7 +434,7 @@ namespace flex
 			{
 				if (m_BRDFTextureHandle.id == 0)
 				{
-					GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+					GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.i32ernalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 					GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 				}
 				mat.brdfLUTSamplerID = m_BRDFTextureHandle.id;
@@ -455,11 +455,11 @@ namespace flex
 			{
 				bool needed;
 				bool create;
-				glm::uint* id;
+				u32* id;
 				std::string filepath;
 				std::string textureName;
 				bool flipVertically;
-				std::function<bool(glm::uint&, const std::string&, bool, bool)> createFunction;
+				std::function<bool(u32&, const std::string&, bool, bool)> createFunction;
 			};
 
 			// Samplers that need to be loaded from file
@@ -481,7 +481,7 @@ namespace flex
 				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", true, GenerateHDRGLTexture },
 			};
 
-			int binding = 0;
+			i32 binding = 0;
 			for (SamplerCreateInfo& samplerCreateInfo : samplerCreateInfos)
 			{
 				if (samplerCreateInfo.needed)
@@ -495,7 +495,7 @@ namespace flex
 							m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
 						}
 
-						int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, samplerCreateInfo.textureName.c_str());
+						i32 uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, samplerCreateInfo.textureName.c_str());
 						CheckGLErrorMessages();
 						if (uniformLocation == -1)
 						{
@@ -515,7 +515,7 @@ namespace flex
 			for (auto& frameBufferPair : createInfo->frameBuffers)
 			{
 				const char* frameBufferName = frameBufferPair.first.c_str();
-				int positionLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, frameBufferName);
+				i32 positionLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, frameBufferName);
 				CheckGLErrorMessages();
 				if (positionLocation == -1)
 				{
@@ -550,7 +550,7 @@ namespace flex
 					// Load from file
 					GenerateGLCubemap(cubemapCreateInfo);
 
-					int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "cubemapSampler");
+					i32 uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "cubemapSampler");
 					CheckGLErrorMessages();
 					if (uniformLocation == -1)
 					{
@@ -605,7 +605,7 @@ namespace flex
 			if (m_Shaders[mat.material.shaderID].shader.needCubemapSampler)
 			{
 				// TODO: Save location for binding later?
-				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "cubemapSampler");
+				i32 uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "cubemapSampler");
 				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
@@ -621,7 +621,7 @@ namespace flex
 
 			if (m_Shaders[mat.material.shaderID].shader.needBRDFLUT)
 			{
-				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "brdfLUT");
+				i32 uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "brdfLUT");
 				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
@@ -650,7 +650,7 @@ namespace flex
 
 			if (m_Shaders[mat.material.shaderID].shader.needIrradianceSampler)
 			{
-				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "irradianceSampler");
+				i32 uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "irradianceSampler");
 				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
@@ -679,7 +679,7 @@ namespace flex
 
 			if (m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
 			{
-				int uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "prefilterMap");
+				i32 uniformLocation = glGetUniformLocation(m_Shaders[mat.material.shaderID].program, "prefilterMap");
 				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
@@ -698,7 +698,7 @@ namespace flex
 			return materialID;
 		}
 
-		glm::uint GLRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+		u32 GLRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
@@ -861,7 +861,7 @@ namespace flex
 			glDepthMask(skyboxRenderObject->depthWriteEnable);
 			CheckGLErrorMessages();
 
-			for (unsigned int i = 0; i < 6; ++i)
+			for (u32 i = 0; i < 6; ++i)
 			{
 				glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
 				CheckGLErrorMessages();
@@ -939,11 +939,11 @@ namespace flex
 			glDepthMask(skybox->depthWriteEnable);
 			CheckGLErrorMessages();
 
-			unsigned int maxMipLevels = 5;
-			for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
+			u32 maxMipLevels = 5;
+			for (u32 mip = 0; mip < maxMipLevels; ++mip)
 			{
-				unsigned int mipWidth = (unsigned int)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.x * pow(0.5f, mip));
-				unsigned int mipHeight = (unsigned int)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.y * pow(0.5f, mip));
+				u32 mipWidth = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.x * pow(0.5f, mip));
+				u32 mipHeight = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.y * pow(0.5f, mip));
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
@@ -952,11 +952,11 @@ namespace flex
 				glViewport(0, 0, mipWidth, mipHeight);
 				CheckGLErrorMessages();
 
-				float roughness = (float)mip / (float(maxMipLevels - 1));
-				int roughnessUniformLocation = glGetUniformLocation(m_Shaders[m_Materials[prefilterMatID].material.shaderID].program, "roughness");
+				real roughness = (real)mip / (real(maxMipLevels - 1));
+				i32 roughnessUniformLocation = glGetUniformLocation(m_Shaders[m_Materials[prefilterMatID].material.shaderID].program, "roughness");
 				glUniform1f(roughnessUniformLocation, roughness);
 				CheckGLErrorMessages();
-				for (unsigned int i = 0; i < 6; ++i)
+				for (u32 i = 0; i < 6; ++i)
 				{
 					glUniformMatrix4fv(m_Materials[prefilterMatID].uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
 					CheckGLErrorMessages();
@@ -981,7 +981,7 @@ namespace flex
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
+		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
@@ -1006,7 +1006,7 @@ namespace flex
 					{ 1.0f, 1.0f },
 					{ 1.0f, 0.0f },
 				};
-				quadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
+				quadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
 
 				m_1x1_NDC_QuadVertexBufferData = {};
 				m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
@@ -1130,7 +1130,7 @@ namespace flex
 			glDepthMask(skybox->depthWriteEnable);
 			CheckGLErrorMessages();
 
-			for (unsigned int i = 0; i < 6; ++i)
+			for (u32 i = 0; i < 6; ++i)
 			{
 				glBindVertexArray(skybox->VAO);
 				CheckGLErrorMessages();
@@ -1261,9 +1261,9 @@ namespace flex
 			return m_DirectionalLight;
 		}
 
-		Renderer::PointLight& GLRenderer::GetPointLight(PointLightID pointLightID)
+		Renderer::PointLight& GLRenderer::GetPointLight(PointLightID pointLight)
 		{
-			return m_PointLights[pointLightID];
+			return m_PointLights[pointLight];
 		}
 
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
@@ -1275,7 +1275,7 @@ namespace flex
 
 			if (glMode == GL_INVALID_ENUM)
 			{
-				Logger::LogError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: " + std::to_string((int)topology));
+				Logger::LogError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: " + std::to_string((i32)topology));
 				renderObject->topology = GL_TRIANGLES;
 			}
 			else
@@ -1284,7 +1284,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::SetClearColor(float r, float g, float b)
+		void GLRenderer::SetClearColor(real r, real g, real b)
 		{
 			glClearColor(r, g, b, 1.0f);
 			CheckGLErrorMessages();
@@ -1304,21 +1304,21 @@ namespace flex
 
 			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
 				0,
-				m_gBuffer_PositionMetallicHandle.internalFormat,
+				m_gBuffer_PositionMetallicHandle.i32ernalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
 				m_gBuffer_PositionMetallicHandle.type,
 				frameBufferSize);
 
 			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
 				1,
-				m_gBuffer_NormalRoughnessHandle.internalFormat,
+				m_gBuffer_NormalRoughnessHandle.i32ernalFormat,
 				m_gBuffer_NormalRoughnessHandle.format,
 				m_gBuffer_NormalRoughnessHandle.type,
 				frameBufferSize);
 
 			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
 				2,
-				m_gBuffer_DiffuseAOHandle.internalFormat,
+				m_gBuffer_DiffuseAOHandle.i32ernalFormat,
 				m_gBuffer_DiffuseAOHandle.format,
 				m_gBuffer_DiffuseAOHandle.type,
 				frameBufferSize);
@@ -1339,7 +1339,7 @@ namespace flex
 			
 			if (m_BRDFTextureHandle.id == 0)
 			{
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.i32ernalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
 
@@ -1348,12 +1348,12 @@ namespace flex
 			Logger::LogInfo("Ready!\n");
 		}
 
-		void GLRenderer::GenerateFrameBufferTexture(glm::uint* handle, int index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
+		void GLRenderer::GenerateFrameBufferTexture(u32* handle, i32 index, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glGenTextures(1, handle);
 			glBindTexture(GL_TEXTURE_2D, *handle);
 			CheckGLErrorMessages();
-			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, i32ernalFormat, size.x, size.y, 0, format, type, NULL);
 			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			CheckGLErrorMessages();
@@ -1365,14 +1365,14 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::ResizeFrameBufferTexture(glm::uint handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
+		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glBindTexture(GL_TEXTURE_2D, handle);
-			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, i32ernalFormat, size.x, size.y, 0, format, type, NULL);
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::ResizeRenderBuffer(glm::uint handle, const glm::vec2i& size)
+		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size)
 		{
 			glBindRenderbuffer(GL_RENDERBUFFER, handle);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, size.x, size.y);
@@ -1430,7 +1430,7 @@ namespace flex
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
 			
-			// Sort render objects into deferred + forward buckets
+			// Sort render objects i32o deferred + forward buckets
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
 				GLShader* shader = &m_Shaders[m_Materials[i].material.shaderID];
@@ -1493,8 +1493,8 @@ namespace flex
 
 			{
 				// TODO: Make more dynamic (based on framebuffer count)
-				constexpr int numBuffers = 3;
-				unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+				constexpr i32 numBuffers = 3;
+				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 				glDrawBuffers(numBuffers, attachments);
 				CheckGLErrorMessages();
 			}
@@ -1515,8 +1515,8 @@ namespace flex
 			CheckGLErrorMessages();
 
 			{
-				constexpr int numBuffers = 1;
-				unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0 };
+				constexpr i32 numBuffers = 1;
+				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0 };
 				glDrawBuffers(numBuffers, attachments);
 				CheckGLErrorMessages();
 			}
@@ -1577,7 +1577,7 @@ namespace flex
 				UpdateMaterialUniforms(gameContext, cubemapObject->materialID);
 				UpdatePerObjectUniforms(cubemapObject->materialID, skybox->transform->GetModelMatrix(), gameContext);
 
-				glm::uint bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
+				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
 
 				if (skybox->enableCulling) glEnable(GL_CULL_FACE);
@@ -1597,7 +1597,7 @@ namespace flex
 
 				glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-				for (int face = 0; face < 6; ++face)
+				for (i32 face = 0; face < 6; ++face)
 				{
 					glUniformMatrix4fv(cubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[face][0][0]);
 					CheckGLErrorMessages();
@@ -1636,7 +1636,7 @@ namespace flex
 				UpdateMaterialUniforms(gameContext, gBufferQuad->materialID);
 				UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
 
-				glm::uint bindingOffset = BindFrameBufferTextures(material);
+				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
 
 				if (gBufferQuad->enableCulling) glEnable(GL_CULL_FACE);
@@ -1683,8 +1683,8 @@ namespace flex
 
 			// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
 			ImGuiIO& io = ImGui::GetIO();
-			int fb_width = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-			int fb_height = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
+			i32 fb_width = (i32)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
+			i32 fb_height = (i32)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
 			if (fb_width == 0 || fb_height == 0)
 				return;
 			drawData->ScaleClipRects(io.DisplayFramebufferScale);
@@ -1720,7 +1720,7 @@ namespace flex
 
 			// Setup viewport, orthographic projection matrix
 			glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
-			const float ortho_projection[4][4] =
+			const real ortho_projection[4][4] =
 			{
 				{ 2.0f / io.DisplaySize.x, 0.0f,                   0.0f, 0.0f },
 				{ 0.0f,                  2.0f / -io.DisplaySize.y, 0.0f, 0.0f },
@@ -1732,7 +1732,7 @@ namespace flex
 			glUniformMatrix4fv(m_ImGuiAttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 			glBindVertexArray(m_ImGuiVaoHandle);
 
-			for (int n = 0; n < drawData->CmdListsCount; ++n)
+			for (i32 n = 0; n < drawData->CmdListsCount; ++n)
 			{
 				const ImDrawList* cmd_list = drawData->CmdLists[n];
 				const ImDrawIdx* idx_buffer_offset = 0;
@@ -1743,7 +1743,7 @@ namespace flex
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ElementsHandle);
 				glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx), (const GLvoid*)cmd_list->IdxBuffer.Data, GL_STREAM_DRAW);
 
-				for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; ++cmd_i)
+				for (i32 cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; ++cmd_i)
 				{
 					const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
 					if (pcmd->UserCallback)
@@ -1753,7 +1753,7 @@ namespace flex
 					else
 					{
 						glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-						glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
+						glScissor((i32)pcmd->ClipRect.x, (i32)(fb_height - pcmd->ClipRect.w), (i32)(pcmd->ClipRect.z - pcmd->ClipRect.x), (i32)(pcmd->ClipRect.w - pcmd->ClipRect.y));
 						glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
 					}
 					idx_buffer_offset += pcmd->ElemCount;
@@ -1850,8 +1850,8 @@ namespace flex
 
 						if (drawCallInfo.deferred)
 						{
-							constexpr int numBuffers = 3;
-							unsigned int attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+							constexpr i32 numBuffers = 3;
+							u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 							glDrawBuffers(numBuffers, attachments);
 
 							for (size_t j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
@@ -1898,7 +1898,7 @@ namespace flex
 			}
 		}
 
-		glm::uint GLRenderer::BindTextures(Shader* shader, GLMaterial* glMaterial, glm::uint startingBinding)
+		u32 GLRenderer::BindTextures(Shader* shader, GLMaterial* glMaterial, u32 startingBinding)
 		{
 			Material* material = &glMaterial->material;
 
@@ -1906,7 +1906,7 @@ namespace flex
 			{
 				bool needed;
 				bool enabled;
-				glm::uint textureID;
+				u32 textureID;
 				GLenum target;
 			};
 
@@ -1922,7 +1922,7 @@ namespace flex
 			textures.push_back({ shader->needPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP });
 			textures.push_back({ shader->needCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP });
 
-			glm::uint binding = startingBinding;
+			u32 binding = startingBinding;
 			for (Tex& tex : textures)
 			{
 				if (tex.needed)
@@ -1941,7 +1941,7 @@ namespace flex
 			return binding;
 		}
 
-		glm::uint GLRenderer::BindFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding)
+		u32 GLRenderer::BindFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding)
 		{
 			Material* material = &glMaterial->material;
 
@@ -1949,7 +1949,7 @@ namespace flex
 			{
 				bool needed;
 				bool enabled;
-				glm::uint textureID;
+				u32 textureID;
 			};
 
 			if (material->frameBuffers.empty())
@@ -1958,7 +1958,7 @@ namespace flex
 				return startingBinding;
 			}
 
-			glm::uint binding = startingBinding;
+			u32 binding = startingBinding;
 			for (auto& frameBuffer : material->frameBuffers)
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
@@ -1971,13 +1971,13 @@ namespace flex
 			return binding;
 		}
 
-		glm::uint GLRenderer::BindDeferredFrameBufferTextures(GLMaterial* glMaterial, glm::uint startingBinding)
+		u32 GLRenderer::BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding)
 		{
 			struct Tex
 			{
 				bool needed;
 				bool enabled;
-				glm::uint textureID;
+				u32 textureID;
 			};
 
 			if (glMaterial->cubemapSamplerGBuffersIDs.empty())
@@ -1986,7 +1986,7 @@ namespace flex
 				return startingBinding;
 			}
 
-			glm::uint binding = startingBinding;
+			u32 binding = startingBinding;
 			for (auto& cubemapGBuffer : glMaterial->cubemapSamplerGBuffersIDs)
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
@@ -1999,7 +1999,7 @@ namespace flex
 			return binding;
 		}
 
-		bool GLRenderer::GetLoadedTexture(const std::string& filePath, glm::uint& handle)
+		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
 		{
 			auto location = m_LoadedTextures.find(filePath);
 			if (location == m_LoadedTextures.end())
@@ -2239,7 +2239,7 @@ namespace flex
 				LinkProgram(m_Shaders[i].program);
 			}
 
-			glm::uint imGuiShaderID;
+			u32 imGuiShaderID;
 			if (!GetShaderID("imgui", imGuiShaderID))
 			{
 				Logger::LogError("Could not get imgui shader ID!");
@@ -2455,7 +2455,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::OnWindowSize(int width, int height)
+		void GLRenderer::OnWindowSize(i32 width, i32 height)
 		{
 			if (width == 0 || height == 0) return;
 
@@ -2467,7 +2467,7 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
 			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_OffscreenTextureHandle.id,
-				m_OffscreenTextureHandle.internalFormat,
+				m_OffscreenTextureHandle.i32ernalFormat,
 				m_OffscreenTextureHandle.format,
 				m_OffscreenTextureHandle.type,
 				newFrameBufferSize);
@@ -2478,19 +2478,19 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_gBuffer_PositionMetallicHandle.id,
-				m_gBuffer_PositionMetallicHandle.internalFormat,
+				m_gBuffer_PositionMetallicHandle.i32ernalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
 				m_gBuffer_PositionMetallicHandle.type,
 				newFrameBufferSize);
 
 			ResizeFrameBufferTexture(m_gBuffer_NormalRoughnessHandle.id,
-				m_gBuffer_NormalRoughnessHandle.internalFormat,
+				m_gBuffer_NormalRoughnessHandle.i32ernalFormat,
 				m_gBuffer_NormalRoughnessHandle.format,
 				m_gBuffer_NormalRoughnessHandle.type,
 				newFrameBufferSize);
 
 			ResizeFrameBufferTexture(m_gBuffer_DiffuseAOHandle.id,
-				m_gBuffer_DiffuseAOHandle.internalFormat,
+				m_gBuffer_DiffuseAOHandle.i32ernalFormat,
 				m_gBuffer_DiffuseAOHandle.format,
 				m_gBuffer_DiffuseAOHandle.type,
 				newFrameBufferSize);
@@ -2511,7 +2511,7 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, float val)
+		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, real val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
 			if (location == -1) Logger::LogWarning("Float " + valName + " couldn't be found!");
@@ -2521,10 +2521,10 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetUInt(ShaderID shaderID, const std::string& valName, glm::uint val)
+		void GLRenderer::SetUInt(ShaderID shaderID, const std::string& valName, u32 val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
-			if (location == -1) Logger::LogWarning("Unsigned int " + valName + " couldn't be found!");
+			if (location == -1) Logger::LogWarning("Unsigned i32 " + valName + " couldn't be found!");
 			CheckGLErrorMessages();
 
 			glUniform1ui(location, val);
@@ -2628,7 +2628,7 @@ namespace flex
 				glm::vec2(0.0f, 0.0f),
 			};
 
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
 
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
@@ -2650,10 +2650,10 @@ namespace flex
 			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
 		}
 
-		glm::uint GLRenderer::GetRenderObjectCount() const
+		u32 GLRenderer::GetRenderObjectCount() const
 		{
 			// TODO: Replace function with m_RenderObjects.size()? (only if no nullptr objects exist)
-			glm::uint count = 0;
+			u32 count = 0;
 
 			for (auto renderObject : m_RenderObjects)
 			{
@@ -2663,13 +2663,13 @@ namespace flex
 			return count;
 		}
 
-		glm::uint GLRenderer::GetRenderObjectCapacity() const
+		u32 GLRenderer::GetRenderObjectCapacity() const
 		{
 			return m_RenderObjects.size();
 		}
 
-		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size,
-			Renderer::Type renderType, bool normalized, int stride, void* pointer)
+		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
+			Renderer::Type renderType, bool normalized, i32 stride, void* pointer)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 
@@ -2677,7 +2677,7 @@ namespace flex
 			if (!renderObject) return;
 
 			GLMaterial* material = &m_Materials[renderObject->materialID];
-			glm::uint program = m_Shaders[material->material.shaderID].program;
+			u32 program = m_Shaders[material->material.shaderID].program;
 
 
 			glUseProgram(program);
@@ -2709,7 +2709,7 @@ namespace flex
 
 			m_SkyBoxMaterialID = skyboxMaterialID;
 
-			for (glm::uint i = 0; i < m_RenderObjects.size(); ++i)
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject && m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
@@ -2755,7 +2755,7 @@ namespace flex
 			// Build texture atlas
 			ImGuiIO& io = ImGui::GetIO();
 			unsigned char* pixels;
-			int width, height;
+			i32 width, height;
 			io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
 			// Upload texture to graphics system
@@ -2788,10 +2788,10 @@ namespace flex
 
 			glm::vec2i windowSize = gameContext.window->GetSize();
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((float)windowSize.x, (float)windowSize.y);
+			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
 			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((float)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((float)frameBufferSize.y / windowSize.y) : 0);
+				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
+				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
 
 			io.DeltaTime = gameContext.deltaTime;
 
@@ -2806,10 +2806,10 @@ namespace flex
 
 			glm::vec2i windowSize = gameContext.window->GetSize();
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((float)windowSize.x, (float)windowSize.y);
+			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
 			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((float)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((float)frameBufferSize.y / windowSize.y) : 0);
+				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
+				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
 
 			io.DeltaTime = gameContext.deltaTime;
 		}
@@ -2830,8 +2830,8 @@ namespace flex
 
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				const glm::uint objectCount = GetRenderObjectCount();
-				const glm::uint objectCapacity = GetRenderObjectCapacity();
+				const u32 objectCount = GetRenderObjectCount();
+				const u32 objectCapacity = GetRenderObjectCapacity();
 				const std::string objectCountStr("Render object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
 				ImGui::Text(objectCountStr.c_str());
 
@@ -2922,9 +2922,9 @@ namespace flex
 						const std::string iStr = std::to_string(i);
 						const std::string objectName("Point Light##" + iStr);
 
-						bool pointLightEnabled = m_PointLights[i].enabled;
-						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLightEnabled);
-						m_PointLights[i].enabled = pointLightEnabled ? 1 : 0;
+						bool PointLightEnabled = m_PointLights[i].enabled;
+						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
+						m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
 						ImGui::SameLine();
 						if (ImGui::TreeNode(objectName.c_str()))
 						{

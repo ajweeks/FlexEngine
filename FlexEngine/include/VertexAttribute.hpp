@@ -1,12 +1,12 @@
 #pragma once
 
-#include <glm/integer.hpp>
+#include <glm/Integer.hpp>
 
-#include "Typedefs.hpp"
+
 
 namespace flex
 {
-	enum class VertexAttribute : glm::uint
+	enum class VertexAttribute : u32
 	{
 		NONE = 0,
 		POSITION = (1 << 0),
@@ -20,6 +20,6 @@ namespace flex
 		NORMAL = (1 << 8),
 	};
 
-	glm::uint CalculateVertexStride(VertexAttributes vertexAttributes);
+	u32 CalculateVertexStride(VertexAttributes vertexAttributes);
 
 } // namespace flex

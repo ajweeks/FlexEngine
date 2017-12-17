@@ -46,7 +46,7 @@ namespace flex
 			}
 		}
 
-		void VulkanWindowWrapper::SetFrameBufferSize(int width, int height)
+		void VulkanWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
 		{
 			m_FrameBufferSize = glm::vec2i(width, height);
 			// TODO: Call OnFrameBufferSize here?

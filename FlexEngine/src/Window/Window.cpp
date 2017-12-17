@@ -6,6 +6,7 @@
 
 #include "Helpers.hpp"
 #include "Logger.hpp"
+#include "Time.hpp"
 
 namespace flex
 {
@@ -93,12 +94,12 @@ namespace flex
 		m_TitleString = title;
 	}
 
-	std::string Window::GenerateWindowTitle(float dt)
+	std::string Window::GenerateWindowTitle(real dt)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
-		if (m_ShowMSInWindowTitle) result += "   " + FloatToString(dt * 1000.0f, 2) + " ms";
-		if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable rolling average
+		if (m_ShowMSInWindowTitle) result += "   " + Time::MillisecondsToString(dt, 2);
+		if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
 		//if (m_ShowFPSInWindowTitle) result += +" | " + FloatToString(1.0f / dt, 0) + " FPS ";
 
 		return result;
@@ -114,7 +115,7 @@ namespace flex
 		m_ShowMSInWindowTitle = showMS;
 	}
 
-	void Window::SetUpdateWindowTitleFrequency(float updateFrequencyinSeconds)
+	void Window::SetUpdateWindowTitleFrequency(real updateFrequencyinSeconds)
 	{
 		m_UpdateWindowTitleFrequency = updateFrequencyinSeconds;
 	}
@@ -131,22 +132,22 @@ namespace flex
 
 
 	// Callbacks
-	void Window::KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, int mods)
+	void Window::KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, i32 mods)
 	{
 		m_GameContextRef.inputManager->KeyCallback(keycode, action, mods);
 	}
 
-	void Window::CharCallback(unsigned int character)
+	void Window::CharCallback(u32 character)
 	{
 		m_GameContextRef.inputManager->CharCallback(character);
 	}
 
-	void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, int mods)
+	void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, i32 mods)
 	{
 		m_GameContextRef.inputManager->MouseButtonCallback(m_GameContextRef, mouseButton, action, mods);
 	}
 
-	void Window::WindowFocusCallback(int focused)
+	void Window::WindowFocusCallback(i32 focused)
 	{
 		m_HasFocus = focused != 0;
 	}
@@ -161,17 +162,17 @@ namespace flex
 		m_GameContextRef.inputManager->ScrollCallback(xoffset, yoffset);
 	}
 
-	void Window::WindowSizeCallback(int width, int height)
+	void Window::WindowSizeCallback(i32 width, i32 height)
 	{
 		SetSize(width, height);
 	}
 
-	void Window::WindowPosCallback(int newX, int newY)
+	void Window::WindowPosCallback(i32 newX, i32 newY)
 	{
 		m_Position = { newX, newY };
 	}
 
-	void Window::FrameBufferSizeCallback(int width, int height)
+	void Window::FrameBufferSizeCallback(i32 width, i32 height)
 	{
 		SetFrameBufferSize(width, height);
 	}

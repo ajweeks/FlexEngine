@@ -30,24 +30,24 @@ namespace flex
 
 		static void SetSuppressInfo(bool suppressInfo);
 		static bool GetSuppressInfo();
-		static int GetSuppressedInfoCount();
+		static i32 GetSuppressedInfoCount();
 
 		static void SetSuppressWarnings(bool suppressWarnings);
 		static bool GetSuppressWarnings();
-		static int GetSuppressedWarningCount();
+		static i32 GetSuppressedWarningCount();
 		
 		static void SetSuppressErrors(bool suppressErrors);
 		static bool GetSuppressErrors();
-		static int GetSuppressedErrorCount();
+		static i32 GetSuppressedErrorCount();
 
 	private:
 		static bool m_SuppressInfo;
 		static bool m_SuppressWarnings;
 		static bool m_SuppressErrors;
 
-		static int m_SuppressedInfoCount;
-		static int m_SuppressedWarningCount;
-		static int m_SuppressedErrorCount;
+		static i32 m_SuppressedInfoCount;
+		static i32 m_SuppressedWarningCount;
+		static i32 m_SuppressedErrorCount;
 
 #ifdef _WIN32
 		static HANDLE m_ConsoleHandle;

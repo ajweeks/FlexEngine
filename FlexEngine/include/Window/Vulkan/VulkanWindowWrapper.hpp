@@ -15,7 +15,7 @@ namespace flex
 			virtual ~VulkanWindowWrapper();
 
 			virtual void Create() override;
-			virtual void SetFrameBufferSize(int width, int height) override;
+			virtual void SetFrameBufferSize(i32 width, i32 height) override;
 
 		private:
 

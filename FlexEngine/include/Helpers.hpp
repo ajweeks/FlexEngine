@@ -13,6 +13,8 @@
 
 #include <imgui.h>
 
+
+
 namespace flex
 {
 	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha = false, bool flipVertically = false);
@@ -23,22 +25,22 @@ namespace flex
 		bool Load(const std::string& hdrFilePath, bool flipVertically);
 		void Free();
 
-		int width;
-		int height;
+		i32 width;
+		i32 height;
 		std::string filePath;
-		float* pixels;
+		real* pixels;
 	};
 
-	std::string FloatToString(float f, int precision);
+	std::string FloatToString(real f, i32 precision);
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec);
 
 	// Removes all content before the final '/' or '\' 
 	void StripLeadingDirectories(std::string& filePath);
 
-	float Lerp(float a, float b, float t);
-	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, float t);
-	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t);
+	real Lerp(real a, real b, real t);
+	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
+	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 
 	template<class T>
 	inline typename T::const_iterator Contains(const std::vector<T>& vec, const T& t)

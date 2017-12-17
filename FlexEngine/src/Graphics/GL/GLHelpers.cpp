@@ -14,18 +14,18 @@ namespace flex
 {
 	namespace gl
 	{
-		bool GenerateGLTexture_Empty(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
+		bool GenerateGLTexture_Empty(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type)
 		{
-			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, i32ernalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTexture_EmptyWithParams(glm::uint& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
 			CheckGLErrorMessages();
 
-			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, dimensions.x, dimensions.y, 0, format, type, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, i32ernalFormat, dimensions.x, dimensions.y, 0, format, type, 0);
 			CheckGLErrorMessages();
 			if (generateMipMaps)
 			{
@@ -48,12 +48,12 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
+		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
 		{
 			return GenerateGLTextureWithParams(textureID, filePath, flipVertically, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
 			GLFWimage image = LoadGLFWimage(filePath, false, flipVertically);
 
@@ -94,12 +94,12 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateHDRGLTexture(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
 		{
 			return GenerateHDRGLTextureWithParams(textureID, filePath, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateHDRGLTextureWithParams(glm::uint& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, int sWrap, int tWrap, int minFilter, int magFilter)
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
 			HDRImage image = {};
 			if (!image.Load(filePath, flipVertically))
@@ -150,7 +150,7 @@ namespace flex
 			glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.textureID);
 			CheckGLErrorMessages();
 
-			const GLint internalFormat = createInfo.HDR ? GL_RGB16F : GL_RGB;
+			const GLint i32ernalFormat = createInfo.HDR ? GL_RGB16F : GL_RGB;
 			const GLenum format = GL_RGB;
 			const GLenum type = createInfo.HDR ? GL_FLOAT : GL_UNSIGNED_BYTE;
 
@@ -166,7 +166,7 @@ namespace flex
 				{
 					for (size_t i = 0; i < 6; ++i)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat,
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, i32ernalFormat,
 							createInfo.textureSize.x, createInfo.textureSize.y, 0, format, type, nullptr);
 						CheckGLErrorMessages();
 					}
@@ -180,7 +180,7 @@ namespace flex
 
 					if (image.pixels)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, image.width, image.height, 0, format, type, image.pixels);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, i32ernalFormat, image.width, image.height, 0, format, type, image.pixels);
 						CheckGLErrorMessages();
 
 						DestroyGLFWimage(image);
@@ -199,7 +199,7 @@ namespace flex
 				const GLenum gbufFormat = GL_RGBA;
 				const GLenum gbufType = GL_FLOAT;
 
-				int binding = 0;
+				i32 binding = 0;
 
 				// Generate GBuffers
 				for (auto& gbuffer : *createInfo.textureGBufferIDs)
@@ -207,9 +207,9 @@ namespace flex
 					glGenTextures(1, &gbuffer.id);
 					glBindTexture(GL_TEXTURE_CUBE_MAP, gbuffer.id);
 					CheckGLErrorMessages();
-					for (int i = 0; i < 6; i++)
+					for (i32 i = 0; i < 6; i++)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, createInfo.textureSize.x, createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.i32ernalFormat, createInfo.textureSize.x, createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
 						CheckGLErrorMessages();
 					}
 
@@ -221,7 +221,7 @@ namespace flex
 					CheckGLErrorMessages();
 
 					
-					int uniformLocation = glGetUniformLocation(createInfo.program, gbuffer.name);
+					i32 uniformLocation = glGetUniformLocation(createInfo.program, gbuffer.name);
 					CheckGLErrorMessages();
 					if (uniformLocation == -1)
 					{
@@ -277,7 +277,7 @@ namespace flex
 			return success;
 		}
 
-		bool LoadGLShaders(glm::uint program, GLShader& shader)
+		bool LoadGLShaders(u32 program, GLShader& shader)
 		{
 			CheckGLErrorMessages();
 
@@ -308,11 +308,11 @@ namespace flex
 			shader.shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
 
 			GLint result = GL_FALSE;
-			int infoLogLength;
+			i32 infoLogLength;
 
 			// Compile vertex shader
-			char const* vertexSourcePointer = shader.shader.vertexShaderCode.data(); // TODO: Test
-			glShaderSource(vertexShaderID, 1, &vertexSourcePointer, NULL);
+			char const* vertexSourcepointer = shader.shader.vertexShaderCode.data(); // TODO: Test
+			glShaderSource(vertexShaderID, 1, &vertexSourcepointer, NULL);
 			glCompileShader(vertexShaderID);
 
 			glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &result);
@@ -349,7 +349,7 @@ namespace flex
 			return success;
 		}
 
-		bool LinkProgram(glm::uint program)
+		bool LinkProgram(u32 program)
 		{
 			glLinkProgram(program);
 
@@ -357,7 +357,7 @@ namespace flex
 			glGetProgramiv(program, GL_LINK_STATUS, &result);
 			if (result == GL_FALSE)
 			{
-				int infoLogLength;
+				i32 infoLogLength;
 				glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
 				std::string programErrorMessage;
 				programErrorMessage.resize((size_t)infoLogLength);
@@ -381,7 +381,7 @@ namespace flex
 
 			if (bufferTarget == Renderer::BufferTarget::ARRAY_BUFFER) glTarget = GL_ARRAY_BUFFER;
 			else if (bufferTarget == Renderer::BufferTarget::ELEMENT_ARRAY_BUFFER) glTarget = GL_ELEMENT_ARRAY_BUFFER;
-			else Logger::LogError("Unhandled BufferTarget passed to GLRenderer: " + std::to_string((int)bufferTarget));
+			else Logger::LogError("Unhandled BufferTarget passed to GLRenderer: " + std::to_string((i32)bufferTarget));
 
 			return glTarget;
 		}
@@ -398,7 +398,7 @@ namespace flex
 			else if (type == Renderer::Type::UNSIGNED_INT) glType = GL_UNSIGNED_INT;
 			else if (type == Renderer::Type::FLOAT) glType = GL_FLOAT;
 			else if (type == Renderer::Type::DOUBLE) glType = GL_DOUBLE;
-			else Logger::LogError("Unhandled Type passed to GLRenderer: " + std::to_string((int)type));
+			else Logger::LogError("Unhandled Type passed to GLRenderer: " + std::to_string((i32)type));
 
 			return glType;
 		}
@@ -409,7 +409,7 @@ namespace flex
 
 			if (usage == Renderer::UsageFlag::STATIC_DRAW) glUsage = GL_STATIC_DRAW;
 			else if (usage == Renderer::UsageFlag::DYNAMIC_DRAW) glUsage = GL_DYNAMIC_DRAW;
-			else Logger::LogError("Unhandled usage flag passed to GLRenderer: " + std::to_string((int)usage));
+			else Logger::LogError("Unhandled usage flag passed to GLRenderer: " + std::to_string((i32)usage));
 
 			return glUsage;
 		}
@@ -429,7 +429,7 @@ namespace flex
 			}
 		}
 
-		glm::uint CullFaceToGLMode(Renderer::CullFace cullFace)
+		u32 CullFaceToGLMode(Renderer::CullFace cullFace)
 		{
 			switch (cullFace)
 			{

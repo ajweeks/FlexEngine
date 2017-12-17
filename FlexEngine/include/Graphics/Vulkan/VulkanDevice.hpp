@@ -5,6 +5,7 @@
 
 #include "VDeleter.hpp"
 
+
 namespace flex
 {
 	namespace vk
@@ -13,7 +14,7 @@ namespace flex
 		{
 			VulkanDevice(VkPhysicalDevice physicalDevice);
 
-			glm::uint GetMemoryType(glm::uint typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr) const;
+			u32 GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr) const;
 
 			operator VkDevice();
 

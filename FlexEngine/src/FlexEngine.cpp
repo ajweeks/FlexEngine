@@ -12,7 +12,8 @@
 #include "Scene/SceneManager.hpp"
 #include "Scene/Scenes/Scene_02.hpp"
 #include "Scene/Scenes/TestScene.hpp"
-#include "Typedefs.hpp"
+
+#include "Time.hpp"
 
 namespace flex
 {
@@ -175,12 +176,12 @@ namespace flex
 		m_GameContext.window->Initialize();
 		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
 
-		int newWindowSizeY = int(m_GameContext.monitor.height * 0.75f);
-		int newWindowSizeX = int(newWindowSizeY * 16.0f / 9.0f);
+		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.75f);
+		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
 		m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
 
-		int newWindowPosX = int(newWindowSizeX * 0.1f);
-		int newWindowPosY = int(newWindowSizeY * 0.1f);
+		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
+		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
 		m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
 
 		m_GameContext.window->Create();
@@ -245,7 +246,7 @@ namespace flex
 
 		while (true)
 		{
-			m_RendererIndex = RendererID(((int)m_RendererIndex + 1) % (int)RendererID::_LAST_ELEMENT);
+			m_RendererIndex = RendererID(((i32)m_RendererIndex + 1) % (i32)RendererID::_LAST_ELEMENT);
 
 #if COMPILE_VULKAN
 			if (m_RendererIndex == RendererID::VULKAN) break;
@@ -267,16 +268,17 @@ namespace flex
 	void FlexEngine::UpdateAndRender()
 	{
 		m_Running = true;
-		float previousTime = (float)m_GameContext.window->GetTime();
+		sec frameStartTime = Time::Now();
 		while (m_Running)
 		{
-			float currentTime = (float)m_GameContext.window->GetTime();
-			float dt = (currentTime - previousTime);
-			previousTime = currentTime;
+			sec frameEndTime = Time::Now();
+			sec dt = frameEndTime - frameStartTime;
+			frameStartTime = frameEndTime;
+
 			if (dt < 0.0f) dt = 0.0f;
 
 			m_GameContext.deltaTime = dt;
-			m_GameContext.elapsedTime = currentTime;
+			m_GameContext.elapsedTime = frameEndTime;
 
 			m_GameContext.window->PollEvents();
 
@@ -376,7 +378,7 @@ namespace flex
 					m_GameContext.camera->SetYaw(glm::radians(camYawPitch[0]));
 					m_GameContext.camera->SetPitch(glm::radians(camYawPitch[1]));
 
-					float camFOV = glm::degrees(m_GameContext.camera->GetFOV());
+					real camFOV = glm::degrees(m_GameContext.camera->GetFOV());
 					ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f);
 					m_GameContext.camera->SetFOV(glm::radians(camFOV));
 
@@ -397,11 +399,11 @@ namespace flex
 				if (ImGui::TreeNode("Logging"))
 				{
 					bool suppressInfo = Logger::GetSuppressInfo();
-					int suppressedInfoCount = Logger::GetSuppressedInfoCount();
+					i32 suppressedInfoCount = Logger::GetSuppressedInfoCount();
 					bool suppressWarnings = Logger::GetSuppressWarnings();
-					int suppressedWarningCount = Logger::GetSuppressedWarningCount();
+					i32 suppressedWarningCount = Logger::GetSuppressedWarningCount();
 					bool suppressErrors = Logger::GetSuppressErrors();
-					int suppressedErrorCount = Logger::GetSuppressedErrorCount();
+					i32 suppressedErrorCount = Logger::GetSuppressedErrorCount();
 
 					const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")");
 					ImGui::Checkbox(infoStr.c_str(), &suppressInfo);
@@ -433,8 +435,8 @@ namespace flex
 
 					ImGui::SameLine();
 					
-					const glm::uint currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
-					const glm::uint sceneCount = m_GameContext.sceneManager->GetSceneCount();
+					const u32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
+					const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
 					const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() + 
 						" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
 					ImGui::Text(currentSceneStr.c_str());

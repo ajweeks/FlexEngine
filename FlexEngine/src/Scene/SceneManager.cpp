@@ -71,7 +71,7 @@ namespace flex
 		Logger::LogError("Attempt to set current scene to " + scene->m_Name + " failed because it was not found in the scene manager!");
 	}
 
-	void SceneManager::SetCurrentScene(glm::uint sceneIndex)
+	void SceneManager::SetCurrentScene(u32 sceneIndex)
 	{
 		if (sceneIndex >= m_Scenes.size())
 		{
@@ -115,7 +115,7 @@ namespace flex
 		else --m_CurrentSceneIndex;
 	}
 
-	glm::uint SceneManager::CurrentSceneIndex() const
+	u32 SceneManager::CurrentSceneIndex() const
 	{
 		return m_CurrentSceneIndex;
 	}
@@ -125,7 +125,7 @@ namespace flex
 		return m_Scenes[m_CurrentSceneIndex];
 	}
 
-	glm::uint SceneManager::GetSceneCount() const
+	u32 SceneManager::GetSceneCount() const
 	{
 		return m_Scenes.size();
 	}

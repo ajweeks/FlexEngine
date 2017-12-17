@@ -19,13 +19,13 @@ namespace flex
 			vkGetPhysicalDeviceFeatures(physicalDevice, &m_PhysicalDeviceFeatures);
 			vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
 
-			uint32_t queueFamilyCount;
+			u32 queueFamilyCount;
 			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 			assert(queueFamilyCount > 0);
 			m_QueueFamilyProperties.resize(queueFamilyCount);
 			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
 
-			uint32_t extensionCount = 0;
+			u32 extensionCount = 0;
 			vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 			if (extensionCount > 0)
 			{
@@ -45,9 +45,9 @@ namespace flex
 			return m_LogicalDevice;
 		}
 
-		glm::uint VulkanDevice::GetMemoryType(glm::uint typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound) const
+		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound) const
 		{
-			for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
+			for (u32 i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
 			{
 				if ((typeBits & 1) == 1)
 				{

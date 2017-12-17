@@ -2,8 +2,6 @@
 
 #include <vector>
 
-#include <glm/integer.hpp>
-
 #include "Scene/Scenes/BaseScene.hpp"
 #include "GameContext.hpp"
 
@@ -21,19 +19,19 @@ namespace flex
 		void RemoveScene(BaseScene* scene, const GameContext& gameContext);
 
 		void SetCurrentScene(BaseScene* scene);
-		void SetCurrentScene(glm::uint sceneIndex);
+		void SetCurrentScene(u32 sceneIndex);
 		void SetCurrentScene(std::string sceneName);
 		void SetNextSceneActive();
 		void SetPreviousSceneActive();
 
-		glm::uint CurrentSceneIndex() const;
+		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
-		glm::uint GetSceneCount() const;
+		u32 GetSceneCount() const;
 
 		void DestroyAllScenes(const GameContext& gameContext);
 
 	private:
-		glm::uint m_CurrentSceneIndex;
+		u32 m_CurrentSceneIndex;
 		std::vector<BaseScene*> m_Scenes;
 
 		SceneManager(const SceneManager&) = delete;

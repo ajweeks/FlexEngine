@@ -77,7 +77,7 @@ namespace flex
 
 			LoadDefaultShaderCode();
 
-			const glm::uint shaderCount = m_Shaders.size();
+			const u32 shaderCount = m_Shaders.size();
 			m_VertexIndexBufferPairs.reserve(shaderCount);
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
@@ -207,7 +207,7 @@ namespace flex
 				{ 1.0f, 1.0f },
 				{ 1.0f, 0.0f },
 			};
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (glm::uint)VertexAttribute::POSITION | (glm::uint)VertexAttribute::UV;
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
 			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
@@ -218,7 +218,7 @@ namespace flex
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 			gBufferQuadCreateInfo.enableCulling = false;
 
-			std::vector<glm::uint> indexBuffer = { 0, 1, 2,  2, 1, 3 };
+			std::vector<u32> indexBuffer = { 0, 1, 2,  2, 1, 3 };
 			gBufferQuadCreateInfo.indices = &indexBuffer;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
@@ -309,9 +309,9 @@ namespace flex
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.cubemapSamplerSize.x;
+			const u32 dim = (u32)m_LoadedMaterials[renderObject->materialID].material.cubemapSamplerSize.x;
 			
-			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
+			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkAttachmentDescription attDesc = {};
 			// HDR texture color attachment
@@ -441,7 +441,7 @@ namespace flex
 			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
 			descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
-			descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
+			descriptorSetLayoutCreateInfo.bindingCount = static_cast<u32>(setLayoutBindings.size());
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
 			
 			ShaderID equirectangularToCubeShaderID;
@@ -517,7 +517,7 @@ namespace flex
 			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 			VkPipelineDynamicStateCreateInfo dynamicState = {};
 			dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-			dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStateEnables.size());
+			dynamicState.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
 			dynamicState.pDynamicStates = dynamicStateEnables.data();
 
 			// Vertex input state
@@ -605,8 +605,8 @@ namespace flex
 			VkCommandBuffer cmdBuf = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			VkViewport viewport = {};
-			viewport.width = (float)dim;
-			viewport.height = (float)dim;
+			viewport.width = (real)dim;
+			viewport.height = (real)dim;
 			viewport.minDepth = 0.0;
 			viewport.maxDepth = 1.0f;
 
@@ -631,19 +631,19 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
 
-			for (uint32_t mip = 0; mip < mipLevels; ++mip)
+			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
-				for (uint32_t face = 0; face < 6; ++face)
+				for (u32 face = 0; face < 6; ++face)
 				{
-					viewport.width = static_cast<float>(dim * std::pow(0.5f, mip));
-					viewport.height = static_cast<float>(dim * std::pow(0.5f, mip));
+					viewport.width = static_cast<real>(dim * std::pow(0.5f, mip));
+					viewport.height = static_cast<real>(dim * std::pow(0.5f, mip));
 					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 					
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
 					m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (float)dim) * m_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * m_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
 						&m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock);
 
@@ -689,8 +689,8 @@ namespace flex
 					copyRegion.dstSubresource.layerCount = 1;
 					copyRegion.dstOffset = { 0, 0, 0 };
 
-					copyRegion.extent.width = static_cast<uint32_t>(viewport.width);
-					copyRegion.extent.height = static_cast<uint32_t>(viewport.height);
+					copyRegion.extent.width = static_cast<u32>(viewport.width);
+					copyRegion.extent.height = static_cast<u32>(viewport.height);
 					copyRegion.extent.depth = 1;
 
 					vkCmdCopyImage(
@@ -739,8 +739,8 @@ namespace flex
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-			const uint32_t dim = (uint32_t)m_LoadedMaterials[renderObject->materialID].material.irradianceSamplerSize.x;
-			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
+			const u32 dim = (u32)m_LoadedMaterials[renderObject->materialID].material.irradianceSamplerSize.x;
+			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkAttachmentDescription attDesc = {};
 			// Color attachment
@@ -868,7 +868,7 @@ namespace flex
 			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
 			descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
-			descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
+			descriptorSetLayoutCreateInfo.bindingCount = static_cast<u32>(setLayoutBindings.size());
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
 			
 			// Descriptor Pool
@@ -879,7 +879,7 @@ namespace flex
 			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
 			descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
-			descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+			descriptorPoolCreateInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
 			descriptorPoolCreateInfo.maxSets = 2;
 			VkDescriptorPool descriptorPool;
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
@@ -965,7 +965,7 @@ namespace flex
 			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 			VkPipelineDynamicStateCreateInfo dynamicState = {};
 			dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-			dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStateEnables.size());
+			dynamicState.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
 			dynamicState.pDynamicStates = dynamicStateEnables.data();
 
 			// Vertex input state
@@ -1058,8 +1058,8 @@ namespace flex
 			VkCommandBuffer cmdBuf = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			VkViewport viewport = {};
-			viewport.width = (float)dim;
-			viewport.height = (float)dim;
+			viewport.width = (real)dim;
+			viewport.height = (real)dim;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
@@ -1085,19 +1085,19 @@ namespace flex
 				subresourceRange);
 			m_LoadedMaterials[renderObject->materialID].irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-			for (uint32_t mip = 0; mip < mipLevels; ++mip)
+			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
-				for (uint32_t face = 0; face < 6; ++face) 
+				for (u32 face = 0; face < 6; ++face) 
 				{
-					viewport.width = static_cast<float>(dim * std::pow(0.5f, mip));
-					viewport.height = static_cast<float>(dim * std::pow(0.5f, mip));
+					viewport.width = static_cast<real>(dim * std::pow(0.5f, mip));
+					viewport.height = static_cast<real>(dim * std::pow(0.5f, mip));
 					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
 					m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (float)dim) * m_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * m_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
 						&m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock);
 
@@ -1143,8 +1143,8 @@ namespace flex
 					copyRegion.dstSubresource.layerCount = 1;
 					copyRegion.dstOffset = { 0, 0, 0 };
 
-					copyRegion.extent.width = static_cast<uint32_t>(viewport.width);
-					copyRegion.extent.height = static_cast<uint32_t>(viewport.height);
+					copyRegion.extent.width = static_cast<u32>(viewport.width);
+					copyRegion.extent.height = static_cast<u32>(viewport.height);
 					copyRegion.extent.depth = 1;
 
 					vkCmdCopyImage(
@@ -1194,8 +1194,8 @@ namespace flex
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
-			const uint32_t dim = m_LoadedMaterials[renderObject->materialID].material.prefilteredMapSize.x;
-			const uint32_t mipLevels = static_cast<uint32_t>(floor(log2(dim))) + 1;
+			const u32 dim = m_LoadedMaterials[renderObject->materialID].material.prefilteredMapSize.x;
+			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkAttachmentDescription attDesc = {};
 			// Color attachment
@@ -1404,7 +1404,7 @@ namespace flex
 			VkPipelineDynamicStateCreateInfo dynamicState = {}; (dynamicStateEnables);
 			dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 			dynamicState.pDynamicStates = dynamicStateEnables.data();
-			dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStateEnables.size());
+			dynamicState.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
 			dynamicState.flags = 0;
 
 			// Vertex input state
@@ -1480,8 +1480,8 @@ namespace flex
 			VkCommandBuffer cmdBuf = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			VkViewport viewport = {};
-			viewport.width = (float)dim;
-			viewport.height = (float)dim;
+			viewport.width = (real)dim;
+			viewport.height = (real)dim;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
@@ -1508,19 +1508,19 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
 
-			for (uint32_t mip = 0; mip < mipLevels; ++mip) 
+			for (u32 mip = 0; mip < mipLevels; ++mip) 
 			{
-				for (uint32_t face = 0; face < 6; ++face) 
+				for (u32 face = 0; face < 6; ++face) 
 				{
-					viewport.width = static_cast<float>(dim * std::pow(0.5f, mip));
-					viewport.height = static_cast<float>(dim * std::pow(0.5f, mip));
+					viewport.width = static_cast<real>(dim * std::pow(0.5f, mip));
+					viewport.height = static_cast<real>(dim * std::pow(0.5f, mip));
 					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
 					m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (float)dim) * m_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * m_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
 						&m_LoadedMaterials[skyboxRenderObject->materialID].material.pushConstantBlock);
 
@@ -1566,8 +1566,8 @@ namespace flex
 					copyRegion.dstSubresource.layerCount = 1;
 					copyRegion.dstOffset = { 0, 0, 0 };
 
-					copyRegion.extent.width = static_cast<uint32_t>(viewport.width);
-					copyRegion.extent.height = static_cast<uint32_t>(viewport.height);
+					copyRegion.extent.width = static_cast<u32>(viewport.width);
+					copyRegion.extent.height = static_cast<u32>(viewport.height);
 					copyRegion.extent.depth = 1;
 
 					vkCmdCopyImage(
@@ -1612,7 +1612,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(gameContext);
 
 			const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
-			const uint32_t dim = (uint32_t)m_BRDFSize.x;
+			const u32 dim = (u32)m_BRDFSize.x;
 
 			// Color attachment
 			VkAttachmentDescription attachmentDesc = {};
@@ -1680,7 +1680,7 @@ namespace flex
 			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{};
 			descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
-			descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
+			descriptorSetLayoutCreateInfo.bindingCount = static_cast<u32>(setLayoutBindings.size());
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
 
 			// Descriptor Pool
@@ -1690,7 +1690,7 @@ namespace flex
 
 			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
 			descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+			descriptorPoolCreateInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
 			descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
 			descriptorPoolCreateInfo.maxSets = 2;
 			VkDescriptorPool descriptorPool;
@@ -1762,7 +1762,7 @@ namespace flex
 			VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo{};
 			pipelineDynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 			pipelineDynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
-			pipelineDynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStateEnables.size());
+			pipelineDynamicStateCreateInfo.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
 			pipelineDynamicStateCreateInfo.flags = 0;
 
 			VkPipelineVertexInputStateCreateInfo emptyInputState = {};
@@ -1839,8 +1839,8 @@ namespace flex
 			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			VkViewport viewport = {};
-			viewport.width = (float)dim;
-			viewport.height = (float)dim;
+			viewport.width = (real)dim;
+			viewport.height = (real)dim;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
@@ -1966,7 +1966,7 @@ namespace flex
 				VulkanTexture** texture = nullptr;
 				bool* generate;
 				VkFormat format;
-				glm::uint mipLevels;
+				u32 mipLevels;
 				VulkanTextureCreateFunction createFunction;
 			};
 
@@ -2010,7 +2010,7 @@ namespace flex
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
 					// Cubemap is needed, but doesn't need to loaded from file
-					const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
+					const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
 					CreateVulkanCubemap_Empty(createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, 4, mipLevels, createInfo->enableCubemapTrilinearFiltering, VK_FORMAT_R8G8B8A8_UNORM, &mat.cubemapTexture);
 					m_LoadedTextures.push_back(mat.cubemapTexture);
 				}
@@ -2028,7 +2028,7 @@ namespace flex
 
 			if (mat.material.generateHDRCubemapSampler)
 			{
-				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
+				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
 				CreateVulkanCubemap_Empty(createInfo->generatedCubemapSize.x, createInfo->generatedCubemapSize.y, 4, mipLevels, false, VK_FORMAT_R32G32B32A32_SFLOAT, &mat.cubemapTexture);
 				m_LoadedTextures.push_back(mat.cubemapTexture);
 			}
@@ -2046,7 +2046,7 @@ namespace flex
 
 			if (mat.material.generateIrradianceSampler)
 			{
-				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
+				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
 				CreateVulkanCubemap_Empty(createInfo->generatedIrradianceCubemapSize.x, createInfo->generatedIrradianceCubemapSize.y, 4, mipLevels, false, VK_FORMAT_R32G32B32A32_SFLOAT, &mat.irradianceTexture);
 				m_LoadedTextures.push_back(mat.irradianceTexture);
 			}
@@ -2058,7 +2058,7 @@ namespace flex
 
 			if (mat.material.generatePrefilteredMap)
 			{
-				const glm::uint mipLevels = static_cast<uint32_t>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
+				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
 				CreateVulkanCubemap_Empty(createInfo->generatedPrefilteredCubemapSize.x, createInfo->generatedPrefilteredCubemapSize.y, 4, mipLevels, true, VK_FORMAT_R16G16B16A16_SFLOAT, &mat.prefilterTexture);
 				m_LoadedTextures.push_back(mat.prefilterTexture);
 			}
@@ -2073,7 +2073,7 @@ namespace flex
 			return m_LoadedMaterials.size() - 1;
 		}
 
-		glm::uint VulkanRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+		u32 VulkanRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
@@ -2106,7 +2106,7 @@ namespace flex
 			{
 				if (shader->uniformBuffer.constantData.data) free(shader->uniformBuffer.constantData.data);
 				
-				shader->uniformBuffer.constantData.data = (float*)malloc(shader->uniformBuffer.constantData.size);
+				shader->uniformBuffer.constantData.data = (real*)malloc(shader->uniformBuffer.constantData.size);
 				assert(shader->uniformBuffer.constantData.data);
 
 				PrepareUniformBuffer(&shader->uniformBuffer.constantBuffer, shader->uniformBuffer.constantData.size,
@@ -2137,7 +2137,7 @@ namespace flex
 
 			if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
 			{
-				Logger::LogError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: " + (int)topology);
+				Logger::LogError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: " + (i32)topology);
 			}
 			else
 			{
@@ -2145,7 +2145,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::SetClearColor(float r, float g, float b)
+		void VulkanRenderer::SetClearColor(real r, real g, real b)
 		{
 			m_ClearColor = { r, g, b, 1.0f };
 		}
@@ -2190,8 +2190,8 @@ namespace flex
 			// TODO: Consolidate renderer ImGui code
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				const glm::uint objectCount = GetRenderObjectCount();
-				const glm::uint objectCapacity = GetRenderObjectCapacity();
+				const u32 objectCount = GetRenderObjectCount();
+				const u32 objectCapacity = GetRenderObjectCapacity();
 				const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
 				ImGui::Text(objectCountStr.c_str());
 
@@ -2276,9 +2276,9 @@ namespace flex
 						const std::string iStr = std::to_string(i);
 						const std::string objectName("Point Light##" + iStr);
 
-						bool pointLightEnabled = m_PointLights[i].enabled;
-						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &pointLightEnabled);
-						m_PointLights[i].enabled = pointLightEnabled ? 1 : 0;
+						bool PointLightEnabled = m_PointLights[i].enabled;
+						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
+						m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
 						ImGui::SameLine();
 						if (ImGui::TreeNode(objectName.c_str()))
 						{
@@ -2301,7 +2301,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(gameContext);
 		}
 
-		void VulkanRenderer::OnWindowSize(int width, int height)
+		void VulkanRenderer::OnWindowSize(i32 width, i32 height)
 		{
 			UNREFERENCED_PARAMETER(width);
 			UNREFERENCED_PARAMETER(height);
@@ -2323,9 +2323,9 @@ namespace flex
 			m_VSyncEnabled = enableVSync;
 		}
 
-		glm::uint VulkanRenderer::GetRenderObjectCount() const
+		u32 VulkanRenderer::GetRenderObjectCount() const
 		{
-			glm::uint count = 0;
+			u32 count = 0;
 
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
@@ -2335,12 +2335,12 @@ namespace flex
 			return count;
 		}
 
-		glm::uint VulkanRenderer::GetRenderObjectCapacity() const
+		u32 VulkanRenderer::GetRenderObjectCapacity() const
 		{
 			return m_RenderObjects.size();
 		}
 
-		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, int size, Renderer::Type renderType, bool normalized, int stride, void* pointer)
+		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, Renderer::Type renderType, bool normalized, i32 stride, void* pointer)
 		{
 			// TODO: Implement
 			UNREFERENCED_PARAMETER(renderID);
@@ -2359,7 +2359,7 @@ namespace flex
 			m_SkyBoxMaterialID = skyboxMaterialID;
 
 			// TODO: IMPLEMENT:
-			//for (glm::uint i = 0; i < m_RenderObjects.size(); ++i)
+			//for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			//{
 			//	VulkanRenderObject* renderObject = GetRenderObject(i);
 			//	if (renderObject && m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
@@ -2407,10 +2407,10 @@ namespace flex
 
 			glm::vec2i windowSize = gameContext.window->GetSize();
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((float)windowSize.x, (float)windowSize.y);
+			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
 			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((float)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((float)frameBufferSize.y / windowSize.y) : 0);
+				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
+				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
 
 			io.SetClipboardTextFn = SetClipboardText;
 			io.GetClipboardTextFn = GetClipboardText;
@@ -2433,10 +2433,10 @@ namespace flex
 			// Setup display size (every frame to accommodate for window resizing)
 			glm::vec2i windowSize = gameContext.window->GetSize();
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((float)windowSize.x, (float)windowSize.y);
+			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
 			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((float)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((float)frameBufferSize.y / windowSize.y) : 0);
+				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
+				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
 
 			io.DeltaTime = gameContext.deltaTime;
 		}
@@ -2470,8 +2470,8 @@ namespace flex
 			VkViewport viewport = {};
 			viewport.x = 0.0f;
 			viewport.y = 0.0f;
-			viewport.width = (float)m_SwapChainExtent.width;
-			viewport.height = (float)m_SwapChainExtent.height;
+			viewport.width = (real)m_SwapChainExtent.width;
+			viewport.height = (real)m_SwapChainExtent.height;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -2483,19 +2483,19 @@ namespace flex
 
 			// Render commands
 			ImDrawData* imDrawData = ImGui::GetDrawData();
-			int32_t vertexOffset = 0;
-			int32_t indexOffset = 0;
-			for (int32_t i = 0; i < imDrawData->CmdListsCount; ++i)
+			i32 vertexOffset = 0;
+			i32 indexOffset = 0;
+			for (i32 i = 0; i < imDrawData->CmdListsCount; ++i)
 			{
 				const ImDrawList* cmd_list = imDrawData->CmdLists[i];
-				for (int32_t j = 0; j < cmd_list->CmdBuffer.Size; ++j)
+				for (i32 j = 0; j < cmd_list->CmdBuffer.Size; ++j)
 				{
 					const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[j];
 					VkRect2D scissorRect;
-					scissorRect.offset.x = std::max((int32_t)(pcmd->ClipRect.x), 0);
-					scissorRect.offset.y = std::max((int32_t)(pcmd->ClipRect.y), 0);
-					scissorRect.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-					scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
+					scissorRect.offset.x = std::max((i32)(pcmd->ClipRect.x), 0);
+					scissorRect.offset.y = std::max((i32)(pcmd->ClipRect.y), 0);
+					scissorRect.extent.width = (u32)(pcmd->ClipRect.z - pcmd->ClipRect.x);
+					scissorRect.extent.height = (u32)(pcmd->ClipRect.w - pcmd->ClipRect.y);
 					vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
 					vkCmdDrawIndexed(commandBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
 					indexOffset += pcmd->ElemCount;
@@ -2523,19 +2523,19 @@ namespace flex
 
 			VkPushConstantRange pushConstants[1] = {};
 			pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			pushConstants[0].offset = sizeof(float) * 0;
-			pushConstants[0].size = sizeof(float) * 4;
+			pushConstants[0].offset = sizeof(real) * 0;
+			pushConstants[0].size = sizeof(real) * 4;
 
 			VertexBufferData vertexBufferData = {};
 			vertexBufferData.Attributes =
-				(glm::uint)VertexAttribute::POSITION_2D |
-				(glm::uint)VertexAttribute::UV |
-				(glm::uint)VertexAttribute::COLOR_R8G8B8A8_UNORM;
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R8G8B8A8_UNORM;
 			vertexBufferData.VertexStride = CalculateVertexStride(vertexBufferData.Attributes);
 
 			assert(vertexBufferData.VertexStride == sizeof(ImDrawVert));
 
-			glm::uint descriptorSetLayoutIndex = m_IGuiShaderID;
+			u32 descriptorSetLayoutIndex = m_IGuiShaderID;
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 
@@ -2621,7 +2621,7 @@ namespace flex
 			ImGuiIO& io = ImGui::GetIO();
 
 			unsigned char* pixels;
-			int textureWidth, textureHeight;
+			i32 textureWidth, textureHeight;
 			io.Fonts->GetTexDataAsRGBA32(&pixels, &textureWidth, &textureHeight);
 			size_t uploadSize = textureWidth * textureHeight * 4 * sizeof(char);
 
@@ -2696,11 +2696,11 @@ namespace flex
 			return true;
 		}
 
-		uint32_t VulkanRenderer::ImGui_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits)
+		u32 VulkanRenderer::ImGui_MemoryType(VkMemoryPropertyFlags properties, u32 type_bits)
 		{
 			VkPhysicalDeviceMemoryProperties prop;
 			vkGetPhysicalDeviceMemoryProperties(m_VulkanDevice->m_PhysicalDevice, &prop);
-			for (uint32_t i = 0; i < prop.memoryTypeCount; ++i)
+			for (u32 i = 0; i < prop.memoryTypeCount; ++i)
 				if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1 << i))
 					return i;
 			return 0xffffffff; // Unable to find memoryType
@@ -2789,7 +2789,7 @@ namespace flex
 		{
 			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
-			uint32_t deviceCount = 0;
+			u32 deviceCount = 0;
 			vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
 
 			if (deviceCount == 0)
@@ -2822,14 +2822,14 @@ namespace flex
 			VulkanQueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
 
 			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+			std::set<i32> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
 
-			float queuePriority = 1.0f;
-			for (int queueFamily : uniqueQueueFamilies)
+			real queuePriority = 1.0f;
+			for (i32 queueFamily : uniqueQueueFamilies)
 			{
 				VkDeviceQueueCreateInfo queueCreateInfo = {};
 				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo.queueFamilyIndex = (glm::uint32)queueFamily;
+				queueCreateInfo.queueFamilyIndex = (u32)queueFamily;
 				queueCreateInfo.queueCount = 1;
 				queueCreateInfo.pQueuePriorities = &queuePriority;
 				queueCreateInfos.push_back(queueCreateInfo);
@@ -2842,7 +2842,7 @@ namespace flex
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
 			createInfo.pQueueCreateInfos = queueCreateInfos.data();
-			createInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
+			createInfo.queueCreateInfoCount = (u32)queueCreateInfos.size();
 
 			createInfo.pEnabledFeatures = &deviceFeatures;
 
@@ -2865,8 +2865,8 @@ namespace flex
 
 			vkGetPhysicalDeviceProperties(physicalDevice, &m_VulkanDevice->m_PhysicalDeviceProperties);
 
-			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (glm::uint32)indices.graphicsFamily, 0, &m_GraphicsQueue);
-			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (glm::uint32)indices.presentFamily, 0, &m_PresentQueue);
+			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)indices.graphicsFamily, 0, &m_GraphicsQueue);
+			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)indices.presentFamily, 0, &m_PresentQueue);
 		}
 
 		void VulkanRenderer::RecreateSwapChain(Window* window)
@@ -2893,7 +2893,7 @@ namespace flex
 			VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes);
 			VkExtent2D extent = ChooseSwapExtent(window, swapChainSupport.capabilities);
 
-			uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+			u32 imageCount = swapChainSupport.capabilities.minImageCount + 1;
 			if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
 			{
 				imageCount = swapChainSupport.capabilities.maxImageCount;
@@ -2911,7 +2911,7 @@ namespace flex
 			createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 			VulkanQueueFamilyIndices indices = FindQueueFamilies(m_VulkanDevice->m_PhysicalDevice);
-			uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
+			u32 queueFamilyIndices[] = { (u32)indices.graphicsFamily, (u32)indices.presentFamily };
 
 			if (indices.graphicsFamily != indices.presentFamily)
 			{
@@ -2949,7 +2949,7 @@ namespace flex
 		{
 			m_SwapChainImageViews.resize(m_SwapChainImages.size(), VDeleter<VkImageView>{ m_VulkanDevice->m_LogicalDevice, vkDestroyImageView });
 
-			for (uint32_t i = 0; i < m_SwapChainImages.size(); ++i)
+			for (u32 i = 0; i < m_SwapChainImages.size(); ++i)
 			{
 				CreateImageView(m_SwapChainImages[i], m_SwapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1, m_SwapChainImageViews[i].replace());
 			}
@@ -2960,7 +2960,7 @@ namespace flex
 			CreateImageView(texture->image, format, VK_IMAGE_ASPECT_COLOR_BIT, texture->mipLevels, texture->imageView.replace());
 		}
 
-		void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, glm::uint mipLevels, VkImageView* imageView) const
+		void VulkanRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, u32 mipLevels, VkImageView* imageView) const
 		{
 			VkImageViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -3225,8 +3225,8 @@ namespace flex
 			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
 			writeDescriptorSets.reserve(descriptorSets.size());
 
-			glm::uint descriptorSetIndex = 0;
-			glm::uint binding = 0;
+			u32 descriptorSetIndex = 0;
+			u32 binding = 0;
 
 			for (DescriptorSetInfo& descriptorSetInfo : descriptorSets)
 			{
@@ -3349,7 +3349,7 @@ namespace flex
 			};
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
-			glm::uint binding = 0;
+			u32 binding = 0;
 
 			for (DescriptorSetInfo& descSetInfo : descriptorSets)
 			{
@@ -3374,7 +3374,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
 		}
 
-		void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture, float maxAnisotropy, float minLod, float maxLod, VkSamplerAddressMode samplerAddressMode, VkBorderColor borderColor) const
+		void VulkanRenderer::CreateTextureSampler(VulkanTexture* texture, real maxAnisotropy, real minLod, real maxLod, VkSamplerAddressMode samplerAddressMode, VkBorderColor borderColor) const
 		{
 			VkSamplerCreateInfo samplerInfo = {};
 			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -3494,7 +3494,7 @@ namespace flex
 
 			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = { vertShaderStageInfo, fragShaderStageInfo };
 
-			const glm::uint vertexStride = CalculateVertexStride(createInfo->vertexAttributes);
+			const u32 vertexStride = CalculateVertexStride(createInfo->vertexAttributes);
 			VkVertexInputBindingDescription bindingDescription = GetVertexBindingDescription(vertexStride);
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 			GetVertexAttributeDescriptions(createInfo->vertexAttributes, attributeDescriptions);
@@ -3514,8 +3514,8 @@ namespace flex
 			VkViewport viewport = {};
 			viewport.x = 0.0f;
 			viewport.y = 0.0f;
-			viewport.width = (float)m_SwapChainExtent.width;
-			viewport.height = (float)m_SwapChainExtent.height;
+			viewport.width = (real)m_SwapChainExtent.width;
+			viewport.height = (real)m_SwapChainExtent.height;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
@@ -3649,7 +3649,7 @@ namespace flex
 			VkCommandPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			poolInfo.queueFamilyIndex = (glm::uint32)queueFamilyIndices.graphicsFamily;
+			poolInfo.queueFamilyIndex = (u32)queueFamilyIndices.graphicsFamily;
 
 			VK_CHECK_RESULT(vkCreateCommandPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_VulkanDevice->m_CommandPool.replace()));
 		}
@@ -3690,8 +3690,8 @@ namespace flex
 			vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, 1, &commandBuffer);
 		}
 
-		VkDeviceSize VulkanRenderer::CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-			VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory, glm::uint arrayLayers, glm::uint mipLevels, VkImageCreateFlags flags) const
+		VkDeviceSize VulkanRenderer::CreateImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+			VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory, u32 arrayLayers, u32 mipLevels, VkImageCreateFlags flags) const
 		{
 			VkImageCreateInfo imageInfo = {};
 			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -3804,7 +3804,7 @@ namespace flex
 			const size_t frameBufferColorAttachmentCount = offScreenFrameBuf->frameBufferAttachments.size();
 
 			// Color attachments
-			for (uint32_t i = 0; i < frameBufferColorAttachmentCount; ++i)
+			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
 				CreateAttachment(
 					m_VulkanDevice,
@@ -3826,7 +3826,7 @@ namespace flex
 			std::vector<VkAttachmentDescription> attachmentDescs(frameBufferColorAttachmentCount + 1); // + 1 for depth attachment
 
 			// Init attachment properties
-			for (uint32_t i = 0; i < frameBufferColorAttachmentCount; ++i)
+			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
 				attachmentDescs[i].samples = VK_SAMPLE_COUNT_1_BIT;
 				attachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -3848,7 +3848,7 @@ namespace flex
 
 
 			std::vector<VkAttachmentReference> colorReferences;
-			for (uint32_t i = 0; i < frameBufferColorAttachmentCount; ++i)
+			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
 				colorReferences.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
 			}
@@ -3860,7 +3860,7 @@ namespace flex
 			VkSubpassDescription subpass = {};
 			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 			subpass.pColorAttachments = colorReferences.data();
-			subpass.colorAttachmentCount = static_cast<uint32_t>(colorReferences.size());
+			subpass.colorAttachmentCount = static_cast<u32>(colorReferences.size());
 			subpass.pDepthStencilAttachment = &depthReference;
 
 			// Use subpass dependencies for attachment layput transitions
@@ -3885,7 +3885,7 @@ namespace flex
 			VkRenderPassCreateInfo renderPassInfo = {};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 			renderPassInfo.pAttachments = attachmentDescs.data();
-			renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentDescs.size());
+			renderPassInfo.attachmentCount = static_cast<u32>(attachmentDescs.size());
 			renderPassInfo.subpassCount = 1;
 			renderPassInfo.pSubpasses = &subpass;
 			renderPassInfo.dependencyCount = dependencies.size();
@@ -3894,7 +3894,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &offScreenFrameBuf->renderPass));
 
 			std::vector<VkImageView> attachments;
-			for (uint32_t i = 0; i < frameBufferColorAttachmentCount; ++i)
+			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
 				attachments.push_back(offScreenFrameBuf->frameBufferAttachments[i].second.view);
 			}
@@ -3905,7 +3905,7 @@ namespace flex
 			fbufCreateInfo.pNext = NULL;
 			fbufCreateInfo.renderPass = offScreenFrameBuf->renderPass;
 			fbufCreateInfo.pAttachments = attachments.data();
-			fbufCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+			fbufCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 			fbufCreateInfo.width = offScreenFrameBuf->width;
 			fbufCreateInfo.height = offScreenFrameBuf->height;
 			fbufCreateInfo.layers = 1;
@@ -3929,7 +3929,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, &colorSampler));
 		}
 
-		void VulkanRenderer::CreateVulkanTexture_Empty(glm::uint width, glm::uint height, VkFormat format, uint32_t mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanTexture_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
 		{
 			CreateTextureImage_Empty(width, height, format, mipLevels, texture);
 			if (*texture != nullptr)
@@ -3939,7 +3939,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanTexture(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
 		{
 			CreateTextureImage(filePath, format, mipLevels, texture);
 			if (*texture != nullptr)
@@ -3951,7 +3951,7 @@ namespace flex
 			(*texture)->filePath = filePath;
 		}
 
-		void VulkanRenderer::CreateVulkanTexture_HDR(const std::string & filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanTexture_HDR(const std::string & filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
 		{
 			CreateTextureImage_HDR(filePath, format, mipLevels, texture);
 			if (*texture != nullptr)
@@ -3964,7 +3964,7 @@ namespace flex
 		}
 
 		// TODO: IMPORTANT: FIXME: XXX: Consolidate two cubemap functions (way too much duplicated code atm)
-		void VulkanRenderer::CreateVulkanCubemap_Empty(glm::uint width, glm::uint height, glm::uint channels, glm::uint mipLevels, bool enableTrilinearFiltering, VkFormat format, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanCubemap_Empty(u32 width, u32 height, u32 channels, u32 mipLevels, bool enableTrilinearFiltering, VkFormat format, VulkanTexture** texture) const
 		{
 			UNREFERENCED_PARAMETER(channels);
 			UNREFERENCED_PARAMETER(enableTrilinearFiltering);
@@ -3985,7 +3985,7 @@ namespace flex
 			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 			imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			imageCreateInfo.extent = { (glm::uint)width, (glm::uint)height, 1u };
+			imageCreateInfo.extent = { (u32)width, (u32)height, 1u };
 			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			// Cube faces count as array layers in Vulkan
 			imageCreateInfo.arrayLayers = 6;
@@ -4016,7 +4016,7 @@ namespace flex
 			sampler.mipLodBias = 0.0f;
 			sampler.compareOp = VK_COMPARE_OP_NEVER;
 			sampler.minLod = 0.0f;
-			sampler.maxLod = (float)mipLevels;
+			sampler.maxLod = (real)mipLevels;
 			sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			if (m_VulkanDevice->m_PhysicalDeviceFeatures.samplerAnisotropy)
 			{
@@ -4049,21 +4049,21 @@ namespace flex
 
 		void VulkanRenderer::CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VkFormat format, VulkanTexture** texture, bool generateMipMaps) const
 		{
-			int textureWidth = 0;
-			int textureHeight = 0;
-			int textureChannels = 0;
+			i32 textureWidth = 0;
+			i32 textureHeight = 0;
+			i32 textureChannels = 0;
 
 			struct Image
 			{
 				unsigned char* pixels;
-				int width;
-				int height;
-				int textureChannels;
-				int size;
+				i32 width;
+				i32 height;
+				i32 textureChannels;
+				i32 size;
 			};
 
 			std::vector<Image> images;
-			glm::uint totalSize = 0;
+			u32 totalSize = 0;
 
 			std::string fileName = filePaths[0];
 			StripLeadingDirectories(fileName);
@@ -4084,7 +4084,7 @@ namespace flex
 				// but it was forced to 4 because of the last parameter
 				textureChannels = 4;
 
-				int size = textureWidth * textureHeight * textureChannels * sizeof(unsigned char);
+				i32 size = textureWidth * textureHeight * textureChannels * sizeof(unsigned char);
 				images.push_back({ pixels, textureWidth, textureHeight, textureChannels, size });
 				totalSize += size;
 			}
@@ -4098,7 +4098,7 @@ namespace flex
 				stbi_image_free(image.pixels);
 			}
 
-			const glm::uint mipLevels = generateMipMaps ? static_cast<uint32_t>(floor(log2(std::min(textureWidth, textureHeight)))) + 1 : 0;
+			const u32 mipLevels = generateMipMaps ? static_cast<u32>(floor(log2(std::min(textureWidth, textureHeight)))) + 1 : 0;
 
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
 			(*texture)->mipLevels = mipLevels;
@@ -4142,7 +4142,7 @@ namespace flex
 			imageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 			imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			imageCreateInfo.extent = { (glm::uint)textureWidth, (glm::uint)textureHeight, 1u };
+			imageCreateInfo.extent = { (u32)textureWidth, (u32)textureHeight, 1u };
 			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			imageCreateInfo.arrayLayers = 6;
 			imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -4161,19 +4161,19 @@ namespace flex
 
 			// Setup buffer copy regions for each face including all of it's miplevels
 			std::vector<VkBufferImageCopy> bufferCopyRegions;
-			uint32_t offset = 0;
+			u32 offset = 0;
 
-			for (uint32_t face = 0; face < 6; ++face)
+			for (u32 face = 0; face < 6; ++face)
 			{
-				for (uint32_t mipLevel = 0; mipLevel < mipLevels; ++mipLevel)
+				for (u32 mipLevel = 0; mipLevel < mipLevels; ++mipLevel)
 				{
 					VkBufferImageCopy bufferCopyRegion = {};
 					bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 					bufferCopyRegion.imageSubresource.mipLevel = mipLevel;
 					bufferCopyRegion.imageSubresource.baseArrayLayer = face;
 					bufferCopyRegion.imageSubresource.layerCount = 1;
-					bufferCopyRegion.imageExtent.width = static_cast<uint32_t>(textureWidth * std::pow(0.5f, mipLevel));
-					bufferCopyRegion.imageExtent.height = static_cast<uint32_t>(textureHeight * std::pow(0.5f, mipLevel));
+					bufferCopyRegion.imageExtent.width = static_cast<u32>(textureWidth * std::pow(0.5f, mipLevel));
+					bufferCopyRegion.imageExtent.height = static_cast<u32>(textureHeight * std::pow(0.5f, mipLevel));
 					bufferCopyRegion.imageExtent.depth = 1;
 					bufferCopyRegion.bufferOffset = offset;
 
@@ -4204,7 +4204,7 @@ namespace flex
 				stagingBuffer.m_Buffer,
 				(*texture)->image,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				static_cast<uint32_t>(bufferCopyRegions.size()),
+				static_cast<u32>(bufferCopyRegions.size()),
 				bufferCopyRegions.data()
 			);
 
@@ -4231,7 +4231,7 @@ namespace flex
 			sampler.mipLodBias = 0.0f;
 			sampler.compareOp = VK_COMPARE_OP_NEVER;
 			sampler.minLod = 0.0f;
-			sampler.maxLod = (float)mipLevels;
+			sampler.maxLod = (real)mipLevels;
 			sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			if (m_VulkanDevice->m_PhysicalDeviceFeatures.samplerAnisotropy)
 			{
@@ -4257,13 +4257,13 @@ namespace flex
 			(*texture)->height = textureHeight;
 		}
 
-		void VulkanRenderer::CreateTextureImage(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateTextureImage(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
 		{
 			std::string fileName = filePath;
 			StripLeadingDirectories(fileName);
 			Logger::LogInfo("Loading texture " + fileName);
 
-			int textureWidth, textureHeight, textureChannels;
+			i32 textureWidth, textureHeight, textureChannels;
 			unsigned char* pixels = stbi_load(filePath.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 
 			if (!pixels)
@@ -4290,26 +4290,26 @@ namespace flex
 
 			stbi_image_free(pixels);
 
-			CreateImage((glm::uint32)textureWidth, (glm::uint32)textureHeight, format, VK_IMAGE_TILING_OPTIMAL,
+			CreateImage((u32)textureWidth, (u32)textureHeight, format, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				(*texture)->image.replace(), (*texture)->imageMemory.replace());
 
 			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-			CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (glm::uint32)textureWidth, (glm::uint32)textureHeight);
+			CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (u32)textureWidth, (u32)textureHeight);
 			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 		}
 
-		void VulkanRenderer::CreateTextureImage_Empty(glm::uint width, glm::uint height, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateTextureImage_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
 		{
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
 			(*texture)->mipLevels = mipLevels;
 
-			CreateImage((glm::uint32)width, (glm::uint32)height, format, VK_IMAGE_TILING_OPTIMAL,
+			CreateImage((u32)width, (u32)height, format, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				(*texture)->image.replace(), (*texture)->imageMemory.replace(), 1, mipLevels);
 		}
 
-		void VulkanRenderer::CreateTextureImage_HDR(const std::string& filePath, VkFormat format, glm::uint mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateTextureImage_HDR(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
 		{
 			HDRImage image = {};
 			if (!image.Load(filePath, false))
@@ -4322,12 +4322,12 @@ namespace flex
 			*texture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
 			(*texture)->mipLevels = mipLevels;
 
-			VkDeviceSize imageSize = CreateImage((glm::uint32)image.width, (glm::uint32)image.height, format, VK_IMAGE_TILING_OPTIMAL,
+			VkDeviceSize imageSize = CreateImage((u32)image.width, (u32)image.height, format, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 				(*texture)->image.replace(), (*texture)->imageMemory.replace(), 1, mipLevels);
 
-			const int numChannels = 4;
-			VkDeviceSize calculatedImageSize = (VkDeviceSize)(image.width * image.height * numChannels * sizeof(float));
+			const i32 numChannels = 4;
+			VkDeviceSize calculatedImageSize = (VkDeviceSize)(image.width * image.height * numChannels * sizeof(real));
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 
@@ -4342,7 +4342,7 @@ namespace flex
 			image.Free();
 
 			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-			CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (glm::uint32)image.width, (glm::uint32)image.height);
+			CopyBufferToImage(stagingBuffer.m_Buffer, (*texture)->image, (u32)image.width, (u32)image.height);
 			TransitionImageLayout((*texture)->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 		}
 
@@ -4368,7 +4368,7 @@ namespace flex
 			allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			allocInfo.commandPool = m_VulkanDevice->m_CommandPool;
-			allocInfo.commandBufferCount = (uint32_t)m_CommandBuffers.size();
+			allocInfo.commandBufferCount = (u32)m_CommandBuffers.size();
 
 			VK_CHECK_RESULT(vkAllocateCommandBuffers(m_VulkanDevice->m_LogicalDevice, &allocInfo, m_CommandBuffers.data()));
 		}
@@ -4429,7 +4429,7 @@ namespace flex
 
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				VkViewport viewport = VkViewport{ 0.0f, 1.0f, (float)m_SwapChainExtent.width, (float)m_SwapChainExtent.height, 0.1f, 1000.0f };
+				VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.1f, 1000.0f };
 				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 				VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
@@ -4543,7 +4543,7 @@ namespace flex
 			vkCmdBeginRenderPass(offScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			// TODO: Make min and max values members
-			VkViewport viewport = VkViewport{ 0.0f, 1.0f, (float)offScreenFrameBuf->width, (float)offScreenFrameBuf->height, 0.1f, 1000.0f };
+			VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)offScreenFrameBuf->width, (real)offScreenFrameBuf->height, 0.1f, 1000.0f };
 			vkCmdSetViewport(offScreenCmdBuffer, 0, 1, &viewport);
 
 			VkRect2D scissor = VkRect2D{ { 0u, 0u },{ offScreenFrameBuf->width, offScreenFrameBuf->height } };
@@ -4611,7 +4611,7 @@ namespace flex
 			VertexIndexBufferPair& bufferPair = m_VertexIndexBufferPairs[m_IGuiShaderID];
 
 			// Vertex buffer
-			if ((bufferPair.vertexBuffer->m_Buffer == VK_NULL_HANDLE) || ((int)bufferPair.vertexCount != imDrawData->TotalVtxCount)) {
+			if ((bufferPair.vertexBuffer->m_Buffer == VK_NULL_HANDLE) || ((i32)bufferPair.vertexCount != imDrawData->TotalVtxCount)) {
 				bufferPair.vertexBuffer->Unmap();
 				bufferPair.vertexBuffer->Destroy();
 				//assert(vertexBufferSize == bufferPair.vertexBuffer->m_Size);
@@ -4622,7 +4622,7 @@ namespace flex
 			}
 
 			// Index buffer
-			if ((bufferPair.indexBuffer == VK_NULL_HANDLE) || ((int)bufferPair.indexCount < imDrawData->TotalIdxCount)) {
+			if ((bufferPair.indexBuffer == VK_NULL_HANDLE) || ((i32)bufferPair.indexCount < imDrawData->TotalIdxCount)) {
 				bufferPair.indexBuffer->Unmap();
 				bufferPair.indexBuffer->Destroy();
 				//assert(indexBufferSize == bufferPair.indexBuffer->m_Size);
@@ -4635,7 +4635,7 @@ namespace flex
 			ImDrawVert* vtxDst = (ImDrawVert*)bufferPair.vertexBuffer->m_Mapped;
 			ImDrawIdx* idxDst = (ImDrawIdx*)bufferPair.indexBuffer->m_Mapped;
 
-			for (int n = 0; n < imDrawData->CmdListsCount; ++n)
+			for (i32 n = 0; n < imDrawData->CmdListsCount; ++n)
 			{
 				const ImDrawList* cmd_list = imDrawData->CmdLists[n];
 				memcpy(vtxDst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
@@ -4686,14 +4686,14 @@ namespace flex
 
 		void VulkanRenderer::DestroyCommandBuffers()
 		{
-			vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, static_cast<uint32_t>(m_CommandBuffers.size()), m_CommandBuffers.data());
+			vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, static_cast<u32>(m_CommandBuffers.size()), m_CommandBuffers.data());
 		}
 
 		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, RenderID renderID, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
 		{
-			uint32_t dynamicOffset = renderID * static_cast<uint32_t>(m_DynamicAlignment);
-			uint32_t* dynamicOffsetPtr = nullptr;
-			uint32_t dynamicOffsetCount = 0;
+			u32 dynamicOffset = renderID * static_cast<u32>(m_DynamicAlignment);
+			u32* dynamicOffsetPtr = nullptr;
+			u32 dynamicOffsetCount = 0;
 			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
 			{
 				// This shader uses a dynamic buffer, so it needs a dynamic offset
@@ -4706,12 +4706,12 @@ namespace flex
 				dynamicOffsetCount, dynamicOffsetPtr);
 		}
 
-		uint32_t VulkanRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
+		u32 VulkanRenderer::FindMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties) const
 		{
 			VkPhysicalDeviceMemoryProperties memProperties;
 			vkGetPhysicalDeviceMemoryProperties(m_VulkanDevice->m_PhysicalDevice, &memProperties);
 
-			for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
+			for (u32 i = 0; i < memProperties.memoryTypeCount; ++i)
 			{
 				if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
 				{
@@ -4722,7 +4722,7 @@ namespace flex
 			throw std::runtime_error("Failed to find any suitable memory type!");
 		}
 
-		void VulkanRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, glm::uint mipLevels) const
+		void VulkanRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -4787,7 +4787,7 @@ namespace flex
 			EndSingleTimeCommands(commandBuffer);
 		}
 
-		void VulkanRenderer::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) const
+		void VulkanRenderer::CopyImage(VkImage srcImage, VkImage dstImage, u32 width, u32 height) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -4812,7 +4812,7 @@ namespace flex
 			EndSingleTimeCommands(commandBuffer);
 		}
 
-		void VulkanRenderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const
+		void VulkanRenderer::CopyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height) const
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -4910,7 +4910,7 @@ namespace flex
 			}
 		}
 
-		glm::uint VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, int size)
+		u32 VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, i32 size)
 		{
 			void* vertexDataStart = malloc(size);
 			if (!vertexDataStart)
@@ -4921,8 +4921,8 @@ namespace flex
 
 			void* vertexBufferData = vertexDataStart;
 
-			glm::uint vertexCount = 0;
-			glm::uint vertexBufferSize = 0;
+			u32 vertexCount = 0;
+			u32 vertexBufferSize = 0;
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject && renderObject->vertexBufferData && m_LoadedMaterials[renderObject->materialID].material.shaderID == shaderID)
@@ -4950,7 +4950,7 @@ namespace flex
 			return vertexCount;
 		}
 
-		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, glm::uint vertexBufferSize)
+		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
 		{
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 			CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -4974,9 +4974,9 @@ namespace flex
 			}
 		}
 
-		glm::uint VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID)
+		u32 VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID)
 		{
-			std::vector<glm::uint> indices;
+			std::vector<u32> indices;
 
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
@@ -4998,7 +4998,7 @@ namespace flex
 			return indices.size();
 		}
 
-		void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<glm::uint>& indices)
+		void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices)
 		{
 			const size_t bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -5016,16 +5016,16 @@ namespace flex
 			CopyBuffer(stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
 
-		glm::uint VulkanRenderer::AllocateUniformBuffer(glm::uint dynamicDataSize, void** data)
+		u32 VulkanRenderer::AllocateUniformBuffer(u32 dynamicDataSize, void** data)
 		{
 			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-			glm::uint dynamicAllignment =
+			u32 dynamicAllignment =
 				(dynamicDataSize / uboAlignment) * uboAlignment +
 				((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
 
 			if (dynamicAllignment > m_DynamicAlignment)
 			{
-				glm::uint newDynamicAllignment = 1;
+				u32 newDynamicAllignment = 1;
 				while (newDynamicAllignment < dynamicAllignment)
 				{
 					newDynamicAllignment <<= 1;
@@ -5041,7 +5041,7 @@ namespace flex
 			return dynamicBufferSize;
 		}
 
-		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, glm::uint bufferSize,
+		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits)
 		{
 			CreateAndAllocateBuffer(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer);
@@ -5088,8 +5088,8 @@ namespace flex
 
 		void VulkanRenderer::DrawFrame(Window* window)
 		{
-			uint32_t imageIndex;
-			VkResult result = vkAcquireNextImageKHR(m_VulkanDevice->m_LogicalDevice, m_SwapChain, std::numeric_limits<uint64_t>::max(), m_PresentCompleteSemaphore, VK_NULL_HANDLE, &imageIndex);
+			u32 imageIndex;
+			VkResult result = vkAcquireNextImageKHR(m_VulkanDevice->m_LogicalDevice, m_SwapChain, std::numeric_limits<u64>::max(), m_PresentCompleteSemaphore, VK_NULL_HANDLE, &imageIndex);
 
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
@@ -5161,7 +5161,7 @@ namespace flex
 			VkShaderModuleCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 			createInfo.codeSize = code.size();
-			createInfo.pCode = (uint32_t*)code.data();
+			createInfo.pCode = (u32*)code.data();
 
 			VkResult result = vkCreateShaderModule(m_VulkanDevice->m_LogicalDevice, &createInfo, nullptr, shaderModule.replace());
 			VK_CHECK_RESULT(result);
@@ -5210,16 +5210,16 @@ namespace flex
 
 		VkExtent2D VulkanRenderer::ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities) const
 		{
-			if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+			if (capabilities.currentExtent.width != std::numeric_limits<u32>::max())
 			{
 				return capabilities.currentExtent;
 			}
 			else
 			{
-				int width, height;
+				i32 width, height;
 				glfwGetWindowSize(((VulkanWindowWrapper*)window)->GetWindow(), &width, &height);
 
-				VkExtent2D actualExtent = { (uint32_t)width, (uint32_t)height };
+				VkExtent2D actualExtent = { (u32)width, (u32)height };
 
 				actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 				actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
@@ -5234,7 +5234,7 @@ namespace flex
 
 			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_Surface, &details.capabilities);
 
-			uint32_t formatCount;
+			u32 formatCount;
 			vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, nullptr);
 
 			if (formatCount != 0)
@@ -5243,7 +5243,7 @@ namespace flex
 				vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, details.formats.data());
 			}
 
-			uint32_t presentModeCount;
+			u32 presentModeCount;
 			vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, nullptr);
 
 			if (presentModeCount != 0)
@@ -5276,7 +5276,7 @@ namespace flex
 
 		bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device) const
 		{
-			uint32_t extensionCount;
+			u32 extensionCount;
 			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
 			std::vector<VkExtensionProperties> availableExtensions(extensionCount);
@@ -5297,13 +5297,13 @@ namespace flex
 			// TODO: Move to VulkanDevice class?
 			VulkanQueueFamilyIndices indices;
 
-			uint32_t queueFamilyCount;
+			u32 queueFamilyCount;
 			vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 			assert(queueFamilyCount > 0);
 			std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
 			vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilyProperties.data());
 
-			int i = 0;
+			i32 i = 0;
 			for (const auto& queueFamily : queueFamilyProperties)
 			{
 				if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -5312,7 +5312,7 @@ namespace flex
 				}
 
 				VkBool32 presentSupport = false;
-				vkGetPhysicalDeviceSurfaceSupportKHR(device, (glm::uint32)i, m_Surface, &presentSupport);
+				vkGetPhysicalDeviceSurfaceSupportKHR(device, (u32)i, m_Surface, &presentSupport);
 
 				if (queueFamily.queueCount > 0 && presentSupport)
 				{
@@ -5334,11 +5334,11 @@ namespace flex
 		{
 			std::vector<const char*> extensions;
 
-			unsigned int glfwExtensionCount = 0;
+			u32 glfwExtensionCount = 0;
 			const char** glfwExtensions;
 			glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-			for (unsigned int i = 0; i < glfwExtensionCount; ++i)
+			for (u32 i = 0; i < glfwExtensionCount; ++i)
 			{
 				extensions.push_back(glfwExtensions[i]);
 			}
@@ -5353,7 +5353,7 @@ namespace flex
 
 		bool VulkanRenderer::CheckValidationLayerSupport() const
 		{
-			uint32_t layerCount;
+			u32 layerCount;
 			vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
 			std::vector<VkLayerProperties> availableLayers(layerCount);
@@ -5411,14 +5411,14 @@ namespace flex
 				if (overridenUniforms->overridenUniforms.HasUniform("camPos")) camPos = overridenUniforms->camPos;
 			}
 
-			void* pointLightsDataStart = nullptr;
-			size_t pointLightsSize = 0;
-			size_t pointLightsMoveInBytes = 0;
+			void* PointLightsDataStart = nullptr;
+			size_t PointLightsSize = 0;
+			size_t PointLightsMoveInBytes = 0;
 			if (!m_PointLights.empty())
 			{
-				pointLightsDataStart = (void*)&m_PointLights[0];
-				pointLightsSize = sizeof(m_PointLights[0]) * m_PointLights.size();
-				pointLightsMoveInBytes = pointLightsSize / sizeof(float);
+				PointLightsDataStart = (void*)&m_PointLights[0];
+				PointLightsSize = sizeof(m_PointLights[0]) * m_PointLights.size();
+				PointLightsMoveInBytes = PointLightsSize / sizeof(real);
 			}
 
 			struct UniformInfo
@@ -5434,8 +5434,8 @@ namespace flex
 				{ "projection", (void*)&projection, sizeof(glm::mat4), 16 },
 				{ "viewProjection", (void*)&viewProjection, sizeof(glm::mat4), 16 },
 				{ "camPos", (void*)&camPos, sizeof(glm::vec4), 4 },
-				{ "dirLight", (void*)&m_DirectionalLight, sizeof(m_DirectionalLight), sizeof(m_DirectionalLight) / sizeof(float) },
-				{ "pointLights", (void*)pointLightsDataStart, pointLightsSize, pointLightsMoveInBytes },
+				{ "dirLight", (void*)&m_DirectionalLight, sizeof(m_DirectionalLight), sizeof(m_DirectionalLight) / sizeof(real) },
+				{ "pointLights", (void*)PointLightsDataStart, PointLightsSize, PointLightsMoveInBytes },
 			};
 
 			size_t index = 0;
@@ -5448,10 +5448,10 @@ namespace flex
 				}
 			}
 
-			glm::uint size = constantData.size;
+			u32 size = constantData.size;
 
 #if  _DEBUG
-			glm::uint calculatedSize1 = index * 4;
+			u32 calculatedSize1 = index * 4;
 			assert(calculatedSize1 == size);
 #endif // _DEBUG
 
@@ -5478,16 +5478,16 @@ namespace flex
 			glm::mat4 projection = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 modelViewProjection = projection * view * model;
-			glm::uint enableAlbedoSampler = material->material.enableAlbedoSampler;
-			glm::uint enableMetallicSampler = material->material.enableMetallicSampler;
-			glm::uint enableRoughnessSampler = material->material.enableRoughnessSampler;
-			glm::uint enableAOSampler = material->material.enableAOSampler;
-			glm::uint enableDiffuseSampler = material->material.enableDiffuseSampler;
-			glm::uint enableNormalSampler = material->material.enableNormalSampler;
-			glm::uint enableCubemapSampler = material->material.enableCubemapSampler;
-			glm::uint enableIrradianceSampler = material->material.enableIrradianceSampler;
+			u32 enableAlbedoSampler = material->material.enableAlbedoSampler;
+			u32 enableMetallicSampler = material->material.enableMetallicSampler;
+			u32 enableRoughnessSampler = material->material.enableRoughnessSampler;
+			u32 enableAOSampler = material->material.enableAOSampler;
+			u32 enableDiffuseSampler = material->material.enableDiffuseSampler;
+			u32 enableNormalSampler = material->material.enableNormalSampler;
+			u32 enableCubemapSampler = material->material.enableCubemapSampler;
+			u32 enableIrradianceSampler = material->material.enableIrradianceSampler;
 
-			// TODO: Roll into array?
+			// TODO: Roll i32o array?
 			if (uniformOverrides)
 			{
 				if (uniformOverrides->overridenUniforms.HasUniform("model"))
@@ -5554,7 +5554,7 @@ namespace flex
 				modelInvTranspose = glm::transpose(glm::inverse(model));
 			}
 
-			glm::uint offset = 0;
+			u32 offset = 0;
 			for (VulkanRenderObject* renderObj : m_RenderObjects)
 			{
 				if (renderObj->renderID != renderObject->renderID &&
@@ -5563,7 +5563,7 @@ namespace flex
 					offset += uniformBuffer.dynamicData.size;
 				}
 			}
-			glm::uint index = 0;
+			u32 index = 0;
 
 			struct UniformInfo
 			{
@@ -5601,15 +5601,15 @@ namespace flex
 			}
 
 			// Aligned offset
-			glm::uint size = uniformBuffer.dynamicData.size;
+			u32 size = uniformBuffer.dynamicData.size;
 
 #if  _DEBUG
-			glm::uint calculatedSize1 = index * 4;
+			u32 calculatedSize1 = index * 4;
 			assert(calculatedSize1 == size);
 #endif // _DEBUG
 
 			void* firstIndex = uniformBuffer.dynamicBuffer.m_Mapped;
-			uint64_t dest = (uint64_t)firstIndex + (renderID * m_DynamicAlignment);
+			u64 dest = (u64)firstIndex + (renderID * m_DynamicAlignment);
 			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[offset], size);
 
 			// Flush to make changes visible to the host 
@@ -5896,7 +5896,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(cubemapMaterialID);
 		}
 
-		void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, glm::uint brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
+		void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(brdfLUTTextureID);
@@ -5904,7 +5904,7 @@ namespace flex
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
-			uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
+			u64 obj, size_t location, i32 code, const char* layerPrefix, const char* msg, void* userData)
 		{
 			UNREFERENCED_PARAMETER(userData);
 			UNREFERENCED_PARAMETER(layerPrefix);

@@ -32,7 +32,7 @@ namespace flex
 		MaterialID m_SkyboxMatID_3;
 		MaterialID m_SkyboxMatID_4;
 		MaterialID m_SkyboxMatID_5;
-		int m_CurrentSkyboxMatID;
+		i32 m_CurrentSkyboxMatID;
 
 		MeshPrefab* m_Skybox = nullptr;
 		MeshPrefab* m_Grid = nullptr;

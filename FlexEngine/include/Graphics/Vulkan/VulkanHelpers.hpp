@@ -12,6 +12,7 @@
 #include "VertexBufferData.hpp"
 #include "VDeleter.hpp"
 
+
 namespace flex
 {
 	namespace vk
@@ -32,7 +33,7 @@ namespace flex
 	}
 #endif // VK_CHECK_RESULT
 
-		VkVertexInputBindingDescription GetVertexBindingDescription(glm::uint vertexStride);
+		VkVertexInputBindingDescription GetVertexBindingDescription(u32 vertexStride);
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
@@ -53,7 +54,7 @@ namespace flex
 		{
 			FrameBuffer(const VDeleter<VkDevice>& device);
 
-			uint32_t width, height;
+			u32 width, height;
 			VDeleter<VkFramebuffer> frameBuffer;
 			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
 			VDeleter<VkRenderPass> renderPass;
@@ -61,8 +62,8 @@ namespace flex
 
 		struct VulkanQueueFamilyIndices
 		{
-			int graphicsFamily = -1;
-			int presentFamily = -1;
+			i32 graphicsFamily = -1;
+			i32 presentFamily = -1;
 
 			bool IsComplete()
 			{
@@ -79,8 +80,8 @@ namespace flex
 
 		struct VulkanUniformBufferObjectData
 		{
-			float* data = nullptr;
-			glm::uint size;
+			real* data = nullptr;
+			u32 size;
 		};
 
 		struct UniformBuffer
@@ -98,8 +99,8 @@ namespace flex
 		{
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
-			glm::uint vertexCount;
-			glm::uint indexCount;
+			u32 vertexCount;
+			u32 indexCount;
 			bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (eg. ImGui vertex buffer)
 		};
 
@@ -114,10 +115,10 @@ namespace flex
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
 			VkDescriptorImageInfo imageInfoDescriptor;
-			glm::uint width;
-			glm::uint height;
+			u32 width;
+			u32 height;
 			std::string filePath;
-			glm::uint mipLevels = 1;
+			u32 mipLevels = 1;
 		};
 
 		void SetImageLayout(
@@ -160,8 +161,8 @@ namespace flex
 			VulkanDevice* device,
 			VkFormat format,
 			VkImageUsageFlagBits usage,
-			glm::uint width,
-			glm::uint height,
+			u32 width,
+			u32 height,
 			FrameBufferAttachment *attachment);
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
@@ -192,7 +193,7 @@ namespace flex
 			VulkanTexture* prefilterTexture = nullptr;
 			VkFramebuffer hdrCubemapFramebuffer;
 
-			glm::uint descriptorSetLayoutIndex;
+			u32 descriptorSetLayoutIndex;
 		};
 
 		struct VulkanRenderObject
@@ -210,16 +211,16 @@ namespace flex
 			std::string materialName;
 			Transform* transform = nullptr;
 
-			glm::uint VAO;
-			glm::uint VBO;
-			glm::uint IBO;
+			u32 VAO;
+			u32 VBO;
+			u32 IBO;
 
 			VertexBufferData* vertexBufferData = nullptr;
-			glm::uint vertexOffset = 0;
+			u32 vertexOffset = 0;
 
 			bool indexed = false;
-			std::vector<glm::uint>* indices = nullptr;
-			glm::uint indexOffset = 0;
+			std::vector<u32>* indices = nullptr;
+			u32 indexOffset = 0;
 
 			VkDescriptorSet descriptorSet;
 
@@ -240,12 +241,12 @@ namespace flex
 			bool enableCulling = true;
 
 			VkRenderPass renderPass;
-			glm::uint subpass = 0;
+			u32 subpass = 0;
 
 			VkPushConstantRange* pushConstants = nullptr;
-			glm::uint pushConstantRangeCount = 0;
+			u32 pushConstantRangeCount = 0;
 
-			glm::uint descriptorSetLayoutIndex;
+			u32 descriptorSetLayoutIndex;
 
 			bool setDynamicStates = false;
 			bool enabledColorBlending = false;
@@ -280,7 +281,7 @@ namespace flex
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
 
-			std::vector<std::pair<std::string, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view into frame buffer
+			std::vector<std::pair<std::string, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
 		};
 
 		struct ImGui_PushConstBlock

@@ -5,19 +5,19 @@
 
 namespace flex
 {
-	glm::uint CalculateVertexStride(VertexAttributes vertexAttributes)
+	u32 CalculateVertexStride(VertexAttributes vertexAttributes)
 	{
-		glm::uint stride = 0;
+		u32 stride = 0;
 
-		if (vertexAttributes & (glm::uint)VertexAttribute::POSITION) stride += sizeof(glm::vec3);
-		if (vertexAttributes & (glm::uint)VertexAttribute::POSITION_2D) stride += sizeof(glm::vec2);
-		if (vertexAttributes & (glm::uint)VertexAttribute::UV) stride += sizeof(glm::vec2);
-		if (vertexAttributes & (glm::uint)VertexAttribute::UVW) stride += sizeof(glm::vec3);
-		if (vertexAttributes & (glm::uint)VertexAttribute::COLOR_R8G8B8A8_UNORM) stride += sizeof(glm::int32);
-		if (vertexAttributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT) stride += sizeof(glm::vec4);
-		if (vertexAttributes & (glm::uint)VertexAttribute::TANGENT) stride += sizeof(glm::vec3);
-		if (vertexAttributes & (glm::uint)VertexAttribute::BITANGENT) stride += sizeof(glm::vec3);
-		if (vertexAttributes & (glm::uint)VertexAttribute::NORMAL) stride += sizeof(glm::vec3);
+		if (vertexAttributes & (u32)VertexAttribute::POSITION) stride += sizeof(glm::vec3);
+		if (vertexAttributes & (u32)VertexAttribute::POSITION_2D) stride += sizeof(glm::vec2);
+		if (vertexAttributes & (u32)VertexAttribute::UV) stride += sizeof(glm::vec2);
+		if (vertexAttributes & (u32)VertexAttribute::UVW) stride += sizeof(glm::vec3);
+		if (vertexAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM) stride += sizeof(i32);
+		if (vertexAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT) stride += sizeof(glm::vec4);
+		if (vertexAttributes & (u32)VertexAttribute::TANGENT) stride += sizeof(glm::vec3);
+		if (vertexAttributes & (u32)VertexAttribute::BITANGENT) stride += sizeof(glm::vec3);
+		if (vertexAttributes & (u32)VertexAttribute::NORMAL) stride += sizeof(glm::vec3);
 
 		if (stride == 0)
 		{

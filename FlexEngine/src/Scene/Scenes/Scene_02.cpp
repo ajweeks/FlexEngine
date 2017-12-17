@@ -147,10 +147,10 @@ namespace flex
 #endif
 
 #if 1 // Spheres
-		const int sphereCountX = 7;
-		const int sphereCountY = 2;
-		const int sphereCountZ = 1;
-		const float sphereSpacing = 3.0f;
+		const i32 sphereCountX = 7;
+		const i32 sphereCountY = 2;
+		const i32 sphereCountZ = 1;
+		const real sphereSpacing = 3.0f;
 		const glm::vec3 offset = glm::vec3(
 			-sphereCountX / 2 * sphereSpacing, 
 			-sphereCountY / 2 * sphereSpacing + 4.0f, 
@@ -159,9 +159,9 @@ namespace flex
 		m_Spheres.resize(sphereCount);
 		for (size_t i = 0; i < sphereCount; ++i)
 		{
-			int x = i % sphereCountX;
-			int y = int(i / sphereCountX) % sphereCountY;
-			int z = int(i / (sphereCountX * sphereCountY));
+			i32 x = i % sphereCountX;
+			i32 y = i32(i / sphereCountX) % sphereCountY;
+			i32 z = i32(i / (sphereCountX * sphereCountY));
 
 			const std::string iStr = std::to_string(i);
 
@@ -176,7 +176,7 @@ namespace flex
 				//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.22f, 0.2f);
 				pbrMatInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.5f);
 				pbrMatInfo.constMetallic = 1.0f;
-				pbrMatInfo.constRoughness = glm::clamp(float(x + y) / (sphereCountX + sphereCountY - 2) * 0.75f, 0.05f, 0.9f);
+				pbrMatInfo.constRoughness = glm::clamp(real(x + y) / (sphereCountX + sphereCountY - 2) * 0.75f, 0.05f, 0.9f);
 				pbrMatInfo.constAO = 1.0f;
 				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 			}
@@ -188,7 +188,7 @@ namespace flex
 				//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.95f, 0.95f); // Chrome
 				pbrMatInfo.constAlbedo = glm::vec3(1.0f, .71f, 0.29f); // Gold
 				pbrMatInfo.constMetallic = 1.0f;
-				pbrMatInfo.constRoughness = glm::clamp((float(x + y) / (sphereCountX + sphereCountY - 2)) * 0.5f, 0.05f, 0.9f);
+				pbrMatInfo.constRoughness = glm::clamp((real(x + y) / (sphereCountX + sphereCountY - 2)) * 0.5f, 0.05f, 0.9f);
 				pbrMatInfo.constAO = 1.0f;
 				matID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 			}
@@ -240,9 +240,9 @@ namespace flex
 	void Scene_02::Update(const GameContext& gameContext)
 	{
 		// Circle
-		//float moveSpeed = 1.25f;
-		//float hDist = 10.0f;
-		//float vDist = 8.0f;
+		//real moveSpeed = 1.25f;
+		//real hDist = 10.0f;
+		//real vDist = 8.0f;
 
 		//const glm::vec3 pPos = gameContext.camera->GetPosition();
 
@@ -263,7 +263,7 @@ namespace flex
 		}
 		else if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 		{
-			const float moveSpeed = 0.075f;
+			const real moveSpeed = 0.075f;
 
 			const glm::vec3 pPos = gameContext.camera->GetPosition();
 			const glm::vec2 mouseMove = gameContext.inputManager->GetMousePosition() - startMousePos;

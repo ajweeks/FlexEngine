@@ -127,69 +127,69 @@ namespace flex
 				glm::vec3 pos = ToVec3(mesh->mVertices[i]);
 				pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 				vertexBufferDataCreateInfo.positions_3D.push_back(pos);
-				vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
+				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 				// Color
-				if (mesh->HasVertexColors(0) && !(m_IgnoredAttributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT))
+				if (mesh->HasVertexColors(0) && !(m_IgnoredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT))
 				{
 					glm::vec4 col = ToVec4(mesh->mColors[0][i]);
 					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
-					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 				}
-				else if (m_ForcedAttributes & (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+				else if (m_ForcedAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 				{
 					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
-					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 				}
 
 				// Tangent & Bitangent
 				if (mesh->HasTangentsAndBitangents())
 				{
-					if (!(m_IgnoredAttributes & (glm::uint)VertexAttribute::TANGENT))
+					if (!(m_IgnoredAttributes & (u32)VertexAttribute::TANGENT))
 					{
 						glm::vec3 tangent = ToVec3(mesh->mTangents[i]);
 						vertexBufferDataCreateInfo.tangents.push_back(tangent);
-						vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::TANGENT;
+						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
 					}
 
-					if (!(m_IgnoredAttributes & (glm::uint)VertexAttribute::BITANGENT))
+					if (!(m_IgnoredAttributes & (u32)VertexAttribute::BITANGENT))
 					{
 						glm::vec3 bitangent = ToVec3(mesh->mBitangents[i]);
 						vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
-						vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
+						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 					}
 				}
 				else
 				{
-					if (m_ForcedAttributes & (glm::uint)VertexAttribute::TANGENT)
+					if (m_ForcedAttributes & (u32)VertexAttribute::TANGENT)
 					{
 						vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
-						vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::TANGENT;
+						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
 					}
-					if (m_ForcedAttributes & (glm::uint)VertexAttribute::BITANGENT)
+					if (m_ForcedAttributes & (u32)VertexAttribute::BITANGENT)
 					{
 						vertexBufferDataCreateInfo.bitangents.push_back(m_DefaultBitangent);
-						vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
+						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 					}
 				}
 
 				// Normal
-				if (mesh->HasNormals() && !(m_IgnoredAttributes & (glm::uint)VertexAttribute::NORMAL))
+				if (mesh->HasNormals() && !(m_IgnoredAttributes & (u32)VertexAttribute::NORMAL))
 				{
 					glm::vec3 norm = ToVec3(mesh->mNormals[i]);
 					if (flipNormalYZ) std::swap(norm.y, norm.z);
 					if (flipZ) norm.z = -norm.z;
 					vertexBufferDataCreateInfo.normals.push_back(norm);
-					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 				}
-				else if (m_ForcedAttributes & (glm::uint)VertexAttribute::NORMAL)
+				else if (m_ForcedAttributes & (u32)VertexAttribute::NORMAL)
 				{
 					vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
-					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 				}
 
 				// TexCoord
-				if (mesh->HasTextureCoords(0) && !(m_IgnoredAttributes & (glm::uint)VertexAttribute::UV))
+				if (mesh->HasTextureCoords(0) && !(m_IgnoredAttributes & (u32)VertexAttribute::UV))
 				{
 					// Truncate w component
 					glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
@@ -197,12 +197,12 @@ namespace flex
 					if (flipU) texCoord.x = 1.0f - texCoord.x;
 					if (flipV) texCoord.y = 1.0f - texCoord.y;
 					vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
-					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 				}
-				else if (m_ForcedAttributes & (glm::uint)VertexAttribute::UV)
+				else if (m_ForcedAttributes & (u32)VertexAttribute::UV)
 				{
 					vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
-					vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 				}
 			}
 		}
@@ -297,7 +297,7 @@ namespace flex
 				{ -5.0f, -5.0f,  5.0f, },
 				{ -5.0f,  5.0f,  5.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
 			{
@@ -355,7 +355,7 @@ namespace flex
 				colors[5],
 				colors[5],
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			vertexBufferDataCreateInfo.normals =
 			{
@@ -413,7 +413,7 @@ namespace flex
 				{ -1.0f, 0.0f, 0.0f, },
 				{ -1.0f, 0.0f, 0.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
 			vertexBufferDataCreateInfo.texCoords_UV =
 			{
@@ -471,14 +471,14 @@ namespace flex
 				{ 1.0f, 1.0f },
 				{ 1.0f, 0.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 
 			renderObjectCreateInfo.name = "Cube";
 		} break;
 		case MeshPrefab::PrefabShape::GRID:
 		{
-			float rowWidth = 10.0f;
-			glm::uint lineCount = 15;
+			real rowWidth = 10.0f;
+			u32 lineCount = 15;
 
 			const glm::vec4 lineColor = Color::GRAY;
 			const glm::vec4 centerLineColor = Color::LIGHT_GRAY;
@@ -487,13 +487,13 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
 
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
-			float halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
+			real halfWidth = (rowWidth * (lineCount - 1)) / 2.0f;
 
 			// Horizontal lines
-			for (glm::uint i = 0; i < lineCount; ++i)
+			for (u32 i = 0; i < lineCount; ++i)
 			{
 				vertexBufferDataCreateInfo.positions_3D.push_back({ i * rowWidth - halfWidth, 0.0f, -halfWidth });
 				vertexBufferDataCreateInfo.positions_3D.push_back({ i * rowWidth - halfWidth, 0.0f, halfWidth });
@@ -504,7 +504,7 @@ namespace flex
 			}
 
 			// Vertical lines
-			for (glm::uint i = 0; i < lineCount; ++i)
+			for (u32 i = 0; i < lineCount; ++i)
 			{
 				vertexBufferDataCreateInfo.positions_3D.push_back({ -halfWidth, 0.0f, i * rowWidth - halfWidth });
 				vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, i * rowWidth - halfWidth });
@@ -529,7 +529,7 @@ namespace flex
 				{ 50.0f,  0.0f,  50.0f, },
 				{ 50.0f,  0.0f, -50.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 			vertexBufferDataCreateInfo.normals =
 			{
@@ -541,7 +541,7 @@ namespace flex
 				{ 0.0f, 1.0f, 0.0f, },
 				{ 0.0f, 1.0f, 0.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
 			vertexBufferDataCreateInfo.bitangents =
 			{
@@ -553,7 +553,7 @@ namespace flex
 				{ 1.0f, 0.0f, 0.0f, },
 				{ 1.0f, 0.0f, 0.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::BITANGENT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 
 			vertexBufferDataCreateInfo.tangents =
 			{
@@ -565,7 +565,7 @@ namespace flex
 				{ 0.0f, 0.0f, 1.0f, },
 				{ 0.0f, 0.0f, 1.0f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::TANGENT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
 
 			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
 			{
@@ -577,7 +577,7 @@ namespace flex
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			vertexBufferDataCreateInfo.texCoords_UV =
 			{
@@ -589,7 +589,7 @@ namespace flex
 				{ 1.0f, 1.0f },
 				{ 1.0f, 0.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 
 			renderObjectCreateInfo.name = "Plane";
 		} break;
@@ -602,25 +602,25 @@ namespace flex
 			vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
 			vertexBufferDataCreateInfo.normals.push_back({ 0.0f, 1.0f, 0.0f });
 
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::UV;
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::NORMAL;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
-			glm::uint parallelCount = 10;
-			glm::uint meridianCount = 5;
+			u32 parallelCount = 10;
+			u32 meridianCount = 5;
 
 			assert(parallelCount > 0 && meridianCount > 0);
-			for (glm::uint j = 0; j < parallelCount - 1; ++j)
+			for (u32 j = 0; j < parallelCount - 1; ++j)
 			{
-				float polar = PI * float(j + 1) / (float)parallelCount;
-				float sinP = sin(polar);
-				float cosP = cos(polar);
-				for (glm::uint i = 0; i < meridianCount; ++i)
+				real polar = PI * real(j + 1) / (real)parallelCount;
+				real sinP = sin(polar);
+				real cosP = cos(polar);
+				for (u32 i = 0; i < meridianCount; ++i)
 				{
-					float azimuth = TWO_PI * (float)i / (float)meridianCount;
-					float sinA = sin(azimuth);
-					float cosA = cos(azimuth);
+					real azimuth = TWO_PI * (real)i / (real)meridianCount;
+					real sinA = sin(azimuth);
+					real cosA = cos(azimuth);
 					glm::vec3 point(sinP * cosA, cosP, sinP * sinA);
 					const glm::vec4 color =
 						(i % 2 == 0 ? j % 2 == 0 ? Color::ORANGE : Color::PURPLE : j % 2 == 0 ? Color::WHITE : Color::YELLOW);
@@ -638,7 +638,7 @@ namespace flex
 			vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
 			vertexBufferDataCreateInfo.normals.push_back({ 0.0f, -1.0f, 0.0f });
 
-			const glm::uint numVerts = vertexBufferDataCreateInfo.positions_3D.size();
+			const u32 numVerts = vertexBufferDataCreateInfo.positions_3D.size();
 
 			// Indices
 			m_Indices.clear();
@@ -646,8 +646,8 @@ namespace flex
 			// Top triangles
 			for (size_t i = 0; i < meridianCount; ++i)
 			{
-				glm::uint a = i + 1;
-				glm::uint b = (i + 1) % meridianCount + 1;
+				u32 a = i + 1;
+				u32 b = (i + 1) % meridianCount + 1;
 				m_Indices.push_back(0);
 				m_Indices.push_back(b);
 				m_Indices.push_back(a);
@@ -656,14 +656,14 @@ namespace flex
 			// Center quads
 			for (size_t j = 0; j < parallelCount - 2; ++j)
 			{
-				glm::uint aStart = j * meridianCount + 1;
-				glm::uint bStart = (j + 1) * meridianCount + 1;
+				u32 aStart = j * meridianCount + 1;
+				u32 bStart = (j + 1) * meridianCount + 1;
 				for (size_t i = 0; i < meridianCount; ++i)
 				{
-					glm::uint a = aStart + i;
-					glm::uint a1 = aStart + (i + 1) % meridianCount;
-					glm::uint b = bStart + i;
-					glm::uint b1 = bStart + (i + 1) % meridianCount;
+					u32 a = aStart + i;
+					u32 a1 = aStart + (i + 1) % meridianCount;
+					u32 b = bStart + i;
+					u32 b1 = bStart + (i + 1) % meridianCount;
 					m_Indices.push_back(a);
 					m_Indices.push_back(a1);
 					m_Indices.push_back(b1);
@@ -677,8 +677,8 @@ namespace flex
 			// Bottom triangles
 			for (size_t i = 0; i < meridianCount; ++i)
 			{
-				glm::uint a = i + meridianCount * (parallelCount - 2) + 1;
-				glm::uint b = (i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1;
+				u32 a = i + meridianCount * (parallelCount - 2) + 1;
+				u32 b = (i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1;
 				m_Indices.push_back(numVerts - 1);
 				m_Indices.push_back(a);
 				m_Indices.push_back(b);
@@ -744,7 +744,7 @@ namespace flex
 				{ -0.5f, -0.5f,  0.5f, },
 				{ -0.5f,  0.5f,  0.5f, },
 			};
-			vertexBufferDataCreateInfo.attributes |= (glm::uint)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
 			renderObjectCreateInfo.name = "Skybox";
@@ -752,7 +752,7 @@ namespace flex
 		} break;
 		default:
 		{
-			Logger::LogWarning("Unhandled prefab shape passed to MeshPrefab::LoadPrefabShape: " + std::to_string((int)shape));
+			Logger::LogWarning("Unhandled prefab shape passed to MeshPrefab::LoadPrefabShape: " + std::to_string((i32)shape));
 			return false;
 		} break;
 		}
@@ -801,7 +801,7 @@ namespace flex
 		}
 	}
 
-	void MeshPrefab::SetUVScale(float uScale, float vScale)
+	void MeshPrefab::SetUVScale(real uScale, real vScale)
 	{
 		m_UVScale = glm::vec2(uScale, vScale);
 	}
