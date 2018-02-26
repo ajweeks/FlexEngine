@@ -233,8 +233,8 @@ namespace flex
 			glm::vec2i m_BRDFSize;
 			VulkanTexture* m_BRDFTexture = nullptr;
 
-			FrameBuffer* offScreenFrameBuf = nullptr;
-			VkSampler colorSampler;
+			FrameBuffer* m_OffScreenFrameBuf = nullptr;
+			VkSampler m_ColorSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 			i32 m_DeferredQuadVertexBufferIndex;
 

@@ -47,8 +47,8 @@ namespace flex
 			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 
-			offScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
-			offScreenFrameBuf->frameBufferAttachments = {
+			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_OffScreenFrameBuf->frameBufferAttachments = {
 				{ "positionMetallicFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
 				{ "normalRoughnessFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
 				{ "albedoAOFrameBufferSampler", { m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R8G8B8A8_UNORM } },
@@ -127,17 +127,13 @@ namespace flex
 
 			m_Shaders.clear();
 
-			SafeDelete(offScreenFrameBuf);
+			SafeDelete(m_OffScreenFrameBuf);
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, offscreenSemaphore, nullptr);
 
-			vkDestroySampler(m_VulkanDevice->m_LogicalDevice, colorSampler, nullptr);
+			vkDestroySampler(m_VulkanDevice->m_LogicalDevice, m_ColorSampler, nullptr);
 			
 			m_gBufferQuadVertexBufferData.Destroy();
 
-			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_ImGui_GraphicsPipeline, nullptr);
-			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_ImGui_PipelineLayout, nullptr);
-
-			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
 			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, nullptr);
 
 			m_DescriptorPool.replace();
@@ -184,10 +180,10 @@ namespace flex
 			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = m_SkyBoxMaterialID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
-			for (size_t i = 0; i < offScreenFrameBuf->frameBufferAttachments.size(); ++i)
+			for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
 			{
 				gBufferMaterialCreateInfo.frameBuffers.push_back({ 
-					offScreenFrameBuf->frameBufferAttachments[i].first, (void*)&offScreenFrameBuf->frameBufferAttachments[i].second.view
+					m_OffScreenFrameBuf->frameBufferAttachments[i].first, (void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
 				});
 			}
 
@@ -3217,7 +3213,7 @@ namespace flex
 					createInfo->frameBufferViews[i].first, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					VK_NULL_HANDLE, 0,
 					createInfo->frameBufferViews[i].second ? *createInfo->frameBufferViews[i].second : 0u,
-					colorSampler
+					m_ColorSampler
 
 				});
 			}
@@ -3447,7 +3443,7 @@ namespace flex
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
 			// Deferred objects get drawn in a different render pass
-			pipelineCreateInfo.renderPass = shader.shader.deferred ? offScreenFrameBuf->renderPass : m_DeferredCombineRenderPass;
+			pipelineCreateInfo.renderPass = shader.shader.deferred ? m_OffScreenFrameBuf->renderPass : m_DeferredCombineRenderPass;
 			pipelineCreateInfo.subpass = shader.shader.subpass;
 			pipelineCreateInfo.depthWriteEnable = shader.shader.depthWriteEnable ? VK_TRUE : VK_FALSE;
 
@@ -3797,22 +3793,22 @@ namespace flex
 			// TODO: This should be setting up the m_SwapChainFrameBuffers?
 
 			const glm::vec2i frameBufferSize = window->GetFrameBufferSize();
-			offScreenFrameBuf->width = frameBufferSize.x;
-			offScreenFrameBuf->height = frameBufferSize.y;
+			m_OffScreenFrameBuf->width = frameBufferSize.x;
+			m_OffScreenFrameBuf->height = frameBufferSize.y;
 
 			// Does *not* include depth attachment
-			const size_t frameBufferColorAttachmentCount = offScreenFrameBuf->frameBufferAttachments.size();
+			const size_t frameBufferColorAttachmentCount = m_OffScreenFrameBuf->frameBufferAttachments.size();
 
 			// Color attachments
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
 				CreateAttachment(
 					m_VulkanDevice,
-					offScreenFrameBuf->frameBufferAttachments[i].second.format,
+					m_OffScreenFrameBuf->frameBufferAttachments[i].second.format,
 					VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-					offScreenFrameBuf->width,
-					offScreenFrameBuf->height,
-					&offScreenFrameBuf->frameBufferAttachments[i].second);
+					m_OffScreenFrameBuf->width,
+					m_OffScreenFrameBuf->height,
+					&m_OffScreenFrameBuf->frameBufferAttachments[i].second);
 			}
 
 			// Depth attachment
@@ -3835,7 +3831,7 @@ namespace flex
 				attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				attachmentDescs[i].format = offScreenFrameBuf->frameBufferAttachments[i].second.format;
+				attachmentDescs[i].format = m_OffScreenFrameBuf->frameBufferAttachments[i].second.format;
 			}
 			attachmentDescs[frameBufferColorAttachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
 			attachmentDescs[frameBufferColorAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -3891,25 +3887,25 @@ namespace flex
 			renderPassInfo.dependencyCount = dependencies.size();
 			renderPassInfo.pDependencies = dependencies.data();
 
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &offScreenFrameBuf->renderPass));
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &m_OffScreenFrameBuf->renderPass));
 
 			std::vector<VkImageView> attachments;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
-				attachments.push_back(offScreenFrameBuf->frameBufferAttachments[i].second.view);
+				attachments.push_back(m_OffScreenFrameBuf->frameBufferAttachments[i].second.view);
 			}
 			attachments.push_back(m_DepthImageView);
 
 			VkFramebufferCreateInfo fbufCreateInfo = {};
 			fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			fbufCreateInfo.pNext = NULL;
-			fbufCreateInfo.renderPass = offScreenFrameBuf->renderPass;
+			fbufCreateInfo.renderPass = m_OffScreenFrameBuf->renderPass;
 			fbufCreateInfo.pAttachments = attachments.data();
 			fbufCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
-			fbufCreateInfo.width = offScreenFrameBuf->width;
-			fbufCreateInfo.height = offScreenFrameBuf->height;
+			fbufCreateInfo.width = m_OffScreenFrameBuf->width;
+			fbufCreateInfo.height = m_OffScreenFrameBuf->height;
 			fbufCreateInfo.layers = 1;
-			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, &offScreenFrameBuf->frameBuffer));
+			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, &m_OffScreenFrameBuf->frameBuffer));
 
 			// Create sampler to sample from the color attachments
 			VkSamplerCreateInfo samplerCreateInfo = {};
@@ -3926,7 +3922,7 @@ namespace flex
 			samplerCreateInfo.minLod = 0.0f;
 			samplerCreateInfo.maxLod = 1.0f;
 			samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, &colorSampler));
+			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, &m_ColorSampler));
 		}
 
 		void VulkanRenderer::CreateVulkanTexture_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
@@ -4526,11 +4522,11 @@ namespace flex
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = offScreenFrameBuf->renderPass;
-			renderPassBeginInfo.framebuffer = offScreenFrameBuf->frameBuffer;
+			renderPassBeginInfo.renderPass = m_OffScreenFrameBuf->renderPass;
+			renderPassBeginInfo.framebuffer = m_OffScreenFrameBuf->frameBuffer;
 			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent.width = offScreenFrameBuf->width;
-			renderPassBeginInfo.renderArea.extent.height = offScreenFrameBuf->height;
+			renderPassBeginInfo.renderArea.extent.width = m_OffScreenFrameBuf->width;
+			renderPassBeginInfo.renderArea.extent.height = m_OffScreenFrameBuf->height;
 			renderPassBeginInfo.clearValueCount = clearValues.size();
 			renderPassBeginInfo.pClearValues = clearValues.data();
 
@@ -4543,10 +4539,10 @@ namespace flex
 			vkCmdBeginRenderPass(offScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			// TODO: Make min and max values members
-			VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)offScreenFrameBuf->width, (real)offScreenFrameBuf->height, 0.1f, 1000.0f };
+			VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.1f, 1000.0f };
 			vkCmdSetViewport(offScreenCmdBuffer, 0, 1, &viewport);
 
-			VkRect2D scissor = VkRect2D{ { 0u, 0u },{ offScreenFrameBuf->width, offScreenFrameBuf->height } };
+			VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height } };
 			vkCmdSetScissor(offScreenCmdBuffer, 0, 1, &scissor);
 
 			VkDeviceSize offsets[1] = { 0 };
