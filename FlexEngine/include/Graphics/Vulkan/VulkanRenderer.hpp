@@ -234,7 +234,7 @@ namespace flex
 			VulkanTexture* m_BRDFTexture = nullptr;
 
 			FrameBuffer* m_OffScreenFrameBuf = nullptr;
-			VkSampler m_ColorSampler;
+			VDeleter<VkSampler> m_ColorSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 			i32 m_DeferredQuadVertexBufferIndex;
 
@@ -299,7 +299,7 @@ namespace flex
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
-			VkPipelineCache m_PipelineCache;
+			VDeleter<VkPipelineCache> m_PipelineCache;
 
 			VkCommandBuffer offScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;

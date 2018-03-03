@@ -46,6 +46,8 @@ namespace flex
 			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
 			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
+			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+			m_PipelineCache = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineCache };
 
 			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
 			m_OffScreenFrameBuf->frameBufferAttachments = {
@@ -129,17 +131,22 @@ namespace flex
 
 			SafeDelete(m_OffScreenFrameBuf);
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, offscreenSemaphore, nullptr);
-
-			vkDestroySampler(m_VulkanDevice->m_LogicalDevice, m_ColorSampler, nullptr);
 			
 			m_gBufferQuadVertexBufferData.Destroy();
 
-			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, nullptr);
+			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_ImGui_GraphicsPipeline, nullptr);
+			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_ImGui_PipelineLayout, nullptr);
+
+			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
+
+			m_PipelineCache.replace();
 
 			m_DescriptorPool.replace();
 			m_DepthImageView.replace();
 			m_DepthImageMemory.replace();
 			m_DepthImage.replace();
+
+			m_ColorSampler.replace();
 
 			SafeDelete(m_BlankTexture);
 
@@ -446,7 +453,7 @@ namespace flex
 				Logger::LogError("Failed to find equirectangular_to_cube shader ID!");
 			}
 
-			VkDescriptorSet descriptorSet;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
 			equirectangularToCubeDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[equirectangularToCubeShaderID];
@@ -579,7 +586,7 @@ namespace flex
 			shaderStages[1].module = fragShaderModule;
 			shaderStages[1].pName = "main";
 
-			VkPipeline pipeline;
+			VkPipeline pipeline = VK_NULL_HANDLE;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 
@@ -881,7 +888,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
 			
 			// Descriptor sets
-			VkDescriptorSet descriptorSet;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
 			descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 			descriptorSetAllocateInfo.descriptorPool = descriptorPool;
@@ -1034,7 +1041,7 @@ namespace flex
 			shaderStages[1].module = fragShaderModule;
 			shaderStages[1].pName = "main";
 
-			VkPipeline pipeline;
+			VkPipeline pipeline = VK_NULL_HANDLE;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 			// Render
@@ -1328,7 +1335,7 @@ namespace flex
 
 			CreateUniformBuffers(&m_Shaders[prefilterShaderID]);
 
-			VkDescriptorSet descriptorSet;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
 			equirectangularToCubeDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterShaderID];
@@ -1455,7 +1462,7 @@ namespace flex
 			shaderStages[1].module = fragShaderModule;
 			shaderStages[1].pName = "main";
 
-			VkPipeline pipeline;
+			VkPipeline pipeline = VK_NULL_HANDLE;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 			// Render
@@ -1698,7 +1705,7 @@ namespace flex
 			descriptorSetAllocateInfo.descriptorPool = descriptorPool;
 			descriptorSetAllocateInfo.pSetLayouts = &descriptorsetlayout;
 			descriptorSetAllocateInfo.descriptorSetCount = 1;
-			VkDescriptorSet descriptorSet;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
 
 			// Pipeline layout
@@ -1814,7 +1821,7 @@ namespace flex
 			shaderStages[1].module = fragShaderModule;
 			shaderStages[1].pName = "main";
 
-			VkPipeline pipeline;
+			VkPipeline pipeline = VK_NULL_HANDLE;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 			// Render
@@ -2200,54 +2207,54 @@ namespace flex
 						VulkanRenderObject* renderObject = GetRenderObject(i);
 						if (renderObject && renderObject->visibleInSceneExplorer)
 						{
-						VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
-						VulkanShader* shader = &m_Shaders[material->material.shaderID];
-						const std::string objectName(renderObject->name + "##" + std::to_string(i));
+							VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
+							VulkanShader* shader = &m_Shaders[material->material.shaderID];
+							const std::string objectName(renderObject->name + "##" + std::to_string(i));
 
-						const std::string objectID("##" + objectName + "-visble");
-						ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
-						ImGui::SameLine();
-						if (ImGui::TreeNode(objectName.c_str()))
-						{
-							static const char* localTransformStr = "Transform (local)";
-							static const char* globalTransformStr = "Transform (global)";
-
-							bool local = true;
-
-							ImGui::Text(local ? localTransformStr : globalTransformStr);
-
-							Transform* transform = renderObject->transform;
-
-
-							glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-							glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
-							glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
-
-							ImGui::DragFloat3("Translation", &translation[0], 0.1f);
-							ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
-							ImGui::DragFloat3("Scale", &scale[0], 0.01f);
-
-							if (local)
+							const std::string objectID("##" + objectName + "-visble");
+							ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
+							ImGui::SameLine();
+							if (ImGui::TreeNode(objectName.c_str()))
 							{
-								transform->SetLocalPosition(translation);
-								transform->SetLocalRotation(glm::quat(rotation));
-								transform->SetLocalScale(scale);
-							}
-							else
-							{
-								transform->SetGlobalPosition(translation);
-								transform->SetGlobalRotation(glm::quat(rotation));
-								transform->SetGlobalScale(scale);
-							}
+								static const char* localTransformStr = "Transform (local)";
+								static const char* globalTransformStr = "Transform (global)";
 
-							if (shader->shader.needIrradianceSampler)
-							{
-								ImGui::Checkbox("Use Irradiance Sampler", &material->material.enableIrradianceSampler);
-							}
+								bool local = true;
 
-							ImGui::TreePop();
+								ImGui::Text(local ? localTransformStr : globalTransformStr);
+
+								Transform* transform = renderObject->transform;
+
+
+								glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
+								glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
+								glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
+
+								ImGui::DragFloat3("Translation", &translation[0], 0.1f);
+								ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
+								ImGui::DragFloat3("Scale", &scale[0], 0.01f);
+
+								if (local)
+								{
+									transform->SetLocalPosition(translation);
+									transform->SetLocalRotation(glm::quat(rotation));
+									transform->SetLocalScale(scale);
+								}
+								else
+								{
+									transform->SetGlobalPosition(translation);
+									transform->SetGlobalRotation(glm::quat(rotation));
+									transform->SetGlobalScale(scale);
+								}
+
+								if (shader->shader.needIrradianceSampler)
+								{
+									ImGui::Checkbox("Use Irradiance Sampler", &material->material.enableIrradianceSampler);
+								}
+
+								ImGui::TreePop();
+							}
 						}
-					}
 					}
 
 					ImGui::TreePop();
@@ -2882,6 +2889,12 @@ namespace flex
 			PrepareOffscreenFrameBuffer(window);
 			CreateRenderPass();
 
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				CreateDescriptorSet(i);
+				CreateGraphicsPipeline(i);
+			}
+
 			CreateFramebuffers();
 			CreateCommandBuffers();
 		}
@@ -3110,8 +3123,12 @@ namespace flex
 			allocInfo.descriptorSetCount = 1;
 			allocInfo.pSetLayouts = layouts;
 
+			if (*createInfo->descriptorSet)
+			{
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, createInfo->descriptorSet);
+			}
+			// TODO: Optimization: Allocate all required descriptor sets in one call rather than 1 at a time
 			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &allocInfo, createInfo->descriptorSet));
-
 
 			Uniforms constantBufferUniforms = m_Shaders[createInfo->shaderID].shader.constantBufferUniforms;
 			Uniforms dynamicBufferUniforms = m_Shaders[createInfo->shaderID].shader.dynamicBufferUniforms;
@@ -3219,7 +3236,6 @@ namespace flex
 					VK_NULL_HANDLE, 0,
 					createInfo->frameBufferViews[i].second ? *createInfo->frameBufferViews[i].second : 0u,
 					m_ColorSampler
-
 				});
 			}
 
@@ -3590,11 +3606,15 @@ namespace flex
 
 			if (createInfo->pipelineCache)
 			{
+				vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineCache, nullptr);
+
 				VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 				pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 				VK_CHECK_RESULT(vkCreatePipelineCache(m_VulkanDevice->m_LogicalDevice, &pipelineCacheCreateInfo, nullptr, createInfo->pipelineCache));
 			}
 
+			// TODO: Wrap this pipeline layout in a VDeleter so we can just call .replace()
+			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineLayout, nullptr);
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, createInfo->pipelineLayout));
 
 			VkPipelineDepthStencilStateCreateInfo depthStencil{};
@@ -3640,6 +3660,8 @@ namespace flex
 
 			VkPipelineCache pipelineCache = createInfo->pipelineCache ? *createInfo->pipelineCache : VK_NULL_HANDLE;
 
+			// TODO: Wrap this pipeline in a VDeleter so we can just call .replace()
+			//vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, *createInfo->grahpicsPipeline, nullptr);
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, createInfo->grahpicsPipeline));
 		}
 
@@ -3892,6 +3914,7 @@ namespace flex
 			renderPassInfo.dependencyCount = dependencies.size();
 			renderPassInfo.pDependencies = dependencies.data();
 
+			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, m_OffScreenFrameBuf->renderPass, nullptr);
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &m_OffScreenFrameBuf->renderPass));
 
 			std::vector<VkImageView> attachments;
@@ -3910,7 +3933,7 @@ namespace flex
 			fbufCreateInfo.width = m_OffScreenFrameBuf->width;
 			fbufCreateInfo.height = m_OffScreenFrameBuf->height;
 			fbufCreateInfo.layers = 1;
-			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, &m_OffScreenFrameBuf->frameBuffer));
+			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, m_OffScreenFrameBuf->frameBuffer.replace()));
 
 			// Create sampler to sample from the color attachments
 			VkSamplerCreateInfo samplerCreateInfo = {};
@@ -3927,7 +3950,7 @@ namespace flex
 			samplerCreateInfo.minLod = 0.0f;
 			samplerCreateInfo.maxLod = 1.0f;
 			samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, &m_ColorSampler));
+			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, m_ColorSampler.replace()));
 		}
 
 		void VulkanRenderer::CreateVulkanTexture_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
@@ -4779,13 +4802,13 @@ namespace flex
 				throw std::invalid_argument("unsupported layout transition!");
 			}
 
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 				0,
 				0, nullptr,
 				0, nullptr,
 				1, &barrier);
 
-			EndSingleTimeCommands(commandBuffer);
+ 			EndSingleTimeCommands(commandBuffer);
 		}
 
 		void VulkanRenderer::CopyImage(VkImage srcImage, VkImage dstImage, u32 width, u32 height) const

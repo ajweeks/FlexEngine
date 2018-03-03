@@ -223,7 +223,7 @@ namespace flex
 			std::vector<u32>* indices = nullptr;
 			u32 indexOffset = 0;
 
-			VkDescriptorSet descriptorSet;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			bool enableCulling;
