@@ -61,17 +61,18 @@ namespace flex
 		}
 
 		m_Capture = new GameObject();
-		Renderer::RenderObjectCreateInfo captuerObjectCreateInfo = {};
-		captuerObjectCreateInfo.vertexBufferData = nullptr;
-		captuerObjectCreateInfo.materialID = m_CaptureMatID;
-		captuerObjectCreateInfo.name = "Reflection probe capture object";
-		captuerObjectCreateInfo.transform = &m_Transform;
+		Renderer::RenderObjectCreateInfo captureObjectCreateInfo = {};
+		captureObjectCreateInfo.vertexBufferData = nullptr;
+		captureObjectCreateInfo.materialID = m_CaptureMatID;
+		captureObjectCreateInfo.name = "Reflection probe capture object";
+		captureObjectCreateInfo.transform = &m_SphereMesh->GetTransform();
+		captureObjectCreateInfo.visibleInSceneExplorer = false;
 		
-		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captuerObjectCreateInfo);
+		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
 		m_Capture->SetRenderID(captureRenderID);
 		gameContext.renderer->SetRenderObjectVisible(captureRenderID, false);
 
-		AddChild(m_Capture);
+		m_SphereMesh->AddChild(m_Capture);
 	}
 
 	void ReflectionProbe::PostInitialize(const GameContext& gameContext)

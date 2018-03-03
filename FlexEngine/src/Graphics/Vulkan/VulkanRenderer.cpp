@@ -2085,6 +2085,7 @@ namespace flex
 			renderObject->materialName = m_LoadedMaterials[renderObject->materialID].material.name;
 			renderObject->transform = createInfo->transform;
 			renderObject->visible = true;
+			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
 
 			if (createInfo->indices != nullptr)
 			{
@@ -2186,6 +2187,7 @@ namespace flex
 			// TODO: Consolidate renderer ImGui code
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
+				// TODO: FIXME: Take into account visibleInSceneExplorer!!
 				const u32 objectCount = GetRenderObjectCount();
 				const u32 objectCapacity = GetRenderObjectCapacity();
 				const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
@@ -2196,6 +2198,8 @@ namespace flex
 					for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 					{
 						VulkanRenderObject* renderObject = GetRenderObject(i);
+						if (renderObject && renderObject->visibleInSceneExplorer)
+						{
 						VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 						VulkanShader* shader = &m_Shaders[material->material.shaderID];
 						const std::string objectName(renderObject->name + "##" + std::to_string(i));
@@ -2243,6 +2247,7 @@ namespace flex
 
 							ImGui::TreePop();
 						}
+					}
 					}
 
 					ImGui::TreePop();

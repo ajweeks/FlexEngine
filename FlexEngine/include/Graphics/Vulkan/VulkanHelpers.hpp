@@ -206,6 +206,7 @@ namespace flex
 			MaterialID materialID;
 
 			bool visible = true;
+			bool visibleInSceneExplorer = true;
 
 			std::string name;
 			std::string materialName;

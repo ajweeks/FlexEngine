@@ -718,6 +718,7 @@ namespace flex
 			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			renderObject->name = createInfo->name;
 			renderObject->transform = createInfo->transform;
+			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
 
 			if (m_Materials.empty()) Logger::LogError("Render object is being created before any materials have been created!");
 			if (renderObject->materialID >= m_Materials.size())
@@ -2841,57 +2842,60 @@ namespace flex
 					{
 						GLRenderObject* renderObject = GetRenderObject(i);
 
-						const std::string objectName(renderObject->name + "##" + std::to_string(i));
-
-						const std::string objectID("##" + objectName + "-visble");
-						ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
-						ImGui::SameLine();
-						if (ImGui::TreeNode(objectName.c_str()))
+						if (renderObject && renderObject->visibleInSceneExplorer)
 						{
-							Transform* transform = renderObject->transform;
-							if (transform)
+							const std::string objectName(renderObject->name + "##" + std::to_string(i));
+
+							const std::string objectID("##" + objectName + "-visble");
+							ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
+							ImGui::SameLine();
+							if (ImGui::TreeNode(objectName.c_str()))
 							{
-								static const char* localTransformStr = "Transform (local)";
-								static const char* globalTransformStr = "Transform (global)";
-
-								bool local = true;
-
-								ImGui::Text(local ? localTransformStr : globalTransformStr);
-
-
-								glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-								glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
-								glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
-
-								ImGui::DragFloat3("Translation", &translation[0], 0.1f);
-								ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
-								ImGui::DragFloat3("Scale", &scale[0], 0.01f);
-
-								if (local)
+								Transform* transform = renderObject->transform;
+								if (transform)
 								{
-									transform->SetLocalPosition(translation);
-									transform->SetLocalRotation(glm::quat(rotation));
-									transform->SetLocalScale(scale);
+									static const char* localTransformStr = "Transform (local)";
+									static const char* globalTransformStr = "Transform (global)";
+
+									bool local = true;
+
+									ImGui::Text(local ? localTransformStr : globalTransformStr);
+
+
+									glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
+									glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
+									glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
+
+									ImGui::DragFloat3("Translation", &translation[0], 0.1f);
+									ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
+									ImGui::DragFloat3("Scale", &scale[0], 0.01f);
+
+									if (local)
+									{
+										transform->SetLocalPosition(translation);
+										transform->SetLocalRotation(glm::quat(rotation));
+										transform->SetLocalScale(scale);
+									}
+									else
+									{
+										transform->SetGlobalPosition(translation);
+										transform->SetGlobalRotation(glm::quat(rotation));
+										transform->SetGlobalScale(scale);
+									}
 								}
 								else
 								{
-									transform->SetGlobalPosition(translation);
-									transform->SetGlobalRotation(glm::quat(rotation));
-									transform->SetGlobalScale(scale);
+									ImGui::Text("Transform not set");
 								}
-							}
-							else
-							{
-								ImGui::Text("Transform not set");
-							}
 
-							GLMaterial* material = &m_Materials[m_RenderObjects[i]->materialID];
-							if (material->uniformIDs.enableIrradianceSampler)
-							{
-								ImGui::Checkbox("Enable Irradiance Sampler", &material->material.enableIrradianceSampler);
-							}
+								GLMaterial* material = &m_Materials[m_RenderObjects[i]->materialID];
+								if (material->uniformIDs.enableIrradianceSampler)
+								{
+									ImGui::Checkbox("Enable Irradiance Sampler", &material->material.enableIrradianceSampler);
+								}
 
-							ImGui::TreePop();
+								ImGui::TreePop();
+							}
 						}
 					}
 

@@ -90,6 +90,7 @@ namespace flex
 
 			bool visible = true;
 			bool isStatic = true; // If true, this object will be rendered to reflection probes
+			bool visibleInSceneExplorer = true;
 
 			u32 VAO;
 			u32 VBO;

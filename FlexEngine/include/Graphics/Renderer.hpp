@@ -249,6 +249,8 @@ namespace flex
 			std::string name;
 			Transform* transform;
 
+			bool visibleInSceneExplorer = true;
+
 			CullFace cullFace = CullFace::BACK;
 			bool enableCulling = true;
 

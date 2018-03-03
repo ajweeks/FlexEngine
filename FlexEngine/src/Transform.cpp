@@ -170,25 +170,28 @@ namespace flex
 		}
 		else
 		{
-			globalPosition = localPosition;
-			globalRotation = localRotation;
-			globalScale = localScale;
-
 			UpdateChildTransforms();
 		}
 	}
 
 	void Transform::UpdateChildTransforms()
 	{
+		if (parentTransform)
+		{
+			globalPosition = parentTransform->globalPosition + localPosition;
+			globalScale = parentTransform->globalScale * localScale;
+			globalRotation = parentTransform->globalRotation * localRotation;
+		}
+		else
+		{
+			globalPosition = localPosition;
+			globalRotation = localRotation;
+			globalScale = localScale;
+		}
+
 		for (auto iter = childrenTransforms.begin(); iter != childrenTransforms.end(); ++iter)
 		{
-			Transform* childTransform = *iter;
-
-			childTransform->globalPosition = childTransform->localPosition + localPosition;
-			childTransform->globalScale = childTransform->localScale * localScale;
-			childTransform->globalRotation = childTransform->localRotation * localRotation;
-
-			childTransform->UpdateChildTransforms();
+			(*iter)->UpdateChildTransforms();
 		}
 	}
 
