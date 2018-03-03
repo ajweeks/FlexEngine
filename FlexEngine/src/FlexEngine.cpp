@@ -287,11 +287,6 @@ namespace flex
 				continue; // Don't update or render when the window has been minimized
 			}
 
-			// Call as early as possible in the frame
-			m_GameContext.renderer->ImGui_NewFrame(m_GameContext);
-
-			m_GameContext.inputManager->PostImGuiUpdate(m_GameContext);
-
 			// TODO: Bring keybindings out to external file (or at least variables)
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 			{
@@ -306,6 +301,10 @@ namespace flex
 				continue;
 			}
 
+			// Call as early as possible in the frame
+			m_GameContext.renderer->ImGui_NewFrame(m_GameContext);
+
+			m_GameContext.inputManager->PostImGuiUpdate(m_GameContext);
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
 				m_GameContext.sceneManager->SetNextSceneActive();
