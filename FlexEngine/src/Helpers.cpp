@@ -6,8 +6,6 @@
 #include <iomanip>
 #include <fstream>
 
-#include <imgui.h>
-
 #include <glm/gtx/matrix_decompose.hpp>
 
 #include "Logger.hpp"

@@ -13,6 +13,9 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "imgui.h"
+#include "ImGui/imgui_impl_glfw_vulkan.h"
+
 #include "FreeCamera.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
@@ -89,14 +92,19 @@ namespace flex
 				});
 			}
 
-			// ImGui buffers are dynamic, they shouldn't use the staging buffer
-			m_VertexIndexBufferPairs[m_IGuiShaderID].useStagingBuffer = false;
-			
 			CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, 1, &m_BlankTexture);
+
+			ImGui::CreateContext();
 		}
 
 		VulkanRenderer::~VulkanRenderer()
 		{
+			// TODO: Is this needed?
+			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
+
+			ImGui_ImplGlfwVulkan_Shutdown();
+			ImGui::DestroyContext();
+
 			{
 				auto iter = m_RenderObjects.begin();
 				while (iter != m_RenderObjects.end())
@@ -133,11 +141,6 @@ namespace flex
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, offscreenSemaphore, nullptr);
 			
 			m_gBufferQuadVertexBufferData.Destroy();
-
-			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_ImGui_GraphicsPipeline, nullptr);
-			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_ImGui_PipelineLayout, nullptr);
-
-			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
 
 			m_PipelineCache.replace();
 
@@ -245,13 +248,41 @@ namespace flex
 				CreateGraphicsPipeline(i);
 			}
 
-			ImGui_Init(gameContext);
+			ImGui_ImplGlfwVulkan_Init_Data initData = {};
+			initData.allocator = VK_NULL_HANDLE;
+			initData.gpu = m_VulkanDevice->m_PhysicalDevice;
+			initData.device = *m_VulkanDevice;
+			initData.render_pass = m_DeferredCombineRenderPass;
+			initData.pipeline_cache = m_PipelineCache;
+			initData.descriptor_pool = m_DescriptorPool;
+			initData.check_vk_result = VK_NULL_HANDLE;
+
+			ImGui_ImplGlfwVulkan_Init(dynamic_cast<GLFWWindowWrapper*>(gameContext.window)->GetWindow(), false, &initData);
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
 
 			CreateCommandBuffers();
 			CreateSemaphores();
+
+			// Upload ImGui fonts
+			VK_CHECK_RESULT(vkResetCommandPool(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, 0));
+			VkCommandBufferBeginInfo begin_info = {};
+			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			VK_CHECK_RESULT(vkBeginCommandBuffer(m_CommandBuffers[0], &begin_info));
+
+			ImGui_ImplGlfwVulkan_CreateFontsTexture(m_CommandBuffers[0]);
+
+			VkSubmitInfo end_info = {};
+			end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			end_info.commandBufferCount = 1;
+			end_info.pCommandBuffers = &m_CommandBuffers[0];
+			VK_CHECK_RESULT(vkEndCommandBuffer(m_CommandBuffers[0]));
+			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+
+			VK_CHECK_RESULT(vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice));
+
 
 			if (!m_SkyBoxMesh)
 			{
@@ -1932,6 +1963,8 @@ namespace flex
 			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
+			
+			mat.material.generateReflectionProbeMaps = createInfo->generateReflectionProbeMaps;
 
 			if (m_Shaders[mat.material.shaderID].shader.needIrradianceSampler)
 			{
@@ -2005,6 +2038,32 @@ namespace flex
 						(*textureInfo.texture)->UpdateImageDescriptor();
 					}
 				}
+			}
+
+			if (createInfo->generateReflectionProbeMaps)
+			{
+				mat.cubemapSamplerGBuffersIDs = {
+					{ 0, "positionMetallicFrameBufferSampler", VK_FORMAT_R16G16B16_SFLOAT },
+					{ 0, "normalRoughnessFrameBufferSampler", VK_FORMAT_R16G16B16_SFLOAT },
+					{ 0, "albedoAOFrameBufferSampler", VK_FORMAT_R16G16B16_SFLOAT },
+
+					//{ 0, "positionMetallicFrameBufferSampler", GL_RGBA16F, GL_RGBA },
+					//{ 0, "normalRoughnessFrameBufferSampler", GL_RGBA16F, GL_RGBA },
+					//{ 0, "albedoAOFrameBufferSampler", GL_RGBA, GL_RGBA },
+				};
+
+				//GLCubemapCreateInfo cubemapCreateInfo = {};
+				//cubemapCreateInfo.program = m_Shaders[mat.material.shaderID].program;
+				//cubemapCreateInfo.textureID = &mat.cubemapSamplerID;
+				//cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
+				//cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
+				//cubemapCreateInfo.HDR = true;
+				//cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				//cubemapCreateInfo.generateMipmaps = false;
+				//cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
+				//cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
+
+				//GenerateVulkanCubemap(cubemapCreateInfo);
 			}
 
 			// Cubemaps are treated differently than regular textures because they require 6 filepaths
@@ -2156,6 +2215,22 @@ namespace flex
 
 		void VulkanRenderer::Update(const GameContext& gameContext)
 		{
+			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
+			{
+				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
+				{
+					VulkanRenderObject* renderObject = *iter;
+					if (renderObject && m_LoadedMaterials[renderObject->materialID].material.generateReflectionProbeMaps)
+					{
+						Logger::LogInfo("Capturing reflection probe");
+						CaptureSceneToCubemap(gameContext, renderObject->renderID);
+						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+						Logger::LogInfo("Done");
+					}
+				}
+			}
+
 			// Update uniform buffer
 			UpdateConstantUniformBuffers(gameContext);
 
@@ -2173,8 +2248,8 @@ namespace flex
 		{
 			DrawCallInfo drawCallInfo = {};
 
-			BuildCommandBuffers(gameContext, drawCallInfo); // TODO: Only call this when objects change
 			BuildDeferredCommandBuffer(gameContext, drawCallInfo); // TODO: Only call this when objects change
+			BuildCommandBuffers(gameContext, drawCallInfo); // TODO: Only call this when objects change
 
 			if (m_SwapChainNeedsRebuilding)
 			{
@@ -2407,187 +2482,9 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::ImGui_Init(const GameContext& gameContext)
+		void VulkanRenderer::ImGuiNewFrame()
 		{
-			ImGuiIO& io = ImGui::GetIO();
-
-			io.RenderDrawListsFn = NULL;
-
-			glm::vec2i windowSize = gameContext.window->GetSize();
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
-			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
-
-			io.SetClipboardTextFn = SetClipboardText;
-			io.GetClipboardTextFn = GetClipboardText;
-			io.ClipboardUserData = gameContext.window;
-
-			ImGui_InitResources();
-		}
-
-		void VulkanRenderer::ImGui_ReleaseRenderObjects()
-		{
-			ImGui_InvalidateDeviceObjects();
-		}
-
-		void VulkanRenderer::ImGui_NewFrame(const GameContext& gameContext)
-		{
-			ImGui::NewFrame();
-
-			ImGuiIO& io = ImGui::GetIO();
-
-			// Setup display size (every frame to accommodate for window resizing)
-			glm::vec2i windowSize = gameContext.window->GetSize();
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
-			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
-
-			io.DeltaTime = gameContext.deltaTime;
-		}
-
-		void VulkanRenderer::ImGui_Render()
-		{
-			ImGui::Render();
-
-			ImGui_UpdateBuffers();
-		}
-
-		void VulkanRenderer::ImGui_DrawFrame(VkCommandBuffer commandBuffer)
-		{
-			ImGuiIO& io = ImGui::GetIO();
-
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ImGui_PipelineLayout, 0, 1, &m_ImGuiDescriptorSet, 0, nullptr);
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ImGui_GraphicsPipeline);
-
-			ShaderID imGuiShaderID;
-			if (!GetShaderID("imgui", imGuiShaderID))
-			{
-				Logger::LogError("Failed to find imgui shader!");
-			}
-			VertexIndexBufferPair& bufferPair = m_VertexIndexBufferPairs[imGuiShaderID];
-
-			// Bind vertex and index buffer
-			VkDeviceSize offsets[1] = { 0 };
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bufferPair.vertexBuffer->m_Buffer, offsets);
-			vkCmdBindIndexBuffer(commandBuffer, bufferPair.indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT16);
-
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = 0.0f;
-			viewport.width = (real)m_SwapChainExtent.width;
-			viewport.height = (real)m_SwapChainExtent.height;
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
-			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-			// UI scale and translate via push constants
-			m_ImGuiPushConstBlock.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
-			m_ImGuiPushConstBlock.translate = glm::vec2(-1.0f);
-			vkCmdPushConstants(commandBuffer, m_ImGui_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGui_PushConstBlock), &m_ImGuiPushConstBlock);
-
-			// Render commands
-			ImDrawData* imDrawData = ImGui::GetDrawData();
-			i32 vertexOffset = 0;
-			i32 indexOffset = 0;
-			for (i32 i = 0; i < imDrawData->CmdListsCount; ++i)
-			{
-				const ImDrawList* cmd_list = imDrawData->CmdLists[i];
-				for (i32 j = 0; j < cmd_list->CmdBuffer.Size; ++j)
-				{
-					const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[j];
-					VkRect2D scissorRect;
-					scissorRect.offset.x = std::max((i32)(pcmd->ClipRect.x), 0);
-					scissorRect.offset.y = std::max((i32)(pcmd->ClipRect.y), 0);
-					scissorRect.extent.width = (u32)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-					scissorRect.extent.height = (u32)(pcmd->ClipRect.w - pcmd->ClipRect.y);
-					vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
-					vkCmdDrawIndexed(commandBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
-					indexOffset += pcmd->ElemCount;
-				}
-				vertexOffset += cmd_list->VtxBuffer.Size;
-			}
-		}
-
-		void VulkanRenderer::ImGui_InitResources()
-		{
-			m_ImGuiPushConstBlock = { glm::vec2(1.0f, 1.0f), glm::vec2(0.0f, 0.0f) };
-
-			{
-				ImGui_CreateFontsTexture(m_GraphicsQueue);
-
-				DescriptorSetCreateInfo createInfo = {};
-				createInfo.descriptorSet = &m_ImGuiDescriptorSet;
-				createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[m_IGuiShaderID];
-				createInfo.diffuseTexture = m_ImGuiFontTexture;
-				createInfo.shaderID = m_IGuiShaderID;
-				createInfo.uniformBuffer = &m_Shaders[m_IGuiShaderID].uniformBuffer;
-
-				CreateDescriptorSet(&createInfo);
-			}
-
-			VkPushConstantRange pushConstants[1] = {};
-			pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			pushConstants[0].offset = sizeof(real) * 0;
-			pushConstants[0].size = sizeof(real) * 4;
-
-			VertexBufferData vertexBufferData = {};
-			vertexBufferData.Attributes =
-				(u32)VertexAttribute::POSITION_2D |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R8G8B8A8_UNORM;
-			vertexBufferData.VertexStride = CalculateVertexStride(vertexBufferData.Attributes);
-
-			assert(vertexBufferData.VertexStride == sizeof(ImDrawVert));
-
-			u32 descriptorSetLayoutIndex = m_IGuiShaderID;
-
-			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-
-			pipelineCreateInfo.shaderID = m_IGuiShaderID;
-			pipelineCreateInfo.vertexAttributes = vertexBufferData.Attributes;
-			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-			pipelineCreateInfo.descriptorSetLayoutIndex = descriptorSetLayoutIndex;
-			pipelineCreateInfo.setDynamicStates = true;
-			pipelineCreateInfo.enabledColorBlending = true;
-			pipelineCreateInfo.pushConstants = pushConstants;
-			pipelineCreateInfo.pushConstantRangeCount = 1;
-			pipelineCreateInfo.pipelineLayout = &m_ImGui_PipelineLayout;
-			pipelineCreateInfo.grahpicsPipeline = &m_ImGui_GraphicsPipeline;
-			pipelineCreateInfo.pipelineCache = &m_ImGuiPipelineCache;
-			pipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
-			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-			pipelineCreateInfo.depthTestEnable = VK_FALSE;
-			pipelineCreateInfo.subpass = 1;
-
-			CreateGraphicsPipeline(&pipelineCreateInfo);
-		}
-
-		void VulkanRenderer::ImGui_InvalidateDeviceObjects()
-		{
-			SafeDelete(m_ImGuiFontTexture);
-
-			if (m_ImGui_PipelineLayout)
-			{
-				vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_ImGui_PipelineLayout, nullptr);
-				m_ImGui_PipelineLayout = VK_NULL_HANDLE;
-			}
-
-			if (m_ImGui_GraphicsPipeline)
-			{
-				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_ImGui_GraphicsPipeline, nullptr);
-				m_ImGui_GraphicsPipeline = VK_NULL_HANDLE;
-			}
-
-			if (m_ImGuiPipelineCache)
-			{
-				vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_ImGuiPipelineCache, nullptr);
-				m_ImGuiPipelineCache = VK_NULL_HANDLE;
-			}
+			ImGui_ImplGlfwVulkan_NewFrame();
 		}
 
 		void VulkanRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)
@@ -2623,97 +2520,7 @@ namespace flex
 		{
 			return m_RenderObjects[renderID];
 		}
-
-		bool VulkanRenderer::ImGui_CreateFontsTexture(VkQueue copyQueue)
-		{
-			ImGuiIO& io = ImGui::GetIO();
-
-			unsigned char* pixels;
-			i32 textureWidth, textureHeight;
-			io.Fonts->GetTexDataAsRGBA32(&pixels, &textureWidth, &textureHeight);
-			size_t uploadSize = textureWidth * textureHeight * 4 * sizeof(char);
-
-			m_ImGuiFontTexture = new VulkanTexture(m_VulkanDevice->m_LogicalDevice);
-
-			CreateImage(textureWidth, textureHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, &m_ImGuiFontTexture->image, &m_ImGuiFontTexture->imageMemory);
-
-			CreateImageView(m_ImGuiFontTexture->image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, m_ImGuiFontTexture->mipLevels, &m_ImGuiFontTexture->imageView);
-
-			// Staging buffers for font data upload
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-
-			CreateAndAllocateBuffer(
-				uploadSize,
-				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				&stagingBuffer);
-
-			stagingBuffer.Map();
-			memcpy(stagingBuffer.m_Mapped, pixels, uploadSize);
-			stagingBuffer.Unmap();
-
-			// Copy buffer data to font image
-			VkCommandBuffer copyCmd = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-
-			// Prepare for transfer
-			SetImageLayout(
-				copyCmd,
-				m_ImGuiFontTexture,
-				VK_IMAGE_ASPECT_COLOR_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_PIPELINE_STAGE_HOST_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-			// Copy
-			VkBufferImageCopy bufferCopyRegion = {};
-			bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			bufferCopyRegion.imageSubresource.layerCount = 1;
-			bufferCopyRegion.imageExtent.width = textureWidth;
-			bufferCopyRegion.imageExtent.height = textureHeight;
-			bufferCopyRegion.imageExtent.depth = 1;
-
-			vkCmdCopyBufferToImage(
-				copyCmd,
-				stagingBuffer.m_Buffer,
-				m_ImGuiFontTexture->image,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1,
-				&bufferCopyRegion
-			);
-
-			// Prepare for shader read
-			SetImageLayout(
-				copyCmd,
-				m_ImGuiFontTexture,
-				VK_IMAGE_ASPECT_COLOR_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-			FlushCommandBuffer(copyCmd, copyQueue, true);
-
-			stagingBuffer.Destroy();
-
-			CreateTextureSampler(m_ImGuiFontTexture, 1.0f, -1000.0f, 1000.0f);
-
-			// Store our identifier
-			io.Fonts->TexID = (void *)(intptr_t)&m_ImGuiFontTexture->image;
-
-			return true;
-		}
-
-		u32 VulkanRenderer::ImGui_MemoryType(VkMemoryPropertyFlags properties, u32 type_bits)
-		{
-			VkPhysicalDeviceMemoryProperties prop;
-			vkGetPhysicalDeviceMemoryProperties(m_VulkanDevice->m_PhysicalDevice, &prop);
-			for (u32 i = 0; i < prop.memoryTypeCount; ++i)
-				if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1 << i))
-					return i;
-			return 0xffffffff; // Unable to find memoryType
-		}
-
+		
 		RenderID VulkanRenderer::GetFirstAvailableRenderID() const
 		{
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
@@ -4421,29 +4228,36 @@ namespace flex
 
 		void VulkanRenderer::BuildCommandBuffers(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			// TODO: Remove unused param
-			UNREFERENCED_PARAMETER(drawCallInfo);
-
-			std::array<VkClearValue, 2> clearValues = {};
-			clearValues[0].color = m_ClearColor;
-			clearValues[1].depthStencil = { 1.0f, 0 };
-
-			VkRenderPassBeginInfo renderPassBeginInfo = {};
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = m_DeferredCombineRenderPass;
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-			renderPassBeginInfo.clearValueCount = clearValues.size();
-			renderPassBeginInfo.pClearValues = clearValues.data();
-			
-			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-			VulkanMaterial* gBufferMaterial = &m_LoadedMaterials[gBufferObject->materialID];
-
-			for (size_t i = 0; i < m_CommandBuffers.size(); ++i)
+			if (drawCallInfo.renderToCubemap)
 			{
-				VkCommandBuffer& commandBuffer = m_CommandBuffers[i];
+				if (offScreenCmdBuffer == VK_NULL_HANDLE)
+				{
+					offScreenCmdBuffer = CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
+				}
 
-				renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
+				VulkanRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+				VulkanMaterial const & cubemapMaterial = m_LoadedMaterials[cubemapRenderObject->materialID];
+
+				std::array<VkClearValue, 4> clearValues = {};
+				clearValues[0].color = m_ClearColor;
+				clearValues[1].color = m_ClearColor;
+				clearValues[2].color = m_ClearColor;
+				clearValues[3].depthStencil = { 1.0f, 0 };
+
+				VkRenderPassBeginInfo renderPassBeginInfo = {};
+				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				renderPassBeginInfo.renderPass = m_OffScreenFrameBuf->renderPass;
+				renderPassBeginInfo.renderArea.offset = { 0, 0 };
+				renderPassBeginInfo.renderArea.extent = {
+					cubemapMaterial.material.cubemapSamplerSize.x,
+					cubemapMaterial.material.cubemapSamplerSize.y
+				};
+				renderPassBeginInfo.clearValueCount = clearValues.size();
+				renderPassBeginInfo.pClearValues = clearValues.data();
+
+				VkCommandBuffer& commandBuffer = offScreenCmdBuffer;
+
+				renderPassBeginInfo.framebuffer = m_OffScreenFrameBuf->frameBuffer;
 
 				VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
 				cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -4453,38 +4267,41 @@ namespace flex
 
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.1f, 1000.0f };
+				VkViewport viewport = VkViewport{
+					0.0f, 1.0f,
+					(real)cubemapMaterial.material.cubemapSamplerSize.x, (real)cubemapMaterial.material.cubemapSamplerSize.y,
+					0.1f, 1000.0f
+				};
 				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-				VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
+				VkRect2D scissor = VkRect2D{
+					{ 0u, 0u },
+					{ cubemapMaterial.material.cubemapSamplerSize.x, cubemapMaterial.material.cubemapSamplerSize.y }
+				};
 				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-				BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], gBufferObject->renderID, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
-
-				// Final composition as full screen quad (deferred combine)
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
-				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
-				vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
-
-
-				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-
+				// This needed?
+				//vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 				// Forward rendered objects
 
-				// TODO: Batch objects with same materials together like in GL renderer
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(j);
-					if (!renderObject || !renderObject->visible) continue;
+					if (!renderObject || !renderObject->visible)
+					{
+						continue;
+					}
 
 					VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
 
 					// Only render non-deferred (forward) objects in this pass
-					if (m_Shaders[material->material.shaderID].shader.deferred) continue;
+					if (m_Shaders[material->material.shaderID].shader.deferred)
+					{
+						continue;
+					}
 
+					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[material->material.shaderID].vertexBuffer->m_Buffer, offsets);
 
 					if (m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Size != 0)
@@ -4500,7 +4317,7 @@ namespace flex
 						glm::mat4 view = glm::mat4(glm::mat3(gameContext.camera->GetView())); // Truncate translation part off to center around viwer
 						glm::mat4 projection = gameContext.camera->GetProjection();
 						m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock.mvp =
-							projection * view * glm::mat4(1.0f); // renderObject->model; TODO
+							projection * view * renderObject->transform->GetModelMatrix();
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
 					}
 
@@ -4516,12 +4333,120 @@ namespace flex
 					}
 				}
 
-				ImGui_DrawFrame(commandBuffer);
-
-
 				vkCmdEndRenderPass(commandBuffer);
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+			}
+			else
+			{
+				// Not drawing to cubemap, just draw normally
+				std::array<VkClearValue, 2> clearValues = {};
+				clearValues[0].color = m_ClearColor;
+				clearValues[1].depthStencil = { 1.0f, 0 };
+
+				VkRenderPassBeginInfo renderPassBeginInfo = {};
+				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				renderPassBeginInfo.renderPass = m_DeferredCombineRenderPass;
+				renderPassBeginInfo.renderArea.offset = { 0, 0 };
+				renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+				renderPassBeginInfo.clearValueCount = clearValues.size();
+				renderPassBeginInfo.pClearValues = clearValues.data();
+
+				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
+				VulkanMaterial* gBufferMaterial = &m_LoadedMaterials[gBufferObject->materialID];
+
+				for (size_t i = 0; i < m_CommandBuffers.size(); ++i)
+				{
+					ImGui_ImplGlfwVulkan_Render();
+
+					VkCommandBuffer& commandBuffer = m_CommandBuffers[i];
+
+					renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
+
+					VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
+					cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+					VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
+
+					vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+					VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.1f, 1000.0f };
+					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+					VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
+					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+					BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], gBufferObject->renderID, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+
+					// Final composition as full screen quad (deferred combine)
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+
+					vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
+
+
+					vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+
+					// Forward rendered objects
+
+					// TODO: Batch objects with same materials together like in GL renderer
+					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+					{
+						VulkanRenderObject* renderObject = GetRenderObject(j);
+						if (!renderObject || !renderObject->visible)
+						{
+							continue;
+						}
+
+						VulkanMaterial* material = &m_LoadedMaterials[renderObject->materialID];
+
+						// Only render non-deferred (forward) objects in this pass
+						if (m_Shaders[material->material.shaderID].shader.deferred)
+						{
+							continue;
+						}
+
+						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[material->material.shaderID].vertexBuffer->m_Buffer, offsets);
+
+						if (m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Size != 0)
+						{
+							vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[material->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						}
+
+						vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
+
+						// Push constants
+						if (m_Shaders[material->material.shaderID].shader.needPushConstantBlock)
+						{
+							glm::mat4 view = glm::mat4(glm::mat3(gameContext.camera->GetView())); // Truncate translation part off to center around viwer
+							glm::mat4 projection = gameContext.camera->GetProjection();
+							m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock.mvp =
+								projection * view * renderObject->transform->GetModelMatrix();
+							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &m_LoadedMaterials[renderObject->materialID].material.pushConstantBlock);
+						}
+
+						BindDescriptorSet(&m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID], renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+
+						if (renderObject->indexed)
+						{
+							vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[material->material.shaderID].indexCount, 1, renderObject->indexOffset, 0, 0);
+						}
+						else
+						{
+							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+						}
+					}
+
+					ImGui_ImplGlfwVulkan_DrawFrame(commandBuffer);
+
+					vkCmdEndRenderPass(commandBuffer);
+
+					VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+				}
 			}
 		}
 
@@ -4620,57 +4545,6 @@ namespace flex
 			vkCmdEndRenderPass(offScreenCmdBuffer);
 
 			VK_CHECK_RESULT(vkEndCommandBuffer(offScreenCmdBuffer));
-		}
-
-		void VulkanRenderer::ImGui_UpdateBuffers()
-		{
-			ImDrawData* imDrawData = ImGui::GetDrawData();
-
-			// Note: Alignment is done inside buffer creation
-			VkDeviceSize vertexBufferSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
-			VkDeviceSize indexBufferSize = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
-
-			// Update buffers only if vertex or index count has been changed compared to current buffer size
-
-			VertexIndexBufferPair& bufferPair = m_VertexIndexBufferPairs[m_IGuiShaderID];
-
-			// Vertex buffer
-			if ((bufferPair.vertexBuffer->m_Buffer == VK_NULL_HANDLE) || ((i32)bufferPair.vertexCount != imDrawData->TotalVtxCount)) {
-				bufferPair.vertexBuffer->Unmap();
-				bufferPair.vertexBuffer->Destroy();
-				//assert(vertexBufferSize == bufferPair.vertexBuffer->m_Size);
-				CreateAndAllocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, bufferPair.vertexBuffer);
-				bufferPair.vertexCount = imDrawData->TotalVtxCount;
-				bufferPair.vertexBuffer->Unmap();
-				bufferPair.vertexBuffer->Map();
-			}
-
-			// Index buffer
-			if ((bufferPair.indexBuffer == VK_NULL_HANDLE) || ((i32)bufferPair.indexCount < imDrawData->TotalIdxCount)) {
-				bufferPair.indexBuffer->Unmap();
-				bufferPair.indexBuffer->Destroy();
-				//assert(indexBufferSize == bufferPair.indexBuffer->m_Size);
-				CreateAndAllocateBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, bufferPair.indexBuffer);
-				bufferPair.indexCount = imDrawData->TotalIdxCount;
-				bufferPair.indexBuffer->Map();
-			}
-
-			// Upload data
-			ImDrawVert* vtxDst = (ImDrawVert*)bufferPair.vertexBuffer->m_Mapped;
-			ImDrawIdx* idxDst = (ImDrawIdx*)bufferPair.indexBuffer->m_Mapped;
-
-			for (i32 n = 0; n < imDrawData->CmdListsCount; ++n)
-			{
-				const ImDrawList* cmd_list = imDrawData->CmdLists[n];
-				memcpy(vtxDst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-				memcpy(idxDst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-				vtxDst += cmd_list->VtxBuffer.Size;
-				idxDst += cmd_list->IdxBuffer.Size;
-			}
-
-			// Flush to make writes visible to GPU
-			bufferPair.vertexBuffer->Flush();
-			bufferPair.indexBuffer->Flush();
 		}
 
 		bool VulkanRenderer::CheckCommandBuffers() const
@@ -5651,7 +5525,6 @@ namespace flex
 			m_Shaders = {
 				{ "deferred_simple", shaderDirectory + "vk_deferred_simple_vert.spv", shaderDirectory + "vk_deferred_simple_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "color",  shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "imgui", shaderDirectory + "vk_imgui_vert.spv", shaderDirectory + "vk_imgui_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "pbr", shaderDirectory + "vk_pbr_vert.spv", shaderDirectory + "vk_pbr_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "skybox", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "equirectangular_to_cube", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_equirectangular_to_cube_frag.spv", m_VulkanDevice->m_LogicalDevice },
@@ -5697,14 +5570,6 @@ namespace flex
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("uniformBufferDynamic");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			++shaderID;
-
-			// ImGui
-			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("diffuseSampler");
 			++shaderID;
 
 			// PBR
@@ -5846,11 +5711,6 @@ namespace flex
 					Logger::LogError("Could not find fragment shader " + m_Shaders[i].shader.name);
 				}
 			}
-
-			if (!GetShaderID("imgui", m_IGuiShaderID))
-			{
-				Logger::LogError("Failed to find imgui shader!");
-			}
 		}
 
 		void VulkanRenderer::GenerateSkybox(const GameContext& gameContext)
@@ -5894,8 +5754,8 @@ namespace flex
 				// Clear
 			}
 
-			drawCallInfo.deferred = true;
-			BuildDeferredCommandBuffer(gameContext, drawCallInfo);
+			//drawCallInfo.deferred = true;
+			//BuildDeferredCommandBuffer(gameContext, drawCallInfo);
 			drawCallInfo.deferred = false;
 			//DrawGBufferQuad(gameContext, drawCallInfo);
 			BuildCommandBuffers(gameContext, drawCallInfo);

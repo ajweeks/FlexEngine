@@ -19,6 +19,12 @@ namespace flex
 
 		void VulkanWindowWrapper::Create()
 		{
+			if (glfwVulkanSupported() != GLFW_TRUE)
+			{
+				Logger::LogError("This device does not support Vulkan! Aborting");
+				exit(EXIT_FAILURE);
+			}
+
 			// Tell the window we're not using OpenGL
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 

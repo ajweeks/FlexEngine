@@ -13,6 +13,12 @@
 #include "VertexBufferData.hpp"
 #include "Transform.hpp"
 
+/*
+ * TODO:
+ * - Add near & far members for child classes to use
+ * 
+*/
+
 namespace flex
 {
 	class Renderer
@@ -341,11 +347,12 @@ namespace flex
 
 		virtual void Destroy(RenderID renderID) = 0;
 
-		// ImGUI functions
-		virtual void ImGui_NewFrame(const GameContext& gameContext) = 0;
-		virtual void ImGui_Render() = 0;
-		virtual void ImGui_ReleaseRenderObjects() = 0;
-		
+		virtual void ImGuiNewFrame() = 0;
+
+		//virtual void ImGuiInvalidateFontUploadObjects();
+		//virtual void ImGuiInvalidateDeviceObjects();
+		//virtual void ImGuiCreateFontsTexture();
+		//virtual void ImGuiCreateDeviceObjects();
 
 	protected:
 		std::vector<PointLight> m_PointLights;

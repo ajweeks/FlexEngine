@@ -12,6 +12,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "imgui.h"
+#include "ImGui/imgui_impl_glfw_gl3.h"
+
 #include "FreeCamera.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Logger.hpp"
@@ -22,6 +25,7 @@
 #include "Scene/SceneManager.hpp"
 #include "Helpers.hpp"
 #include "Scene/MeshPrefab.hpp"
+
 
 namespace flex
 {
@@ -49,33 +53,33 @@ namespace flex
 
 			m_BRDFTextureSize = { 512, 512 };
 			m_BRDFTextureHandle = {};
-			m_BRDFTextureHandle.i32ernalFormat = GL_RG16F;
+			m_BRDFTextureHandle.internalFormat = GL_RG16F;
 			m_BRDFTextureHandle.format = GL_RG;
 			m_BRDFTextureHandle.type = GL_FLOAT;
 
 			m_OffscreenTextureHandle = {};
-			m_OffscreenTextureHandle.i32ernalFormat = GL_RGBA16F;
+			m_OffscreenTextureHandle.internalFormat = GL_RGBA16F;
 			m_OffscreenTextureHandle.format = GL_RGBA;
 			m_OffscreenTextureHandle.type = GL_FLOAT;
 
 			m_LoadingTextureHandle = {};
-			m_LoadingTextureHandle.i32ernalFormat = GL_RGBA;
+			m_LoadingTextureHandle.internalFormat = GL_RGBA;
 			m_LoadingTextureHandle.format = GL_RGBA;
 			m_LoadingTextureHandle.type = GL_FLOAT;
 
 
 			m_gBuffer_PositionMetallicHandle = {};
-			m_gBuffer_PositionMetallicHandle.i32ernalFormat = GL_RGBA16F;
+			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
 			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
 			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
 
 			m_gBuffer_NormalRoughnessHandle = {};
-			m_gBuffer_NormalRoughnessHandle.i32ernalFormat = GL_RGBA16F;
+			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
 			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
 			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
 
 			m_gBuffer_DiffuseAOHandle = {};
-			m_gBuffer_DiffuseAOHandle.i32ernalFormat = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
@@ -120,7 +124,7 @@ namespace flex
 
 				GenerateFrameBufferTexture(&m_OffscreenTextureHandle.id,
 					0,
-					m_OffscreenTextureHandle.i32ernalFormat,
+					m_OffscreenTextureHandle.internalFormat,
 					m_OffscreenTextureHandle.format,
 					m_OffscreenTextureHandle.type,
 					frameBufferSize);
@@ -217,9 +221,11 @@ namespace flex
 			if (m_BRDFTextureHandle.id == 0)
 			{
 				Logger::LogInfo("Generating BRDF LUT");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.i32ernalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
+
+			ImGui::CreateContext();
 		}
 
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
@@ -280,6 +286,11 @@ namespace flex
 
 		GLRenderer::~GLRenderer()
 		{
+			CheckGLErrorMessages();
+			
+			ImGui_ImplGlfwGL3_Shutdown();
+			ImGui::DestroyContext();
+
 			CheckGLErrorMessages();
 
 			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
@@ -434,7 +445,7 @@ namespace flex
 			{
 				if (m_BRDFTextureHandle.id == 0)
 				{
-					GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.i32ernalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+					GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 					GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 				}
 				mat.brdfLUTSamplerID = m_BRDFTextureHandle.id;
@@ -1293,7 +1304,9 @@ namespace flex
 
 		void GLRenderer::PostInitialize(const GameContext& gameContext)
 		{
-			ImGui_Init(gameContext);
+			ImGuiIO& io = ImGui::GetIO();
+			ImGui_ImplGlfwGL3_Init(dynamic_cast<GLFWWindowWrapper*>(gameContext.window)->GetWindow(), false);
+
 
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
@@ -1301,25 +1314,23 @@ namespace flex
 
 			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 
-
-
 			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
 				0,
-				m_gBuffer_PositionMetallicHandle.i32ernalFormat,
+				m_gBuffer_PositionMetallicHandle.internalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
 				m_gBuffer_PositionMetallicHandle.type,
 				frameBufferSize);
 
 			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
 				1,
-				m_gBuffer_NormalRoughnessHandle.i32ernalFormat,
+				m_gBuffer_NormalRoughnessHandle.internalFormat,
 				m_gBuffer_NormalRoughnessHandle.format,
 				m_gBuffer_NormalRoughnessHandle.type,
 				frameBufferSize);
 
 			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
 				2,
-				m_gBuffer_DiffuseAOHandle.i32ernalFormat,
+				m_gBuffer_DiffuseAOHandle.internalFormat,
 				m_gBuffer_DiffuseAOHandle.format,
 				m_gBuffer_DiffuseAOHandle.type,
 				frameBufferSize);
@@ -1340,7 +1351,7 @@ namespace flex
 			
 			if (m_BRDFTextureHandle.id == 0)
 			{
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.i32ernalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
 
@@ -1349,12 +1360,12 @@ namespace flex
 			Logger::LogInfo("Ready!\n");
 		}
 
-		void GLRenderer::GenerateFrameBufferTexture(u32* handle, i32 index, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size)
+		void GLRenderer::GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glGenTextures(1, handle);
 			glBindTexture(GL_TEXTURE_2D, *handle);
 			CheckGLErrorMessages();
-			glTexImage2D(GL_TEXTURE_2D, 0, i32ernalFormat, size.x, size.y, 0, format, type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
 			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			CheckGLErrorMessages();
@@ -1366,10 +1377,10 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size)
+		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glBindTexture(GL_TEXTURE_2D, handle);
-			glTexImage2D(GL_TEXTURE_2D, 0, i32ernalFormat, size.x, size.y, 0, format, type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
 			CheckGLErrorMessages();
 		}
 
@@ -1410,7 +1421,7 @@ namespace flex
 			DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawOffscreenTexture(gameContext);
-			DrawUI();
+			ImGuiRender();
 
 			SwapBuffers(gameContext);
 		}
@@ -1606,6 +1617,7 @@ namespace flex
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 					CheckGLErrorMessages();
 
+					// Draw cube (TODO: Use "cube" object to be less confusing)
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 				}
@@ -1678,107 +1690,6 @@ namespace flex
 			DrawSpriteQuad(gameContext, m_OffscreenTextureHandle.id, m_PostProcessMatID, true);
 		}
 
-		void GLRenderer::DrawUI()
-		{
-			ImDrawData* drawData = ImGui::GetDrawData();
-
-			// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-			ImGuiIO& io = ImGui::GetIO();
-			i32 fb_width = (i32)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-			i32 fb_height = (i32)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
-			if (fb_width == 0 || fb_height == 0)
-				return;
-			drawData->ScaleClipRects(io.DisplayFramebufferScale);
-
-			// Backup GL state
-			GLenum last_active_texture; glGetIntegerv(GL_ACTIVE_TEXTURE, (GLint*)&last_active_texture);
-			glActiveTexture(GL_TEXTURE0);
-			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-			GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-			GLint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-			GLint last_element_array_buffer; glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
-			GLint last_vertex_array; glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-			GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
-			GLenum last_blend_src_rgb; glGetIntegerv(GL_BLEND_SRC_RGB, (GLint*)&last_blend_src_rgb);
-			GLenum last_blend_dst_rgb; glGetIntegerv(GL_BLEND_DST_RGB, (GLint*)&last_blend_dst_rgb);
-			GLenum last_blend_src_alpha; glGetIntegerv(GL_BLEND_SRC_ALPHA, (GLint*)&last_blend_src_alpha);
-			GLenum last_blend_dst_alpha; glGetIntegerv(GL_BLEND_DST_ALPHA, (GLint*)&last_blend_dst_alpha);
-			GLenum last_blend_equation_rgb; glGetIntegerv(GL_BLEND_EQUATION_RGB, (GLint*)&last_blend_equation_rgb);
-			GLenum last_blend_equation_alpha; glGetIntegerv(GL_BLEND_EQUATION_ALPHA, (GLint*)&last_blend_equation_alpha);
-			GLboolean last_enable_blend = glIsEnabled(GL_BLEND);
-			GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
-			GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
-			GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
-
-			// Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
-			glEnable(GL_BLEND);
-			glBlendEquation(GL_FUNC_ADD);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glDisable(GL_CULL_FACE);
-			glDisable(GL_DEPTH_TEST);
-			glEnable(GL_SCISSOR_TEST);
-
-			// Setup viewport, orthographic projection matrix
-			glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
-			const real ortho_projection[4][4] =
-			{
-				{ 2.0f / io.DisplaySize.x, 0.0f,                   0.0f, 0.0f },
-				{ 0.0f,                  2.0f / -io.DisplaySize.y, 0.0f, 0.0f },
-				{ 0.0f,                  0.0f,                  -1.0f, 0.0f },
-				{ -1.0f,                  1.0f,                   0.0f, 1.0f },
-			};
-			glUseProgram(m_ImGuiShaderHandle);
-			//glUniform1i(m_ImGuiAttribLocationTex, 0);
-			glUniformMatrix4fv(m_ImGuiAttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
-			glBindVertexArray(m_ImGuiVaoHandle);
-
-			for (i32 n = 0; n < drawData->CmdListsCount; ++n)
-			{
-				const ImDrawList* cmd_list = drawData->CmdLists[n];
-				const ImDrawIdx* idx_buffer_offset = 0;
-
-				glBindBuffer(GL_ARRAY_BUFFER, m_ImGuiVboHandle);
-				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert), (const GLvoid*)cmd_list->VtxBuffer.Data, GL_STREAM_DRAW);
-
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ElementsHandle);
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx), (const GLvoid*)cmd_list->IdxBuffer.Data, GL_STREAM_DRAW);
-
-				for (i32 cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; ++cmd_i)
-				{
-					const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-					if (pcmd->UserCallback)
-					{
-						pcmd->UserCallback(cmd_list, pcmd);
-					}
-					else
-					{
-						glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-						glScissor((i32)pcmd->ClipRect.x, (i32)(fb_height - pcmd->ClipRect.w), (i32)(pcmd->ClipRect.z - pcmd->ClipRect.x), (i32)(pcmd->ClipRect.w - pcmd->ClipRect.y));
-						glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
-					}
-					idx_buffer_offset += pcmd->ElemCount;
-				}
-			}
-
-			// Restore modified GL state
-			glUseProgram(last_program);
-			glBindTexture(GL_TEXTURE_2D, last_texture);
-			glActiveTexture(last_active_texture);
-			glBindVertexArray(last_vertex_array);
-			glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
-			glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
-			glBlendFuncSeparate(last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);
-			if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-			if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
-			if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-			if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
-			glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
-			glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
-
-		}
-
 		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
 			assert(!batchedRenderObjects.empty());
@@ -1792,18 +1703,27 @@ namespace flex
 			for (size_t i = 0; i < batchedRenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = batchedRenderObjects[i];
-				if (!renderObject->visible) continue;
+				if (!renderObject->visible)
+				{
+					continue;
+				}
 
 				glBindVertexArray(renderObject->VAO);
 				CheckGLErrorMessages();
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 				CheckGLErrorMessages();
 
-				if (renderObject->enableCulling) glEnable(GL_CULL_FACE);
-				else glDisable(GL_CULL_FACE);
+				if (renderObject->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
 
-				glCullFace(renderObject->cullFace);
-				CheckGLErrorMessages();
+					glCullFace(renderObject->cullFace);
+					CheckGLErrorMessages();
+				}
+				else
+				{
+					glDisable(GL_CULL_FACE);
+				}
 
 				glDepthFunc(renderObject->depthTestReadFunc);
 				CheckGLErrorMessages();
@@ -1815,6 +1735,7 @@ namespace flex
 
 				BindTextures(shader, material);
 
+				// TODO: OPTIMIZATION: Create DrawRenderObjectBatchToCubemap rather than check bool
 				if (drawCallInfo.renderToCubemap)
 				{
 					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
@@ -1884,6 +1805,8 @@ namespace flex
 				}
 				else
 				{
+					// renderToCubemap is false, just render normally
+
 					if (renderObject->indexed)
 					{
 						glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
@@ -2042,7 +1965,6 @@ namespace flex
 				{ "deferred_combine", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine.frag" },
 				{ "deferred_combine_cubemap", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine_cubemap.vert", RESOURCE_LOCATION + "shaders/GLSL/deferred_combine_cubemap.frag" },
 				{ "color", RESOURCE_LOCATION + "shaders/GLSL/color.vert", RESOURCE_LOCATION + "shaders/GLSL/color.frag" },
-				{ "imgui", RESOURCE_LOCATION + "shaders/GLSL/imgui.vert", RESOURCE_LOCATION + "shaders/GLSL/imgui.frag" },
 				{ "pbr", RESOURCE_LOCATION + "shaders/GLSL/pbr.vert", RESOURCE_LOCATION + "shaders/GLSL/pbr.frag" },
 				{ "skybox", RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/skybox.frag" },
 				{ "equirectangular_to_cube", RESOURCE_LOCATION + "shaders/GLSL/skybox.vert", RESOURCE_LOCATION + "shaders/GLSL/equirectangular_to_cube.frag" },
@@ -2111,13 +2033,6 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			++shaderID;
-
-			// ImGui
-			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
@@ -2240,16 +2155,6 @@ namespace flex
 				LinkProgram(m_Shaders[i].program);
 			}
 
-			u32 imGuiShaderID;
-			if (!GetShaderID("imgui", imGuiShaderID))
-			{
-				Logger::LogError("Could not get imgui shader ID!");
-			}
-			else
-			{
-				m_ImGuiShaderHandle = m_Shaders[imGuiShaderID].program;
-			}
-
 			CheckGLErrorMessages();
 		}
 
@@ -2361,6 +2266,8 @@ namespace flex
 
 		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model, const GameContext& gameContext)
 		{
+			// TODO: OPTIMIZATION: Investigate performance impact of caching each uniform and preventing updates to data that hasn't changed
+
 			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
@@ -2468,7 +2375,7 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
 			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_OffscreenTextureHandle.id,
-				m_OffscreenTextureHandle.i32ernalFormat,
+				m_OffscreenTextureHandle.internalFormat,
 				m_OffscreenTextureHandle.format,
 				m_OffscreenTextureHandle.type,
 				newFrameBufferSize);
@@ -2479,19 +2386,19 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_gBuffer_PositionMetallicHandle.id,
-				m_gBuffer_PositionMetallicHandle.i32ernalFormat,
+				m_gBuffer_PositionMetallicHandle.internalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
 				m_gBuffer_PositionMetallicHandle.type,
 				newFrameBufferSize);
 
 			ResizeFrameBufferTexture(m_gBuffer_NormalRoughnessHandle.id,
-				m_gBuffer_NormalRoughnessHandle.i32ernalFormat,
+				m_gBuffer_NormalRoughnessHandle.internalFormat,
 				m_gBuffer_NormalRoughnessHandle.format,
 				m_gBuffer_NormalRoughnessHandle.type,
 				newFrameBufferSize);
 
 			ResizeFrameBufferTexture(m_gBuffer_DiffuseAOHandle.id,
-				m_gBuffer_DiffuseAOHandle.i32ernalFormat,
+				m_gBuffer_DiffuseAOHandle.internalFormat,
 				m_gBuffer_DiffuseAOHandle.format,
 				m_gBuffer_DiffuseAOHandle.type,
 				newFrameBufferSize);
@@ -2751,78 +2658,15 @@ namespace flex
 			SafeDelete(renderObject);
 		}
 
-		bool GLRenderer::ImGui_CreateFontsTexture()
+		void GLRenderer::ImGuiNewFrame()
 		{
-			// Build texture atlas
-			ImGuiIO& io = ImGui::GetIO();
-			unsigned char* pixels;
-			i32 width, height;
-			io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
-
-			// Upload texture to graphics system
-			GLint last_texture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-			glGenTextures(1, &m_ImGuiFontTexture); CheckGLErrorMessages();
-			glBindTexture(GL_TEXTURE_2D, m_ImGuiFontTexture); CheckGLErrorMessages();
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-			// Store our identifier
-			io.Fonts->TexID = (void *)(intptr_t)m_ImGuiFontTexture;
-
-			// Restore state
-			glBindTexture(GL_TEXTURE_2D, last_texture); CheckGLErrorMessages();
-
-			return true;
+			ImGui_ImplGlfwGL3_NewFrame();
 		}
 
-		void GLRenderer::ImGui_Init(const GameContext& gameContext)
-		{
-			ImGuiIO& io = ImGui::GetIO();
-
-			io.RenderDrawListsFn = NULL;
-
-			io.SetClipboardTextFn = SetClipboardText;
-			io.GetClipboardTextFn = GetClipboardText;
-			io.ClipboardUserData = gameContext.window;
-
-			glm::vec2i windowSize = gameContext.window->GetSize();
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
-			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
-
-			io.DeltaTime = gameContext.deltaTime;
-
-			ImGui_CreateDeviceObjects();
-		}
-
-		void GLRenderer::ImGui_NewFrame(const GameContext& gameContext)
-		{
-			ImGui::NewFrame();
-
-			ImGuiIO& io = ImGui::GetIO();
-
-			glm::vec2i windowSize = gameContext.window->GetSize();
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			io.DisplaySize = ImVec2((real)windowSize.x, (real)windowSize.y);
-			io.DisplayFramebufferScale = ImVec2(
-				windowSize.x > 0 ? ((real)frameBufferSize.x / windowSize.x) : 0,
-				windowSize.y > 0 ? ((real)frameBufferSize.y / windowSize.y) : 0);
-
-			io.DeltaTime = gameContext.deltaTime;
-		}
-
-		void GLRenderer::ImGui_Render()
+		void GLRenderer::ImGuiRender()
 		{
 			ImGui::Render();
-		}
-
-		void GLRenderer::ImGui_ReleaseRenderObjects()
-		{
-			ImGui_InvalidateDeviceObjects();
+			ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 		}
 
 		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)
@@ -2942,87 +2786,6 @@ namespace flex
 
 					ImGui::TreePop();
 				}
-			}
-		}
-
-		bool GLRenderer::ImGui_CreateDeviceObjects()
-		{
-			// Backup GL state
-			GLint last_texture, last_array_buffer, last_vertex_array;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-			glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-			glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-
-			//m_ImGuiShaderHandle = glCreateProgram(); CheckGLErrorMessages();
-			//m_ImGuiVertHandle = glCreateShader(GL_VERTEX_SHADER); CheckGLErrorMessages();
-			//m_ImGuiFragHandle = glCreateShader(GL_FRAGMENT_SHADER); CheckGLErrorMessages();
-			//glShaderSource(m_ImGuiVertHandle, 1, &vertex_shader, 0); CheckGLErrorMessages();
-			//glShaderSource(m_ImGuiFragHandle, 1, &fragment_shader, 0); CheckGLErrorMessages();
-			//glCompileShader(m_ImGuiVertHandle); CheckGLErrorMessages();
-			//glCompileShader(m_ImGuiFragHandle); CheckGLErrorMessages();
-			//glAttachShader(m_ImGuiShaderHandle, m_ImGuiVertHandle); CheckGLErrorMessages();
-			//glAttachShader(m_ImGuiShaderHandle, m_ImGuiFragHandle); CheckGLErrorMessages();
-			//glLinkProgram(m_ImGuiShaderHandle); CheckGLErrorMessages();
-
-			glUseProgram(m_ImGuiShaderHandle);
-
-			m_ImGuiAttribLocationTex = glGetUniformLocation(m_ImGuiShaderHandle, "in_Texture"); CheckGLErrorMessages();
-			if (m_ImGuiAttribLocationTex == -1) Logger::LogWarning("in_Texture not found in ImGui shader!");
-
-			m_ImGuiAttribLocationProjMtx = glGetUniformLocation(m_ImGuiShaderHandle, "in_ProjMatrix"); CheckGLErrorMessages();
-			if (m_ImGuiAttribLocationProjMtx == -1) Logger::LogWarning("in_ProjMatrix not found in ImGui shader!");
-
-			m_ImGuiAttribLocationPosition = glGetAttribLocation(m_ImGuiShaderHandle, "in_Position2D"); CheckGLErrorMessages();
-			if (m_ImGuiAttribLocationPosition == -1) Logger::LogWarning("in_Position2D not found in ImGui shader!");
-
-			m_ImGuiAttribLocationUV = glGetAttribLocation(m_ImGuiShaderHandle, "in_TexCoord"); CheckGLErrorMessages();
-			if (m_ImGuiAttribLocationUV == -1) Logger::LogWarning("in_TexCoord not found in ImGui shader!");
-
-			m_ImGuiAttribLocationColor = glGetAttribLocation(m_ImGuiShaderHandle, "in_Color_32"); CheckGLErrorMessages();
-			if (m_ImGuiAttribLocationColor == -1) Logger::LogWarning("in_Color_32 not found in ImGui shader!");
-
-
-			glGenBuffers(1, &m_ImGuiVboHandle);
-			glGenBuffers(1, &g_ElementsHandle);
-
-			glGenVertexArrays(1, &m_ImGuiVaoHandle); CheckGLErrorMessages();
-			glBindVertexArray(m_ImGuiVaoHandle); CheckGLErrorMessages();
-			glBindBuffer(GL_ARRAY_BUFFER, m_ImGuiVboHandle); CheckGLErrorMessages();
-			glEnableVertexAttribArray((GLuint)m_ImGuiAttribLocationPosition); CheckGLErrorMessages();
-			glEnableVertexAttribArray((GLuint)m_ImGuiAttribLocationUV); CheckGLErrorMessages();
-			glEnableVertexAttribArray((GLuint)m_ImGuiAttribLocationColor); CheckGLErrorMessages();
-
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-			glVertexAttribPointer(m_ImGuiAttribLocationPosition, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, pos));
-			glVertexAttribPointer(m_ImGuiAttribLocationUV, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, uv));
-			glVertexAttribPointer(m_ImGuiAttribLocationColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)OFFSETOF(ImDrawVert, col));
-#undef OFFSETOF
-
-			ImGui_CreateFontsTexture();
-
-			// Restore modified GL state
-			glBindTexture(GL_TEXTURE_2D, last_texture); CheckGLErrorMessages();
-			glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer); CheckGLErrorMessages();
-			glBindVertexArray(last_vertex_array); CheckGLErrorMessages();
-
-			return true;
-		}
-
-		void GLRenderer::ImGui_InvalidateDeviceObjects()
-		{
-			if (m_ImGuiVaoHandle) glDeleteVertexArrays(1, &m_ImGuiVaoHandle);
-			if (m_ImGuiVboHandle) glDeleteBuffers(1, &m_ImGuiVboHandle);
-			if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
-			m_ImGuiVaoHandle = m_ImGuiVboHandle = g_ElementsHandle = 0;
-
-			if (m_ImGuiShaderHandle) glDeleteProgram(m_ImGuiShaderHandle);
-			m_ImGuiShaderHandle = 0;
-
-			if (m_ImGuiFontTexture)
-			{
-				glDeleteTextures(1, &m_ImGuiFontTexture);
-				ImGui::GetIO().Fonts->TexID = 0;
-				m_ImGuiFontTexture = 0;
 			}
 		}
 

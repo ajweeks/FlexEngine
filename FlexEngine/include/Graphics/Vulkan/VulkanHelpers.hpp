@@ -167,6 +167,14 @@ namespace flex
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
+		struct VulkanCubemapGBuffer
+		{
+			u32 id;
+			const char* name;
+			VkFormat internalFormat;
+			//GLenum format;
+		};
+
 		struct VulkanShader
 		{
 			VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device);
@@ -192,6 +200,10 @@ namespace flex
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
 			VkFramebuffer hdrCubemapFramebuffer;
+			
+			u32 cubemapSamplerID;
+			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
+			u32 cubemapDepthSamplerID;
 
 			u32 descriptorSetLayoutIndex;
 		};

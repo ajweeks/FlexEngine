@@ -3,8 +3,6 @@
 
 #include "Graphics/Renderer.hpp"
 
-#include <imgui.h>
-
 #include <map>
 
 #include "Graphics/GL/GLHelpers.hpp"
@@ -58,14 +56,11 @@ namespace flex
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual void Destroy(RenderID renderID) override;
-
-			// ImGui functions
-			virtual void ImGui_NewFrame(const GameContext& gameContext) override;
-			virtual void ImGui_Render() override;
-			virtual void ImGui_ReleaseRenderObjects() override;
+			
+			virtual void ImGuiNewFrame() override;
 
 		private:
-			virtual void ImGui_Init(const GameContext& gameContext);
+			void ImGuiRender();
 
 			// TODO: Either use these functions or remove them
 			void SetFloat(ShaderID shaderID, const std::string& valName, real val);
@@ -101,8 +96,8 @@ namespace flex
 			void UnloadShaders();
 			void LoadShaders();
 
-			void GenerateFrameBufferTexture(u32* handle, i32 index, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size);
-			void ResizeFrameBufferTexture(u32 handle, GLint i32ernalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size);
 
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
@@ -114,7 +109,6 @@ namespace flex
 			void DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawOffscreenTexture(const GameContext& gameContext);
-			void DrawUI();
 
 			// Returns the next binding that would be used
 			u32 BindTextures(Shader* shader, GLMaterial* glMaterial, u32 startingBinding = 0);
@@ -123,16 +117,6 @@ namespace flex
 			// Returns the next binding that would be used
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
-			void ImGui_InvalidateDeviceObjects();
-			bool ImGui_CreateDeviceObjects();
-			bool ImGui_CreateFontsTexture();
-
-			GLuint m_ImGuiFontTexture = 0;
-			i32 m_ImGuiShaderHandle = 0;
-			i32 m_ImGuiAttribLocationTex = 0, m_ImGuiAttribLocationProjMtx = 0;
-			i32 m_ImGuiAttribLocationPosition = 0, m_ImGuiAttribLocationUV = 0, m_ImGuiAttribLocationColor = 0;
-			u32 m_ImGuiVboHandle = 0, m_ImGuiVaoHandle = 0, g_ElementsHandle = 0;
-			
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::map<RenderID, GLRenderObject*> m_RenderObjects;
 
@@ -156,7 +140,7 @@ namespace flex
 			{
 				u32 id;
 				GLenum format;
-				GLenum i32ernalFormat;
+				GLenum internalFormat;
 				GLenum type;
 			};
 

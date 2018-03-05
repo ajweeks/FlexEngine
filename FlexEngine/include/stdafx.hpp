@@ -12,11 +12,14 @@
 
 #include "Typedefs.hpp"
 
+//#include "imgui.h"
+
 #if COMPILE_VULKAN
 #pragma warning(push, 0) // Don't generate warnings for 3rd party code    
 	#include <glad/glad.h>
 	#include <vulkan/vulkan.h>
 	#include <GLFW/glfw3.h>
+	#include <GLFW/glfw3native.h>
 #pragma warning(pop)
 
 	#include "Graphics/Vulkan/VulkanRenderer.hpp"

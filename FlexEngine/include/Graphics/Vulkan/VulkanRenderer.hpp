@@ -4,8 +4,6 @@
 #include <array>
 #include <map>
 
-#include <imgui.h>
-
 #include "Graphics/Renderer.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "VDeleter.hpp"
@@ -62,14 +60,10 @@ namespace flex
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual void Destroy(RenderID renderID) override;
-
-			virtual void ImGui_NewFrame(const GameContext& gameContext) override;
-			virtual void ImGui_Render() override;
-			virtual void ImGui_ReleaseRenderObjects() override;
+			
+			virtual void ImGuiNewFrame() override;
 
 		private:
-			virtual void ImGui_Init(const GameContext& gameContext);
-
 			typedef void (VulkanRenderer::*VulkanTextureCreateFunction)(const std::string&, VkFormat, u32, VulkanTexture**) const;
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
@@ -93,13 +87,6 @@ namespace flex
 				u32 enableCubemapSampler;
 				u32 enableIrradianceSampler;
 			};
-
-			void ImGui_InitResources();
-			bool ImGui_CreateFontsTexture(VkQueue copyQueue);
-			void ImGui_UpdateBuffers();
-			void ImGui_DrawFrame(VkCommandBuffer commandBuffer);
-			void ImGui_InvalidateDeviceObjects();
-			u32 ImGui_MemoryType(VkMemoryPropertyFlags properties, u32 type_bits);
 
 			void GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject);
 			void GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject);
@@ -313,22 +300,7 @@ namespace flex
 			
 			VkClearColorValue m_ClearColor;
 
-			ShaderID m_IGuiShaderID;
-
 			static std::array<glm::mat4, 6> m_CaptureViews;
-
-			// ImGui members
-			VkPipelineLayout m_ImGui_PipelineLayout = VK_NULL_HANDLE;
-			VkPipeline m_ImGui_GraphicsPipeline = VK_NULL_HANDLE;
-
-			const i32 IMGUI_VK_QUEUED_FRAMES = 2;
-			const i32 IMGUI_MAX_POSSIBLE_BACK_BUFFERS = 16;
-
-			VkPipelineCache m_ImGuiPipelineCache = VK_NULL_HANDLE;
-			VkDescriptorSet m_ImGuiDescriptorSet = VK_NULL_HANDLE;
-			VulkanTexture* m_ImGuiFontTexture = nullptr;
-
-			ImGui_PushConstBlock m_ImGuiPushConstBlock;
 
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;

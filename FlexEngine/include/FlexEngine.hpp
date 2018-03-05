@@ -35,6 +35,7 @@ namespace flex
 		void InitializeWindowAndRenderer();
 		void DestroyWindowAndRenderer();
 		void LoadDefaultScenes();
+		void SetupImGuiStyles();
 
 		std::string RenderIDToString(RendererID rendererID) const;
 

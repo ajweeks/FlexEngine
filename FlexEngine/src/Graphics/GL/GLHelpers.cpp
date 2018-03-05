@@ -14,18 +14,18 @@ namespace flex
 {
 	namespace gl
 	{
-		bool GenerateGLTexture_Empty(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type)
+		bool GenerateGLTexture_Empty(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
 		{
-			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, i32ernalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
 			CheckGLErrorMessages();
 
-			glTexImage2D(GL_TEXTURE_2D, 0, i32ernalFormat, dimensions.x, dimensions.y, 0, format, type, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, dimensions.x, dimensions.y, 0, format, type, 0);
 			CheckGLErrorMessages();
 			if (generateMipMaps)
 			{
@@ -150,7 +150,7 @@ namespace flex
 			glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.textureID);
 			CheckGLErrorMessages();
 
-			const GLint i32ernalFormat = createInfo.HDR ? GL_RGB16F : GL_RGB;
+			const GLint internalFormat = createInfo.HDR ? GL_RGB16F : GL_RGB;
 			const GLenum format = GL_RGB;
 			const GLenum type = createInfo.HDR ? GL_FLOAT : GL_UNSIGNED_BYTE;
 
@@ -166,7 +166,7 @@ namespace flex
 				{
 					for (size_t i = 0; i < 6; ++i)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, i32ernalFormat,
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat,
 							createInfo.textureSize.x, createInfo.textureSize.y, 0, format, type, nullptr);
 						CheckGLErrorMessages();
 					}
@@ -180,7 +180,7 @@ namespace flex
 
 					if (image.pixels)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, i32ernalFormat, image.width, image.height, 0, format, type, image.pixels);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, image.width, image.height, 0, format, type, image.pixels);
 						CheckGLErrorMessages();
 
 						DestroyGLFWimage(image);
@@ -209,7 +209,7 @@ namespace flex
 					CheckGLErrorMessages();
 					for (i32 i = 0; i < 6; i++)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.i32ernalFormat, createInfo.textureSize.x, createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, createInfo.textureSize.x, createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
 						CheckGLErrorMessages();
 					}
 

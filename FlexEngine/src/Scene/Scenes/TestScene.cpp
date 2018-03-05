@@ -4,8 +4,6 @@
 
 #include <glm/vec3.hpp>
 
-#include <imgui.h>
-
 #include "Scene/ReflectionProbe.hpp"
 
 namespace flex

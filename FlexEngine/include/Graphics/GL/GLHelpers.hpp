@@ -25,7 +25,7 @@ namespace flex
 		{
 			u32 id;
 			const char* name;
-			GLint i32ernalFormat;
+			GLint internalFormat;
 			GLenum format;
 		};
 
@@ -112,7 +112,6 @@ namespace flex
 
 			u32 materialID;
 		};
-		typedef std::vector<GLRenderObject*>::iterator RenderObjectIter;
 
 		struct UniformInfo
 		{
