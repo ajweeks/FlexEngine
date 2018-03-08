@@ -17,6 +17,7 @@
 #include "ImGui/imgui_impl_glfw_vulkan.h"
 
 #include "FreeCamera.hpp"
+#include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
 #include "VertexAttribute.hpp"
@@ -2555,12 +2556,12 @@ namespace flex
 			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 			std::string applicationName = gameContext.window->GetTitle();
 			appInfo.pApplicationName = applicationName.c_str();
-			appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+			appInfo.applicationVersion = VK_API_VERSION_1_0;
 			appInfo.pEngineName = "Flex Engine";
-			appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+			appInfo.engineVersion = VK_MAKE_VERSION(FlexEngine::EngineVersionMajor, FlexEngine::EngineVersionMinor, FlexEngine::EngineVersionPatch);
 			appInfo.apiVersion = VK_API_VERSION_1_0;
 
-			Logger::LogInfo("Vulkan Version: 1.0.0");
+			Logger::LogInfo("Vulkan Version: 1.1.70.0");
 
 			VkInstanceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

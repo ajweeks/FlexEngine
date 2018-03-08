@@ -17,6 +17,10 @@
 
 namespace flex
 {
+	const u32 FlexEngine::EngineVersionMajor = 0;
+	const u32 FlexEngine::EngineVersionMinor = 4;
+	const u32 FlexEngine::EngineVersionPatch = 0;
+
 	FlexEngine::FlexEngine() :
 		m_ClearColor(1.0f, 0.0, 1.0f),
 		m_VSyncEnabled(false)
@@ -98,16 +102,18 @@ namespace flex
 		glm::vec2i desiredWindowSize(1920, 1080);
 		glm::vec2i desiredWindowPos(300, 300);
 
+		const std::string titleString = "Flex Engine v" + EngineVersionString();
+
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			m_GameContext.window = new vk::VulkanWindowWrapper("Flex Engine - Vulkan", desiredWindowSize, desiredWindowPos, m_GameContext);
+			m_GameContext.window = new vk::VulkanWindowWrapper(titleString + " - Vulkan", desiredWindowSize, desiredWindowPos, m_GameContext);
 		}
 #endif
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			m_GameContext.window = new gl::GLWindowWrapper("Flex Engine - OpenGL", desiredWindowSize, desiredWindowPos, m_GameContext);
+			m_GameContext.window = new gl::GLWindowWrapper(titleString + " - OpenGL", desiredWindowSize, desiredWindowPos, m_GameContext);
 		}
 #endif
 		if (m_GameContext.window == nullptr)
@@ -297,7 +303,8 @@ namespace flex
 
 			static bool windowOpen = true;
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1)) windowOpen = !windowOpen;
-			if (ImGui::Begin("Flex Engine", &windowOpen))
+			static const std::string titleString = "Flex Engine v" + EngineVersionString();
+			if (ImGui::Begin(titleString.c_str(), &windowOpen))
 			{
 				const std::string rendStr("Current renderer: " + m_RendererName);
 				ImGui::Text(rendStr.c_str());
@@ -477,5 +484,12 @@ namespace flex
 	void FlexEngine::Stop()
 	{
 		m_Running = false;
+	}
+	
+	std::string FlexEngine::EngineVersionString()
+	{
+		return std::to_string(EngineVersionMajor) + "." +
+			std::to_string(EngineVersionMinor) + "." +
+			std::to_string(EngineVersionPatch);
 	}
 } // namespace flex

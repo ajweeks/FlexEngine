@@ -37,7 +37,6 @@ namespace flex
 		virtual void SetFrameBufferSize(i32 width, i32 height) = 0;
 		bool HasFocus() const;
 
-		void SetTitleString(const std::string& title);
 		void SetShowFPSInTitleBar(bool showFPS);
 		void SetShowMSInTitleBar(bool showMS);
 		// Set to 0 to update window title every frame

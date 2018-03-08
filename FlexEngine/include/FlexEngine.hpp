@@ -19,6 +19,12 @@ namespace flex
 		void Initialize();
 		void UpdateAndRender();
 		void Stop();
+		
+		static std::string EngineVersionString();
+
+		static const u32 EngineVersionMajor;
+		static const u32 EngineVersionMinor;
+		static const u32 EngineVersionPatch;
 
 	private:
 		enum class RendererID

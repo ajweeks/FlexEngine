@@ -89,11 +89,6 @@ namespace flex
 		return m_HasFocus;
 	}
 
-	void Window::SetTitleString(const std::string& title)
-	{
-		m_TitleString = title;
-	}
-
 	std::string Window::GenerateWindowTitle(real dt)
 	{
 		ImGuiIO& io = ImGui::GetIO();
