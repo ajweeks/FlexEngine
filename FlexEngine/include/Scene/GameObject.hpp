@@ -18,7 +18,7 @@ namespace flex
 		bool RemoveChild(GameObject* child);
 		void RemoveAllChildren();
 
-		Transform& GetTransform();
+		virtual Transform& GetTransform();
 		
 		RenderID GetRenderID() const;
 		void SetRenderID(RenderID renderID);

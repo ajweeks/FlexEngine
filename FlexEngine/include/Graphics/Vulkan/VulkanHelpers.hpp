@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sstream>
 
 #include <vulkan/vulkan.h>
 
@@ -21,17 +22,9 @@ namespace flex
 
 		std::string VulkanErrorString(VkResult errorCode);
 
-#ifndef VK_CHECK_RESULT
-#define VK_CHECK_RESULT(f)																				\
-	{																										\
-		VkResult res = (f);																					\
-		if (res != VK_SUCCESS)																				\
-		{																									\
-			std::cerr << "Vulkan fatal error: VkResult is \"" << VulkanErrorString(res) << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
-			assert(res == VK_SUCCESS);																		\
-		}																									\
-	}
-#endif // VK_CHECK_RESULT
+		static std::stringstream VkErrorSS;
+
+		inline void VK_CHECK_RESULT(VkResult result);
 
 		VkVertexInputBindingDescription GetVertexBindingDescription(u32 vertexStride);
 

@@ -5791,15 +5791,33 @@ namespace flex
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
 			u64 obj, size_t location, i32 code, const char* layerPrefix, const char* msg, void* userData)
 		{
-			UNREFERENCED_PARAMETER(userData);
-			UNREFERENCED_PARAMETER(layerPrefix);
-			UNREFERENCED_PARAMETER(code);
-			UNREFERENCED_PARAMETER(location);
-			UNREFERENCED_PARAMETER(obj);
 			UNREFERENCED_PARAMETER(objType);
-			UNREFERENCED_PARAMETER(flags);
+			UNREFERENCED_PARAMETER(obj);
+			UNREFERENCED_PARAMETER(location);
+			UNREFERENCED_PARAMETER(code);
+			UNREFERENCED_PARAMETER(layerPrefix);
+			UNREFERENCED_PARAMETER(userData);
 
-			std::cerr << "[ERROR] (VL): " << msg << std::endl;
+			switch (flags)
+			{
+			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
+				Logger::LogInfo(msg);
+				break;
+			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_WARNING_BIT_EXT:
+				Logger::LogWarning(msg);
+				break;
+			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
+				Logger::LogWarning(msg);
+				break;
+			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_ERROR_BIT_EXT:
+				Logger::LogError(msg);
+				break;
+			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_DEBUG_BIT_EXT:
+				// Fallthrough
+			default:
+				Logger::LogError(msg);
+				break;
+			}
 
 			return VK_FALSE;
 		}

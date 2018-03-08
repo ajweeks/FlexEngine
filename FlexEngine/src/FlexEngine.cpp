@@ -94,6 +94,7 @@ namespace flex
 		SafeDelete(m_DefaultCamera);
 
 		DestroyWindowAndRenderer();
+		Logger::Shutdown();
 	}
 
 	void FlexEngine::InitializeWindowAndRenderer()
@@ -312,8 +313,10 @@ namespace flex
 				if (ImGui::TreeNode("Renderer settings"))
 				{
 					std::string vsyncEnabledStr = "VSync " + std::string(m_VSyncEnabled ? "enabled" : "disabled");
-					ImGui::Checkbox(vsyncEnabledStr.c_str(), &m_VSyncEnabled);
-					m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+					if (ImGui::Checkbox(vsyncEnabledStr.c_str(), &m_VSyncEnabled))
+					{
+						m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+					}
 
 					ImGui::TreePop();
 				}
@@ -321,19 +324,25 @@ namespace flex
 				if (ImGui::TreeNode("Camera"))
 				{
 					glm::vec3 camPos = m_GameContext.camera->GetPosition();
-					ImGui::DragFloat3("Position", &camPos.x, 0.1f);
-					m_GameContext.camera->SetPosition(camPos);
+					if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
+					{
+						m_GameContext.camera->SetPosition(camPos);
+					}
 
 					glm::vec2 camYawPitch;
 					camYawPitch[0] = glm::degrees(m_GameContext.camera->GetYaw());
 					camYawPitch[1] = glm::degrees(m_GameContext.camera->GetPitch());
-					ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f);
-					m_GameContext.camera->SetYaw(glm::radians(camYawPitch[0]));
-					m_GameContext.camera->SetPitch(glm::radians(camYawPitch[1]));
+					if (ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f))
+					{
+						m_GameContext.camera->SetYaw(glm::radians(camYawPitch[0]));
+						m_GameContext.camera->SetPitch(glm::radians(camYawPitch[1]));
+					}
 
 					real camFOV = glm::degrees(m_GameContext.camera->GetFOV());
-					ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f);
-					m_GameContext.camera->SetFOV(glm::radians(camFOV));
+					if (ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f))
+					{
+						m_GameContext.camera->SetFOV(glm::radians(camFOV));
+					}
 
 					if (ImGui::Button("Reset orientation"))
 					{
@@ -353,22 +362,28 @@ namespace flex
 				{
 					bool suppressInfo = Logger::GetSuppressInfo();
 					i32 suppressedInfoCount = Logger::GetSuppressedInfoCount();
+					const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")###SUppressedInfo");
+					if (ImGui::Checkbox(infoStr.c_str(), &suppressInfo))
+					{
+						Logger::SetSuppressInfo(suppressInfo);
+					}
+
 					bool suppressWarnings = Logger::GetSuppressWarnings();
 					i32 suppressedWarningCount = Logger::GetSuppressedWarningCount();
+					const std::string warningStr("Suppress Warnings (" + std::to_string(suppressedWarningCount) + ")###SuppressedWarnings");
+					if (ImGui::Checkbox(warningStr.c_str(), &suppressWarnings))
+					{
+						Logger::SetSuppressWarnings(suppressWarnings);
+					}
+
+					// TODO: Why can't this be turned on again while errors are being spammed?
 					bool suppressErrors = Logger::GetSuppressErrors();
 					i32 suppressedErrorCount = Logger::GetSuppressedErrorCount();
-
-					const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")");
-					ImGui::Checkbox(infoStr.c_str(), &suppressInfo);
-					Logger::SetSuppressInfo(suppressInfo);
-
-					const std::string warningStr("Suppress Warnings (" + std::to_string(suppressedWarningCount) + ")");
-					ImGui::Checkbox(warningStr.c_str(), &suppressWarnings);
-					Logger::SetSuppressWarnings(suppressWarnings);
-
-					const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")");
-					ImGui::Checkbox(errorStr.c_str(), &suppressErrors);
-					Logger::SetSuppressErrors(suppressErrors);
+					const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")###SuppressedErrors");
+					if (ImGui::Checkbox(errorStr.c_str(), &suppressErrors));
+					{
+						Logger::SetSuppressErrors(suppressErrors);
+					}
 
 					ImGui::TreePop();
 				}

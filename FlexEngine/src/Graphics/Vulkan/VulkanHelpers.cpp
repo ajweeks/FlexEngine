@@ -12,6 +12,17 @@ namespace flex
 {
 	namespace vk
 	{
+		void VK_CHECK_RESULT(VkResult result)
+		{
+			if (result != VK_SUCCESS)
+			{
+				VkErrorSS << "Vulkan fatal error: VkResult is \"" << VulkanErrorString(result) << std::endl;
+				Logger::LogError(VkErrorSS.str());
+				VkErrorSS.clear();
+				assert(result == VK_SUCCESS);
+			}
+		}
+
 		VkVertexInputBindingDescription GetVertexBindingDescription(u32 vertexStride)
 		{
 			VkVertexInputBindingDescription bindingDesc = {};

@@ -55,6 +55,7 @@ namespace flex
 		m_SphereMesh = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe");
 		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 		AddChild(m_SphereMesh);
+		m_SphereMesh->GetTransform().Scale(1.5f);
 		if (!m_Visible)
 		{
 			gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), m_Visible);
@@ -102,5 +103,9 @@ namespace flex
 	{
 		m_Visible = visible;
 		gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), visible);
+	}
+	Transform& ReflectionProbe::GetTransform()
+	{
+		return m_SphereMesh->GetTransform();
 	}
 }

@@ -25,6 +25,14 @@ namespace flex
 #endif
 	}
 
+	void Logger::Shutdown()
+	{
+#ifdef _WIN32
+		// Set console color back to white
+		SetConsoleTextAttribute(m_ConsoleHandle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+#endif
+	}
+
 	void Logger::Log(const std::string& message, LogLevel logLevel, bool newline)
 	{
 		switch (logLevel)

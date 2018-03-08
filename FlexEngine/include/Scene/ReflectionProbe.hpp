@@ -20,6 +20,8 @@ namespace flex
 		MaterialID GetCaptureMaterialID() const;
 		void SetSphereVisible(bool visible, const GameContext& gameContext);
 
+		Transform& GetTransform() override;
+
 	private:
 		MeshPrefab* m_SphereMesh = nullptr; // The object visible in the scene
 		GameObject* m_Capture = nullptr; // The object doing the capturing

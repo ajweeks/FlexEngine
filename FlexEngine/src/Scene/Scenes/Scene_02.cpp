@@ -222,14 +222,14 @@ namespace flex
 		// Generated last so it can use generated skybox maps
 		m_ReflectionProbe = new ReflectionProbe(true);
 		AddChild(gameContext, m_ReflectionProbe);
-		m_ReflectionProbe->GetTransform().Translate(0.0f, 10.0f, 0.0f);
-		m_ReflectionProbe->GetTransform().Scale(3.5f);
 #endif
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
 	{
 		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
+
+		m_ReflectionProbe->GetTransform().Translate(0.0f, 7.5f, 0.0f);
 	}
 
 	void Scene_02::Destroy(const GameContext& gameContext)

@@ -15,6 +15,7 @@ namespace flex
 		};
 
 		static void Initialize();
+		static void Shutdown();
 
 		static void LogInfo(const std::string& message, bool newline = true);
 		static void LogWarning(const std::string& message, bool newline = true);
