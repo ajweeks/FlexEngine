@@ -360,8 +360,8 @@ namespace flex
 
 		struct DrawCallInfo
 		{
-			bool renderToCubemap = false;
 			RenderID cubemapObjectRenderID;
+			bool renderToCubemap = false;
 			bool deferred;
 		};
 		

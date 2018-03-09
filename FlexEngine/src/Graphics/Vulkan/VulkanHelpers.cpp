@@ -256,7 +256,7 @@ namespace flex
 			VkImage image,
 			VkImageLayout oldImageLayout,
 			VkImageLayout newImageLayout,
-			VkImageSubresourceRange subresourceRange,
+			const VkImageSubresourceRange& subresourceRange,
 			VkPipelineStageFlags srcStageMask,
 			VkPipelineStageFlags dstStageMask)
 		{
@@ -376,7 +376,7 @@ namespace flex
 				1, &imageMemoryBarrier);
 		}
 
-		void SetImageLayout(VkCommandBuffer cmdbuffer, VulkanTexture* texture, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, VkImageSubresourceRange subresourceRange, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
+		void SetImageLayout(VkCommandBuffer cmdbuffer, VulkanTexture* texture, VkImageLayout oldImageLayout, VkImageLayout newImageLayout, const VkImageSubresourceRange& subresourceRange, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask)
 		{
 			SetImageLayout(cmdbuffer, texture->image, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
 			texture->imageLayout = newImageLayout;

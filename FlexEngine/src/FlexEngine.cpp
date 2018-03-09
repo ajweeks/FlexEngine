@@ -380,7 +380,7 @@ namespace flex
 					bool suppressErrors = Logger::GetSuppressErrors();
 					i32 suppressedErrorCount = Logger::GetSuppressedErrorCount();
 					const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")###SuppressedErrors");
-					if (ImGui::Checkbox(errorStr.c_str(), &suppressErrors));
+					if (ImGui::Checkbox(errorStr.c_str(), &suppressErrors))
 					{
 						Logger::SetSuppressErrors(suppressErrors);
 					}

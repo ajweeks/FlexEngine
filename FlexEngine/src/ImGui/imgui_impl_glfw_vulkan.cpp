@@ -264,7 +264,6 @@ static void ImGui_ImplGlfwVulkan_UpdateBuffers()
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 void ImGui_ImplGlfwVulkan_RenderDrawData(ImDrawData* draw_data)
 {
-    VkResult err;
 	ImGuiIO& io = ImGui::GetIO();
 
     // Bind pipeline and descriptor sets:
@@ -751,15 +750,7 @@ void    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects()
     if (g_Pipeline)             { vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator); g_Pipeline = VK_NULL_HANDLE; }
 }
 
-static void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
-{
-    //glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
-    //glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
-    //glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
-    //glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
-}
-
-bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, ImGui_ImplGlfwVulkan_Init_Data *init_data)
+bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, ImGui_ImplGlfwVulkan_Init_Data *init_data)
 {
     g_Allocator = init_data->allocator;
     g_Gpu = init_data->gpu;
@@ -811,9 +802,6 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     g_MouseCursors[ImGuiMouseCursor_ResizeEW] = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
     g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
     g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
-
-    if (install_callbacks)
-        ImGui_ImplGlfw_InstallCallbacks(window);
 
     ImGui_ImplGlfwVulkan_CreateDeviceObjects();
 

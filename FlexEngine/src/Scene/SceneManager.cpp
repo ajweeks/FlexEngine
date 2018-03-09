@@ -83,7 +83,7 @@ namespace flex
 		m_CurrentSceneIndex = sceneIndex;
 	}
 
-	void SceneManager::SetCurrentScene(std::string sceneName)
+	void SceneManager::SetCurrentScene(const std::string& sceneName)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{

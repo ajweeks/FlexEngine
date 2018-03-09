@@ -25,13 +25,13 @@ namespace flex
 			VDeleter<VkBuffer> m_Buffer;
 			VDeleter<VkDeviceMemory> m_Memory;
 			VkDescriptorBufferInfo m_DescriptorInfo;
-			VkDevice m_Device;
+			VkDevice m_Device = VK_NULL_HANDLE;
 			VkDeviceSize m_Size = 0;
 			VkDeviceSize m_Alignment = 0;
 			void* m_Mapped = nullptr;
 
-			VkBufferUsageFlags m_UsageFlags;
-			VkMemoryPropertyFlags m_MemoryPropertyFlags;
+			VkBufferUsageFlags m_UsageFlags = 0;
+			VkMemoryPropertyFlags m_MemoryPropertyFlags = 0;
 		};
 	} // namespace vk
 } // namespace flex

@@ -35,11 +35,63 @@ namespace flex
 	{
 	}
 
+	Transform::Transform(const Transform& other) :
+		localPosition(other.localPosition),
+		localRotation(other.localRotation),
+		localScale(other.localScale),
+		globalPosition(other.globalPosition),
+		globalRotation(other.globalRotation),
+		globalScale(other.globalScale)
+	{
+		// Don't copy parent/children
+	}
+
+	Transform::Transform(const Transform&& other) :
+		localPosition(std::move(other.localPosition)),
+		localRotation(std::move(other.localRotation)),
+		localScale(std::move(other.localScale)),
+		globalPosition(std::move(other.globalPosition)),
+		globalRotation(std::move(other.globalRotation)),
+		globalScale(std::move(other.globalScale))
+	{
+		// Don't copy parent/children
+	}
+
+	Transform& Transform::operator=(const Transform& other)
+	{
+		localPosition = other.localPosition;
+		localRotation = other.localRotation;
+		localScale = other.localScale;
+		globalPosition = other.globalPosition;
+		globalRotation = other.globalRotation;
+		globalScale = other.globalScale;
+		// Don't copy parent/ children
+
+		return *this;
+	}
+
+	Transform& Transform::operator=(const Transform&& other)
+	{
+		if (this != &other)
+		{
+			localPosition = std::move(other.localPosition);
+			localRotation = std::move(other.localRotation);
+			localScale = std::move(other.localScale);
+			globalPosition = std::move(other.globalPosition);
+			globalRotation = std::move(other.globalRotation);
+			globalScale = std::move(other.globalScale);
+			parentTransform = other.parentTransform;
+			childrenTransforms = std::move(other.childrenTransforms);
+		}
+
+		return *this;
+	}
+
 	Transform::~Transform()
 	{
 	}
 
-	void Transform::Translate(glm::vec3 deltaPosition)
+	void Transform::Translate(const glm::vec3& deltaPosition)
 	{
 		localPosition += deltaPosition;
 
@@ -55,14 +107,14 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::Rotate(glm::quat deltaQuatRotation)
+	void Transform::Rotate(const glm::quat& deltaQuatRotation)
 	{
 		localRotation *= deltaQuatRotation;
 
 		UpdateParentTransform();
 	}
 
-	void Transform::Rotate(glm::vec3 deltaEulerRotationRad)
+	void Transform::Rotate(const glm::vec3& deltaEulerRotationRad)
 	{
 		glm::quat rotationQuat(deltaEulerRotationRad);
 		localRotation *= rotationQuat;
@@ -78,7 +130,7 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::Scale(glm::vec3 deltaScale)
+	void Transform::Scale(const glm::vec3& deltaScale)
 	{
 		localScale *= deltaScale;
 
@@ -225,14 +277,14 @@ namespace flex
 		return globalScale;
 	}
 
-	void Transform::SetLocalPosition(glm::vec3 position)
+	void Transform::SetLocalPosition(const glm::vec3& position)
 	{
 		localPosition = position;
 
 		UpdateParentTransform();
 	}
 
-	void Transform::SetGlobalPosition(glm::vec3 position)
+	void Transform::SetGlobalPosition(const glm::vec3& position)
 	{
 		if (parentTransform)
 		{
@@ -247,14 +299,14 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::SetLocalRotation(glm::quat quatRotation)
+	void Transform::SetLocalRotation(const glm::quat& quatRotation)
 	{
 		localRotation = quatRotation;
 
 		UpdateParentTransform();
 	}
 
-	void Transform::SetGlobalRotation(glm::quat quatRotation)
+	void Transform::SetGlobalRotation(const glm::quat& quatRotation)
 	{
 		if (parentTransform)
 		{
@@ -269,14 +321,14 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::SetLocalRotation(glm::vec3 eulerAnglesRad)
+	void Transform::SetLocalRotation(const glm::vec3& eulerAnglesRad)
 	{
 		localRotation = glm::quat(eulerAnglesRad);
 
 		UpdateParentTransform();
 	}
 
-	void Transform::SetGlobalRotation(glm::vec3 eulerAnglesRad)
+	void Transform::SetGlobalRotation(const glm::vec3& eulerAnglesRad)
 	{
 		if (parentTransform)
 		{
@@ -313,14 +365,14 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::SetLocalScale(glm::vec3 scale)
+	void Transform::SetLocalScale(const glm::vec3& scale)
 	{
 		localScale = scale;
 
 		UpdateParentTransform();
 	}
 
-	void Transform::SetGlobalScale(glm::vec3 scale)
+	void Transform::SetGlobalScale(const glm::vec3& scale)
 	{
 		if (parentTransform)
 		{

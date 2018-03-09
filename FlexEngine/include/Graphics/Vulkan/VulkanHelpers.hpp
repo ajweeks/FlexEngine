@@ -119,7 +119,7 @@ namespace flex
 			VkImage image,
 			VkImageLayout oldImageLayout,
 			VkImageLayout newImageLayout,
-			VkImageSubresourceRange subresourceRange,
+			const VkImageSubresourceRange& subresourceRange,
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
@@ -128,7 +128,7 @@ namespace flex
 			VulkanTexture* texture,
 			VkImageLayout oldImageLayout,
 			VkImageLayout newImageLayout,
-			VkImageSubresourceRange subresourceRange,
+			const VkImageSubresourceRange& subresourceRange,
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
@@ -192,7 +192,7 @@ namespace flex
 			VulkanTexture* irradianceTexture = nullptr;
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
-			VkFramebuffer hdrCubemapFramebuffer;
+			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 			
 			u32 cubemapSamplerID;
 			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;

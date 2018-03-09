@@ -14,6 +14,12 @@ namespace flex
 		Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale);
 		Transform(const glm::vec3& position, const glm::quat& rotation);
 		Transform(const glm::vec3& position);
+
+		Transform(const Transform& other);
+		Transform(const Transform&& other);
+		Transform& operator=(const Transform& other);
+		Transform& operator=(const Transform&& other);
+
 		~Transform();
 		
 		// Call when parent-child trees need to be updated
@@ -30,28 +36,28 @@ namespace flex
 		glm::vec3 GetLocalScale();
 		glm::vec3 GetGlobalScale();
 
-		void SetLocalPosition(glm::vec3 position);
-		void SetGlobalPosition(glm::vec3 position);
+		void SetLocalPosition(const glm::vec3& position);
+		void SetGlobalPosition(const glm::vec3& position);
 
-		void SetLocalRotation(glm::quat quatRotation);
-		void SetGlobalRotation(glm::quat quatRotation);
-		void SetLocalRotation(glm::vec3 eulerAnglesRad);
-		void SetGlobalRotation(glm::vec3 eulerAnglesRad);
+		void SetLocalRotation(const glm::quat& quatRotation);
+		void SetGlobalRotation(const glm::quat& quatRotation);
+		void SetLocalRotation(const glm::vec3& eulerAnglesRad);
+		void SetGlobalRotation(const glm::vec3& eulerAnglesRad);
 		void SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad);
 		void SetGlobalRotation(real eulerXRad, real eulerYRad, real eulerZRad);
 
-		void SetLocalScale(glm::vec3 scale);
-		void SetGlobalScale(glm::vec3 scale);
+		void SetLocalScale(const glm::vec3& scale);
+		void SetGlobalScale(const glm::vec3& scale);
 
 
-		void Translate(glm::vec3 deltaPosition);
+		void Translate(const glm::vec3& deltaPosition);
 		void Translate(real deltaX, real deltaY, real deltaZ);
 
-		void Rotate(glm::quat deltaQuatRotation);
-		void Rotate(glm::vec3 deltaEulerRotationRad);
+		void Rotate(const glm::quat& deltaQuatRotation);
+		void Rotate(const glm::vec3& deltaEulerRotationRad);
 		void Rotate(real deltaX, real deltaY, real deltaZ);
 		
-		void Scale(glm::vec3 deltaScale);
+		void Scale(const glm::vec3& deltaScale);
 		void Scale(real deltaScale);
 		void Scale(real deltaX, real deltaY, real deltaZ);
 

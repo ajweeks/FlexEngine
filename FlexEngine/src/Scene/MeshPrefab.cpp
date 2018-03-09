@@ -111,8 +111,10 @@ namespace flex
 			meshes[i] = pScene->mMeshes[i];
 		}
 
-		std::string meshName(meshes[0]->mName.C_Str());
-		if (m_Name.empty()) m_Name = meshName;
+		if (m_Name.empty())
+		{
+			m_Name = meshes[0]->mName.C_Str();
+		}
 
 		size_t totalVertCount = 0;
 

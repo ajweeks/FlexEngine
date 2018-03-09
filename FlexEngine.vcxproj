@@ -265,7 +265,7 @@
     <ClInclude Include="FlexEngine\include\Logger.hpp" />
     <ClInclude Include="FlexEngine\include\stdafx.hpp" />
     <ClInclude Include="FlexEngine\include\FlexEngine.hpp" />
-    <ClInclude Include="FlexEngine\include\Typedefs.hpp" />
+    <ClInclude Include="FlexEngine\include\Types.hpp" />
     <ClInclude Include="FlexEngine\include\InputManager.hpp" />
     <ClInclude Include="FlexEngine\include\VertexAttribute.hpp" />
     <ClInclude Include="FlexEngine\include\VertexBufferData.hpp" />

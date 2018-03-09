@@ -20,7 +20,7 @@ namespace flex
 
 		void SetCurrentScene(BaseScene* scene);
 		void SetCurrentScene(u32 sceneIndex);
-		void SetCurrentScene(std::string sceneName);
+		void SetCurrentScene(const std::string& sceneName);
 		void SetNextSceneActive();
 		void SetPreviousSceneActive();
 

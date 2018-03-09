@@ -127,7 +127,7 @@ namespace flex
 			void CreateTextureImageView(VulkanTexture* texture, VkFormat format) const;
 			void CreateTextureSampler(VulkanTexture* texture, real maxAnisotropy = 16.0f, real minLod = 0.0f, real maxLod = 0.0f, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK) const;
 
-			bool GetShaderID(const std::string shaderName, ShaderID& shaderID);
+			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 			void CreateUniformBuffers(VulkanShader* shader);
 
 			// Returns a pointer i32o m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
@@ -185,7 +185,7 @@ namespace flex
 			void DrawFrame(Window* window);
 			bool CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
-			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes) const;
+			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
 			VkExtent2D ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities) const;
 			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 			bool IsDeviceSuitable(VkPhysicalDevice device) const;

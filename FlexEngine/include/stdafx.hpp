@@ -10,7 +10,7 @@
 #pragma warning(disable : 4868)
 #pragma warning(disable : 4710)
 
-#include "Typedefs.hpp"
+#include "Types.hpp"
 
 //#include "imgui.h"
 

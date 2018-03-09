@@ -22,10 +22,10 @@ while (errorType != GL_NO_ERROR)
 
 	// Remove all directories from string
 	std::string fileName(file);
-	size_t lastBS = fileName.rfind("\\");
+	size_t lastBS = fileName.rfind('\\');
 	if (lastBS == std::string::npos)
 	{
-		lastBS = fileName.rfind("/");
+		lastBS = fileName.rfind('/');
 	}
 
 	if (lastBS != std::string::npos)

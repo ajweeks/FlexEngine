@@ -130,8 +130,8 @@ namespace flex
 			glm::mat4 viewProj;
 		};
 
-		bool GenerateGLTexture_Empty(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type);
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, glm::vec2i dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type);
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
 		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
 		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
 		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
@@ -139,10 +139,10 @@ namespace flex
 
 		struct GLCubemapCreateInfo
 		{
-			u32 program;
-			u32* textureID;
-			u32* depthTextureID;
-			std::vector<GLCubemapGBuffer>* textureGBufferIDs;
+			u32 program = 0;
+			u32* textureID = nullptr;
+			u32* depthTextureID = nullptr;
+			std::vector<GLCubemapGBuffer>* textureGBufferIDs = nullptr;
 			glm::uvec2 textureSize;
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
 			bool generateMipmaps = false;

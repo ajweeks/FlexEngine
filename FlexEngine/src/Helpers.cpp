@@ -10,8 +10,10 @@
 
 #include "Logger.hpp"
 
+#pragma warning(push, 0) // Don't generate warnings for third party code
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#pragma warning(pop)
 
 namespace flex
 {

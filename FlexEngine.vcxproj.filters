@@ -233,9 +233,6 @@
     <ClInclude Include="FlexEngine\include\Transform.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FlexEngine\include\Typedefs.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FlexEngine\include\VertexAttribute.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -255,6 +252,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlexEngine\include\ImGui\imgui_impl_glfw_gl3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlexEngine\include\Types.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
