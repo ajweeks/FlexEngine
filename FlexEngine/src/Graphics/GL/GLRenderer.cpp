@@ -673,7 +673,7 @@ namespace flex
 				{
 					glUniform1i(uniformLocation, binding);
 				}
- 				CheckGLErrorMessages();
+				CheckGLErrorMessages();
 				++binding;
 			}
 

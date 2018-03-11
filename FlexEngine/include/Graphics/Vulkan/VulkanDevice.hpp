@@ -32,4 +32,4 @@ namespace flex
 	} // namespace vk
 } // namespace flex
 
-#endif COMPILE_VULKAN
+#endif // COMPILE_VULKAN

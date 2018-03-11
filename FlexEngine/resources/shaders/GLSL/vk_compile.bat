@@ -11,6 +11,9 @@
 @ glslangvalidator -V vk_deferred_combine.vert -o spv/vk_deferred_combine_vert.spv
 @ glslangvalidator -V vk_deferred_combine.frag -o spv/vk_deferred_combine_frag.spv
 
+@ glslangvalidator -V vk_deferred_combine_cubemap.vert -o spv/vk_deferred_combine_cubemap_vert.spv
+@ glslangvalidator -V vk_deferred_combine_cubemap.frag -o spv/vk_deferred_combine_cubemap_frag.spv
+
 @ glslangvalidator -V vk_deferred_simple.vert -o spv/vk_deferred_simple_vert.spv
 @ glslangvalidator -V vk_deferred_simple.frag -o spv/vk_deferred_simple_frag.spv
 

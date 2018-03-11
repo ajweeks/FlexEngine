@@ -1,3 +1,5 @@
+#if COMPILE_OPEN_GL
+
 // ImGui GLFW binding with OpenGL3 + shaders
 // (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
@@ -21,3 +23,5 @@ IMGUI_API void        ImGui_ImplGlfwGL3_RenderDrawData(ImDrawData* draw_data);
 // Use if you want to reset your rendering device without losing ImGui state.
 IMGUI_API void        ImGui_ImplGlfwGL3_InvalidateDeviceObjects();
 IMGUI_API bool        ImGui_ImplGlfwGL3_CreateDeviceObjects();
+
+#endif // COMPILE_OPEN_GL
