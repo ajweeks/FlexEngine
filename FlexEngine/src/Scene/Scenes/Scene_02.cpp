@@ -1,9 +1,11 @@
 #include "stdafx.hpp"
 
 #include "Scene/Scenes/Scene_02.hpp"
-#include "Scene/ReflectionProbe.hpp"
 
 #include <glm/vec3.hpp>
+
+#include "Scene/ReflectionProbe.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {

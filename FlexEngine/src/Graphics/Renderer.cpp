@@ -2,6 +2,8 @@
 
 #include "Graphics/Renderer.hpp"
 
+#include "Logger.hpp"
+
 namespace flex
 {
 	Renderer::Renderer()
