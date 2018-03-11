@@ -330,8 +330,6 @@ namespace flex
 			mat.material = {};
 			mat.material.name = createInfo->name;
 
-			GLShader& shader = m_Shaders[mat.material.shaderID];
-
 			const MaterialID materialID = m_Materials.size() - 1;
 
 			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
@@ -345,6 +343,8 @@ namespace flex
 					Logger::LogError("Material's shader not set! (material: " + createInfo->name + ", shader: " + createInfo->shaderName + ")");
 				}
 			}
+			
+			GLShader& shader = m_Shaders[mat.material.shaderID];
 
 			glUseProgram(shader.program);
 			CheckGLErrorMessages();
@@ -383,7 +383,10 @@ namespace flex
 					shader.shader.constantBufferUniforms.HasUniform(uniformInfo[i].name))
 				{
 					*uniformInfo[i].id = glGetUniformLocation(shader.program, uniformInfo[i].name);
-					if (*uniformInfo[i].id == -1) Logger::LogWarning(std::string(uniformInfo[i].name) + " was not found for material " + createInfo->name + " (shader " + createInfo->shaderName + ")");
+					if (*uniformInfo[i].id == -1)
+					{
+						Logger::LogWarning(std::string(uniformInfo[i].name) + " was not found for material " + createInfo->name + " (shader " + createInfo->shaderName + ")");
+					}
 				}
 			}
 
@@ -2007,8 +2010,10 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
 			++shaderID;
 
-			// Deferred combine (sample gbuffer)
+			// Deferred combine
 			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
+			// m_Shaders[shaderID].shader.subpass = 0;
+			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
@@ -2019,12 +2024,17 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("positionMetallicFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("normalRoughnessFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("albedoAOFrameBufferSampler");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
 			++shaderID;
 
 			// Deferred combine cubemap
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
+			// m_Shaders[shaderID].shader.subpass = 0;
+			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
@@ -2037,6 +2047,9 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("positionMetallicFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("normalRoughnessFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("albedoAOFrameBufferSampler");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
