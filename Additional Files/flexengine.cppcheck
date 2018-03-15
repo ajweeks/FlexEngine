@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="1">
-    <root name="D:/MEGASync/Code/C++/FlexEngine/FlexEngine/FlexEngine"/>
-    <builddir>D:/MEGASync/Code/C++/FlexEngine/FlexEngine/Build</builddir>
-    <exclude>
-        <path name="D:/MEGASync/Code/C++/FlexEngine/FlexEngine/FlexEngine/dependencies/"/>
-    </exclude>
-</project>
