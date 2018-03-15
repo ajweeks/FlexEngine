@@ -69,9 +69,9 @@ namespace flex
 		captureObjectCreateInfo.transform = &m_SphereMesh->GetTransform();
 		captureObjectCreateInfo.visibleInSceneExplorer = false;
 		
-		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
-		m_Capture->SetRenderID(captureRenderID);
-		gameContext.renderer->SetRenderObjectVisible(captureRenderID, false);
+		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
+		m_Capture->SetRenderID(m_RenderID);
+		gameContext.renderer->SetRenderObjectVisible(m_RenderID, false);
 
 		m_SphereMesh->AddChild(m_Capture);
 	}
@@ -91,7 +91,10 @@ namespace flex
 
 	void ReflectionProbe::Destroy(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		if (m_Capture)
+		{
+			gameContext.renderer->Destroy(m_Capture->GetRenderID());
+		}
 	}
 
 	MaterialID ReflectionProbe::GetCaptureMaterialID() const

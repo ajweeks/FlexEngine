@@ -237,6 +237,10 @@ namespace flex
 	void Scene_02::Destroy(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+		if (m_ReflectionProbe)
+		{
+			m_ReflectionProbe->Destroy(gameContext);
+		}
 	}
 
 	void Scene_02::Update(const GameContext& gameContext)

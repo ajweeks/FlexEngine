@@ -69,6 +69,8 @@ namespace flex
 
 	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV)
 	{
+		m_VertexBufferData.Destroy();
+
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
 		const aiScene* pScene = nullptr;
@@ -230,6 +232,8 @@ namespace flex
 
 	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape)
 	{
+		m_VertexBufferData.Destroy();
+
 		Renderer::RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.materialID = m_MaterialID;
 		renderObjectCreateInfo.transform = &m_Transform;
