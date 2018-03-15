@@ -35,7 +35,7 @@ namespace flex
 		virtual void SetWindowTitle(const std::string& title) override;
 		virtual void SetMousePosition(glm::vec2 mousePosition) override;
 
-		GLFWwindow* m_Window;
+		GLFWwindow* m_Window = nullptr;
 
 		std::vector<GLFWimage> m_WindowIcons;
 

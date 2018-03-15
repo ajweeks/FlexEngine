@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Window/Monitor.hpp"
+#include "Types.hpp"
 
 namespace flex
 {
@@ -13,15 +14,15 @@ namespace flex
 
 	struct GameContext
 	{
-		Window* window;
-		FreeCamera* camera;
-		InputManager* inputManager;
-		Renderer* renderer;
-		FlexEngine* engineInstance;
-		SceneManager* sceneManager;
-		Monitor monitor;
+		Window* window = nullptr;
+		FreeCamera* camera = nullptr;
+		InputManager* inputManager = nullptr;
+		Renderer* renderer = nullptr;
+		FlexEngine* engineInstance = nullptr;
+		SceneManager* sceneManager = nullptr;
+		Monitor monitor = {};
 
-		sec elapsedTime;
-		sec deltaTime;
+		sec elapsedTime = 0;
+		sec deltaTime = 0;
 	};
 } // namespace flex

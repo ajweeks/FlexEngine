@@ -31,7 +31,7 @@ namespace flex
 		
 		Transform m_Transform;
 		// TODO: Make public?
-		RenderID m_RenderID;
+		RenderID m_RenderID = InvalidRenderID;
 
 	private:
 		void RootInitialize(const GameContext& gameContext);

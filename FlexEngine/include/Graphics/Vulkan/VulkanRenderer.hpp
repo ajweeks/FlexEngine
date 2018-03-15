@@ -251,12 +251,12 @@ namespace flex
 
 			VulkanDevice* m_VulkanDevice = nullptr;
 
-			VkQueue m_GraphicsQueue;
-			VkQueue m_PresentQueue;
+			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
+			VkQueue m_PresentQueue = VK_NULL_HANDLE;
 
 			VDeleter<VkSwapchainKHR> m_SwapChain;
 			std::vector<VkImage> m_SwapChainImages;
-			VkFormat m_SwapChainImageFormat;
+			VkFormat m_SwapChainImageFormat = VK_FORMAT_UNDEFINED;
 			VkExtent2D m_SwapChainExtent;
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
@@ -291,11 +291,11 @@ namespace flex
 			VkCommandBuffer offScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
 
-			RenderID m_GBufferQuadRenderID;
+			RenderID m_GBufferQuadRenderID = InvalidRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			Transform m_gBufferQuadTransform;
 
-			MaterialID m_SkyBoxMaterialID; // Set by the user via SetSkyboxMaterial
+			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 			
 			VkClearColorValue m_ClearColor;

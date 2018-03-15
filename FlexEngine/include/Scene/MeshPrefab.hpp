@@ -58,7 +58,7 @@ namespace flex
 
 		bool m_Initialized = false;
 
-		MaterialID m_MaterialID;
+		MaterialID m_MaterialID = InvalidMaterialID;
 
 		static std::string m_DefaultName;
 		std::string m_Name;
