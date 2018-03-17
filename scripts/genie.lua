@@ -1,0 +1,175 @@
+
+solution "FlexEngine"
+	configurations {
+		"Debug",
+		"Release",
+	}
+
+	platforms {
+		"x32",
+		"x64",
+	}
+
+	language "C++"
+
+	location "../build/"
+	objdir "../build/"
+
+
+PROJECT_DIR = path.getabsolute("..")
+SOURCE_DIR = path.join(PROJECT_DIR, "FlexEngine/")
+DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
+
+
+-- Put intermediate files under build/Intermediate/config_platform/project
+-- Put binaries under bin/config/project/platform --TODO: Really? confirm
+-- TODO: Remove project cause we only have one
+function outputDirectories(_project)
+	local cfgs = configurations()
+	local p = platforms()
+	for i = 1, #cfgs do
+		for j = 1, #p do
+			configuration { cfgs[i], p[j] }
+				targetdir("../bin/" .. cfgs[i] .. "_" .. p[j] .. "/" .. _project)
+				objdir("../build/Intermediate/" .. cfgs[i]  .. "/" .. _project)		--seems like the platform will automatically be added
+		end
+	end
+	configuration {}
+end
+
+
+function platformLibraries()
+	local cfgs = configurations()
+	for i = 1, #cfgs do
+		configuration { "vs*", cfgs[i] }
+			libdirs { 
+				path.join(DEPENDENCIES_DIR, path.join("assimp/lib/code/", cfgs[i])),
+				path.join(DEPENDENCIES_DIR, path.join("glfw/glfw-project/src/", cfgs[i])),
+			}
+	end
+	configuration {}
+end
+
+function staticPlatformLibraries()
+	local p = platforms()
+	for j = 1, #p do
+		configuration { "vs*", p[j] }
+			libdirs { 
+				path.join(DEPENDENCIES_DIR, path.join("vulkan/lib/", p[j])),
+			}
+	end
+	configuration {}
+end
+
+
+--copy files that are specific for the platform being built for
+function windowsPlatformPostBuild()
+	local cfgs = configurations()
+	for i = 1, #cfgs do
+		--copy dlls and resources after build
+		configuration { "vs*", cfgs[i] }
+			postbuildcommands { 
+				"copy \"$(SolutionDir)..\\FlexEngine\\dependencies\\assimp\\lib\\code\\" .. cfgs[i] .. "\\assimp-vc140-mt.dll\" " ..
+				"\"$(OutDir)assimp-vc140-mt.dll\""
+			}
+	end
+	configuration {}
+end
+
+
+configuration "Debug"
+	defines { "_DEBUG" }
+	flags { "Symbols", "ExtraWarnings" }
+configuration "Development"
+	flags {"OptimizeSpeed", "Symbols", "ExtraWarnings" }
+configuration "Shipping"
+	defines { "SHIPPING" }
+	flags {"OptimizeSpeed", "No64BitChecks" }
+
+configuration "vs*"
+	flags { "NoIncrementalLink", "NoEditAndContinue" }
+	linkoptions { "/ignore:4221" }
+	defines { "PLATFORM_Win" }
+	includedirs { 
+		path.join(DEPENDENCIES_DIR, "include"),
+		path.join(DEPENDENCIES_DIR, "glad/include"),
+		path.join(DEPENDENCIES_DIR, "glfw/include"), 
+		path.join(DEPENDENCIES_DIR, "glm"), 
+		path.join(DEPENDENCIES_DIR, "stb"), 
+		path.join(DEPENDENCIES_DIR, "assimp/include"),
+		path.join(DEPENDENCIES_DIR, "imgui"),
+		path.join(DEPENDENCIES_DIR, "vulkan/include"),
+	}
+	debugdir "$(OutDir)"
+configuration { "vs*", "x32" }
+	flags { "EnableSSE2" }
+	defines { "WIN32" }
+configuration { "x32" }
+	defines { "PLATFORM_x32" }
+configuration { "vs*", "x64" }
+	defines { "WIN64" }
+configuration { "x64" }
+	defines { "PLATFORM_x64" }
+configuration { "linux", "gmake"}
+	defines { "PLATFORM_Linux", "__linux__" }
+	includedirs { "/usr/include" }
+	buildoptions_cpp { "-std=c++14" }
+configuration {}
+
+
+startproject "FlexEngine"
+
+project "FlexEngine"
+	kind "ConsoleApp"
+
+	location "../build"
+
+    defines { "_CONSOLE" }
+
+	outputDirectories("FlexEngine")
+
+	configuration "vs*"
+		flags { "Winmain"}
+
+		links { "opengl32" } 
+
+	platformLibraries()
+	staticPlatformLibraries()
+	windowsPlatformPostBuild()
+
+	--Linked libraries
+    links { "opengl32", "glfw3", "vulkan-1", "assimp-vc140-mt" }
+
+	--Additional includedirs
+	includedirs { 
+		path.join(SOURCE_DIR, "include"),
+	}
+
+	--Source files
+    files {
+		path.join(SOURCE_DIR, "include/**.h"), 
+		path.join(SOURCE_DIR, "include/**.hpp"), 
+		path.join(SOURCE_DIR, "src/**.cpp"), 
+		path.join(DEPENDENCIES_DIR, "imgui/*.cpp"), --only include files in base dir
+		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"), --only include files in base dir
+	}
+
+	--Exclude the following files from the build, but keep in the project
+	--removefiles {
+	--	path.join(DEPENDENCIES_DIR, "")
+	--}
+
+	nopch {
+		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/imgui_draw.cpp"),
+		path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
+	}
+
+	pchheader "stdafx.hpp"
+	pchsource "../FlexEngine/src/stdafx.cpp"
+
+
+
+
+-- TODO: Figure out how to set stdafx.cpp to use /Yc compiler flag to generate precompiled header object

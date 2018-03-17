@@ -2,8 +2,8 @@
 
 #define NOMINMAX
 
-#define COMPILE_OPEN_GL 0
-#define COMPILE_VULKAN 1
+#define COMPILE_OPEN_GL 1
+#define COMPILE_VULKAN 0
 
 #pragma warning(disable : 4201)
 #pragma warning(disable : 4820)
@@ -12,12 +12,10 @@
 
 #include "Types.hpp"
 
-//#include "imgui.h"
-
 #if COMPILE_VULKAN
 #pragma warning(push, 0) // Don't generate warnings for 3rd party code    
 	#include <glad/glad.h>
-	#include <vulkan/vulkan.h>
+	#include <vulkan/vulkan.hpp>
 	#include <GLFW/glfw3.h>
 	#include <GLFW/glfw3native.h>
 #pragma warning(pop)
@@ -38,10 +36,10 @@
 #ifndef CheckGLErrorMessages
 void _CheckGLErrorMessages(const char *file, flex::i32 line);
 #define CheckGLErrorMessages() _CheckGLErrorMessages(__FILE__,__LINE__)
-#endif
+#endif // CheckGLErrorMessages
 #else
 #define CheckGLErrorMessages() 
-#endif
+#endif // COMPILE_OPEN_GL
 
 	#include "Graphics/GL/GLRenderer.hpp"
 	#include "Window/GL/GLWindowWrapper.hpp"
@@ -78,5 +76,5 @@ inline void SafeDelete(T &pObjectToDelete)
 
 namespace flex
 {
-	static const std::string RESOURCE_LOCATION = "FlexEngine/resources/";
-} // namspace flex
+	static const std::string RESOURCE_LOCATION = "../../../FlexEngine/resources/";
+}
