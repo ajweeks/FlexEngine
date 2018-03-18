@@ -92,7 +92,7 @@ namespace flex
 
 		struct DirectionalLight
 		{
-			glm::vec4 direction;
+			glm::vec4 direction = { 0, 0, 0, 0 };
 
 			glm::vec4 color = glm::vec4(1.0f);
 
@@ -115,149 +115,152 @@ namespace flex
 		// TODO: Straight up copy most of these with a memcpy?
 		struct MaterialCreateInfo
 		{
-			std::string shaderName;
-			std::string name;
+			std::string shaderName = "";
+			std::string name = "";
 
-			std::string diffuseTexturePath;
-			std::string normalTexturePath;
-			std::string albedoTexturePath;
-			std::string metallicTexturePath;
-			std::string roughnessTexturePath;
-			std::string aoTexturePath;
-			std::string hdrEquirectangularTexturePath;
+			std::string diffuseTexturePath = "";
+			std::string normalTexturePath = "";
+			std::string albedoTexturePath = "";
+			std::string metallicTexturePath = "";
+			std::string roughnessTexturePath = "";
+			std::string aoTexturePath = "";
+			std::string hdrEquirectangularTexturePath = "";
 
-			bool generateDiffuseSampler;
-			bool enableDiffuseSampler;
-			bool generateNormalSampler;
-			bool enableNormalSampler;
-			bool generateAlbedoSampler;
-			bool enableAlbedoSampler;
-			bool generateMetallicSampler;
-			bool enableMetallicSampler;
-			bool generateRoughnessSampler;
-			bool enableRoughnessSampler;
-			bool generateAOSampler;
-			bool enableAOSampler;
-			bool generateHDREquirectangularSampler;
-			bool enableHDREquirectangularSampler;
-			bool generateHDRCubemapSampler;
+			bool generateDiffuseSampler = false;
+			bool enableDiffuseSampler = false;
+			bool generateNormalSampler = false;
+			bool enableNormalSampler = false;
+			bool generateAlbedoSampler = false;
+			bool enableAlbedoSampler = false;
+			bool generateMetallicSampler = false;
+			bool enableMetallicSampler = false;
+			bool generateRoughnessSampler = false;
+			bool enableRoughnessSampler = false;
+			bool generateAOSampler = false;
+			bool enableAOSampler = false;
+			bool generateHDREquirectangularSampler = false;
+			bool enableHDREquirectangularSampler = false;
+			bool generateHDRCubemapSampler = false;
 
 			std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
-			bool enableIrradianceSampler;
-			bool generateIrradianceSampler;
-			glm::uvec2 generatedIrradianceCubemapSize;
-			MaterialID irradianceSamplerMatID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
-			std::string environmentMapPath;
+			bool enableIrradianceSampler = false;
+			bool generateIrradianceSampler = false;
+			glm::uvec2 generatedIrradianceCubemapSize = { 0, 0 };
+			MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
+			std::string environmentMapPath = "";
 
-			bool enableBRDFLUT;
+			bool enableBRDFLUT = false;
+			bool renderToCubemap = true;
 
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-			bool enableCubemapSampler;
-			bool enableCubemapTrilinearFiltering;
-			bool generateCubemapSampler;
-			glm::uvec2 generatedCubemapSize;
-			bool generateCubemapDepthBuffers;
+			bool enableCubemapSampler = false;
+			bool enableCubemapTrilinearFiltering = false;
+			bool generateCubemapSampler = false;
+			glm::uvec2 generatedCubemapSize = { 0, 0 };
+			bool generateCubemapDepthBuffers = false;
 
-			bool generatePrefilteredMap;
-			bool enablePrefilteredMap;
-			glm::uvec2 generatedPrefilteredCubemapSize;
-			MaterialID prefilterMapSamplerMatID;
+			bool generatePrefilteredMap = false;
+			bool enablePrefilteredMap = false;
+			glm::uvec2 generatedPrefilteredCubemapSize = { 0, 0 };
+			MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
-			bool generateReflectionProbeMaps;
+			bool generateReflectionProbeMaps = false;
 
 			// PBR Constant colors
-			glm::vec3 constAlbedo;
-			real constMetallic;
-			real constRoughness;
-			real constAO;
+			glm::vec3 constAlbedo = { 0, 0, 0 };
+			real constMetallic = 0;
+			real constRoughness = 0;
+			real constAO = 0;
 		};
 
 		struct Material
 		{
-			std::string name;
+			std::string name = "";
 
-			ShaderID shaderID;
+			ShaderID shaderID = InvalidShaderID;
 
-			bool generateDiffuseSampler;
-			bool enableDiffuseSampler;
-			std::string diffuseTexturePath;
+			bool generateDiffuseSampler = false;
+			bool enableDiffuseSampler = false;
+			std::string diffuseTexturePath = "";
 
-			bool generateNormalSampler;
-			bool enableNormalSampler;
-			std::string normalTexturePath;
+			bool generateNormalSampler = false;
+			bool enableNormalSampler = false;
+			std::string normalTexturePath = "";
 
 			// GBuffer samplers
 			std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
-			bool generateCubemapSampler;   // Cubemap is enabled 
-			bool enableCubemapSampler;   // Cubemap is enabled 
-			glm::uvec2 cubemapSamplerSize;
+			bool generateCubemapSampler = false;
+			bool enableCubemapSampler = false;
+			glm::uvec2 cubemapSamplerSize = { 0, 0 };
 			std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 			// PBR constants
-			glm::vec4 constAlbedo;
-			real constMetallic;
-			real constRoughness;
-			real constAO;
+			glm::vec4 constAlbedo = { 0, 0, 0, 0};
+			real constMetallic = 0;
+			real constRoughness = 0;
+			real constAO = 0;
 
 			// PBR samplers
-			bool generateAlbedoSampler;
-			bool enableAlbedoSampler;
-			std::string albedoTexturePath;
+			bool generateAlbedoSampler = false;
+			bool enableAlbedoSampler = false;
+			std::string albedoTexturePath = "";
 
-			bool generateMetallicSampler;
-			bool enableMetallicSampler;
-			std::string metallicTexturePath;
+			bool generateMetallicSampler = false;
+			bool enableMetallicSampler = false;
+			std::string metallicTexturePath = "";
 
-			bool generateRoughnessSampler;
-			bool enableRoughnessSampler;
-			std::string roughnessTexturePath;
+			bool generateRoughnessSampler = false;
+			bool enableRoughnessSampler = false;
+			std::string roughnessTexturePath = "";
 
-			bool generateAOSampler;
-			bool enableAOSampler;
-			std::string aoTexturePath;
+			bool generateAOSampler = false;
+			bool enableAOSampler = false;
+			std::string aoTexturePath = "";
 
-			bool generateHDREquirectangularSampler;
-			bool enableHDREquirectangularSampler;
-			std::string hdrEquirectangularTexturePath;
+			bool generateHDREquirectangularSampler = false;
+			bool enableHDREquirectangularSampler = false;
+			std::string hdrEquirectangularTexturePath = "";
 
-			bool generateHDRCubemapSampler;
+			bool generateHDRCubemapSampler = false;
 
-			bool enableIrradianceSampler;
-			bool generateIrradianceSampler;
-			glm::uvec2 irradianceSamplerSize;
-			std::string environmentMapPath;
+			bool enableIrradianceSampler = false;
+			bool generateIrradianceSampler = false;
+			glm::uvec2 irradianceSamplerSize = { 0,0 };
+			std::string environmentMapPath = "";
 
-			bool enablePrefilteredMap;
-			bool generatePrefilteredMap;
-			glm::uvec2 prefilteredMapSize;
+			bool enablePrefilteredMap = false;
+			bool generatePrefilteredMap = false;
+			glm::uvec2 prefilteredMapSize = { 0,0 };
 
-			bool enableBRDFLUT;
+			bool enableBRDFLUT = false;
+			bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!
 
-			bool generateReflectionProbeMaps;
+			bool generateReflectionProbeMaps = false;
 
 			// TODO: Make this more dynamic!
 			struct PushConstantBlock
 			{
 				glm::mat4 mvp;
 			};
-			PushConstantBlock pushConstantBlock;
+			PushConstantBlock pushConstantBlock = {};
 		};
 
 		struct RenderObjectCreateInfo
 		{
-			MaterialID materialID;
+			MaterialID materialID = InvalidMaterialID;
 
 			VertexBufferData* vertexBufferData = nullptr;
 			std::vector<u32>* indices = nullptr;
 
-			std::string name;
-			Transform* transform;
+			std::string name = "";
+			Transform* transform = nullptr;
 
 			bool visibleInSceneExplorer = true;
 
 			CullFace cullFace = CullFace::BACK;
+			// TODO: Rename to enableBackfaceCulling
 			bool enableCulling = true;
 
 			DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
@@ -276,36 +279,40 @@ namespace flex
 
 		struct Shader
 		{
-			std::string name;
+			Shader(const std::string& name,
+				const std::string& vertexShaderFilePath,
+				const std::string& fragmentShaderFilePath);
 
-			std::string vertexShaderFilePath;
-			std::string fragmentShaderFilePath;
+			std::string name = "";
 
-			std::vector<char> vertexShaderCode;
-			std::vector<char> fragmentShaderCode;
+			std::string vertexShaderFilePath = "";
+			std::string fragmentShaderFilePath = "";
 
-			Uniforms constantBufferUniforms;
-			Uniforms dynamicBufferUniforms;
+			std::vector<char> vertexShaderCode = {};
+			std::vector<char> fragmentShaderCode = {};
 
-			bool deferred; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+			Uniforms constantBufferUniforms = {};
+			Uniforms dynamicBufferUniforms = {};
+
+			bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 			i32 subpass = 0;
 			bool depthWriteEnable = true;
 
 			// These variables should be set to true when the shader has these uniforms
-			bool needDiffuseSampler;
-			bool needNormalSampler;
-			bool needCubemapSampler;
-			bool needAlbedoSampler;
-			bool needMetallicSampler;
-			bool needRoughnessSampler;
-			bool needAOSampler;
-			bool needHDREquirectangularSampler;
-			bool needIrradianceSampler;
-			bool needPrefilteredMap;
-			bool needBRDFLUT;
-			bool needPushConstantBlock;
+			bool needDiffuseSampler = false;
+			bool needNormalSampler = false;
+			bool needCubemapSampler = false;
+			bool needAlbedoSampler = false;
+			bool needMetallicSampler = false;
+			bool needRoughnessSampler = false;
+			bool needAOSampler = false;
+			bool needHDREquirectangularSampler = false;
+			bool needIrradianceSampler = false;
+			bool needPrefilteredMap = false;
+			bool needBRDFLUT = false;
+			bool needPushConstantBlock = false;
 
-			VertexAttributes vertexAttributes;
+			VertexAttributes vertexAttributes = 0;
 			i32 numAttachments = 1; // How many output textures the fragment shader has
 		};
 
@@ -354,18 +361,22 @@ namespace flex
 		//virtual void ImGuiCreateFontsTexture();
 		//virtual void ImGuiCreateDeviceObjects();
 
+		static const u32 MAX_TEXTURE_DIM = 65536;
+
 	protected:
 		std::vector<PointLight> m_PointLights;
 		DirectionalLight m_DirectionalLight;
 
 		struct DrawCallInfo
 		{
-			RenderID cubemapObjectRenderID;
+			RenderID cubemapObjectRenderID = InvalidRenderID;
 			bool renderToCubemap = false;
-			bool deferred;
+			bool deferred = false;
 		};
 		
-		MaterialID m_ReflectionProbeMaterialID; // Set by the user via SetReflecionProbeMaterial
+		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
+
+		bool m_VSyncEnabled = true;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

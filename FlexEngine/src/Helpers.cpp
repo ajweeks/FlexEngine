@@ -38,6 +38,9 @@ namespace flex
 		}
 		else
 		{
+			assert(result.width <= Renderer::MAX_TEXTURE_DIM);
+			assert(result.height <= Renderer::MAX_TEXTURE_DIM);
+
 			result.pixels = static_cast<unsigned char*>(data);
 		}
 
@@ -171,7 +174,7 @@ namespace flex
 
 		return result;
 	}
-
+	// TODO: Remove, colors can be dragged onto one another in the latest version of ImGui
 	void CopyableColorEdit3(const char * label, glm::vec3 & col, const char * copyBtnLabel, const char * pasteBtnLabel, ImGuiColorEditFlags flags)
 	{
 		ImGui::ColorEdit3(label, &col.r, flags);
@@ -204,6 +207,9 @@ namespace flex
 			Logger::LogError("Failed to load HDR image at " + filePath);
 			return false;
 		}
+		
+		assert(width <= Renderer::MAX_TEXTURE_DIM);
+		assert(height <= Renderer::MAX_TEXTURE_DIM);
 
 		return true;
 	}

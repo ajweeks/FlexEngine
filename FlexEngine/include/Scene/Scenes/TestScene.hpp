@@ -24,10 +24,10 @@ namespace flex
 	private:
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
-		PointLightID m_PointLight1ID;
-		PointLightID m_PointLight2ID;
-		PointLightID m_PointLight3ID;
-		PointLightID m_PointLight4ID;
+		PointLightID m_PointLight1ID = InvalidPointLightID;
+		PointLightID m_PointLight2ID = InvalidPointLightID;
+		PointLightID m_PointLight3ID = InvalidPointLightID;
+		PointLightID m_PointLight4ID = InvalidPointLightID;
 
 		TestScene(const TestScene&) = delete;
 		TestScene& operator=(const TestScene&) = delete;

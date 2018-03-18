@@ -31,7 +31,7 @@ namespace flex
 		void DestroyAllScenes(const GameContext& gameContext);
 
 	private:
-		u32 m_CurrentSceneIndex;
+		u32 m_CurrentSceneIndex = 0;
 		std::vector<BaseScene*> m_Scenes;
 
 		SceneManager(const SceneManager&) = delete;

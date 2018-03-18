@@ -226,6 +226,57 @@ namespace flex
 			}
 
 			ImGui::CreateContext();
+			CheckGLErrorMessages();
+
+
+			// G-buffer objects
+			glGenFramebuffers(1, &m_gBufferHandle);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+
+			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
+				0,
+				m_gBuffer_PositionMetallicHandle.internalFormat,
+				m_gBuffer_PositionMetallicHandle.format,
+				m_gBuffer_PositionMetallicHandle.type,
+				frameBufferSize);
+
+			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
+				1,
+				m_gBuffer_NormalRoughnessHandle.internalFormat,
+				m_gBuffer_NormalRoughnessHandle.format,
+				m_gBuffer_NormalRoughnessHandle.type,
+				frameBufferSize);
+
+			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
+				2,
+				m_gBuffer_DiffuseAOHandle.internalFormat,
+				m_gBuffer_DiffuseAOHandle.format,
+				m_gBuffer_DiffuseAOHandle.type,
+				frameBufferSize);
+
+			// Create and attach depth buffer
+			glGenRenderbuffers(1, &m_gBufferDepthHandle);
+			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				Logger::LogError("Framebuffer not complete!");
+			}
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			//GenerateGBuffer(gameContext);
+
+			if (m_BRDFTextureHandle.id == 0)
+			{
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+			}
+
+			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
@@ -407,6 +458,9 @@ namespace flex
 			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
 			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
 
+			assert(mat.material.cubemapSamplerSize.x <= MAX_TEXTURE_DIM);
+			assert(mat.material.cubemapSamplerSize.y <= MAX_TEXTURE_DIM);
+
 			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
 			mat.material.generateAlbedoSampler = createInfo->generateAlbedoSampler;
 			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
@@ -443,8 +497,15 @@ namespace flex
 
 			if (shader.shader.needIrradianceSampler)
 			{
-				mat.irradianceSamplerID = (createInfo->irradianceSamplerMatID < m_Materials.size() ?
-					m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID : 0);
+				if (createInfo->irradianceSamplerMatID >= m_Materials.size())
+				{
+					Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
+					mat.irradianceSamplerID = InvalidID;
+				}
+				else
+				{
+					mat.irradianceSamplerID = m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID;
+				}
 			}
 			if (shader.shader.needBRDFLUT)
 			{
@@ -457,8 +518,15 @@ namespace flex
 			}
 			if (shader.shader.needPrefilteredMap)
 			{
-				mat.prefilteredMapSamplerID = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ?
-					m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID : 0);
+				if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
+				{
+					Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
+					mat.prefilteredMapSamplerID = InvalidID;
+				}
+				else
+				{
+					mat.prefilteredMapSamplerID = m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID;
+				}
 			}
 
 			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
@@ -504,23 +572,30 @@ namespace flex
 				{
 					if (samplerCreateInfo.create)
 					{
-						if (!GetLoadedTexture(samplerCreateInfo.filepath, *samplerCreateInfo.id))
+						if (samplerCreateInfo.filepath.empty())
 						{
-							// Texture hasn't been loaded yet, load it now
-							samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, samplerCreateInfo.flipVertically, false);
-							m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
-						}
-
-						i32 uniformLocation = glGetUniformLocation(shader.program, samplerCreateInfo.textureName.c_str());
-						CheckGLErrorMessages();
-						if (uniformLocation == -1)
-						{
-							Logger::LogWarning(samplerCreateInfo.textureName + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+							Logger::LogError("Empty file path specified in SamplerCreateInfo for texture " + samplerCreateInfo.textureName + " in material " + mat.material.name);
 						}
 						else
 						{
-							glUniform1i(uniformLocation, binding);
+							if (!GetLoadedTexture(samplerCreateInfo.filepath, *samplerCreateInfo.id))
+							{
+								// Texture hasn't been loaded yet, load it now
+								samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, samplerCreateInfo.flipVertically, false);
+								m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
+							}
+
+							i32 uniformLocation = glGetUniformLocation(shader.program, samplerCreateInfo.textureName.c_str());
 							CheckGLErrorMessages();
+							if (uniformLocation == -1)
+							{
+								Logger::LogWarning(samplerCreateInfo.textureName + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+							}
+							else
+							{
+								glUniform1i(uniformLocation, binding);
+								CheckGLErrorMessages();
+							}
 						}
 					}
 					// Always increment the binding, even when not binding anything
@@ -964,6 +1039,8 @@ namespace flex
 			{
 				u32 mipWidth = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.x * pow(0.5f, mip));
 				u32 mipHeight = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.y * pow(0.5f, mip));
+				assert(mipWidth <= Renderer::MAX_TEXTURE_DIM);
+				assert(mipHeight <= Renderer::MAX_TEXTURE_DIM);
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
@@ -1322,55 +1399,6 @@ namespace flex
 			}
 
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
-
-
-			// G-buffer objects
-			glGenFramebuffers(1, &m_gBufferHandle);
-			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-
-			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
-				0,
-				m_gBuffer_PositionMetallicHandle.internalFormat,
-				m_gBuffer_PositionMetallicHandle.format,
-				m_gBuffer_PositionMetallicHandle.type,
-				frameBufferSize);
-
-			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
-				1,
-				m_gBuffer_NormalRoughnessHandle.internalFormat,
-				m_gBuffer_NormalRoughnessHandle.format,
-				m_gBuffer_NormalRoughnessHandle.type,
-				frameBufferSize);
-
-			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
-				2,
-				m_gBuffer_DiffuseAOHandle.internalFormat,
-				m_gBuffer_DiffuseAOHandle.format,
-				m_gBuffer_DiffuseAOHandle.type,
-				frameBufferSize);
-
-			// Create and attach depth buffer
-			glGenRenderbuffers(1, &m_gBufferDepthHandle);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
-
-			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			{
-				Logger::LogError("Framebuffer not complete!");
-			}
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			GenerateGBuffer(gameContext);
-			
-			if (m_BRDFTextureHandle.id == 0)
-			{
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
-			}
-
 			CheckGLErrorMessages();
 
 			Logger::LogInfo("Ready!\n");
@@ -1568,14 +1596,14 @@ namespace flex
 
 		void GLRenderer::DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
+			if (!m_gBufferQuadVertexBufferData.pDataStart)
+			{
+				// Generate GBuffer if not already generated
+				GenerateGBuffer(gameContext);
+			}
+
 			if (drawCallInfo.renderToCubemap)
 			{
-				if (!m_gBufferQuadVertexBufferData.pDataStart)
-				{
-					// Generate GBuffer if not already generated
-					GenerateGBuffer(gameContext);
-				}
-
 				if (!m_SkyBoxMesh)
 				{
 					GenerateSkybox(gameContext);
@@ -2512,8 +2540,7 @@ namespace flex
 				m_SkyBoxMesh = new MeshPrefab(m_SkyBoxMaterialID, "Skybox Mesh");
 				m_SkyBoxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 				m_SkyBoxMesh->Initialize(gameContext);
-				// This object is just used as a framebuffer target, don't render it normally
-				GetRenderObject(m_SkyBoxMesh->GetRenderID())->visible = false;
+				m_SkyBoxMesh->PostInitialize(gameContext);
 			}
 		}
 
@@ -2724,13 +2751,15 @@ namespace flex
 								Transform* transform = renderObject->transform;
 								if (transform)
 								{
-									static bool local = true;
+									static int transformSpace = 0;
 
-									static const char* localTransformStr = "Transform (local)";
-									static const char* globalTransformStr = "Transform (global)";
-									const char* transformSpaceStr = local ? localTransformStr : globalTransformStr;
+									static const char* localStr = "local";
+									static const char* globalStr = "global";
 
-									ImGui::Checkbox(transformSpaceStr, &local);
+									ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
+									ImGui::RadioButton(globalStr, &transformSpace, 1);
+
+									const bool local = (transformSpace == 0);
 
 
 									glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
@@ -2784,7 +2813,7 @@ namespace flex
 
 					ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
 
-					bool dirLightEnabled = m_DirectionalLight.enabled;
+					bool dirLightEnabled = m_DirectionalLight.enabled == 1;
 					ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
 					m_DirectionalLight.enabled = dirLightEnabled ? 1 : 0;
 					ImGui::SameLine();
@@ -2802,7 +2831,7 @@ namespace flex
 						const std::string iStr = std::to_string(i);
 						const std::string objectName("Point Light##" + iStr);
 
-						bool PointLightEnabled = m_PointLights[i].enabled;
+						bool PointLightEnabled = m_PointLights[i].enabled == 1;
 						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
 						m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
 						ImGui::SameLine();
@@ -2823,7 +2852,18 @@ namespace flex
 
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)
 		{
+#if _DEBUG
+			auto result = m_RenderObjects.find(renderID);
+			if (result != m_RenderObjects.end())
+			{
+				return result->second;
+			}
+
+			Logger::LogError("Couldn't find GLRenderObject with renderID " + std::to_string(renderID));
+			return nullptr;
+#else
 			return m_RenderObjects[renderID];
+#endif
 		}
 
 		void GLRenderer::InsertNewRenderObject(GLRenderObject* renderObject)

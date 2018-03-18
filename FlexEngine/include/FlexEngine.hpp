@@ -45,18 +45,19 @@ namespace flex
 
 		std::string RenderIDToString(RendererID rendererID) const;
 
-		u32 m_RendererCount;
+		u32 m_RendererCount = 0;
 
-		GameContext m_GameContext;
-		FreeCamera* m_DefaultCamera;
+		GameContext m_GameContext = {};
+		FreeCamera* m_DefaultCamera = nullptr;
 
-		glm::vec3 m_ClearColor;
-		bool m_VSyncEnabled;
+		// TODO: Add clear background bool
+		glm::vec3 m_ClearColor = { 0,0,0 };
+		bool m_VSyncEnabled = true;
 
-		RendererID m_RendererIndex;
-		std::string m_RendererName;
+		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
+		std::string m_RendererName = "";
 
-		bool m_Running;
+		bool m_Running = false;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

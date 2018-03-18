@@ -6,11 +6,11 @@ namespace flex
 {
 	struct Monitor
 	{
-		i32 width;
-		i32 height;
-		i32 redBits;
-		i32 greenBits;
-		i32 blueBits;
-		i32 refreshRate;
+		i32 width = 0;
+		i32 height = 0;
+		i32 redBits = 0;
+		i32 greenBits = 0;
+		i32 blueBits = 0;
+		i32 refreshRate = 0;
 	};
 }

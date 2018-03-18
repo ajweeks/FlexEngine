@@ -55,35 +55,37 @@ namespace flex
 		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
 		const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-		Renderer::MaterialCreateInfo pbrMatInfo = {};
-		pbrMatInfo.shaderName = "pbr";
-		pbrMatInfo.name = "PBR";
-		pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.25f, 0.35f);
-		pbrMatInfo.constMetallic = 0.0f;
-		pbrMatInfo.constRoughness = 0.5f;
-		pbrMatInfo.constAO = 1.0f;
-		MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+		//Renderer::MaterialCreateInfo pbrMatInfo = {};
+		//pbrMatInfo.shaderName = "pbr";
+		//pbrMatInfo.name = "PBR";
+		//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.25f, 0.35f);
+		//pbrMatInfo.constMetallic = 0.0f;
+		//pbrMatInfo.constRoughness = 0.5f;
+		//pbrMatInfo.constAO = 1.0f;
+		//MaterialID pbrMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
-		MeshPrefab* sponzaMesh = new MeshPrefab(pbrMatID, "Sponza");
-		sponzaMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sponza/sponza-optimized.fbx", true, true);
-		sponzaMesh->GetTransform().Scale(0.01f);
-		//sponzaMesh->GetTransform().Rotate(0.0f, glm::radians(180.0f), 0.0f);
-		AddChild(gameContext, sponzaMesh);
+		//MeshPrefab* sponzaMesh = new MeshPrefab(pbrMatID, "Sponza");
+		//sponzaMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sponza/sponza-optimized.fbx", true, true);
+		//sponzaMesh->GetTransform().Scale(0.01f);
+		////sponzaMesh->GetTransform().Rotate(0.0f, glm::radians(180.0f), 0.0f);
+		//AddChild(gameContext, sponzaMesh);
 
 		MeshPrefab* skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
 		skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 		AddChild(gameContext, skybox);
 
+		gameContext.renderer->SetSkyboxMaterial(skyboxHDRMatID);
+
 		// Reflection probes
 		// Generate last so it can use generated skybox maps
 		m_ReflectionProbe = new ReflectionProbe();
 		AddChild(gameContext, m_ReflectionProbe);
-		m_ReflectionProbe->GetTransform().Translate(0.0f, 10.0f, 0.0f);
-		m_ReflectionProbe->GetTransform().Scale(3.5f);
 	}
 
 	void TestScene::PostInitialize(const GameContext& gameContext)
 	{
+		m_ReflectionProbe->GetTransform().Translate(0.0f, 10.0f, 0.0f);
+		m_ReflectionProbe->GetTransform().Scale(3.5f);
 		UNREFERENCED_PARAMETER(gameContext);
 	}
 

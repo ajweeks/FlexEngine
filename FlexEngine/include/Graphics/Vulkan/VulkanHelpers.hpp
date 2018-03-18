@@ -6,7 +6,9 @@
 #include <iostream>
 #include <sstream>
 
-#include <vulkan/vulkan.h>
+#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#include <vulkan/vulkan.hpp>
+#pragma warning(pop)
 
 #include "Graphics/Renderer.hpp"
 #include "VulkanBuffer.hpp"
@@ -74,7 +76,7 @@ namespace flex
 		struct VulkanUniformBufferObjectData
 		{
 			real* data = nullptr;
-			u32 size;
+			u32 size = 0;
 		};
 
 		struct UniformBuffer
@@ -90,10 +92,15 @@ namespace flex
 
 		struct VertexIndexBufferPair
 		{
+			VertexIndexBufferPair(VulkanBuffer* vertexBuffer, VulkanBuffer* indexBuffer) :
+				vertexBuffer(vertexBuffer),
+				indexBuffer(indexBuffer)
+			{}
+
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
-			u32 vertexCount;
-			u32 indexCount;
+			u32 vertexCount = 0;
+			u32 indexCount = 0;
 			bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (eg. ImGui vertex buffer)
 		};
 
@@ -108,9 +115,9 @@ namespace flex
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
 			VkDescriptorImageInfo imageInfoDescriptor;
-			u32 width;
-			u32 height;
-			std::string filePath;
+			u32 width = 0;
+			u32 height = 0;
+			std::string filePath = "";
 			u32 mipLevels = 1;
 		};
 
@@ -156,15 +163,18 @@ namespace flex
 			VkImageUsageFlagBits usage,
 			u32 width,
 			u32 height,
+			u32 arrayLayers,
+			VkImageViewType imageViewType,
+			VkImageCreateFlags imageFlags,
 			FrameBufferAttachment *attachment);
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
 		struct VulkanCubemapGBuffer
 		{
-			u32 id;
-			const char* name;
-			VkFormat internalFormat;
+			u32 id = 0;
+			const char* name = "";
+			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
 			//GLenum format;
 		};
 
@@ -193,12 +203,12 @@ namespace flex
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
-			
-			u32 cubemapSamplerID;
-			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
-			u32 cubemapDepthSamplerID;
 
-			u32 descriptorSetLayoutIndex;
+			u32 cubemapSamplerID = 0;
+			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
+			u32 cubemapDepthSamplerID = 0;
+
+			u32 descriptorSetLayoutIndex = 0;
 		};
 
 		struct VulkanRenderObject
@@ -207,19 +217,19 @@ namespace flex
 
 			VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-			RenderID renderID;
-			MaterialID materialID;
+			RenderID renderID = InvalidRenderID;
+			MaterialID materialID = InvalidMaterialID;
 
 			bool visible = true;
 			bool visibleInSceneExplorer = true;
 
-			std::string name;
-			std::string materialName;
+			std::string name = "";
+			std::string materialName = "";
 			Transform* transform = nullptr;
 
-			u32 VAO;
-			u32 VBO;
-			u32 IBO;
+			u32 VAO = 0;
+			u32 VBO = 0;
+			u32 IBO = 0;
 
 			VertexBufferData* vertexBufferData = nullptr;
 			u32 vertexOffset = 0;
@@ -231,7 +241,8 @@ namespace flex
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-			bool enableCulling;
+			// TODO: Rename to enableBackfaceCulling
+			bool enableCulling = true;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;
@@ -239,11 +250,12 @@ namespace flex
 
 		struct GraphicsPipelineCreateInfo
 		{
-			ShaderID shaderID;
-			VertexAttributes vertexAttributes;
+			ShaderID shaderID = InvalidShaderID;
+			VertexAttributes vertexAttributes = 0;
 
-			VkPrimitiveTopology topology;
-			VkCullModeFlags cullMode;
+			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+			// TODO: Rename to enableBackfaceCulling
 			bool enableCulling = true;
 
 			VkRenderPass renderPass;
@@ -252,7 +264,7 @@ namespace flex
 			VkPushConstantRange* pushConstants = nullptr;
 			u32 pushConstantRangeCount = 0;
 
-			u32 descriptorSetLayoutIndex;
+			u32 descriptorSetLayoutIndex = 0;
 
 			bool setDynamicStates = false;
 			bool enabledColorBlending = false;
@@ -272,7 +284,7 @@ namespace flex
 		{
 			VkDescriptorSet* descriptorSet = nullptr;
 			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
-			ShaderID shaderID;
+			ShaderID shaderID = InvalidShaderID;
 			UniformBuffer* uniformBuffer = nullptr;
 
 			VulkanTexture* diffuseTexture = nullptr;

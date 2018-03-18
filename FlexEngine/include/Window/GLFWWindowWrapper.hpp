@@ -41,7 +41,7 @@ namespace flex
 
 	private:
 
-		real m_PreviousFrameTime;
+		real m_PreviousFrameTime = 0;
 
 		GLFWWindowWrapper(const GLFWWindowWrapper&) = delete;
 		GLFWWindowWrapper& operator=(const GLFWWindowWrapper&) = delete;

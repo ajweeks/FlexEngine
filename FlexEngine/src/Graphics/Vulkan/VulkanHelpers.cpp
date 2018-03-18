@@ -211,7 +211,7 @@ namespace flex
 			{
 				switch (errorCode)
 				{
-	#define STR(r) case VK_ ##r: return #r
+#define STR(r) case VK_ ##r: return #r
 					STR(NOT_READY);
 					STR(TIMEOUT);
 					STR(EVENT_SET);
@@ -237,7 +237,7 @@ namespace flex
 					STR(ERROR_INVALID_SHADER_NV);
 					STR(ERROR_OUT_OF_POOL_MEMORY_KHR);
 					STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
-	#undef STR
+#undef STR
 				case VK_SUCCESS:
 					// No error to pri32
 					return "";
@@ -431,6 +431,8 @@ namespace flex
 			}
 
 			assert(aspectMask > 0);
+			assert(width <= Renderer::MAX_TEXTURE_DIM);
+			assert(height <= Renderer::MAX_TEXTURE_DIM);
 
 			VkImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -570,7 +572,7 @@ namespace flex
 			renderPass(device, vkDestroyRenderPass)
 		{
 		}
-		
+
 		VulkanShader::VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device) :
 			uniformBuffer(device)
 		{
@@ -579,7 +581,7 @@ namespace flex
 			shader.vertexShaderFilePath = vertexShaderFilePath;
 			shader.fragmentShaderFilePath = fragmentShaderFilePath;
 		}
-} // namespace vk
+	} // namespace vk
 } // namespace flex
 
 #endif // COMPILE_VULKAN

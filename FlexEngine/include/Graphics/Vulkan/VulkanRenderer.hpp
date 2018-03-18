@@ -62,8 +62,9 @@ namespace flex
 			virtual void Destroy(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;
-
 		private:
+			void Destroy(RenderID renderID, VulkanRenderObject* renderObject);
+			
 			typedef void (VulkanRenderer::*VulkanTextureCreateFunction)(const std::string&, VkFormat, u32, VulkanTexture**) const;
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
@@ -226,7 +227,6 @@ namespace flex
 			i32 m_DeferredQuadVertexBufferIndex;
 
 			
-			bool m_VSyncEnabled;
 			bool m_SwapChainNeedsRebuilding;
 
 			const std::vector<const char*> m_ValidationLayers =

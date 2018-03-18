@@ -56,6 +56,15 @@ namespace flex
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidDirectionalLightID ((DirectionalLightID)u32_max)
 
+	// 
+	template<bool> struct StaticAssert;
+	template<> struct StaticAssert<true> {};
+
+#define STATIC_ASSERT(e) StaticAssert<(e)>{}
+
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 } // namespace flex
 
 namespace glm

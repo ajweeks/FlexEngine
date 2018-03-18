@@ -59,26 +59,26 @@ namespace flex
 		glm::mat4 m_Proj;
 		glm::mat4 m_ViewProjection;
 
-		real m_FOV;
-		real m_ZNear;
-		real m_ZFar;
+		real m_FOV = 0;
+		real m_ZNear = 0;
+		real m_ZFar = 0;
 
 		glm::vec3 m_Position;
 		glm::vec3 m_DragStartPosition;
 
-		real m_Yaw;
-		real m_Pitch;
+		real m_Yaw = 0;
+		real m_Pitch = 0;
 		glm::vec3 m_Forward;
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;
 
-		real m_MoveSpeed; // Keyboard
-		real m_PanSpeed; // MMB
-		real m_DragDollySpeed; // RMB
-		real m_ScrollDollySpeed; // Scroll wheel
-		real m_MoveSpeedFastMultiplier;
-		real m_MoveSpeedSlowMultiplier;
-		real m_RotationSpeed;
+		real m_MoveSpeed = 0; // Keyboard
+		real m_PanSpeed = 0; // MMB
+		real m_DragDollySpeed = 0; // RMB
+		real m_ScrollDollySpeed = 0; // Scroll wheel
+		real m_MoveSpeedFastMultiplier = 0;
+		real m_MoveSpeedSlowMultiplier = 0;
+		real m_RotationSpeed = 0;
 
 		InputManager::KeyCode m_MoveForwardKey;
 		InputManager::KeyCode m_MoveBackwardKey;

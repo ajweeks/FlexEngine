@@ -27,7 +27,7 @@ namespace flex
 		GameObject* m_Capture = nullptr; // The object doing the capturing
 		MaterialID m_CaptureMatID = 0;
 
-		bool m_Visible;
+		bool m_Visible = true;
 
 		// bool enabled, ivec4 influenceBoundingBox, bool update (real updateFrequency?), ...
 

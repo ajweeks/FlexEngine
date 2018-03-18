@@ -21,6 +21,10 @@ namespace flex
 
 		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
+			assert(dimensions.x <= Renderer::MAX_TEXTURE_DIM);
+			assert(dimensions.y <= Renderer::MAX_TEXTURE_DIM);
+
+
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
 			CheckGLErrorMessages();
@@ -156,7 +160,8 @@ namespace flex
 
 			if (createInfo.filePaths[0].empty()) // Don't generate pixel data
 			{
-				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0)
+				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0 ||
+					createInfo.textureSize.x >= Renderer::MAX_TEXTURE_DIM || createInfo.textureSize.y >= Renderer::MAX_TEXTURE_DIM)
 				{
 					Logger::LogError("Invalid cubemap dimensions: " + 
 						std::to_string(createInfo.textureSize.x) + "x" + std::to_string(createInfo.textureSize.y));
@@ -456,7 +461,12 @@ namespace flex
 			default: return GL_FALSE;
 			}
 		}
-} // namespace gl
+
+		GLShader::GLShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :
+			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
+		{
+		}
+	} // namespace gl
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL

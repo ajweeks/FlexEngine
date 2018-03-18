@@ -1,7 +1,9 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#include <vulkan/vulkan.h>
+#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#include <vulkan/vulkan.hpp>
+#pragma warning(pop)
 
 #include "VDeleter.hpp"
 

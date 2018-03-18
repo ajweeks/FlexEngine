@@ -54,20 +54,19 @@ namespace flex
 		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
 		skyboxHDRMatInfo.generatePrefilteredMap = true;
 		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
+		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 		m_SkyboxMatID_1 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
-		m_SkyboxMatID_2 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+		//m_SkyboxMatID_2 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/wobbly_bridge_8k.hdr";
-		m_SkyboxMatID_3 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+		//skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/wobbly_bridge_8k.hdr";
+		//m_SkyboxMatID_3 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
-		m_SkyboxMatID_4 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+		//skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
+		//m_SkyboxMatID_4 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
-		m_SkyboxMatID_5 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+		//skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
+		//m_SkyboxMatID_5 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
 		//RESOURCE_LOCATION + "textures/hdri/rustig_koppie_1k.hdr";
 		//RESOURCE_LOCATION + "textures/hdri/wobbly_bridge_8k.hdr";
@@ -75,9 +74,9 @@ namespace flex
 		//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
 		//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 
-		m_Skybox = new MeshPrefab(m_SkyboxMatID_1, "Skybox");
-		m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(gameContext, m_Skybox);
+		//m_Skybox = new MeshPrefab(m_SkyboxMatID_1, "Skybox");
+		//m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+		//AddChild(gameContext, m_Skybox);
 
 		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1);
 		m_CurrentSkyboxMatID = 0;
@@ -288,21 +287,21 @@ namespace flex
 			gameContext.camera->LookAt(glm::vec3(0.0f, 4.0f, 0.0f), gameContext.deltaTime * 5.0f);
 		}
 
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
-		{
-			++m_CurrentSkyboxMatID;
-			m_CurrentSkyboxMatID %= 5;
-			MaterialID newMatID = 0;
-			if (m_CurrentSkyboxMatID == 0) newMatID = m_SkyboxMatID_1;
-			if (m_CurrentSkyboxMatID == 1) newMatID = m_SkyboxMatID_2;
-			if (m_CurrentSkyboxMatID == 2) newMatID = m_SkyboxMatID_3;
-			if (m_CurrentSkyboxMatID == 3) newMatID = m_SkyboxMatID_4;
-			if (m_CurrentSkyboxMatID == 4) newMatID = m_SkyboxMatID_5;
+		//if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
+		//{
+		//	++m_CurrentSkyboxMatID;
+		//	m_CurrentSkyboxMatID %= 5;
+		//	MaterialID newMatID = 0;
+		//	if (m_CurrentSkyboxMatID == 0) newMatID = m_SkyboxMatID_1;
+		//	if (m_CurrentSkyboxMatID == 1) newMatID = m_SkyboxMatID_2;
+		//	if (m_CurrentSkyboxMatID == 2) newMatID = m_SkyboxMatID_3;
+		//	if (m_CurrentSkyboxMatID == 3) newMatID = m_SkyboxMatID_4;
+		//	if (m_CurrentSkyboxMatID == 4) newMatID = m_SkyboxMatID_5;
 
-			Logger::LogInfo("index: " + std::to_string(m_CurrentSkyboxMatID) + " new mat id: " + std::to_string(newMatID));
-			gameContext.renderer->SetSkyboxMaterial(newMatID);
-			gameContext.renderer->PostInitializeRenderObject(gameContext, m_Skybox->GetRenderID());
-			m_Skybox->SetMaterialID(newMatID, gameContext);
-		}
+		//	Logger::LogInfo("index: " + std::to_string(m_CurrentSkyboxMatID) + " new mat id: " + std::to_string(newMatID));
+		//	gameContext.renderer->SetSkyboxMaterial(newMatID);
+		//	gameContext.renderer->PostInitializeRenderObject(gameContext, m_Skybox->GetRenderID());
+		//	m_Skybox->SetMaterialID(newMatID, gameContext);
+		//}
 	}
 } // namespace flex

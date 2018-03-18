@@ -35,7 +35,7 @@ namespace flex
 
 		friend class SceneManager;
 
-		std::string m_Name;
+		std::string m_Name = "";
 
 		std::vector<GameObject*> m_Children;
 

@@ -178,7 +178,7 @@ namespace flex
 
 		struct Key
 		{
-			i32 down; // A count of how many frames this key has been down for (0 means not down)
+			i32 down = 0; // A count of how many frames this key has been down for (0 means not down)
 		};
 
 		struct MouseDrag
@@ -222,9 +222,9 @@ namespace flex
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		Key m_MouseButtons[MOUSE_BUTTON_COUNT];
 		MouseDrag m_MouseButtonDrags[MOUSE_BUTTON_COUNT];
-		glm::vec2 m_MousePosition;
-		glm::vec2 m_PrevMousePosition;
-		real m_ScrollXOffset;
-		real m_ScrollYOffset;
+		glm::vec2 m_MousePosition = { 0, 0 };
+		glm::vec2 m_PrevMousePosition = { 0, 0 };
+		real m_ScrollXOffset = 0;
+		real m_ScrollYOffset = 0;
 	};
 } // namespace flex

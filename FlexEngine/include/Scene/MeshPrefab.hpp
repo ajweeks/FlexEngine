@@ -61,13 +61,13 @@ namespace flex
 		MaterialID m_MaterialID = InvalidMaterialID;
 
 		static std::string m_DefaultName;
-		std::string m_Name;
+		std::string m_Name = "";
 
-		glm::vec2 m_UVScale;
+		glm::vec2 m_UVScale = { 1,1 };
 
 		VertexAttributes m_ForcedAttributes = (u32)VertexAttribute::NONE;
 		VertexAttributes m_IgnoredAttributes = (u32)VertexAttribute::NONE;
-		VertexBufferData m_VertexBufferData;
+		VertexBufferData m_VertexBufferData = {};
 
 		std::vector<u32> m_Indices;
 

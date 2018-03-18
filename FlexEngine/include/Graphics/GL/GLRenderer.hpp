@@ -120,21 +120,19 @@ namespace flex
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::map<RenderID, GLRenderObject*> m_RenderObjects;
 
-			bool m_VSyncEnabled;
-
 			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
 			std::map<std::string, u32> m_LoadedTextures; // Key is filepath, value is texture id
 
 			// TODO: Clean up (make more dynamic)
-			u32 viewProjectionUBO;
-			u32 viewProjectionCombinedUBO;
+			u32 viewProjectionUBO = 0;
+			u32 viewProjectionCombinedUBO = 0;
 
-			RenderID m_GBufferQuadRenderID;
+			RenderID m_GBufferQuadRenderID = InvalidRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			Transform m_gBufferQuadTransform;
-			u32 m_gBufferHandle;
-			u32 m_gBufferDepthHandle;
+			u32 m_gBufferHandle = 0;
+			u32 m_gBufferDepthHandle = 0;
 
 			struct FrameBufferHandle
 			{
@@ -156,8 +154,8 @@ namespace flex
 			// Everything is drawn to this texture before being drawn to the default 
 			// frame buffer through some post-processing effects
 			FrameBufferHandle m_OffscreenTextureHandle; 
-			u32 m_OffscreenFBO;
-			u32 m_OffscreenRBO;
+			u32 m_OffscreenFBO = 0;
+			u32 m_OffscreenRBO = 0;
 
 			FrameBufferHandle m_LoadingTextureHandle;
 			// TODO: Use a mesh prefab here
@@ -165,11 +163,11 @@ namespace flex
 			Transform m_SpriteQuadTransform;
 			RenderID m_SpriteQuadRenderID;
 			
-			MaterialID m_SpriteMatID;
-			MaterialID m_PostProcessMatID;
+			MaterialID m_SpriteMatID = InvalidMaterialID;
+			MaterialID m_PostProcessMatID = InvalidMaterialID;
 
-			u32 m_CaptureFBO;
-			u32 m_CaptureRBO;
+			u32 m_CaptureFBO = 0;
+			u32 m_CaptureRBO = 0;
 
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;

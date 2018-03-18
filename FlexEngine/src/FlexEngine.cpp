@@ -303,17 +303,22 @@ namespace flex
 			m_GameContext.window->Update(m_GameContext);
 
 			static bool windowOpen = true;
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1)) windowOpen = !windowOpen;
-			static const std::string titleString = "Flex Engine v" + EngineVersionString();
-			if (ImGui::Begin(titleString.c_str(), &windowOpen))
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1))
 			{
-				const std::string rendStr("Current renderer: " + m_RendererName);
-				ImGui::Text(rendStr.c_str());
+				windowOpen = !windowOpen;
+			}
+			static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
+			static const char* titleCharStr = titleString.c_str();
+			if (ImGui::Begin(titleCharStr, &windowOpen))
+			{
+				static const std::string rendererStr = std::string("Current renderer: " + m_RendererName);
+				static const char* rendCharStr = rendererStr.c_str();
+				ImGui::Text(rendCharStr);
 
 				if (ImGui::TreeNode("Renderer settings"))
 				{
-					std::string vsyncEnabledStr = "VSync " + std::string(m_VSyncEnabled ? "enabled" : "disabled");
-					if (ImGui::Checkbox(vsyncEnabledStr.c_str(), &m_VSyncEnabled))
+					static const char* vsyncEnabledStr = "VSync";
+					if (ImGui::Checkbox(vsyncEnabledStr, &m_VSyncEnabled))
 					{
 						m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
 					}
@@ -321,7 +326,8 @@ namespace flex
 					ImGui::TreePop();
 				}
 
-				if (ImGui::TreeNode("Camera"))
+				static const char* cameraStr = "Camera";
+				if (ImGui::TreeNode(cameraStr))
 				{
 					glm::vec3 camPos = m_GameContext.camera->GetPosition();
 					if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
@@ -358,7 +364,8 @@ namespace flex
 					ImGui::TreePop();
 				}
 
-				if (ImGui::TreeNode("Logging"))
+				static const char* loggingStr = "Logging";
+				if (ImGui::TreeNode(loggingStr))
 				{
 					bool suppressInfo = Logger::GetSuppressInfo();
 					i32 suppressedInfoCount = Logger::GetSuppressedInfoCount();
@@ -388,12 +395,17 @@ namespace flex
 					ImGui::TreePop();
 				}
 
-				if (ImGui::TreeNode("Scenes"))
+				static const char* scenesStr = "Scenes";
+				if (ImGui::TreeNode(scenesStr))
 				{
-					if (ImGui::Button("<")) // Enter previous scene
+					static const char* arrowPrevStr = "<";
+					static const char* arrowNextStr = ">";
+
+					if (ImGui::Button(arrowPrevStr))
 					{
 						m_GameContext.sceneManager->SetPreviousSceneActive();
 					}
+
 					if (ImGui::IsItemHovered())
 					{
 						ImGui::BeginTooltip();
@@ -410,14 +422,15 @@ namespace flex
 					ImGui::Text(currentSceneStr.c_str());
 
 					ImGui::SameLine();
-					if (ImGui::Button(">"))
+					if (ImGui::Button(arrowNextStr))
 					{
 						m_GameContext.sceneManager->SetNextSceneActive();
 					}
 					if (ImGui::IsItemHovered())
 					{
 						ImGui::BeginTooltip();
-						ImGui::Text("Next scene");
+						static const char* nextSceneStr = "Next scene";
+						ImGui::Text(nextSceneStr);
 						ImGui::EndTooltip();
 					}
 
@@ -425,9 +438,8 @@ namespace flex
 				}
 
 				m_GameContext.renderer->DrawImGuiItems(m_GameContext);
-
-				ImGui::End();
 			}
+			ImGui::End();
 
 			// TODO: Consolidate functions?
 			m_GameContext.inputManager->Update();
@@ -443,6 +455,7 @@ namespace flex
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
+
 
 		// Scale correctly on high DPI monitors
 		// TODO: Handle more cleanly

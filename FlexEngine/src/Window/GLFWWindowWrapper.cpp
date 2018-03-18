@@ -99,7 +99,7 @@ namespace flex
 		}
 
 		// TODO: Look i32o supporting system-DPI awareness
-		SetProcessDPIAware();
+		//SetProcessDPIAware();
 	}
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo(GameContext& gameContext)

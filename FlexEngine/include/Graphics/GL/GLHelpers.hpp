@@ -8,17 +8,24 @@
 #include <GLFW/glfw3.h>
 
 #include "Logger.hpp"
+#include "Types.hpp"
 
 
 namespace flex
 {
 	namespace gl
 	{
+#define InvalidID u32_max
+
 		struct GLShader
 		{
-			Renderer::Shader shader = {};
+			GLShader(const std::string& name,
+				const std::string& vertexShaderFilePath,
+				const std::string& fragmentShaderFilePath);
 
-			u32 program;
+			Renderer::Shader shader;
+
+			u32 program = 0;
 		};
 
 		struct GLCubemapGBuffer
@@ -60,41 +67,41 @@ namespace flex
 			};
 			UniformIDs uniformIDs;
 
-			u32 diffuseSamplerID;
-			u32 normalSamplerID;
+			u32 diffuseSamplerID = 0;
+			u32 normalSamplerID = 0;
 
-			u32 cubemapSamplerID;
+			u32 cubemapSamplerID = 0;
 			std::vector<GLCubemapGBuffer> cubemapSamplerGBuffersIDs;
-			u32 cubemapDepthSamplerID;
+			u32 cubemapDepthSamplerID = 0;
 
 			// PBR samplers
-			u32 albedoSamplerID;
-			u32 metallicSamplerID;
-			u32 roughnessSamplerID;
-			u32 aoSamplerID;
+			u32 albedoSamplerID = 0;
+			u32 metallicSamplerID = 0;
+			u32 roughnessSamplerID = 0;
+			u32 aoSamplerID = 0;
 
-			u32 hdrTextureID;
+			u32 hdrTextureID = 0;
 
-			u32 irradianceSamplerID;
-			u32 prefilteredMapSamplerID;
-			u32 brdfLUTSamplerID;
+			u32 irradianceSamplerID = 0;
+			u32 prefilteredMapSamplerID = 0;
+			u32 brdfLUTSamplerID = 0;
 		};
 
 		struct GLRenderObject
 		{
-			RenderID renderID;
+			RenderID renderID = InvalidRenderID;
 
-			std::string name;
-			std::string materialName;
+			std::string name = "";
+			std::string materialName = "";
 			Transform* transform = nullptr;
 
 			bool visible = true;
 			bool isStatic = true; // If true, this object will be rendered to reflection probes
 			bool visibleInSceneExplorer = true;
 
-			u32 VAO;
-			u32 VBO;
-			u32 IBO;
+			u32 VAO = 0;
+			u32 VBO = 0;
+			u32 IBO = 0;
 
 			GLenum topology = GL_TRIANGLES;
 			GLenum cullFace = GL_BACK;
@@ -103,14 +110,14 @@ namespace flex
 			GLenum depthTestReadFunc = GL_LEQUAL;
 			GLboolean depthWriteEnable = GL_TRUE;
 
-			u32 vertexBuffer;
+			u32 vertexBuffer = 0;
 			VertexBufferData* vertexBufferData = nullptr;
 
 			bool indexed = false;
-			u32 indexBuffer;
+			u32 indexBuffer = 0;
 			std::vector<u32>* indices = nullptr;
 
-			u32 materialID;
+			MaterialID materialID = InvalidMaterialID;
 		};
 
 		struct UniformInfo
@@ -143,7 +150,7 @@ namespace flex
 			u32* textureID = nullptr;
 			u32* depthTextureID = nullptr;
 			std::vector<GLCubemapGBuffer>* textureGBufferIDs = nullptr;
-			glm::uvec2 textureSize;
+			glm::uvec2 textureSize = { 0, 0 };
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
 			bool generateMipmaps = false;
 			bool enableTrilinearFiltering = false;

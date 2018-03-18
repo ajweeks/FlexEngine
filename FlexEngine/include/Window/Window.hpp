@@ -87,20 +87,20 @@ namespace flex
 		// Should be updated with every call to Update()
 		GameContext& m_GameContextRef;
 
-		std::string m_TitleString;
-		glm::vec2i m_Size;
-		glm::vec2i m_StartingPosition;
-		glm::vec2i m_Position;
-		glm::vec2i m_FrameBufferSize;
-		bool m_HasFocus;
+		std::string m_TitleString = "";
+		glm::vec2i m_Size = { 0, 0 };
+		glm::vec2i m_StartingPosition = { 0, 0 };
+		glm::vec2i m_Position = { 0, 0 };
+		glm::vec2i m_FrameBufferSize = { 0, 0 };
+		bool m_HasFocus = false;
 
-		bool m_ShowFPSInWindowTitle;
-		bool m_ShowMSInWindowTitle;
+		bool m_ShowFPSInWindowTitle = true;
+		bool m_ShowMSInWindowTitle = true;
 
-		real m_UpdateWindowTitleFrequency;
-		real m_SecondsSinceTitleUpdate;
+		real m_UpdateWindowTitleFrequency = 0;
+		real m_SecondsSinceTitleUpdate = 0;
 
-		CursorMode m_CursorMode;
+		CursorMode m_CursorMode = CursorMode::NORMAL;
 
 	private:
 		std::string GenerateWindowTitle(real dt);
