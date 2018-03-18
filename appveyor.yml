@@ -3,7 +3,7 @@ os:
   - Visual Studio 2015
 install:
   - git clone --depth 1 https://github.com/bkaradzic/bx .\build\tools
-  - .\build\tools\tools\bin\windows\genie --file=build/genie.lua vs2015
+  - .\build\tools\tools\bin\windows\genie --file=scripts/genie.lua vs2015
 build:
   project: ./build/FlexEngine.sln
   verbosity: normal
