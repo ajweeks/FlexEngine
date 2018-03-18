@@ -2153,7 +2153,7 @@ namespace flex
 					createFunction(createFunction)
 				{}
 
-				std::string filePath;
+				const std::string filePath;
 				VulkanTexture** texture = nullptr;
 				bool* generate;
 				VkFormat format;
@@ -2186,7 +2186,7 @@ namespace flex
 					if (*textureInfo.texture == nullptr)
 					{
 						// Texture hasn't been loaded yet, load it now
-						std::invoke(textureInfo.createFunction, this, textureInfo.filePath, textureInfo.format, textureInfo.mipLevels, textureInfo.texture);
+						std::invoke(textureInfo.createFunction, *this, (const std::string&)textureInfo.filePath, textureInfo.format, textureInfo.mipLevels, textureInfo.texture);
 						m_LoadedTextures.push_back(*textureInfo.texture);
 
 						(*textureInfo.texture)->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -3197,68 +3197,68 @@ namespace flex
 
 				{ "albedoSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->albedoTexture ? createInfo->albedoTexture->imageView : 0u,
-				createInfo->albedoTexture ? createInfo->albedoTexture->sampler : 0u,
+				createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE,
+				createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE,
 				createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr },
 
 				{ "metallicSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->metallicTexture ? createInfo->metallicTexture->imageView : 0u,
-				createInfo->metallicTexture ? createInfo->metallicTexture->sampler : 0u,
+				createInfo->metallicTexture ? *&createInfo->metallicTexture->imageView : VK_NULL_HANDLE,
+				createInfo->metallicTexture ? *&createInfo->metallicTexture->sampler : VK_NULL_HANDLE,
 				createInfo->metallicTexture ? &createInfo->metallicTexture->imageInfoDescriptor : nullptr },
 
 				{ "roughnessSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->roughnessTexture ? createInfo->roughnessTexture->imageView : 0u,
-				createInfo->roughnessTexture ? createInfo->roughnessTexture->sampler : 0u,
+				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->imageView : VK_NULL_HANDLE,
+				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->sampler : VK_NULL_HANDLE,
 				createInfo->roughnessTexture ? &createInfo->roughnessTexture->imageInfoDescriptor : nullptr },
 
 				{ "aoSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->aoTexture ? createInfo->aoTexture->imageView : 0u,
-				createInfo->aoTexture ? createInfo->aoTexture->sampler : 0u,
+				createInfo->aoTexture ? *&createInfo->aoTexture->imageView : VK_NULL_HANDLE,
+				createInfo->aoTexture ? *&createInfo->aoTexture->sampler : VK_NULL_HANDLE,
 				createInfo->aoTexture ? &createInfo->aoTexture->imageInfoDescriptor : nullptr },
 
 				{ "diffuseSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->diffuseTexture ? createInfo->diffuseTexture->imageView : 0u,
-				createInfo->diffuseTexture ? createInfo->diffuseTexture->sampler : 0u,
+				createInfo->diffuseTexture ? *&createInfo->diffuseTexture->imageView : VK_NULL_HANDLE,
+				createInfo->diffuseTexture ? *&createInfo->diffuseTexture->sampler : VK_NULL_HANDLE,
 				createInfo->diffuseTexture ? &createInfo->diffuseTexture->imageInfoDescriptor : nullptr },
 
 				{ "normalSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->normalTexture ? createInfo->normalTexture->imageView : 0u,
-				createInfo->normalTexture ? createInfo->normalTexture->sampler : 0u,
+				createInfo->normalTexture ? *&createInfo->normalTexture->imageView : VK_NULL_HANDLE,
+				createInfo->normalTexture ? *&createInfo->normalTexture->sampler : VK_NULL_HANDLE,
 				createInfo->normalTexture ? &createInfo->normalTexture->imageInfoDescriptor : nullptr },
 
 				{ "hdrEquirectangularSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->hdrEquirectangularTexture ? createInfo->hdrEquirectangularTexture->imageView : 0u,
-				createInfo->hdrEquirectangularTexture ? createInfo->hdrEquirectangularTexture->sampler : 0u,
+				createInfo->hdrEquirectangularTexture ? *&createInfo->hdrEquirectangularTexture->imageView : VK_NULL_HANDLE,
+				createInfo->hdrEquirectangularTexture ? *&createInfo->hdrEquirectangularTexture->sampler : VK_NULL_HANDLE,
 				createInfo->hdrEquirectangularTexture ? &createInfo->hdrEquirectangularTexture->imageInfoDescriptor : nullptr },
 
 				{ "cubemapSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->cubemapTexture ? createInfo->cubemapTexture->imageView : 0u,
-				createInfo->cubemapTexture ? createInfo->cubemapTexture->sampler : 0u,
+				createInfo->cubemapTexture ? *&createInfo->cubemapTexture->imageView : VK_NULL_HANDLE,
+				createInfo->cubemapTexture ? *&createInfo->cubemapTexture->sampler : VK_NULL_HANDLE,
 				createInfo->cubemapTexture ? &createInfo->cubemapTexture->imageInfoDescriptor : nullptr },
 
 				{ "brdfLUT", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->brdfLUT ? createInfo->brdfLUT->imageView : 0u,
-				createInfo->brdfLUT ? createInfo->brdfLUT->sampler : 0u,
+				createInfo->brdfLUT ? *&createInfo->brdfLUT->imageView : VK_NULL_HANDLE,
+				createInfo->brdfLUT ? *&createInfo->brdfLUT->sampler : VK_NULL_HANDLE,
 				createInfo->brdfLUT ? &createInfo->brdfLUT->imageInfoDescriptor : nullptr },
 
 				{ "irradianceSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->irradianceTexture ? createInfo->irradianceTexture->imageView : 0u,
-				createInfo->irradianceTexture ? createInfo->irradianceTexture->sampler : 0u,
+				createInfo->irradianceTexture ? *&createInfo->irradianceTexture->imageView : VK_NULL_HANDLE,
+				createInfo->irradianceTexture ? *&createInfo->irradianceTexture->sampler : VK_NULL_HANDLE,
 				createInfo->irradianceTexture ? &createInfo->irradianceTexture->imageInfoDescriptor : nullptr },
 
 				{ "prefilterMap", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->prefilterTexture ? createInfo->prefilterTexture->imageView : 0u,
-				createInfo->prefilterTexture ? createInfo->prefilterTexture->sampler : 0u,
+				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->imageView : VK_NULL_HANDLE,
+				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->sampler : VK_NULL_HANDLE,
 				createInfo->prefilterTexture ? &createInfo->prefilterTexture->imageInfoDescriptor : nullptr },
 			};
 
@@ -3268,7 +3268,7 @@ namespace flex
 				descriptorSets.push_back({
 					frameBufferViewPair.first, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					VK_NULL_HANDLE, 0,
-					frameBufferViewPair.second ? *frameBufferViewPair.second : 0u,
+					frameBufferViewPair.second ? *frameBufferViewPair.second : VK_NULL_HANDLE,
 					m_ColorSampler
 				});
 			}
@@ -4214,7 +4214,7 @@ namespace flex
 			(*texture)->filePath = filePath;
 		}
 
-		void VulkanRenderer::CreateVulkanTexture_HDR(const std::string & filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
+		void VulkanRenderer::CreateVulkanTexture_HDR(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
 		{
 			CreateTextureImage_HDR(filePath, format, mipLevels, texture);
 			if (*texture != nullptr)

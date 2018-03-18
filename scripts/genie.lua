@@ -7,7 +7,7 @@ solution "FlexEngine"
 
 	platforms {
 		"x32",
-		"x64",
+		--"x64",
 	}
 
 	language "C++"
@@ -44,7 +44,7 @@ function platformLibraries()
 		configuration { "vs*", cfgs[i] }
 			libdirs { 
 				path.join(DEPENDENCIES_DIR, path.join("assimp/lib/code/", cfgs[i])),
-				path.join(DEPENDENCIES_DIR, path.join("glfw/glfw-project/src/", cfgs[i])),
+				path.join(DEPENDENCIES_DIR, path.join("glfw/src/", cfgs[i])),
 			}
 	end
 	configuration {}

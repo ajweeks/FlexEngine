@@ -115,11 +115,14 @@ namespace flex
 			void PrepareCubemapFrameBuffer();
 
 			void CreateVulkanTexture_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const;
+
 			// Expects *texture == nullptr
-			void CreateVulkanTexture(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture)const;
-			void CreateVulkanTexture_HDR(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture)const;
+			void CreateVulkanTexture(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const;
+			
+			void CreateVulkanTexture_HDR(const std::string& filePath, VkFormat format, u32 mipLevels, VulkanTexture** texture) const;
 
 			void CreateVulkanCubemap_Empty(u32 width, u32 height, u32 channels, u32 mipLevels, bool enableTrilinearFiltering, VkFormat format, VulkanTexture** texture) const;
+
 			// Expects *texture == nullptr
 			void CreateVulkanCubemap(const std::array<std::string, 6>& filePaths, VkFormat format, VulkanTexture** texture, bool generateMipMaps) const;
 
