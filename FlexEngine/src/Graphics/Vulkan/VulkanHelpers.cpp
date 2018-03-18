@@ -208,46 +208,44 @@ namespace flex
 
 		std::string VulkanErrorString(VkResult errorCode)
 		{
+			switch (errorCode)
 			{
-				switch (errorCode)
-				{
 #define STR(r) case VK_ ##r: return #r
-					STR(NOT_READY);
-					STR(TIMEOUT);
-					STR(EVENT_SET);
-					STR(EVENT_RESET);
-					STR(INCOMPLETE);
-					STR(ERROR_OUT_OF_HOST_MEMORY);
-					STR(ERROR_OUT_OF_DEVICE_MEMORY);
-					STR(ERROR_INITIALIZATION_FAILED);
-					STR(ERROR_DEVICE_LOST);
-					STR(ERROR_MEMORY_MAP_FAILED);
-					STR(ERROR_LAYER_NOT_PRESENT);
-					STR(ERROR_EXTENSION_NOT_PRESENT);
-					STR(ERROR_FEATURE_NOT_PRESENT);
-					STR(ERROR_INCOMPATIBLE_DRIVER);
-					STR(ERROR_TOO_MANY_OBJECTS);
-					STR(ERROR_FORMAT_NOT_SUPPORTED);
-					STR(ERROR_SURFACE_LOST_KHR);
-					STR(ERROR_NATIVE_WINDOW_IN_USE_KHR);
-					STR(SUBOPTIMAL_KHR);
-					STR(ERROR_OUT_OF_DATE_KHR);
-					STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
-					STR(ERROR_VALIDATION_FAILED_EXT);
-					STR(ERROR_INVALID_SHADER_NV);
-					STR(ERROR_OUT_OF_POOL_MEMORY_KHR);
-					STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+				STR(NOT_READY);
+				STR(TIMEOUT);
+				STR(EVENT_SET);
+				STR(EVENT_RESET);
+				STR(INCOMPLETE);
+				STR(ERROR_OUT_OF_HOST_MEMORY);
+				STR(ERROR_OUT_OF_DEVICE_MEMORY);
+				STR(ERROR_INITIALIZATION_FAILED);
+				STR(ERROR_DEVICE_LOST);
+				STR(ERROR_MEMORY_MAP_FAILED);
+				STR(ERROR_LAYER_NOT_PRESENT);
+				STR(ERROR_EXTENSION_NOT_PRESENT);
+				STR(ERROR_FEATURE_NOT_PRESENT);
+				STR(ERROR_INCOMPATIBLE_DRIVER);
+				STR(ERROR_TOO_MANY_OBJECTS);
+				STR(ERROR_FORMAT_NOT_SUPPORTED);
+				STR(ERROR_SURFACE_LOST_KHR);
+				STR(ERROR_NATIVE_WINDOW_IN_USE_KHR);
+				STR(SUBOPTIMAL_KHR);
+				STR(ERROR_OUT_OF_DATE_KHR);
+				STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
+				STR(ERROR_VALIDATION_FAILED_EXT);
+				STR(ERROR_INVALID_SHADER_NV);
+				STR(ERROR_OUT_OF_POOL_MEMORY_KHR);
+				STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 #undef STR
-				case VK_SUCCESS:
-					// No error to pri32
-					return "";
-				case VK_RESULT_RANGE_SIZE:
-				case VK_RESULT_MAX_ENUM:
-				case VK_RESULT_BEGIN_RANGE:
-					return "INVALID_ENUM";
-				default:
-					return "UNKNOWN_ERROR";
-				}
+			case VK_SUCCESS:
+				// No error to pri32
+				return "";
+			case VK_RESULT_RANGE_SIZE:
+			case VK_RESULT_MAX_ENUM:
+			case VK_RESULT_BEGIN_RANGE:
+				return "INVALID_ENUM";
+			default:
+				return "UNKNOWN_ERROR";
 			}
 		}
 
@@ -412,6 +410,9 @@ namespace flex
 			VkImageUsageFlagBits usage,
 			u32 width,
 			u32 height,
+			u32 arrayLayers,
+			VkImageViewType imageViewType,
+			VkImageCreateFlags imageFlags,
 			FrameBufferAttachment *attachment)
 		{
 			VkImageAspectFlags aspectMask = 0;
@@ -442,10 +443,11 @@ namespace flex
 			imageCreateInfo.extent.height = height;
 			imageCreateInfo.extent.depth = 1;
 			imageCreateInfo.mipLevels = 1;
-			imageCreateInfo.arrayLayers = 1;
+			imageCreateInfo.arrayLayers = arrayLayers;
 			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 			imageCreateInfo.usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCreateInfo.flags = imageFlags;
 
 			VkMemoryAllocateInfo memAlloc = {};
 			memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -460,14 +462,14 @@ namespace flex
 
 			VkImageViewCreateInfo imageView = {};
 			imageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			imageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			imageView.viewType = imageViewType;
 			imageView.format = format;
 			imageView.subresourceRange = {};
 			imageView.subresourceRange.aspectMask = aspectMask;
 			imageView.subresourceRange.baseMipLevel = 0;
-			imageView.subresourceRange.levelCount = 1;
+			imageView.subresourceRange.levelCount = 1; // Number of mipmap levels
 			imageView.subresourceRange.baseArrayLayer = 0;
-			imageView.subresourceRange.layerCount = 1;
+			imageView.subresourceRange.layerCount = arrayLayers;
 			imageView.image = attachment->image;
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, attachment->view.replace()));
 		}
@@ -574,14 +576,19 @@ namespace flex
 		}
 
 		VulkanShader::VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device) :
-			uniformBuffer(device)
+			uniformBuffer(device),
+			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
 		{
-			shader = {};
-			shader.name = name;
-			shader.vertexShaderFilePath = vertexShaderFilePath;
-			shader.fragmentShaderFilePath = fragmentShaderFilePath;
 		}
-	} // namespace vk
+
+		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
+			id(id),
+			name(name),
+			internalFormat(internalFormat)
+		{
+
+		}
+} // namespace vk
 } // namespace flex
 
 #endif // COMPILE_VULKAN

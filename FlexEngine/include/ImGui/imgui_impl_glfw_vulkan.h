@@ -9,6 +9,9 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// Modifications done by AJ Weeks:
+// Add subpass field to init data to be used in pipeline generation
+
 struct GLFWwindow;
 
 #define IMGUI_VK_QUEUED_FRAMES 3
@@ -21,6 +24,7 @@ struct ImGui_ImplGlfwVulkan_Init_Data
     VkRenderPass           render_pass;
     VkPipelineCache        pipeline_cache;
     VkDescriptorPool       descriptor_pool;
+	uint32_t               subpass;
     void (*check_vk_result)(VkResult err);
 };
 

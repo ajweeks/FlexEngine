@@ -107,11 +107,12 @@ namespace flex
 			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
-			void CreateGraphicsPipeline(RenderID renderID);
+			void CreateGraphicsPipeline(RenderID renderID, bool setCubemapRenderPass);
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
 			void CreateFramebuffers();
 			void PrepareOffscreenFrameBuffer(Window* window);
+			void PrepareCubemapFrameBuffer();
 
 			void CreateVulkanTexture_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const;
 			// Expects *texture == nullptr
@@ -169,11 +170,11 @@ namespace flex
 
 			void CreateSemaphores();
 
-			void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, u32 mipLevels, VkImageView* imageView) const;
+			void CreateImageView(VkImage image, VkFormat format, VkImageViewType viewType, VkImageAspectFlags aspectFlags, u32 mipLevels, u32 layerCount, VkImageView* imageView) const;
 			void RecreateSwapChain(Window* window);
 			VkCommandBuffer BeginSingleTimeCommands() const;
 			void EndSingleTimeCommands(VkCommandBuffer commandBuffer) const;
-			VkDeviceSize CreateImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling,
+			VkDeviceSize CreateImage(u32 width, u32 height, VkFormat format, VkImageType imageType, VkImageTiling tiling,
 				VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImageLayout initialLayout, VkImage* image, VkDeviceMemory* imageMemory, u32 arrayLayers = 1, u32 mipLevels = 1, VkImageCreateFlags flags = 0) const;
 			VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 			bool HasStencilComponent(VkFormat format) const;
@@ -215,6 +216,14 @@ namespace flex
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
+			/* 
+			 * How many materials we expect to have *at most* at any given time
+			 * This is only used to prevent local material reference variables to
+			 * remain valid, it could (should?) also be solved by storing materials
+			 * in a linked list, rather than a dynamic array
+			*/ 
+			static const u32 MAT_CAPACITY = 25;
+
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::vector<VulkanMaterial> m_LoadedMaterials;
 
@@ -236,7 +245,8 @@ namespace flex
 
 			const std::vector<const char*> m_DeviceExtensions =
 			{
-				VK_KHR_SWAPCHAIN_EXTENSION_NAME
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME
 			};
 
 #ifdef NDEBUG
@@ -260,6 +270,11 @@ namespace flex
 			VkExtent2D m_SwapChainExtent;
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
+
+			FrameBuffer* m_CubemapFrameBuffer = nullptr;
+			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
+			MeshPrefab* m_gBufferCubemapMesh = nullptr;
+			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
 
@@ -294,6 +309,7 @@ namespace flex
 			RenderID m_GBufferQuadRenderID = InvalidRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			Transform m_gBufferQuadTransform;
+			std::vector<u32> m_gBufferQuadIndices;
 
 			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;

@@ -5,7 +5,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec2 ex_TexCoord;
+layout (location = 0) in vec3 ex_WorldPosition;
 
 layout (location = 0) out vec4 fragColor;
 
@@ -42,9 +42,9 @@ layout (binding = 2) uniform sampler2D brdfLUT;
 layout (binding = 3) uniform samplerCube irradianceSampler;
 layout (binding = 4) uniform samplerCube prefilterMap;
 
-layout (binding = 5) uniform sampler2D positionMetallicFrameBufferSampler;
-layout (binding = 6) uniform sampler2D normalRoughnessFrameBufferSampler;
-layout (binding = 7) uniform sampler2D albedoAOFrameBufferSampler;
+layout (binding = 5) uniform samplerCube positionMetallicFrameBufferSampler;
+layout (binding = 6) uniform samplerCube normalRoughnessFrameBufferSampler;
+layout (binding = 7) uniform samplerCube albedoAOFrameBufferSampler;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -94,14 +94,14 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 void main()
 {
 	// Retrieve data from gbuffer
-    vec3 worldPos = texture(positionMetallicFrameBufferSampler, ex_TexCoord).rgb;
-    float metallic = texture(positionMetallicFrameBufferSampler, ex_TexCoord).a;
+    vec3 worldPos = texture(positionMetallicFrameBufferSampler, ex_WorldPosition).rgb;
+    float metallic = texture(positionMetallicFrameBufferSampler, ex_WorldPosition).a;
 
-    vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
-    float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
+    vec3 N = texture(normalRoughnessFrameBufferSampler, ex_WorldPosition).rgb;
+    float roughness = texture(normalRoughnessFrameBufferSampler, ex_WorldPosition).a;
 
-    vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;
-    float ao = texture(albedoAOFrameBufferSampler, ex_TexCoord).a;
+    vec3 albedo = texture(albedoAOFrameBufferSampler, ex_WorldPosition).rgb;
+    float ao = texture(albedoAOFrameBufferSampler, ex_WorldPosition).a;
 
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);

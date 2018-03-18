@@ -74,11 +74,6 @@ namespace flex
 		//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
 		//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 
-		//m_Skybox = new MeshPrefab(m_SkyboxMatID_1, "Skybox");
-		//m_Skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		//AddChild(gameContext, m_Skybox);
-
-		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1);
 		m_CurrentSkyboxMatID = 0;
 #endif
 
@@ -224,6 +219,8 @@ namespace flex
 		m_ReflectionProbe = new ReflectionProbe(true);
 		AddChild(gameContext, m_ReflectionProbe);
 #endif
+
+		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1);
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)

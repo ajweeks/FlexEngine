@@ -46,6 +46,7 @@ static VkRenderPass           g_RenderPass = VK_NULL_HANDLE;
 static VkPipelineCache        g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool       g_DescriptorPool = VK_NULL_HANDLE;
 static void (*g_CheckVkResult)(VkResult err) = NULL;
+static uint32_t               g_Subpass = 0;
 
 static VkCommandBuffer        g_CommandBuffer = VK_NULL_HANDLE;
 static VkDeviceSize           g_BufferMemoryAlignment = 256;
@@ -707,6 +708,7 @@ bool ImGui_ImplGlfwVulkan_CreateDeviceObjects()
 	info.pDynamicState = &dynamic_state;
 	info.layout = g_PipelineLayout;
 	info.renderPass = g_RenderPass;
+	info.subpass = g_Subpass;
 	err = vkCreateGraphicsPipelines(g_Device, g_PipelineCache, 1, &info, g_Allocator, &g_Pipeline);
 	ImGui_ImplGlfwVulkan_VkResult(err);
 
@@ -760,6 +762,7 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, ImGui_ImplGlfwVulkan_Init_
 	g_PipelineCache = init_data->pipeline_cache;
 	g_DescriptorPool = init_data->descriptor_pool;
 	g_CheckVkResult = init_data->check_vk_result;
+	g_Subpass = init_data->subpass;
 
 	g_Window = window;
 

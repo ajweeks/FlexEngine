@@ -172,17 +172,18 @@ namespace flex
 
 		struct VulkanCubemapGBuffer
 		{
+			VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat);
+
 			u32 id = 0;
 			const char* name = "";
 			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
-			//GLenum format;
 		};
 
 		struct VulkanShader
 		{
 			VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device);
 
-			Renderer::Shader shader = {};
+			Renderer::Shader shader;
 
 			UniformBuffer uniformBuffer;
 		};
