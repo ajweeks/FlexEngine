@@ -8,6 +8,9 @@ install:
   - cd FlexEngine\dependencies\assimp
   - cmake CMakeLists.txt -G "Visual Studio 14 2015"
   - cd ../../..
+  - cd FlexEngine\dependencies\glfw
+  - cmake CMakeLists.txt -G "Visual Studio 14 2015"
+  - cd ../../..
 build:
   project: ./build/FlexEngine.sln
   verbosity: normal
