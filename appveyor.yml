@@ -4,6 +4,7 @@ os:
 install:
   - git clone --depth 1 https://github.com/bkaradzic/bx .\build\tools
   - .\build\tools\tools\bin\windows\genie --file=scripts/genie.lua vs2015
+  - git submodule update --init --recursive
 build:
   project: ./build/FlexEngine.sln
   verbosity: normal
