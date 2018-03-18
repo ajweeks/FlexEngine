@@ -43,8 +43,7 @@ function platformLibraries()
 	for i = 1, #cfgs do
 		configuration { "vs*", cfgs[i] }
 			libdirs { 
-				path.join(DEPENDENCIES_DIR, path.join("assimp/lib/", cfgs[i])),
-				path.join(DEPENDENCIES_DIR, path.join("glfw/src/", cfgs[i])),
+				path.join(SOURCE_DIR, path.join("lib/", cfgs[i]))
 			}
 	end
 	configuration {}
@@ -69,7 +68,7 @@ function windowsPlatformPostBuild()
 		--copy dlls and resources after build
 		configuration { "vs*", cfgs[i] }
 			postbuildcommands { 
-				"copy \"$(SolutionDir)..\\FlexEngine\\dependencies\\assimp\\bin\\" .. cfgs[i] .. "\\assimp-vc140-mt.dll\" " ..
+				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. cfgs[i] .. "\\assimp-vc140-mt.dll\" " ..
 				"\"$(OutDir)assimp-vc140-mt.dll\""
 			}
 	end
