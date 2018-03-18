@@ -15,7 +15,7 @@
 
 namespace flex
 {
-	std::map<std::string, MeshPrefab::LoadedMesh> MeshPrefab::m_LoadedMeshes;
+	std::map<std::string, MeshPrefab::LoadedMesh*> MeshPrefab::m_LoadedMeshes;
 
 	std::string MeshPrefab::m_DefaultName = "Game Object";
 	glm::vec4 MeshPrefab::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -43,6 +43,15 @@ namespace flex
 		m_VertexBufferData.Destroy();
 	}
 
+	void MeshPrefab::Shutdown()
+	{
+		for (auto iter = m_LoadedMeshes.begin(); iter != m_LoadedMeshes.end(); /**/)
+		{
+			SafeDelete(iter->second);
+			iter = m_LoadedMeshes.erase(iter);
+		}
+	}
+
 	void MeshPrefab::ForceAttributes(VertexAttributes attributes)
 	{
 		m_ForcedAttributes |= attributes;
@@ -62,7 +71,7 @@ namespace flex
 		}
 		else
 		{
-			*scene = location->second.scene;
+			*scene = location->second->scene;
 			return true;
 		}
 	}
@@ -82,20 +91,20 @@ namespace flex
 			StripLeadingDirectories(fileName);
 			Logger::LogInfo("Loading mesh " + fileName);
 
-			auto meshObj = m_LoadedMeshes.insert({ filepath, LoadedMesh{ {}, nullptr } });
-			LoadedMesh& loadedMesh = meshObj.first->second;
+			auto meshObj = m_LoadedMeshes.emplace(filepath, new LoadedMesh());
+			LoadedMesh* loadedMesh = meshObj.first->second;
 
-			loadedMesh.scene = loadedMesh.importer.ReadFile(filepath,
+			loadedMesh->scene = loadedMesh->importer.ReadFile(filepath,
 				aiProcess_FindInvalidData |
 				aiProcess_GenNormals |
 				aiProcess_CalcTangentSpace
 			);
 
-			pScene = loadedMesh.scene;
+			pScene = loadedMesh->scene;
 
 			if (!pScene)
 			{
-				Logger::LogError(loadedMesh.importer.GetErrorString());
+				Logger::LogError(loadedMesh->importer.GetErrorString());
 				return false;
 			}
 		}
@@ -810,5 +819,9 @@ namespace flex
 	void MeshPrefab::SetUVScale(real uScale, real vScale)
 	{
 		m_UVScale = glm::vec2(uScale, vScale);
+	}
+
+	MeshPrefab::LoadedMesh::LoadedMesh()
+	{
 	}
 } // namespace flex

@@ -43,7 +43,7 @@ function platformLibraries()
 	for i = 1, #cfgs do
 		configuration { "vs*", cfgs[i] }
 			libdirs { 
-				path.join(DEPENDENCIES_DIR, path.join("assimp/lib/code/", cfgs[i])),
+				path.join(DEPENDENCIES_DIR, path.join("assimp/lib/", cfgs[i])),
 				path.join(DEPENDENCIES_DIR, path.join("glfw/src/", cfgs[i])),
 			}
 	end
@@ -69,7 +69,7 @@ function windowsPlatformPostBuild()
 		--copy dlls and resources after build
 		configuration { "vs*", cfgs[i] }
 			postbuildcommands { 
-				"copy \"$(SolutionDir)..\\FlexEngine\\dependencies\\assimp\\lib\\code\\" .. cfgs[i] .. "\\assimp-vc140-mt.dll\" " ..
+				"copy \"$(SolutionDir)..\\FlexEngine\\dependencies\\assimp\\bin\\" .. cfgs[i] .. "\\assimp-vc140-mt.dll\" " ..
 				"\"$(OutDir)assimp-vc140-mt.dll\""
 			}
 	end
@@ -150,15 +150,21 @@ project "FlexEngine"
 		path.join(SOURCE_DIR, "include/**.h"), 
 		path.join(SOURCE_DIR, "include/**.hpp"), 
 		path.join(SOURCE_DIR, "src/**.cpp"), 
-		path.join(DEPENDENCIES_DIR, "imgui/*.cpp"), --only include files in base dir
-		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"), --only include files in base dir
+		path.join(DEPENDENCIES_DIR, "imgui/imgui.h"),
+		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/imgui_draw.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/imconfig.h"),
+		path.join(DEPENDENCIES_DIR, "imgui/imgui_internal.h"),
+		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
 	}
 
 	--Exclude the following files from the build, but keep in the project
-	--removefiles {
-	--	path.join(DEPENDENCIES_DIR, "")
-	--}
+	removefiles {
+		--path.join(DEPENDENCIES_DIR, "imgui/imconfig_demo.cpp")
+	}
 
+	-- Don't use pre-compiled header for the following files
 	nopch {
 		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
 		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),

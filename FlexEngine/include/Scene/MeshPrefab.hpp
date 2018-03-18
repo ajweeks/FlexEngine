@@ -24,6 +24,8 @@ namespace flex
 		MeshPrefab(MaterialID materialID, const std::string& name = "");
 		~MeshPrefab();
 
+		static void Shutdown();
+
 		enum class PrefabShape
 		{
 			CUBE,
@@ -50,11 +52,13 @@ namespace flex
 	private:
 		struct LoadedMesh
 		{
-			Assimp::Importer importer;
-			const aiScene* scene;
+			LoadedMesh();
+
+			Assimp::Importer importer = {};
+			const aiScene* scene = nullptr;
 		};
 		static bool GetLoadedMesh(const std::string& filePath, const aiScene** scene);
-		static std::map<std::string, LoadedMesh> m_LoadedMeshes;
+		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
 		bool m_Initialized = false;
 

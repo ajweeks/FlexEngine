@@ -1,6 +1,6 @@
 [submodule "FlexEngine/dependencies/glm"]
 	path = FlexEngine/dependencies/glm
-	url = https://github.com/g-truc/glm
+	url = https://github.com/ajweeks/glm
 [submodule "FlexEngine/dependencies/stb"]
 	path = FlexEngine/dependencies/stb
 	url = https://github.com/nothings/stb
@@ -9,7 +9,7 @@
 	url = https://github.com/ajweeks/assimp
 [submodule "FlexEngine/dependencies/imgui"]
 	path = FlexEngine/dependencies/imgui
-	url = https://github.com/ocornut/imgui
+	url = https://github.com/ajweeks/imgui
 [submodule "FlexEngine/dependencies/glfw"]
 	path = FlexEngine/dependencies/glfw
 	url = https://github.com/glfw/glfw
