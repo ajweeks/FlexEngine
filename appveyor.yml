@@ -5,6 +5,7 @@ install:
   - git clone --depth 1 https://github.com/bkaradzic/bx .\build\tools
   - .\build\tools\tools\bin\windows\genie --file=scripts/genie.lua vs2015
   - git submodule update --init --recursive
+  - cmake CMakeLists.txt -G "Visual Studio 14 2015"
 build:
   project: ./build/FlexEngine.sln
   verbosity: normal

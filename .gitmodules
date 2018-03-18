@@ -6,7 +6,7 @@
 	url = https://github.com/nothings/stb
 [submodule "FlexEngine/dependencies/assimp"]
 	path = FlexEngine/dependencies/assimp
-	url = https://github.com/assimp/assimp
+	url = https://github.com/ajweeks/assimp
 [submodule "FlexEngine/dependencies/imgui"]
 	path = FlexEngine/dependencies/imgui
 	url = https://github.com/ocornut/imgui
