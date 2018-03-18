@@ -1,0 +1,12 @@
+version: 1.0.{build}
+os:
+  - Visual Studio 2015
+install:
+  - git clone --depth 1 https://github.com/bkaradzic/bx .\build\tools
+  - .\build\tools\tools\bin\windows\genie --file=build/genie.lua vs2015
+build:
+  project: ./build/FlexEngine.sln
+  verbosity: normal
+test_script:
+- cmd: >-
+    .\bin\Debug_x32\FlexEngine\FlexEngine.exe
