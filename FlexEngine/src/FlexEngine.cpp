@@ -94,6 +94,7 @@ namespace flex
 		SafeDelete(m_DefaultCamera);
 
 		DestroyWindowAndRenderer();
+		MeshPrefab::Shutdown();
 		Logger::Shutdown();
 	}
 
