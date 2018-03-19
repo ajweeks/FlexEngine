@@ -54,7 +54,7 @@ namespace flex
 		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
 		skyboxHDRMatInfo.generatePrefilteredMap = true;
 		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
+		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
 		m_SkyboxMatID_1 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
 		//m_SkyboxMatID_2 = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);

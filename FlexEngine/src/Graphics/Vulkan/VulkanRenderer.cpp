@@ -451,9 +451,9 @@ namespace flex
 			// TODO: Make cyclable at runtime
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath =
 				//RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
-				//RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
+				RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
-				RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
+				//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
