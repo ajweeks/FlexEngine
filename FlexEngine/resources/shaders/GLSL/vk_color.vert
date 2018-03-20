@@ -16,6 +16,7 @@ layout (binding = 0) uniform UBOConstant
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
+	vec4 multiplier;
 } uboDynamic;
 
 layout (location = 0) out vec4 outColor;
@@ -29,7 +30,7 @@ void main()
 {
 	gl_Position = uboConstant.viewProjection * uboDynamic.model * vec4(inWorldPos, 1.0);
 
-	outColor = inColor;
+	outColor = inColor * uboDynamic.multiplier;
 	
 	// Convert from GL coordinates to Vulkan coordinates
 	// TODO: Move out to external function in helper file

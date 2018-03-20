@@ -503,8 +503,6 @@ namespace flex
 			const float lineMaxOpacity = 0.5f;
 			glm::vec4 lineColor = Color::GRAY;
 			lineColor.a = lineMaxOpacity;
-			glm::vec4 centerLineColor = Color::LIGHT_GRAY;
-			centerLineColor.a = lineMaxOpacity;
 
 			const size_t vertexCount = GRID_LINE_COUNT * 2 * 4; // 4 verts per line (to allow for fading) *------**------*
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
@@ -523,9 +521,8 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f });
 				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth });
 
-				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 2.0f);
-				//float opacityEnds = glm::max(0.0f, opacityCenter - 0.5f);
-				glm::vec4 colorCenter = (i == GRID_LINE_COUNT / 2 ? centerLineColor : lineColor);
+				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
+				glm::vec4 colorCenter = lineColor;
 				colorCenter.a = opacityCenter;
 				glm::vec4 colorEnds = colorCenter;
 				colorEnds.a = 0.0f;
@@ -543,9 +540,8 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth });
 				vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth });
 
-				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 2.0f);
-				//float opacityEnds = glm::max(0.0f, opacityCenter - 0.5f);
-				glm::vec4 colorCenter = (i == GRID_LINE_COUNT / 2 ? centerLineColor : lineColor);
+				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
+				glm::vec4 colorCenter = lineColor;
 				colorCenter.a = opacityCenter;
 				glm::vec4 colorEnds = colorCenter;
 				colorEnds.a = 0.0f;
@@ -561,6 +557,55 @@ namespace flex
 
 			topologyMode = Renderer::TopologyMode::LINE_LIST;
 			renderObjectCreateInfo.name = "Grid";
+		} break;
+		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:
+		{
+			glm::vec4 centerLineColorX = Color::RED;
+			glm::vec4 centerLineColorY = Color::GREEN;
+
+			const size_t vertexCount = 4 * 2; // 4 verts per line (to allow for fading) *------**------*
+			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			real halfWidth = (GRID_LINE_SPACING * (GRID_LINE_COUNT - 1)) / 2.0f;
+			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, -halfWidth });
+			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
+			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
+			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, halfWidth });
+
+			float opacityCenter = 1.0f;
+			glm::vec4 colorCenter = centerLineColorX;
+			colorCenter.a = opacityCenter;
+			glm::vec4 colorEnds = colorCenter;
+			colorEnds.a = 0.0f;
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+
+			vertexBufferDataCreateInfo.positions_3D.push_back({ -halfWidth, 0.0f, 0.0f });
+			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
+			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
+			vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, 0.0f });
+
+			colorCenter = centerLineColorY;
+			colorCenter.a = opacityCenter;
+			colorEnds = colorCenter;
+			colorEnds.a = 0.0f;
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+
+			// Make sure we didn't allocate too much data
+			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
+			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
+
+			topologyMode = Renderer::TopologyMode::LINE_LIST;
+			renderObjectCreateInfo.name = "World Axis Ground Plane";
 		} break;
 		case MeshPrefab::PrefabShape::PLANE:
 		{
@@ -834,7 +879,10 @@ namespace flex
 		if (m_Shape == PrefabShape::GRID)
 		{
 			glm::vec3 camPos = gameContext.camera->GetPosition();
-			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(camPos.x, GRID_LINE_SPACING), m_Transform.GetGlobalPosition().y, camPos.z - fmod(camPos.z, GRID_LINE_SPACING));
+			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
+				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
+				m_Transform.GetGlobalPosition().y,
+				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
 			m_Transform.SetGlobalPosition(newGridPos);
 		}
 	}

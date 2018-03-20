@@ -91,13 +91,23 @@ namespace flex
 #endif
 
 #if 1 // Grid
-		Renderer::MaterialCreateInfo colorMatInfo = {};
-		colorMatInfo.shaderName = "color";
-		colorMatInfo.name = "Color";
-		const MaterialID colorMatID = gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
+		Renderer::MaterialCreateInfo gridMatInfo = {};
+		gridMatInfo.shaderName = "color";
+		gridMatInfo.name = "Color";
+		m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
 
-		m_Grid = new MeshPrefab(colorMatID, "Grid");
+		m_Grid = new MeshPrefab(m_GridMaterialID, "Grid");
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
+		AddChild(gameContext, m_Grid);
+
+		Renderer::MaterialCreateInfo worldAxisMatInfo = {};
+		worldAxisMatInfo.shaderName = "color";
+		worldAxisMatInfo.name = "Color";
+		m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+
+		m_Grid = new MeshPrefab(m_WorldAxisMaterialID, "Grid origin");
+		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
 		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
 		AddChild(gameContext, m_Grid);
 #endif
@@ -252,6 +262,16 @@ namespace flex
 		//	sin(gameContext.elapsedTime * moveSpeed) * vDist + 10.0f,
 		//	pPos.z });
 		//gameContext.camera->LookAt(glm::vec3(0.0f, 12.5f, 0.0f));
+
+		float maxHeightVisible = 100.0f;
+		float distCamToGround = gameContext.camera->GetPosition().y;
+		float maxDistVisible = 100.0f;
+		float distCamToOrigin = glm::distance(gameContext.camera->GetPosition(), glm::vec3(0, 0, 0));
+
+		glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
+		glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
+		gameContext.renderer->GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
+		gameContext.renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
 
 		// Orbit
 		static glm::vec3 startCamPos(0.0f);

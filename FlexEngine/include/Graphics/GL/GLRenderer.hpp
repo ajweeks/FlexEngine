@@ -55,6 +55,8 @@ namespace flex
 			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
+			virtual Renderer::Material& GetMaterial(MaterialID matID) override;
+
 			virtual void Destroy(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;

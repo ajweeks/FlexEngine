@@ -142,6 +142,8 @@ namespace flex
 			bool enableHDREquirectangularSampler = false;
 			bool generateHDRCubemapSampler = false;
 
+			glm::vec4 colorMultiplier = {1, 1, 1, 1};
+
 			std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
 			bool enableIrradianceSampler = false;
@@ -238,6 +240,8 @@ namespace flex
 			bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!
 
 			bool generateReflectionProbeMaps = false;
+
+			glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
 
 			// TODO: Make this more dynamic!
 			struct PushConstantBlock
@@ -352,6 +356,8 @@ namespace flex
 		virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) = 0;
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
 		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
+
+		virtual Material& GetMaterial(MaterialID matID) = 0;
 
 		virtual void Destroy(RenderID renderID) = 0;
 

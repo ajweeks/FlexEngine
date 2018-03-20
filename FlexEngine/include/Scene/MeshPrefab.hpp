@@ -30,6 +30,7 @@ namespace flex
 		{
 			CUBE,
 			GRID,
+			WORLD_AXIS_GROUND, // Two lines representing the world X and Z axis
 			PLANE,
 			UV_SPHERE,
 			SKYBOX,

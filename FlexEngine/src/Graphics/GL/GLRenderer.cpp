@@ -405,6 +405,7 @@ namespace flex
 				{ "model", 							&mat.uniformIDs.model },
 				{ "modelInvTranspose", 				&mat.uniformIDs.modelInvTranspose },
 				{ "modelViewProjection",			&mat.uniformIDs.modelViewProjection },
+				{ "colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
 				{ "view", 							&mat.uniformIDs.view },
 				{ "viewInv", 						&mat.uniformIDs.viewInv },
 				{ "viewProjection", 				&mat.uniformIDs.viewProjection },
@@ -494,6 +495,8 @@ namespace flex
 			mat.material.environmentMapPath = createInfo->environmentMapPath;
 
 			mat.material.generateReflectionProbeMaps = createInfo->generateReflectionProbeMaps;
+
+			mat.material.colorMultiplier = createInfo->colorMultiplier;
 
 			if (shader.shader.needIrradianceSampler)
 			{
@@ -2110,6 +2113,7 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
 			++shaderID;
 
 			// PBR
@@ -2350,6 +2354,7 @@ namespace flex
 			glm::mat4 proj = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 MVP = proj * view * model;
+			glm::vec4 colorMultiplier = material->material.colorMultiplier;
 
 			// TODO: Use set functions here (SetFloat, SetMatrix, ...)
 			if (shader->shader.dynamicBufferUniforms.HasUniform("model"))
@@ -2362,6 +2367,13 @@ namespace flex
 			{
 				// OpenGL will transpose for us if we set the third param to true
 				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, true, &modelInv[0][0]);
+				CheckGLErrorMessages();
+			}
+
+			if (shader->shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
+			{
+				// OpenGL will transpose for us if we set the third param to true
+				glUniform4fv(material->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
 				CheckGLErrorMessages();
 			}
 
@@ -2714,6 +2726,11 @@ namespace flex
 			{
 				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
 			}
+		}
+
+		Renderer::Material& GLRenderer::GetMaterial(MaterialID matID)
+		{
+			return m_Materials[matID].material;
 		}
 
 		void GLRenderer::Destroy(RenderID renderID)

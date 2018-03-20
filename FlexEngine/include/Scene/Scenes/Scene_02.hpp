@@ -39,6 +39,9 @@ namespace flex
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
+		MaterialID m_GridMaterialID = InvalidMaterialID;
+		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
+
 		Scene_02(const Scene_02&) = delete;
 		Scene_02& operator=(const Scene_02&) = delete;
 
