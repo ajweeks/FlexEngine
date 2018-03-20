@@ -6,6 +6,8 @@
 
 #include "Scene/ReflectionProbe.hpp"
 #include "Logger.hpp"
+#include "Physics/PhysicsWorld.hpp"
+#include "Physics/PhysicsManager.hpp"
 
 namespace flex
 {
@@ -230,6 +232,14 @@ namespace flex
 #endif
 
 		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1);
+
+		m_PhysicsWorld = new PhysicsWorld();
+		m_PhysicsWorld->Initialize(gameContext);
+
+		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
+		m_Box1Shape = gameContext.physicsManager->CreateBoxShape({ 10.0f, 10.0f, 5.0f });
+		m_Box1Shape = gameContext.physicsManager->CreateBoxShape({ 2.0f, 10.0f, 12.0f });
+		// TODO: Add rigid bodies to the scene and attach meshes!
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)

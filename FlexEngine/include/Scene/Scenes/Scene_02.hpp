@@ -6,6 +6,8 @@
 
 #include "Scene/MeshPrefab.hpp"
 
+class btCollisionShape;
+
 namespace flex
 {
 	class ReflectionProbe;
@@ -42,8 +44,10 @@ namespace flex
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
+		btCollisionShape* m_Box1Shape = nullptr;
+		btCollisionShape* m_Box2Shape = nullptr;
+
 		Scene_02(const Scene_02&) = delete;
 		Scene_02& operator=(const Scene_02&) = delete;
-
 	};
 } // namespace flex

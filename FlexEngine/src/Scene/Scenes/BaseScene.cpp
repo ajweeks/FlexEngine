@@ -6,6 +6,7 @@
 
 #include "Scene/GameObject.hpp"
 #include "Logger.hpp"
+#include "Physics/PhysicsWorld.hpp"
 
 namespace flex
 {
@@ -21,6 +22,12 @@ namespace flex
 		{
 			delete *iter;
 			iter = m_Children.erase(iter);
+		}
+
+		if (m_PhysicsWorld)
+		{
+			m_PhysicsWorld->Destroy();
+			SafeDelete(m_PhysicsWorld);
 		}
 	}
 

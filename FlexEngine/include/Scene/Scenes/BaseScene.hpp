@@ -9,6 +9,8 @@
 
 namespace flex
 {
+	class PhysicsWorld;
+
 	class BaseScene
 	{
 	public:
@@ -26,6 +28,8 @@ namespace flex
 		void AddChild(const GameContext& gameContext, GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
+
+		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 	private:
 		void RootInitialize(const GameContext& gameContext);

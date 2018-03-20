@@ -12,6 +12,7 @@
 #include "Scene/SceneManager.hpp"
 #include "Scene/Scenes/Scene_02.hpp"
 #include "Scene/Scenes/TestScene.hpp"
+#include "Physics/PhysicsManager.hpp"
 
 #include "Time.hpp"
 
@@ -77,6 +78,9 @@ namespace flex
 		m_GameContext.camera->Update(m_GameContext); // Update to set initial values
 		m_GameContext.camera = m_DefaultCamera;
 
+		m_GameContext.physicsManager = new PhysicsManager();
+		m_GameContext.physicsManager->Initialize();
+
 		m_GameContext.sceneManager = new SceneManager();
 
 		LoadDefaultScenes();
@@ -91,6 +95,11 @@ namespace flex
 		if (m_GameContext.sceneManager) m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
 		SafeDelete(m_GameContext.sceneManager);
 		SafeDelete(m_GameContext.inputManager);
+		if (m_GameContext.physicsManager)
+		{
+			m_GameContext.physicsManager->Destroy();
+			SafeDelete(m_GameContext.physicsManager);
+		}
 		SafeDelete(m_DefaultCamera);
 
 		DestroyWindowAndRenderer();

@@ -1,8 +1,22 @@
 
+-- 
+-- NOTES:
+-- - DLLs should be built using the Multi-threaded Debug DLL flag (/MDd) in debug,
+--   and the Multi-threade DLL flag (/MD) in release
+-- 
+
+-- 
+-- TODO: 
+-- [ ] Figure out how to disable warnings for individual files
+-- [ ] 
+-- 
+
+
 solution "FlexEngine"
 	configurations {
 		"Debug",
-		"Release",
+		"Development",
+		"Shipping"
 	}
 
 	platforms {
@@ -98,6 +112,7 @@ configuration "vs*"
 		path.join(DEPENDENCIES_DIR, "assimp/include"),
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
+		path.join(DEPENDENCIES_DIR, "bullet/src"),
 	}
 	debugdir "$(OutDir)"
 configuration { "vs*", "x32" }
@@ -138,6 +153,15 @@ project "FlexEngine"
 
 	--Linked libraries
     links { "opengl32", "glfw3", "vulkan-1", "assimp-vc140-mt" }
+
+
+configuration { "Debug" }
+	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug" } 
+configuration { "Development" }
+	links { "BulletCollision", "BulletDynamics", "LinearMath" }
+configuration { "Shipping" }
+	links { "BulletCollision", "BulletDynamics", "LinearMath" } 
+configuration {}
 
 	--Additional includedirs
 	includedirs { 
