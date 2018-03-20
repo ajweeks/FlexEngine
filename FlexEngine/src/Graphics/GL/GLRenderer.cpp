@@ -1835,6 +1835,16 @@ namespace flex
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 						CheckGLErrorMessages();
 
+						if (shader->translucent)
+						{
+							glEnable(GL_BLEND);
+							glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+						}
+						else
+						{
+							glDisable(GL_BLEND);
+						}
+
 						if (renderObject->indexed)
 						{
 							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
@@ -1850,6 +1860,16 @@ namespace flex
 				else
 				{
 					// renderToCubemap is false, just render normally
+
+					if (shader->translucent)
+					{
+						glEnable(GL_BLEND);
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					}
+					else
+					{
+						glDisable(GL_BLEND);
+					}
 
 					if (renderObject->indexed)
 					{
@@ -2085,6 +2105,7 @@ namespace flex
 
 			// Color
 			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.translucent = true;
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 

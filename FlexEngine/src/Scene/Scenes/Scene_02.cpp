@@ -99,7 +99,6 @@ namespace flex
 		m_Grid = new MeshPrefab(colorMatID, "Grid");
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
-		m_Grid->GetTransform().Scale(0.2f);
 		AddChild(gameContext, m_Grid);
 #endif
 

@@ -32,7 +32,8 @@ namespace flex
 			GRID,
 			PLANE,
 			UV_SPHERE,
-			SKYBOX
+			SKYBOX,
+			NONE
 		};
 
 		void ForceAttributes(VertexAttributes attributes); // Call this before loading to force certain attributes to be filled
@@ -66,6 +67,12 @@ namespace flex
 
 		static std::string m_DefaultName;
 		std::string m_Name = "";
+
+		PrefabShape m_Shape = PrefabShape::NONE;
+
+		static const real GRID_LINE_SPACING;
+		static const u32 GRID_LINE_COUNT;
+
 
 		glm::vec2 m_UVScale = { 1,1 };
 

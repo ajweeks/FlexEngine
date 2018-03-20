@@ -297,6 +297,7 @@ namespace flex
 			bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 			i32 subpass = 0;
 			bool depthWriteEnable = true;
+			bool translucent = false;
 
 			// These variables should be set to true when the shader has these uniforms
 			bool needDiffuseSampler = false;
