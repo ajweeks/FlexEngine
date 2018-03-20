@@ -1838,6 +1838,7 @@ namespace flex
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 						CheckGLErrorMessages();
 
+						// TODO: Move to translucent pass?
 						if (shader->translucent)
 						{
 							glEnable(GL_BLEND);
@@ -1864,6 +1865,7 @@ namespace flex
 				{
 					// renderToCubemap is false, just render normally
 
+					// TODO: Move to translucent pass?
 					if (shader->translucent)
 					{
 						glEnable(GL_BLEND);

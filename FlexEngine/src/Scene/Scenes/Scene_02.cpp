@@ -263,9 +263,9 @@ namespace flex
 		//	pPos.z });
 		//gameContext.camera->LookAt(glm::vec3(0.0f, 12.5f, 0.0f));
 
-		float maxHeightVisible = 100.0f;
+		float maxHeightVisible = 300.0f;
 		float distCamToGround = gameContext.camera->GetPosition().y;
-		float maxDistVisible = 100.0f;
+		float maxDistVisible = 300.0f;
 		float distCamToOrigin = glm::distance(gameContext.camera->GetPosition(), glm::vec3(0, 0, 0));
 
 		glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
