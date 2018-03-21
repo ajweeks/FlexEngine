@@ -519,3 +519,4 @@ pip-log.txt
 
 # Excludes
 !FlexEngine/lib/Debug
+!FlexEngine/lib/Release

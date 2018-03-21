@@ -4,8 +4,10 @@
 #include <string>
 #include <array>
 
+#pragma warning(push, 0)
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#pragma warning(pop)
 
 #include "Logger.hpp"
 #include "Types.hpp"

@@ -3,7 +3,7 @@
 #define NOMINMAX
 
 #define COMPILE_OPEN_GL 1
-#define COMPILE_VULKAN 1
+#define COMPILE_VULKAN 0
 
 #pragma warning(disable : 4201) // nonstandard extension used: nanmeless struct/union
 //#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'

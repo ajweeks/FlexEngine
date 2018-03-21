@@ -11,6 +11,7 @@ namespace flex
 	class Renderer;
 	class FlexEngine;
 	class SceneManager;
+	class PhysicsManager;
 
 	struct GameContext
 	{
@@ -21,6 +22,7 @@ namespace flex
 		FlexEngine* engineInstance = nullptr;
 		SceneManager* sceneManager = nullptr;
 		Monitor monitor = {};
+		PhysicsManager* physicsManager = nullptr;
 
 		sec elapsedTime = 0;
 		sec deltaTime = 0;
