@@ -1,12 +1,15 @@
 #pragma once
 
+#pragma warning(push, 0)
 #include <btBulletDynamicsCommon.h>
-
-#include <vector>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#pragma warning(pop)
+
+#include <vector>
+
 
 class btDefaultCollisionConfiguration;
 class btCollisionDispatcher;
@@ -44,9 +47,11 @@ namespace flex
 	};
 
 	btVector3 ToBtVec3(const glm::vec3& rhs);
-
 	btVector4 ToBtVec4(const glm::vec4& rhs);
-
 	btQuaternion ToBtQuaternion(const glm::quat& rhs);
+
+	glm::vec3 FromBtVec3(const btVector3& rhs);
+	glm::vec4 FromBtVec4(const btVector4& rhs);
+	glm::quat FromBtQuaternion(const btQuaternion& rhs);
 
 } // namespace flex

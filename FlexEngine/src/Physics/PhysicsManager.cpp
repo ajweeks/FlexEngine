@@ -69,4 +69,19 @@ namespace flex
 	{
 		return btQuaternion(rhs.x, rhs.y, rhs.z, rhs.w);
 	}
+
+	glm::vec3 FromBtVec3(const btVector3& rhs)
+	{
+		return glm::vec3(rhs.getX(), rhs.getY(), rhs.getZ());
+	}
+
+	glm::vec4 FromBtVec4(const btVector4& rhs)
+	{
+		return glm::vec4(rhs.getX(), rhs.getY(), rhs.getZ(), rhs.getW());
+	}
+
+	glm::quat FromBtQuaternion(const btQuaternion& rhs)
+	{
+		return glm::quat(rhs.getX(), rhs.getY(), rhs.getZ(), rhs.getW());
+	}
 } // namespace flex

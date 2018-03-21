@@ -8,6 +8,7 @@
 #include "Logger.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/PhysicsManager.hpp"
+#include "Physics/RigidBody.hpp"
 
 namespace flex
 {
@@ -237,9 +238,56 @@ namespace flex
 		m_PhysicsWorld->Initialize(gameContext);
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-		m_Box1Shape = gameContext.physicsManager->CreateBoxShape({ 10.0f, 10.0f, 5.0f });
-		m_Box1Shape = gameContext.physicsManager->CreateBoxShape({ 2.0f, 10.0f, 12.0f });
+		m_BoxShape = gameContext.physicsManager->CreateBoxShape({ 1.0f, 1.0f, 1.0f });
 		// TODO: Add rigid bodies to the scene and attach meshes!
+
+		rb1 = new RigidBody();
+		rb1->SetMass(100.0f);
+		rb1->Initialize(m_BoxShape, gameContext);
+
+		rb2 = new RigidBody();
+		rb2->SetMass(50.0f);
+		rb2->Initialize(m_BoxShape, gameContext, true, true);
+
+		{
+			Renderer::MaterialCreateInfo pbrMatInfo = {};
+			pbrMatInfo.shaderName = "pbr";
+			pbrMatInfo.name = "PBR box";
+			//pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.95f);
+			//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.22f, 0.2f);
+			pbrMatInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.5f);
+			pbrMatInfo.constMetallic = 1.0f;
+			pbrMatInfo.constRoughness = 0.5f;
+			pbrMatInfo.constAO = 1.0f;
+			MaterialID boxMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+
+			m_Box1 = new MeshPrefab(boxMatID, "Box 1");
+			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
+			m_Box1->GetTransform().SetLocalPosition(glm::vec3(40.0f, 500.0f, 40.0f));
+			AddChild(gameContext, m_Box1);
+			m_Box1->GetTransform().SetGlobalScale(glm::vec3(0.5f, 0.5f, 1.0f));
+
+			m_Box2 = new MeshPrefab(boxMatID, "Box 2");
+			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
+			m_Box2->GetTransform().SetLocalPosition(glm::vec3(-20.0f, 0.0f, -20.0f));
+			AddChild(gameContext, m_Box2);
+			m_Box2->GetTransform().SetGlobalScale(glm::vec3(3.0f, 0.05f, 3.0f));
+
+			//glm::vec3 pos;
+			//glm::quat rot;
+			//glm::vec3 scale;
+			//rb1->GetTransform(pos, rot, scale);
+			//rb2->GetTransform(pos, rot, scale);
+
+			rb1->SetPosition(m_Box1->GetTransform().GetGlobalPosition());
+			rb1->SetRotation(m_Box1->GetTransform().GetGlobalRotation());
+			rb1->SetScale(m_Box1->GetTransform().GetGlobalScale());
+
+			rb2->SetPosition(m_Box2->GetTransform().GetGlobalPosition());
+			rb2->SetRotation(m_Box2->GetTransform().GetGlobalRotation());
+			rb2->SetScale(m_Box2->GetTransform().GetGlobalScale());
+			
+		}
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
@@ -272,6 +320,18 @@ namespace flex
 		//	sin(gameContext.elapsedTime * moveSpeed) * vDist + 10.0f,
 		//	pPos.z });
 		//gameContext.camera->LookAt(glm::vec3(0.0f, 12.5f, 0.0f));
+
+		glm::vec3 pos;
+		glm::quat rot;
+		glm::vec3 scale;
+		rb1->GetTransform(pos, rot, scale);
+
+		m_Box1->GetTransform().SetGlobalPosition(pos);
+		m_Box1->GetTransform().SetGlobalRotation(rot);
+
+		rb2->GetTransform(pos, rot, scale);
+		m_Box2->GetTransform().SetGlobalPosition(pos);
+		m_Box2->GetTransform().SetGlobalRotation(rot);
 
 		float maxHeightVisible = 300.0f;
 		float distCamToGround = gameContext.camera->GetPosition().y;

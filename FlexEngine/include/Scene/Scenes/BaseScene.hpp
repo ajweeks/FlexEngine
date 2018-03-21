@@ -19,6 +19,8 @@ namespace flex
 
 		std::string GetName() const;
 
+		PhysicsWorld* GetPhysicsWorld();
+
 	protected:
 		virtual void Initialize(const GameContext& gameContext) = 0;
 		virtual void PostInitialize(const GameContext& gameContext) = 0;

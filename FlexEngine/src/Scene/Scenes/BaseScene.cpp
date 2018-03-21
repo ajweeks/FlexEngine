@@ -36,6 +36,11 @@ namespace flex
 		return m_Name;
 	}
 
+	PhysicsWorld* BaseScene::GetPhysicsWorld()
+	{
+		return m_PhysicsWorld;
+	}
+
 	void BaseScene::AddChild(const GameContext& gameContext, GameObject* pGameObject)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
@@ -112,6 +117,11 @@ namespace flex
 
 	void BaseScene::RootUpdate(const GameContext& gameContext)
 	{
+		if (m_PhysicsWorld)
+		{
+			m_PhysicsWorld->Update(gameContext.deltaTime);
+		}
+
 		Update(gameContext);
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)

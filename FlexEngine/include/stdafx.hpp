@@ -57,6 +57,8 @@ inline void SafeDelete(T &pObjectToDelete)
 	}
 }
 
+#define btAssert(e) assert(e)
+
 #pragma warning(push, 0) // Don't generate warnings for 3rd party code    
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

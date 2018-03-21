@@ -2094,6 +2094,8 @@ namespace flex
 			mat.material.aoTexturePath = createInfo->aoTexturePath;
 			mat.material.enableAOSampler = createInfo->enableAOSampler;
 
+			mat.material.colorMultiplier = createInfo->colorMultiplier;
+
 			mat.material.enableHDREquirectangularSampler = createInfo->enableHDREquirectangularSampler;
 			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
 			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
@@ -2658,6 +2660,11 @@ namespace flex
 			{
 				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
 			}
+		}
+
+		Renderer::Material& VulkanRenderer::GetMaterial(MaterialID matID)
+		{
+			return m_LoadedMaterials[matID].material;
 		}
 
 		void VulkanRenderer::Destroy(RenderID renderID)
@@ -3495,7 +3502,7 @@ namespace flex
 			pipelineCreateInfo.enableCulling = renderObject->enableCulling;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
 			pipelineCreateInfo.setDynamicStates = false;
-			pipelineCreateInfo.enabledColorBlending = false;
+			pipelineCreateInfo.enabledColorBlending = true;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.subpass = shader.shader.subpass;
@@ -3628,8 +3635,8 @@ namespace flex
 					colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 					colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 					colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-					colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-					colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+					colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+					colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 					colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 				}
 				else
@@ -5860,6 +5867,7 @@ namespace flex
 			glm::mat4 projection = gameContext.camera->GetProjection();
 			glm::mat4 view = gameContext.camera->GetView();
 			glm::mat4 modelViewProjection = projection * view * model;
+			glm::vec4 colorMultiplier = material.material.colorMultiplier;
 			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;
 			u32 enableMetallicSampler = material.material.enableMetallicSampler;
 			u32 enableRoughnessSampler = material.material.enableRoughnessSampler;
@@ -5869,7 +5877,7 @@ namespace flex
 			u32 enableCubemapSampler = material.material.enableCubemapSampler;
 			u32 enableIrradianceSampler = material.material.enableIrradianceSampler;
 
-			// TODO: Roll i32o array?
+			// TODO: Roll into array?
 			if (uniformOverrides)
 			{
 				if (uniformOverrides->overridenUniforms.HasUniform("model"))
@@ -5969,6 +5977,7 @@ namespace flex
 				{ "modelInvTranspose", (void*)&modelInvTranspose, 64, 16 },
 				{ "modelViewProjection", (void*)&modelViewProjection, 64, 16 },
 				// view, viewInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
+				{ "colorMultiplier", (void*)&material.material.colorMultiplier, 16, 4 },
 				{ "constAlbedo", (void*)&material.material.constAlbedo, 16, 4 },
 				{ "constMetallic", (void*)&material.material.constMetallic, 4, 1 },
 				{ "constRoughness", (void*)&material.material.constRoughness, 4, 1 },
@@ -6064,6 +6073,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("uniformBufferDynamic");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
 			++shaderID;
 
 			// PBR

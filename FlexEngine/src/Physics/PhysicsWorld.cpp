@@ -2,7 +2,9 @@
 
 #include "Physics/PhysicsWorld.hpp"
 
+#pragma warning(push, 0)
 #include <btBulletDynamicsCommon.h>
+#pragma warning(pop)
 
 #include "Physics/PhysicsManager.hpp"
 #include "GameContext.hpp"

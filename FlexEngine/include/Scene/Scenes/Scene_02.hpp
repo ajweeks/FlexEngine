@@ -10,6 +10,7 @@ class btCollisionShape;
 
 namespace flex
 {
+	class RigidBody;
 	class ReflectionProbe;
 
 	class Scene_02 : public BaseScene
@@ -44,8 +45,17 @@ namespace flex
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
-		btCollisionShape* m_Box1Shape = nullptr;
-		btCollisionShape* m_Box2Shape = nullptr;
+
+		// TEMP:
+		btCollisionShape* m_BoxShape = nullptr;
+
+		RigidBody* rb1 = nullptr;
+		RigidBody* rb2 = nullptr;
+
+		MeshPrefab* m_Box1 = nullptr;
+		MeshPrefab* m_Box2 = nullptr;
+
+
 
 		Scene_02(const Scene_02&) = delete;
 		Scene_02& operator=(const Scene_02&) = delete;
