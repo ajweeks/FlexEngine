@@ -241,13 +241,24 @@ namespace flex
 		m_BoxShape = gameContext.physicsManager->CreateBoxShape({ 1.0f, 1.0f, 1.0f });
 		// TODO: Add rigid bodies to the scene and attach meshes!
 
-		rb1 = new RigidBody();
-		rb1->SetMass(100.0f);
-		rb1->Initialize(m_BoxShape, gameContext);
+		btTransform groundPlaneTransform = btTransform::getIdentity();
+		groundPlaneTransform.setOrigin({ 20, 0, 0 });
+		btTransform rb1Transform = btTransform::getIdentity();
+		rb1Transform.setOrigin({ 20, 10, 0 });
+		btTransform rb2Transform = btTransform::getIdentity();
+		rb2Transform.setOrigin({ 20, 15, 0 });
 
-		rb2 = new RigidBody();
-		rb2->SetMass(50.0f);
-		rb2->Initialize(m_BoxShape, gameContext, true, true);
+		rb1 = new RigidBody(1, 1);
+		rb1->SetMass(1.0f);
+		rb1->Initialize(m_BoxShape, gameContext, rb1Transform);
+
+		rb2 = new RigidBody(1, 1);
+		rb2->SetMass(0.85f);
+		rb2->Initialize(m_BoxShape, gameContext, rb2Transform);
+
+		groundPlaneRB = new RigidBody(1, 1);
+		groundPlaneRB->SetMass(0.0f);
+		groundPlaneRB->Initialize(m_BoxShape, gameContext, groundPlaneTransform, false, true);
 
 		{
 			Renderer::MaterialCreateInfo pbrMatInfo = {};
@@ -255,23 +266,39 @@ namespace flex
 			pbrMatInfo.name = "PBR box";
 			//pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.95f);
 			//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.22f, 0.2f);
-			pbrMatInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.5f);
+			pbrMatInfo.constAlbedo = glm::vec3(0.2f, 0.89f, 0.95f);
 			pbrMatInfo.constMetallic = 1.0f;
-			pbrMatInfo.constRoughness = 0.5f;
+			pbrMatInfo.constRoughness = 0.1f;
 			pbrMatInfo.constAO = 1.0f;
-			MaterialID boxMatID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+			MaterialID boxMat1ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
-			m_Box1 = new MeshPrefab(boxMatID, "Box 1");
+			pbrMatInfo.constMetallic = 1.0f;
+			pbrMatInfo.constRoughness = 0.22f;
+			pbrMatInfo.constAlbedo = glm::vec3(0.92f, 0.93f, 0.95f);
+			MaterialID boxMat2ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+
+			pbrMatInfo.constMetallic = 1.0f;
+			pbrMatInfo.constRoughness = 0.22f;
+			pbrMatInfo.constAlbedo = glm::vec3(0.9f, 0.25f, 0.1f);
+			MaterialID boxMat3ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
+
+			m_GroundPlane = new MeshPrefab(boxMat1ID, "Ground Plane");
+			m_GroundPlane->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
+			m_GroundPlane->GetTransform().SetLocalPosition(glm::vec3(20, 0, 0));
+			AddChild(gameContext, m_GroundPlane);
+			m_GroundPlane->GetTransform().SetGlobalScale(glm::vec3(3.0f, 0.4f, 3.0f));
+
+			m_Box1 = new MeshPrefab(boxMat2ID, "Box 2");
 			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_Box1->GetTransform().SetLocalPosition(glm::vec3(40.0f, 500.0f, 40.0f));
+			m_Box1->GetTransform().SetLocalPosition(glm::vec3(20, 10, 0));
 			AddChild(gameContext, m_Box1);
-			m_Box1->GetTransform().SetGlobalScale(glm::vec3(0.5f, 0.5f, 1.0f));
+			m_Box1->GetTransform().SetGlobalScale(glm::vec3(0.4f, 0.4f, 1.0f));
 
-			m_Box2 = new MeshPrefab(boxMatID, "Box 2");
+			m_Box2 = new MeshPrefab(boxMat3ID, "Box 2");
 			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_Box2->GetTransform().SetLocalPosition(glm::vec3(-20.0f, 0.0f, -20.0f));
+			m_Box2->GetTransform().SetLocalPosition(glm::vec3(20, 15, 0));
 			AddChild(gameContext, m_Box2);
-			m_Box2->GetTransform().SetGlobalScale(glm::vec3(3.0f, 0.05f, 3.0f));
+			m_Box2->GetTransform().SetGlobalScale(glm::vec3(1.0f, 0.4f, 0.4f));
 
 			//glm::vec3 pos;
 			//glm::quat rot;
@@ -279,13 +306,13 @@ namespace flex
 			//rb1->GetTransform(pos, rot, scale);
 			//rb2->GetTransform(pos, rot, scale);
 
-			rb1->SetPosition(m_Box1->GetTransform().GetGlobalPosition());
-			rb1->SetRotation(m_Box1->GetTransform().GetGlobalRotation());
-			rb1->SetScale(m_Box1->GetTransform().GetGlobalScale());
+			//rb1->SetPosition(m_Box1->GetTransform().GetGlobalPosition());
+			//rb1->SetRotation(m_Box1->GetTransform().GetGlobalRotation());
+			//rb1->SetScale(m_Box1->GetTransform().GetGlobalScale());
 
-			rb2->SetPosition(m_Box2->GetTransform().GetGlobalPosition());
-			rb2->SetRotation(m_Box2->GetTransform().GetGlobalRotation());
-			rb2->SetScale(m_Box2->GetTransform().GetGlobalScale());
+			//rb2->SetPosition(m_Box2->GetTransform().GetGlobalPosition());
+			//rb2->SetRotation(m_Box2->GetTransform().GetGlobalRotation());
+			//rb2->SetScale(m_Box2->GetTransform().GetGlobalScale());
 			
 		}
 	}
@@ -303,6 +330,12 @@ namespace flex
 		if (m_ReflectionProbe)
 		{
 			m_ReflectionProbe->Destroy(gameContext);
+		}
+
+		if (groundPlaneRB)
+		{
+			groundPlaneRB->Destroy(gameContext);
+			SafeDelete(groundPlaneRB);
 		}
 
 		if (rb1)
@@ -344,6 +377,18 @@ namespace flex
 		rb2->GetTransform(pos, rot, scale);
 		m_Box2->GetTransform().SetGlobalPosition(pos);
 		m_Box2->GetTransform().SetGlobalRotation(rot);
+
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_SPACE))
+		{
+			rb1->GetRigidBodyInternal()->activate(false);
+			rb1->GetRigidBodyInternal()->clearForces();
+			rb1->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
+
+			rb2->GetRigidBodyInternal()->activate(false);
+			rb2->GetRigidBodyInternal()->clearForces();
+			rb2->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
+		}
+
 
 		float maxHeightVisible = 300.0f;
 		float distCamToGround = gameContext.camera->GetPosition().y;

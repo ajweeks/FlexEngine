@@ -14,7 +14,9 @@
 
 namespace flex
 {
-	RigidBody::RigidBody()
+	RigidBody::RigidBody(int group, int mask) :
+		m_Group(group),
+		m_Mask(mask)
 	{
 	}
 
@@ -22,31 +24,38 @@ namespace flex
 	{
 	}
 
-	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, bool isKinematic, bool isStatic)
+	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform, bool isKinematic, bool isStatic)
 	{
-		btTransform startTransform = btTransform::getIdentity();
-		
 		btVector3 localInertia(0, 0, 0);
 		if (!isStatic)
 		{
 			collisionShape->calculateLocalInertia(m_Mass, localInertia);
 		}
 
-		m_MotionState = new btDefaultMotionState(startTransform);
+		if (isStatic)
+		{
+			assert(m_Mass == 0);
+		}
+
+		m_MotionState = new btDefaultMotionState(startingTransform);
 		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
 
 		m_RigidBody = new btRigidBody(info);
 
+		int flags = m_RigidBody->getFlags();
 		if (isKinematic)
 		{
-			m_RigidBody->setFlags(btCollisionObject::CF_KINEMATIC_OBJECT);
+			flags |= btCollisionObject::CF_KINEMATIC_OBJECT;
 		}
 		if (isStatic)
 		{
-			m_RigidBody->setFlags(btCollisionObject::CF_STATIC_OBJECT);
+			flags |= btCollisionObject::CF_STATIC_OBJECT;
 		}
+		m_RigidBody->setFlags(flags);
 
-		gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody);
+		m_RigidBody->setDamping(0.0f, 0.0f);
+
+		gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
 	}
 
 	void RigidBody::Destroy(const GameContext& gameContext)
@@ -94,6 +103,11 @@ namespace flex
 	void RigidBody::SetScale(const glm::vec3& scale)
 	{
 		m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(scale));
+	}
+
+	btRigidBody* RigidBody::GetRigidBodyInternal()
+	{
+		return m_RigidBody;
 	}
 
 	//glm::vec3 RigidBody::GetPosition()
