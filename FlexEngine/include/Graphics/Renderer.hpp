@@ -275,7 +275,7 @@ namespace flex
 		{
 			std::map<std::string, bool> types;
 
-			inline bool HasUniform(const std::string& name) const;
+			bool HasUniform(const std::string& name) const;
 			void AddUniform(const std::string& name);
 			void RemoveUniform(const std::string& name);
 			u32 CalculateSize(i32 PointLightCount);
@@ -358,15 +358,14 @@ namespace flex
 		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
 		virtual Material& GetMaterial(MaterialID matID) = 0;
+		virtual Shader& GetShader(ShaderID shaderID)  = 0;
 
 		virtual void Destroy(RenderID renderID) = 0;
 
 		virtual void ImGuiNewFrame() = 0;
 
-		//virtual void ImGuiInvalidateFontUploadObjects();
-		//virtual void ImGuiInvalidateDeviceObjects();
-		//virtual void ImGuiCreateFontsTexture();
-		//virtual void ImGuiCreateDeviceObjects();
+		void SetDrawPhysicsDebugObjects(bool drawPhysicsDebugObjects);
+		void ToggleDrawPhysicsDebugObjects();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
 
@@ -384,6 +383,7 @@ namespace flex
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 		bool m_VSyncEnabled = true;
+		bool m_DrawPhysicsDebugObjects = false;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

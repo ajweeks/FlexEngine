@@ -14,6 +14,8 @@ namespace flex
 
 	namespace gl
 	{
+		class GLPhysicsDebugDraw;
+
 		class GLRenderer : public Renderer
 		{
 		public:
@@ -55,14 +57,19 @@ namespace flex
 			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
-			virtual Renderer::Material& GetMaterial(MaterialID matID) override;
+			virtual Material& GetMaterial(MaterialID materialID) override;
+			virtual Shader& GetShader(ShaderID shaderID) override;
 
 			virtual void Destroy(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;
 
 		private:
+			friend class GLPhysicsDebugDraw;
+
 			void ImGuiRender();
+
+			void PhysicsDebugRender(const GameContext& gameContext);
 
 			// TODO: Either use these functions or remove them
 			void SetFloat(ShaderID shaderID, const std::string& valName, real val);
@@ -89,8 +96,10 @@ namespace flex
 
 			bool GetLoadedTexture(const std::string& filePath, u32& handle);
 
-			MaterialID GetNextAvailableMaterialID();
 			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
+			bool GetMaterialID(const std::string& materialName, MaterialID& materialID);
+
+			MaterialID GetNextAvailableMaterialID();
 
 			GLRenderObject* GetRenderObject(RenderID renderID);
 			RenderID GetNextAvailableRenderID() const;
@@ -183,6 +192,8 @@ namespace flex
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
+
+			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

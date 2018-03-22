@@ -18,6 +18,8 @@ namespace flex
 
 	namespace vk
 	{
+		class VulkanDebugDraw;
+
 		class VulkanRenderer : public Renderer
 		{
 		public:
@@ -59,11 +61,13 @@ namespace flex
 			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
-			virtual Renderer::Material& GetMaterial(MaterialID matID) override;
+			virtual Material& GetMaterial(MaterialID materialID) override;
+			virtual Shader& GetShader(ShaderID shaderID) override;
 
 			virtual void Destroy(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;
+
 		private:
 			void Destroy(RenderID renderID, VulkanRenderObject* renderObject);
 			
@@ -322,6 +326,8 @@ namespace flex
 			VkClearColorValue m_ClearColor;
 
 			static std::array<glm::mat4, 6> m_CaptureViews;
+
+			VulkanDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;

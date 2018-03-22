@@ -24,6 +24,8 @@ namespace flex
 		if (!m_World)
 		{
 			m_World = gameContext.physicsManager->CreateWorld();
+			
+			//m_World->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawAabb);
 		}
 	}
 

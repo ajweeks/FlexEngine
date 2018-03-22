@@ -15,16 +15,21 @@
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
 
+#include "BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h"
+
 #include "FreeCamera.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
+#include "Graphics/GL/GLPhysicsDebugDraw.hpp"
 #include "Logger.hpp"
 #include "Window/Window.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "VertexAttribute.hpp"
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Helpers.hpp"
+#include "Scene/Scenes/BaseScene.hpp"
 #include "Scene/MeshPrefab.hpp"
+#include "Helpers.hpp"
+#include "Physics/PhysicsWorld.hpp"
 
 
 namespace flex
@@ -362,6 +367,8 @@ namespace flex
 			}
 			m_RenderObjects.clear();
 			CheckGLErrorMessages();
+
+			SafeDelete(m_PhysicsDebugDrawer);
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_SpriteQuadVertexBufferData.Destroy();
@@ -1344,6 +1351,21 @@ namespace flex
 			return false;
 		}
 
+		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
+		{
+			// TODO: Store shaders using sorted data structure?
+			for (size_t i = 0; i < m_Materials.size(); ++i)
+			{
+				if (m_Materials[i].material.name.compare(materialName) == 0)
+				{
+					materialID = i;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		DirectionalLightID GLRenderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
 		{
 			m_DirectionalLight = dirLight;
@@ -1403,6 +1425,11 @@ namespace flex
 
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
 			CheckGLErrorMessages();
+
+
+			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(this);
+			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			world->setDebugDrawer(m_PhysicsDebugDrawer);
 
 			Logger::LogInfo("Ready!\n");
 		}
@@ -1468,6 +1495,12 @@ namespace flex
 			DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawOffscreenTexture(gameContext);
+
+			if (m_DrawPhysicsDebugObjects)
+			{
+				PhysicsDebugRender(gameContext);
+			}
+
 			ImGuiRender();
 
 			SwapBuffers(gameContext);
@@ -2735,6 +2768,11 @@ namespace flex
 			return m_Materials[matID].material;
 		}
 
+		Renderer::Shader& GLRenderer::GetShader(ShaderID shaderID)
+		{
+			return m_Shaders[shaderID].shader;
+		}
+
 		void GLRenderer::Destroy(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
@@ -2760,6 +2798,14 @@ namespace flex
 		{
 			ImGui::Render();
 			ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+		}
+
+		void GLRenderer::PhysicsDebugRender(const GameContext& gameContext)
+		{
+			btDiscreteDynamicsWorld* physicsWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			physicsWorld->debugDrawWorld();
+
+			//m_PhysicsDebugDrawer->Draw();
 		}
 
 		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)

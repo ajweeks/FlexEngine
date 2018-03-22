@@ -25,9 +25,15 @@ namespace flex
 	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, bool isKinematic, bool isStatic)
 	{
 		btTransform startTransform = btTransform::getIdentity();
+		
+		btVector3 localInertia(0, 0, 0);
+		if (!isStatic)
+		{
+			collisionShape->calculateLocalInertia(m_Mass, localInertia);
+		}
 
 		m_MotionState = new btDefaultMotionState(startTransform);
-		btRigidBody::btRigidBodyConstructionInfo info = btRigidBody::btRigidBodyConstructionInfo(m_Mass, m_MotionState, collisionShape);
+		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
 
 		m_RigidBody = new btRigidBody(info);
 

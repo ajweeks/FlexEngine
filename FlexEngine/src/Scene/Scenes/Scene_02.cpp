@@ -304,6 +304,18 @@ namespace flex
 		{
 			m_ReflectionProbe->Destroy(gameContext);
 		}
+
+		if (rb1)
+		{
+			rb1->Destroy(gameContext);
+			SafeDelete(rb1);
+		}
+
+		if (rb2)
+		{
+			rb2->Destroy(gameContext);
+			SafeDelete(rb2);
+		}
 	}
 
 	void Scene_02::Update(const GameContext& gameContext)

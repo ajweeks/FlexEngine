@@ -27,6 +27,7 @@
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/MeshPrefab.hpp"
+#include "Graphics/Vulkan/VulkanPhysicsDebugDraw.h"
 
 namespace flex
 {
@@ -221,6 +222,8 @@ namespace flex
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
 			m_SwapChainFramebuffers.clear();
+
+			SafeDelete(m_PhysicsDebugDrawer);
 
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
@@ -2662,9 +2665,14 @@ namespace flex
 			}
 		}
 
-		Renderer::Material& VulkanRenderer::GetMaterial(MaterialID matID)
+		Renderer::Material& VulkanRenderer::GetMaterial(MaterialID materialID)
 		{
 			return m_LoadedMaterials[matID].material;
+		}
+
+		Shader& GetShader(ShaderID shaderID)
+		{
+			return m_Shaders[shaderID];
 		}
 
 		void VulkanRenderer::Destroy(RenderID renderID)

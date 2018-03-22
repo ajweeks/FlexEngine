@@ -55,9 +55,14 @@ end
 function platformLibraries()
 	local cfgs = configurations()
 	for i = 1, #cfgs do
+		local subdir = ""
+		if (string.startswith(cfgs[i], "Debug"))
+			then subdir = "Debug"
+			else subdir = "Release"
+		end
 		configuration { "vs*", cfgs[i] }
 			libdirs { 
-				path.join(SOURCE_DIR, path.join("lib/", cfgs[i]))
+				path.join(SOURCE_DIR, path.join("lib/", subdir))
 			}
 	end
 	configuration {}

@@ -44,8 +44,9 @@ void _CheckGLErrorMessages(const char *file, flex::i32 line);
 	#include "Graphics/GL/GLRenderer.hpp"
 	#include "Window/GL/GLWindowWrapper.hpp"
 
-
 #endif // COMPILE_OPEN_GL
+
+#include "Physics/PhysicsTypeConversions.hpp"
 
 template<class T>
 inline void SafeDelete(T &pObjectToDelete)

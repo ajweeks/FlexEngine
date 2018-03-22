@@ -14,7 +14,7 @@ namespace flex
 	{
 	}
 
-	inline bool Renderer::Uniforms::HasUniform(const std::string& name) const
+	bool Renderer::Uniforms::HasUniform(const std::string& name) const
 	{
 		return (types.find(name) != types.end());
 	}
@@ -71,6 +71,16 @@ namespace flex
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
 	{
 		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
+	}
+
+	void Renderer::SetDrawPhysicsDebugObjects(bool drawPhysicsDebugObjects)
+	{
+		m_DrawPhysicsDebugObjects = drawPhysicsDebugObjects;
+	}
+
+	void Renderer::ToggleDrawPhysicsDebugObjects()
+	{
+		SetDrawPhysicsDebugObjects(!m_DrawPhysicsDebugObjects);
 	}
 	
 	Renderer::Shader::Shader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :

@@ -1,6 +1,7 @@
 #pragma once
 
 #pragma warning(push, 0)
+// TODO: Include only required headers rather than common headers
 #include <btBulletDynamicsCommon.h>
 
 #include <glm/vec3.hpp>
@@ -45,13 +46,5 @@ namespace flex
 		std::vector<btCollisionShape*> m_Shapes;
 
 	};
-
-	btVector3 ToBtVec3(const glm::vec3& rhs);
-	btVector4 ToBtVec4(const glm::vec4& rhs);
-	btQuaternion ToBtQuaternion(const glm::quat& rhs);
-
-	glm::vec3 FromBtVec3(const btVector3& rhs);
-	glm::vec4 FromBtVec4(const btVector4& rhs);
-	glm::quat FromBtQuaternion(const btQuaternion& rhs);
 
 } // namespace flex

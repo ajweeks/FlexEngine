@@ -6,6 +6,8 @@
 
 #include <imgui.h>
 
+#include "BulletDynamics/Dynamics/btDynamicsWorld.h"
+
 #include "FreeCamera.hpp"
 #include "Logger.hpp"
 #include "Helpers.hpp"
@@ -13,6 +15,7 @@
 #include "Scene/Scenes/Scene_02.hpp"
 #include "Scene/Scenes/TestScene.hpp"
 #include "Physics/PhysicsManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
 
 #include "Time.hpp"
 
@@ -306,6 +309,11 @@ namespace flex
 				}
 
 				m_GameContext.renderer->PostInitialize(m_GameContext);
+			}
+
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
+			{
+				m_GameContext.renderer->ToggleDrawPhysicsDebugObjects();
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
