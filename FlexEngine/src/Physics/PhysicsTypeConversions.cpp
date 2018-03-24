@@ -29,5 +29,5 @@ glm::vec4 FromBtVec4(const btVector4& rhs)
 
 glm::quat FromBtQuaternion(const btQuaternion& rhs)
 {
-	return glm::quat(rhs.getX(), rhs.getY(), rhs.getZ(), rhs.getW());
+	return glm::quat(rhs.getW(), rhs.getX(), rhs.getY(), rhs.getZ());
 }
