@@ -48,10 +48,24 @@ namespace flex
 		return nullptr;
 	}
 
-	btBoxShape* PhysicsManager::CreateBoxShape(const glm::vec3& halfExtent)
+	btBoxShape* PhysicsManager::CreateBoxShape(const btVector3& halfExtent)
 	{
-		btBoxShape* box = new btBoxShape(ToBtVec3(halfExtent));
+		btBoxShape* box = new btBoxShape(halfExtent);
 		m_Shapes.push_back(box);
 		return box;
+	}
+
+	btSphereShape* PhysicsManager::CreateSphereShape(btScalar radius)
+	{
+		btSphereShape* sphere = new btSphereShape(radius);
+		m_Shapes.push_back(sphere);
+		return sphere;
+	}
+
+	btCapsuleShape* PhysicsManager::CreateCapsuleShape(btScalar radius, btScalar height)
+	{
+		btCapsuleShape* capsule = new btCapsuleShape(radius, height);
+		m_Shapes.push_back(capsule);
+		return capsule;
 	}
 } // namespace flex

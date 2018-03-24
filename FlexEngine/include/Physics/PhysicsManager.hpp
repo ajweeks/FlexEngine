@@ -20,6 +20,8 @@ class btSequentialImpulseConstraintSolver;
 class btDiscreteDynamicsWorld;
 
 class btBoxShape;
+class btSphereShape;
+class btCapsuleShape;
 class btCollisionShape;
 
 namespace flex
@@ -31,7 +33,9 @@ namespace flex
 		void Destroy();
 
 		btDiscreteDynamicsWorld* CreateWorld();
-		btBoxShape* CreateBoxShape(const glm::vec3& halfExtent);
+		btBoxShape* CreateBoxShape(const btVector3& halfExtent);
+		btSphereShape* CreateSphereShape(btScalar radius);
+		btCapsuleShape* CreateCapsuleShape(btScalar radius, btScalar height);
 
 	private:
 		bool m_Initialized = false;

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Scene/MeshPrefab.hpp"
+#include "Physics/Collider.hpp"
 
 class btCollisionShape;
 
@@ -45,6 +46,10 @@ namespace flex
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
+
+		Collider box1Collider;
+		Collider box2Collider;
+		Collider box3Collider;
 
 		// TEMP:
 		RigidBody* rb1 = nullptr;

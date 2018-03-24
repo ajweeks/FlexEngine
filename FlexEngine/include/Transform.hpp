@@ -4,12 +4,13 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-
-
 namespace flex
 {
-	struct Transform
+	class RigidBody;
+	
+	class Transform
 	{
+	public:
 		Transform();
 		Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale);
 		Transform(const glm::vec3& position, const glm::quat& rotation);
@@ -48,6 +49,8 @@ namespace flex
 
 		void SetLocalScale(const glm::vec3& scale);
 		void SetGlobalScale(const glm::vec3& scale);
+
+		void MatchRigidBody(RigidBody* rigidBody, bool forceUpdate = false);
 
 
 		void Translate(const glm::vec3& deltaPosition);

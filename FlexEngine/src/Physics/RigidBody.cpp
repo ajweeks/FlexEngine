@@ -74,14 +74,13 @@ namespace flex
 		m_Mass = mass;
 	}
 
-	void RigidBody::GetTransform(glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale)
+	void RigidBody::GetTransform(glm::vec3& outPos, glm::quat& outRot)
 	{
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
 
 		outPos = FromBtVec3(transform.getOrigin());
 		outRot = FromBtQuaternion(transform.getRotation());
-		outScale = FromBtVec3(m_RigidBody->getCollisionShape()->getLocalScaling());
 	}
 
 	void RigidBody::SetPosition(const glm::vec3& pos)

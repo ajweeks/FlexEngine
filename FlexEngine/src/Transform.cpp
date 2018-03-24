@@ -7,6 +7,10 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
+#include "BulletDynamics/Dynamics/btRigidBody.h"
+
+#include "Physics/RigidBody.hpp"
+
 namespace flex
 {
 	Transform::Transform()
@@ -385,6 +389,21 @@ namespace flex
 		}
 
 		UpdateParentTransform();
+	}
+
+	void Transform::MatchRigidBody(RigidBody* rigidBody, bool forceUpdate)
+	{
+		btRigidBody* rb = rigidBody->GetRigidBodyInternal();
+		bool update = forceUpdate || (!rb->isStaticObject() && rb->isActive());
+		if (update)
+		{
+			glm::vec3 pos;
+			glm::quat rot;
+			rigidBody->GetTransform(pos, rot);
+
+			SetGlobalPosition(pos);
+			SetGlobalRotation(rot);
+		}
 	}
 
 } // namespace flex

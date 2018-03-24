@@ -239,28 +239,21 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
-		glm::vec3 box1HalfExtent = { 6.0f, 0.1f, 6.0f };
+		box1Collider = {};
+		box1Collider.CreateBoxCollider(gameContext, { 6.0f, 0.1f, 6.0f });
 
-		glm::vec3 box2HalfExtent = { 1.5f, 1.1f, 3.0f };
+		box2Collider = {};
+		box2Collider.CreateBoxCollider(gameContext, { 1.5f, 1.1f, 3.0f });
 
-		glm::vec3 box3HalfExtent = { 0.5f, 1.5f, 2.0f };
+		box3Collider = {};
+		box3Collider.CreateBoxCollider(gameContext, { 0.5f, 1.5f, 2.0f });
 
-		btBoxShape* box1Shape = gameContext.physicsManager->CreateBoxShape(box1HalfExtent);
-		btBoxShape* box2Shape = gameContext.physicsManager->CreateBoxShape(box2HalfExtent);
-		btBoxShape* box3Shape = gameContext.physicsManager->CreateBoxShape(box3HalfExtent);
 		// TODO: Add rigid bodies to the scene and attach meshes!
 
-		btVector3 box1HalfExtentsWMargin = box1Shape->getHalfExtentsWithMargin();
-		btScalar margin1 = box1Shape->getMargin();
-		glm::vec3 box1Scale = FromBtVec3(box1HalfExtentsWMargin);// / 2.0f - glm::vec3(margin1);
 
-		btVector3 box2HalfExtentsWMargin = box2Shape->getHalfExtentsWithMargin();
-		btScalar margin2 = box1Shape->getMargin();
-		glm::vec3 box2Scale = FromBtVec3(box2HalfExtentsWMargin);// / 2.0f - glm::vec3(margin2);
-
-		btVector3 box3HalfExtentsWMargin = box3Shape->getHalfExtentsWithMargin();
-		btScalar margin3 = box1Shape->getMargin();
-		glm::vec3 box3Scale = FromBtVec3(box3HalfExtentsWMargin);// / 2.0f - glm::vec3(margin3);
+		glm::vec3 box1Scale = FromBtVec3(box1Collider.GetScale());
+		glm::vec3 box2Scale = FromBtVec3(box2Collider.GetScale());
+		glm::vec3 box3Scale = FromBtVec3(box3Collider.GetScale());
 
 		btTransform rb1Transform = btTransform::getIdentity();
 		rb1Transform.setOrigin({ 20, 0, 0 });
@@ -271,15 +264,15 @@ namespace flex
 
 		rb1 = new RigidBody(1, 1);
 		rb1->SetMass(0.0f);
-		rb1->Initialize(box1Shape, gameContext, rb1Transform, false, true);
+		rb1->Initialize(box1Collider.GetShape(), gameContext, rb1Transform, false, true);
 
 		rb2 = new RigidBody(1, 1);
 		rb2->SetMass(1.0f);
-		rb2->Initialize(box2Shape, gameContext, rb2Transform);
+		rb2->Initialize(box2Collider.GetShape(), gameContext, rb2Transform);
 
 		rb3 = new RigidBody(1, 1);
 		rb3->SetMass(0.85f);
-		rb3->Initialize(box3Shape, gameContext, rb3Transform);
+		rb3->Initialize(box3Collider.GetShape(), gameContext, rb3Transform);
 
 		{
 			Renderer::MaterialCreateInfo pbrMatInfo = {};
@@ -305,22 +298,23 @@ namespace flex
 
 			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
 			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_Box1->GetTransform().SetLocalPosition(glm::vec3(20, 0, 0));
 			AddChild(gameContext, m_Box1);
 			m_Box1->GetTransform().SetGlobalScale(box1Scale);
 
 			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
 			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_Box2->GetTransform().SetLocalPosition(glm::vec3(20, 10, 0));
 			AddChild(gameContext, m_Box2);
 			m_Box2->GetTransform().SetGlobalScale(box2Scale);
 
 			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
 			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_Box3->GetTransform().SetLocalPosition(glm::vec3(20, 15, 0));
 			AddChild(gameContext, m_Box3);
 			m_Box3->GetTransform().SetGlobalScale(box3Scale);
 		}
+
+		m_Box1->GetTransform().MatchRigidBody(rb1, true);
+		m_Box2->GetTransform().MatchRigidBody(rb2, true);
+		m_Box3->GetTransform().MatchRigidBody(rb3, true);
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
@@ -359,19 +353,9 @@ namespace flex
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
-		glm::vec3 pos;
-		glm::quat rot;
-		glm::vec3 scale;
-		rb2->GetTransform(pos, rot, scale);
-
-		m_Box2->GetTransform().SetGlobalPosition(pos);
-		m_Box2->GetTransform().SetGlobalRotation(rot);
-		//m_Box2->GetTransform().Translate(0, scale.y / 2.0f, 0);
-
-		rb3->GetTransform(pos, rot, scale);
-		m_Box3->GetTransform().SetGlobalPosition(pos);
-		m_Box3->GetTransform().SetGlobalRotation(rot);
-		//m_Box3->GetTransform().Translate(0, scale.y / 2.0f, 0);
+		m_Box1->GetTransform().MatchRigidBody(rb1);
+		m_Box2->GetTransform().MatchRigidBody(rb2);
+		m_Box3->GetTransform().MatchRigidBody(rb3);
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_SPACE))
 		{

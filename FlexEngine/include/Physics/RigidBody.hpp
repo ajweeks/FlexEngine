@@ -18,7 +18,7 @@ namespace flex
 
 		void SetMass(real mass);
 
-		void GetTransform(glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale);
+		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
 		//glm::vec3 GetPosition();
 		//glm::quat GetRotation();
 		
