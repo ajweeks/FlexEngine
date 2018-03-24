@@ -22,7 +22,7 @@ namespace flex
 	public:
 		MeshPrefab(const std::string& name = "");
 		MeshPrefab(MaterialID materialID, const std::string& name = "");
-		~MeshPrefab();
+		virtual ~MeshPrefab();
 
 		static void Shutdown();
 
