@@ -47,15 +47,13 @@ namespace flex
 
 
 		// TEMP:
-		btCollisionShape* m_BoxShape = nullptr;
-
-		RigidBody* groundPlaneRB = nullptr;
 		RigidBody* rb1 = nullptr;
 		RigidBody* rb2 = nullptr;
+		RigidBody* rb3 = nullptr;
 
-		MeshPrefab* m_GroundPlane = nullptr;
 		MeshPrefab* m_Box1 = nullptr;
 		MeshPrefab* m_Box2 = nullptr;
+		MeshPrefab* m_Box3 = nullptr;
 
 
 

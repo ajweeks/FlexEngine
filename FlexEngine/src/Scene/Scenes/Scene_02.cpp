@@ -238,27 +238,48 @@ namespace flex
 		m_PhysicsWorld->Initialize(gameContext);
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-		m_BoxShape = gameContext.physicsManager->CreateBoxShape({ 1.0f, 1.0f, 1.0f });
+
+		glm::vec3 box1HalfExtent = { 6.0f, 0.1f, 6.0f };
+
+		glm::vec3 box2HalfExtent = { 1.5f, 1.1f, 3.0f };
+
+		glm::vec3 box3HalfExtent = { 0.5f, 1.5f, 2.0f };
+
+		btBoxShape* box1Shape = gameContext.physicsManager->CreateBoxShape(box1HalfExtent);
+		btBoxShape* box2Shape = gameContext.physicsManager->CreateBoxShape(box2HalfExtent);
+		btBoxShape* box3Shape = gameContext.physicsManager->CreateBoxShape(box3HalfExtent);
 		// TODO: Add rigid bodies to the scene and attach meshes!
 
-		btTransform groundPlaneTransform = btTransform::getIdentity();
-		groundPlaneTransform.setOrigin({ 20, 0, 0 });
+		btVector3 box1HalfExtentsWMargin = box1Shape->getHalfExtentsWithMargin();
+		btScalar margin1 = box1Shape->getMargin();
+		glm::vec3 box1Scale = FromBtVec3(box1HalfExtentsWMargin);// / 2.0f - glm::vec3(margin1);
+
+		btVector3 box2HalfExtentsWMargin = box2Shape->getHalfExtentsWithMargin();
+		btScalar margin2 = box1Shape->getMargin();
+		glm::vec3 box2Scale = FromBtVec3(box2HalfExtentsWMargin);// / 2.0f - glm::vec3(margin2);
+
+		btVector3 box3HalfExtentsWMargin = box3Shape->getHalfExtentsWithMargin();
+		btScalar margin3 = box1Shape->getMargin();
+		glm::vec3 box3Scale = FromBtVec3(box3HalfExtentsWMargin);// / 2.0f - glm::vec3(margin3);
+
 		btTransform rb1Transform = btTransform::getIdentity();
-		rb1Transform.setOrigin({ 20, 10, 0 });
+		rb1Transform.setOrigin({ 20, 0, 0 });
 		btTransform rb2Transform = btTransform::getIdentity();
-		rb2Transform.setOrigin({ 20, 15, 0 });
+		rb2Transform.setOrigin({ 20, 10, 0 });
+		btTransform rb3Transform = btTransform::getIdentity();
+		rb3Transform.setOrigin({ 20, 15, 0 });
 
 		rb1 = new RigidBody(1, 1);
-		rb1->SetMass(1.0f);
-		rb1->Initialize(m_BoxShape, gameContext, rb1Transform);
+		rb1->SetMass(0.0f);
+		rb1->Initialize(box1Shape, gameContext, rb1Transform, false, true);
 
 		rb2 = new RigidBody(1, 1);
-		rb2->SetMass(0.85f);
-		rb2->Initialize(m_BoxShape, gameContext, rb2Transform);
+		rb2->SetMass(1.0f);
+		rb2->Initialize(box2Shape, gameContext, rb2Transform);
 
-		groundPlaneRB = new RigidBody(1, 1);
-		groundPlaneRB->SetMass(0.0f);
-		groundPlaneRB->Initialize(m_BoxShape, gameContext, groundPlaneTransform, false, true);
+		rb3 = new RigidBody(1, 1);
+		rb3->SetMass(0.85f);
+		rb3->Initialize(box3Shape, gameContext, rb3Transform);
 
 		{
 			Renderer::MaterialCreateInfo pbrMatInfo = {};
@@ -282,38 +303,23 @@ namespace flex
 			pbrMatInfo.constAlbedo = glm::vec3(0.9f, 0.25f, 0.1f);
 			MaterialID boxMat3ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
-			m_GroundPlane = new MeshPrefab(boxMat1ID, "Ground Plane");
-			m_GroundPlane->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_GroundPlane->GetTransform().SetLocalPosition(glm::vec3(20, 0, 0));
-			AddChild(gameContext, m_GroundPlane);
-			m_GroundPlane->GetTransform().SetGlobalScale(glm::vec3(3.0f, 0.4f, 3.0f));
-
-			m_Box1 = new MeshPrefab(boxMat2ID, "Box 2");
+			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
 			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_Box1->GetTransform().SetLocalPosition(glm::vec3(20, 10, 0));
+			m_Box1->GetTransform().SetLocalPosition(glm::vec3(20, 0, 0));
 			AddChild(gameContext, m_Box1);
-			m_Box1->GetTransform().SetGlobalScale(glm::vec3(0.4f, 0.4f, 1.0f));
+			m_Box1->GetTransform().SetGlobalScale(box1Scale);
 
-			m_Box2 = new MeshPrefab(boxMat3ID, "Box 2");
+			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
 			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			m_Box2->GetTransform().SetLocalPosition(glm::vec3(20, 15, 0));
+			m_Box2->GetTransform().SetLocalPosition(glm::vec3(20, 10, 0));
 			AddChild(gameContext, m_Box2);
-			m_Box2->GetTransform().SetGlobalScale(glm::vec3(1.0f, 0.4f, 0.4f));
+			m_Box2->GetTransform().SetGlobalScale(box2Scale);
 
-			//glm::vec3 pos;
-			//glm::quat rot;
-			//glm::vec3 scale;
-			//rb1->GetTransform(pos, rot, scale);
-			//rb2->GetTransform(pos, rot, scale);
-
-			//rb1->SetPosition(m_Box1->GetTransform().GetGlobalPosition());
-			//rb1->SetRotation(m_Box1->GetTransform().GetGlobalRotation());
-			//rb1->SetScale(m_Box1->GetTransform().GetGlobalScale());
-
-			//rb2->SetPosition(m_Box2->GetTransform().GetGlobalPosition());
-			//rb2->SetRotation(m_Box2->GetTransform().GetGlobalRotation());
-			//rb2->SetScale(m_Box2->GetTransform().GetGlobalScale());
-			
+			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
+			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
+			m_Box3->GetTransform().SetLocalPosition(glm::vec3(20, 15, 0));
+			AddChild(gameContext, m_Box3);
+			m_Box3->GetTransform().SetGlobalScale(box3Scale);
 		}
 	}
 
@@ -332,12 +338,6 @@ namespace flex
 			m_ReflectionProbe->Destroy(gameContext);
 		}
 
-		if (groundPlaneRB)
-		{
-			groundPlaneRB->Destroy(gameContext);
-			SafeDelete(groundPlaneRB);
-		}
-
 		if (rb1)
 		{
 			rb1->Destroy(gameContext);
@@ -349,44 +349,39 @@ namespace flex
 			rb2->Destroy(gameContext);
 			SafeDelete(rb2);
 		}
+
+		if (rb3)
+		{
+			rb3->Destroy(gameContext);
+			SafeDelete(rb3);
+		}
 	}
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
-		// Circle
-		//real moveSpeed = 1.25f;
-		//real hDist = 10.0f;
-		//real vDist = 8.0f;
-
-		//const glm::vec3 pPos = gameContext.camera->GetPosition();
-
-		//gameContext.camera->SetPosition({
-		//	cos(gameContext.elapsedTime * moveSpeed) * hDist + 0.0f, 
-		//	sin(gameContext.elapsedTime * moveSpeed) * vDist + 10.0f,
-		//	pPos.z });
-		//gameContext.camera->LookAt(glm::vec3(0.0f, 12.5f, 0.0f));
-
 		glm::vec3 pos;
 		glm::quat rot;
 		glm::vec3 scale;
-		rb1->GetTransform(pos, rot, scale);
-
-		m_Box1->GetTransform().SetGlobalPosition(pos);
-		m_Box1->GetTransform().SetGlobalRotation(rot);
-
 		rb2->GetTransform(pos, rot, scale);
+
 		m_Box2->GetTransform().SetGlobalPosition(pos);
 		m_Box2->GetTransform().SetGlobalRotation(rot);
+		//m_Box2->GetTransform().Translate(0, scale.y / 2.0f, 0);
+
+		rb3->GetTransform(pos, rot, scale);
+		m_Box3->GetTransform().SetGlobalPosition(pos);
+		m_Box3->GetTransform().SetGlobalRotation(rot);
+		//m_Box3->GetTransform().Translate(0, scale.y / 2.0f, 0);
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_SPACE))
 		{
-			rb1->GetRigidBodyInternal()->activate(false);
-			rb1->GetRigidBodyInternal()->clearForces();
-			rb1->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
-
-			rb2->GetRigidBodyInternal()->activate(false);
+			rb2->GetRigidBodyInternal()->activate();
 			rb2->GetRigidBodyInternal()->clearForces();
 			rb2->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
+
+			rb3->GetRigidBodyInternal()->activate();
+			rb3->GetRigidBodyInternal()->clearForces();
+			rb3->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
 		}
 
 

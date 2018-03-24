@@ -383,7 +383,7 @@ namespace flex
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 		bool m_VSyncEnabled = true;
-		bool m_DrawPhysicsDebugObjects = false;
+		bool m_DrawPhysicsDebugObjects = true;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;
