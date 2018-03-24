@@ -1473,6 +1473,8 @@ namespace flex
 
 		void GLRenderer::Update(const GameContext& gameContext)
 		{
+			m_PhysicsDebugDrawer->UpdateDebugMode();
+
 			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
@@ -1503,7 +1505,7 @@ namespace flex
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawOffscreenTexture(gameContext);
 
-			if (m_DrawPhysicsDebugObjects)
+			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
 				PhysicsDebugRender(gameContext);
 			}

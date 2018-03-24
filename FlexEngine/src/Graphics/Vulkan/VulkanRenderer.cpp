@@ -2401,6 +2401,8 @@ namespace flex
 
 		void VulkanRenderer::Update(const GameContext& gameContext)
 		{
+			m_PhysicsDebugDrawer->UpdateDebugMode();
+
 			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)

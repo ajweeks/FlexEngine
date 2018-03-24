@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include "BulletDynamics/Dynamics/btDynamicsWorld.h"
 
@@ -313,7 +314,8 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
 			{
-				m_GameContext.renderer->ToggleDrawPhysicsDebugObjects();
+				PhysicsDebuggingSettings& settings = m_GameContext.renderer->GetPhysicsDebuggingSettings();
+				settings.DrawWireframe = !settings.DrawWireframe;
 			}
 
 			m_GameContext.camera->Update(m_GameContext);
@@ -333,12 +335,76 @@ namespace flex
 				static const char* rendCharStr = rendererStr.c_str();
 				ImGui::Text(rendCharStr);
 
-				if (ImGui::TreeNode("Renderer settings"))
+				static const char* rendererSettingsStr = "Renderer settings";
+				if (ImGui::TreeNode(rendererSettingsStr))
 				{
 					static const char* vsyncEnabledStr = "VSync";
 					if (ImGui::Checkbox(vsyncEnabledStr, &m_VSyncEnabled))
 					{
 						m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+					}
+
+					static const char* physicsDebuggingStr = "Physics debugging";
+					if (ImGui::TreeNode(physicsDebuggingStr))
+					{
+						PhysicsDebuggingSettings& physicsDebuggingSettings =  m_GameContext.renderer->GetPhysicsDebuggingSettings();
+
+						static const char* disableAllStr = "Disable All";
+						ImGui::Checkbox(disableAllStr, &physicsDebuggingSettings.DisableAll);
+
+						ImGui::Spacing();
+						ImGui::Spacing();
+						ImGui::Spacing();
+
+						static const char* wireframeStr = "Wireframe";
+						ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
+
+						static const char* aabbStr = "AABB";
+						ImGui::Checkbox(aabbStr, &physicsDebuggingSettings.DrawAabb);
+
+						static const char* drawFeaturesTextStr = "Draw Features Text";
+						ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
+
+						static const char* drawContactPointsStr = "Draw Contact Points";
+						ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
+
+						static const char* noDeactivationStr = "No Deactivation";
+						ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
+
+						static const char* noHelpTextStr = "No Help Text";
+						ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
+
+						static const char* drawTextStr = "Draw Text";
+						ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
+
+						static const char* profileTimingsStr = "Profile Timings";
+						ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
+
+						static const char* satComparisonStr = "Sat Comparison";
+						ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
+
+						static const char* disableBulletLCPStr = "Disable Bullet LCP";
+						ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
+
+						static const char* ccdStr = "CCD";
+						ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
+
+						static const char* drawConstraintsStr = "Draw Constraints";
+						ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
+
+						static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
+						ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
+
+						static const char* fastWireframeStr = "Fast Wireframe";
+						ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
+
+						static const char* drawNormalsStr = "Draw Normals";
+						ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
+
+						static const char* drawFramesStr = "Draw Frames";
+						ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
+
+						ImGui::TreePop();
 					}
 
 					ImGui::TreePop();
@@ -477,7 +543,7 @@ namespace flex
 
 		// Scale correctly on high DPI monitors
 		// TODO: Handle more cleanly
-		if (m_GameContext.monitor.width > 1920.0f)
+		//if (m_GameContext.monitor.width > 1920.0f)
 		{
 			io.FontGlobalScale = 2.0f;
 		}

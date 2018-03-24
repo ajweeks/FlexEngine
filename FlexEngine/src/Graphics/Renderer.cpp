@@ -73,14 +73,9 @@ namespace flex
 		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
 	}
 
-	void Renderer::SetDrawPhysicsDebugObjects(bool drawPhysicsDebugObjects)
+	PhysicsDebuggingSettings& Renderer::GetPhysicsDebuggingSettings()
 	{
-		m_DrawPhysicsDebugObjects = drawPhysicsDebugObjects;
-	}
-
-	void Renderer::ToggleDrawPhysicsDebugObjects()
-	{
-		SetDrawPhysicsDebugObjects(!m_DrawPhysicsDebugObjects);
+		return m_PhysicsDebuggingSettings;
 	}
 	
 	Renderer::Shader::Shader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :

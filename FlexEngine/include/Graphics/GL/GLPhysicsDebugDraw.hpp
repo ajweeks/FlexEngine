@@ -20,6 +20,8 @@ namespace flex
 			GLPhysicsDebugDraw(const GameContext& gameContext);
 			virtual ~GLPhysicsDebugDraw();
 
+			void UpdateDebugMode();
+
 			virtual void reportErrorWarning(const char* warningString)  override;
 			virtual void draw3dText(const btVector3& location, const char* textString)  override;
 			virtual void setDebugMode(int debugMode)  override;
@@ -33,10 +35,9 @@ namespace flex
 			virtual void flushLines() override;
 			virtual void clearLines() override;
 			
-			
+		private:
 			void Draw();
 
-		private:
 			struct LineSegment
 			{
 				btVector3 start;
@@ -47,7 +48,7 @@ namespace flex
 			// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()
 			std::vector<LineSegment> m_LineSegments;
 
-			int m_DebugMode = DBG_DrawWireframe | DBG_DrawAabb;
+			int m_DebugMode = 0;
 
 			GLRenderer* m_Renderer = nullptr;
 			const GameContext& m_GameContext;

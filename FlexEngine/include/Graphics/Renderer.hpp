@@ -12,6 +12,7 @@
 
 #include "VertexBufferData.hpp"
 #include "Transform.hpp"
+#include "Physics/PhysicsDebuggingSettings.hpp"
 
 /*
  * TODO:
@@ -364,8 +365,7 @@ namespace flex
 
 		virtual void ImGuiNewFrame() = 0;
 
-		void SetDrawPhysicsDebugObjects(bool drawPhysicsDebugObjects);
-		void ToggleDrawPhysicsDebugObjects();
+		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
 
@@ -383,7 +383,7 @@ namespace flex
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 		bool m_VSyncEnabled = true;
-		bool m_DrawPhysicsDebugObjects = true;
+		PhysicsDebuggingSettings m_PhysicsDebuggingSettings;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;
