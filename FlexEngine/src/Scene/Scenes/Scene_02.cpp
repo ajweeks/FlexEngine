@@ -111,7 +111,7 @@ namespace flex
 
 		m_Grid = new MeshPrefab(m_WorldAxisMaterialID, "Grid origin");
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
-		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
+		m_Grid->GetTransform().Translate(0.0f, -0.09f, 0.0f);
 		AddChild(gameContext, m_Grid);
 #endif
 

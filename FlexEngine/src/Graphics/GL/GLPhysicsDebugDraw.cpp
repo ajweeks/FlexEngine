@@ -6,15 +6,19 @@
 #include "VertexAttribute.hpp"
 
 #include "Logger.hpp"
+#include "Graphics/Renderer.hpp"
+#include "GameContext.hpp"
+#include "FreeCamera.hpp"
 
 namespace flex
 {
 	namespace gl
 	{
-		GLPhysicsDebugDraw::GLPhysicsDebugDraw(GLRenderer* renderer) :
-			m_Renderer(renderer)
+		GLPhysicsDebugDraw::GLPhysicsDebugDraw(const GameContext& gameContext) :
+			m_GameContext(gameContext)
 		{
-			if (!renderer->GetMaterialID("Color", m_MaterialID))
+			m_Renderer = (GLRenderer*)(m_GameContext.renderer);
+			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
 			{
 				Logger::LogError("Failed to retrieve shader for GL physics debug draw!");
 			}
@@ -57,10 +61,28 @@ namespace flex
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
 		}
 
+		btIDebugDraw::DefaultColors GLPhysicsDebugDraw::getDefaultColors() const
+		{
+			DefaultColors colors = {};
+
+			colors.m_activeObject.setW(1.0f);
+			colors.m_deactivatedObject.setW(1.0f);
+			colors.m_wantsDeactivationObject.setW(1.0f);
+			colors.m_disabledDeactivationObject.setW(1.0f);
+			colors.m_disabledSimulationObject.setW(1.0f);
+			colors.m_aabb.setW(1.0f);
+			colors.m_contactPoint.setW(1.0f);
+
+			return colors;
+		}
+
 		void GLPhysicsDebugDraw::flushLines()
 		{
 			Draw();
+		}
 
+		void GLPhysicsDebugDraw::clearLines()
+		{
 			m_LineSegments.clear();
 		}
 
@@ -72,7 +94,7 @@ namespace flex
 
 			VertexBufferData::CreateInfo createInfo = {};
 			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			
+
 			for (LineSegment& line : m_LineSegments)
 			{
 				createInfo.positions_3D.push_back(FromBtVec3(line.start));
@@ -84,7 +106,7 @@ namespace flex
 			}
 
 
-			m_VertexBufferData.Destroy(); // Destory previous frame's buffer since it's already been drawn
+			m_VertexBufferData.Destroy(); // Destroy previous frame's buffer since it's already been drawn
 
 			m_VertexBufferData.Initialize(&createInfo);
 
@@ -100,21 +122,69 @@ namespace flex
 			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STATIC_DRAW);
 			CheckGLErrorMessages();
 
-			glDepthFunc(GL_LEQUAL);
-			CheckGLErrorMessages();
 
-			glDepthMask(GL_TRUE);
-			CheckGLErrorMessages();
-
-			if (shader->translucent)
+			// Describe shader variables
 			{
-				glEnable(GL_BLEND);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				real* currentLocation = (real*)0;
+
+				GLint location = glGetAttribLocation(glShader->program, "in_Position");
+				if (location != -1)
+				{
+					glEnableVertexAttribArray((GLuint)location);
+
+
+					glVertexAttribPointer((GLuint)location, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
+					CheckGLErrorMessages();
+
+					currentLocation += 3;
+				}
+
+				location = glGetAttribLocation(glShader->program, "in_Color");
+				if (location != -1)
+				{
+					glEnableVertexAttribArray((GLuint)location);
+
+					glVertexAttribPointer((GLuint)location, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
+					CheckGLErrorMessages();
+
+					currentLocation += 4;
+				}
 			}
-			else
-			{
+
+
+			glm::mat4 model = glm::mat4(1.0f);
+			glm::mat4 proj = m_GameContext.camera->GetProjection();
+			glm::mat4 view = m_GameContext.camera->GetView();
+			glm::mat4 MVP = proj * view * model;
+			glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
+
+			glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
+			CheckGLErrorMessages();
+
+			glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
+			CheckGLErrorMessages();
+
+			glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
+			CheckGLErrorMessages();
+
+			glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
+			CheckGLErrorMessages();
+
+			//glDepthFunc(GL_LEQUAL);
+			//CheckGLErrorMessages();
+
+			glDepthMask(GL_FALSE);
+			CheckGLErrorMessages();
+
+			//if (shader->translucent)
+			//{
+			//	glEnable(GL_BLEND);
+			//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			//}
+			//else
+			//{
 				glDisable(GL_BLEND);
-			}
+			//}
 
 			glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
 			CheckGLErrorMessages();

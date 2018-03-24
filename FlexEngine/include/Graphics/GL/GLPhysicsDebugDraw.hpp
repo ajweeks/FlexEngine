@@ -8,16 +8,16 @@
 
 #include <vector>
 
+#include "GameContext.hpp"
+
 namespace flex
 {
 	namespace gl
 	{
-		class GLRenderer;
-
 		class GLPhysicsDebugDraw : public btIDebugDraw
 		{
 		public:
-			GLPhysicsDebugDraw(GLRenderer* renderer);
+			GLPhysicsDebugDraw(const GameContext& gameContext);
 			virtual ~GLPhysicsDebugDraw();
 
 			virtual void reportErrorWarning(const char* warningString)  override;
@@ -27,7 +27,11 @@ namespace flex
 
 			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override;
 			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
+
+			virtual DefaultColors getDefaultColors() const override;
+
 			virtual void flushLines() override;
+			virtual void clearLines() override;
 			
 			
 			void Draw();
@@ -46,6 +50,7 @@ namespace flex
 			int m_DebugMode = DBG_DrawWireframe | DBG_DrawAabb;
 
 			GLRenderer* m_Renderer = nullptr;
+			const GameContext& m_GameContext;
 
 			MaterialID m_MaterialID = InvalidMaterialID;
 

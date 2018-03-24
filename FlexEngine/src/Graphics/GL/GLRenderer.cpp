@@ -213,6 +213,7 @@ namespace flex
 			spriteQuadCreateInfo.name = "Sprite quad";
 			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
 			spriteQuadCreateInfo.materialID = m_SpriteMatID;
+			spriteQuadCreateInfo.depthWriteEnable = false;
 			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
 			spriteQuadCreateInfo.enableCulling = false;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
@@ -320,6 +321,8 @@ namespace flex
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, textureHandle);
 			CheckGLErrorMessages();
+
+			glDepthMask(GL_TRUE);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
@@ -961,9 +964,6 @@ namespace flex
 			glDepthFunc(skyboxRenderObject->depthTestReadFunc);
 			CheckGLErrorMessages();
 
-			glDepthMask(skyboxRenderObject->depthWriteEnable);
-			CheckGLErrorMessages();
-
 			for (u32 i = 0; i < 6; ++i)
 			{
 				glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
@@ -972,7 +972,12 @@ namespace flex
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
 				CheckGLErrorMessages();
 
+				glDepthMask(GL_TRUE);
+
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				CheckGLErrorMessages();
+
+				glDepthMask(skyboxRenderObject->depthWriteEnable);
 				CheckGLErrorMessages();
 
 				glDrawArrays(skyboxRenderObject->topology, 0, (GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
@@ -1304,6 +1309,8 @@ namespace flex
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
 						CheckGLErrorMessages();
 
+						glDepthMask(GL_TRUE);
+
 						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 						CheckGLErrorMessages();
 					}
@@ -1427,7 +1434,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 
-			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(this);
+			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
 			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			world->setDebugDrawer(m_PhysicsDebugDrawer);
 
@@ -1591,6 +1598,8 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
+			glDepthMask(GL_TRUE);
+
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
 
@@ -1711,6 +1720,8 @@ namespace flex
 				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
 				CheckGLErrorMessages();
+
+				glDepthMask(GL_TRUE);
 
 				glClear(GL_COLOR_BUFFER_BIT); // Don't clear depth - we just copied it over from the GBuffer
 				CheckGLErrorMessages();
