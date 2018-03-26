@@ -86,7 +86,6 @@ namespace flex
 		m_GameContext.physicsManager->Initialize();
 
 		m_GameContext.sceneManager = new SceneManager();
-
 		LoadDefaultScenes();
 
 		m_GameContext.renderer->PostInitialize(m_GameContext);
@@ -96,14 +95,20 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
-		if (m_GameContext.sceneManager) m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
-		SafeDelete(m_GameContext.sceneManager);
+		if (m_GameContext.sceneManager)
+		{
+			m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
+			SafeDelete(m_GameContext.sceneManager);
+		}
+
 		SafeDelete(m_GameContext.inputManager);
+
 		if (m_GameContext.physicsManager)
 		{
 			m_GameContext.physicsManager->Destroy();
 			SafeDelete(m_GameContext.physicsManager);
 		}
+
 		SafeDelete(m_DefaultCamera);
 
 		DestroyWindowAndRenderer();
@@ -215,10 +220,16 @@ namespace flex
 			m_RendererIndex = RendererID(((i32)m_RendererIndex + 1) % (i32)RendererID::_LAST_ELEMENT);
 
 #if COMPILE_VULKAN
-			if (m_RendererIndex == RendererID::VULKAN) break;
+			if (m_RendererIndex == RendererID::VULKAN)
+			{
+				break;
+			}
 #endif
 #if COMPILE_OPEN_GL
-			if (m_RendererIndex == RendererID::GL) break;
+			if (m_RendererIndex == RendererID::GL)
+			{
+				break;
+			}
 #endif
 		}
 		m_RendererName = RenderIDToString(m_RendererIndex);

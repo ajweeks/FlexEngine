@@ -50,8 +50,14 @@ namespace flex
 			m_Pitch += look.y * m_RotationSpeed;
 
 			real pitchLimit = PI - 0.02f;
-			if (m_Pitch > pitchLimit) m_Pitch = pitchLimit;
-			if (m_Pitch < -pitchLimit) m_Pitch = -pitchLimit;
+			if (m_Pitch > pitchLimit)
+			{
+				m_Pitch = pitchLimit;
+			}
+			else if (m_Pitch < -pitchLimit)
+			{
+				m_Pitch = -pitchLimit;
+			}
 		}
 		
 		m_Forward = {};
@@ -266,7 +272,10 @@ namespace flex
 	void FreeCamera::RecalculateViewProjection(const GameContext& gameContext)
 	{
 		const glm::vec2 windowSize = gameContext.window->GetSize();
-		if (windowSize.x == 0.0f || windowSize.y == 0.0f) return;
+		if (windowSize.x == 0.0f || windowSize.y == 0.0f)
+		{
+			return;
+		}
 
 		real aspectRatio = windowSize.x / (real)windowSize.y;
 		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);

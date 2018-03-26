@@ -39,7 +39,10 @@ namespace flex
 		m_Name(name),
 		m_UVScale(1.0f, 1.0f)
 	{
-		if (name.empty()) m_Name = m_DefaultName;
+		if (name.empty())
+		{
+			m_Name = m_DefaultName;
+		}
 	}
 
 	MeshPrefab::~MeshPrefab()
@@ -196,8 +199,14 @@ namespace flex
 				if (mesh->HasNormals() && !(m_IgnoredAttributes & (u32)VertexAttribute::NORMAL))
 				{
 					glm::vec3 norm = ToVec3(mesh->mNormals[i]);
-					if (flipNormalYZ) std::swap(norm.y, norm.z);
-					if (flipZ) norm.z = -norm.z;
+					if (flipNormalYZ)
+					{
+						std::swap(norm.y, norm.z);
+					}
+					if (flipZ)
+					{
+						norm.z = -norm.z;
+					}
 					vertexBufferDataCreateInfo.normals.push_back(norm);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 				}
@@ -213,8 +222,14 @@ namespace flex
 					// Truncate w component
 					glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 					texCoord *= m_UVScale;
-					if (flipU) texCoord.x = 1.0f - texCoord.x;
-					if (flipV) texCoord.y = 1.0f - texCoord.y;
+					if (flipU)
+					{
+						texCoord.x = 1.0f - texCoord.x;
+					}
+					if (flipV)
+					{
+						texCoord.y = 1.0f - texCoord.y;
+					}
 					vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 				}
@@ -852,7 +867,10 @@ namespace flex
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		if (!m_Name.empty() && m_Name.compare(m_DefaultName) != 0) renderObjectCreateInfo.name = m_Name;
+		if (!m_Name.empty() && m_Name.compare(m_DefaultName) != 0)
+		{
+			renderObjectCreateInfo.name = m_Name;
+		}
 
 		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
 

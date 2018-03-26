@@ -288,7 +288,10 @@ namespace flex
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
 		{
 			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
-			if (!spriteRenderObject) return;
+			if (!spriteRenderObject)
+			{
+				return;
+			}
 
 			spriteRenderObject->materialID = materialID;
 
@@ -327,8 +330,14 @@ namespace flex
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
 
-			if (spriteRenderObject->enableCulling) glEnable(GL_CULL_FACE);
-			else glDisable(GL_CULL_FACE);
+			if (spriteRenderObject->enableCulling)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
 
 			glCullFace(spriteRenderObject->cullFace);
 			CheckGLErrorMessages();
@@ -824,7 +833,11 @@ namespace flex
 			renderObject->transform = createInfo->transform;
 			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
 
-			if (m_Materials.empty()) Logger::LogError("Render object is being created before any materials have been created!");
+			if (m_Materials.empty())
+			{
+				Logger::LogError("Render object is being created before any materials have been created!");
+			}
+
 			if (renderObject->materialID >= m_Materials.size())
 			{
 				Logger::LogError("Uninitialized material with MaterialID " + std::to_string(renderObject->materialID));
@@ -958,8 +971,14 @@ namespace flex
 			glCullFace(skyboxRenderObject->cullFace);
 			CheckGLErrorMessages();
 
-			if (skyboxRenderObject->enableCulling) glEnable(GL_CULL_FACE);
-			else glDisable(GL_CULL_FACE);
+			if (skyboxRenderObject->enableCulling)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
 
 			glDepthFunc(skyboxRenderObject->depthTestReadFunc);
 			CheckGLErrorMessages();
@@ -1037,8 +1056,14 @@ namespace flex
 			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 			CheckGLErrorMessages();
 
-			if (skybox->enableCulling) glEnable(GL_CULL_FACE);
-			else glDisable(GL_CULL_FACE);
+			if (skybox->enableCulling)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
 
 			glCullFace(skybox->cullFace);
 			CheckGLErrorMessages();
@@ -1167,8 +1192,14 @@ namespace flex
 			glViewport(0, 0, BRDFLUTSize.x, BRDFLUTSize.y);
 			CheckGLErrorMessages();
 
-			if (m_1x1_NDC_Quad->enableCulling) glEnable(GL_CULL_FACE);
-			else glDisable(GL_CULL_FACE);
+			if (m_1x1_NDC_Quad->enableCulling)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
 
 			glCullFace(m_1x1_NDC_Quad->cullFace);
 			CheckGLErrorMessages();
@@ -1232,8 +1263,14 @@ namespace flex
 			glViewport(0, 0, cubemapSize.x, cubemapSize.y);
 			CheckGLErrorMessages();
 
-			if (skybox->enableCulling) glEnable(GL_CULL_FACE);
-			else glDisable(GL_CULL_FACE);
+			if (skybox->enableCulling)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
 
 			glCullFace(skybox->cullFace);
 			CheckGLErrorMessages();
@@ -1400,7 +1437,10 @@ namespace flex
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject) return;
+			if (!renderObject)
+			{
+				return;
+			}
 
 			GLenum glMode = TopologyModeToGLMode(topology);
 
@@ -1683,8 +1723,14 @@ namespace flex
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
 
-				if (skybox->enableCulling) glEnable(GL_CULL_FACE);
-				else glDisable(GL_CULL_FACE);
+				if (skybox->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
+				}
+				else
+				{
+					glDisable(GL_CULL_FACE);
+				}
 
 				glCullFace(skybox->cullFace);
 				CheckGLErrorMessages();
@@ -1745,8 +1791,14 @@ namespace flex
 				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
 
-				if (gBufferQuad->enableCulling) glEnable(GL_CULL_FACE);
-				else glDisable(GL_CULL_FACE);
+				if (gBufferQuad->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
+				}
+				else
+				{
+					glDisable(GL_CULL_FACE);
+				}
 
 				glCullFace(gBufferQuad->cullFace);
 				CheckGLErrorMessages();
@@ -2385,7 +2437,10 @@ namespace flex
 		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject) return;
+			if (!renderObject)
+			{
+				return;
+			}
 
 			glm::mat4 model = renderObject->transform->GetModelMatrix();
 			UpdatePerObjectUniforms(renderObject->materialID, model, gameContext);
@@ -2500,7 +2555,11 @@ namespace flex
 
 		void GLRenderer::OnWindowSize(i32 width, i32 height)
 		{
-			if (width == 0 || height == 0) return;
+			if (width == 0 || height == 0)
+			{
+				return;
+			}
+
 
 			glViewport(0, 0, width, height);
 			CheckGLErrorMessages();
@@ -2544,7 +2603,10 @@ namespace flex
 		void GLRenderer::SetRenderObjectVisible(RenderID renderID, bool visible)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject) renderObject->visible = visible;
+			if (renderObject)
+			{
+				renderObject->visible = visible;
+			}
 		}
 
 		void GLRenderer::SetVSyncEnabled(bool enableVSync)
@@ -2557,7 +2619,10 @@ namespace flex
 		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, real val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
-			if (location == -1) Logger::LogWarning("Float " + valName + " couldn't be found!");
+			if (location == -1)
+			{
+				Logger::LogWarning("Float " + valName + " couldn't be found!");
+			}
 			CheckGLErrorMessages();
 
 			glUniform1f(location, val);
@@ -2567,7 +2632,10 @@ namespace flex
 		void GLRenderer::SetUInt(ShaderID shaderID, const std::string& valName, u32 val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
-			if (location == -1) Logger::LogWarning("Unsigned i32 " + valName + " couldn't be found!");
+			if (location == -1)
+			{
+				Logger::LogWarning("Unsigned i32 " + valName + " couldn't be found!");
+			}
 			CheckGLErrorMessages();
 
 			glUniform1ui(location, val);
@@ -2577,7 +2645,10 @@ namespace flex
 		void GLRenderer::SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
-			if (location == -1) Logger::LogWarning("Vec2f " + vecName + " couldn't be found!");
+			if (location == -1)
+			{
+				Logger::LogWarning("Vec2f " + vecName + " couldn't be found!");
+			}
 			CheckGLErrorMessages();
 
 			glUniform2f(location, vec[0], vec[1]);
@@ -2587,7 +2658,10 @@ namespace flex
 		void GLRenderer::SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
-			if (location == -1) Logger::LogWarning("Vec3f " + vecName + " couldn't be found!");
+			if (location == -1)
+			{
+				Logger::LogWarning("Vec3f " + vecName + " couldn't be found!");
+			}
 			CheckGLErrorMessages();
 
 			glUniform3f(location, vec[0], vec[1], vec[2]);
@@ -2597,7 +2671,10 @@ namespace flex
 		void GLRenderer::SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
-			if (location == -1) Logger::LogWarning("Vec4f " + vecName + " couldn't be found!");
+			if (location == -1)
+			{
+				Logger::LogWarning("Vec4f " + vecName + " couldn't be found!");
+			}
 			CheckGLErrorMessages();
 
 			glUniform4f(location, vec[0], vec[1], vec[2], vec[3]);
@@ -2607,7 +2684,10 @@ namespace flex
 		void GLRenderer::SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName.c_str());
-			if (location == -1) Logger::LogWarning("Mat4f " + matName + " couldn't be found!");
+			if (location == -1)
+			{
+				Logger::LogWarning("Mat4f " + matName + " couldn't be found!");
+			}
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(location, 1, false, &mat[0][0]);
@@ -2699,7 +2779,10 @@ namespace flex
 
 			for (auto renderObject : m_RenderObjects)
 			{
-				if (renderObject.second) ++count;
+				if (renderObject.second)
+				{
+					++count;
+				}
 			}
 
 			return count;
@@ -2716,7 +2799,10 @@ namespace flex
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject) return;
+			if (!renderObject)
+			{
+				return;
+			}
 
 			GLMaterial* material = &m_Materials[renderObject->materialID];
 			u32 program = m_Shaders[material->material.shaderID].program;
@@ -2789,7 +2875,10 @@ namespace flex
 		void GLRenderer::Destroy(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject) return;
+			if (!renderObject)
+			{
+				return;
+			}
 
 			m_RenderObjects[renderObject->renderID] = nullptr;
 

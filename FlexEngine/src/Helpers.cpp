@@ -86,7 +86,10 @@ namespace flex
 	void StripLeadingDirectories(std::string& filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash == std::string::npos) finalSlash = filePath.rfind('\\');
+		if (finalSlash == std::string::npos)
+		{
+			finalSlash = filePath.rfind('\\');
+		}
 
 		if (finalSlash == std::string::npos)
 		{

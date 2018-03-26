@@ -21,7 +21,10 @@ namespace flex
 	void VertexBufferData::Initialize(CreateInfo* createInfo)
 	{
 		VertexCount = createInfo->positions_3D.size();
-		if (VertexCount == 0) VertexCount = createInfo->positions_2D.size();
+		if (VertexCount == 0)
+		{
+			VertexCount = createInfo->positions_2D.size();
+		}
 		Attributes = createInfo->attributes;
 		VertexStride = CalculateVertexStride(Attributes);
 		BufferSize = VertexCount * VertexStride;

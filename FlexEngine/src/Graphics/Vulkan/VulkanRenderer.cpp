@@ -395,7 +395,10 @@ namespace flex
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (!renderObject) continue;
+				if (!renderObject)
+				{
+					continue;
+				}
 				
 				VulkanMaterial& renderObjectMat = m_LoadedMaterials[renderObject->materialID];
 
@@ -2612,7 +2615,10 @@ namespace flex
 
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject != nullptr) ++count;
+				if (renderObject != nullptr)
+				{
+					++count;
+				}
 			}
 
 			return count;
@@ -4759,7 +4765,7 @@ namespace flex
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(j);
-					if (!renderObject || !renderObject->visible)
+					if (!renderObject || !renderObject->visible || renderObject->vertexBufferData->VertexCount == 0)
 					{
 						continue;
 					}
@@ -4869,7 +4875,7 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						VulkanRenderObject* renderObject = GetRenderObject(j);
-						if (!renderObject || !renderObject->visible)
+						if (!renderObject || !renderObject->visible || renderObject->vertexBufferData->VertexCount == 0)
 						{
 							continue;
 						}
@@ -4978,7 +4984,10 @@ namespace flex
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (!renderObject || !renderObject->visible) continue;
+				if (!renderObject || !renderObject->visible || renderObject->vertexBufferData->VertexCount == 0)
+				{
+					continue;
+				}
 
 				VulkanMaterial& renderObjectMat = m_LoadedMaterials[renderObject->materialID];
 
@@ -5787,11 +5796,26 @@ namespace flex
 
 			if (overridenUniforms)
 			{
-				if (overridenUniforms->overridenUniforms.HasUniform("projection")) projection = overridenUniforms->projection;
-				if (overridenUniforms->overridenUniforms.HasUniform("view")) view = overridenUniforms->view;
-				if (overridenUniforms->overridenUniforms.HasUniform("viewInv")) viewInv = overridenUniforms->viewInv;
-				if (overridenUniforms->overridenUniforms.HasUniform("viewProjection")) viewProjection = overridenUniforms->viewProjection;
-				if (overridenUniforms->overridenUniforms.HasUniform("camPos")) camPos = overridenUniforms->camPos;
+				if (overridenUniforms->overridenUniforms.HasUniform("projection"))
+				{
+					projection = overridenUniforms->projection;
+				}
+				if (overridenUniforms->overridenUniforms.HasUniform("view"))
+				{
+					view = overridenUniforms->view;
+				}
+				if (overridenUniforms->overridenUniforms.HasUniform("viewInv"))
+				{
+					viewInv = overridenUniforms->viewInv;
+				}
+				if (overridenUniforms->overridenUniforms.HasUniform("viewProjection"))
+				{
+					viewProjection = overridenUniforms->viewProjection;
+				}
+				if (overridenUniforms->overridenUniforms.HasUniform("camPos"))
+				{
+					camPos = overridenUniforms->camPos;
+				}
 			}
 
 			void* PointLightsDataStart = nullptr;

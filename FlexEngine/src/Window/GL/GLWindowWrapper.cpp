@@ -82,7 +82,10 @@ namespace flex
 			UNREFERENCED_PARAMETER(length);
 
 			// Ignore insignificant error/warning codes
-			if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
+			if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+			{
+				return;
+			}
 
 			Logger::LogInfo("---------------");
 			Logger::LogInfo("Debug message (" + std::to_string(id) + "): " + message);
