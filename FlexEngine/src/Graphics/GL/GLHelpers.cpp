@@ -395,15 +395,18 @@ namespace flex
 		{
 			GLenum glType = 0;
 
-			if (type == Renderer::Type::BYTE) glType = GL_BYTE;
-			else if (type == Renderer::Type::UNSIGNED_BYTE) glType = GL_UNSIGNED_BYTE;
-			else if (type == Renderer::Type::SHORT) glType = GL_SHORT;
-			else if (type == Renderer::Type::UNSIGNED_SHORT) glType = GL_UNSIGNED_SHORT;
-			else if (type == Renderer::Type::INT) glType = GL_INT;
-			else if (type == Renderer::Type::UNSIGNED_INT) glType = GL_UNSIGNED_INT;
-			else if (type == Renderer::Type::FLOAT) glType = GL_FLOAT;
-			else if (type == Renderer::Type::DOUBLE) glType = GL_DOUBLE;
-			else Logger::LogError("Unhandled Type passed to GLRenderer: " + std::to_string((i32)type));
+			if (type == Renderer::Type::BYTE)					glType = GL_BYTE;
+			else if (type == Renderer::Type::UNSIGNED_BYTE)		glType = GL_UNSIGNED_BYTE;
+			else if (type == Renderer::Type::SHORT)				glType = GL_SHORT;
+			else if (type == Renderer::Type::UNSIGNED_SHORT)	glType = GL_UNSIGNED_SHORT;
+			else if (type == Renderer::Type::INT)				glType = GL_INT;
+			else if (type == Renderer::Type::UNSIGNED_INT)		glType = GL_UNSIGNED_INT;
+			else if (type == Renderer::Type::FLOAT)				glType = GL_FLOAT;
+			else if (type == Renderer::Type::DOUBLE)			glType = GL_DOUBLE;
+			else
+			{
+				Logger::LogError("Unhandled Type passed to GLRenderer: " + std::to_string((i32)type));
+			}
 
 			return glType;
 		}
@@ -412,9 +415,12 @@ namespace flex
 		{
 			GLenum glUsage = 0;
 
-			if (usage == Renderer::UsageFlag::STATIC_DRAW) glUsage = GL_STATIC_DRAW;
-			else if (usage == Renderer::UsageFlag::DYNAMIC_DRAW) glUsage = GL_DYNAMIC_DRAW;
-			else Logger::LogError("Unhandled usage flag passed to GLRenderer: " + std::to_string((i32)usage));
+			if (usage == Renderer::UsageFlag::STATIC_DRAW)			glUsage = GL_STATIC_DRAW;
+			else if (usage == Renderer::UsageFlag::DYNAMIC_DRAW)	glUsage = GL_DYNAMIC_DRAW;
+			else
+			{
+				Logger::LogError("Unhandled usage flag passed to GLRenderer: " + std::to_string((i32)usage));
+			}
 
 			return glUsage;
 		}
@@ -423,14 +429,14 @@ namespace flex
 		{
 			switch (topology)
 			{
-			case Renderer::TopologyMode::POINT_LIST: return GL_POINTS;
-			case Renderer::TopologyMode::LINE_LIST: return GL_LINES;
-			case Renderer::TopologyMode::LINE_LOOP: return GL_LINE_LOOP;
-			case Renderer::TopologyMode::LINE_STRIP: return GL_LINE_STRIP;
-			case Renderer::TopologyMode::TRIANGLE_LIST: return GL_TRIANGLES;
-			case Renderer::TopologyMode::TRIANGLE_STRIP: return GL_TRIANGLE_STRIP;
-			case Renderer::TopologyMode::TRIANGLE_FAN: return GL_TRIANGLE_FAN;
-			default: return GL_INVALID_ENUM;
+			case Renderer::TopologyMode::POINT_LIST:		return GL_POINTS;
+			case Renderer::TopologyMode::LINE_LIST:			return GL_LINES;
+			case Renderer::TopologyMode::LINE_LOOP:			return GL_LINE_LOOP;
+			case Renderer::TopologyMode::LINE_STRIP:		return GL_LINE_STRIP;
+			case Renderer::TopologyMode::TRIANGLE_LIST:		return GL_TRIANGLES;
+			case Renderer::TopologyMode::TRIANGLE_STRIP:	return GL_TRIANGLE_STRIP;
+			case Renderer::TopologyMode::TRIANGLE_FAN:		return GL_TRIANGLE_FAN;
+			default:										return GL_INVALID_ENUM;
 			}
 		}
 
@@ -438,10 +444,10 @@ namespace flex
 		{
 			switch (cullFace)
 			{
-			case Renderer::CullFace::BACK: return GL_BACK;
-			case Renderer::CullFace::FRONT: return GL_FRONT;
-			case Renderer::CullFace::FRONT_AND_BACK: return GL_FRONT_AND_BACK;
-			default: return GL_FALSE;
+			case Renderer::CullFace::BACK:				return GL_BACK;
+			case Renderer::CullFace::FRONT:				return GL_FRONT;
+			case Renderer::CullFace::FRONT_AND_BACK:	return GL_FRONT_AND_BACK;
+			default:									return GL_FALSE;
 			}
 		}
 
@@ -449,16 +455,16 @@ namespace flex
 		{
 			switch (func)
 			{
-			case Renderer::DepthTestFunc::ALWAYS: return GL_ALWAYS;
-			case Renderer::DepthTestFunc::NEVER: return GL_NEVER;
-			case Renderer::DepthTestFunc::LESS: return GL_LESS;
-			case Renderer::DepthTestFunc::LEQUAL: return GL_LEQUAL;
-			case Renderer::DepthTestFunc::GREATER: return GL_GREATER;
-			case Renderer::DepthTestFunc::GEQUAL: return GL_GEQUAL;
-			case Renderer::DepthTestFunc::EQUAL: return GL_EQUAL;
-			case Renderer::DepthTestFunc::NOTEQUAL: return GL_NOTEQUAL;
-			case Renderer::DepthTestFunc::NONE: return GL_FALSE;
-			default: return GL_FALSE;
+			case Renderer::DepthTestFunc::ALWAYS:	return GL_ALWAYS;
+			case Renderer::DepthTestFunc::NEVER:	return GL_NEVER;
+			case Renderer::DepthTestFunc::LESS:		return GL_LESS;
+			case Renderer::DepthTestFunc::LEQUAL:	return GL_LEQUAL;
+			case Renderer::DepthTestFunc::GREATER:	return GL_GREATER;
+			case Renderer::DepthTestFunc::GEQUAL:	return GL_GEQUAL;
+			case Renderer::DepthTestFunc::EQUAL:	return GL_EQUAL;
+			case Renderer::DepthTestFunc::NOTEQUAL:	return GL_NOTEQUAL;
+			case Renderer::DepthTestFunc::NONE:		return GL_FALSE;
+			default:								return GL_FALSE;
 			}
 		}
 

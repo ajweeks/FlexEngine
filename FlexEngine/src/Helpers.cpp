@@ -177,20 +177,6 @@ namespace flex
 
 		return result;
 	}
-	// TODO: Remove, colors can be dragged onto one another in the latest version of ImGui
-	void CopyableColorEdit3(const char * label, glm::vec3 & col, const char * copyBtnLabel, const char * pasteBtnLabel, ImGuiColorEditFlags flags)
-	{
-		ImGui::ColorEdit3(label, &col.r, flags);
-		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
-		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor3FromClipboard();
-	}
-
-	void CopyableColorEdit4(const char * label, glm::vec4 & col, const char * copyBtnLabel, const char * pasteBtnLabel, ImGuiColorEditFlags flags)
-	{
-		ImGui::ColorEdit4(label, &col.r, flags);
-		ImGui::SameLine(); if (ImGui::Button(copyBtnLabel)) CopyColorToClipboard(col);
-		ImGui::SameLine(); if (ImGui::Button(pasteBtnLabel)) col = PasteColor4FromClipboard();
-	}
 
 	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)
 	{

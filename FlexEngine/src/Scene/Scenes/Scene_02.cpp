@@ -109,10 +109,10 @@ namespace flex
 		worldAxisMatInfo.name = "Color";
 		m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
 
-		m_Grid = new MeshPrefab(m_WorldAxisMaterialID, "Grid origin");
-		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
-		m_Grid->GetTransform().Translate(0.0f, -0.09f, 0.0f);
-		AddChild(gameContext, m_Grid);
+		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
+		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
+		m_WorldOrigin->GetTransform().Translate(0.0f, -0.09f, 0.0f);
+		AddChild(gameContext, m_WorldOrigin);
 #endif
 
 #if 0 // Cerebus
@@ -248,9 +248,6 @@ namespace flex
 		box3Collider = {};
 		box3Collider.CreateBoxCollider(gameContext, { 0.5f, 1.5f, 2.0f });
 
-		// TODO: Add rigid bodies to the scene and attach meshes!
-
-
 		glm::vec3 box1Scale = FromBtVec3(box1Collider.GetScale());
 		glm::vec3 box2Scale = FromBtVec3(box2Collider.GetScale());
 		glm::vec3 box3Scale = FromBtVec3(box3Collider.GetScale());
@@ -297,16 +294,19 @@ namespace flex
 			MaterialID boxMat3ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
 			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
+			m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(gameContext, m_Box1);
 			m_Box1->GetTransform().SetGlobalScale(box1Scale);
 
 			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
+			m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(gameContext, m_Box2);
 			m_Box2->GetTransform().SetGlobalScale(box2Scale);
 
 			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
+			m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(gameContext, m_Box3);
 			m_Box3->GetTransform().SetGlobalScale(box3Scale);

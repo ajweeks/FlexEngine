@@ -48,6 +48,7 @@ namespace flex
 		if (HasUniform("viewInv")) size += sizeof(glm::mat4);
 		if (HasUniform("viewProjection")) size += sizeof(glm::mat4);
 		if (HasUniform("projection")) size += sizeof(glm::mat4);
+		if (HasUniform("colorMultiplier")) size += sizeof(glm::vec4);
 		if (HasUniform("camPos")) size += sizeof(glm::vec4);
 		if (HasUniform("dirLight")) size += sizeof(DirectionalLight);
 		if (HasUniform("pointLights")) size += sizeof(PointLight) * PointLightCount;

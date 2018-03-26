@@ -340,6 +340,8 @@ namespace flex
 		virtual void Draw(const GameContext& gameContext) = 0;
 		virtual void DrawImGuiItems(const GameContext& gameContext) = 0;
 
+		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
+
 		virtual void ReloadShaders(GameContext& gameContext) = 0;
 
 		virtual void OnWindowSize(i32 width, i32 height) = 0;

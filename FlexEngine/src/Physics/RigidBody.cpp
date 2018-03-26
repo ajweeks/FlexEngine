@@ -34,7 +34,7 @@ namespace flex
 
 		if (isStatic)
 		{
-			assert(m_Mass == 0);
+			assert(m_Mass == 0, "Static objects must have a mass of 0!");
 		}
 
 		m_MotionState = new btDefaultMotionState(startingTransform);

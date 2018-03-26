@@ -1,4 +1,5 @@
 #pragma once
+#if COMPILE_OPEN_GL
 
 #include "LinearMath\btIDebugDraw.h"
 
@@ -14,6 +15,8 @@ namespace flex
 {
 	namespace gl
 	{
+		class GLRenderer;
+
 		class GLPhysicsDebugDraw : public btIDebugDraw
 		{
 		public:
@@ -29,8 +32,6 @@ namespace flex
 
 			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override;
 			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
-
-			virtual DefaultColors getDefaultColors() const override;
 
 			virtual void flushLines() override;
 			virtual void clearLines() override;
@@ -63,3 +64,5 @@ namespace flex
 		};
 	} // namespace gl
 } // namespace flex
+
+#endif // COMPILE_OPEN_GL

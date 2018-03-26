@@ -2906,8 +2906,6 @@ namespace flex
 		{
 			btDiscreteDynamicsWorld* physicsWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
-
-			//m_PhysicsDebugDrawer->Draw();
 		}
 
 		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)
@@ -3009,7 +3007,7 @@ namespace flex
 					{
 						ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
 
-						CopyableColorEdit4("Color ", m_DirectionalLight.color, "c##diffuse", "p##color", colorEditFlags);
+						ImGui::ColorEdit4("Color ", %m_DirectionalLight.color.r, colorEditFlags);
 
 						ImGui::TreePop();
 					}
@@ -3027,7 +3025,7 @@ namespace flex
 						{
 							ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
 
-							CopyableColorEdit4("Color ", m_PointLights[i].color, "c##diffuse", "p##color", colorEditFlags);
+							ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
 
 							ImGui::TreePop();
 						}
@@ -3036,6 +3034,12 @@ namespace flex
 					ImGui::TreePop();
 				}
 			}
+		}
+
+		void GLRenderer::UpdateRenderObjectVertexData(RenderID renderID)
+		{
+			UNREFERENCED_PARAMETER(renderID);
+			// TODO: IMPLEMENT: UNIMPLEMENTED:
 		}
 
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)

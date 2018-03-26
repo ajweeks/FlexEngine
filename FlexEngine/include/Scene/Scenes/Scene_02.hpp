@@ -40,6 +40,7 @@ namespace flex
 
 		MeshPrefab* m_Skybox = nullptr;
 		MeshPrefab* m_Grid = nullptr;
+		MeshPrefab* m_WorldOrigin = nullptr;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 

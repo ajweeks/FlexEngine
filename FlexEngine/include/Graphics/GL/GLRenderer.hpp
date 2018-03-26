@@ -37,6 +37,8 @@ namespace flex
 			virtual void Draw(const GameContext& gameContext) override;
 			virtual void DrawImGuiItems(const GameContext& gameContext) override;
 
+			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
+
 			virtual void ReloadShaders(GameContext& gameContext) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;

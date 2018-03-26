@@ -83,7 +83,10 @@ namespace flex
 		}
 
 		std::cout << message;
-		if (newline) std::cout << std::endl;
+		if (newline)
+		{
+			std::cout << std::endl;
+		}
 	}
 
 	void Logger::Log(const std::wstring& message, LogLevel logLevel, bool newline)
@@ -136,12 +139,18 @@ namespace flex
 		}
 
 		std::wcout << message;
-		if (newline) std::wcout << std::endl;
+		if (newline)
+		{
+			std::wcout << std::endl;
+		}
 	}
 
 	void Logger::SetSuppressInfo(bool suppressInfo)
 	{
-		if (m_SuppressInfo == suppressInfo) return;
+		if (m_SuppressInfo == suppressInfo)
+		{
+			return;
+		}
 
 		m_SuppressInfo = false; // Enable info logging to display message
 		LogInfo((suppressInfo ? "Enabled" : "Disabled") + std::string(" info suppression"));
@@ -156,7 +165,10 @@ namespace flex
 
 	void Logger::SetSuppressWarnings(bool suppressWarnings)
 	{
-		if (m_SuppressWarnings == suppressWarnings) return;
+		if (m_SuppressWarnings == suppressWarnings)
+		{
+			return;
+		}
 
 		const bool prevSuppressLog = m_SuppressInfo;
 		m_SuppressInfo = false; // Enable info logging to display message
@@ -173,7 +185,10 @@ namespace flex
 
 	void Logger::SetSuppressErrors(bool suppressErrors)
 	{
-		if (m_SuppressErrors == suppressErrors) return;
+		if (m_SuppressErrors == suppressErrors)
+		{
+			return;
+		}
 
 		const bool prevSuppressLog = m_SuppressInfo;
 		m_SuppressInfo = false; // Enable info logging to display message

@@ -18,7 +18,7 @@ namespace flex
 
 	namespace vk
 	{
-		class VulkanDebugDraw;
+		class VulkanPhysicsDebugDraw;
 
 		class VulkanRenderer : public Renderer
 		{
@@ -43,6 +43,8 @@ namespace flex
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;
 			virtual void DrawImGuiItems(const GameContext& gameContext) override;
+
+			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
 			virtual void ReloadShaders(GameContext& gameContext) override;
 
@@ -69,8 +71,10 @@ namespace flex
 			virtual void ImGuiNewFrame() override;
 
 		private:
+			friend VulkanPhysicsDebugDraw;
+
 			void Destroy(RenderID renderID, VulkanRenderObject* renderObject);
-			
+
 			typedef void (VulkanRenderer::*VulkanTextureCreateFunction)(const std::string&, VkFormat, u32, VulkanTexture**) const;
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
@@ -119,6 +123,7 @@ namespace flex
 			void CreateFramebuffers();
 			void PrepareOffscreenFrameBuffer(Window* window);
 			void PrepareCubemapFrameBuffer();
+			void PhysicsDebugRender(const GameContext& gameContext);
 
 			void CreateVulkanTexture_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const;
 
@@ -138,7 +143,9 @@ namespace flex
 			void CreateTextureImageView(VulkanTexture* texture, VkFormat format) const;
 			void CreateTextureSampler(VulkanTexture* texture, real maxAnisotropy = 16.0f, real minLod = 0.0f, real maxLod = 0.0f, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK) const;
 
+			bool GetMaterialID(const std::string& materialName, MaterialID& materialID);
 			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
+
 			void CreateUniformBuffers(VulkanShader* shader);
 
 			// Returns a pointer i32o m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
@@ -244,7 +251,7 @@ namespace flex
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 			i32 m_DeferredQuadVertexBufferIndex;
 
-			
+			bool m_PostInitialized = false;
 			bool m_SwapChainNeedsRebuilding;
 
 			const std::vector<const char*> m_ValidationLayers =
@@ -327,7 +334,7 @@ namespace flex
 
 			static std::array<glm::mat4, 6> m_CaptureViews;
 
-			VulkanDebugDraw* m_PhysicsDebugDrawer = nullptr;
+			VulkanPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;

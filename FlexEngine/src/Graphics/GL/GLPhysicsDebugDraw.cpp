@@ -1,4 +1,5 @@
 #include "stdafx.hpp"
+#if COMPILE_OPEN_GL
 
 #include "Graphics\GL\GLPhysicsDebugDraw.hpp"
 #include "Graphics\GL\GLHelpers.hpp"
@@ -67,7 +68,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::setDebugMode(int debugMode)
 		{
-			m_DebugMode = debugMode;
+			// NOTE: Call UpdateDebugMode instead of this
 		}
 
 		int GLPhysicsDebugDraw::getDebugMode() const
@@ -84,22 +85,7 @@ namespace flex
 		{
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
 		}
-
-		btIDebugDraw::DefaultColors GLPhysicsDebugDraw::getDefaultColors() const
-		{
-			DefaultColors colors = {};
-
-			colors.m_activeObject.setW(1.0f);
-			colors.m_deactivatedObject.setW(1.0f);
-			colors.m_wantsDeactivationObject.setW(1.0f);
-			colors.m_disabledDeactivationObject.setW(1.0f);
-			colors.m_disabledSimulationObject.setW(1.0f);
-			colors.m_aabb.setW(1.0f);
-			colors.m_contactPoint.setW(1.0f);
-
-			return colors;
-		}
-
+		
 		void GLPhysicsDebugDraw::flushLines()
 		{
 			Draw();
@@ -112,6 +98,11 @@ namespace flex
 
 		void GLPhysicsDebugDraw::Draw()
 		{
+			if (m_LineSegments.empty())
+			{
+				return;
+			}
+
 			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
 			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
 			Renderer::Shader* shader = &glShader->shader;
@@ -194,24 +185,16 @@ namespace flex
 			glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
 			CheckGLErrorMessages();
 
-			//glDepthFunc(GL_LEQUAL);
-			//CheckGLErrorMessages();
 
 			glDepthMask(GL_FALSE);
 			CheckGLErrorMessages();
 
-			//if (shader->translucent)
-			//{
-			//	glEnable(GL_BLEND);
-			//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			//}
-			//else
-			//{
-				glDisable(GL_BLEND);
-			//}
+			glDisable(GL_BLEND);
 
 			glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
 			CheckGLErrorMessages();
 		}
 	} // namespace gl
 } // namespace flex
+
+#endif // COMPILE_OPEN_GL

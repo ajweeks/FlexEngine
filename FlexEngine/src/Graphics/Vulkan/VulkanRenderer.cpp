@@ -18,6 +18,8 @@
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_vulkan.h"
 
+#include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+
 #include "FreeCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
@@ -27,7 +29,9 @@
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/MeshPrefab.hpp"
-#include "Graphics/Vulkan/VulkanPhysicsDebugDraw.h"
+#include "Scene/Scenes/BaseScene.hpp"
+#include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
+#include "Physics/PhysicsWorld.hpp"
 
 namespace flex
 {
@@ -241,6 +245,11 @@ namespace flex
 				return;
 			}
 
+			m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw(gameContext);
+			m_PhysicsDebugDrawer->Initialize();
+			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			world->setDebugDrawer(m_PhysicsDebugDrawer);
+
 			CreateDescriptorPool();
 
 			ShaderID deferredCombineShaderID;
@@ -440,6 +449,7 @@ namespace flex
 			}
 
 
+			m_PostInitialized = true;
 			Logger::LogInfo("Ready!\n");
 		}
 
@@ -2325,7 +2335,7 @@ namespace flex
 				}
 				else
 				{
-					Logger::LogError("Render object doesn't have its material ID set! Using first availble material");
+					Logger::LogError("Render object doesn't have its material ID set! Using first available material");
 					renderObject->materialID = 0;
 				}
 			}
@@ -2343,6 +2353,13 @@ namespace flex
 			{
 				renderObject->indices = createInfo->indices;
 				renderObject->indexed = true;
+			}
+
+			// We've already been post initialized, so we need to create a descriptor set and pipeline here
+			if (m_PostInitialized)
+			{
+				CreateDescriptorSet(renderID);
+				CreateGraphicsPipeline(renderID, true);
 			}
 
 			return renderID;
@@ -2438,6 +2455,11 @@ namespace flex
 		void VulkanRenderer::Draw(const GameContext& gameContext)
 		{
 			DrawCallInfo drawCallInfo = {};
+
+			if (!m_PhysicsDebuggingSettings.DisableAll)
+			{
+				PhysicsDebugRender(gameContext);
+			}
 
 			BuildDeferredCommandBuffer(gameContext, drawCallInfo); // TODO: Only call this when objects change
 			BuildCommandBuffers(gameContext, drawCallInfo); // TODO: Only call this when objects change
@@ -2552,7 +2574,7 @@ namespace flex
 					{
 						ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
 
-						CopyableColorEdit4("Color ", m_DirectionalLight.color, "c##diffuse", "p##color", colorEditFlags);
+						ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
 
 						ImGui::TreePop();
 					}
@@ -2570,7 +2592,7 @@ namespace flex
 						{
 							ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
 
-							CopyableColorEdit4("Color ", m_PointLights[i].color, "c##diffuse", "p##color", colorEditFlags);
+							ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
 
 							ImGui::TreePop();
 						}
@@ -2675,12 +2697,12 @@ namespace flex
 
 		Renderer::Material& VulkanRenderer::GetMaterial(MaterialID materialID)
 		{
-			return m_LoadedMaterials[matID].material;
+			return m_LoadedMaterials[materialID].material;
 		}
 
-		Shader& GetShader(ShaderID shaderID)
+		Renderer::Shader& VulkanRenderer::GetShader(ShaderID shaderID)
 		{
-			return m_Shaders[shaderID];
+			return m_Shaders[shaderID].shader;
 		}
 
 		void VulkanRenderer::Destroy(RenderID renderID)
@@ -2748,6 +2770,14 @@ namespace flex
 		{
 			assert(renderID < m_RenderObjects.size());
 			return m_RenderObjects[renderID];
+		}
+
+		void VulkanRenderer::UpdateRenderObjectVertexData(RenderID renderID)
+		{
+			//RenderObject renderObject = GetRenderObject(renderID);
+			
+			//CreateDescriptorSet(renderID);
+			CreateGraphicsPipeline(renderID, false);
 		}
 		
 		RenderID VulkanRenderer::GetFirstAvailableRenderID() const
@@ -3471,6 +3501,20 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerInfo, nullptr, texture->sampler.replace()));
 		}
 
+		bool VulkanRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
+		{
+			for (size_t i = 0; i < m_LoadedMaterials.size(); ++i)
+			{
+				if (m_LoadedMaterials[i].material.name.compare(materialName) == 0)
+				{
+					materialID = i;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		bool VulkanRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
@@ -3518,7 +3562,7 @@ namespace flex
 			pipelineCreateInfo.enableCulling = renderObject->enableCulling;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
 			pipelineCreateInfo.setDynamicStates = false;
-			pipelineCreateInfo.enabledColorBlending = true;
+			pipelineCreateInfo.enabledColorBlending = shader.shader.translucent;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.subpass = shader.shader.subpass;
@@ -4213,6 +4257,12 @@ namespace flex
 			//samplerCreateInfo.maxLod = 1.0f;
 			//samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			//VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, m_ColorSampler.replace()));
+		}
+
+		void VulkanRenderer::PhysicsDebugRender(const GameContext& gameContext)
+		{
+			btDiscreteDynamicsWorld* physicsWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			physicsWorld->debugDrawWorld();
 		}
 
 		void VulkanRenderer::CreateVulkanTexture_Empty(u32 width, u32 height, VkFormat format, u32 mipLevels, VulkanTexture** texture) const
@@ -6101,6 +6151,7 @@ namespace flex
 
 			// Color
 			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.translucent = true;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
