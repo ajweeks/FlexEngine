@@ -68,6 +68,7 @@ A huge thanks to the following people/organizations for their incredibly useful 
  - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
  - Andrew Maximov for the pistol model and textures [artisaverb.info/PBT.html ](http://artisaverb.info/PBT.html)
  - [FreePBR.com](http://FreePBR.com) for the wonderful PBR textures
+ - Aidan Vangrysperre for being a total cool and damn radical dude. Waw, just waw.
 
 ## Blog
  Stay (somewhat) up to date about this project on my blog at [ajweeks.wordpress.com/tag/flex-engine/](https://ajweeks.wordpress.com/tag/flex-engine/)
