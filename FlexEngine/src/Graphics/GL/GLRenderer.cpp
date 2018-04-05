@@ -3007,7 +3007,7 @@ namespace flex
 					{
 						ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
 
-						ImGui::ColorEdit4("Color ", %m_DirectionalLight.color.r, colorEditFlags);
+						ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
 
 						ImGui::TreePop();
 					}
