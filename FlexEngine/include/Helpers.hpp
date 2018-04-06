@@ -26,6 +26,7 @@ namespace flex
 
 		i32 width;
 		i32 height;
+		i32 channelCount;
 		std::string filePath;
 		real* pixels;
 	};

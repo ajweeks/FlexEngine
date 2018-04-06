@@ -101,13 +101,126 @@ namespace flex
 			VulkanBuffer* indexBuffer = nullptr;
 			u32 vertexCount = 0;
 			u32 indexCount = 0;
-			bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (eg. ImGui vertex buffer)
+			bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 
 		struct VulkanTexture
 		{
-			VulkanTexture(const VDeleter<VkDevice>& device);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue);
+
+			struct ImageCreateInfo
+			{
+				VkImage* image = nullptr;
+				VkDeviceMemory* imageMemory = nullptr;
+
+				bool isHDR = false;
+				u32 width = 0;
+				u32 height = 0;
+				VkFormat format = VK_FORMAT_UNDEFINED;
+				VkImageUsageFlags usage = 0;
+				VkMemoryPropertyFlags properties = 0;
+				u32 mipLevels = 1;
+
+				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				VkImageType imageType = VK_IMAGE_TYPE_2D;
+				VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+				u32 arrayLayers = 1;
+				VkImageCreateFlags flags = 0;
+			};
+
+			struct ImageViewCreateInfo
+			{
+				VkImageView* imageView = nullptr;
+				VkImage* image = nullptr;
+
+				VkFormat format = VK_FORMAT_UNDEFINED;
+				u32 mipLevels = 1;
+				u32 layerCount = 1;
+				VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
+				VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+			};
+
+			struct SamplerCreateInfo
+			{
+				VkSampler* sampler = nullptr;
+
+				real maxAnisotropy = 16.0f;
+				real minLod = 0.0f;
+				real maxLod = 0.0f;
+				VkFilter magFilter = VK_FILTER_LINEAR;
+				VkFilter minFilter = VK_FILTER_LINEAR;
+				VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+				VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+			};
+
+			struct CubemapCreateInfo
+			{
+				VkImage* image = nullptr;
+				VkDeviceMemory* imageMemory = nullptr;
+				VkImageView* imageView = nullptr;
+				VkSampler* sampler = nullptr;
+
+				VkImageLayout imageLayoutOut; // Will be set upon successful creation
+
+				VkFormat format = VK_FORMAT_UNDEFINED;
+				u32 width = 0;
+				u32 height = 0;
+				u32 channels = 0;
+				u32 totalSize = 0;
+				u32 mipLevels = 1;
+				bool generateMipMaps = false;
+				bool enableTrilinearFiltering = true;
+
+				// Leave following field empty to generate uninitialized cubemap
+				std::array<std::string, 6> filePaths;
+			};
+
+			// Static, globally usable functions
+
+			/* @return the size of the generated image */
+			static VkDeviceSize CreateImage(VulkanDevice* device, VkQueue graphicsQueue, ImageCreateInfo& createInfo);
+
+			static void CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo);
+
+			static void CreateSampler(VulkanDevice* device, SamplerCreateInfo& createInfo);
+
+			// Expects *texture == nullptr
+			static VkDeviceSize CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo);
+
+			// Non-static member functions
+			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
+
+			/* 
+			 * Creates image, image view, and sampler based on the texture at filePath 
+			 * Returns size of image in bytes
+			 */
+			VkDeviceSize CreateFromTexture(const std::string& filePath, VkFormat format, bool hdr, u32 mipLevels = 1);
+
+			/*
+			 * Creates image, image view, and sampler
+			 * Returns the size of the image
+			*/
+			VkDeviceSize CreateEmpty(VkFormat format, u32 width, u32 height, u32 mipLevels = 1, VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT);
+
+			/*
+			 * Creates an empty cubemap and returns the size of the generated image
+			 * Returns the size of the image
+			*/
+			VkDeviceSize CreateCubemapEmpty(VkFormat format, u32 width, u32 height, u32 channels, u32 mipLevels, bool enableTrilinearFiltering);
+
+			/*
+			 * Creates a cubemap from the given 6 textures
+			 * Returns the size of the image
+			 */
+			VkDeviceSize CreateCubemapFromTextures(VkFormat format, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering);
+
 			void UpdateImageDescriptor();
+
+			u32 width = 0;
+			u32 height = 0;
+			u32 channelCount = 0;
+			std::string filePath = "";
+			u32 mipLevels = 1;
 
 			VDeleter<VkImage> image;
 			VkImageLayout imageLayout;
@@ -115,10 +228,10 @@ namespace flex
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
 			VkDescriptorImageInfo imageInfoDescriptor;
-			u32 width = 0;
-			u32 height = 0;
-			std::string filePath = "";
-			u32 mipLevels = 1;
+
+		private:
+			VulkanDevice* m_VulkanDevice = nullptr;
+			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
 		};
 
 		void SetImageLayout(
@@ -170,6 +283,25 @@ namespace flex
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
+		VkFormat FindSupportedFormat(VulkanDevice* device, const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+			VkFormatFeatureFlags features);
+		bool HasStencilComponent(VkFormat format);
+		u32 FindMemoryType(VulkanDevice* device, u32 typeFilter, VkMemoryPropertyFlags properties);
+		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
+			VkImageLayout newLayout, u32 mipLevels);
+
+		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height);
+		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height);
+		void CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
+			VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
+		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
+			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
+
+		VkCommandBuffer BeginSingleTimeCommands(VulkanDevice* device);
+		void EndSingleTimeCommands(VulkanDevice* device, VkQueue graphicsQueue, VkCommandBuffer commandBuffer);
+
+		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
+
 		struct VulkanCubemapGBuffer
 		{
 			VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat);
@@ -190,6 +322,8 @@ namespace flex
 
 		struct VulkanMaterial
 		{
+			VulkanMaterial();
+
 			Renderer::Material material = {}; // More info is stored in the generic material struct
 
 			VulkanTexture* diffuseTexture = nullptr;
