@@ -19,7 +19,7 @@ namespace flex
 	void ReflectionProbe::Initialize(const GameContext& gameContext)
 	{
 		// Reflective chrome ball material
-		Renderer::MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
+		MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
 		reflectionProbeMaterialCreateInfo.name = "Reflection probe ball";
 		reflectionProbeMaterialCreateInfo.shaderName = "pbr";
 		reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
@@ -29,7 +29,7 @@ namespace flex
 		MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 
 		// Probe capture material
-		Renderer::MaterialCreateInfo probeCaptureMatCreateInfo = {};
+		MaterialCreateInfo probeCaptureMatCreateInfo = {};
 		probeCaptureMatCreateInfo.name = "Reflection probe capture";
 		probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
 		probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
@@ -62,7 +62,7 @@ namespace flex
 		}
 
 		m_Capture = new GameObject();
-		Renderer::RenderObjectCreateInfo captureObjectCreateInfo = {};
+		RenderObjectCreateInfo captureObjectCreateInfo = {};
 		captureObjectCreateInfo.vertexBufferData = nullptr;
 		captureObjectCreateInfo.materialID = m_CaptureMatID;
 		captureObjectCreateInfo.name = "Reflection probe capture object";
@@ -93,7 +93,7 @@ namespace flex
 	{
 		if (m_Capture)
 		{
-			gameContext.renderer->Destroy(m_Capture->GetRenderID());
+			gameContext.renderer->DestroyRenderObject(m_Capture->GetRenderID());
 		}
 	}
 

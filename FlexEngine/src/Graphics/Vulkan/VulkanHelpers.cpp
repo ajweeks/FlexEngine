@@ -273,14 +273,14 @@ namespace flex
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, createInfo.image));
 
-			VkMemoryRequirements memReqs;
-			vkGetImageMemoryRequirements(device->m_LogicalDevice, *createInfo.image, &memReqs);
+			VkMemoryRequirements memRequirements;
+			vkGetImageMemoryRequirements(device->m_LogicalDevice, *createInfo.image, &memRequirements);
 
 			VkMemoryAllocateInfo memAllocInfo = {};
 			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 
-			memAllocInfo.allocationSize = memReqs.size;
-			memAllocInfo.memoryTypeIndex = device->GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			memAllocInfo.allocationSize = memRequirements.size;
+			memAllocInfo.memoryTypeIndex = device->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAllocInfo, nullptr, createInfo.imageMemory));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *createInfo.image, *createInfo.imageMemory, 0));
@@ -319,6 +319,8 @@ namespace flex
 			imageViewCreateInfo.image = *createInfo.image;
 			imageViewCreateInfo.flags = 0;
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageViewCreateInfo, nullptr, createInfo.imageView));
+
+			return memRequirements.size;
 		}
 
 		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat format, u32 width, u32 height, u32 channels, u32 mipLevels, bool enableTrilinearFiltering)
@@ -432,18 +434,18 @@ namespace flex
 
 			VK_CHECK_RESULT(vkCreateBuffer(m_VulkanDevice->m_LogicalDevice, &bufferCreateInfo, nullptr, &stagingBuffer.m_Buffer));
 
-			VkMemoryRequirements memReqs;
-			vkGetBufferMemoryRequirements(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Buffer, &memReqs);
+			VkMemoryRequirements memRequirements;
+			vkGetBufferMemoryRequirements(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Buffer, &memRequirements);
 
 			VkMemoryAllocateInfo memAllocInfo = {};
 			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			memAllocInfo.allocationSize = memReqs.size;
-			memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			memAllocInfo.allocationSize = memRequirements.size;
+			memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAllocInfo, nullptr, &stagingBuffer.m_Memory));
 			stagingBuffer.Bind();
 
-			stagingBuffer.Map(memReqs.size);
+			stagingBuffer.Map(memRequirements.size);
 			memcpy(stagingBuffer.m_Mapped, pixels, totalSize);
 			free(pixels);
 			stagingBuffer.Unmap();
@@ -1225,12 +1227,12 @@ namespace flex
 
 			VkMemoryAllocateInfo memAlloc = {};
 			memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			VkMemoryRequirements memReqs;
+			VkMemoryRequirements memRequirements;
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, attachment->image.replace()));
-			vkGetImageMemoryRequirements(device->m_LogicalDevice, attachment->image, &memReqs);
-			memAlloc.allocationSize = memReqs.size;
-			memAlloc.memoryTypeIndex = device->GetMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			vkGetImageMemoryRequirements(device->m_LogicalDevice, attachment->image, &memRequirements);
+			memAlloc.allocationSize = memRequirements.size;
+			memAlloc.memoryTypeIndex = device->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, attachment->mem.replace()));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, attachment->image, attachment->mem, 0));
 
@@ -1314,17 +1316,17 @@ namespace flex
 		}
 
 
-		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode)
+		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)
 		{
 			switch (mode)
 			{
-			case Renderer::TopologyMode::POINT_LIST: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-			case Renderer::TopologyMode::LINE_LIST: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-			case Renderer::TopologyMode::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-			case Renderer::TopologyMode::TRIANGLE_LIST: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			case Renderer::TopologyMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-			case Renderer::TopologyMode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-			case Renderer::TopologyMode::LINE_LOOP:
+			case TopologyMode::POINT_LIST: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			case TopologyMode::LINE_LIST: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			case TopologyMode::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			case TopologyMode::TRIANGLE_LIST: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			case TopologyMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+			case TopologyMode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+			case TopologyMode::LINE_LOOP:
 			{
 				Logger::LogWarning("Unsupported TopologyMode passed to Vulkan Renderer: LINE_LOOP");
 				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
@@ -1333,13 +1335,13 @@ namespace flex
 			}
 		}
 
-		VkCullModeFlagBits CullFaceToVkCullMode(Renderer::CullFace cullFace)
+		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace)
 		{
 			switch (cullFace)
 			{
-			case Renderer::CullFace::BACK: return VK_CULL_MODE_BACK_BIT;
-			case Renderer::CullFace::FRONT: return VK_CULL_MODE_FRONT_BIT;
-			case Renderer::CullFace::FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
+			case CullFace::BACK: return VK_CULL_MODE_BACK_BIT;
+			case CullFace::FRONT: return VK_CULL_MODE_FRONT_BIT;
+			case CullFace::FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
 			default: return VK_CULL_MODE_NONE;
 			}
 		}

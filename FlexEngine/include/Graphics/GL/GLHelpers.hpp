@@ -169,7 +169,7 @@ namespace flex
 
 		GLboolean BoolToGLBoolean(bool value);
 		GLuint BufferTargetToGLTarget(Renderer::BufferTarget bufferTarget);
-		GLenum TypeToGLType(Renderer::Type type);
+		GLenum DataTypeToGLType(DataType dataType);
 		GLenum UsageFlagToGLUsageFlag(Renderer::UsageFlag usage);
 		GLenum TopologyModeToGLMode(Renderer::TopologyMode topology);
 		u32 CullFaceToGLMode(Renderer::CullFace cullFace);

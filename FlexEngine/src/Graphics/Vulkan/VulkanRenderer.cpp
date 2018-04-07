@@ -185,17 +185,19 @@ namespace flex
 
 			if (m_SkyBoxMesh)
 			{
-				Destroy(m_SkyBoxMesh->GetRenderID());
+				DestroyRenderObject(m_SkyBoxMesh->GetRenderID());
 				SafeDelete(m_SkyBoxMesh);
 			}
 
 			if (m_gBufferCubemapMesh)
 			{
-				Destroy(m_gBufferCubemapMesh->GetRenderID());
+				DestroyRenderObject(m_gBufferCubemapMesh->GetRenderID());
 				SafeDelete(m_gBufferCubemapMesh);
 			}
 
-			Destroy(m_GBufferQuadRenderID);
+			DestroyRenderObject(m_GBufferQuadRenderID);
+
+			SafeDelete(m_PhysicsDebugDrawer);
 
 			u32 activeRenderObjectCount = 0;
 			for (RenderObjectIter iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
@@ -215,7 +217,7 @@ namespace flex
 					if (*iter)
 					{
 						Logger::LogError("Render object " + (*iter)->name + " was not destroyed");
-						Destroy((*iter)->renderID, *iter);
+						DestroyRenderObject((*iter)->renderID, *iter);
 					}
 				}
 			}
@@ -253,8 +255,6 @@ namespace flex
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
 			m_SwapChainFramebuffers.clear();
-
-			SafeDelete(m_PhysicsDebugDrawer);
 
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
@@ -578,10 +578,10 @@ namespace flex
 
 			VkMemoryAllocateInfo offscreenMemAlloc = {};
 			offscreenMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			VkMemoryRequirements offscreenMemReqs;
-			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemReqs);
-			offscreenMemAlloc.allocationSize = offscreenMemReqs.size;
-			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VkMemoryRequirements offscreenMemRequirements;
+			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
+			offscreenMemAlloc.allocationSize = offscreenMemRequirements.size;
+			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
 			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
@@ -1021,10 +1021,10 @@ namespace flex
 
 			VkMemoryAllocateInfo offscreenMemAlloc = {};
 			offscreenMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			VkMemoryRequirements offscreenMemReqs;
-			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemReqs);
-			offscreenMemAlloc.allocationSize = offscreenMemReqs.size;
-			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VkMemoryRequirements offscreenMemRequirements;
+			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
+			offscreenMemAlloc.allocationSize = offscreenMemRequirements.size;
+			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
 			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
@@ -1480,10 +1480,10 @@ namespace flex
 
 				VkMemoryAllocateInfo memAlloc = {};
 				memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-				VkMemoryRequirements memReqs;
-				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &memReqs);
-				memAlloc.allocationSize = memReqs.size;
-				memAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+				VkMemoryRequirements memRequirements;
+				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &memRequirements);
+				memAlloc.allocationSize = memRequirements.size;
+				memAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, &offscreen.memory));
 				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
@@ -2690,13 +2690,13 @@ namespace flex
 			return m_RenderObjects.size();
 		}
 
-		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, Renderer::Type renderType, bool normalized, i32 stride, void* pointer)
+		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
 			// TODO: Implement
 			UNREFERENCED_PARAMETER(renderID);
 			UNREFERENCED_PARAMETER(variableName);
 			UNREFERENCED_PARAMETER(size);
-			UNREFERENCED_PARAMETER(renderType);
+			UNREFERENCED_PARAMETER(dataType);
 			UNREFERENCED_PARAMETER(normalized);
 			UNREFERENCED_PARAMETER(stride);
 			UNREFERENCED_PARAMETER(pointer);
@@ -2734,17 +2734,17 @@ namespace flex
 			}
 		}
 
-		Renderer::Material& VulkanRenderer::GetMaterial(MaterialID materialID)
+		Material& VulkanRenderer::GetMaterial(MaterialID materialID)
 		{
 			return m_Materials[materialID].material;
 		}
 
-		Renderer::Shader& VulkanRenderer::GetShader(ShaderID shaderID)
+		Shader& VulkanRenderer::GetShader(ShaderID shaderID)
 		{
 			return m_Shaders[shaderID].shader;
 		}
 
-		void VulkanRenderer::Destroy(RenderID renderID)
+		void VulkanRenderer::DestroyRenderObject(RenderID renderID)
 		{
 			for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 			{
@@ -2759,7 +2759,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::Destroy(RenderID renderID, VulkanRenderObject* renderObject)
+		void VulkanRenderer::DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject)
 		{
 			if (renderObject)
 			{
@@ -2793,13 +2793,13 @@ namespace flex
 			return m_PointLights.size() - 1;
 		}
 
-		Renderer::DirectionalLight& VulkanRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
+		DirectionalLight& VulkanRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
 		{
 			UNREFERENCED_PARAMETER(dirLightID);
 			return m_DirectionalLight;
 		}
 
-		Renderer::PointLight& VulkanRenderer::GetPointLight(PointLightID pointLightID)
+		PointLight& VulkanRenderer::GetPointLight(PointLightID pointLightID)
 		{
 			assert(pointLightID < m_PointLights.size());
 			return m_PointLights[pointLightID];
@@ -4597,6 +4597,25 @@ namespace flex
 			return vertexCount;
 		}
 
+		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData)
+		{
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+
+			if (initialData)
+			{
+				stagingBuffer.Map(size);
+				memcpy(stagingBuffer.m_Mapped, initialData, size);
+				stagingBuffer.Unmap();
+			}
+
+			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer);
+
+			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, size);
+		}
+
 		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
 		{
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
@@ -5622,7 +5641,7 @@ namespace flex
 				Logger::LogError(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_DEBUG_BIT_EXT:
-				// Fallthrough
+				// Fall through
 			default:
 				Logger::LogError(msg);
 				break;

@@ -42,14 +42,15 @@ namespace flex
 			VDeleter<VkImage> image;
 			VDeleter<VkDeviceMemory> mem;
 			VDeleter<VkImageView> view;
-			VkFormat format;
+			VkFormat format = VK_FORMAT_UNDEFINED;
 		};
 
 		struct FrameBuffer
 		{
 			FrameBuffer(const VDeleter<VkDevice>& device);
 
-			u32 width, height;
+			u32 width = 0;
+			u32 height = 0;
 			VDeleter<VkFramebuffer> frameBuffer;
 			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
 			VDeleter<VkRenderPass> renderPass;
@@ -160,7 +161,7 @@ namespace flex
 				VkImageView* imageView = nullptr;
 				VkSampler* sampler = nullptr;
 
-				VkImageLayout imageLayoutOut; // Will be set upon successful creation
+				VkImageLayout imageLayoutOut = VK_IMAGE_LAYOUT_UNDEFINED; // Will be set upon successful creation
 
 				VkFormat format = VK_FORMAT_UNDEFINED;
 				u32 width = 0;
@@ -223,7 +224,7 @@ namespace flex
 			u32 mipLevels = 1;
 
 			VDeleter<VkImage> image;
-			VkImageLayout imageLayout;
+			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
@@ -315,7 +316,7 @@ namespace flex
 		{
 			VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device);
 
-			Renderer::Shader shader;
+			Shader shader;
 
 			UniformBuffer uniformBuffer;
 		};
@@ -324,7 +325,7 @@ namespace flex
 		{
 			VulkanMaterial();
 
-			Renderer::Material material = {}; // More info is stored in the generic material struct
+			Material material = {}; // More info is stored in the generic material struct
 
 			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
@@ -445,8 +446,8 @@ namespace flex
 
 		typedef std::vector<VulkanRenderObject*>::iterator RenderObjectIter;
 
-		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(Renderer::TopologyMode mode);
-		VkCullModeFlagBits CullFaceToVkCullMode(Renderer::CullFace cullFace);
+		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
+		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);
 
 		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 			const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);

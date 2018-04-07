@@ -391,21 +391,21 @@ namespace flex
 			return glTarget;
 		}
 
-		GLenum TypeToGLType(Renderer::Type type)
+		GLenum DataTypeToGLType(DataType dataType)
 		{
 			GLenum glType = 0;
 
-			if (type == Renderer::Type::BYTE)					glType = GL_BYTE;
-			else if (type == Renderer::Type::UNSIGNED_BYTE)		glType = GL_UNSIGNED_BYTE;
-			else if (type == Renderer::Type::SHORT)				glType = GL_SHORT;
-			else if (type == Renderer::Type::UNSIGNED_SHORT)	glType = GL_UNSIGNED_SHORT;
-			else if (type == Renderer::Type::INT)				glType = GL_INT;
-			else if (type == Renderer::Type::UNSIGNED_INT)		glType = GL_UNSIGNED_INT;
-			else if (type == Renderer::Type::FLOAT)				glType = GL_FLOAT;
-			else if (type == Renderer::Type::DOUBLE)			glType = GL_DOUBLE;
+			if (dataType == DataType::BYTE)					glType = GL_BYTE;
+			else if (dataType == DataType::UNSIGNED_BYTE)		glType = GL_UNSIGNED_BYTE;
+			else if (dataType == DataType::SHORT)				glType = GL_SHORT;
+			else if (dataType == DataType::UNSIGNED_SHORT)	glType = GL_UNSIGNED_SHORT;
+			else if (dataType == DataType::INT)				glType = GL_INT;
+			else if (dataType == DataType::UNSIGNED_INT)		glType = GL_UNSIGNED_INT;
+			else if (dataType == DataType::FLOAT)				glType = GL_FLOAT;
+			else if (dataType == DataType::DOUBLE)			glType = GL_DOUBLE;
 			else
 			{
-				Logger::LogError("Unhandled Type passed to GLRenderer: " + std::to_string((i32)type));
+				Logger::LogError("Unhandled Type passed to GLRenderer: " + std::to_string((i32)dataType));
 			}
 
 			return glType;

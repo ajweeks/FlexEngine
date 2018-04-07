@@ -54,7 +54,7 @@ namespace flex
 			virtual u32 GetRenderObjectCapacity() const override;
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-				Renderer::Type renderType, bool normalized, i32 stride, void* pointer) override;
+				DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
 			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
@@ -62,7 +62,7 @@ namespace flex
 			virtual Material& GetMaterial(MaterialID materialID) override;
 			virtual Shader& GetShader(ShaderID shaderID) override;
 
-			virtual void Destroy(RenderID renderID) override;
+			virtual void DestroyRenderObject(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;
 

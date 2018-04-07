@@ -368,13 +368,13 @@ namespace flex
 
 			if (m_SkyBoxMesh)
 			{
-				Destroy(m_SkyBoxMesh->GetRenderID());
+				DestroyRenderObject(m_SkyBoxMesh->GetRenderID());
 				SafeDelete(m_SkyBoxMesh);
 			}
 
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				Destroy(i);
+				DestroyRenderObject(i);
 				CheckGLErrorMessages();
 			}
 			m_RenderObjects.clear();
@@ -1429,7 +1429,7 @@ namespace flex
 			return m_DirectionalLight;
 		}
 
-		Renderer::PointLight& GLRenderer::GetPointLight(PointLightID pointLight)
+		PointLight& GLRenderer::GetPointLight(PointLightID pointLight)
 		{
 			return m_PointLights[pointLight];
 		}
@@ -2794,7 +2794,7 @@ namespace flex
 		}
 
 		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-			Renderer::Type renderType, bool normalized, i32 stride, void* pointer)
+			DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 
@@ -2822,7 +2822,7 @@ namespace flex
 			}
 			glEnableVertexAttribArray((GLuint)location);
 
-			GLenum glRenderType = TypeToGLType(renderType);
+			GLenum glRenderType = DataTypeToGLType(dataType);
 			glVertexAttribPointer((GLuint)location, size, glRenderType, (GLboolean)normalized, stride, pointer);
 			CheckGLErrorMessages();
 
@@ -2872,7 +2872,7 @@ namespace flex
 			return m_Shaders[shaderID].shader;
 		}
 
-		void GLRenderer::Destroy(RenderID renderID)
+		void GLRenderer::DestroyRenderObject(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)

@@ -21,28 +21,28 @@ namespace flex
 	void TestScene::Initialize(const GameContext& gameContext)
 	{
 		// Lights
-		Renderer::PointLight light1 = {};
+		PointLight light1 = {};
 		light1.position = glm::vec4(-6.0f, -6.0f, -8.0f, 0.0f);
 		light1.color = glm::vec4(300.0f, 300.0f, 300.0f, 0.0f);
 		m_PointLight1ID = gameContext.renderer->InitializePointLight(light1);
 
-		Renderer::PointLight light2 = {};
+		PointLight light2 = {};
 		light2.position = glm::vec4(-6.0f, 6.0f, -8.0f, 0.0f);
 		light2.color = glm::vec4(10.0f, 300.0f, 10.0f, 0.0f);
 		m_PointLight2ID = gameContext.renderer->InitializePointLight(light2);
 
-		Renderer::PointLight light3 = {};
+		PointLight light3 = {};
 		light3.position = glm::vec4(6.0f, 6.0f, -8.0f, 0.0f);
 		light3.color = glm::vec4(300.0f, 10.0f, 10.0f, 0.0f);
 		m_PointLight3ID = gameContext.renderer->InitializePointLight(light3);
 
-		Renderer::PointLight light4 = {};
+		PointLight light4 = {};
 		light4.position = glm::vec4(6.0f, -6.0f, -8.0f, 0.0f);
 		light4.color = glm::vec4(40.0f, 10.0f, 300.0f, 0.0f);
 		m_PointLight4ID = gameContext.renderer->InitializePointLight(light4);
 
 		// Materials
-		Renderer::MaterialCreateInfo skyboxHDRMatInfo = {};
+		MaterialCreateInfo skyboxHDRMatInfo = {};
 		skyboxHDRMatInfo.name = "HDR Skybox";
 		skyboxHDRMatInfo.shaderName = "background";
 		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
@@ -55,7 +55,7 @@ namespace flex
 		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
 		const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
 
-		//Renderer::MaterialCreateInfo pbrMatInfo = {};
+		//MaterialCreateInfo pbrMatInfo = {};
 		//pbrMatInfo.shaderName = "pbr";
 		//pbrMatInfo.name = "PBR";
 		//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.25f, 0.35f);
@@ -96,22 +96,22 @@ namespace flex
 
 	void TestScene::Update(const GameContext& gameContext)
 	{
-		Renderer::PointLight& light1 = gameContext.renderer->GetPointLight(m_PointLight1ID);
+		PointLight& light1 = gameContext.renderer->GetPointLight(m_PointLight1ID);
 		light1.position.x = (cos(gameContext.elapsedTime)) * 12.0f;
 		light1.position.y = (cos(gameContext.elapsedTime * 0.6f + 1.5f) * 0.4f + 0.6f) * 10.0f;
 		light1.position.z = (sin(gameContext.elapsedTime)) * 20.0f;
 
-		Renderer::PointLight& light2 = gameContext.renderer->GetPointLight(m_PointLight2ID);
+		PointLight& light2 = gameContext.renderer->GetPointLight(m_PointLight2ID);
 		light2.position.x = (sin(gameContext.elapsedTime + PI)) * 12.0f - 15.0f;
 		light2.position.y = (cos(gameContext.elapsedTime * 0.23f + 2.51f) * 0.4f + 0.6f) * 5.0f;
 		light2.position.z = (cos(gameContext.elapsedTime + PI)) * 12.0f + 15.0f;
 
-		Renderer::PointLight& light3 = gameContext.renderer->GetPointLight(m_PointLight3ID);
+		PointLight& light3 = gameContext.renderer->GetPointLight(m_PointLight3ID);
 		light3.position.x = (cos(gameContext.elapsedTime)) * 5.0f;
 		light3.position.y = (cos(gameContext.elapsedTime * 2.56f + 1.2f) * 0.4f + 0.6f) * 12.0f;
 		light3.position.z = (sin(gameContext.elapsedTime)) * 25.0f;
 
-		Renderer::PointLight& light4 = gameContext.renderer->GetPointLight(m_PointLight4ID);
+		PointLight& light4 = gameContext.renderer->GetPointLight(m_PointLight4ID);
 		light4.position.x = (sin(gameContext.elapsedTime + glm::three_over_two_pi<real>())) * 10.0f - 5.0f;
 		light4.position.y = (cos(gameContext.elapsedTime * 1.1f + 3.6f) * 0.4f + 0.6f) * 10.0f;
 		light4.position.z = (cos(gameContext.elapsedTime + glm::three_over_two_pi<real>())) * 10.0f + 5.0f;
