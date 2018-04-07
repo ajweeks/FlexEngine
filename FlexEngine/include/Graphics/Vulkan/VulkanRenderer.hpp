@@ -268,10 +268,7 @@ namespace flex
 			VulkanTexture* m_BlankTexture = nullptr;
 
 			// TODO: Use FrameBufferAttachment
-			VDeleter<VkImage> m_DepthImage;
-			VDeleter<VkDeviceMemory> m_DepthImageMemory;
-			VDeleter<VkImageView> m_DepthImageView;
-			VkFormat m_DepthImageFormat;
+			FrameBufferAttachment* m_DepthAttachment = nullptr;
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 

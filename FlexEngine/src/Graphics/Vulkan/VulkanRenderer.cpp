@@ -55,14 +55,13 @@ namespace flex
 
 			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
 			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_DepthImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
-			m_DepthImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
-			m_DepthImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
 			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
 			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 			m_PipelineCache = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineCache };
+
+			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
 
 			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
 			m_OffScreenFrameBuf->frameBufferAttachments.reserve(3);
@@ -231,14 +230,13 @@ namespace flex
 			SafeDelete(m_CubemapFrameBuffer);
 			SafeDelete(m_CubemapDepthAttachment);
 
+			SafeDelete(m_DepthAttachment);
+
 			m_gBufferQuadVertexBufferData.Destroy();
 
 			m_PipelineCache.replace();
 
 			m_DescriptorPool.replace();
-			m_DepthImageView.replace();
-			m_DepthImageMemory.replace();
-			m_DepthImage.replace();
 
 			m_ColorSampler.replace();
 
@@ -3795,12 +3793,12 @@ namespace flex
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
-			m_DepthImageFormat = depthFormat;
+			m_DepthAttachment->format = depthFormat;
 
 			// Swapchain images
 			VulkanTexture::ImageCreateInfo depthImageCreateInfo = {};
-			depthImageCreateInfo.image = m_DepthImage.replace();
-			depthImageCreateInfo.imageMemory = m_DepthImageMemory.replace();
+			depthImageCreateInfo.image = m_DepthAttachment->image.replace();
+			depthImageCreateInfo.imageMemory = m_DepthAttachment->mem.replace();
 			depthImageCreateInfo.width = m_SwapChainExtent.width;
 			depthImageCreateInfo.height = m_SwapChainExtent.height;
 			depthImageCreateInfo.format = depthFormat;
@@ -3811,13 +3809,13 @@ namespace flex
 			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, depthImageCreateInfo);
 
 			VulkanTexture::ImageViewCreateInfo depthImageViewCreateInfo = {};
-			depthImageViewCreateInfo.image = &m_DepthImage;
-			depthImageViewCreateInfo.imageView = m_DepthImageView.replace();
+			depthImageViewCreateInfo.image = &m_DepthAttachment->image;
+			depthImageViewCreateInfo.imageView = m_DepthAttachment->view.replace();
 			depthImageViewCreateInfo.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
 			depthImageViewCreateInfo.format = depthFormat;
 			VulkanTexture::CreateImageView(m_VulkanDevice, depthImageViewCreateInfo);
 
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 
 
 			// Cubemap depth
@@ -3858,7 +3856,7 @@ namespace flex
 			{
 				std::array<VkImageView, 2> attachments = {
 					m_SwapChainImageViews[i],
-					m_DepthImageView
+					m_DepthAttachment->view
 				};
 
 				VkFramebufferCreateInfo framebufferInfo = {};
@@ -3931,7 +3929,7 @@ namespace flex
 			attachmentDescs[frameBufferColorAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 			attachmentDescs[frameBufferColorAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			attachmentDescs[frameBufferColorAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			attachmentDescs[frameBufferColorAttachmentCount].format = m_DepthImageFormat;
+			attachmentDescs[frameBufferColorAttachmentCount].format = m_DepthAttachment->format;
 
 
 			std::vector<VkAttachmentReference> colorReferences;
@@ -3950,7 +3948,7 @@ namespace flex
 			subpass.colorAttachmentCount = static_cast<u32>(colorReferences.size());
 			subpass.pDepthStencilAttachment = &depthReference;
 
-			// Use subpass dependencies for attachment layput transitions
+			// Use subpass dependencies for attachment layout transitions
 			std::array<VkSubpassDependency, 2> dependencies;
 
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -3986,7 +3984,7 @@ namespace flex
 			{
 				attachments.push_back(m_OffScreenFrameBuf->frameBufferAttachments[i].second.view);
 			}
-			attachments.push_back(m_DepthImageView);
+			attachments.push_back(m_DepthAttachment->view);
 
 			VkFramebufferCreateInfo fbufCreateInfo = {};
 			fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

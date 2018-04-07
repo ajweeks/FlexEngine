@@ -1372,7 +1372,8 @@ namespace flex
 		FrameBufferAttachment::FrameBufferAttachment(const VDeleter<VkDevice>& device) :
 			image(device, vkDestroyImage),
 			mem(device, vkFreeMemory),
-			view(device, vkDestroyImageView)
+			view(device, vkDestroyImageView),
+			format(VK_FORMAT_UNDEFINED)
 		{
 		}
 
