@@ -25,7 +25,7 @@ namespace flex
 				const std::string& vertexShaderFilePath,
 				const std::string& fragmentShaderFilePath);
 
-			Renderer::Shader shader;
+			Shader shader;
 
 			u32 program = 0;
 		};
@@ -40,7 +40,7 @@ namespace flex
 
 		struct GLMaterial
 		{
-			Renderer::Material material = {}; // More info is stored in the generic material struct
+			Material material = {}; // More info is stored in the generic material struct
 
 			struct UniformIDs
 			{
@@ -168,12 +168,12 @@ namespace flex
 
 
 		GLboolean BoolToGLBoolean(bool value);
-		GLuint BufferTargetToGLTarget(Renderer::BufferTarget bufferTarget);
+		GLuint BufferTargetToGLTarget(BufferTarget bufferTarget);
 		GLenum DataTypeToGLType(DataType dataType);
-		GLenum UsageFlagToGLUsageFlag(Renderer::UsageFlag usage);
-		GLenum TopologyModeToGLMode(Renderer::TopologyMode topology);
-		u32 CullFaceToGLMode(Renderer::CullFace cullFace);
-		GLenum DepthTestFuncToGlenum(Renderer::DepthTestFunc func);
+		GLenum UsageFlagToGLUsageFlag(UsageFlag usage);
+		GLenum TopologyModeToGLMode(TopologyMode topology);
+		u32 CullFaceToGLMode(CullFace cullFace);
+		GLenum DepthTestFuncToGlenum(DepthTestFunc func);
 
 	} // namespace gl
 } // namespace flex

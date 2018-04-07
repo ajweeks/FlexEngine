@@ -380,12 +380,12 @@ namespace flex
 			return value ? GL_TRUE : GL_FALSE;
 		}
 
-		GLuint BufferTargetToGLTarget(Renderer::BufferTarget bufferTarget)
+		GLuint BufferTargetToGLTarget(BufferTarget bufferTarget)
 		{
 			GLuint glTarget = 0;
 
-			if (bufferTarget == Renderer::BufferTarget::ARRAY_BUFFER) glTarget = GL_ARRAY_BUFFER;
-			else if (bufferTarget == Renderer::BufferTarget::ELEMENT_ARRAY_BUFFER) glTarget = GL_ELEMENT_ARRAY_BUFFER;
+			if (bufferTarget == BufferTarget::ARRAY_BUFFER) glTarget = GL_ARRAY_BUFFER;
+			else if (bufferTarget == BufferTarget::ELEMENT_ARRAY_BUFFER) glTarget = GL_ELEMENT_ARRAY_BUFFER;
 			else Logger::LogError("Unhandled BufferTarget passed to GLRenderer: " + std::to_string((i32)bufferTarget));
 
 			return glTarget;
@@ -411,12 +411,12 @@ namespace flex
 			return glType;
 		}
 
-		GLenum UsageFlagToGLUsageFlag(Renderer::UsageFlag usage)
+		GLenum UsageFlagToGLUsageFlag(UsageFlag usage)
 		{
 			GLenum glUsage = 0;
 
-			if (usage == Renderer::UsageFlag::STATIC_DRAW)			glUsage = GL_STATIC_DRAW;
-			else if (usage == Renderer::UsageFlag::DYNAMIC_DRAW)	glUsage = GL_DYNAMIC_DRAW;
+			if (usage == UsageFlag::STATIC_DRAW)			glUsage = GL_STATIC_DRAW;
+			else if (usage == UsageFlag::DYNAMIC_DRAW)	glUsage = GL_DYNAMIC_DRAW;
 			else
 			{
 				Logger::LogError("Unhandled usage flag passed to GLRenderer: " + std::to_string((i32)usage));
@@ -425,45 +425,45 @@ namespace flex
 			return glUsage;
 		}
 
-		GLenum TopologyModeToGLMode(Renderer::TopologyMode topology)
+		GLenum TopologyModeToGLMode(TopologyMode topology)
 		{
 			switch (topology)
 			{
-			case Renderer::TopologyMode::POINT_LIST:		return GL_POINTS;
-			case Renderer::TopologyMode::LINE_LIST:			return GL_LINES;
-			case Renderer::TopologyMode::LINE_LOOP:			return GL_LINE_LOOP;
-			case Renderer::TopologyMode::LINE_STRIP:		return GL_LINE_STRIP;
-			case Renderer::TopologyMode::TRIANGLE_LIST:		return GL_TRIANGLES;
-			case Renderer::TopologyMode::TRIANGLE_STRIP:	return GL_TRIANGLE_STRIP;
-			case Renderer::TopologyMode::TRIANGLE_FAN:		return GL_TRIANGLE_FAN;
+			case TopologyMode::POINT_LIST:		return GL_POINTS;
+			case TopologyMode::LINE_LIST:			return GL_LINES;
+			case TopologyMode::LINE_LOOP:			return GL_LINE_LOOP;
+			case TopologyMode::LINE_STRIP:		return GL_LINE_STRIP;
+			case TopologyMode::TRIANGLE_LIST:		return GL_TRIANGLES;
+			case TopologyMode::TRIANGLE_STRIP:	return GL_TRIANGLE_STRIP;
+			case TopologyMode::TRIANGLE_FAN:		return GL_TRIANGLE_FAN;
 			default:										return GL_INVALID_ENUM;
 			}
 		}
 
-		u32 CullFaceToGLMode(Renderer::CullFace cullFace)
+		u32 CullFaceToGLMode(CullFace cullFace)
 		{
 			switch (cullFace)
 			{
-			case Renderer::CullFace::BACK:				return GL_BACK;
-			case Renderer::CullFace::FRONT:				return GL_FRONT;
-			case Renderer::CullFace::FRONT_AND_BACK:	return GL_FRONT_AND_BACK;
+			case CullFace::BACK:				return GL_BACK;
+			case CullFace::FRONT:				return GL_FRONT;
+			case CullFace::FRONT_AND_BACK:	return GL_FRONT_AND_BACK;
 			default:									return GL_FALSE;
 			}
 		}
 
-		GLenum DepthTestFuncToGlenum(Renderer::DepthTestFunc func)
+		GLenum DepthTestFuncToGlenum(DepthTestFunc func)
 		{
 			switch (func)
 			{
-			case Renderer::DepthTestFunc::ALWAYS:	return GL_ALWAYS;
-			case Renderer::DepthTestFunc::NEVER:	return GL_NEVER;
-			case Renderer::DepthTestFunc::LESS:		return GL_LESS;
-			case Renderer::DepthTestFunc::LEQUAL:	return GL_LEQUAL;
-			case Renderer::DepthTestFunc::GREATER:	return GL_GREATER;
-			case Renderer::DepthTestFunc::GEQUAL:	return GL_GEQUAL;
-			case Renderer::DepthTestFunc::EQUAL:	return GL_EQUAL;
-			case Renderer::DepthTestFunc::NOTEQUAL:	return GL_NOTEQUAL;
-			case Renderer::DepthTestFunc::NONE:		return GL_FALSE;
+			case DepthTestFunc::ALWAYS:	return GL_ALWAYS;
+			case DepthTestFunc::NEVER:	return GL_NEVER;
+			case DepthTestFunc::LESS:		return GL_LESS;
+			case DepthTestFunc::LEQUAL:	return GL_LEQUAL;
+			case DepthTestFunc::GREATER:	return GL_GREATER;
+			case DepthTestFunc::GEQUAL:	return GL_GEQUAL;
+			case DepthTestFunc::EQUAL:	return GL_EQUAL;
+			case DepthTestFunc::NOTEQUAL:	return GL_NOTEQUAL;
+			case DepthTestFunc::NONE:		return GL_FALSE;
 			default:								return GL_FALSE;
 			}
 		}

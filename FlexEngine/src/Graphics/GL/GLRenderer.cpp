@@ -1422,7 +1422,7 @@ namespace flex
 			return m_PointLights.size() - 1;
 		}
 
-		Renderer::DirectionalLight& GLRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
+		DirectionalLight& GLRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
 		{
 			// TODO: Add support for multiple directional lights
 			UNREFERENCED_PARAMETER(dirLightID);
@@ -2862,12 +2862,12 @@ namespace flex
 			}
 		}
 
-		Renderer::Material& GLRenderer::GetMaterial(MaterialID matID)
+		Material& GLRenderer::GetMaterial(MaterialID matID)
 		{
 			return m_Materials[matID].material;
 		}
 
-		Renderer::Shader& GLRenderer::GetShader(ShaderID shaderID)
+		Shader& GLRenderer::GetShader(ShaderID shaderID)
 		{
 			return m_Shaders[shaderID].shader;
 		}
