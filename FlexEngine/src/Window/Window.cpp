@@ -10,17 +10,14 @@
 
 namespace flex
 {
-	Window::Window(const std::string& title, glm::vec2 size, glm::vec2 startingPos, GameContext& gameContext) :
+	Window::Window(const std::string& title, GameContext& gameContext) :
 		m_TitleString(title),
-		m_Size(size),
-		m_StartingPosition(startingPos),
-		m_Position(startingPos),
-		m_FrameBufferSize(size),
 		m_ShowFPSInWindowTitle(true),
 		m_ShowMSInWindowTitle(true),
 		m_GameContextRef(gameContext),
 		m_UpdateWindowTitleFrequency(0.0f),
-		m_SecondsSinceTitleUpdate(0.0f)
+		m_SecondsSinceTitleUpdate(0.0f),
+		m_CurrentFullscreenMode(FullscreenMode::WINDOWED)
 	{
 		gameContext.window = this;
 	}
@@ -134,6 +131,10 @@ namespace flex
 		m_CursorMode = mode;
 	}
 
+	Window::FullscreenMode Window::GetFullscreenMode()
+	{
+		return m_CurrentFullscreenMode;
+	}
 
 	// Callbacks
 	void Window::KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, i32 mods)
@@ -168,12 +169,22 @@ namespace flex
 
 	void Window::WindowSizeCallback(i32 width, i32 height)
 	{
-		SetSize(width, height);
+		OnSizeChanged(width, height);
+
+		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		{
+			m_LastWindowedSize = glm::vec2i(width, height);
+		}
 	}
 
 	void Window::WindowPosCallback(i32 newX, i32 newY)
 	{
-		m_Position = { newX, newY };
+		OnPositionChanged(newX, newY);
+
+		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		{
+			m_LastWindowedPos = m_Position;
+		}
 	}
 
 	void Window::FrameBufferSizeCallback(i32 width, i32 height)

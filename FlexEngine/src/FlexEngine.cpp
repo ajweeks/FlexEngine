@@ -119,21 +119,21 @@ namespace flex
 	void FlexEngine::InitializeWindowAndRenderer()
 	{
 		// TODO: Determine user's display size before creating a window
-		glm::vec2i desiredWindowSize(1920, 1080);
-		glm::vec2i desiredWindowPos(300, 300);
+		//glm::vec2i desiredWindowSize(500, 300);
+		//glm::vec2i desiredWindowPos(300, 300);
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			m_GameContext.window = new vk::VulkanWindowWrapper(titleString + " - Vulkan", desiredWindowSize, desiredWindowPos, m_GameContext);
+			m_GameContext.window = new vk::VulkanWindowWrapper(titleString + " - Vulkan", m_GameContext);
 		}
 #endif
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			m_GameContext.window = new gl::GLWindowWrapper(titleString + " - OpenGL", desiredWindowSize, desiredWindowPos, m_GameContext);
+			m_GameContext.window = new gl::GLWindowWrapper(titleString + " - OpenGL", m_GameContext);
 		}
 #endif
 		if (m_GameContext.window == nullptr)
@@ -144,16 +144,17 @@ namespace flex
 
 		m_GameContext.window->Initialize();
 		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
-
-		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.75f);
+		
+		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.4f);
 		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
-		m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
+		//m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
 
 		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
 		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
-		m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
+		//m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
 
-		m_GameContext.window->Create();
+		m_GameContext.window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
+		m_GameContext.window->PostInitialize();
 
 
 #if COMPILE_VULKAN
@@ -329,9 +330,19 @@ namespace flex
 				settings.DrawWireframe = !settings.DrawWireframe;
 			}
 
+			bool altDown = m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_ALT) ||
+				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT_ALT);
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F11) ||
+				(altDown && m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_ENTER)))
+			{
+				m_GameContext.window->ToggleFullscreen();
+			}
+
 			m_GameContext.camera->Update(m_GameContext);
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.window->Update(m_GameContext);
+
+			//ImGui::ShowDemoWindow();
 
 			static bool windowOpen = true;
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1))
@@ -357,6 +368,17 @@ namespace flex
 
 					static const char* uiScaleStr = "UI Scale";
 					ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
+
+					static const char* windowModeStr = "##WindowMode";
+					static const char* windowModesStr[] = { "Windowed", "Borderless Windowed", "Fullscreen" };
+					static const int windowModeCount = 3;
+					int currentItemIndex = (int)m_GameContext.window->GetFullscreenMode();
+					if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
+					{
+						Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
+						m_GameContext.window->SetFullscreenMode(newFullscreenMode);
+					}
+
 					static const char* physicsDebuggingStr = "Physics debugging";
 					if (ImGui::TreeNode(physicsDebuggingStr))
 					{
@@ -557,9 +579,9 @@ namespace flex
 		// Scale correctly on high DPI monitors
 		// TODO: Handle more cleanly
 		//if (m_GameContext.monitor.width > 1920.0f)
-		{
-			io.FontGlobalScale = 2.0f;
-		}
+		//{
+			///io.FontGlobalScale = 2.0f;
+		//}
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);

@@ -5,31 +5,37 @@
 
 #include "Window.hpp"
 
-
 namespace flex
 {
 	class GLFWWindowWrapper : public Window
 	{
 	public:
-		GLFWWindowWrapper(std::string title, glm::vec2i size, glm::vec2i startingPos, GameContext& gameContext);
+		GLFWWindowWrapper(std::string title, GameContext& gameContext);
 		virtual ~GLFWWindowWrapper();
 
 		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void RetrieveMonitorInfo(GameContext& gameContext) override;
 		void SetUpCallbacks();
 
 		virtual void SetSize(i32 width, i32 height) override;
+		virtual void OnSizeChanged(i32 width, i32 height) override;
 		virtual void SetPosition(i32 newX, i32 newY) override;
+		virtual void OnPositionChanged(i32 newX, i32 newY) override;
+
+		virtual void SetFrameBufferSize(i32 width, i32 height) override;
 
 		virtual void Update(const GameContext& gameContext) override;
 		virtual void PollEvents() override;
 		virtual void SetCursorMode(CursorMode mode) override;
 
+		virtual void SetFullscreenMode(FullscreenMode mode, bool force = false) override;
+		virtual void ToggleFullscreen(bool force = false) override;
+
 		GLFWwindow* GetWindow() const;
 
 		const char* GetClipboardText();
 		void SetClipboardText(const char* text);
-
 
 	protected:
 		virtual void SetWindowTitle(const std::string& title) override;

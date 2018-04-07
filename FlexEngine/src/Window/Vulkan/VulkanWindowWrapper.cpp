@@ -8,8 +8,8 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanWindowWrapper::VulkanWindowWrapper(std::string title, glm::vec2i size, glm::vec2i startingPos, GameContext& gameContext) :
-			GLFWWindowWrapper(title, size, startingPos, gameContext)
+		VulkanWindowWrapper::VulkanWindowWrapper(std::string title, GameContext& gameContext) :
+			GLFWWindowWrapper(title, gameContext)
 		{
 		}
 
@@ -17,8 +17,15 @@ namespace flex
 		{
 		}
 
-		void VulkanWindowWrapper::Create()
+		void VulkanWindowWrapper::Create(glm::vec2i size, glm::vec2i pos)
 		{
+			m_Size = size;
+			m_FrameBufferSize = size;
+			m_LastWindowedSize = size;
+			m_Position = pos;
+			m_StartingPosition = pos;
+			m_LastWindowedPos = pos;
+
 			if (glfwVulkanSupported() != GLFW_TRUE)
 			{
 				Logger::LogError("This device does not support Vulkan! Aborting");
@@ -50,13 +57,6 @@ namespace flex
 			{
 				glfwSetWindowIcon(m_Window, m_WindowIcons.size(), m_WindowIcons.data());
 			}
-		}
-
-		void VulkanWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
-		{
-			m_FrameBufferSize = glm::vec2i(width, height);
-			// TODO: Call OnFrameBufferSize here?
-			m_GameContextRef.renderer->OnWindowSize(width, height);
 		}
 	} // namespace vk
 } // namespace flex

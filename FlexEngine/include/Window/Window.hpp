@@ -19,22 +19,41 @@ namespace flex
 			DISABLED
 		};
 
-		Window(const std::string& title, glm::vec2 size, glm::vec2 startingPos, GameContext& gameContext);
+		enum class FullscreenMode
+		{
+			WINDOWED,
+			WINDOWED_FULLSCREEN, // (aka "Borderless windowed")
+			FULLSCREEN
+		};
+
+		Window(const std::string& title, GameContext& gameContext);
 		virtual ~Window();
 		
 		virtual void Initialize() = 0;
+		/* Called after the window has been created */
+		virtual void PostInitialize() = 0;
 		virtual void RetrieveMonitorInfo(GameContext& gameContext) = 0;
-		virtual void Create() = 0;
+		virtual void Create(glm::vec2i size, glm::vec2i pos) = 0;
 
 		virtual void Update(const GameContext& gameContext);
 		virtual void PollEvents() = 0;
 
 		glm::vec2i GetSize() const;
+		/* Sets the window's size */
 		virtual void SetSize(i32 width, i32 height) = 0;
+		/* Called when the window's size changes */
+		virtual void OnSizeChanged(i32 width, i32 height) = 0;
+
 		glm::vec2i GetPosition() const;
+		/* Set the window's position */
 		virtual void SetPosition(i32 newX, i32 newY) = 0;
+		/* Called when the window's position changes */
+		virtual void OnPositionChanged(i32 newX, i32 newY) = 0;
+		
 		glm::vec2i GetFrameBufferSize() const;
 		virtual void SetFrameBufferSize(i32 width, i32 height) = 0;
+		
+		/* Returns whether or not this window is the last window the user interacted with */
 		bool HasFocus() const;
 
 		void SetShowFPSInTitleBar(bool showFPS);
@@ -45,6 +64,15 @@ namespace flex
 		std::string GetTitle() const;
 
 		virtual void SetCursorMode(CursorMode mode);
+
+		/* 
+		 * Sets this window's fullscreen mode
+		 * Set force to true to set the window's mode even if it hasn't changed
+		 */
+		virtual void SetFullscreenMode(FullscreenMode mode, bool force = false) = 0;
+		/* Toggles between fullscreen and the last used non-fullscreen mode (windowed or borderless windowed */
+		virtual void ToggleFullscreen(bool force = false) = 0;
+		FullscreenMode GetFullscreenMode();
 
 		// Callbacks
 		virtual void KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, i32 mods);
@@ -93,6 +121,13 @@ namespace flex
 		glm::vec2i m_Position = { 0, 0 };
 		glm::vec2i m_FrameBufferSize = { 0, 0 };
 		bool m_HasFocus = false;
+
+		FullscreenMode m_CurrentFullscreenMode;
+
+		// Used to store previous window size and position to restore after exiting fullscreen
+		glm::vec2i m_LastWindowedSize;
+		glm::vec2i m_LastWindowedPos;
+		FullscreenMode m_LastNonFullscreenMode; // Stores which mode we were in before entering fullscreen
 
 		bool m_ShowFPSInWindowTitle = true;
 		bool m_ShowMSInWindowTitle = true;

@@ -2648,7 +2648,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(gameContext);
 		}
 
-		void VulkanRenderer::OnWindowSize(i32 width, i32 height)
+		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
 			UNREFERENCED_PARAMETER(width);
 			UNREFERENCED_PARAMETER(height);

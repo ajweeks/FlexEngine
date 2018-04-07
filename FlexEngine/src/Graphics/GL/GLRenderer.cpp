@@ -2553,13 +2553,12 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::OnWindowSize(i32 width, i32 height)
+		void GLRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
 			if (width == 0 || height == 0)
 			{
 				return;
 			}
-
 
 			glViewport(0, 0, width, height);
 			CheckGLErrorMessages();
