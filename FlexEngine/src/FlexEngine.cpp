@@ -355,6 +355,8 @@ namespace flex
 						m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
 					}
 
+					static const char* uiScaleStr = "UI Scale";
+					ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
 					static const char* physicsDebuggingStr = "Physics debugging";
 					if (ImGui::TreeNode(physicsDebuggingStr))
 					{
