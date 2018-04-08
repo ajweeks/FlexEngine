@@ -155,7 +155,7 @@ namespace flex
 				GLenum type;
 			};
 
-			// TODO: Resize all framebuffers automatically by inserting i32o container
+			// TODO: Resize all framebuffers automatically by inserting into container
 			// TODO: Remove ??
 			FrameBufferHandle m_gBuffer_PositionMetallicHandle;
 			FrameBufferHandle m_gBuffer_NormalRoughnessHandle;
@@ -185,7 +185,7 @@ namespace flex
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
 
-			MaterialID m_SkyBoxMaterialID; // Set by the user via SetSkyboxMaterial
+			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 			
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;

@@ -1515,6 +1515,8 @@ namespace flex
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
+			// TODO: Move keybind catches out to FlexEngine or Renderer base Update and
+			// call renderer-specific code
 			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)

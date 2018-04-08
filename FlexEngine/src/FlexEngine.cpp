@@ -49,7 +49,7 @@ namespace flex
 			m_RendererIndex = RendererID::VULKAN;
 		}
 #endif
-		
+
 		m_RendererName = RenderIDToString(m_RendererIndex);
 
 		Logger::Initialize();
@@ -144,7 +144,7 @@ namespace flex
 
 		m_GameContext.window->Initialize();
 		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
-		
+
 		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.4f);
 		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
 		//m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);

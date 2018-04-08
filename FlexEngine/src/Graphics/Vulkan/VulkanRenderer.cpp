@@ -4128,8 +4128,7 @@ namespace flex
 			renderPassInfo.dependencyCount = dependencies.size();
 			renderPassInfo.pDependencies = dependencies.data();
 
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, m_CubemapFrameBuffer->renderPass, nullptr);
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &m_CubemapFrameBuffer->renderPass));
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_CubemapFrameBuffer->renderPass.replace()));
 
 			std::vector<VkImageView> attachments;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
