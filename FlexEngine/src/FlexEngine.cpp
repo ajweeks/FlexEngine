@@ -284,6 +284,23 @@ namespace flex
 				continue;
 			}
 
+			if (m_GameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::LEFT) &&
+				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+			{
+				glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
+
+				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
+
+				btVector3 cameraPos = ToBtVec3(m_GameContext.camera->GetPosition());
+				btVector3 rayStart(cameraPos);
+				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, mousePos.x, mousePos.y);
+
+				if (physicsWorld->PickBody(rayStart, rayEnd))
+				{
+					m_GameContext.inputManager->ClearMouseInput(m_GameContext);
+				}
+			}
+
 			// Call as early as possible in the frame
 			m_GameContext.renderer->ImGuiNewFrame();
 
