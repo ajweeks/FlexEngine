@@ -11,7 +11,7 @@ install:
   - cd ../../..
 build:
   project: ./build/FlexEngine.sln
-  verbosity: normal
+  verbosity: minimal
 test_script:
 - cmd: >-
     .\bin\Debug_x32\FlexEngine\FlexEngine.exe
