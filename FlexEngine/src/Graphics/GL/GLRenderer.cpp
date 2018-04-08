@@ -216,6 +216,7 @@ namespace flex
 			spriteQuadCreateInfo.depthWriteEnable = false;
 			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
 			spriteQuadCreateInfo.enableCulling = false;
+			spriteQuadCreateInfo.visibleInSceneExplorer = false;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
 			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
 
@@ -1157,6 +1158,7 @@ namespace flex
 				quadCreateInfo.transform = &m_1x1_NDC_QuadTransform;
 				quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quadCreateInfo.depthWriteEnable = false;
+				quadCreateInfo.visibleInSceneExplorer = false;
 
 				RenderID quadRenderID = InitializeRenderObject(gameContext, &quadCreateInfo);
 				m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
@@ -2764,6 +2766,7 @@ namespace flex
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
 			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
+			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
 
