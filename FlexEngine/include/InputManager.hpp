@@ -190,6 +190,8 @@ namespace flex
 		InputManager();
 		~InputManager();
 
+		void Initialize();
+
 		void Update();
 		void PostImGuiUpdate(const GameContext& gameContext);
 		void PostUpdate();

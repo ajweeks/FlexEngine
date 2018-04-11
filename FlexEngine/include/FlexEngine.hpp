@@ -38,6 +38,7 @@ namespace flex
 		void Destroy();
 
 		void CycleRenderer();
+		void CreateWindowAndRenderer();
 		void InitializeWindowAndRenderer();
 		void DestroyWindowAndRenderer();
 		void LoadDefaultScenes();

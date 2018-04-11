@@ -71,7 +71,7 @@ namespace flex
 		m_GameContext = {};
 		m_GameContext.engineInstance = this;
 
-		InitializeWindowAndRenderer();
+		CreateWindowAndRenderer();
 
 		m_GameContext.inputManager = new InputManager();
 
@@ -81,6 +81,10 @@ namespace flex
 		m_DefaultCamera->SetPitch(glm::radians(-10.0f));
 		m_GameContext.camera->Update(m_GameContext); // Update to set initial values
 		m_GameContext.camera = m_DefaultCamera;
+
+		InitializeWindowAndRenderer();
+
+		m_GameContext.inputManager->Initialize();
 
 		m_GameContext.physicsManager = new PhysicsManager();
 		m_GameContext.physicsManager->Initialize();
@@ -116,7 +120,7 @@ namespace flex
 		Logger::Shutdown();
 	}
 
-	void FlexEngine::InitializeWindowAndRenderer()
+	void FlexEngine::CreateWindowAndRenderer()
 	{
 		// TODO: Determine user's display size before creating a window
 		glm::vec2i desiredWindowSize(1920, 1080);
@@ -142,20 +146,6 @@ namespace flex
 			return;
 		}
 
-		m_GameContext.window->Initialize();
-		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
-
-		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.75f);
-		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
-		m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
-
-		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
-		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
-		m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
-
-		m_GameContext.window->Create();
-
-
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
@@ -173,11 +163,30 @@ namespace flex
 			Logger::LogError("Failed to create a renderer!");
 			return;
 		}
+	}
 
+	void FlexEngine::InitializeWindowAndRenderer()
+	{
+		m_GameContext.window->Initialize();
+		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
+
+		m_GameContext.window->Create();
 		m_GameContext.window->SetUpdateWindowTitleFrequency(0.4f);
+
+		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.75f);
+		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
+		m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
+
+		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
+		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
+		m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
+
+		m_GameContext.renderer->Initialize(m_GameContext);
 
 		m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
 		m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
+
+
 	}
 
 	void FlexEngine::DestroyWindowAndRenderer()
@@ -235,6 +244,7 @@ namespace flex
 		m_RendererName = RenderIDToString(m_RendererIndex);
 		Logger::LogInfo("Current renderer: " + m_RendererName);
 
+		CreateWindowAndRenderer();
 		InitializeWindowAndRenderer();
 
 		SetupImGuiStyles();

@@ -13,6 +13,14 @@ namespace flex
 {
 	InputManager::InputManager()
 	{
+	}
+
+	InputManager::~InputManager()
+	{
+	}
+
+	void InputManager::Initialize()
+	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeyMap[ImGuiKey_Tab] = (i32)KeyCode::KEY_TAB;
 		io.KeyMap[ImGuiKey_LeftArrow] = (i32)KeyCode::KEY_LEFT;
@@ -36,10 +44,6 @@ namespace flex
 
 		// TODO: Figure out how to use RESOURCE_LOCATION constant here
 		io.IniFilename = "FlexEngine/resources/imgui.ini";
-	}
-
-	InputManager::~InputManager()
-	{
 	}
 
 	void InputManager::Update()

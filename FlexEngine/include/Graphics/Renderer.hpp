@@ -14,12 +14,6 @@
 #include "Transform.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
 
-/*
- * TODO:
- * - Add near & far members for child classes to use
- * 
-*/
-
 namespace flex
 {
 	class Renderer
@@ -322,6 +316,7 @@ namespace flex
 			i32 numAttachments = 1; // How many output textures the fragment shader has
 		};
 
+		virtual void Initialize(const GameContext& gameContext) = 0;
 		virtual void PostInitialize(const GameContext& gameContext) = 0;
 
 		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;

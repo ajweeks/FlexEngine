@@ -26,6 +26,7 @@ namespace flex
 			VulkanRenderer(const GameContext& gameContext);
 			virtual ~VulkanRenderer();
 
+			virtual void Initialize(const GameContext& gameContext) override;
 			virtual void PostInitialize(const GameContext& gameContext) override;
 
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;

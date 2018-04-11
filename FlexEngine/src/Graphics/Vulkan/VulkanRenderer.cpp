@@ -41,86 +41,6 @@ namespace flex
 
 		VulkanRenderer::VulkanRenderer(const GameContext& gameContext)
 		{
-			m_LoadedMaterials.reserve(MAT_CAPACITY);
-
-			CreateInstance(gameContext);
-			SetupDebugCallback();
-			CreateSurface(gameContext.window);
-			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
-			CreateLogicalDevice(physicalDevice);
-
-			m_BRDFSize = { 512, 512 };
-
-			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
-			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_DepthImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
-			m_DepthImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
-			m_DepthImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
-			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
-			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
-			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
-			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
-			m_PipelineCache = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineCache };
-
-			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
-			m_OffScreenFrameBuf->frameBufferAttachments = {
-				{ "positionMetallicFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
-				{ "normalRoughnessFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
-				{ "albedoAOFrameBufferSampler", { m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R8G8B8A8_UNORM } },
-			};
-
-			m_CubemapFrameBuffer = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
-			m_CubemapFrameBuffer->frameBufferAttachments = {
-				{ "positionMetallicFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
-				{ "normalRoughnessFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
-				{ "albedoAOFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R8G8B8A8_UNORM } },
-			};
-
-			VkFormat depthFormat;
-			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-			m_CubemapDepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice, depthFormat);
-
-			// NOTE: This is different from theh GLRenderer's capture views
-			m_CaptureViews = {
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  -1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  -1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f,  0.0f), glm::vec3(0.0f,  0.0f, 1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
-			};
-
-			// TODO: Make variable
-			m_CubemapFrameBuffer->width = 512;
-			m_CubemapFrameBuffer->height = 512;
-
-
-			CreateSwapChain(gameContext.window);
-			CreateSwapChainImageViews();
-			CreateRenderPass();
-
-			CreateCommandPool();
-			CreateDepthResources();
-			CreateFramebuffers();
-
-			PrepareOffscreenFrameBuffer(gameContext.window);
-			PrepareCubemapFrameBuffer();
-
-			LoadDefaultShaderCode();
-
-			const u32 shaderCount = m_Shaders.size();
-			m_VertexIndexBufferPairs.reserve(shaderCount);
-			for (size_t i = 0; i < shaderCount; ++i)
-			{
-				m_VertexIndexBufferPairs.push_back({
-					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
-					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
-				});
-			}
-
-			CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, 1, &m_BlankTexture);
-
-			ImGui::CreateContext();
 		}
 
 		VulkanRenderer::~VulkanRenderer()
@@ -234,6 +154,90 @@ namespace flex
 			SafeDelete(m_VulkanDevice);
 
 			glfwTerminate();
+		}
+
+		void VulkanRenderer::Initialize(const GameContext& gameContext)
+		{
+			m_LoadedMaterials.reserve(MAT_CAPACITY);
+
+			CreateInstance(gameContext);
+			SetupDebugCallback();
+			CreateSurface(gameContext.window);
+			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
+			CreateLogicalDevice(physicalDevice);
+
+			m_BRDFSize = { 512, 512 };
+
+			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
+			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
+			m_DepthImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
+			m_DepthImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
+			m_DepthImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
+			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
+			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
+			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
+			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+			m_PipelineCache = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineCache };
+
+			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_OffScreenFrameBuf->frameBufferAttachments = {
+				{ "positionMetallicFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
+				{ "normalRoughnessFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
+				{ "albedoAOFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R8G8B8A8_UNORM } },
+			};
+
+			m_CubemapFrameBuffer = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_CubemapFrameBuffer->frameBufferAttachments = {
+				{ "positionMetallicFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
+				{ "normalRoughnessFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
+				{ "albedoAOFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R8G8B8A8_UNORM } },
+			};
+
+			VkFormat depthFormat;
+			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
+			m_CubemapDepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice, depthFormat);
+
+			// NOTE: This is different from the GLRenderer's capture views
+			m_CaptureViews = {
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  -1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  -1.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f,  0.0f), glm::vec3(0.0f,  0.0f, 1.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+			};
+
+			// TODO: Make variable
+			m_CubemapFrameBuffer->width = 512;
+			m_CubemapFrameBuffer->height = 512;
+
+
+			CreateSwapChain(gameContext.window);
+			CreateSwapChainImageViews();
+			CreateRenderPass();
+
+			CreateCommandPool();
+			CreateDepthResources();
+			CreateFramebuffers();
+
+			PrepareOffscreenFrameBuffer(gameContext.window);
+			PrepareCubemapFrameBuffer();
+
+			LoadDefaultShaderCode();
+
+			const u32 shaderCount = m_Shaders.size();
+			m_VertexIndexBufferPairs.reserve(shaderCount);
+			for (size_t i = 0; i < shaderCount; ++i)
+			{
+				m_VertexIndexBufferPairs.push_back({
+					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
+					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
+				});
+			}
+
+			CreateVulkanTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, 1, &m_BlankTexture);
+
+			ImGui::CreateContext();
 		}
 
 		void VulkanRenderer::PostInitialize(const GameContext& gameContext)
@@ -1701,6 +1705,8 @@ namespace flex
 					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+					// TODO: Use camera's near and far? (in other functions too)
 
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
