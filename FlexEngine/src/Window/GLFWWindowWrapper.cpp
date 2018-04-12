@@ -11,8 +11,8 @@
 
 namespace flex
 {
-	GLFWWindowWrapper::GLFWWindowWrapper(std::string title, glm::vec2i size, glm::vec2i startingPos, GameContext& gameContext) :
-		Window(title, size, startingPos, gameContext)
+	GLFWWindowWrapper::GLFWWindowWrapper(std::string title, GameContext& gameContext) :
+		Window(title, gameContext)
 	{
 		const bool moveConsoleToExtraMonitor = true;
 
@@ -66,8 +66,8 @@ namespace flex
 			}
 		}
 
-		// TODO: Move window to previous location/size (load from disk)
-		
+		m_LastNonFullscreenMode = FullscreenMode::WINDOWED;
+
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_128.png", true));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_64.png", true));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_48.png", true));
@@ -98,8 +98,19 @@ namespace flex
 			exit(EXIT_FAILURE);
 		}
 
-		// TODO: Look i32o supporting system-DPI awareness
+		// TODO: Look into supporting system-DPI awareness
 		//SetProcessDPIAware();
+	}
+
+	void GLFWWindowWrapper::PostInitialize()
+	{
+		// TODO: Use this for ImGui scale!
+		auto monitor = glfwGetPrimaryMonitor();
+
+		// TODO: Set window location/size based on previous session (load from disk)
+		glfwGetWindowSize(m_Window, &m_LastWindowedSize.x, &m_LastWindowedSize.y);
+		glfwGetWindowPos(m_Window, &m_LastWindowedPos.x, &m_LastWindowedPos.y);
+		
 	}
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo(GameContext& gameContext)
@@ -124,6 +135,8 @@ namespace flex
 		gameContext.monitor.greenBits = vidMode->greenBits;
 		gameContext.monitor.blueBits = vidMode->blueBits;
 		gameContext.monitor.refreshRate = vidMode->refreshRate;
+
+		glfwGetMonitorContentScale(monitor, &gameContext.monitor.contentScaleX, &gameContext.monitor.contentScaleY);
 	}
 
 	void GLFWWindowWrapper::SetUpCallbacks()
@@ -145,14 +158,37 @@ namespace flex
 		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
 	}
 
+	void GLFWWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
+	{
+		m_FrameBufferSize = glm::vec2i(width, height);
+		m_Size = m_FrameBufferSize;
+		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		{
+			m_LastWindowedSize = m_FrameBufferSize;
+		}
+		// TODO: Call OnFrameBufferSize here?
+		if (m_GameContextRef.renderer)
+		{
+			m_GameContextRef.renderer->OnWindowSizeChanged(width, height);
+		}
+	}
+
 	void GLFWWindowWrapper::SetSize(i32 width, i32 height)
 	{
+		glfwSetWindowSize(m_Window, width, height);
+		
+		OnSizeChanged(width, height);
+	}
+
+	void GLFWWindowWrapper::OnSizeChanged(i32 width, i32 height)
+	{
 		m_Size = glm::vec2i(width, height);
-		m_FrameBufferSize = m_Size; // TODO: Remove redundant variable?
+		m_FrameBufferSize = m_Size;
+		m_LastWindowedSize = m_Size;
 
 		if (m_GameContextRef.renderer)
 		{
-			m_GameContextRef.renderer->OnWindowSize(width, height);
+			m_GameContextRef.renderer->OnWindowSizeChanged(width, height);
 		}
 	}
 
@@ -161,12 +197,22 @@ namespace flex
 		if (m_Window)
 		{
 			glfwSetWindowPos(m_Window, newX, newY);
-			m_Position = { newX, newY };
 		}
 		else
 		{
 			m_StartingPosition = { newX, newY };
-			m_Position = { newX, newY };
+		}
+
+		OnPositionChanged(newX, newY);
+	}
+
+	void GLFWWindowWrapper::OnPositionChanged(i32 newX, i32 newY)
+	{
+		m_Position = { newX, newY };
+
+		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		{
+			m_LastWindowedPos = m_Position;
 		}
 	}
 
@@ -190,6 +236,62 @@ namespace flex
 		}
 
 		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+	}
+
+	void GLFWWindowWrapper::SetFullscreenMode(FullscreenMode mode, bool force)
+	{
+		if (force || m_CurrentFullscreenMode != mode)
+		{
+			m_CurrentFullscreenMode = mode;
+
+			auto monitor = glfwGetPrimaryMonitor();
+			if (!monitor)
+			{
+				Logger::LogError("Failed to find primary monitor! Can't set fullscreen mode");
+				return;
+			}
+
+			const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
+			if (!videoMode)
+			{
+				Logger::LogError("Failed to get monitor's video mode! Can't set fullscreen mode");
+				return;
+			}
+
+			switch (mode)
+			{
+			case FullscreenMode::FULLSCREEN:
+			{
+				glfwSetWindowMonitor(m_Window, monitor, 0, 0, videoMode->width, videoMode->height, videoMode->refreshRate);
+			} break;
+			case FullscreenMode::WINDOWED_FULLSCREEN:
+			{
+				glfwSetWindowMonitor(m_Window, monitor, 0, 0, videoMode->width, videoMode->height, videoMode->refreshRate);
+				m_LastNonFullscreenMode = FullscreenMode::WINDOWED_FULLSCREEN;
+			} break;
+			case FullscreenMode::WINDOWED:
+			{
+				assert(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
+
+				glfwSetWindowMonitor(m_Window, nullptr, m_LastWindowedPos.x, m_LastWindowedPos.y, m_LastWindowedSize.x, m_LastWindowedSize.y, videoMode->refreshRate);
+				m_LastNonFullscreenMode = FullscreenMode::WINDOWED;
+			} break;
+			}
+		}
+	}
+
+	void GLFWWindowWrapper::ToggleFullscreen(bool force)
+	{
+		if (m_CurrentFullscreenMode == FullscreenMode::FULLSCREEN)
+		{
+			assert(m_LastNonFullscreenMode == FullscreenMode::WINDOWED || m_LastNonFullscreenMode == FullscreenMode::WINDOWED_FULLSCREEN);
+
+			SetFullscreenMode(m_LastNonFullscreenMode, force);
+		}
+		else
+		{
+			SetFullscreenMode(FullscreenMode::FULLSCREEN, force);
+		}
 	}
 
 	void GLFWWindowWrapper::Update(const GameContext& gameContext)

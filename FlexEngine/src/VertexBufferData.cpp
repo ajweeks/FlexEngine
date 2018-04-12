@@ -136,7 +136,7 @@ namespace flex
 			VertexAttribute vertexAttribute = VertexAttribute(1 << i);
 			if (Attributes & (i32)vertexAttribute)
 			{
-				renderer->DescribeShaderVariable(renderID, vertexTypes[i].name, vertexTypes[i].size, Renderer::Type::FLOAT, false,
+				renderer->DescribeShaderVariable(renderID, vertexTypes[i].name, vertexTypes[i].size, DataType::FLOAT, false,
 					(i32)VertexStride, currentLocation);
 				currentLocation += vertexTypes[i].size;
 			}

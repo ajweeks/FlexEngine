@@ -243,7 +243,7 @@ namespace flex
 		
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
-		Renderer::RenderObjectCreateInfo createInfo = {};
+		RenderObjectCreateInfo createInfo = {};
 		createInfo.vertexBufferData = &m_VertexBufferData;
 		createInfo.materialID = m_MaterialID;
 		createInfo.name = m_Name;
@@ -251,7 +251,7 @@ namespace flex
 
 		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &createInfo);
 
-		gameContext.renderer->SetTopologyMode(m_RenderID, Renderer::TopologyMode::TRIANGLE_LIST);
+		gameContext.renderer->SetTopologyMode(m_RenderID, TopologyMode::TRIANGLE_LIST);
 
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
 
@@ -266,11 +266,11 @@ namespace flex
 
 		m_Shape = shape;
 
-		Renderer::RenderObjectCreateInfo renderObjectCreateInfo = {};
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.materialID = m_MaterialID;
 		renderObjectCreateInfo.transform = &m_Transform;
 
-		Renderer::TopologyMode topologyMode = Renderer::TopologyMode::TRIANGLE_LIST;
+		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
@@ -571,7 +571,7 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
-			topologyMode = Renderer::TopologyMode::LINE_LIST;
+			topologyMode = TopologyMode::LINE_LIST;
 			renderObjectCreateInfo.name = "Grid";
 		} break;
 		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:
@@ -621,7 +621,7 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
-			topologyMode = Renderer::TopologyMode::LINE_LIST;
+			topologyMode = TopologyMode::LINE_LIST;
 			renderObjectCreateInfo.name = "World Axis Ground Plane";
 		} break;
 		case MeshPrefab::PrefabShape::PLANE:
@@ -853,7 +853,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
-			renderObjectCreateInfo.cullFace = Renderer::CullFace::FRONT;
+			renderObjectCreateInfo.cullFace = CullFace::FRONT;
 			renderObjectCreateInfo.name = "Skybox";
 
 		} break;
@@ -909,7 +909,7 @@ namespace flex
 
 	void MeshPrefab::Destroy(const GameContext& gameContext)
 	{
-		gameContext.renderer->Destroy(m_RenderID);
+		gameContext.renderer->DestroyRenderObject(m_RenderID);
 	}
 
 	void MeshPrefab::SetMaterialID(MaterialID materialID, const GameContext& gameContext)

@@ -188,8 +188,9 @@ namespace flex
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
-		i32 channelCount;
 		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
+
+		channelCount = 4;
 
 		if (!pixels)
 		{
@@ -199,6 +200,7 @@ namespace flex
 		
 		assert(width <= Renderer::MAX_TEXTURE_DIM);
 		assert(height <= Renderer::MAX_TEXTURE_DIM);
+		assert(channelCount > 0);
 
 		return true;
 	}

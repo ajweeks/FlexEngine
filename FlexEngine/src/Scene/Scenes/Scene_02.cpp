@@ -25,28 +25,28 @@ namespace flex
 	void Scene_02::Initialize(const GameContext& gameContext)
 	{
 		// Lights
-		Renderer::PointLight light1 = {};
+		PointLight light1 = {};
 		light1.position = glm::vec4(-6.0f, -6.0f, -8.0f, 0.0f);
 		light1.color = glm::vec4(300.0f, 300.0f, 300.0f, 0.0f);
 		gameContext.renderer->InitializePointLight(light1);
 
-		Renderer::PointLight light2 = {};
+		PointLight light2 = {};
 		light2.position = glm::vec4(-6.0f, 6.0f, -8.0f, 0.0f);
 		light2.color = glm::vec4(300.0f, 300.0f, 300.0f, 0.0f);
 		gameContext.renderer->InitializePointLight(light2);
 
-		Renderer::PointLight light3 = {};
+		PointLight light3 = {};
 		light3.position = glm::vec4(6.0f, 6.0f, -8.0f, 0.0f);
 		light3.color = glm::vec4(300.0f, 300.0f, 300.0f, 0.0f);
 		gameContext.renderer->InitializePointLight(light3);
 
-		Renderer::PointLight light4 = {};
+		PointLight light4 = {};
 		light4.position = glm::vec4(6.0f, -6.0f, -8.0f, 0.0f);
 		light4.color = glm::vec4(300.0f, 300.0f, 300.0f, 0.0f);
 		gameContext.renderer->InitializePointLight(light4);
 
 #if 1 // Skybox
-		Renderer::MaterialCreateInfo skyboxHDRMatInfo = {};
+		MaterialCreateInfo skyboxHDRMatInfo = {};
 		skyboxHDRMatInfo.name = "HDR Skybox";
 		skyboxHDRMatInfo.shaderName = "background";
 		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
@@ -81,7 +81,7 @@ namespace flex
 #endif
 
 #if 0 // Cornell Box
-		Renderer::MaterialCreateInfo cornellBoxMatInfo = {};
+		MaterialCreateInfo cornellBoxMatInfo = {};
 		cornellBoxMatInfo.shaderName = "deferred_simple";
 		cornellBoxMatInfo.name = "Cornell Box";
 		const MaterialID cornellBoxMatID = gameContext.renderer->InitializeMaterial(gameContext, &cornellBoxMatInfo);
@@ -94,7 +94,7 @@ namespace flex
 #endif
 
 #if 1 // Grid
-		Renderer::MaterialCreateInfo gridMatInfo = {};
+		MaterialCreateInfo gridMatInfo = {};
 		gridMatInfo.shaderName = "color";
 		gridMatInfo.name = "Color";
 		m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
@@ -104,7 +104,7 @@ namespace flex
 		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
 		AddChild(gameContext, m_Grid);
 
-		Renderer::MaterialCreateInfo worldAxisMatInfo = {};
+		MaterialCreateInfo worldAxisMatInfo = {};
 		worldAxisMatInfo.shaderName = "color";
 		worldAxisMatInfo.name = "Color";
 		m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
@@ -116,7 +116,7 @@ namespace flex
 #endif
 
 #if 0 // Cerebus
-		Renderer::MaterialCreateInfo cerebusMatTexturedInfo = {};
+		MaterialCreateInfo cerebusMatTexturedInfo = {};
 		cerebusMatTexturedInfo.name = "Cerebus";
 		cerebusMatTexturedInfo.shaderName = "pbr";
 		cerebusMatTexturedInfo.enableAlbedoSampler = true;
@@ -177,7 +177,7 @@ namespace flex
 
 			if ((x + y + z) % 2 == 0)
 			{
-				Renderer::MaterialCreateInfo pbrMatInfo = {};
+				MaterialCreateInfo pbrMatInfo = {};
 				pbrMatInfo.shaderName = "pbr";
 				pbrMatInfo.name = "PBR " + iStr;
 				//pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.95f);
@@ -190,7 +190,7 @@ namespace flex
 			}
 			else
 			{
-				Renderer::MaterialCreateInfo pbrMatInfo = {};
+				MaterialCreateInfo pbrMatInfo = {};
 				pbrMatInfo.shaderName = "pbr";
 				pbrMatInfo.name = "PBR " + iStr;
 				//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.95f, 0.95f); // Chrome
@@ -210,7 +210,7 @@ namespace flex
 #endif
 
 #if 0 // White sphere
-		Renderer::MaterialCreateInfo pbrMatInfo = {};
+		MaterialCreateInfo pbrMatInfo = {};
 		pbrMatInfo.shaderName = "pbr";
 		pbrMatInfo.name = "White PBR";
 		pbrMatInfo.constAlbedo = glm::vec3(0.95, 0.95, 0.95f);
@@ -272,7 +272,7 @@ namespace flex
 		rb3->Initialize(box3Collider.GetShape(), gameContext, rb3Transform);
 
 		{
-			Renderer::MaterialCreateInfo pbrMatInfo = {};
+			MaterialCreateInfo pbrMatInfo = {};
 			pbrMatInfo.shaderName = "pbr";
 			pbrMatInfo.name = "PBR box";
 			//pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.95f);

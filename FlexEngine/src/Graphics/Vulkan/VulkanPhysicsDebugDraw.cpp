@@ -26,7 +26,7 @@ namespace flex
 
 			if (m_RenderID != InvalidRenderID)
 			{
-				m_GameContext.renderer->Destroy(m_RenderID);
+				m_GameContext.renderer->DestroyRenderObject(m_RenderID);
 				m_RenderID = InvalidRenderID;
 			}
 		}
@@ -48,7 +48,7 @@ namespace flex
 
 			m_Transform = Transform::Identity();
 
-			Renderer::RenderObjectCreateInfo renderObjectCreateInfo = {};
+			RenderObjectCreateInfo renderObjectCreateInfo = {};
 			renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 			renderObjectCreateInfo.name = "Physics Debug Draw Object";
 			renderObjectCreateInfo.transform = &m_Transform;
@@ -131,9 +131,9 @@ namespace flex
 			}
 			m_GameContext.renderer->SetRenderObjectVisible(m_RenderID, true);
 
-			VulkanMaterial* vkMat = &m_Renderer->m_LoadedMaterials[m_MaterialID];
+			VulkanMaterial* vkMat = &m_Renderer->m_Materials[m_MaterialID];
 			VulkanShader* vkShader = &m_Renderer->m_Shaders[vkMat->material.shaderID];
-			Renderer::Shader* shader = &vkShader->shader;
+			Shader* shader = &vkShader->shader;
 
 			VertexBufferData::CreateInfo createInfo = {};
 			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);

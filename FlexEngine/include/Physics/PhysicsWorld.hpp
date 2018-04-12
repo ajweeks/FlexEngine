@@ -19,6 +19,9 @@ namespace flex
 
 		btDiscreteDynamicsWorld* GetWorld();
 
+		btVector3 GetRayTo(const GameContext& gameContext, int x, int y);
+		bool PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld);
+
 	private:
 		btDiscreteDynamicsWorld * m_World = nullptr;
 

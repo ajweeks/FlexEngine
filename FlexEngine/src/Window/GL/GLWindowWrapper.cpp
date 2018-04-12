@@ -13,8 +13,8 @@ namespace flex
 {
 	namespace gl
 	{
-		GLWindowWrapper::GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i startingPos, GameContext& gameContext) :
-			GLFWWindowWrapper(title, size, startingPos, gameContext)
+		GLWindowWrapper::GLWindowWrapper(std::string title, GameContext& gameContext) :
+			GLFWWindowWrapper(title, gameContext)
 		{
 		}
 
@@ -22,8 +22,15 @@ namespace flex
 		{
 		}
 
-		void GLWindowWrapper::Create()
+		void GLWindowWrapper::Create(glm::vec2i size, glm::vec2i pos)
 		{
+			m_Size = size;
+			m_FrameBufferSize = size;
+			m_LastWindowedSize = size;
+			m_Position = pos;
+			m_StartingPosition = pos;
+			m_LastWindowedPos = pos;
+
 #if _DEBUG
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif
@@ -66,13 +73,6 @@ namespace flex
 			{
 				glfwSetWindowIcon(m_Window, m_WindowIcons.size(), m_WindowIcons.data());
 			}
-		}
-
-		void GLWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
-		{
-			m_FrameBufferSize = glm::vec2i(width, height);
-			// TODO: Call OnFrameBufferSize here?
-			m_GameContextRef.renderer->OnWindowSize(width, height);
 		}
 
 		void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,

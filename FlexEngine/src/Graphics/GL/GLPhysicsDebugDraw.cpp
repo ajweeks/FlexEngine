@@ -105,7 +105,7 @@ namespace flex
 
 			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
 			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
-			Renderer::Shader* shader = &glShader->shader;
+			Shader* shader = &glShader->shader;
 
 			VertexBufferData::CreateInfo createInfo = {};
 			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);

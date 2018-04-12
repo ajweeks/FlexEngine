@@ -45,7 +45,7 @@ namespace flex
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
 
-			virtual void OnWindowSize(i32 width, i32 height) override;
+			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
 			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
 
@@ -55,7 +55,7 @@ namespace flex
 			virtual u32 GetRenderObjectCapacity() const override;
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-				Renderer::Type renderType, bool normalized, i32 stride, void* pointer) override;
+				DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
 			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
@@ -63,7 +63,7 @@ namespace flex
 			virtual Material& GetMaterial(MaterialID materialID) override;
 			virtual Shader& GetShader(ShaderID shaderID) override;
 
-			virtual void Destroy(RenderID renderID) override;
+			virtual void DestroyRenderObject(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;
 
@@ -156,7 +156,7 @@ namespace flex
 				GLenum type;
 			};
 
-			// TODO: Resize all framebuffers automatically by inserting i32o container
+			// TODO: Resize all framebuffers automatically by inserting into container
 			// TODO: Remove ??
 			FrameBufferHandle m_gBuffer_PositionMetallicHandle;
 			FrameBufferHandle m_gBuffer_NormalRoughnessHandle;
@@ -186,7 +186,7 @@ namespace flex
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
 
-			MaterialID m_SkyBoxMaterialID; // Set by the user via SetSkyboxMaterial
+			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 			
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;

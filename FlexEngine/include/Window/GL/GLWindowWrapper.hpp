@@ -10,11 +10,10 @@ namespace flex
 		class GLWindowWrapper : public GLFWWindowWrapper
 		{
 		public:
-			GLWindowWrapper(std::string title, glm::vec2i size, glm::vec2i pos, GameContext& gameContext);
+			GLWindowWrapper(std::string title, GameContext& gameContext);
 			virtual ~GLWindowWrapper();
 
-			virtual void Create() override;
-			virtual void SetFrameBufferSize(i32 width, i32 height) override;
+			virtual void Create(glm::vec2i size, glm::vec2i pos) override;
 
 		private:
 

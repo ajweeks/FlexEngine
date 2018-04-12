@@ -40,6 +40,22 @@ namespace flex
 		{
 			gameContext.renderer = this;
 
+			CheckGLErrorMessages();
+
+			LoadShaders();
+
+			CheckGLErrorMessages();
+
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LEQUAL);
+			CheckGLErrorMessages();
+
+			glFrontFace(GL_CCW);
+			CheckGLErrorMessages();
+
+			// Prevent seams from appearing on lower mip map levels of cubemaps
+			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
 			m_BRDFTextureSize = { 512, 512 };
 			m_BRDFTextureHandle = {};
 			m_BRDFTextureHandle.internalFormat = GL_RG16F;
@@ -71,62 +87,6 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
-
-		}
-
-		GLRenderer::~GLRenderer()
-		{
-			CheckGLErrorMessages();
-			
-			ImGui_ImplGlfwGL3_Shutdown();
-			ImGui::DestroyContext();
-
-			CheckGLErrorMessages();
-
-			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
-			{
-				m_1x1_NDC_QuadVertexBufferData.Destroy();
-			}
-
-			if (m_SkyBoxMesh)
-			{
-				Destroy(m_SkyBoxMesh->GetRenderID());
-				SafeDelete(m_SkyBoxMesh);
-			}
-
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				Destroy(i);
-				CheckGLErrorMessages();
-			}
-			m_RenderObjects.clear();
-			CheckGLErrorMessages();
-
-			SafeDelete(m_PhysicsDebugDrawer);
-
-			m_gBufferQuadVertexBufferData.Destroy();
-			m_SpriteQuadVertexBufferData.Destroy();
-
-			glfwTerminate();
-		}
-
-		void GLRenderer::Initialize(const GameContext& gameContext)
-		{
-			CheckGLErrorMessages();
-
-			LoadShaders();
-
-			CheckGLErrorMessages();
-
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_LEQUAL);
-			CheckGLErrorMessages();
-
-			glFrontFace(GL_CCW);
-			CheckGLErrorMessages();
-
-			// Prevent seams from appearing on lower mip map levels of cubemaps
-			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 
 			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
@@ -183,9 +143,9 @@ namespace flex
 				glBindRenderbuffer(GL_RENDERBUFFER, 0);
 				CheckGLErrorMessages();
 			}
-
-			const real captureProjectionNearPlane = gameContext.camera->GetZNear();
-			const real captureProjectionFarPlane = gameContext.camera->GetZFar();
+			
+			const real captureProjectionNearPlane = 0.1f;
+			const real captureProjectionFarPlane = 1000.0f;
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
@@ -243,7 +203,7 @@ namespace flex
 			};
 
 			spriteQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION_2D | (u32)VertexAttribute::UV | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-
+			
 			m_SpriteQuadVertexBufferData = {};
 			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
 
@@ -256,6 +216,7 @@ namespace flex
 			spriteQuadCreateInfo.depthWriteEnable = false;
 			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
 			spriteQuadCreateInfo.enableCulling = false;
+			spriteQuadCreateInfo.visibleInSceneExplorer = false;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
 			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
 
@@ -325,24 +286,107 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::PostInitialize(const GameContext& gameContext)
+		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
 		{
-			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
-			if (castedWindow == nullptr)
+			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
+			if (!spriteRenderObject)
 			{
-				Logger::LogError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!");
 				return;
 			}
 
-			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
+			spriteRenderObject->materialID = materialID;
+
+			GLMaterial* spriteMaterial = &m_Materials[spriteRenderObject->materialID];
+			GLShader* spriteShader = &m_Shaders[spriteMaterial->material.shaderID];
+
+			glUseProgram(spriteShader->program);
 			CheckGLErrorMessages();
 
+			real verticalScale = flipVertically ? -1.0f : 1.0f;
 
-			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
-			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-			world->setDebugDrawer(m_PhysicsDebugDrawer);
+			if (spriteShader->shader.constantBufferUniforms.HasUniform("verticalScale"))
+			{
+				glUniform1f(spriteMaterial->uniformIDs.verticalScale, verticalScale);
+				CheckGLErrorMessages();
+			}
+			
+			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+			CheckGLErrorMessages();
 
-			Logger::LogInfo("Ready!\n");
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			CheckGLErrorMessages();
+
+			glBindVertexArray(spriteRenderObject->VAO);
+			CheckGLErrorMessages();
+			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
+			CheckGLErrorMessages();
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, textureHandle);
+			CheckGLErrorMessages();
+
+			glDepthMask(GL_TRUE);
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			CheckGLErrorMessages();
+
+			if (spriteRenderObject->enableCulling)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
+
+			glCullFace(spriteRenderObject->cullFace);
+			CheckGLErrorMessages();
+
+			glDepthFunc(spriteRenderObject->depthTestReadFunc);
+			CheckGLErrorMessages();
+
+			glDepthMask(spriteRenderObject->depthWriteEnable);
+			CheckGLErrorMessages();
+
+			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
+			CheckGLErrorMessages();
+		}
+
+		GLRenderer::~GLRenderer()
+		{
+			CheckGLErrorMessages();
+			
+			ImGui_ImplGlfwGL3_Shutdown();
+			ImGui::DestroyContext();
+
+			CheckGLErrorMessages();
+
+			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
+			{
+				m_1x1_NDC_QuadVertexBufferData.Destroy();
+			}
+
+			if (m_SkyBoxMesh)
+			{
+				DestroyRenderObject(m_SkyBoxMesh->GetRenderID());
+				SafeDelete(m_SkyBoxMesh);
+			}
+
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				DestroyRenderObject(i);
+				CheckGLErrorMessages();
+			}
+			m_RenderObjects.clear();
+			CheckGLErrorMessages();
+
+			SafeDelete(m_PhysicsDebugDrawer);
+
+			m_gBufferQuadVertexBufferData.Destroy();
+			m_SpriteQuadVertexBufferData.Destroy();
+
+			glfwTerminate();
 		}
 
 		MaterialID GLRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
@@ -478,7 +522,7 @@ namespace flex
 			{
 				if (createInfo->irradianceSamplerMatID >= m_Materials.size())
 				{
-					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
+					Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
 					mat.irradianceSamplerID = InvalidID;
 				}
 				else
@@ -499,7 +543,7 @@ namespace flex
 			{
 				if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
 				{
-					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
+					Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
 					mat.prefilteredMapSamplerID = InvalidID;
 				}
 				else
@@ -1114,6 +1158,7 @@ namespace flex
 				quadCreateInfo.transform = &m_1x1_NDC_QuadTransform;
 				quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quadCreateInfo.depthWriteEnable = false;
+				quadCreateInfo.visibleInSceneExplorer = false;
 
 				RenderID quadRenderID = InitializeRenderObject(gameContext, &quadCreateInfo);
 				m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
@@ -1379,14 +1424,14 @@ namespace flex
 			return m_PointLights.size() - 1;
 		}
 
-		Renderer::DirectionalLight& GLRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
+		DirectionalLight& GLRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
 		{
 			// TODO: Add support for multiple directional lights
 			UNREFERENCED_PARAMETER(dirLightID);
 			return m_DirectionalLight;
 		}
 
-		Renderer::PointLight& GLRenderer::GetPointLight(PointLightID pointLight)
+		PointLight& GLRenderer::GetPointLight(PointLightID pointLight)
 		{
 			return m_PointLights[pointLight];
 		}
@@ -1416,6 +1461,26 @@ namespace flex
 		{
 			glClearColor(r, g, b, 1.0f);
 			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::PostInitialize(const GameContext& gameContext)
+		{
+			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
+			if (castedWindow == nullptr)
+			{
+				Logger::LogError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!");
+				return;
+			}
+
+			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
+			CheckGLErrorMessages();
+
+
+			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
+			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			world->setDebugDrawer(m_PhysicsDebugDrawer);
+
+			Logger::LogInfo("Ready!\n");
 		}
 
 		void GLRenderer::GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
@@ -1452,6 +1517,8 @@ namespace flex
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
+			// TODO: Move keybind catches out to FlexEngine or Renderer base Update and
+			// call renderer-specific code
 			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
@@ -1924,73 +1991,6 @@ namespace flex
 				}
 
 			}
-		}
-
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
-		{
-			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
-			if (!spriteRenderObject)
-			{
-				return;
-			}
-
-			spriteRenderObject->materialID = materialID;
-
-			GLMaterial* spriteMaterial = &m_Materials[spriteRenderObject->materialID];
-			GLShader* spriteShader = &m_Shaders[spriteMaterial->material.shaderID];
-
-			glUseProgram(spriteShader->program);
-			CheckGLErrorMessages();
-
-			real verticalScale = flipVertically ? -1.0f : 1.0f;
-
-			if (spriteShader->shader.constantBufferUniforms.HasUniform("verticalScale"))
-			{
-				glUniform1f(spriteMaterial->uniformIDs.verticalScale, verticalScale);
-				CheckGLErrorMessages();
-			}
-
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-			CheckGLErrorMessages();
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			CheckGLErrorMessages();
-
-			glBindVertexArray(spriteRenderObject->VAO);
-			CheckGLErrorMessages();
-			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
-			CheckGLErrorMessages();
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, textureHandle);
-			CheckGLErrorMessages();
-
-			glDepthMask(GL_TRUE);
-
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
-
-			if (spriteRenderObject->enableCulling)
-			{
-				glEnable(GL_CULL_FACE);
-			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
-
-			glCullFace(spriteRenderObject->cullFace);
-			CheckGLErrorMessages();
-
-			glDepthFunc(spriteRenderObject->depthTestReadFunc);
-			CheckGLErrorMessages();
-
-			glDepthMask(spriteRenderObject->depthWriteEnable);
-			CheckGLErrorMessages();
-
-			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
-			CheckGLErrorMessages();
 		}
 
 		u32 GLRenderer::BindTextures(Shader* shader, GLMaterial* glMaterial, u32 startingBinding)
@@ -2557,9 +2557,9 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::OnWindowSize(i32 width, i32 height)
+		void GLRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
-			if (width == 0 || height == 0 || m_gBufferHandle == 0)
+			if (width == 0 || height == 0)
 			{
 				return;
 			}
@@ -2601,8 +2601,6 @@ namespace flex
 				newFrameBufferSize);
 
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
-
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetRenderObjectVisible(RenderID renderID, bool visible)
@@ -2768,6 +2766,7 @@ namespace flex
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
 			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
+			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
 
@@ -2799,7 +2798,7 @@ namespace flex
 		}
 
 		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-			Renderer::Type renderType, bool normalized, i32 stride, void* pointer)
+			DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 
@@ -2827,7 +2826,7 @@ namespace flex
 			}
 			glEnableVertexAttribArray((GLuint)location);
 
-			GLenum glRenderType = TypeToGLType(renderType);
+			GLenum glRenderType = DataTypeToGLType(dataType);
 			glVertexAttribPointer((GLuint)location, size, glRenderType, (GLboolean)normalized, stride, pointer);
 			CheckGLErrorMessages();
 
@@ -2867,17 +2866,17 @@ namespace flex
 			}
 		}
 
-		Renderer::Material& GLRenderer::GetMaterial(MaterialID matID)
+		Material& GLRenderer::GetMaterial(MaterialID matID)
 		{
 			return m_Materials[matID].material;
 		}
 
-		Renderer::Shader& GLRenderer::GetShader(ShaderID shaderID)
+		Shader& GLRenderer::GetShader(ShaderID shaderID)
 		{
 			return m_Shaders[shaderID].shader;
 		}
 
-		void GLRenderer::Destroy(RenderID renderID)
+		void GLRenderer::DestroyRenderObject(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)

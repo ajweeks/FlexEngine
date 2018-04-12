@@ -49,7 +49,7 @@ namespace flex
 			m_RendererIndex = RendererID::VULKAN;
 		}
 #endif
-		
+
 		m_RendererName = RenderIDToString(m_RendererIndex);
 
 		Logger::Initialize();
@@ -71,7 +71,7 @@ namespace flex
 		m_GameContext = {};
 		m_GameContext.engineInstance = this;
 
-		CreateWindowAndRenderer();
+		InitializeWindowAndRenderer();
 
 		m_GameContext.inputManager = new InputManager();
 
@@ -81,10 +81,6 @@ namespace flex
 		m_DefaultCamera->SetPitch(glm::radians(-10.0f));
 		m_GameContext.camera->Update(m_GameContext); // Update to set initial values
 		m_GameContext.camera = m_DefaultCamera;
-
-		InitializeWindowAndRenderer();
-
-		m_GameContext.inputManager->Initialize();
 
 		m_GameContext.physicsManager = new PhysicsManager();
 		m_GameContext.physicsManager->Initialize();
@@ -120,24 +116,24 @@ namespace flex
 		Logger::Shutdown();
 	}
 
-	void FlexEngine::CreateWindowAndRenderer()
+	void FlexEngine::InitializeWindowAndRenderer()
 	{
 		// TODO: Determine user's display size before creating a window
-		glm::vec2i desiredWindowSize(1920, 1080);
-		glm::vec2i desiredWindowPos(300, 300);
+		//glm::vec2i desiredWindowSize(500, 300);
+		//glm::vec2i desiredWindowPos(300, 300);
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			m_GameContext.window = new vk::VulkanWindowWrapper(titleString + " - Vulkan", desiredWindowSize, desiredWindowPos, m_GameContext);
+			m_GameContext.window = new vk::VulkanWindowWrapper(titleString + " - Vulkan", m_GameContext);
 		}
 #endif
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			m_GameContext.window = new gl::GLWindowWrapper(titleString + " - OpenGL", desiredWindowSize, desiredWindowPos, m_GameContext);
+			m_GameContext.window = new gl::GLWindowWrapper(titleString + " - OpenGL", m_GameContext);
 		}
 #endif
 		if (m_GameContext.window == nullptr)
@@ -145,6 +141,21 @@ namespace flex
 			Logger::LogError("Failed to create a window! Are any compile flags set in stdafx.hpp?");
 			return;
 		}
+
+		m_GameContext.window->Initialize();
+		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
+
+		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.4f);
+		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
+		//m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
+
+		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
+		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
+		//m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
+
+		m_GameContext.window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
+		m_GameContext.window->PostInitialize();
+
 
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
@@ -163,30 +174,11 @@ namespace flex
 			Logger::LogError("Failed to create a renderer!");
 			return;
 		}
-	}
 
-	void FlexEngine::InitializeWindowAndRenderer()
-	{
-		m_GameContext.window->Initialize();
-		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
-
-		m_GameContext.window->Create();
 		m_GameContext.window->SetUpdateWindowTitleFrequency(0.4f);
-
-		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.75f);
-		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
-		m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
-
-		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
-		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
-		m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
-
-		m_GameContext.renderer->Initialize(m_GameContext);
 
 		m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
 		m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
-
-
 	}
 
 	void FlexEngine::DestroyWindowAndRenderer()
@@ -244,7 +236,6 @@ namespace flex
 		m_RendererName = RenderIDToString(m_RendererIndex);
 		Logger::LogInfo("Current renderer: " + m_RendererName);
 
-		CreateWindowAndRenderer();
 		InitializeWindowAndRenderer();
 
 		SetupImGuiStyles();
@@ -293,6 +284,23 @@ namespace flex
 				continue;
 			}
 
+			if (m_GameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::LEFT) &&
+				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+			{
+				glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
+
+				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
+
+				btVector3 cameraPos = ToBtVec3(m_GameContext.camera->GetPosition());
+				btVector3 rayStart(cameraPos);
+				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, mousePos.x, mousePos.y);
+
+				if (physicsWorld->PickBody(rayStart, rayEnd))
+				{
+					m_GameContext.inputManager->ClearMouseInput(m_GameContext);
+				}
+			}
+
 			// Call as early as possible in the frame
 			m_GameContext.renderer->ImGuiNewFrame();
 
@@ -339,9 +347,19 @@ namespace flex
 				settings.DrawWireframe = !settings.DrawWireframe;
 			}
 
+			bool altDown = m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_ALT) ||
+				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT_ALT);
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F11) ||
+				(altDown && m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_ENTER)))
+			{
+				m_GameContext.window->ToggleFullscreen();
+			}
+
 			m_GameContext.camera->Update(m_GameContext);
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.window->Update(m_GameContext);
+
+			//ImGui::ShowDemoWindow();
 
 			static bool windowOpen = true;
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1))
@@ -363,6 +381,19 @@ namespace flex
 					if (ImGui::Checkbox(vsyncEnabledStr, &m_VSyncEnabled))
 					{
 						m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
+					}
+
+					static const char* uiScaleStr = "UI Scale";
+					ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
+
+					static const char* windowModeStr = "##WindowMode";
+					static const char* windowModesStr[] = { "Windowed", "Borderless Windowed", "Fullscreen" };
+					static const int windowModeCount = 3;
+					int currentItemIndex = (int)m_GameContext.window->GetFullscreenMode();
+					if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
+					{
+						Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
+						m_GameContext.window->SetFullscreenMode(newFullscreenMode);
 					}
 
 					static const char* physicsDebuggingStr = "Physics debugging";
@@ -434,20 +465,6 @@ namespace flex
 				static const char* cameraStr = "Camera";
 				if (ImGui::TreeNode(cameraStr))
 				{
-					static const char* moveSpeedStr = "Move speed";
-					float moveSpeed = m_GameContext.camera->GetMoveSpeed();
-					if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
-					{
-						m_GameContext.camera->SetMoveSpeed(moveSpeed);
-					}
-
-					static const char* turnSpeedStr = "Turn speed";
-					float turnSpeed = glm::degrees(m_GameContext.camera->GetRotationSpeed());
-					if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
-					{
-						m_GameContext.camera->SetRotationSpeed(glm::radians(turnSpeed));
-					}
-
 					glm::vec3 camPos = m_GameContext.camera->GetPosition();
 					if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
 					{
@@ -579,9 +596,9 @@ namespace flex
 		// Scale correctly on high DPI monitors
 		// TODO: Handle more cleanly
 		//if (m_GameContext.monitor.width > 1920.0f)
-		{
-			io.FontGlobalScale = 2.0f;
-		}
+		//{
+			///io.FontGlobalScale = 2.0f;
+		//}
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
