@@ -483,6 +483,20 @@ namespace flex
 				static const char* cameraStr = "Camera";
 				if (ImGui::TreeNode(cameraStr))
 				{
+					static const char* moveSpeedStr = "Move speed";
+					float moveSpeed = m_GameContext.camera->GetMoveSpeed();
+					if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
+					{
+						m_GameContext.camera->SetMoveSpeed(moveSpeed);
+					}
+
+					static const char* turnSpeedStr = "Turn speed";
+					float turnSpeed = glm::degrees(m_GameContext.camera->GetRotationSpeed());
+					if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
+					{
+						m_GameContext.camera->SetRotationSpeed(glm::radians(turnSpeed));
+					}
+
 					glm::vec3 camPos = m_GameContext.camera->GetPosition();
 					if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
 					{
