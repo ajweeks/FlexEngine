@@ -14,8 +14,10 @@ namespace flex
 	class BaseScene
 	{
 	public:
-		BaseScene(std::string name);
+		BaseScene(const std::string& name = "");
 		virtual ~BaseScene();
+
+		void CreateFromJSON(const std::string& jsonFilePath);
 
 		std::string GetName() const;
 
@@ -41,7 +43,7 @@ namespace flex
 
 		friend class SceneManager;
 
-		std::string m_Name = "";
+		std::string m_Name;
 
 		std::vector<GameObject*> m_Children;
 

@@ -1,0 +1,37 @@
+{
+	"name" : "scene_01",
+	"objects" :
+	[
+		{
+			"name" : "Grid",
+			"prefab" : "grid",
+			"transform" : 
+			{
+				"position" : "0.0,0.0,0.0",
+				"rotation" : "0.0,0.0,0.0",
+				"scale" : "1.0,1.0,1.0"
+			},
+			"material" :
+			{
+				"name" : "color"
+			}
+			// add rigid body, collider, renderer settings here
+		},
+		{
+			"name" : "Sphere",
+			"file" : "sphere.fbx",
+			"transform" : 
+			{
+				"position" : "10.0,0.0,0.0",
+				"rotation" : "0.0,0.0,0.0",
+				"scale" : "1.0,1.0,1.0"
+			},
+			"material" :
+			{
+				"name" : "pbr"
+				// add per-object material paramaters here
+			}
+			// add rigid body, collider, renderer settings here
+		}
+	]
+}

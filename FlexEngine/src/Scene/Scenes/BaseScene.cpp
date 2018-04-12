@@ -7,10 +7,11 @@
 #include "Scene/GameObject.hpp"
 #include "Logger.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "JSONParser.hpp"
 
 namespace flex
 {
-	BaseScene::BaseScene(std::string name) :
+	BaseScene::BaseScene(const std::string& name) :
 		m_Name(name)
 	{
 	}
@@ -28,6 +29,21 @@ namespace flex
 		{
 			m_PhysicsWorld->Destroy();
 			SafeDelete(m_PhysicsWorld);
+		}
+	}
+
+	void BaseScene::CreateFromJSON(const std::string& jsonFilePath)
+	{
+		JSONParser::ParsedFile parsedFile;
+
+		JSONParser::Parse(jsonFilePath, parsedFile);
+
+		//GameObject* gameObject = new GameObject();
+
+		for (auto field : parsedFile.rootObject.fields)
+		{
+			void* data = field.value.GetData();
+
 		}
 	}
 

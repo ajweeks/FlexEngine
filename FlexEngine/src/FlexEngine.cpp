@@ -189,8 +189,18 @@ namespace flex
 
 	void FlexEngine::LoadDefaultScenes()
 	{
-		Scene_02* scene02 = new Scene_02(m_GameContext);
+		//Scene_02* scene02 = new Scene_02(m_GameContext);
+		//m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
+
+		BaseScene* scene01 = new BaseScene("");
+		scene01->CreateFromJSON(RESOURCE_LOCATION + "scenes/scene_01.json");
+		m_GameContext.sceneManager->AddScene(scene01, m_GameContext);
+
+		BaseScene* scene02 = new BaseScene("");
+		scene02->CreateFromJSON(RESOURCE_LOCATION + "scenes/scene_02.json");
 		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
+
+		m_GameContext.sceneManager->SetCurrentScene(scene01);
 
 		//TestScene* pDefaultScene = new TestScene(m_GameContext);
 		//m_GameContext.sceneManager->AddScene(pDefaultScene, m_GameContext);

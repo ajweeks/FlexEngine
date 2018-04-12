@@ -1,0 +1,22 @@
+{
+	"name": "scene_02",
+	"objects" :
+	[
+		{
+			"name" : "Cube",
+			"file" : "cube.fbx",
+			"transform" : 
+			{
+				"position" : "3.5,10.0,-5.1",
+				"rotation" : "0.1,1.1,2.2",
+				"scale" : "1.5,4.0,3.0"
+			},
+			"material" :
+			{
+				"name" : "pbr"
+				// add per-object material paramaters here
+			}
+			// add rigid body, collider, renderer settings here
+		}
+	]
+}
