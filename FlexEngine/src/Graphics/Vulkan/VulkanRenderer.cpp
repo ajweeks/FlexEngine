@@ -20,7 +20,7 @@
 
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 
-#include "FreeCamera.hpp"
+#include "Cameras/BaseCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"

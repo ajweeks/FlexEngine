@@ -9,7 +9,7 @@
 
 #include "BulletDynamics/Dynamics/btDynamicsWorld.h"
 
-#include "FreeCamera.hpp"
+#include "Cameras/DebugCamera.hpp"
 #include "Logger.hpp"
 #include "Helpers.hpp"
 #include "Scene/SceneManager.hpp"
@@ -75,7 +75,7 @@ namespace flex
 
 		m_GameContext.inputManager = new InputManager();
 
-		m_DefaultCamera = new FreeCamera(m_GameContext);
+		m_DefaultCamera = new DebugCamera(m_GameContext);
 		m_DefaultCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		m_DefaultCamera->SetYaw(glm::radians(130.0f));
 		m_DefaultCamera->SetPitch(glm::radians(-10.0f));
@@ -480,8 +480,9 @@ namespace flex
 					ImGui::TreePop();
 				}
 
-				static const char* cameraStr = "Camera";
-				if (ImGui::TreeNode(cameraStr))
+				// TODO: Add DrawImGuiItems to camera class and let it handle itself?
+				std::string cameraStr = m_GameContext.camera->GetName();
+				if (ImGui::TreeNode(cameraStr.c_str()))
 				{
 					static const char* moveSpeedStr = "Move speed";
 					float moveSpeed = m_GameContext.camera->GetMoveSpeed();

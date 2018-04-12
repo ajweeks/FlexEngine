@@ -9,6 +9,7 @@
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {

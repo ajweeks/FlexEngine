@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "FreeCamera.hpp"
 #include "GameContext.hpp"
 #include "Scene/GameObject.hpp"
 

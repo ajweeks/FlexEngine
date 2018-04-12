@@ -17,7 +17,7 @@
 
 #include "BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h"
 
-#include "FreeCamera.hpp"
+#include "Cameras/BaseCamera.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
 #include "Logger.hpp"

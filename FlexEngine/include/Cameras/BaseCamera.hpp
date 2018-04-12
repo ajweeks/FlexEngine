@@ -3,15 +3,19 @@
 #include "GameContext.hpp"
 #include "InputManager.hpp"
 
+#include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
+#include <glm/trigonometric.hpp>
+
 namespace flex
 {
-	class FreeCamera final
+	class BaseCamera
 	{
 	public:
-		FreeCamera(GameContext& gameContext, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
-		~FreeCamera();
+		BaseCamera(const std::string& cameraName, GameContext& gameContext, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
+		~BaseCamera();
 
-		void Update(const GameContext& gameContext);
+		virtual void Update(const GameContext& gameContext) = 0;
 
 		void SetFOV(real FOV);
 		real GetFOV() const;
@@ -26,11 +30,6 @@ namespace flex
 		// speed: Lerp amount to new rotation
 		void LookAt(glm::vec3 point, real speed = 1.0f);
 
-		void SetMoveSpeed(real moveSpeed);
-		real GetMoveSpeed() const;
-		void SetRotationSpeed(real rotationSpeed);
-		real GetRotationSpeed() const;
-
 		void Translate(glm::vec3 translation);
 		void SetPosition(glm::vec3 position);
 		glm::vec3 GetPosition() const;
@@ -44,16 +43,22 @@ namespace flex
 		void ResetPosition();
 		void ResetOrientation();
 
-		void LoadDefaultKeybindings();
-		void LoadAzertyKeybindings();
-
 		void SetYaw(real rawRad);
 		real GetYaw() const;
 		void SetPitch(real pitchRad);
 		real GetPitch() const;
 
-	private:
+		void SetMoveSpeed(real moveSpeed);
+		real GetMoveSpeed() const;
+		void SetRotationSpeed(real rotationSpeed);
+		real GetRotationSpeed() const;
+
+		std::string GetName() const;
+
+	protected:
 		void RecalculateViewProjection(const GameContext& gameContext);
+
+		std::string m_Name;
 
 		glm::mat4 m_View;
 		glm::mat4 m_Proj;
@@ -63,15 +68,6 @@ namespace flex
 		real m_ZNear = 0;
 		real m_ZFar = 0;
 
-		glm::vec3 m_Position;
-		glm::vec3 m_DragStartPosition;
-
-		real m_Yaw = 0;
-		real m_Pitch = 0;
-		glm::vec3 m_Forward;
-		glm::vec3 m_Up;
-		glm::vec3 m_Right;
-
 		real m_MoveSpeed = 0; // Keyboard
 		real m_PanSpeed = 0; // MMB
 		real m_DragDollySpeed = 0; // RMB
@@ -80,14 +76,12 @@ namespace flex
 		real m_MoveSpeedSlowMultiplier = 0;
 		real m_RotationSpeed = 0;
 
-		InputManager::KeyCode m_MoveForwardKey;
-		InputManager::KeyCode m_MoveBackwardKey;
-		InputManager::KeyCode m_MoveLeftKey;
-		InputManager::KeyCode m_MoveRightKey;
-		InputManager::KeyCode m_MoveUpKey;
-		InputManager::KeyCode m_MoveDownKey;
-		InputManager::KeyCode m_MoveFasterKey;
-		InputManager::KeyCode m_MoveSlowerKey;
+		glm::vec3 m_Position;
 
+		real m_Yaw = 0;
+		real m_Pitch = 0;
+		glm::vec3 m_Forward;
+		glm::vec3 m_Up;
+		glm::vec3 m_Right;
 	};
 } // namespace flex

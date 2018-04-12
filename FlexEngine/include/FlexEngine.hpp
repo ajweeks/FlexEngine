@@ -3,7 +3,7 @@
 #include <string>
 
 #include "GameContext.hpp"
-#include "FreeCamera.hpp"
+#include "Cameras/BaseCamera.hpp"
 #include "InputManager.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
@@ -49,7 +49,7 @@ namespace flex
 		u32 m_RendererCount = 0;
 
 		GameContext m_GameContext = {};
-		FreeCamera* m_DefaultCamera = nullptr;
+		BaseCamera* m_DefaultCamera = nullptr;
 
 		// TODO: Add clear background bool
 		glm::vec3 m_ClearColor = { 0,0,0 };
