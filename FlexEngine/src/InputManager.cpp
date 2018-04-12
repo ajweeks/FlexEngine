@@ -239,7 +239,6 @@ namespace flex
 
 	void InputManager::ClearMouseInput(const GameContext& gameContext)
 	{
-		m_MousePosition = glm::vec2(-1.0f, -1.0f);
 		m_PrevMousePosition = m_MousePosition;
 		m_ScrollXOffset = 0.0f;
 		m_ScrollYOffset = 0.0f;
