@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 		SafeDelete(engineInstance);
 	}
 
-	//system("PAUSE");
+	system("PAUSE");
 	
 	return 0;
 }

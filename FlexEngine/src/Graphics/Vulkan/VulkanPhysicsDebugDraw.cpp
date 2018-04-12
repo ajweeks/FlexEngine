@@ -9,7 +9,7 @@
 #include "Logger.hpp"
 #include "Graphics/Renderer.hpp"
 #include "GameContext.hpp"
-#include "FreeCamera.hpp"
+#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {
@@ -131,7 +131,7 @@ namespace flex
 			}
 			m_GameContext.renderer->SetRenderObjectVisible(m_RenderID, true);
 
-			VulkanMaterial* vkMat = &m_Renderer->m_Materials[m_MaterialID];
+			VulkanMaterial* vkMat = &m_Renderer->m_LoadedMaterials[m_MaterialID];
 			VulkanShader* vkShader = &m_Renderer->m_Shaders[vkMat->material.shaderID];
 			Shader* shader = &vkShader->shader;
 

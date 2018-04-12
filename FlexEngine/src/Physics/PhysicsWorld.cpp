@@ -8,7 +8,7 @@
 
 #include "Physics/PhysicsManager.hpp"
 #include "GameContext.hpp"
-#include "FreeCamera.hpp"
+#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {
@@ -65,9 +65,8 @@ namespace flex
 
 	bool PhysicsWorld::PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld)
 	{
-		btVector3 oldPickingPos;
 		btVector3 hitPos;
-		float oldPickingDist;
+		float pickingDist;
 		btRigidBody* pickedBody = nullptr;
 		int savedState;
 		btTypedConstraint* pickedConstraint = nullptr;
@@ -87,14 +86,15 @@ namespace flex
 				{
 					pickedBody = body;
 
-					pickedBody->activate();
+					pickedBody->activate(true);
 					pickedBody->clearForces();
-					pickedBody->applyCentralForce({ 0, 600, 0 });
+
+					btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
+					pickedBody->applyForce({ 0, 600, 0 }, localPivot);
 
 					//savedState = pickedBody->getActivationState();
 					//pickedBody->setActivationState(DISABLE_DEACTIVATION);
 
-					//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
 					//btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body, localPivot);
 					//dynamicsWorld->addConstraint(p2p, true);
 					//pickedConstraint = p2p;
@@ -103,9 +103,8 @@ namespace flex
 					//p2p->m_setting.m_tau = 0.001f;
 				}
 			}
-			oldPickingPos = rayToWorld;
 			hitPos = pickPos;
-			oldPickingDist = (pickPos - rayFromWorld).length();
+			pickingDist = (pickPos - rayFromWorld).length();
 
 			return true;
 		}

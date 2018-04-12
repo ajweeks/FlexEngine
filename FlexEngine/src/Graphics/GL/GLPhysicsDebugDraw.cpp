@@ -9,7 +9,7 @@
 #include "Logger.hpp"
 #include "Graphics/Renderer.hpp"
 #include "GameContext.hpp"
-#include "FreeCamera.hpp"
+#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {

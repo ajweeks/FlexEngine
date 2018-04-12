@@ -9,7 +9,7 @@
 
 #include "BulletDynamics/Dynamics/btDynamicsWorld.h"
 
-#include "FreeCamera.hpp"
+#include "Cameras/DebugCamera.hpp"
 #include "Logger.hpp"
 #include "Helpers.hpp"
 #include "Scene/SceneManager.hpp"
@@ -71,16 +71,19 @@ namespace flex
 		m_GameContext = {};
 		m_GameContext.engineInstance = this;
 
-		InitializeWindowAndRenderer();
+		CreateWindowAndRenderer();
 
 		m_GameContext.inputManager = new InputManager();
 
-		m_DefaultCamera = new FreeCamera(m_GameContext);
+		m_DefaultCamera = new DebugCamera(m_GameContext);
 		m_DefaultCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		m_DefaultCamera->SetYaw(glm::radians(130.0f));
 		m_DefaultCamera->SetPitch(glm::radians(-10.0f));
 		m_GameContext.camera->Update(m_GameContext); // Update to set initial values
 		m_GameContext.camera = m_DefaultCamera;
+
+		InitializeWindowAndRenderer();
+		m_GameContext.inputManager->Initialize();
 
 		m_GameContext.physicsManager = new PhysicsManager();
 		m_GameContext.physicsManager->Initialize();
@@ -116,11 +119,14 @@ namespace flex
 		Logger::Shutdown();
 	}
 
-	void FlexEngine::InitializeWindowAndRenderer()
+	void FlexEngine::CreateWindowAndRenderer()
 	{
 		// TODO: Determine user's display size before creating a window
 		//glm::vec2i desiredWindowSize(500, 300);
 		//glm::vec2i desiredWindowPos(300, 300);
+
+		assert(m_GameContext.window == nullptr);
+		assert(m_GameContext.renderer == nullptr);
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
@@ -147,6 +153,7 @@ namespace flex
 
 		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.4f);
 		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
+		// TODO:
 		//m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
 
 		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
@@ -154,7 +161,6 @@ namespace flex
 		//m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
 
 		m_GameContext.window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
-		m_GameContext.window->PostInitialize();
 
 
 #if COMPILE_VULKAN
@@ -174,8 +180,14 @@ namespace flex
 			Logger::LogError("Failed to create a renderer!");
 			return;
 		}
+	}
 
+	void FlexEngine::InitializeWindowAndRenderer()
+	{
 		m_GameContext.window->SetUpdateWindowTitleFrequency(0.4f);
+		m_GameContext.window->PostInitialize();
+
+		m_GameContext.renderer->Initialize(m_GameContext);
 
 		m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
 		m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
@@ -183,8 +195,8 @@ namespace flex
 
 	void FlexEngine::DestroyWindowAndRenderer()
 	{
-		SafeDelete(m_GameContext.window);
 		SafeDelete(m_GameContext.renderer);
+		SafeDelete(m_GameContext.window);
 	}
 
 	void FlexEngine::LoadDefaultScenes()
@@ -246,6 +258,7 @@ namespace flex
 		m_RendererName = RenderIDToString(m_RendererIndex);
 		Logger::LogInfo("Current renderer: " + m_RendererName);
 
+		CreateWindowAndRenderer();
 		InitializeWindowAndRenderer();
 
 		SetupImGuiStyles();
@@ -329,11 +342,15 @@ namespace flex
 			// TODO: Figure out better
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
 			{
+				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
+
 				const std::string sceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
 				m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
 
 				DestroyWindowAndRenderer();
+				CreateWindowAndRenderer();
 				InitializeWindowAndRenderer();
+				SetupImGuiStyles();
 
 				//m_GameContext.renderer->ReloadShaders(m_GameContext);
 
@@ -349,6 +366,7 @@ namespace flex
 				}
 
 				m_GameContext.renderer->PostInitialize(m_GameContext);
+				continue;
 			}
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
@@ -472,9 +490,24 @@ namespace flex
 					ImGui::TreePop();
 				}
 
-				static const char* cameraStr = "Camera";
-				if (ImGui::TreeNode(cameraStr))
+				// TODO: Add DrawImGuiItems to camera class and let it handle itself?
+				std::string cameraStr = m_GameContext.camera->GetName();
+				if (ImGui::TreeNode(cameraStr.c_str()))
 				{
+					static const char* moveSpeedStr = "Move speed";
+					float moveSpeed = m_GameContext.camera->GetMoveSpeed();
+					if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
+					{
+						m_GameContext.camera->SetMoveSpeed(moveSpeed);
+					}
+
+					static const char* turnSpeedStr = "Turn speed";
+					float turnSpeed = glm::degrees(m_GameContext.camera->GetRotationSpeed());
+					if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
+					{
+						m_GameContext.camera->SetRotationSpeed(glm::radians(turnSpeed));
+					}
+
 					glm::vec3 camPos = m_GameContext.camera->GetPosition();
 					if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
 					{

@@ -12,7 +12,7 @@
 #include "GameContext.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
-#include "FreeCamera.hpp"
+#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {
