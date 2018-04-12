@@ -205,8 +205,9 @@ namespace flex
 			static const u32 MAT_CAPACITY = 25;
 
 			std::vector<VulkanRenderObject*> m_RenderObjects;
-			std::vector<VulkanMaterial> m_Materials;
+			std::vector<VulkanMaterial> m_LoadedMaterials;
 
+			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
 			VulkanTexture* m_BRDFTexture = nullptr;
 
@@ -268,7 +269,6 @@ namespace flex
 
 			VulkanTexture* m_BlankTexture = nullptr;
 
-			// TODO: Use FrameBufferAttachment
 			FrameBufferAttachment* m_DepthAttachment = nullptr;
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;

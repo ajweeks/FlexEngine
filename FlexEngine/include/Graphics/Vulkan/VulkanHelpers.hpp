@@ -195,7 +195,7 @@ namespace flex
 			 * Creates image, image view, and sampler based on the texture at filePath 
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromTexture(const std::string& filePath, VkFormat format, bool hdr, u32 mipLevels = 1);
+			VkDeviceSize CreateFromTexture(const std::string& filePath, VkFormat format, bool hdr = false, u32 mipLevels = 1);
 
 			/*
 			 * Creates image, image view, and sampler

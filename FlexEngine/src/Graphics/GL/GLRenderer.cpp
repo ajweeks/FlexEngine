@@ -42,20 +42,6 @@ namespace flex
 
 			CheckGLErrorMessages();
 
-			LoadShaders();
-
-			CheckGLErrorMessages();
-
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_LEQUAL);
-			CheckGLErrorMessages();
-
-			glFrontFace(GL_CCW);
-			CheckGLErrorMessages();
-
-			// Prevent seams from appearing on lower mip map levels of cubemaps
-			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
 			m_BRDFTextureSize = { 512, 512 };
 			m_BRDFTextureHandle = {};
 			m_BRDFTextureHandle.internalFormat = GL_RG16F;
@@ -87,201 +73,6 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
-
-
-			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
-			{
-				glGenFramebuffers(1, &m_CaptureFBO);
-				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
-
-				glGenRenderbuffers(1, &m_CaptureRBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512); // TODO: Remove 512
-				CheckGLErrorMessages();
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
-
-				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				{
-					Logger::LogError("Capture frame buffer is incomplete!");
-				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glBindRenderbuffer(GL_RENDERBUFFER, 0);
-				CheckGLErrorMessages();
-			}
-
-			// Offscreen framebuffer
-			{
-				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-
-				glGenFramebuffers(1, &m_OffscreenFBO);
-				glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
-				CheckGLErrorMessages();
-
-				glGenRenderbuffers(1, &m_OffscreenRBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, frameBufferSize.x, frameBufferSize.y);
-				CheckGLErrorMessages();
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_OffscreenRBO);
-				CheckGLErrorMessages();
-
-				GenerateFrameBufferTexture(&m_OffscreenTextureHandle.id,
-					0,
-					m_OffscreenTextureHandle.internalFormat,
-					m_OffscreenTextureHandle.format,
-					m_OffscreenTextureHandle.type,
-					frameBufferSize);
-
-				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				{
-					Logger::LogError("Offscreen frame buffer is incomplete!");
-				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glBindRenderbuffer(GL_RENDERBUFFER, 0);
-				CheckGLErrorMessages();
-			}
-			
-			const real captureProjectionNearPlane = 0.1f;
-			const real captureProjectionFarPlane = 1000.0f;
-			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
-			m_CaptureViews =
-			{
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
-			};
-
-			// Sprite quad
-			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, true);
-
-			MaterialCreateInfo spriteMatCreateInfo = {};
-			spriteMatCreateInfo.name = "Sprite material";
-			spriteMatCreateInfo.shaderName = "sprite";
-			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
-
-
-			MaterialCreateInfo postProcessMatCreateInfo = {};
-			postProcessMatCreateInfo.name = "Post process material";
-			postProcessMatCreateInfo.shaderName = "post_process";
-			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
-
-			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
-			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
-				glm::vec2(-1.0f,  1.0f),
-				glm::vec2(-1.0f, -1.0f),
-				glm::vec2(1.0f,  1.0f),
-
-				glm::vec2(1.0f,  1.0f),
-				glm::vec2(-1.0f, -1.0f),
-				glm::vec2(1.0f, -1.0f),
-			};
-
-			spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, 0.0f),
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(1.0f, 0.0f),
-
-				glm::vec2(1.0f, 0.0f),
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(1.0f, 1.0f),
-			};
-
-			spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-			};
-
-			spriteQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION_2D | (u32)VertexAttribute::UV | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-			
-			m_SpriteQuadVertexBufferData = {};
-			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
-
-			m_SpriteQuadTransform.SetAsIdentity();
-
-			RenderObjectCreateInfo spriteQuadCreateInfo = {};
-			spriteQuadCreateInfo.name = "Sprite quad";
-			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
-			spriteQuadCreateInfo.materialID = m_SpriteMatID;
-			spriteQuadCreateInfo.depthWriteEnable = false;
-			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
-			spriteQuadCreateInfo.enableCulling = false;
-			spriteQuadCreateInfo.visibleInSceneExplorer = false;
-			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
-			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
-
-			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
-
-			DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID);
-			SwapBuffers(gameContext);
-
-			if (m_BRDFTextureHandle.id == 0)
-			{
-				Logger::LogInfo("Generating BRDF LUT");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
-			}
-
-			ImGui::CreateContext();
-			CheckGLErrorMessages();
-
-
-			// G-buffer objects
-			glGenFramebuffers(1, &m_gBufferHandle);
-			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-
-			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
-				0,
-				m_gBuffer_PositionMetallicHandle.internalFormat,
-				m_gBuffer_PositionMetallicHandle.format,
-				m_gBuffer_PositionMetallicHandle.type,
-				frameBufferSize);
-
-			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
-				1,
-				m_gBuffer_NormalRoughnessHandle.internalFormat,
-				m_gBuffer_NormalRoughnessHandle.format,
-				m_gBuffer_NormalRoughnessHandle.type,
-				frameBufferSize);
-
-			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
-				2,
-				m_gBuffer_DiffuseAOHandle.internalFormat,
-				m_gBuffer_DiffuseAOHandle.format,
-				m_gBuffer_DiffuseAOHandle.type,
-				frameBufferSize);
-
-			// Create and attach depth buffer
-			glGenRenderbuffers(1, &m_gBufferDepthHandle);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
-
-			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			{
-				Logger::LogError("Framebuffer not complete!");
-			}
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			//GenerateGBuffer(gameContext);
-
-			if (m_BRDFTextureHandle.id == 0)
-			{
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
-			}
 
 			CheckGLErrorMessages();
 		}
@@ -386,6 +177,7 @@ namespace flex
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_SpriteQuadVertexBufferData.Destroy();
 
+			// TODO: Is this wanted here?
 			glfwTerminate();
 		}
 
@@ -407,7 +199,7 @@ namespace flex
 			{
 				if (createInfo->shaderName.empty())
 				{
-					Logger::LogError("Material's shader name not set! MaterialCreateInfo::shaderName must be filled in");
+					Logger::LogError("MaterialCreateInfo::shaderName must be filled in!");
 				}
 				else
 				{
@@ -522,7 +314,7 @@ namespace flex
 			{
 				if (createInfo->irradianceSamplerMatID >= m_Materials.size())
 				{
-					Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
+					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
 					mat.irradianceSamplerID = InvalidID;
 				}
 				else
@@ -543,7 +335,7 @@ namespace flex
 			{
 				if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
 				{
-					Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
+					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
 					mat.prefilteredMapSamplerID = InvalidID;
 				}
 				else
@@ -1460,6 +1252,222 @@ namespace flex
 		void GLRenderer::SetClearColor(real r, real g, real b)
 		{
 			glClearColor(r, g, b, 1.0f);
+			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::Initialize(const GameContext& gameContext)
+		{
+
+			CheckGLErrorMessages();
+
+			LoadShaders();
+
+			CheckGLErrorMessages();
+
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LEQUAL);
+			CheckGLErrorMessages();
+
+			glFrontFace(GL_CCW);
+			CheckGLErrorMessages();
+
+			// Prevent seams from appearing on lower mip map levels of cubemaps
+			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+
+			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
+			{
+				glGenFramebuffers(1, &m_CaptureFBO);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				CheckGLErrorMessages();
+
+				glGenRenderbuffers(1, &m_CaptureRBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512); // TODO: Remove 512
+				CheckGLErrorMessages();
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
+				CheckGLErrorMessages();
+
+				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				{
+					Logger::LogError("Capture frame buffer is incomplete!");
+				}
+
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glBindRenderbuffer(GL_RENDERBUFFER, 0);
+				CheckGLErrorMessages();
+			}
+
+			// Offscreen framebuffer
+			{
+				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+				glGenFramebuffers(1, &m_OffscreenFBO);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
+				CheckGLErrorMessages();
+
+				glGenRenderbuffers(1, &m_OffscreenRBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, frameBufferSize.x, frameBufferSize.y);
+				CheckGLErrorMessages();
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_OffscreenRBO);
+				CheckGLErrorMessages();
+
+				GenerateFrameBufferTexture(&m_OffscreenTextureHandle.id,
+					0,
+					m_OffscreenTextureHandle.internalFormat,
+					m_OffscreenTextureHandle.format,
+					m_OffscreenTextureHandle.type,
+					frameBufferSize);
+
+				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				{
+					Logger::LogError("Offscreen frame buffer is incomplete!");
+				}
+
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glBindRenderbuffer(GL_RENDERBUFFER, 0);
+				CheckGLErrorMessages();
+			}
+
+			const real captureProjectionNearPlane = gameContext.camera->GetZNear();
+			const real captureProjectionFarPlane = gameContext.camera->GetZFar();
+			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
+			m_CaptureViews =
+			{
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+			};
+
+			// Sprite quad
+			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, true);
+
+			MaterialCreateInfo spriteMatCreateInfo = {};
+			spriteMatCreateInfo.name = "Sprite material";
+			spriteMatCreateInfo.shaderName = "sprite";
+			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
+
+
+			MaterialCreateInfo postProcessMatCreateInfo = {};
+			postProcessMatCreateInfo.name = "Post process material";
+			postProcessMatCreateInfo.shaderName = "post_process";
+			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
+
+			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
+			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
+				glm::vec2(-1.0f,  1.0f),
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(1.0f,  1.0f),
+
+				glm::vec2(1.0f,  1.0f),
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(1.0f, -1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 0.0f),
+
+				glm::vec2(1.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION_2D | (u32)VertexAttribute::UV | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			m_SpriteQuadVertexBufferData = {};
+			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
+
+			m_SpriteQuadTransform.SetAsIdentity();
+
+			RenderObjectCreateInfo spriteQuadCreateInfo = {};
+			spriteQuadCreateInfo.name = "Sprite quad";
+			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
+			spriteQuadCreateInfo.materialID = m_SpriteMatID;
+			spriteQuadCreateInfo.depthWriteEnable = false;
+			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
+			spriteQuadCreateInfo.enableCulling = false;
+			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
+			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
+
+			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
+
+			DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID);
+			SwapBuffers(gameContext);
+
+			if (m_BRDFTextureHandle.id == 0)
+			{
+				Logger::LogInfo("Generating BRDF LUT");
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+			}
+
+			ImGui::CreateContext();
+			CheckGLErrorMessages();
+
+
+			// G-buffer objects
+			glGenFramebuffers(1, &m_gBufferHandle);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+
+			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
+				0,
+				m_gBuffer_PositionMetallicHandle.internalFormat,
+				m_gBuffer_PositionMetallicHandle.format,
+				m_gBuffer_PositionMetallicHandle.type,
+				frameBufferSize);
+
+			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
+				1,
+				m_gBuffer_NormalRoughnessHandle.internalFormat,
+				m_gBuffer_NormalRoughnessHandle.format,
+				m_gBuffer_NormalRoughnessHandle.type,
+				frameBufferSize);
+
+			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
+				2,
+				m_gBuffer_DiffuseAOHandle.internalFormat,
+				m_gBuffer_DiffuseAOHandle.format,
+				m_gBuffer_DiffuseAOHandle.type,
+				frameBufferSize);
+
+			// Create and attach depth buffer
+			glGenRenderbuffers(1, &m_gBufferDepthHandle);
+			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				Logger::LogError("Framebuffer not complete!");
+			}
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			//GenerateGBuffer(gameContext);
+
+			if (m_BRDFTextureHandle.id == 0)
+			{
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+			}
+
 			CheckGLErrorMessages();
 		}
 
@@ -2559,7 +2567,7 @@ namespace flex
 
 		void GLRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
-			if (width == 0 || height == 0)
+			if (width == 0 || height == 0 || m_gBufferHandle == 0)
 			{
 				return;
 			}

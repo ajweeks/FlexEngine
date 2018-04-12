@@ -23,6 +23,7 @@ namespace flex
 		Renderer();
 		virtual ~Renderer();
 
+		virtual void Initialize(const GameContext& gameContext) = 0;
 		virtual void PostInitialize(const GameContext& gameContext) = 0;
 
 		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
