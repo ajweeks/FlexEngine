@@ -9,6 +9,11 @@
 #include "Physics/PhysicsWorld.hpp"
 #include "JSONParser.hpp"
 
+#include "Physics/PhysicsWorld.hpp"
+#include "Physics/PhysicsManager.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Scene/ReflectionProbe.hpp"
+
 namespace flex
 {
 	BaseScene::BaseScene(const std::string& name) :
@@ -55,6 +60,52 @@ namespace flex
 	PhysicsWorld* BaseScene::GetPhysicsWorld()
 	{
 		return m_PhysicsWorld;
+	}
+
+	void BaseScene::Initialize(const GameContext& gameContext)
+	{
+		MaterialCreateInfo colorMatInfo = {};
+		colorMatInfo.shaderName = "color";
+		colorMatInfo.name = "Color";
+		gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
+
+		m_PhysicsWorld = new PhysicsWorld();
+		m_PhysicsWorld->Initialize(gameContext);
+
+		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
+
+
+		MaterialCreateInfo skyboxHDRMatInfo = {};
+		skyboxHDRMatInfo.name = "HDR Skybox";
+		skyboxHDRMatInfo.shaderName = "background";
+		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
+		skyboxHDRMatInfo.enableCubemapSampler = true;
+		skyboxHDRMatInfo.enableCubemapTrilinearFiltering = true;
+		skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
+		skyboxHDRMatInfo.generateIrradianceSampler = true;
+		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
+		skyboxHDRMatInfo.generatePrefilteredMap = true;
+		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
+		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
+		MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+		gameContext.renderer->SetSkyboxMaterial(skyboxMatID);
+
+		// Generated last so it can use generated skybox maps
+		m_ReflectionProbe = new ReflectionProbe(true);
+		AddChild(gameContext, m_ReflectionProbe);
+	}
+
+	void BaseScene::PostInitialize(const GameContext& gameContext)
+	{
+		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
+	}
+
+	void BaseScene::Destroy(const GameContext& gameContext)
+	{
+	}
+
+	void BaseScene::Update(const GameContext& gameContext)
+	{
 	}
 
 	void BaseScene::AddChild(const GameContext& gameContext, GameObject* pGameObject)

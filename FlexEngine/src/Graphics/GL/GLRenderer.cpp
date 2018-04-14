@@ -619,12 +619,15 @@ namespace flex
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
 
-			assert(createInfo->transform);
 			
 			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			renderObject->name = createInfo->name;
 			renderObject->transform = createInfo->transform;
 			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
+
+			assert(!renderObject->materialName.empty());
+			assert(!renderObject->name.empty());
+			assert(renderObject->transform != nullptr);
 
 			if (m_Materials.empty())
 			{
@@ -726,6 +729,7 @@ namespace flex
 				GenerateSkybox(gameContext);
 			}
 
+			// TODO: Handle no skybox being set gracefully
 			GLRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			GLMaterial* skyboxGLMaterial = &m_Materials[skyboxRenderObject->materialID];
 
@@ -2032,6 +2036,7 @@ namespace flex
 				{
 					if (tex.enabled)
 					{
+
 						GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 						glActiveTexture(activeTexture);
 						glBindTexture(tex.target, (GLuint)tex.textureID);
@@ -2722,6 +2727,9 @@ namespace flex
 			{
 				return; // GBuffer quad has already been generated
 			}
+
+			// TODO: Allow user to not set this and have a backup plan (disable deferred rendering?)
+			assert(m_ReflectionProbeMaterialID != InvalidMaterialID);
 
 			MaterialCreateInfo gBufferMaterialCreateInfo = {};
 			gBufferMaterialCreateInfo.name = "GBuffer material";

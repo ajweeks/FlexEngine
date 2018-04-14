@@ -9,6 +9,7 @@
 namespace flex
 {
 	class PhysicsWorld;
+	class ReflectionProbe;
 
 	class BaseScene
 	{
@@ -23,10 +24,10 @@ namespace flex
 		PhysicsWorld* GetPhysicsWorld();
 
 	protected:
-		virtual void Initialize(const GameContext& gameContext) = 0;
-		virtual void PostInitialize(const GameContext& gameContext) = 0;
-		virtual void Destroy(const GameContext& gameContext) = 0;
-		virtual void Update(const GameContext& gameContext) = 0;
+		virtual void Initialize(const GameContext& gameContext);
+		virtual void PostInitialize(const GameContext& gameContext);
+		virtual void Destroy(const GameContext& gameContext);
+		virtual void Update(const GameContext& gameContext);
 
 		void AddChild(const GameContext& gameContext, GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
@@ -45,6 +46,8 @@ namespace flex
 		std::string m_Name;
 
 		std::vector<GameObject*> m_Children;
+
+		ReflectionProbe* m_ReflectionProbe = nullptr;
 
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
