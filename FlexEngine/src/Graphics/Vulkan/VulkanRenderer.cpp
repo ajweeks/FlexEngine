@@ -5538,6 +5538,9 @@ namespace flex
 
 		void VulkanRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
 		{
+			// TODO: Finish implementing this function
+			return;
+
 			DrawCallInfo drawCallInfo = {};
 			drawCallInfo.renderToCubemap = true;
 			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
