@@ -5,6 +5,7 @@
 #include "Logger.hpp"
 
 #include <fstream>
+#include <cwctype>
 
 namespace flex
 {
@@ -67,7 +68,7 @@ namespace flex
 			return;
 		}
 
-		size_t fileSize = ifStream.tellg();
+		size_t fileSize = (size_t)ifStream.tellg();
 		ifStream.seekg(0, ifStream.beg);
 
 		if (fileSize == 0)
@@ -92,10 +93,52 @@ namespace flex
 			Logger::LogError("Failed to parse JSON file. No valid bracket pairs found!");
 		}
 
-		// Trim start/end of file
-		fileContents = fileContents.substr(firstBracket + 1, lastBracket - firstBracket);
+		bool inQuote = false;
+		i32 i = 0;
+		while (i < (i32)fileContents.size())
+		{
+			char currentChar = fileContents[i];
+			if (currentChar == '\"')
+			{
+				inQuote = !inQuote;
+				++i;
+				continue;
+			}
+			else
+			{
+				if (!inQuote)
+				{
+					// Remove all single line comments
+					if (currentChar == '/' && fileContents[i + 1] == '/')
+					{
+						size_t endLine = fileContents.find('\n', i + 2);
+						if (endLine == std::string::npos)
+						{
+							Logger::LogError("Invalidly formatted json file (contains '/' at end of line): " + filePath);
+							return;
+						}
+
+						fileContents.erase(i, endLine - i);
+						continue;
+					}
+					// Remove all whitespace
+					else if (isspace(currentChar))
+					{
+						fileContents.erase(i, 1);
+						continue;
+					}
+				}
+			}
+
+			++i;
+		}
+
+		Logger::LogInfo("Cleaned json file:");
+		Logger::LogInfo(fileContents);
 
 
+		++parsedFile.numFields;
+		parsedFile.rootObject = {};
 	}
 
 } // namespace flex
