@@ -40,7 +40,7 @@ namespace flex
 
 			Type type;
 			std::string strValue;
-			i32 intValue = 0.0f;
+			i32 intValue = 0;
 			real floatValue = 0.0f;
 			std::vector<JSONField> fieldArrayValue;
 			std::vector<JSONObject> objectArrayValue;

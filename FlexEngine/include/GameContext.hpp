@@ -6,7 +6,7 @@
 namespace flex
 {
 	class Window;
-	class BaseCamera;
+	class CameraManager;
 	class InputManager;
 	class Renderer;
 	class FlexEngine;
@@ -16,7 +16,7 @@ namespace flex
 	struct GameContext
 	{
 		Window* window = nullptr;
-		BaseCamera* camera = nullptr;
+		CameraManager* cameraManager = nullptr;
 		InputManager* inputManager = nullptr;
 		Renderer* renderer = nullptr;
 		FlexEngine* engineInstance = nullptr;

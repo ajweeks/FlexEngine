@@ -4,12 +4,13 @@
 
 #include <glm/vec3.hpp>
 
+#include "Cameras/CameraManager.hpp"
+#include "Cameras/BaseCamera.hpp"
 #include "Scene/ReflectionProbe.hpp"
 #include "Logger.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {
@@ -354,6 +355,8 @@ namespace flex
 
 	void Scene_02::Update(const GameContext& gameContext)
 	{
+		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+
 		m_Box1->GetTransform().MatchRigidBody(rb1);
 		m_Box2->GetTransform().MatchRigidBody(rb2);
 		m_Box3->GetTransform().MatchRigidBody(rb3);
@@ -371,9 +374,9 @@ namespace flex
 
 
 		float maxHeightVisible = 300.0f;
-		float distCamToGround = gameContext.camera->GetPosition().y;
+		float distCamToGround = camera->GetPosition().y;
 		float maxDistVisible = 300.0f;
-		float distCamToOrigin = glm::distance(gameContext.camera->GetPosition(), glm::vec3(0, 0, 0));
+		float distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
 
 		glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
 		glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
@@ -386,28 +389,28 @@ namespace flex
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_CONTROL))
 		{
 			startMousePos = gameContext.inputManager->GetMousePosition();
-			startCamPos = gameContext.camera->GetPosition();
+			startCamPos = camera->GetPosition();
 			//Logger::LogInfo(std::to_string(startMousePos.x) + " " + std::to_string(startMousePos.y));
 		}
 		else if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 		{
 			const real moveSpeed = 0.075f;
 
-			const glm::vec3 pPos = gameContext.camera->GetPosition();
+			const glm::vec3 pPos = camera->GetPosition();
 			const glm::vec2 mouseMove = gameContext.inputManager->GetMousePosition() - startMousePos;
 			//Logger::LogInfo(std::to_string(mouseMove.x) + " " + std::to_string(mouseMove.y));
 
 			const glm::uvec2 windowSize = gameContext.window->GetSize();
 
-			const glm::vec3 camRight = gameContext.camera->GetRight();
-			const glm::vec3 camUp = gameContext.camera->GetUp();
-			const glm::vec3 camForward = gameContext.camera->GetForward();
+			const glm::vec3 camRight = camera->GetRight();
+			const glm::vec3 camUp = camera->GetUp();
+			const glm::vec3 camForward = camera->GetForward();
 
-			gameContext.camera->SetPosition(pPos + 
+			camera->SetPosition(pPos + 
 				camRight * (mouseMove.x / windowSize.x * moveSpeed) +
 				camUp  * (-mouseMove.y / windowSize.y * moveSpeed) +
 				camForward * (0.0f));
-			gameContext.camera->LookAt(glm::vec3(0.0f, 4.0f, 0.0f), gameContext.deltaTime * 5.0f);
+			camera->LookAt(glm::vec3(0.0f, 4.0f, 0.0f), gameContext.deltaTime * 5.0f);
 		}
 
 		//if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))

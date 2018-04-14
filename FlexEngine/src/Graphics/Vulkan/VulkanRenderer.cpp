@@ -20,6 +20,7 @@
 
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 
+#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
@@ -4273,8 +4274,8 @@ namespace flex
 					if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 					{
 						// Truncate translation component to center cubemap around viwer
-						glm::mat4 view = glm::mat4(glm::mat3(gameContext.camera->GetView()));
-						glm::mat4 projection = gameContext.camera->GetProjection();
+						glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView()));
+						glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
 						renderObjectMat.material.pushConstantBlock.mvp =
 							projection * view * renderObject->transform->GetModelMatrix();
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -4381,8 +4382,8 @@ namespace flex
 						// Push constants
 						if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 						{
-							glm::mat4 view = glm::mat4(glm::mat3(gameContext.camera->GetView())); // Truncate translation part off to center around viwer
-							glm::mat4 projection = gameContext.camera->GetProjection();
+							glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
+							glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
 							renderObjectMat.material.pushConstantBlock.mvp =
 								projection * view * renderObject->transform->GetModelMatrix();
 							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -4487,8 +4488,8 @@ namespace flex
 				// Push constants
 				if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 				{
-					glm::mat4 view = glm::mat4(glm::mat3(gameContext.camera->GetView())); // Truncate translation part off to center around viewer
-					glm::mat4 projection = gameContext.camera->GetProjection();
+					glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
+					glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
 					renderObjectMat.material.pushConstantBlock.mvp =
 						projection * view * glm::mat4(1.0f); // renderObject->model; TODO
 					vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -5033,11 +5034,11 @@ namespace flex
 				return; // There is no constant data
 			}
 
-			glm::mat4 projection = gameContext.camera->GetProjection();
-			glm::mat4 view = gameContext.camera->GetView();
+			glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
-			glm::vec4 camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(gameContext.cameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 			if (overridenUniforms)
 			{
@@ -5139,12 +5140,12 @@ namespace flex
 				return; // There are no dynamic uniforms to update
 			}
 
-			bool updateMVP = false; // This is set to true when either the view or projection matrix get overriden
+			bool updateMVP = false; // This is set to true when either the view or projection matrix get overridden
 
 			glm::mat4 model = renderObject->transform->GetModelMatrix();
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
-			glm::mat4 projection = gameContext.camera->GetProjection();
-			glm::mat4 view = gameContext.camera->GetView();
+			glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
 			glm::mat4 modelViewProjection = projection * view * model;
 			glm::vec4 colorMultiplier = material.material.colorMultiplier;
 			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;

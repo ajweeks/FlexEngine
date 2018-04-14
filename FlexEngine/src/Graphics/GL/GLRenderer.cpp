@@ -17,6 +17,7 @@
 
 #include "BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h"
 
+#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
@@ -1334,8 +1335,8 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			const real captureProjectionNearPlane = gameContext.camera->GetZNear();
-			const real captureProjectionFarPlane = gameContext.camera->GetZFar();
+			const real captureProjectionNearPlane = gameContext.cameraManager->CurrentCamera()->GetZNear();
+			const real captureProjectionFarPlane = gameContext.cameraManager->CurrentCamera()->GetZFar();
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
@@ -2363,11 +2364,11 @@ namespace flex
 			
 			glUseProgram(shader->program);
 
-			glm::mat4 proj = gameContext.camera->GetProjection();
-			glm::mat4 view = gameContext.camera->GetView();
+			glm::mat4 proj = gameContext.cameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProj = proj * view;
-			glm::vec4 camPos = glm::vec4(gameContext.camera->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(gameContext.cameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 
 			if (shader->shader.constantBufferUniforms.HasUniform("view"))
@@ -2471,8 +2472,8 @@ namespace flex
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
 			glm::mat4 modelInv = glm::inverse(model);
-			glm::mat4 proj = gameContext.camera->GetProjection();
-			glm::mat4 view = gameContext.camera->GetView();
+			glm::mat4 proj = gameContext.cameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
 			glm::mat4 MVP = proj * view * model;
 			glm::vec4 colorMultiplier = material->material.colorMultiplier;
 

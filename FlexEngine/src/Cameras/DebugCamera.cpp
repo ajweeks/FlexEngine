@@ -5,6 +5,7 @@
 #include <glm/vec2.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Cameras/CameraManager.hpp"
 #include "Logger.hpp"
 #include "Window/Window.hpp"
 #include "Helpers.hpp"
@@ -14,7 +15,6 @@ namespace flex
 	DebugCamera::DebugCamera(GameContext& gameContext, real FOV, real zNear, real zFar) :
 		BaseCamera("Debug Camera", gameContext, FOV, zNear, zFar)
 	{
-		gameContext.camera = this;
 		ResetOrientation();
 		RecalculateViewProjection(gameContext);
 

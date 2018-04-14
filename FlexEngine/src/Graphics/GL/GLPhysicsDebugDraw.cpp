@@ -9,6 +9,7 @@
 #include "Logger.hpp"
 #include "Graphics/Renderer.hpp"
 #include "GameContext.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 
 namespace flex
@@ -168,8 +169,8 @@ namespace flex
 
 
 			glm::mat4 model = glm::mat4(1.0f);
-			glm::mat4 proj = m_GameContext.camera->GetProjection();
-			glm::mat4 view = m_GameContext.camera->GetView();
+			glm::mat4 proj = m_GameContext.cameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = m_GameContext.cameraManager->CurrentCamera()->GetView();
 			glm::mat4 MVP = proj * view * model;
 			glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
 

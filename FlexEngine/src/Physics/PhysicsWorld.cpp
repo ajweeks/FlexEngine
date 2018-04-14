@@ -6,9 +6,10 @@
 #include <btBulletDynamicsCommon.h>
 #pragma warning(pop)
 
+#include "Cameras/CameraManager.hpp"
+#include "Cameras/BaseCamera.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "GameContext.hpp"
-#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {
@@ -114,15 +115,16 @@ namespace flex
 
 	btVector3 PhysicsWorld::GetRayTo(const GameContext& gameContext, int x, int y)
 	{
-		btVector3 rayFrom = ToBtVec3(gameContext.camera->GetPosition());
-		btVector3 rayForward = ToBtVec3(gameContext.camera->GetForward());
-		float farPlane = gameContext.camera->GetZFar();
+		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+		btVector3 rayFrom = ToBtVec3(camera->GetPosition());
+		btVector3 rayForward = ToBtVec3(camera->GetForward());
+		float farPlane = camera->GetZFar();
 		rayForward *= farPlane;
 
-		btVector3 vertical = ToBtVec3(gameContext.camera->GetUp());
-		btVector3 horizontal = ToBtVec3(gameContext.camera->GetRight());
+		btVector3 vertical = ToBtVec3(camera->GetUp());
+		btVector3 horizontal = ToBtVec3(camera->GetRight());
 
-		float fov = gameContext.camera->GetFOV();
+		float fov = camera->GetFOV();
 		float tanfov = tanf(0.5f * fov);
 
 		horizontal *= 2.0f * farPlane * tanfov;

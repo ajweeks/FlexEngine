@@ -9,7 +9,9 @@
 
 #include "BulletDynamics/Dynamics/btDynamicsWorld.h"
 
+#include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
+#include "Cameras/OverheadCamera.hpp"
 #include "Logger.hpp"
 #include "Helpers.hpp"
 #include "Scene/SceneManager.hpp"
@@ -75,12 +77,18 @@ namespace flex
 
 		m_GameContext.inputManager = new InputManager();
 
-		m_DefaultCamera = new DebugCamera(m_GameContext);
-		m_DefaultCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
-		m_DefaultCamera->SetYaw(glm::radians(130.0f));
-		m_DefaultCamera->SetPitch(glm::radians(-10.0f));
-		m_GameContext.camera->Update(m_GameContext); // Update to set initial values
-		m_GameContext.camera = m_DefaultCamera;
+		m_GameContext.cameraManager = new CameraManager();
+
+		DebugCamera* debugCamera = new DebugCamera(m_GameContext);
+		debugCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
+		debugCamera->SetYaw(glm::radians(130.0f));
+		debugCamera->SetPitch(glm::radians(-10.0f));
+		m_GameContext.cameraManager->AddCamera(debugCamera, true);
+
+		OverheadCamera* overheadCamera = new OverheadCamera(m_GameContext);
+		m_GameContext.cameraManager->AddCamera(overheadCamera, false);
+
+		m_GameContext.cameraManager->Update(m_GameContext); // Set initial values before first render
 
 		InitializeWindowAndRenderer();
 		m_GameContext.inputManager->Initialize();
@@ -112,7 +120,7 @@ namespace flex
 			SafeDelete(m_GameContext.physicsManager);
 		}
 
-		SafeDelete(m_DefaultCamera);
+		SafeDelete(m_GameContext.cameraManager);
 
 		DestroyWindowAndRenderer();
 		MeshPrefab::Shutdown();
@@ -314,7 +322,7 @@ namespace flex
 
 				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
 
-				btVector3 cameraPos = ToBtVec3(m_GameContext.camera->GetPosition());
+				btVector3 cameraPos = ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
 				btVector3 rayStart(cameraPos);
 				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, mousePos.x, mousePos.y);
 
@@ -383,7 +391,7 @@ namespace flex
 				m_GameContext.window->ToggleFullscreen();
 			}
 
-			m_GameContext.camera->Update(m_GameContext);
+			m_GameContext.cameraManager->Update(m_GameContext);
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.window->Update(m_GameContext);
 
@@ -398,9 +406,9 @@ namespace flex
 			static const char* titleCharStr = titleString.c_str();
 			if (ImGui::Begin(titleCharStr, &windowOpen))
 			{
-				static const std::string rendererStr = std::string("Current renderer: " + m_RendererName);
-				static const char* rendCharStr = rendererStr.c_str();
-				ImGui::Text(rendCharStr);
+				static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
+				static const char* renderNameStr = rendererNameStringStr.c_str();
+				ImGui::TextUnformatted(renderNameStr);
 
 				static const char* rendererSettingsStr = "Renderer settings";
 				if (ImGui::TreeNode(rendererSettingsStr))
@@ -415,8 +423,8 @@ namespace flex
 					ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
 
 					static const char* windowModeStr = "##WindowMode";
-					static const char* windowModesStr[] = { "Windowed", "Borderless Windowed", "Fullscreen" };
-					static const int windowModeCount = 3;
+					static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
+					static const int windowModeCount = 2;
 					int currentItemIndex = (int)m_GameContext.window->GetFullscreenMode();
 					if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
 					{
@@ -491,53 +499,80 @@ namespace flex
 				}
 
 				// TODO: Add DrawImGuiItems to camera class and let it handle itself?
-				std::string cameraStr = m_GameContext.camera->GetName();
-				if (ImGui::TreeNode(cameraStr.c_str()))
+				const char* cameraStr = "Camera";
+				if (ImGui::TreeNode(cameraStr))
 				{
+					BaseCamera* currentCamera = m_GameContext.cameraManager->CurrentCamera();
+
+					const i32 cameraCount = m_GameContext.cameraManager->CameraCount();
+
+					if (cameraCount > 1) // Only show arrows if other cameras exist
+					{
+						static const char* arrowPrevStr = "<";
+						static const char* arrowNextStr = ">";
+
+						if (ImGui::Button(arrowPrevStr))
+						{
+							m_GameContext.cameraManager->SwtichToIndexRelative(-1, false);
+						}
+
+						ImGui::SameLine();
+
+						std::string cameraNameStr = currentCamera->GetName();
+						ImGui::TextUnformatted(cameraNameStr.c_str());
+
+						ImGui::SameLine();
+
+						if (ImGui::Button(arrowNextStr))
+						{
+							m_GameContext.cameraManager->SwtichToIndexRelative(1, false);
+						}
+					}
+
 					static const char* moveSpeedStr = "Move speed";
-					float moveSpeed = m_GameContext.camera->GetMoveSpeed();
+					float moveSpeed = currentCamera->GetMoveSpeed();
 					if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
 					{
-						m_GameContext.camera->SetMoveSpeed(moveSpeed);
+						currentCamera->SetMoveSpeed(moveSpeed);
 					}
 
 					static const char* turnSpeedStr = "Turn speed";
-					float turnSpeed = glm::degrees(m_GameContext.camera->GetRotationSpeed());
+					float turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
 					if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
 					{
-						m_GameContext.camera->SetRotationSpeed(glm::radians(turnSpeed));
+						currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
 					}
 
-					glm::vec3 camPos = m_GameContext.camera->GetPosition();
+					glm::vec3 camPos = currentCamera->GetPosition();
 					if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
 					{
-						m_GameContext.camera->SetPosition(camPos);
+						currentCamera->SetPosition(camPos);
 					}
 
 					glm::vec2 camYawPitch;
-					camYawPitch[0] = glm::degrees(m_GameContext.camera->GetYaw());
-					camYawPitch[1] = glm::degrees(m_GameContext.camera->GetPitch());
+					camYawPitch[0] = glm::degrees(currentCamera->GetYaw());
+					camYawPitch[1] = glm::degrees(currentCamera->GetPitch());
 					if (ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f))
 					{
-						m_GameContext.camera->SetYaw(glm::radians(camYawPitch[0]));
-						m_GameContext.camera->SetPitch(glm::radians(camYawPitch[1]));
+						currentCamera->SetYaw(glm::radians(camYawPitch[0]));
+						currentCamera->SetPitch(glm::radians(camYawPitch[1]));
 					}
 
-					real camFOV = glm::degrees(m_GameContext.camera->GetFOV());
+					real camFOV = glm::degrees(currentCamera->GetFOV());
 					if (ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f))
 					{
-						m_GameContext.camera->SetFOV(glm::radians(camFOV));
+						currentCamera->SetFOV(glm::radians(camFOV));
 					}
 
 					if (ImGui::Button("Reset orientation"))
 					{
-						m_GameContext.camera->ResetOrientation();
+						currentCamera->ResetOrientation();
 					}
 
 					ImGui::SameLine();
 					if (ImGui::Button("Reset position"))
 					{
-						m_GameContext.camera->ResetPosition();
+						currentCamera->ResetPosition();
 					}
 
 					ImGui::TreePop();
@@ -588,7 +623,7 @@ namespace flex
 					if (ImGui::IsItemHovered())
 					{
 						ImGui::BeginTooltip();
-						ImGui::Text("Previous scene");
+						ImGui::TextUnformatted("Previous scene");
 						ImGui::EndTooltip();
 					}
 
@@ -598,7 +633,7 @@ namespace flex
 					const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
 					const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() + 
 						" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
-					ImGui::Text(currentSceneStr.c_str());
+					ImGui::TextUnformatted(currentSceneStr.c_str());
 
 					ImGui::SameLine();
 					if (ImGui::Button(arrowNextStr))
@@ -609,7 +644,7 @@ namespace flex
 					{
 						ImGui::BeginTooltip();
 						static const char* nextSceneStr = "Next scene";
-						ImGui::Text(nextSceneStr);
+						ImGui::TextUnformatted(nextSceneStr);
 						ImGui::EndTooltip();
 					}
 
@@ -634,7 +669,6 @@ namespace flex
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
-
 
 		// Scale correctly on high DPI monitors
 		// TODO: Handle more cleanly

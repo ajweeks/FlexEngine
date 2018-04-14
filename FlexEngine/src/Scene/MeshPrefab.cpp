@@ -8,11 +8,12 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Cameras/CameraManager.hpp"
+#include "Cameras/BaseCamera.hpp"
 #include "Colors.hpp"
 #include "GameContext.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
-#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {
@@ -898,7 +899,7 @@ namespace flex
 
 		if (m_Shape == PrefabShape::GRID)
 		{
-			glm::vec3 camPos = gameContext.camera->GetPosition();
+			glm::vec3 camPos = gameContext.cameraManager->CurrentCamera()->GetPosition();
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
 				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
 				m_Transform.GetGlobalPosition().y,

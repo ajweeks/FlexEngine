@@ -28,7 +28,6 @@ namespace flex
 		m_MoveSpeedSlowMultiplier(0.05f),
 		m_RotationSpeed(0.0011f)
 	{
-		gameContext.camera = this;
 		ResetOrientation();
 		RecalculateViewProjection(gameContext);
 
