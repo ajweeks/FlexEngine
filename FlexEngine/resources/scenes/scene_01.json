@@ -15,7 +15,7 @@
 			{
 				"name" : "color"
 			}
-			// add rigid body, collider, renderer settings here
+			// add rigid body, collider, renderer settings, ... here
 		},
 		{
 			"name" : "Sphere",
@@ -31,7 +31,7 @@
 				"name" : "pbr"
 				// add per-object material paramaters here
 			}
-			// add rigid body, collider, renderer settings here
+			// add rigid body, collider, renderer settings, ... here
 		}
 	]
 }

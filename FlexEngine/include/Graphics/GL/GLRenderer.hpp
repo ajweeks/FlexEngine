@@ -50,6 +50,7 @@ namespace flex
 			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
+			virtual bool GetVSyncEnabled() override;
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;
@@ -182,6 +183,8 @@ namespace flex
 
 			u32 m_CaptureFBO = 0;
 			u32 m_CaptureRBO = 0;
+
+			glm::vec3 m_ClearColor = { 1.0f, 0.0f, 1.0f };
 
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;

@@ -28,9 +28,7 @@ namespace flex
 	const u32 FlexEngine::EngineVersionMinor = 4;
 	const u32 FlexEngine::EngineVersionPatch = 0;
 
-	FlexEngine::FlexEngine() :
-		m_ClearColor(1.0f, 0.0, 1.0f),
-		m_VSyncEnabled(false)
+	FlexEngine::FlexEngine()
 	{
 		RendererID preferredInitialRenderer = RendererID::GL;
 
@@ -88,8 +86,6 @@ namespace flex
 		OverheadCamera* overheadCamera = new OverheadCamera(m_GameContext);
 		m_GameContext.cameraManager->AddCamera(overheadCamera, false);
 
-		m_GameContext.cameraManager->Update(m_GameContext); // Set initial values before first render
-
 		InitializeWindowAndRenderer();
 		m_GameContext.inputManager->Initialize();
 
@@ -102,6 +98,8 @@ namespace flex
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 
 		SetupImGuiStyles();
+
+		m_GameContext.cameraManager->Update(m_GameContext); // Set initial values before first render
 	}
 
 	void FlexEngine::Destroy()
@@ -202,9 +200,6 @@ namespace flex
 		m_GameContext.window->PostInitialize();
 
 		m_GameContext.renderer->Initialize(m_GameContext);
-
-		m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
-		m_GameContext.renderer->SetClearColor(m_ClearColor.r, m_ClearColor.g, m_ClearColor.b);
 	}
 
 	void FlexEngine::DestroyWindowAndRenderer()
@@ -305,13 +300,6 @@ namespace flex
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 			}
 
-			// TODO: Bring keybindings out to external file (or at least variables)
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
-			{
-				m_VSyncEnabled = !m_VSyncEnabled;
-				m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
-			}
-
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
 			{
 				m_GameContext.inputManager->Update();
@@ -321,6 +309,12 @@ namespace flex
 				continue;
 			}
 
+			// Call as early as possible in the frame
+			m_GameContext.renderer->ImGuiNewFrame();
+
+			DrawImGuiObjects();
+
+			// TODO: Bring keybindings out to external file (or at least variables)
 			if (m_GameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::LEFT) &&
 				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
 			{
@@ -330,7 +324,7 @@ namespace flex
 
 				btVector3 cameraPos = ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
 				btVector3 rayStart(cameraPos);
-				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, mousePos.x, mousePos.y);
+				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, (int)mousePos.x, (int)mousePos.y);
 
 				if (physicsWorld->PickBody(rayStart, rayEnd))
 				{
@@ -338,10 +332,11 @@ namespace flex
 				}
 			}
 
-			// Call as early as possible in the frame
-			m_GameContext.renderer->ImGuiNewFrame();
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
+			{
+				m_GameContext.renderer->SetVSyncEnabled(!m_GameContext.renderer->GetVSyncEnabled());
+			}
 
-			m_GameContext.inputManager->PostImGuiUpdate(m_GameContext);
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
 				m_GameContext.sceneManager->SetNextSceneActive();
@@ -401,265 +396,13 @@ namespace flex
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.window->Update(m_GameContext);
 
-			//ImGui::ShowDemoWindow();
-
-			static bool windowOpen = true;
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1))
+			if (m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_TAB))
 			{
-				windowOpen = !windowOpen;
+				if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_TAB))
+					Logger::LogInfo("tab pressed");
+				else 
+					Logger::LogInfo("tab");
 			}
-			static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
-			static const char* titleCharStr = titleString.c_str();
-			if (ImGui::Begin(titleCharStr, &windowOpen))
-			{
-				static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
-				static const char* renderNameStr = rendererNameStringStr.c_str();
-				ImGui::TextUnformatted(renderNameStr);
-
-				static const char* rendererSettingsStr = "Renderer settings";
-				if (ImGui::TreeNode(rendererSettingsStr))
-				{
-					static const char* vsyncEnabledStr = "VSync";
-					if (ImGui::Checkbox(vsyncEnabledStr, &m_VSyncEnabled))
-					{
-						m_GameContext.renderer->SetVSyncEnabled(m_VSyncEnabled);
-					}
-
-					static const char* uiScaleStr = "UI Scale";
-					ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
-
-					static const char* windowModeStr = "##WindowMode";
-					static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
-					static const int windowModeCount = 2;
-					int currentItemIndex = (int)m_GameContext.window->GetFullscreenMode();
-					if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
-					{
-						Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
-						m_GameContext.window->SetFullscreenMode(newFullscreenMode);
-					}
-
-					static const char* physicsDebuggingStr = "Physics debugging";
-					if (ImGui::TreeNode(physicsDebuggingStr))
-					{
-						PhysicsDebuggingSettings& physicsDebuggingSettings =  m_GameContext.renderer->GetPhysicsDebuggingSettings();
-
-						static const char* disableAllStr = "Disable All";
-						ImGui::Checkbox(disableAllStr, &physicsDebuggingSettings.DisableAll);
-
-						ImGui::Spacing();
-						ImGui::Spacing();
-						ImGui::Spacing();
-
-						static const char* wireframeStr = "Wireframe";
-						ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
-
-						static const char* aabbStr = "AABB";
-						ImGui::Checkbox(aabbStr, &physicsDebuggingSettings.DrawAabb);
-
-						static const char* drawFeaturesTextStr = "Draw Features Text";
-						ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
-
-						static const char* drawContactPointsStr = "Draw Contact Points";
-						ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
-
-						static const char* noDeactivationStr = "No Deactivation";
-						ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
-
-						static const char* noHelpTextStr = "No Help Text";
-						ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
-
-						static const char* drawTextStr = "Draw Text";
-						ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
-
-						static const char* profileTimingsStr = "Profile Timings";
-						ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
-
-						static const char* satComparisonStr = "Sat Comparison";
-						ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
-
-						static const char* disableBulletLCPStr = "Disable Bullet LCP";
-						ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
-
-						static const char* ccdStr = "CCD";
-						ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
-
-						static const char* drawConstraintsStr = "Draw Constraints";
-						ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
-
-						static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
-						ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
-
-						static const char* fastWireframeStr = "Fast Wireframe";
-						ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
-
-						static const char* drawNormalsStr = "Draw Normals";
-						ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
-
-						static const char* drawFramesStr = "Draw Frames";
-						ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
-
-						ImGui::TreePop();
-					}
-
-					ImGui::TreePop();
-				}
-
-				// TODO: Add DrawImGuiItems to camera class and let it handle itself?
-				const char* cameraStr = "Camera";
-				if (ImGui::TreeNode(cameraStr))
-				{
-					BaseCamera* currentCamera = m_GameContext.cameraManager->CurrentCamera();
-
-					const i32 cameraCount = m_GameContext.cameraManager->CameraCount();
-
-					if (cameraCount > 1) // Only show arrows if other cameras exist
-					{
-						static const char* arrowPrevStr = "<";
-						static const char* arrowNextStr = ">";
-
-						if (ImGui::Button(arrowPrevStr))
-						{
-							m_GameContext.cameraManager->SwtichToIndexRelative(-1, false);
-						}
-
-						ImGui::SameLine();
-
-						std::string cameraNameStr = currentCamera->GetName();
-						ImGui::TextUnformatted(cameraNameStr.c_str());
-
-						ImGui::SameLine();
-
-						if (ImGui::Button(arrowNextStr))
-						{
-							m_GameContext.cameraManager->SwtichToIndexRelative(1, false);
-						}
-					}
-
-					static const char* moveSpeedStr = "Move speed";
-					float moveSpeed = currentCamera->GetMoveSpeed();
-					if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
-					{
-						currentCamera->SetMoveSpeed(moveSpeed);
-					}
-
-					static const char* turnSpeedStr = "Turn speed";
-					float turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
-					if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
-					{
-						currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
-					}
-
-					glm::vec3 camPos = currentCamera->GetPosition();
-					if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
-					{
-						currentCamera->SetPosition(camPos);
-					}
-
-					glm::vec2 camYawPitch;
-					camYawPitch[0] = glm::degrees(currentCamera->GetYaw());
-					camYawPitch[1] = glm::degrees(currentCamera->GetPitch());
-					if (ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f))
-					{
-						currentCamera->SetYaw(glm::radians(camYawPitch[0]));
-						currentCamera->SetPitch(glm::radians(camYawPitch[1]));
-					}
-
-					real camFOV = glm::degrees(currentCamera->GetFOV());
-					if (ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f))
-					{
-						currentCamera->SetFOV(glm::radians(camFOV));
-					}
-
-					if (ImGui::Button("Reset orientation"))
-					{
-						currentCamera->ResetOrientation();
-					}
-
-					ImGui::SameLine();
-					if (ImGui::Button("Reset position"))
-					{
-						currentCamera->ResetPosition();
-					}
-
-					ImGui::TreePop();
-				}
-
-				static const char* loggingStr = "Logging";
-				if (ImGui::TreeNode(loggingStr))
-				{
-					bool suppressInfo = Logger::GetSuppressInfo();
-					i32 suppressedInfoCount = Logger::GetSuppressedInfoCount();
-					const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")###SUppressedInfo");
-					if (ImGui::Checkbox(infoStr.c_str(), &suppressInfo))
-					{
-						Logger::SetSuppressInfo(suppressInfo);
-					}
-
-					bool suppressWarnings = Logger::GetSuppressWarnings();
-					i32 suppressedWarningCount = Logger::GetSuppressedWarningCount();
-					const std::string warningStr("Suppress Warnings (" + std::to_string(suppressedWarningCount) + ")###SuppressedWarnings");
-					if (ImGui::Checkbox(warningStr.c_str(), &suppressWarnings))
-					{
-						Logger::SetSuppressWarnings(suppressWarnings);
-					}
-
-					// TODO: Why can't this be turned on again while errors are being spammed?
-					bool suppressErrors = Logger::GetSuppressErrors();
-					i32 suppressedErrorCount = Logger::GetSuppressedErrorCount();
-					const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")###SuppressedErrors");
-					if (ImGui::Checkbox(errorStr.c_str(), &suppressErrors))
-					{
-						Logger::SetSuppressErrors(suppressErrors);
-					}
-
-					ImGui::TreePop();
-				}
-
-				static const char* scenesStr = "Scenes";
-				if (ImGui::TreeNode(scenesStr))
-				{
-					static const char* arrowPrevStr = "<";
-					static const char* arrowNextStr = ">";
-
-					if (ImGui::Button(arrowPrevStr))
-					{
-						m_GameContext.sceneManager->SetPreviousSceneActive();
-					}
-
-					if (ImGui::IsItemHovered())
-					{
-						ImGui::BeginTooltip();
-						ImGui::TextUnformatted("Previous scene");
-						ImGui::EndTooltip();
-					}
-
-					ImGui::SameLine();
-					
-					const u32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
-					const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
-					const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() + 
-						" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
-					ImGui::TextUnformatted(currentSceneStr.c_str());
-
-					ImGui::SameLine();
-					if (ImGui::Button(arrowNextStr))
-					{
-						m_GameContext.sceneManager->SetNextSceneActive();
-					}
-					if (ImGui::IsItemHovered())
-					{
-						ImGui::BeginTooltip();
-						static const char* nextSceneStr = "Next scene";
-						ImGui::TextUnformatted(nextSceneStr);
-						ImGui::EndTooltip();
-					}
-
-					ImGui::TreePop();
-				}
-
-				m_GameContext.renderer->DrawImGuiItems(m_GameContext);
-			}
-			ImGui::End();
 
 			// TODO: Consolidate functions?
 			m_GameContext.inputManager->Update();
@@ -676,12 +419,7 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 
-		// Scale correctly on high DPI monitors
-		// TODO: Handle more cleanly
-		//if (m_GameContext.monitor.width > 1920.0f)
-		{
-			io.FontGlobalScale = m_GameContext.monitor.contentScaleX;// ImVec2(m_GameContext.monitor.contentScaleX, m_GameContext.monitor.contentScaleY);
-		}
+		io.FontGlobalScale = m_GameContext.monitor.contentScaleX;
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
@@ -726,6 +464,273 @@ namespace flex
 		style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 		style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(1.00f, 0.57f, 0.31f, 0.35f);
 		style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+	}
+
+	void FlexEngine::DrawImGuiObjects()
+	{
+		ImGui::ShowDemoWindow();
+
+		static bool windowOpen = true;
+		if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1))
+		{
+			windowOpen = !windowOpen;
+		}
+		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
+		static const char* titleCharStr = titleString.c_str();
+		if (ImGui::Begin(titleCharStr, &windowOpen))
+		{
+			static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
+			static const char* renderNameStr = rendererNameStringStr.c_str();
+			ImGui::TextUnformatted(renderNameStr);
+
+			static const char* rendererSettingsStr = "Renderer settings";
+			if (ImGui::TreeNode(rendererSettingsStr))
+			{
+				bool vSyncEnabled = m_GameContext.renderer->GetVSyncEnabled();
+				static const char* vSyncEnabledStr = "VSync";
+				if (ImGui::Checkbox(vSyncEnabledStr, &vSyncEnabled))
+				{
+					m_GameContext.renderer->SetVSyncEnabled(vSyncEnabled);
+				}
+
+				static const char* uiScaleStr = "UI Scale";
+				ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
+
+				static const char* windowModeStr = "##WindowMode";
+				static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
+				static const int windowModeCount = 2;
+				int currentItemIndex = (int)m_GameContext.window->GetFullscreenMode();
+				if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
+				{
+					Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
+					m_GameContext.window->SetFullscreenMode(newFullscreenMode);
+				}
+
+				static const char* physicsDebuggingStr = "Physics debugging";
+				if (ImGui::TreeNode(physicsDebuggingStr))
+				{
+					PhysicsDebuggingSettings& physicsDebuggingSettings = m_GameContext.renderer->GetPhysicsDebuggingSettings();
+
+					static const char* disableAllStr = "Disable All";
+					ImGui::Checkbox(disableAllStr, &physicsDebuggingSettings.DisableAll);
+
+					ImGui::Spacing();
+					ImGui::Spacing();
+					ImGui::Spacing();
+
+					static const char* wireframeStr = "Wireframe";
+					ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
+
+					static const char* aabbStr = "AABB";
+					ImGui::Checkbox(aabbStr, &physicsDebuggingSettings.DrawAabb);
+
+					static const char* drawFeaturesTextStr = "Draw Features Text";
+					ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
+
+					static const char* drawContactPointsStr = "Draw Contact Points";
+					ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
+
+					static const char* noDeactivationStr = "No Deactivation";
+					ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
+
+					static const char* noHelpTextStr = "No Help Text";
+					ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
+
+					static const char* drawTextStr = "Draw Text";
+					ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
+
+					static const char* profileTimingsStr = "Profile Timings";
+					ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
+
+					static const char* satComparisonStr = "Sat Comparison";
+					ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
+
+					static const char* disableBulletLCPStr = "Disable Bullet LCP";
+					ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
+
+					static const char* ccdStr = "CCD";
+					ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
+
+					static const char* drawConstraintsStr = "Draw Constraints";
+					ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
+
+					static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
+					ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
+
+					static const char* fastWireframeStr = "Fast Wireframe";
+					ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
+
+					static const char* drawNormalsStr = "Draw Normals";
+					ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
+
+					static const char* drawFramesStr = "Draw Frames";
+					ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
+
+					ImGui::TreePop();
+				}
+
+				ImGui::TreePop();
+			}
+
+			// TODO: Add DrawImGuiItems to camera class and let it handle itself?
+			const char* cameraStr = "Camera";
+			if (ImGui::TreeNode(cameraStr))
+			{
+				BaseCamera* currentCamera = m_GameContext.cameraManager->CurrentCamera();
+
+				const i32 cameraCount = m_GameContext.cameraManager->CameraCount();
+
+				if (cameraCount > 1) // Only show arrows if other cameras exist
+				{
+					static const char* arrowPrevStr = "<";
+					static const char* arrowNextStr = ">";
+
+					if (ImGui::Button(arrowPrevStr))
+					{
+						m_GameContext.cameraManager->SwtichToIndexRelative(-1, false);
+					}
+
+					ImGui::SameLine();
+
+					std::string cameraNameStr = currentCamera->GetName();
+					ImGui::TextUnformatted(cameraNameStr.c_str());
+
+					ImGui::SameLine();
+
+					ImGui::PushItemWidth(-1.0f);
+					if (ImGui::Button(arrowNextStr))
+					{
+						m_GameContext.cameraManager->SwtichToIndexRelative(1, false);
+					}
+					ImGui::PopItemWidth();
+				}
+
+				static const char* moveSpeedStr = "Move speed";
+				float moveSpeed = currentCamera->GetMoveSpeed();
+				if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
+				{
+					currentCamera->SetMoveSpeed(moveSpeed);
+				}
+
+				static const char* turnSpeedStr = "Turn speed";
+				float turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
+				if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
+				{
+					currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
+				}
+
+				glm::vec3 camPos = currentCamera->GetPosition();
+				if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
+				{
+					currentCamera->SetPosition(camPos);
+				}
+
+				glm::vec2 camYawPitch;
+				camYawPitch[0] = glm::degrees(currentCamera->GetYaw());
+				camYawPitch[1] = glm::degrees(currentCamera->GetPitch());
+				if (ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f))
+				{
+					currentCamera->SetYaw(glm::radians(camYawPitch[0]));
+					currentCamera->SetPitch(glm::radians(camYawPitch[1]));
+				}
+
+				real camFOV = glm::degrees(currentCamera->GetFOV());
+				if (ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f))
+				{
+					currentCamera->SetFOV(glm::radians(camFOV));
+				}
+
+				if (ImGui::Button("Reset orientation"))
+				{
+					currentCamera->ResetOrientation();
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Reset position"))
+				{
+					currentCamera->ResetPosition();
+				}
+
+				ImGui::TreePop();
+			}
+
+			static const char* loggingStr = "Logging";
+			if (ImGui::TreeNode(loggingStr))
+			{
+				bool suppressInfo = Logger::GetSuppressInfo();
+				i32 suppressedInfoCount = Logger::GetSuppressedInfoCount();
+				const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")###SUppressedInfo");
+				if (ImGui::Checkbox(infoStr.c_str(), &suppressInfo))
+				{
+					Logger::SetSuppressInfo(suppressInfo);
+				}
+
+				bool suppressWarnings = Logger::GetSuppressWarnings();
+				i32 suppressedWarningCount = Logger::GetSuppressedWarningCount();
+				const std::string warningStr("Suppress Warnings (" + std::to_string(suppressedWarningCount) + ")###SuppressedWarnings");
+				if (ImGui::Checkbox(warningStr.c_str(), &suppressWarnings))
+				{
+					Logger::SetSuppressWarnings(suppressWarnings);
+				}
+
+				// TODO: Why can't this be turned on again while errors are being spammed?
+				bool suppressErrors = Logger::GetSuppressErrors();
+				i32 suppressedErrorCount = Logger::GetSuppressedErrorCount();
+				const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")###SuppressedErrors");
+				if (ImGui::Checkbox(errorStr.c_str(), &suppressErrors))
+				{
+					Logger::SetSuppressErrors(suppressErrors);
+				}
+
+				ImGui::TreePop();
+			}
+
+			static const char* scenesStr = "Scenes";
+			if (ImGui::TreeNode(scenesStr))
+			{
+				static const char* arrowPrevStr = "<";
+				static const char* arrowNextStr = ">";
+
+				if (ImGui::Button(arrowPrevStr))
+				{
+					m_GameContext.sceneManager->SetPreviousSceneActive();
+				}
+
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					ImGui::TextUnformatted("Previous scene");
+					ImGui::EndTooltip();
+				}
+
+				ImGui::SameLine();
+
+				const u32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
+				const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
+				const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() +
+					" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
+				ImGui::TextUnformatted(currentSceneStr.c_str());
+
+				ImGui::SameLine();
+				if (ImGui::Button(arrowNextStr))
+				{
+					m_GameContext.sceneManager->SetNextSceneActive();
+				}
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					static const char* nextSceneStr = "Next scene";
+					ImGui::TextUnformatted(nextSceneStr);
+					ImGui::EndTooltip();
+				}
+
+				ImGui::TreePop();
+			}
+
+			m_GameContext.renderer->DrawImGuiItems(m_GameContext);
+		}
+		ImGui::End();
+
 	}
 
 	void FlexEngine::Stop()

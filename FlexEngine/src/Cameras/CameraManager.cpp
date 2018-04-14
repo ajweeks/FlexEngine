@@ -14,7 +14,7 @@ namespace flex
 
 	CameraManager::~CameraManager()
 	{
-		for (i32 i = 0; i < m_Cameras.size(); ++i)
+		for (u32 i = 0; i < m_Cameras.size(); ++i)
 		{
 			SafeDelete(m_Cameras[i]);
 		}
@@ -75,7 +75,7 @@ namespace flex
 
 	void CameraManager::SwtichToIndex(i32 index, bool align)
 	{
-		if (index >= 0 && index < m_Cameras.size())
+		if (index >= 0 && index < (i32)m_Cameras.size())
 		{
 			if (align)
 			{
@@ -89,13 +89,14 @@ namespace flex
 	void CameraManager::SwtichToIndexRelative(i32 delta, bool align)
 	{
 		i32 newIndex = m_ActiveCameraIndex + delta;
+		i32 numCameras = (i32)m_Cameras.size();
 		if (newIndex < 0)
 		{
-			newIndex += m_Cameras.size();
+			newIndex += numCameras;
 		}
-		else if (newIndex >= m_Cameras.size())
+		else if (newIndex >= numCameras)
 		{
-			newIndex -= m_Cameras.size();
+			newIndex -= numCameras;
 		}
 
 		SwtichToIndex(newIndex, align);
@@ -104,7 +105,7 @@ namespace flex
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)
 	{
 		i32 cameraIndex = -1;
-		for (i32 i = 0; i < m_Cameras.size(); ++i)
+		for (u32 i = 0; i < m_Cameras.size(); ++i)
 		{
 			if (m_Cameras[i] == camera)
 			{

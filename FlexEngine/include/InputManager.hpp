@@ -193,10 +193,9 @@ namespace flex
 		void Initialize();
 
 		void Update();
-		void PostImGuiUpdate(const GameContext& gameContext);
 		void PostUpdate();
 
-		i32 GetKeyDown(KeyCode keyCode) const;
+		i32 GetKeyDown(KeyCode keyCode, bool ignoreImGui = false) const;
 		bool GetKeyPressed(KeyCode keyCode) const;
 
 		void CursorPosCallback(double x, double y);

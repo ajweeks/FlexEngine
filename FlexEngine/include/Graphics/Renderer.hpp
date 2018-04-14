@@ -51,6 +51,7 @@ namespace flex
 		virtual void SetRenderObjectVisible(RenderID renderID, bool visible) = 0;
 
 		virtual void SetVSyncEnabled(bool enableVSync) = 0;
+		virtual bool GetVSyncEnabled() = 0;
 
 		virtual u32 GetRenderObjectCount() const = 0;
 		virtual u32 GetRenderObjectCapacity() const = 0;

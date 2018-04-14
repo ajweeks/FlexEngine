@@ -1256,6 +1256,7 @@ namespace flex
 
 		void GLRenderer::SetClearColor(real r, real g, real b)
 		{
+			m_ClearColor = { r, g, b };
 			glClearColor(r, g, b, 1.0f);
 			CheckGLErrorMessages();
 		}
@@ -2631,6 +2632,11 @@ namespace flex
 			m_VSyncEnabled = enableVSync;
 			glfwSwapInterval(enableVSync ? 1 : 0);
 			CheckGLErrorMessages();
+		}
+
+		bool GLRenderer::GetVSyncEnabled()
+		{
+			return m_VSyncEnabled;
 		}
 
 		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, real val)

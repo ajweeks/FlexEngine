@@ -42,16 +42,13 @@ namespace flex
 		void DestroyWindowAndRenderer();
 		void LoadDefaultScenes();
 		void SetupImGuiStyles();
+		void DrawImGuiObjects();
 
 		std::string RenderIDToString(RendererID rendererID) const;
 
 		u32 m_RendererCount = 0;
 
 		GameContext m_GameContext = {};
-
-		// TODO: Add clear background bool
-		glm::vec3 m_ClearColor = { 0,0,0 };
-		bool m_VSyncEnabled = true;
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
 		std::string m_RendererName = "";

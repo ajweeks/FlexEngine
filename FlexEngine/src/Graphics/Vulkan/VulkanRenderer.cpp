@@ -42,6 +42,7 @@ namespace flex
 
 		VulkanRenderer::VulkanRenderer(const GameContext& gameContext)
 		{
+			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
 			m_BRDFSize = { 512, 512 };
 			m_CubemapFramebufferSize = { 512, 512 };
 
@@ -2668,6 +2669,11 @@ namespace flex
 		void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
 		{
 			m_VSyncEnabled = enableVSync;
+		}
+
+		bool VulkanRenderer::GetVSyncEnabled()
+		{
+			return m_VSyncEnabled;
 		}
 
 		u32 VulkanRenderer::GetRenderObjectCount() const

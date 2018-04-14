@@ -68,19 +68,6 @@ namespace flex
 		}
 	}
 
-	void InputManager::PostImGuiUpdate(const GameContext& gameContext)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		if (io.WantCaptureMouse)
-		{
-			ClearMouseInput(gameContext);
-		}
-		if (io.WantCaptureKeyboard)
-		{
-			ClearKeyboadInput(gameContext);
-		}
-	}
-
 	void InputManager::PostUpdate()
 	{
 		m_PrevMousePosition = m_MousePosition;
@@ -88,8 +75,13 @@ namespace flex
 		m_ScrollYOffset = 0.0f;
 	}
 
-	i32 InputManager::GetKeyDown(KeyCode keyCode) const
+	i32 InputManager::GetKeyDown(KeyCode keyCode, bool ignoreImGui) const
 	{
+		if (!ignoreImGui && ImGui::GetIO().WantCaptureKeyboard)
+		{
+			return 0;
+		}
+
 		auto value = m_Keys.find(keyCode);
 		if (value != m_Keys.end())
 		{
@@ -175,10 +167,10 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeysDown[(i32)keycode] = m_Keys[keycode].down > 0;
 
-		io.KeyCtrl = GetKeyDown(KeyCode::KEY_LEFT_CONTROL) || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL);
-		io.KeyShift = GetKeyDown(KeyCode::KEY_LEFT_SHIFT) || GetKeyDown(KeyCode::KEY_RIGHT_SHIFT);
-		io.KeyAlt = GetKeyDown(KeyCode::KEY_LEFT_ALT) || GetKeyDown(KeyCode::KEY_RIGHT_ALT);
-		io.KeySuper = GetKeyDown(KeyCode::KEY_LEFT_SUPER) || GetKeyDown(KeyCode::KEY_RIGHT_SUPER);
+		io.KeyCtrl = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true);
+		io.KeyShift = GetKeyDown(KeyCode::KEY_LEFT_SHIFT, true) || GetKeyDown(KeyCode::KEY_RIGHT_SHIFT, true);
+		io.KeyAlt = GetKeyDown(KeyCode::KEY_LEFT_ALT, true) || GetKeyDown(KeyCode::KEY_RIGHT_ALT, true);
+		io.KeySuper = GetKeyDown(KeyCode::KEY_LEFT_SUPER, true) || GetKeyDown(KeyCode::KEY_RIGHT_SUPER, true);
 	}
 
 	void InputManager::CharCallback(u32 character)
@@ -204,11 +196,21 @@ namespace flex
 
 	glm::vec2 InputManager::GetMouseMovement() const
 	{
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
+			return glm::vec2(0, 0);
+		}
+
 		return m_MousePosition - m_PrevMousePosition;
 	}
 
 	i32 InputManager::GetMouseButtonDown(MouseButton mouseButton) const
 	{
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
+			return 0;
+		}
+
 		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return m_MouseButtons[(i32)mouseButton].down;
@@ -216,13 +218,16 @@ namespace flex
 
 	bool InputManager::GetMouseButtonClicked(MouseButton mouseButton) const
 	{
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
-
-		return (m_MouseButtons[(i32)mouseButton].down == 1);
+		return (GetMouseButtonDown(mouseButton) == 1);
 	}
 
 	real InputManager::GetVerticalScrollDistance() const
 	{
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
+			return 0.0f;
+		}
+
 		return m_ScrollYOffset;
 	}
 
@@ -251,6 +256,12 @@ namespace flex
 		}
 
 		gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
+
+
+		ImGuiIO& io = ImGui::GetIO();
+		io.MousePos = m_MousePosition;
+		io.MousePosPrev = m_PrevMousePosition;
+		io.MouseWheel = m_ScrollYOffset;
 	}
 
 	void InputManager::ClearKeyboadInput(const GameContext& gameContext)
