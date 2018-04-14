@@ -159,8 +159,14 @@ namespace flex
 		m_GameContext.window->Initialize();
 		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
 
-		i32 newWindowSizeY = i32(m_GameContext.monitor.height * 0.4f);
-		i32 newWindowSizeX = i32(newWindowSizeY * 16.0f / 9.0f);
+		float desiredAspectRatio = 16.0f / 9.0f;
+		float desiredWindowSizeScreenPercetange = 0.6f;
+
+		// What kind of monitor has different scales along each axis?
+		assert(m_GameContext.monitor.contentScaleX == m_GameContext.monitor.contentScaleY);
+
+		i32 newWindowSizeY = i32(m_GameContext.monitor.height * desiredWindowSizeScreenPercetange * m_GameContext.monitor.contentScaleY);
+		i32 newWindowSizeX = i32(newWindowSizeY * desiredAspectRatio);
 		// TODO:
 		//m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
 
@@ -673,9 +679,9 @@ namespace flex
 		// Scale correctly on high DPI monitors
 		// TODO: Handle more cleanly
 		//if (m_GameContext.monitor.width > 1920.0f)
-		//{
-			///io.FontGlobalScale = 2.0f;
-		//}
+		{
+			io.FontGlobalScale = m_GameContext.monitor.contentScaleX;// ImVec2(m_GameContext.monitor.contentScaleX, m_GameContext.monitor.contentScaleY);
+		}
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
