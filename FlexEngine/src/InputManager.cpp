@@ -31,19 +31,21 @@ namespace flex
 		io.KeyMap[ImGuiKey_PageDown] = (i32)KeyCode::KEY_PAGE_DOWN;
 		io.KeyMap[ImGuiKey_Home] = (i32)KeyCode::KEY_HOME;
 		io.KeyMap[ImGuiKey_End] = (i32)KeyCode::KEY_END;
+		io.KeyMap[ImGuiKey_Insert] = (i32)KeyCode::KEY_INSERT;
 		io.KeyMap[ImGuiKey_Delete] = (i32)KeyCode::KEY_DELETE;
 		io.KeyMap[ImGuiKey_Backspace] = (i32)KeyCode::KEY_BACKSPACE;
+		io.KeyMap[ImGuiKey_Space] = (i32)KeyCode::KEY_SPACE;
 		io.KeyMap[ImGuiKey_Enter] = (i32)KeyCode::KEY_ENTER;
 		io.KeyMap[ImGuiKey_Escape] = (i32)KeyCode::KEY_ESCAPE;
-		io.KeyMap[ImGuiKey_A] = (i32)KeyCode::KEY_A;
-		io.KeyMap[ImGuiKey_C] = (i32)KeyCode::KEY_C;
-		io.KeyMap[ImGuiKey_V] = (i32)KeyCode::KEY_V;
-		io.KeyMap[ImGuiKey_X] = (i32)KeyCode::KEY_X;
-		io.KeyMap[ImGuiKey_Y] = (i32)KeyCode::KEY_Y;
-		io.KeyMap[ImGuiKey_Z] = (i32)KeyCode::KEY_Z;
+		io.KeyMap[ImGuiKey_A] = (i32)KeyCode::KEY_A; // for text edit CTRL+A: select all
+		io.KeyMap[ImGuiKey_C] = (i32)KeyCode::KEY_C; // for text edit CTRL+C: copy
+		io.KeyMap[ImGuiKey_V] = (i32)KeyCode::KEY_V; // for text edit CTRL+V: paste
+		io.KeyMap[ImGuiKey_X] = (i32)KeyCode::KEY_X; // for text edit CTRL+X: cut
+		io.KeyMap[ImGuiKey_Y] = (i32)KeyCode::KEY_Y; // for text edit CTRL+Y: redo
+		io.KeyMap[ImGuiKey_Z] = (i32)KeyCode::KEY_Z; // for text edit CTRL+Z: undo
 
-		// TODO: Figure out how to use RESOURCE_LOCATION constant here
-		io.IniFilename = "FlexEngine/resources/imgui.ini";
+		m_ImGuiIniFilepathStr = RESOURCE_LOCATION + "imgui.ini";
+		io.IniFilename  = m_ImGuiIniFilepathStr.c_str();
 	}
 
 	void InputManager::Update()

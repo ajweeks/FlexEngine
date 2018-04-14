@@ -228,5 +228,8 @@ namespace flex
 		glm::vec2 m_PrevMousePosition = { 0, 0 };
 		real m_ScrollXOffset = 0;
 		real m_ScrollYOffset = 0;
+
+		// Must be stored as member because ImGui will not make a copy
+		std::string m_ImGuiIniFilepathStr;
 	};
 } // namespace flex
