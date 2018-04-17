@@ -101,6 +101,20 @@ namespace flex
 		}
 	}
 
+	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
+	{
+		while (offset < str.size())
+		{
+			if (!isdigit(str[offset]) && !isalpha(str[offset]))
+			{
+				return offset;
+			}
+			++offset;
+		}
+
+		return -1;
+	}
+
 	real Lerp(real a, real b, real t)
 	{
 		return a * (1.0f - t) + b * t;

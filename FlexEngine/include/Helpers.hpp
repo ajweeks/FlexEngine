@@ -38,6 +38,12 @@ namespace flex
 	// Removes all content before the final '/' or '\' 
 	void StripLeadingDirectories(std::string& filePath);
 
+	/*
+	 * Returns the index of the first character which isn't a number
+	 * of letter (or -1 if none exist) starting from offset
+	 */
+	i32 NextNonAlphaNumeric(const std::string& str, i32 offset);
+
 	real Lerp(real a, real b, real t);
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);

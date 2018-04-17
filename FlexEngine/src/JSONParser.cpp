@@ -3,180 +3,20 @@
 
 #include "JSONParser.hpp"
 #include "Logger.hpp"
+#include "Helpers.hpp"
 
 #include <fstream>
 #include <cwctype>
 
 namespace flex
 {
-	JSONParser::JSONValue::Type JSONParser::JSONValue::TypeFromChar(char c, const std::string& stringAfter)
-	{
-		switch (c)
-		{
-		case '{':
-			return Type::OBJECT;
-		case '[':
-			if (stringAfter[0] == '{')
-			{
-				return Type::OBJECT_ARRAY;
-			}
-			else
-			{
-				// Arrays of strings are not supported
-				return Type::FIELD_ARRAY;
-			}
-		case '\"':
-			return Type::STRING;
-		case 't':
-		case 'f':
-			return Type::BOOL;
-		default:
-		{
-			// Check if number
-			bool isDigit = isdigit(c) != 0;
-			bool isNegation = c == '-';
-
-			if (isDigit || isNegation)
-			{
-				i32 nextNonAlphaNumeric = NextNonAlphaNumeric(stringAfter, 0);
-				if (nextNonAlphaNumeric == '.')
-				{
-					return Type::FLOAT;
-				}
-				else
-				{
-					return Type::INT;
-				}
-			}
-		}
-
-		return Type::UNINITIALIZED;
-		}
-	}
-
-	JSONParser::JSONValue::JSONValue() :
-		type(Type::UNINITIALIZED)
-	{
-	}
-
-	JSONParser::JSONValue::JSONValue(const std::string& strValue) :
-		strValue(strValue),
-		type(Type::STRING)
-	{
-	}
-
-	JSONParser::JSONValue::JSONValue(i32 intValue) :
-		intValue(intValue),
-		type(Type::INT)
-	{
-	}
-
-	JSONParser::JSONValue::JSONValue(real floatValue) :
-		floatValue(floatValue),
-		type(Type::FLOAT)
-	{
-	}
-
-	JSONParser::JSONValue::JSONValue(bool boolValue) :
-		boolValue(boolValue),
-		type(Type::BOOL)
-	{
-	}
-
-	JSONParser::JSONValue::JSONValue(const JSONObject& objectValue) :
-		objectValue(objectValue),
-		type(Type::OBJECT)
-	{
-	}
-
-	JSONParser::JSONValue::JSONValue(const std::vector<JSONObject>& objectArrayValue) :
-		objectArrayValue(objectArrayValue),
-		type(Type::OBJECT_ARRAY)
-	{
-	}
-
-	JSONParser::JSONValue::JSONValue(const std::vector<JSONField>& fieldArrayValue) :
-		fieldArrayValue(fieldArrayValue),
-		type(Type::FIELD_ARRAY)
-	{
-	}
-
-	std::string JSONParser::Print(const JSONField& field, i32 tabCount)
-	{
-		const std::string tabs(tabCount, '\t');
-		std::string result(tabs + field.label + " : ");
-
-		switch (field.value.type)
-		{
-		case JSONValue::Type::STRING:
-			result += '\"' + field.value.strValue + "\"\n";
-			break;
-		case JSONValue::Type::INT:
-			result += std::to_string(field.value.intValue) + '\n';
-			break;
-		case JSONValue::Type::FLOAT:
-			result += std::to_string(field.value.floatValue) + '\n';
-			break;
-		case JSONValue::Type::BOOL:
-			result += (field.value.boolValue ? "true\n" : "false\n");
-			break;
-		case JSONValue::Type::OBJECT:
-			result += '\n' + tabs + "{\n";
-			for (i32 i = 0; i < field.value.objectValue.fields.size(); ++i)
-			{
-				result += Print(field.value.objectValue.fields[i], tabCount + 1);
-			}
-			result += tabs + "}\n";
-			break;
-		case JSONValue::Type::OBJECT_ARRAY:
-			result += '\n' + tabs + "[\n";
-			for (i32 i = 0; i < field.value.objectArrayValue.size(); ++i)
-			{
-				result += Print(field.value.objectArrayValue[i], tabCount + 1);
-			}
-			result += tabs + "]\n";
-			break;
-		case JSONValue::Type::FIELD_ARRAY:
-			result += '\n' + tabs + "[\n";
-			for (i32 i = 0; i < field.value.fieldArrayValue.size(); ++i)
-			{
-				result += Print(field.value.fieldArrayValue[i], tabCount + 1);
-			}
-			result += tabs + "]\n";
-			break;
-		case JSONValue::Type::UNINITIALIZED:
-			result += "UNINITIALIZED TYPE\n";
-			break;
-		default:
-			result += "UNHANDLED TYPE\n";
-			break;
-		}
-
-		return result;
-	}
-
-	std::string JSONParser::Print(const JSONObject& object, i32 tabCount)
-	{
-		const std::string tabs(tabCount, '\t');
-		std::string result(tabs + "{\n");
-
-		for (i32 i = 0; i < object.fields.size(); ++i)
-		{
-			result += Print(object.fields[i], tabCount + 1);
-		}
-
-		result += tabs + "}\n";
-
-		return result;
-	}
-
-	void JSONParser::Parse(const std::string& filePath, ParsedJSONFile& parsedFile)
+	bool JSONParser::Parse(const std::string& filePath, ParsedJSONFile& parsedFile)
 	{
 		std::ifstream ifStream(filePath, std::fstream::ate);
 		if (!ifStream)
 		{
 			Logger::LogError("Couldn't find JSON file: " + filePath);
-			return;
+			return false;
 		}
 
 		size_t fileSize = (size_t)ifStream.tellg();
@@ -185,7 +25,7 @@ namespace flex
 		if (fileSize == 0)
 		{
 			Logger::LogError("Attempted to parse empty JSON file: " + filePath);
-			return;
+			return false;
 		}
 
 		std::string fileContents;
@@ -249,6 +89,7 @@ namespace flex
 		parsedFile.rootObject = {};
 
 		i32 fileContentOffset = 0;
+		bool parseSucceeded = true;
 		bool parsing = true;
 		while (parsing)
 		{
@@ -256,14 +97,44 @@ namespace flex
 			parsing = ParseField(fileContents, &fileContentOffset, field);
 			parsedFile.rootObject.fields.push_back(field);
 
+			parseSucceeded |= parsing;
+
 			if (fileContentOffset == fileContents.size() - 1)
 			{
 				// We've reached the end of the file!
 				parsing = false;
 			}
 		}
+
+		return parseSucceeded;
 	}
 
+	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
+	{
+		i32 objectClosingBracket = MatchingBracket('{', fileContents, *offset);
+		if (objectClosingBracket == -1)
+		{
+			Logger::LogError("Couldn't find matching bracket for '{'");
+			return false;
+		}
+
+		bool parsing = true;
+		while (parsing && *offset < objectClosingBracket)
+		{
+			JSONField field;
+			parsing = ParseField(fileContents, offset, field);
+			outObject.fields.push_back(field);
+		}
+
+		*offset = objectClosingBracket + 1;
+
+		if (fileContents[*offset] == ',')
+		{
+			*offset += 1;
+		}
+
+		return true;
+	}
 	bool JSONParser::ParseField(const std::string& fileContents, i32* offset, JSONField& field)
 	{
 		size_t quoteStart = fileContents.find('/"', *offset);
@@ -399,20 +270,6 @@ namespace flex
 		return true;
 	}
 
-	i32 JSONParser::NextNonAlphaNumeric(const std::string& fileContents, i32 offset)
-	{
-		while (offset < fileContents.size())
-		{
-			if (!isdigit(fileContents[offset]) && !isalpha(fileContents[offset]))
-			{
-				return offset;
-			}
-			++offset;
-		}
-
-		return -1;
-	}
-
 	i32 JSONParser::MatchingBracket(char openingBracket, const std::string& fileContents, i32 offset)
 	{
 		assert(fileContents[offset] == openingBracket);
@@ -491,128 +348,4 @@ namespace flex
 
 		return -1;
 	}
-
-	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
-	{
-		i32 objectClosingBracket = MatchingBracket('{', fileContents, *offset);
-		if (objectClosingBracket == -1)
-		{
-			Logger::LogError("Couldn't find matching bracket for '{'");
-			return false;
-		}
-
-		bool parsing = true;
-		while (parsing && *offset < objectClosingBracket)
-		{
-			JSONField field;
-			parsing = ParseField(fileContents, offset, field);
-			outObject.fields.push_back(field);
-		}
-
-		*offset = objectClosingBracket + 1;
-
-		if (fileContents[*offset] == ',')
-		{
-			*offset += 1;
-		}
-
-		return true;
-	}
-
-	bool JSONParser::JSONObject::HasField(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	std::string JSONParser::JSONObject::GetString(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return field.value.strValue;
-			}
-		}
-		return "";
-	}
-
-	i32 JSONParser::JSONObject::GetInt(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return field.value.intValue;
-			}
-		}
-		return 0;
-	}
-
-	real JSONParser::JSONObject::GetFloat(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return field.value.floatValue;
-			}
-		}
-		return 0.0f;
-	}
-
-	bool JSONParser::JSONObject::GetBool(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return field.value.boolValue;
-			}
-		}
-		return false;
-	}
-
-	std::vector<JSONParser::JSONField> JSONParser::JSONObject::GetFieldArray(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return field.value.fieldArrayValue;
-			}
-		}
-		return {};
-	}
-
-	std::vector<JSONParser::JSONObject> JSONParser::JSONObject::GetObjectArray(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return field.value.objectArrayValue;
-			}
-		}
-		return {};
-	}
-
-	JSONParser::JSONObject& JSONParser::JSONObject::GetObject(const std::string& label)
-	{
-		for (auto& field : fields)
-		{
-			if (field.label == label)
-			{
-				return field.value.objectValue;
-			}
-		}
-		return JSONObject();
-	}
-
 } // namespace flex

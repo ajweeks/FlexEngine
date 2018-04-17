@@ -39,16 +39,16 @@ namespace flex
 
 	void BaseScene::CreateFromJSON(const std::string& jsonFilePath)
 	{
-		JSONParser::ParsedJSONFile parsedFile;
+		ParsedJSONFile parsedFile;
 
 		JSONParser::Parse(jsonFilePath, parsedFile);
 
 		Logger::LogInfo("Parsed scene file:");
-		Logger::LogInfo(JSONParser::Print(parsedFile.rootObject, 0));
+		Logger::LogInfo(parsedFile.rootObject.Print(0));
 
 		std::string sceneName = parsedFile.rootObject.GetString("name");
 		m_Name = sceneName;
-		std::vector<JSONParser::JSONObject> sceneObjects = parsedFile.rootObject.GetObjectArray("objects");
+		std::vector<JSONObject> sceneObjects = parsedFile.rootObject.GetObjectArray("objects");
 		for (auto sceneObject : sceneObjects)
 		{
 			std::string objectName = sceneObject.GetString("name");
@@ -63,14 +63,14 @@ namespace flex
 
 				if (prefabName.empty())
 				{
-					Logger::LogError("Scene object contain's no file path or prefab name!");
+					Logger::LogError("Scene object contains no file path or prefab name!");
 					continue;
 				}
 			}
 			bool visibleInSceneGraph = sceneObject.GetBool("visibleInSceneGraph");
 			bool visible = sceneObject.GetBool("visible");
-			JSONParser::JSONObject transform = sceneObject.GetObject("transform");
-			JSONParser::JSONObject material = sceneObject.GetObject("material");
+			JSONObject transform = sceneObject.GetObject("transform");
+			JSONObject material = sceneObject.GetObject("material");
 			std::string materialName = material.GetString("name");
 			int materialConstMetallic = material.GetInt("constMetallic");
 			std::string cullFace = sceneObject.GetString("cullFace");
