@@ -6,7 +6,7 @@
 			"name" : "Grid",
 			"prefab" : "grid",
 			"visibleInSceneGraph" : false,
-			"trueBoolean" : true,
+			"visible" : true,
 			"transform" : 
 			{
 				"position" : "0.0,0.0,0.0",
@@ -23,6 +23,7 @@
 			"name" : "Sphere",
 			"file" : "sphere.fbx",
 			"cullFace" : "back",
+			"visible" : false,
 			"transform" : 
 			{
 				"position" : "10.0,0.0,0.0",

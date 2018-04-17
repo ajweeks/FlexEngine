@@ -27,6 +27,16 @@ namespace flex
 		struct JSONObject
 		{
 			std::vector<JSONField> fields;
+
+			bool HasField(const std::string& label);
+			std::string GetString(const std::string& label);
+			i32 GetInt(const std::string& label);
+			real GetFloat(const std::string& label);
+			bool GetBool(const std::string& label);
+			std::vector<JSONField> GetFieldArray(const std::string& label);
+			std::vector<JSONObject> GetObjectArray(const std::string& label);
+			JSONObject& GetObject(const std::string& label);
+			//JSONField& operator[](const std::string& label);
 		};
 
 		struct JSONValue
@@ -70,15 +80,14 @@ namespace flex
 			JSONValue value;
 		};
 
-
-		struct ParsedFile
+		struct ParsedJSONFile
 		{
 			JSONObject rootObject;
 		};
 
 		static std::string Print(const JSONObject& object, i32 tabCount);
 
-		static void Parse(const std::string& filePath, ParsedFile& parsedFile);
+		static void Parse(const std::string& filePath, ParsedJSONFile& parsedFile);
 
 	private:
 		static std::string Print(const JSONField& field, i32 tabCount);

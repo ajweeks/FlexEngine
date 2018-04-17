@@ -170,7 +170,7 @@ namespace flex
 		return result;
 	}
 
-	void JSONParser::Parse(const std::string& filePath, ParsedFile& parsedFile)
+	void JSONParser::Parse(const std::string& filePath, ParsedJSONFile& parsedFile)
 	{
 		std::ifstream ifStream(filePath, std::fstream::ate);
 		if (!ifStream)
@@ -517,6 +517,102 @@ namespace flex
 		}
 
 		return true;
+	}
+
+	bool JSONParser::JSONObject::HasField(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	std::string JSONParser::JSONObject::GetString(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.strValue;
+			}
+		}
+		return "";
+	}
+
+	i32 JSONParser::JSONObject::GetInt(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.intValue;
+			}
+		}
+		return 0;
+	}
+
+	real JSONParser::JSONObject::GetFloat(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.floatValue;
+			}
+		}
+		return 0.0f;
+	}
+
+	bool JSONParser::JSONObject::GetBool(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.boolValue;
+			}
+		}
+		return false;
+	}
+
+	std::vector<JSONParser::JSONField> JSONParser::JSONObject::GetFieldArray(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.fieldArrayValue;
+			}
+		}
+		return {};
+	}
+
+	std::vector<JSONParser::JSONObject> JSONParser::JSONObject::GetObjectArray(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.objectArrayValue;
+			}
+		}
+		return {};
+	}
+
+	JSONParser::JSONObject& JSONParser::JSONObject::GetObject(const std::string& label)
+	{
+		for (auto& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.objectValue;
+			}
+		}
+		return JSONObject();
 	}
 
 } // namespace flex
