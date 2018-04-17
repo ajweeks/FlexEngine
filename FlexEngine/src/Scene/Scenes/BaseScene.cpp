@@ -43,13 +43,8 @@ namespace flex
 
 		JSONParser::Parse(jsonFilePath, parsedFile);
 
-		//GameObject* gameObject = new GameObject();
-
-		for (auto field : parsedFile.rootObject.fields)
-		{
-			void* data = field.value.GetData();
-
-		}
+		Logger::LogInfo("Parsed scene file:");
+		Logger::LogInfo(JSONParser::Print(parsedFile.rootObject, 0));
 	}
 
 	std::string BaseScene::GetName() const

@@ -5,6 +5,8 @@
 		{
 			"name" : "Grid",
 			"prefab" : "grid",
+			"visibleInSceneGraph" : false,
+			"trueBoolean" : true,
 			"transform" : 
 			{
 				"position" : "0.0,0.0,0.0",
@@ -20,6 +22,7 @@
 		{
 			"name" : "Sphere",
 			"file" : "sphere.fbx",
+			"cullFace" : "back",
 			"transform" : 
 			{
 				"position" : "10.0,0.0,0.0",
@@ -28,7 +31,8 @@
 			},
 			"material" :
 			{
-				"name" : "pbr"
+				"name" : "pbr",
+				"constMetallic" : 1
 				// add per-object material paramaters here
 			}
 			// add rigid body, collider, renderer settings, ... here
