@@ -30,13 +30,14 @@ namespace flex
 		default:
 		{
 			// Check if number
-			bool isDigit = isdigit(c) != 0;
-			bool isNegation = c == '-';
+			bool isDigit = (isdigit(c) != 0);
+			bool isDecimal = (c == '.');
+			bool isNegation = (c == '-');
 
-			if (isDigit || isNegation)
+			if (isDigit || isDecimal || isNegation)
 			{
 				i32 nextNonAlphaNumeric = NextNonAlphaNumeric(stringAfter, 0);
-				if (nextNonAlphaNumeric == '.')
+				if (isDecimal || stringAfter[nextNonAlphaNumeric] == '.')
 				{
 					return Type::FLOAT;
 				}

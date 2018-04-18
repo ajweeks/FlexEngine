@@ -82,12 +82,134 @@ namespace flex
 				continue;
 			}
 
+
 			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.name = materialName;
-			matCreateInfo.shaderName = shaderName;
-			matCreateInfo.constMetallic = (real)materialConstMetallic;
-			matCreateInfo.albedoTexturePath = albedoTexturePath;
-			// ...
+			{
+				matCreateInfo.name = materialName;
+				matCreateInfo.shaderName = shaderName;
+
+				struct StringMaterialParam
+				{
+					std::string* member;
+					std::string name;
+				};
+
+				std::vector<StringMaterialParam> strParams =
+				{
+					{ &matCreateInfo.diffuseTexturePath, "diffuseTexturePath" },
+					{ &matCreateInfo.normalTexturePath, "normalTexturePath" },
+					{ &matCreateInfo.albedoTexturePath, "albedoTexturePath" },
+					{ &matCreateInfo.metallicTexturePath, "metallicTexturePath" },
+					{ &matCreateInfo.roughnessTexturePath, "roughnessTexturePath" },
+					{ &matCreateInfo.aoTexturePath, "aoTexturePath" },
+					{ &matCreateInfo.hdrEquirectangularTexturePath, "hdrEquirectangularTexturePath" },
+					{ &matCreateInfo.environmentMapPath, "environmentMapPath" },
+				};
+
+				for (u32 i = 0; i < strParams.size(); ++i)
+				{
+					if (material.HasField(strParams[i].name))
+					{
+						*strParams[i].member = material.GetString(strParams[i].name);
+					}
+				}
+
+
+				struct BoolMaterialParam
+				{
+					bool* member;
+					std::string name;
+				};
+
+				std::vector<BoolMaterialParam> boolParams =
+				{
+					{ &matCreateInfo.generateDiffuseSampler, "generateDiffuseSampler" },
+					{ &matCreateInfo.enableDiffuseSampler, "enableDiffuseSampler" },
+					{ &matCreateInfo.generateNormalSampler, "generateNormalSampler" },
+					{ &matCreateInfo.enableNormalSampler, "enableNormalSampler" },
+					{ &matCreateInfo.generateAlbedoSampler, "generateAlbedoSampler" },
+					{ &matCreateInfo.enableAlbedoSampler, "enableAlbedoSampler" },
+					{ &matCreateInfo.generateMetallicSampler, "generateMetallicSampler" },
+					{ &matCreateInfo.enableMetallicSampler, "enableMetallicSampler" },
+					{ &matCreateInfo.generateRoughnessSampler, "generateRoughnessSampler" },
+					{ &matCreateInfo.enableRoughnessSampler, "enableRoughnessSampler" },
+					{ &matCreateInfo.generateAOSampler, "generateAOSampler" },
+					{ &matCreateInfo.enableAOSampler, "enableAOSampler" },
+					{ &matCreateInfo.generateHDREquirectangularSampler, "generateHDREquirectangularSampler" },
+					{ &matCreateInfo.enableHDREquirectangularSampler, "enableHDREquirectangularSampler" },
+					{ &matCreateInfo.generateHDRCubemapSampler, "generateHDRCubemapSampler" },
+					{ &matCreateInfo.enableIrradianceSampler, "enableIrradianceSampler" },
+					{ &matCreateInfo.generateIrradianceSampler, "generateIrradianceSampler" },
+					{ &matCreateInfo.enableBRDFLUT, "enableBRDFLUT" },
+					{ &matCreateInfo.renderToCubemap, "renderToCubemap"},
+					{ &matCreateInfo.enableCubemapSampler, "enableCubemapSampler" },
+					{ &matCreateInfo.enableCubemapTrilinearFiltering, "enableCubemapTrilinearFiltering" },
+					{ &matCreateInfo.generateCubemapSampler, "generateCubemapSampler" },
+					{ &matCreateInfo.generateCubemapDepthBuffers, "generateCubemapDepthBuffers" },
+					{ &matCreateInfo.generatePrefilteredMap, "generatePrefilteredMap" },
+					{ &matCreateInfo.enablePrefilteredMap, "enablePrefilteredMap" },
+					{ &matCreateInfo.generateReflectionProbeMaps, "generateReflectionProbeMaps" },
+				};
+
+				for (u32 i = 0; i < boolParams.size(); ++i)
+				{
+					if (material.HasField(boolParams[i].name))
+					{
+						*boolParams[i].member = material.GetBool(boolParams[i].name);
+					}
+				}
+
+				if (material.HasField("colorMultiplier"))
+				{
+					std::string colorStr = material.GetString("colorMultiplier");
+					matCreateInfo.colorMultiplier = JSONParser::ParseColor4(colorStr);
+				}
+
+				if (material.HasField("generatedIrradianceCubemapSize"))
+				{
+					std::string irradianceCubemapSizeStr = material.GetString("generatedIrradianceCubemapSize");
+					matCreateInfo.generatedIrradianceCubemapSize = JSONParser::ParseVec2(irradianceCubemapSizeStr);
+				}
+
+				//std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+				//matCreateInfo.irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
+				//matCreateInfo.prefilterMapSamplerMatID = InvalidMaterialID;
+
+				//matCreateInfo.cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+
+				if (material.HasField("generatedCubemapSize"))
+				{
+					std::string generatedCubemapSizeStr = material.GetString("generatedCubemapSize");
+					matCreateInfo.generatedCubemapSize = JSONParser::ParseVec2(generatedCubemapSizeStr);
+				}
+
+				if (material.HasField("generatedPrefilteredCubemapSize"))
+				{
+					std::string generatedPrefilteredCubemapSizeStr = material.GetString("generatedPrefilteredCubemapSize");
+					matCreateInfo.generatedPrefilteredCubemapSize = JSONParser::ParseVec2(generatedPrefilteredCubemapSizeStr);
+				}
+
+				if (material.HasField("constAlbedo"))
+				{
+					std::string albedoStr = material.GetString("constAlbedo");
+					matCreateInfo.constAlbedo = JSONParser::ParseColor3(albedoStr);
+				}
+
+				if (material.HasField("constMetallic"))
+				{
+					matCreateInfo.constMetallic = material.GetFloat("constMetallic");
+				}
+
+				if (material.HasField("constRoughness"))
+				{
+					matCreateInfo.constRoughness = material.GetFloat("constRoughness");
+				}
+
+				if (material.HasField("constAO"))
+				{
+					matCreateInfo.constAO = material.GetFloat("constAO");
+				}
+			}
 			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
 
 			MeshPrefab* mesh = new MeshPrefab(matID, objectName);
@@ -102,10 +224,7 @@ namespace flex
 			}
 
 			AddChild(gameContext, mesh);
-			// TODO: Add transform assignment operator
-			mesh->GetTransform().SetGlobalPosition(transform.GetGlobalPosition());
-			mesh->GetTransform().SetGlobalRotation(transform.GetGlobalRotation());
-			mesh->GetTransform().SetGlobalScale(transform.GetGlobalScale());
+			mesh->GetTransform() = transform;
 		}
 	}
 

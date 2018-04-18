@@ -16,13 +16,17 @@
 			"material" :
 			{
 				"name" : "color",
-        "shader" :  "color"
+        		"shader" :  "color",
+        		"constRoughness" : 0.56,
+        		"generatedCubemapSize" : "512, 512",
+        		"enablePrefilteredMap" : true,
+        		"aoTexturePath" : "texture.png"
 			}
 			// add rigid body, collider, renderer settings, ... here
 		},
 		{
-      "name": "Sphere",
-      // Mesh path is relative to RESOURCE_LOCATION + "models/"
+      		"name": "Sphere",
+      		// Mesh path is relative to RESOURCE_LOCATION + "models/"
 			"file" : "sphere.fbx",
 			"cullFace" : "back",
 			"visible" : false,
@@ -34,8 +38,8 @@
 			},
 			"material" :
 			{
-        "name": "pbr",
-        "shader" :  "color",
+        		"name": "pbr",
+        		"shader" :  "color",
 				"constMetallic" : 1
 				// add per-object material paramaters here
 			}

@@ -126,7 +126,7 @@ namespace flex
 			}
 			else
 			{
-				pos = glm::vec3(atoi(posParts[0].c_str()), atoi(posParts[1].c_str()), atoi(posParts[2].c_str()));
+				pos = glm::vec3(atof(posParts[0].c_str()), atof(posParts[1].c_str()), atof(posParts[2].c_str()));
 			}
 		}
 
@@ -141,7 +141,7 @@ namespace flex
 			}
 			else
 			{
-				rot = glm::quat(glm::vec3(atoi(rotParts[0].c_str()), atoi(rotParts[1].c_str()), atoi(rotParts[2].c_str())));
+				rot = glm::quat(glm::vec3(atof(rotParts[0].c_str()), atof(rotParts[1].c_str()), atof(rotParts[2].c_str())));
 			}
 		}
 
@@ -156,11 +156,94 @@ namespace flex
 			}
 			else
 			{
-				scale = glm::vec3(atoi(scaleParts[0].c_str()), atoi(scaleParts[1].c_str()), atoi(scaleParts[2].c_str()));
+				scale = glm::vec3(atof(scaleParts[0].c_str()), atof(scaleParts[1].c_str()), atof(scaleParts[2].c_str()));
 			}
 		}
 
 		return Transform(pos, rot, scale);
+	}
+
+	glm::vec2 JSONParser::ParseVec2(const std::string& vecStr)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 2)
+		{
+			Logger::LogError("Invalid vec2 field: " + vecStr);
+			return glm::vec2(-1);
+		}
+		else
+		{
+			glm::vec2 result(
+				std::stof(parts[0].c_str()),
+				std::stof(parts[1].c_str()));
+
+			return result;
+		}
+	}
+
+	glm::vec3 JSONParser::ParseVec3(const std::string& vecStr)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 3 && parts.size() != 4)
+		{
+			Logger::LogError("Invalid vec3 field: " + vecStr);
+			return glm::vec3(-1);
+		}
+		else
+		{
+			glm::vec3 result(
+				std::stof(parts[0].c_str()),
+				std::stof(parts[1].c_str()),
+				std::stof(parts[2].c_str()));
+
+			return result;
+		}
+	}
+
+	glm::vec4 JSONParser::ParseVec4(const std::string& vecStr, bool requireW)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if ((parts.size() != 4 && parts.size() != 3) || (requireW && parts.size() != 4))
+		{
+			Logger::LogError("Invalid vec4 field: " + vecStr);
+			return glm::vec4(-1);
+		}
+		else
+		{
+			glm::vec4 result;
+
+			if (parts.size() == 4)
+			{
+				result = glm::vec4(
+					std::stof(parts[0].c_str()),
+					std::stof(parts[1].c_str()),
+					std::stof(parts[2].c_str()),
+					std::stof(parts[3].c_str()));
+			}
+			else
+			{
+				result = glm::vec4(
+					std::stof(parts[0].c_str()),
+					std::stof(parts[1].c_str()),
+					std::stof(parts[2].c_str()),
+					1.0f);
+			}
+
+			return result;
+		}
+	}
+
+	glm::vec4 JSONParser::ParseColor4(const std::string& colorStr)
+	{
+		return ParseVec4(colorStr, false);
+	}
+
+	glm::vec3 JSONParser::ParseColor3(const std::string& colorStr)
+	{
+		return ParseVec3(colorStr);
 	}
 
 	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
@@ -244,9 +327,10 @@ namespace flex
 		} break;
 		case JSONValue::Type::INT:
 		{
-			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, quoteEnd + 2);
-			size_t intCharCount = nextNonAlphaNumeric - (quoteEnd + 2);
-			std::string intStr = fileContents.substr(quoteEnd + 2, intCharCount);
+			size_t intStart = quoteEnd + 2;
+			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart);
+			size_t intCharCount = nextNonAlphaNumeric - intStart;
+			std::string intStr = fileContents.substr(intStart, intCharCount);
 			int intValue = stoi(intStr);
 			field.value = JSONValue(intValue);
 
@@ -254,13 +338,15 @@ namespace flex
 		} break;
 		case JSONValue::Type::FLOAT:
 		{
-			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
-			size_t floatEnd = nextNonAlphaNumeric - (quoteEnd + 3);
-			std::string floatStr = fileContents.substr(quoteEnd + 3, floatEnd);
+			size_t floatStart = quoteEnd + 2;
+			size_t decminalIndex = NextNonAlphaNumeric(fileContents, floatStart);
+			size_t floatEnd = NextNonAlphaNumeric(fileContents, decminalIndex + 1);
+			size_t floatCharCount = floatEnd - floatStart;
+			std::string floatStr = fileContents.substr(floatStart, floatCharCount);
 			real floatValue = stof(floatStr);
 			field.value = JSONValue(floatValue);
 
-			*offset = floatEnd + 1;
+			*offset = floatEnd;
 		} break;
 		case JSONValue::Type::BOOL:
 		{
