@@ -38,6 +38,8 @@ namespace flex
 	// Removes all content before the final '/' or '\' 
 	void StripLeadingDirectories(std::string& filePath);
 
+	std::vector<std::string> Split(const std::string& str, char delim);
+
 	/*
 	 * Returns the index of the first character which isn't a number
 	 * of letter (or -1 if none exist) starting from offset

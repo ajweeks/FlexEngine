@@ -15,12 +15,14 @@
 			},
 			"material" :
 			{
-				"name" : "color"
+				"name" : "color",
+        "shader" :  "color"
 			}
 			// add rigid body, collider, renderer settings, ... here
 		},
 		{
-			"name" : "Sphere",
+      "name": "Sphere",
+      // Mesh path is relative to RESOURCE_LOCATION + "models/"
 			"file" : "sphere.fbx",
 			"cullFace" : "back",
 			"visible" : false,
@@ -32,7 +34,8 @@
 			},
 			"material" :
 			{
-				"name" : "pbr",
+        "name": "pbr",
+        "shader" :  "color",
 				"constMetallic" : 1
 				// add per-object material paramaters here
 			}

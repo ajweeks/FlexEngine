@@ -21,21 +21,30 @@ namespace flex
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(scale)
+		localScale(scale),
+		globalPosition(localPosition),
+		globalRotation(localRotation),
+		globalScale(localScale)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(glm::vec3(1.0f))
+		localScale(glm::vec3(1.0f)),
+		globalPosition(localPosition),
+		globalRotation(localRotation),
+		globalScale(localScale)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position) :
 		localPosition(position),
 		localRotation(glm::quat(glm::vec3(0.0f))),
-		localScale(glm::vec3(1.0f))
+		localScale(glm::vec3(1.0f)),
+		globalPosition(localPosition),
+		globalRotation(localRotation),
+		globalScale(localScale)
 	{
 	}
 

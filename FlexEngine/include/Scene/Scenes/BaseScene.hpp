@@ -17,7 +17,7 @@ namespace flex
 		BaseScene(const std::string& name = "");
 		virtual ~BaseScene();
 
-		void CreateFromJSON(const std::string& jsonFilePath);
+		void InitializeFromJSON(const std::string& jsonFilePath, const GameContext& gameContext);
 
 		std::string GetName() const;
 

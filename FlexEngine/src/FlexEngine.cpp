@@ -214,11 +214,11 @@ namespace flex
 		//m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
 
 		BaseScene* scene01 = new BaseScene("");
-		scene01->CreateFromJSON(RESOURCE_LOCATION + "scenes/scene_01.json");
+		scene01->InitializeFromJSON(RESOURCE_LOCATION + "scenes/scene_01.json", m_GameContext);
 		m_GameContext.sceneManager->AddScene(scene01, m_GameContext);
 
 		BaseScene* scene02 = new BaseScene("");
-		scene02->CreateFromJSON(RESOURCE_LOCATION + "scenes/scene_02.json");
+		scene02->InitializeFromJSON(RESOURCE_LOCATION + "scenes/scene_02.json", m_GameContext);
 		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
 
 		m_GameContext.sceneManager->SetCurrentScene(scene01);

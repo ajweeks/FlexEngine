@@ -30,6 +30,8 @@ namespace flex
 		*/
 		static bool Parse(const std::string& filePath, ParsedJSONFile& parsedFile);
 
+		static Transform ParseTransform(const JSONObject& transformObject);
+
 	private:
 		/*
 		* Parses an object starting at offset

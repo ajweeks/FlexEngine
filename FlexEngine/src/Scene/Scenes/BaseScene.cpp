@@ -13,6 +13,7 @@
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Scene/ReflectionProbe.hpp"
+#include "Scene/MeshPrefab.hpp"
 
 namespace flex
 {
@@ -37,7 +38,7 @@ namespace flex
 		}
 	}
 
-	void BaseScene::CreateFromJSON(const std::string& jsonFilePath)
+	void BaseScene::InitializeFromJSON(const std::string& jsonFilePath, const GameContext& gameContext)
 	{
 		ParsedJSONFile parsedFile;
 
@@ -49,32 +50,62 @@ namespace flex
 		std::string sceneName = parsedFile.rootObject.GetString("name");
 		m_Name = sceneName;
 		std::vector<JSONObject> sceneObjects = parsedFile.rootObject.GetObjectArray("objects");
-		for (auto sceneObject : sceneObjects)
+		for (const auto& sceneObject : sceneObjects)
 		{
 			std::string objectName = sceneObject.GetString("name");
-			if (sceneObject.HasField("file"))
-			{
-				std::string filePath = sceneObject.GetString("file");
+			std::string filePath = sceneObject.GetString("file");
+			std::string prefabName = sceneObject.GetString("prefab");
 
+			if (!sceneObject.HasField("file") && !sceneObject.HasField("prefab"))
+			{
+				Logger::LogError("Scene object contains no file path or prefab name!");
+				continue;
+			}
+
+			bool visibleInSceneGraph = sceneObject.GetBool("visibleInSceneGraph");
+			bool visible = sceneObject.GetBool("visible");
+			std::string cullFace = sceneObject.GetString("cullFace");
+			
+			JSONObject transformObj = sceneObject.GetObject("transform");
+			Transform transform = JSONParser::ParseTransform(transformObj);
+
+
+			JSONObject material = sceneObject.GetObject("material");
+			std::string materialName = material.GetString("name");
+			std::string shaderName = material.GetString("shader");
+			std::string albedoTexturePath = material.GetString("albedoTexturePath");
+			int materialConstMetallic = material.GetInt("constMetallic");
+
+			if (shaderName.empty())
+			{
+				Logger::LogError("Shader name not set in material " + materialName);
+				continue;
+			}
+
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = materialName;
+			matCreateInfo.shaderName = shaderName;
+			matCreateInfo.constMetallic = (real)materialConstMetallic;
+			matCreateInfo.albedoTexturePath = albedoTexturePath;
+			// ...
+			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
+
+			MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+			if (!filePath.empty())
+			{
+				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/" + filePath);
 			}
 			else
 			{
-				std::string prefabName = sceneObject.GetString("prefab");
-
-				if (prefabName.empty())
-				{
-					Logger::LogError("Scene object contains no file path or prefab name!");
-					continue;
-				}
+				MeshPrefab::PrefabShape prefabShape = MeshPrefab::PrefabShapeFromString(prefabName);
+				mesh->LoadPrefabShape(gameContext, prefabShape);
 			}
-			bool visibleInSceneGraph = sceneObject.GetBool("visibleInSceneGraph");
-			bool visible = sceneObject.GetBool("visible");
-			JSONObject transform = sceneObject.GetObject("transform");
-			JSONObject material = sceneObject.GetObject("material");
-			std::string materialName = material.GetString("name");
-			int materialConstMetallic = material.GetInt("constMetallic");
-			std::string cullFace = sceneObject.GetString("cullFace");
 
+			AddChild(gameContext, mesh);
+			// TODO: Add transform assignment operator
+			mesh->GetTransform().SetGlobalPosition(transform.GetGlobalPosition());
+			mesh->GetTransform().SetGlobalRotation(transform.GetGlobalRotation());
+			mesh->GetTransform().SetGlobalScale(transform.GetGlobalScale());
 		}
 	}
 
@@ -90,11 +121,6 @@ namespace flex
 
 	void BaseScene::Initialize(const GameContext& gameContext)
 	{
-		MaterialCreateInfo colorMatInfo = {};
-		colorMatInfo.shaderName = "color";
-		colorMatInfo.name = "Color";
-		gameContext.renderer->InitializeMaterial(gameContext, &colorMatInfo);
-
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);
 

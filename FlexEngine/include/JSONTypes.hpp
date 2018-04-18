@@ -16,14 +16,14 @@ namespace flex
 	{
 		std::vector<JSONField> fields;
 
-		bool HasField(const std::string& label);
-		std::string GetString(const std::string& label);
-		i32 GetInt(const std::string& label);
-		real GetFloat(const std::string& label);
-		bool GetBool(const std::string& label);
-		std::vector<JSONField> GetFieldArray(const std::string& label);
-		std::vector<JSONObject> GetObjectArray(const std::string& label);
-		JSONObject& GetObject(const std::string& label);
+		bool HasField(const std::string& label) const;
+		std::string GetString(const std::string& label) const;
+		i32 GetInt(const std::string& label) const;
+		real GetFloat(const std::string& label) const;
+		bool GetBool(const std::string& label) const;
+		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
+		const std::vector<JSONObject>& GetObjectArray(const std::string& label) const;
+		const JSONObject& GetObject(const std::string& label) const;
 		//JSONField& operator[](const std::string& label);
 
 		std::string Print(i32 tabCount);

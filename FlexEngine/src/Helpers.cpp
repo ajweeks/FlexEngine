@@ -101,6 +101,35 @@ namespace flex
 		}
 	}
 
+	std::vector<std::string> Split(const std::string& str, char delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+
+		size_t strLen = str.size();
+		while (i != strLen)
+		{
+			while (i != strLen && str[i] == delim)
+			{
+				++i;
+			}
+
+			size_t j = i;
+			while (j != strLen && str[j] != delim)
+			{
+				++j;
+			}
+
+			if (i != j)
+			{
+				result.push_back(str.substr(i, j - i));
+				i = j;
+			}
+		}
+
+		return result;
+	}
+
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
 	{
 		while (offset < str.size())

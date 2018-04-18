@@ -13,7 +13,8 @@
 			},
 			"material" :
 			{
-				"name" : "pbr"
+				"name" : "pbr",
+        "shader" :  "pbr"
 				// add per-object material paramaters here
 			}
 			// add rigid body, collider, renderer settings here

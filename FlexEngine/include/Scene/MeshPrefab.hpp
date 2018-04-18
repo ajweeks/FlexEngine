@@ -51,6 +51,8 @@ namespace flex
 		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
 		void SetUVScale(real uScale, real vScale);
 
+		static PrefabShape PrefabShapeFromString(const std::string& prefabName);
+
 	private:
 		struct LoadedMesh
 		{

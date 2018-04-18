@@ -96,7 +96,7 @@ namespace flex
 	{
 	}
 
-	bool JSONObject::HasField(const std::string& label)
+	bool JSONObject::HasField(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -108,7 +108,7 @@ namespace flex
 		return false;
 	}
 
-	std::string JSONObject::GetString(const std::string& label)
+	std::string JSONObject::GetString(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -120,7 +120,7 @@ namespace flex
 		return "";
 	}
 
-	i32 JSONObject::GetInt(const std::string& label)
+	i32 JSONObject::GetInt(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -132,7 +132,7 @@ namespace flex
 		return 0;
 	}
 
-	real JSONObject::GetFloat(const std::string& label)
+	real JSONObject::GetFloat(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -144,7 +144,7 @@ namespace flex
 		return 0.0f;
 	}
 
-	bool JSONObject::GetBool(const std::string& label)
+	bool JSONObject::GetBool(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -156,7 +156,7 @@ namespace flex
 		return false;
 	}
 
-	std::vector<JSONField> JSONObject::GetFieldArray(const std::string& label)
+	const std::vector<JSONField>& JSONObject::GetFieldArray(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -168,7 +168,7 @@ namespace flex
 		return {};
 	}
 
-	std::vector<JSONObject> JSONObject::GetObjectArray(const std::string& label)
+	const std::vector<JSONObject>& JSONObject::GetObjectArray(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -180,7 +180,7 @@ namespace flex
 		return {};
 	}
 
-	JSONObject& JSONObject::GetObject(const std::string& label)
+	const JSONObject& JSONObject::GetObject(const std::string& label) const
 	{
 		for (auto& field : fields)
 		{
@@ -214,7 +214,7 @@ namespace flex
 			break;
 		case JSONValue::Type::OBJECT:
 			result += '\n' + tabs + "{\n";
-			for (i32 i = 0; i < value.objectValue.fields.size(); ++i)
+			for (u32 i = 0; i < value.objectValue.fields.size(); ++i)
 			{
 				result += value.objectValue.fields[i].Print(tabCount + 1);
 			}
@@ -222,7 +222,7 @@ namespace flex
 			break;
 		case JSONValue::Type::OBJECT_ARRAY:
 			result += '\n' + tabs + "[\n";
-			for (i32 i = 0; i < value.objectArrayValue.size(); ++i)
+			for (u32 i = 0; i < value.objectArrayValue.size(); ++i)
 			{
 				result += value.objectArrayValue[i].Print(tabCount + 1);
 			}
@@ -230,7 +230,7 @@ namespace flex
 			break;
 		case JSONValue::Type::FIELD_ARRAY:
 			result += '\n' + tabs + "[\n";
-			for (i32 i = 0; i < value.fieldArrayValue.size(); ++i)
+			for (u32 i = 0; i < value.fieldArrayValue.size(); ++i)
 			{
 				result += value.fieldArrayValue[i].Print(tabCount + 1);
 			}
@@ -252,7 +252,7 @@ namespace flex
 		const std::string tabs(tabCount, '\t');
 		std::string result(tabs + "{\n");
 
-		for (i32 i = 0; i < fields.size(); ++i)
+		for (u32 i = 0; i < fields.size(); ++i)
 		{
 			result += fields[i].Print(tabCount + 1);
 		}

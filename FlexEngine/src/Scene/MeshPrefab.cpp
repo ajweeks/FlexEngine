@@ -8,6 +8,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <string>
+
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Colors.hpp"
@@ -925,6 +927,35 @@ namespace flex
 	void MeshPrefab::SetUVScale(real uScale, real vScale)
 	{
 		m_UVScale = glm::vec2(uScale, vScale);
+	}
+
+	MeshPrefab::PrefabShape MeshPrefab::PrefabShapeFromString(const std::string& prefabName)
+	{
+		if (prefabName.compare("cube") == 0)
+		{
+			return PrefabShape::CUBE;
+		}
+		else if (prefabName.compare("grid") == 0)
+		{
+			return PrefabShape::GRID;
+		}
+		else if (prefabName.compare("grid") == 0)
+		{
+			return PrefabShape::PLANE;
+		}
+		else if (prefabName.compare("skybox") == 0)
+		{
+			return PrefabShape::SKYBOX;
+		}
+		else if (prefabName.compare("uv sphere") == 0)
+		{
+			return PrefabShape::UV_SPHERE;
+		}
+		else
+		{
+			return PrefabShape::NONE;
+		}
+
 	}
 
 	MeshPrefab::LoadedMesh::LoadedMesh()
