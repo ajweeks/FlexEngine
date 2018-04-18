@@ -4,7 +4,10 @@
 	[
 		{
 			"name" : "Cube",
-			"file" : "cube.fbx",
+			"mesh" :
+			{
+				"file" : "cube.fbx",
+			},
 			"transform" : 
 			{
 				"position" : "3.5,10.0,-5.1",
@@ -14,10 +17,8 @@
 			"material" :
 			{
 				"name" : "pbr",
-        "shader" :  "pbr"
-				// add per-object material paramaters here
+        		"shader" :  "pbr"
 			}
-			// add rigid body, collider, renderer settings here
 		}
 	]
 }

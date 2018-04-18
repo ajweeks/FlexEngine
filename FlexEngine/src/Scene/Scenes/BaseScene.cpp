@@ -53,22 +53,17 @@ namespace flex
 		for (const auto& sceneObject : sceneObjects)
 		{
 			std::string objectName = sceneObject.GetString("name");
-			std::string filePath = sceneObject.GetString("file");
-			std::string prefabName = sceneObject.GetString("prefab");
 
-			if (!sceneObject.HasField("file") && !sceneObject.HasField("prefab"))
-			{
-				Logger::LogError("Scene object contains no file path or prefab name!");
-				continue;
-			}
+			JSONObject meshObj = sceneObject.GetObject("mesh");
+			std::string meshFilePath = meshObj.GetString("file");
+			std::string meshPrefabName = meshObj.GetString("prefab");
+			std::string cullFace = meshObj.GetString("cullFace");
 
 			bool visibleInSceneGraph = sceneObject.GetBool("visibleInSceneGraph");
 			bool visible = sceneObject.GetBool("visible");
-			std::string cullFace = sceneObject.GetString("cullFace");
 			
 			JSONObject transformObj = sceneObject.GetObject("transform");
 			Transform transform = JSONParser::ParseTransform(transformObj);
-
 
 			JSONObject material = sceneObject.GetObject("material");
 			std::string materialName = material.GetString("name");
@@ -212,19 +207,30 @@ namespace flex
 			}
 			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
 
-			MeshPrefab* mesh = new MeshPrefab(matID, objectName);
-			if (!filePath.empty())
+			if (!meshFilePath.empty())
 			{
-				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/" + filePath);
+				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+
+				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/" + meshFilePath);
+
+				AddChild(gameContext, mesh);
+				mesh->GetTransform() = transform;
+			}
+			else if (!meshPrefabName.empty())
+			{
+				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+
+				MeshPrefab::PrefabShape prefabShape = MeshPrefab::PrefabShapeFromString(meshPrefabName);
+				mesh->LoadPrefabShape(gameContext, prefabShape);
+
+				AddChild(gameContext, mesh);
+				mesh->GetTransform() = transform;
 			}
 			else
 			{
-				MeshPrefab::PrefabShape prefabShape = MeshPrefab::PrefabShapeFromString(prefabName);
-				mesh->LoadPrefabShape(gameContext, prefabShape);
+				GameObject* gameObject = new GameObject();
+				AddChild(gameContext, gameObject);
 			}
-
-			AddChild(gameContext, mesh);
-			mesh->GetTransform() = transform;
 		}
 	}
 

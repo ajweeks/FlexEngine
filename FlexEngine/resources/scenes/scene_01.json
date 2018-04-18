@@ -4,7 +4,10 @@
 	[
 		{
 			"name" : "Grid",
-			"prefab" : "grid",
+			 "mesh" :
+      		{
+				"prefab" : "grid",
+			},
 			"visibleInSceneGraph" : false,
 			"visible" : true,
 			"transform" : 
@@ -22,13 +25,25 @@
         		"enablePrefilteredMap" : true,
         		"aoTexturePath" : "texture.png"
 			}
-			// add rigid body, collider, renderer settings, ... here
 		},
 		{
       		"name": "Sphere",
       		// Mesh path is relative to RESOURCE_LOCATION + "models/"
-			"file" : "sphere.fbx",
-			"cullFace" : "back",
+			"mesh" :
+      		{
+      			"file" : "sphere.fbx",
+				"cullFace" : "back"
+			},
+			"collider" :
+			{
+				"shape" : "sphere",
+				"radius" : 10.0,
+			},
+			"rigidbody" : 
+			{
+				"kinematic" : false,
+				"mass" : 1.0
+			},
 			"visible" : false,
 			"transform" : 
 			{
@@ -39,11 +54,81 @@
 			"material" :
 			{
         		"name": "pbr",
-        		"shader" :  "color",
-				"constMetallic" : 1
-				// add per-object material paramaters here
+        		"shader" :  "pbr",
+				"constMetallic" : 1,
+				"constRoughness" : 0.25,
+				"constAO" : 1
+			},
+			"children" :
+			[
+				{
+					"name" : "sphere child test 01",
+					"visible" : true,
+					"mesh" :
+		      		{
+		      			"file" : "sphere.fbx",
+						"cullFace" : "back"
+					},
+					"material" :
+					{
+		        		"name": "color",
+		        		"shader" :  "color",
+						"colorMultiplier" : "1.5, 0.9, 0.1, 1"
+					}
+				},
+				{
+					"name" : "sphere child test 02",
+					"mesh" :
+		      		{
+		      			"file" : "sphere.fbx",
+						"cullFace" : "back"
+					},
+					"material" :
+					{
+		        		"name": "color",
+		        		"shader" :  "color",
+						"colorMultiplier" : "1, 0.4, 1, 1"
+					}
+				}
+			]
+		},
+		{
+      		"name": "Skybox",
+      		 "mesh" :
+      		{
+				"file" : "cube.fbx",
+				"cullFace" : "front",
+			},
+			"transform" : 
+			{
+				"position" : "10.0,0.0,0.0",
+				"rotation" : "0.0,0.0,0.0",
+				"scale" : "1.0,1.0,1.0"
+			},
+			"material" :
+			{
+        		"name": "Skybox",
+        		"shader" :  "skybox"
 			}
-			// add rigid body, collider, renderer settings, ... here
+		},
+		{
+      		"name": "Reflection Probe 01",
+      		"mesh" :
+      		{
+				"file" : "sphere.fbx",
+				"cullFace" : "front",
+      		},
+			"transform" : 
+			{
+				"position" : "10.0,0.0,0.0",
+				"rotation" : "0.0,0.0,0.0",
+				"scale" : "1.0,1.0,1.0"
+			},
+			"material" :
+			{
+        		"name": "Skybox",
+        		"shader" :  "skybox"
+			}
 		}
 	]
 }
