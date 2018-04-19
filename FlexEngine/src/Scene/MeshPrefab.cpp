@@ -86,7 +86,7 @@ namespace flex
 		}
 	}
 
-	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV)
+	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV, RenderObjectCreateInfo* optionalCreateInfo)
 	{
 		m_VertexBufferData.Destroy();
 
@@ -246,13 +246,42 @@ namespace flex
 		
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
-		RenderObjectCreateInfo createInfo = {};
-		createInfo.vertexBufferData = &m_VertexBufferData;
-		createInfo.materialID = m_MaterialID;
-		createInfo.name = m_Name;
-		createInfo.transform = &m_Transform;
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &createInfo);
+		if (optionalCreateInfo)
+		{
+			if (optionalCreateInfo->materialID != InvalidMaterialID)
+			{
+				m_MaterialID = optionalCreateInfo->materialID;
+				renderObjectCreateInfo.materialID = m_MaterialID;
+			}
+			renderObjectCreateInfo.name = optionalCreateInfo->name;
+			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
+			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
+			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
+			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
+			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+
+			if (optionalCreateInfo->transform != nullptr)
+			{
+				Logger::LogError("Can not override transform in LoadPrefabShape! Ignoring passed in data");
+			}
+			if (optionalCreateInfo->vertexBufferData != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+			}
+			if (optionalCreateInfo->indices != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+			}
+		}
+
+		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
+		renderObjectCreateInfo.materialID = m_MaterialID;
+		renderObjectCreateInfo.name = m_Name;
+		renderObjectCreateInfo.transform = &m_Transform;
+
+		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
 
 		gameContext.renderer->SetTopologyMode(m_RenderID, TopologyMode::TRIANGLE_LIST);
 
@@ -263,13 +292,42 @@ namespace flex
 		return true;
 	}
 
-	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape)
+	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
 		m_VertexBufferData.Destroy();
 
 		m_Shape = shape;
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
+
+		if (optionalCreateInfo)
+		{
+			if (optionalCreateInfo->materialID != InvalidMaterialID)
+			{
+				m_MaterialID = optionalCreateInfo->materialID;
+				renderObjectCreateInfo.materialID = m_MaterialID;
+			}
+			renderObjectCreateInfo.name = optionalCreateInfo->name;
+			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
+			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
+			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
+			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
+			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+
+			if (optionalCreateInfo->transform != nullptr)
+			{
+				Logger::LogError("Can not override transform in LoadPrefabShape! Ignoring passed in data");
+			}
+			if (optionalCreateInfo->vertexBufferData != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+			}
+			if (optionalCreateInfo->indices != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+			}
+		}
+
 		renderObjectCreateInfo.materialID = m_MaterialID;
 		renderObjectCreateInfo.transform = &m_Transform;
 
@@ -939,20 +997,25 @@ namespace flex
 		{
 			return PrefabShape::GRID;
 		}
-		else if (prefabName.compare("grid") == 0)
+		else if (prefabName.compare("world axis ground") == 0)
+		{
+			return PrefabShape::WORLD_AXIS_GROUND;
+		}
+		else if (prefabName.compare("plane") == 0)
 		{
 			return PrefabShape::PLANE;
-		}
-		else if (prefabName.compare("skybox") == 0)
-		{
-			return PrefabShape::SKYBOX;
 		}
 		else if (prefabName.compare("uv sphere") == 0)
 		{
 			return PrefabShape::UV_SPHERE;
 		}
+		else if (prefabName.compare("skybox") == 0)
+		{
+			return PrefabShape::SKYBOX;
+		}
 		else
 		{
+			Logger::LogError("Unhandled prefab shape string: " + prefabName);
 			return PrefabShape::NONE;
 		}
 

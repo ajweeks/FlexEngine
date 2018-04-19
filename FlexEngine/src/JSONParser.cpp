@@ -115,7 +115,7 @@ namespace flex
 		std::string rotStr = transformObject.GetString("rotation");
 		std::string scaleStr = transformObject.GetString("scale");
 
-		glm::vec3 pos{};
+		glm::vec3 pos(0.0f);
 		if (!posStr.empty())
 		{
 			std::vector<std::string> posParts = Split(posStr, ',');
@@ -130,7 +130,7 @@ namespace flex
 			}
 		}
 
-		glm::quat rot{};
+		glm::quat rot = glm::quat();
 		if (!rotStr.empty())
 		{
 			std::vector<std::string> rotParts = Split(rotStr, ',');
@@ -145,7 +145,7 @@ namespace flex
 			}
 		}
 
-		glm::vec3 scale{};
+		glm::vec3 scale(1.0f);
 		if (!scaleStr.empty())
 		{
 			std::vector<std::string> scaleParts = Split(scaleStr, ',');

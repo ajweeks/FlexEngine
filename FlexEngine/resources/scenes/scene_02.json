@@ -1,12 +1,12 @@
 {
 	"name": "scene_02",
-	"objects" :
+	"entities" :
 	[
 		{
 			"name" : "Cube",
 			"mesh" :
 			{
-				"file" : "cube.fbx",
+				"file" : "models/cube.fbx",
 			},
 			"transform" : 
 			{
@@ -17,7 +17,48 @@
 			"material" :
 			{
 				"name" : "pbr",
-        		"shader" :  "pbr"
+        		"shader" :  "pbr",
+				"constMetallic" : 0,
+				"constRoughness" : 0.95,
+				"constAO" : 1,
+				"constAlbedo" : "0, 0.6, 0.664"
+			}
+		},
+		{
+			"name" : "Cerebus",
+			"mesh" :
+			{
+				"file" : "Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx",
+				"flipNormalYZ" : true,
+				"flipZ" : true,
+				"flipU" : false,
+				"flipV" : true
+			},
+			"transform" : 
+			{
+				"position" : "0, 5, 10",
+				"rotation" : "0, 0, 0",
+				"scale" : "0.075,0.075,0.075"
+			},
+			"material" :
+			{
+				"name" : "pbr",
+        		"shader" :  "pbr",
+        		"enableAlbedoSampler" : true,
+        		"generateAlbedoSampler" : true,
+        		"albedoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga",
+        		"enableMetallicSampler" : true,
+        		"generateMetallicSampler" : true,
+        		"metallicTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga",
+        		"enableRoughnessSampler" : true,
+        		"generateRoughnessSampler" : true,
+        		"roughnessTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga",
+        		"enableAOSampler" : true,
+        		"generateAOSampler" : true,
+        		"aoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga",
+        		"enableNormalSampler" : true,
+        		"generateNormalSampler" : true,
+        		"normalTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_N.tga",
 			}
 		}
 	]

@@ -92,4 +92,9 @@ namespace flex
 	glm::vec3 PasteColor3FromClipboard();
 	glm::vec4 PasteColor4FromClipboard();
 
+	CullFace StringToCullFace(const std::string& str);
+
+	void ToLower(std::string& str);
+	void ToUpper(std::string& str);
+
 } // namespace flex

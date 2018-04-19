@@ -221,6 +221,46 @@ namespace flex
 		return result;
 	}
 
+	CullFace StringToCullFace(const std::string& str)
+	{
+		std::string strLower(str);
+		ToLower(strLower);
+
+		if (strLower.compare("back") == 0)
+		{
+			return CullFace::BACK;
+		}
+		else if (strLower.compare("front") == 0)
+		{
+			return CullFace::FRONT;
+		}
+		else if (strLower.compare("front and back") == 0)
+		{
+			return CullFace::FRONT_AND_BACK;
+		}
+		else
+		{
+			Logger::LogError("Unhandled cull face str: " + str);
+			return CullFace::NONE;
+		}
+	}
+
+	void ToLower(std::string& str)
+	{
+		for (char& c : str)
+		{
+			c = tolower(c);
+		}
+	}
+
+	void ToUpper(std::string& str)
+	{
+		for (char& c : str)
+		{
+			c = toupper(c);
+		}
+	}
+
 	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)
 	{
 		filePath = hdrFilePath;

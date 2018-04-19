@@ -40,8 +40,17 @@ namespace flex
 		void ForceAttributes(VertexAttributes attributes); // Call this before loading to force certain attributes to be filled
 		void IgnoreAttributes(VertexAttributes attributes); // Call this before loading to ignore certain attributes
 
-		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false);
-		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
+		/*
+		* Loads a mesh from file
+		*/
+		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false, RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
+		/*
+		* Loads a predefined shape
+		* Optionally pass in createInfo values to be given to the renderer
+		* when initializing the render object
+		*/
+		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		virtual void Initialize(const GameContext& gameContext) override;
 		virtual void PostInitialize(const GameContext& gameContext) override;

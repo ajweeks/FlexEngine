@@ -14,6 +14,7 @@
 #include "Physics/RigidBody.hpp"
 #include "Scene/ReflectionProbe.hpp"
 #include "Scene/MeshPrefab.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -49,27 +50,30 @@ namespace flex
 
 		std::string sceneName = parsedFile.rootObject.GetString("name");
 		m_Name = sceneName;
-		std::vector<JSONObject> sceneObjects = parsedFile.rootObject.GetObjectArray("objects");
-		for (const auto& sceneObject : sceneObjects)
-		{
-			std::string objectName = sceneObject.GetString("name");
 
-			JSONObject meshObj = sceneObject.GetObject("mesh");
+		// This holds all the entities in the scene which do not have a parent
+		std::vector<JSONObject> rootEntities = parsedFile.rootObject.GetObjectArray("entities");
+		for (const auto& rootEntity : rootEntities)
+		{
+			std::string objectName = rootEntity.GetString("name");
+
+			JSONObject meshObj = rootEntity.GetObject("mesh");
 			std::string meshFilePath = meshObj.GetString("file");
 			std::string meshPrefabName = meshObj.GetString("prefab");
-			std::string cullFace = meshObj.GetString("cullFace");
+			bool flipNormalYZ = meshObj.GetBool("flipNormalYZ");
+			bool flipZ = meshObj.GetBool("flipZ");
+			bool flipU = meshObj.GetBool("flipU");
+			bool flipV = meshObj.GetBool("flipV");
 
-			bool visibleInSceneGraph = sceneObject.GetBool("visibleInSceneGraph");
-			bool visible = sceneObject.GetBool("visible");
+			bool visibleInSceneGraph = rootEntity.HasField("visibleInSceneGraph") ? rootEntity.GetBool("visibleInSceneGraph") : true;
+			bool visible = rootEntity.HasField("visibleInSceneGraph") ? rootEntity.GetBool("visible") : true;
 			
-			JSONObject transformObj = sceneObject.GetObject("transform");
+			JSONObject transformObj = rootEntity.GetObject("transform");
 			Transform transform = JSONParser::ParseTransform(transformObj);
 
-			JSONObject material = sceneObject.GetObject("material");
+			JSONObject material = rootEntity.GetObject("material");
 			std::string materialName = material.GetString("name");
 			std::string shaderName = material.GetString("shader");
-			std::string albedoTexturePath = material.GetString("albedoTexturePath");
-			int materialConstMetallic = material.GetInt("constMetallic");
 
 			if (shaderName.empty())
 			{
@@ -83,13 +87,13 @@ namespace flex
 				matCreateInfo.name = materialName;
 				matCreateInfo.shaderName = shaderName;
 
-				struct StringMaterialParam
+				struct FilePathMaterialParam
 				{
 					std::string* member;
 					std::string name;
 				};
 
-				std::vector<StringMaterialParam> strParams =
+				std::vector<FilePathMaterialParam> filePathParams =
 				{
 					{ &matCreateInfo.diffuseTexturePath, "diffuseTexturePath" },
 					{ &matCreateInfo.normalTexturePath, "normalTexturePath" },
@@ -101,11 +105,11 @@ namespace flex
 					{ &matCreateInfo.environmentMapPath, "environmentMapPath" },
 				};
 
-				for (u32 i = 0; i < strParams.size(); ++i)
+				for (u32 i = 0; i < filePathParams.size(); ++i)
 				{
-					if (material.HasField(strParams[i].name))
+					if (material.HasField(filePathParams[i].name))
 					{
-						*strParams[i].member = material.GetString(strParams[i].name);
+						*filePathParams[i].member = RESOURCE_LOCATION + material.GetString(filePathParams[i].name);
 					}
 				}
 
@@ -211,7 +215,21 @@ namespace flex
 			{
 				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
 
-				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/" + meshFilePath);
+				RenderObjectCreateInfo createInfo = {};
+				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
+
+				if (meshObj.HasField("cullFace"))
+				{
+					std::string cullFaceStr = meshObj.GetString("cullFace");
+					CullFace cullFace = StringToCullFace(cullFaceStr);
+					createInfo.cullFace = cullFace;
+				}
+				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + meshFilePath,
+					flipNormalYZ,
+					flipZ,
+					flipU,
+					flipV,
+					&createInfo);
 
 				AddChild(gameContext, mesh);
 				mesh->GetTransform() = transform;
@@ -220,11 +238,25 @@ namespace flex
 			{
 				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
 
+				RenderObjectCreateInfo createInfo = {};
+				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
+
+				if (meshObj.HasField("cullFace"))
+				{
+					std::string cullFaceStr = meshObj.GetString("cullFace");
+					CullFace cullFace = StringToCullFace(cullFaceStr);
+					createInfo.cullFace = cullFace;
+				}
 				MeshPrefab::PrefabShape prefabShape = MeshPrefab::PrefabShapeFromString(meshPrefabName);
-				mesh->LoadPrefabShape(gameContext, prefabShape);
+				mesh->LoadPrefabShape(gameContext, prefabShape, &createInfo);
 
 				AddChild(gameContext, mesh);
 				mesh->GetTransform() = transform;
+
+				if (!visible)
+				{
+					gameContext.renderer->SetRenderObjectVisible(mesh->GetRenderID(), visible);
+				}
 			}
 			else
 			{

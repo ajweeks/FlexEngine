@@ -1,38 +1,52 @@
 {
 	"name" : "scene_01",
-	"objects" :
+	"entities" :
 	[
 		{
 			"name" : "Grid",
 			 "mesh" :
       		{
-				"prefab" : "grid",
+				"prefab" : "grid"
 			},
-			"visibleInSceneGraph" : false,
+			"visibleInSceneGraph" : true,
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.0,0.0,0.0",
-				"rotation" : "0.0,0.0,0.0",
-				"scale" : "1.0,1.0,1.0"
+				"position" : "0.0,-0.1,0.0"
 			},
 			"material" :
 			{
 				"name" : "color",
-        		"shader" :  "color",
-        		"constRoughness" : 0.56,
-        		"generatedCubemapSize" : "512, 512",
-        		"enablePrefilteredMap" : true,
-        		"aoTexturePath" : "texture.png"
-			}
+        		"shader" :  "color"
+			},
+			"children" :
+			{
+				"name" : "World Origin",
+				"mesh" :
+	      		{
+					"prefab" : "world axis ground"
+				},
+				"transform" : 
+				{
+					"position" : "0.0,-0.09,0.0",
+					"rotation" : "0.0,0.0,0.0",
+					"scale" : "1.0,1.0,1.0"
+				},
+				"visibleInSceneGraph" : false,
+				"visible" : true,
+				"material" :
+				{
+					"name" : "color",
+	        		"shader" :  "color"
+				}
+			},
 		},
 		{
       		"name": "Sphere",
-      		// Mesh path is relative to RESOURCE_LOCATION + "models/"
 			"mesh" :
       		{
-      			"file" : "sphere.fbx",
-				"cullFace" : "back"
+      			"file" : "models/sphere.fbx",
+				"cullFace" : "front"
 			},
 			"collider" :
 			{
@@ -54,24 +68,32 @@
 			"material" :
 			{
         		"name": "pbr",
-        		"shader" :  "pbr",
+        		"shader" : "pbr",
 				"constMetallic" : 1,
 				"constRoughness" : 0.25,
-				"constAO" : 1
+				"constAO" : 1,
+				"constAlbedo" : "1, 0, 0"
 			},
 			"children" :
 			[
 				{
-					"name" : "sphere child test 01",
+					"name" : "cone child test 01",
 					"visible" : true,
 					"mesh" :
 		      		{
-		      			"file" : "sphere.fbx",
+		      			"file" : "models/cone.fbx",
 						"cullFace" : "back"
+					},
+					"transform" : 
+					{
+						"space" : "local", // This means this transform is relative to the parent
+						"position" : "10.0,0.0,0.0",
+						"rotation" : "0.0,0.0,0.0",
+						"scale" : "1.0,1.0,1.0"
 					},
 					"material" :
 					{
-		        		"name": "color",
+		        		"name" : "color",
 		        		"shader" :  "color",
 						"colorMultiplier" : "1.5, 0.9, 0.1, 1"
 					}
@@ -80,8 +102,15 @@
 					"name" : "sphere child test 02",
 					"mesh" :
 		      		{
-		      			"file" : "sphere.fbx",
+		      			"file" : "models/sphere.fbx",
 						"cullFace" : "back"
+					},
+					"transform" : 
+					{
+						"space" : "global",
+						"position" : "10.0,0.0,0.0",
+						"rotation" : "0.0,0.0,0.0",
+						"scale" : "1.0,1.0,1.0"
 					},
 					"material" :
 					{
@@ -96,7 +125,7 @@
       		"name": "Skybox",
       		 "mesh" :
       		{
-				"file" : "cube.fbx",
+				"file" : "models/cube.fbx",
 				"cullFace" : "front",
 			},
 			"transform" : 
@@ -115,7 +144,7 @@
       		"name": "Reflection Probe 01",
       		"mesh" :
       		{
-				"file" : "sphere.fbx",
+				"file" : "models/sphere.fbx",
 				"cullFace" : "front",
       		},
 			"transform" : 

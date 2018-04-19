@@ -27,7 +27,8 @@ namespace flex
 	{
 		BACK,
 		FRONT,
-		FRONT_AND_BACK
+		FRONT_AND_BACK,
+		NONE
 	};
 
 	enum class DepthTestFunc
