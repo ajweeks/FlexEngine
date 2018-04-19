@@ -33,13 +33,25 @@ namespace flex
 		if (std::find(m_Scenes.begin(), m_Scenes.end(), newScene) == m_Scenes.end())
 		{
 			m_Scenes.push_back(newScene);
-			newScene->RootInitialize(gameContext);
-			newScene->RootPostInitialize(gameContext);
 		}
 		else
 		{
 			Logger::LogError("Attempt to add already existing scene to SceneManager: " + newScene->m_Name);
 		}
+	}
+
+	void SceneManager::InitializeCurrentScene(const GameContext& gameContext)
+	{
+		assert(!m_Scenes.empty());
+
+		CurrentScene()->RootInitialize(gameContext);
+	}
+
+	void SceneManager::PostInitializeCurrentScene(const GameContext& gameContext)
+	{
+		assert(!m_Scenes.empty());
+
+		CurrentScene()->RootPostInitialize(gameContext);
 	}
 
 	void SceneManager::RemoveScene(BaseScene* scene, const GameContext& gameContext)

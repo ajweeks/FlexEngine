@@ -611,6 +611,8 @@ namespace flex
 
 			const RenderID renderID = GetNextAvailableRenderID();
 
+			assert(createInfo->materialID != InvalidMaterialID);
+
 			GLRenderObject* renderObject = new GLRenderObject();
 			renderObject->renderID = renderID;
 			InsertNewRenderObject(renderObject);
@@ -1489,6 +1491,7 @@ namespace flex
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
 			CheckGLErrorMessages();
 
+			GenerateSkybox(gameContext);
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
 			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
