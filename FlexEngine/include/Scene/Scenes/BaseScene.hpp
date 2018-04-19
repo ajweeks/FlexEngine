@@ -10,11 +10,12 @@ namespace flex
 {
 	class PhysicsWorld;
 	class ReflectionProbe;
+	struct JSONObject;
 
 	class BaseScene
 	{
 	public:
-		BaseScene(const std::string& name = "");
+		BaseScene(const std::string& name);
 		virtual ~BaseScene();
 
 		void InitializeFromJSON(const std::string& jsonFilePath, const GameContext& gameContext);
@@ -36,6 +37,8 @@ namespace flex
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 	private:
+		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
+
 		void RootInitialize(const GameContext& gameContext);
 		void RootPostInitialize(const GameContext& gameContext);
 		void RootUpdate(const GameContext& gameContext);

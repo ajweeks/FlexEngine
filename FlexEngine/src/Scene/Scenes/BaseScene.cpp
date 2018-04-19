@@ -55,215 +55,236 @@ namespace flex
 		std::vector<JSONObject> rootEntities = parsedFile.rootObject.GetObjectArray("entities");
 		for (const auto& rootEntity : rootEntities)
 		{
-			std::string objectName = rootEntity.GetString("name");
+			AddChild(gameContext, CreateEntityFromJSON(gameContext, rootEntity));
+		}
+	}
 
-			JSONObject meshObj = rootEntity.GetObject("mesh");
-			std::string meshFilePath = meshObj.GetString("file");
-			std::string meshPrefabName = meshObj.GetString("prefab");
-			bool flipNormalYZ = meshObj.GetBool("flipNormalYZ");
-			bool flipZ = meshObj.GetBool("flipZ");
-			bool flipU = meshObj.GetBool("flipU");
-			bool flipV = meshObj.GetBool("flipV");
+	GameObject* BaseScene::CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj)
+	{
+		GameObject* result = nullptr;
 
-			bool visibleInSceneGraph = rootEntity.HasField("visibleInSceneGraph") ? rootEntity.GetBool("visibleInSceneGraph") : true;
-			bool visible = rootEntity.HasField("visibleInSceneGraph") ? rootEntity.GetBool("visible") : true;
-			
-			JSONObject transformObj = rootEntity.GetObject("transform");
-			Transform transform = JSONParser::ParseTransform(transformObj);
+		std::string objectName = obj.GetString("name");
 
-			JSONObject material = rootEntity.GetObject("material");
-			std::string materialName = material.GetString("name");
-			std::string shaderName = material.GetString("shader");
+		JSONObject meshObj = obj.GetObject("mesh");
+		std::string meshFilePath = meshObj.GetString("file");
+		std::string meshPrefabName = meshObj.GetString("prefab");
+		bool flipNormalYZ = meshObj.GetBool("flipNormalYZ");
+		bool flipZ = meshObj.GetBool("flipZ");
+		bool flipU = meshObj.GetBool("flipU");
+		bool flipV = meshObj.GetBool("flipV");
 
-			if (shaderName.empty())
+		bool visibleInSceneGraph = obj.HasField("visibleInSceneGraph") ? obj.GetBool("visibleInSceneGraph") : true;
+		bool visible = obj.HasField("visibleInSceneGraph") ? obj.GetBool("visible") : true;
+
+		JSONObject transformObj = obj.GetObject("transform");
+		Transform transform = JSONParser::ParseTransform(transformObj);
+
+		JSONObject material = obj.GetObject("material");
+		std::string materialName = material.GetString("name");
+		std::string shaderName = material.GetString("shader");
+
+		if (shaderName.empty())
+		{
+			Logger::LogError("Shader name not set in material " + materialName);
+			return nullptr;
+		}
+
+
+		MaterialCreateInfo matCreateInfo = {};
+		{
+			matCreateInfo.name = materialName;
+			matCreateInfo.shaderName = shaderName;
+
+			struct FilePathMaterialParam
 			{
-				Logger::LogError("Shader name not set in material " + materialName);
-				continue;
+				std::string* member;
+				std::string name;
+			};
+
+			std::vector<FilePathMaterialParam> filePathParams =
+			{
+				{ &matCreateInfo.diffuseTexturePath, "diffuseTexturePath" },
+				{ &matCreateInfo.normalTexturePath, "normalTexturePath" },
+				{ &matCreateInfo.albedoTexturePath, "albedoTexturePath" },
+				{ &matCreateInfo.metallicTexturePath, "metallicTexturePath" },
+				{ &matCreateInfo.roughnessTexturePath, "roughnessTexturePath" },
+				{ &matCreateInfo.aoTexturePath, "aoTexturePath" },
+				{ &matCreateInfo.hdrEquirectangularTexturePath, "hdrEquirectangularTexturePath" },
+				{ &matCreateInfo.environmentMapPath, "environmentMapPath" },
+			};
+
+			for (u32 i = 0; i < filePathParams.size(); ++i)
+			{
+				if (material.HasField(filePathParams[i].name))
+				{
+					*filePathParams[i].member = RESOURCE_LOCATION + material.GetString(filePathParams[i].name);
+				}
 			}
 
 
-			MaterialCreateInfo matCreateInfo = {};
+			struct BoolMaterialParam
 			{
-				matCreateInfo.name = materialName;
-				matCreateInfo.shaderName = shaderName;
+				bool* member;
+				std::string name;
+			};
 
-				struct FilePathMaterialParam
+			std::vector<BoolMaterialParam> boolParams =
+			{
+				{ &matCreateInfo.generateDiffuseSampler, "generateDiffuseSampler" },
+				{ &matCreateInfo.enableDiffuseSampler, "enableDiffuseSampler" },
+				{ &matCreateInfo.generateNormalSampler, "generateNormalSampler" },
+				{ &matCreateInfo.enableNormalSampler, "enableNormalSampler" },
+				{ &matCreateInfo.generateAlbedoSampler, "generateAlbedoSampler" },
+				{ &matCreateInfo.enableAlbedoSampler, "enableAlbedoSampler" },
+				{ &matCreateInfo.generateMetallicSampler, "generateMetallicSampler" },
+				{ &matCreateInfo.enableMetallicSampler, "enableMetallicSampler" },
+				{ &matCreateInfo.generateRoughnessSampler, "generateRoughnessSampler" },
+				{ &matCreateInfo.enableRoughnessSampler, "enableRoughnessSampler" },
+				{ &matCreateInfo.generateAOSampler, "generateAOSampler" },
+				{ &matCreateInfo.enableAOSampler, "enableAOSampler" },
+				{ &matCreateInfo.generateHDREquirectangularSampler, "generateHDREquirectangularSampler" },
+				{ &matCreateInfo.enableHDREquirectangularSampler, "enableHDREquirectangularSampler" },
+				{ &matCreateInfo.generateHDRCubemapSampler, "generateHDRCubemapSampler" },
+				{ &matCreateInfo.enableIrradianceSampler, "enableIrradianceSampler" },
+				{ &matCreateInfo.generateIrradianceSampler, "generateIrradianceSampler" },
+				{ &matCreateInfo.enableBRDFLUT, "enableBRDFLUT" },
+				{ &matCreateInfo.renderToCubemap, "renderToCubemap" },
+				{ &matCreateInfo.enableCubemapSampler, "enableCubemapSampler" },
+				{ &matCreateInfo.enableCubemapTrilinearFiltering, "enableCubemapTrilinearFiltering" },
+				{ &matCreateInfo.generateCubemapSampler, "generateCubemapSampler" },
+				{ &matCreateInfo.generateCubemapDepthBuffers, "generateCubemapDepthBuffers" },
+				{ &matCreateInfo.generatePrefilteredMap, "generatePrefilteredMap" },
+				{ &matCreateInfo.enablePrefilteredMap, "enablePrefilteredMap" },
+				{ &matCreateInfo.generateReflectionProbeMaps, "generateReflectionProbeMaps" },
+			};
+
+			for (u32 i = 0; i < boolParams.size(); ++i)
+			{
+				if (material.HasField(boolParams[i].name))
 				{
-					std::string* member;
-					std::string name;
-				};
-
-				std::vector<FilePathMaterialParam> filePathParams =
-				{
-					{ &matCreateInfo.diffuseTexturePath, "diffuseTexturePath" },
-					{ &matCreateInfo.normalTexturePath, "normalTexturePath" },
-					{ &matCreateInfo.albedoTexturePath, "albedoTexturePath" },
-					{ &matCreateInfo.metallicTexturePath, "metallicTexturePath" },
-					{ &matCreateInfo.roughnessTexturePath, "roughnessTexturePath" },
-					{ &matCreateInfo.aoTexturePath, "aoTexturePath" },
-					{ &matCreateInfo.hdrEquirectangularTexturePath, "hdrEquirectangularTexturePath" },
-					{ &matCreateInfo.environmentMapPath, "environmentMapPath" },
-				};
-
-				for (u32 i = 0; i < filePathParams.size(); ++i)
-				{
-					if (material.HasField(filePathParams[i].name))
-					{
-						*filePathParams[i].member = RESOURCE_LOCATION + material.GetString(filePathParams[i].name);
-					}
-				}
-
-
-				struct BoolMaterialParam
-				{
-					bool* member;
-					std::string name;
-				};
-
-				std::vector<BoolMaterialParam> boolParams =
-				{
-					{ &matCreateInfo.generateDiffuseSampler, "generateDiffuseSampler" },
-					{ &matCreateInfo.enableDiffuseSampler, "enableDiffuseSampler" },
-					{ &matCreateInfo.generateNormalSampler, "generateNormalSampler" },
-					{ &matCreateInfo.enableNormalSampler, "enableNormalSampler" },
-					{ &matCreateInfo.generateAlbedoSampler, "generateAlbedoSampler" },
-					{ &matCreateInfo.enableAlbedoSampler, "enableAlbedoSampler" },
-					{ &matCreateInfo.generateMetallicSampler, "generateMetallicSampler" },
-					{ &matCreateInfo.enableMetallicSampler, "enableMetallicSampler" },
-					{ &matCreateInfo.generateRoughnessSampler, "generateRoughnessSampler" },
-					{ &matCreateInfo.enableRoughnessSampler, "enableRoughnessSampler" },
-					{ &matCreateInfo.generateAOSampler, "generateAOSampler" },
-					{ &matCreateInfo.enableAOSampler, "enableAOSampler" },
-					{ &matCreateInfo.generateHDREquirectangularSampler, "generateHDREquirectangularSampler" },
-					{ &matCreateInfo.enableHDREquirectangularSampler, "enableHDREquirectangularSampler" },
-					{ &matCreateInfo.generateHDRCubemapSampler, "generateHDRCubemapSampler" },
-					{ &matCreateInfo.enableIrradianceSampler, "enableIrradianceSampler" },
-					{ &matCreateInfo.generateIrradianceSampler, "generateIrradianceSampler" },
-					{ &matCreateInfo.enableBRDFLUT, "enableBRDFLUT" },
-					{ &matCreateInfo.renderToCubemap, "renderToCubemap"},
-					{ &matCreateInfo.enableCubemapSampler, "enableCubemapSampler" },
-					{ &matCreateInfo.enableCubemapTrilinearFiltering, "enableCubemapTrilinearFiltering" },
-					{ &matCreateInfo.generateCubemapSampler, "generateCubemapSampler" },
-					{ &matCreateInfo.generateCubemapDepthBuffers, "generateCubemapDepthBuffers" },
-					{ &matCreateInfo.generatePrefilteredMap, "generatePrefilteredMap" },
-					{ &matCreateInfo.enablePrefilteredMap, "enablePrefilteredMap" },
-					{ &matCreateInfo.generateReflectionProbeMaps, "generateReflectionProbeMaps" },
-				};
-
-				for (u32 i = 0; i < boolParams.size(); ++i)
-				{
-					if (material.HasField(boolParams[i].name))
-					{
-						*boolParams[i].member = material.GetBool(boolParams[i].name);
-					}
-				}
-
-				if (material.HasField("colorMultiplier"))
-				{
-					std::string colorStr = material.GetString("colorMultiplier");
-					matCreateInfo.colorMultiplier = JSONParser::ParseColor4(colorStr);
-				}
-
-				if (material.HasField("generatedIrradianceCubemapSize"))
-				{
-					std::string irradianceCubemapSizeStr = material.GetString("generatedIrradianceCubemapSize");
-					matCreateInfo.generatedIrradianceCubemapSize = JSONParser::ParseVec2(irradianceCubemapSizeStr);
-				}
-
-				//std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
-				//matCreateInfo.irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
-				//matCreateInfo.prefilterMapSamplerMatID = InvalidMaterialID;
-
-				//matCreateInfo.cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-
-				if (material.HasField("generatedCubemapSize"))
-				{
-					std::string generatedCubemapSizeStr = material.GetString("generatedCubemapSize");
-					matCreateInfo.generatedCubemapSize = JSONParser::ParseVec2(generatedCubemapSizeStr);
-				}
-
-				if (material.HasField("generatedPrefilteredCubemapSize"))
-				{
-					std::string generatedPrefilteredCubemapSizeStr = material.GetString("generatedPrefilteredCubemapSize");
-					matCreateInfo.generatedPrefilteredCubemapSize = JSONParser::ParseVec2(generatedPrefilteredCubemapSizeStr);
-				}
-
-				if (material.HasField("constAlbedo"))
-				{
-					std::string albedoStr = material.GetString("constAlbedo");
-					matCreateInfo.constAlbedo = JSONParser::ParseColor3(albedoStr);
-				}
-
-				if (material.HasField("constMetallic"))
-				{
-					matCreateInfo.constMetallic = material.GetFloat("constMetallic");
-				}
-
-				if (material.HasField("constRoughness"))
-				{
-					matCreateInfo.constRoughness = material.GetFloat("constRoughness");
-				}
-
-				if (material.HasField("constAO"))
-				{
-					matCreateInfo.constAO = material.GetFloat("constAO");
+					*boolParams[i].member = material.GetBool(boolParams[i].name);
 				}
 			}
-			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
 
-			if (!meshFilePath.empty())
+			if (material.HasField("colorMultiplier"))
 			{
-				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
-
-				RenderObjectCreateInfo createInfo = {};
-				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
-
-				if (meshObj.HasField("cullFace"))
-				{
-					std::string cullFaceStr = meshObj.GetString("cullFace");
-					CullFace cullFace = StringToCullFace(cullFaceStr);
-					createInfo.cullFace = cullFace;
-				}
-				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + meshFilePath,
-					flipNormalYZ,
-					flipZ,
-					flipU,
-					flipV,
-					&createInfo);
-
-				AddChild(gameContext, mesh);
-				mesh->GetTransform() = transform;
+				std::string colorStr = material.GetString("colorMultiplier");
+				matCreateInfo.colorMultiplier = JSONParser::ParseColor4(colorStr);
 			}
-			else if (!meshPrefabName.empty())
+
+			if (material.HasField("generatedIrradianceCubemapSize"))
 			{
-				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
-
-				RenderObjectCreateInfo createInfo = {};
-				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
-
-				if (meshObj.HasField("cullFace"))
-				{
-					std::string cullFaceStr = meshObj.GetString("cullFace");
-					CullFace cullFace = StringToCullFace(cullFaceStr);
-					createInfo.cullFace = cullFace;
-				}
-				MeshPrefab::PrefabShape prefabShape = MeshPrefab::PrefabShapeFromString(meshPrefabName);
-				mesh->LoadPrefabShape(gameContext, prefabShape, &createInfo);
-
-				AddChild(gameContext, mesh);
-				mesh->GetTransform() = transform;
-
-				if (!visible)
-				{
-					gameContext.renderer->SetRenderObjectVisible(mesh->GetRenderID(), visible);
-				}
+				std::string irradianceCubemapSizeStr = material.GetString("generatedIrradianceCubemapSize");
+				matCreateInfo.generatedIrradianceCubemapSize = JSONParser::ParseVec2(irradianceCubemapSizeStr);
 			}
-			else
+
+			//std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+			//matCreateInfo.irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
+			//matCreateInfo.prefilterMapSamplerMatID = InvalidMaterialID;
+
+			//matCreateInfo.cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+
+			if (material.HasField("generatedCubemapSize"))
 			{
-				GameObject* gameObject = new GameObject();
-				AddChild(gameContext, gameObject);
+				std::string generatedCubemapSizeStr = material.GetString("generatedCubemapSize");
+				matCreateInfo.generatedCubemapSize = JSONParser::ParseVec2(generatedCubemapSizeStr);
+			}
+
+			if (material.HasField("generatedPrefilteredCubemapSize"))
+			{
+				std::string generatedPrefilteredCubemapSizeStr = material.GetString("generatedPrefilteredCubemapSize");
+				matCreateInfo.generatedPrefilteredCubemapSize = JSONParser::ParseVec2(generatedPrefilteredCubemapSizeStr);
+			}
+
+			if (material.HasField("constAlbedo"))
+			{
+				std::string albedoStr = material.GetString("constAlbedo");
+				matCreateInfo.constAlbedo = JSONParser::ParseColor3(albedoStr);
+			}
+
+			if (material.HasField("constMetallic"))
+			{
+				matCreateInfo.constMetallic = material.GetFloat("constMetallic");
+			}
+
+			if (material.HasField("constRoughness"))
+			{
+				matCreateInfo.constRoughness = material.GetFloat("constRoughness");
+			}
+
+			if (material.HasField("constAO"))
+			{
+				matCreateInfo.constAO = material.GetFloat("constAO");
 			}
 		}
+		MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
+
+		if (!meshFilePath.empty())
+		{
+			MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+
+			RenderObjectCreateInfo createInfo = {};
+			createInfo.visibleInSceneExplorer = visibleInSceneGraph;
+
+			if (meshObj.HasField("cullFace"))
+			{
+				std::string cullFaceStr = meshObj.GetString("cullFace");
+				CullFace cullFace = StringToCullFace(cullFaceStr);
+				createInfo.cullFace = cullFace;
+			}
+			mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + meshFilePath,
+				flipNormalYZ,
+				flipZ,
+				flipU,
+				flipV,
+				&createInfo);
+
+			mesh->GetTransform() = transform;
+
+			result = mesh;
+		}
+		else if (!meshPrefabName.empty())
+		{
+			MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+
+			RenderObjectCreateInfo createInfo = {};
+			createInfo.visibleInSceneExplorer = visibleInSceneGraph;
+
+			if (meshObj.HasField("cullFace"))
+			{
+				std::string cullFaceStr = meshObj.GetString("cullFace");
+				CullFace cullFace = StringToCullFace(cullFaceStr);
+				createInfo.cullFace = cullFace;
+			}
+			MeshPrefab::PrefabShape prefabShape = MeshPrefab::PrefabShapeFromString(meshPrefabName);
+			mesh->LoadPrefabShape(gameContext, prefabShape, &createInfo);
+
+			mesh->GetTransform() = transform;
+
+			if (!visible)
+			{
+				gameContext.renderer->SetRenderObjectVisible(mesh->GetRenderID(), visible);
+			}
+
+			result = mesh;
+		}
+		else
+		{
+			GameObject* gameObject = new GameObject();
+			// TODO: Throw error here?
+			result = gameObject;
+		}
+
+		if (result && obj.HasField("children"))
+		{
+			std::vector<JSONObject> children = obj.GetObjectArray("children");
+			for (const auto& child : children)
+			{
+				result->AddChild(CreateEntityFromJSON(gameContext, child));
+			}
+		}
+
+		return result;
 	}
 
 	std::string BaseScene::GetName() const

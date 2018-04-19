@@ -2979,13 +2979,13 @@ namespace flex
 
 
 									glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-									glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
+									glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation())));
 									glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
 
 									bool valueChanged = false;
 									
 									valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
-									valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.01f) || valueChanged;
+									valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.1f) || valueChanged;
 									valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
 
 									if (valueChanged)
@@ -2993,13 +2993,13 @@ namespace flex
 										if (local)
 										{
 											transform->SetLocalPosition(translation);
-											transform->SetLocalRotation(glm::quat(rotation));
+											transform->SetLocalRotation(glm::quat(glm::radians(rotation)));
 											transform->SetLocalScale(scale);
 										}
 										else
 										{
 											transform->SetGlobalPosition(translation);
-											transform->SetGlobalRotation(glm::quat(rotation));
+											transform->SetGlobalRotation(glm::quat(glm::radians(rotation)));
 											transform->SetGlobalScale(scale);
 										}
 									}

@@ -42,6 +42,11 @@ namespace flex
 
 	void GameObject::AddChild(GameObject* child)
 	{
+		if (!child)
+		{
+			return;
+		}
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			if (*iter == child)
@@ -60,6 +65,11 @@ namespace flex
 
 	bool GameObject::RemoveChild(GameObject* child)
 	{
+		if (!child)
+		{
+			return false;
+		}
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			if (*iter == child)

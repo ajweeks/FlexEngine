@@ -20,26 +20,28 @@
         		"shader" :  "color"
 			},
 			"children" :
-			{
-				"name" : "World Origin",
-				"mesh" :
-	      		{
-					"prefab" : "world axis ground"
-				},
-				"transform" : 
+			[
 				{
-					"position" : "0.0,-0.09,0.0",
-					"rotation" : "0.0,0.0,0.0",
-					"scale" : "1.0,1.0,1.0"
-				},
-				"visibleInSceneGraph" : false,
-				"visible" : true,
-				"material" :
-				{
-					"name" : "color",
-	        		"shader" :  "color"
+					"name" : "World Origin",
+					"mesh" :
+		      		{
+						"prefab" : "world axis ground"
+					},
+					"transform" : 
+					{
+						"position" : "0.0,-0.09,0.0",
+						"rotation" : "0.0,0.0,0.0",
+						"scale" : "1.0,1.0,1.0"
+					},
+					"visibleInSceneGraph" : false,
+					"visible" : true,
+					"material" :
+					{
+						"name" : "color",
+		        		"shader" :  "color"
+					}
 				}
-			},
+			],
 		},
 		{
       		"name": "Sphere",
