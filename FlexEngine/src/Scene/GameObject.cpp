@@ -5,14 +5,14 @@
 
 namespace flex
 {
-	GameObject::GameObject(GameObject* pParent) :
-		m_Parent(pParent)
+	GameObject::GameObject(GameObject* parent) :
+		m_Parent(parent)
 	{
 		m_Transform.SetAsIdentity();
 
-		if (pParent)
+		if (parent)
 		{
-			m_Transform.SetParentTransform(&pParent->m_Transform);
+			m_Transform.SetParentTransform(&parent->m_Transform);
 		}
 	}
 

@@ -338,20 +338,20 @@ namespace flex
 	{
 	}
 
-	void BaseScene::AddChild(const GameContext& gameContext, GameObject* pGameObject)
+	void BaseScene::AddChild(const GameContext& gameContext, GameObject* gameObject)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			if (*iter == pGameObject)
+			if (*iter == gameObject)
 			{
 				Logger::LogWarning("Attempting to add child to scene again");
 				return;
 			}
 		}
 
-		m_Children.push_back(pGameObject);
+		m_Children.push_back(gameObject);
 	}
 
 	void BaseScene::RemoveChild(GameObject* gameObject, bool deleteChild)

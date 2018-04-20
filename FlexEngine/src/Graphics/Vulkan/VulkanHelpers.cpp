@@ -1347,12 +1347,12 @@ namespace flex
 		}
 
 
-		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback)
 		{
 			auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 			if (func != nullptr)
 			{
-				return func(instance, pCreateInfo, pAllocator, pCallback);
+				return func(instance, createInfo, allocator, callback);
 			}
 			else
 			{
@@ -1360,12 +1360,12 @@ namespace flex
 			}
 		}
 
-		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator)
+		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* allocator)
 		{
 			auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
 			if (func != nullptr)
 			{
-				func(instance, callback, pAllocator);
+				func(instance, callback, allocator);
 			}
 		}
 

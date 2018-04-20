@@ -94,8 +94,8 @@ namespace flex
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
-		const aiScene* pScene = nullptr;
-		if (!GetLoadedMesh(filepath, &pScene))
+		const aiScene* scene = nullptr;
+		if (!GetLoadedMesh(filepath, &scene))
 		{
 			// Mesh hasn't been loaded before, load it now
 
@@ -112,9 +112,9 @@ namespace flex
 				aiProcess_CalcTangentSpace
 			);
 
-			pScene = loadedMesh->scene;
+			scene = loadedMesh->scene;
 
-			if (!pScene)
+			if (!scene)
 			{
 				Logger::LogError(loadedMesh->importer.GetErrorString());
 				return false;
@@ -122,16 +122,16 @@ namespace flex
 		}
 
 
-		if (!pScene->HasMeshes())
+		if (!scene->HasMeshes())
 		{
 			Logger::LogWarning("Loaded mesh file has no meshes! " + filepath);
 			return false;
 		}
 
-		std::vector<aiMesh*> meshes(pScene->mNumMeshes);
-		for (size_t i = 0; i < pScene->mNumMeshes; ++i)
+		std::vector<aiMesh*> meshes(scene->mNumMeshes);
+		for (size_t i = 0; i < scene->mNumMeshes; ++i)
 		{
-			meshes[i] = pScene->mMeshes[i];
+			meshes[i] = scene->mMeshes[i];
 		}
 
 		if (m_Name.empty())

@@ -10,7 +10,7 @@ namespace flex
 	class GameObject
 	{
 	public:
-		GameObject(GameObject* pParent = nullptr);
+		GameObject(GameObject* parent = nullptr);
 		virtual ~GameObject();
 
 		void SetParent(GameObject* parent);

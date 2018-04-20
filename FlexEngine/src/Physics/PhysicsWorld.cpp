@@ -37,14 +37,14 @@ namespace flex
 		{
 			for (i32 i = m_World->getNumCollisionObjects() - 1; i >= 0; --i)
 			{
-				btCollisionObject* pObj = m_World->getCollisionObjectArray()[i];
-				btRigidBody* pBody = btRigidBody::upcast(pObj);
-				if (pBody && pBody->getMotionState())
+				btCollisionObject* obj = m_World->getCollisionObjectArray()[i];
+				btRigidBody* body = btRigidBody::upcast(obj);
+				if (body && body->getMotionState())
 				{
-					delete pBody->getMotionState();
+					delete body->getMotionState();
 				}
-				m_World->removeCollisionObject(pObj);
-				delete pObj;
+				m_World->removeCollisionObject(obj);
+				delete obj;
 			}
 			
 			SafeDelete(m_World);
