@@ -65,6 +65,8 @@ namespace flex
 
 		std::string objectName = obj.GetString("name");
 
+		std::string entityTypeStr = obj.GetString("type");
+
 		JSONObject meshObj = obj.GetObject("mesh");
 		std::string meshFilePath = meshObj.GetString("file");
 		std::string meshPrefabName = meshObj.GetString("prefab");
@@ -341,6 +343,11 @@ namespace flex
 	void BaseScene::AddChild(const GameContext& gameContext, GameObject* gameObject)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+
+		if (!gameObject)
+		{
+			return;
+		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{

@@ -1,165 +1,156 @@
 {
 	"name" : "scene_01",
-	"entities" :
-	[
-		{
-			"name" : "Grid",
-			 "mesh" :
-      		{
-				"prefab" : "grid"
-			},
-			"visibleInSceneGraph" : true,
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "0.0,-0.1,0.0"
-			},
-			"material" :
-			{
-				"name" : "color",
-        		"shader" :  "color"
-			},
-			"children" :
-			[
-				{
-					"name" : "World Origin",
-					"mesh" :
-		      		{
-						"prefab" : "world axis ground"
-					},
-					"transform" : 
-					{
-						"position" : "0.0,-0.09,0.0",
-						"rotation" : "0.0,0.0,0.0",
-						"scale" : "1.0,1.0,1.0"
-					},
-					"visibleInSceneGraph" : false,
-					"visible" : true,
-					"material" :
-					{
-						"name" : "color",
-		        		"shader" :  "color"
-					}
-				}
-			],
-		},
-		{
-      		"name": "Sphere",
-			"mesh" :
-      		{
-      			"file" : "models/sphere.fbx",
-				"cullFace" : "front"
-			},
-			"collider" :
-			{
-				"shape" : "sphere",
-				"radius" : 10.0,
-			},
-			"rigidbody" : 
-			{
-				"kinematic" : false,
-				"mass" : 1.0
-			},
-			"visible" : false,
-			"transform" : 
-			{
-				"position" : "10.0,0.0,0.0",
-				"rotation" : "0.0,0.0,0.0",
-				"scale" : "1.0,1.0,1.0"
-			},
-			"material" :
-			{
-        		"name": "pbr",
-        		"shader" : "pbr",
-				"constMetallic" : 1,
-				"constRoughness" : 0.25,
-				"constAO" : 1,
-				"constAlbedo" : "1, 0, 0"
-			},
-			"children" :
-			[
-				{
-					"name" : "cone child test 01",
-					"visible" : true,
-					"mesh" :
-		      		{
-		      			"file" : "models/cone.fbx",
-						"cullFace" : "back"
-					},
-					"transform" : 
-					{
-						"space" : "local", // This means this transform is relative to the parent
-						"position" : "10.0,0.0,0.0",
-						"rotation" : "0.0,0.0,0.0",
-						"scale" : "1.0,1.0,1.0"
-					},
-					"material" :
-					{
-		        		"name" : "color",
-		        		"shader" :  "color",
-						"colorMultiplier" : "1.5, 0.9, 0.1, 1"
-					}
-				},
-				{
-					"name" : "sphere child test 02",
-					"mesh" :
-		      		{
-		      			"file" : "models/sphere.fbx",
-						"cullFace" : "back"
-					},
-					"transform" : 
-					{
-						"space" : "global",
-						"position" : "10.0,0.0,0.0",
-						"rotation" : "0.0,0.0,0.0",
-						"scale" : "1.0,1.0,1.0"
-					},
-					"material" :
-					{
-		        		"name": "color",
-		        		"shader" :  "color",
-						"colorMultiplier" : "1, 0.4, 1, 1"
-					}
-				}
-			]
-		},
-		{
-      		"name": "Skybox",
-      		 "mesh" :
-      		{
-				"file" : "models/cube.fbx",
-				"cullFace" : "front",
-			},
-			"transform" : 
-			{
-				"position" : "10.0,0.0,0.0",
-				"rotation" : "0.0,0.0,0.0",
-				"scale" : "1.0,1.0,1.0"
-			},
-			"material" :
-			{
-        		"name": "Skybox",
-        		"shader" :  "skybox"
-			}
-		},
-		{
-      		"name": "Reflection Probe 01",
-      		"mesh" :
-      		{
-				"file" : "models/sphere.fbx",
-				"cullFace" : "front",
-      		},
-			"transform" : 
-			{
-				"position" : "10.0,0.0,0.0",
-				"rotation" : "0.0,0.0,0.0",
-				"scale" : "1.0,1.0,1.0"
-			},
-			"material" :
-			{
-        		"name": "Skybox",
-        		"shader" :  "skybox"
-			}
-		}
-	]
+  "entities": [
+    {
+      "name": "Grid",
+      "type": "mesh",
+      "mesh": {
+        "prefab": "grid"
+      },
+      "visibleInSceneGraph": true,
+      "visible": true,
+      "transform": {
+        "position": "0.0,-0.1,0.0"
+      },
+      "material": {
+        "name": "color",
+        "shader": "color"
+      },
+      "children": [
+        {
+          "name": "World Origin",
+          "type": "mesh",
+          "mesh": {
+            "prefab": "world axis ground"
+          },
+          "transform": {
+            "position": "0.0,-0.09,0.0",
+            "rotation": "0.0,0.0,0.0",
+            "scale": "1.0,1.0,1.0"
+          },
+          "visibleInSceneGraph": false,
+          "visible": true,
+          "material": {
+            "name": "color",
+            "shader": "color"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sphere",
+      "type" :  "mesh",
+      "mesh": {
+        "file": "models/sphere.fbx",
+        "cullFace": "front"
+      },
+      "collider": {
+        "shape": "sphere",
+        "radius": 10.0
+      },
+      "rigidbody": {
+        "kinematic": false,
+        "mass": 1.0
+      },
+      "visible": false,
+      "transform": {
+        "position": "10.0,0.0,0.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1.0,1.0,1.0"
+      },
+      "material": {
+        "name": "pbr",
+        "shader": "pbr",
+        "constMetallic": 1,
+        "constRoughness": 0.25,
+        "constAO": 1,
+        "constAlbedo": "1, 0, 0"
+      },
+      "children": [
+        {
+          "name": "cone child test 01",
+          "visible": true,
+          "type": "mesh",
+          "mesh": {
+            "file": "models/cone.fbx",
+            "cullFace": "back"
+          },
+          "transform": {
+            "space": "local", // This means this transform is relative to the parent
+            "position": "10.0,0.0,0.0",
+            "rotation": "0.0,0.0,0.0",
+            "scale": "1.0,1.0,1.0"
+          },
+          "material": {
+            "name": "color",
+            "shader": "color",
+            "colorMultiplier": "1.5, 0.9, 0.1, 1"
+          }
+        },
+        {
+          "name": "sphere child test 02",
+          "type": "mesh",
+          "mesh": {
+            "file": "models/sphere.fbx",
+            "cullFace": "back"
+          },
+          "transform": {
+            "space": "global",
+            "position": "10.0,0.0,0.0",
+            "rotation": "0.0,0.0,0.0",
+            "scale": "1.0,1.0,1.0"
+          },
+          "material": {
+            "name": "color",
+            "shader": "color",
+            "colorMultiplier": "1, 0.4, 1, 1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Skybox",
+      "type" : "skybox",
+      "mesh": {
+        "file": "models/cube.fbx",
+        "cullFace": "front"
+      },
+      "transform": {
+        "position": "10.0,0.0,0.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1.0,1.0,1.0"
+      },
+      "material": {
+        "name": "Skybox",
+        "shader": "skybox"
+      }
+    },
+    {
+      "name": "Reflection Probe 01",
+      "type" : "reflection probe",
+      "transform": {
+        "position": "10.0,0.0,0.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1.0,1.0,1.0"
+      }
+    },
+    {
+      "name": "Point light 01",
+      "type": "point light",
+      "transform": {
+        "position": "6.0,-6.0,-8.0"
+      },
+      "color": "1.0,1.0,1.0",
+      "brightness": "300.0)"
+    },
+    {
+      "name": "Directional light 01",
+      "type" :  "directional light",
+      "transform": {
+        "rotation": "0.1,1.5,0.0"
+      },
+      "color": "1.0,1.0,1.0",
+      "brightness": "300.0"
+    }
+  ]
 }
