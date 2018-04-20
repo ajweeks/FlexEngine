@@ -32,19 +32,6 @@ namespace flex
 
 		static Transform ParseTransform(const JSONObject& transformObject);
 
-		static glm::vec2 ParseVec2(const std::string& vecStr);
-
-		static glm::vec3 ParseVec3(const std::string& vecStr);
-
-		/* If requireW is false then it will be set to 1.0f if it doesn't exist in the string */
-		static glm::vec4 ParseVec4(const std::string& vecStr, bool requireW = true);
-
-		/* If only three components are found, alpha is set to 1.0f */
-		static glm::vec4 ParseColor4(const std::string& colorStr);
-
-		/* If four components are found only the first three are used */
-		static glm::vec3 ParseColor3(const std::string& colorStr);
-
 	private:
 		/*
 		* Parses an object starting at offset

@@ -81,6 +81,7 @@ namespace flex
 
 	struct DirectionalLight
 	{
+		// TODO: Add brightness multiplier here
 		glm::vec4 direction = { 0, 0, 1, 0 };
 
 		glm::vec4 color = glm::vec4(1.0f);

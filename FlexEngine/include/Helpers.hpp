@@ -50,6 +50,23 @@ namespace flex
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 
+	/* Parses a single float, returns -1.0f if incorrectly formatted */
+	real ParseFloat(const std::string& floatStr);
+
+	/* Parses a comma separated list of 2 floats */
+	glm::vec2 ParseVec2(const std::string& vecStr);
+
+	/* Parses a comma separated list of 3 floats */
+	glm::vec3 ParseVec3(const std::string& vecStr);
+
+	/*
+	* Parses a comma separated list of 3 or 4 floats
+	* If defaultW is non-negative and no w component exists in the string defaultW will be used
+	* If defaultW is negative then an error will be generated if the string doesn't
+	* contain 4 components
+	*/
+	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
+
 	template<class T>
 	inline typename T::const_iterator Contains(const std::vector<T>& vec, const T& t)
 	{

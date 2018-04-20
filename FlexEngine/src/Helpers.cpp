@@ -132,7 +132,7 @@ namespace flex
 
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
 	{
-		while (offset < str.size())
+		while (offset < (i32)str.size())
 		{
 			if (!isdigit(str[offset]) && !isalpha(str[offset]))
 			{
@@ -157,6 +157,90 @@ namespace flex
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t)
 	{
 		return a * (1.0f - t) + b * t;
+	}
+
+	real ParseFloat(const std::string& floatStr)
+	{
+		if (floatStr.empty())
+		{
+			Logger::LogError("Invalid float string (empty)");
+			return -1.0f;
+		}
+
+		return (real)std::atof(floatStr.c_str());
+	}
+
+	glm::vec2 ParseVec2(const std::string& vecStr)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 2)
+		{
+			Logger::LogError("Invalid vec2 field: " + vecStr);
+			return glm::vec2(-1);
+		}
+		else
+		{
+			glm::vec2 result(
+				std::atof(parts[0].c_str()),
+				std::atof(parts[1].c_str()));
+
+			return result;
+		}
+	}
+
+	glm::vec3 ParseVec3(const std::string& vecStr)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 3 && parts.size() != 4)
+		{
+			Logger::LogError("Invalid vec3 field: " + vecStr);
+			return glm::vec3(-1);
+		}
+		else
+		{
+			glm::vec3 result(
+				std::atof(parts[0].c_str()),
+				std::atof(parts[1].c_str()),
+				std::atof(parts[2].c_str()));
+
+			return result;
+		}
+	}
+
+	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if ((parts.size() != 4 && parts.size() != 3) || (defaultW < 0 && parts.size() != 4))
+		{
+			Logger::LogError("Invalid vec4 field: " + vecStr);
+			return glm::vec4(-1);
+		}
+		else
+		{
+			glm::vec4 result;
+
+			if (parts.size() == 4)
+			{
+				result = glm::vec4(
+					std::atof(parts[0].c_str()),
+					std::atof(parts[1].c_str()),
+					std::atof(parts[2].c_str()),
+					std::atof(parts[3].c_str()));
+			}
+			else
+			{
+				result = glm::vec4(
+					std::atof(parts[0].c_str()),
+					std::atof(parts[1].c_str()),
+					std::atof(parts[2].c_str()),
+					defaultW);
+			}
+
+			return result;
+		}
 	}
 
 	void ToString(const glm::vec2& vec, std::ostream& stream)
@@ -249,7 +333,7 @@ namespace flex
 	{
 		for (char& c : str)
 		{
-			c = tolower(c);
+			c = (char)tolower(c);
 		}
 	}
 
@@ -257,7 +341,7 @@ namespace flex
 	{
 		for (char& c : str)
 		{
-			c = toupper(c);
+			c = (char)toupper(c);
 		}
 	}
 

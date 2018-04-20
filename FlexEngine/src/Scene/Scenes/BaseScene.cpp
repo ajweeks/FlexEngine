@@ -202,13 +202,13 @@ namespace flex
 				if (material.HasField("colorMultiplier"))
 				{
 					std::string colorStr = material.GetString("colorMultiplier");
-					matCreateInfo.colorMultiplier = JSONParser::ParseColor4(colorStr);
+					matCreateInfo.colorMultiplier = ParseVec4(colorStr);
 				}
 
 				if (material.HasField("generatedIrradianceCubemapSize"))
 				{
 					std::string irradianceCubemapSizeStr = material.GetString("generatedIrradianceCubemapSize");
-					matCreateInfo.generatedIrradianceCubemapSize = JSONParser::ParseVec2(irradianceCubemapSizeStr);
+					matCreateInfo.generatedIrradianceCubemapSize = ParseVec2(irradianceCubemapSizeStr);
 				}
 
 				//std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
@@ -220,19 +220,19 @@ namespace flex
 				if (material.HasField("generatedCubemapSize"))
 				{
 					std::string generatedCubemapSizeStr = material.GetString("generatedCubemapSize");
-					matCreateInfo.generatedCubemapSize = JSONParser::ParseVec2(generatedCubemapSizeStr);
+					matCreateInfo.generatedCubemapSize = ParseVec2(generatedCubemapSizeStr);
 				}
 
 				if (material.HasField("generatedPrefilteredCubemapSize"))
 				{
 					std::string generatedPrefilteredCubemapSizeStr = material.GetString("generatedPrefilteredCubemapSize");
-					matCreateInfo.generatedPrefilteredCubemapSize = JSONParser::ParseVec2(generatedPrefilteredCubemapSizeStr);
+					matCreateInfo.generatedPrefilteredCubemapSize = ParseVec2(generatedPrefilteredCubemapSizeStr);
 				}
 
 				if (material.HasField("constAlbedo"))
 				{
 					std::string albedoStr = material.GetString("constAlbedo");
-					matCreateInfo.constAlbedo = JSONParser::ParseColor3(albedoStr);
+					matCreateInfo.constAlbedo = ParseVec3(albedoStr);
 				}
 
 				if (material.HasField("constMetallic"))
@@ -307,6 +307,72 @@ namespace flex
 				// TODO: Throw error here?
 				result = gameObject;
 			}
+		}
+		else if (entityTypeStr.compare("point light") == 0)
+		{
+			PointLight pointLight = {};
+
+			std::string posStr = obj.GetString("position");
+			pointLight.position = glm::vec4(ParseVec3(posStr), 0);
+
+			std::string colorStr = obj.GetString("color");
+			if (!colorStr.empty())
+			{
+				pointLight.color = ParseVec4(colorStr);
+			}
+
+			if (obj.HasField("brightness"))
+			{
+				real brightness = obj.GetFloat("brightness");
+				//pointLight.brightness = ParseFloat(brightnessStr);
+			}
+
+			if (obj.HasField("enabled"))
+			{
+				pointLight.enabled = obj.GetBool("enabled") ? 1 : 0;
+			}
+
+			gameContext.renderer->InitializePointLight(pointLight);
+		}
+		else if (entityTypeStr.compare("directional light") == 0)
+		{
+			DirectionalLight dirLight = {};
+
+			std::string dirStr = obj.GetString("direction");
+			dirLight.direction = glm::vec4(ParseVec3(dirStr), 0);
+
+			std::string colorStr = obj.GetString("color");
+			if (!colorStr.empty())
+			{
+				dirLight.color = ParseVec4(colorStr);
+			}
+
+			if (obj.HasField("brightness"))
+			{
+				real brightness = obj.GetFloat("brightness");
+				//pointLight.brightness = ParseFloat(brightnessStr);
+			}
+
+			if (obj.HasField("enabled"))
+			{
+				dirLight.enabled = obj.GetBool("enabled") ? 1 : 0;
+			}
+
+			gameContext.renderer->InitializeDirectionalLight(dirLight);
+		}
+		else if (entityTypeStr.compare("spot light") == 0)
+		{
+			// @Unsupported
+		}
+		else if (entityTypeStr.compare("skybox") == 0)
+		{
+
+			//gameContext.renderer->SetSkyboxMaterial();
+		}
+		else if (entityTypeStr.compare("reflection probe") == 0)
+		{
+
+			//gameContext.renderer->SetReflectionProbeMaterial();
 		}
 
 		if (result && obj.HasField("children"))

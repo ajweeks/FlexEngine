@@ -118,132 +118,22 @@ namespace flex
 		glm::vec3 pos(0.0f);
 		if (!posStr.empty())
 		{
-			std::vector<std::string> posParts = Split(posStr, ',');
-			
-			if (posParts.size() != 3)
-			{
-				Logger::LogError("Invalid position specified in scene file: " + posStr);
-			}
-			else
-			{
-				pos = glm::vec3(atof(posParts[0].c_str()), atof(posParts[1].c_str()), atof(posParts[2].c_str()));
-			}
+			pos = ParseVec3(posStr);
 		}
 
 		glm::quat rot = glm::quat();
 		if (!rotStr.empty())
 		{
-			std::vector<std::string> rotParts = Split(rotStr, ',');
-
-			if (rotParts.size() != 3)
-			{
-				Logger::LogError("Invalid rotation specified in scene file: " + rotStr);
-			}
-			else
-			{
-				rot = glm::quat(glm::vec3(atof(rotParts[0].c_str()), atof(rotParts[1].c_str()), atof(rotParts[2].c_str())));
-			}
+			rot = ParseVec3(rotStr);
 		}
 
 		glm::vec3 scale(1.0f);
 		if (!scaleStr.empty())
 		{
-			std::vector<std::string> scaleParts = Split(scaleStr, ',');
-
-			if (scaleParts.size() != 3)
-			{
-				Logger::LogError("Invalid scale specified in scene file: " + posStr);
-			}
-			else
-			{
-				scale = glm::vec3(atof(scaleParts[0].c_str()), atof(scaleParts[1].c_str()), atof(scaleParts[2].c_str()));
-			}
+			scale = ParseVec3(scaleStr);
 		}
 
 		return Transform(pos, rot, scale);
-	}
-
-	glm::vec2 JSONParser::ParseVec2(const std::string& vecStr)
-	{
-		std::vector<std::string> parts = Split(vecStr, ',');
-
-		if (parts.size() != 2)
-		{
-			Logger::LogError("Invalid vec2 field: " + vecStr);
-			return glm::vec2(-1);
-		}
-		else
-		{
-			glm::vec2 result(
-				std::stof(parts[0].c_str()),
-				std::stof(parts[1].c_str()));
-
-			return result;
-		}
-	}
-
-	glm::vec3 JSONParser::ParseVec3(const std::string& vecStr)
-	{
-		std::vector<std::string> parts = Split(vecStr, ',');
-
-		if (parts.size() != 3 && parts.size() != 4)
-		{
-			Logger::LogError("Invalid vec3 field: " + vecStr);
-			return glm::vec3(-1);
-		}
-		else
-		{
-			glm::vec3 result(
-				std::stof(parts[0].c_str()),
-				std::stof(parts[1].c_str()),
-				std::stof(parts[2].c_str()));
-
-			return result;
-		}
-	}
-
-	glm::vec4 JSONParser::ParseVec4(const std::string& vecStr, bool requireW)
-	{
-		std::vector<std::string> parts = Split(vecStr, ',');
-
-		if ((parts.size() != 4 && parts.size() != 3) || (requireW && parts.size() != 4))
-		{
-			Logger::LogError("Invalid vec4 field: " + vecStr);
-			return glm::vec4(-1);
-		}
-		else
-		{
-			glm::vec4 result;
-
-			if (parts.size() == 4)
-			{
-				result = glm::vec4(
-					std::stof(parts[0].c_str()),
-					std::stof(parts[1].c_str()),
-					std::stof(parts[2].c_str()),
-					std::stof(parts[3].c_str()));
-			}
-			else
-			{
-				result = glm::vec4(
-					std::stof(parts[0].c_str()),
-					std::stof(parts[1].c_str()),
-					std::stof(parts[2].c_str()),
-					1.0f);
-			}
-
-			return result;
-		}
-	}
-
-	glm::vec4 JSONParser::ParseColor4(const std::string& colorStr)
-	{
-		return ParseVec4(colorStr, false);
-	}
-
-	glm::vec3 JSONParser::ParseColor3(const std::string& colorStr)
-	{
-		return ParseVec3(colorStr);
 	}
 
 	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
