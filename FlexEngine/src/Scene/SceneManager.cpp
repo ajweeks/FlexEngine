@@ -69,21 +69,7 @@ namespace flex
 		}
 	}
 
-	void SceneManager::SetCurrentScene(BaseScene* scene)
-	{
-		for (size_t i = 0; i < m_Scenes.size(); ++i)
-		{
-			if (m_Scenes[i]->m_Name.compare(scene->m_Name) == 0)
-			{
-				m_CurrentSceneIndex = i;
-				return;
-			}
-		}
-
-		Logger::LogError("Attempt to set current scene to " + scene->m_Name + " failed because it was not found in the scene manager!");
-	}
-
-	void SceneManager::SetCurrentScene(u32 sceneIndex)
+	void SceneManager::SetCurrentScene(u32 sceneIndex, const GameContext& gameContext)
 	{
 		if (sceneIndex >= m_Scenes.size())
 		{
@@ -92,16 +78,38 @@ namespace flex
 			return;
 		}
 
+		if (m_CurrentSceneIndex != u32_max)
+		{
+			m_Scenes[m_CurrentSceneIndex]->RootDestroy(gameContext);
+		}
+
 		m_CurrentSceneIndex = sceneIndex;
+
+		m_Scenes[m_CurrentSceneIndex]->RootInitialize(gameContext);
+		m_Scenes[m_CurrentSceneIndex]->RootPostInitialize(gameContext);
 	}
 
-	void SceneManager::SetCurrentScene(const std::string& sceneName)
+	void SceneManager::SetCurrentScene(BaseScene* scene, const GameContext& gameContext)
+	{
+		for (size_t i = 0; i < m_Scenes.size(); ++i)
+		{
+			if (m_Scenes[i]->m_Name.compare(scene->m_Name) == 0)
+			{
+				SetCurrentScene(i, gameContext);
+				return;
+			}
+		}
+
+		Logger::LogError("Attempt to set current scene to " + scene->m_Name + " failed because it was not found in the scene manager!");
+	}
+
+	void SceneManager::SetCurrentScene(const std::string& sceneName, const GameContext& gameContext)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
 			if (m_Scenes[i]->GetName().compare(sceneName) == 0)
 			{
-				m_CurrentSceneIndex = i;
+				SetCurrentScene(i, gameContext);
 				return;
 			}
 		}
@@ -109,7 +117,7 @@ namespace flex
 		Logger::LogError("Attempt to set scene to " + sceneName + " failed, it does not exist in the SceneManager");
 	}
 
-	void SceneManager::SetNextSceneActive()
+	void SceneManager::SetNextSceneActive(const GameContext& gameContext)
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
@@ -117,14 +125,11 @@ namespace flex
 			return;
 		}
 		
-		if (m_CurrentSceneIndex >= sceneCount - 1)
-		{
-			m_CurrentSceneIndex = 0;
-		}
-		else ++m_CurrentSceneIndex;
+		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
+		SetCurrentScene(newCurrentSceneIndex, gameContext);
 	}
 
-	void SceneManager::SetPreviousSceneActive()
+	void SceneManager::SetPreviousSceneActive(const GameContext& gameContext)
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
@@ -132,11 +137,9 @@ namespace flex
 			return;
 		}
 
-		if (m_CurrentSceneIndex == 0)
-		{
-			m_CurrentSceneIndex = sceneCount - 1;
-		}
-		else --m_CurrentSceneIndex;
+		// Loop around to previous index but stay positive cause things are unsigned
+		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size();
+		SetCurrentScene(newCurrentSceneIndex, gameContext);
 	}
 
 	u32 SceneManager::CurrentSceneIndex() const

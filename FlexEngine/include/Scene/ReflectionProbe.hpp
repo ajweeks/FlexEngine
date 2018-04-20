@@ -15,7 +15,6 @@ namespace flex
 		virtual void Initialize(const GameContext& gameContext) override;
 		virtual void PostInitialize(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
-		virtual void Destroy(const GameContext& gameContext) override;
 
 		MaterialID GetCaptureMaterialID() const;
 		void SetSphereVisible(bool visible, const GameContext& gameContext);

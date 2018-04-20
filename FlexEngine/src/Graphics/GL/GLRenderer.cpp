@@ -159,16 +159,34 @@ namespace flex
 				m_1x1_NDC_QuadVertexBufferData.Destroy();
 			}
 
+			if (m_1x1_NDC_Quad)
+			{
+				DestroyRenderObject(m_1x1_NDC_Quad->renderID);
+				m_1x1_NDC_Quad = nullptr;
+			}
+
 			if (m_SkyBoxMesh)
 			{
 				DestroyRenderObject(m_SkyBoxMesh->GetRenderID());
 				SafeDelete(m_SkyBoxMesh);
 			}
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			DestroyRenderObject(m_SpriteQuadRenderID);
+
+			DestroyRenderObject(m_GBufferQuadRenderID);
+
+			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
+			if (activeRenderObjectCount > 0)
 			{
-				DestroyRenderObject(i);
-				CheckGLErrorMessages();
+				Logger::LogError(std::to_string(activeRenderObjectCount) + " render objects were not destroyed before GL render!");
+
+				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+				{
+					if (m_RenderObjects[i])
+					{
+						DestroyRenderObject(m_RenderObjects[i]->renderID);
+					}
+				}
 			}
 			m_RenderObjects.clear();
 			CheckGLErrorMessages();
@@ -1240,6 +1258,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to SetTopologyMode: " + std::to_string(renderID));
 				return;
 			}
 
@@ -1540,7 +1559,7 @@ namespace flex
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
-					GLRenderObject* renderObject = iter->second;
+					GLRenderObject* renderObject = *iter;
 					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
 						Logger::LogInfo("Capturing reflection probe");
@@ -2461,6 +2480,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to UpdatePerObjectUniforms: " + std::to_string(renderID));
 				return;
 			}
 
@@ -2627,6 +2647,10 @@ namespace flex
 			if (renderObject)
 			{
 				renderObject->visible = visible;
+			}
+			else
+			{
+				Logger::LogError("Invalid renderID passed to SetRenderObjectVisible: " + std::to_string(renderID));
 			}
 		}
 
@@ -2809,7 +2833,7 @@ namespace flex
 
 			for (auto renderObject : m_RenderObjects)
 			{
-				if (renderObject.second)
+				if (renderObject)
 				{
 					++count;
 				}
@@ -2820,17 +2844,30 @@ namespace flex
 
 		u32 GLRenderer::GetRenderObjectCapacity() const
 		{
-			return m_RenderObjects.size();
+			return m_RenderObjects.capacity();
 		}
 
-		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-			DataType dataType, bool normalized, i32 stride, void* pointer)
+		u32 GLRenderer::GetActiveRenderObjectCount() const
+		{
+			u32 capacity = 0;
+			for (auto renderObject : m_RenderObjects)
+			{
+				if (renderObject)
+				{
+					++capacity;
+				}
+			}
+			return capacity;
+		}
+
+		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to DescribeShaderVariable: " + std::to_string(renderID));
 				return;
 			}
 
@@ -2907,6 +2944,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to DestroyRenderObject: " + std::to_string(renderID));
 				return;
 			}
 
@@ -2964,6 +3002,9 @@ namespace flex
 							ImGui::SameLine();
 							if (ImGui::TreeNode(objectName.c_str()))
 							{
+								const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
+								ImGui::TextUnformatted(renderIDStr.c_str());
+
 								Transform* transform = renderObject->transform;
 								if (transform)
 								{
@@ -3074,18 +3115,12 @@ namespace flex
 
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)
 		{
-#if _DEBUG
-			auto result = m_RenderObjects.find(renderID);
-			if (result != m_RenderObjects.end())
+			if (renderID > m_RenderObjects.size())
 			{
-				return result->second;
+				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
 			}
 
-			Logger::LogError("Couldn't find GLRenderObject with renderID " + std::to_string(renderID));
-			return nullptr;
-#else
 			return m_RenderObjects[renderID];
-#endif
 		}
 
 		void GLRenderer::InsertNewRenderObject(GLRenderObject* renderObject)
@@ -3097,7 +3132,8 @@ namespace flex
 			}
 			else
 			{
-				m_RenderObjects.insert({ renderObject->renderID, renderObject });
+				m_RenderObjects.resize(renderObject->renderID + 1);
+				m_RenderObjects[renderObject->renderID] = renderObject;
 			}
 		}
 
@@ -3108,6 +3144,14 @@ namespace flex
 
 		RenderID GLRenderer::GetNextAvailableRenderID() const
 		{
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				if (m_RenderObjects[i] == nullptr)
+				{
+					return i;
+				}
+			}
+
 			return m_RenderObjects.size();
 		}
 

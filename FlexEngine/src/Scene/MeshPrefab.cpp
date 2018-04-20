@@ -968,11 +968,6 @@ namespace flex
 		}
 	}
 
-	void MeshPrefab::Destroy(const GameContext& gameContext)
-	{
-		gameContext.renderer->DestroyRenderObject(m_RenderID);
-	}
-
 	void MeshPrefab::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
 	{
 		m_MaterialID = materialID;

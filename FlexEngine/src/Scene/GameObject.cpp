@@ -18,14 +18,6 @@ namespace flex
 
 	GameObject::~GameObject()
 	{
-		m_Transform.RemoveAllChildTransforms();
-		m_Transform.SetParentTransform(nullptr);
-
-		for (size_t i = 0; i < m_Children.size(); ++i)
-		{
-			SafeDelete(m_Children[i]);
-		}
-		m_Children.clear();
 	}
 
 	void GameObject::SetParent(GameObject* parent)
@@ -115,7 +107,15 @@ namespace flex
 
 	void GameObject::PostInitialize(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		if (m_RenderID != InvalidRenderID)
+		{
+			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
+		}
+
+		for (auto child : m_Children)
+		{
+			child->PostInitialize(gameContext);
+		}
 	}
 
 	void GameObject::Update(const GameContext& gameContext)
@@ -125,7 +125,13 @@ namespace flex
 
 	void GameObject::Destroy(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		if (m_RenderID != InvalidRenderID)
+		{
+			gameContext.renderer->DestroyRenderObject(m_RenderID);
+		}
+
+		m_Transform.RemoveAllChildTransforms();
+		m_Transform.SetParentTransform(nullptr);
 	}
 
 	void GameObject::SetRenderID(RenderID renderID)
@@ -160,6 +166,8 @@ namespace flex
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->RootDestroy(gameContext);
+			SafeDelete(*iter);
 		}
+		m_Children.clear();
 	}
 } // namespace flex

@@ -15,9 +15,11 @@
 namespace flex
 {
 	Scene_02::Scene_02(const GameContext& gameContext) :
-		BaseScene("Scene_02")
+		BaseScene("Scene_02", "")
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+		Logger::LogError("FATAL: DEPRECATED CLASS INSTANTITED");
+		assert(false);
 	}
 
 	Scene_02::~Scene_02()
@@ -328,12 +330,6 @@ namespace flex
 
 	void Scene_02::Destroy(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-		if (m_ReflectionProbe)
-		{
-			m_ReflectionProbe->Destroy(gameContext);
-		}
-
 		if (rb1)
 		{
 			rb1->Destroy(gameContext);

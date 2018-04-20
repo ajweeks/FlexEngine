@@ -3,20 +3,17 @@
 	"entities" :
 	[
 		{
-      "name": "Cube",
-      "type" : "mesh",
-			"mesh" :
-			{
+      		"name": "Cube",
+      		"type" : "mesh",
+			"mesh" : {
 				"file" : "models/cube.fbx"
 			},
-			"transform" : 
-			{
+			"transform" : {
 				"position" : "3.5,10.0,-5.1",
 				"rotation" : "0.1,1.1,2.2",
 				"scale" : "1.5,4.0,3.0"
 			},
-			"material" :
-			{
+			"material" : {
 				"name" : "pbr",
         		"shader" :  "pbr",
 				"constMetallic" : 0,
@@ -40,25 +37,25 @@
         "rotation": "0, 0, 0",
         "scale": "0.075,0.075,0.075"
       },
-      "material": {
-        "name": "pbr",
-        "shader": "pbr",
-        "enableAlbedoSampler": true,
-        "generateAlbedoSampler": true,
-        "albedoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga",
-        "enableMetallicSampler": true,
-        "generateMetallicSampler": true,
-        "metallicTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga",
-        "enableRoughnessSampler": true,
-        "generateRoughnessSampler": true,
-        "roughnessTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga",
-        "enableAOSampler": true,
-        "generateAOSampler": true,
-        "aoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga",
-        "enableNormalSampler": true,
-        "generateNormalSampler": true,
-        "normalTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_N.tga"
-      }
-    }
+	      "material": {
+	        "name": "pbr",
+	        "shader": "pbr",
+	        "enableAlbedoSampler": true,
+	        "generateAlbedoSampler": true,
+	        "albedoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga",
+	        "enableMetallicSampler": true,
+	        "generateMetallicSampler": true,
+	        "metallicTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga",
+	        "enableRoughnessSampler": true,
+	        "generateRoughnessSampler": true,
+	        "roughnessTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga",
+	        "enableAOSampler": true,
+	        "generateAOSampler": true,
+	        "aoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga",
+	        "enableNormalSampler": true,
+	        "generateNormalSampler": true,
+	        "normalTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_N.tga"
+	      }
+	    }
 	]
 }

@@ -214,21 +214,11 @@ namespace flex
 
 	void FlexEngine::LoadDefaultScenes()
 	{
-		//Scene_02* scene02 = new Scene_02(m_GameContext);
-		//m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
-
-		BaseScene* scene01 = new BaseScene("");
-		scene01->InitializeFromJSON(RESOURCE_LOCATION + "scenes/scene_01.json", m_GameContext);
+		BaseScene* scene01 = new BaseScene("scene 01", RESOURCE_LOCATION + "scenes/scene_01.json");
 		m_GameContext.sceneManager->AddScene(scene01, m_GameContext);
 
-		BaseScene* scene02 = new BaseScene("");
-		scene02->InitializeFromJSON(RESOURCE_LOCATION + "scenes/scene_02.json", m_GameContext);
+		BaseScene* scene02 = new BaseScene("scene 02", RESOURCE_LOCATION + "scenes/scene_02.json");
 		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
-
-		m_GameContext.sceneManager->SetCurrentScene(scene01);
-
-		//TestScene* pDefaultScene = new TestScene(m_GameContext);
-		//m_GameContext.sceneManager->AddScene(pDefaultScene, m_GameContext);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
@@ -343,13 +333,13 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
-				m_GameContext.sceneManager->SetNextSceneActive();
+				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
 			
 				//m_GameContext.renderer->PostInitialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
-				m_GameContext.sceneManager->SetPreviousSceneActive();
+				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
 			}
 
 			// TODO: Figure out better
@@ -697,7 +687,7 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
-					m_GameContext.sceneManager->SetPreviousSceneActive();
+					m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
 				}
 
 				if (ImGui::IsItemHovered())
@@ -718,7 +708,7 @@ namespace flex
 				ImGui::SameLine();
 				if (ImGui::Button(arrowNextStr))
 				{
-					m_GameContext.sceneManager->SetNextSceneActive();
+					m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
 				}
 				if (ImGui::IsItemHovered())
 				{

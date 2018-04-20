@@ -9,9 +9,11 @@
 namespace flex
 {
 	TestScene::TestScene(const GameContext& gameContext) :
-		BaseScene("TestScene")
+		BaseScene("TestScene", "")
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+		Logger::LogError("FATAL: DEPRECATED CLASS INSTANTITED");
+		assert(false);
 	}
 
 	TestScene::~TestScene()

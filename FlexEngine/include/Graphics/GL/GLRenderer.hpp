@@ -54,9 +54,9 @@ namespace flex
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;
+			u32 GetActiveRenderObjectCount() const;
 
-			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-				DataType dataType, bool normalized, i32 stride, void* pointer) override;
+			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
 			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
@@ -133,7 +133,7 @@ namespace flex
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
 			std::map<MaterialID, GLMaterial> m_Materials;
-			std::map<RenderID, GLRenderObject*> m_RenderObjects;
+			std::vector<GLRenderObject*> m_RenderObjects;
 
 			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
