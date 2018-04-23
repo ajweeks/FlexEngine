@@ -948,11 +948,6 @@ namespace flex
 		UNREFERENCED_PARAMETER(gameContext);
 	}
 
-	void MeshPrefab::PostInitialize(const GameContext& gameContext)
-	{
-		gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
-	}
-
 	void MeshPrefab::Update(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);

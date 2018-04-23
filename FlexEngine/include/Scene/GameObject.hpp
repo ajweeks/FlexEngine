@@ -23,9 +23,10 @@ namespace flex
 		RenderID GetRenderID() const;
 		void SetRenderID(RenderID renderID);
 
-	protected:
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void PostInitialize(const GameContext& gameContext);
+
+	protected:
 		virtual void Update(const GameContext& gameContext);
 		virtual void Destroy(const GameContext& gameContext);
 		

@@ -76,10 +76,6 @@ namespace flex
 		m_SphereMesh->AddChild(m_Capture);
 	}
 
-	void ReflectionProbe::PostInitialize(const GameContext& gameContext)
-	{
-	}
-
 	void ReflectionProbe::Update(const GameContext& gameContext)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
