@@ -5,6 +5,7 @@
 #include <glm/vec3.hpp>
 
 #include "Scene/ReflectionProbe.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {

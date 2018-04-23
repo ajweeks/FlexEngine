@@ -2,7 +2,7 @@
 
 #define NOMINMAX
 
-#define COMPILE_OPEN_GL 1
+#define COMPILE_OPEN_GL 0
 #define COMPILE_VULKAN 1
 
 #pragma warning(disable : 4201) // nonstandard extension used: nanmeless struct/union

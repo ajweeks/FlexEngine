@@ -10,6 +10,7 @@
 #include "Cameras/BaseCamera.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "GameContext.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {
