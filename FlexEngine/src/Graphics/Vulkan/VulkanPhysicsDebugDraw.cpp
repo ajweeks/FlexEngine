@@ -34,7 +34,7 @@ namespace flex
 		void VulkanPhysicsDebugDraw::Initialize()
 		{
 			m_Renderer = (VulkanRenderer*)(m_GameContext.renderer);
-			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
+			if (!m_Renderer->GetMaterialID("color", m_MaterialID))
 			{
 				Logger::LogError("Failed to retrieve shader for Vulkan physics debug draw!");
 			}
