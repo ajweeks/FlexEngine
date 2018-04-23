@@ -73,6 +73,12 @@ namespace flex
 
 		static Transform Identity();
 
+		Transform* GetParent();
+		const std::vector<Transform*>& GetChildren();
+
+		void SetOwnerRenderID(RenderID ownerRenderID);
+		RenderID GetOwnerRenderID() const;
+
 	private:
 		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
 		void UpdateChildTransforms(); // Used to go back down to the lowest node of the parent-child tree
@@ -87,6 +93,8 @@ namespace flex
 
 		Transform* parentTransform = nullptr;
 		std::vector<Transform*> childrenTransforms;
+
+		RenderID m_OwnerRenderID = InvalidRenderID;
 
 	};
 } // namespace flex

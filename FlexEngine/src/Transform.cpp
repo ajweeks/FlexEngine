@@ -227,6 +227,26 @@ namespace flex
 		return result;
 	}
 
+	Transform* Transform::GetParent()
+	{
+		return parentTransform;
+	}
+
+	const std::vector<Transform*>& Transform::GetChildren()
+	{
+		return childrenTransforms;
+	}
+
+	void Transform::SetOwnerRenderID(RenderID ownerRenderID)
+	{
+		m_OwnerRenderID = ownerRenderID;
+	}
+
+	RenderID Transform::GetOwnerRenderID() const
+	{
+		return m_OwnerRenderID;
+	}
+
 	void Transform::UpdateParentTransform()
 	{
 		if (parentTransform)

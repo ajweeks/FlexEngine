@@ -323,6 +323,7 @@ namespace flex
 				gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
 				gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 				gBufferQuadCreateInfo.enableCulling = false;
+				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
 				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
 				gBufferQuadCreateInfo.indices = &m_gBufferQuadIndices;
@@ -355,6 +356,9 @@ namespace flex
 
 				m_CubemapGBufferMaterialID = InitializeMaterial(gameContext, &gBufferCubemapMaterialCreateInfo);
 
+				// TODO: Find out why a pointer to this variable gets set to null when passing in to LoadPrefabShape
+				RenderObjectCreateInfo gBufferCubemapCreateInfoOverrides = {};
+				gBufferCubemapCreateInfoOverrides.visibleInSceneExplorer = false;
 
 				m_gBufferCubemapMesh = new MeshPrefab(m_CubemapGBufferMaterialID, "GBuffer cubemap");
 				if (!m_gBufferCubemapMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX))
@@ -2523,78 +2527,22 @@ namespace flex
 			// TODO: Consolidate renderer ImGui code
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				// TODO: FIXME: Take into account visibleInSceneExplorer!!
-				const u32 objectCount = GetRenderObjectCount();
-				const u32 objectCapacity = GetRenderObjectCapacity();
-				const std::string objectCountStr("Object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
-				ImGui::Text(objectCountStr.c_str());
+				//const u32 objectCount = GetRenderObjectCount();
+				//const u32 objectCapacity = GetRenderObjectCapacity();
+				//const std::string objectCountStr("Object count/capacity: " + std::to_string//(objectCount) + "/" + std::to_string(objectCapacity));
+				//ImGui::Text(objectCountStr.c_str());
 
 				if (ImGui::TreeNode("Render Objects"))
 				{
 					for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 					{
+						// Directly draw all root render objects, they will all draw their own children
 						VulkanRenderObject* renderObject = GetRenderObject(i);
-						if (renderObject && renderObject->visibleInSceneExplorer)
+						if (renderObject &&
+							renderObject->visibleInSceneExplorer &&
+							renderObject->transform->GetParent() == nullptr)
 						{
-							VulkanMaterial& material = m_LoadedMaterials[renderObject->materialID];
-							VulkanShader& shader = m_Shaders[material.material.shaderID];
-							const std::string objectName(renderObject->name + "##" + std::to_string(i));
-
-							const std::string objectID("##" + objectName + "-visble");
-							ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
-							ImGui::SameLine();
-							if (ImGui::TreeNode(objectName.c_str()))
-							{
-								Transform* transform = renderObject->transform;
-								if (transform)
-								{
-									static bool local = true;
-
-									static const char* localTransformStr = "Transform (local)";
-									static const char* globalTransformStr = "Transform (global)";
-									const char* transformSpaceStr = local ? localTransformStr : globalTransformStr;
-
-									ImGui::Checkbox(transformSpaceStr, &local);
-
-
-									glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-									glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
-									glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
-
-									bool valueChanged = false;
-
-									valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
-									valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.01f) || valueChanged;
-									valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
-
-									if (valueChanged)
-									{
-										if (local)
-										{
-											transform->SetLocalPosition(translation);
-											transform->SetLocalRotation(glm::quat(rotation));
-											transform->SetLocalScale(scale);
-										}
-										else
-										{
-											transform->SetGlobalPosition(translation);
-											transform->SetGlobalRotation(glm::quat(rotation));
-											transform->SetGlobalScale(scale);
-										}
-									}
-								}
-								else
-								{
-									ImGui::Text("Transform not set");
-								}
-
-								if (shader.shader.needIrradianceSampler)
-								{
-									ImGui::Checkbox("Use Irradiance Sampler", &material.material.enableIrradianceSampler);
-								}
-
-								ImGui::TreePop();
-							}
+							DrawImGuiForRenderObjectAndChildren(renderObject);
 						}
 					}
 
@@ -2644,6 +2592,96 @@ namespace flex
 			}
 		}
 
+		void VulkanRenderer::DrawImGuiForRenderObjectAndChildren(VulkanRenderObject* renderObject)
+		{
+			VulkanMaterial& material = m_LoadedMaterials[renderObject->materialID];
+			VulkanShader& shader = m_Shaders[material.material.shaderID];
+			const std::string objectName(renderObject->name + "##" + std::to_string(renderObject->renderID));
+
+			const std::string objectID("##" + objectName + "-visible");
+			bool visible = renderObject->visible;
+			if (ImGui::Checkbox(objectID.c_str(), &visible))
+			{
+				SetRenderObjectVisible(renderObject->renderID, visible);
+			}
+			ImGui::SameLine();
+			if (ImGui::TreeNode(objectName.c_str()))
+			{
+				const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
+				ImGui::TextUnformatted(renderIDStr.c_str());
+
+				Transform* transform = renderObject->transform;
+				if (transform)
+				{
+					static bool local = true;
+
+					static const char* localTransformStr = "Transform (local)";
+					static const char* globalTransformStr = "Transform (global)";
+					const char* transformSpaceStr = local ? localTransformStr : globalTransformStr;
+
+					ImGui::Checkbox(transformSpaceStr, &local);
+
+
+					glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
+					glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
+					glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
+
+					bool valueChanged = false;
+
+					valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
+					valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.01f) || valueChanged;
+					valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
+
+					if (valueChanged)
+					{
+						if (local)
+						{
+							transform->SetLocalPosition(translation);
+							transform->SetLocalRotation(glm::quat(rotation));
+							transform->SetLocalScale(scale);
+						}
+						else
+						{
+							transform->SetGlobalPosition(translation);
+							transform->SetGlobalRotation(glm::quat(rotation));
+							transform->SetGlobalScale(scale);
+						}
+					}
+				}
+				else
+				{
+					ImGui::Text("Transform not set");
+				}
+
+				std::string matNameStr = "Material: " + material.material.name;
+				std::string shaderNameStr = "Shader: " + shader.shader.name;
+				ImGui::TextUnformatted(matNameStr.c_str());
+				ImGui::TextUnformatted(shaderNameStr.c_str());
+
+				if (shader.shader.needIrradianceSampler)
+				{
+					ImGui::Checkbox("Use Irradiance Sampler", &material.material.enableIrradianceSampler);
+				}
+
+				if (renderObject->transform)
+				{
+					ImGui::Indent();
+					auto children = renderObject->transform->GetChildren();
+					for (Transform* child : children)
+					{
+						VulkanRenderObject* renderObject = GetRenderObject(child->GetOwnerRenderID());
+						if (renderObject)
+						{
+							DrawImGuiForRenderObjectAndChildren(renderObject);
+						}
+					}
+					ImGui::Unindent();
+				}
+
+				ImGui::TreePop();
+			}
+		}
+
 		void VulkanRenderer::ReloadShaders(GameContext& gameContext)
 		{
 			// TODO: Implement
@@ -2658,12 +2696,29 @@ namespace flex
 			m_SwapChainNeedsRebuilding = true;
 		}
 
-		void VulkanRenderer::SetRenderObjectVisible(RenderID renderID, bool visible)
+		void VulkanRenderer::SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject)
 			{
-				renderObject->visible = visible;
+				if (visible != renderObject->visible)
+				{
+					renderObject->visible = visible;
+
+					if (effectChildren && renderObject->transform)
+					{
+						auto children = renderObject->transform->GetChildren();
+						for (Transform* child : children)
+						{
+							RenderID childRenderID = child->GetOwnerRenderID();
+							VulkanRenderObject* childRenderObject = GetRenderObject(childRenderID);
+							if (childRenderObject)
+							{
+								SetRenderObjectVisible(childRenderID, visible, true);
+							}
+						}
+					}
+				}
 			}
 		}
 

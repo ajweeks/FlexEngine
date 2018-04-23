@@ -76,7 +76,7 @@
             "cullFace": "back"
           },
           "transform": {
-            "space": "local", // This means this transform is relative to the parent
+            "space": "local",
             "position": "10.0,0.0,0.0",
             "rotation": "0.0,0.0,0.0",
             "scale": "1.0,1.0,1.0"
@@ -85,7 +85,31 @@
             "name": "color",
             "shader": "color",
             "colorMultiplier": "1.5, 0.9, 0.1, 1"
-          }
+          },
+          "children": [
+            {
+              "name": "sphere child child!",
+              "type": "mesh",
+              "mesh": {
+                "file": "models/sphere.fbx",
+                "cullFace": "back"
+              },
+              "transform": {
+                "space": "local",
+                "position": "10.0,0.0,0.0",
+                "rotation": "0.0,0.0,0.0",
+                "scale": "1.0,1.0,1.0"
+              },
+              "material": {
+                "name": "pbr",
+                "shader": "pbr",
+                "constMetallic": 1,
+                "constRoughness": 0,
+                "constAO": 1,
+                "constAlbedo": "1, 1, 1"
+              }
+            }
+          ]
         },
         {
           "name": "sphere child test 02",

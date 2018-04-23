@@ -137,6 +137,7 @@ namespace flex
 	void GameObject::SetRenderID(RenderID renderID)
 	{
 		m_RenderID = renderID;
+		m_Transform.SetOwnerRenderID(renderID);
 	}
 
 	void GameObject::RootInitialize(const GameContext& gameContext)

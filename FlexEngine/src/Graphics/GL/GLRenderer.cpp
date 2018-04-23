@@ -1429,6 +1429,7 @@ namespace flex
 			spriteQuadCreateInfo.depthWriteEnable = false;
 			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
 			spriteQuadCreateInfo.enableCulling = false;
+			spriteQuadCreateInfo.visibleInSceneExplorer = false;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
 			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
 
@@ -2641,16 +2642,29 @@ namespace flex
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
 		}
 
-		void GLRenderer::SetRenderObjectVisible(RenderID renderID, bool visible)
+		void GLRenderer::SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject)
 			{
-				renderObject->visible = visible;
-			}
-			else
-			{
-				Logger::LogError("Invalid renderID passed to SetRenderObjectVisible: " + std::to_string(renderID));
+				if (renderObject->visible != visible)
+				{
+					renderObject->visible = visible;
+
+					if (effectChildren && renderObject->transform)
+					{
+						auto children = renderObject->transform->GetChildren();
+						for (Transform* child : children)
+						{
+							RenderID childRenderID = child->GetOwnerRenderID();
+							GLRenderObject* childRenderObject = GetRenderObject(childRenderID);
+							if (childRenderObject)
+							{
+								SetRenderObjectVisible(childRenderID, visible, true);
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -2956,7 +2970,7 @@ namespace flex
 				glDeleteBuffers(1, &renderObject->IBO);
 			}
 
-			SafeDelete(renderObject);
+SafeDelete(renderObject);
 		}
 
 		void GLRenderer::ImGuiNewFrame()
@@ -2982,10 +2996,10 @@ namespace flex
 
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				const u32 objectCount = GetRenderObjectCount();
-				const u32 objectCapacity = GetRenderObjectCapacity();
-				const std::string objectCountStr("Render object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
-				ImGui::Text(objectCountStr.c_str());
+				//const u32 objectCount = GetRenderObjectCount();
+				//const u32 objectCapacity = GetRenderObjectCapacity();
+				//const std::string objectCountStr("Render object count/capacity: " + std::to_string//(objectCount) + "/" + std::to_string(objectCapacity));
+				//ImGui::Text(objectCountStr.c_str());
 
 				if (ImGui::TreeNode("Render Objects"))
 				{
@@ -2993,71 +3007,12 @@ namespace flex
 					{
 						GLRenderObject* renderObject = GetRenderObject(i);
 
-						if (renderObject && renderObject->visibleInSceneExplorer)
+						// Directly draw all root render objects, they will all draw their own children
+						if (renderObject &&
+							renderObject->visibleInSceneExplorer &&
+							renderObject->transform->GetParent() == nullptr)
 						{
-							const std::string objectName(renderObject->name + "##" + std::to_string(i));
-
-							const std::string objectID("##" + objectName + "-visble");
-							ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
-							ImGui::SameLine();
-							if (ImGui::TreeNode(objectName.c_str()))
-							{
-								const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
-								ImGui::TextUnformatted(renderIDStr.c_str());
-
-								Transform* transform = renderObject->transform;
-								if (transform)
-								{
-									static int transformSpace = 0;
-
-									static const char* localStr = "local";
-									static const char* globalStr = "global";
-
-									ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
-									ImGui::RadioButton(globalStr, &transformSpace, 1);
-
-									const bool local = (transformSpace == 0);
-
-
-									glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-									glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation())));
-									glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
-
-									bool valueChanged = false;
-									
-									valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
-									valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.1f) || valueChanged;
-									valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
-
-									if (valueChanged)
-									{
-										if (local)
-										{
-											transform->SetLocalPosition(translation);
-											transform->SetLocalRotation(glm::quat(glm::radians(rotation)));
-											transform->SetLocalScale(scale);
-										}
-										else
-										{
-											transform->SetGlobalPosition(translation);
-											transform->SetGlobalRotation(glm::quat(glm::radians(rotation)));
-											transform->SetGlobalScale(scale);
-										}
-									}
-								}
-								else
-								{
-									ImGui::Text("Transform not set");
-								}
-
-								GLMaterial* material = &m_Materials[m_RenderObjects[i]->materialID];
-								if (material->uniformIDs.enableIrradianceSampler)
-								{
-									ImGui::Checkbox("Enable Irradiance Sampler", &material->material.enableIrradianceSampler);
-								}
-
-								ImGui::TreePop();
-							}
+							DrawImGuiForRenderObjectAndChildren(renderObject);
 						}
 					}
 
@@ -3104,6 +3059,92 @@ namespace flex
 
 					ImGui::TreePop();
 				}
+			}
+		}
+
+		void GLRenderer::DrawImGuiForRenderObjectAndChildren(GLRenderObject* renderObject)
+		{
+			const std::string objectName(renderObject->name + "##" + std::to_string(renderObject->renderID));
+
+			const std::string objectID("##" + objectName + "-visible");
+			bool visible = renderObject->visible;
+			if (ImGui::Checkbox(objectID.c_str(), &visible))
+			{
+				SetRenderObjectVisible(renderObject->renderID, visible);
+			}
+			ImGui::SameLine();
+			if (ImGui::TreeNode(objectName.c_str()))
+			{
+				const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
+				ImGui::TextUnformatted(renderIDStr.c_str());
+
+				Transform* transform = renderObject->transform;
+				if (transform)
+				{
+					static int transformSpace = 0;
+
+					static const char* localStr = "local";
+					static const char* globalStr = "global";
+
+					ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
+					ImGui::RadioButton(globalStr, &transformSpace, 1);
+
+					const bool local = (transformSpace == 0);
+
+
+					glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
+					glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation())));
+					glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
+
+					bool valueChanged = false;
+
+					valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
+					valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.1f) || valueChanged;
+					valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
+
+					if (valueChanged)
+					{
+						if (local)
+						{
+							transform->SetLocalPosition(translation);
+							transform->SetLocalRotation(glm::quat(glm::radians(rotation)));
+							transform->SetLocalScale(scale);
+						}
+						else
+						{
+							transform->SetGlobalPosition(translation);
+							transform->SetGlobalRotation(glm::quat(glm::radians(rotation)));
+							transform->SetGlobalScale(scale);
+						}
+					}
+				}
+				else
+				{
+					ImGui::Text("Transform not set");
+				}
+
+				GLMaterial* material = &m_Materials[m_RenderObjects[renderObject->renderID]->materialID];
+				if (material->uniformIDs.enableIrradianceSampler)
+				{
+					ImGui::Checkbox("Enable Irradiance Sampler", &material->material.enableIrradianceSampler);
+				}
+
+				if (renderObject->transform)
+				{
+					ImGui::Indent();
+					auto children = renderObject->transform->GetChildren();
+					for (Transform* child : children)
+					{
+						GLRenderObject* renderObject = GetRenderObject(child->GetOwnerRenderID());
+						if (renderObject)
+						{
+							DrawImGuiForRenderObjectAndChildren(renderObject);
+						}
+					}
+					ImGui::Unindent();
+				}
+
+				ImGui::TreePop();
 			}
 		}
 

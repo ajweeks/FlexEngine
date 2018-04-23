@@ -306,7 +306,7 @@ namespace flex
 		renderObjectCreateInfo.name = m_Name;
 		renderObjectCreateInfo.transform = &m_Transform;
 
-		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));
 
 		gameContext.renderer->SetTopologyMode(m_RenderID, TopologyMode::TRIANGLE_LIST);
 
@@ -958,7 +958,7 @@ namespace flex
 			renderObjectCreateInfo.name = m_Name;
 		}
 
-		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));
 
 		gameContext.renderer->SetTopologyMode(m_RenderID, topologyMode);
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);

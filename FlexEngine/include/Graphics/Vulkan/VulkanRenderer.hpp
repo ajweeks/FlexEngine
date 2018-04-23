@@ -51,7 +51,7 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
-			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
+			virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 			virtual bool GetVSyncEnabled() override;
@@ -190,6 +190,8 @@ namespace flex
 
 			void LoadDefaultShaderCode();
 			void GenerateSkybox(const GameContext& gameContext);
+
+			void DrawImGuiForRenderObjectAndChildren(VulkanRenderObject* renderObject);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,

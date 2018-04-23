@@ -48,7 +48,7 @@ namespace flex
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		virtual void SetRenderObjectVisible(RenderID renderID, bool visible) = 0;
+		virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) = 0;
 
 		virtual void SetVSyncEnabled(bool enableVSync) = 0;
 		virtual bool GetVSyncEnabled() = 0;
