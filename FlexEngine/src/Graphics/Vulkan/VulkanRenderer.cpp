@@ -271,13 +271,6 @@ namespace flex
 				return;
 			}
 
-			assert(m_PhysicsDebugDrawer == nullptr);
-
-			m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw(gameContext);
-			m_PhysicsDebugDrawer->Initialize();
-			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-			world->setDebugDrawer(m_PhysicsDebugDrawer);
-
 			CreateDescriptorPool();
 
 			ShaderID deferredCombineShaderID;
@@ -373,6 +366,14 @@ namespace flex
 
 				VulkanRenderObject* gBufferCubemapRenderObject = GetRenderObject(gBufferCubemapRenderID);
 				gBufferCubemapRenderObject->visible = false; // Don't render the g buffer cubemap normally, we'll handle it separately
+
+
+				assert(m_PhysicsDebugDrawer == nullptr);
+				m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw(gameContext);
+				m_PhysicsDebugDrawer->Initialize();
+
+				btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+				world->setDebugDrawer(m_PhysicsDebugDrawer);
 			}
 
 			for (size_t i = 0; i < m_Shaders.size(); ++i)

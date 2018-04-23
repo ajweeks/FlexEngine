@@ -268,7 +268,11 @@ namespace flex
 
 		LoadDefaultScenes();
 
+		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+
 		m_GameContext.renderer->PostInitialize(m_GameContext);
+
+		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 	}
 
 	void FlexEngine::UpdateAndRender()

@@ -30,7 +30,16 @@ namespace flex
 
 	void SceneManager::AddScene(BaseScene* newScene, const GameContext& gameContext)
 	{
-		if (std::find(m_Scenes.begin(), m_Scenes.end(), newScene) == m_Scenes.end())
+		bool unique = true;
+		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&unique, newScene](BaseScene* scene) mutable
+		{
+			if (scene->GetName().compare(newScene->GetName()) == 0)
+			{
+				unique = false;
+			}
+		});
+
+		if (unique)
 		{
 			m_Scenes.push_back(newScene);
 		}
