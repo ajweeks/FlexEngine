@@ -13,7 +13,6 @@ namespace flex
 		virtual ~ReflectionProbe();
 
 		virtual void Initialize(const GameContext& gameContext) override;
-		virtual void PostInitialize(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
 
 		MaterialID GetCaptureMaterialID() const;
