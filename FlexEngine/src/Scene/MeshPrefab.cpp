@@ -154,8 +154,6 @@ namespace flex
 			{
 				// Position
 				glm::vec3 pos = ToVec3(mesh->mVertices[i]);
-				// TODO: Don't do this?
-				pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 				vertexBufferDataCreateInfo.positions_3D.push_back(pos);
 
 				// Color

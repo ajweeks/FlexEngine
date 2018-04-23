@@ -41,7 +41,7 @@
       "name": "Sphere",
       "type" :  "mesh",
       "mesh": {
-        "file": "models/sphere.fbx",
+        "file": "models/ico-sphere.gltf",
         "cullFace": "front"
       },
       "collider": {
@@ -72,7 +72,7 @@
           "visible": true,
           "type": "mesh",
           "mesh": {
-            "file": "models/cone.fbx",
+            "file": "models/cone.gltf",
             "cullFace": "back"
           },
           "transform": {
@@ -91,7 +91,7 @@
               "name": "sphere child child!",
               "type": "mesh",
               "mesh": {
-                "file": "models/sphere.fbx",
+                "file": "models/uv-sphere.gltf",
                 "cullFace": "back"
               },
               "transform": {
@@ -115,7 +115,7 @@
           "name": "sphere child test 02",
           "type": "mesh",
           "mesh": {
-            "file": "models/sphere.fbx",
+            "file": "models/ico-sphere.gltf",
             "cullFace": "back"
           },
           "transform": {
@@ -133,10 +133,28 @@
       ]
     },
     {
+      "name": "chamfer box",
+      "type": "mesh",
+      "mesh": {
+        "file": "models/chamfer-box.glb",
+        "cullFace" : "back"
+      },
+      "transform": {
+        "position": "-8.0,1.0,-2.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1.5,1.5,1.5"
+      },
+      "material": {
+        "name": "color",
+        "shader": "color",
+        "colorMultiplier": "0.1, 0.4, 1, 0.5"
+      }
+    },
+    {
       "name": "Skybox",
       "type" : "skybox",
       "mesh": {
-        "file": "models/cube.fbx",
+        "file": "models/cube.gltf",
         "cullFace": "front"
       },
       "transform": {
