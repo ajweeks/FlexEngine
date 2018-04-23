@@ -298,19 +298,19 @@ namespace flex
 			MaterialID boxMat3ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
 			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
-			m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+			//m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(gameContext, m_Box1);
 			m_Box1->GetTransform().SetGlobalScale(box1Scale);
 
 			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
-			m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+			//m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(gameContext, m_Box2);
 			m_Box2->GetTransform().SetGlobalScale(box2Scale);
 
 			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
-			m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+			//m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(gameContext, m_Box3);
 			m_Box3->GetTransform().SetGlobalScale(box3Scale);

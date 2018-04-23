@@ -37,8 +37,12 @@ namespace flex
 			NONE
 		};
 
-		void ForceAttributes(VertexAttributes attributes); // Call this before loading to force certain attributes to be filled
-		void IgnoreAttributes(VertexAttributes attributes); // Call this before loading to ignore certain attributes
+		/*
+		 * Call before loading to force certain attributes to be filled/ignored based on shader
+		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
+		 * be enforced (filled with default value if not present in mesh)
+		*/
+		void SetRequiredAttributes(VertexAttributes requiredAttributes);
 
 		/*
 		* Loads a mesh from file
@@ -86,8 +90,7 @@ namespace flex
 
 		glm::vec2 m_UVScale = { 1,1 };
 
-		VertexAttributes m_ForcedAttributes = (u32)VertexAttribute::NONE;
-		VertexAttributes m_IgnoredAttributes = (u32)VertexAttribute::NONE;
+		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::NONE;
 		VertexBufferData m_VertexBufferData = {};
 
 		std::vector<u32> m_Indices;

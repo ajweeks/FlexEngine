@@ -68,6 +68,9 @@ namespace flex
 			virtual Material& GetMaterial(MaterialID materialID) override;
 			virtual Shader& GetShader(ShaderID shaderID) override;
 
+			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
+			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
+
 			virtual void DestroyRenderObject(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;
@@ -81,7 +84,7 @@ namespace flex
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
 			{
-				Uniforms overridenUniforms; // To override a uniform, add it to this object, then set the overriden value to the respective member
+				Uniforms overridenUniforms; // To override a uniform, add it to this object, then set the overridden value to the respective member
 
 				glm::mat4 projection;
 				glm::mat4 view;
@@ -133,9 +136,6 @@ namespace flex
 			void PrepareOffscreenFrameBuffer(Window* window);
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender(const GameContext& gameContext);
-
-			bool GetMaterialID(const std::string& materialName, MaterialID& materialID);
-			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
 			void CreateUniformBuffers(VulkanShader* shader);
 

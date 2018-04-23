@@ -62,14 +62,9 @@ namespace flex
 		}
 	}
 
-	void MeshPrefab::ForceAttributes(VertexAttributes attributes)
+	void MeshPrefab::SetRequiredAttributes(VertexAttributes requiredAttributes)
 	{
-		m_ForcedAttributes |= attributes;
-	}
-
-	void MeshPrefab::IgnoreAttributes(VertexAttributes attributes)
-	{
-		m_IgnoredAttributes |= attributes;
+		m_RequiredAttributes |= requiredAttributes;
 	}
 
 	bool MeshPrefab::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
@@ -146,100 +141,130 @@ namespace flex
 			const size_t numMeshVerts = mesh->mNumVertices;
 			totalVertCount += numMeshVerts;
 
+			// Cached bools per-mesh
+			const bool meshHasVertexColors0 = mesh->HasVertexColors(0);
+			const bool meshHasTangentsAndBitangents = mesh->HasTangentsAndBitangents();
+			const bool meshHasNormals = mesh->HasNormals();
+			const bool meshHasTexCoord0 = mesh->HasTextureCoords(0);
+
+			// All meshes need positions
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+
 			for (size_t i = 0; i < numMeshVerts; ++i)
 			{
 				// Position
 				glm::vec3 pos = ToVec3(mesh->mVertices[i]);
+				// TODO: Don't do this?
 				pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 				vertexBufferDataCreateInfo.positions_3D.push_back(pos);
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 				// Color
-				if (mesh->HasVertexColors(0) && !(m_IgnoredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT))
+				if ((m_RequiredAttributes && 
+					(m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)) ||
+					(!m_RequiredAttributes && meshHasVertexColors0))
 				{
-					glm::vec4 col = ToVec4(mesh->mColors[0][i]);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-				}
-				else if (m_ForcedAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
-				{
-					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
-					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+					if (meshHasVertexColors0)
+					{
+						glm::vec4 col = ToVec4(mesh->mColors[0][i]);
+						vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
+					}
+					else
+					{
+						vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
+					}
 				}
 
-				// Tangent & Bitangent
-				if (mesh->HasTangentsAndBitangents())
+
+				// Tangent
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::TANGENT)) ||
+					(!m_RequiredAttributes && meshHasTangentsAndBitangents))
 				{
-					if (!(m_IgnoredAttributes & (u32)VertexAttribute::TANGENT))
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
+
+					if (meshHasTangentsAndBitangents)
 					{
 						glm::vec3 tangent = ToVec3(mesh->mTangents[i]);
 						vertexBufferDataCreateInfo.tangents.push_back(tangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
 					}
+					else
+					{
+						vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
+					}
+				}
 
-					if (!(m_IgnoredAttributes & (u32)VertexAttribute::BITANGENT))
+				// Bitangent
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
+					(!m_RequiredAttributes && meshHasTangentsAndBitangents))
+				{
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
+
+					if (meshHasTangentsAndBitangents)
 					{
 						glm::vec3 bitangent = ToVec3(mesh->mBitangents[i]);
 						vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 					}
-				}
-				else
-				{
-					if (m_ForcedAttributes & (u32)VertexAttribute::TANGENT)
-					{
-						vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-					}
-					if (m_ForcedAttributes & (u32)VertexAttribute::BITANGENT)
+					else
 					{
 						vertexBufferDataCreateInfo.bitangents.push_back(m_DefaultBitangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 					}
 				}
 
 				// Normal
-				if (mesh->HasNormals() && !(m_IgnoredAttributes & (u32)VertexAttribute::NORMAL))
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
+					(!m_RequiredAttributes && meshHasNormals))
 				{
-					glm::vec3 norm = ToVec3(mesh->mNormals[i]);
-					if (flipNormalYZ)
-					{
-						std::swap(norm.y, norm.z);
-					}
-					if (flipZ)
-					{
-						norm.z = -norm.z;
-					}
-					vertexBufferDataCreateInfo.normals.push_back(norm);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
-				}
-				else if (m_ForcedAttributes & (u32)VertexAttribute::NORMAL)
-				{
-					vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
-					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
+
+					if (meshHasNormals)
+					{
+						glm::vec3 norm = ToVec3(mesh->mNormals[i]);
+						if (flipNormalYZ)
+						{
+							std::swap(norm.y, norm.z);
+						}
+						if (flipZ)
+						{
+							norm.z = -norm.z;
+						}
+						vertexBufferDataCreateInfo.normals.push_back(norm);
+					}
+					else
+					{
+						vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
+					}
 				}
 
 				// TexCoord
-				if (mesh->HasTextureCoords(0) && !(m_IgnoredAttributes & (u32)VertexAttribute::UV))
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
+					(!m_RequiredAttributes && meshHasTexCoord0))
 				{
-					// Truncate w component
-					glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
-					texCoord *= m_UVScale;
-					if (flipU)
-					{
-						texCoord.x = 1.0f - texCoord.x;
-					}
-					if (flipV)
-					{
-						texCoord.y = 1.0f - texCoord.y;
-					}
-					vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
-				}
-				else if (m_ForcedAttributes & (u32)VertexAttribute::UV)
-				{
-					vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
-					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
+
+					if (meshHasTexCoord0)
+					{
+						// Truncate w component
+						glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
+						texCoord *= m_UVScale;
+						if (flipU)
+						{
+							texCoord.x = 1.0f - texCoord.x;
+						}
+						if (flipV)
+						{
+							texCoord.y = 1.0f - texCoord.y;
+						}
+						vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
+					}
+					else
+					{
+						vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
+					}
 				}
 			}
 		}

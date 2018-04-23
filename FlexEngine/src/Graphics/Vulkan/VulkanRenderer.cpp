@@ -4280,7 +4280,7 @@ namespace flex
 					// Push constants
 					if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 					{
-						// Truncate translation component to center cubemap around viwer
+						// Truncate translation component to center cubemap around viewer
 						glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView()));
 						glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
 						renderObjectMat.material.pushConstantBlock.mvp =
@@ -5327,8 +5327,6 @@ namespace flex
 				//{ "post_process", shaderDirectory + "vk_post_process_vert.spv", shaderDirectory + "vk_post_process_frag.spv", m_VulkanDevice->m_LogicalDevice },
 			};
 
-			// TODO: Specify vertex attributes expected here as well?
-
 			// Specify shader uniforms
 			ShaderID shaderID = 0;
 
@@ -5339,6 +5337,13 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.needDiffuseSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::TANGENT |
+				(u32)VertexAttribute::BITANGENT |
+				(u32)VertexAttribute::NORMAL;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
@@ -5358,6 +5363,9 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("uniformBufferDynamic");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
@@ -5373,6 +5381,12 @@ namespace flex
 			m_Shaders[shaderID].shader.needRoughnessSampler = true;
 			m_Shaders[shaderID].shader.needAOSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV | 
+				(u32)VertexAttribute::TANGENT |
+				(u32)VertexAttribute::BITANGENT | 
+				(u32)VertexAttribute::NORMAL;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("viewProjection");
@@ -5400,6 +5414,8 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 			m_Shaders[shaderID].shader.needPushConstantBlock = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
@@ -5411,6 +5427,8 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.needHDREquirectangularSampler = true;
 			m_Shaders[shaderID].shader.needPushConstantBlock = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("hdrEquirectangularSampler");
 
@@ -5422,6 +5440,8 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 			m_Shaders[shaderID].shader.needPushConstantBlock = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
@@ -5433,6 +5453,8 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 			m_Shaders[shaderID].shader.needPushConstantBlock = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
@@ -5443,6 +5465,7 @@ namespace flex
 			// BRDF
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.subpass = 1;
+			m_Shaders[shaderID].shader.vertexAttributes = 0; // No vertex attributes! Not even position (vertex index is used)
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
@@ -5454,6 +5477,8 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
 			m_Shaders[shaderID].shader.needPushConstantBlock = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 
@@ -5467,8 +5492,11 @@ namespace flex
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
-			// TODO: Specify that this buffer is only used in the frag shader here
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
 
+			// TODO: Specify that this buffer is only used in the frag shader here
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
@@ -5491,7 +5519,8 @@ namespace flex
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
-			// TODO: Specify that this buffer is only used in the frag shader here
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("uniformBufferConstant");

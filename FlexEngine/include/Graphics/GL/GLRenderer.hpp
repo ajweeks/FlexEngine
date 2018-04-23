@@ -64,6 +64,9 @@ namespace flex
 			virtual Material& GetMaterial(MaterialID materialID) override;
 			virtual Shader& GetShader(ShaderID shaderID) override;
 
+			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
+			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
+
 			virtual void DestroyRenderObject(RenderID renderID) override;
 			
 			virtual void ImGuiNewFrame() override;
@@ -99,9 +102,6 @@ namespace flex
 			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically = false);
 
 			bool GetLoadedTexture(const std::string& filePath, u32& handle);
-
-			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
-			bool GetMaterialID(const std::string& materialName, MaterialID& materialID);
 
 			MaterialID GetNextAvailableMaterialID();
 

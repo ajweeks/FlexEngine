@@ -66,6 +66,9 @@ namespace flex
 		virtual Material& GetMaterial(MaterialID matID) = 0;
 		virtual Shader& GetShader(ShaderID shaderID)  = 0;
 
+		virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) = 0;
+		virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) = 0;
+
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 
 		virtual void ImGuiNewFrame() = 0;

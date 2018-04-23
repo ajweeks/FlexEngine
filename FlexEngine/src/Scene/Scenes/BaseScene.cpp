@@ -122,6 +122,15 @@ namespace flex
 				return nullptr;
 			}
 
+			ShaderID shaderID = InvalidShaderID;
+			if (!gameContext.renderer->GetShaderID(shaderName, shaderID))
+			{
+				Logger::LogError("Shader ID not found in renderer!" + materialName);
+				return nullptr;
+			}
+
+			Shader& shader = gameContext.renderer->GetShader(shaderID);
+			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
 
 			MaterialCreateInfo matCreateInfo = {};
 			{
@@ -255,6 +264,7 @@ namespace flex
 			if (!meshFilePath.empty())
 			{
 				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+				mesh->SetRequiredAttributes(requiredVertexAttributes);
 
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
@@ -279,6 +289,7 @@ namespace flex
 			else if (!meshPrefabName.empty())
 			{
 				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+				mesh->SetRequiredAttributes(requiredVertexAttributes);
 
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
