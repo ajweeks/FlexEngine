@@ -232,7 +232,7 @@ namespace flex
 
 #if 1 // Reflection probe
 		// Generated last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe(true);
+		m_ReflectionProbe = new ReflectionProbe("default reflection probe", true);
 		AddChild(gameContext, m_ReflectionProbe);
 #endif
 

@@ -1,5 +1,6 @@
 {
-	"name" : "scene_01",
+  "version" : 1,
+  "name" : "scene_01",
   "entities": [
     {
       "name": "Grid",
@@ -42,7 +43,7 @@
       "type" : "mesh",
       "mesh": {
         "file": "models/ico-sphere.gltf",
-        "cullFace": "front"
+        "cull face": "front"
       },
       "collider": {
         "shape": "sphere",
@@ -73,7 +74,7 @@
           "type": "mesh",
           "mesh": {
             "file": "models/cone.gltf",
-            "cullFace": "back"
+            "cull face": "back"
           },
           "transform": {
             "space": "local",
@@ -95,7 +96,7 @@
               "type": "mesh",
               "mesh": {
                 "file": "models/uv-sphere.gltf",
-                "cullFace": "back"
+                "cull face": "back"
               },
               "transform": {
                 "space": "local",
@@ -119,7 +120,7 @@
           "type": "mesh",
           "mesh": {
             "file": "models/ico-sphere.gltf",
-            "cullFace": "back"
+            "cull face": "back"
           },
           "transform": {
             "space": "global",
@@ -143,7 +144,7 @@
       "type": "mesh",
       "mesh": {
         "file": "models/chamfer-box.gltf",
-        "cullFace" : "back"
+        "cull face" : "back"
       },
       "transform": {
         "position": "-8.0,1.0,-2.0",
@@ -162,15 +163,7 @@
     {
       "name": "Skybox",
       "type" : "skybox",
-      "mesh": {
-        "file": "models/cube.gltf",
-        "cullFace": "front"
-      },
-      "transform": {
-        "position": "10.0,0.0,0.0",
-        "rotation": "0.0,0.0,0.0",
-        "scale": "1.0,1.0,1.0"
-      },
+      "rotation": "0.0,0.0,0.0",
       "material": {
         "name": "Skybox",
         "shader": "skybox"
@@ -179,11 +172,8 @@
     {
       "name": "Reflection Probe 01",
       "type" : "reflection probe",
-      "transform": {
-        "position": "10.0,0.0,0.0",
-        "rotation": "0.0,0.0,0.0",
-        "scale": "1.0,1.0,1.0"
-      }
+      "position": "10.0,0.0,0.0",
+      "rotation": "0.0,0.0,0.0"
     },
     {
       "name": "Point light 01",
@@ -198,7 +188,8 @@
       "type" :  "directional light",
       "direction": "0.1,1.5,0.0",
       "color": "1.0,1.0,1.0",
-      "brightness": 300.0
+      "brightness": 300.0,
+      "enabled" : true
     }
   ]
 }

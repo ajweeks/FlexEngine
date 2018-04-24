@@ -22,6 +22,8 @@ namespace flex
 
 		PhysicsWorld* GetPhysicsWorld();
 
+		void SerializeToFile(const GameContext& gameContext);
+
 	protected:
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void PostInitialize(const GameContext& gameContext);
@@ -36,6 +38,8 @@ namespace flex
 
 	private:
 		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
+
+		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
 
 		void RootInitialize(const GameContext& gameContext);
 		void RootPostInitialize(const GameContext& gameContext);

@@ -197,45 +197,69 @@ namespace flex
 	std::string JSONField::Print(i32 tabCount)
 	{
 		const std::string tabs(tabCount, '\t');
-		std::string result(tabs + label + " : ");
+		std::string result(tabs + '\"' + label + "\" : ");
 
 		switch (value.type)
 		{
 		case JSONValue::Type::STRING:
-			result += '\"' + value.strValue + "\"\n";
+			result += '\"' + value.strValue + '\"';
 			break;
 		case JSONValue::Type::INT:
-			result += std::to_string(value.intValue) + '\n';
+			result += std::to_string(value.intValue);
 			break;
 		case JSONValue::Type::FLOAT:
-			result += std::to_string(value.floatValue) + '\n';
+			result += std::to_string(value.floatValue);
 			break;
 		case JSONValue::Type::BOOL:
-			result += (value.boolValue ? "true\n" : "false\n");
+			result += (value.boolValue ? "true\n" : "false");
 			break;
 		case JSONValue::Type::OBJECT:
 			result += '\n' + tabs + "{\n";
 			for (u32 i = 0; i < value.objectValue.fields.size(); ++i)
 			{
 				result += value.objectValue.fields[i].Print(tabCount + 1);
+				if (i != value.objectValue.fields.size() - 1)
+				{
+					result += ",\n";
+				}
+				else
+				{
+					result += '\n';
+				}
 			}
-			result += tabs + "}\n";
+			result += tabs + "}";
 			break;
 		case JSONValue::Type::OBJECT_ARRAY:
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.objectArrayValue.size(); ++i)
 			{
 				result += value.objectArrayValue[i].Print(tabCount + 1);
+				if (i != value.objectArrayValue.size() - 1)
+				{
+					result += ",\n";
+				}
+				else
+				{
+					result += '\n';
+				}
 			}
-			result += tabs + "]\n";
+			result += tabs + "]";
 			break;
 		case JSONValue::Type::FIELD_ARRAY:
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.fieldArrayValue.size(); ++i)
 			{
 				result += value.fieldArrayValue[i].Print(tabCount + 1);
+				if (i != value.fieldArrayValue.size() - 1)
+				{
+					result += ",\n";
+				}
+				else
+				{
+					result += '\n';
+				}
 			}
-			result += tabs + "]\n";
+			result += tabs + "]";
 			break;
 		case JSONValue::Type::UNINITIALIZED:
 			result += "UNINITIALIZED TYPE\n";
@@ -256,9 +280,17 @@ namespace flex
 		for (u32 i = 0; i < fields.size(); ++i)
 		{
 			result += fields[i].Print(tabCount + 1);
+			if (i != fields.size() - 1)
+			{
+				result += ",\n";
+			}
+			else
+			{
+				result += '\n';
+			}
 		}
 
-		result += tabs + "}\n";
+		result += tabs + "}";
 
 		return result;
 	}

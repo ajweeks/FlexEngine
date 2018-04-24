@@ -38,8 +38,8 @@ namespace flex
 	}
 
 	MeshPrefab::MeshPrefab(MaterialID materialID, const std::string& name) :
+		GameObject(name, SerializableType::MESH),
 		m_MaterialID(materialID),
-		m_Name(name),
 		m_UVScale(1.0f, 1.0f)
 	{
 		if (name.empty())
@@ -83,6 +83,9 @@ namespace flex
 
 	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV, RenderObjectCreateInfo* optionalCreateInfo)
 	{
+		m_Type = MeshType::FILE;
+		m_Filepath = filepath;
+
 		m_VertexBufferData.Destroy();
 
 		m_Shape = PrefabShape::NONE;
@@ -287,15 +290,15 @@ namespace flex
 
 			if (optionalCreateInfo->transform != nullptr)
 			{
-				Logger::LogError("Can not override transform in LoadPrefabShape! Ignoring passed in data");
+				Logger::LogError("Can not override transform in LoadFromFile! Ignoring passed in data");
 			}
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
 			}
 		}
 
@@ -317,6 +320,8 @@ namespace flex
 
 	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
+		m_Type = MeshType::PREFAB;
+
 		m_VertexBufferData.Destroy();
 
 		m_Shape = shape;
@@ -879,6 +884,8 @@ namespace flex
 		} break;
 		case MeshPrefab::PrefabShape::SKYBOX:
 		{
+			// TODO: Move to separate class?
+			m_SerializableType = SerializableType::SKYBOX;
 			vertexBufferDataCreateInfo.positions_3D =
 			{
 				// Front
@@ -1000,7 +1007,7 @@ namespace flex
 		m_UVScale = glm::vec2(uScale, vScale);
 	}
 
-	MeshPrefab::PrefabShape MeshPrefab::PrefabShapeFromString(const std::string& prefabName)
+	MeshPrefab::PrefabShape MeshPrefab::StringToPrefabShape(const std::string& prefabName)
 	{
 		if (prefabName.compare("cube") == 0)
 		{
@@ -1034,7 +1041,33 @@ namespace flex
 
 	}
 
-	MeshPrefab::LoadedMesh::LoadedMesh()
+	std::string MeshPrefab::PrefabShapeToString(PrefabShape shape)
 	{
+		switch (shape)
+		{
+		case MeshPrefab::PrefabShape::CUBE:					return "cube";
+		case MeshPrefab::PrefabShape::GRID:					return "grid";
+		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:	return "world axis ground";
+		case MeshPrefab::PrefabShape::PLANE:				return "plane";
+		case MeshPrefab::PrefabShape::UV_SPHERE:			return "uv sphere";
+		case MeshPrefab::PrefabShape::SKYBOX:				return "skybox";
+		case MeshPrefab::PrefabShape::NONE:					return "NONE";
+		default:											return "UNHANDLED PREFAB SHAPE";
+		}
+	}
+
+	MeshPrefab::MeshType MeshPrefab::GetType() const
+	{
+		return m_Type;
+	}
+
+	MeshPrefab::PrefabShape MeshPrefab::GetShape() const
+	{
+		return m_Shape;
+	}
+
+	std::string MeshPrefab::GetFilepath() const
+	{
+		return m_Filepath;
 	}
 } // namespace flex

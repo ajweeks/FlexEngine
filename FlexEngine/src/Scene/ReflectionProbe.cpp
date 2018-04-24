@@ -7,7 +7,8 @@
 
 namespace flex
 {
-	ReflectionProbe::ReflectionProbe(bool visible) :
+	ReflectionProbe::ReflectionProbe(const std::string& name, bool visible) :
+		GameObject(name, SerializableType::REFLECTION_PROBE),
 		m_Visible(visible)
 	{
 	}
@@ -61,7 +62,8 @@ namespace flex
 			gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), m_Visible);
 		}
 
-		m_Capture = new GameObject();
+		std::string captureName = m_Name + " capture";
+		m_Capture = new GameObject(captureName, SerializableType::NONE);
 		RenderObjectCreateInfo captureObjectCreateInfo = {};
 		captureObjectCreateInfo.vertexBufferData = nullptr;
 		captureObjectCreateInfo.materialID = m_CaptureMatID;

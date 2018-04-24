@@ -81,7 +81,7 @@ namespace flex
 
 		// Reflection probes
 		// Generate last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe();
+		m_ReflectionProbe = new ReflectionProbe("default reflection probe");
 		AddChild(gameContext, m_ReflectionProbe);
 	}
 

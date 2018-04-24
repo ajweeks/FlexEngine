@@ -26,6 +26,13 @@ namespace flex
 
 		static void Shutdown();
 
+		enum class MeshType
+		{
+			PREFAB,
+			FILE,
+			NONE
+		};
+
 		enum class PrefabShape
 		{
 			CUBE,
@@ -62,13 +69,17 @@ namespace flex
 		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
 		void SetUVScale(real uScale, real vScale);
 
-		static PrefabShape PrefabShapeFromString(const std::string& prefabName);
+		static PrefabShape StringToPrefabShape(const std::string& prefabName);
+		static std::string PrefabShapeToString(PrefabShape shape);
+
+		MeshType GetType() const;
+
+		std::string GetFilepath() const;
+		PrefabShape GetShape() const;
 
 	private:
 		struct LoadedMesh
 		{
-			LoadedMesh();
-
 			Assimp::Importer importer = {};
 			const aiScene* scene = nullptr;
 		};
@@ -80,13 +91,14 @@ namespace flex
 		MaterialID m_MaterialID = InvalidMaterialID;
 
 		static std::string m_DefaultName;
-		std::string m_Name = "";
 
 		PrefabShape m_Shape = PrefabShape::NONE;
 
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
 
+		MeshType m_Type = MeshType::NONE;
+		std::string m_Filepath;
 
 		glm::vec2 m_UVScale = { 1,1 };
 

@@ -56,12 +56,20 @@ namespace flex
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidDirectionalLightID ((DirectionalLightID)u32_max)
 
-	// 
 	template<bool> struct StaticAssert;
 	template<> struct StaticAssert<true> {};
 
-#define STATIC_ASSERT(e) StaticAssert<(e)>{}
+	enum class SerializableType
+	{
+		MESH,
+		SKYBOX,
+		REFLECTION_PROBE,
+		POINT_LIGHT,
+		DIRECTIONAL_LIGHT,
+		NONE
+	};
 
+#define STATIC_ASSERT(e) StaticAssert<(e)>{}
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 

@@ -4,6 +4,8 @@
 
 #include <glm/vec3.hpp>
 
+#include <fstream>
+
 #include "Scene/GameObject.hpp"
 #include "Logger.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -28,16 +30,6 @@ namespace flex
 	{
 	}
 
-	std::string BaseScene::GetName() const
-	{
-		return m_Name;
-	}
-
-	PhysicsWorld* BaseScene::GetPhysicsWorld()
-	{
-		return m_PhysicsWorld;
-	}
-
 	void BaseScene::Initialize(const GameContext& gameContext)
 	{
 		JSONObject sceneRootObject;
@@ -51,6 +43,19 @@ namespace flex
 
 		Logger::LogInfo("Parsed scene file:");
 		Logger::LogInfo(sceneRootObject.Print(0));
+
+		int sceneVersion = sceneRootObject.GetInt("version");
+		if (sceneVersion != 1)
+		{
+			if (sceneRootObject.HasField("version"))
+			{
+				Logger::LogError("Unhandled scene version! Max handled version: 1, This version: " + std::to_string(sceneVersion));
+			}
+			else
+			{
+				Logger::LogError("Scene version missing from scene file. Assuming version 1");
+			}
+		}
 
 		std::string sceneName = sceneRootObject.GetString("name");
 		m_Name = sceneName;
@@ -84,8 +89,89 @@ namespace flex
 		gameContext.renderer->SetSkyboxMaterial(skyboxMatID);
 
 		// Generated last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe(true);
+		m_ReflectionProbe = new ReflectionProbe("default reflection probe", true);
 		AddChild(gameContext, m_ReflectionProbe);
+	}
+
+	void BaseScene::PostInitialize(const GameContext& gameContext)
+	{
+		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
+	}
+
+	void BaseScene::Destroy(const GameContext& gameContext)
+	{
+		for (auto child : m_Children)
+		{
+			if (child)
+			{
+				child->RootDestroy(gameContext);
+				SafeDelete(child);
+			}
+		}
+		m_Children.clear();
+
+		if (m_PhysicsWorld)
+		{
+			m_PhysicsWorld->Destroy();
+			SafeDelete(m_PhysicsWorld);
+		}
+	}
+
+	void BaseScene::Update(const GameContext& gameContext)
+	{
+		for (auto child : m_Children)
+		{
+			if (child)
+			{
+				child->RootUpdate(gameContext);
+			}
+		}
+	}
+
+	void BaseScene::RootInitialize(const GameContext& gameContext)
+	{
+		Initialize(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->Initialize(gameContext);
+		}
+	}
+
+	void BaseScene::RootPostInitialize(const GameContext& gameContext)
+	{
+		PostInitialize(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->PostInitialize(gameContext);
+		}
+	}
+
+	void BaseScene::RootUpdate(const GameContext& gameContext)
+	{
+		if (m_PhysicsWorld)
+		{
+			m_PhysicsWorld->Update(gameContext.deltaTime);
+		}
+
+		Update(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->RootUpdate(gameContext);
+		}
+	}
+
+	void BaseScene::RootDestroy(const GameContext& gameContext)
+	{
+		Destroy(gameContext);
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->RootDestroy(gameContext);
+			SafeDelete(*iter);
+		}
 	}
 
 	GameObject* BaseScene::CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj)
@@ -93,8 +179,11 @@ namespace flex
 		GameObject* result = nullptr;
 
 		std::string entityTypeStr = obj.GetString("type");
+		SerializableType entityType = StringToSerializableType(entityTypeStr);
 
-		if (entityTypeStr.compare("mesh") == 0)
+		switch (entityType)
+		{
+		case SerializableType::MESH:
 		{
 			std::string objectName = obj.GetString("name");
 
@@ -300,7 +389,7 @@ namespace flex
 					CullFace cullFace = StringToCullFace(cullFaceStr);
 					createInfo.cullFace = cullFace;
 				}
-				MeshPrefab::PrefabShape prefabShape = MeshPrefab::PrefabShapeFromString(meshPrefabName);
+				MeshPrefab::PrefabShape prefabShape = MeshPrefab::StringToPrefabShape(meshPrefabName);
 				mesh->LoadPrefabShape(gameContext, prefabShape, &createInfo);
 
 				mesh->GetTransform() = transform;
@@ -314,12 +403,20 @@ namespace flex
 			}
 			else
 			{
-				GameObject* gameObject = new GameObject();
-				// TODO: Throw error here?
-				result = gameObject;
+				Logger::LogError("Unhandled mesh object " + objectName);
 			}
-		}
-		else if (entityTypeStr.compare("point light") == 0)
+		} break;
+		case SerializableType::SKYBOX:
+		{
+			// TODO: UNIMPLEMENTED
+			//gameContext.renderer->SetSkyboxMaterial();
+		} break;
+		case SerializableType::REFLECTION_PROBE:
+		{
+			// TODO: UNIMPLEMENTED
+			//gameContext.renderer->SetReflectionProbeMaterial();
+		} break;
+		case SerializableType::POINT_LIGHT:
 		{
 			PointLight pointLight = {};
 
@@ -344,8 +441,8 @@ namespace flex
 			}
 
 			gameContext.renderer->InitializePointLight(pointLight);
-		}
-		else if (entityTypeStr.compare("directional light") == 0)
+		} break;
+		case SerializableType::DIRECTIONAL_LIGHT:
 		{
 			DirectionalLight dirLight = {};
 
@@ -370,20 +467,10 @@ namespace flex
 			}
 
 			gameContext.renderer->InitializeDirectionalLight(dirLight);
-		}
-		else if (entityTypeStr.compare("spot light") == 0)
-		{
-			// @Unsupported
-		}
-		else if (entityTypeStr.compare("skybox") == 0)
-		{
-
-			//gameContext.renderer->SetSkyboxMaterial();
-		}
-		else if (entityTypeStr.compare("reflection probe") == 0)
-		{
-
-			//gameContext.renderer->SetReflectionProbeMaterial();
+		} break;
+		case SerializableType::NONE:
+		default:
+			Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
 		}
 
 		if (result && obj.HasField("children"))
@@ -398,39 +485,149 @@ namespace flex
 		return result;
 	}
 
-	void BaseScene::PostInitialize(const GameContext& gameContext)
+	void BaseScene::SerializeToFile(const GameContext& gameContext)
 	{
-		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
-	}
+		JSONObject rootSceneObject = {};
 
-	void BaseScene::Destroy(const GameContext& gameContext)
-	{
+		i32 fileVersion = 1;
+
+		JSONField versionField = {};
+		versionField.label = "version";
+		versionField.value = JSONValue(fileVersion);
+		rootSceneObject.fields.push_back(versionField);
+
+		JSONField nameField = {};
+		nameField.label = "name";
+		nameField.value = JSONValue(m_Name);
+		rootSceneObject.fields.push_back(nameField);
+
+		JSONField childrenField = {};
+		childrenField.label = "entities";
+
+		std::vector<JSONObject> childrenArray;
 		for (auto child : m_Children)
 		{
-			if (child)
-			{
-				child->RootDestroy(gameContext);
-				SafeDelete(child);
-			}
+			childrenArray.push_back(SerializeObject(child, gameContext));
 		}
-		m_Children.clear();
+		childrenField.value = JSONValue(childrenArray);
 
-		if (m_PhysicsWorld)
+		rootSceneObject.fields.push_back(childrenField);
+
+		std::string fileContents = rootSceneObject.Print(0);
+
+		std::ofstream fileStream;
+		std::string fileName = m_JSONFilePath.substr(0, m_JSONFilePath.size() - 5);
+		std::string newFilePath = fileName + "_saved.json";
+		fileStream.open(newFilePath, std::ofstream::out | std::ofstream::trunc);
+
+		Logger::LogInfo("Serializing scene to " + fileName);
+
+		if (fileStream.is_open())
 		{
-			m_PhysicsWorld->Destroy();
-			SafeDelete(m_PhysicsWorld);
+			fileStream.write(fileContents.c_str(), fileContents.size());
 		}
+		else
+		{
+			Logger::LogError("Failed to open file for writing: " + m_JSONFilePath + ", Can't serialize scene");
+		}
+
+		Logger::LogInfo("Done serializing scene");
+
+		fileStream.close();
 	}
 
-	void BaseScene::Update(const GameContext& gameContext)
+	JSONObject BaseScene::SerializeObject(GameObject* gameObject, const GameContext& gameContext)
 	{
-		for (auto child : m_Children)
+		JSONObject object;
+		std::string childName = gameObject->m_Name;
+
+		JSONField childNameField = {};
+		childNameField.label = "name";
+		childNameField.value = JSONValue(childName);
+		object.fields.push_back(childNameField);
+
+		SerializableType childType = gameObject->m_SerializableType;
+		std::string childTypeStr = SerializableTypeToString(childType);
+
+		JSONField childTypeField = {};
+		childNameField.label = "type";
+		childNameField.value = JSONValue(childTypeStr);
+		object.fields.push_back(childNameField);
+
+		switch (childType)
 		{
-			if (child)
+		case SerializableType::MESH:
+		{
+			MeshPrefab* mesh = (MeshPrefab*)gameObject;
+
+			JSONField meshField = {};
+			meshField.label = "mesh";
+
+			JSONObject meshValue = {};
+
+			MeshPrefab::MeshType meshType = mesh->GetType();
+			if (meshType == MeshPrefab::MeshType::FILE)
 			{
-				child->RootUpdate(gameContext);
+				JSONField filePathField = {};
+				filePathField.label = "file";
+				filePathField.value = JSONValue(mesh->GetFilepath());
+
+				meshValue.fields.push_back(filePathField);
 			}
+			else if (meshType == MeshPrefab::MeshType::PREFAB)
+			{
+				JSONField prefabField = {};
+				prefabField.label = "prefab";
+				prefabField.value = JSONValue(MeshPrefab::PrefabShapeToString(mesh->GetShape()));
+
+				meshValue.fields.push_back(prefabField);
+			}
+			else
+			{
+				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
+			}
+
+			JSONField cullFaceField = {};
+			cullFaceField.label = "cull face";
+			RenderID meshRenderID = mesh->GetRenderID();
+			CullFace renderObjectCullFace = gameContext.renderer->GetRenderObjectCullFace(meshRenderID);
+			std::string cullFaceStr = CullFaceToString(renderObjectCullFace);
+			cullFaceField.value = JSONValue(cullFaceStr);
+
+			meshValue.fields.push_back(cullFaceField);
+
+			meshField.value = JSONValue(meshValue);
+
+			object.fields.push_back(meshField);
+		} break;
+		case SerializableType::SKYBOX:
+		{
+			// TODO: UNIMPLEMENTED
+		} break;
+		case SerializableType::REFLECTION_PROBE:
+		{
+			// TODO: UNIMPLEMENTED
+		} break;
+		case SerializableType::POINT_LIGHT:
+		{
+		} break;
+		case SerializableType::DIRECTIONAL_LIGHT:
+		{
+		} break;
+		case SerializableType::NONE:
+		{
+			// Assume this type is intentionally non-serializable
+		} break;
+		default:
+		{
+			Logger::LogError("Unhandled serializable type encountered in BaseScene::SerializeToFile " + childTypeStr);
+		} break;
 		}
+
+		// TODO: Also serialize children
+		//child->m_Children;
+
+		return object;
 	}
 
 	void BaseScene::AddChild(const GameContext& gameContext, GameObject* gameObject)
@@ -492,49 +689,14 @@ namespace flex
 		}
 	}
 
-	void BaseScene::RootInitialize(const GameContext& gameContext)
+	std::string BaseScene::GetName() const
 	{
-		Initialize(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->Initialize(gameContext);
-		}
+		return m_Name;
 	}
 
-	void BaseScene::RootPostInitialize(const GameContext& gameContext)
+	PhysicsWorld* BaseScene::GetPhysicsWorld()
 	{
-		PostInitialize(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->PostInitialize(gameContext);
-		}
+		return m_PhysicsWorld;
 	}
 
-	void BaseScene::RootUpdate(const GameContext& gameContext)
-	{
-		if (m_PhysicsWorld)
-		{
-			m_PhysicsWorld->Update(gameContext.deltaTime);
-		}
-
-		Update(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootUpdate(gameContext);
-		}
-	}
-
-	void BaseScene::RootDestroy(const GameContext& gameContext)
-	{
-		Destroy(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootDestroy(gameContext);
-			SafeDelete(*iter);
-		}
-	}
 } // namespace flex

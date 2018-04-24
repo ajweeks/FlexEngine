@@ -10,7 +10,7 @@ namespace flex
 	class GameObject
 	{
 	public:
-		GameObject(GameObject* parent = nullptr);
+		GameObject(const std::string& name, SerializableType serializableType, GameObject* parent = nullptr);
 		virtual ~GameObject();
 
 		void SetParent(GameObject* parent);
@@ -34,7 +34,13 @@ namespace flex
 		// TODO: Make public?
 		RenderID m_RenderID = InvalidRenderID;
 
+		std::string m_Name;
+		SerializableType m_SerializableType = SerializableType::NONE;
+
 	private:
+		// Serializing class
+		friend class BaseClass;
+
 		void RootInitialize(const GameContext& gameContext);
 		void RootUpdate(const GameContext& gameContext);
 		void RootDestroy(const GameContext& gameContext);

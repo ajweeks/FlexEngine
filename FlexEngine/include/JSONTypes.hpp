@@ -45,7 +45,7 @@ namespace flex
 
 		static Type TypeFromChar(char c, const std::string& stringAfter);
 
-		JSONValue();
+		explicit JSONValue();
 		explicit JSONValue(const std::string& strValue);
 		explicit JSONValue(i32 intValue);
 		explicit JSONValue(real floatValue);

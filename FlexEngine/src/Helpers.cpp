@@ -357,6 +357,48 @@ namespace flex
 		}
 	}
 
+	std::string SerializableTypeToString(SerializableType type)
+	{
+		switch (type)
+		{
+		case SerializableType::MESH:				return "mesh";
+		case SerializableType::SKYBOX:				return "skybox";
+		case SerializableType::REFLECTION_PROBE:	return "reflection probe";
+		case SerializableType::POINT_LIGHT:			return "point light";
+		case SerializableType::DIRECTIONAL_LIGHT:	return "directional light";
+		case SerializableType::NONE:				return "NONE";
+		default:									return "UNHANDLED SERIALIZABLE TYPE";
+		}
+	}
+
+	SerializableType StringToSerializableType(const std::string& serializableTypeStr)
+	{
+		if (serializableTypeStr.compare("mesh") == 0)
+		{
+			return SerializableType::MESH;
+		}
+		else if (serializableTypeStr.compare("skybox") == 0)
+		{
+			return SerializableType::SKYBOX;
+		}
+		else if (serializableTypeStr.compare("reflection probe") == 0)
+		{
+			return SerializableType::REFLECTION_PROBE;
+		}
+		else if (serializableTypeStr.compare("point light") == 0)
+		{
+			return SerializableType::POINT_LIGHT;
+		}
+		else if (serializableTypeStr.compare("directional light") == 0)
+		{
+			return SerializableType::DIRECTIONAL_LIGHT;
+		}
+		else
+		{
+			return SerializableType::NONE;
+		}
+	}
+
 	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)
 	{
 		filePath = hdrFilePath;

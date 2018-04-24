@@ -9,7 +9,7 @@ namespace flex
 	class ReflectionProbe : public GameObject
 	{
 	public:
-		ReflectionProbe(bool visible = true);
+		ReflectionProbe(const std::string& name, bool visible = true);
 		virtual ~ReflectionProbe();
 
 		virtual void Initialize(const GameContext& gameContext) override;

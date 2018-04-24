@@ -1,0 +1,38 @@
+{
+	"version" : 1,
+	"name" : "scene_01",
+	"entities" : 
+	[
+		{
+			"name" : "Grid",
+			"type" : "mesh",
+			"mesh" : 
+			{
+				"prefab" : "grid",
+				"cull face" : "back"
+			}
+		},
+		{
+			"name" : "Sphere",
+			"type" : "mesh",
+			"mesh" : 
+			{
+				"file" : "../../../FlexEngine/resources/models/ico-sphere.gltf",
+				"cull face" : "back"
+			}
+		},
+		{
+			"name" : "chamfer box",
+			"type" : "mesh",
+			"mesh" : 
+			{
+				"file" : "../../../FlexEngine/resources/models/chamfer-box.gltf",
+				"cull face" : "back"
+			}
+		},
+		{
+			"name" : "default reflection probe",
+			"type" : "reflection probe"
+		}
+	]
+}

@@ -5,7 +5,9 @@
 
 namespace flex
 {
-	GameObject::GameObject(GameObject* parent) :
+	GameObject::GameObject(const std::string& name, SerializableType serializableType, GameObject* parent) :
+		m_Name(name),
+		m_SerializableType(serializableType),
 		m_Parent(parent)
 	{
 		m_Transform.SetAsIdentity();

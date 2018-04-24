@@ -394,12 +394,10 @@ namespace flex
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.window->Update(m_GameContext);
 
-			if (m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_TAB))
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
+				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 			{
-				if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_TAB))
-					Logger::LogInfo("tab pressed");
-				else 
-					Logger::LogInfo("tab");
+				m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext);
 			}
 
 			// TODO: Consolidate functions?
