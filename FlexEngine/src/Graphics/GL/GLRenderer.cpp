@@ -635,7 +635,7 @@ namespace flex
 			renderObject->renderID = renderID;
 			InsertNewRenderObject(renderObject);
 			renderObject->materialID = createInfo->materialID;
-			renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);
+			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
 			renderObject->enableCulling = createInfo->enableCulling ? GL_TRUE : GL_FALSE;
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
@@ -2666,6 +2666,17 @@ namespace flex
 					}
 				}
 			}
+		}
+
+		CullFace GLRenderer::GetRenderObjectCullFace(RenderID renderID)
+		{
+			GLRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				return GLCullFaceToCullFace(renderObject->cullFace);
+			}
+
+			return CullFace::NONE;
 		}
 
 		void GLRenderer::SetVSyncEnabled(bool enableVSync)

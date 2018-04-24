@@ -13,6 +13,7 @@
 
 #include "imgui.h"
 
+#include "Types.hpp"
 
 namespace flex
 {
@@ -110,6 +111,7 @@ namespace flex
 	glm::vec4 PasteColor4FromClipboard();
 
 	CullFace StringToCullFace(const std::string& str);
+	std::string CullFaceToString(CullFace cullFace);
 
 	void ToLower(std::string& str);
 	void ToUpper(std::string& str);

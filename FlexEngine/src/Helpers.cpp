@@ -329,6 +329,18 @@ namespace flex
 		}
 	}
 
+	std::string CullFaceToString(CullFace cullFace)
+	{
+		switch (cullFace)
+		{
+		case CullFace::BACK:			return "back";
+		case CullFace::FRONT:			return "front";
+		case CullFace::FRONT_AND_BACK:	return "front and back";
+		case CullFace::NONE:			return "NONE";
+		default:						return "UNHANDLED CULL FACE";
+		}
+	}
+
 	void ToLower(std::string& str)
 	{
 		for (char& c : str)

@@ -52,6 +52,7 @@ namespace flex
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
 			virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) override;
+			virtual CullFace GetRenderObjectCullFace(RenderID renderID) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 			virtual bool GetVSyncEnabled() override;

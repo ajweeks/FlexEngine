@@ -2722,6 +2722,17 @@ namespace flex
 			}
 		}
 
+		CullFace VulkanRenderer::GetRenderObjectCullFace(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				return VkCullModeToCullFace(renderObject->cullMode);
+			}
+
+			return CullFace::NONE;
+		}
+
 		void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
 		{
 			m_VSyncEnabled = enableVSync;

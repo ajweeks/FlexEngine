@@ -449,6 +449,9 @@ namespace flex
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);
 
+		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology);
+		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode);
+
 		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo,
 			const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback);
 

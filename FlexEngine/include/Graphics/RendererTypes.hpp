@@ -20,7 +20,8 @@ namespace flex
 	{
 		COLOR =   (1 << 0),
 		DEPTH =   (1 << 1),
-		STENCIL = (1 << 2)
+		STENCIL = (1 << 2),
+		NONE
 	};
 
 	enum class CullFace
@@ -47,13 +48,15 @@ namespace flex
 	enum class BufferTarget
 	{
 		ARRAY_BUFFER,
-		ELEMENT_ARRAY_BUFFER
+		ELEMENT_ARRAY_BUFFER,
+		NONE
 	};
 
 	enum class UsageFlag
 	{
 		STATIC_DRAW,
-		DYNAMIC_DRAW
+		DYNAMIC_DRAW,
+		NONE
 	};
 
 	enum class DataType
@@ -65,7 +68,8 @@ namespace flex
 		INT,
 		UNSIGNED_INT,
 		FLOAT,
-		DOUBLE
+		DOUBLE,
+		NONE
 	};
 
 	enum class TopologyMode
@@ -76,7 +80,8 @@ namespace flex
 		LINE_STRIP,
 		TRIANGLE_LIST,
 		TRIANGLE_STRIP,
-		TRIANGLE_FAN
+		TRIANGLE_FAN,
+		NONE
 	};
 
 	struct DirectionalLight

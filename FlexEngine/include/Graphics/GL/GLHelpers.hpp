@@ -172,8 +172,16 @@ namespace flex
 		GLenum DataTypeToGLType(DataType dataType);
 		GLenum UsageFlagToGLUsageFlag(UsageFlag usage);
 		GLenum TopologyModeToGLMode(TopologyMode topology);
-		u32 CullFaceToGLMode(CullFace cullFace);
+		u32 CullFaceToGLCullFace(CullFace cullFace);
 		GLenum DepthTestFuncToGlenum(DepthTestFunc func);
+
+		bool GLBooleanToBool(GLboolean boolean);
+		BufferTarget GLTargetToBufferTarget(GLuint target);
+		DataType GLTypeToDataType(GLenum type);
+		UsageFlag GLUsageFlagToUsageFlag(GLenum usage);
+		TopologyMode GLModeToTopologyMode(GLenum mode);
+		CullFace GLCullFaceToCullFace(u32 cullFace);
+		DepthTestFunc GlenumToDepthTestFunc(GLenum depthTestFunc);
 
 	} // namespace gl
 } // namespace flex
