@@ -104,13 +104,9 @@ namespace flex
 
 	void GLFWWindowWrapper::PostInitialize()
 	{
-		// TODO: Use this for ImGui scale!
-		auto monitor = glfwGetPrimaryMonitor();
-
 		// TODO: Set window location/size based on previous session (load from disk)
 		glfwGetWindowSize(m_Window, &m_LastWindowedSize.x, &m_LastWindowedSize.y);
 		glfwGetWindowPos(m_Window, &m_LastWindowedPos.x, &m_LastWindowedPos.y);
-		
 	}
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo(GameContext& gameContext)
