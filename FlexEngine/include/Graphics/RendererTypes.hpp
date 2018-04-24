@@ -87,7 +87,11 @@ namespace flex
 		glm::vec4 color = glm::vec4(1.0f);
 
 		u32 enabled = 1;
-		real padding[3];
+
+		// This value is not uploaded to the GPU, it's just multiplied with the color
+		real brightness = 1.0f;
+
+		real padding[2];
 	};
 
 	struct PointLight
@@ -97,7 +101,11 @@ namespace flex
 		glm::vec4 color = glm::vec4(1.0f);
 
 		u32 enabled = 1;
-		real padding[3];
+
+		// This value is not uploaded to the GPU, it's just multiplied with the color
+		real brightness = 1.0f;
+
+		real padding[2];
 	};
 
 	// TODO: Is setting all the members to false necessary?

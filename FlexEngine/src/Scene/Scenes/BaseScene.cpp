@@ -335,7 +335,7 @@ namespace flex
 			if (obj.HasField("brightness"))
 			{
 				real brightness = obj.GetFloat("brightness");
-				//pointLight.brightness = ParseFloat(brightnessStr);
+				pointLight.brightness = brightness;
 			}
 
 			if (obj.HasField("enabled"))

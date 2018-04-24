@@ -23,7 +23,7 @@ struct PointLight
 	vec4 position;
 	vec4 color;
 	bool enabled;
-	float padding[3];
+	float padding[2];
 };
 #define NUMBER_POINT_LIGHTS 4
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];

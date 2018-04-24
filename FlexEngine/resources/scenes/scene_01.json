@@ -38,8 +38,8 @@
       ]
     },
     {
-      "name": "Sphere",
-      "type" :  "mesh",
+      "name" : "Sphere",
+      "type" : "mesh",
       "mesh": {
         "file": "models/ico-sphere.gltf",
         "cullFace": "front"
@@ -64,7 +64,7 @@
         "constMetallic": 1,
         "constRoughness": 0.25,
         "constAO": 1,
-        "constAlbedo": "1, 0, 0"
+        "constAlbedo": "0.78, 0.12, 0.11"
       },
       "children": [
         {
@@ -82,9 +82,12 @@
             "scale": "1.0,1.0,1.0"
           },
           "material": {
-            "name": "color",
-            "shader": "color",
-            "colorMultiplier": "1.5, 0.9, 0.1, 1"
+            "name": "pbr",
+            "shader": "pbr",
+            "constMetallic": 0,
+            "constRoughness": 0.5,
+            "constAO": 1,
+            "constAlbedo": "0.1, 0.76, 0.81"
           },
           "children": [
             {
@@ -103,10 +106,10 @@
               "material": {
                 "name": "pbr",
                 "shader": "pbr",
-                "constMetallic": 1,
-                "constRoughness": 0,
+                "constMetallic": 0,
+                "constRoughness": 1,
                 "constAO": 1,
-                "constAlbedo": "1, 1, 1"
+                "constAlbedo": "0.48, 0.76, 0.81"
               }
             }
           ]
@@ -125,9 +128,12 @@
             "scale": "1.0,1.0,1.0"
           },
           "material": {
-            "name": "color",
-            "shader": "color",
-            "colorMultiplier": "1, 0.4, 1, 1"
+            "name": "pbr",
+            "shader": "pbr",
+            "constMetallic": 1,
+            "constRoughness": 0,
+            "constAO": 1,
+            "constAlbedo": "0.6, 0.65, 0.4"
           }
         }
       ]
@@ -136,7 +142,7 @@
       "name": "chamfer box",
       "type": "mesh",
       "mesh": {
-        "file": "models/chamfer-box.glb",
+        "file": "models/chamfer-box.gltf",
         "cullFace" : "back"
       },
       "transform": {
@@ -145,9 +151,12 @@
         "scale": "1.5,1.5,1.5"
       },
       "material": {
-        "name": "color",
-        "shader": "color",
-        "colorMultiplier": "0.1, 0.4, 1, 0.5"
+        "name": "pbr",
+        "shader": "pbr",
+        "constMetallic": 0,
+        "constRoughness": 0.2,
+        "constAO": 1,
+        "constAlbedo": "0.8, 0.54, 0.1"
       }
     },
     {

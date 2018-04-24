@@ -2437,7 +2437,7 @@ namespace flex
 					CheckGLErrorMessages();
 					SetVec4f(material->material.shaderID, "dirLight.direction", m_DirectionalLight.direction);
 					CheckGLErrorMessages();
-					SetVec4f(material->material.shaderID, "dirLight.color", m_DirectionalLight.color);
+					SetVec4f(material->material.shaderID, "dirLight.color", m_DirectionalLight.color * m_DirectionalLight.brightness);
 					CheckGLErrorMessages();
 				}
 				else
@@ -2461,7 +2461,7 @@ namespace flex
 						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
 						CheckGLErrorMessages();
 
-						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color);
+						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color * m_PointLights[i].brightness);
 						CheckGLErrorMessages();
 					}
 					else
@@ -3035,6 +3035,8 @@ SafeDelete(renderObject);
 
 						ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
 
+						ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
+
 						ImGui::TreePop();
 					}
 
@@ -3052,6 +3054,8 @@ SafeDelete(renderObject);
 							ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
 
 							ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
+
+							ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
 
 							ImGui::TreePop();
 						}
