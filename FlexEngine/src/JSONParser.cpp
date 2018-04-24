@@ -10,7 +10,7 @@
 
 namespace flex
 {
-	bool JSONParser::Parse(const std::string& filePath, ParsedJSONFile& parsedFile)
+	bool JSONParser::Parse(const std::string& filePath, JSONObject& rootObject)
 	{
 		std::ifstream ifStream(filePath, std::fstream::ate);
 		if (!ifStream)
@@ -86,7 +86,7 @@ namespace flex
 		//Logger::LogInfo("Cleaned JSON file:");
 		//Logger::LogInfo(fileContents);
 
-		parsedFile.rootObject = {};
+		rootObject = {};
 
 		i32 fileContentOffset = 0;
 		bool parseSucceeded = true;
@@ -95,7 +95,7 @@ namespace flex
 		{
 			JSONField field;
 			parsing = ParseField(fileContents, &fileContentOffset, field);
-			parsedFile.rootObject.fields.push_back(field);
+			rootObject.fields.push_back(field);
 
 			parseSucceeded |= parsing;
 

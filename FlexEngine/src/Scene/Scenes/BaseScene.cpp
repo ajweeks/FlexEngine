@@ -40,8 +40,8 @@ namespace flex
 
 	void BaseScene::Initialize(const GameContext& gameContext)
 	{
-		ParsedJSONFile parsedFile;
-		if (!JSONParser::Parse(m_JSONFilePath, parsedFile))
+		JSONObject sceneRootObject;
+		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
 		{
 			Logger::LogError("Failed to parse scene JSON file \"" + m_JSONFilePath + "\"");
 			return;
@@ -50,13 +50,13 @@ namespace flex
 		Logger::LogInfo("Loading scene from JSON");
 
 		Logger::LogInfo("Parsed scene file:");
-		Logger::LogInfo(parsedFile.rootObject.Print(0));
+		Logger::LogInfo(sceneRootObject.Print(0));
 
-		std::string sceneName = parsedFile.rootObject.GetString("name");
+		std::string sceneName = sceneRootObject.GetString("name");
 		m_Name = sceneName;
 
 		// This holds all the entities in the scene which do not have a parent
-		std::vector<JSONObject> rootEntities = parsedFile.rootObject.GetObjectArray("entities");
+		std::vector<JSONObject> rootEntities = sceneRootObject.GetObjectArray("entities");
 		for (const auto& rootEntity : rootEntities)
 		{
 			AddChild(gameContext, CreateEntityFromJSON(gameContext, rootEntity));

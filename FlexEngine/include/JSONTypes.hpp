@@ -71,9 +71,4 @@ namespace flex
 
 		std::string Print(i32 tabCount);
 	};
-
-	struct ParsedJSONFile
-	{
-		JSONObject rootObject;
-	};
 } // namespace flex
