@@ -14,7 +14,7 @@
 
 namespace flex
 {
-	RigidBody::RigidBody(int group, int mask) :
+	RigidBody::RigidBody(i32 group, i32 mask) :
 		m_Group(group),
 		m_Mask(mask)
 	{
@@ -42,7 +42,7 @@ namespace flex
 
 		m_RigidBody = new btRigidBody(info);
 
-		int flags = m_RigidBody->getFlags();
+		i32 flags = m_RigidBody->getFlags();
 		if (isKinematic)
 		{
 			flags |= btCollisionObject::CF_KINEMATIC_OBJECT;

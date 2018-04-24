@@ -70,7 +70,7 @@ namespace flex
 		btVector3 hitPos;
 		float pickingDist;
 		btRigidBody* pickedBody = nullptr;
-		int savedState;
+		i32 savedState;
 		btTypedConstraint* pickedConstraint = nullptr;
 		Logger::LogInfo("click!");
 
@@ -114,7 +114,7 @@ namespace flex
 		return false;
 	}
 
-	btVector3 PhysicsWorld::GetRayTo(const GameContext& gameContext, int x, int y)
+	btVector3 PhysicsWorld::GetRayTo(const GameContext& gameContext, i32 x, i32 y)
 	{
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
 		btVector3 rayFrom = ToBtVec3(camera->GetPosition());

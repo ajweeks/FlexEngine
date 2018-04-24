@@ -322,7 +322,7 @@ namespace flex
 
 				btVector3 cameraPos = ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
 				btVector3 rayStart(cameraPos);
-				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, (int)mousePos.x, (int)mousePos.y);
+				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
 
 				if (physicsWorld->PickBody(rayStart, rayEnd))
 				{
@@ -496,8 +496,8 @@ namespace flex
 
 				static const char* windowModeStr = "##WindowMode";
 				static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
-				static const int windowModeCount = 2;
-				int currentItemIndex = (int)m_GameContext.window->GetFullscreenMode();
+				static const i32 windowModeCount = 2;
+				i32 currentItemIndex = (i32)m_GameContext.window->GetFullscreenMode();
 				if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
 				{
 					Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);

@@ -10,7 +10,7 @@ namespace flex
 	class RigidBody
 	{
 	public:
-		RigidBody(int group = 1, int mask = 1);
+		RigidBody(i32 group = 1, i32 mask = 1);
 		virtual ~RigidBody();
 
 		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform, bool isKinematic = false, bool isStatic = false);
@@ -32,8 +32,8 @@ namespace flex
 		btRigidBody* m_RigidBody = nullptr;
 		btMotionState* m_MotionState = nullptr;
 
-		int m_Group = 0;
-		int m_Mask = 0;
+		i32 m_Group = 0;
+		i32 m_Mask = 0;
 
 		real m_Mass = 0.0f;
 

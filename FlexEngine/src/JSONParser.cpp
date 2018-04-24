@@ -221,7 +221,7 @@ namespace flex
 			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart);
 			size_t intCharCount = nextNonAlphaNumeric - intStart;
 			std::string intStr = fileContents.substr(intStart, intCharCount);
-			int intValue = stoi(intStr);
+			i32 intValue = stoi(intStr);
 			field.value = JSONValue(intValue);
 
 			*offset = nextNonAlphaNumeric;
