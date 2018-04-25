@@ -26,7 +26,35 @@
 			"mesh" : 
 			{
 				"prefab" : "grid"
-			}
+			},
+			"children" : 
+			[
+				{
+					"name" : "World Origin",
+					"type" : "mesh",
+					"transform" : 
+					{
+						"space" : true
+,
+						"position" : "0.000000, -0.090000, 0.000000",
+						"rotation" : "0.000000, -0.000000, 0.000000",
+						"scale" : "1.000000, 1.000000, 1.000000"
+					},
+					"material" : 
+					{
+						"name" : "color",
+						"shader" : "color",
+						"const albedo" : "0.000000, 0.000000, 0.000000",
+						"const metallic" : 0.000000,
+						"const roughness" : 0.000000,
+						"const ao" : 0.000000
+					},
+					"mesh" : 
+					{
+						"prefab" : "world axis ground"
+					}
+				}
+			]
 		},
 		{
 			"name" : "Sphere",
@@ -55,7 +83,100 @@
 			"mesh" : 
 			{
 				"file" : "../../../FlexEngine/resources/models/ico-sphere.gltf"
-			}
+			},
+			"children" : 
+			[
+				{
+					"name" : "cone child test 01",
+					"type" : "mesh",
+					"transform" : 
+					{
+						"space" : true
+,
+						"position" : "10.000000, 0.000000, 0.000000",
+						"rotation" : "0.000000, -0.000000, 0.000000",
+						"scale" : "1.000000, 1.000000, 1.000000"
+					},
+					"material" : 
+					{
+						"name" : "pbr",
+						"shader" : "pbr",
+						"const albedo" : "0.100000, 0.760000, 0.810000",
+						"const metallic" : 0.000000,
+						"const roughness" : 0.000000,
+						"const ao" : 0.000000,
+						"enable albedo sampler" : false,
+						"enable metallic sampler" : false,
+						"enable roughness sampler" : false,
+						"enable ao sampler" : false
+					},
+					"mesh" : 
+					{
+						"file" : "../../../FlexEngine/resources/models/cone.gltf"
+					},
+					"children" : 
+					[
+						{
+							"name" : "sphere child child!",
+							"type" : "mesh",
+							"transform" : 
+							{
+								"space" : true
+,
+								"position" : "10.000000, 0.000000, 0.000000",
+								"rotation" : "0.000000, -0.000000, 0.000000",
+								"scale" : "1.000000, 1.000000, 1.000000"
+							},
+							"material" : 
+							{
+								"name" : "pbr",
+								"shader" : "pbr",
+								"const albedo" : "0.480000, 0.760000, 0.810000",
+								"const metallic" : 0.000000,
+								"const roughness" : 0.000000,
+								"const ao" : 0.000000,
+								"enable albedo sampler" : false,
+								"enable metallic sampler" : false,
+								"enable roughness sampler" : false,
+								"enable ao sampler" : false
+							},
+							"mesh" : 
+							{
+								"file" : "../../../FlexEngine/resources/models/uv-sphere.gltf"
+							}
+						}
+					]
+				},
+				{
+					"name" : "sphere child test 02",
+					"type" : "mesh",
+					"transform" : 
+					{
+						"space" : true
+,
+						"position" : "6.000000, 0.000000, 6.000000",
+						"rotation" : "0.000000, -0.000000, 0.000000",
+						"scale" : "1.000000, 1.000000, 1.000000"
+					},
+					"material" : 
+					{
+						"name" : "pbr",
+						"shader" : "pbr",
+						"const albedo" : "0.600000, 0.650000, 0.400000",
+						"const metallic" : 0.000000,
+						"const roughness" : 0.000000,
+						"const ao" : 0.000000,
+						"enable albedo sampler" : false,
+						"enable metallic sampler" : false,
+						"enable roughness sampler" : false,
+						"enable ao sampler" : false
+					},
+					"mesh" : 
+					{
+						"file" : "../../../FlexEngine/resources/models/ico-sphere.gltf"
+					}
+				}
+			]
 		},
 		{
 			"name" : "chamfer box",
@@ -88,7 +209,44 @@
 		},
 		{
 			"name" : "default reflection probe",
-			"type" : "reflection probe"
+			"type" : "reflection probe",
+			"children" : 
+			[
+				{
+					"name" : "Reflection probe",
+					"type" : "mesh",
+					"transform" : 
+					{
+						"space" : true
+,
+						"position" : "0.000000, 0.000000, 0.000000",
+						"rotation" : "0.000000, -0.000000, 0.000000",
+						"scale" : "1.500000, 1.500000, 1.500000"
+					},
+					"material" : 
+					{
+						"name" : "Reflection probe ball",
+						"shader" : "Reflection probe ball",
+						"const albedo" : "0.750000, 0.750000, 0.750000",
+						"const roughness" : 0.000000,
+						"enable albedo sampler" : false,
+						"enable metallic sampler" : false,
+						"enable roughness sampler" : false,
+						"enable ao sampler" : false
+					},
+					"mesh" : 
+					{
+						"file" : "../../../FlexEngine/resources/models/sphere.fbx"
+					},
+					"children" : 
+					[
+						{
+							"name" : "default reflection probe capture",
+							"type" : "NONE"
+						}
+					]
+				}
+			]
 		}
 	]
 }

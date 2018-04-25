@@ -715,8 +715,21 @@ namespace flex
 		} break;
 		}
 
-		// TODO: Also serialize children
-		//child->m_Children;
+		if (!gameObject->m_Children.empty())
+		{
+			JSONField childrenField = {};
+			childrenField.label = "children";
+
+			std::vector<JSONObject> children;
+
+			for (GameObject* child : gameObject->m_Children)
+			{
+				children.push_back(SerializeObject(child, gameContext));
+			}
+
+			childrenField.value = JSONValue(children);
+			object.fields.push_back(childrenField);
+		}
 
 		return object;
 	}
