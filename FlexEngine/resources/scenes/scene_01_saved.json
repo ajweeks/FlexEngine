@@ -21,7 +21,7 @@
 				{
 					"name" : "color",
 					"shader" : "color",
-					"const albedo" : "0.000000, 0.000000, 0.000000, 0.000000",
+					"const albedo" : "0.000000, 0.000000, 0.000000",
 					"const metallic" : 0.000000,
 					"const roughness" : 0.000000,
 					"const ao" : 0.000000
@@ -46,7 +46,7 @@
 				{
 					"name" : "pbr",
 					"shader" : "pbr",
-					"const albedo" : "0.000000, 0.000000, 0.000000, 0.000000",
+					"const albedo" : "0.780000, 0.120000, 0.110000",
 					"const metallic" : 0.000000,
 					"const roughness" : 0.000000,
 					"const ao" : 0.000000,
@@ -75,7 +75,7 @@
 				{
 					"name" : "pbr",
 					"shader" : "pbr",
-					"const albedo" : "0.000000, 0.000000, 0.000000, 0.000000",
+					"const albedo" : "0.800000, 0.540000, 0.100000",
 					"const metallic" : 0.000000,
 					"const roughness" : 0.000000,
 					"const ao" : 0.000000,

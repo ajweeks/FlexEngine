@@ -234,14 +234,14 @@ namespace flex
 
 				std::vector<FilePathMaterialParam> filePathParams =
 				{
-					{ &matCreateInfo.diffuseTexturePath, "diffuseTexturePath" },
-					{ &matCreateInfo.normalTexturePath, "normalTexturePath" },
-					{ &matCreateInfo.albedoTexturePath, "albedoTexturePath" },
-					{ &matCreateInfo.metallicTexturePath, "metallicTexturePath" },
-					{ &matCreateInfo.roughnessTexturePath, "roughnessTexturePath" },
-					{ &matCreateInfo.aoTexturePath, "aoTexturePath" },
-					{ &matCreateInfo.hdrEquirectangularTexturePath, "hdrEquirectangularTexturePath" },
-					{ &matCreateInfo.environmentMapPath, "environmentMapPath" },
+					{ &matCreateInfo.diffuseTexturePath, "diffuse texture filepath" },
+					{ &matCreateInfo.normalTexturePath, "normal texture filepath" },
+					{ &matCreateInfo.albedoTexturePath, "albedo texture filepath" },
+					{ &matCreateInfo.metallicTexturePath, "metallic texture filepath" },
+					{ &matCreateInfo.roughnessTexturePath, "roughness texture filepath" },
+					{ &matCreateInfo.aoTexturePath, "ao texture filepath" },
+					{ &matCreateInfo.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
+					{ &matCreateInfo.environmentMapPath, "environment map filepath" },
 				};
 
 				for (u32 i = 0; i < filePathParams.size(); ++i)
@@ -261,32 +261,32 @@ namespace flex
 
 				std::vector<BoolMaterialParam> boolParams =
 				{
-					{ &matCreateInfo.generateDiffuseSampler, "generateDiffuseSampler" },
-					{ &matCreateInfo.enableDiffuseSampler, "enableDiffuseSampler" },
-					{ &matCreateInfo.generateNormalSampler, "generateNormalSampler" },
-					{ &matCreateInfo.enableNormalSampler, "enableNormalSampler" },
-					{ &matCreateInfo.generateAlbedoSampler, "generateAlbedoSampler" },
-					{ &matCreateInfo.enableAlbedoSampler, "enableAlbedoSampler" },
-					{ &matCreateInfo.generateMetallicSampler, "generateMetallicSampler" },
-					{ &matCreateInfo.enableMetallicSampler, "enableMetallicSampler" },
-					{ &matCreateInfo.generateRoughnessSampler, "generateRoughnessSampler" },
-					{ &matCreateInfo.enableRoughnessSampler, "enableRoughnessSampler" },
-					{ &matCreateInfo.generateAOSampler, "generateAOSampler" },
-					{ &matCreateInfo.enableAOSampler, "enableAOSampler" },
-					{ &matCreateInfo.generateHDREquirectangularSampler, "generateHDREquirectangularSampler" },
-					{ &matCreateInfo.enableHDREquirectangularSampler, "enableHDREquirectangularSampler" },
-					{ &matCreateInfo.generateHDRCubemapSampler, "generateHDRCubemapSampler" },
-					{ &matCreateInfo.enableIrradianceSampler, "enableIrradianceSampler" },
-					{ &matCreateInfo.generateIrradianceSampler, "generateIrradianceSampler" },
-					{ &matCreateInfo.enableBRDFLUT, "enableBRDFLUT" },
-					{ &matCreateInfo.renderToCubemap, "renderToCubemap" },
-					{ &matCreateInfo.enableCubemapSampler, "enableCubemapSampler" },
-					{ &matCreateInfo.enableCubemapTrilinearFiltering, "enableCubemapTrilinearFiltering" },
-					{ &matCreateInfo.generateCubemapSampler, "generateCubemapSampler" },
-					{ &matCreateInfo.generateCubemapDepthBuffers, "generateCubemapDepthBuffers" },
-					{ &matCreateInfo.generatePrefilteredMap, "generatePrefilteredMap" },
-					{ &matCreateInfo.enablePrefilteredMap, "enablePrefilteredMap" },
-					{ &matCreateInfo.generateReflectionProbeMaps, "generateReflectionProbeMaps" },
+					{ &matCreateInfo.generateDiffuseSampler, "generate diffuse sampler" },
+					{ &matCreateInfo.enableDiffuseSampler, "enable diffuse sampler" },
+					{ &matCreateInfo.generateNormalSampler, "generate normal sampler" },
+					{ &matCreateInfo.enableNormalSampler, "enable normal sampler" },
+					{ &matCreateInfo.generateAlbedoSampler, "generate albedo sampler" },
+					{ &matCreateInfo.enableAlbedoSampler, "enable albedo sampler" },
+					{ &matCreateInfo.generateMetallicSampler, "generate metallic sampler" },
+					{ &matCreateInfo.enableMetallicSampler, "enable metallic sampler" },
+					{ &matCreateInfo.generateRoughnessSampler, "generate roughness sampler" },
+					{ &matCreateInfo.enableRoughnessSampler, "enable roughness sampler" },
+					{ &matCreateInfo.generateAOSampler, "generate ao sampler" },
+					{ &matCreateInfo.enableAOSampler, "enable ao sampler" },
+					{ &matCreateInfo.generateHDREquirectangularSampler, "generate hdr equirectangular sampler" },
+					{ &matCreateInfo.enableHDREquirectangularSampler, "enable hdr equirectangular sampler" },
+					{ &matCreateInfo.generateHDRCubemapSampler, "generate hdr cubemap sampler" },
+					{ &matCreateInfo.enableIrradianceSampler, "enable irradiance sampler" },
+					{ &matCreateInfo.generateIrradianceSampler, "generate irradiance sampler" },
+					{ &matCreateInfo.enableBRDFLUT, "enable brdf lut" },
+					{ &matCreateInfo.renderToCubemap, "render to cubemap" },
+					{ &matCreateInfo.enableCubemapSampler, "enable cubemap sampler" },
+					{ &matCreateInfo.enableCubemapTrilinearFiltering, "enable cubemap trilinear filtering" },
+					{ &matCreateInfo.generateCubemapSampler, "generate cubemap sampler" },
+					{ &matCreateInfo.generateCubemapDepthBuffers, "generate cubemap depth buffers" },
+					{ &matCreateInfo.generatePrefilteredMap, "generate prefiltered map" },
+					{ &matCreateInfo.enablePrefilteredMap, "enable prefiltered map" },
+					{ &matCreateInfo.generateReflectionProbeMaps, "generate reflection probe maps" },
 				};
 
 				for (u32 i = 0; i < boolParams.size(); ++i)
@@ -297,15 +297,15 @@ namespace flex
 					}
 				}
 
-				if (material.HasField("colorMultiplier"))
+				if (material.HasField("color multiplier"))
 				{
-					std::string colorStr = material.GetString("colorMultiplier");
+					std::string colorStr = material.GetString("color multiplier");
 					matCreateInfo.colorMultiplier = ParseVec4(colorStr);
 				}
 
-				if (material.HasField("generatedIrradianceCubemapSize"))
+				if (material.HasField("generated irradiance cubemap size"))
 				{
-					std::string irradianceCubemapSizeStr = material.GetString("generatedIrradianceCubemapSize");
+					std::string irradianceCubemapSizeStr = material.GetString("generated irradiance cubemap size");
 					matCreateInfo.generatedIrradianceCubemapSize = ParseVec2(irradianceCubemapSizeStr);
 				}
 
@@ -315,37 +315,37 @@ namespace flex
 
 				//matCreateInfo.cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
-				if (material.HasField("generatedCubemapSize"))
+				if (material.HasField("generated cubemap size"))
 				{
-					std::string generatedCubemapSizeStr = material.GetString("generatedCubemapSize");
+					std::string generatedCubemapSizeStr = material.GetString("generated cubemap size");
 					matCreateInfo.generatedCubemapSize = ParseVec2(generatedCubemapSizeStr);
 				}
 
-				if (material.HasField("generatedPrefilteredCubemapSize"))
+				if (material.HasField("generated prefiltered cubemap size"))
 				{
-					std::string generatedPrefilteredCubemapSizeStr = material.GetString("generatedPrefilteredCubemapSize");
+					std::string generatedPrefilteredCubemapSizeStr = material.GetString("generated prefiltered cubemap size");
 					matCreateInfo.generatedPrefilteredCubemapSize = ParseVec2(generatedPrefilteredCubemapSizeStr);
 				}
 
-				if (material.HasField("constAlbedo"))
+				if (material.HasField("const albedo"))
 				{
-					std::string albedoStr = material.GetString("constAlbedo");
+					std::string albedoStr = material.GetString("const albedo");
 					matCreateInfo.constAlbedo = ParseVec3(albedoStr);
 				}
 
-				if (material.HasField("constMetallic"))
+				if (material.HasField("const metallic"))
 				{
-					matCreateInfo.constMetallic = material.GetFloat("constMetallic");
+					matCreateInfo.constMetallic = material.GetFloat("const metallic");
 				}
 
-				if (material.HasField("constRoughness"))
+				if (material.HasField("cons roughness"))
 				{
-					matCreateInfo.constRoughness = material.GetFloat("constRoughness");
+					matCreateInfo.constRoughness = material.GetFloat("const roughness");
 				}
 
-				if (material.HasField("constAO"))
+				if (material.HasField("const ao"))
 				{
-					matCreateInfo.constAO = material.GetFloat("constAO");
+					matCreateInfo.constAO = material.GetFloat("const ao");
 				}
 			}
 			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
@@ -358,12 +358,6 @@ namespace flex
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
 
-				if (meshObj.HasField("cullFace"))
-				{
-					std::string cullFaceStr = meshObj.GetString("cullFace");
-					CullFace cullFace = StringToCullFace(cullFaceStr);
-					createInfo.cullFace = cullFace;
-				}
 				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + meshFilePath,
 					flipNormalYZ,
 					flipZ,
@@ -383,12 +377,6 @@ namespace flex
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
 
-				if (meshObj.HasField("cullFace"))
-				{
-					std::string cullFaceStr = meshObj.GetString("cullFace");
-					CullFace cullFace = StringToCullFace(cullFaceStr);
-					createInfo.cullFace = cullFace;
-				}
 				MeshPrefab::PrefabShape prefabShape = MeshPrefab::StringToPrefabShape(meshPrefabName);
 				mesh->LoadPrefabShape(gameContext, prefabShape, &createInfo);
 
@@ -607,10 +595,10 @@ namespace flex
 				materialObject.fields.push_back(JSONField("shader", JSONValue(materialName)));
 				
 				// TODO: Write out const values when texture path is not given?
-				static const glm::vec4 defaultConstAlbedo = glm::vec4(1.0f);
-				if (material.constAlbedo != defaultConstAlbedo)
+				static const glm::vec3 defaultConstAlbedo = glm::vec3(1.0f);
+				if (((glm::vec3)material.constAlbedo) != defaultConstAlbedo)
 				{
-					std::string constAlbedoStr = Vec4ToString(material.constAlbedo);
+					std::string constAlbedoStr = Vec3ToString(material.constAlbedo);
 					materialObject.fields.push_back(JSONField("const albedo", 
 						JSONValue(constAlbedoStr)));
 				}
