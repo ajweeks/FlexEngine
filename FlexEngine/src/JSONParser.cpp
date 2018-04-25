@@ -150,7 +150,7 @@ namespace flex
 
 		// TODO: Make this a parameter or remove field from scene files entirely if always the same
 		// All transform data is saved in local space (relative to parent)
-		transformObject.fields.push_back(JSONField("space", JSONValue("local")));
+		transformObject.fields.push_back(JSONField("space", JSONValue(std::string("local"))));
 
 		glm::vec3 localPos = transform->GetLocalPosition();
 		glm::quat localRotQuat = transform->GetLocalRotation();
