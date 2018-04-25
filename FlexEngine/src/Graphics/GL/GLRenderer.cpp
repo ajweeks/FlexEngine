@@ -75,6 +75,8 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
+			m_DefaultTransform = Transform::Identity();
+
 			CheckGLErrorMessages();
 		}
 
@@ -634,21 +636,51 @@ namespace flex
 			GLRenderObject* renderObject = new GLRenderObject();
 			renderObject->renderID = renderID;
 			InsertNewRenderObject(renderObject);
+
 			renderObject->materialID = createInfo->materialID;
+			renderObject->vertexBufferData = createInfo->vertexBufferData;
+			renderObject->indices = createInfo->indices;
+			renderObject->name = createInfo->name;
+			renderObject->transform = createInfo->transform;
+			renderObject->visible = createInfo->visible;
+			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
 			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
 			renderObject->enableCulling = createInfo->enableCulling ? GL_TRUE : GL_FALSE;
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
 
-			
-			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
-			renderObject->name = createInfo->name;
-			renderObject->transform = createInfo->transform;
-			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
+			if (renderObject->materialID == InvalidMaterialID)
+			{
+				Logger::LogError("Render object's materialID has not been set in its createInfo!");
 
-			assert(!renderObject->materialName.empty());
-			assert(!renderObject->name.empty());
-			assert(renderObject->transform != nullptr);
+				// TODO: Use INVALID material here (Bright pink)
+				// Hopefully the first material works out okay! Should be better than crashing
+				renderObject->materialID = 0;
+
+				if (m_Materials.size() > 0)
+				{
+					renderObject->materialName = m_Materials[renderObject->materialID].material.name;
+				}
+			}
+			else
+			{
+				renderObject->materialName = m_Materials[renderObject->materialID].material.name;
+
+				if (renderObject->materialName.empty())
+				{
+					Logger::LogWarning("Render object created with empty material name!");
+				}
+			}
+
+			if (renderObject->name.empty())
+			{
+				Logger::LogWarning("Render object created with empty name!");
+			}
+
+			if (renderObject->transform == nullptr)
+			{
+				renderObject->transform = &m_DefaultTransform;
+			}
 
 			if (m_Materials.empty())
 			{
@@ -679,11 +711,8 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			renderObject->vertexBufferData = createInfo->vertexBufferData;
-
 			if (createInfo->indices != nullptr)
 			{
-				renderObject->indices = createInfo->indices;
 				renderObject->indexed = true;
 
 				glGenBuffers(1, &renderObject->IBO);
@@ -2668,15 +2697,29 @@ namespace flex
 			}
 		}
 
-		CullFace GLRenderer::GetRenderObjectCullFace(RenderID renderID)
+		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{
+			outInfo = {};
+
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
+			if (!renderObject)
 			{
-				return GLCullFaceToCullFace(renderObject->cullFace);
+				return false;
 			}
 
-			return CullFace::NONE;
+			outInfo.materialID = renderObject->materialID;
+			outInfo.vertexBufferData = renderObject->vertexBufferData;
+			outInfo.indices = renderObject->indices;
+			outInfo.name = renderObject->name;
+			outInfo.transform = renderObject->transform;
+			outInfo.visible = renderObject->visible;
+			outInfo.visibleInSceneExplorer = renderObject->visibleInSceneExplorer;
+			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
+			outInfo.enableCulling = renderObject->enableCulling;
+			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
+			outInfo.depthWriteEnable= renderObject->depthWriteEnable;
+
+			return true;
 		}
 
 		void GLRenderer::SetVSyncEnabled(bool enableVSync)

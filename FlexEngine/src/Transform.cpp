@@ -13,6 +13,8 @@
 
 namespace flex
 {
+	Transform Transform::m_Identity = Transform(glm::vec3(0.0f), glm::quat(glm::vec3(0.0f)), glm::vec3(1.0f));
+
 	Transform::Transform()
 	{
 		SetAsIdentity();
@@ -201,10 +203,7 @@ namespace flex
 
 	void Transform::SetAsIdentity()
 	{
-		localPosition = glm::vec3(0.0f);
-		localRotation = glm::quat(glm::vec3(0.0f));
-		localScale = glm::vec3(1.0f);
-
+		*this = m_Identity;
 		UpdateParentTransform();
 	}
 
@@ -216,6 +215,14 @@ namespace flex
 		glm::mat4 matModel = matTrans * matRot * matScale;
 
 		return matModel;
+	}
+
+	bool Transform::IsIdentity() const
+	{
+		bool identity = (localPosition == m_Identity.localPosition &&
+						localRotation == m_Identity.localRotation &&
+						localScale == m_Identity.localScale);
+		return identity;
 	}
 
 	Transform Transform::Identity()

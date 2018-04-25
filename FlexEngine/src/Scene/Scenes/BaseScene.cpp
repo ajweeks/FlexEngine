@@ -491,15 +491,9 @@ namespace flex
 
 		i32 fileVersion = 1;
 
-		JSONField versionField = {};
-		versionField.label = "version";
-		versionField.value = JSONValue(fileVersion);
-		rootSceneObject.fields.push_back(versionField);
+		rootSceneObject.fields.push_back(JSONField("version", JSONValue(fileVersion)));
 
-		JSONField nameField = {};
-		nameField.label = "name";
-		nameField.value = JSONValue(m_Name);
-		rootSceneObject.fields.push_back(nameField);
+		rootSceneObject.fields.push_back(JSONField("name", JSONValue(m_Name)));
 
 		JSONField childrenField = {};
 		childrenField.label = "entities";
@@ -541,18 +535,11 @@ namespace flex
 		JSONObject object;
 		std::string childName = gameObject->m_Name;
 
-		JSONField childNameField = {};
-		childNameField.label = "name";
-		childNameField.value = JSONValue(childName);
-		object.fields.push_back(childNameField);
+		object.fields.push_back(JSONField("name", JSONValue(childName)));
 
 		SerializableType childType = gameObject->m_SerializableType;
 		std::string childTypeStr = SerializableTypeToString(childType);
-
-		JSONField childTypeField = {};
-		childNameField.label = "type";
-		childNameField.value = JSONValue(childTypeStr);
-		object.fields.push_back(childNameField);
+		object.fields.push_back(JSONField("type", JSONValue(childTypeStr)));
 
 		switch (childType)
 		{
@@ -568,33 +555,149 @@ namespace flex
 			MeshPrefab::MeshType meshType = mesh->GetType();
 			if (meshType == MeshPrefab::MeshType::FILE)
 			{
-				JSONField filePathField = {};
-				filePathField.label = "file";
-				filePathField.value = JSONValue(mesh->GetFilepath());
-
-				meshValue.fields.push_back(filePathField);
+				meshValue.fields.push_back(JSONField("file", JSONValue(mesh->GetFilepath())));
 			}
 			else if (meshType == MeshPrefab::MeshType::PREFAB)
 			{
-				JSONField prefabField = {};
-				prefabField.label = "prefab";
-				prefabField.value = JSONValue(MeshPrefab::PrefabShapeToString(mesh->GetShape()));
-
-				meshValue.fields.push_back(prefabField);
+				std::string prefabShapeStr = MeshPrefab::PrefabShapeToString(mesh->GetShape());
+				meshValue.fields.push_back(JSONField("prefab", JSONValue(prefabShapeStr)));
 			}
 			else
 			{
 				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
 			}
 
-			JSONField cullFaceField = {};
-			cullFaceField.label = "cull face";
 			RenderID meshRenderID = mesh->GetRenderID();
-			CullFace renderObjectCullFace = gameContext.renderer->GetRenderObjectCullFace(meshRenderID);
-			std::string cullFaceStr = CullFaceToString(renderObjectCullFace);
-			cullFaceField.value = JSONValue(cullFaceStr);
+			RenderObjectCreateInfo renderObjectCreateInfo;
+			if (gameContext.renderer->GetRenderObjectCreateInfo(meshRenderID, renderObjectCreateInfo))
+			{
+				static const bool defaultVisible = true;
+				if (renderObjectCreateInfo.visible != defaultVisible)
+				{
+					object.fields.push_back(JSONField("visible", JSONValue(renderObjectCreateInfo.visible)));
+				}
 
-			meshValue.fields.push_back(cullFaceField);
+				static const bool defaultVisibleInSceneGraph = true;
+				if (renderObjectCreateInfo.visibleInSceneExplorer != defaultVisibleInSceneGraph)
+				{
+					object.fields.push_back(JSONField("visible in scene graph",
+						JSONValue(renderObjectCreateInfo.visibleInSceneExplorer)));
+				}
+
+				if (!renderObjectCreateInfo.transform->IsIdentity())
+				{
+					JSONField transformField;
+					if (JSONParser::SerializeTransform(renderObjectCreateInfo.transform, transformField))
+					{
+						object.fields.push_back(transformField);
+					}
+				}
+
+				JSONField materialField = {};
+				materialField.label = "material";
+
+				JSONObject materialObject = {};
+
+				Material& material = gameContext.renderer->GetMaterial(renderObjectCreateInfo.materialID);
+				std::string materialName = material.name;
+				materialObject.fields.push_back(JSONField("name", JSONValue(materialName)));
+
+				Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+				std::string shaderName = shader.name;
+				materialObject.fields.push_back(JSONField("shader", JSONValue(materialName)));
+				
+				// TODO: Write out const values when texture path is not given?
+				static const glm::vec4 defaultConstAlbedo = glm::vec4(1.0f);
+				if (material.constAlbedo != defaultConstAlbedo)
+				{
+					std::string constAlbedoStr = Vec4ToString(material.constAlbedo);
+					materialObject.fields.push_back(JSONField("const albedo", 
+						JSONValue(constAlbedoStr)));
+				}
+
+				static const real defaultConstMetallic = 1.0f;
+				if (material.constMetallic != defaultConstMetallic)
+				{
+					materialObject.fields.push_back(JSONField("const metallic", 
+						JSONValue(material.constMetallic)));
+				}
+
+				static const real defaultConstRoughness = 1.0f;
+				if (material.constRoughness != defaultConstRoughness)
+				{
+					materialObject.fields.push_back(JSONField("const roughness", 
+						JSONValue(material.constRoughness)));
+				}
+
+				static const real defaultConstAO = 1.0f;
+				if (material.constAO != defaultConstAO)
+				{
+					materialObject.fields.push_back(JSONField("const ao", 
+						JSONValue(material.constAO)));
+				}
+
+				static const bool defaultEnableAlbedo = true;
+				if (shader.needAlbedoSampler && material.enableAlbedoSampler != defaultEnableAlbedo)
+				{
+					std::string constAlbedoStr = Vec4ToString(material.constAlbedo);
+					materialObject.fields.push_back(JSONField("enable albedo sampler", 
+						JSONValue(material.enableAlbedoSampler)));
+				}
+
+				static const bool defaultEnableMetallicSampler = true;
+				if (shader.needMetallicSampler && material.enableMetallicSampler != defaultEnableMetallicSampler)
+				{
+					materialObject.fields.push_back(JSONField("enable metallic sampler", 
+						JSONValue(material.enableMetallicSampler)));
+				}
+
+				static const bool defaultEnableRoughness = true;
+				if (shader.needRoughnessSampler && material.enableRoughnessSampler != defaultEnableRoughness)
+				{
+					materialObject.fields.push_back(JSONField("enable roughness sampler", 
+						JSONValue(material.enableRoughnessSampler)));
+				}
+
+				static const bool defaultEnableAO = true;
+				if (shader.needAOSampler && material.enableAOSampler != defaultEnableAO)
+				{
+					materialObject.fields.push_back(JSONField("enable ao sampler", 
+						JSONValue(material.enableAOSampler)));
+				}
+
+				if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())
+				{
+					materialObject.fields.push_back(JSONField("albedo texture filepath", 
+						JSONValue(material.albedoTexturePath)));
+				}
+
+				if (shader.needMetallicSampler && !material.metallicTexturePath.empty())
+				{
+					materialObject.fields.push_back(JSONField("metallic texture filepath",
+						JSONValue(material.metallicTexturePath)));
+				}
+
+				if (shader.needRoughnessSampler && !material.roughnessTexturePath.empty())
+				{
+					materialObject.fields.push_back(JSONField("roughness texture filepath", 
+						JSONValue(material.roughnessTexturePath)));
+				}
+
+				if (shader.needAOSampler && !material.aoTexturePath.empty())
+				{
+					materialObject.fields.push_back(JSONField("ao texture filepath", 
+						JSONValue(material.aoTexturePath)));
+				}
+
+				materialField.value = JSONValue(materialObject);
+				meshValue.fields.push_back(materialField);
+			}
+			else
+			{
+				Logger::LogWarning("BaseScene::SerializeObject failed to retrieve mesh object"
+					" create info, serialized data will be incomplete. Invalid render ID: " + 
+					std::to_string(meshRenderID));
+			}
 
 			meshField.value = JSONValue(meshValue);
 

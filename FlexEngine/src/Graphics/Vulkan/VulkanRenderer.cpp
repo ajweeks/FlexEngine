@@ -2722,15 +2722,29 @@ namespace flex
 			}
 		}
 
-		CullFace VulkanRenderer::GetRenderObjectCullFace(RenderID renderID)
+		bool VulkanRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{
+			outInfo = {};
+
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
+			if (!renderObject)
 			{
-				return VkCullModeToCullFace(renderObject->cullMode);
+				return false;
 			}
 
-			return CullFace::NONE;
+			outInfo.materialID = renderObject->materialID;
+			outInfo.vertexBufferData = renderObject->vertexBufferData;
+			outInfo.indices = renderObject->indices;
+			outInfo.name = renderObject->name;
+			outInfo.transform = renderObject->transform;
+			outInfo.visible = renderObject->visible;
+			outInfo.visibleInSceneExplorer = renderObject->visibleInSceneExplorer;
+			outInfo.cullFace = VkCullModeToCullFace(renderObject->cullMode);
+			outInfo.enableCulling = renderObject->enableCulling;
+			//outInfo.depthTestReadFunc =  // TODO: ?
+			//outInfo.depthWriteEnable = // TODO: ?
+
+			return true;
 		}
 
 		void VulkanRenderer::SetVSyncEnabled(bool enableVSync)

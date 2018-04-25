@@ -136,6 +136,40 @@ namespace flex
 		return Transform(pos, rot, scale);
 	}
 
+	bool JSONParser::SerializeTransform(Transform* transform, JSONField& outTransformField)
+	{
+		if (transform == nullptr)
+		{
+			return false;
+		}
+
+		outTransformField = {};
+		outTransformField.label = "transform";
+
+		JSONObject transformObject = {};
+
+		// TODO: Make this a parameter or remove field from scene files entirely if always the same
+		// All transform data is saved in local space (relative to parent)
+		transformObject.fields.push_back(JSONField("space", JSONValue("local")));
+
+		glm::vec3 localPos = transform->GetLocalPosition();
+		glm::quat localRotQuat = transform->GetLocalRotation();
+		glm::vec3 localRotEuler = glm::eulerAngles(localRotQuat);
+		glm::vec3 localScale = transform->GetLocalScale();
+
+		std::string posStr = Vec3ToString(localPos);
+		std::string rotStr = Vec3ToString(localRotEuler);
+		std::string scaleStr = Vec3ToString(localScale);
+
+		transformObject.fields.push_back(JSONField("position", JSONValue(posStr)));
+		transformObject.fields.push_back(JSONField("rotation", JSONValue(rotStr)));
+		transformObject.fields.push_back(JSONField("scale", JSONValue(scaleStr)));
+
+		outTransformField.value = JSONValue(transformObject);
+
+		return true;
+	}
+
 	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
 	{
 		i32 objectClosingBracket = MatchingBracket('{', fileContents, *offset);

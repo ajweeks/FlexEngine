@@ -71,6 +71,8 @@ namespace flex
 		
 		glm::mat4 GetModelMatrix();
 
+		bool IsIdentity() const;
+
 		static Transform Identity();
 
 		Transform* GetParent();
@@ -95,6 +97,8 @@ namespace flex
 		std::vector<Transform*> childrenTransforms;
 
 		RenderID m_OwnerRenderID = InvalidRenderID;
+
+		static Transform m_Identity;
 
 	};
 } // namespace flex

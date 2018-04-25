@@ -48,9 +48,13 @@ namespace flex
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		// TODO: FIXME: CLEANUP: These functions should be made into a single "GetRenderObjectInfo" which returns all generic data about a render object
 		virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) = 0;
-		virtual CullFace GetRenderObjectCullFace(RenderID renderID) = 0;
+
+		/*
+		* Fills outInfo with an up-to-date version of the render object's info
+		* Returns true if renderID refers to a valid render object
+		*/
+		virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) = 0;
 
 		virtual void SetVSyncEnabled(bool enableVSync) = 0;
 		virtual bool GetVSyncEnabled() = 0;

@@ -48,7 +48,8 @@ namespace flex
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
 			virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) override;
-			virtual CullFace GetRenderObjectCullFace(RenderID renderID) override;
+
+			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 			virtual bool GetVSyncEnabled() override;
@@ -197,6 +198,10 @@ namespace flex
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
+
+			// The transform to be used for all objects who don't specify one in their 
+			// create info. Always set to identity.
+			Transform m_DefaultTransform;
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;

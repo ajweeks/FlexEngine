@@ -66,6 +66,9 @@ namespace flex
 
 	struct JSONField
 	{
+		JSONField();
+		JSONField(const std::string& label, const JSONValue& value);
+
 		std::string label;
 		JSONValue value;
 

@@ -100,9 +100,14 @@ namespace flex
 		return glm::vec4(color.r, color.g, color.b, color.a);
 	}
 
-	void ToString(const glm::vec2& vec, std::ostream& stream);
-	void ToString(const glm::vec3& vec, std::ostream& stream);
-	void ToString(const glm::vec4& vec, std::ostream& stream);
+	// TODO: Remove: unused
+	//void Vec2ToString(const glm::vec2& vec, std::ostream& stream);
+	//void Vec3ToString(const glm::vec3& vec, std::ostream& stream);
+	//void Vec4ToString(const glm::vec4& vec, std::ostream& stream);
+
+	std::string Vec2ToString(const glm::vec2& vec);
+	std::string Vec3ToString(const glm::vec3& vec);
+	std::string Vec4ToString(const glm::vec4& vec);
 
 	void CopyColorToClipboard(const glm::vec4& col);
 	void CopyColorToClipboard(const glm::vec3& col);

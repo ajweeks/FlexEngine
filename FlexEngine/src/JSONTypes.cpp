@@ -194,6 +194,16 @@ namespace flex
 	}
 
 
+	JSONField::JSONField()
+	{
+	}
+
+	JSONField::JSONField(const std::string& label, const JSONValue& value) :
+		label(label),
+		value(value)
+	{
+	}
+
 	std::string JSONField::Print(i32 tabCount)
 	{
 		const std::string tabs(tabCount, '\t');

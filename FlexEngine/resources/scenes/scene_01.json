@@ -8,7 +8,7 @@
       "mesh": {
         "prefab": "grid"
       },
-      "visibleInSceneGraph": true,
+      "visible in scene graph": true,
       "visible": true,
       "transform": {
         "position": "0.0,-0.1,0.0"
@@ -29,7 +29,7 @@
             "rotation": "0.0,0.0,0.0",
             "scale": "1.0,1.0,1.0"
           },
-          "visibleInSceneGraph": false,
+          "visible in scene graph": false,
           "visible": true,
           "material": {
             "name": "color",
@@ -42,8 +42,7 @@
       "name" : "Sphere",
       "type" : "mesh",
       "mesh": {
-        "file": "models/ico-sphere.gltf",
-        "cull face": "front"
+        "file": "models/ico-sphere.gltf"
       },
       "collider": {
         "shape": "sphere",
@@ -62,10 +61,10 @@
       "material": {
         "name": "pbr",
         "shader": "pbr",
-        "constMetallic": 1,
-        "constRoughness": 0.25,
-        "constAO": 1,
-        "constAlbedo": "0.78, 0.12, 0.11"
+        "const metallic": 1,
+        "const roughness": 0.25,
+        "const ao": 1,
+        "const albedo": "0.78, 0.12, 0.11"
       },
       "children": [
         {
@@ -73,8 +72,7 @@
           "visible": true,
           "type": "mesh",
           "mesh": {
-            "file": "models/cone.gltf",
-            "cull face": "back"
+            "file": "models/cone.gltf"
           },
           "transform": {
             "space": "local",
@@ -85,18 +83,17 @@
           "material": {
             "name": "pbr",
             "shader": "pbr",
-            "constMetallic": 0,
-            "constRoughness": 0.5,
-            "constAO": 1,
-            "constAlbedo": "0.1, 0.76, 0.81"
+            "const metallic": 0,
+            "const roughness": 0.5,
+            "const ao": 1,
+            "const albedo": "0.1, 0.76, 0.81"
           },
           "children": [
             {
               "name": "sphere child child!",
               "type": "mesh",
               "mesh": {
-                "file": "models/uv-sphere.gltf",
-                "cull face": "back"
+                "file": "models/uv-sphere.gltf"
               },
               "transform": {
                 "space": "local",
@@ -107,10 +104,10 @@
               "material": {
                 "name": "pbr",
                 "shader": "pbr",
-                "constMetallic": 0,
-                "constRoughness": 1,
-                "constAO": 1,
-                "constAlbedo": "0.48, 0.76, 0.81"
+                "const metallic": 0,
+                "const roughness": 1,
+                "const ao": 1,
+                "const albedo": "0.48, 0.76, 0.81"
               }
             }
           ]
@@ -119,8 +116,7 @@
           "name": "sphere child test 02",
           "type": "mesh",
           "mesh": {
-            "file": "models/ico-sphere.gltf",
-            "cull face": "back"
+            "file": "models/ico-sphere.gltf"
           },
           "transform": {
             "space": "global",
@@ -131,10 +127,10 @@
           "material": {
             "name": "pbr",
             "shader": "pbr",
-            "constMetallic": 1,
-            "constRoughness": 0,
-            "constAO": 1,
-            "constAlbedo": "0.6, 0.65, 0.4"
+            "const metallic": 1,
+            "const roughness": 0,
+            "const ao": 1,
+            "const albedo": "0.6, 0.65, 0.4"
           }
         }
       ]
@@ -143,8 +139,7 @@
       "name": "chamfer box",
       "type": "mesh",
       "mesh": {
-        "file": "models/chamfer-box.gltf",
-        "cull face" : "back"
+        "file": "models/chamfer-box.gltf"
       },
       "transform": {
         "position": "-8.0,1.0,-2.0",
@@ -154,10 +149,10 @@
       "material": {
         "name": "pbr",
         "shader": "pbr",
-        "constMetallic": 0,
-        "constRoughness": 0.2,
-        "constAO": 1,
-        "constAlbedo": "0.8, 0.54, 0.1"
+        "const metallic": 0,
+        "const roughness": 0.2,
+        "const ao": 1,
+        "const albedo": "0.8, 0.54, 0.1"
       }
     },
     {

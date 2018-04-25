@@ -243,19 +243,43 @@ namespace flex
 		}
 	}
 
-	void ToString(const glm::vec2& vec, std::ostream& stream)
+	//void Vec2ToString(const glm::vec2& vec, std::ostream& stream)
+	//{
+	//	stream << vec.x << " " << vec.y;
+	//}
+
+	//void Vec3ToString(const glm::vec3& vec, std::ostream& stream)
+	//{
+	//	stream << vec.x << " " << vec.y << " " << vec.z;
+	//}
+
+	//void Vec4ToString(const glm::vec4& vec, std::ostream& stream)
+	//{
+	//	stream << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+	//}
+
+	std::string Vec2ToString(const glm::vec2& vec)
 	{
-		stream << vec.x << " " << vec.y;
+		std::string result(std::to_string(vec.x) + ", " +
+			std::to_string(vec.y));
+		return result;
 	}
 
-	void ToString(const glm::vec3& vec, std::ostream& stream)
+	std::string Vec3ToString(const glm::vec3& vec)
 	{
-		stream << vec.x << " " << vec.y << " " << vec.z;
+		std::string result(std::to_string(vec.x) + ", " + 
+			std::to_string(vec.y) + ", " + 
+			std::to_string(vec.z));
+		return result;
 	}
 
-	void ToString(const glm::vec4& vec, std::ostream& stream)
+	std::string Vec4ToString(const glm::vec4& vec)
 	{
-		stream << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+		std::string result(std::to_string(vec.x) + ", " +
+			std::to_string(vec.y) + ", " + 
+			std::to_string(vec.z) + ", " + 
+			std::to_string(vec.w));
+		return result;
 	}
 
 	void CopyColorToClipboard(const glm::vec3& col)

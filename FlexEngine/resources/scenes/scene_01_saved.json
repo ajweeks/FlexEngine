@@ -6,28 +6,84 @@
 		{
 			"name" : "Grid",
 			"type" : "mesh",
+			"transform" : 
+			{
+				"space" : true
+,
+				"position" : "19.500000, -0.100000, -15.500000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
 			"mesh" : 
 			{
 				"prefab" : "grid",
-				"cull face" : "back"
+				"material" : 
+				{
+					"name" : "color",
+					"shader" : "color",
+					"const albedo" : "0.000000, 0.000000, 0.000000, 0.000000",
+					"const metallic" : 0.000000,
+					"const roughness" : 0.000000,
+					"const ao" : 0.000000
+				}
 			}
 		},
 		{
 			"name" : "Sphere",
 			"type" : "mesh",
+			"transform" : 
+			{
+				"space" : true
+,
+				"position" : "10.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
 			"mesh" : 
 			{
 				"file" : "../../../FlexEngine/resources/models/ico-sphere.gltf",
-				"cull face" : "back"
+				"material" : 
+				{
+					"name" : "pbr",
+					"shader" : "pbr",
+					"const albedo" : "0.000000, 0.000000, 0.000000, 0.000000",
+					"const metallic" : 0.000000,
+					"const roughness" : 0.000000,
+					"const ao" : 0.000000,
+					"enable albedo sampler" : false,
+					"enable metallic sampler" : false,
+					"enable roughness sampler" : false,
+					"enable ao sampler" : false
+				}
 			}
 		},
 		{
 			"name" : "chamfer box",
 			"type" : "mesh",
+			"transform" : 
+			{
+				"space" : true
+,
+				"position" : "-8.000000, 1.000000, -2.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.500000, 1.500000, 1.500000"
+			},
 			"mesh" : 
 			{
 				"file" : "../../../FlexEngine/resources/models/chamfer-box.gltf",
-				"cull face" : "back"
+				"material" : 
+				{
+					"name" : "pbr",
+					"shader" : "pbr",
+					"const albedo" : "0.000000, 0.000000, 0.000000, 0.000000",
+					"const metallic" : 0.000000,
+					"const roughness" : 0.000000,
+					"const ao" : 0.000000,
+					"enable albedo sampler" : false,
+					"enable metallic sampler" : false,
+					"enable roughness sampler" : false,
+					"enable ao sampler" : false
+				}
 			}
 		},
 		{

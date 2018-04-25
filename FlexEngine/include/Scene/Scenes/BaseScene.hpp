@@ -22,6 +22,11 @@ namespace flex
 
 		PhysicsWorld* GetPhysicsWorld();
 
+		/* 
+		* Serializes all data from scene into JSON scene file.
+		* Only writes data that has non-default values (e.g. an identity 
+		* transform is not saved)
+		*/
 		void SerializeToFile(const GameContext& gameContext);
 
 	protected:
