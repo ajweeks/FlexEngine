@@ -520,7 +520,7 @@ namespace flex
 		std::string newFilePath = fileName + "_saved.json";
 		fileStream.open(newFilePath, std::ofstream::out | std::ofstream::trunc);
 
-		Logger::LogInfo("Serializing scene to " + fileName);
+		Logger::LogInfo("Serializing scene to " + newFilePath);
 
 		if (fileStream.is_open())
 		{
