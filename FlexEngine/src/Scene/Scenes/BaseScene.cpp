@@ -678,7 +678,7 @@ namespace flex
 				}
 
 				materialField.value = JSONValue(materialObject);
-				meshValue.fields.push_back(materialField);
+				object.fields.push_back(materialField);
 			}
 			else
 			{
