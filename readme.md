@@ -43,9 +43,9 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 
 #### Steps
 1. Recursively clone the repository using your method of choice (SourceTree, git bash, ...)
-2. Ensure GENie is either on your PATH, or `genie.exe` is in `scripts/`.
+2. Ensure GENie is either on your PATH, or `genie.exe` is in `scripts/`
 3. Navigate a command prompt to `scripts/` and run `genie vs2015`
-4. Navigate a command prompt to `FlexEngine/dependencies/assimp/` and run `cmake .` You do not need to build the project, just run this command to generate the necessary `config.h` file.
+4. Navigate a command prompt to `FlexEngine/dependencies/assimp/` and run `cmake .` to generate the necessary `config.h` file.  You do not need to build generated `.sln`
 4. Open `build/FlexEngine.sln`
 5. Build and run!
 
