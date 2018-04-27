@@ -67,6 +67,74 @@ namespace flex
 			AddChild(gameContext, CreateEntityFromJSON(gameContext, rootEntity));
 		}
 
+		if (sceneRootObject.HasField("point lights"))
+		{
+			std::vector<JSONObject> pointLightsArray = sceneRootObject.GetObjectArray("point lights");
+
+			for (JSONObject& pointLightObj : pointLightsArray)
+			{
+				PointLight pointLight = {};
+
+				std::string posStr = pointLightObj.GetString("position");
+				pointLight.position = glm::vec4(ParseVec3(posStr), 0);
+
+				std::string colorStr = pointLightObj.GetString("color");
+				if (!colorStr.empty())
+				{
+					pointLight.color = ParseVec4(colorStr);
+				}
+
+				if (pointLightObj.HasField("brightness"))
+				{
+					real brightness = pointLightObj.GetFloat("brightness");
+					pointLight.brightness = brightness;
+				}
+
+				if (pointLightObj.HasField("enabled"))
+				{
+					pointLight.enabled = pointLightObj.GetBool("enabled") ? 1 : 0;
+				}
+
+				if (pointLightObj.HasField("name"))
+				{
+					pointLight.name = pointLightObj.GetString("name");
+				}
+
+				m_PointLights.push_back(pointLight);
+				gameContext.renderer->InitializePointLight(pointLight);
+			}
+		}
+
+		if (sceneRootObject.HasField("directional light"))
+		{
+			JSONObject directionalLightObj = sceneRootObject.GetObject("directional light");
+
+			DirectionalLight dirLight = {};
+
+			std::string dirStr = directionalLightObj.GetString("direction");
+			dirLight.direction = glm::vec4(ParseVec3(dirStr), 0);
+
+			std::string colorStr = directionalLightObj.GetString("color");
+			if (!colorStr.empty())
+			{
+				dirLight.color = ParseVec4(colorStr);
+			}
+
+			if (directionalLightObj.HasField("brightness"))
+			{
+				real brightness = directionalLightObj.GetFloat("brightness");
+				dirLight.brightness = brightness;
+			}
+
+			if (directionalLightObj.HasField("enabled"))
+			{
+				dirLight.enabled = directionalLightObj.GetBool("enabled") ? 1 : 0;
+			}
+
+			m_DirectionalLight = dirLight;
+			gameContext.renderer->InitializeDirectionalLight(dirLight);
+		}
+
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);
 
@@ -404,58 +472,6 @@ namespace flex
 			// TODO: UNIMPLEMENTED
 			//gameContext.renderer->SetReflectionProbeMaterial();
 		} break;
-		case SerializableType::POINT_LIGHT:
-		{
-			PointLight pointLight = {};
-
-			std::string posStr = obj.GetString("position");
-			pointLight.position = glm::vec4(ParseVec3(posStr), 0);
-
-			std::string colorStr = obj.GetString("color");
-			if (!colorStr.empty())
-			{
-				pointLight.color = ParseVec4(colorStr);
-			}
-
-			if (obj.HasField("brightness"))
-			{
-				real brightness = obj.GetFloat("brightness");
-				pointLight.brightness = brightness;
-			}
-
-			if (obj.HasField("enabled"))
-			{
-				pointLight.enabled = obj.GetBool("enabled") ? 1 : 0;
-			}
-
-			gameContext.renderer->InitializePointLight(pointLight);
-		} break;
-		case SerializableType::DIRECTIONAL_LIGHT:
-		{
-			DirectionalLight dirLight = {};
-
-			std::string dirStr = obj.GetString("direction");
-			dirLight.direction = glm::vec4(ParseVec3(dirStr), 0);
-
-			std::string colorStr = obj.GetString("color");
-			if (!colorStr.empty())
-			{
-				dirLight.color = ParseVec4(colorStr);
-			}
-
-			if (obj.HasField("brightness"))
-			{
-				real brightness = obj.GetFloat("brightness");
-				//pointLight.brightness = ParseFloat(brightnessStr);
-			}
-
-			if (obj.HasField("enabled"))
-			{
-				dirLight.enabled = obj.GetBool("enabled") ? 1 : 0;
-			}
-
-			gameContext.renderer->InitializeDirectionalLight(dirLight);
-		} break;
 		case SerializableType::NONE:
 		default:
 			Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
@@ -483,17 +499,38 @@ namespace flex
 
 		rootSceneObject.fields.push_back(JSONField("name", JSONValue(m_Name)));
 
-		JSONField childrenField = {};
-		childrenField.label = "entities";
 
-		std::vector<JSONObject> childrenArray;
-		for (auto child : m_Children)
+		JSONField entitiesField = {};
+		entitiesField.label = "entities";
+
+		std::vector<JSONObject> entitiesArray;
+		for (GameObject* child : m_Children)
 		{
-			childrenArray.push_back(SerializeObject(child, gameContext));
+			entitiesArray.push_back(SerializeObject(child, gameContext));
 		}
-		childrenField.value = JSONValue(childrenArray);
+		entitiesField.value = JSONValue(entitiesArray);
 
-		rootSceneObject.fields.push_back(childrenField);
+		rootSceneObject.fields.push_back(entitiesField);
+
+
+		JSONField pointLightsField = {};
+		pointLightsField.label = "point lights";
+
+		std::vector<JSONObject> pointLightsArray;
+		for (PointLight& pointLight : m_PointLights)
+		{
+			pointLightsArray.push_back(SerializePointLight(pointLight, gameContext));
+		}
+		pointLightsField.value = JSONValue(pointLightsArray);
+
+		rootSceneObject.fields.push_back(pointLightsField);
+
+
+		JSONField directionalLightsField("directional light",
+			JSONValue(SerializeDirectionalLight(m_DirectionalLight, gameContext)));
+
+		rootSceneObject.fields.push_back(directionalLightsField);
+
 
 		std::string fileContents = rootSceneObject.Print(0);
 
@@ -699,12 +736,6 @@ namespace flex
 		{
 			// TODO: UNIMPLEMENTED
 		} break;
-		case SerializableType::POINT_LIGHT:
-		{
-		} break;
-		case SerializableType::DIRECTIONAL_LIGHT:
-		{
-		} break;
 		case SerializableType::NONE:
 		{
 			// Assume this type is intentionally non-serializable
@@ -730,6 +761,39 @@ namespace flex
 			childrenField.value = JSONValue(children);
 			object.fields.push_back(childrenField);
 		}
+
+		return object;
+	}
+
+	JSONObject BaseScene::SerializePointLight(PointLight& pointLight, const GameContext& gameContext)
+	{
+		JSONObject object;
+
+		std::string posStr = Vec3ToString(pointLight.position);
+		object.fields.push_back(JSONField("position", JSONValue(posStr)));
+
+		std::string colorStr = Vec3ToString(pointLight.color);
+		object.fields.push_back(JSONField("color", JSONValue(colorStr)));
+
+		object.fields.push_back(JSONField("enabled", JSONValue(pointLight.enabled != 0)));
+		object.fields.push_back(JSONField("brightness", JSONValue(pointLight.brightness)));
+		object.fields.push_back(JSONField("name", JSONValue(pointLight.name)));
+
+		return object;
+	}
+
+	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext)
+	{
+		JSONObject object;
+
+		std::string dirStr = Vec3ToString(directionalLight.direction);
+		object.fields.push_back(JSONField("direction", JSONValue(dirStr)));
+
+		std::string colorStr = Vec3ToString(directionalLight.color);
+		object.fields.push_back(JSONField("color", JSONValue(colorStr)));
+
+		object.fields.push_back(JSONField("enabled", JSONValue(directionalLight.enabled != 0)));
+		object.fields.push_back(JSONField("brightness", JSONValue(directionalLight.brightness)));
 
 		return object;
 	}

@@ -388,8 +388,6 @@ namespace flex
 		case SerializableType::MESH:				return "mesh";
 		case SerializableType::SKYBOX:				return "skybox";
 		case SerializableType::REFLECTION_PROBE:	return "reflection probe";
-		case SerializableType::POINT_LIGHT:			return "point light";
-		case SerializableType::DIRECTIONAL_LIGHT:	return "directional light";
 		case SerializableType::NONE:				return "NONE";
 		default:									return "UNHANDLED SERIALIZABLE TYPE";
 		}
@@ -408,14 +406,6 @@ namespace flex
 		else if (serializableTypeStr.compare("reflection probe") == 0)
 		{
 			return SerializableType::REFLECTION_PROBE;
-		}
-		else if (serializableTypeStr.compare("point light") == 0)
-		{
-			return SerializableType::POINT_LIGHT;
-		}
-		else if (serializableTypeStr.compare("directional light") == 0)
-		{
-			return SerializableType::DIRECTIONAL_LIGHT;
 		}
 		else
 		{

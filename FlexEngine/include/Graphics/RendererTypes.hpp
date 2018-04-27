@@ -93,10 +93,7 @@ namespace flex
 
 		u32 enabled = 1;
 
-		// This value is not uploaded to the GPU, it's just multiplied with the color
 		real brightness = 1.0f;
-
-		real padding[2];
 	};
 
 	struct PointLight
@@ -107,10 +104,8 @@ namespace flex
 
 		u32 enabled = 1;
 
-		// This value is not uploaded to the GPU, it's just multiplied with the color
 		real brightness = 1.0f;
-
-		real padding[2];
+		std::string name;
 	};
 
 	// TODO: Is setting all the members to false necessary?

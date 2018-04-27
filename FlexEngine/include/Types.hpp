@@ -64,8 +64,6 @@ namespace flex
 		MESH,
 		SKYBOX,
 		REFLECTION_PROBE,
-		POINT_LIGHT,
-		DIRECTIONAL_LIGHT,
 		NONE
 	};
 

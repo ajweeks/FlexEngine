@@ -169,22 +169,26 @@
       "type" : "reflection probe",
       "position": "10.0,0.0,0.0",
       "rotation": "0.0,0.0,0.0"
-    },
-    {
-      "name": "Point light 01",
-      "type": "point light",
-      "position": "6.0,-6.0,-8.0",
-      "color": "1.0,1.0,1.0",
-      "brightness": 300.0,
-      "enabled" : true
-    },
-    {
-      "name": "Directional light 01",
-      "type" :  "directional light",
-      "direction": "0.1,1.5,0.0",
-      "color": "1.0,1.0,1.0",
-      "brightness": 300.0,
-      "enabled" : true
     }
-  ]
+  ],
+  "point lights" :
+  [
+        {
+        "name": "Point light 01",
+        "type": "point light",
+        "position": "6.0,-6.0,-8.0",
+        "color": "1.0,1.0,1.0",
+        "brightness": 300.0,
+        "enabled" : true
+      }
+  ],
+  "directional light" :
+  {
+    "name": "Directional light 01",
+    "type" :  "directional light",
+    "direction": "0.1,1.5,0.0",
+    "color": "1.0,1.0,1.0",
+    "brightness": 300.0,
+    "enabled" : true
+  }
 }

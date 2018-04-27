@@ -221,7 +221,7 @@ namespace flex
 			result += std::to_string(value.floatValue);
 			break;
 		case JSONValue::Type::BOOL:
-			result += (value.boolValue ? "true\n" : "false");
+			result += (value.boolValue ? "true" : "false");
 			break;
 		case JSONValue::Type::OBJECT:
 			result += '\n' + tabs + "{\n";

@@ -45,6 +45,8 @@ namespace flex
 		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
 
 		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
+		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);
+		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
 
 		void RootInitialize(const GameContext& gameContext);
 		void RootPostInitialize(const GameContext& gameContext);
@@ -57,8 +59,11 @@ namespace flex
 		std::string m_JSONFilePath;
 
 		std::vector<GameObject*> m_Children;
+		std::vector<PointLight> m_PointLights;
+		DirectionalLight m_DirectionalLight;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
+
 
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;

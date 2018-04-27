@@ -240,5 +240,22 @@
 				}
 			]
 		}
-	]
+	],
+	"point lights" : 
+	[
+		{
+			"position" : "6.000000, -6.000000, -8.000000",
+			"color" : "1.000000, 1.000000, 1.000000",
+			"enabled" : true,
+			"brightness" : 300.000000,
+			"name" : "Point light 01"
+		}
+	],
+	"directional light" : 
+	{
+		"direction" : "0.100000, 1.500000, 0.000000",
+		"color" : "1.000000, 1.000000, 1.000000",
+		"enabled" : true,
+		"brightness" : 300.000000
+	}
 }
