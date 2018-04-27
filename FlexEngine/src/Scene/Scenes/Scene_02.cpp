@@ -396,7 +396,7 @@ namespace flex
 			const glm::vec2 mouseMove = gameContext.inputManager->GetMousePosition() - startMousePos;
 			//Logger::LogInfo(std::to_string(mouseMove.x) + " " + std::to_string(mouseMove.y));
 
-			const glm::uvec2 windowSize = gameContext.window->GetSize();
+			const glm::vec2 windowSize = gameContext.window->GetSize();
 
 			const glm::vec3 camRight = camera->GetRight();
 			const glm::vec3 camUp = camera->GetUp();

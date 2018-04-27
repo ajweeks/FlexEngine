@@ -35,7 +35,7 @@ namespace flex
 		probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
 		probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
 		probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-		probeCaptureMatCreateInfo.generatedCubemapSize = glm::uvec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
+		probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
 		probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
 		probeCaptureMatCreateInfo.enableIrradianceSampler = true;
 		probeCaptureMatCreateInfo.generateIrradianceSampler = true;

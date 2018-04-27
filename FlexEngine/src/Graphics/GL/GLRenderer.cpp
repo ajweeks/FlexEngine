@@ -798,7 +798,7 @@ namespace flex
 			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
 			CheckGLErrorMessages();
 
-			glm::uvec2 cubemapSize = skyboxGLMaterial->material.cubemapSamplerSize;
+			glm::vec2 cubemapSize = skyboxGLMaterial->material.cubemapSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			CheckGLErrorMessages();
@@ -965,7 +965,7 @@ namespace flex
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
+		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
@@ -1102,7 +1102,7 @@ namespace flex
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			CheckGLErrorMessages();
 
-			glm::uvec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
+			glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
@@ -1169,7 +1169,7 @@ namespace flex
 			GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 			GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
-			glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+			glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 
 			// Must be enabled to clear depth buffer
 			glDepthMask(GL_TRUE);
@@ -1689,7 +1689,7 @@ namespace flex
 				GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 				GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
-				glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+				glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 				CheckGLErrorMessages();
@@ -1956,7 +1956,7 @@ namespace flex
 					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
-					glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 					
 					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 					CheckGLErrorMessages();

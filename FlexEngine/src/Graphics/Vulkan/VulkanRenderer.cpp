@@ -5664,7 +5664,7 @@ namespace flex
 			VulkanRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 			VulkanMaterial* cubemapMaterial = &m_LoadedMaterials[cubemapRenderObject->materialID];
 
-			glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+			glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 
 			for (size_t face = 0; face < 6; ++face)
 			{
@@ -5727,7 +5727,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(cubemapMaterialID);
 		}
 
-		//void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
+		//void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
 		//{
 		//	UNREFERENCED_PARAMETER(gameContext);
 		//	UNREFERENCED_PARAMETER(brdfLUTTextureID);

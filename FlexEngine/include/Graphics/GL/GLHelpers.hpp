@@ -153,7 +153,7 @@ namespace flex
 			u32* textureID = nullptr;
 			u32* depthTextureID = nullptr;
 			std::vector<GLCubemapGBuffer>* textureGBufferIDs = nullptr;
-			glm::uvec2 textureSize = { 0, 0 };
+			glm::vec2 textureSize = { 0, 0 };
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
 			bool generateMipmaps = false;
 			bool enableTrilinearFiltering = false;

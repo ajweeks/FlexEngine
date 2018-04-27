@@ -145,7 +145,7 @@ namespace flex
 
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::uvec2 generatedIrradianceCubemapSize = { 0, 0 };
+		glm::vec2 generatedIrradianceCubemapSize = { 0, 0 };
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 		std::string environmentMapPath = "";
 
@@ -156,12 +156,12 @@ namespace flex
 		bool enableCubemapSampler = false;
 		bool enableCubemapTrilinearFiltering = false;
 		bool generateCubemapSampler = false;
-		glm::uvec2 generatedCubemapSize = { 0, 0 };
+		glm::vec2 generatedCubemapSize = { 0, 0 };
 		bool generateCubemapDepthBuffers = false;
 
 		bool generatePrefilteredMap = false;
 		bool enablePrefilteredMap = false;
-		glm::uvec2 generatedPrefilteredCubemapSize = { 0, 0 };
+		glm::vec2 generatedPrefilteredCubemapSize = { 0, 0 };
 		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
 		bool generateReflectionProbeMaps = false;
@@ -192,7 +192,7 @@ namespace flex
 
 		bool generateCubemapSampler = false;
 		bool enableCubemapSampler = false;
-		glm::uvec2 cubemapSamplerSize = { 0, 0 };
+		glm::vec2 cubemapSamplerSize = { 0, 0 };
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 		// PBR constants
@@ -226,12 +226,12 @@ namespace flex
 
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::uvec2 irradianceSamplerSize = { 0,0 };
+		glm::vec2 irradianceSamplerSize = { 0,0 };
 		std::string environmentMapPath = "";
 
 		bool enablePrefilteredMap = false;
 		bool generatePrefilteredMap = false;
-		glm::uvec2 prefilteredMapSize = { 0,0 };
+		glm::vec2 prefilteredMapSize = { 0,0 };
 
 		bool enableBRDFLUT = false;
 		bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!

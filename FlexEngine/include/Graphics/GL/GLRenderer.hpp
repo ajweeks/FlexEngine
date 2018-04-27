@@ -97,7 +97,7 @@ namespace flex
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
-			void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
+			void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
 			void SwapBuffers(const GameContext& gameContext);
 
@@ -167,7 +167,7 @@ namespace flex
 			FrameBufferHandle m_gBuffer_DiffuseAOHandle;
 
 			FrameBufferHandle m_BRDFTextureHandle;
-			glm::uvec2 m_BRDFTextureSize;
+			glm::vec2 m_BRDFTextureSize;
 
 			// Everything is drawn to this texture before being drawn to the default 
 			// frame buffer through some post-processing effects
