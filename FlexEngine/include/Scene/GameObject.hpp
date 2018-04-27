@@ -26,6 +26,8 @@ namespace flex
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void PostInitialize(const GameContext& gameContext);
 
+		bool IsSerializable() const;
+
 	protected:
 		virtual void Update(const GameContext& gameContext);
 		virtual void Destroy(const GameContext& gameContext);
@@ -36,6 +38,7 @@ namespace flex
 
 		std::string m_Name;
 		SerializableType m_SerializableType = SerializableType::NONE;
+		bool m_Serializable = true;
 
 	private:
 		// Serializing class

@@ -4283,8 +4283,8 @@ namespace flex
 				renderPassBeginInfo.renderPass = m_CubemapFrameBuffer->renderPass;
 				renderPassBeginInfo.renderArea.offset = { 0, 0 };
 				renderPassBeginInfo.renderArea.extent = {
-					cubemapMaterial.material.cubemapSamplerSize.x,
-					cubemapMaterial.material.cubemapSamplerSize.y
+					(uint32_t)cubemapMaterial.material.cubemapSamplerSize.x,
+					(uint32_t)cubemapMaterial.material.cubemapSamplerSize.y
 				};
 				renderPassBeginInfo.clearValueCount = clearValues.size();
 				renderPassBeginInfo.pClearValues = clearValues.data();
@@ -4303,14 +4303,16 @@ namespace flex
 
 				VkViewport viewport = VkViewport{
 					0.0f, 1.0f,
-					(real)cubemapMaterial.material.cubemapSamplerSize.x, (real)cubemapMaterial.material.cubemapSamplerSize.y,
+					(real)cubemapMaterial.material.cubemapSamplerSize.x, 
+					(real)cubemapMaterial.material.cubemapSamplerSize.y,
 					0.1f, 1000.0f
 				};
 				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 				VkRect2D scissor = VkRect2D{
 					{ 0u, 0u },
-					{ cubemapMaterial.material.cubemapSamplerSize.x, cubemapMaterial.material.cubemapSamplerSize.y }
+					{ (uint32_t)cubemapMaterial.material.cubemapSamplerSize.x, 
+					  (uint32_t)cubemapMaterial.material.cubemapSamplerSize.y }
 				};
 				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 

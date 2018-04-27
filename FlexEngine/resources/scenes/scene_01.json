@@ -158,10 +158,18 @@
     {
       "name": "Skybox",
       "type" : "skybox",
-      "rotation": "0.0,0.0,0.0",
+      "rotation": "0.0, 0.0, 0.0",
       "material": {
         "name": "Skybox",
-        "shader": "skybox"
+        "shader": "skybox",
+        "generate hdr cubemap sampler" : true,
+        "enable cubemap sampler" : true,
+        "enable cubemap trilinear filtering" : true,
+        "generated cubemap size" : "512, 512",
+        "generate irradiance sampler" : true,
+        "generated irradiance cubemap size" : "32, 32",
+        "generate prefiltered map" : true,
+        "generated prefiltered map size" : "128, 128",
       }
     },
     {
@@ -188,7 +196,7 @@
     "type" :  "directional light",
     "direction": "0.1,1.5,0.0",
     "color": "1.0,1.0,1.0",
-    "brightness": 300.0,
+    "brightness": 10.0,
     "enabled" : true
   }
 }

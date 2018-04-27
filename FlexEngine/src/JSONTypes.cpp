@@ -121,6 +121,46 @@ namespace flex
 		return "";
 	}
 
+	bool JSONObject::SetStringChecked(const std::string& label, std::string& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetString(label);
+			return true;
+		}
+		return false;
+	}
+
+	bool JSONObject::SetVec2Checked(const std::string& label, glm::vec2& value) const
+	{
+		if (HasField(label))
+		{
+			value = ParseVec2(GetString(label));
+			return true;
+		}
+		return false;
+	}
+
+	bool JSONObject::SetVec3Checked(const std::string& label, glm::vec3& value) const
+	{
+		if (HasField(label))
+		{
+			value = ParseVec3(GetString(label));
+			return true;
+		}
+		return false;
+	}
+
+	bool JSONObject::SetVec4Checked(const std::string& label, glm::vec4& value) const
+	{
+		if (HasField(label))
+		{
+			value = ParseVec4(GetString(label));
+			return true;
+		}
+		return false;
+	}
+
 	i32 JSONObject::GetInt(const std::string& label) const
 	{
 		for (auto& field : fields)
@@ -131,6 +171,16 @@ namespace flex
 			}
 		}
 		return 0;
+	}
+
+	bool JSONObject::SetIntChecked(const std::string& label, int & value) const
+	{
+		if (HasField(label))
+		{
+			value = GetInt(label);
+			return true;
+		}
+		return false;
 	}
 
 	real JSONObject::GetFloat(const std::string& label) const
@@ -145,6 +195,16 @@ namespace flex
 		return 0.0f;
 	}
 
+	bool JSONObject::SetFloatChecked(const std::string & label, float & value) const
+	{
+		if (HasField(label))
+		{
+			value = GetFloat(label);
+			return true;
+		}
+		return false;
+	}
+
 	bool JSONObject::GetBool(const std::string& label) const
 	{
 		for (auto& field : fields)
@@ -153,6 +213,16 @@ namespace flex
 			{
 				return field.value.boolValue;
 			}
+		}
+		return false;
+	}
+
+	bool JSONObject::SetBoolChecked(const std::string& label, bool& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetBool(label);
+			return true;
 		}
 		return false;
 	}
@@ -169,6 +239,16 @@ namespace flex
 		return {};
 	}
 
+	bool JSONObject::SetFieldArrayChecked(const std::string & label, std::vector<JSONField>& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetFieldArray(label);
+			return true;
+		}
+		return false;
+	}
+
 	const std::vector<JSONObject>& JSONObject::GetObjectArray(const std::string& label) const
 	{
 		for (auto& field : fields)
@@ -181,6 +261,16 @@ namespace flex
 		return {};
 	}
 
+	bool JSONObject::SetObjectArrayChecked(const std::string & label, std::vector<JSONObject>& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetObjectArray(label);
+			return true;
+		}
+		return false;
+	}
+
 	const JSONObject& JSONObject::GetObject(const std::string& label) const
 	{
 		for (auto& field : fields)
@@ -191,6 +281,16 @@ namespace flex
 			}
 		}
 		return JSONObject();
+	}
+
+	bool JSONObject::SetObjectChecked(const std::string& label, JSONObject& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetObject(label);
+			return true;
+		}
+		return false;
 	}
 
 

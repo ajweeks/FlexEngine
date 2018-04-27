@@ -57,48 +57,23 @@ namespace flex
 			}
 		}
 
-		std::string sceneName = sceneRootObject.GetString("name");
-		m_Name = sceneName;
+		sceneRootObject.SetStringChecked("name", m_Name);
 
 		// This holds all the entities in the scene which do not have a parent
-		std::vector<JSONObject> rootEntities = sceneRootObject.GetObjectArray("entities");
-		for (const auto& rootEntity : rootEntities)
+		const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
+		for (const JSONObject& rootEntity : rootEntities)
 		{
 			AddChild(gameContext, CreateEntityFromJSON(gameContext, rootEntity));
 		}
 
 		if (sceneRootObject.HasField("point lights"))
 		{
-			std::vector<JSONObject> pointLightsArray = sceneRootObject.GetObjectArray("point lights");
+			const std::vector<JSONObject>& pointLightsArray = sceneRootObject.GetObjectArray("point lights");
 
-			for (JSONObject& pointLightObj : pointLightsArray)
+			for (const JSONObject& pointLightObj : pointLightsArray)
 			{
 				PointLight pointLight = {};
-
-				std::string posStr = pointLightObj.GetString("position");
-				pointLight.position = glm::vec4(ParseVec3(posStr), 0);
-
-				std::string colorStr = pointLightObj.GetString("color");
-				if (!colorStr.empty())
-				{
-					pointLight.color = ParseVec4(colorStr);
-				}
-
-				if (pointLightObj.HasField("brightness"))
-				{
-					real brightness = pointLightObj.GetFloat("brightness");
-					pointLight.brightness = brightness;
-				}
-
-				if (pointLightObj.HasField("enabled"))
-				{
-					pointLight.enabled = pointLightObj.GetBool("enabled") ? 1 : 0;
-				}
-
-				if (pointLightObj.HasField("name"))
-				{
-					pointLight.name = pointLightObj.GetString("name");
-				}
+				CreatePointLightFromJSON(gameContext, pointLightObj, pointLight);
 
 				m_PointLights.push_back(pointLight);
 				gameContext.renderer->InitializePointLight(pointLight);
@@ -107,33 +82,15 @@ namespace flex
 
 		if (sceneRootObject.HasField("directional light"))
 		{
-			JSONObject directionalLightObj = sceneRootObject.GetObject("directional light");
+			const JSONObject& directionalLightObj = sceneRootObject.GetObject("directional light");
 
 			DirectionalLight dirLight = {};
-
-			std::string dirStr = directionalLightObj.GetString("direction");
-			dirLight.direction = glm::vec4(ParseVec3(dirStr), 0);
-
-			std::string colorStr = directionalLightObj.GetString("color");
-			if (!colorStr.empty())
-			{
-				dirLight.color = ParseVec4(colorStr);
-			}
-
-			if (directionalLightObj.HasField("brightness"))
-			{
-				real brightness = directionalLightObj.GetFloat("brightness");
-				dirLight.brightness = brightness;
-			}
-
-			if (directionalLightObj.HasField("enabled"))
-			{
-				dirLight.enabled = directionalLightObj.GetBool("enabled") ? 1 : 0;
-			}
-
+			CreateDirectionalLightFromJSON(gameContext, directionalLightObj, dirLight);
+			
 			m_DirectionalLight = dirLight;
 			gameContext.renderer->InitializeDirectionalLight(dirLight);
 		}
+
 
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);
@@ -249,14 +206,18 @@ namespace flex
 		std::string entityTypeStr = obj.GetString("type");
 		SerializableType entityType = StringToSerializableType(entityTypeStr);
 
+		std::string objectName = obj.GetString("name");
+		
 		switch (entityType)
 		{
 		case SerializableType::MESH:
 		{
-			std::string objectName = obj.GetString("name");
-
 			JSONObject meshObj = obj.GetObject("mesh");
 			std::string meshFilePath = meshObj.GetString("file");
+			if (!meshFilePath.empty())
+			{
+				meshFilePath = RESOURCE_LOCATION + meshFilePath;
+			}
 			std::string meshPrefabName = meshObj.GetString("prefab");
 			bool flipNormalYZ = meshObj.GetBool("flipNormalYZ");
 			bool flipZ = meshObj.GetBool("flipZ");
@@ -316,7 +277,12 @@ namespace flex
 				{
 					if (material.HasField(filePathParams[i].name))
 					{
-						*filePathParams[i].member = RESOURCE_LOCATION + material.GetString(filePathParams[i].name);
+						*filePathParams[i].member = material.GetString(filePathParams[i].name);
+
+						if (StartsWith(*filePathParams[i].member, RESOURCE_LOCATION))
+						{
+							*filePathParams[i].member = (filePathParams[i].member)->substr(RESOURCE_LOCATION.length());
+						}
 					}
 				}
 
@@ -426,7 +392,8 @@ namespace flex
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
 
-				mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + meshFilePath,
+				mesh->LoadFromFile(gameContext, 
+					meshFilePath,
 					flipNormalYZ,
 					flipZ,
 					flipU,
@@ -464,8 +431,27 @@ namespace flex
 		} break;
 		case SerializableType::SKYBOX:
 		{
-			// TODO: UNIMPLEMENTED
-			//gameContext.renderer->SetSkyboxMaterial();
+			JSONObject materialObj = obj.GetObject("material");
+			
+			MaterialCreateInfo skyboxHDRMatInfo = {};
+			materialObj.SetStringChecked("name", skyboxHDRMatInfo.name);
+			materialObj.SetStringChecked("shader", skyboxHDRMatInfo.shaderName);
+			materialObj.SetBoolChecked("generate hdr cubemap sampler", skyboxHDRMatInfo.generateHDRCubemapSampler);
+			materialObj.SetBoolChecked("enable cubemap sampler", skyboxHDRMatInfo.enableCubemapSampler);
+			materialObj.SetBoolChecked("enable cubemap trilinear filtering", skyboxHDRMatInfo.enableCubemapTrilinearFiltering);
+			materialObj.SetVec2Checked("generated cubemap size", skyboxHDRMatInfo.generatedCubemapSize);
+			materialObj.SetBoolChecked("generate irradiance sampler", skyboxHDRMatInfo.generateIrradianceSampler);
+			materialObj.SetVec2Checked("generated irradiance cubemap size", skyboxHDRMatInfo.generatedIrradianceCubemapSize);
+			materialObj.SetBoolChecked("generate prefiltered map", skyboxHDRMatInfo.generatePrefilteredMap);
+			materialObj.SetVec2Checked("generated prefiltered map size", skyboxHDRMatInfo.generatedPrefilteredCubemapSize);
+
+			const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+
+			MeshPrefab* skybox = new MeshPrefab(skyboxHDRMatID, objectName);
+			skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+			AddChild(gameContext, skybox);
+
+			gameContext.renderer->SetSkyboxMaterial(skyboxHDRMatID);
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
@@ -489,6 +475,40 @@ namespace flex
 		return result;
 	}
 
+	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
+	{
+		std::string posStr = obj.GetString("position");
+		pointLight.position = glm::vec4(ParseVec3(posStr), 0);
+
+		obj.SetVec4Checked("color", pointLight.color);
+
+		obj.SetFloatChecked("brightness", pointLight.brightness);
+
+		if (obj.HasField("enabled"))
+		{
+			pointLight.enabled = obj.GetBool("enabled") ? 1 : 0;
+		}
+
+		obj.SetStringChecked("brightness", pointLight.name);
+
+		obj.SetStringChecked("name", pointLight.name);
+	}
+
+	void BaseScene::CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight)
+	{
+		std::string dirStr = obj.GetString("direction");
+		directionalLight.direction = glm::vec4(ParseVec3(dirStr), 0);
+
+		obj.SetVec4Checked("color", directionalLight.color);
+
+		obj.SetFloatChecked("brightness", directionalLight.brightness);
+
+		if (obj.HasField("enabled"))
+		{
+			directionalLight.enabled = obj.GetBool("enabled") ? 1 : 0;
+		}
+	}
+
 	void BaseScene::SerializeToFile(const GameContext& gameContext)
 	{
 		JSONObject rootSceneObject = {};
@@ -506,7 +526,10 @@ namespace flex
 		std::vector<JSONObject> entitiesArray;
 		for (GameObject* child : m_Children)
 		{
-			entitiesArray.push_back(SerializeObject(child, gameContext));
+			if (child->IsSerializable())
+			{
+				entitiesArray.push_back(SerializeObject(child, gameContext));
+			}
 		}
 		entitiesField.value = JSONValue(entitiesArray);
 
@@ -557,6 +580,8 @@ namespace flex
 
 	JSONObject BaseScene::SerializeObject(GameObject* gameObject, const GameContext& gameContext)
 	{
+		assert(gameObject->m_Serializable);
+
 		JSONObject object;
 		std::string childName = gameObject->m_Name;
 
@@ -580,7 +605,8 @@ namespace flex
 			MeshPrefab::MeshType meshType = mesh->GetType();
 			if (meshType == MeshPrefab::MeshType::FILE)
 			{
-				meshValue.fields.push_back(JSONField("file", JSONValue(mesh->GetFilepath())));
+				std::string meshFilepath = mesh->GetFilepath().substr(RESOURCE_LOCATION.length());
+				meshValue.fields.push_back(JSONField("file", JSONValue(meshFilepath)));
 			}
 			else if (meshType == MeshPrefab::MeshType::PREFAB)
 			{
@@ -692,26 +718,30 @@ namespace flex
 
 				if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())
 				{
+					std::string albedoTexturePath = material.albedoTexturePath.substr(RESOURCE_LOCATION.length());
 					materialObject.fields.push_back(JSONField("albedo texture filepath", 
-						JSONValue(material.albedoTexturePath)));
+						JSONValue(albedoTexturePath)));
 				}
 
 				if (shader.needMetallicSampler && !material.metallicTexturePath.empty())
 				{
+					std::string metallicTexturePath = material.metallicTexturePath.substr(RESOURCE_LOCATION.length());
 					materialObject.fields.push_back(JSONField("metallic texture filepath",
-						JSONValue(material.metallicTexturePath)));
+						JSONValue(metallicTexturePath)));
 				}
 
 				if (shader.needRoughnessSampler && !material.roughnessTexturePath.empty())
 				{
-					materialObject.fields.push_back(JSONField("roughness texture filepath", 
-						JSONValue(material.roughnessTexturePath)));
+					std::string roughnessTexturePath = material.roughnessTexturePath.substr(RESOURCE_LOCATION.length());
+					materialObject.fields.push_back(JSONField("roughness texture filepath",
+						JSONValue(roughnessTexturePath)));
 				}
 
 				if (shader.needAOSampler && !material.aoTexturePath.empty())
 				{
-					materialObject.fields.push_back(JSONField("ao texture filepath", 
-						JSONValue(material.aoTexturePath)));
+					std::string aoTexturePath = material.aoTexturePath.substr(RESOURCE_LOCATION.length());
+					materialObject.fields.push_back(JSONField("ao texture filepath",
+						JSONValue(aoTexturePath)));
 				}
 
 				materialField.value = JSONValue(materialObject);
@@ -730,7 +760,41 @@ namespace flex
 		} break;
 		case SerializableType::SKYBOX:
 		{
-			// TODO: UNIMPLEMENTED
+			// A skybox is a mesh prefab for now
+			MeshPrefab* skyboxMesh = (MeshPrefab*)gameObject;
+
+			glm::vec3 skyboxRotEuler = glm::eulerAngles(skyboxMesh->GetTransform().GetGlobalRotation());
+			object.fields.push_back(JSONField("rotation", JSONValue(Vec3ToString(skyboxRotEuler))));
+
+			JSONField materialField = {};
+			materialField.label = "material";
+
+			Material skyboxMat = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
+			Shader skyboxShader = gameContext.renderer->GetShader(skyboxMat.shaderID);
+
+			JSONObject materialObj = {};
+			materialObj.fields.push_back(JSONField("name", JSONValue(skyboxMat.name)));
+			materialObj.fields.push_back(JSONField("shader", JSONValue(skyboxShader.name)));
+			materialObj.fields.push_back(JSONField("generate hdr cubemap sampler", 
+				JSONValue(skyboxMat.generateHDRCubemapSampler)));
+			materialObj.fields.push_back(JSONField("enable cubemap sampler", 
+				JSONValue(skyboxMat.enableCubemapSampler)));
+			materialObj.fields.push_back(JSONField("enable cubemap trilinear filtering",
+				JSONValue(skyboxMat.enableCubemapTrilinearFiltering)));
+			materialObj.fields.push_back(JSONField("generated cubemap size", 
+				JSONValue(Vec2ToString(skyboxMat.cubemapSamplerSize))));
+			materialObj.fields.push_back(JSONField("generate irradiance sampler", 
+				JSONValue(skyboxMat.generateIrradianceSampler)));
+			materialObj.fields.push_back(JSONField("generated irradiance cubemap size", 
+				JSONValue(Vec2ToString(skyboxMat.irradianceSamplerSize))));
+			materialObj.fields.push_back(JSONField("generate prefiltered map", 
+				JSONValue(skyboxMat.generatePrefilteredMap)));
+			materialObj.fields.push_back(JSONField("generated prefiltered map size", 
+				JSONValue(Vec2ToString(skyboxMat.prefilteredMapSize))));
+
+			materialField.value = JSONValue(materialObj);
+
+			object.fields.push_back(materialField);
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
@@ -755,11 +819,18 @@ namespace flex
 
 			for (GameObject* child : gameObject->m_Children)
 			{
-				children.push_back(SerializeObject(child, gameContext));
+				if (child->IsSerializable())
+				{
+					children.push_back(SerializeObject(child, gameContext));
+				}
 			}
 
-			childrenField.value = JSONValue(children);
-			object.fields.push_back(childrenField);
+			// It's possible that all children are non-serializable
+			if (!children.empty())
+			{
+				childrenField.value = JSONValue(children);
+				object.fields.push_back(childrenField);
+			}
 		}
 
 		return object;

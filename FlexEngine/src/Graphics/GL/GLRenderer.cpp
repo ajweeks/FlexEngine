@@ -287,6 +287,8 @@ namespace flex
 
 			mat.material.frameBuffers = createInfo->frameBuffers;
 
+			mat.material.enableCubemapTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+
 			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
 			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler || createInfo->generateHDRCubemapSampler;
 			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
@@ -2717,7 +2719,7 @@ namespace flex
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
 			outInfo.enableCulling = renderObject->enableCulling;
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
-			outInfo.depthWriteEnable= renderObject->depthWriteEnable;
+			outInfo.depthWriteEnable = renderObject->depthWriteEnable;
 
 			return true;
 		}

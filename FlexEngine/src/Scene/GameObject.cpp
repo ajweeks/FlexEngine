@@ -12,6 +12,11 @@ namespace flex
 	{
 		m_Transform.SetAsIdentity();
 
+		if (m_SerializableType == SerializableType::NONE)
+		{
+			m_Serializable = false;
+		}
+
 		if (parent)
 		{
 			m_Transform.SetParentTransform(&parent->m_Transform);
@@ -118,6 +123,11 @@ namespace flex
 		{
 			child->PostInitialize(gameContext);
 		}
+	}
+
+	bool GameObject::IsSerializable() const
+	{
+		return m_Serializable;
 	}
 
 	void GameObject::Update(const GameContext& gameContext)

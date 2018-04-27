@@ -43,6 +43,8 @@ namespace flex
 
 	private:
 		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
+		void CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight);
+		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
 
 		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
 		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);

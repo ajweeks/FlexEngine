@@ -119,6 +119,12 @@ namespace flex
 			}
 		}
 
+		if (!scene)
+		{
+			Logger::LogError("Failed to load mesh " + filepath);
+			return false;
+		}
+
 
 		if (!scene->HasMeshes())
 		{
@@ -991,6 +997,11 @@ namespace flex
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
 			m_Transform.SetGlobalPosition(newGridPos);
 		}
+	}
+
+	MaterialID MeshPrefab::GetMaterialID() const
+	{
+		return m_MaterialID;
 	}
 
 	void MeshPrefab::SetMaterialID(MaterialID materialID, const GameContext& gameContext)

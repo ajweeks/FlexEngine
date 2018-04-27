@@ -381,6 +381,17 @@ namespace flex
 		}
 	}
 
+	bool StartsWith(const std::string& str, const std::string& start)
+	{
+		if (str.length() < start.length())
+		{
+			return false;
+		}
+
+		bool result = (str.substr(0, start.length()).compare(start) == 0);
+		return result;
+	}
+
 	std::string SerializableTypeToString(SerializableType type)
 	{
 		switch (type)

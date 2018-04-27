@@ -66,6 +66,7 @@ namespace flex
 		virtual void Initialize(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
 
+		MaterialID GetMaterialID() const;
 		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
 		void SetUVScale(real uScale, real vScale);
 

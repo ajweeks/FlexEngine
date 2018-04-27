@@ -201,6 +201,24 @@
 			}
 		},
 		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"rotation" : "0.000000, -0.000000, 0.000000",
+			"material" : 
+			{
+				"name" : "Skybox",
+				"shader" : "skybox",
+				"generate hdr cubemap sampler" : true,
+				"enable cubemap sampler" : true,
+				"enable cubemap trilinear filtering" : true,
+				"generated cubemap size" : "512.000000, 512.000000",
+				"generate irradiance sampler" : true,
+				"generated irradiance cubemap size" : "32.000000, 32.000000",
+				"generate prefiltered map" : true,
+				"generated prefiltered map size" : "128.000000, 128.000000"
+			}
+		},
+		{
 			"name" : "default reflection probe",
 			"type" : "reflection probe",
 			"children" : 
@@ -229,14 +247,7 @@
 					"mesh" : 
 					{
 						"file" : "../../../FlexEngine/resources/models/sphere.fbx"
-					},
-					"children" : 
-					[
-						{
-							"name" : "default reflection probe capture",
-							"type" : "NONE"
-						}
-					]
+					}
 				}
 			]
 		}
@@ -256,6 +267,6 @@
 		"direction" : "0.100000, 1.500000, 0.000000",
 		"color" : "1.000000, 1.000000, 1.000000",
 		"enabled" : true,
-		"brightness" : 300.000000
+		"brightness" : 10.000000
 	}
 }

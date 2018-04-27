@@ -222,6 +222,7 @@ namespace flex
 		bool enableHDREquirectangularSampler = false;
 		std::string hdrEquirectangularTexturePath = "";
 
+		bool enableCubemapTrilinearFiltering = false;
 		bool generateHDRCubemapSampler = false;
 
 		bool enableIrradianceSampler = false;

@@ -121,6 +121,8 @@ namespace flex
 	void ToLower(std::string& str);
 	void ToUpper(std::string& str);
 
+	bool StartsWith(const std::string& str, const std::string& start);
+
 	std::string SerializableTypeToString(SerializableType type);
 	SerializableType StringToSerializableType(const std::string& serializableTypeStr);
 
