@@ -76,7 +76,10 @@ namespace flex
 		}
 	}
 
-	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV, RenderObjectCreateInfo* optionalCreateInfo)
+	bool MeshPrefab::LoadFromFile(const GameContext& gameContext,
+		const std::string& filepath,
+		ImportSettings* importSettings /* = nullptr */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		m_Type = Type::FILE;
 		m_Shape = PrefabShape::NONE;
@@ -235,11 +238,11 @@ namespace flex
 					if (meshHasNormals)
 					{
 						glm::vec3 norm = ToVec3(mesh->mNormals[i]);
-						if (flipNormalYZ)
+						if (importSettings && importSettings->swapNormalYZ)
 						{
 							std::swap(norm.y, norm.z);
 						}
-						if (flipZ)
+						if (importSettings && importSettings->flipNormalZ)
 						{
 							norm.z = -norm.z;
 						}
@@ -263,11 +266,11 @@ namespace flex
 						// Truncate w component
 						glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
 						texCoord *= m_UVScale;
-						if (flipU)
+						if (importSettings && importSettings->flipU)
 						{
 							texCoord.x = 1.0f - texCoord.x;
 						}
-						if (flipV)
+						if (importSettings && importSettings->flipV)
 						{
 							texCoord.y = 1.0f - texCoord.y;
 						}

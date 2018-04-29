@@ -44,6 +44,18 @@ namespace flex
 			NONE
 		};
 
+		struct ImportSettings
+		{
+			/* Whether or not to invert the horizontal texture coordinate */
+			bool flipU = false;
+			/* Whether or not to invert the vertical texture coordinate */
+			bool flipV = false;
+			/* Whether or not to invert the Z component (up) of all normals */
+			bool flipNormalZ = false;
+			/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
+			bool swapNormalYZ = false;
+		};
+
 		/*
 		 * Call before loading to force certain attributes to be filled/ignored based on shader
 		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
@@ -54,8 +66,9 @@ namespace flex
 		/*
 		* Loads a mesh from file
 		*/
-		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath,
-			bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false,
+		bool LoadFromFile(const GameContext& gameContext, 
+			const std::string& filepath,
+			ImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		/*

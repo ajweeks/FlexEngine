@@ -261,12 +261,15 @@ namespace flex
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
 
+				MeshPrefab::ImportSettings importSettings = {};
+				importSettings.flipU = flipU;
+				importSettings.flipV = flipV;
+				importSettings.flipNormalZ = flipZ;
+				importSettings.swapNormalYZ = flipNormalYZ;
+
 				mesh->LoadFromFile(gameContext, 
 					meshFilePath,
-					flipNormalYZ,
-					flipZ,
-					flipU,
-					flipV,
+					&importSettings,
 					&createInfo);
 
 				result = mesh;

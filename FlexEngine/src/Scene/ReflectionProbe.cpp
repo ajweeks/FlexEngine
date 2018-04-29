@@ -54,7 +54,10 @@ namespace flex
 
 
 		m_SphereMesh = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe mesh");
-		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", true, true);
+		MeshPrefab::ImportSettings importSettings = {};
+		importSettings.swapNormalYZ = true;
+		importSettings.flipNormalZ = true;
+		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", &importSettings);
 		AddChild(m_SphereMesh);
 		m_SphereMesh->GetTransform()->Scale(1.5f);
 

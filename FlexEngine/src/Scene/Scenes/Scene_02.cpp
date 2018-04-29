@@ -207,7 +207,10 @@ namespace flex
 
 			m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
 
-			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
+			MeshPrefab::ImportSettings importSettings = {};
+			importSettings.swapNormalYZ = true;
+			importSettings.flipNormalZ = true;
+			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", &importSettings);
 			m_Spheres[i]->GetTransform()->SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, z * sphereSpacing));
 			AddChild(m_Spheres[i]);
 		}
@@ -297,21 +300,25 @@ namespace flex
 			pbrMatInfo.constAlbedo = glm::vec3(0.9f, 0.25f, 0.1f);
 			MaterialID boxMat3ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
 
+			MeshPrefab::ImportSettings importSettings = {};
+			importSettings.swapNormalYZ = true;
+			importSettings.flipNormalZ = true;
+
 			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
 			//m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
+			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", &importSettings);
 			AddChild(m_Box1);
 			m_Box1->GetTransform()->SetGlobalScale(box1Scale);
 
 			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
 			//m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
+			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", &importSettings);
 			AddChild(m_Box2);
 			m_Box2->GetTransform()->SetGlobalScale(box2Scale);
 
 			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
 			//m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
+			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", &importSettings);
 			AddChild(m_Box3);
 			m_Box3->GetTransform()->SetGlobalScale(box3Scale);
 		}
