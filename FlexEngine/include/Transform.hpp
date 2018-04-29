@@ -64,14 +64,6 @@ namespace flex
 		void Scale(const glm::vec3& deltaScale);
 		void Scale(real deltaScale);
 		void Scale(real deltaX, real deltaY, real deltaZ);
-
-		void SetParentTransform(Transform* parent);
-		Transform* GetParent();
-
-		void AddChildTransform(Transform* child);
-		void RemoveChildTransform(Transform* child);
-		void RemoveAllChildTransforms();
-		const std::vector<Transform*>& GetChildren();
 		
 		glm::mat4 GetModelMatrix();
 
@@ -92,9 +84,6 @@ namespace flex
 		glm::vec3 globalPosition;
 		glm::quat globalRotation;
 		glm::vec3 globalScale;
-
-		Transform* parentTransform = nullptr;
-		std::vector<Transform*> childrenTransforms;
 
 		GameObject* m_GameObject = nullptr;
 

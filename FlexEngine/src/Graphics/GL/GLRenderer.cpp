@@ -75,7 +75,7 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
-			m_DefaultTransform = Transform::Identity();
+			//m_DefaultTransform = Transform::Identity();
 
 			CheckGLErrorMessages();
 		}
@@ -173,6 +173,16 @@ namespace flex
 				SafeDelete(m_SkyBoxMesh);
 			}
 
+			for (GameObject* obj : m_PersistentObjects)
+			{
+				if (obj->GetRenderID() != InvalidRenderID)
+				{
+					DestroyRenderObject(obj->GetRenderID());
+				}
+				SafeDelete(obj);
+			}
+			m_PersistentObjects.clear();
+
 			DestroyRenderObject(m_SpriteQuadRenderID);
 
 			DestroyRenderObject(m_GBufferQuadRenderID);
@@ -187,7 +197,7 @@ namespace flex
 				{
 					if (m_RenderObjects[i])
 					{
-						Logger::LogError(m_RenderObjects[i]->name);
+						Logger::LogError(m_RenderObjects[i]->gameObject->GetName());
 						DestroyRenderObject(m_RenderObjects[i]->renderID);
 					}
 				}
@@ -645,10 +655,7 @@ namespace flex
 			renderObject->materialID = createInfo->materialID;
 			renderObject->vertexBufferData = createInfo->vertexBufferData;
 			renderObject->indices = createInfo->indices;
-			renderObject->name = createInfo->name;
-			renderObject->transform = createInfo->transform;
-			renderObject->visible = createInfo->visible;
-			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
+			renderObject->gameObject = createInfo->gameObject;
 			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
 			renderObject->enableCulling = createInfo->enableCulling ? GL_TRUE : GL_FALSE;
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
@@ -677,14 +684,9 @@ namespace flex
 				}
 			}
 
-			if (renderObject->name.empty())
+			if (renderObject->gameObject->GetName().empty())
 			{
 				Logger::LogWarning("Render object created with empty name!");
-			}
-
-			if (renderObject->transform == nullptr)
-			{
-				renderObject->transform = &m_DefaultTransform;
 			}
 
 			if (m_Materials.empty())
@@ -991,18 +993,25 @@ namespace flex
 					{ 1.0f, 1.0f },
 					{ 1.0f, 0.0f },
 				};
-				quadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
+				quadVertexBufferDataCreateInfo.attributes = 
+					(u32)VertexAttribute::POSITION | 
+					(u32)VertexAttribute::UV;
 
 				m_1x1_NDC_QuadVertexBufferData = {};
 				m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
 
 				m_1x1_NDC_QuadTransform = Transform::Identity();
 
+
+				GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", SerializableType::NONE);
+				m_PersistentObjects.push_back(oneByOneQuadGameObject);
+				// Don't render this normally, we'll draw it manually
+				oneByOneQuadGameObject->SetVisible(false);
+
 				RenderObjectCreateInfo quadCreateInfo = {};
-				quadCreateInfo.name = "1x1 Quad";
 				quadCreateInfo.materialID = brdfMatID;
 				quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
-				quadCreateInfo.transform = &m_1x1_NDC_QuadTransform;
+				quadCreateInfo.gameObject = oneByOneQuadGameObject;
 				quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quadCreateInfo.depthWriteEnable = false;
 				quadCreateInfo.visibleInSceneExplorer = false;
@@ -1017,7 +1026,6 @@ namespace flex
 				else
 				{
 					SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-					m_1x1_NDC_Quad->visible = false; // Don't render this normally, we'll draw it manually
 					m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(gameContext.renderer, quadRenderID);
 				}
 			}
@@ -1453,18 +1461,19 @@ namespace flex
 			m_SpriteQuadVertexBufferData = {};
 			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
 
-			m_SpriteQuadTransform.SetAsIdentity();
+
+			GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", SerializableType::NONE);
+			m_PersistentObjects.push_back(spriteQuadGameObject);
+			spriteQuadGameObject->SetVisible(false);
 
 			RenderObjectCreateInfo spriteQuadCreateInfo = {};
-			spriteQuadCreateInfo.name = "Sprite quad";
 			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
 			spriteQuadCreateInfo.materialID = m_SpriteMatID;
 			spriteQuadCreateInfo.depthWriteEnable = false;
-			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
+			spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
 			spriteQuadCreateInfo.enableCulling = false;
 			spriteQuadCreateInfo.visibleInSceneExplorer = false;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
-			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
 
 			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
 
@@ -1658,7 +1667,9 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						GLRenderObject* renderObject = GetRenderObject(j);
-						if (renderObject && renderObject->visible && renderObject->materialID == i)
+						if (renderObject &&
+							renderObject->gameObject->IsVisible() &&
+							renderObject->materialID == i)
 						{
 							m_DeferredRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1670,7 +1681,9 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						GLRenderObject* renderObject = GetRenderObject(j);
-						if (renderObject && renderObject->visible && renderObject->materialID == i)
+						if (renderObject &&
+							renderObject->gameObject->IsVisible() &&
+							renderObject->materialID == i)
 						{
 							m_ForwardRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1789,7 +1802,8 @@ namespace flex
 				CheckGLErrorMessages();
 
 				UpdateMaterialUniforms(gameContext, cubemapObject->materialID);
-				UpdatePerObjectUniforms(cubemapObject->materialID, skybox->transform->GetModelMatrix(), gameContext);
+				UpdatePerObjectUniforms(cubemapObject->materialID, 
+					skybox->gameObject->GetTransform()->GetModelMatrix(), gameContext);
 
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
@@ -1920,14 +1934,14 @@ namespace flex
 			for (size_t i = 0; i < batchedRenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = batchedRenderObjects[i];
-				if (!renderObject->visible)
+				if (!renderObject->gameObject->IsVisible())
 				{
 					continue;
 				}
 
 				if (!renderObject->vertexBufferData)
 				{
-					Logger::LogError("Attempted to draw object which contains no vertex buffer data: " + renderObject->name);
+					Logger::LogError("Attempted to draw object which contains no vertex buffer data: " + renderObject->gameObject->GetName());
 					return;
 				}
 
@@ -1981,7 +1995,7 @@ namespace flex
 					CheckGLErrorMessages();
 					
 					// TODO: Test if this is actually correct
-					glm::vec3 cubemapTranslation = -cubemapRenderObject->transform->GetGlobalPosition();
+					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetGlobalPosition();
 					for (size_t face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
@@ -2527,7 +2541,7 @@ namespace flex
 				return;
 			}
 
-			glm::mat4 model = renderObject->transform->GetModelMatrix();
+			glm::mat4 model = renderObject->gameObject->GetTransform()->GetModelMatrix();
 			UpdatePerObjectUniforms(renderObject->materialID, model, gameContext);
 		}
 
@@ -2684,45 +2698,6 @@ namespace flex
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
 		}
 
-		bool GLRenderer::GetRenderObjectVisible(RenderID renderID)
-		{
-			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
-			{
-				return renderObject->visible;
-			}
-			return false;
-		}
-
-		void GLRenderer::SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren)
-		{
-			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
-			{
-				if (renderObject->visible != visible)
-				{
-					renderObject->visible = visible;
-
-					if (effectChildren && renderObject->transform)
-					{
-						auto children = renderObject->transform->GetChildren();
-						for (Transform* child : children)
-						{
-							if (child->GetGameObject())
-							{
-								RenderID childRenderID = child->GetGameObject()->GetRenderID();
-								GLRenderObject* childRenderObject = GetRenderObject(childRenderID);
-								if (childRenderObject)
-								{
-									SetRenderObjectVisible(childRenderID, visible, true);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{
 			outInfo = {};
@@ -2736,10 +2711,7 @@ namespace flex
 			outInfo.materialID = renderObject->materialID;
 			outInfo.vertexBufferData = renderObject->vertexBufferData;
 			outInfo.indices = renderObject->indices;
-			outInfo.name = renderObject->name;
-			outInfo.transform = renderObject->transform;
-			outInfo.visible = renderObject->visible;
-			outInfo.visibleInSceneExplorer = renderObject->visibleInSceneExplorer;
+			outInfo.gameObject = renderObject->gameObject;
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
 			outInfo.enableCulling = renderObject->enableCulling;
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
@@ -2901,12 +2873,15 @@ namespace flex
 
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
-			m_gBufferQuadTransform = Transform::Identity();
+
+			GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", SerializableType::NONE);
+			m_PersistentObjects.push_back(gBufferQuadGameObject);
+			// Don't render the g buffer normally, we'll handle it separately
+			gBufferQuadGameObject->SetVisible(false);
 
 			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
-			gBufferQuadCreateInfo.name = "G Buffer Quad";
 			gBufferQuadCreateInfo.materialID = gBufferMatID;
-			gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
+			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
 			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
@@ -2917,7 +2892,6 @@ namespace flex
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
 			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
 		}
 
 		u32 GLRenderer::GetRenderObjectCount() const
@@ -3161,8 +3135,7 @@ SafeDelete(renderObject);
 				renderObject = GetRenderObject(renderID);
 				objectName = std::string(object->GetName() + "##" + std::to_string(renderObject->renderID));
 
-				// NOTE: 
-				if (!renderObject->visibleInSceneExplorer)
+				if (!renderObject->gameObject->IsVisibleInSceneExplorer())
 				{
 					return;
 				}
@@ -3177,10 +3150,10 @@ SafeDelete(renderObject);
 			if (renderObject)
 			{
 				const std::string objectID("##" + objectName + "-visible");
-				bool visible = renderObject->visible;
+				bool visible = renderObject->gameObject->IsVisible();
 				if (ImGui::Checkbox(objectID.c_str(), &visible))
 				{
-					SetRenderObjectVisible(renderObject->renderID, visible);
+					renderObject->gameObject->SetVisible(visible);
 				}
 				ImGui::SameLine();
 			}
@@ -3240,10 +3213,10 @@ SafeDelete(renderObject);
 				}
 
 				ImGui::Indent();
-				auto children = transform->GetChildren();
-				for (Transform* child : children)
+				const std::vector<GameObject*>& children = transform->GetGameObject()->GetChildren();
+				for (GameObject* child : children)
 				{
-					DrawImGuiForGameObjectAndChildren(child->GetGameObject());
+					DrawImGuiForGameObjectAndChildren(child);
 				}
 				ImGui::Unindent();
 
@@ -3259,10 +3232,14 @@ SafeDelete(renderObject);
 
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)
 		{
-			if (renderID > m_RenderObjects.size())
+#if _DEBUG
+			if (renderID > m_RenderObjects.size() ||
+				renderID == InvalidRenderID)
 			{
 				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
+				return nullptr;
 			}
+#endif
 
 			return m_RenderObjects[renderID];
 		}

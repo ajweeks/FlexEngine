@@ -48,9 +48,6 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
-			virtual bool GetRenderObjectVisible(RenderID renderID) override;
-			virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) override;
-
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
@@ -151,7 +148,6 @@ namespace flex
 
 			RenderID m_GBufferQuadRenderID = InvalidRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
-			Transform m_gBufferQuadTransform;
 			u32 m_gBufferHandle = 0;
 			u32 m_gBufferDepthHandle = 0;
 
@@ -181,7 +177,6 @@ namespace flex
 			FrameBufferHandle m_LoadingTextureHandle;
 			// TODO: Use a mesh prefab here
 			VertexBufferData m_SpriteQuadVertexBufferData;
-			Transform m_SpriteQuadTransform;
 			RenderID m_SpriteQuadRenderID;
 			
 			MaterialID m_SpriteMatID = InvalidMaterialID;
@@ -204,7 +199,7 @@ namespace flex
 
 			// The transform to be used for all objects who don't specify one in their 
 			// create info. Always set to identity.
-			Transform m_DefaultTransform;
+			//Transform m_DefaultTransform;
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;

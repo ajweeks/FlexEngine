@@ -36,11 +36,11 @@ namespace flex
 
 		std::vector<GameObject*>& GetRootObjects();
 
-	protected:
-		void AddChild(GameObject* gameObject);
+		GameObject* AddChild(GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
 
+	protected:
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);

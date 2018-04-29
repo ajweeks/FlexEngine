@@ -10,6 +10,7 @@
 #include "Graphics/Renderer.hpp"
 #include "GameContext.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
@@ -24,10 +25,10 @@ namespace flex
 		{
 			m_VertexBufferData.Destroy();
 
-			if (m_RenderID != InvalidRenderID)
+			if (m_GameObject)
 			{
-				m_GameContext.renderer->DestroyRenderObject(m_RenderID);
-				m_RenderID = InvalidRenderID;
+				m_GameObject->Destroy(m_GameContext);
+				SafeDelete(m_GameObject);
 			}
 		}
 
@@ -46,16 +47,15 @@ namespace flex
 			createInfo.colors_R32G32B32A32 = {};
 			m_VertexBufferData.Initialize(&createInfo);
 
-			m_Transform = Transform::Identity();
+			m_GameObject = new GameObject("Physics Debug Draw Object", SerializableType::NONE);
 
 			RenderObjectCreateInfo renderObjectCreateInfo = {};
 			renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-			renderObjectCreateInfo.name = "Physics Debug Draw Object";
-			renderObjectCreateInfo.transform = &m_Transform;
+			renderObjectCreateInfo.gameObject = m_GameObject;
 			renderObjectCreateInfo.materialID = m_MaterialID;
 			renderObjectCreateInfo.visibleInSceneExplorer = false;
 
-			m_RenderID = m_GameContext.renderer->InitializeRenderObject(m_GameContext, &renderObjectCreateInfo);
+			m_GameObject->SetRenderID(m_GameContext.renderer->InitializeRenderObject(m_GameContext, &renderObjectCreateInfo));
 		}
 
 		void VulkanPhysicsDebugDraw::UpdateDebugMode()
@@ -126,10 +126,10 @@ namespace flex
 		{
 			if (m_LineSegments.empty())
 			{
-				m_GameContext.renderer->SetRenderObjectVisible(m_RenderID, false);
+				m_GameObject->SetVisible(false);
 				return;
 			}
-			m_GameContext.renderer->SetRenderObjectVisible(m_RenderID, true);
+			m_GameObject->SetVisible(true);
 
 			VulkanMaterial* vkMat = &m_Renderer->m_LoadedMaterials[m_MaterialID];
 			VulkanShader* vkShader = &m_Renderer->m_Shaders[vkMat->material.shaderID];
@@ -153,7 +153,7 @@ namespace flex
 
 			m_VertexBufferData.Initialize(&createInfo);
 
-			m_GameContext.renderer->UpdateRenderObjectVertexData(m_RenderID);
+			m_GameContext.renderer->UpdateRenderObjectVertexData(m_GameObject->GetRenderID());
 
 			//glUseProgram(glShader->program);
 			//CheckGLErrorMessages();

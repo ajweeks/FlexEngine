@@ -359,9 +359,9 @@ namespace flex
 			bool visible = true;
 			bool visibleInSceneExplorer = true;
 
-			std::string name = "";
+			GameObject* gameObject = nullptr;
+
 			std::string materialName = "";
-			Transform* transform = nullptr;
 
 			u32 VAO = 0;
 			u32 VBO = 0;

@@ -113,6 +113,16 @@ namespace flex
 
 			SafeDelete(m_PhysicsDebugDrawer);
 
+			for (GameObject* obj : m_PersistentObjects)
+			{
+				if (obj->GetRenderID() != InvalidRenderID)
+				{
+					DestroyRenderObject(obj->GetRenderID());
+				}
+				SafeDelete(obj);
+			}
+			m_PersistentObjects.clear();
+
 			u32 activeRenderObjectCount = 0;
 			for (RenderObjectIter iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 			{
@@ -130,7 +140,7 @@ namespace flex
 				{
 					if (*iter)
 					{
-						Logger::LogError("Render object " + (*iter)->name + " was not destroyed");
+						Logger::LogError("Render object " + (*iter)->gameObject->GetName() + " was not destroyed");
 						DestroyRenderObject((*iter)->renderID, *iter);
 					}
 				}
@@ -316,11 +326,13 @@ namespace flex
 				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
 				m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
+
+				GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", SerializableType::NONE);
+				m_PersistentObjects.push_back(gBufferQuadGameObject);
+
 				RenderObjectCreateInfo gBufferQuadCreateInfo = {};
-				gBufferQuadCreateInfo.name = "G Buffer Quad";
 				gBufferQuadCreateInfo.materialID = gBufferMatID;
-				m_gBufferQuadTransform = Transform::Identity();
-				gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
+				gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
 				gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 				gBufferQuadCreateInfo.enableCulling = false;
 				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
@@ -2388,9 +2400,8 @@ namespace flex
 			renderObject->vertexBufferData = createInfo->vertexBufferData;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
 			renderObject->enableCulling = createInfo->enableCulling;
-			renderObject->name = createInfo->name;
 			renderObject->materialName = m_LoadedMaterials[renderObject->materialID].material.name;
-			renderObject->transform = createInfo->transform;
+			renderObject->gameObject = createInfo->gameObject;
 			renderObject->visible = true;
 			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
 
@@ -2534,13 +2545,16 @@ namespace flex
 
 				if (ImGui::TreeNode("Render Objects"))
 				{
+					//=====================
+					// TODO: OUTDATED
+					//=====================
 					for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 					{
 						// Directly draw all root render objects, they will all draw their own children
 						VulkanRenderObject* renderObject = GetRenderObject(i);
 						if (renderObject &&
 							renderObject->visibleInSceneExplorer &&
-							renderObject->transform->GetParent() == nullptr)
+							renderObject->gameObject->GetParent() == nullptr)
 						{
 							DrawImGuiForRenderObjectAndChildren(renderObject);
 						}
@@ -2596,13 +2610,13 @@ namespace flex
 		{
 			VulkanMaterial& material = m_LoadedMaterials[renderObject->materialID];
 			VulkanShader& shader = m_Shaders[material.material.shaderID];
-			const std::string objectName(renderObject->name + "##" + std::to_string(renderObject->renderID));
+			const std::string objectName(renderObject->gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
 
 			const std::string objectID("##" + objectName + "-visible");
 			bool visible = renderObject->visible;
 			if (ImGui::Checkbox(objectID.c_str(), &visible))
 			{
-				SetRenderObjectVisible(renderObject->renderID, visible);
+				renderObject->gameObject->SetVisible(visible);
 			}
 			ImGui::SameLine();
 			if (ImGui::TreeNode(objectName.c_str()))
@@ -2610,7 +2624,7 @@ namespace flex
 				const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
 				ImGui::TextUnformatted(renderIDStr.c_str());
 
-				Transform* transform = renderObject->transform;
+				Transform* transform = renderObject->gameObject->GetTransform();
 				if (transform)
 				{
 					static bool local = true;
@@ -2650,7 +2664,9 @@ namespace flex
 				}
 				else
 				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0, 0, 1));
 					ImGui::Text("Transform not set");
+					ImGui::PopStyleColor();
 				}
 
 				std::string matNameStr = "Material: " + material.material.name;
@@ -2663,20 +2679,17 @@ namespace flex
 					ImGui::Checkbox("Use Irradiance Sampler", &material.material.enableIrradianceSampler);
 				}
 
-				if (renderObject->transform)
+				ImGui::Indent();
+				const std::vector<GameObject*>& children = renderObject->gameObject->GetChildren();
+				for (GameObject* child : children)
 				{
-					ImGui::Indent();
-					auto children = renderObject->transform->GetChildren();
-					for (Transform* child : children)
+					VulkanRenderObject* renderObject = GetRenderObject(child->GetRenderID());
+					if (renderObject)
 					{
-						VulkanRenderObject* renderObject = GetRenderObject(child->GetGameObject()->GetRenderID());
-						if (renderObject)
-						{
-							DrawImGuiForRenderObjectAndChildren(renderObject);
-						}
+						DrawImGuiForRenderObjectAndChildren(renderObject);
 					}
-					ImGui::Unindent();
 				}
+				ImGui::Unindent();
 
 				ImGui::TreePop();
 			}
@@ -2696,45 +2709,6 @@ namespace flex
 			m_SwapChainNeedsRebuilding = true;
 		}
 
-		bool VulkanRenderer::GetRenderObjectVisible(RenderID renderID)
-		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
-			{
-				return renderObject->visible;
-			}
-			return false;
-		}
-
-		void VulkanRenderer::SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren)
-		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
-			{
-				if (visible != renderObject->visible)
-				{
-					renderObject->visible = visible;
-
-					if (effectChildren && renderObject->transform)
-					{
-						auto children = renderObject->transform->GetChildren();
-						for (Transform* child : children)
-						{
-							if (child->GetGameObject())
-							{
-								RenderID childRenderID = child->GetGameObject()->GetRenderID();
-								VulkanRenderObject* childRenderObject = GetRenderObject(childRenderID);
-								if (childRenderObject)
-								{
-									SetRenderObjectVisible(childRenderID, visible, true);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
 		bool VulkanRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{
 			outInfo = {};
@@ -2748,8 +2722,7 @@ namespace flex
 			outInfo.materialID = renderObject->materialID;
 			outInfo.vertexBufferData = renderObject->vertexBufferData;
 			outInfo.indices = renderObject->indices;
-			outInfo.name = renderObject->name;
-			outInfo.transform = renderObject->transform;
+			outInfo.gameObject = renderObject->gameObject;
 			outInfo.visible = renderObject->visible;
 			outInfo.visibleInSceneExplorer = renderObject->visibleInSceneExplorer;
 			outInfo.cullFace = VkCullModeToCullFace(renderObject->cullMode);
@@ -2919,7 +2892,15 @@ namespace flex
 
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
 		{
-			assert(renderID < m_RenderObjects.size());
+#if _DEBUG
+			if (renderID > m_RenderObjects.size() ||
+				renderID == InvalidRenderID)
+			{
+				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
+				return nullptr;
+			}
+#endif 
+
 			return m_RenderObjects[renderID];
 		}
 
@@ -4391,7 +4372,7 @@ namespace flex
 						glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView()));
 						glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
 						renderObjectMat.material.pushConstantBlock.mvp =
-							projection * view * renderObject->transform->GetModelMatrix();
+							projection * view * renderObject->gameObject->GetTransform()->GetModelMatrix();
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 					}
 
@@ -4499,7 +4480,7 @@ namespace flex
 							glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
 							glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
 							renderObjectMat.material.pushConstantBlock.mvp =
-								projection * view * renderObject->transform->GetModelMatrix();
+								projection * view * renderObject->gameObject->GetTransform()->GetModelMatrix();
 							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 						}
 
@@ -5256,7 +5237,7 @@ namespace flex
 
 			bool updateMVP = false; // This is set to true when either the view or projection matrix get overridden
 
-			glm::mat4 model = renderObject->transform->GetModelMatrix();
+			glm::mat4 model = renderObject->gameObject->GetTransform()->GetModelMatrix();
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();

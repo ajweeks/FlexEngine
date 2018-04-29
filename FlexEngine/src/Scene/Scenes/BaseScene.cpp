@@ -284,7 +284,7 @@ namespace flex
 
 				if (!visible)
 				{
-					gameContext.renderer->SetRenderObjectVisible(mesh->GetRenderID(), visible);
+					mesh->SetVisible(visible);
 				}
 
 				result = mesh;
@@ -523,7 +523,11 @@ namespace flex
 
 	JSONObject BaseScene::SerializeObject(GameObject* gameObject, const GameContext& gameContext)
 	{
-		assert(gameObject->m_Serializable);
+		if (!gameObject->IsSerializable())
+		{
+			Logger::LogError("Attempted to serialize non-serializable class");
+			return{};
+		}
 
 		JSONObject object;
 		std::string childName = gameObject->m_Name;
@@ -578,10 +582,10 @@ namespace flex
 						JSONValue(renderObjectCreateInfo.visibleInSceneExplorer)));
 				}
 
-				if (!renderObjectCreateInfo.transform->IsIdentity())
+				if (!renderObjectCreateInfo.gameObject->GetTransform()->IsIdentity())
 				{
 					JSONField transformField;
-					if (JSONParser::SerializeTransform(renderObjectCreateInfo.transform, transformField))
+					if (JSONParser::SerializeTransform(renderObjectCreateInfo.gameObject->GetTransform(), transformField))
 					{
 						object.fields.push_back(transformField);
 					}
@@ -760,7 +764,7 @@ namespace flex
 		} break;
 		}
 
-		const std::vector<Transform*>& gameObjectChildren = gameObject->m_Transform.GetChildren();
+		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		if (!gameObjectChildren.empty())
 		{
 			JSONField childrenField = {};
@@ -768,12 +772,11 @@ namespace flex
 
 			std::vector<JSONObject> children;
 
-			for (Transform* child : gameObjectChildren)
+			for (GameObject* child : gameObjectChildren)
 			{
-				GameObject* childGameObject = child->GetGameObject();
-				if (childGameObject->IsSerializable())
+				if (child->IsSerializable())
 				{
-					children.push_back(SerializeObject(childGameObject, gameContext));
+					children.push_back(SerializeObject(child, gameContext));
 				}
 			}
 
@@ -821,11 +824,11 @@ namespace flex
 		return object;
 	}
 
-	void BaseScene::AddChild(GameObject* gameObject)
+	GameObject* BaseScene::AddChild(GameObject* gameObject)
 	{
 		if (!gameObject)
 		{
-			return;
+			return nullptr;
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
@@ -833,11 +836,13 @@ namespace flex
 			if (*iter == gameObject)
 			{
 				Logger::LogWarning("Attempting to add child to scene again");
-				return;
+				return nullptr;
 			}
 		}
 
 		m_Children.push_back(gameObject);
+
+		return gameObject;
 	}
 
 	void BaseScene::RemoveChild(GameObject* gameObject, bool deleteChild)

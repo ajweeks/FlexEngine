@@ -94,27 +94,9 @@ namespace flex
 		{
 			RenderID renderID = InvalidRenderID;
 
-			std::string name = "";
+			GameObject* gameObject = nullptr;
+
 			std::string materialName = "";
-			Transform* transform = nullptr;
-
-			/*
-			* Whether or not this object should be rendered
-			* NOTE: Does *not* effect childrens' visibility
-			*/
-			bool visible = true;
-
-			/*
-			* Whether or not this object should be shown in the scene explorer UI
-			* NOTE: Children are also hidden when this if false!
-			*/
-			bool visibleInSceneExplorer = true;
-
-			/* 
-			* True if and only if this object will never move
-			* If true, this object will be rendered to reflection probes
-			*/
-			bool isStatic = true;
 
 			u32 VAO = 0;
 			u32 VBO = 0;

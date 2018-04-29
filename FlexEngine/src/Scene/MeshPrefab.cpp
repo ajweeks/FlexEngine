@@ -24,7 +24,6 @@ namespace flex
 
 	std::map<std::string, MeshPrefab::LoadedMesh*> MeshPrefab::m_LoadedMeshes;
 
-	std::string MeshPrefab::m_DefaultName = "Game Object";
 	glm::vec4 MeshPrefab::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 	glm::vec3 MeshPrefab::m_DefaultTangent(1.0f, 0.0f, 0.0f);
@@ -42,10 +41,6 @@ namespace flex
 		m_MaterialID(materialID),
 		m_UVScale(1.0f, 1.0f)
 	{
-		if (name.empty())
-		{
-			m_Name = m_DefaultName;
-		}
 	}
 
 	MeshPrefab::~MeshPrefab()
@@ -142,6 +137,15 @@ namespace flex
 		if (m_Name.empty())
 		{
 			m_Name = meshes[0]->mName.C_Str();
+
+			if (m_Name.empty())
+			{
+				auto filePathParts = Split(filepath, '.');
+				std::string friendlyFileName = filePathParts[filePathParts.size() - 1];
+				StripLeadingDirectories(friendlyFileName);
+
+				m_Name = "Mesh prefab - " + friendlyFileName;
+			}
 		}
 
 		size_t totalVertCount = 0;
@@ -288,17 +292,12 @@ namespace flex
 				m_MaterialID = optionalCreateInfo->materialID;
 				renderObjectCreateInfo.materialID = m_MaterialID;
 			}
-			renderObjectCreateInfo.name = optionalCreateInfo->name;
 			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
 			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
 			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
 			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
 			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
 
-			if (optionalCreateInfo->transform != nullptr)
-			{
-				Logger::LogError("Can not override transform in LoadFromFile! Ignoring passed in data");
-			}
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
 				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
@@ -309,10 +308,9 @@ namespace flex
 			}
 		}
 
+		renderObjectCreateInfo.gameObject = this;
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.materialID = m_MaterialID;
-		renderObjectCreateInfo.name = m_Name;
-		renderObjectCreateInfo.transform = &m_Transform;
 
 		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));
 
@@ -343,17 +341,12 @@ namespace flex
 				m_MaterialID = optionalCreateInfo->materialID;
 				renderObjectCreateInfo.materialID = m_MaterialID;
 			}
-			renderObjectCreateInfo.name = optionalCreateInfo->name;
 			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
 			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
 			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
 			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
 			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
 
-			if (optionalCreateInfo->transform != nullptr)
-			{
-				Logger::LogError("Can not override transform in LoadPrefabShape! Ignoring passed in data");
-			}
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
 				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
@@ -364,12 +357,14 @@ namespace flex
 			}
 		}
 
+		renderObjectCreateInfo.gameObject = this;
 		renderObjectCreateInfo.materialID = m_MaterialID;
-		renderObjectCreateInfo.transform = &m_Transform;
 
 		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+
+		std::string defaultName;
 
 		switch (shape)
 		{
@@ -608,7 +603,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 
-			renderObjectCreateInfo.name = "Cube";
+			defaultName = "Cube";
 		} break;
 		case MeshPrefab::PrefabShape::GRID:
 		{
@@ -669,7 +664,7 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
-			renderObjectCreateInfo.name = "Grid";
+			defaultName = "Grid";
 		} break;
 		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:
 		{
@@ -719,7 +714,7 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
-			renderObjectCreateInfo.name = "World Axis Ground Plane";
+			defaultName = "World Axis Ground Plane";
 		} break;
 		case MeshPrefab::PrefabShape::PLANE:
 		{
@@ -795,7 +790,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 
-			renderObjectCreateInfo.name = "Plane";
+			defaultName = "Plane";
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:
 		{
@@ -888,7 +883,7 @@ namespace flex
 				m_Indices.push_back(b);
 			}
 
-			renderObjectCreateInfo.name = "UV Sphere";
+			defaultName = "UV Sphere";
 		} break;
 		case MeshPrefab::PrefabShape::SKYBOX:
 		{
@@ -953,7 +948,7 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 			renderObjectCreateInfo.cullFace = CullFace::FRONT;
-			renderObjectCreateInfo.name = "Skybox";
+			defaultName = "Skybox";
 
 		} break;
 		default:
@@ -966,9 +961,9 @@ namespace flex
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		if (!m_Name.empty() && m_Name.compare(m_DefaultName) != 0)
+		if (m_Name.empty() || defaultName.empty())
 		{
-			renderObjectCreateInfo.name = m_Name;
+			m_Name = defaultName;
 		}
 
 		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));

@@ -60,8 +60,7 @@ namespace flex
 			// Per-frame data
 			VertexBufferData m_VertexBufferData;
 
-			Transform m_Transform;
-			RenderID m_RenderID = InvalidRenderID;
+			GameObject* m_GameObject = nullptr;
 		};
 	} // namespace vk
 } // namespace flex

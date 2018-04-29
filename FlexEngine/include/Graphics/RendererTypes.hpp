@@ -256,10 +256,7 @@ namespace flex
 		VertexBufferData* vertexBufferData = nullptr;
 		std::vector<u32>* indices = nullptr;
 
-		std::string name = "";
-
-		// If this field is null then this object will be given an identity transform which can not change
-		Transform* transform = nullptr;
+		GameObject* gameObject = nullptr;
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;

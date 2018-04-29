@@ -51,9 +51,6 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
-			virtual bool GetRenderObjectVisible(RenderID renderID) override;
-			virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) override;
-
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
@@ -292,7 +289,6 @@ namespace flex
 
 			RenderID m_GBufferQuadRenderID = InvalidRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
-			Transform m_gBufferQuadTransform;
 			std::vector<u32> m_gBufferQuadIndices;
 
 			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial

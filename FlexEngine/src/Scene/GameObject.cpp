@@ -14,7 +14,7 @@ namespace flex
 
 		if (m_SerializableType == SerializableType::NONE)
 		{
-			m_Serializable = false;
+			m_bSerializable = false;
 		}
 	}
 
@@ -24,10 +24,9 @@ namespace flex
 
 	void GameObject::Initialize(const GameContext& gameContext)
 	{
-		const std::vector<Transform*>& children = m_Transform.GetChildren();
-		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			(*iter)->GetGameObject()->Initialize(gameContext);
+			(*iter)->Initialize(gameContext);
 		}
 	}
 
@@ -38,10 +37,9 @@ namespace flex
 			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
 		}
 
-		const std::vector<Transform*>& children = m_Transform.GetChildren();
-		for (auto child : children)
+		for (auto child : m_Children)
 		{
-			child->GetGameObject()->PostInitialize(gameContext);
+			child->PostInitialize(gameContext);
 		}
 	}
 
@@ -52,53 +50,68 @@ namespace flex
 			gameContext.renderer->DestroyRenderObject(m_RenderID);
 		}
 
-		const std::vector<Transform*>& children = m_Transform.GetChildren();
-		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			(*iter)->GetGameObject()->Destroy(gameContext);
+			(*iter)->Destroy(gameContext);
+			SafeDelete(*iter);
 		}
-
-		m_Transform.SetParentTransform(nullptr);
-		m_Transform.RemoveAllChildTransforms();
+		m_Children.clear();
 	}
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
-		const std::vector<Transform*>& children = m_Transform.GetChildren();
-		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			(*iter)->GetGameObject()->Update(gameContext);
+			(*iter)->Update(gameContext);
 		}
+	}
+
+	GameObject* GameObject::GetParent()
+	{
+		return m_Parent;
 	}
 
 	void GameObject::SetParent(GameObject* parent)
 	{
-		m_Transform.SetParentTransform(parent->GetTransform());
-		m_Transform.Update();
-	}
-
-	void GameObject::AddChild(GameObject* child)
-	{
-		if (!child)
+		if (parent == this)
 		{
+			Logger::LogError("Attempted to set parent as self! (" + m_Name + ")");
 			return;
 		}
 
-		Transform* childTransform = child->GetTransform();
+		m_Parent = parent;
 
-		const std::vector<Transform*>& children = m_Transform.GetChildren();
-		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		m_Transform.Update();
+	}
+
+	GameObject* GameObject::AddChild(GameObject* child)
+	{
+		if (!child)
 		{
-			if (*iter == childTransform)
+			return nullptr;
+		}
+
+		if (child == this)
+		{
+			Logger::LogError("Attempted to add self as child! (" + m_Name + ")");
+			return nullptr;
+		}
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			if (*iter == child)
 			{
-				return; // Don't add the same child twice
+				// Don't add the same child twice
+				return nullptr;
 			}
 		}
 
-		m_Transform.AddChildTransform(childTransform);
+		m_Children.push_back(child);
 		child->SetParent(this);
 
 		m_Transform.Update();
+
+		return child;
 	}
 
 	bool GameObject::RemoveChild(GameObject* child)
@@ -108,15 +121,12 @@ namespace flex
 			return false;
 		}
 
-		Transform* childTransform = child->GetTransform();
-
-		const std::vector<Transform*>& children = m_Transform.GetChildren();
-		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			if (*iter == childTransform)
+			if (*iter == child)
 			{
-				childTransform->SetParentTransform(nullptr);
-				m_Transform.RemoveChildTransform(childTransform);
+				child->SetParent(nullptr);
+				m_Children.erase(iter);
 				return true;
 			}
 		}
@@ -126,7 +136,17 @@ namespace flex
 
 	void GameObject::RemoveAllChildren()
 	{
-		m_Transform.RemoveAllChildTransforms();
+		auto iter = m_Children.begin();
+		while (iter != m_Children.end())
+		{
+			iter = m_Children.erase(iter);
+		}
+		m_Children.clear();
+	}
+
+	const std::vector<GameObject*>& GameObject::GetChildren() const
+	{
+		return m_Children;
 	}
 
 	Transform* GameObject::GetTransform()
@@ -139,11 +159,6 @@ namespace flex
 		return m_RenderID;
 	}
 
-	bool GameObject::IsSerializable() const
-	{
-		return m_Serializable;
-	}
-
 	std::string GameObject::GetName() const
 	{
 		return m_Name;
@@ -152,5 +167,45 @@ namespace flex
 	void GameObject::SetRenderID(RenderID renderID)
 	{
 		m_RenderID = renderID;
+	}
+
+	bool GameObject::IsSerializable() const
+	{
+		return m_bSerializable;
+	}
+
+	void GameObject::SetSerializable(bool serializable)
+	{
+		m_bSerializable = serializable;
+	}
+
+	bool GameObject::IsStatic() const
+	{
+		return m_bStatic;
+	}
+
+	void GameObject::SetStatic(bool newStatic)
+	{
+		m_bStatic = newStatic;
+	}
+
+	bool GameObject::IsVisible() const
+	{
+		return m_bVisible;
+	}
+
+	void GameObject::SetVisible(bool visible)
+	{
+		m_bVisible = visible;
+	}
+
+	bool GameObject::IsVisibleInSceneExplorer() const
+	{
+		return m_bVisibleInSceneExplorer;
+	}
+
+	void GameObject::SetVisibleInSceneExplorer(bool visibleInSceneExplorer)
+	{
+		m_bVisibleInSceneExplorer = visibleInSceneExplorer;
 	}
 } // namespace flex

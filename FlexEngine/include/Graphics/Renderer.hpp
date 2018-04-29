@@ -48,9 +48,6 @@ namespace flex
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		virtual bool GetRenderObjectVisible(RenderID renderID) = 0;
-		virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) = 0;
-
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info
 		* Returns true if renderID refers to a valid render object
@@ -100,6 +97,9 @@ namespace flex
 
 		bool m_VSyncEnabled = true;
 		PhysicsDebuggingSettings m_PhysicsDebuggingSettings;
+
+		/* Objects that are created at bootup and stay active until shutdown, regardless of scene */
+		std::vector<GameObject*> m_PersistentObjects;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

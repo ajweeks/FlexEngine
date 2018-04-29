@@ -54,14 +54,17 @@ namespace flex
 		/*
 		* Loads a mesh from file
 		*/
-		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false, RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath,
+			bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		/*
 		* Loads a predefined shape
 		* Optionally pass in createInfo values to be given to the renderer
 		* when initializing the render object
 		*/
-		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, 
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		virtual void Initialize(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
@@ -90,8 +93,6 @@ namespace flex
 		bool m_Initialized = false;
 
 		MaterialID m_MaterialID = InvalidMaterialID;
-
-		static std::string m_DefaultName;
 
 		PrefabShape m_Shape = PrefabShape::NONE;
 
