@@ -114,7 +114,7 @@ namespace flex
 
 		m_Grid = new MeshPrefab(m_GridMaterialID, "Grid");
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
+		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 		AddChild(m_Grid);
 
 		MaterialCreateInfo worldAxisMatInfo = {};
@@ -124,12 +124,22 @@ namespace flex
 
 		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
 		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
-		m_WorldOrigin->GetTransform().Translate(0.0f, -0.09f, 0.0f);
+		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 		AddChild(m_WorldOrigin);
+
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->Initialize(gameContext);
+		}
 	}
 
 	void BaseScene::PostInitialize(const GameContext& gameContext)
 	{
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->PostInitialize(gameContext);
+		}
 	}
 
 	void BaseScene::Destroy(const GameContext& gameContext)
@@ -138,7 +148,7 @@ namespace flex
 		{
 			if (child)
 			{
-				child->RootDestroy(gameContext);
+				child->Destroy(gameContext);
 				SafeDelete(child);
 			}
 		}
@@ -153,6 +163,11 @@ namespace flex
 
 	void BaseScene::Update(const GameContext& gameContext)
 	{
+		if (m_PhysicsWorld)
+		{
+			m_PhysicsWorld->Update(gameContext.deltaTime);
+		}
+
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
 
 		// Fade grid out when far away
@@ -168,58 +183,12 @@ namespace flex
 			gameContext.renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
 		}
 
-		for (auto child : m_Children)
+		for (GameObject* child : m_Children)
 		{
 			if (child)
 			{
-				child->RootUpdate(gameContext);
+				child->Update(gameContext);
 			}
-		}
-	}
-
-	void BaseScene::RootInitialize(const GameContext& gameContext)
-	{
-		Initialize(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->Initialize(gameContext);
-		}
-	}
-
-	void BaseScene::RootPostInitialize(const GameContext& gameContext)
-	{
-		PostInitialize(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->PostInitialize(gameContext);
-		}
-	}
-
-	void BaseScene::RootUpdate(const GameContext& gameContext)
-	{
-		if (m_PhysicsWorld)
-		{
-			m_PhysicsWorld->Update(gameContext.deltaTime);
-		}
-
-		Update(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootUpdate(gameContext);
-		}
-	}
-
-	void BaseScene::RootDestroy(const GameContext& gameContext)
-	{
-		Destroy(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootDestroy(gameContext);
-			SafeDelete(*iter);
 		}
 	}
 
@@ -344,10 +313,13 @@ namespace flex
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
-			bool visible;
+			bool visible = true;
 			obj.SetBoolChecked("visible", visible);
 
-			ReflectionProbe* reflectionProbe = new ReflectionProbe(objectName, visible);
+			glm::vec3 position = glm::vec3(0.0f);
+			obj.SetVec3Checked("position", position);
+
+			ReflectionProbe* reflectionProbe = new ReflectionProbe(objectName, visible, position);
 
 			result = reflectionProbe;
 		} break;
@@ -734,7 +706,7 @@ namespace flex
 			// A skybox is a mesh prefab for now
 			MeshPrefab* skyboxMesh = (MeshPrefab*)gameObject;
 
-			glm::vec3 skyboxRotEuler = glm::eulerAngles(skyboxMesh->GetTransform().GetGlobalRotation());
+			glm::vec3 skyboxRotEuler = glm::eulerAngles(skyboxMesh->GetTransform()->GetGlobalRotation());
 			object.fields.push_back(JSONField("rotation", JSONValue(Vec3ToString(skyboxRotEuler))));
 
 			JSONField materialField = {};
@@ -771,7 +743,7 @@ namespace flex
 		{
 			ReflectionProbe* reflectionProbe = (ReflectionProbe*)gameObject;
 
-			glm::vec3 probePos = reflectionProbe->GetTransform().GetGlobalPosition();
+			glm::vec3 probePos = reflectionProbe->GetTransform()->GetGlobalPosition();
 			object.fields.push_back(JSONField("position", JSONValue(Vec3ToString(probePos))));
 			object.fields.push_back(JSONField("visible", JSONValue(reflectionProbe->IsSphereVisible(gameContext))));
 
@@ -788,18 +760,20 @@ namespace flex
 		} break;
 		}
 
-		if (!gameObject->m_Children.empty())
+		const std::vector<Transform*>& gameObjectChildren = gameObject->m_Transform.GetChildren();
+		if (!gameObjectChildren.empty())
 		{
 			JSONField childrenField = {};
 			childrenField.label = "children";
 
 			std::vector<JSONObject> children;
 
-			for (GameObject* child : gameObject->m_Children)
+			for (Transform* child : gameObjectChildren)
 			{
-				if (child->IsSerializable())
+				GameObject* childGameObject = child->GetGameObject();
+				if (childGameObject->IsSerializable())
 				{
-					children.push_back(SerializeObject(child, gameContext));
+					children.push_back(SerializeObject(childGameObject, gameContext));
 				}
 			}
 
@@ -902,6 +876,11 @@ namespace flex
 
 			iter = m_Children.erase(iter);
 		}
+	}
+
+	std::vector<GameObject*>& BaseScene::GetRootObjects()
+	{
+		return m_Children;
 	}
 
 	std::string BaseScene::GetName() const

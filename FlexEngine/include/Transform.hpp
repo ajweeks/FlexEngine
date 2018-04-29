@@ -7,7 +7,8 @@
 namespace flex
 {
 	class RigidBody;
-	
+	class GameObject;
+
 	class Transform
 	{
 	public:
@@ -65,21 +66,20 @@ namespace flex
 		void Scale(real deltaX, real deltaY, real deltaZ);
 
 		void SetParentTransform(Transform* parent);
+		Transform* GetParent();
+
 		void AddChildTransform(Transform* child);
 		void RemoveChildTransform(Transform* child);
 		void RemoveAllChildTransforms();
+		const std::vector<Transform*>& GetChildren();
 		
 		glm::mat4 GetModelMatrix();
 
 		bool IsIdentity() const;
-
 		static Transform Identity();
 
-		Transform* GetParent();
-		const std::vector<Transform*>& GetChildren();
-
-		void SetOwnerRenderID(RenderID ownerRenderID);
-		RenderID GetOwnerRenderID() const;
+		void SetGameObject(GameObject* gameObject);
+		GameObject* GetGameObject() const;
 
 	private:
 		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
@@ -96,7 +96,7 @@ namespace flex
 		Transform* parentTransform = nullptr;
 		std::vector<Transform*> childrenTransforms;
 
-		RenderID m_OwnerRenderID = InvalidRenderID;
+		GameObject* m_GameObject = nullptr;
 
 		static Transform m_Identity;
 

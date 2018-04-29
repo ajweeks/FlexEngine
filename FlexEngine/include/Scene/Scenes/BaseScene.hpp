@@ -18,6 +18,11 @@ namespace flex
 		BaseScene(const std::string& name, const std::string& jsonFilePath);
 		virtual ~BaseScene();
 
+		virtual void Initialize(const GameContext& gameContext);
+		virtual void PostInitialize(const GameContext& gameContext);
+		virtual void Destroy(const GameContext& gameContext);
+		virtual void Update(const GameContext& gameContext);
+
 		std::string GetName() const;
 
 		PhysicsWorld* GetPhysicsWorld();
@@ -29,19 +34,15 @@ namespace flex
 		*/
 		void SerializeToFile(const GameContext& gameContext);
 
-	protected:
-		virtual void Initialize(const GameContext& gameContext);
-		virtual void PostInitialize(const GameContext& gameContext);
-		virtual void Destroy(const GameContext& gameContext);
-		virtual void Update(const GameContext& gameContext);
+		std::vector<GameObject*>& GetRootObjects();
 
+	protected:
 		void AddChild(GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
-	private:
 		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
 		void CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight);
 		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
@@ -51,13 +52,6 @@ namespace flex
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
 
 		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
-
-		void RootInitialize(const GameContext& gameContext);
-		void RootPostInitialize(const GameContext& gameContext);
-		void RootUpdate(const GameContext& gameContext);
-		void RootDestroy(const GameContext& gameContext);
-
-		friend class SceneManager;
 
 		std::string m_Name;
 		std::string m_JSONFilePath;
@@ -74,8 +68,9 @@ namespace flex
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
-
+	private:
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
+
 	};
 } // namespace flex

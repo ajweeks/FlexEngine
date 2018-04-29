@@ -10,6 +10,7 @@
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 
 #include "Physics/RigidBody.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
@@ -164,22 +165,30 @@ namespace flex
 
 	void Transform::SetParentTransform(Transform* parent)
 	{
+		assert(parent != this);
+
 		parentTransform = parent;
 	}
 
 	void Transform::AddChildTransform(Transform* child)
 	{
+		assert(child != this);
+
 		childrenTransforms.push_back(child);
+		child->SetParentTransform(this);
 
 		UpdateParentTransform();
 	}
 
 	void Transform::RemoveChildTransform(Transform* child)
 	{
+		assert(child != this);
+
 		for (auto iter = childrenTransforms.begin(); iter != childrenTransforms.end(); ++iter)
 		{
 			if (*iter == child)
 			{
+				(*iter)->SetParentTransform(nullptr);
 				childrenTransforms.erase(iter);
 				return;
 			}
@@ -191,9 +200,13 @@ namespace flex
 		auto iter = childrenTransforms.begin();
 		while (iter != childrenTransforms.end())
 		{
-			(*iter)->RemoveAllChildTransforms();
+			Transform* child = (*iter);
+			child->SetParentTransform(nullptr);
+			child->RemoveAllChildTransforms();
+
 			iter = childrenTransforms.erase(iter);
 		}
+		childrenTransforms.clear();
 	}
 
 	void Transform::Update()
@@ -244,14 +257,14 @@ namespace flex
 		return childrenTransforms;
 	}
 
-	void Transform::SetOwnerRenderID(RenderID ownerRenderID)
+	void Transform::SetGameObject(GameObject* gameObject)
 	{
-		m_OwnerRenderID = ownerRenderID;
+		m_GameObject = gameObject;
 	}
 
-	RenderID Transform::GetOwnerRenderID() const
+	GameObject* Transform::GetGameObject() const
 	{
-		return m_OwnerRenderID;
+		return m_GameObject;
 	}
 
 	void Transform::UpdateParentTransform()

@@ -5,21 +5,16 @@
 
 namespace flex
 {
-	GameObject::GameObject(const std::string& name, SerializableType serializableType, GameObject* parent) :
+	GameObject::GameObject(const std::string& name, SerializableType serializableType) :
 		m_Name(name),
-		m_SerializableType(serializableType),
-		m_Parent(parent)
+		m_SerializableType(serializableType)
 	{
 		m_Transform.SetAsIdentity();
+		m_Transform.SetGameObject(this);
 
 		if (m_SerializableType == SerializableType::NONE)
 		{
 			m_Serializable = false;
-		}
-
-		if (parent)
-		{
-			m_Transform.SetParentTransform(&parent->m_Transform);
 		}
 	}
 
@@ -27,15 +22,58 @@ namespace flex
 	{
 	}
 
-	void GameObject::SetParent(GameObject* parent)
+	void GameObject::Initialize(const GameContext& gameContext)
 	{
-		m_Parent = parent;
-
-		if (parent)
+		const std::vector<Transform*>& children = m_Transform.GetChildren();
+		for (auto iter = children.begin(); iter != children.end(); ++iter)
 		{
-			m_Transform.SetParentTransform(&parent->m_Transform);
+			(*iter)->GetGameObject()->Initialize(gameContext);
+		}
+	}
+
+	void GameObject::PostInitialize(const GameContext& gameContext)
+	{
+		if (m_RenderID != InvalidRenderID)
+		{
+			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
 		}
 
+		const std::vector<Transform*>& children = m_Transform.GetChildren();
+		for (auto child : children)
+		{
+			child->GetGameObject()->PostInitialize(gameContext);
+		}
+	}
+
+	void GameObject::Destroy(const GameContext& gameContext)
+	{
+		if (m_RenderID != InvalidRenderID)
+		{
+			gameContext.renderer->DestroyRenderObject(m_RenderID);
+		}
+
+		const std::vector<Transform*>& children = m_Transform.GetChildren();
+		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		{
+			(*iter)->GetGameObject()->Destroy(gameContext);
+		}
+
+		m_Transform.SetParentTransform(nullptr);
+		m_Transform.RemoveAllChildTransforms();
+	}
+
+	void GameObject::Update(const GameContext& gameContext)
+	{
+		const std::vector<Transform*>& children = m_Transform.GetChildren();
+		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		{
+			(*iter)->GetGameObject()->Update(gameContext);
+		}
+	}
+
+	void GameObject::SetParent(GameObject* parent)
+	{
+		m_Transform.SetParentTransform(parent->GetTransform());
 		m_Transform.Update();
 	}
 
@@ -46,18 +84,19 @@ namespace flex
 			return;
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		Transform* childTransform = child->GetTransform();
+
+		const std::vector<Transform*>& children = m_Transform.GetChildren();
+		for (auto iter = children.begin(); iter != children.end(); ++iter)
 		{
-			if (*iter == child)
+			if (*iter == childTransform)
 			{
 				return; // Don't add the same child twice
 			}
 		}
 
-		m_Children.push_back(child);
-		m_Transform.AddChildTransform(&child->m_Transform);
+		m_Transform.AddChildTransform(childTransform);
 		child->SetParent(this);
-		child->m_Transform.SetParentTransform(&m_Transform);
 
 		m_Transform.Update();
 	}
@@ -69,14 +108,15 @@ namespace flex
 			return false;
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		Transform* childTransform = child->GetTransform();
+
+		const std::vector<Transform*>& children = m_Transform.GetChildren();
+		for (auto iter = children.begin(); iter != children.end(); ++iter)
 		{
-			if (*iter == child)
+			if (*iter == childTransform)
 			{
-				(*iter)->m_Parent = nullptr;
-				(*iter)->m_Transform.RemoveAllChildTransforms();
-				m_Transform.RemoveChildTransform(&(*iter)->m_Transform);
-				m_Children.erase(iter);
+				childTransform->SetParentTransform(nullptr);
+				m_Transform.RemoveChildTransform(childTransform);
 				return true;
 			}
 		}
@@ -87,19 +127,11 @@ namespace flex
 	void GameObject::RemoveAllChildren()
 	{
 		m_Transform.RemoveAllChildTransforms();
-
-		auto iter = m_Children.begin();
-		while (iter != m_Children.end())
-		{
-			(*iter)->m_Parent = nullptr;
-			(*iter)->m_Transform.RemoveAllChildTransforms();
-			iter = m_Children.erase(iter);
-		}
 	}
 
-	Transform& GameObject::GetTransform()
+	Transform* GameObject::GetTransform()
 	{
-		return m_Transform;
+		return &m_Transform;
 	}
 
 	RenderID GameObject::GetRenderID() const
@@ -107,80 +139,18 @@ namespace flex
 		return m_RenderID;
 	}
 
-	void GameObject::Initialize(const GameContext& gameContext)
-	{
-		UNREFERENCED_PARAMETER(gameContext);
-	}
-
-	void GameObject::PostInitialize(const GameContext& gameContext)
-	{
-		if (m_RenderID != InvalidRenderID)
-		{
-			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
-		}
-
-		for (auto child : m_Children)
-		{
-			child->PostInitialize(gameContext);
-		}
-	}
-
 	bool GameObject::IsSerializable() const
 	{
 		return m_Serializable;
 	}
 
-	void GameObject::Update(const GameContext& gameContext)
+	std::string GameObject::GetName() const
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-	}
-
-	void GameObject::Destroy(const GameContext& gameContext)
-	{
-		if (m_RenderID != InvalidRenderID)
-		{
-			gameContext.renderer->DestroyRenderObject(m_RenderID);
-		}
-
-		m_Transform.RemoveAllChildTransforms();
-		m_Transform.SetParentTransform(nullptr);
+		return m_Name;
 	}
 
 	void GameObject::SetRenderID(RenderID renderID)
 	{
 		m_RenderID = renderID;
-		m_Transform.SetOwnerRenderID(renderID);
-	}
-
-	void GameObject::RootInitialize(const GameContext& gameContext)
-	{
-		Initialize(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootInitialize(gameContext);
-		}
-	}
-
-	void GameObject::RootUpdate(const GameContext& gameContext)
-	{
-		Update(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootUpdate(gameContext);
-		}
-	}
-
-	void GameObject::RootDestroy(const GameContext& gameContext)
-	{
-		Destroy(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootDestroy(gameContext);
-			SafeDelete(*iter);
-		}
-		m_Children.clear();
 	}
 } // namespace flex

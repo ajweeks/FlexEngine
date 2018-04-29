@@ -25,7 +25,7 @@ namespace flex
 			return;
 		}
 
-		m_Scenes[m_CurrentSceneIndex]->RootUpdate(gameContext);
+		m_Scenes[m_CurrentSceneIndex]->Update(gameContext);
 	}
 
 	void SceneManager::AddScene(BaseScene* newScene, const GameContext& gameContext)
@@ -45,7 +45,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Attempt to add already existing scene to SceneManager: " + newScene->m_Name);
+			Logger::LogError("Attempt to add already existing scene to SceneManager: " + newScene->GetName());
 		}
 	}
 
@@ -53,14 +53,14 @@ namespace flex
 	{
 		assert(!m_Scenes.empty());
 
-		CurrentScene()->RootInitialize(gameContext);
+		CurrentScene()->Initialize(gameContext);
 	}
 
 	void SceneManager::PostInitializeCurrentScene(const GameContext& gameContext)
 	{
 		assert(!m_Scenes.empty());
 
-		CurrentScene()->RootPostInitialize(gameContext);
+		CurrentScene()->PostInitialize(gameContext);
 	}
 
 	void SceneManager::RemoveScene(BaseScene* scene, const GameContext& gameContext)
@@ -68,13 +68,13 @@ namespace flex
 		auto iter = std::find(m_Scenes.begin(), m_Scenes.end(), scene);
 		if (iter != m_Scenes.end())
 		{
-			scene->RootDestroy(gameContext);
+			scene->Destroy(gameContext);
 			SafeDelete(scene);
 			m_Scenes.erase(iter);
 		}
 		else
 		{
-			Logger::LogError("Attempt to remove non-existent scene from SceneManager: " + scene->m_Name);
+			Logger::LogError("Attempt to remove non-existent scene from SceneManager: " + scene->GetName());
 		}
 	}
 
@@ -89,27 +89,27 @@ namespace flex
 
 		if (m_CurrentSceneIndex != u32_max)
 		{
-			m_Scenes[m_CurrentSceneIndex]->RootDestroy(gameContext);
+			m_Scenes[m_CurrentSceneIndex]->Destroy(gameContext);
 		}
 
 		m_CurrentSceneIndex = sceneIndex;
 
-		m_Scenes[m_CurrentSceneIndex]->RootInitialize(gameContext);
-		m_Scenes[m_CurrentSceneIndex]->RootPostInitialize(gameContext);
+		m_Scenes[m_CurrentSceneIndex]->Initialize(gameContext);
+		m_Scenes[m_CurrentSceneIndex]->PostInitialize(gameContext);
 	}
 
 	void SceneManager::SetCurrentScene(BaseScene* scene, const GameContext& gameContext)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
-			if (m_Scenes[i]->m_Name.compare(scene->m_Name) == 0)
+			if (m_Scenes[i]->GetName().compare(scene->GetName()) == 0)
 			{
 				SetCurrentScene(i, gameContext);
 				return;
 			}
 		}
 
-		Logger::LogError("Attempt to set current scene to " + scene->m_Name + " failed because it was not found in the scene manager!");
+		Logger::LogError("Attempt to set current scene to " + scene->GetName() + " failed because it was not found in the scene manager!");
 	}
 
 	void SceneManager::SetCurrentScene(const std::string& sceneName, const GameContext& gameContext)
@@ -171,7 +171,7 @@ namespace flex
 		auto iter = m_Scenes.begin();
 		while (iter != m_Scenes.end())
 		{
-			(*iter)->RootDestroy(gameContext);
+			(*iter)->Destroy(gameContext);
 			SafeDelete(*iter);
 			iter = m_Scenes.erase(iter);
 		}

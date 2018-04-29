@@ -105,7 +105,7 @@ namespace flex
 
 		m_Grid = new MeshPrefab(m_GridMaterialID, "Grid");
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
+		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 		AddChild(m_Grid);
 
 		MaterialCreateInfo worldAxisMatInfo = {};
@@ -115,7 +115,7 @@ namespace flex
 
 		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
 		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
-		m_WorldOrigin->GetTransform().Translate(0.0f, -0.09f, 0.0f);
+		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 		AddChild(m_WorldOrigin);
 #endif
 
@@ -145,17 +145,17 @@ namespace flex
 		m_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
 		m_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, m_Cerberus);
-		m_Cerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
-		m_Cerberus->GetTransform().Translate(0.0f, 0.0f, 0.0f);
+		m_Cerberus->GetTransform()->Scale(0.075f, 0.075f, 0.075f);
+		m_Cerberus->GetTransform()->Translate(0.0f, 0.0f, 0.0f);
 #endif
 
 #if 0 // Cerebus 2
 		MeshPrefab* extraCerberus = new MeshPrefab(cerebusMatID, "Cerberus 2");
 		extraCerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, extraCerberus);
-		extraCerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
-		extraCerberus->GetTransform().Translate(10.0f, 18.0f, -5.0f);
-		m_Cerberus->GetTransform().Rotate(0.0, -0.5f, 0.0f);
+		extraCerberus->GetTransform()->Scale(0.075f, 0.075f, 0.075f);
+		extraCerberus->GetTransform()->Translate(10.0f, 18.0f, -5.0f);
+		m_Cerberus->GetTransform()->Rotate(0.0, -0.5f, 0.0f);
 #endif
 
 #if 1 // Spheres
@@ -208,7 +208,7 @@ namespace flex
 			m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
 
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-			m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, z * sphereSpacing));
+			m_Spheres[i]->GetTransform()->SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, z * sphereSpacing));
 			AddChild(m_Spheres[i]);
 		}
 #endif
@@ -225,8 +225,8 @@ namespace flex
 
 		MeshPrefab* whiteSphere = new MeshPrefab(whiteSphereMatID, "White sphere");
 		whiteSphere->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-		whiteSphere->GetTransform().Translate(0.0, 19.0, 0.0f);
-		whiteSphere->GetTransform().Scale(3.5f);
+		whiteSphere->GetTransform()->Translate(0.0, 19.0, 0.0f);
+		whiteSphere->GetTransform()->Scale(3.5f);
 		AddChild(gameContext, whiteSphere);
 #endif
 
@@ -301,31 +301,31 @@ namespace flex
 			//m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(m_Box1);
-			m_Box1->GetTransform().SetGlobalScale(box1Scale);
+			m_Box1->GetTransform()->SetGlobalScale(box1Scale);
 
 			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
 			//m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(m_Box2);
-			m_Box2->GetTransform().SetGlobalScale(box2Scale);
+			m_Box2->GetTransform()->SetGlobalScale(box2Scale);
 
 			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
 			//m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
 			AddChild(m_Box3);
-			m_Box3->GetTransform().SetGlobalScale(box3Scale);
+			m_Box3->GetTransform()->SetGlobalScale(box3Scale);
 		}
 
-		m_Box1->GetTransform().MatchRigidBody(rb1, true);
-		m_Box2->GetTransform().MatchRigidBody(rb2, true);
-		m_Box3->GetTransform().MatchRigidBody(rb3, true);
+		m_Box1->GetTransform()->MatchRigidBody(rb1, true);
+		m_Box2->GetTransform()->MatchRigidBody(rb2, true);
+		m_Box3->GetTransform()->MatchRigidBody(rb3, true);
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
 	{
 		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
 
-		m_ReflectionProbe->GetTransform().Translate(0.0f, 7.5f, 0.0f);
+		m_ReflectionProbe->GetTransform()->Translate(0.0f, 7.5f, 0.0f);
 	}
 
 	void Scene_02::Destroy(const GameContext& gameContext)
@@ -353,9 +353,9 @@ namespace flex
 	{
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
 
-		m_Box1->GetTransform().MatchRigidBody(rb1);
-		m_Box2->GetTransform().MatchRigidBody(rb2);
-		m_Box3->GetTransform().MatchRigidBody(rb3);
+		m_Box1->GetTransform()->MatchRigidBody(rb1);
+		m_Box2->GetTransform()->MatchRigidBody(rb2);
+		m_Box3->GetTransform()->MatchRigidBody(rb3);
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_SPACE))
 		{

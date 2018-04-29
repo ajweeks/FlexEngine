@@ -9,7 +9,7 @@
       "children" :
       [
         {
-          "name" : "Sphere",
+          "name" : "Sphere 01",
           "type" : "mesh",
           "mesh": {
             "file": "models/ico-sphere.gltf"
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "name" : "Sphere",
+      "name" : "Sphere 02",
       "type" : "mesh",
       "mesh": {
         "file": "models/ico-sphere.gltf"
@@ -152,6 +152,7 @@
       "name": "Skybox",
       "type" : "skybox",
       "rotation": "0.0, 0.0, 0.0",
+      "visible" : false,
       "material": {
         "name": "Skybox",
         "shader": "skybox",
@@ -170,32 +171,7 @@
       "name": "Reflection Probe 01",
       "type" : "reflection probe",
       "position": "10.0, 0.0, 0.0",
-      "children" : 
-      [
-        {
-          "name" : "Reflection probe mesh",
-          "type" : "mesh",
-          "transform" : 
-          {
-            "space" : "local",
-            "position" : "0.0, 0.0, 0.0",
-            "rotation" : "0.0, -0.0, 0.0",
-            "scale" : "1.5, 1.5, 1.5"
-          },
-          "material" : 
-          {
-            "name" : "Reflection probe sphere",
-            "shader" : "pbr",
-            "const albedo" : "0.75, 0.75, 0.75",
-            "const roughness" : 0.0,
-            "const metallic" : 1.0
-          },
-          "mesh" : 
-          {
-            "file" : "models/ico-sphere.gltf"
-          }
-        }
-      ]
+      "visible" : true
     }
   ],
   "point lights" :

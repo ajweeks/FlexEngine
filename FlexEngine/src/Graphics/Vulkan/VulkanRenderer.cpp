@@ -2669,7 +2669,7 @@ namespace flex
 					auto children = renderObject->transform->GetChildren();
 					for (Transform* child : children)
 					{
-						VulkanRenderObject* renderObject = GetRenderObject(child->GetOwnerRenderID());
+						VulkanRenderObject* renderObject = GetRenderObject(child->GetGameObject()->GetRenderID());
 						if (renderObject)
 						{
 							DrawImGuiForRenderObjectAndChildren(renderObject);
@@ -2720,11 +2720,14 @@ namespace flex
 						auto children = renderObject->transform->GetChildren();
 						for (Transform* child : children)
 						{
-							RenderID childRenderID = child->GetOwnerRenderID();
-							VulkanRenderObject* childRenderObject = GetRenderObject(childRenderID);
-							if (childRenderObject)
+							if (child->GetGameObject())
 							{
-								SetRenderObjectVisible(childRenderID, visible, true);
+								RenderID childRenderID = child->GetGameObject()->GetRenderID();
+								VulkanRenderObject* childRenderObject = GetRenderObject(childRenderID);
+								if (childRenderObject)
+								{
+									SetRenderObjectVisible(childRenderID, visible, true);
+								}
 							}
 						}
 					}
@@ -2803,7 +2806,7 @@ namespace flex
 		{
 			assert(m_SkyBoxMesh);
 
-			m_SkyBoxMesh->GetTransform().SetLocalRotation(skyboxRotation);
+			m_SkyBoxMesh->GetTransform()->SetLocalRotation(skyboxRotation);
 		}
 
 		void VulkanRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext)

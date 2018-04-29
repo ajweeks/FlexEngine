@@ -7,9 +7,10 @@
 
 namespace flex
 {
-	ReflectionProbe::ReflectionProbe(const std::string& name, bool startVisible) :
+	ReflectionProbe::ReflectionProbe(const std::string& name, bool startVisible, const glm::vec3& startPosition) :
 		GameObject(name, SerializableType::REFLECTION_PROBE),
-		m_StartVisible(startVisible)
+		m_StartVisible(startVisible),
+		m_StartPosition(startPosition)
 	{
 	}
 
@@ -53,9 +54,9 @@ namespace flex
 
 
 		m_SphereMesh = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe mesh");
-		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
+		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", true, true);
 		AddChild(m_SphereMesh);
-		m_SphereMesh->GetTransform().Scale(1.5f);
+		m_SphereMesh->GetTransform()->Scale(1.5f);
 
 		if (!m_StartVisible)
 		{
@@ -68,7 +69,7 @@ namespace flex
 		captureObjectCreateInfo.vertexBufferData = nullptr;
 		captureObjectCreateInfo.materialID = m_CaptureMatID;
 		captureObjectCreateInfo.name = "Reflection probe capture object";
-		captureObjectCreateInfo.transform = &m_SphereMesh->GetTransform();
+		captureObjectCreateInfo.transform = m_Capture->GetTransform();
 		captureObjectCreateInfo.visibleInSceneExplorer = false;
 		
 		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
@@ -76,6 +77,8 @@ namespace flex
 		gameContext.renderer->SetRenderObjectVisible(captureRenderID, false);
 
 		m_SphereMesh->AddChild(m_Capture);
+
+		m_Transform.SetGlobalPosition(m_StartPosition);
 	}
 
 	void ReflectionProbe::PostInitialize(const GameContext& gameContext)
@@ -97,10 +100,5 @@ namespace flex
 	void ReflectionProbe::SetSphereVisible(bool visible, const GameContext& gameContext)
 	{
 		gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), visible);
-	}
-
-	Transform& ReflectionProbe::GetTransform()
-	{
-		return m_SphereMesh->GetTransform();
 	}
 }

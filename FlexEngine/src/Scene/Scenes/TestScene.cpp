@@ -87,8 +87,8 @@ namespace flex
 
 	void TestScene::PostInitialize(const GameContext& gameContext)
 	{
-		m_ReflectionProbe->GetTransform().Translate(0.0f, 10.0f, 0.0f);
-		m_ReflectionProbe->GetTransform().Scale(3.5f);
+		m_ReflectionProbe->GetTransform()->Translate(0.0f, 10.0f, 0.0f);
+		m_ReflectionProbe->GetTransform()->Scale(3.5f);
 		UNREFERENCED_PARAMETER(gameContext);
 	}
 

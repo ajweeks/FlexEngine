@@ -11,6 +11,7 @@
 namespace flex
 {
 	class MeshPrefab;
+	class GameObject;
 
 	namespace gl
 	{
@@ -79,7 +80,7 @@ namespace flex
 			friend class GLPhysicsDebugDraw;
 
 			void ImGuiRender();
-			void DrawImGuiForRenderObjectAndChildren(GLRenderObject* renderObject);
+			void DrawImGuiForGameObjectAndChildren(GameObject* object);
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 
