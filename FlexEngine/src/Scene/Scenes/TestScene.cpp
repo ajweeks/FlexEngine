@@ -75,14 +75,14 @@ namespace flex
 
 		MeshPrefab* skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
 		skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(gameContext, skybox);
+		AddChild(skybox);
 
-		gameContext.renderer->SetSkyboxMaterial(skyboxHDRMatID);
+		gameContext.renderer->SetSkyboxMaterial(skyboxHDRMatID, gameContext);
 
 		// Reflection probes
 		// Generate last so it can use generated skybox maps
 		m_ReflectionProbe = new ReflectionProbe("default reflection probe");
-		AddChild(gameContext, m_ReflectionProbe);
+		AddChild(m_ReflectionProbe);
 	}
 
 	void TestScene::PostInitialize(const GameContext& gameContext)

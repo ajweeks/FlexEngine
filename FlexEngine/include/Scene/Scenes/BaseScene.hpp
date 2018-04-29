@@ -35,7 +35,7 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext);
 		virtual void Update(const GameContext& gameContext);
 
-		void AddChild(const GameContext& gameContext, GameObject* gameObject);
+		void AddChild(GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
 
@@ -49,6 +49,8 @@ namespace flex
 		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
 		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
+
+		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
 
 		void RootInitialize(const GameContext& gameContext);
 		void RootPostInitialize(const GameContext& gameContext);
@@ -65,6 +67,12 @@ namespace flex
 		DirectionalLight m_DirectionalLight;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
+		
+		// TODO: Merge into one object type
+		MeshPrefab* m_Grid = nullptr;
+		MeshPrefab* m_WorldOrigin = nullptr;
+		MaterialID m_GridMaterialID = InvalidMaterialID;
+		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 
 		BaseScene(const BaseScene&) = delete;

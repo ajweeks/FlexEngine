@@ -1,39 +1,32 @@
 {
   "version" : 1,
   "name" : "scene_01",
-  "entities": [
+  "entities":
+  [
     {
-      "name": "Grid",
-      "type": "mesh",
-      "mesh": {
-        "prefab": "grid"
-      },
-      "visible in scene graph": true,
-      "visible": true,
-      "transform": {
-        "position": "0.0,-0.1,0.0"
-      },
-      "material": {
-        "name": "color",
-        "shader": "color"
-      },
-      "children": [
+      "name" : "holder of things",
+      "type" : "NONE",
+      "children" :
+      [
         {
-          "name": "World Origin",
-          "type": "mesh",
+          "name" : "Sphere",
+          "type" : "mesh",
           "mesh": {
-            "prefab": "world axis ground"
+            "file": "models/ico-sphere.gltf"
           },
+          "visible": false,
           "transform": {
-            "position": "0.0,-0.09,0.0",
+            "position": "10.0,0.0,0.0",
             "rotation": "0.0,0.0,0.0",
             "scale": "1.0,1.0,1.0"
           },
-          "visible in scene graph": false,
-          "visible": true,
           "material": {
-            "name": "color",
-            "shader": "color"
+            "name": "pbr",
+            "shader": "pbr",
+            "const metallic": 1,
+            "const roughness": 0.25,
+            "const ao": 1,
+            "const albedo": "0.78, 0.12, 0.11"
           }
         }
       ]
@@ -170,13 +163,39 @@
         "generated irradiance cubemap size" : "32, 32",
         "generate prefiltered map" : true,
         "generated prefiltered map size" : "128, 128",
+        "environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
       }
     },
     {
       "name": "Reflection Probe 01",
       "type" : "reflection probe",
-      "position": "10.0,0.0,0.0",
-      "rotation": "0.0,0.0,0.0"
+      "position": "10.0, 0.0, 0.0",
+      "children" : 
+      [
+        {
+          "name" : "Reflection probe mesh",
+          "type" : "mesh",
+          "transform" : 
+          {
+            "space" : "local",
+            "position" : "0.0, 0.0, 0.0",
+            "rotation" : "0.0, -0.0, 0.0",
+            "scale" : "1.5, 1.5, 1.5"
+          },
+          "material" : 
+          {
+            "name" : "Reflection probe sphere",
+            "shader" : "pbr",
+            "const albedo" : "0.75, 0.75, 0.75",
+            "const roughness" : 0.0,
+            "const metallic" : 1.0
+          },
+          "mesh" : 
+          {
+            "file" : "models/ico-sphere.gltf"
+          }
+        }
+      ]
     }
   ],
   "point lights" :

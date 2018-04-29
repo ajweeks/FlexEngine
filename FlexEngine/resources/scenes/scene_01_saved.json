@@ -4,57 +4,6 @@
 	"entities" : 
 	[
 		{
-			"name" : "Grid",
-			"type" : "mesh",
-			"transform" : 
-			{
-				"space" : "local",
-				"position" : "19.500000, -0.100000, -15.500000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material" : 
-			{
-				"name" : "color",
-				"shader" : "color",
-				"const albedo" : "0.000000, 0.000000, 0.000000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 0.000000
-			},
-			"mesh" : 
-			{
-				"prefab" : "grid"
-			},
-			"children" : 
-			[
-				{
-					"name" : "World Origin",
-					"type" : "mesh",
-					"transform" : 
-					{
-						"space" : "local",
-						"position" : "0.000000, -0.090000, 0.000000",
-						"rotation" : "0.000000, -0.000000, 0.000000",
-						"scale" : "1.000000, 1.000000, 1.000000"
-					},
-					"material" : 
-					{
-						"name" : "color",
-						"shader" : "color",
-						"const albedo" : "0.000000, 0.000000, 0.000000",
-						"const metallic" : 0.000000,
-						"const roughness" : 0.000000,
-						"const ao" : 0.000000
-					},
-					"mesh" : 
-					{
-						"prefab" : "world axis ground"
-					}
-				}
-			]
-		},
-		{
 			"name" : "Sphere",
 			"type" : "mesh",
 			"transform" : 
@@ -79,7 +28,7 @@
 			},
 			"mesh" : 
 			{
-				"file" : "../../../FlexEngine/resources/models/ico-sphere.gltf"
+				"file" : "models/ico-sphere.gltf"
 			},
 			"children" : 
 			[
@@ -108,7 +57,7 @@
 					},
 					"mesh" : 
 					{
-						"file" : "../../../FlexEngine/resources/models/cone.gltf"
+						"file" : "models/cone.gltf"
 					},
 					"children" : 
 					[
@@ -137,7 +86,7 @@
 							},
 							"mesh" : 
 							{
-								"file" : "../../../FlexEngine/resources/models/uv-sphere.gltf"
+								"file" : "models/uv-sphere.gltf"
 							}
 						}
 					]
@@ -167,7 +116,7 @@
 					},
 					"mesh" : 
 					{
-						"file" : "../../../FlexEngine/resources/models/ico-sphere.gltf"
+						"file" : "models/ico-sphere.gltf"
 					}
 				}
 			]
@@ -197,7 +146,7 @@
 			},
 			"mesh" : 
 			{
-				"file" : "../../../FlexEngine/resources/models/chamfer-box.gltf"
+				"file" : "models/chamfer-box.gltf"
 			}
 		},
 		{
@@ -215,7 +164,9 @@
 				"generate irradiance sampler" : true,
 				"generated irradiance cubemap size" : "32.000000, 32.000000",
 				"generate prefiltered map" : true,
-				"generated prefiltered map size" : "128.000000, 128.000000"
+				"generated prefiltered map size" : "128.000000, 128.000000",
+				"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Bg.hdr"
+				//"environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
 			}
 		},
 		{
@@ -224,7 +175,7 @@
 			"children" : 
 			[
 				{
-					"name" : "Reflection probe",
+					"name" : "Reflection probe mesh",
 					"type" : "mesh",
 					"transform" : 
 					{
@@ -235,8 +186,8 @@
 					},
 					"material" : 
 					{
-						"name" : "Reflection probe ball",
-						"shader" : "Reflection probe ball",
+						"name" : "Reflection probe sphere",
+						"shader" : "Reflection probe sphere",
 						"const albedo" : "0.750000, 0.750000, 0.750000",
 						"const roughness" : 0.000000,
 						"enable albedo sampler" : false,
@@ -246,7 +197,7 @@
 					},
 					"mesh" : 
 					{
-						"file" : "../../../FlexEngine/resources/models/sphere.fbx"
+						"file" : "models/sphere.fbx"
 					}
 				}
 			]

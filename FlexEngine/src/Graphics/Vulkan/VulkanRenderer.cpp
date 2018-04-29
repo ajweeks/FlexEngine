@@ -2696,6 +2696,16 @@ namespace flex
 			m_SwapChainNeedsRebuilding = true;
 		}
 
+		bool VulkanRenderer::GetRenderObjectVisible(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				return renderObject->visible;
+			}
+			return false;
+		}
+
 		void VulkanRenderer::SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
@@ -2789,7 +2799,14 @@ namespace flex
 			UNREFERENCED_PARAMETER(pointer);
 		}
 
-		void VulkanRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID)
+		void VulkanRenderer::SetSkyboxRotation(const glm::quat& skyboxRotation)
+		{
+			assert(m_SkyBoxMesh);
+
+			m_SkyBoxMesh->GetTransform().SetLocalRotation(skyboxRotation);
+		}
+
+		void VulkanRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext)
 		{
 			assert(skyboxMaterialID >= 0 && skyboxMaterialID < m_LoadedMaterials.size());
 
@@ -2805,6 +2822,11 @@ namespace flex
 					mat->irradianceTexture = m_LoadedMaterials[m_SkyBoxMaterialID].irradianceTexture;
 					mat->prefilterTexture = m_LoadedMaterials[m_SkyBoxMaterialID].prefilterTexture;
 				}
+			}
+
+			if (!m_SkyBoxMesh)
+			{
+				GenerateSkybox(gameContext);
 			}
 		}
 

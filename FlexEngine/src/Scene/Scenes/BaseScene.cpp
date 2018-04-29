@@ -17,6 +17,8 @@
 #include "Scene/ReflectionProbe.hpp"
 #include "Scene/MeshPrefab.hpp"
 #include "Helpers.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "Cameras/BaseCamera.hpp"
 
 namespace flex
 {
@@ -39,10 +41,15 @@ namespace flex
 			return;
 		}
 
-		Logger::LogInfo("Loading scene from JSON");
+		std::string friendlySceneFilepath = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
+		Logger::LogInfo("Loading scene from JSON file: " + friendlySceneFilepath);
 
-		Logger::LogInfo("Parsed scene file:");
-		Logger::LogInfo(sceneRootObject.Print(0));
+		const bool printSceneContentsToConsole = false;
+		if (printSceneContentsToConsole)
+		{
+			Logger::LogInfo("Parsed scene file:");
+			Logger::LogInfo(sceneRootObject.Print(0));
+		}
 
 		int sceneVersion = sceneRootObject.GetInt("version");
 		if (sceneVersion != 1)
@@ -63,7 +70,7 @@ namespace flex
 		const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
 		for (const JSONObject& rootEntity : rootEntities)
 		{
-			AddChild(gameContext, CreateEntityFromJSON(gameContext, rootEntity));
+			AddChild(CreateEntityFromJSON(gameContext, rootEntity));
 		}
 
 		if (sceneRootObject.HasField("point lights"))
@@ -92,35 +99,37 @@ namespace flex
 		}
 
 
+		// Physics world
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
 
-		MaterialCreateInfo skyboxHDRMatInfo = {};
-		skyboxHDRMatInfo.name = "HDR Skybox";
-		skyboxHDRMatInfo.shaderName = "background";
-		skyboxHDRMatInfo.generateHDRCubemapSampler = true;
-		skyboxHDRMatInfo.enableCubemapSampler = true;
-		skyboxHDRMatInfo.enableCubemapTrilinearFiltering = true;
-		skyboxHDRMatInfo.generatedCubemapSize = { 512, 512 };
-		skyboxHDRMatInfo.generateIrradianceSampler = true;
-		skyboxHDRMatInfo.generatedIrradianceCubemapSize = { 32, 32 };
-		skyboxHDRMatInfo.generatePrefilteredMap = true;
-		skyboxHDRMatInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		skyboxHDRMatInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
-		MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
-		gameContext.renderer->SetSkyboxMaterial(skyboxMatID);
+		// Grid
+		MaterialCreateInfo gridMatInfo = {};
+		gridMatInfo.shaderName = "color";
+		gridMatInfo.name = "Color";
+		m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
 
-		// Generated last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe("default reflection probe", true);
-		AddChild(gameContext, m_ReflectionProbe);
+		m_Grid = new MeshPrefab(m_GridMaterialID, "Grid");
+		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
+		AddChild(m_Grid);
+
+		MaterialCreateInfo worldAxisMatInfo = {};
+		worldAxisMatInfo.shaderName = "color";
+		worldAxisMatInfo.name = "Color";
+		m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+
+		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
+		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
+		m_WorldOrigin->GetTransform().Translate(0.0f, -0.09f, 0.0f);
+		AddChild(m_WorldOrigin);
 	}
 
 	void BaseScene::PostInitialize(const GameContext& gameContext)
 	{
-		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
 	}
 
 	void BaseScene::Destroy(const GameContext& gameContext)
@@ -144,6 +153,21 @@ namespace flex
 
 	void BaseScene::Update(const GameContext& gameContext)
 	{
+		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+
+		// Fade grid out when far away
+		{
+			float maxHeightVisible = 350.0f;
+			float distCamToGround = camera->GetPosition().y;
+			float maxDistVisible = 300.0f;
+			float distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
+
+			glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
+			glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
+			gameContext.renderer->GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
+			gameContext.renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
+		}
+
 		for (auto child : m_Children)
 		{
 			if (child)
@@ -207,7 +231,14 @@ namespace flex
 		SerializableType entityType = StringToSerializableType(entityTypeStr);
 
 		std::string objectName = obj.GetString("name");
-		
+
+		Transform transform = Transform::Identity();
+		if (obj.HasField("transform"))
+		{
+			JSONObject transformObj = obj.GetObject("transform");
+			transform = JSONParser::ParseTransform(transformObj);
+		}
+
 		switch (entityType)
 		{
 		case SerializableType::MESH:
@@ -224,11 +255,10 @@ namespace flex
 			bool flipU = meshObj.GetBool("flipU");
 			bool flipV = meshObj.GetBool("flipV");
 
-			bool visibleInSceneGraph = obj.HasField("visibleInSceneGraph") ? obj.GetBool("visibleInSceneGraph") : true;
-			bool visible = obj.HasField("visibleInSceneGraph") ? obj.GetBool("visible") : true;
-
-			JSONObject transformObj = obj.GetObject("transform");
-			Transform transform = JSONParser::ParseTransform(transformObj);
+			bool visibleInSceneGraph;
+			obj.SetBoolChecked("visibleInSceneGraph", visibleInSceneGraph);
+			bool visible;
+			obj.SetBoolChecked("visible", visible);
 
 			JSONObject material = obj.GetObject("material");
 			std::string materialName = material.GetString("name");
@@ -236,14 +266,14 @@ namespace flex
 
 			if (shaderName.empty())
 			{
-				Logger::LogError("Shader name not set in material " + materialName);
+				Logger::LogError("Can not create entity from JSON: shader name not set in material \"" + materialName + '\"');
 				return nullptr;
 			}
 
 			ShaderID shaderID = InvalidShaderID;
 			if (!gameContext.renderer->GetShaderID(shaderName, shaderID))
 			{
-				Logger::LogError("Shader ID not found in renderer!" + materialName);
+				Logger::LogError("Shader ID not found in renderer! Shader name: \"" + shaderName + '\"');
 				return nullptr;
 			}
 
@@ -251,137 +281,7 @@ namespace flex
 			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
 
 			MaterialCreateInfo matCreateInfo = {};
-			{
-				matCreateInfo.name = materialName;
-				matCreateInfo.shaderName = shaderName;
-
-				struct FilePathMaterialParam
-				{
-					std::string* member;
-					std::string name;
-				};
-
-				std::vector<FilePathMaterialParam> filePathParams =
-				{
-					{ &matCreateInfo.diffuseTexturePath, "diffuse texture filepath" },
-					{ &matCreateInfo.normalTexturePath, "normal texture filepath" },
-					{ &matCreateInfo.albedoTexturePath, "albedo texture filepath" },
-					{ &matCreateInfo.metallicTexturePath, "metallic texture filepath" },
-					{ &matCreateInfo.roughnessTexturePath, "roughness texture filepath" },
-					{ &matCreateInfo.aoTexturePath, "ao texture filepath" },
-					{ &matCreateInfo.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
-					{ &matCreateInfo.environmentMapPath, "environment map filepath" },
-				};
-
-				for (u32 i = 0; i < filePathParams.size(); ++i)
-				{
-					if (material.HasField(filePathParams[i].name))
-					{
-						*filePathParams[i].member = material.GetString(filePathParams[i].name);
-
-						if (StartsWith(*filePathParams[i].member, RESOURCE_LOCATION))
-						{
-							*filePathParams[i].member = (filePathParams[i].member)->substr(RESOURCE_LOCATION.length());
-						}
-					}
-				}
-
-
-				struct BoolMaterialParam
-				{
-					bool* member;
-					std::string name;
-				};
-
-				std::vector<BoolMaterialParam> boolParams =
-				{
-					{ &matCreateInfo.generateDiffuseSampler, "generate diffuse sampler" },
-					{ &matCreateInfo.enableDiffuseSampler, "enable diffuse sampler" },
-					{ &matCreateInfo.generateNormalSampler, "generate normal sampler" },
-					{ &matCreateInfo.enableNormalSampler, "enable normal sampler" },
-					{ &matCreateInfo.generateAlbedoSampler, "generate albedo sampler" },
-					{ &matCreateInfo.enableAlbedoSampler, "enable albedo sampler" },
-					{ &matCreateInfo.generateMetallicSampler, "generate metallic sampler" },
-					{ &matCreateInfo.enableMetallicSampler, "enable metallic sampler" },
-					{ &matCreateInfo.generateRoughnessSampler, "generate roughness sampler" },
-					{ &matCreateInfo.enableRoughnessSampler, "enable roughness sampler" },
-					{ &matCreateInfo.generateAOSampler, "generate ao sampler" },
-					{ &matCreateInfo.enableAOSampler, "enable ao sampler" },
-					{ &matCreateInfo.generateHDREquirectangularSampler, "generate hdr equirectangular sampler" },
-					{ &matCreateInfo.enableHDREquirectangularSampler, "enable hdr equirectangular sampler" },
-					{ &matCreateInfo.generateHDRCubemapSampler, "generate hdr cubemap sampler" },
-					{ &matCreateInfo.enableIrradianceSampler, "enable irradiance sampler" },
-					{ &matCreateInfo.generateIrradianceSampler, "generate irradiance sampler" },
-					{ &matCreateInfo.enableBRDFLUT, "enable brdf lut" },
-					{ &matCreateInfo.renderToCubemap, "render to cubemap" },
-					{ &matCreateInfo.enableCubemapSampler, "enable cubemap sampler" },
-					{ &matCreateInfo.enableCubemapTrilinearFiltering, "enable cubemap trilinear filtering" },
-					{ &matCreateInfo.generateCubemapSampler, "generate cubemap sampler" },
-					{ &matCreateInfo.generateCubemapDepthBuffers, "generate cubemap depth buffers" },
-					{ &matCreateInfo.generatePrefilteredMap, "generate prefiltered map" },
-					{ &matCreateInfo.enablePrefilteredMap, "enable prefiltered map" },
-					{ &matCreateInfo.generateReflectionProbeMaps, "generate reflection probe maps" },
-				};
-
-				for (u32 i = 0; i < boolParams.size(); ++i)
-				{
-					if (material.HasField(boolParams[i].name))
-					{
-						*boolParams[i].member = material.GetBool(boolParams[i].name);
-					}
-				}
-
-				if (material.HasField("color multiplier"))
-				{
-					std::string colorStr = material.GetString("color multiplier");
-					matCreateInfo.colorMultiplier = ParseVec4(colorStr);
-				}
-
-				if (material.HasField("generated irradiance cubemap size"))
-				{
-					std::string irradianceCubemapSizeStr = material.GetString("generated irradiance cubemap size");
-					matCreateInfo.generatedIrradianceCubemapSize = ParseVec2(irradianceCubemapSizeStr);
-				}
-
-				//std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
-				//matCreateInfo.irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
-				//matCreateInfo.prefilterMapSamplerMatID = InvalidMaterialID;
-
-				//matCreateInfo.cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
-
-				if (material.HasField("generated cubemap size"))
-				{
-					std::string generatedCubemapSizeStr = material.GetString("generated cubemap size");
-					matCreateInfo.generatedCubemapSize = ParseVec2(generatedCubemapSizeStr);
-				}
-
-				if (material.HasField("generated prefiltered cubemap size"))
-				{
-					std::string generatedPrefilteredCubemapSizeStr = material.GetString("generated prefiltered cubemap size");
-					matCreateInfo.generatedPrefilteredCubemapSize = ParseVec2(generatedPrefilteredCubemapSizeStr);
-				}
-
-				if (material.HasField("const albedo"))
-				{
-					std::string albedoStr = material.GetString("const albedo");
-					matCreateInfo.constAlbedo = ParseVec3(albedoStr);
-				}
-
-				if (material.HasField("const metallic"))
-				{
-					matCreateInfo.constMetallic = material.GetFloat("const metallic");
-				}
-
-				if (material.HasField("cons roughness"))
-				{
-					matCreateInfo.constRoughness = material.GetFloat("const roughness");
-				}
-
-				if (material.HasField("const ao"))
-				{
-					matCreateInfo.constAO = material.GetFloat("const ao");
-				}
-			}
+			ParseMaterialJSONObject(material, matCreateInfo);
 			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
 
 			if (!meshFilePath.empty())
@@ -400,8 +300,6 @@ namespace flex
 					flipV,
 					&createInfo);
 
-				mesh->GetTransform() = transform;
-
 				result = mesh;
 			}
 			else if (!meshPrefabName.empty())
@@ -414,8 +312,6 @@ namespace flex
 
 				MeshPrefab::PrefabShape prefabShape = MeshPrefab::StringToPrefabShape(meshPrefabName);
 				mesh->LoadPrefabShape(gameContext, prefabShape, &createInfo);
-
-				mesh->GetTransform() = transform;
 
 				if (!visible)
 				{
@@ -432,47 +328,122 @@ namespace flex
 		case SerializableType::SKYBOX:
 		{
 			JSONObject materialObj = obj.GetObject("material");
-			
-			MaterialCreateInfo skyboxHDRMatInfo = {};
-			materialObj.SetStringChecked("name", skyboxHDRMatInfo.name);
-			materialObj.SetStringChecked("shader", skyboxHDRMatInfo.shaderName);
-			materialObj.SetBoolChecked("generate hdr cubemap sampler", skyboxHDRMatInfo.generateHDRCubemapSampler);
-			materialObj.SetBoolChecked("enable cubemap sampler", skyboxHDRMatInfo.enableCubemapSampler);
-			materialObj.SetBoolChecked("enable cubemap trilinear filtering", skyboxHDRMatInfo.enableCubemapTrilinearFiltering);
-			materialObj.SetVec2Checked("generated cubemap size", skyboxHDRMatInfo.generatedCubemapSize);
-			materialObj.SetBoolChecked("generate irradiance sampler", skyboxHDRMatInfo.generateIrradianceSampler);
-			materialObj.SetVec2Checked("generated irradiance cubemap size", skyboxHDRMatInfo.generatedIrradianceCubemapSize);
-			materialObj.SetBoolChecked("generate prefiltered map", skyboxHDRMatInfo.generatePrefilteredMap);
-			materialObj.SetVec2Checked("generated prefiltered map size", skyboxHDRMatInfo.generatedPrefilteredCubemapSize);
 
-			const MaterialID skyboxHDRMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxHDRMatInfo);
+			MaterialCreateInfo skyboxMatInfo = {};
+			ParseMaterialJSONObject(materialObj, skyboxMatInfo);
+			const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
 
-			MeshPrefab* skybox = new MeshPrefab(skyboxHDRMatID, objectName);
-			skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-			AddChild(gameContext, skybox);
+			gameContext.renderer->SetSkyboxMaterial(skyboxMatID, gameContext);
 
-			gameContext.renderer->SetSkyboxMaterial(skyboxHDRMatID);
+			glm::vec3 skyboxRotEuler;
+			if (obj.SetVec3Checked("rotation", skyboxRotEuler))
+			{
+				glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
+				gameContext.renderer->SetSkyboxRotation(skyboxRotation);
+			}
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
-			// TODO: UNIMPLEMENTED
-			//gameContext.renderer->SetReflectionProbeMaterial();
+			bool visible;
+			obj.SetBoolChecked("visible", visible);
+
+			ReflectionProbe* reflectionProbe = new ReflectionProbe(objectName, visible);
+
+			result = reflectionProbe;
 		} break;
 		case SerializableType::NONE:
+			// Assume this object is an empty parent object which holds no data itself but a transform
+			result = new GameObject(objectName, SerializableType::NONE);
+			break;
 		default:
 			Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
+			break;
 		}
 
-		if (result && obj.HasField("children"))
+		if (result)
 		{
-			std::vector<JSONObject> children = obj.GetObjectArray("children");
-			for (const auto& child : children)
+			result->m_Transform = transform;
+
+			if (obj.HasField("children"))
 			{
-				result->AddChild(CreateEntityFromJSON(gameContext, child));
+				std::vector<JSONObject> children = obj.GetObjectArray("children");
+				for (const auto& child : children)
+				{
+					result->AddChild(CreateEntityFromJSON(gameContext, child));
+				}
 			}
 		}
 
 		return result;
+	}
+
+	void BaseScene::ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
+	{
+		material.SetStringChecked("name", createInfoOut.name);
+		material.SetStringChecked("shader", createInfoOut.shaderName);
+
+		struct FilePathMaterialParam
+		{
+			std::string* member;
+			std::string name;
+		};
+
+		std::vector<FilePathMaterialParam> filePathParams =
+		{
+			{ &createInfoOut.diffuseTexturePath, "diffuse texture filepath" },
+			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
+			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
+			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
+			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
+			{ &createInfoOut.aoTexturePath, "ao texture filepath" },
+			{ &createInfoOut.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
+			{ &createInfoOut.environmentMapPath, "environment map path" },
+		};
+
+		for (u32 i = 0; i < filePathParams.size(); ++i)
+		{
+			if (material.HasField(filePathParams[i].name))
+			{
+				*filePathParams[i].member = RESOURCE_LOCATION +
+					material.GetString(filePathParams[i].name);
+			}
+		}
+
+		material.SetBoolChecked("generate diffuse sampler", createInfoOut.generateDiffuseSampler);
+		material.SetBoolChecked("enable diffuse sampler", createInfoOut.enableDiffuseSampler);
+		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
+		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
+		material.SetBoolChecked("generate albedo sampler", createInfoOut.generateAlbedoSampler);
+		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
+		material.SetBoolChecked("generate metallic sampler", createInfoOut.generateMetallicSampler);
+		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
+		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
+		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
+		material.SetBoolChecked("generate ao sampler", createInfoOut.generateAOSampler);
+		material.SetBoolChecked("enable ao sampler", createInfoOut.enableAOSampler);
+		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
+		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
+		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
+		material.SetBoolChecked("enable irradiance sampler", createInfoOut.enableIrradianceSampler);
+		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
+		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
+		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
+		material.SetBoolChecked("enable cubemap sampler", createInfoOut.enableCubemapSampler);
+		material.SetBoolChecked("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
+		material.SetBoolChecked("generate cubemap sampler", createInfoOut.generateCubemapSampler);
+		material.SetBoolChecked("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
+		material.SetBoolChecked("generate prefiltered map", createInfoOut.generatePrefilteredMap);
+		material.SetBoolChecked("enable prefiltered map", createInfoOut.enablePrefilteredMap);
+		material.SetBoolChecked("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
+
+		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
+		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
+		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
+		material.SetVec4Checked("color multiplier", createInfoOut.colorMultiplier);
+		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
+		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
+		material.SetFloatChecked("cons roughness", createInfoOut.constRoughness);
+		material.SetFloatChecked("const ao", createInfoOut.constAO);
 	}
 
 	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
@@ -798,11 +769,18 @@ namespace flex
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
-			// TODO: UNIMPLEMENTED
+			ReflectionProbe* reflectionProbe = (ReflectionProbe*)gameObject;
+
+			glm::vec3 probePos = reflectionProbe->GetTransform().GetGlobalPosition();
+			object.fields.push_back(JSONField("position", JSONValue(Vec3ToString(probePos))));
+			object.fields.push_back(JSONField("visible", JSONValue(reflectionProbe->IsSphereVisible(gameContext))));
+
+			// TODO: Add probe-specific fields here like resolution and influence
+
 		} break;
 		case SerializableType::NONE:
 		{
-			// Assume this type is intentionally non-serializable
+			// Assume this type is intentionally non-serializable or just a parent object
 		} break;
 		default:
 		{
@@ -869,10 +847,8 @@ namespace flex
 		return object;
 	}
 
-	void BaseScene::AddChild(const GameContext& gameContext, GameObject* gameObject)
+	void BaseScene::AddChild(GameObject* gameObject)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		if (!gameObject)
 		{
 			return;

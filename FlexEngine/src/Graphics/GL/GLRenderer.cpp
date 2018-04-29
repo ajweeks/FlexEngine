@@ -776,11 +776,6 @@ namespace flex
 			GLShader* equirectangularToCubemapShader = &m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID];
 			GLMaterial* equirectangularToCubemapMaterial = &m_Materials[equirectangularToCubeMatID];
 
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
-
 			// TODO: Handle no skybox being set gracefully
 			GLRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			GLMaterial* skyboxGLMaterial = &m_Materials[skyboxRenderObject->materialID];
@@ -876,11 +871,6 @@ namespace flex
 			MaterialID prefilterMatID = InitializeMaterial(gameContext, &prefilterMaterialCreateInfo);
 			GLMaterial& prefilterMat = m_Materials[prefilterMatID];
 			GLShader& prefilterShader = m_Shaders[prefilterMat.material.shaderID];
-
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
 
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
@@ -1083,11 +1073,6 @@ namespace flex
 			MaterialID irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
 			GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
 			GLShader& shader = m_Shaders[irradianceMat.material.shaderID];
-
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
 
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
@@ -1542,8 +1527,6 @@ namespace flex
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
 			CheckGLErrorMessages();
 
-			GenerateSkybox(gameContext);
-
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
 			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			world->setDebugDrawer(m_PhysicsDebugDrawer);
@@ -1763,11 +1746,6 @@ namespace flex
 
 			if (drawCallInfo.renderToCubemap)
 			{
-				if (!m_SkyBoxMesh)
-				{
-					GenerateSkybox(gameContext);
-				}
-
 				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 				GLRenderObject* cubemapObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
@@ -2673,6 +2651,16 @@ namespace flex
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
 		}
 
+		bool GLRenderer::GetRenderObjectVisible(RenderID renderID)
+		{
+			GLRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				return renderObject->visible;
+			}
+			return false;
+		}
+
 		void GLRenderer::SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
@@ -2968,7 +2956,14 @@ namespace flex
 			glUseProgram(last_program);
 		}
 
-		void GLRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID)
+		void GLRenderer::SetSkyboxRotation(const glm::quat& skyboxRotation)
+		{
+			assert(m_SkyBoxMesh);
+
+			m_SkyBoxMesh->GetTransform().SetLocalRotation(skyboxRotation);
+		}
+
+		void GLRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext)
 		{
 			assert(skyboxMaterialID >= 0 && skyboxMaterialID < m_Materials.size());
 
@@ -2983,6 +2978,11 @@ namespace flex
 					mat->irradianceSamplerID = m_Materials[m_SkyBoxMaterialID].irradianceSamplerID;
 					mat->prefilteredMapSamplerID = m_Materials[m_SkyBoxMaterialID].prefilteredMapSamplerID;
 				}
+			}
+
+			if (!m_SkyBoxMesh)
+			{
+				GenerateSkybox(gameContext);
 			}
 		}
 

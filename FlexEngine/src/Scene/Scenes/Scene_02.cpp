@@ -106,7 +106,7 @@ namespace flex
 		m_Grid = new MeshPrefab(m_GridMaterialID, "Grid");
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
-		AddChild(gameContext, m_Grid);
+		AddChild(m_Grid);
 
 		MaterialCreateInfo worldAxisMatInfo = {};
 		worldAxisMatInfo.shaderName = "color";
@@ -116,7 +116,7 @@ namespace flex
 		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
 		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
 		m_WorldOrigin->GetTransform().Translate(0.0f, -0.09f, 0.0f);
-		AddChild(gameContext, m_WorldOrigin);
+		AddChild(m_WorldOrigin);
 #endif
 
 #if 0 // Cerebus
@@ -209,7 +209,7 @@ namespace flex
 
 			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 			m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, z * sphereSpacing));
-			AddChild(gameContext, m_Spheres[i]);
+			AddChild(m_Spheres[i]);
 		}
 #endif
 
@@ -232,11 +232,11 @@ namespace flex
 
 #if 1 // Reflection probe
 		// Generated last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe("default reflection probe", true);
-		AddChild(gameContext, m_ReflectionProbe);
+		m_ReflectionProbe = new ReflectionProbe("default reflection probe");
+		AddChild(m_ReflectionProbe);
 #endif
 
-		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1);
+		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1, gameContext);
 
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);
@@ -300,19 +300,19 @@ namespace flex
 			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
 			//m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			AddChild(gameContext, m_Box1);
+			AddChild(m_Box1);
 			m_Box1->GetTransform().SetGlobalScale(box1Scale);
 
 			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
 			//m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			AddChild(gameContext, m_Box2);
+			AddChild(m_Box2);
 			m_Box2->GetTransform().SetGlobalScale(box2Scale);
 
 			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
 			//m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			AddChild(gameContext, m_Box3);
+			AddChild(m_Box3);
 			m_Box3->GetTransform().SetGlobalScale(box3Scale);
 		}
 

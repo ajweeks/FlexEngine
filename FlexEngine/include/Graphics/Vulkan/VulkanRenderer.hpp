@@ -51,6 +51,7 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
+			virtual bool GetRenderObjectVisible(RenderID renderID) override;
 			virtual void SetRenderObjectVisible(RenderID renderID, bool visible, bool effectChildren = true) override;
 
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
@@ -64,7 +65,8 @@ namespace flex
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
 				DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
-			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
+			virtual void SetSkyboxRotation(const glm::quat& skyboxRotation) override;
+			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;

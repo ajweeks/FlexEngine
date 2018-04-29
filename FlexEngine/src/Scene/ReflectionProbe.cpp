@@ -7,9 +7,9 @@
 
 namespace flex
 {
-	ReflectionProbe::ReflectionProbe(const std::string& name, bool visible) :
+	ReflectionProbe::ReflectionProbe(const std::string& name, bool startVisible) :
 		GameObject(name, SerializableType::REFLECTION_PROBE),
-		m_Visible(visible)
+		m_StartVisible(startVisible)
 	{
 	}
 
@@ -21,7 +21,7 @@ namespace flex
 	{
 		// Reflective chrome ball material
 		MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
-		reflectionProbeMaterialCreateInfo.name = "Reflection probe ball";
+		reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
 		reflectionProbeMaterialCreateInfo.shaderName = "pbr";
 		reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
 		reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
@@ -52,14 +52,14 @@ namespace flex
 		m_CaptureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
 
-
-		m_SphereMesh = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe");
+		m_SphereMesh = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe mesh");
 		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
 		AddChild(m_SphereMesh);
 		m_SphereMesh->GetTransform().Scale(1.5f);
-		if (!m_Visible)
+
+		if (!m_StartVisible)
 		{
-			gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), m_Visible);
+			SetSphereVisible(m_StartVisible, gameContext);
 		}
 
 		std::string captureName = m_Name + " capture";
@@ -78,9 +78,10 @@ namespace flex
 		m_SphereMesh->AddChild(m_Capture);
 	}
 
-	void ReflectionProbe::Update(const GameContext& gameContext)
+	void ReflectionProbe::PostInitialize(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		gameContext.renderer->SetReflectionProbeMaterial(GetCaptureMaterialID());
+		GameObject::PostInitialize(gameContext);
 	}
 
 	MaterialID ReflectionProbe::GetCaptureMaterialID() const
@@ -88,11 +89,16 @@ namespace flex
 		return m_CaptureMatID;
 	}
 
+	bool ReflectionProbe::IsSphereVisible(const GameContext& gameContext) const
+	{
+		return gameContext.renderer->GetRenderObjectVisible(m_SphereMesh->GetRenderID());
+	}
+
 	void ReflectionProbe::SetSphereVisible(bool visible, const GameContext& gameContext)
 	{
-		m_Visible = visible;
 		gameContext.renderer->SetRenderObjectVisible(m_SphereMesh->GetRenderID(), visible);
 	}
+
 	Transform& ReflectionProbe::GetTransform()
 	{
 		return m_SphereMesh->GetTransform();

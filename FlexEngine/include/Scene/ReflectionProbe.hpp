@@ -9,13 +9,15 @@ namespace flex
 	class ReflectionProbe : public GameObject
 	{
 	public:
-		ReflectionProbe(const std::string& name, bool visible = true);
+		ReflectionProbe(const std::string& name, bool startVisible = true);
 		virtual ~ReflectionProbe();
 
 		virtual void Initialize(const GameContext& gameContext) override;
-		virtual void Update(const GameContext& gameContext) override;
+		virtual void PostInitialize(const GameContext& gameContext) override;
 
 		MaterialID GetCaptureMaterialID() const;
+
+		bool IsSphereVisible(const GameContext& gameContext) const;
 		void SetSphereVisible(bool visible, const GameContext& gameContext);
 
 		Transform& GetTransform() override;
@@ -25,7 +27,7 @@ namespace flex
 		GameObject* m_Capture = nullptr; // The object doing the capturing
 		MaterialID m_CaptureMatID = 0;
 
-		bool m_Visible = true;
+		bool m_StartVisible = true;
 
 		// bool enabled, ivec4 influenceBoundingBox, bool update (real updateFrequency?), ...
 
