@@ -26,7 +26,7 @@ namespace flex
 
 		static void Shutdown();
 
-		enum class MeshType
+		enum class Type
 		{
 			PREFAB,
 			FILE,
@@ -76,7 +76,7 @@ namespace flex
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);
 		static std::string PrefabShapeToString(PrefabShape shape);
 
-		MeshType GetType() const;
+		Type GetType() const;
 
 		std::string GetFilepath() const;
 		PrefabShape GetShape() const;
@@ -99,7 +99,7 @@ namespace flex
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
 
-		MeshType m_Type = MeshType::NONE;
+		Type m_Type = Type::NONE;
 		std::string m_Filepath;
 
 		glm::vec2 m_UVScale = { 1,1 };

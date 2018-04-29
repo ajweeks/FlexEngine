@@ -78,7 +78,7 @@ namespace flex
 
 	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV, RenderObjectCreateInfo* optionalCreateInfo)
 	{
-		m_Type = MeshType::FILE;
+		m_Type = Type::FILE;
 		m_Shape = PrefabShape::NONE;
 		m_Filepath = filepath;
 
@@ -325,7 +325,7 @@ namespace flex
 
 	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
-		m_Type = MeshType::PREFAB;
+		m_Type = Type::PREFAB;
 		m_Shape = shape;
 
 		m_VertexBufferData.Destroy();
@@ -1064,7 +1064,7 @@ namespace flex
 		}
 	}
 
-	MeshPrefab::MeshType MeshPrefab::GetType() const
+	MeshPrefab::Type MeshPrefab::GetType() const
 	{
 		return m_Type;
 	}

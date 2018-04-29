@@ -549,13 +549,13 @@ namespace flex
 
 			JSONObject meshValue = {};
 
-			MeshPrefab::MeshType meshType = mesh->GetType();
-			if (meshType == MeshPrefab::MeshType::FILE)
+			MeshPrefab::Type meshType = mesh->GetType();
+			if (meshType == MeshPrefab::Type::FILE)
 			{
 				std::string meshFilepath = mesh->GetFilepath().substr(RESOURCE_LOCATION.length());
 				meshValue.fields.push_back(JSONField("file", JSONValue(meshFilepath)));
 			}
-			else if (meshType == MeshPrefab::MeshType::PREFAB)
+			else if (meshType == MeshPrefab::Type::PREFAB)
 			{
 				std::string prefabShapeStr = MeshPrefab::PrefabShapeToString(mesh->GetShape());
 				meshValue.fields.push_back(JSONField("prefab", JSONValue(prefabShapeStr)));
