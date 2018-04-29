@@ -3,7 +3,11 @@
 #include "Physics/PhysicsWorld.hpp"
 
 #pragma warning(push, 0)
-#include <btBulletDynamicsCommon.h>
+#include <LinearMath/btVector3.h>
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletCollision/CollisionDispatch/btCollisionObject.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"

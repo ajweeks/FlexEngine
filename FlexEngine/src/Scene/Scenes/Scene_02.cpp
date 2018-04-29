@@ -4,6 +4,10 @@
 
 #include <glm/vec3.hpp>
 
+#pragma warning(push, 0)
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#pragma warning(pop)
+
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Scene/ReflectionProbe.hpp"
@@ -245,87 +249,6 @@ namespace flex
 		m_PhysicsWorld->Initialize(gameContext);
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-
-		box1Collider = {};
-		box1Collider.CreateBoxCollider(gameContext, { 6.0f, 0.1f, 6.0f });
-
-		box2Collider = {};
-		box2Collider.CreateBoxCollider(gameContext, { 1.5f, 1.1f, 3.0f });
-
-		box3Collider = {};
-		box3Collider.CreateBoxCollider(gameContext, { 0.5f, 1.5f, 2.0f });
-
-		glm::vec3 box1Scale = FromBtVec3(box1Collider.GetScale());
-		glm::vec3 box2Scale = FromBtVec3(box2Collider.GetScale());
-		glm::vec3 box3Scale = FromBtVec3(box3Collider.GetScale());
-
-		btTransform rb1Transform = btTransform::getIdentity();
-		rb1Transform.setOrigin({ 20, 0, 0 });
-		btTransform rb2Transform = btTransform::getIdentity();
-		rb2Transform.setOrigin({ 20, 10, 0 });
-		btTransform rb3Transform = btTransform::getIdentity();
-		rb3Transform.setOrigin({ 20, 15, 0 });
-
-		rb1 = new RigidBody(1, 1);
-		rb1->SetMass(0.0f);
-		rb1->Initialize(box1Collider.GetShape(), gameContext, rb1Transform, false, true);
-
-		rb2 = new RigidBody(1, 1);
-		rb2->SetMass(1.0f);
-		rb2->Initialize(box2Collider.GetShape(), gameContext, rb2Transform);
-
-		rb3 = new RigidBody(1, 1);
-		rb3->SetMass(0.85f);
-		rb3->Initialize(box3Collider.GetShape(), gameContext, rb3Transform);
-
-		{
-			MaterialCreateInfo pbrMatInfo = {};
-			pbrMatInfo.shaderName = "pbr";
-			pbrMatInfo.name = "PBR box";
-			//pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.95f);
-			//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.22f, 0.2f);
-			pbrMatInfo.constAlbedo = glm::vec3(0.2f, 0.89f, 0.95f);
-			pbrMatInfo.constMetallic = 1.0f;
-			pbrMatInfo.constRoughness = 0.1f;
-			pbrMatInfo.constAO = 1.0f;
-			MaterialID boxMat1ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-
-			pbrMatInfo.constMetallic = 1.0f;
-			pbrMatInfo.constRoughness = 0.22f;
-			pbrMatInfo.constAlbedo = glm::vec3(0.92f, 0.93f, 0.95f);
-			MaterialID boxMat2ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-
-			pbrMatInfo.constMetallic = 1.0f;
-			pbrMatInfo.constRoughness = 0.22f;
-			pbrMatInfo.constAlbedo = glm::vec3(0.9f, 0.25f, 0.1f);
-			MaterialID boxMat3ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-
-			MeshPrefab::ImportSettings importSettings = {};
-			importSettings.swapNormalYZ = true;
-			importSettings.flipNormalZ = true;
-
-			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
-			//m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", &importSettings);
-			AddChild(m_Box1);
-			m_Box1->GetTransform()->SetGlobalScale(box1Scale);
-
-			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
-			//m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", &importSettings);
-			AddChild(m_Box2);
-			m_Box2->GetTransform()->SetGlobalScale(box2Scale);
-
-			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
-			//m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", &importSettings);
-			AddChild(m_Box3);
-			m_Box3->GetTransform()->SetGlobalScale(box3Scale);
-		}
-
-		m_Box1->GetTransform()->MatchRigidBody(rb1, true);
-		m_Box2->GetTransform()->MatchRigidBody(rb2, true);
-		m_Box3->GetTransform()->MatchRigidBody(rb3, true);
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
@@ -359,22 +282,6 @@ namespace flex
 	void Scene_02::Update(const GameContext& gameContext)
 	{
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
-
-		m_Box1->GetTransform()->MatchRigidBody(rb1);
-		m_Box2->GetTransform()->MatchRigidBody(rb2);
-		m_Box3->GetTransform()->MatchRigidBody(rb3);
-
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_SPACE))
-		{
-			rb2->GetRigidBodyInternal()->activate();
-			rb2->GetRigidBodyInternal()->clearForces();
-			rb2->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
-
-			rb3->GetRigidBodyInternal()->activate();
-			rb3->GetRigidBodyInternal()->clearForces();
-			rb3->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
-		}
-
 
 		float maxHeightVisible = 300.0f;
 		float distCamToGround = camera->GetPosition().y;

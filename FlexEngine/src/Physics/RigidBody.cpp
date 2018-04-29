@@ -24,15 +24,15 @@ namespace flex
 	{
 	}
 
-	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform, bool isKinematic, bool isStatic)
+	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform)
 	{
 		btVector3 localInertia(0, 0, 0);
-		if (!isStatic)
+		if (!m_bStatic)
 		{
 			collisionShape->calculateLocalInertia(m_Mass, localInertia);
 		}
 
-		if (isStatic)
+		if (m_bStatic)
 		{
 			assert(m_Mass == 0); // Static objects must have a mass of 0!
 		}
@@ -43,11 +43,11 @@ namespace flex
 		m_RigidBody = new btRigidBody(info);
 
 		i32 flags = m_RigidBody->getFlags();
-		if (isKinematic)
+		if (m_bKinematic)
 		{
 			flags |= btCollisionObject::CF_KINEMATIC_OBJECT;
 		}
-		if (isStatic)
+		if (m_bStatic)
 		{
 			flags |= btCollisionObject::CF_STATIC_OBJECT;
 		}
@@ -72,6 +72,31 @@ namespace flex
 	void RigidBody::SetMass(real mass)
 	{
 		m_Mass = mass;
+	}
+
+	real RigidBody::GetMass() const
+	{
+		return m_Mass;
+	}
+
+	void RigidBody::SetKinematic(bool bKinematic)
+	{
+		m_bKinematic = bKinematic;
+	}
+
+	bool RigidBody::GetKinematic() const
+	{
+		return m_bKinematic;
+	}
+
+	void RigidBody::SetStatic(bool bStatic)
+	{
+		m_bStatic = bStatic;
+	}
+
+	bool RigidBody::GetStatic() const
+	{
+		return m_bStatic;
 	}
 
 	void RigidBody::GetTransform(glm::vec3& outPos, glm::quat& outRot)

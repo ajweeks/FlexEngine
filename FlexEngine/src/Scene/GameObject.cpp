@@ -1,7 +1,16 @@
 #include "stdafx.hpp"
 
+#pragma warning(push, 0)
+#include <LinearMath/btTransform.h>
+#include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
+#include <BulletCollision/CollisionShapes/btCollisionShape.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#pragma warning(pop)
+
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
+#include "Physics/RigidBody.hpp"
 
 namespace flex
 {
@@ -24,6 +33,13 @@ namespace flex
 
 	void GameObject::Initialize(const GameContext& gameContext)
 	{
+		if (m_RigidBody && m_CollisionShape)
+		{
+			btTransform startingTransform = btTransform::getIdentity();
+			m_RigidBody->Initialize(m_CollisionShape, gameContext, startingTransform);
+		}
+
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->Initialize(gameContext);
@@ -56,10 +72,23 @@ namespace flex
 			SafeDelete(*iter);
 		}
 		m_Children.clear();
+
+		// NOTE: SafeDelete does not work on this type
+		if (m_CollisionShape)
+		{
+			delete m_CollisionShape;
+			m_CollisionShape = nullptr;
+		}
+		SafeDelete(m_RigidBody);
 	}
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
+		if (m_RigidBody)
+		{
+			m_Transform.MatchRigidBody(m_RigidBody, true);
+		}
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->Update(gameContext);
@@ -207,5 +236,27 @@ namespace flex
 	void GameObject::SetVisibleInSceneExplorer(bool visibleInSceneExplorer)
 	{
 		m_bVisibleInSceneExplorer = visibleInSceneExplorer;
+	}
+
+	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)
+	{
+		m_CollisionShape = collisionShape;
+		return collisionShape;
+	}
+
+	btCollisionShape* GameObject::GetCollisionShape() const
+	{
+		return m_CollisionShape;
+	}
+
+	RigidBody* GameObject::SetRigidBody(RigidBody* rigidBody)
+	{
+		m_RigidBody = rigidBody;
+		return rigidBody;
+	}
+
+	RigidBody* GameObject::GetRigidBody() const
+	{
+		return m_RigidBody;
 	}
 } // namespace flex

@@ -79,7 +79,6 @@ namespace flex
 		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, 
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
-		virtual void Initialize(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
 
 		MaterialID GetMaterialID() const;

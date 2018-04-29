@@ -20,7 +20,7 @@ namespace flex
 			m_GameContext(gameContext)
 		{
 			m_Renderer = (GLRenderer*)(m_GameContext.renderer);
-			if (!m_Renderer->GetMaterialID("color", m_MaterialID))
+			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
 			{
 				Logger::LogError("Failed to retrieve shader for GL physics debug draw!");
 			}
@@ -101,6 +101,12 @@ namespace flex
 		{
 			if (m_LineSegments.empty())
 			{
+				return;
+			}
+
+			if (m_MaterialID == InvalidMaterialID)
+			{
+				Logger::LogError("Attempted to draw GLPhysicsDebug objects before material has been set");
 				return;
 			}
 

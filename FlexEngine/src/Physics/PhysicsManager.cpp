@@ -1,5 +1,14 @@
 #include "stdafx.hpp"
 
+#include <BulletCollision/BroadphaseCollision/btDbvtBroadphase.h>
+#include <BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h>
+#include <BulletCollision/CollisionDispatch/btCollisionDispatcher.h>
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
+#include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
 #include "Physics/PhysicsManager.hpp"
 
 namespace flex
@@ -23,14 +32,6 @@ namespace flex
 		{
 			m_Initialized = false;
 
-			auto iter = m_Shapes.begin();
-			while (iter != m_Shapes.end())
-			{
-				delete *iter;
-				iter = m_Shapes.erase(iter);
-			}
-			m_Shapes.clear();
-
 			SafeDelete(m_Solver);
 			SafeDelete(m_OverlappingPairCache);
 			SafeDelete(m_Dispatcher);
@@ -46,26 +47,5 @@ namespace flex
 			return world;
 		}
 		return nullptr;
-	}
-
-	btBoxShape* PhysicsManager::CreateBoxShape(const btVector3& halfExtent)
-	{
-		btBoxShape* box = new btBoxShape(halfExtent);
-		m_Shapes.push_back(box);
-		return box;
-	}
-
-	btSphereShape* PhysicsManager::CreateSphereShape(btScalar radius)
-	{
-		btSphereShape* sphere = new btSphereShape(radius);
-		m_Shapes.push_back(sphere);
-		return sphere;
-	}
-
-	btCapsuleShape* PhysicsManager::CreateCapsuleShape(btScalar radius, btScalar height)
-	{
-		btCapsuleShape* capsule = new btCapsuleShape(radius, height);
-		m_Shapes.push_back(capsule);
-		return capsule;
 	}
 } // namespace flex

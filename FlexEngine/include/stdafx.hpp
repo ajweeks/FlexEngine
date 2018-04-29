@@ -51,10 +51,10 @@ void _CheckGLErrorMessages(const char *file, flex::i32 line);
 template<class T>
 inline void SafeDelete(T &pObjectToDelete)
 {
-	if (pObjectToDelete != 0)
+	if (pObjectToDelete != nullptr)
 	{
 		delete(pObjectToDelete);
-		pObjectToDelete = 0;
+		pObjectToDelete = nullptr;
 	}
 }
 

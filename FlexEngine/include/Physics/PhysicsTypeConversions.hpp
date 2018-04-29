@@ -1,8 +1,8 @@
 #pragma once
 
 #pragma warning(push, 0)
-#include "LinearMath\btVector3.h"
-#include "LinearMath\btQuaternion.h"
+#include <LinearMath/btVector3.h>
+#include <LinearMath/btQuaternion.h>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>

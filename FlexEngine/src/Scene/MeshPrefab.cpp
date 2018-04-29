@@ -979,14 +979,9 @@ namespace flex
 		return true;
 	}
 
-	void MeshPrefab::Initialize(const GameContext& gameContext)
-	{
-		UNREFERENCED_PARAMETER(gameContext);
-	}
-
 	void MeshPrefab::Update(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		GameObject::Update(gameContext);
 
 		if (m_Shape == PrefabShape::GRID)
 		{

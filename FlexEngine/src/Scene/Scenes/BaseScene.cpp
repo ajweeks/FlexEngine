@@ -6,19 +6,27 @@
 
 #include <fstream>
 
-#include "Scene/GameObject.hpp"
-#include "Logger.hpp"
-#include "Physics/PhysicsWorld.hpp"
-#include "JSONParser.hpp"
+#pragma warning(push, 0)
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletCollision/CollisionShapes/btConeShape.h>
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
+#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
+#pragma warning(pop)
 
-#include "Physics/PhysicsWorld.hpp"
-#include "Physics/PhysicsManager.hpp"
-#include "Physics/RigidBody.hpp"
-#include "Scene/ReflectionProbe.hpp"
-#include "Scene/MeshPrefab.hpp"
-#include "Helpers.hpp"
-#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "Helpers.hpp"
+#include "JSONParser.hpp"
+#include "Logger.hpp"
+#include "Physics/PhysicsHelpers.hpp"
+#include "Physics/PhysicsManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Scene/GameObject.hpp"
+#include "Scene/MeshPrefab.hpp"
+#include "Scene/ReflectionProbe.hpp"
 
 namespace flex
 {
@@ -34,6 +42,13 @@ namespace flex
 
 	void BaseScene::Initialize(const GameContext& gameContext)
 	{
+		// Physics world
+		m_PhysicsWorld = new PhysicsWorld();
+		m_PhysicsWorld->Initialize(gameContext);
+
+		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
+
+
 		JSONObject sceneRootObject;
 		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
 		{
@@ -97,13 +112,6 @@ namespace flex
 			m_DirectionalLight = dirLight;
 			gameContext.renderer->InitializeDirectionalLight(dirLight);
 		}
-
-
-		// Physics world
-		m_PhysicsWorld = new PhysicsWorld();
-		m_PhysicsWorld->Initialize(gameContext);
-
-		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
 
 		// Grid
@@ -194,7 +202,7 @@ namespace flex
 
 	GameObject* BaseScene::CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj)
 	{
-		GameObject* result = nullptr;
+		GameObject* newEntity = nullptr;
 
 		std::string entityTypeStr = obj.GetString("type");
 		SerializableType entityType = StringToSerializableType(entityTypeStr);
@@ -272,7 +280,7 @@ namespace flex
 					&importSettings,
 					&createInfo);
 
-				result = mesh;
+				newEntity = mesh;
 			}
 			else if (!meshPrefabName.empty())
 			{
@@ -290,11 +298,91 @@ namespace flex
 					mesh->SetVisible(visible);
 				}
 
-				result = mesh;
+				newEntity = mesh;
 			}
 			else
 			{
 				Logger::LogError("Unhandled mesh object " + objectName);
+			}
+
+			JSONObject colliderObj;
+			if (obj.SetObjectChecked("collider", colliderObj))
+			{
+				std::string shapeStr = colliderObj.GetString("shape");
+				BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
+
+				switch (shapeType)
+				{
+				case BOX_SHAPE_PROXYTYPE:
+				{
+					glm::vec3 halfExtents;
+					colliderObj.SetVec3Checked("half extents", halfExtents);
+					btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+					btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+
+					newEntity->SetCollisionShape(boxShape);
+				} break;
+				case SPHERE_SHAPE_PROXYTYPE:
+				{
+					real radius = colliderObj.GetFloat("radius");
+					btSphereShape* sphereShape = new btSphereShape(radius);
+
+					newEntity->SetCollisionShape(sphereShape);
+				} break;
+				case CAPSULE_SHAPE_PROXYTYPE:
+				{
+					real radius = colliderObj.GetFloat("radius");
+					real height = colliderObj.GetFloat("height");
+					btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
+
+					newEntity->SetCollisionShape(capsuleShape);
+				} break;
+				case CONE_SHAPE_PROXYTYPE:
+				{
+					real radius = colliderObj.GetFloat("radius");
+					real height = colliderObj.GetFloat("height");
+					btConeShape* coneShape = new btConeShape(radius, height);
+
+					newEntity->SetCollisionShape(coneShape);
+				} break;
+				case CYLINDER_SHAPE_PROXYTYPE:
+				{
+					glm::vec3 halfExtents;
+					colliderObj.SetVec3Checked("half extents", halfExtents);
+					btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+					btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
+
+					newEntity->SetCollisionShape(cylinderShape);
+				} break;
+				default:
+				{
+					Logger::LogError("Unhandled BroadphaseNativeType: " + shapeStr);
+				} break;
+				}
+
+
+				bool bIsTrigger = colliderObj.GetBool("trigger");
+				// TODO: Create btGhostObject to use for trigger
+			}
+
+			JSONObject rigidBodyObj;
+			if (obj.SetObjectChecked("rigid body", rigidBodyObj))
+			{
+				if (newEntity->GetCollisionShape() == nullptr)
+				{
+					Logger::LogError("Serialized object contains \"rigid body\" field but no collider! (" + objectName + ")");
+				}
+				else
+				{
+					bool bKinematic = rigidBodyObj.GetBool("kinematic");
+					bool bStatic = rigidBodyObj.GetBool("static");
+					real mass = rigidBodyObj.GetFloat("mass");
+
+					RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
+					rigidBody->SetMass(mass);
+					rigidBody->SetStatic(bStatic);
+					rigidBody->SetKinematic(bKinematic);
+				}
 			}
 		} break;
 		case SerializableType::SKYBOX:
@@ -324,32 +412,32 @@ namespace flex
 
 			ReflectionProbe* reflectionProbe = new ReflectionProbe(objectName, visible, position);
 
-			result = reflectionProbe;
+			newEntity = reflectionProbe;
 		} break;
 		case SerializableType::NONE:
 			// Assume this object is an empty parent object which holds no data itself but a transform
-			result = new GameObject(objectName, SerializableType::NONE);
+			newEntity = new GameObject(objectName, SerializableType::NONE);
 			break;
 		default:
 			Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
 			break;
 		}
 
-		if (result)
+		if (newEntity)
 		{
-			result->m_Transform = transform;
+			newEntity->m_Transform = transform;
 
 			if (obj.HasField("children"))
 			{
 				std::vector<JSONObject> children = obj.GetObjectArray("children");
 				for (const auto& child : children)
 				{
-					result->AddChild(CreateEntityFromJSON(gameContext, child));
+					newEntity->AddChild(CreateEntityFromJSON(gameContext, child));
 				}
 			}
 		}
 
-		return result;
+		return newEntity;
 	}
 
 	void BaseScene::ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)

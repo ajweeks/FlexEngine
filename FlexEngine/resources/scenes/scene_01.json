@@ -39,9 +39,10 @@
       },
       "collider": {
         "shape": "sphere",
-        "radius": 10.0
+        "radius": 10.0,
+        "trigger" : false
       },
-      "rigidbody": {
+      "rigid body": {
         "kinematic": false,
         "mass": 1.0
       },
@@ -59,74 +60,27 @@
         "const ao": 1,
         "const albedo": "0.78, 0.12, 0.11"
       },
-      "children": [
-        {
-          "name": "cone child test 01",
-          "visible": true,
-          "type": "mesh",
-          "mesh": {
-            "file": "models/cone.gltf"
-          },
-          "transform": {
-            "space": "local",
-            "position": "10.0,0.0,0.0",
-            "rotation": "0.0,0.0,0.0",
-            "scale": "1.0,1.0,1.0"
-          },
-          "material": {
-            "name": "pbr",
-            "shader": "pbr",
-            "const metallic": 0,
-            "const roughness": 0.5,
-            "const ao": 1,
-            "const albedo": "0.1, 0.76, 0.81"
-          },
-          "children": [
-            {
-              "name": "sphere child child!",
-              "type": "mesh",
-              "mesh": {
-                "file": "models/uv-sphere.gltf"
-              },
-              "transform": {
-                "space": "local",
-                "position": "10.0,0.0,0.0",
-                "rotation": "0.0,0.0,0.0",
-                "scale": "1.0,1.0,1.0"
-              },
-              "material": {
-                "name": "pbr",
-                "shader": "pbr",
-                "const metallic": 0,
-                "const roughness": 1,
-                "const ao": 1,
-                "const albedo": "0.48, 0.76, 0.81"
-              }
-            }
-          ]
-        },
-        {
-          "name": "sphere child test 02",
-          "type": "mesh",
-          "mesh": {
-            "file": "models/ico-sphere.gltf"
-          },
-          "transform": {
-            "space": "global",
-            "position": "6.0,0.0,6.0",
-            "rotation": "0.0,0.0,0.0",
-            "scale": "1.0,1.0,1.0"
-          },
-          "material": {
-            "name": "pbr",
-            "shader": "pbr",
-            "const metallic": 1,
-            "const roughness": 0,
-            "const ao": 1,
-            "const albedo": "0.6, 0.65, 0.4"
-          }
-        }
-      ]
+    },
+    {
+      "name": "mori knob",
+      "type": "mesh",
+      "mesh": {
+        "file": "models/mori-knob.gltf"
+      },
+      "transform": {
+        "space": "global",
+        "position": "-2.0,0.0,-4.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1.0,1.0,1.0"
+      },
+      "material": {
+        "name": "pbr",
+        "shader": "pbr",
+        "const metallic": 1,
+        "const roughness": 0,
+        "const ao": 1,
+        "const albedo": "0.8, 0.8, 0.8"
+      }
     },
     {
       "name": "chamfer box",
@@ -146,7 +100,16 @@
         "const roughness": 0.2,
         "const ao": 1,
         "const albedo": "0.8, 0.54, 0.1"
-      }
+      },
+      "collider": {
+        "shape": "box",
+        "half extents": "0.5, 1, 2",
+        "trigger" : false
+      },
+      "rigid body": {
+        "kinematic": false,
+        "mass": 2.0
+      },
     },
     {
       "name": "Skybox",

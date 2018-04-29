@@ -5,6 +5,8 @@
 #include "GameContext.hpp"
 #include "Transform.hpp"
 
+class btCollisionShape;
+
 namespace flex
 {
 	class GameObject
@@ -45,6 +47,12 @@ namespace flex
 		bool IsVisibleInSceneExplorer() const;
 		void SetVisibleInSceneExplorer(bool visibleInSceneExplorer);
 
+		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);
+		btCollisionShape* GetCollisionShape() const;
+
+		RigidBody* SetRigidBody(RigidBody* rigidBody);
+		RigidBody* GetRigidBody() const;
+
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
@@ -55,6 +63,7 @@ namespace flex
 		RenderID m_RenderID = InvalidRenderID;
 
 		SerializableType m_SerializableType = SerializableType::NONE;
+
 		/*
 		* If true, this object will be written out to file
 		* NOTE: If false, children will also not be serialized
@@ -78,6 +87,9 @@ namespace flex
 		* If true, this object will be rendered to reflection probes
 		*/
 		bool m_bStatic = true;
+
+		btCollisionShape* m_CollisionShape = nullptr;
+		RigidBody* m_RigidBody = nullptr;
 
 		GameObject* m_Parent = nullptr;
 		std::vector<GameObject*> m_Children;
