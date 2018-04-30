@@ -60,6 +60,8 @@ namespace flex
 		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", &importSettings);
 		AddChild(m_SphereMesh);
 		m_SphereMesh->GetTransform()->Scale(1.5f);
+		// This object will get created at bootup
+		m_SphereMesh->SetSerializable(false);
 
 		if (!m_StartVisible)
 		{
