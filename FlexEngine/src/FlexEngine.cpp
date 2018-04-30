@@ -320,7 +320,7 @@ namespace flex
 
 				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
 
-				btVector3 cameraPos = ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
+				btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
 				btVector3 rayStart(cameraPos);
 				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
 
@@ -351,28 +351,22 @@ namespace flex
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
-				const std::string sceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
-				m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
+				m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
 
 				DestroyWindowAndRenderer();
 				CreateWindowAndRenderer();
 				InitializeWindowAndRenderer();
 				SetupImGuiStyles();
 
+				LoadDefaultScenes();
+
 				//m_GameContext.renderer->ReloadShaders(m_GameContext);
 
-				if (sceneName.compare("TestScene") == 0)
-				{
-					TestScene* newScene = new TestScene(m_GameContext);
-					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
-				}
-				else
-				{
-					Scene_02* newScene = new Scene_02(m_GameContext);
-					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
-				}
+				m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 
 				m_GameContext.renderer->PostInitialize(m_GameContext);
+
+				m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 				continue;
 			}
 

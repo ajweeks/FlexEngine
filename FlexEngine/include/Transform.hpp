@@ -29,14 +29,14 @@ namespace flex
 
 		void SetAsIdentity();
 
-		glm::vec3 GetLocalPosition();
-		glm::vec3 GetGlobalPosition();
+		glm::vec3 GetLocalPosition() const;
+		glm::vec3 GetGlobalPosition() const;
 
-		glm::quat GetLocalRotation();
-		glm::quat GetGlobalRotation();
+		glm::quat GetLocalRotation() const;
+		glm::quat GetGlobalRotation() const;
 
-		glm::vec3 GetLocalScale();
-		glm::vec3 GetGlobalScale();
+		glm::vec3 GetLocalScale() const;
+		glm::vec3 GetGlobalScale() const;
 
 		void SetLocalPosition(const glm::vec3& position);
 		void SetGlobalPosition(const glm::vec3& position);

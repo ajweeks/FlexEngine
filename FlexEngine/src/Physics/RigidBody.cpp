@@ -104,15 +104,15 @@ namespace flex
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
 
-		outPos = FromBtVec3(transform.getOrigin());
-		outRot = FromBtQuaternion(transform.getRotation());
+		outPos = BtVec3ToVec3(transform.getOrigin());
+		outRot = BtQuaternionToQuaternion(transform.getRotation());
 	}
 
 	void RigidBody::SetPosition(const glm::vec3& pos)
 	{
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
-		transform.setOrigin(ToBtVec3(pos));
+		transform.setOrigin(Vec3ToBtVec3(pos));
 		m_RigidBody->setWorldTransform(transform);
 	}
 
@@ -120,13 +120,13 @@ namespace flex
 	{
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
-		transform.setRotation(ToBtQuaternion(rot));
+		transform.setRotation(QuaternionToBtQuaternion(rot));
 		m_RigidBody->setWorldTransform(transform);
 	}
 
 	void RigidBody::SetScale(const glm::vec3& scale)
 	{
-		m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(scale));
+		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(scale));
 	}
 
 	btRigidBody* RigidBody::GetRigidBodyInternal()

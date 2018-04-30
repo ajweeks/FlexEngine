@@ -121,13 +121,13 @@ namespace flex
 	btVector3 PhysicsWorld::GetRayTo(const GameContext& gameContext, i32 x, i32 y)
 	{
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
-		btVector3 rayFrom = ToBtVec3(camera->GetPosition());
-		btVector3 rayForward = ToBtVec3(camera->GetForward());
+		btVector3 rayFrom = Vec3ToBtVec3(camera->GetPosition());
+		btVector3 rayForward = Vec3ToBtVec3(camera->GetForward());
 		float farPlane = camera->GetZFar();
 		rayForward *= farPlane;
 
-		btVector3 vertical = ToBtVec3(camera->GetUp());
-		btVector3 horizontal = ToBtVec3(camera->GetRight());
+		btVector3 vertical = Vec3ToBtVec3(camera->GetUp());
+		btVector3 horizontal = Vec3ToBtVec3(camera->GetRight());
 
 		float fov = camera->GetFOV();
 		float tanfov = tanf(0.5f * fov);

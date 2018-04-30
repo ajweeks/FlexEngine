@@ -119,10 +119,10 @@ namespace flex
 
 			for (LineSegment& line : m_LineSegments)
 			{
-				createInfo.positions_3D.push_back(FromBtVec3(line.start));
-				createInfo.positions_3D.push_back(FromBtVec3(line.end));
+				createInfo.positions_3D.push_back(BtVec3ToVec3(line.start));
+				createInfo.positions_3D.push_back(BtVec3ToVec3(line.end));
 
-				glm::vec4 color = glm::vec4(FromBtVec3(line.color), 1.0f);
+				glm::vec4 color = glm::vec4(BtVec3ToVec3(line.color), 1.0f);
 				createInfo.colors_R32G32B32A32.push_back(color);
 				createInfo.colors_R32G32B32A32.push_back(color);
 			}

@@ -35,7 +35,7 @@ namespace flex
 	{
 		if (m_RigidBody && m_CollisionShape)
 		{
-			btTransform startingTransform = btTransform::getIdentity();
+			btTransform startingTransform = TransformToBtTransform(m_Transform);
 			m_RigidBody->Initialize(m_CollisionShape, gameContext, startingTransform);
 		}
 

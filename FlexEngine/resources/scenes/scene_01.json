@@ -39,7 +39,7 @@
       },
       "collider": {
         "shape": "sphere",
-        "radius": 10.0,
+        "radius": 1.0,
         "trigger" : false
       },
       "rigid body": {
@@ -48,9 +48,9 @@
       },
       "visible": false,
       "transform": {
-        "position": "10.0,0.0,0.0",
-        "rotation": "0.0,0.0,0.0",
-        "scale": "1.0,1.0,1.0"
+        "position": "2.0, 5.0, 0.0",
+        "rotation": "0.0, 0.0, 0.0",
+        "scale": "2.0, 2.0, 2.0"
       },
       "material": {
         "name": "pbr",
@@ -69,9 +69,9 @@
       },
       "transform": {
         "space": "global",
-        "position": "-2.0,0.0,-4.0",
-        "rotation": "0.0,0.0,0.0",
-        "scale": "1.0,1.0,1.0"
+        "position": "-2.0, 0.0, -4.0",
+        "rotation": "0.0, 0.0, 0.0",
+        "scale": "1.0, 1.0, 1.0"
       },
       "material": {
         "name": "pbr",
@@ -89,9 +89,9 @@
         "file": "models/chamfer-box.gltf"
       },
       "transform": {
-        "position": "-8.0,1.0,-2.0",
+        "position": "-8.0,10.0,-2.0",
         "rotation": "0.0,0.0,0.0",
-        "scale": "1.5,1.5,1.5"
+        "scale": "1, 1, 1"
       },
       "material": {
         "name": "pbr",
@@ -103,12 +103,42 @@
       },
       "collider": {
         "shape": "box",
-        "half extents": "0.5, 1, 2",
+        "half extents": "0.5, 0.5, 0.5",
         "trigger" : false
       },
       "rigid body": {
         "kinematic": false,
-        "mass": 2.0
+        "mass": 1.0
+      },
+    },
+    {
+      "name": "ground plane",
+      "type": "mesh",
+      "mesh": {
+        "file": "models/unit-plane.gltf"
+      },
+      "transform": {
+        "position": "0.0, -0.1, 0.0",
+        "rotation": "0.0, 0.0, 0.0",
+        "scale": "20, 20, 20"
+      },
+      "material": {
+        "name": "pbr",
+        "shader": "pbr",
+        "const metallic": 0,
+        "const roughness": 0.2,
+        "const ao": 1,
+        "const albedo": "0.23, 0.25, 0.29"
+      },
+      "collider": {
+        "shape": "box",
+        "half extents": "10, 0.1, 10",
+        "trigger" : false
+      },
+      "rigid body": {
+        "kinematic": false,
+        "static" : true,
+        "mass": 0.0
       },
     },
     {
@@ -127,7 +157,8 @@
         "generated irradiance cubemap size" : "32, 32",
         "generate prefiltered map" : true,
         "generated prefiltered map size" : "128, 128",
-        "environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
+        //"environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
+        "environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
       }
     },
     {

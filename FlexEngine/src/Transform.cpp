@@ -243,32 +243,32 @@ namespace flex
 		}
 	}
 
-	glm::vec3 Transform::GetLocalPosition()
+	glm::vec3 Transform::GetLocalPosition() const
 	{
 		return localPosition;
 	}
 
-	glm::vec3 Transform::GetGlobalPosition()
+	glm::vec3 Transform::GetGlobalPosition() const
 	{
 		return globalPosition;
 	}
 
-	glm::quat Transform::GetLocalRotation()
+	glm::quat Transform::GetLocalRotation() const
 	{
 		return localRotation;
 	}
 
-	glm::quat Transform::GetGlobalRotation()
+	glm::quat Transform::GetGlobalRotation() const
 	{
 		return globalRotation;
 	}
 
-	glm::vec3 Transform::GetLocalScale()
+	glm::vec3 Transform::GetLocalScale() const
 	{
 		return localScale;
 	}
 
-	glm::vec3 Transform::GetGlobalScale()
+	glm::vec3 Transform::GetGlobalScale() const
 	{
 		return globalScale;
 	}
