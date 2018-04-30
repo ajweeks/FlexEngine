@@ -145,7 +145,7 @@
       "name": "Skybox",
       "type" : "skybox",
       "rotation": "0.0, 0.0, 0.0",
-      "visible" : false,
+      "visible" : true,
       "material": {
         "name": "Skybox",
         "shader": "skybox",

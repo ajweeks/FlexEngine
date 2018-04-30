@@ -17,6 +17,8 @@
 
 namespace flex
 {
+	class MeshPrefab;
+
 	class Renderer
 	{
 	public:
@@ -63,10 +65,10 @@ namespace flex
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized,
 			i32 stride, void* pointer) = 0;
 
-		virtual void SetSkyboxRotation(const glm::quat& skyboxRotation) = 0;
-		virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext) = 0;
+		virtual void SetSkyboxMesh(MeshPrefab* skyboxMesh) = 0;
+		virtual MeshPrefab* GetSkyboxMesh() = 0;
+
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
-		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
 		virtual Material& GetMaterial(MaterialID matID) = 0;
 		virtual Shader& GetShader(ShaderID shaderID)  = 0;
@@ -77,6 +79,8 @@ namespace flex
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 
 		virtual void ImGuiNewFrame() = 0;
+
+		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 

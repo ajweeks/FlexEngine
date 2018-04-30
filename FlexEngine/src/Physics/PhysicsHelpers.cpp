@@ -10,10 +10,9 @@
 
 namespace flex
 {
-	std::string CollisionShapeTypeToString(btCollisionShape * shape)
+	std::string CollisionShapeTypeToString(int shapeType)
 	{
-		int type = shape->getShapeType();
-		switch (type)
+		switch (shapeType)
 		{
 		case BOX_SHAPE_PROXYTYPE:					return "box";
 		case TRIANGLE_SHAPE_PROXYTYPE:				return "triangle";
@@ -29,8 +28,8 @@ namespace flex
 		case STATIC_PLANE_PROXYTYPE:				return "static plane";
 		case SOFTBODY_SHAPE_PROXYTYPE:				return "soft body";
 		default:
-			Logger::LogError("Unhandled btCollisionShape type: " + (i32)type);
-			return "UNHANDLED BroadphsaeNativeTypes: " + type;
+			Logger::LogError("Unhandled btCollisionShape type: " + (i32)shapeType);
+			return "UNHANDLED BroadphsaeNativeTypes: " + shapeType;
 		}
 	}
 

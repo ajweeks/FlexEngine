@@ -84,7 +84,7 @@ namespace flex
 		m_bKinematic = bKinematic;
 	}
 
-	bool RigidBody::GetKinematic() const
+	bool RigidBody::IsKinematic() const
 	{
 		return m_bKinematic;
 	}
@@ -94,7 +94,7 @@ namespace flex
 		m_bStatic = bStatic;
 	}
 
-	bool RigidBody::GetStatic() const
+	bool RigidBody::IsStatic() const
 	{
 		return m_bStatic;
 	}

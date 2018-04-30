@@ -15,7 +15,7 @@ class btCollisionShape;
 
 namespace flex
 {
-	std::string CollisionShapeTypeToString(btCollisionShape* shape);
+	std::string CollisionShapeTypeToString(int shapeType);
 	BroadphaseNativeTypes StringToCollisionShapeType(const std::string& str);
 
 } // namespace flex

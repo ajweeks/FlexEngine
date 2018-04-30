@@ -167,12 +167,6 @@ namespace flex
 				m_1x1_NDC_Quad = nullptr;
 			}
 
-			if (m_SkyBoxMesh)
-			{
-				DestroyRenderObject(m_SkyBoxMesh->GetRenderID());
-				SafeDelete(m_SkyBoxMesh);
-			}
-
 			for (GameObject* obj : m_PersistentObjects)
 			{
 				if (obj->GetRenderID() != InvalidRenderID)
@@ -339,6 +333,16 @@ namespace flex
 			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
+
+			if (m_SkyBoxMesh &&
+				m_Shaders[m_Materials[matID].material.shaderID].shader.needPrefilteredMap)
+			{
+				MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
+
+				GLMaterial* mat = &m_Materials[matID];
+				mat->irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+				mat->prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
+			}
 
 			mat.material.environmentMapPath = createInfo->environmentMapPath;
 
@@ -2810,16 +2814,6 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::GenerateSkybox(const GameContext& gameContext)
-		{
-			if (!m_SkyBoxMesh)
-			{
-				m_SkyBoxMesh = new MeshPrefab(m_SkyBoxMaterialID, "Skybox Mesh");
-				m_SkyBoxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-				m_SkyBoxMesh->Initialize(gameContext);
-				m_SkyBoxMesh->PostInitialize(gameContext);
-			}
-		}
 
 		void GLRenderer::GenerateGBuffer(const GameContext& gameContext)
 		{
@@ -2966,34 +2960,38 @@ namespace flex
 			glUseProgram(last_program);
 		}
 
-		void GLRenderer::SetSkyboxRotation(const glm::quat& skyboxRotation)
+		void GLRenderer::SetSkyboxMesh(MeshPrefab* skyboxMesh)
 		{
-			assert(m_SkyBoxMesh);
+			m_SkyBoxMesh = skyboxMesh;
 
-			m_SkyBoxMesh->GetTransform()->SetLocalRotation(skyboxRotation);
-		}
+			if (skyboxMesh == nullptr)
+			{
+				return;
+			}
 
-		void GLRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext)
-		{
-			assert(skyboxMaterialID >= 0 && skyboxMaterialID < m_Materials.size());
-
-			m_SkyBoxMaterialID = skyboxMaterialID;
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
+			if (skyboxMaterialID == InvalidMaterialID)
+			{
+				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
+				return;
+			}
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject && m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+				if (renderObject &&
+					m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
 				{
 					GLMaterial* mat = &m_Materials[renderObject->materialID];
-					mat->irradianceSamplerID = m_Materials[m_SkyBoxMaterialID].irradianceSamplerID;
-					mat->prefilteredMapSamplerID = m_Materials[m_SkyBoxMaterialID].prefilteredMapSamplerID;
+					mat->irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+					mat->prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
 				}
 			}
+		}
 
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
+		MeshPrefab* GLRenderer::GetSkyboxMesh()
+		{
+			return m_SkyBoxMesh;
 		}
 
 		void GLRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)

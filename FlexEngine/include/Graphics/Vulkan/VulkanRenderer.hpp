@@ -62,8 +62,9 @@ namespace flex
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
 				DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
-			virtual void SetSkyboxRotation(const glm::quat& skyboxRotation) override;
-			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext) override;
+			virtual void SetSkyboxMesh(MeshPrefab* skyboxMesh) override;
+			virtual MeshPrefab* GetSkyboxMesh() override;
+
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;
@@ -190,7 +191,6 @@ namespace flex
 			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
 			void LoadDefaultShaderCode();
-			void GenerateSkybox(const GameContext& gameContext);
 
 			void DrawImGuiForRenderObjectAndChildren(VulkanRenderObject* renderObject);
 
@@ -291,7 +291,6 @@ namespace flex
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			std::vector<u32> m_gBufferQuadIndices;
 
-			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 			
 			VkClearColorValue m_ClearColor;

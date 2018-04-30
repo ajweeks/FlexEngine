@@ -243,7 +243,7 @@ namespace flex
 		AddChild(m_ReflectionProbe);
 #endif
 
-		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1, gameContext);
+		//gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1, gameContext);
 
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);

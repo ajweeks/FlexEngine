@@ -289,15 +289,18 @@ namespace flex
 				Logger::LogError("Failed to find deferred_combine shader!");
 			}
 
+			assert(m_SkyBoxMesh);
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
+
 			// Initialize GBuffer material & mesh
 			{
 				MaterialCreateInfo gBufferMaterialCreateInfo = {};
 				gBufferMaterialCreateInfo.name = "GBuffer material";
 				gBufferMaterialCreateInfo.shaderName = "deferred_combine";
 				gBufferMaterialCreateInfo.enableIrradianceSampler = true;
-				gBufferMaterialCreateInfo.irradianceSamplerMatID = m_SkyBoxMaterialID;
+				gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
 				gBufferMaterialCreateInfo.enablePrefilteredMap = true;
-				gBufferMaterialCreateInfo.prefilterMapSamplerMatID = m_SkyBoxMaterialID;
+				gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
 				gBufferMaterialCreateInfo.enableBRDFLUT = true;
 				gBufferMaterialCreateInfo.renderToCubemap = false;
 				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
@@ -354,19 +357,20 @@ namespace flex
 				gBufferCubemapMaterialCreateInfo.name = "GBuffer cubemap material";
 				gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
 				gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
-				gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = m_SkyBoxMaterialID;
+				gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
 				gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
-				gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = m_SkyBoxMaterialID;
+				gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
 				gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
 				gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
 				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
 				{
 					gBufferCubemapMaterialCreateInfo.frameBuffers.push_back({
-						m_OffScreenFrameBuf->frameBufferAttachments[i].first, (void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
+						m_OffScreenFrameBuf->frameBufferAttachments[i].first,
+						(void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
 					});
 				}
 
-				m_CubemapGBufferMaterialID = InitializeMaterial(gameContext, &gBufferCubemapMaterialCreateInfo);
+				m_CubemapGBufferMaterialID = InitializeMaterial(gameContext,&gBufferCubemapMaterialCreateInfo);
 
 				// TODO: Find out why a pointer to this variable gets set to null when passing in to LoadPrefabShape
 				RenderObjectCreateInfo gBufferCubemapCreateInfoOverrides = {};
@@ -396,11 +400,6 @@ namespace flex
 			{
 				CreateDescriptorSetLayout(i);
 				CreateUniformBuffers(&m_Shaders[i]);
-			}
-
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
 			}
 
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
@@ -2775,35 +2774,38 @@ namespace flex
 			UNREFERENCED_PARAMETER(pointer);
 		}
 
-		void VulkanRenderer::SetSkyboxRotation(const glm::quat& skyboxRotation)
+		void VulkanRenderer::SetSkyboxMesh(MeshPrefab* skyboxMesh)
 		{
-			assert(m_SkyBoxMesh);
+			m_SkyBoxMesh = skyboxMesh;
 
-			m_SkyBoxMesh->GetTransform()->SetLocalRotation(skyboxRotation);
-		}
+			if (skyboxMesh == nullptr)
+			{
+				return;
+			}
 
-		void VulkanRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID, const GameContext& gameContext)
-		{
-			assert(skyboxMaterialID >= 0 && skyboxMaterialID < m_LoadedMaterials.size());
+			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetMaterialID();
+			if (skyboxMatierialID == InvalidMaterialID)
+			{
+				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
+				return;
+			}
 
-			m_SkyBoxMaterialID = skyboxMaterialID;
-
-			// TODO: IMPLEMENT:
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject && m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+				if (renderObject &&
+					m_Shaders[m_LoadedMaterials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
 				{
 					VulkanMaterial* mat = &m_LoadedMaterials[renderObject->materialID];
-					mat->irradianceTexture = m_LoadedMaterials[m_SkyBoxMaterialID].irradianceTexture;
-					mat->prefilterTexture = m_LoadedMaterials[m_SkyBoxMaterialID].prefilterTexture;
+					mat->irradianceTexture = m_LoadedMaterials[skyboxMatierialID].irradianceTexture;
+					mat->prefilterTexture = m_LoadedMaterials[skyboxMatierialID].prefilterTexture;
 				}
 			}
+		}
 
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
+		MeshPrefab* VulkanRenderer::GetSkyboxMesh()
+		{
+			return m_SkyBoxMesh;
 		}
 
 		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
@@ -5646,17 +5648,6 @@ namespace flex
 				{
 					Logger::LogError("Could not find fragment shader " + shader.name);
 				}
-			}
-		}
-
-		void VulkanRenderer::GenerateSkybox(const GameContext& gameContext)
-		{
-			if (!m_SkyBoxMesh)
-			{
-				m_SkyBoxMesh = new MeshPrefab(m_SkyBoxMaterialID, "Skybox Mesh");
-				m_SkyBoxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-				m_SkyBoxMesh->Initialize(gameContext);
-				m_SkyBoxMesh->PostInitialize(gameContext);
 			}
 		}
 

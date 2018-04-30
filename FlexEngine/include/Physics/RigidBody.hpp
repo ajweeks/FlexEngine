@@ -19,9 +19,9 @@ namespace flex
 		void SetMass(real mass);
 		real GetMass() const;
 		void SetKinematic(bool bKinematic);
-		bool GetKinematic() const;
+		bool IsKinematic() const;
 		void SetStatic(bool bStatic);
-		bool GetStatic() const;
+		bool IsStatic() const;
 
 		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
 		//glm::vec3 GetPosition();
@@ -37,13 +37,11 @@ namespace flex
 		btRigidBody* m_RigidBody = nullptr;
 		btMotionState* m_MotionState = nullptr;
 
+		real m_Mass = 0.0f;
 		bool m_bStatic = false;
 		bool m_bKinematic = false;
 
 		i32 m_Group = 0;
 		i32 m_Mask = 0;
-
-		real m_Mass = 0.0f;
-
 	};
 } // namespace flex

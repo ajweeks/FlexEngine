@@ -162,6 +162,8 @@ namespace flex
 		}
 		m_Children.clear();
 
+		gameContext.renderer->SetSkyboxMesh(nullptr);
+
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Destroy();
@@ -374,14 +376,14 @@ namespace flex
 				}
 				else
 				{
+					real mass = rigidBodyObj.GetFloat("mass");
 					bool bKinematic = rigidBodyObj.GetBool("kinematic");
 					bool bStatic = rigidBodyObj.GetBool("static");
-					real mass = rigidBodyObj.GetFloat("mass");
 
 					RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
 					rigidBody->SetMass(mass);
-					rigidBody->SetStatic(bStatic);
 					rigidBody->SetKinematic(bKinematic);
+					rigidBody->SetStatic(bStatic);
 				}
 			}
 		} break;
@@ -393,13 +395,33 @@ namespace flex
 			ParseMaterialJSONObject(materialObj, skyboxMatInfo);
 			const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
 
-			gameContext.renderer->SetSkyboxMaterial(skyboxMatID, gameContext);
-
-			glm::vec3 skyboxRotEuler;
-			if (obj.SetVec3Checked("rotation", skyboxRotEuler))
+			if (skyboxMatID == InvalidMaterialID)
 			{
-				glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
-				gameContext.renderer->SetSkyboxRotation(skyboxRotation);
+				Logger::LogError("Failed to create skybox material from serialized values! Can't create skybox.");
+				Logger::LogError("material field:");
+				std::string materialObjStr = materialObj.Print(0);
+				Logger::LogError(materialObjStr);
+			}
+			else
+			{
+				MeshPrefab* skyboxMesh = new MeshPrefab(skyboxMatID, "Skybox");
+				skyboxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
+				AddChild(skyboxMesh);
+
+				gameContext.renderer->SetSkyboxMesh(skyboxMesh);
+
+				glm::vec3 skyboxRotEuler;
+				if (obj.SetVec3Checked("rotation", skyboxRotEuler))
+				{
+					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
+					skyboxMesh->GetTransform()->SetGlobalRotation(skyboxRotation);
+				}
+
+				bool bVisible = true;
+				if (obj.SetBoolChecked("visible", bVisible))
+				{
+					skyboxMesh->SetVisible(bVisible);
+				}
 			}
 		} break;
 		case SerializableType::REFLECTION_PROBE:
@@ -798,41 +820,49 @@ namespace flex
 		} break;
 		case SerializableType::SKYBOX:
 		{
-			// A skybox is a mesh prefab for now
 			MeshPrefab* skyboxMesh = (MeshPrefab*)gameObject;
 
 			glm::vec3 skyboxRotEuler = glm::eulerAngles(skyboxMesh->GetTransform()->GetGlobalRotation());
 			object.fields.push_back(JSONField("rotation", JSONValue(Vec3ToString(skyboxRotEuler))));
 
-			JSONField materialField = {};
-			materialField.label = "material";
+			bool visible = skyboxMesh->IsVisible();
+			object.fields.push_back(JSONField("visible", JSONValue(visible)));
 
-			Material skyboxMat = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
-			Shader skyboxShader = gameContext.renderer->GetShader(skyboxMat.shaderID);
+			{
+				JSONField materialField = {};
+				materialField.label = "material";
 
-			JSONObject materialObj = {};
-			materialObj.fields.push_back(JSONField("name", JSONValue(skyboxMat.name)));
-			materialObj.fields.push_back(JSONField("shader", JSONValue(skyboxShader.name)));
-			materialObj.fields.push_back(JSONField("generate hdr cubemap sampler", 
-				JSONValue(skyboxMat.generateHDRCubemapSampler)));
-			materialObj.fields.push_back(JSONField("enable cubemap sampler", 
-				JSONValue(skyboxMat.enableCubemapSampler)));
-			materialObj.fields.push_back(JSONField("enable cubemap trilinear filtering",
-				JSONValue(skyboxMat.enableCubemapTrilinearFiltering)));
-			materialObj.fields.push_back(JSONField("generated cubemap size", 
-				JSONValue(Vec2ToString(skyboxMat.cubemapSamplerSize))));
-			materialObj.fields.push_back(JSONField("generate irradiance sampler", 
-				JSONValue(skyboxMat.generateIrradianceSampler)));
-			materialObj.fields.push_back(JSONField("generated irradiance cubemap size", 
-				JSONValue(Vec2ToString(skyboxMat.irradianceSamplerSize))));
-			materialObj.fields.push_back(JSONField("generate prefiltered map", 
-				JSONValue(skyboxMat.generatePrefilteredMap)));
-			materialObj.fields.push_back(JSONField("generated prefiltered map size", 
-				JSONValue(Vec2ToString(skyboxMat.prefilteredMapSize))));
+				Material skyboxMat = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
+				Shader skyboxShader = gameContext.renderer->GetShader(skyboxMat.shaderID);
 
-			materialField.value = JSONValue(materialObj);
+				// TODO: Use SerializeMaterial function
+				JSONObject materialObj = {};
+				materialObj.fields.push_back(JSONField("name", JSONValue(skyboxMat.name)));
+				materialObj.fields.push_back(JSONField("shader", JSONValue(skyboxShader.name)));
+				materialObj.fields.push_back(JSONField("generate hdr cubemap sampler",
+					JSONValue(skyboxMat.generateHDRCubemapSampler)));
+				materialObj.fields.push_back(JSONField("enable cubemap sampler",
+					JSONValue(skyboxMat.enableCubemapSampler)));
+				materialObj.fields.push_back(JSONField("enable cubemap trilinear filtering",
+					JSONValue(skyboxMat.enableCubemapTrilinearFiltering)));
+				materialObj.fields.push_back(JSONField("generated cubemap size",
+					JSONValue(Vec2ToString(skyboxMat.cubemapSamplerSize))));
+				materialObj.fields.push_back(JSONField("generate irradiance sampler",
+					JSONValue(skyboxMat.generateIrradianceSampler)));
+				materialObj.fields.push_back(JSONField("generated irradiance cubemap size",
+					JSONValue(Vec2ToString(skyboxMat.irradianceSamplerSize))));
+				materialObj.fields.push_back(JSONField("generate prefiltered map",
+					JSONValue(skyboxMat.generatePrefilteredMap)));
+				materialObj.fields.push_back(JSONField("generated prefiltered map size",
+					JSONValue(Vec2ToString(skyboxMat.prefilteredMapSize))));
+				std::string cleanedEnvMapPath = skyboxMat.environmentMapPath.substr(RESOURCE_LOCATION.length());
+				materialObj.fields.push_back(JSONField("environment map path",
+					JSONValue(cleanedEnvMapPath)));
 
-			object.fields.push_back(materialField);
+				materialField.value = JSONValue(materialObj);
+
+				object.fields.push_back(materialField);
+			}
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
@@ -853,6 +883,87 @@ namespace flex
 		{
 			Logger::LogError("Unhandled serializable type encountered in BaseScene::SerializeToFile " + childTypeStr);
 		} break;
+		}
+
+		btCollisionShape* collisionShape = gameObject->GetCollisionShape();
+		if (collisionShape)
+		{
+			JSONObject colliderObj;
+
+			int shapeType = collisionShape->getShapeType();
+			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
+
+			colliderObj.fields.push_back(JSONField("shape", JSONValue(shapeTypeStr)));
+
+			switch (shapeType)
+			{
+			case BOX_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
+				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
+			} break;
+			case SPHERE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btSphereShape*)collisionShape)->getRadius();
+				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
+			} break;
+			case CAPSULE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btCapsuleShape*)collisionShape)->getRadius();
+				real height = ((btCapsuleShape*)collisionShape)->getHalfHeight(); // TODO: Double?
+				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
+				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
+			} break;
+			case CONE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btConeShape*)collisionShape)->getRadius();
+				real height = ((btConeShape*)collisionShape)->getHeight();
+				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
+				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
+			} break;
+			case CYLINDER_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
+				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
+			} break;
+			default:
+			{
+				Logger::LogError("Unhandled BroadphaseNativeType: " + std::to_string(shapeType));
+			} break;
+			}
+
+			//bool bTrigger = false;
+			//colliderObj.fields.push_back(JSONField("trigger", JSONValue(bTrigger)));
+			// TODO: Handle triggers
+
+			object.fields.push_back(JSONField("collider", JSONValue(colliderObj)));
+		}
+
+		RigidBody* rigidBody = gameObject->GetRigidBody();
+		if (rigidBody)
+		{
+			JSONObject rigidBodyObj;
+
+			if (collisionShape == nullptr)
+			{
+				Logger::LogError("Can't serialize object which has a rigid body but no collider! (" + gameObject->GetName() + ")");
+			}
+			else
+			{
+				real mass = rigidBody->GetMass();
+				bool bKinematic = rigidBody->IsKinematic();
+				bool bStatic = rigidBody->IsStatic();
+
+				rigidBodyObj.fields.push_back(JSONField("mass", JSONValue(mass)));
+				rigidBodyObj.fields.push_back(JSONField("kinematic", JSONValue(bKinematic)));
+				rigidBodyObj.fields.push_back(JSONField("static", JSONValue(bStatic)));
+			}
+
+			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
 		}
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
