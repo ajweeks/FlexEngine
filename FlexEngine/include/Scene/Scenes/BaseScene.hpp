@@ -11,6 +11,7 @@ namespace flex
 	class PhysicsWorld;
 	class ReflectionProbe;
 	struct JSONObject;
+	struct JSONField;
 
 	class BaseScene
 	{
@@ -48,6 +49,7 @@ namespace flex
 		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
 
 		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
+		JSONField SerializeMaterial(const Material& material, const GameContext& gameContext);
 		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
 

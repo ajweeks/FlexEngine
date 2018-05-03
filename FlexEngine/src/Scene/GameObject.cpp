@@ -20,11 +20,6 @@ namespace flex
 	{
 		m_Transform.SetAsIdentity();
 		m_Transform.SetGameObject(this);
-
-		if (m_SerializableType == SerializableType::NONE)
-		{
-			m_bSerializable = false;
-		}
 	}
 
 	GameObject::~GameObject()

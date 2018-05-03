@@ -167,7 +167,11 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				return field.value.intValue;
+				if (field.value.intValue != 0)
+				{
+					return field.value.intValue;
+				}
+				return (i32)field.value.floatValue;
 			}
 		}
 		return 0;
@@ -189,7 +193,12 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				return field.value.floatValue;
+				// A float might be written without a decimal, making the system think it's an int
+				if (field.value.floatValue != 0.0f)
+				{
+					return field.value.floatValue;
+				}
+				return (real)field.value.intValue;
 			}
 		}
 		return 0.0f;

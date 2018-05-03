@@ -220,6 +220,11 @@ namespace flex
 			transform = JSONParser::ParseTransform(transformObj);
 		}
 
+		bool bVisible = true;
+		obj.SetBoolChecked("visible", bVisible);
+		bool bVisibleInSceneGraph = true;
+		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
+
 		switch (entityType)
 		{
 		case SerializableType::MESH:
@@ -235,12 +240,6 @@ namespace flex
 			bool flipZ = meshObj.GetBool("flipZ");
 			bool flipU = meshObj.GetBool("flipU");
 			bool flipV = meshObj.GetBool("flipV");
-
-			bool visibleInSceneGraph;
-			obj.SetBoolChecked("visibleInSceneGraph", visibleInSceneGraph);
-			bool visible;
-			obj.SetBoolChecked("visible", visible);
-
 			JSONObject material = obj.GetObject("material");
 			std::string materialName = material.GetString("name");
 			std::string shaderName = material.GetString("shader");
@@ -270,9 +269,6 @@ namespace flex
 				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
 				mesh->SetRequiredAttributes(requiredVertexAttributes);
 
-				RenderObjectCreateInfo createInfo = {};
-				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
-
 				MeshPrefab::ImportSettings importSettings = {};
 				importSettings.flipU = flipU;
 				importSettings.flipV = flipV;
@@ -281,8 +277,7 @@ namespace flex
 
 				mesh->LoadFromFile(gameContext, 
 					meshFilePath,
-					&importSettings,
-					&createInfo);
+					&importSettings);
 
 				newEntity = mesh;
 			}
@@ -291,16 +286,8 @@ namespace flex
 				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
 				mesh->SetRequiredAttributes(requiredVertexAttributes);
 
-				RenderObjectCreateInfo createInfo = {};
-				createInfo.visibleInSceneExplorer = visibleInSceneGraph;
-
 				MeshPrefab::PrefabShape prefabShape = MeshPrefab::StringToPrefabShape(meshPrefabName);
-				mesh->LoadPrefabShape(gameContext, prefabShape, &createInfo);
-
-				if (!visible)
-				{
-					mesh->SetVisible(visible);
-				}
+				mesh->LoadPrefabShape(gameContext, prefabShape);
 
 				newEntity = mesh;
 			}
@@ -418,12 +405,6 @@ namespace flex
 					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
 					skyboxMesh->GetTransform()->SetGlobalRotation(skyboxRotation);
 				}
-
-				bool bVisible = true;
-				if (obj.SetBoolChecked("visible", bVisible))
-				{
-					skyboxMesh->SetVisible(bVisible);
-				}
 			}
 		} break;
 		case SerializableType::REFLECTION_PROBE:
@@ -449,6 +430,8 @@ namespace flex
 
 		if (newEntity)
 		{
+			newEntity->SetVisible(bVisible);
+			newEntity->SetVisibleInSceneExplorer(bVisibleInSceneGraph);
 			newEntity->m_Transform = transform;
 
 			if (obj.HasField("children"))
@@ -529,7 +512,7 @@ namespace flex
 		material.SetVec4Checked("color multiplier", createInfoOut.colorMultiplier);
 		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
-		material.SetFloatChecked("cons roughness", createInfoOut.constRoughness);
+		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
 	}
 
@@ -620,7 +603,8 @@ namespace flex
 		std::string newFilePath = fileName + "_saved.json";
 		fileStream.open(newFilePath, std::ofstream::out | std::ofstream::trunc);
 
-		Logger::LogInfo("Serializing scene to " + newFilePath);
+		std::string cleanFileName = newFilePath.substr(RESOURCE_LOCATION.length());
+		Logger::LogInfo("Serializing scene to " + cleanFileName);
 
 		if (fileStream.is_open())
 		{
@@ -648,15 +632,26 @@ namespace flex
 		std::string childName = gameObject->m_Name;
 
 		object.fields.push_back(JSONField("name", JSONValue(childName)));
-
 		SerializableType childType = gameObject->m_SerializableType;
 		std::string childTypeStr = SerializableTypeToString(childType);
 		object.fields.push_back(JSONField("type", JSONValue(childTypeStr)));
-
+		object.fields.push_back(JSONField("visible", JSONValue(gameObject->IsVisible())));
+		if (!gameObject->IsVisibleInSceneExplorer())
+		{
+			object.fields.push_back(JSONField("visible in scene graph", 
+				JSONValue(gameObject->IsVisibleInSceneExplorer())));
+		}
+		
 		switch (childType)
 		{
 		case SerializableType::MESH:
 		{
+			JSONField transformField;
+			if (JSONParser::SerializeTransform(gameObject->GetTransform(), transformField))
+			{
+				object.fields.push_back(transformField);
+			}
+
 			MeshPrefab* mesh = (MeshPrefab*)gameObject;
 
 			JSONField meshField = {};
@@ -680,134 +675,16 @@ namespace flex
 				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
 			}
 
+			meshField.value = JSONValue(meshValue);
+			object.fields.push_back(meshField);
+
+
 			RenderID meshRenderID = mesh->GetRenderID();
 			RenderObjectCreateInfo renderObjectCreateInfo;
 			if (gameContext.renderer->GetRenderObjectCreateInfo(meshRenderID, renderObjectCreateInfo))
 			{
-				static const bool defaultVisible = true;
-				if (renderObjectCreateInfo.visible != defaultVisible)
-				{
-					object.fields.push_back(JSONField("visible", JSONValue(renderObjectCreateInfo.visible)));
-				}
-
-				static const bool defaultVisibleInSceneGraph = true;
-				if (renderObjectCreateInfo.visibleInSceneExplorer != defaultVisibleInSceneGraph)
-				{
-					object.fields.push_back(JSONField("visible in scene graph",
-						JSONValue(renderObjectCreateInfo.visibleInSceneExplorer)));
-				}
-
-				if (!renderObjectCreateInfo.gameObject->GetTransform()->IsIdentity())
-				{
-					JSONField transformField;
-					if (JSONParser::SerializeTransform(renderObjectCreateInfo.gameObject->GetTransform(), transformField))
-					{
-						object.fields.push_back(transformField);
-					}
-				}
-
-				JSONField materialField = {};
-				materialField.label = "material";
-
-				JSONObject materialObject = {};
-
-				Material& material = gameContext.renderer->GetMaterial(renderObjectCreateInfo.materialID);
-				std::string materialName = material.name;
-				materialObject.fields.push_back(JSONField("name", JSONValue(materialName)));
-
-				Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-				std::string shaderName = shader.name;
-				materialObject.fields.push_back(JSONField("shader", JSONValue(materialName)));
-				
-				// TODO: Write out const values when texture path is not given?
-				static const glm::vec3 defaultConstAlbedo = glm::vec3(1.0f);
-				if (((glm::vec3)material.constAlbedo) != defaultConstAlbedo)
-				{
-					std::string constAlbedoStr = Vec3ToString(material.constAlbedo);
-					materialObject.fields.push_back(JSONField("const albedo", 
-						JSONValue(constAlbedoStr)));
-				}
-
-				static const real defaultConstMetallic = 1.0f;
-				if (material.constMetallic != defaultConstMetallic)
-				{
-					materialObject.fields.push_back(JSONField("const metallic", 
-						JSONValue(material.constMetallic)));
-				}
-
-				static const real defaultConstRoughness = 1.0f;
-				if (material.constRoughness != defaultConstRoughness)
-				{
-					materialObject.fields.push_back(JSONField("const roughness", 
-						JSONValue(material.constRoughness)));
-				}
-
-				static const real defaultConstAO = 1.0f;
-				if (material.constAO != defaultConstAO)
-				{
-					materialObject.fields.push_back(JSONField("const ao", 
-						JSONValue(material.constAO)));
-				}
-
-				static const bool defaultEnableAlbedo = true;
-				if (shader.needAlbedoSampler && material.enableAlbedoSampler != defaultEnableAlbedo)
-				{
-					std::string constAlbedoStr = Vec4ToString(material.constAlbedo);
-					materialObject.fields.push_back(JSONField("enable albedo sampler", 
-						JSONValue(material.enableAlbedoSampler)));
-				}
-
-				static const bool defaultEnableMetallicSampler = true;
-				if (shader.needMetallicSampler && material.enableMetallicSampler != defaultEnableMetallicSampler)
-				{
-					materialObject.fields.push_back(JSONField("enable metallic sampler", 
-						JSONValue(material.enableMetallicSampler)));
-				}
-
-				static const bool defaultEnableRoughness = true;
-				if (shader.needRoughnessSampler && material.enableRoughnessSampler != defaultEnableRoughness)
-				{
-					materialObject.fields.push_back(JSONField("enable roughness sampler", 
-						JSONValue(material.enableRoughnessSampler)));
-				}
-
-				static const bool defaultEnableAO = true;
-				if (shader.needAOSampler && material.enableAOSampler != defaultEnableAO)
-				{
-					materialObject.fields.push_back(JSONField("enable ao sampler", 
-						JSONValue(material.enableAOSampler)));
-				}
-
-				if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())
-				{
-					std::string albedoTexturePath = material.albedoTexturePath.substr(RESOURCE_LOCATION.length());
-					materialObject.fields.push_back(JSONField("albedo texture filepath", 
-						JSONValue(albedoTexturePath)));
-				}
-
-				if (shader.needMetallicSampler && !material.metallicTexturePath.empty())
-				{
-					std::string metallicTexturePath = material.metallicTexturePath.substr(RESOURCE_LOCATION.length());
-					materialObject.fields.push_back(JSONField("metallic texture filepath",
-						JSONValue(metallicTexturePath)));
-				}
-
-				if (shader.needRoughnessSampler && !material.roughnessTexturePath.empty())
-				{
-					std::string roughnessTexturePath = material.roughnessTexturePath.substr(RESOURCE_LOCATION.length());
-					materialObject.fields.push_back(JSONField("roughness texture filepath",
-						JSONValue(roughnessTexturePath)));
-				}
-
-				if (shader.needAOSampler && !material.aoTexturePath.empty())
-				{
-					std::string aoTexturePath = material.aoTexturePath.substr(RESOURCE_LOCATION.length());
-					materialObject.fields.push_back(JSONField("ao texture filepath",
-						JSONValue(aoTexturePath)));
-				}
-
-				materialField.value = JSONValue(materialObject);
-				object.fields.push_back(materialField);
+				const Material& material = gameContext.renderer->GetMaterial(renderObjectCreateInfo.materialID);
+				object.fields.push_back(SerializeMaterial(material, gameContext));
 			}
 			else
 			{
@@ -815,10 +692,6 @@ namespace flex
 					" create info, serialized data will be incomplete. Invalid render ID: " + 
 					std::to_string(meshRenderID));
 			}
-
-			meshField.value = JSONValue(meshValue);
-
-			object.fields.push_back(meshField);
 		} break;
 		case SerializableType::SKYBOX:
 		{
@@ -827,44 +700,8 @@ namespace flex
 			glm::vec3 skyboxRotEuler = glm::eulerAngles(skyboxMesh->GetTransform()->GetGlobalRotation());
 			object.fields.push_back(JSONField("rotation", JSONValue(Vec3ToString(skyboxRotEuler))));
 
-			bool visible = skyboxMesh->IsVisible();
-			object.fields.push_back(JSONField("visible", JSONValue(visible)));
-
-			{
-				JSONField materialField = {};
-				materialField.label = "material";
-
-				Material skyboxMat = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
-				Shader skyboxShader = gameContext.renderer->GetShader(skyboxMat.shaderID);
-
-				// TODO: Use SerializeMaterial function
-				JSONObject materialObj = {};
-				materialObj.fields.push_back(JSONField("name", JSONValue(skyboxMat.name)));
-				materialObj.fields.push_back(JSONField("shader", JSONValue(skyboxShader.name)));
-				materialObj.fields.push_back(JSONField("generate hdr cubemap sampler",
-					JSONValue(skyboxMat.generateHDRCubemapSampler)));
-				materialObj.fields.push_back(JSONField("enable cubemap sampler",
-					JSONValue(skyboxMat.enableCubemapSampler)));
-				materialObj.fields.push_back(JSONField("enable cubemap trilinear filtering",
-					JSONValue(skyboxMat.enableCubemapTrilinearFiltering)));
-				materialObj.fields.push_back(JSONField("generated cubemap size",
-					JSONValue(Vec2ToString(skyboxMat.cubemapSamplerSize))));
-				materialObj.fields.push_back(JSONField("generate irradiance sampler",
-					JSONValue(skyboxMat.generateIrradianceSampler)));
-				materialObj.fields.push_back(JSONField("generated irradiance cubemap size",
-					JSONValue(Vec2ToString(skyboxMat.irradianceSamplerSize))));
-				materialObj.fields.push_back(JSONField("generate prefiltered map",
-					JSONValue(skyboxMat.generatePrefilteredMap)));
-				materialObj.fields.push_back(JSONField("generated prefiltered map size",
-					JSONValue(Vec2ToString(skyboxMat.prefilteredMapSize))));
-				std::string cleanedEnvMapPath = skyboxMat.environmentMapPath.substr(RESOURCE_LOCATION.length());
-				materialObj.fields.push_back(JSONField("environment map path",
-					JSONValue(cleanedEnvMapPath)));
-
-				materialField.value = JSONValue(materialObj);
-
-				object.fields.push_back(materialField);
-			}
+			const Material& skyboxMat = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
+			object.fields.push_back(SerializeMaterial(skyboxMat, gameContext));
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
@@ -872,14 +709,16 @@ namespace flex
 
 			glm::vec3 probePos = reflectionProbe->GetTransform()->GetGlobalPosition();
 			object.fields.push_back(JSONField("position", JSONValue(Vec3ToString(probePos))));
-			object.fields.push_back(JSONField("visible", JSONValue(reflectionProbe->IsSphereVisible(gameContext))));
 
 			// TODO: Add probe-specific fields here like resolution and influence
-
 		} break;
 		case SerializableType::NONE:
 		{
-			// Assume this type is intentionally non-serializable or just a parent object
+			JSONField transformField;
+			if (JSONParser::SerializeTransform(gameObject->GetTransform(), transformField))
+			{
+				object.fields.push_back(transformField);
+			}
 		} break;
 		default:
 		{
@@ -995,9 +834,143 @@ namespace flex
 		return object;
 	}
 
+	JSONField BaseScene::SerializeMaterial(const Material& material, const GameContext& gameContext)
+	{
+		JSONField materialField = {};
+		materialField.label = "material";
+
+		JSONObject materialObject = {};
+
+		materialObject.fields.push_back(JSONField("name", JSONValue(material.name)));
+
+		const Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+		materialObject.fields.push_back(JSONField("shader", JSONValue(shader.name)));
+
+		// TODO: Find out way of determining if the following four  values
+		// are used by the shader (only currently used by PBR I think)
+		std::string constAlbedoStr = Vec3ToString(material.constAlbedo);
+		materialObject.fields.push_back(JSONField("const albedo",
+			JSONValue(constAlbedoStr)));
+		materialObject.fields.push_back(JSONField("const metallic",
+			JSONValue(material.constMetallic)));
+		materialObject.fields.push_back(JSONField("const roughness",
+			JSONValue(material.constRoughness)));
+		materialObject.fields.push_back(JSONField("const ao",
+			JSONValue(material.constAO)));
+
+		static const bool defaultEnableAlbedo = true;
+		if (shader.needAlbedoSampler && material.enableAlbedoSampler != defaultEnableAlbedo)
+		{
+			std::string constAlbedoStr = Vec4ToString(material.constAlbedo);
+			materialObject.fields.push_back(JSONField("enable albedo sampler",
+				JSONValue(material.enableAlbedoSampler)));
+		}
+
+		static const bool defaultEnableMetallicSampler = true;
+		if (shader.needMetallicSampler && material.enableMetallicSampler != defaultEnableMetallicSampler)
+		{
+			materialObject.fields.push_back(JSONField("enable metallic sampler",
+				JSONValue(material.enableMetallicSampler)));
+		}
+
+		static const bool defaultEnableRoughness = true;
+		if (shader.needRoughnessSampler && material.enableRoughnessSampler != defaultEnableRoughness)
+		{
+			materialObject.fields.push_back(JSONField("enable roughness sampler",
+				JSONValue(material.enableRoughnessSampler)));
+		}
+
+		static const bool defaultEnableAO = true;
+		if (shader.needAOSampler && material.enableAOSampler != defaultEnableAO)
+		{
+			materialObject.fields.push_back(JSONField("enable ao sampler",
+				JSONValue(material.enableAOSampler)));
+		}
+
+		if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())
+		{
+			std::string albedoTexturePath = material.albedoTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("albedo texture filepath",
+				JSONValue(albedoTexturePath)));
+		}
+
+		if (shader.needMetallicSampler && !material.metallicTexturePath.empty())
+		{
+			std::string metallicTexturePath = material.metallicTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("metallic texture filepath",
+				JSONValue(metallicTexturePath)));
+		}
+
+		if (shader.needRoughnessSampler && !material.roughnessTexturePath.empty())
+		{
+			std::string roughnessTexturePath = material.roughnessTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("roughness texture filepath",
+				JSONValue(roughnessTexturePath)));
+		}
+
+		if (shader.needAOSampler && !material.aoTexturePath.empty())
+		{
+			std::string aoTexturePath = material.aoTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("ao texture filepath",
+				JSONValue(aoTexturePath)));
+		}
+
+		if (material.generateHDRCubemapSampler)
+		{
+			materialObject.fields.push_back(JSONField("generate hdr cubemap sampler",
+				JSONValue(material.generateHDRCubemapSampler)));
+		}
+
+		if (shader.needCubemapSampler)
+		{
+			materialObject.fields.push_back(JSONField("enable cubemap sampler",
+				JSONValue(material.enableCubemapSampler)));
+
+			materialObject.fields.push_back(JSONField("enable cubemap trilinear filtering",
+				JSONValue(material.enableCubemapTrilinearFiltering)));
+
+			std::string cubemapSamplerSizeStr = Vec2ToString(material.cubemapSamplerSize);
+			materialObject.fields.push_back(JSONField("generated cubemap size",
+				JSONValue(cubemapSamplerSizeStr)));
+		}
+
+		if (shader.needIrradianceSampler || material.irradianceSamplerSize.x > 0)
+		{
+			materialObject.fields.push_back(JSONField("generate irradiance sampler",
+				JSONValue(material.generateIrradianceSampler)));
+
+			std::string irradianceSamplerSizeStr = Vec2ToString(material.irradianceSamplerSize);
+			materialObject.fields.push_back(JSONField("generated irradiance cubemap size",
+				JSONValue(irradianceSamplerSizeStr)));
+		}
+
+		if (shader.needPrefilteredMap || material.prefilteredMapSize.x > 0)
+		{
+			materialObject.fields.push_back(JSONField("generate prefiltered map",
+				JSONValue(material.generatePrefilteredMap)));
+
+			std::string prefilteredMapSizeStr = Vec2ToString(material.prefilteredMapSize);
+			materialObject.fields.push_back(JSONField("generated prefiltered map size",
+				JSONValue(prefilteredMapSizeStr)));
+		}
+
+		if (!material.environmentMapPath.empty())
+		{
+			std::string cleanedEnvMapPath = material.environmentMapPath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("environment map path",
+				JSONValue(cleanedEnvMapPath)));
+		}
+
+		materialField.value = JSONValue(materialObject);
+
+		return materialField;
+	}
+
 	JSONObject BaseScene::SerializePointLight(PointLight& pointLight, const GameContext& gameContext)
 	{
 		JSONObject object;
+
+		object.fields.push_back(JSONField("name", JSONValue(pointLight.name)));
 
 		std::string posStr = Vec3ToString(pointLight.position);
 		object.fields.push_back(JSONField("position", JSONValue(posStr)));
@@ -1007,7 +980,6 @@ namespace flex
 
 		object.fields.push_back(JSONField("enabled", JSONValue(pointLight.enabled != 0)));
 		object.fields.push_back(JSONField("brightness", JSONValue(pointLight.brightness)));
-		object.fields.push_back(JSONField("name", JSONValue(pointLight.name)));
 
 		return object;
 	}

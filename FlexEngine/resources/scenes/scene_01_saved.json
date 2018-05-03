@@ -4,31 +4,76 @@
 	"entities" : 
 	[
 		{
-			"name" : "Sphere 02",
-			"type" : "mesh",
+			"name" : "holder of things",
+			"type" : "NONE",
+			"visible" : true,
 			"transform" : 
 			{
 				"space" : "local",
-				"position" : "2.000000, 3.422923, 0.000000",
+				"position" : "0.000000, 0.000000, 0.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"children" : 
+			[
+				{
+					"name" : "Sphere 01",
+					"type" : "mesh",
+					"visible" : false,
+					"transform" : 
+					{
+						"space" : "local",
+						"position" : "10.000000, 0.000000, 0.000000",
+						"rotation" : "0.000000, -0.000000, 0.000000",
+						"scale" : "1.000000, 1.000000, 1.000000"
+					},
+					"mesh" : 
+					{
+						"file" : "models/ico-sphere.gltf"
+					},
+					"material" : 
+					{
+						"name" : "pbr",
+						"shader" : "pbr",
+						"const albedo" : "0.780000, 0.120000, 0.110000",
+						"const metallic" : 0.000000,
+						"const roughness" : 0.250000,
+						"const ao" : 1.000000,
+						"enable albedo sampler" : false,
+						"enable metallic sampler" : false,
+						"enable roughness sampler" : false,
+						"enable ao sampler" : false
+					}
+				}
+			]
+		},
+		{
+			"name" : "Sphere 02",
+			"type" : "mesh",
+			"visible" : false,
+			"transform" : 
+			{
+				"space" : "local",
+				"position" : "1.999999, 0.997128, -0.000001",
+				"rotation" : "0.000000, 0.000000, 0.000002",
 				"scale" : "2.000000, 2.000000, 2.000000"
+			},
+			"mesh" : 
+			{
+				"file" : "models/ico-sphere.gltf"
 			},
 			"material" : 
 			{
 				"name" : "pbr",
 				"shader" : "pbr",
 				"const albedo" : "0.780000, 0.120000, 0.110000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 0.000000,
+				"const metallic" : 1.000000,
+				"const roughness" : 0.250000,
+				"const ao" : 1.000000,
 				"enable albedo sampler" : false,
 				"enable metallic sampler" : false,
 				"enable roughness sampler" : false,
 				"enable ao sampler" : false
-			},
-			"mesh" : 
-			{
-				"file" : "models/ico-sphere.gltf"
 			},
 			"collider" : 
 			{
@@ -45,12 +90,17 @@
 		{
 			"name" : "mori knob",
 			"type" : "mesh",
+			"visible" : true,
 			"transform" : 
 			{
 				"space" : "local",
 				"position" : "-2.000000, 0.000000, -4.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"mesh" : 
+			{
+				"file" : "models/mori-knob.gltf"
 			},
 			"material" : 
 			{
@@ -59,26 +109,27 @@
 				"const albedo" : "0.800000, 0.800000, 0.800000",
 				"const metallic" : 0.000000,
 				"const roughness" : 0.000000,
-				"const ao" : 0.000000,
+				"const ao" : 1.000000,
 				"enable albedo sampler" : false,
 				"enable metallic sampler" : false,
 				"enable roughness sampler" : false,
 				"enable ao sampler" : false
-			},
-			"mesh" : 
-			{
-				"file" : "models/mori-knob.gltf"
 			}
 		},
 		{
 			"name" : "chamfer box",
 			"type" : "mesh",
+			"visible" : true,
 			"transform" : 
 			{
 				"space" : "local",
-				"position" : "-8.000000, 8.422923, -2.000000",
+				"position" : "-8.000000, 3.880553, -2.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"mesh" : 
+			{
+				"file" : "models/chamfer-box.gltf"
 			},
 			"material" : 
 			{
@@ -86,16 +137,12 @@
 				"shader" : "pbr",
 				"const albedo" : "0.800000, 0.540000, 0.100000",
 				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 0.000000,
+				"const roughness" : 0.200000,
+				"const ao" : 1.000000,
 				"enable albedo sampler" : false,
 				"enable metallic sampler" : false,
 				"enable roughness sampler" : false,
 				"enable ao sampler" : false
-			},
-			"mesh" : 
-			{
-				"file" : "models/chamfer-box.gltf"
 			},
 			"collider" : 
 			{
@@ -112,6 +159,7 @@
 		{
 			"name" : "ground plane",
 			"type" : "mesh",
+			"visible" : true,
 			"transform" : 
 			{
 				"space" : "local",
@@ -119,22 +167,22 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "20.000000, 20.000000, 20.000000"
 			},
+			"mesh" : 
+			{
+				"file" : "models/unit-plane.gltf"
+			},
 			"material" : 
 			{
 				"name" : "pbr",
 				"shader" : "pbr",
 				"const albedo" : "0.230000, 0.250000, 0.290000",
 				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 0.000000,
+				"const roughness" : 0.200000,
+				"const ao" : 1.000000,
 				"enable albedo sampler" : false,
 				"enable metallic sampler" : false,
 				"enable roughness sampler" : false,
 				"enable ao sampler" : false
-			},
-			"mesh" : 
-			{
-				"file" : "models/unit-plane.gltf"
 			},
 			"collider" : 
 			{
@@ -151,12 +199,16 @@
 		{
 			"name" : "Skybox",
 			"type" : "skybox",
-			"rotation" : "0.000000, -0.000000, 0.000000",
 			"visible" : true,
+			"rotation" : "0.000000, -0.000000, 0.000000",
 			"material" : 
 			{
 				"name" : "Skybox",
 				"shader" : "skybox",
+				"const albedo" : "0.000000, 0.000000, 0.000000",
+				"const metallic" : 0.000000,
+				"const roughness" : 0.000000,
+				"const ao" : 0.000000,
 				"generate hdr cubemap sampler" : true,
 				"enable cubemap sampler" : true,
 				"enable cubemap trilinear filtering" : true,
@@ -171,95 +223,18 @@
 		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
-			"position" : "10.000000, 0.000000, 0.000000",
 			"visible" : true,
-			"children" : 
-			[
-				{
-					"name" : "Reflection probe mesh",
-					"type" : "mesh",
-					"transform" : 
-					{
-						"space" : "local",
-						"position" : "0.000000, 0.000000, 0.000000",
-						"rotation" : "0.000000, -0.000000, 0.000000",
-						"scale" : "1.500000, 1.500000, 1.500000"
-					},
-					"material" : 
-					{
-						"name" : "Reflection probe sphere",
-						"shader" : "Reflection probe sphere",
-						"const albedo" : "0.750000, 0.750000, 0.750000",
-						"const roughness" : 0.000000,
-						"enable albedo sampler" : false,
-						"enable metallic sampler" : false,
-						"enable roughness sampler" : false,
-						"enable ao sampler" : false
-					},
-					"mesh" : 
-					{
-						"file" : "models/ico-sphere.gltf"
-					}
-				}
-			]
-		},
-		{
-			"name" : "Grid",
-			"type" : "mesh",
-			"transform" : 
-			{
-				"space" : "local",
-				"position" : "19.500000, -0.100000, -15.500000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material" : 
-			{
-				"name" : "Color",
-				"shader" : "Color",
-				"const albedo" : "0.000000, 0.000000, 0.000000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 0.000000
-			},
-			"mesh" : 
-			{
-				"prefab" : "grid"
-			}
-		},
-		{
-			"name" : "World origin",
-			"type" : "mesh",
-			"transform" : 
-			{
-				"space" : "local",
-				"position" : "0.000000, -0.090000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material" : 
-			{
-				"name" : "Color",
-				"shader" : "Color",
-				"const albedo" : "0.000000, 0.000000, 0.000000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 0.000000
-			},
-			"mesh" : 
-			{
-				"prefab" : "world axis ground"
-			}
+			"position" : "10.000000, 0.000000, 0.000000"
 		}
 	],
 	"point lights" : 
 	[
 		{
+			"name" : "Point light 01",
 			"position" : "6.000000, -6.000000, -8.000000",
 			"color" : "1.000000, 1.000000, 1.000000",
 			"enabled" : true,
-			"brightness" : 300.000000,
-			"name" : "Point light 01"
+			"brightness" : 300.000000
 		}
 	],
 	"directional light" : 

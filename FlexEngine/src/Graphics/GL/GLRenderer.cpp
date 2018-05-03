@@ -231,7 +231,7 @@ namespace flex
 				}
 				else
 				{
-					Logger::LogError("Material's shader not set! (material: " + createInfo->name + ", shader: " + createInfo->shaderName + ")");
+					Logger::LogError("Material's shader name couldn't be found! shader name: " + createInfo->shaderName);
 				}
 			}
 			
@@ -334,15 +334,25 @@ namespace flex
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
 
+
+
+
+
+
+
+			// TODO: FIXME!!!
 			if (m_SkyBoxMesh &&
-				m_Shaders[m_Materials[matID].material.shaderID].shader.needPrefilteredMap)
+				m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
 			{
 				MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
 
-				GLMaterial* mat = &m_Materials[matID];
-				mat->irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
-				mat->prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
+				mat.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+				mat.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
 			}
+
+
+
+
 
 			mat.material.environmentMapPath = createInfo->environmentMapPath;
 
@@ -352,14 +362,17 @@ namespace flex
 
 			if (shader.shader.needIrradianceSampler)
 			{
-				if (createInfo->irradianceSamplerMatID >= m_Materials.size())
+				if (mat.irradianceSamplerID == InvalidID)
 				{
-					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
-					mat.irradianceSamplerID = InvalidID;
-				}
-				else
-				{
-					mat.irradianceSamplerID = m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID;
+					if (createInfo->irradianceSamplerMatID >= m_Materials.size())
+					{
+						//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
+						mat.irradianceSamplerID = InvalidID;
+					}
+					else
+					{
+						mat.irradianceSamplerID = m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID;
+					}
 				}
 			}
 			if (shader.shader.needBRDFLUT)
@@ -373,14 +386,17 @@ namespace flex
 			}
 			if (shader.shader.needPrefilteredMap)
 			{
-				if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
+				if (mat.prefilteredMapSamplerID == InvalidID)
 				{
-					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
-					mat.prefilteredMapSamplerID = InvalidID;
-				}
-				else
-				{
-					mat.prefilteredMapSamplerID = m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID;
+					if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
+					{
+						//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
+						mat.prefilteredMapSamplerID = InvalidID;
+					}
+					else
+					{
+						mat.prefilteredMapSamplerID = m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID;
+					}
 				}
 			}
 

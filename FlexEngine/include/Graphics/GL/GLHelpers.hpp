@@ -70,24 +70,24 @@ namespace flex
 			};
 			UniformIDs uniformIDs;
 
-			u32 diffuseSamplerID = 0;
-			u32 normalSamplerID = 0;
+			u32 diffuseSamplerID = InvalidID;
+			u32 normalSamplerID = InvalidID;
 
-			u32 cubemapSamplerID = 0;
+			u32 cubemapSamplerID = InvalidID;
 			std::vector<GLCubemapGBuffer> cubemapSamplerGBuffersIDs;
-			u32 cubemapDepthSamplerID = 0;
+			u32 cubemapDepthSamplerID = InvalidID;
 
 			// PBR samplers
-			u32 albedoSamplerID = 0;
-			u32 metallicSamplerID = 0;
-			u32 roughnessSamplerID = 0;
-			u32 aoSamplerID = 0;
+			u32 albedoSamplerID = InvalidID;
+			u32 metallicSamplerID = InvalidID;
+			u32 roughnessSamplerID = InvalidID;
+			u32 aoSamplerID = InvalidID;
 
-			u32 hdrTextureID = 0;
+			u32 hdrTextureID = InvalidID;
 
-			u32 irradianceSamplerID = 0;
-			u32 prefilteredMapSamplerID = 0;
-			u32 brdfLUTSamplerID = 0;
+			u32 irradianceSamplerID = InvalidID;
+			u32 prefilteredMapSamplerID = InvalidID;
+			u32 brdfLUTSamplerID = InvalidID;
 		};
 
 		struct GLRenderObject
@@ -98,9 +98,9 @@ namespace flex
 
 			std::string materialName = "";
 
-			u32 VAO = 0;
-			u32 VBO = 0;
-			u32 IBO = 0;
+			u32 VAO = InvalidID;
+			u32 VBO = InvalidID;
+			u32 IBO = InvalidID;
 
 			GLenum topology = GL_TRIANGLES;
 			GLenum cullFace = GL_BACK;

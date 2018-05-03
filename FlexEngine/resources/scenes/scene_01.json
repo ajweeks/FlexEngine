@@ -6,27 +6,43 @@
     {
       "name" : "holder of things",
       "type" : "NONE",
+      "visible" : true,
+      "transform": 
+      {
+        "space" : "local",
+        "position": "00.0,0.0,0.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1.0,1.0,1.0"
+      },
       "children" :
       [
         {
           "name" : "Sphere 01",
           "type" : "mesh",
-          "mesh": {
-            "file": "models/ico-sphere.gltf"
-          },
           "visible": false,
-          "transform": {
+          "transform": 
+          {
+            "space" : "local",
             "position": "10.0,0.0,0.0",
             "rotation": "0.0,0.0,0.0",
             "scale": "1.0,1.0,1.0"
           },
-          "material": {
+          "mesh": 
+          {
+            "file": "models/ico-sphere.gltf"
+          },
+          "material": 
+          {
             "name": "pbr",
             "shader": "pbr",
-            "const metallic": 1,
+            "const albedo": "0.78, 0.12, 0.11",
+            "const metallic": 0,
             "const roughness": 0.25,
             "const ao": 1,
-            "const albedo": "0.78, 0.12, 0.11"
+            "enable albedo sampler" : false,
+            "enable metallic sampler" : false,
+            "enable roughness sampler" : false,
+            "enable ao sampler" : false
           }
         }
       ]
@@ -34,121 +50,165 @@
     {
       "name" : "Sphere 02",
       "type" : "mesh",
-      "mesh": {
-        "file": "models/ico-sphere.gltf"
-      },
-      "collider": {
-        "shape": "sphere",
-        "radius": 1.0,
-        "trigger" : false
-      },
-      "rigid body": {
-        "kinematic": false,
-        "mass": 1.0
-      },
       "visible": false,
-      "transform": {
+      "transform": 
+      {
+        "space" : "local",
         "position": "2.0, 5.0, 0.0",
         "rotation": "0.0, 0.0, 0.0",
         "scale": "2.0, 2.0, 2.0"
       },
-      "material": {
+      "mesh": 
+      {
+        "file": "models/ico-sphere.gltf"
+      },
+      "material": 
+      {
         "name": "pbr",
         "shader": "pbr",
+        "const albedo": "0.78, 0.12, 0.11",
         "const metallic": 1,
         "const roughness": 0.25,
         "const ao": 1,
-        "const albedo": "0.78, 0.12, 0.11"
+        "enable albedo sampler" : false,
+        "enable metallic sampler" : false,
+        "enable roughness sampler" : false,
+        "enable ao sampler" : false
+      },
+      "collider": 
+      {
+        "shape": "sphere",
+        "radius": 1.0
+      },
+      "rigid body": 
+      {
+        "mass" : 1.0,
+        "kinematic" : false,
+        "static" : false
       },
     },
     {
       "name": "mori knob",
       "type": "mesh",
-      "mesh": {
-        "file": "models/mori-knob.gltf"
-      },
-      "transform": {
-        "space": "global",
+      "visible" : true,
+      "transform": 
+      {
+        "space": "local",
         "position": "-2.0, 0.0, -4.0",
         "rotation": "0.0, 0.0, 0.0",
         "scale": "1.0, 1.0, 1.0"
       },
-      "material": {
+      "mesh":
+      {
+        "file": "models/mori-knob.gltf"
+      },
+      "material":
+      {
         "name": "pbr",
         "shader": "pbr",
-        "const metallic": 1,
+        "const albedo": "0.8, 0.8, 0.8",
+        "const metallic": 0,
         "const roughness": 0,
         "const ao": 1,
-        "const albedo": "0.8, 0.8, 0.8"
+        "enable albedo sampler" : false,
+        "enable metallic sampler" : false,
+        "enable roughness sampler" : false,
+        "enable ao sampler" : false
       }
     },
     {
       "name": "chamfer box",
       "type": "mesh",
-      "mesh": {
-        "file": "models/chamfer-box.gltf"
-      },
-      "transform": {
+      "visible" : true,
+      "transform":
+      {
+        "space" : "local",
         "position": "-8.0,10.0,-2.0",
         "rotation": "0.0,0.0,0.0",
         "scale": "1, 1, 1"
       },
-      "material": {
+      "mesh":
+      {
+        "file": "models/chamfer-box.gltf"
+      },
+      "material": 
+      {
         "name": "pbr",
         "shader": "pbr",
+        "const albedo": "0.8, 0.54, 0.1",
         "const metallic": 0,
         "const roughness": 0.2,
         "const ao": 1,
-        "const albedo": "0.8, 0.54, 0.1"
+        "enable albedo sampler" : false,
+        "enable metallic sampler" : false,
+        "enable roughness sampler" : false,
+        "enable ao sampler" : false
       },
-      "collider": {
+      "collider": 
+      {
         "shape": "box",
-        "half extents": "0.5, 0.5, 0.5",
-        "trigger" : false
+        "half extents": "0.5, 0.5, 0.5"
       },
-      "rigid body": {
+      "rigid body": 
+      {
+        "mass": 1.0,
         "kinematic": false,
-        "mass": 1.0
+        "static" : false
       },
     },
     {
       "name": "ground plane",
       "type": "mesh",
-      "mesh": {
-        "file": "models/unit-plane.gltf"
-      },
-      "transform": {
+      "visible" : true,
+      "transform":
+      {
+        "space" : "local",
         "position": "0.0, -0.1, 0.0",
         "rotation": "0.0, 0.0, 0.0",
         "scale": "20, 20, 20"
       },
-      "material": {
+      "mesh": 
+      {
+        "file": "models/unit-plane.gltf"
+      },
+      "material":
+       {
         "name": "pbr",
         "shader": "pbr",
+        "const albedo": "0.23, 0.25, 0.29",
         "const metallic": 0,
         "const roughness": 0.2,
         "const ao": 1,
-        "const albedo": "0.23, 0.25, 0.29"
+        "enable albedo sampler" : false,
+        "enable metallic sampler" : false,
+        "enable roughness sampler" : false,
+        "enable ao sampler" : false
       },
-      "collider": {
+      "collider":
+       {
         "shape": "box",
-        "half extents": "10, 0.1, 10",
-        "trigger" : false
+        "half extents": "10, 0.1, 10"
       },
-      "rigid body": {
+      "rigid body":
+       {
+        "mass": 0.0,
         "kinematic": false,
-        "static" : true,
-        "mass": 0.0
+        "static" : true
       },
     },
     {
       "name": "Skybox",
       "type" : "skybox",
-      "rotation": "0.0, 0.0, 0.0",
       "visible" : true,
-      "material": {
+      "rotation": "0.0, 0.0, 0.0",
+      "material": 
+      {
         "name": "Skybox",
         "shader": "skybox",
+        "const albedo" : "0.000000, 0.000000, 0.000000",
+        "const metallic" : 0.000000,
+        "const roughness" : 0.000000,
+        "const ao" : 0.000000,
         "generate hdr cubemap sampler" : true,
         "enable cubemap sampler" : true,
         "enable cubemap trilinear filtering" : true,
@@ -164,25 +224,22 @@
     {
       "name": "Reflection Probe 01",
       "type" : "reflection probe",
-      "position": "10.0, 0.0, 0.0",
-      "visible" : true
+      "visible" : true,
+      "position": "10.0, 0.0, 0.0"
     }
   ],
   "point lights" :
   [
-        {
-        "name": "Point light 01",
-        "type": "point light",
-        "position": "6.0,-6.0,-8.0",
-        "color": "1.0,1.0,1.0",
-        "brightness": 300.0,
-        "enabled" : true
-      }
+    {
+      "name": "Point light 01",
+      "position": "6.0,-6.0,-8.0",
+      "color": "1.0,1.0,1.0",
+      "enabled" : true,
+      "brightness": 300.0
+    }
   ],
   "directional light" :
   {
-    "name": "Directional light 01",
-    "type" :  "directional light",
     "direction": "0.1,1.5,0.0",
     "color": "1.0,1.0,1.0",
     "brightness": 10.0,
