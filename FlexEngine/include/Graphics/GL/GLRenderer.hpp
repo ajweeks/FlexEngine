@@ -77,7 +77,7 @@ namespace flex
 			friend class GLPhysicsDebugDraw;
 
 			void ImGuiRender();
-			void DrawImGuiForGameObjectAndChildren(GameObject* object);
+			void DrawImGuiForGameObjectAndChildren(GameObject* gameObject);
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 

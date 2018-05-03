@@ -2732,6 +2732,8 @@ namespace flex
 			outInfo.vertexBufferData = renderObject->vertexBufferData;
 			outInfo.indices = renderObject->indices;
 			outInfo.gameObject = renderObject->gameObject;
+			outInfo.visible = renderObject->gameObject->IsVisible();
+			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
 			outInfo.enableCulling = renderObject->enableCulling;
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
@@ -3139,17 +3141,17 @@ SafeDelete(renderObject);
 			}
 		}
 
-		void GLRenderer::DrawImGuiForGameObjectAndChildren(GameObject* object)
+		void GLRenderer::DrawImGuiForGameObjectAndChildren(GameObject* gameObject)
 		{
-			RenderID renderID = object->GetRenderID();
+			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
 			std::string objectName;
 			if (renderID != InvalidRenderID)
 			{
 				renderObject = GetRenderObject(renderID);
-				objectName = std::string(object->GetName() + "##" + std::to_string(renderObject->renderID));
+				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
 
-				if (!renderObject->gameObject->IsVisibleInSceneExplorer())
+				if (!gameObject->IsVisibleInSceneExplorer())
 				{
 					return;
 				}
@@ -3157,20 +3159,17 @@ SafeDelete(renderObject);
 			else
 			{
 				// TODO: FIXME: This will fail if multiple objects share the same name
-				// and have no valid RenderID
-				objectName = std::string(object->GetName());
+				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
+				objectName = std::string(gameObject->GetName());
 			}
 
-			if (renderObject)
+			const std::string objectID("##" + objectName + "-visible");
+			bool visible = gameObject->IsVisible();
+			if (ImGui::Checkbox(objectID.c_str(), &visible))
 			{
-				const std::string objectID("##" + objectName + "-visible");
-				bool visible = renderObject->gameObject->IsVisible();
-				if (ImGui::Checkbox(objectID.c_str(), &visible))
-				{
-					renderObject->gameObject->SetVisible(visible);
-				}
-				ImGui::SameLine();
+				gameObject->SetVisible(visible);
 			}
+			ImGui::SameLine();
 			if (ImGui::TreeNode(objectName.c_str()))
 			{
 				if (renderObject)
@@ -3179,55 +3178,26 @@ SafeDelete(renderObject);
 					ImGui::TextUnformatted(renderIDStr.c_str());
 				}
 
-				Transform* transform = object->GetTransform();
-				static int transformSpace = 0;
-
-				static const char* localStr = "local";
-				static const char* globalStr = "global";
-
-				ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
-				ImGui::RadioButton(globalStr, &transformSpace, 1);
-
-				const bool local = (transformSpace == 0);
-
-
-				glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-				glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation())));
-				glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
-
-				bool valueChanged = false;
-
-				valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
-				valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.1f) || valueChanged;
-				valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
-
-				if (valueChanged)
-				{
-					if (local)
-					{
-						transform->SetLocalPosition(translation);
-						transform->SetLocalRotation(glm::quat(glm::radians(rotation)));
-						transform->SetLocalScale(scale);
-					}
-					else
-					{
-						transform->SetGlobalPosition(translation);
-						transform->SetGlobalRotation(glm::quat(glm::radians(rotation)));
-						transform->SetGlobalScale(scale);
-					}
-				}
+				DrawImGuiForRenderObjectCommon(gameObject);
 
 				if (renderObject)
 				{
-					GLMaterial* material = &m_Materials[m_RenderObjects[renderObject->renderID]->materialID];
-					if (material->uniformIDs.enableIrradianceSampler)
+					GLMaterial& material = m_Materials[renderObject->materialID];
+					GLShader& shader = m_Shaders[material.material.shaderID];
+
+					std::string matNameStr = "Material: " + material.material.name;
+					std::string shaderNameStr = "Shader: " + shader.shader.name;
+					ImGui::TextUnformatted(matNameStr.c_str());
+					ImGui::TextUnformatted(shaderNameStr.c_str());
+
+					if (material.uniformIDs.enableIrradianceSampler)
 					{
-						ImGui::Checkbox("Enable Irradiance Sampler", &material->material.enableIrradianceSampler);
+						ImGui::Checkbox("Enable Irradiance Sampler", &material.material.enableIrradianceSampler);
 					}
 				}
 
 				ImGui::Indent();
-				const std::vector<GameObject*>& children = transform->GetGameObject()->GetChildren();
+				const std::vector<GameObject*>& children = gameObject->GetChildren();
 				for (GameObject* child : children)
 				{
 					DrawImGuiForGameObjectAndChildren(child);

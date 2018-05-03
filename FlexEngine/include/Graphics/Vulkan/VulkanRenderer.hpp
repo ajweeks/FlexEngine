@@ -192,7 +192,7 @@ namespace flex
 
 			void LoadDefaultShaderCode();
 
-			void DrawImGuiForRenderObjectAndChildren(VulkanRenderObject* renderObject);
+			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,

@@ -332,6 +332,8 @@ namespace flex
 
 				GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", SerializableType::NONE);
 				m_PersistentObjects.push_back(gBufferQuadGameObject);
+				// Don't render the g buffer normally, we'll render it separately
+				gBufferQuadGameObject->SetVisible(false);
 
 				RenderObjectCreateInfo gBufferQuadCreateInfo = {};
 				gBufferQuadCreateInfo.materialID = gBufferMatID;
@@ -348,7 +350,6 @@ namespace flex
 				m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
 				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-				gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
 			}
 
 			// Initialize GBuffer cubemap material & mesh
@@ -381,11 +382,15 @@ namespace flex
 				{
 					Logger::LogError("Failed to create GBuffer cubemap mesh prefab!");
 				}
+				else
+				{
+					// Don't render the g buffer cubemap normally, we'll render it separately
+					m_gBufferCubemapMesh->SetVisible(false);
+				}
 
 				RenderID gBufferCubemapRenderID = m_gBufferCubemapMesh->GetRenderID();
 
 				VulkanRenderObject* gBufferCubemapRenderObject = GetRenderObject(gBufferCubemapRenderID);
-				gBufferCubemapRenderObject->visible = false; // Don't render the g buffer cubemap normally, we'll handle it separately
 
 
 				assert(m_PhysicsDebugDrawer == nullptr);
@@ -2401,8 +2406,6 @@ namespace flex
 			renderObject->enableCulling = createInfo->enableCulling;
 			renderObject->materialName = m_LoadedMaterials[renderObject->materialID].material.name;
 			renderObject->gameObject = createInfo->gameObject;
-			renderObject->visible = true;
-			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
 
 			if (createInfo->indices != nullptr)
 			{
@@ -2534,29 +2537,14 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			// TODO: Consolidate renderer ImGui code
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				//const u32 objectCount = GetRenderObjectCount();
-				//const u32 objectCapacity = GetRenderObjectCapacity();
-				//const std::string objectCountStr("Object count/capacity: " + std::to_string//(objectCount) + "/" + std::to_string(objectCapacity));
-				//ImGui::Text(objectCountStr.c_str());
-
 				if (ImGui::TreeNode("Render Objects"))
 				{
-					//=====================
-					// TODO: OUTDATED
-					//=====================
-					for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+					std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
+					for (size_t i = 0; i < rootObjects.size(); ++i)
 					{
-						// Directly draw all root render objects, they will all draw their own children
-						VulkanRenderObject* renderObject = GetRenderObject(i);
-						if (renderObject &&
-							renderObject->visibleInSceneExplorer &&
-							renderObject->gameObject->GetParent() == nullptr)
-						{
-							DrawImGuiForRenderObjectAndChildren(renderObject);
-						}
+						DrawImGuiForRenderObjectAndChildren(rootObjects[i]);
 					}
 
 					ImGui::TreePop();
@@ -2605,88 +2593,66 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::DrawImGuiForRenderObjectAndChildren(VulkanRenderObject* renderObject)
+		void VulkanRenderer::DrawImGuiForRenderObjectAndChildren(GameObject* gameObject)
 		{
-			VulkanMaterial& material = m_LoadedMaterials[renderObject->materialID];
-			VulkanShader& shader = m_Shaders[material.material.shaderID];
-			const std::string objectName(renderObject->gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
+			RenderID renderID = gameObject->GetRenderID();
+			VulkanRenderObject* renderObject = nullptr;
+			std::string objectName;
+			if (renderID != InvalidRenderID)
+			{
+				renderObject = GetRenderObject(renderID);
+				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
+
+				if (!gameObject->IsVisibleInSceneExplorer())
+				{
+					return;
+				}
+			}
+			else
+			{
+				// TODO: FIXME: This will fail if multiple objects share the same name
+				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
+				objectName = std::string(gameObject->GetName());
+			}
 
 			const std::string objectID("##" + objectName + "-visible");
-			bool visible = renderObject->visible;
+			bool visible = gameObject->IsVisible();
 			if (ImGui::Checkbox(objectID.c_str(), &visible))
 			{
-				renderObject->gameObject->SetVisible(visible);
+				gameObject->SetVisible(visible);
 			}
 			ImGui::SameLine();
 			if (ImGui::TreeNode(objectName.c_str()))
 			{
-				const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
-				ImGui::TextUnformatted(renderIDStr.c_str());
-
-				Transform* transform = renderObject->gameObject->GetTransform();
-				if (transform)
+				if (renderObject)
 				{
-					static bool local = true;
+					const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
+					ImGui::TextUnformatted(renderIDStr.c_str());
+				}
 
-					static const char* localTransformStr = "Transform (local)";
-					static const char* globalTransformStr = "Transform (global)";
-					const char* transformSpaceStr = local ? localTransformStr : globalTransformStr;
+				DrawImGuiForRenderObjectCommon(gameObject);
 
-					ImGui::Checkbox(transformSpaceStr, &local);
+				if (renderObject)
+				{
+					VulkanMaterial& material = m_LoadedMaterials[renderObject->materialID];
+					VulkanShader& shader = m_Shaders[material.material.shaderID];
 
+					std::string matNameStr = "Material: " + material.material.name;
+					std::string shaderNameStr = "Shader: " + shader.shader.name;
+					ImGui::TextUnformatted(matNameStr.c_str());
+					ImGui::TextUnformatted(shaderNameStr.c_str());
 
-					glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-					glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
-					glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
-
-					bool valueChanged = false;
-
-					valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
-					valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.01f) || valueChanged;
-					valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
-
-					if (valueChanged)
+					if (shader.shader.needIrradianceSampler)
 					{
-						if (local)
-						{
-							transform->SetLocalPosition(translation);
-							transform->SetLocalRotation(glm::quat(rotation));
-							transform->SetLocalScale(scale);
-						}
-						else
-						{
-							transform->SetGlobalPosition(translation);
-							transform->SetGlobalRotation(glm::quat(rotation));
-							transform->SetGlobalScale(scale);
-						}
+						ImGui::Checkbox("Use Irradiance Sampler", &material.material.enableIrradianceSampler);
 					}
-				}
-				else
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0, 0, 1));
-					ImGui::Text("Transform not set");
-					ImGui::PopStyleColor();
-				}
-
-				std::string matNameStr = "Material: " + material.material.name;
-				std::string shaderNameStr = "Shader: " + shader.shader.name;
-				ImGui::TextUnformatted(matNameStr.c_str());
-				ImGui::TextUnformatted(shaderNameStr.c_str());
-
-				if (shader.shader.needIrradianceSampler)
-				{
-					ImGui::Checkbox("Use Irradiance Sampler", &material.material.enableIrradianceSampler);
 				}
 
 				ImGui::Indent();
-				const std::vector<GameObject*>& children = renderObject->gameObject->GetChildren();
+				const std::vector<GameObject*>& children = gameObject->GetChildren();
 				for (GameObject* child : children)
 				{
-					VulkanRenderObject* renderObject = GetRenderObject(child->GetRenderID());
-					if (renderObject)
-					{
-						DrawImGuiForRenderObjectAndChildren(renderObject);
-					}
+					DrawImGuiForRenderObjectAndChildren(child);
 				}
 				ImGui::Unindent();
 
@@ -2722,8 +2688,8 @@ namespace flex
 			outInfo.vertexBufferData = renderObject->vertexBufferData;
 			outInfo.indices = renderObject->indices;
 			outInfo.gameObject = renderObject->gameObject;
-			outInfo.visible = renderObject->visible;
-			outInfo.visibleInSceneExplorer = renderObject->visibleInSceneExplorer;
+			outInfo.visible = renderObject->gameObject->IsVisible();
+			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = VkCullModeToCullFace(renderObject->cullMode);
 			outInfo.enableCulling = renderObject->enableCulling;
 			//outInfo.depthTestReadFunc =  // TODO: ?
@@ -4344,7 +4310,10 @@ namespace flex
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(j);
-					if (!renderObject || !renderObject->visible || renderObject->vertexBufferData->VertexCount == 0)
+					if (!renderObject || 
+						!renderObject->gameObject->IsVisible() || 
+						!renderObject->vertexBufferData || 
+						renderObject->vertexBufferData->VertexCount == 0)
 					{
 						continue;
 					}
@@ -4454,7 +4423,10 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						VulkanRenderObject* renderObject = GetRenderObject(j);
-						if (!renderObject || !renderObject->visible || renderObject->vertexBufferData->VertexCount == 0)
+						if (!renderObject || 
+							!renderObject->gameObject->IsVisible() ||
+							!renderObject->vertexBufferData ||
+							renderObject->vertexBufferData->VertexCount == 0)
 						{
 							continue;
 						}
@@ -4563,7 +4535,10 @@ namespace flex
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (!renderObject || !renderObject->visible || renderObject->vertexBufferData->VertexCount == 0)
+				if (!renderObject || 
+					!renderObject->gameObject->IsVisible() ||
+					!renderObject->vertexBufferData || 
+					renderObject->vertexBufferData->VertexCount == 0)
 				{
 					continue;
 				}

@@ -87,6 +87,11 @@ namespace flex
 		static const u32 MAX_TEXTURE_DIM = 65536;
 
 	protected:
+		/*
+		* Draws common data for a game object
+		*/
+		void DrawImGuiForRenderObjectCommon(GameObject* gameObject);
+
 		std::vector<PointLight> m_PointLights;
 		DirectionalLight m_DirectionalLight;
 

@@ -356,9 +356,6 @@ namespace flex
 			RenderID renderID = InvalidRenderID;
 			MaterialID materialID = InvalidMaterialID;
 
-			bool visible = true;
-			bool visibleInSceneExplorer = true;
-
 			GameObject* gameObject = nullptr;
 
 			std::string materialName = "";
