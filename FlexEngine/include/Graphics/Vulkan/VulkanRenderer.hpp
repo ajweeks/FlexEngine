@@ -209,7 +209,7 @@ namespace flex
 			static const u32 MAT_CAPACITY = 25;
 
 			std::vector<VulkanRenderObject*> m_RenderObjects;
-			std::vector<VulkanMaterial> m_LoadedMaterials;
+			std::vector<VulkanMaterial> m_Materials;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
