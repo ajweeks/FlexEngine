@@ -7,7 +7,6 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 
-
 namespace flex
 {
 	class MeshPrefab;
@@ -29,11 +28,6 @@ namespace flex
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
-			virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) override;
-			virtual PointLightID InitializePointLight(const PointLight& PointLight) override;
-
-			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
-			virtual PointLight& GetPointLight(PointLightID PointLightID) override;
 
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;

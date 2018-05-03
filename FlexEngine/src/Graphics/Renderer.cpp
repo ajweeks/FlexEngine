@@ -88,4 +88,79 @@ namespace flex
 		}
 
 	}
+
+	void Renderer::DrawImGuiLights()
+	{
+		if (ImGui::TreeNode("Lights"))
+		{
+			ImGui::AlignFirstTextHeightToWidgets();
+
+			ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
+
+			bool dirLightEnabled = m_DirectionalLight.enabled == 1;
+			ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
+			m_DirectionalLight.enabled = dirLightEnabled ? 1 : 0;
+			ImGui::SameLine();
+			if (ImGui::TreeNode("Directional Light"))
+			{
+				ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
+
+				ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
+
+				ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
+
+				ImGui::TreePop();
+			}
+
+			for (size_t i = 0; i < m_PointLights.size(); ++i)
+			{
+				const std::string iStr = std::to_string(i);
+				const std::string objectName("Point Light##" + iStr);
+
+				bool PointLightEnabled = m_PointLights[i].enabled == 1;
+				ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
+				m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
+				ImGui::SameLine();
+				if (ImGui::TreeNode(objectName.c_str()))
+				{
+					ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
+
+					ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
+
+					ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
+
+					ImGui::TreePop();
+				}
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
+	bool Renderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
+	{
+		m_DirectionalLight = dirLight;
+		return true;
+	}
+
+	PointLightID Renderer::InitializePointLight(const PointLight& pointLight)
+	{
+		m_PointLights.push_back(pointLight);
+		return m_PointLights.size() - 1;
+	}
+
+	DirectionalLight& Renderer::GetDirectionalLight()
+	{
+		return m_DirectionalLight;
+	}
+
+	PointLight& Renderer::GetPointLight(PointLightID pointLight)
+	{
+		return m_PointLights[pointLight];
+	}
+
+	i32 Renderer::GetNumPointLights()
+	{
+		return m_PointLights.size();
+	}
 } // namespace flex

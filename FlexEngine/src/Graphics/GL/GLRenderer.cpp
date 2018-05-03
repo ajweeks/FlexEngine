@@ -1286,30 +1286,6 @@ namespace flex
 			return false;
 		}
 
-		DirectionalLightID GLRenderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
-		{
-			m_DirectionalLight = dirLight;
-			return 0;
-		}
-
-		PointLightID GLRenderer::InitializePointLight(const PointLight& pointLight)
-		{
-			m_PointLights.push_back(pointLight);
-			return m_PointLights.size() - 1;
-		}
-
-		DirectionalLight& GLRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
-		{
-			// TODO: Add support for multiple directional lights
-			UNREFERENCED_PARAMETER(dirLightID);
-			return m_DirectionalLight;
-		}
-
-		PointLight& GLRenderer::GetPointLight(PointLightID pointLight)
-		{
-			return m_PointLights[pointLight];
-		}
-
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
@@ -3094,50 +3070,7 @@ SafeDelete(renderObject);
 					ImGui::TreePop();
 				}
 
-				if (ImGui::TreeNode("Lights"))
-				{
-					ImGui::AlignFirstTextHeightToWidgets();
-
-					ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
-
-					bool dirLightEnabled = m_DirectionalLight.enabled == 1;
-					ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
-					m_DirectionalLight.enabled = dirLightEnabled ? 1 : 0;
-					ImGui::SameLine();
-					if (ImGui::TreeNode("Directional Light"))
-					{
-						ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
-
-						ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
-
-						ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
-
-						ImGui::TreePop();
-					}
-
-					for (size_t i = 0; i < m_PointLights.size(); ++i)
-					{
-						const std::string iStr = std::to_string(i);
-						const std::string objectName("Point Light##" + iStr);
-
-						bool PointLightEnabled = m_PointLights[i].enabled == 1;
-						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
-						m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
-						ImGui::SameLine();
-						if (ImGui::TreeNode(objectName.c_str()))
-						{
-							ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
-
-							ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
-
-							ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
-
-							ImGui::TreePop();
-						}
-					}
-
-					ImGui::TreePop();
-				}
+				DrawImGuiLights();
 			}
 		}
 

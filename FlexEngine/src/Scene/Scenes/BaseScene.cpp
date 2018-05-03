@@ -108,7 +108,6 @@ namespace flex
 				PointLight pointLight = {};
 				CreatePointLightFromJSON(gameContext, pointLightObj, pointLight);
 
-				m_PointLights.push_back(pointLight);
 				gameContext.renderer->InitializePointLight(pointLight);
 			}
 		}
@@ -120,7 +119,6 @@ namespace flex
 			DirectionalLight dirLight = {};
 			CreateDirectionalLightFromJSON(gameContext, directionalLightObj, dirLight);
 			
-			m_DirectionalLight = dirLight;
 			gameContext.renderer->InitializeDirectionalLight(dirLight);
 		}
 
@@ -620,16 +618,17 @@ namespace flex
 		JSONField pointLightsField = {};
 		pointLightsField.label = "point lights";
 		std::vector<JSONObject> pointLightsArray;
-		for (PointLight& pointLight : m_PointLights)
+		for (i32 i = 0; i < gameContext.renderer->GetNumPointLights(); ++i)
 		{
+			PointLight& pointLight = gameContext.renderer->GetPointLight(i);
 			pointLightsArray.push_back(SerializePointLight(pointLight, gameContext));
 		}
 		pointLightsField.value = JSONValue(pointLightsArray);
 		rootSceneObject.fields.push_back(pointLightsField);
 
-
+		DirectionalLight& dirLight = gameContext.renderer->GetDirectionalLight();
 		JSONField directionalLightsField("directional light",
-			JSONValue(SerializeDirectionalLight(m_DirectionalLight, gameContext)));
+			JSONValue(SerializeDirectionalLight(dirLight, gameContext)));
 		rootSceneObject.fields.push_back(directionalLightsField);
 
 

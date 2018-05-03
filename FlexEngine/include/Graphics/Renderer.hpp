@@ -31,11 +31,6 @@ namespace flex
 		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
-		virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) = 0;
-		virtual PointLightID InitializePointLight(const PointLight& pointLight) = 0;
-
-		virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) = 0;
-		virtual PointLight& GetPointLight(PointLightID pointLight) = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(real r, real g, real b) = 0;
@@ -84,6 +79,13 @@ namespace flex
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
+		bool InitializeDirectionalLight(const DirectionalLight& dirLight);
+		PointLightID InitializePointLight(const PointLight& pointLight);
+
+		DirectionalLight& GetDirectionalLight();
+		PointLight& GetPointLight(PointLightID pointLight);
+		i32 GetNumPointLights();
+
 		static const u32 MAX_TEXTURE_DIM = 65536;
 
 	protected:
@@ -92,6 +94,8 @@ namespace flex
 		*/
 		void DrawImGuiForRenderObjectCommon(GameObject* gameObject);
 
+		void DrawImGuiLights();
+		
 		std::vector<PointLight> m_PointLights;
 		DirectionalLight m_DirectionalLight;
 

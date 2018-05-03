@@ -61,8 +61,6 @@ namespace flex
 		std::string m_JSONFilePath;
 
 		std::vector<GameObject*> m_Children;
-		std::vector<PointLight> m_PointLights;
-		DirectionalLight m_DirectionalLight;
 
 		/*
 		* Stores all unique initialized materials we've created
