@@ -25,7 +25,7 @@
 namespace flex
 {
 	const u32 FlexEngine::EngineVersionMajor = 0;
-	const u32 FlexEngine::EngineVersionMinor = 4;
+	const u32 FlexEngine::EngineVersionMinor = 5;
 	const u32 FlexEngine::EngineVersionPatch = 0;
 
 	FlexEngine::FlexEngine()
