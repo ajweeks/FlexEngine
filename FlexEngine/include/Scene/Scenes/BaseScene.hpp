@@ -49,11 +49,13 @@ namespace flex
 		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
 
 		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
-		JSONField SerializeMaterial(const Material& material, const GameContext& gameContext);
+		JSONObject SerializeMaterial(const Material& material, const GameContext& gameContext);
 		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
 
 		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
+
+		i32 GetMaterialIndex(const Material& material, const GameContext& gameContext);
 
 		std::string m_Name;
 		std::string m_JSONFilePath;
@@ -61,6 +63,12 @@ namespace flex
 		std::vector<GameObject*> m_Children;
 		std::vector<PointLight> m_PointLights;
 		DirectionalLight m_DirectionalLight;
+
+		/*
+		* Stores all unique initialized materials we've created
+		* A "material index" is used to index into this array
+		*/
+		std::vector<MaterialID> m_LoadedMaterials;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 		

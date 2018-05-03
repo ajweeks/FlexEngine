@@ -81,6 +81,17 @@ namespace flex
 
 		sceneRootObject.SetStringChecked("name", m_Name);
 
+		std::vector<JSONObject> materialsArray = sceneRootObject.GetObjectArray("materials");
+		for (i32 i = 0; i < materialsArray.size(); ++i)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			ParseMaterialJSONObject(materialsArray[i], matCreateInfo);
+
+			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
+			m_LoadedMaterials.push_back(matID);
+		}
+
+
 		// This holds all the entities in the scene which do not have a parent
 		const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
 		for (const JSONObject& rootEntity : rootEntities)
@@ -227,6 +238,23 @@ namespace flex
 		bool bVisibleInSceneGraph = true;
 		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
 
+		MaterialID matID = InvalidMaterialID;
+		i32 materialIndex = -1;
+		if (obj.SetIntChecked("material index", materialIndex))
+		{
+			if (materialIndex >= 0 &&
+				materialIndex < m_LoadedMaterials.size())
+			{
+				matID = m_LoadedMaterials[materialIndex];
+			}
+			else
+			{
+				matID = InvalidMaterialID;
+				Logger::LogError("Invalid material index for entity " + objectName + ": " +
+					std::to_string(materialIndex));
+			}
+		}
+
 		switch (entityType)
 		{
 		case SerializableType::MESH:
@@ -242,60 +270,49 @@ namespace flex
 			bool flipZ = meshObj.GetBool("flipZ");
 			bool flipU = meshObj.GetBool("flipU");
 			bool flipV = meshObj.GetBool("flipV");
-			JSONObject material = obj.GetObject("material");
-			std::string materialName = material.GetString("name");
-			std::string shaderName = material.GetString("shader");
 
-			if (shaderName.empty())
+			if (matID == InvalidMaterialID)
 			{
-				Logger::LogError("Can not create entity from JSON: shader name not set in material \"" + materialName + '\"');
-				return nullptr;
-			}
-
-			ShaderID shaderID = InvalidShaderID;
-			if (!gameContext.renderer->GetShaderID(shaderName, shaderID))
-			{
-				Logger::LogError("Shader ID not found in renderer! Shader name: \"" + shaderName + '\"');
-				return nullptr;
-			}
-
-			Shader& shader = gameContext.renderer->GetShader(shaderID);
-			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
-			MaterialCreateInfo matCreateInfo = {};
-			ParseMaterialJSONObject(material, matCreateInfo);
-			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
-
-			if (!meshFilePath.empty())
-			{
-				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
-				mesh->SetRequiredAttributes(requiredVertexAttributes);
-
-				MeshPrefab::ImportSettings importSettings = {};
-				importSettings.flipU = flipU;
-				importSettings.flipV = flipV;
-				importSettings.flipNormalZ = flipZ;
-				importSettings.swapNormalYZ = flipNormalYZ;
-
-				mesh->LoadFromFile(gameContext, 
-					meshFilePath,
-					&importSettings);
-
-				newEntity = mesh;
-			}
-			else if (!meshPrefabName.empty())
-			{
-				MeshPrefab* mesh = new MeshPrefab(matID, objectName);
-				mesh->SetRequiredAttributes(requiredVertexAttributes);
-
-				MeshPrefab::PrefabShape prefabShape = MeshPrefab::StringToPrefabShape(meshPrefabName);
-				mesh->LoadPrefabShape(gameContext, prefabShape);
-
-				newEntity = mesh;
+				Logger::LogError("Mesh entity requires material index: " + objectName);
 			}
 			else
 			{
-				Logger::LogError("Unhandled mesh object " + objectName);
+				Material& material = gameContext.renderer->GetMaterial(matID);
+				Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+				VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+
+
+				if (!meshFilePath.empty())
+				{
+					MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+					mesh->SetRequiredAttributes(requiredVertexAttributes);
+
+					MeshPrefab::ImportSettings importSettings = {};
+					importSettings.flipU = flipU;
+					importSettings.flipV = flipV;
+					importSettings.flipNormalZ = flipZ;
+					importSettings.swapNormalYZ = flipNormalYZ;
+
+					mesh->LoadFromFile(gameContext,
+						meshFilePath,
+						&importSettings);
+
+					newEntity = mesh;
+				}
+				else if (!meshPrefabName.empty())
+				{
+					MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+					mesh->SetRequiredAttributes(requiredVertexAttributes);
+
+					MeshPrefab::PrefabShape prefabShape = MeshPrefab::StringToPrefabShape(meshPrefabName);
+					mesh->LoadPrefabShape(gameContext, prefabShape);
+
+					newEntity = mesh;
+				}
+				else
+				{
+					Logger::LogError("Unhandled mesh object " + objectName);
+				}
 			}
 
 			JSONObject colliderObj;
@@ -380,22 +397,13 @@ namespace flex
 		} break;
 		case SerializableType::SKYBOX:
 		{
-			JSONObject materialObj = obj.GetObject("material");
-
-			MaterialCreateInfo skyboxMatInfo = {};
-			ParseMaterialJSONObject(materialObj, skyboxMatInfo);
-			const MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(gameContext, &skyboxMatInfo);
-
-			if (skyboxMatID == InvalidMaterialID)
+			if (matID == InvalidMaterialID)
 			{
 				Logger::LogError("Failed to create skybox material from serialized values! Can't create skybox.");
-				Logger::LogError("material field:");
-				std::string materialObjStr = materialObj.Print(0);
-				Logger::LogError(materialObjStr);
 			}
 			else
 			{
-				MeshPrefab* skyboxMesh = new MeshPrefab(skyboxMatID, "Skybox");
+				MeshPrefab* skyboxMesh = new MeshPrefab(matID, "Skybox");
 				skyboxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 				AddChild(skyboxMesh);
 
@@ -524,6 +532,21 @@ namespace flex
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
 	}
 
+	i32 BaseScene::GetMaterialIndex(const Material& material, const GameContext& gameContext)
+	{
+		i32 materialIndex = -1;
+		for (i32 j = 0; j < m_LoadedMaterials.size(); ++j)
+		{
+			Material& loadedMat = gameContext.renderer->GetMaterial(m_LoadedMaterials[j]);
+			if (loadedMat.Equals(material, gameContext))
+			{
+				materialIndex = j;
+				break;
+			}
+		}
+		return materialIndex;
+	}
+
 	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
 	{
 		std::string posStr = obj.GetString("position");
@@ -565,13 +588,23 @@ namespace flex
 		i32 fileVersion = 1;
 
 		rootSceneObject.fields.push_back(JSONField("version", JSONValue(fileVersion)));
-
 		rootSceneObject.fields.push_back(JSONField("name", JSONValue(m_Name)));
+
+
+		JSONField materialsField = {};
+		materialsField.label = "materials";
+		std::vector<JSONObject> materialsArray;
+		for (MaterialID matID : m_LoadedMaterials)
+		{
+			Material& material = gameContext.renderer->GetMaterial(matID);
+			materialsArray.push_back(SerializeMaterial(material, gameContext));
+		}
+		materialsField.value = JSONValue(materialsArray);
+		rootSceneObject.fields.push_back(materialsField);
 
 
 		JSONField entitiesField = {};
 		entitiesField.label = "entities";
-
 		std::vector<JSONObject> entitiesArray;
 		for (GameObject* child : m_Children)
 		{
@@ -581,26 +614,22 @@ namespace flex
 			}
 		}
 		entitiesField.value = JSONValue(entitiesArray);
-
 		rootSceneObject.fields.push_back(entitiesField);
 
 
 		JSONField pointLightsField = {};
 		pointLightsField.label = "point lights";
-
 		std::vector<JSONObject> pointLightsArray;
 		for (PointLight& pointLight : m_PointLights)
 		{
 			pointLightsArray.push_back(SerializePointLight(pointLight, gameContext));
 		}
 		pointLightsField.value = JSONValue(pointLightsArray);
-
 		rootSceneObject.fields.push_back(pointLightsField);
 
 
 		JSONField directionalLightsField("directional light",
 			JSONValue(SerializeDirectionalLight(m_DirectionalLight, gameContext)));
-
 		rootSceneObject.fields.push_back(directionalLightsField);
 
 
@@ -697,7 +726,15 @@ namespace flex
 			if (gameContext.renderer->GetRenderObjectCreateInfo(meshRenderID, renderObjectCreateInfo))
 			{
 				const Material& material = gameContext.renderer->GetMaterial(renderObjectCreateInfo.materialID);
-				object.fields.push_back(SerializeMaterial(material, gameContext));
+				i32 materialIndex = GetMaterialIndex(material, gameContext);
+				if (materialIndex == -1)
+				{
+					Logger::LogError("Mesh object contains material not present in BaseScene::m_LoadedMaterials! Parsing this file will fail!");
+				}
+				else
+				{
+					object.fields.push_back(JSONField("material index", JSONValue(materialIndex)));
+				}
 			}
 			else
 			{
@@ -713,8 +750,16 @@ namespace flex
 			glm::vec3 skyboxRotEuler = glm::eulerAngles(skyboxMesh->GetTransform()->GetGlobalRotation());
 			object.fields.push_back(JSONField("rotation", JSONValue(Vec3ToString(skyboxRotEuler))));
 
-			const Material& skyboxMat = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
-			object.fields.push_back(SerializeMaterial(skyboxMat, gameContext));
+			const Material& material = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
+			i32 materialIndex = GetMaterialIndex(material, gameContext);
+			if (materialIndex == -1)
+			{
+				Logger::LogError("Skybox contains material not present in BaseScene::m_LoadedMaterials! Parsing this file will fail!");
+			}
+			else
+			{
+				object.fields.push_back(JSONField("material index", JSONValue(materialIndex)));
+			}
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
@@ -847,11 +892,8 @@ namespace flex
 		return object;
 	}
 
-	JSONField BaseScene::SerializeMaterial(const Material& material, const GameContext& gameContext)
+	JSONObject BaseScene::SerializeMaterial(const Material& material, const GameContext& gameContext)
 	{
-		JSONField materialField = {};
-		materialField.label = "material";
-
 		JSONObject materialObject = {};
 
 		materialObject.fields.push_back(JSONField("name", JSONValue(material.name)));
@@ -974,9 +1016,7 @@ namespace flex
 				JSONValue(cleanedEnvMapPath)));
 		}
 
-		materialField.value = JSONValue(materialObject);
-
-		return materialField;
+		return materialObject;
 	}
 
 	JSONObject BaseScene::SerializePointLight(PointLight& pointLight, const GameContext& gameContext)

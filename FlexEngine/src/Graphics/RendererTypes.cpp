@@ -67,4 +67,62 @@ namespace flex
 		fragmentShaderFilePath(fragmentShaderFilePath)
 	{
 	}
+
+	bool Material::Equals(const Material& other, const GameContext& gameContext)
+	{
+		// TODO: FIXME: Pls don't do this :(
+		// memcmp instead ???
+
+		bool equal =
+			(name == other.name &&
+				shaderID == other.shaderID &&
+				generateDiffuseSampler == other.generateDiffuseSampler &&
+				enableDiffuseSampler == other.enableDiffuseSampler &&
+				diffuseTexturePath == other.diffuseTexturePath &&
+				generateNormalSampler == other.generateNormalSampler &&
+				enableNormalSampler == other.enableNormalSampler &&
+				normalTexturePath == other.normalTexturePath &&
+				frameBuffers.size() == other.frameBuffers.size() &&
+				generateCubemapSampler == other.generateCubemapSampler &&
+				enableCubemapSampler == other.enableCubemapSampler &&
+				cubemapSamplerSize == other.cubemapSamplerSize &&
+				cubeMapFilePaths[0] == other.cubeMapFilePaths[0] &&
+				constAlbedo == other.constAlbedo &&
+				constMetallic == other.constMetallic &&
+				constRoughness == other.constRoughness &&
+				constAO == other.constAO &&
+				generateAlbedoSampler == other.generateAlbedoSampler &&
+				enableAlbedoSampler == other.enableAlbedoSampler &&
+				albedoTexturePath == other.albedoTexturePath &&
+				generateMetallicSampler == other.generateMetallicSampler &&
+				enableMetallicSampler == other.enableMetallicSampler &&
+				metallicTexturePath == other.metallicTexturePath &&
+				generateRoughnessSampler == other.generateRoughnessSampler &&
+				enableRoughnessSampler == other.enableRoughnessSampler &&
+				roughnessTexturePath == other.roughnessTexturePath &&
+				albedoTexturePath == other.albedoTexturePath &&
+				generateAOSampler == other.generateAOSampler &&
+				enableAOSampler == other.enableAOSampler &&
+				aoTexturePath == other.aoTexturePath &&
+				generateHDREquirectangularSampler == other.generateHDREquirectangularSampler &&
+				enableHDREquirectangularSampler == other.enableHDREquirectangularSampler &&
+				hdrEquirectangularTexturePath == other.hdrEquirectangularTexturePath &&
+				enableCubemapTrilinearFiltering == other.enableCubemapTrilinearFiltering &&
+				generateHDRCubemapSampler == other.generateHDRCubemapSampler &&
+				enableIrradianceSampler == other.enableIrradianceSampler &&
+				generateIrradianceSampler == other.generateIrradianceSampler &&
+				irradianceSamplerSize == other.irradianceSamplerSize &&
+				environmentMapPath == other.environmentMapPath &&
+				enablePrefilteredMap == other.enablePrefilteredMap &&
+				generatePrefilteredMap == other.generatePrefilteredMap &&
+				prefilteredMapSize == other.prefilteredMapSize &&
+				enableBRDFLUT == other.enableBRDFLUT &&
+				renderToCubemap == other.renderToCubemap &&
+				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
+				colorMultiplier == other.colorMultiplier
+				//pushConstantBlock.mvp == other.pushConstantBlock.mvp &&
+				);
+
+		return equal;
+	}
 } // namespace flex

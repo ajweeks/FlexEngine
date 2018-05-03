@@ -175,6 +175,8 @@ namespace flex
 
 	struct Material
 	{
+		bool Equals(const Material& other, const GameContext& gameContext);
+
 		std::string name = "";
 
 		ShaderID shaderID = InvalidShaderID;

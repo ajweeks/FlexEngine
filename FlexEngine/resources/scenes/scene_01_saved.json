@@ -1,6 +1,62 @@
 {
 	"version" : 1,
 	"name" : "scene_01",
+	"materials" : 
+	[
+		{
+			"name" : "pbr",
+			"shader" : "pbr",
+			"const albedo" : "0.780000, 0.120000, 0.110000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.250000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr",
+			"shader" : "pbr",
+			"const albedo" : "0.230000, 0.250000, 0.290000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.540000, 0.100000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "Skybox",
+			"shader" : "skybox",
+			"const albedo" : "0.000000, 0.000000, 0.000000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000,
+			"generate hdr cubemap sampler" : true,
+			"enable cubemap sampler" : true,
+			"enable cubemap trilinear filtering" : true,
+			"generated cubemap size" : "512.000000, 512.000000",
+			"generate irradiance sampler" : true,
+			"generated irradiance cubemap size" : "32.000000, 32.000000",
+			"generate prefiltered map" : true,
+			"generated prefiltered map size" : "128.000000, 128.000000",
+			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
+		}
+	],
 	"entities" : 
 	[
 		{
@@ -19,7 +75,7 @@
 				{
 					"name" : "Sphere 01",
 					"type" : "mesh",
-					"visible" : false,
+					"visible" : true,
 					"transform" : 
 					{
 						"space" : "local",
@@ -31,26 +87,14 @@
 					{
 						"file" : "models/ico-sphere.gltf"
 					},
-					"material" : 
-					{
-						"name" : "pbr",
-						"shader" : "pbr",
-						"const albedo" : "0.780000, 0.120000, 0.110000",
-						"const metallic" : 0.000000,
-						"const roughness" : 0.250000,
-						"const ao" : 1.000000,
-						"enable albedo sampler" : false,
-						"enable metallic sampler" : false,
-						"enable roughness sampler" : false,
-						"enable ao sampler" : false
-					}
+					"material index" : 0
 				}
 			]
 		},
 		{
 			"name" : "Sphere 02",
 			"type" : "mesh",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
 				"space" : "local",
@@ -62,19 +106,7 @@
 			{
 				"file" : "models/ico-sphere.gltf"
 			},
-			"material" : 
-			{
-				"name" : "pbr",
-				"shader" : "pbr",
-				"const albedo" : "0.780000, 0.120000, 0.110000",
-				"const metallic" : 1.000000,
-				"const roughness" : 0.250000,
-				"const ao" : 1.000000,
-				"enable albedo sampler" : false,
-				"enable metallic sampler" : false,
-				"enable roughness sampler" : false,
-				"enable ao sampler" : false
-			},
+			"material index" : 0,
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -102,19 +134,7 @@
 			{
 				"file" : "models/mori-knob.gltf"
 			},
-			"material" : 
-			{
-				"name" : "pbr",
-				"shader" : "pbr",
-				"const albedo" : "0.800000, 0.800000, 0.800000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 1.000000,
-				"enable albedo sampler" : false,
-				"enable metallic sampler" : false,
-				"enable roughness sampler" : false,
-				"enable ao sampler" : false
-			}
+			"material index" : 1
 		},
 		{
 			"name" : "chamfer box",
@@ -131,19 +151,7 @@
 			{
 				"file" : "models/chamfer-box.gltf"
 			},
-			"material" : 
-			{
-				"name" : "pbr",
-				"shader" : "pbr",
-				"const albedo" : "0.800000, 0.540000, 0.100000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.200000,
-				"const ao" : 1.000000,
-				"enable albedo sampler" : false,
-				"enable metallic sampler" : false,
-				"enable roughness sampler" : false,
-				"enable ao sampler" : false
-			},
+			"material index" : 2,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -172,19 +180,7 @@
 			{
 				"file" : "models/unit-plane.gltf"
 			},
-			"material" : 
-			{
-				"name" : "pbr",
-				"shader" : "pbr",
-				"const albedo" : "0.230000, 0.250000, 0.290000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.200000,
-				"const ao" : 1.000000,
-				"enable albedo sampler" : false,
-				"enable metallic sampler" : false,
-				"enable roughness sampler" : false,
-				"enable ao sampler" : false
-			},
+			"material index" : 1,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -202,24 +198,7 @@
 			"type" : "skybox",
 			"visible" : true,
 			"rotation" : "0.000000, -0.000000, 0.000000",
-			"material" : 
-			{
-				"name" : "Skybox",
-				"shader" : "skybox",
-				"const albedo" : "0.000000, 0.000000, 0.000000",
-				"const metallic" : 0.000000,
-				"const roughness" : 0.000000,
-				"const ao" : 0.000000,
-				"generate hdr cubemap sampler" : true,
-				"enable cubemap sampler" : true,
-				"enable cubemap trilinear filtering" : true,
-				"generated cubemap size" : "512.000000, 512.000000",
-				"generate irradiance sampler" : true,
-				"generated irradiance cubemap size" : "32.000000, 32.000000",
-				"generate prefiltered map" : true,
-				"generated prefiltered map size" : "128.000000, 128.000000",
-				"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
-			}
+			"material index" : 3
 		},
 		{
 			"name" : "Reflection Probe 01",
