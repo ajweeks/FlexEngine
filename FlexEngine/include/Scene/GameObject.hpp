@@ -42,7 +42,7 @@ namespace flex
 		void SetStatic(bool newStatic);
 
 		bool IsVisible() const;
-		void SetVisible(bool visible);
+		void SetVisible(bool visible, bool effectChildren = true);
 
 		bool IsVisibleInSceneExplorer() const;
 		void SetVisibleInSceneExplorer(bool visibleInSceneExplorer);
@@ -86,7 +86,7 @@ namespace flex
 		* True if and only if this object will never move
 		* If true, this object will be rendered to reflection probes
 		*/
-		bool m_bStatic = true;
+		bool m_bStatic = false;
 
 		btCollisionShape* m_CollisionShape = nullptr;
 		RigidBody* m_RigidBody = nullptr;

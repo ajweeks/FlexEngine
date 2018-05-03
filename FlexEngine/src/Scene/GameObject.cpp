@@ -218,9 +218,17 @@ namespace flex
 		return m_bVisible;
 	}
 
-	void GameObject::SetVisible(bool visible)
+	void GameObject::SetVisible(bool visible, bool effectChildren)
 	{
 		m_bVisible = visible;
+
+		if (effectChildren)
+		{
+			for (GameObject* child : m_Children)
+			{
+				child->SetVisible(visible, effectChildren);
+			}
+		}
 	}
 
 	bool GameObject::IsVisibleInSceneExplorer() const

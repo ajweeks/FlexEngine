@@ -124,6 +124,7 @@ namespace flex
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 		m_Grid->SetSerializable(false);
+		m_Grid->SetStatic(true);
 		AddChild(m_Grid);
 
 		MaterialCreateInfo worldAxisMatInfo = {};
@@ -135,6 +136,7 @@ namespace flex
 		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
 		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 		m_WorldOrigin->SetSerializable(false);
+		m_WorldOrigin->SetStatic(true);
 		AddChild(m_WorldOrigin);
 
 
@@ -434,6 +436,12 @@ namespace flex
 			newEntity->SetVisibleInSceneExplorer(bVisibleInSceneGraph);
 			newEntity->m_Transform = transform;
 
+			bool bStatic = false;
+			if (obj.SetBoolChecked("static", bStatic))
+			{
+				newEntity->SetStatic(bStatic);
+			}
+
 			if (obj.HasField("children"))
 			{
 				std::vector<JSONObject> children = obj.GetObjectArray("children");
@@ -640,6 +648,11 @@ namespace flex
 		{
 			object.fields.push_back(JSONField("visible in scene graph", 
 				JSONValue(gameObject->IsVisibleInSceneExplorer())));
+		}
+
+		if (gameObject->IsStatic())
+		{
+			object.fields.push_back(JSONField("static", JSONValue(true)));
 		}
 		
 		switch (childType)
