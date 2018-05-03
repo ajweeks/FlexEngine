@@ -29,9 +29,9 @@
 #include "Scene/SceneManager.hpp"
 #include "Scene/Scenes/BaseScene.hpp"
 #include "Scene/MeshPrefab.hpp"
+#include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 #include "Physics/PhysicsWorld.hpp"
-
 
 namespace flex
 {
@@ -74,6 +74,8 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
+
+			//m_DefaultTransform = Transform::Identity();
 
 			CheckGLErrorMessages();
 		}
@@ -159,16 +161,41 @@ namespace flex
 				m_1x1_NDC_QuadVertexBufferData.Destroy();
 			}
 
-			if (m_SkyBoxMesh)
+			if (m_1x1_NDC_Quad)
 			{
-				DestroyRenderObject(m_SkyBoxMesh->GetRenderID());
-				SafeDelete(m_SkyBoxMesh);
+				DestroyRenderObject(m_1x1_NDC_Quad->renderID);
+				m_1x1_NDC_Quad = nullptr;
 			}
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (GameObject* obj : m_PersistentObjects)
 			{
-				DestroyRenderObject(i);
-				CheckGLErrorMessages();
+				if (obj->GetRenderID() != InvalidRenderID)
+				{
+					DestroyRenderObject(obj->GetRenderID());
+				}
+				SafeDelete(obj);
+			}
+			m_PersistentObjects.clear();
+
+			DestroyRenderObject(m_SpriteQuadRenderID);
+
+			DestroyRenderObject(m_GBufferQuadRenderID);
+
+			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
+			if (activeRenderObjectCount > 0)
+			{
+				Logger::LogError("=====================================================");
+				Logger::LogError(std::to_string(activeRenderObjectCount) + " render objects were not destroyed before GL render:");
+
+				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+				{
+					if (m_RenderObjects[i])
+					{
+						Logger::LogError(m_RenderObjects[i]->gameObject->GetName());
+						DestroyRenderObject(m_RenderObjects[i]->renderID);
+					}
+				}
+				Logger::LogError("=====================================================");
 			}
 			m_RenderObjects.clear();
 			CheckGLErrorMessages();
@@ -204,7 +231,7 @@ namespace flex
 				}
 				else
 				{
-					Logger::LogError("Material's shader not set! (material: " + createInfo->name + ", shader: " + createInfo->shaderName + ")");
+					Logger::LogError("Material's shader name couldn't be found! shader name: " + createInfo->shaderName);
 				}
 			}
 			
@@ -267,6 +294,8 @@ namespace flex
 
 			mat.material.frameBuffers = createInfo->frameBuffers;
 
+			mat.material.enableCubemapTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+
 			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
 			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler || createInfo->generateHDRCubemapSampler;
 			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
@@ -305,6 +334,26 @@ namespace flex
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
 
+
+
+
+
+
+
+			// TODO: FIXME!!!
+			if (m_SkyBoxMesh &&
+				m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
+			{
+				MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
+
+				mat.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+				mat.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
+			}
+
+
+
+
+
 			mat.material.environmentMapPath = createInfo->environmentMapPath;
 
 			mat.material.generateReflectionProbeMaps = createInfo->generateReflectionProbeMaps;
@@ -313,14 +362,17 @@ namespace flex
 
 			if (shader.shader.needIrradianceSampler)
 			{
-				if (createInfo->irradianceSamplerMatID >= m_Materials.size())
+				if (mat.irradianceSamplerID == InvalidID)
 				{
-					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
-					mat.irradianceSamplerID = InvalidID;
-				}
-				else
-				{
-					mat.irradianceSamplerID = m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID;
+					if (createInfo->irradianceSamplerMatID >= m_Materials.size())
+					{
+						//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
+						mat.irradianceSamplerID = InvalidID;
+					}
+					else
+					{
+						mat.irradianceSamplerID = m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID;
+					}
 				}
 			}
 			if (shader.shader.needBRDFLUT)
@@ -334,14 +386,17 @@ namespace flex
 			}
 			if (shader.shader.needPrefilteredMap)
 			{
-				if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
+				if (mat.prefilteredMapSamplerID == InvalidID)
 				{
-					//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
-					mat.prefilteredMapSamplerID = InvalidID;
-				}
-				else
-				{
-					mat.prefilteredMapSamplerID = m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID;
+					if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
+					{
+						//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
+						mat.prefilteredMapSamplerID = InvalidID;
+					}
+					else
+					{
+						mat.prefilteredMapSamplerID = m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID;
+					}
 				}
 			}
 
@@ -611,24 +666,48 @@ namespace flex
 
 			const RenderID renderID = GetNextAvailableRenderID();
 
+			assert(createInfo->materialID != InvalidMaterialID);
+
 			GLRenderObject* renderObject = new GLRenderObject();
 			renderObject->renderID = renderID;
 			InsertNewRenderObject(renderObject);
+
 			renderObject->materialID = createInfo->materialID;
-			renderObject->cullFace = CullFaceToGLMode(createInfo->cullFace);
+			renderObject->vertexBufferData = createInfo->vertexBufferData;
+			renderObject->indices = createInfo->indices;
+			renderObject->gameObject = createInfo->gameObject;
+			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
 			renderObject->enableCulling = createInfo->enableCulling ? GL_TRUE : GL_FALSE;
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
 
-			
-			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
-			renderObject->name = createInfo->name;
-			renderObject->transform = createInfo->transform;
-			renderObject->visibleInSceneExplorer = createInfo->visibleInSceneExplorer;
+			if (renderObject->materialID == InvalidMaterialID)
+			{
+				Logger::LogError("Render object's materialID has not been set in its createInfo!");
 
-			assert(!renderObject->materialName.empty());
-			assert(!renderObject->name.empty());
-			assert(renderObject->transform != nullptr);
+				// TODO: Use INVALID material here (Bright pink)
+				// Hopefully the first material works out okay! Should be better than crashing
+				renderObject->materialID = 0;
+
+				if (m_Materials.size() > 0)
+				{
+					renderObject->materialName = m_Materials[renderObject->materialID].material.name;
+				}
+			}
+			else
+			{
+				renderObject->materialName = m_Materials[renderObject->materialID].material.name;
+
+				if (renderObject->materialName.empty())
+				{
+					Logger::LogWarning("Render object created with empty material name!");
+				}
+			}
+
+			if (renderObject->gameObject->GetName().empty())
+			{
+				Logger::LogWarning("Render object created with empty name!");
+			}
 
 			if (m_Materials.empty())
 			{
@@ -659,11 +738,8 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			renderObject->vertexBufferData = createInfo->vertexBufferData;
-
 			if (createInfo->indices != nullptr)
 			{
-				renderObject->indices = createInfo->indices;
 				renderObject->indexed = true;
 
 				glGenBuffers(1, &renderObject->IBO);
@@ -725,11 +801,6 @@ namespace flex
 			GLShader* equirectangularToCubemapShader = &m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID];
 			GLMaterial* equirectangularToCubemapMaterial = &m_Materials[equirectangularToCubeMatID];
 
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
-
 			// TODO: Handle no skybox being set gracefully
 			GLRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			GLMaterial* skyboxGLMaterial = &m_Materials[skyboxRenderObject->materialID];
@@ -743,13 +814,15 @@ namespace flex
 			CheckGLErrorMessages();
 
 			// Update object's uniforms under this shader's program
-			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.model, 1, false, &m_SkyBoxMesh->GetTransform().GetModelMatrix()[0][0]);
+			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.model, 1, false, 
+				&m_SkyBoxMesh->GetTransform()->GetModelMatrix()[0][0]);
 			CheckGLErrorMessages();
 
-			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
+			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.projection, 1, false, 
+				&m_CaptureProjection[0][0]);
 			CheckGLErrorMessages();
 
-			glm::uvec2 cubemapSize = skyboxGLMaterial->material.cubemapSamplerSize;
+			glm::vec2 cubemapSize = skyboxGLMaterial->material.cubemapSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			CheckGLErrorMessages();
@@ -783,10 +856,12 @@ namespace flex
 
 			for (u32 i = 0; i < 6; ++i)
 			{
-				glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
+				glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.view, 1, false, 
+					&m_CaptureViews[i][0][0]);
 				CheckGLErrorMessages();
 
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
 				CheckGLErrorMessages();
 
 				glDepthMask(GL_TRUE);
@@ -797,7 +872,8 @@ namespace flex
 				glDepthMask(skyboxRenderObject->depthWriteEnable);
 				CheckGLErrorMessages();
 
-				glDrawArrays(skyboxRenderObject->topology, 0, (GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
+				glDrawArrays(skyboxRenderObject->topology, 0, 
+					(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
 				CheckGLErrorMessages();
 			}
 
@@ -826,17 +902,13 @@ namespace flex
 			GLMaterial& prefilterMat = m_Materials[prefilterMatID];
 			GLShader& prefilterShader = m_Shaders[prefilterMat.material.shaderID];
 
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
-
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			glUseProgram(prefilterShader.program);
 			CheckGLErrorMessages();
 
-			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, false, &m_SkyBoxMesh->GetTransform().GetModelMatrix()[0][0]);
+			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, false, 
+				&m_SkyBoxMesh->GetTransform()->GetModelMatrix()[0][0]);
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
@@ -916,7 +988,7 @@ namespace flex
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize)
+		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
@@ -941,18 +1013,25 @@ namespace flex
 					{ 1.0f, 1.0f },
 					{ 1.0f, 0.0f },
 				};
-				quadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
+				quadVertexBufferDataCreateInfo.attributes = 
+					(u32)VertexAttribute::POSITION | 
+					(u32)VertexAttribute::UV;
 
 				m_1x1_NDC_QuadVertexBufferData = {};
 				m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
 
 				m_1x1_NDC_QuadTransform = Transform::Identity();
 
+
+				GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", SerializableType::NONE);
+				m_PersistentObjects.push_back(oneByOneQuadGameObject);
+				// Don't render this normally, we'll draw it manually
+				oneByOneQuadGameObject->SetVisible(false);
+
 				RenderObjectCreateInfo quadCreateInfo = {};
-				quadCreateInfo.name = "1x1 Quad";
 				quadCreateInfo.materialID = brdfMatID;
 				quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
-				quadCreateInfo.transform = &m_1x1_NDC_QuadTransform;
+				quadCreateInfo.gameObject = oneByOneQuadGameObject;
 				quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quadCreateInfo.depthWriteEnable = false;
 				quadCreateInfo.visibleInSceneExplorer = false;
@@ -967,7 +1046,6 @@ namespace flex
 				else
 				{
 					SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-					m_1x1_NDC_Quad->visible = false; // Don't render this normally, we'll draw it manually
 					m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(gameContext.renderer, quadRenderID);
 				}
 			}
@@ -1033,17 +1111,13 @@ namespace flex
 			GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
 			GLShader& shader = m_Shaders[irradianceMat.material.shaderID];
 
-			if (!m_SkyBoxMesh)
-			{
-				GenerateSkybox(gameContext);
-			}
-
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			glUseProgram(shader.program);
 			CheckGLErrorMessages();
 
-			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, false, &m_SkyBoxMesh->GetTransform().GetModelMatrix()[0][0]);
+			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, false, 
+				&m_SkyBoxMesh->GetTransform()->GetModelMatrix()[0][0]);
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
@@ -1053,7 +1127,7 @@ namespace flex
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			CheckGLErrorMessages();
 
-			glm::uvec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
+			glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
@@ -1120,7 +1194,7 @@ namespace flex
 			GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 			GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
-			glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+			glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 
 			// Must be enabled to clear depth buffer
 			glDepthMask(GL_TRUE);
@@ -1142,7 +1216,8 @@ namespace flex
 				{
 					for (size_t i = 0; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
 					{
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, 
+							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
 						CheckGLErrorMessages();
 
 						glDepthMask(GL_TRUE);
@@ -1153,9 +1228,11 @@ namespace flex
 				}
 
 				// Clear base cubemap framebuffer + depth buffer
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 				CheckGLErrorMessages();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
+					GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 				CheckGLErrorMessages();
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1209,35 +1286,12 @@ namespace flex
 			return false;
 		}
 
-		DirectionalLightID GLRenderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
-		{
-			m_DirectionalLight = dirLight;
-			return 0;
-		}
-
-		PointLightID GLRenderer::InitializePointLight(const PointLight& pointLight)
-		{
-			m_PointLights.push_back(pointLight);
-			return m_PointLights.size() - 1;
-		}
-
-		DirectionalLight& GLRenderer::GetDirectionalLight(DirectionalLightID dirLightID)
-		{
-			// TODO: Add support for multiple directional lights
-			UNREFERENCED_PARAMETER(dirLightID);
-			return m_DirectionalLight;
-		}
-
-		PointLight& GLRenderer::GetPointLight(PointLightID pointLight)
-		{
-			return m_PointLights[pointLight];
-		}
-
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to SetTopologyMode: " + std::to_string(renderID));
 				return;
 			}
 
@@ -1245,7 +1299,8 @@ namespace flex
 
 			if (glMode == GL_INVALID_ENUM)
 			{
-				Logger::LogError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: " + std::to_string((i32)topology));
+				Logger::LogError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: " + 
+					std::to_string((i32)topology));
 				renderObject->topology = GL_TRIANGLES;
 			}
 			else
@@ -1394,22 +1449,27 @@ namespace flex
 				glm::vec4(1.0f),
 			};
 
-			spriteQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION_2D | (u32)VertexAttribute::UV | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			spriteQuadVertexBufferDataCreateInfo.attributes = 
+				(u32)VertexAttribute::POSITION_2D | 
+				(u32)VertexAttribute::UV | 
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			m_SpriteQuadVertexBufferData = {};
 			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
 
-			m_SpriteQuadTransform.SetAsIdentity();
+
+			GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", SerializableType::NONE);
+			m_PersistentObjects.push_back(spriteQuadGameObject);
+			spriteQuadGameObject->SetVisible(false);
 
 			RenderObjectCreateInfo spriteQuadCreateInfo = {};
-			spriteQuadCreateInfo.name = "Sprite quad";
 			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
 			spriteQuadCreateInfo.materialID = m_SpriteMatID;
 			spriteQuadCreateInfo.depthWriteEnable = false;
-			spriteQuadCreateInfo.transform = &m_SpriteQuadTransform;
+			spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
 			spriteQuadCreateInfo.enableCulling = false;
+			spriteQuadCreateInfo.visibleInSceneExplorer = false;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
-			GetRenderObject(m_SpriteQuadRenderID)->visible = false;
 
 			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
 
@@ -1419,7 +1479,8 @@ namespace flex
 			if (m_BRDFTextureHandle.id == 0)
 			{
 				Logger::LogInfo("Generating BRDF LUT");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, 
+					m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
 
@@ -1470,7 +1531,8 @@ namespace flex
 
 			if (m_BRDFTextureHandle.id == 0)
 			{
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, 
+					m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
 
@@ -1488,7 +1550,6 @@ namespace flex
 
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
 			CheckGLErrorMessages();
-
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
 			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
@@ -1537,7 +1598,7 @@ namespace flex
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
-					GLRenderObject* renderObject = iter->second;
+					GLRenderObject* renderObject = *iter;
 					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
 						Logger::LogInfo("Capturing reflection probe");
@@ -1602,7 +1663,9 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						GLRenderObject* renderObject = GetRenderObject(j);
-						if (renderObject && renderObject->visible && renderObject->materialID == i)
+						if (renderObject &&
+							renderObject->gameObject->IsVisible() &&
+							renderObject->materialID == i)
 						{
 							m_DeferredRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1614,7 +1677,9 @@ namespace flex
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
 						GLRenderObject* renderObject = GetRenderObject(j);
-						if (renderObject && renderObject->visible && renderObject->materialID == i)
+						if (renderObject &&
+							renderObject->gameObject->IsVisible() &&
+							renderObject->materialID == i)
 						{
 							m_ForwardRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1637,7 +1702,7 @@ namespace flex
 				GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 				GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
-				glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+				glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 				CheckGLErrorMessages();
@@ -1693,7 +1758,8 @@ namespace flex
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_OffscreenRBO);
-				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, 
+					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 				CheckGLErrorMessages();
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -1709,11 +1775,6 @@ namespace flex
 
 			if (drawCallInfo.renderToCubemap)
 			{
-				if (!m_SkyBoxMesh)
-				{
-					GenerateSkybox(gameContext);
-				}
-
 				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 				GLRenderObject* cubemapObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
@@ -1725,7 +1786,8 @@ namespace flex
 				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				CheckGLErrorMessages();
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapMaterial->material.cubemapSamplerSize.x, cubemapMaterial->material.cubemapSamplerSize.y);
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24,
+					cubemapMaterial->material.cubemapSamplerSize.x, cubemapMaterial->material.cubemapSamplerSize.y);
 				CheckGLErrorMessages();
 
 				glUseProgram(cubemapShader->program);
@@ -1736,7 +1798,8 @@ namespace flex
 				CheckGLErrorMessages();
 
 				UpdateMaterialUniforms(gameContext, cubemapObject->materialID);
-				UpdatePerObjectUniforms(cubemapObject->materialID, skybox->transform->GetModelMatrix(), gameContext);
+				UpdatePerObjectUniforms(cubemapObject->materialID, 
+					skybox->gameObject->GetTransform()->GetModelMatrix(), gameContext);
 
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
@@ -1769,7 +1832,8 @@ namespace flex
 					glUniformMatrix4fv(cubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[face][0][0]);
 					CheckGLErrorMessages();
 
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 					CheckGLErrorMessages();
 
 					// Draw cube (TODO: Use "cube" object to be less confusing)
@@ -1866,9 +1930,15 @@ namespace flex
 			for (size_t i = 0; i < batchedRenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = batchedRenderObjects[i];
-				if (!renderObject->visible)
+				if (!renderObject->gameObject->IsVisible())
 				{
 					continue;
+				}
+
+				if (!renderObject->vertexBufferData)
+				{
+					Logger::LogError("Attempted to draw object which contains no vertex buffer data: " + renderObject->gameObject->GetName());
+					return;
 				}
 
 				glBindVertexArray(renderObject->VAO);
@@ -1904,7 +1974,7 @@ namespace flex
 					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
-					glm::uvec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 					
 					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 					CheckGLErrorMessages();
@@ -1921,7 +1991,7 @@ namespace flex
 					CheckGLErrorMessages();
 					
 					// TODO: Test if this is actually correct
-					glm::vec3 cubemapTranslation = -cubemapRenderObject->transform->GetGlobalPosition();
+					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetGlobalPosition();
 					for (size_t face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
@@ -1941,17 +2011,20 @@ namespace flex
 
 							for (size_t j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
 							{
-								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
+								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
+									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
 								CheckGLErrorMessages();
 							}
 						}
 						else
 						{
-							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 							CheckGLErrorMessages();
 						}
 
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
+							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 						CheckGLErrorMessages();
 
 						// TODO: Move to translucent pass?
@@ -1967,7 +2040,8 @@ namespace flex
 
 						if (renderObject->indexed)
 						{
-							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), 
+								GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 							CheckGLErrorMessages();
 						}
 						else
@@ -1994,7 +2068,8 @@ namespace flex
 
 					if (renderObject->indexed)
 					{
-						glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+						glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(),
+							GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 						CheckGLErrorMessages();
 					}
 					else
@@ -2414,7 +2489,7 @@ namespace flex
 					CheckGLErrorMessages();
 					SetVec4f(material->material.shaderID, "dirLight.direction", m_DirectionalLight.direction);
 					CheckGLErrorMessages();
-					SetVec4f(material->material.shaderID, "dirLight.color", m_DirectionalLight.color);
+					SetVec4f(material->material.shaderID, "dirLight.color", m_DirectionalLight.color * m_DirectionalLight.brightness);
 					CheckGLErrorMessages();
 				}
 				else
@@ -2438,7 +2513,7 @@ namespace flex
 						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
 						CheckGLErrorMessages();
 
-						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color);
+						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color * m_PointLights[i].brightness);
 						CheckGLErrorMessages();
 					}
 					else
@@ -2458,10 +2533,11 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to UpdatePerObjectUniforms: " + std::to_string(renderID));
 				return;
 			}
 
-			glm::mat4 model = renderObject->transform->GetModelMatrix();
+			glm::mat4 model = renderObject->gameObject->GetTransform()->GetModelMatrix();
 			UpdatePerObjectUniforms(renderObject->materialID, model, gameContext);
 		}
 
@@ -2618,13 +2694,28 @@ namespace flex
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
 		}
 
-		void GLRenderer::SetRenderObjectVisible(RenderID renderID, bool visible)
+		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{
+			outInfo = {};
+
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
+			if (!renderObject)
 			{
-				renderObject->visible = visible;
+				return false;
 			}
+
+			outInfo.materialID = renderObject->materialID;
+			outInfo.vertexBufferData = renderObject->vertexBufferData;
+			outInfo.indices = renderObject->indices;
+			outInfo.gameObject = renderObject->gameObject;
+			outInfo.visible = renderObject->gameObject->IsVisible();
+			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
+			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
+			outInfo.enableCulling = renderObject->enableCulling;
+			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
+			outInfo.depthWriteEnable = renderObject->depthWriteEnable;
+
+			return true;
 		}
 
 		void GLRenderer::SetVSyncEnabled(bool enableVSync)
@@ -2717,16 +2808,6 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::GenerateSkybox(const GameContext& gameContext)
-		{
-			if (!m_SkyBoxMesh)
-			{
-				m_SkyBoxMesh = new MeshPrefab(m_SkyBoxMaterialID, "Skybox Mesh");
-				m_SkyBoxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-				m_SkyBoxMesh->Initialize(gameContext);
-				m_SkyBoxMesh->PostInitialize(gameContext);
-			}
-		}
 
 		void GLRenderer::GenerateGBuffer(const GameContext& gameContext)
 		{
@@ -2780,12 +2861,15 @@ namespace flex
 
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
-			m_gBufferQuadTransform = Transform::Identity();
+
+			GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", SerializableType::NONE);
+			m_PersistentObjects.push_back(gBufferQuadGameObject);
+			// Don't render the g buffer normally, we'll handle it separately
+			gBufferQuadGameObject->SetVisible(false);
 
 			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
-			gBufferQuadCreateInfo.name = "G Buffer Quad";
 			gBufferQuadCreateInfo.materialID = gBufferMatID;
-			gBufferQuadCreateInfo.transform = &m_gBufferQuadTransform;
+			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
 			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
@@ -2796,7 +2880,6 @@ namespace flex
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
 			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-			gBufferRenderObject->visible = false; // Don't render the g buffer normally, we'll handle it separately
 		}
 
 		u32 GLRenderer::GetRenderObjectCount() const
@@ -2806,7 +2889,7 @@ namespace flex
 
 			for (auto renderObject : m_RenderObjects)
 			{
-				if (renderObject.second)
+				if (renderObject)
 				{
 					++count;
 				}
@@ -2817,17 +2900,30 @@ namespace flex
 
 		u32 GLRenderer::GetRenderObjectCapacity() const
 		{
-			return m_RenderObjects.size();
+			return m_RenderObjects.capacity();
 		}
 
-		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-			DataType dataType, bool normalized, i32 stride, void* pointer)
+		u32 GLRenderer::GetActiveRenderObjectCount() const
+		{
+			u32 capacity = 0;
+			for (auto renderObject : m_RenderObjects)
+			{
+				if (renderObject)
+				{
+					++capacity;
+				}
+			}
+			return capacity;
+		}
+
+		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to DescribeShaderVariable: " + std::to_string(renderID));
 				return;
 			}
 
@@ -2858,22 +2954,38 @@ namespace flex
 			glUseProgram(last_program);
 		}
 
-		void GLRenderer::SetSkyboxMaterial(MaterialID skyboxMaterialID)
+		void GLRenderer::SetSkyboxMesh(MeshPrefab* skyboxMesh)
 		{
-			assert(skyboxMaterialID >= 0 && skyboxMaterialID < m_Materials.size());
+			m_SkyBoxMesh = skyboxMesh;
 
-			m_SkyBoxMaterialID = skyboxMaterialID;
+			if (skyboxMesh == nullptr)
+			{
+				return;
+			}
+
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
+			if (skyboxMaterialID == InvalidMaterialID)
+			{
+				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
+				return;
+			}
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject && m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+				if (renderObject &&
+					m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
 				{
 					GLMaterial* mat = &m_Materials[renderObject->materialID];
-					mat->irradianceSamplerID = m_Materials[m_SkyBoxMaterialID].irradianceSamplerID;
-					mat->prefilteredMapSamplerID = m_Materials[m_SkyBoxMaterialID].prefilteredMapSamplerID;
+					mat->irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+					mat->prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
 				}
 			}
+		}
+
+		MeshPrefab* GLRenderer::GetSkyboxMesh()
+		{
+			return m_SkyBoxMesh;
 		}
 
 		void GLRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
@@ -2904,6 +3016,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
+				Logger::LogError("Invalid renderID passed to DestroyRenderObject: " + std::to_string(renderID));
 				return;
 			}
 
@@ -2915,7 +3028,7 @@ namespace flex
 				glDeleteBuffers(1, &renderObject->IBO);
 			}
 
-			SafeDelete(renderObject);
+SafeDelete(renderObject);
 		}
 
 		void GLRenderer::ImGuiNewFrame()
@@ -2941,125 +3054,90 @@ namespace flex
 
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				const u32 objectCount = GetRenderObjectCount();
-				const u32 objectCapacity = GetRenderObjectCapacity();
-				const std::string objectCountStr("Render object count/capacity: " + std::to_string(objectCount) + "/" + std::to_string(objectCapacity));
-				ImGui::Text(objectCountStr.c_str());
+				//const u32 objectCount = GetRenderObjectCount();
+				//const u32 objectCapacity = GetRenderObjectCapacity();
+				//const std::string objectCountStr("Render object count/capacity: " + std::to_string//(objectCount) + "/" + std::to_string(objectCapacity));
+				//ImGui::Text(objectCountStr.c_str());
 
 				if (ImGui::TreeNode("Render Objects"))
 				{
-					for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+					std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
+					for (size_t i = 0; i < rootObjects.size(); ++i)
 					{
-						GLRenderObject* renderObject = GetRenderObject(i);
-
-						if (renderObject && renderObject->visibleInSceneExplorer)
-						{
-							const std::string objectName(renderObject->name + "##" + std::to_string(i));
-
-							const std::string objectID("##" + objectName + "-visble");
-							ImGui::Checkbox(objectID.c_str(), &renderObject->visible);
-							ImGui::SameLine();
-							if (ImGui::TreeNode(objectName.c_str()))
-							{
-								Transform* transform = renderObject->transform;
-								if (transform)
-								{
-									static int transformSpace = 0;
-
-									static const char* localStr = "local";
-									static const char* globalStr = "global";
-
-									ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
-									ImGui::RadioButton(globalStr, &transformSpace, 1);
-
-									const bool local = (transformSpace == 0);
-
-
-									glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-									glm::vec3 rotation = glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation());
-									glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
-
-									bool valueChanged = false;
-									
-									valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
-									valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.01f) || valueChanged;
-									valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
-
-									if (valueChanged)
-									{
-										if (local)
-										{
-											transform->SetLocalPosition(translation);
-											transform->SetLocalRotation(glm::quat(rotation));
-											transform->SetLocalScale(scale);
-										}
-										else
-										{
-											transform->SetGlobalPosition(translation);
-											transform->SetGlobalRotation(glm::quat(rotation));
-											transform->SetGlobalScale(scale);
-										}
-									}
-								}
-								else
-								{
-									ImGui::Text("Transform not set");
-								}
-
-								GLMaterial* material = &m_Materials[m_RenderObjects[i]->materialID];
-								if (material->uniformIDs.enableIrradianceSampler)
-								{
-									ImGui::Checkbox("Enable Irradiance Sampler", &material->material.enableIrradianceSampler);
-								}
-
-								ImGui::TreePop();
-							}
-						}
+						DrawImGuiForGameObjectAndChildren(rootObjects[i]);
 					}
 
 					ImGui::TreePop();
 				}
 
-				if (ImGui::TreeNode("Lights"))
+				DrawImGuiLights();
+			}
+		}
+
+		void GLRenderer::DrawImGuiForGameObjectAndChildren(GameObject* gameObject)
+		{
+			RenderID renderID = gameObject->GetRenderID();
+			GLRenderObject* renderObject = nullptr;
+			std::string objectName;
+			if (renderID != InvalidRenderID)
+			{
+				renderObject = GetRenderObject(renderID);
+				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
+
+				if (!gameObject->IsVisibleInSceneExplorer())
 				{
-					ImGui::AlignFirstTextHeightToWidgets();
-
-					ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
-
-					bool dirLightEnabled = m_DirectionalLight.enabled == 1;
-					ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
-					m_DirectionalLight.enabled = dirLightEnabled ? 1 : 0;
-					ImGui::SameLine();
-					if (ImGui::TreeNode("Directional Light"))
-					{
-						ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
-
-						ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
-
-						ImGui::TreePop();
-					}
-
-					for (size_t i = 0; i < m_PointLights.size(); ++i)
-					{
-						const std::string iStr = std::to_string(i);
-						const std::string objectName("Point Light##" + iStr);
-
-						bool PointLightEnabled = m_PointLights[i].enabled == 1;
-						ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
-						m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
-						ImGui::SameLine();
-						if (ImGui::TreeNode(objectName.c_str()))
-						{
-							ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
-
-							ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
-
-							ImGui::TreePop();
-						}
-					}
-
-					ImGui::TreePop();
+					return;
 				}
+			}
+			else
+			{
+				// TODO: FIXME: This will fail if multiple objects share the same name
+				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
+				objectName = std::string(gameObject->GetName());
+			}
+
+			const std::string objectID("##" + objectName + "-visible");
+			bool visible = gameObject->IsVisible();
+			if (ImGui::Checkbox(objectID.c_str(), &visible))
+			{
+				gameObject->SetVisible(visible);
+			}
+			ImGui::SameLine();
+			if (ImGui::TreeNode(objectName.c_str()))
+			{
+				if (renderObject)
+				{
+					const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
+					ImGui::TextUnformatted(renderIDStr.c_str());
+				}
+
+				DrawImGuiForRenderObjectCommon(gameObject);
+
+				if (renderObject)
+				{
+					GLMaterial& material = m_Materials[renderObject->materialID];
+					GLShader& shader = m_Shaders[material.material.shaderID];
+
+					std::string matNameStr = "Material: " + material.material.name;
+					std::string shaderNameStr = "Shader: " + shader.shader.name;
+					ImGui::TextUnformatted(matNameStr.c_str());
+					ImGui::TextUnformatted(shaderNameStr.c_str());
+
+					if (material.uniformIDs.enableIrradianceSampler)
+					{
+						ImGui::Checkbox("Enable Irradiance Sampler", &material.material.enableIrradianceSampler);
+					}
+				}
+
+				ImGui::Indent();
+				const std::vector<GameObject*>& children = gameObject->GetChildren();
+				for (GameObject* child : children)
+				{
+					DrawImGuiForGameObjectAndChildren(child);
+				}
+				ImGui::Unindent();
+
+				ImGui::TreePop();
 			}
 		}
 
@@ -3072,17 +3150,15 @@ namespace flex
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)
 		{
 #if _DEBUG
-			auto result = m_RenderObjects.find(renderID);
-			if (result != m_RenderObjects.end())
+			if (renderID > m_RenderObjects.size() ||
+				renderID == InvalidRenderID)
 			{
-				return result->second;
+				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
+				return nullptr;
 			}
-
-			Logger::LogError("Couldn't find GLRenderObject with renderID " + std::to_string(renderID));
-			return nullptr;
-#else
-			return m_RenderObjects[renderID];
 #endif
+
+			return m_RenderObjects[renderID];
 		}
 
 		void GLRenderer::InsertNewRenderObject(GLRenderObject* renderObject)
@@ -3094,7 +3170,8 @@ namespace flex
 			}
 			else
 			{
-				m_RenderObjects.insert({ renderObject->renderID, renderObject });
+				m_RenderObjects.resize(renderObject->renderID + 1);
+				m_RenderObjects[renderObject->renderID] = renderObject;
 			}
 		}
 
@@ -3105,6 +3182,14 @@ namespace flex
 
 		RenderID GLRenderer::GetNextAvailableRenderID() const
 		{
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				if (m_RenderObjects[i] == nullptr)
+				{
+					return i;
+				}
+			}
+
 			return m_RenderObjects.size();
 		}
 

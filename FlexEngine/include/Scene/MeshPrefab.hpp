@@ -26,6 +26,13 @@ namespace flex
 
 		static void Shutdown();
 
+		enum class Type
+		{
+			PREFAB,
+			FILE,
+			NONE
+		};
+
 		enum class PrefabShape
 		{
 			CUBE,
@@ -37,25 +44,58 @@ namespace flex
 			NONE
 		};
 
-		void ForceAttributes(VertexAttributes attributes); // Call this before loading to force certain attributes to be filled
-		void IgnoreAttributes(VertexAttributes attributes); // Call this before loading to ignore certain attributes
+		struct ImportSettings
+		{
+			/* Whether or not to invert the horizontal texture coordinate */
+			bool flipU = false;
+			/* Whether or not to invert the vertical texture coordinate */
+			bool flipV = false;
+			/* Whether or not to invert the Z component (up) of all normals */
+			bool flipNormalZ = false;
+			/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
+			bool swapNormalYZ = false;
+		};
 
-		bool LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ = false, bool flipZ = false, bool flipU = false, bool flipV = false);
-		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape);
+		/*
+		 * Call before loading to force certain attributes to be filled/ignored based on shader
+		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
+		 * be enforced (filled with default value if not present in mesh)
+		*/
+		void SetRequiredAttributes(VertexAttributes requiredAttributes);
 
-		virtual void Initialize(const GameContext& gameContext) override;
-		virtual void PostInitialize(const GameContext& gameContext) override;
+		/*
+		* Loads a mesh from file
+		*/
+		bool LoadFromFile(const GameContext& gameContext, 
+			const std::string& filepath,
+			ImportSettings* importSettings = nullptr,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
+		/*
+		* Loads a predefined shape
+		* Optionally pass in createInfo values to be given to the renderer
+		* when initializing the render object
+		*/
+		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, 
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
 		virtual void Update(const GameContext& gameContext) override;
-		virtual void Destroy(const GameContext& gameContext) override;
 
+		MaterialID GetMaterialID() const;
 		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
 		void SetUVScale(real uScale, real vScale);
+
+		static PrefabShape StringToPrefabShape(const std::string& prefabName);
+		static std::string PrefabShapeToString(PrefabShape shape);
+
+		Type GetType() const;
+
+		std::string GetFilepath() const;
+		PrefabShape GetShape() const;
 
 	private:
 		struct LoadedMesh
 		{
-			LoadedMesh();
-
 			Assimp::Importer importer = {};
 			const aiScene* scene = nullptr;
 		};
@@ -66,19 +106,17 @@ namespace flex
 
 		MaterialID m_MaterialID = InvalidMaterialID;
 
-		static std::string m_DefaultName;
-		std::string m_Name = "";
-
 		PrefabShape m_Shape = PrefabShape::NONE;
 
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
 
+		Type m_Type = Type::NONE;
+		std::string m_Filepath;
 
 		glm::vec2 m_UVScale = { 1,1 };
 
-		VertexAttributes m_ForcedAttributes = (u32)VertexAttribute::NONE;
-		VertexAttributes m_IgnoredAttributes = (u32)VertexAttribute::NONE;
+		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::NONE;
 		VertexBufferData m_VertexBufferData = {};
 
 		std::vector<u32> m_Indices;

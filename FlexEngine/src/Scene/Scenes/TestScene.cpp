@@ -5,13 +5,16 @@
 #include <glm/vec3.hpp>
 
 #include "Scene/ReflectionProbe.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {
 	TestScene::TestScene(const GameContext& gameContext) :
-		BaseScene("TestScene")
+		BaseScene("TestScene", "")
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+		Logger::LogError("FATAL: DEPRECATED CLASS INSTANTITED");
+		assert(false);
 	}
 
 	TestScene::~TestScene()
@@ -72,20 +75,20 @@ namespace flex
 
 		MeshPrefab* skybox = new MeshPrefab(skyboxHDRMatID, "Skybox");
 		skybox->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-		AddChild(gameContext, skybox);
+		AddChild(skybox);
 
-		gameContext.renderer->SetSkyboxMaterial(skyboxHDRMatID);
+		gameContext.renderer->SetSkyboxMesh(skybox);
 
 		// Reflection probes
 		// Generate last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe();
-		AddChild(gameContext, m_ReflectionProbe);
+		m_ReflectionProbe = new ReflectionProbe("default reflection probe");
+		AddChild(m_ReflectionProbe);
 	}
 
 	void TestScene::PostInitialize(const GameContext& gameContext)
 	{
-		m_ReflectionProbe->GetTransform().Translate(0.0f, 10.0f, 0.0f);
-		m_ReflectionProbe->GetTransform().Scale(3.5f);
+		m_ReflectionProbe->GetTransform()->Translate(0.0f, 10.0f, 0.0f);
+		m_ReflectionProbe->GetTransform()->Scale(3.5f);
 		UNREFERENCED_PARAMETER(gameContext);
 	}
 

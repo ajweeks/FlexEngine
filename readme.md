@@ -34,7 +34,7 @@ Flex Engine is my personal rendering engine which currently supports Vulkan and 
 ![](https://i.imgur.com/LbRIVav.jpg)
 **GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
 
-## Building Flex (windows-only)
+## Building Flex (Windows-only)
 If you want to build Flex Engine on your own system, follow these steps. You an always download the latest release binaries [here](https://github.com/ajweeks/flexengine/releases) if that's what you're after.
 
 #### Requirements:
@@ -43,8 +43,9 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 
 #### Steps
 1. Recursively clone the repository using your method of choice (SourceTree, git bash, ...)
-2. Ensure GENie is either on your PATH, or `genie.exe` is in the `/scripts` directory.
-3. Navigate a command prompt to the `/scripts` directory and run `genie vs2015`
+2. Ensure GENie is either on your PATH, or `genie.exe` is in `scripts/`
+3. Navigate a command prompt to `scripts/` and run `genie vs2015`
+4. Navigate a command prompt to `FlexEngine/dependencies/assimp/` and run `cmake .` to generate the necessary `config.h` file.  You do not need to build generated `.sln`
 4. Open `build/FlexEngine.sln`
 5. Build and run!
 
@@ -58,7 +59,7 @@ Flex Engine uses the following open-source libraries:
  - [glm](https://github.com/g-truc/glm) - Math operations
 
 ## License
-Flex engine is released as open source under The MIT License. See [license.md](license.md) for details
+Flex engine is released as open source under The MIT License. See [license.md](license.md) for details.
 
 ## Acknowledgements
 A huge thanks to the following people/organizations for their incredibly useful resources:
@@ -70,4 +71,4 @@ A huge thanks to the following people/organizations for their incredibly useful 
  - [FreePBR.com](http://FreePBR.com) for the wonderful PBR textures
 
 ## Blog
- Stay (somewhat) up to date about this project on my blog at [ajweeks.wordpress.com/tag/flex-engine/](https://ajweeks.wordpress.com/tag/flex-engine/)
+ Stay (somewhat) up to date about this project on my blog at [ajweeks.wordpress.com/tag/flex-engine/](https://ajweeks.wordpress.com/tag/flex-engine/).

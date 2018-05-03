@@ -15,11 +15,6 @@ namespace flex
 
 		virtual void Update(const GameContext& gameContext) override;
 
-		void SetMoveSpeed(real moveSpeed);
-		real GetMoveSpeed() const;
-		void SetRotationSpeed(real rotationSpeed);
-		real GetRotationSpeed() const;
-
 		void LoadDefaultKeybindings();
 		void LoadAzertyKeybindings();
 

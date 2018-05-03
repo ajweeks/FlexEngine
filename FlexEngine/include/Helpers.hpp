@@ -13,6 +13,7 @@
 
 #include "imgui.h"
 
+#include "Types.hpp"
 
 namespace flex
 {
@@ -38,6 +39,8 @@ namespace flex
 	// Removes all content before the final '/' or '\' 
 	void StripLeadingDirectories(std::string& filePath);
 
+	std::vector<std::string> Split(const std::string& str, char delim);
+
 	/*
 	 * Returns the index of the first character which isn't a number
 	 * of letter (or -1 if none exist) starting from offset
@@ -47,6 +50,23 @@ namespace flex
 	real Lerp(real a, real b, real t);
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
+
+	/* Parses a single float, returns -1.0f if incorrectly formatted */
+	real ParseFloat(const std::string& floatStr);
+
+	/* Parses a comma separated list of 2 floats */
+	glm::vec2 ParseVec2(const std::string& vecStr);
+
+	/* Parses a comma separated list of 3 floats */
+	glm::vec3 ParseVec3(const std::string& vecStr);
+
+	/*
+	* Parses a comma separated list of 3 or 4 floats
+	* If defaultW is non-negative and no w component exists in the string defaultW will be used
+	* If defaultW is negative then an error will be generated if the string doesn't
+	* contain 4 components
+	*/
+	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
 
 	template<class T>
 	inline typename T::const_iterator Contains(const std::vector<T>& vec, const T& t)
@@ -80,14 +100,30 @@ namespace flex
 		return glm::vec4(color.r, color.g, color.b, color.a);
 	}
 
-	void ToString(const glm::vec2& vec, std::ostream& stream);
-	void ToString(const glm::vec3& vec, std::ostream& stream);
-	void ToString(const glm::vec4& vec, std::ostream& stream);
+	// TODO: Remove: unused
+	//void Vec2ToString(const glm::vec2& vec, std::ostream& stream);
+	//void Vec3ToString(const glm::vec3& vec, std::ostream& stream);
+	//void Vec4ToString(const glm::vec4& vec, std::ostream& stream);
+
+	std::string Vec2ToString(const glm::vec2& vec);
+	std::string Vec3ToString(const glm::vec3& vec);
+	std::string Vec4ToString(const glm::vec4& vec);
 
 	void CopyColorToClipboard(const glm::vec4& col);
 	void CopyColorToClipboard(const glm::vec3& col);
 
 	glm::vec3 PasteColor3FromClipboard();
 	glm::vec4 PasteColor4FromClipboard();
+
+	CullFace StringToCullFace(const std::string& str);
+	std::string CullFaceToString(CullFace cullFace);
+
+	void ToLower(std::string& str);
+	void ToUpper(std::string& str);
+
+	bool StartsWith(const std::string& str, const std::string& start);
+
+	std::string SerializableTypeToString(SerializableType type);
+	SerializableType StringToSerializableType(const std::string& serializableTypeStr);
 
 } // namespace flex

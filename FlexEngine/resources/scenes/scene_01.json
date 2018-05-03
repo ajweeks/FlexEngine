@@ -1,42 +1,228 @@
 {
-	"name" : "scene_01",
-	"objects" :
-	[
-		{
-			"name" : "Grid",
-			"prefab" : "grid",
-			"visibleInSceneGraph" : false,
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "0.0,0.0,0.0",
-				"rotation" : "0.0,0.0,0.0",
-				"scale" : "1.0,1.0,1.0"
-			},
-			"material" :
-			{
-				"name" : "color"
-			}
-			// add rigid body, collider, renderer settings, ... here
-		},
-		{
-			"name" : "Sphere",
-			"file" : "sphere.fbx",
-			"cullFace" : "back",
-			"visible" : false,
-			"transform" : 
-			{
-				"position" : "10.0,0.0,0.0",
-				"rotation" : "0.0,0.0,0.0",
-				"scale" : "1.0,1.0,1.0"
-			},
-			"material" :
-			{
-				"name" : "pbr",
-				"constMetallic" : 1
-				// add per-object material paramaters here
-			}
-			// add rigid body, collider, renderer settings, ... here
-		}
-	]
+  "version" : 1,
+  "name" : "scene_01",
+  "materials" : 
+  [
+    {
+      "name": "pbr",
+      "shader": "pbr",
+      "const albedo": "0.78, 0.12, 0.11",
+      "const metallic": 0,
+      "const roughness": 0.25,
+      "const ao": 1,
+      "enable albedo sampler" : false,
+      "enable metallic sampler" : false,
+      "enable roughness sampler" : false,
+      "enable ao sampler" : false
+    },
+    {
+      "name": "pbr",
+      "shader": "pbr",
+      "const albedo": "0.23, 0.25, 0.29",
+      "const metallic": 0,
+      "const roughness": 0.2,
+      "const ao": 1,
+      "enable albedo sampler" : false,
+      "enable metallic sampler" : false,
+      "enable roughness sampler" : false,
+      "enable ao sampler" : false
+    },
+    {
+      "name": "pbr",
+      "shader": "pbr",
+      "const albedo": "0.8, 0.54, 0.1",
+      "const metallic": 0,
+      "const roughness": 0.2,
+      "const ao": 1,
+      "enable albedo sampler" : false,
+      "enable metallic sampler" : false,
+      "enable roughness sampler" : false,
+      "enable ao sampler" : false
+    },
+    {
+      "name": "Skybox",
+      "shader": "skybox",
+      "const albedo" : "0.000000, 0.000000, 0.000000",
+      "const metallic" : 0.000000,
+      "const roughness" : 0.000000,
+      "const ao" : 0.000000,
+      "generate hdr cubemap sampler" : true,
+      "enable cubemap sampler" : true,
+      "enable cubemap trilinear filtering" : true,
+      "generated cubemap size" : "512, 512",
+      "generate irradiance sampler" : true,
+      "generated irradiance cubemap size" : "32, 32",
+      "generate prefiltered map" : true,
+      "generated prefiltered map size" : "128, 128",
+      //"environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
+      "environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
+    }
+  ],
+  "entities":
+  [
+    {
+      "name" : "holder of things",
+      "type" : "NONE",
+      "visible" : true,
+      "transform": 
+      {
+        "space" : "local",
+        "position": "00.0,0.0,0.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1.0,1.0,1.0"
+      },
+      "children" :
+      [
+        {
+          "name" : "Sphere 01",
+          "type" : "mesh",
+          "visible": true,
+          "material index": 0,
+          "transform": 
+          {
+            "space" : "local",
+            "position": "3.0,5.0,0.0",
+            "rotation": "0.0,0.0,0.0",
+            "scale": "1.0,2.0,1.0"
+          },
+          "mesh": 
+          {
+            "file": "models/ico-sphere.gltf"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "Sphere 02",
+      "type" : "mesh",
+      "visible": true,
+      "transform": 
+      {
+        "space" : "local",
+        "position": "2.0, 5.0, 0.0",
+        "rotation": "0.0, 0.0, 0.0",
+        "scale": "2.0, 2.0, 2.0"
+      },
+      "mesh": 
+      {
+        "file": "models/ico-sphere.gltf"
+      },
+      "material index": 0,
+      "collider": 
+      {
+        "shape": "sphere",
+        "radius": 1.0
+      },
+      "rigid body": 
+      {
+        "mass" : 1.0,
+        "kinematic" : false,
+        "static" : false
+      },
+    },
+    {
+      "name": "mori knob",
+      "type": "mesh",
+      "visible" : true,
+      "transform": 
+      {
+        "space": "local",
+        "position": "-2.0, 0.0, -4.0",
+        "rotation": "0.0, 0.0, 0.0",
+        "scale": "1.0, 1.0, 1.0"
+      },
+      "mesh":
+      {
+        "file": "models/mori-knob.gltf"
+      },
+      "material index": 1,
+    },
+    {
+      "name": "chamfer box",
+      "type": "mesh",
+      "visible" : true,
+      "transform":
+      {
+        "space" : "local",
+        "position": "-8.0,10.0,-2.0",
+        "rotation": "0.0,0.0,0.0",
+        "scale": "1, 1, 1"
+      },
+      "mesh":
+      {
+        "file": "models/chamfer-box.gltf"
+      },
+      "material index": 2,
+      "collider": 
+      {
+        "shape": "box",
+        "half extents": "0.5, 0.5, 0.5"
+      },
+      "rigid body": 
+      {
+        "mass": 1.0,
+        "kinematic": false,
+        "static" : false
+      },
+    },
+    {
+      "name": "ground plane",
+      "type": "mesh",
+      "visible" : true,
+      "static" : true,
+      "transform":
+      {
+        "space" : "local",
+        "position": "0.0, -0.1, 0.0",
+        "rotation": "0.0, 0.0, 0.0",
+        "scale": "20, 20, 20"
+      },
+      "mesh": 
+      {
+        "file": "models/unit-plane.gltf"
+      },
+      "material index": 1,
+      "collider":
+       {
+        "shape": "box",
+        "half extents": "10, 0.1, 10"
+      },
+      "rigid body":
+       {
+        "mass": 0.0,
+        "kinematic": false,
+        "static" : true
+      },
+    },
+    {
+      "name": "Skybox",
+      "type" : "skybox",
+      "visible" : true,
+      "rotation": "0.0, 0.0, 0.0",
+      "material index": 3,
+    },
+    {
+      "name": "Reflection Probe 01",
+      "type" : "reflection probe",
+      "visible" : true,
+      "position": "10.0, 0.0, 0.0"
+    }
+  ],
+  "point lights" :
+  [
+    {
+      "name": "Point light 01",
+      "position": "6.0,-6.0,-8.0",
+      "color": "1.0,1.0,1.0",
+      "enabled" : true,
+      "brightness": 300.0
+    }
+  ],
+  "directional light" :
+  {
+    "direction": "0.1,1.5,0.0",
+    "color": "1.0,1.0,1.0",
+    "brightness": 10.0,
+    "enabled" : true
+  }
 }

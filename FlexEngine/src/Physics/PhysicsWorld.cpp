@@ -3,13 +3,18 @@
 #include "Physics/PhysicsWorld.hpp"
 
 #pragma warning(push, 0)
-#include <btBulletDynamicsCommon.h>
+#include <LinearMath/btVector3.h>
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletCollision/CollisionDispatch/btCollisionObject.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "GameContext.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {
@@ -37,14 +42,14 @@ namespace flex
 		{
 			for (i32 i = m_World->getNumCollisionObjects() - 1; i >= 0; --i)
 			{
-				btCollisionObject* pObj = m_World->getCollisionObjectArray()[i];
-				btRigidBody* pBody = btRigidBody::upcast(pObj);
-				if (pBody && pBody->getMotionState())
+				btCollisionObject* obj = m_World->getCollisionObjectArray()[i];
+				btRigidBody* body = btRigidBody::upcast(obj);
+				if (body && body->getMotionState())
 				{
-					delete pBody->getMotionState();
+					delete body->getMotionState();
 				}
-				m_World->removeCollisionObject(pObj);
-				delete pObj;
+				m_World->removeCollisionObject(obj);
+				delete obj;
 			}
 			
 			SafeDelete(m_World);
@@ -69,7 +74,7 @@ namespace flex
 		btVector3 hitPos;
 		float pickingDist;
 		btRigidBody* pickedBody = nullptr;
-		int savedState;
+		i32 savedState;
 		btTypedConstraint* pickedConstraint = nullptr;
 		Logger::LogInfo("click!");
 
@@ -113,16 +118,16 @@ namespace flex
 		return false;
 	}
 
-	btVector3 PhysicsWorld::GetRayTo(const GameContext& gameContext, int x, int y)
+	btVector3 PhysicsWorld::GetRayTo(const GameContext& gameContext, i32 x, i32 y)
 	{
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
-		btVector3 rayFrom = ToBtVec3(camera->GetPosition());
-		btVector3 rayForward = ToBtVec3(camera->GetForward());
+		btVector3 rayFrom = Vec3ToBtVec3(camera->GetPosition());
+		btVector3 rayForward = Vec3ToBtVec3(camera->GetForward());
 		float farPlane = camera->GetZFar();
 		rayForward *= farPlane;
 
-		btVector3 vertical = ToBtVec3(camera->GetUp());
-		btVector3 horizontal = ToBtVec3(camera->GetRight());
+		btVector3 vertical = Vec3ToBtVec3(camera->GetUp());
+		btVector3 horizontal = Vec3ToBtVec3(camera->GetRight());
 
 		float fov = camera->GetFOV();
 		float tanfov = tanf(0.5f * fov);

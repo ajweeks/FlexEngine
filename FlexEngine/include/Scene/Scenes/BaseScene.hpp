@@ -10,46 +10,75 @@ namespace flex
 {
 	class PhysicsWorld;
 	class ReflectionProbe;
+	struct JSONObject;
+	struct JSONField;
 
 	class BaseScene
 	{
 	public:
-		BaseScene(const std::string& name = "");
+		BaseScene(const std::string& name, const std::string& jsonFilePath);
 		virtual ~BaseScene();
 
-		void CreateFromJSON(const std::string& jsonFilePath);
-
-		std::string GetName() const;
-
-		PhysicsWorld* GetPhysicsWorld();
-
-	protected:
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void PostInitialize(const GameContext& gameContext);
 		virtual void Destroy(const GameContext& gameContext);
 		virtual void Update(const GameContext& gameContext);
 
-		void AddChild(const GameContext& gameContext, GameObject* gameObject);
+		std::string GetName() const;
+
+		PhysicsWorld* GetPhysicsWorld();
+
+		/* 
+		* Serializes all data from scene into JSON scene file.
+		* Only writes data that has non-default values (e.g. an identity 
+		* transform is not saved)
+		*/
+		void SerializeToFile(const GameContext& gameContext);
+
+		std::vector<GameObject*>& GetRootObjects();
+
+		GameObject* AddChild(GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
 
+	protected:
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
-	private:
-		void RootInitialize(const GameContext& gameContext);
-		void RootPostInitialize(const GameContext& gameContext);
-		void RootUpdate(const GameContext& gameContext);
-		void RootDestroy(const GameContext& gameContext);
+		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
+		void CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight);
+		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
 
-		friend class SceneManager;
+		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
+		JSONObject SerializeMaterial(const Material& material, const GameContext& gameContext);
+		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);
+		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
+
+		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
+
+		i32 GetMaterialIndex(const Material& material, const GameContext& gameContext);
 
 		std::string m_Name;
+		std::string m_JSONFilePath;
 
 		std::vector<GameObject*> m_Children;
 
-		ReflectionProbe* m_ReflectionProbe = nullptr;
+		/*
+		* Stores all unique initialized materials we've created
+		* A "material index" is used to index into this array
+		*/
+		std::vector<MaterialID> m_LoadedMaterials;
 
+		ReflectionProbe* m_ReflectionProbe = nullptr;
+		
+		// TODO: Merge into one object type
+		MeshPrefab* m_Grid = nullptr;
+		MeshPrefab* m_WorldOrigin = nullptr;
+		MaterialID m_GridMaterialID = InvalidMaterialID;
+		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
+
+	private:
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
+
 	};
 } // namespace flex

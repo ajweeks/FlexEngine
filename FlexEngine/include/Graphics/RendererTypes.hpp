@@ -20,14 +20,16 @@ namespace flex
 	{
 		COLOR =   (1 << 0),
 		DEPTH =   (1 << 1),
-		STENCIL = (1 << 2)
+		STENCIL = (1 << 2),
+		NONE
 	};
 
 	enum class CullFace
 	{
 		BACK,
 		FRONT,
-		FRONT_AND_BACK
+		FRONT_AND_BACK,
+		NONE
 	};
 
 	enum class DepthTestFunc
@@ -46,13 +48,15 @@ namespace flex
 	enum class BufferTarget
 	{
 		ARRAY_BUFFER,
-		ELEMENT_ARRAY_BUFFER
+		ELEMENT_ARRAY_BUFFER,
+		NONE
 	};
 
 	enum class UsageFlag
 	{
 		STATIC_DRAW,
-		DYNAMIC_DRAW
+		DYNAMIC_DRAW,
+		NONE
 	};
 
 	enum class DataType
@@ -64,7 +68,8 @@ namespace flex
 		INT,
 		UNSIGNED_INT,
 		FLOAT,
-		DOUBLE
+		DOUBLE,
+		NONE
 	};
 
 	enum class TopologyMode
@@ -75,17 +80,20 @@ namespace flex
 		LINE_STRIP,
 		TRIANGLE_LIST,
 		TRIANGLE_STRIP,
-		TRIANGLE_FAN
+		TRIANGLE_FAN,
+		NONE
 	};
 
 	struct DirectionalLight
 	{
+		// TODO: Add brightness multiplier here
 		glm::vec4 direction = { 0, 0, 1, 0 };
 
 		glm::vec4 color = glm::vec4(1.0f);
 
 		u32 enabled = 1;
-		real padding[3];
+
+		real brightness = 1.0f;
 	};
 
 	struct PointLight
@@ -95,7 +103,9 @@ namespace flex
 		glm::vec4 color = glm::vec4(1.0f);
 
 		u32 enabled = 1;
-		real padding[3];
+
+		real brightness = 1.0f;
+		std::string name;
 	};
 
 	// TODO: Is setting all the members to false necessary?
@@ -135,7 +145,7 @@ namespace flex
 
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::uvec2 generatedIrradianceCubemapSize = { 0, 0 };
+		glm::vec2 generatedIrradianceCubemapSize = { 0, 0 };
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 		std::string environmentMapPath = "";
 
@@ -146,12 +156,12 @@ namespace flex
 		bool enableCubemapSampler = false;
 		bool enableCubemapTrilinearFiltering = false;
 		bool generateCubemapSampler = false;
-		glm::uvec2 generatedCubemapSize = { 0, 0 };
+		glm::vec2 generatedCubemapSize = { 0, 0 };
 		bool generateCubemapDepthBuffers = false;
 
 		bool generatePrefilteredMap = false;
 		bool enablePrefilteredMap = false;
-		glm::uvec2 generatedPrefilteredCubemapSize = { 0, 0 };
+		glm::vec2 generatedPrefilteredCubemapSize = { 0, 0 };
 		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
 		bool generateReflectionProbeMaps = false;
@@ -165,6 +175,8 @@ namespace flex
 
 	struct Material
 	{
+		bool Equals(const Material& other, const GameContext& gameContext);
+
 		std::string name = "";
 
 		ShaderID shaderID = InvalidShaderID;
@@ -182,7 +194,7 @@ namespace flex
 
 		bool generateCubemapSampler = false;
 		bool enableCubemapSampler = false;
-		glm::uvec2 cubemapSamplerSize = { 0, 0 };
+		glm::vec2 cubemapSamplerSize = { 0, 0 };
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 		// PBR constants
@@ -212,16 +224,17 @@ namespace flex
 		bool enableHDREquirectangularSampler = false;
 		std::string hdrEquirectangularTexturePath = "";
 
+		bool enableCubemapTrilinearFiltering = false;
 		bool generateHDRCubemapSampler = false;
 
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::uvec2 irradianceSamplerSize = { 0,0 };
+		glm::vec2 irradianceSamplerSize = { 0,0 };
 		std::string environmentMapPath = "";
 
 		bool enablePrefilteredMap = false;
 		bool generatePrefilteredMap = false;
-		glm::uvec2 prefilteredMapSize = { 0,0 };
+		glm::vec2 prefilteredMapSize = { 0,0 };
 
 		bool enableBRDFLUT = false;
 		bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!
@@ -245,9 +258,9 @@ namespace flex
 		VertexBufferData* vertexBufferData = nullptr;
 		std::vector<u32>* indices = nullptr;
 
-		std::string name = "";
-		Transform* transform = nullptr;
+		GameObject* gameObject = nullptr;
 
+		bool visible = true;
 		bool visibleInSceneExplorer = true;
 
 		CullFace cullFace = CullFace::BACK;

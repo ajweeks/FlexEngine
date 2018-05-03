@@ -95,7 +95,11 @@ namespace flex
 		m_GameContext.sceneManager = new SceneManager();
 		LoadDefaultScenes();
 
+		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+
 		m_GameContext.renderer->PostInitialize(m_GameContext);
+
+		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 
 		SetupImGuiStyles();
 
@@ -210,21 +214,11 @@ namespace flex
 
 	void FlexEngine::LoadDefaultScenes()
 	{
-		//Scene_02* scene02 = new Scene_02(m_GameContext);
-		//m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
-
-		BaseScene* scene01 = new BaseScene("");
-		scene01->CreateFromJSON(RESOURCE_LOCATION + "scenes/scene_01.json");
+		BaseScene* scene01 = new BaseScene("scene 01", RESOURCE_LOCATION + "scenes/scene_01.json");
 		m_GameContext.sceneManager->AddScene(scene01, m_GameContext);
 
-		BaseScene* scene02 = new BaseScene("");
-		scene02->CreateFromJSON(RESOURCE_LOCATION + "scenes/scene_02.json");
-		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
-
-		m_GameContext.sceneManager->SetCurrentScene(scene01);
-
-		//TestScene* pDefaultScene = new TestScene(m_GameContext);
-		//m_GameContext.sceneManager->AddScene(pDefaultScene, m_GameContext);
+		//BaseScene* scene02 = new BaseScene("scene 02", RESOURCE_LOCATION + "scenes/scene_02.json");
+		//m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
@@ -274,7 +268,11 @@ namespace flex
 
 		LoadDefaultScenes();
 
+		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+
 		m_GameContext.renderer->PostInitialize(m_GameContext);
+
+		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 	}
 
 	void FlexEngine::UpdateAndRender()
@@ -322,9 +320,9 @@ namespace flex
 
 				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
 
-				btVector3 cameraPos = ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
+				btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
 				btVector3 rayStart(cameraPos);
-				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, (int)mousePos.x, (int)mousePos.y);
+				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
 
 				if (physicsWorld->PickBody(rayStart, rayEnd))
 				{
@@ -339,13 +337,13 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
-				m_GameContext.sceneManager->SetNextSceneActive();
+				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
 			
 				//m_GameContext.renderer->PostInitialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
-				m_GameContext.sceneManager->SetPreviousSceneActive();
+				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
 			}
 
 			// TODO: Figure out better
@@ -353,28 +351,22 @@ namespace flex
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
-				const std::string sceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
-				m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
+				m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
 
 				DestroyWindowAndRenderer();
 				CreateWindowAndRenderer();
 				InitializeWindowAndRenderer();
 				SetupImGuiStyles();
 
+				LoadDefaultScenes();
+
 				//m_GameContext.renderer->ReloadShaders(m_GameContext);
 
-				if (sceneName.compare("TestScene") == 0)
-				{
-					TestScene* newScene = new TestScene(m_GameContext);
-					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
-				}
-				else
-				{
-					Scene_02* newScene = new Scene_02(m_GameContext);
-					m_GameContext.sceneManager->AddScene(newScene, m_GameContext);
-				}
+				m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 
 				m_GameContext.renderer->PostInitialize(m_GameContext);
+
+				m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 				continue;
 			}
 
@@ -396,12 +388,10 @@ namespace flex
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			m_GameContext.window->Update(m_GameContext);
 
-			if (m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_TAB))
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
+				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 			{
-				if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_TAB))
-					Logger::LogInfo("tab pressed");
-				else 
-					Logger::LogInfo("tab");
+				m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext);
 			}
 
 			// TODO: Consolidate functions?
@@ -498,8 +488,8 @@ namespace flex
 
 				static const char* windowModeStr = "##WindowMode";
 				static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
-				static const int windowModeCount = 2;
-				int currentItemIndex = (int)m_GameContext.window->GetFullscreenMode();
+				static const i32 windowModeCount = 2;
+				i32 currentItemIndex = (i32)m_GameContext.window->GetFullscreenMode();
 				if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
 				{
 					Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
@@ -693,7 +683,7 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
-					m_GameContext.sceneManager->SetPreviousSceneActive();
+					m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
 				}
 
 				if (ImGui::IsItemHovered())
@@ -714,7 +704,7 @@ namespace flex
 				ImGui::SameLine();
 				if (ImGui::Button(arrowNextStr))
 				{
-					m_GameContext.sceneManager->SetNextSceneActive();
+					m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
 				}
 				if (ImGui::IsItemHovered())
 				{

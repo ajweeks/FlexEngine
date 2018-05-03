@@ -28,7 +28,12 @@ namespace flex
 		* Parses a JSON file located at filePath and stores the result in parsedFile
 		* Returns true if the file was parsed successfully
 		*/
-		static bool Parse(const std::string& filePath, ParsedJSONFile& parsedFile);
+		static bool Parse(const std::string& filePath, JSONObject& rootObject);
+
+		static Transform ParseTransform(const JSONObject& transformObject);
+
+		/* Returns true if serialization succeeded */
+		static bool SerializeTransform(Transform* transform, JSONField& outTransformField);
 
 	private:
 		/*

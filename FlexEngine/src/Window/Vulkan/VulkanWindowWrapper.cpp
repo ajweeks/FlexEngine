@@ -35,6 +35,9 @@ namespace flex
 			// Tell the window we're not using OpenGL
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
+			// Don't hide window when losing focus in Windowed Fullscreen
+			glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+
 			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), NULL, NULL);
 			if (!m_Window)
 			{

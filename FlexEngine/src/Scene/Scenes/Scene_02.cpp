@@ -4,6 +4,10 @@
 
 #include <glm/vec3.hpp>
 
+#pragma warning(push, 0)
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#pragma warning(pop)
+
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Scene/ReflectionProbe.hpp"
@@ -15,9 +19,11 @@
 namespace flex
 {
 	Scene_02::Scene_02(const GameContext& gameContext) :
-		BaseScene("Scene_02")
+		BaseScene("Scene_02", "")
 	{
 		UNREFERENCED_PARAMETER(gameContext);
+		Logger::LogError("FATAL: DEPRECATED CLASS INSTANTITED");
+		assert(false);
 	}
 
 	Scene_02::~Scene_02()
@@ -103,8 +109,8 @@ namespace flex
 
 		m_Grid = new MeshPrefab(m_GridMaterialID, "Grid");
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
-		m_Grid->GetTransform().Translate(0.0f, -0.1f, 0.0f);
-		AddChild(gameContext, m_Grid);
+		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
+		AddChild(m_Grid);
 
 		MaterialCreateInfo worldAxisMatInfo = {};
 		worldAxisMatInfo.shaderName = "color";
@@ -113,8 +119,8 @@ namespace flex
 
 		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
 		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
-		m_WorldOrigin->GetTransform().Translate(0.0f, -0.09f, 0.0f);
-		AddChild(gameContext, m_WorldOrigin);
+		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
+		AddChild(m_WorldOrigin);
 #endif
 
 #if 0 // Cerebus
@@ -143,17 +149,17 @@ namespace flex
 		m_Cerberus = new MeshPrefab(cerebusMatID, "Cerberus");
 		m_Cerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, m_Cerberus);
-		m_Cerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
-		m_Cerberus->GetTransform().Translate(0.0f, 0.0f, 0.0f);
+		m_Cerberus->GetTransform()->Scale(0.075f, 0.075f, 0.075f);
+		m_Cerberus->GetTransform()->Translate(0.0f, 0.0f, 0.0f);
 #endif
 
 #if 0 // Cerebus 2
 		MeshPrefab* extraCerberus = new MeshPrefab(cerebusMatID, "Cerberus 2");
 		extraCerberus->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx", true, true, false, true);
 		AddChild(gameContext, extraCerberus);
-		extraCerberus->GetTransform().Scale(0.075f, 0.075f, 0.075f);
-		extraCerberus->GetTransform().Translate(10.0f, 18.0f, -5.0f);
-		m_Cerberus->GetTransform().Rotate(0.0, -0.5f, 0.0f);
+		extraCerberus->GetTransform()->Scale(0.075f, 0.075f, 0.075f);
+		extraCerberus->GetTransform()->Translate(10.0f, 18.0f, -5.0f);
+		m_Cerberus->GetTransform()->Rotate(0.0, -0.5f, 0.0f);
 #endif
 
 #if 1 // Spheres
@@ -205,9 +211,12 @@ namespace flex
 
 			m_Spheres[i] = new MeshPrefab(matID, "Sphere " + iStr);
 
-			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-			m_Spheres[i]->GetTransform().SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, z * sphereSpacing));
-			AddChild(gameContext, m_Spheres[i]);
+			MeshPrefab::ImportSettings importSettings = {};
+			importSettings.swapNormalYZ = true;
+			importSettings.flipNormalZ = true;
+			m_Spheres[i]->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", &importSettings);
+			m_Spheres[i]->GetTransform()->SetLocalPosition(offset + glm::vec3(x * sphereSpacing, y * sphereSpacing, z * sphereSpacing));
+			AddChild(m_Spheres[i]);
 		}
 #endif
 
@@ -223,117 +232,34 @@ namespace flex
 
 		MeshPrefab* whiteSphere = new MeshPrefab(whiteSphereMatID, "White sphere");
 		whiteSphere->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/sphere.fbx", true, true);
-		whiteSphere->GetTransform().Translate(0.0, 19.0, 0.0f);
-		whiteSphere->GetTransform().Scale(3.5f);
+		whiteSphere->GetTransform()->Translate(0.0, 19.0, 0.0f);
+		whiteSphere->GetTransform()->Scale(3.5f);
 		AddChild(gameContext, whiteSphere);
 #endif
 
 #if 1 // Reflection probe
 		// Generated last so it can use generated skybox maps
-		m_ReflectionProbe = new ReflectionProbe(true);
-		AddChild(gameContext, m_ReflectionProbe);
+		m_ReflectionProbe = new ReflectionProbe("default reflection probe");
+		AddChild(m_ReflectionProbe);
 #endif
 
-		gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1);
+		//gameContext.renderer->SetSkyboxMaterial(m_SkyboxMatID_1, gameContext);
 
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-
-		box1Collider = {};
-		box1Collider.CreateBoxCollider(gameContext, { 6.0f, 0.1f, 6.0f });
-
-		box2Collider = {};
-		box2Collider.CreateBoxCollider(gameContext, { 1.5f, 1.1f, 3.0f });
-
-		box3Collider = {};
-		box3Collider.CreateBoxCollider(gameContext, { 0.5f, 1.5f, 2.0f });
-
-		glm::vec3 box1Scale = FromBtVec3(box1Collider.GetScale());
-		glm::vec3 box2Scale = FromBtVec3(box2Collider.GetScale());
-		glm::vec3 box3Scale = FromBtVec3(box3Collider.GetScale());
-
-		btTransform rb1Transform = btTransform::getIdentity();
-		rb1Transform.setOrigin({ 20, 0, 0 });
-		btTransform rb2Transform = btTransform::getIdentity();
-		rb2Transform.setOrigin({ 20, 10, 0 });
-		btTransform rb3Transform = btTransform::getIdentity();
-		rb3Transform.setOrigin({ 20, 15, 0 });
-
-		rb1 = new RigidBody(1, 1);
-		rb1->SetMass(0.0f);
-		rb1->Initialize(box1Collider.GetShape(), gameContext, rb1Transform, false, true);
-
-		rb2 = new RigidBody(1, 1);
-		rb2->SetMass(1.0f);
-		rb2->Initialize(box2Collider.GetShape(), gameContext, rb2Transform);
-
-		rb3 = new RigidBody(1, 1);
-		rb3->SetMass(0.85f);
-		rb3->Initialize(box3Collider.GetShape(), gameContext, rb3Transform);
-
-		{
-			MaterialCreateInfo pbrMatInfo = {};
-			pbrMatInfo.shaderName = "pbr";
-			pbrMatInfo.name = "PBR box";
-			//pbrMatInfo.constAlbedo = glm::vec3(0.25f, 0.14f, 0.95f);
-			//pbrMatInfo.constAlbedo = glm::vec3(0.95f, 0.22f, 0.2f);
-			pbrMatInfo.constAlbedo = glm::vec3(0.2f, 0.89f, 0.95f);
-			pbrMatInfo.constMetallic = 1.0f;
-			pbrMatInfo.constRoughness = 0.1f;
-			pbrMatInfo.constAO = 1.0f;
-			MaterialID boxMat1ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-
-			pbrMatInfo.constMetallic = 1.0f;
-			pbrMatInfo.constRoughness = 0.22f;
-			pbrMatInfo.constAlbedo = glm::vec3(0.92f, 0.93f, 0.95f);
-			MaterialID boxMat2ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-
-			pbrMatInfo.constMetallic = 1.0f;
-			pbrMatInfo.constRoughness = 0.22f;
-			pbrMatInfo.constAlbedo = glm::vec3(0.9f, 0.25f, 0.1f);
-			MaterialID boxMat3ID = gameContext.renderer->InitializeMaterial(gameContext, &pbrMatInfo);
-
-			m_Box1 = new MeshPrefab(boxMat1ID, "Box 1");
-			m_Box1->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box1->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			AddChild(gameContext, m_Box1);
-			m_Box1->GetTransform().SetGlobalScale(box1Scale);
-
-			m_Box2 = new MeshPrefab(boxMat2ID, "Box 2");
-			m_Box2->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box2->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			AddChild(gameContext, m_Box2);
-			m_Box2->GetTransform().SetGlobalScale(box2Scale);
-
-			m_Box3 = new MeshPrefab(boxMat3ID, "Box 3");
-			m_Box3->IgnoreAttributes((u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-			m_Box3->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.fbx", true, true);
-			AddChild(gameContext, m_Box3);
-			m_Box3->GetTransform().SetGlobalScale(box3Scale);
-		}
-
-		m_Box1->GetTransform().MatchRigidBody(rb1, true);
-		m_Box2->GetTransform().MatchRigidBody(rb2, true);
-		m_Box3->GetTransform().MatchRigidBody(rb3, true);
 	}
 
 	void Scene_02::PostInitialize(const GameContext& gameContext)
 	{
 		gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbe->GetCaptureMaterialID());
 
-		m_ReflectionProbe->GetTransform().Translate(0.0f, 7.5f, 0.0f);
+		m_ReflectionProbe->GetTransform()->Translate(0.0f, 7.5f, 0.0f);
 	}
 
 	void Scene_02::Destroy(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-		if (m_ReflectionProbe)
-		{
-			m_ReflectionProbe->Destroy(gameContext);
-		}
-
 		if (rb1)
 		{
 			rb1->Destroy(gameContext);
@@ -356,22 +282,6 @@ namespace flex
 	void Scene_02::Update(const GameContext& gameContext)
 	{
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
-
-		m_Box1->GetTransform().MatchRigidBody(rb1);
-		m_Box2->GetTransform().MatchRigidBody(rb2);
-		m_Box3->GetTransform().MatchRigidBody(rb3);
-
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_SPACE))
-		{
-			rb2->GetRigidBodyInternal()->activate();
-			rb2->GetRigidBodyInternal()->clearForces();
-			rb2->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
-
-			rb3->GetRigidBodyInternal()->activate();
-			rb3->GetRigidBodyInternal()->clearForces();
-			rb3->GetRigidBodyInternal()->applyCentralForce({ 0, 600, 0 });
-		}
-
 
 		float maxHeightVisible = 300.0f;
 		float distCamToGround = camera->GetPosition().y;
@@ -400,7 +310,7 @@ namespace flex
 			const glm::vec2 mouseMove = gameContext.inputManager->GetMousePosition() - startMousePos;
 			//Logger::LogInfo(std::to_string(mouseMove.x) + " " + std::to_string(mouseMove.y));
 
-			const glm::uvec2 windowSize = gameContext.window->GetSize();
+			const glm::vec2 windowSize = gameContext.window->GetSize();
 
 			const glm::vec3 camRight = camera->GetRight();
 			const glm::vec3 camUp = camera->GetUp();

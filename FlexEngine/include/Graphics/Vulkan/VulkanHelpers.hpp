@@ -356,12 +356,9 @@ namespace flex
 			RenderID renderID = InvalidRenderID;
 			MaterialID materialID = InvalidMaterialID;
 
-			bool visible = true;
-			bool visibleInSceneExplorer = true;
+			GameObject* gameObject = nullptr;
 
-			std::string name = "";
 			std::string materialName = "";
-			Transform* transform = nullptr;
 
 			u32 VAO = 0;
 			u32 VBO = 0;
@@ -449,8 +446,11 @@ namespace flex
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);
 
-		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
-			const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
+		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology);
+		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode);
+
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo,
+			const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback);
 
 		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 	} // namespace vk

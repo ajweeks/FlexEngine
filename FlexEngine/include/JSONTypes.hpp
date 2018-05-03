@@ -16,15 +16,42 @@ namespace flex
 	{
 		std::vector<JSONField> fields;
 
-		bool HasField(const std::string& label);
-		std::string GetString(const std::string& label);
-		i32 GetInt(const std::string& label);
-		real GetFloat(const std::string& label);
-		bool GetBool(const std::string& label);
-		std::vector<JSONField> GetFieldArray(const std::string& label);
-		std::vector<JSONObject> GetObjectArray(const std::string& label);
-		JSONObject& GetObject(const std::string& label);
-		//JSONField& operator[](const std::string& label);
+
+		bool HasField(const std::string& label) const;
+
+		std::string GetString(const std::string& label) const;
+		/* Sets value to the result of GetString(label) if that field is present */
+		bool SetStringChecked(const std::string& label, std::string& value) const;
+		/* Sets value to the result of ParseVec2(GetString(label)) if that field is present */
+		bool SetVec2Checked(const std::string& label, glm::vec2& value) const;
+		/* Sets value to the result of ParseVec3(GetString(label)) if that field is present */
+		bool SetVec3Checked(const std::string& label, glm::vec3& value) const;
+		/* Sets value to the result of ParseVec4(GetString(label)) if that field is present */
+		bool SetVec4Checked(const std::string& label, glm::vec4& value) const;
+
+		i32 GetInt(const std::string& label) const;
+		/* Sets value to the result of GetString(label) if that field is present */
+		bool SetIntChecked(const std::string& label, int& value) const;
+		
+		real GetFloat(const std::string& label) const;
+		/* Sets value to the result of GetString(label) if that field is present */
+		bool SetFloatChecked(const std::string& label, float& value) const;
+		
+		bool GetBool(const std::string& label) const;
+		/* Sets value to the result of GetString(label) if that field is present */
+		bool SetBoolChecked(const std::string& label, bool& value) const;
+		
+		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
+		/* Sets value to the result of GetString(label) if that field is present */
+		bool SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const;
+		
+		const std::vector<JSONObject>& GetObjectArray(const std::string& label) const;
+		/* Sets value to the result of GetString(label) if that field is present */
+		bool SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const;
+		
+		const JSONObject& GetObject(const std::string& label) const;
+		/* Sets value to the result of GetString(label) if that field is present */
+		bool SetObjectChecked(const std::string& label, JSONObject& value) const;
 
 		std::string Print(i32 tabCount);
 	};
@@ -45,7 +72,7 @@ namespace flex
 
 		static Type TypeFromChar(char c, const std::string& stringAfter);
 
-		JSONValue();
+		explicit JSONValue();
 		explicit JSONValue(const std::string& strValue);
 		explicit JSONValue(i32 intValue);
 		explicit JSONValue(real floatValue);
@@ -66,14 +93,12 @@ namespace flex
 
 	struct JSONField
 	{
+		JSONField();
+		JSONField(const std::string& label, const JSONValue& value);
+
 		std::string label;
 		JSONValue value;
 
 		std::string Print(i32 tabCount);
-	};
-
-	struct ParsedJSONFile
-	{
-		JSONObject rootObject;
 	};
 } // namespace flex

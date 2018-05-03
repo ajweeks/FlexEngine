@@ -16,13 +16,20 @@ namespace flex
 		void UpdateAndRender(const GameContext& gameContext);
 
 		void AddScene(BaseScene* newScene, const GameContext& gameContext);
+
+		/* To be called after AddScene */
+		void InitializeCurrentScene(const GameContext& gameContext);
+
+		/* To be called after InitializeCurrentScene */
+		void PostInitializeCurrentScene(const GameContext& gameContext);
+
 		void RemoveScene(BaseScene* scene, const GameContext& gameContext);
 
-		void SetCurrentScene(BaseScene* scene);
-		void SetCurrentScene(u32 sceneIndex);
-		void SetCurrentScene(const std::string& sceneName);
-		void SetNextSceneActive();
-		void SetPreviousSceneActive();
+		void SetCurrentScene(u32 sceneIndex, const GameContext& gameContext);
+		void SetCurrentScene(BaseScene* scene, const GameContext& gameContext);
+		void SetCurrentScene(const std::string& sceneName, const GameContext& gameContext);
+		void SetNextSceneActive(const GameContext& gameContext);
+		void SetPreviousSceneActive(const GameContext& gameContext);
 
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
@@ -31,7 +38,7 @@ namespace flex
 		void DestroyAllScenes(const GameContext& gameContext);
 
 	private:
-		u32 m_CurrentSceneIndex = 0;
+		u32 m_CurrentSceneIndex = u32_max;
 		std::vector<BaseScene*> m_Scenes;
 
 		SceneManager(const SceneManager&) = delete;

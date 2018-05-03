@@ -7,10 +7,10 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 
-
 namespace flex
 {
 	class MeshPrefab;
+	class GameObject;
 
 	namespace gl
 	{
@@ -28,11 +28,6 @@ namespace flex
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
-			virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) override;
-			virtual PointLightID InitializePointLight(const PointLight& PointLight) override;
-
-			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
-			virtual PointLight& GetPointLight(PointLightID PointLightID) override;
 
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;
@@ -47,22 +42,26 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
-			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
+			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 			virtual bool GetVSyncEnabled() override;
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;
+			u32 GetActiveRenderObjectCount() const;
 
-			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-				DataType dataType, bool normalized, i32 stride, void* pointer) override;
+			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
-			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
+			virtual void SetSkyboxMesh(MeshPrefab* skyboxMesh) override;
+			virtual MeshPrefab* GetSkyboxMesh() override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;
 			virtual Shader& GetShader(ShaderID shaderID) override;
+
+			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
+			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 			
@@ -72,6 +71,7 @@ namespace flex
 			friend class GLPhysicsDebugDraw;
 
 			void ImGuiRender();
+			void DrawImGuiForGameObjectAndChildren(GameObject* gameObject);
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 
@@ -83,7 +83,6 @@ namespace flex
 			void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec);
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
-			void GenerateSkybox(const GameContext& gameContext);
 			void GenerateGBuffer(const GameContext& gameContext);
 
 			// Draw all static geometry to the given render object's cubemap texture
@@ -91,7 +90,7 @@ namespace flex
 			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
-			void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
+			void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
 			void SwapBuffers(const GameContext& gameContext);
 
@@ -99,9 +98,6 @@ namespace flex
 			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically = false);
 
 			bool GetLoadedTexture(const std::string& filePath, u32& handle);
-
-			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
-			bool GetMaterialID(const std::string& materialName, MaterialID& materialID);
 
 			MaterialID GetNextAvailableMaterialID();
 
@@ -133,7 +129,7 @@ namespace flex
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
 			std::map<MaterialID, GLMaterial> m_Materials;
-			std::map<RenderID, GLRenderObject*> m_RenderObjects;
+			std::vector<GLRenderObject*> m_RenderObjects;
 
 			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
@@ -145,7 +141,6 @@ namespace flex
 
 			RenderID m_GBufferQuadRenderID = InvalidRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
-			Transform m_gBufferQuadTransform;
 			u32 m_gBufferHandle = 0;
 			u32 m_gBufferDepthHandle = 0;
 
@@ -164,7 +159,7 @@ namespace flex
 			FrameBufferHandle m_gBuffer_DiffuseAOHandle;
 
 			FrameBufferHandle m_BRDFTextureHandle;
-			glm::uvec2 m_BRDFTextureSize;
+			glm::vec2 m_BRDFTextureSize;
 
 			// Everything is drawn to this texture before being drawn to the default 
 			// frame buffer through some post-processing effects
@@ -175,7 +170,6 @@ namespace flex
 			FrameBufferHandle m_LoadingTextureHandle;
 			// TODO: Use a mesh prefab here
 			VertexBufferData m_SpriteQuadVertexBufferData;
-			Transform m_SpriteQuadTransform;
 			RenderID m_SpriteQuadRenderID;
 			
 			MaterialID m_SpriteMatID = InvalidMaterialID;
@@ -189,12 +183,15 @@ namespace flex
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
 
-			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 			
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
+
+			// The transform to be used for all objects who don't specify one in their 
+			// create info. Always set to identity.
+			//Transform m_DefaultTransform;
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;

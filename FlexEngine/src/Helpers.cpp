@@ -101,9 +101,38 @@ namespace flex
 		}
 	}
 
+	std::vector<std::string> Split(const std::string& str, char delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+
+		size_t strLen = str.size();
+		while (i != strLen)
+		{
+			while (i != strLen && str[i] == delim)
+			{
+				++i;
+			}
+
+			size_t j = i;
+			while (j != strLen && str[j] != delim)
+			{
+				++j;
+			}
+
+			if (i != j)
+			{
+				result.push_back(str.substr(i, j - i));
+				i = j;
+			}
+		}
+
+		return result;
+	}
+
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
 	{
-		while (offset < str.size())
+		while (offset < (i32)str.size())
 		{
 			if (!isdigit(str[offset]) && !isalpha(str[offset]))
 			{
@@ -130,19 +159,127 @@ namespace flex
 		return a * (1.0f - t) + b * t;
 	}
 
-	void ToString(const glm::vec2& vec, std::ostream& stream)
+	real ParseFloat(const std::string& floatStr)
 	{
-		stream << vec.x << " " << vec.y;
+		if (floatStr.empty())
+		{
+			Logger::LogError("Invalid float string (empty)");
+			return -1.0f;
+		}
+
+		return (real)std::atof(floatStr.c_str());
 	}
 
-	void ToString(const glm::vec3& vec, std::ostream& stream)
+	glm::vec2 ParseVec2(const std::string& vecStr)
 	{
-		stream << vec.x << " " << vec.y << " " << vec.z;
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 2)
+		{
+			Logger::LogError("Invalid vec2 field: " + vecStr);
+			return glm::vec2(-1);
+		}
+		else
+		{
+			glm::vec2 result(
+				std::atof(parts[0].c_str()),
+				std::atof(parts[1].c_str()));
+
+			return result;
+		}
 	}
 
-	void ToString(const glm::vec4& vec, std::ostream& stream)
+	glm::vec3 ParseVec3(const std::string& vecStr)
 	{
-		stream << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 3 && parts.size() != 4)
+		{
+			Logger::LogError("Invalid vec3 field: " + vecStr);
+			return glm::vec3(-1);
+		}
+		else
+		{
+			glm::vec3 result(
+				std::atof(parts[0].c_str()),
+				std::atof(parts[1].c_str()),
+				std::atof(parts[2].c_str()));
+
+			return result;
+		}
+	}
+
+	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if ((parts.size() != 4 && parts.size() != 3) || (defaultW < 0 && parts.size() != 4))
+		{
+			Logger::LogError("Invalid vec4 field: " + vecStr);
+			return glm::vec4(-1);
+		}
+		else
+		{
+			glm::vec4 result;
+
+			if (parts.size() == 4)
+			{
+				result = glm::vec4(
+					std::atof(parts[0].c_str()),
+					std::atof(parts[1].c_str()),
+					std::atof(parts[2].c_str()),
+					std::atof(parts[3].c_str()));
+			}
+			else
+			{
+				result = glm::vec4(
+					std::atof(parts[0].c_str()),
+					std::atof(parts[1].c_str()),
+					std::atof(parts[2].c_str()),
+					defaultW);
+			}
+
+			return result;
+		}
+	}
+
+	//void Vec2ToString(const glm::vec2& vec, std::ostream& stream)
+	//{
+	//	stream << vec.x << " " << vec.y;
+	//}
+
+	//void Vec3ToString(const glm::vec3& vec, std::ostream& stream)
+	//{
+	//	stream << vec.x << " " << vec.y << " " << vec.z;
+	//}
+
+	//void Vec4ToString(const glm::vec4& vec, std::ostream& stream)
+	//{
+	//	stream << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+	//}
+
+	std::string Vec2ToString(const glm::vec2& vec)
+	{
+		std::string result(std::to_string(vec.x) + ", " +
+			std::to_string(vec.y));
+		return result;
+	}
+
+	std::string Vec3ToString(const glm::vec3& vec)
+	{
+		std::string result(std::to_string(vec.x) + ", " + 
+			std::to_string(vec.y) + ", " + 
+			std::to_string(vec.z));
+		return result;
+	}
+
+	std::string Vec4ToString(const glm::vec4& vec)
+	{
+		std::string result(std::to_string(vec.x) + ", " +
+			std::to_string(vec.y) + ", " + 
+			std::to_string(vec.z) + ", " + 
+			std::to_string(vec.w));
+		return result;
 	}
 
 	void CopyColorToClipboard(const glm::vec3& col)
@@ -190,6 +327,101 @@ namespace flex
 		);
 
 		return result;
+	}
+
+	CullFace StringToCullFace(const std::string& str)
+	{
+		std::string strLower(str);
+		ToLower(strLower);
+
+		if (strLower.compare("back") == 0)
+		{
+			return CullFace::BACK;
+		}
+		else if (strLower.compare("front") == 0)
+		{
+			return CullFace::FRONT;
+		}
+		else if (strLower.compare("front and back") == 0)
+		{
+			return CullFace::FRONT_AND_BACK;
+		}
+		else
+		{
+			Logger::LogError("Unhandled cull face str: " + str);
+			return CullFace::NONE;
+		}
+	}
+
+	std::string CullFaceToString(CullFace cullFace)
+	{
+		switch (cullFace)
+		{
+		case CullFace::BACK:			return "back";
+		case CullFace::FRONT:			return "front";
+		case CullFace::FRONT_AND_BACK:	return "front and back";
+		case CullFace::NONE:			return "NONE";
+		default:						return "UNHANDLED CULL FACE";
+		}
+	}
+
+	void ToLower(std::string& str)
+	{
+		for (char& c : str)
+		{
+			c = (char)tolower(c);
+		}
+	}
+
+	void ToUpper(std::string& str)
+	{
+		for (char& c : str)
+		{
+			c = (char)toupper(c);
+		}
+	}
+
+	bool StartsWith(const std::string& str, const std::string& start)
+	{
+		if (str.length() < start.length())
+		{
+			return false;
+		}
+
+		bool result = (str.substr(0, start.length()).compare(start) == 0);
+		return result;
+	}
+
+	std::string SerializableTypeToString(SerializableType type)
+	{
+		switch (type)
+		{
+		case SerializableType::MESH:				return "mesh";
+		case SerializableType::SKYBOX:				return "skybox";
+		case SerializableType::REFLECTION_PROBE:	return "reflection probe";
+		case SerializableType::NONE:				return "NONE";
+		default:									return "UNHANDLED SERIALIZABLE TYPE";
+		}
+	}
+
+	SerializableType StringToSerializableType(const std::string& serializableTypeStr)
+	{
+		if (serializableTypeStr.compare("mesh") == 0)
+		{
+			return SerializableType::MESH;
+		}
+		else if (serializableTypeStr.compare("skybox") == 0)
+		{
+			return SerializableType::SKYBOX;
+		}
+		else if (serializableTypeStr.compare("reflection probe") == 0)
+		{
+			return SerializableType::REFLECTION_PROBE;
+		}
+		else
+		{
+			return SerializableType::NONE;
+		}
 	}
 
 	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)

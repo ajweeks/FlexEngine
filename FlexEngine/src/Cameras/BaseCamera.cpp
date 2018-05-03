@@ -20,7 +20,7 @@ namespace flex
 		m_ViewProjection(glm::mat4(0.0f)),
 		m_Yaw(0.0f),
 		m_Pitch(0.0f),
-		m_MoveSpeed(50.0f),
+		m_MoveSpeed(25.0f),
 		m_PanSpeed(10.0f),
 		m_DragDollySpeed(0.1f),
 		m_ScrollDollySpeed(2.0f),

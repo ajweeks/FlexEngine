@@ -1,0 +1,189 @@
+{
+    "accessors" : [
+        {
+            "bufferView" : 0, 
+            "componentType" : 5121, 
+            "count" : 72, 
+            "max" : [
+                31
+            ], 
+            "min" : [
+                0
+            ], 
+            "type" : "SCALAR"
+        }, 
+        {
+            "bufferView" : 1, 
+            "componentType" : 5126, 
+            "count" : 32, 
+            "max" : [
+                3.182703733444214, 
+                9.129364013671875, 
+                3.1594982147216797
+            ], 
+            "min" : [
+                -3.0902202129364014, 
+                0.0, 
+                -3.1594982147216797
+            ], 
+            "type" : "VEC3"
+        }, 
+        {
+            "bufferView" : 2, 
+            "componentType" : 5126, 
+            "count" : 32, 
+            "max" : [
+                0.9442426562309265, 
+                1.0, 
+                0.9373760223388672
+            ], 
+            "min" : [
+                -0.9168065190315247, 
+                -1.0, 
+                -0.9373760223388672
+            ], 
+            "type" : "VEC3"
+        }, 
+        {
+            "bufferView" : 3, 
+            "componentType" : 5126, 
+            "count" : 32, 
+            "max" : [
+                0.991744339466095, 
+                0.5258771181106567, 
+                0.9960799217224121, 
+                1.0
+            ], 
+            "min" : [
+                -0.9280104637145996, 
+                -0.16344468295574188, 
+                -0.5125963091850281, 
+                1.0
+            ], 
+            "type" : "VEC4"
+        }, 
+        {
+            "bufferView" : 4, 
+            "componentType" : 5126, 
+            "count" : 32, 
+            "max" : [
+                1.0, 
+                1.0
+            ], 
+            "min" : [
+                0.0, 
+                0.0
+            ], 
+            "type" : "VEC2"
+        }, 
+        {
+            "bufferView" : 5, 
+            "componentType" : 5126, 
+            "count" : 32, 
+            "max" : [
+                1.0, 
+                0.0, 
+                0.0, 
+                1.0
+            ], 
+            "min" : [
+                1.0, 
+                0.0, 
+                0.0, 
+                1.0
+            ], 
+            "type" : "VEC4"
+        }
+    ], 
+    "asset" : {
+        "generator" : "Khronos Blender glTF 2.0 exporter", 
+        "version" : "2.0"
+    }, 
+    "bufferViews" : [
+        {
+            "buffer" : 0, 
+            "byteLength" : 72, 
+            "byteOffset" : 0, 
+            "target" : 34963
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 384, 
+            "byteOffset" : 72, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 384, 
+            "byteOffset" : 456, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 512, 
+            "byteOffset" : 840, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 256, 
+            "byteOffset" : 1352, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 512, 
+            "byteOffset" : 1608, 
+            "target" : 34962
+        }
+    ], 
+    "buffers" : [
+        {
+            "byteLength" : 2120, 
+            "uri" : "cone.bin"
+        }
+    ], 
+    "meshes" : [
+        {
+            "name" : "Untitled", 
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "COLOR_0" : 5, 
+                        "NORMAL" : 2, 
+                        "POSITION" : 1, 
+                        "TANGENT" : 3, 
+                        "TEXCOORD_0" : 4
+                    }, 
+                    "indices" : 0
+                }
+            ]
+        }
+    ], 
+    "nodes" : [
+        {
+            "mesh" : 0, 
+            "name" : "Cone001", 
+            "rotation" : [
+                -2.1855694143368964e-08, 
+                0.0, 
+                -0.0, 
+                1.0
+            ], 
+            "scale" : [
+                0.5, 
+                0.5, 
+                0.5
+            ]
+        }
+    ], 
+    "scene" : 0, 
+    "scenes" : [
+        {
+            "name" : "Scene", 
+            "nodes" : [
+                0
+            ]
+        }
+    ]
+}

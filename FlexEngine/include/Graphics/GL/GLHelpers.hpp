@@ -70,41 +70,37 @@ namespace flex
 			};
 			UniformIDs uniformIDs;
 
-			u32 diffuseSamplerID = 0;
-			u32 normalSamplerID = 0;
+			u32 diffuseSamplerID = InvalidID;
+			u32 normalSamplerID = InvalidID;
 
-			u32 cubemapSamplerID = 0;
+			u32 cubemapSamplerID = InvalidID;
 			std::vector<GLCubemapGBuffer> cubemapSamplerGBuffersIDs;
-			u32 cubemapDepthSamplerID = 0;
+			u32 cubemapDepthSamplerID = InvalidID;
 
 			// PBR samplers
-			u32 albedoSamplerID = 0;
-			u32 metallicSamplerID = 0;
-			u32 roughnessSamplerID = 0;
-			u32 aoSamplerID = 0;
+			u32 albedoSamplerID = InvalidID;
+			u32 metallicSamplerID = InvalidID;
+			u32 roughnessSamplerID = InvalidID;
+			u32 aoSamplerID = InvalidID;
 
-			u32 hdrTextureID = 0;
+			u32 hdrTextureID = InvalidID;
 
-			u32 irradianceSamplerID = 0;
-			u32 prefilteredMapSamplerID = 0;
-			u32 brdfLUTSamplerID = 0;
+			u32 irradianceSamplerID = InvalidID;
+			u32 prefilteredMapSamplerID = InvalidID;
+			u32 brdfLUTSamplerID = InvalidID;
 		};
 
 		struct GLRenderObject
 		{
 			RenderID renderID = InvalidRenderID;
 
-			std::string name = "";
+			GameObject* gameObject = nullptr;
+
 			std::string materialName = "";
-			Transform* transform = nullptr;
 
-			bool visible = true;
-			bool isStatic = true; // If true, this object will be rendered to reflection probes
-			bool visibleInSceneExplorer = true;
-
-			u32 VAO = 0;
-			u32 VBO = 0;
-			u32 IBO = 0;
+			u32 VAO = InvalidID;
+			u32 VBO = InvalidID;
+			u32 IBO = InvalidID;
 
 			GLenum topology = GL_TRIANGLES;
 			GLenum cullFace = GL_BACK;
@@ -153,7 +149,7 @@ namespace flex
 			u32* textureID = nullptr;
 			u32* depthTextureID = nullptr;
 			std::vector<GLCubemapGBuffer>* textureGBufferIDs = nullptr;
-			glm::uvec2 textureSize = { 0, 0 };
+			glm::vec2 textureSize = { 0, 0 };
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
 			bool generateMipmaps = false;
 			bool enableTrilinearFiltering = false;
@@ -172,8 +168,16 @@ namespace flex
 		GLenum DataTypeToGLType(DataType dataType);
 		GLenum UsageFlagToGLUsageFlag(UsageFlag usage);
 		GLenum TopologyModeToGLMode(TopologyMode topology);
-		u32 CullFaceToGLMode(CullFace cullFace);
+		u32 CullFaceToGLCullFace(CullFace cullFace);
 		GLenum DepthTestFuncToGlenum(DepthTestFunc func);
+
+		bool GLBooleanToBool(GLboolean boolean);
+		BufferTarget GLTargetToBufferTarget(GLuint target);
+		DataType GLTypeToDataType(GLenum type);
+		UsageFlag GLUsageFlagToUsageFlag(GLenum usage);
+		TopologyMode GLModeToTopologyMode(GLenum mode);
+		CullFace GLCullFaceToCullFace(u32 cullFace);
+		DepthTestFunc GlenumToDepthTestFunc(GLenum depthTestFunc);
 
 	} // namespace gl
 } // namespace flex

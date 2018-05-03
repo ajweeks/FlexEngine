@@ -8,6 +8,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <string>
+
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Colors.hpp"
@@ -22,7 +24,6 @@ namespace flex
 
 	std::map<std::string, MeshPrefab::LoadedMesh*> MeshPrefab::m_LoadedMeshes;
 
-	std::string MeshPrefab::m_DefaultName = "Game Object";
 	glm::vec4 MeshPrefab::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 	glm::vec3 MeshPrefab::m_DefaultTangent(1.0f, 0.0f, 0.0f);
@@ -36,14 +37,10 @@ namespace flex
 	}
 
 	MeshPrefab::MeshPrefab(MaterialID materialID, const std::string& name) :
+		GameObject(name, SerializableType::MESH),
 		m_MaterialID(materialID),
-		m_Name(name),
 		m_UVScale(1.0f, 1.0f)
 	{
-		if (name.empty())
-		{
-			m_Name = m_DefaultName;
-		}
 	}
 
 	MeshPrefab::~MeshPrefab()
@@ -60,14 +57,9 @@ namespace flex
 		}
 	}
 
-	void MeshPrefab::ForceAttributes(VertexAttributes attributes)
+	void MeshPrefab::SetRequiredAttributes(VertexAttributes requiredAttributes)
 	{
-		m_ForcedAttributes |= attributes;
-	}
-
-	void MeshPrefab::IgnoreAttributes(VertexAttributes attributes)
-	{
-		m_IgnoredAttributes |= attributes;
+		m_RequiredAttributes |= requiredAttributes;
 	}
 
 	bool MeshPrefab::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
@@ -84,16 +76,23 @@ namespace flex
 		}
 	}
 
-	bool MeshPrefab::LoadFromFile(const GameContext& gameContext, const std::string& filepath, bool flipNormalYZ, bool flipZ, bool flipU, bool flipV)
+	bool MeshPrefab::LoadFromFile(const GameContext& gameContext,
+		const std::string& filepath,
+		ImportSettings* importSettings /* = nullptr */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
+		m_Type = Type::FILE;
+		m_Shape = PrefabShape::NONE;
+		m_Filepath = filepath;
+
 		m_VertexBufferData.Destroy();
 
-		m_Shape = PrefabShape::NONE;
+		m_Transform.SetGameObject(this);
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
-		const aiScene* pScene = nullptr;
-		if (!GetLoadedMesh(filepath, &pScene))
+		const aiScene* scene = nullptr;
+		if (!GetLoadedMesh(filepath, &scene))
 		{
 			// Mesh hasn't been loaded before, load it now
 
@@ -110,31 +109,46 @@ namespace flex
 				aiProcess_CalcTangentSpace
 			);
 
-			pScene = loadedMesh->scene;
+			scene = loadedMesh->scene;
 
-			if (!pScene)
+			if (!scene)
 			{
 				Logger::LogError(loadedMesh->importer.GetErrorString());
 				return false;
 			}
 		}
 
+		if (!scene)
+		{
+			Logger::LogError("Failed to load mesh " + filepath);
+			return false;
+		}
 
-		if (!pScene->HasMeshes())
+
+		if (!scene->HasMeshes())
 		{
 			Logger::LogWarning("Loaded mesh file has no meshes! " + filepath);
 			return false;
 		}
 
-		std::vector<aiMesh*> meshes(pScene->mNumMeshes);
-		for (size_t i = 0; i < pScene->mNumMeshes; ++i)
+		std::vector<aiMesh*> meshes(scene->mNumMeshes);
+		for (size_t i = 0; i < scene->mNumMeshes; ++i)
 		{
-			meshes[i] = pScene->mMeshes[i];
+			meshes[i] = scene->mMeshes[i];
 		}
 
 		if (m_Name.empty())
 		{
 			m_Name = meshes[0]->mName.C_Str();
+
+			if (m_Name.empty())
+			{
+				auto filePathParts = Split(filepath, '.');
+				std::string friendlyFileName = filePathParts[filePathParts.size() - 1];
+				StripLeadingDirectories(friendlyFileName);
+
+				m_Name = "Mesh prefab - " + friendlyFileName;
+			}
 		}
 
 		size_t totalVertCount = 0;
@@ -144,113 +158,164 @@ namespace flex
 			const size_t numMeshVerts = mesh->mNumVertices;
 			totalVertCount += numMeshVerts;
 
+			// Cached bools per-mesh
+			const bool meshHasVertexColors0 = mesh->HasVertexColors(0);
+			const bool meshHasTangentsAndBitangents = mesh->HasTangentsAndBitangents();
+			const bool meshHasNormals = mesh->HasNormals();
+			const bool meshHasTexCoord0 = mesh->HasTextureCoords(0);
+
+			// All meshes need positions
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+
 			for (size_t i = 0; i < numMeshVerts; ++i)
 			{
 				// Position
 				glm::vec3 pos = ToVec3(mesh->mVertices[i]);
-				pos = glm::vec3(pos.x, pos.z, -pos.y); // Rotate +90 deg around x axis
 				vertexBufferDataCreateInfo.positions_3D.push_back(pos);
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 				// Color
-				if (mesh->HasVertexColors(0) && !(m_IgnoredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT))
+				if ((m_RequiredAttributes && 
+					(m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)) ||
+					(!m_RequiredAttributes && meshHasVertexColors0))
 				{
-					glm::vec4 col = ToVec4(mesh->mColors[0][i]);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-				}
-				else if (m_ForcedAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
-				{
-					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
-					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+					if (meshHasVertexColors0)
+					{
+						glm::vec4 col = ToVec4(mesh->mColors[0][i]);
+						vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
+					}
+					else
+					{
+						vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
+					}
 				}
 
-				// Tangent & Bitangent
-				if (mesh->HasTangentsAndBitangents())
+
+				// Tangent
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::TANGENT)) ||
+					(!m_RequiredAttributes && meshHasTangentsAndBitangents))
 				{
-					if (!(m_IgnoredAttributes & (u32)VertexAttribute::TANGENT))
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
+
+					if (meshHasTangentsAndBitangents)
 					{
 						glm::vec3 tangent = ToVec3(mesh->mTangents[i]);
 						vertexBufferDataCreateInfo.tangents.push_back(tangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
 					}
+					else
+					{
+						vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
+					}
+				}
 
-					if (!(m_IgnoredAttributes & (u32)VertexAttribute::BITANGENT))
+				// Bitangent
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
+					(!m_RequiredAttributes && meshHasTangentsAndBitangents))
+				{
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
+
+					if (meshHasTangentsAndBitangents)
 					{
 						glm::vec3 bitangent = ToVec3(mesh->mBitangents[i]);
 						vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 					}
-				}
-				else
-				{
-					if (m_ForcedAttributes & (u32)VertexAttribute::TANGENT)
-					{
-						vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-					}
-					if (m_ForcedAttributes & (u32)VertexAttribute::BITANGENT)
+					else
 					{
 						vertexBufferDataCreateInfo.bitangents.push_back(m_DefaultBitangent);
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 					}
 				}
 
 				// Normal
-				if (mesh->HasNormals() && !(m_IgnoredAttributes & (u32)VertexAttribute::NORMAL))
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
+					(!m_RequiredAttributes && meshHasNormals))
 				{
-					glm::vec3 norm = ToVec3(mesh->mNormals[i]);
-					if (flipNormalYZ)
-					{
-						std::swap(norm.y, norm.z);
-					}
-					if (flipZ)
-					{
-						norm.z = -norm.z;
-					}
-					vertexBufferDataCreateInfo.normals.push_back(norm);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
-				}
-				else if (m_ForcedAttributes & (u32)VertexAttribute::NORMAL)
-				{
-					vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
-					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
+
+					if (meshHasNormals)
+					{
+						glm::vec3 norm = ToVec3(mesh->mNormals[i]);
+						if (importSettings && importSettings->swapNormalYZ)
+						{
+							std::swap(norm.y, norm.z);
+						}
+						if (importSettings && importSettings->flipNormalZ)
+						{
+							norm.z = -norm.z;
+						}
+						vertexBufferDataCreateInfo.normals.push_back(norm);
+					}
+					else
+					{
+						vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
+					}
 				}
 
 				// TexCoord
-				if (mesh->HasTextureCoords(0) && !(m_IgnoredAttributes & (u32)VertexAttribute::UV))
+				if ((m_RequiredAttributes &&
+					(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
+					(!m_RequiredAttributes && meshHasTexCoord0))
 				{
-					// Truncate w component
-					glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
-					texCoord *= m_UVScale;
-					if (flipU)
-					{
-						texCoord.x = 1.0f - texCoord.x;
-					}
-					if (flipV)
-					{
-						texCoord.y = 1.0f - texCoord.y;
-					}
-					vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
 					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
-				}
-				else if (m_ForcedAttributes & (u32)VertexAttribute::UV)
-				{
-					vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
-					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
+
+					if (meshHasTexCoord0)
+					{
+						// Truncate w component
+						glm::vec2 texCoord = (glm::vec2)(ToVec3(mesh->mTextureCoords[0][i]));
+						texCoord *= m_UVScale;
+						if (importSettings && importSettings->flipU)
+						{
+							texCoord.x = 1.0f - texCoord.x;
+						}
+						if (importSettings && importSettings->flipV)
+						{
+							texCoord.y = 1.0f - texCoord.y;
+						}
+						vertexBufferDataCreateInfo.texCoords_UV.push_back(texCoord);
+					}
+					else
+					{
+						vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
+					}
 				}
 			}
 		}
 		
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
-		RenderObjectCreateInfo createInfo = {};
-		createInfo.vertexBufferData = &m_VertexBufferData;
-		createInfo.materialID = m_MaterialID;
-		createInfo.name = m_Name;
-		createInfo.transform = &m_Transform;
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &createInfo);
+		if (optionalCreateInfo)
+		{
+			if (optionalCreateInfo->materialID != InvalidMaterialID)
+			{
+				m_MaterialID = optionalCreateInfo->materialID;
+				renderObjectCreateInfo.materialID = m_MaterialID;
+			}
+			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
+			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
+			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
+			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
+			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+
+			if (optionalCreateInfo->vertexBufferData != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
+			}
+			if (optionalCreateInfo->indices != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
+			}
+		}
+
+		renderObjectCreateInfo.gameObject = this;
+		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
+		renderObjectCreateInfo.materialID = m_MaterialID;
+
+		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));
 
 		gameContext.renderer->SetTopologyMode(m_RenderID, TopologyMode::TRIANGLE_LIST);
 
@@ -261,19 +326,48 @@ namespace flex
 		return true;
 	}
 
-	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape)
+	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
-		m_VertexBufferData.Destroy();
-
+		m_Type = Type::PREFAB;
 		m_Shape = shape;
 
+		m_VertexBufferData.Destroy();
+
+		m_Transform.SetGameObject(this);
+
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
+
+		if (optionalCreateInfo)
+		{
+			if (optionalCreateInfo->materialID != InvalidMaterialID)
+			{
+				m_MaterialID = optionalCreateInfo->materialID;
+				renderObjectCreateInfo.materialID = m_MaterialID;
+			}
+			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
+			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
+			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
+			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
+			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+
+			if (optionalCreateInfo->vertexBufferData != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+			}
+			if (optionalCreateInfo->indices != nullptr)
+			{
+				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+			}
+		}
+
+		renderObjectCreateInfo.gameObject = this;
 		renderObjectCreateInfo.materialID = m_MaterialID;
-		renderObjectCreateInfo.transform = &m_Transform;
 
 		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+
+		std::string defaultName;
 
 		switch (shape)
 		{
@@ -512,7 +606,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 
-			renderObjectCreateInfo.name = "Cube";
+			defaultName = "Cube";
 		} break;
 		case MeshPrefab::PrefabShape::GRID:
 		{
@@ -573,7 +667,7 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
-			renderObjectCreateInfo.name = "Grid";
+			defaultName = "Grid";
 		} break;
 		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:
 		{
@@ -623,7 +717,7 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
-			renderObjectCreateInfo.name = "World Axis Ground Plane";
+			defaultName = "World Axis Ground Plane";
 		} break;
 		case MeshPrefab::PrefabShape::PLANE:
 		{
@@ -699,7 +793,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 
-			renderObjectCreateInfo.name = "Plane";
+			defaultName = "Plane";
 		} break;
 		case MeshPrefab::PrefabShape::UV_SPHERE:
 		{
@@ -792,10 +886,12 @@ namespace flex
 				m_Indices.push_back(b);
 			}
 
-			renderObjectCreateInfo.name = "UV Sphere";
+			defaultName = "UV Sphere";
 		} break;
 		case MeshPrefab::PrefabShape::SKYBOX:
 		{
+			// TODO: Move to separate class?
+			m_SerializableType = SerializableType::SKYBOX;
 			vertexBufferDataCreateInfo.positions_3D =
 			{
 				// Front
@@ -855,7 +951,7 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 			renderObjectCreateInfo.cullFace = CullFace::FRONT;
-			renderObjectCreateInfo.name = "Skybox";
+			defaultName = "Skybox";
 
 		} break;
 		default:
@@ -868,12 +964,12 @@ namespace flex
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		if (!m_Name.empty() && m_Name.compare(m_DefaultName) != 0)
+		if (m_Name.empty() || defaultName.empty())
 		{
-			renderObjectCreateInfo.name = m_Name;
+			m_Name = defaultName;
 		}
 
-		m_RenderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));
 
 		gameContext.renderer->SetTopologyMode(m_RenderID, topologyMode);
 		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
@@ -883,19 +979,9 @@ namespace flex
 		return true;
 	}
 
-	void MeshPrefab::Initialize(const GameContext& gameContext)
-	{
-		UNREFERENCED_PARAMETER(gameContext);
-	}
-
-	void MeshPrefab::PostInitialize(const GameContext& gameContext)
-	{
-		gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
-	}
-
 	void MeshPrefab::Update(const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		GameObject::Update(gameContext);
 
 		if (m_Shape == PrefabShape::GRID)
 		{
@@ -908,9 +994,9 @@ namespace flex
 		}
 	}
 
-	void MeshPrefab::Destroy(const GameContext& gameContext)
+	MaterialID MeshPrefab::GetMaterialID() const
 	{
-		gameContext.renderer->DestroyRenderObject(m_RenderID);
+		return m_MaterialID;
 	}
 
 	void MeshPrefab::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
@@ -927,7 +1013,67 @@ namespace flex
 		m_UVScale = glm::vec2(uScale, vScale);
 	}
 
-	MeshPrefab::LoadedMesh::LoadedMesh()
+	MeshPrefab::PrefabShape MeshPrefab::StringToPrefabShape(const std::string& prefabName)
 	{
+		if (prefabName.compare("cube") == 0)
+		{
+			return PrefabShape::CUBE;
+		}
+		else if (prefabName.compare("grid") == 0)
+		{
+			return PrefabShape::GRID;
+		}
+		else if (prefabName.compare("world axis ground") == 0)
+		{
+			return PrefabShape::WORLD_AXIS_GROUND;
+		}
+		else if (prefabName.compare("plane") == 0)
+		{
+			return PrefabShape::PLANE;
+		}
+		else if (prefabName.compare("uv sphere") == 0)
+		{
+			return PrefabShape::UV_SPHERE;
+		}
+		else if (prefabName.compare("skybox") == 0)
+		{
+			return PrefabShape::SKYBOX;
+		}
+		else
+		{
+			Logger::LogError("Unhandled prefab shape string: " + prefabName);
+			return PrefabShape::NONE;
+		}
+
+	}
+
+	std::string MeshPrefab::PrefabShapeToString(PrefabShape shape)
+	{
+		switch (shape)
+		{
+		case MeshPrefab::PrefabShape::CUBE:					return "cube";
+		case MeshPrefab::PrefabShape::GRID:					return "grid";
+		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:	return "world axis ground";
+		case MeshPrefab::PrefabShape::PLANE:				return "plane";
+		case MeshPrefab::PrefabShape::UV_SPHERE:			return "uv sphere";
+		case MeshPrefab::PrefabShape::SKYBOX:				return "skybox";
+		case MeshPrefab::PrefabShape::NONE:					return "NONE";
+		default:											return "UNHANDLED PREFAB SHAPE";
+		}
+	}
+
+	MeshPrefab::Type MeshPrefab::GetType() const
+	{
+		return m_Type;
+	}
+
+	MeshPrefab::PrefabShape MeshPrefab::GetShape() const
+	{
+		return m_Shape;
+	}
+
+	std::string MeshPrefab::GetFilepath() const
+	{
+		return m_Filepath;
 	}
 } // namespace flex

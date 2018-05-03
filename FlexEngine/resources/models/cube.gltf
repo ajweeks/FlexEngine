@@ -1,0 +1,189 @@
+{
+    "accessors" : [
+        {
+            "bufferView" : 0, 
+            "componentType" : 5121, 
+            "count" : 36, 
+            "max" : [
+                35
+            ], 
+            "min" : [
+                0
+            ], 
+            "type" : "SCALAR"
+        }, 
+        {
+            "bufferView" : 1, 
+            "componentType" : 5126, 
+            "count" : 36, 
+            "max" : [
+                1.0, 
+                1.0, 
+                1.0
+            ], 
+            "min" : [
+                -1.0, 
+                -1.0, 
+                -1.0
+            ], 
+            "type" : "VEC3"
+        }, 
+        {
+            "bufferView" : 2, 
+            "componentType" : 5126, 
+            "count" : 36, 
+            "max" : [
+                1.0, 
+                1.0, 
+                1.0
+            ], 
+            "min" : [
+                -1.0, 
+                -1.0, 
+                -1.0
+            ], 
+            "type" : "VEC3"
+        }, 
+        {
+            "bufferView" : 3, 
+            "componentType" : 5126, 
+            "count" : 36, 
+            "max" : [
+                1.0, 
+                0.0, 
+                1.0, 
+                1.0
+            ], 
+            "min" : [
+                -1.0, 
+                0.0, 
+                -1.0, 
+                1.0
+            ], 
+            "type" : "VEC4"
+        }, 
+        {
+            "bufferView" : 4, 
+            "componentType" : 5126, 
+            "count" : 36, 
+            "max" : [
+                0.9994999170303345, 
+                0.9994999999762513
+            ], 
+            "min" : [
+                0.0005000000237487257, 
+                0.000500023365020752
+            ], 
+            "type" : "VEC2"
+        }, 
+        {
+            "bufferView" : 5, 
+            "componentType" : 5126, 
+            "count" : 36, 
+            "max" : [
+                0.11372549086809158, 
+                0.1725490242242813, 
+                0.5333333611488342, 
+                1.0
+            ], 
+            "min" : [
+                0.11372549086809158, 
+                0.1725490242242813, 
+                0.5333333611488342, 
+                1.0
+            ], 
+            "type" : "VEC4"
+        }
+    ], 
+    "asset" : {
+        "generator" : "Khronos Blender glTF 2.0 exporter", 
+        "version" : "2.0"
+    }, 
+    "bufferViews" : [
+        {
+            "buffer" : 0, 
+            "byteLength" : 36, 
+            "byteOffset" : 0, 
+            "target" : 34963
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 432, 
+            "byteOffset" : 36, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 432, 
+            "byteOffset" : 468, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 576, 
+            "byteOffset" : 900, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 288, 
+            "byteOffset" : 1476, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 576, 
+            "byteOffset" : 1764, 
+            "target" : 34962
+        }
+    ], 
+    "buffers" : [
+        {
+            "byteLength" : 2340, 
+            "uri" : "cube.bin"
+        }
+    ], 
+    "meshes" : [
+        {
+            "name" : "Untitled.001", 
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "COLOR_0" : 5, 
+                        "NORMAL" : 2, 
+                        "POSITION" : 1, 
+                        "TANGENT" : 3, 
+                        "TEXCOORD_0" : 4
+                    }, 
+                    "indices" : 0
+                }
+            ]
+        }
+    ], 
+    "nodes" : [
+        {
+            "mesh" : 0, 
+            "name" : "Box001", 
+            "rotation" : [
+                -2.1855694143368964e-08, 
+                0.0, 
+                -0.0, 
+                1.0
+            ], 
+            "scale" : [
+                0.5, 
+                0.5, 
+                0.5
+            ]
+        }
+    ], 
+    "scene" : 0, 
+    "scenes" : [
+        {
+            "name" : "Scene", 
+            "nodes" : [
+                0
+            ]
+        }
+    ]
+}

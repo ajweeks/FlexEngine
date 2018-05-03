@@ -32,11 +32,6 @@ namespace flex
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual u32 InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
-			virtual DirectionalLightID InitializeDirectionalLight(const DirectionalLight& dirLight) override;
-			virtual PointLightID InitializePointLight(const PointLight& PointLight) override;
-
-			virtual DirectionalLight& GetDirectionalLight(DirectionalLightID dirLightID) override;
-			virtual PointLight& GetPointLight(PointLightID PointLightID) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
@@ -51,7 +46,7 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
-			virtual void SetRenderObjectVisible(RenderID renderID, bool visible) override;
+			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
 			virtual bool GetVSyncEnabled() override;
@@ -62,11 +57,16 @@ namespace flex
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
 				DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
-			virtual void SetSkyboxMaterial(MaterialID skyboxMaterialID) override;
+			virtual void SetSkyboxMesh(MeshPrefab* skyboxMesh) override;
+			virtual MeshPrefab* GetSkyboxMesh() override;
+
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;
 			virtual Shader& GetShader(ShaderID shaderID) override;
+
+			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
+			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 			
@@ -81,7 +81,7 @@ namespace flex
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
 			{
-				Uniforms overridenUniforms; // To override a uniform, add it to this object, then set the overriden value to the respective member
+				Uniforms overridenUniforms; // To override a uniform, add it to this object, then set the overridden value to the respective member
 
 				glm::mat4 projection;
 				glm::mat4 view;
@@ -111,7 +111,7 @@ namespace flex
 			//void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
-			//void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::uvec2 BRDFLUTSize);
+			//void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
 			RenderID GetFirstAvailableRenderID() const;
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
@@ -133,9 +133,6 @@ namespace flex
 			void PrepareOffscreenFrameBuffer(Window* window);
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender(const GameContext& gameContext);
-
-			bool GetMaterialID(const std::string& materialName, MaterialID& materialID);
-			bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
 
 			void CreateUniformBuffers(VulkanShader* shader);
 
@@ -189,7 +186,8 @@ namespace flex
 			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
 			void LoadDefaultShaderCode();
-			void GenerateSkybox(const GameContext& gameContext);
+
+			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
@@ -206,7 +204,7 @@ namespace flex
 			static const u32 MAT_CAPACITY = 25;
 
 			std::vector<VulkanRenderObject*> m_RenderObjects;
-			std::vector<VulkanMaterial> m_LoadedMaterials;
+			std::vector<VulkanMaterial> m_Materials;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
@@ -286,10 +284,8 @@ namespace flex
 
 			RenderID m_GBufferQuadRenderID = InvalidRenderID;
 			VertexBufferData m_gBufferQuadVertexBufferData;
-			Transform m_gBufferQuadTransform;
 			std::vector<u32> m_gBufferQuadIndices;
 
-			MaterialID m_SkyBoxMaterialID = InvalidMaterialID; // Set by the user via SetSkyboxMaterial
 			MeshPrefab* m_SkyBoxMesh = nullptr;
 			
 			VkClearColorValue m_ClearColor;

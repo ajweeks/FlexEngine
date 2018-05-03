@@ -14,7 +14,7 @@
 
 namespace flex
 {
-	RigidBody::RigidBody(int group, int mask) :
+	RigidBody::RigidBody(i32 group, i32 mask) :
 		m_Group(group),
 		m_Mask(mask)
 	{
@@ -24,15 +24,15 @@ namespace flex
 	{
 	}
 
-	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform, bool isKinematic, bool isStatic)
+	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform)
 	{
 		btVector3 localInertia(0, 0, 0);
-		if (!isStatic)
+		if (!m_bStatic)
 		{
 			collisionShape->calculateLocalInertia(m_Mass, localInertia);
 		}
 
-		if (isStatic)
+		if (m_bStatic)
 		{
 			assert(m_Mass == 0); // Static objects must have a mass of 0!
 		}
@@ -42,12 +42,12 @@ namespace flex
 
 		m_RigidBody = new btRigidBody(info);
 
-		int flags = m_RigidBody->getFlags();
-		if (isKinematic)
+		i32 flags = m_RigidBody->getFlags();
+		if (m_bKinematic)
 		{
 			flags |= btCollisionObject::CF_KINEMATIC_OBJECT;
 		}
-		if (isStatic)
+		if (m_bStatic)
 		{
 			flags |= btCollisionObject::CF_STATIC_OBJECT;
 		}
@@ -74,20 +74,45 @@ namespace flex
 		m_Mass = mass;
 	}
 
+	real RigidBody::GetMass() const
+	{
+		return m_Mass;
+	}
+
+	void RigidBody::SetKinematic(bool bKinematic)
+	{
+		m_bKinematic = bKinematic;
+	}
+
+	bool RigidBody::IsKinematic() const
+	{
+		return m_bKinematic;
+	}
+
+	void RigidBody::SetStatic(bool bStatic)
+	{
+		m_bStatic = bStatic;
+	}
+
+	bool RigidBody::IsStatic() const
+	{
+		return m_bStatic;
+	}
+
 	void RigidBody::GetTransform(glm::vec3& outPos, glm::quat& outRot)
 	{
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
 
-		outPos = FromBtVec3(transform.getOrigin());
-		outRot = FromBtQuaternion(transform.getRotation());
+		outPos = BtVec3ToVec3(transform.getOrigin());
+		outRot = BtQuaternionToQuaternion(transform.getRotation());
 	}
 
 	void RigidBody::SetPosition(const glm::vec3& pos)
 	{
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
-		transform.setOrigin(ToBtVec3(pos));
+		transform.setOrigin(Vec3ToBtVec3(pos));
 		m_RigidBody->setWorldTransform(transform);
 	}
 
@@ -95,13 +120,13 @@ namespace flex
 	{
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
-		transform.setRotation(ToBtQuaternion(rot));
+		transform.setRotation(QuaternionToBtQuaternion(rot));
 		m_RigidBody->setWorldTransform(transform);
 	}
 
 	void RigidBody::SetScale(const glm::vec3& scale)
 	{
-		m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(scale));
+		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(scale));
 	}
 
 	btRigidBody* RigidBody::GetRigidBodyInternal()

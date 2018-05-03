@@ -48,20 +48,24 @@ namespace flex
 	typedef u32 ShaderID;
 	typedef u32 MaterialID;
 	typedef u32 PointLightID;
-	typedef u32 DirectionalLightID;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
 #define InvalidMaterialID ((MaterialID)u32_max)
 #define InvalidPointLightID ((PointLightID)u32_max)
-#define InvalidDirectionalLightID ((DirectionalLightID)u32_max)
 
-	// 
 	template<bool> struct StaticAssert;
 	template<> struct StaticAssert<true> {};
 
-#define STATIC_ASSERT(e) StaticAssert<(e)>{}
+	enum class SerializableType
+	{
+		MESH,
+		SKYBOX,
+		REFLECTION_PROBE,
+		NONE
+	};
 
+#define STATIC_ASSERT(e) StaticAssert<(e)>{}
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 

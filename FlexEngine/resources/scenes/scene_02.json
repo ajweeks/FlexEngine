@@ -1,22 +1,61 @@
 {
 	"name": "scene_02",
-	"objects" :
+	"entities" :
 	[
 		{
-			"name" : "Cube",
-			"file" : "cube.fbx",
-			"transform" : 
-			{
+      		"name": "Cube",
+      		"type" : "mesh",
+			"mesh" : {
+				"file" : "models/cube.fbx"
+			},
+			"transform" : {
 				"position" : "3.5,10.0,-5.1",
 				"rotation" : "0.1,1.1,2.2",
 				"scale" : "1.5,4.0,3.0"
 			},
-			"material" :
-			{
-				"name" : "pbr"
-				// add per-object material paramaters here
+			"material" : {
+				"name" : "pbr",
+        		"shader" :  "pbr",
+				"constMetallic" : 0,
+				"constRoughness" : 0.95,
+				"constAO" : 1,
+				"constAlbedo" : "0, 0.6, 0.664"
 			}
-			// add rigid body, collider, renderer settings here
-		}
+		},
+    {
+      "name": "Cerebus",
+      "type": "mesh",
+      "mesh": {
+        "file": "Cerberus_by_Andrew_Maximov/Cerberus_LP_WithB&T.fbx",
+        "flipNormalYZ": true,
+        "flipZ": true,
+        "flipU": false,
+        "flipV": true
+      },
+      "transform": {
+        "position": "0, 5, 10",
+        "rotation": "0, 0, 0",
+        "scale": "0.075,0.075,0.075"
+      },
+	      "material": {
+	        "name": "pbr",
+	        "shader": "pbr",
+	        "enableAlbedoSampler": true,
+	        "generateAlbedoSampler": true,
+	        "albedoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga",
+	        "enableMetallicSampler": true,
+	        "generateMetallicSampler": true,
+	        "metallicTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga",
+	        "enableRoughnessSampler": true,
+	        "generateRoughnessSampler": true,
+	        "roughnessTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga",
+	        "enableAOSampler": true,
+	        "generateAOSampler": true,
+	        "aoTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga",
+	        "enableNormalSampler": true,
+	        "generateNormalSampler": true,
+	        "normalTexturePath": "Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_N.tga"
+	      }
+	    }
 	]
 }

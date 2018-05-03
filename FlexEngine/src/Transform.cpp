@@ -10,9 +10,12 @@
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 
 #include "Physics/RigidBody.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
+	Transform Transform::m_Identity = Transform(glm::vec3(0.0f), glm::quat(glm::vec3(0.0f)), glm::vec3(1.0f));
+
 	Transform::Transform()
 	{
 		SetAsIdentity();
@@ -21,21 +24,30 @@ namespace flex
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(scale)
+		localScale(scale),
+		globalPosition(localPosition),
+		globalRotation(localRotation),
+		globalScale(localScale)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(glm::vec3(1.0f))
+		localScale(glm::vec3(1.0f)),
+		globalPosition(localPosition),
+		globalRotation(localRotation),
+		globalScale(localScale)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position) :
 		localPosition(position),
 		localRotation(glm::quat(glm::vec3(0.0f))),
-		localScale(glm::vec3(1.0f))
+		localScale(glm::vec3(1.0f)),
+		globalPosition(localPosition),
+		globalRotation(localRotation),
+		globalScale(localScale)
 	{
 	}
 
@@ -47,7 +59,6 @@ namespace flex
 		globalRotation(other.globalRotation),
 		globalScale(other.globalScale)
 	{
-		// Don't copy parent/children
 	}
 
 	Transform::Transform(const Transform&& other) :
@@ -58,7 +69,6 @@ namespace flex
 		globalRotation(std::move(other.globalRotation)),
 		globalScale(std::move(other.globalScale))
 	{
-		// Don't copy parent/children
 	}
 
 	Transform& Transform::operator=(const Transform& other)
@@ -69,7 +79,6 @@ namespace flex
 		globalPosition = other.globalPosition;
 		globalRotation = other.globalRotation;
 		globalScale = other.globalScale;
-		// Don't copy parent/ children
 
 		return *this;
 	}
@@ -84,8 +93,6 @@ namespace flex
 			globalPosition = std::move(other.globalPosition);
 			globalRotation = std::move(other.globalRotation);
 			globalScale = std::move(other.globalScale);
-			parentTransform = other.parentTransform;
-			childrenTransforms = std::move(other.childrenTransforms);
 		}
 
 		return *this;
@@ -151,40 +158,6 @@ namespace flex
 		Scale(glm::vec3(deltaX, deltaY, deltaZ));
 	}
 
-	void Transform::SetParentTransform(Transform* parent)
-	{
-		parentTransform = parent;
-	}
-
-	void Transform::AddChildTransform(Transform* child)
-	{
-		childrenTransforms.push_back(child);
-
-		UpdateParentTransform();
-	}
-
-	void Transform::RemoveChildTransform(Transform* child)
-	{
-		for (auto iter = childrenTransforms.begin(); iter != childrenTransforms.end(); ++iter)
-		{
-			if (*iter == child)
-			{
-				childrenTransforms.erase(iter);
-				return;
-			}
-		}
-	}
-
-	void Transform::RemoveAllChildTransforms()
-	{
-		auto iter = childrenTransforms.begin();
-		while (iter != childrenTransforms.end())
-		{
-			(*iter)->RemoveAllChildTransforms();
-			iter = childrenTransforms.erase(iter);
-		}
-	}
-
 	void Transform::Update()
 	{
 		UpdateParentTransform();
@@ -192,11 +165,7 @@ namespace flex
 
 	void Transform::SetAsIdentity()
 	{
-		localPosition = glm::vec3(0.0f);
-		localRotation = glm::quat(glm::vec3(0.0f));
-		localScale = glm::vec3(1.0f);
-
-		UpdateParentTransform();
+		*this = m_Identity;
 	}
 
 	glm::mat4 Transform::GetModelMatrix()
@@ -209,6 +178,14 @@ namespace flex
 		return matModel;
 	}
 
+	bool Transform::IsIdentity() const
+	{
+		bool identity = (localPosition == m_Identity.localPosition &&
+						localRotation == m_Identity.localRotation &&
+						localScale == m_Identity.localScale);
+		return identity;
+	}
+
 	Transform Transform::Identity()
 	{
 		Transform result;
@@ -218,11 +195,22 @@ namespace flex
 		return result;
 	}
 
+	void Transform::SetGameObject(GameObject* gameObject)
+	{
+		m_GameObject = gameObject;
+	}
+
+	GameObject* Transform::GetGameObject() const
+	{
+		return m_GameObject;
+	}
+
 	void Transform::UpdateParentTransform()
 	{
-		if (parentTransform)
+		GameObject* parent = m_GameObject->GetParent();
+		if (parent)
 		{
-			parentTransform->UpdateParentTransform();
+			parent->GetTransform()->UpdateParentTransform();
 		}
 		else
 		{
@@ -232,8 +220,11 @@ namespace flex
 
 	void Transform::UpdateChildTransforms()
 	{
-		if (parentTransform)
+		GameObject* parent = m_GameObject->GetParent();
+		if (parent)
 		{
+			Transform* parentTransform = parent->GetTransform();
+
 			globalPosition = parentTransform->globalPosition + localPosition;
 			globalScale = parentTransform->globalScale * localScale;
 			globalRotation = parentTransform->globalRotation * localRotation;
@@ -245,38 +236,39 @@ namespace flex
 			globalScale = localScale;
 		}
 
+		const std::vector<GameObject*>& childrenTransforms = m_GameObject->GetChildren();
 		for (auto iter = childrenTransforms.begin(); iter != childrenTransforms.end(); ++iter)
 		{
-			(*iter)->UpdateChildTransforms();
+			(*iter)->GetTransform()->UpdateChildTransforms();
 		}
 	}
 
-	glm::vec3 Transform::GetLocalPosition()
+	glm::vec3 Transform::GetLocalPosition() const
 	{
 		return localPosition;
 	}
 
-	glm::vec3 Transform::GetGlobalPosition()
+	glm::vec3 Transform::GetGlobalPosition() const
 	{
 		return globalPosition;
 	}
 
-	glm::quat Transform::GetLocalRotation()
+	glm::quat Transform::GetLocalRotation() const
 	{
 		return localRotation;
 	}
 
-	glm::quat Transform::GetGlobalRotation()
+	glm::quat Transform::GetGlobalRotation() const
 	{
 		return globalRotation;
 	}
 
-	glm::vec3 Transform::GetLocalScale()
+	glm::vec3 Transform::GetLocalScale() const
 	{
 		return localScale;
 	}
 
-	glm::vec3 Transform::GetGlobalScale()
+	glm::vec3 Transform::GetGlobalScale() const
 	{
 		return globalScale;
 	}
@@ -290,14 +282,15 @@ namespace flex
 
 	void Transform::SetGlobalPosition(const glm::vec3& position)
 	{
-		if (parentTransform)
+		GameObject* parent = m_GameObject->GetParent();
+		if (parent)
 		{
-			localPosition = position- parentTransform->GetGlobalPosition();
+			localPosition = position - parent->GetTransform()->GetGlobalPosition();
 		}
 		else
 		{
 			localPosition = position;
-			// Global position will be set in next function call
+			// NOTE: Global position will be set in next function call
 		}
 		
 		UpdateParentTransform();
@@ -312,9 +305,10 @@ namespace flex
 
 	void Transform::SetGlobalRotation(const glm::quat& quatRotation)
 	{
-		if (parentTransform)
+		GameObject* parent = m_GameObject->GetParent();
+		if (parent)
 		{
-			localRotation = quatRotation + -parentTransform->GetGlobalRotation();
+			localRotation = quatRotation - parent->GetTransform()->GetGlobalRotation();
 		}
 		else
 		{
@@ -334,9 +328,10 @@ namespace flex
 
 	void Transform::SetGlobalRotation(const glm::vec3& eulerAnglesRad)
 	{
-		if (parentTransform)
+		GameObject* parent = m_GameObject->GetParent();
+		if (parent)
 		{
-			localRotation = glm::quat(eulerAnglesRad) + -parentTransform->GetGlobalRotation();
+			localRotation = glm::quat(eulerAnglesRad) - parent->GetTransform()->GetGlobalRotation();
 		}
 		else
 		{
@@ -356,9 +351,10 @@ namespace flex
 
 	void Transform::SetGlobalRotation(real eulerXRad, real eulerYRad, real eulerZRad)
 	{
-		if (parentTransform)
+		GameObject* parent = m_GameObject->GetParent();
+		if (parent)
 		{
-			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad)) + -parentTransform->GetGlobalRotation();
+			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad)) - parent->GetTransform()->GetGlobalRotation();
 		}
 		else
 		{
@@ -378,9 +374,10 @@ namespace flex
 
 	void Transform::SetGlobalScale(const glm::vec3& scale)
 	{
-		if (parentTransform)
+		GameObject* parent = m_GameObject->GetParent();
+		if (parent)
 		{
-			localScale = scale / parentTransform->GetGlobalScale();
+			localScale = scale / parent->GetTransform()->GetGlobalScale();
 		}
 		else
 		{

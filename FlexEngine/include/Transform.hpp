@@ -7,7 +7,8 @@
 namespace flex
 {
 	class RigidBody;
-	
+	class GameObject;
+
 	class Transform
 	{
 	public:
@@ -28,14 +29,14 @@ namespace flex
 
 		void SetAsIdentity();
 
-		glm::vec3 GetLocalPosition();
-		glm::vec3 GetGlobalPosition();
+		glm::vec3 GetLocalPosition() const;
+		glm::vec3 GetGlobalPosition() const;
 
-		glm::quat GetLocalRotation();
-		glm::quat GetGlobalRotation();
+		glm::quat GetLocalRotation() const;
+		glm::quat GetGlobalRotation() const;
 
-		glm::vec3 GetLocalScale();
-		glm::vec3 GetGlobalScale();
+		glm::vec3 GetLocalScale() const;
+		glm::vec3 GetGlobalScale() const;
 
 		void SetLocalPosition(const glm::vec3& position);
 		void SetGlobalPosition(const glm::vec3& position);
@@ -63,15 +64,14 @@ namespace flex
 		void Scale(const glm::vec3& deltaScale);
 		void Scale(real deltaScale);
 		void Scale(real deltaX, real deltaY, real deltaZ);
-
-		void SetParentTransform(Transform* parent);
-		void AddChildTransform(Transform* child);
-		void RemoveChildTransform(Transform* child);
-		void RemoveAllChildTransforms();
 		
 		glm::mat4 GetModelMatrix();
 
+		bool IsIdentity() const;
 		static Transform Identity();
+
+		void SetGameObject(GameObject* gameObject);
+		GameObject* GetGameObject() const;
 
 	private:
 		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
@@ -85,8 +85,9 @@ namespace flex
 		glm::quat globalRotation;
 		glm::vec3 globalScale;
 
-		Transform* parentTransform = nullptr;
-		std::vector<Transform*> childrenTransforms;
+		GameObject* m_GameObject = nullptr;
+
+		static Transform m_Identity;
 
 	};
 } // namespace flex

@@ -28,6 +28,7 @@ struct PointLight
 
 layout (binding = 0) uniform UBOConstant
 {
+	mat4 viewProjection;
 	vec4 camPos;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];

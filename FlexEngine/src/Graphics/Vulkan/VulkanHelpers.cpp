@@ -1320,18 +1320,22 @@ namespace flex
 		{
 			switch (mode)
 			{
-			case TopologyMode::POINT_LIST: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-			case TopologyMode::LINE_LIST: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-			case TopologyMode::LINE_STRIP: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-			case TopologyMode::TRIANGLE_LIST: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			case TopologyMode::TRIANGLE_STRIP: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-			case TopologyMode::TRIANGLE_FAN: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+			case TopologyMode::POINT_LIST:		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			case TopologyMode::LINE_LIST:		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			case TopologyMode::LINE_STRIP:		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			case TopologyMode::TRIANGLE_LIST:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			case TopologyMode::TRIANGLE_STRIP:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+			case TopologyMode::TRIANGLE_FAN:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
 			case TopologyMode::LINE_LOOP:
 			{
-				Logger::LogWarning("Unsupported TopologyMode passed to Vulkan Renderer: LINE_LOOP");
+				Logger::LogError("LINE_LOOP is an unsupported TopologyMode passed to TopologyModeToVkPrimitiveTopology");
 				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 			}
-			default: return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			default:
+			{
+				Logger::LogError("Unhandled TopologyMode passed to TopologyModeToVkPrimitiveTopology: " + std::to_string((i32)mode));
+				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			}
 			}
 		}
 
@@ -1339,20 +1343,78 @@ namespace flex
 		{
 			switch (cullFace)
 			{
-			case CullFace::BACK: return VK_CULL_MODE_BACK_BIT;
-			case CullFace::FRONT: return VK_CULL_MODE_FRONT_BIT;
-			case CullFace::FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
-			default: return VK_CULL_MODE_NONE;
+			case CullFace::BACK:			return VK_CULL_MODE_BACK_BIT;
+			case CullFace::FRONT:			return VK_CULL_MODE_FRONT_BIT;
+			case CullFace::FRONT_AND_BACK:	return VK_CULL_MODE_FRONT_AND_BACK;
+			default:
+			{
+				Logger::LogError("Unhandled CullFace passed to CullFaceToVkCullMode: " + std::to_string((i32)cullFace));
+				return VK_CULL_MODE_NONE;
+			}
+			}
+		}
+
+		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology)
+		{
+			if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
+			{
+				return TopologyMode::POINT_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST)
+			{
+				return TopologyMode::LINE_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP)
+			{
+				return TopologyMode::LINE_STRIP;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+			{
+				return TopologyMode::TRIANGLE_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
+			{
+				return TopologyMode::TRIANGLE_STRIP;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
+			{
+				return TopologyMode::TRIANGLE_FAN;
+			}
+			else
+			{
+				Logger::LogError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: " + std::to_string((i32)primitiveTopology));
+				return TopologyMode::NONE;
+			}
+		}
+
+		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode)
+		{
+			if (cullMode == VK_CULL_MODE_BACK_BIT)
+			{
+				return CullFace::BACK;
+			}
+			else if (cullMode == VK_CULL_MODE_FRONT_BIT)
+			{
+				return CullFace::FRONT;
+			}
+			else if (cullMode == VK_CULL_MODE_FRONT_AND_BACK)
+			{
+				return CullFace::FRONT_AND_BACK;
+			}
+			else
+			{
+				Logger::LogError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: " + std::to_string((i32)cullMode));
+				return CullFace::NONE;
 			}
 		}
 
 
-		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback)
 		{
 			auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 			if (func != nullptr)
 			{
-				return func(instance, pCreateInfo, pAllocator, pCallback);
+				return func(instance, createInfo, allocator, callback);
 			}
 			else
 			{
@@ -1360,12 +1422,12 @@ namespace flex
 			}
 		}
 
-		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator)
+		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* allocator)
 		{
 			auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
 			if (func != nullptr)
 			{
-				func(instance, callback, pAllocator);
+				func(instance, callback, allocator);
 			}
 		}
 

@@ -10,7 +10,7 @@
 
 namespace flex
 {
-	bool JSONParser::Parse(const std::string& filePath, ParsedJSONFile& parsedFile)
+	bool JSONParser::Parse(const std::string& filePath, JSONObject& rootObject)
 	{
 		std::ifstream ifStream(filePath, std::fstream::ate);
 		if (!ifStream)
@@ -86,7 +86,7 @@ namespace flex
 		//Logger::LogInfo("Cleaned JSON file:");
 		//Logger::LogInfo(fileContents);
 
-		parsedFile.rootObject = {};
+		rootObject = {};
 
 		i32 fileContentOffset = 0;
 		bool parseSucceeded = true;
@@ -95,11 +95,11 @@ namespace flex
 		{
 			JSONField field;
 			parsing = ParseField(fileContents, &fileContentOffset, field);
-			parsedFile.rootObject.fields.push_back(field);
+			rootObject.fields.push_back(field);
 
 			parseSucceeded |= parsing;
 
-			if (fileContentOffset == fileContents.size() - 1)
+			if (fileContentOffset == (i32)(fileContents.size() - 1))
 			{
 				// We've reached the end of the file!
 				parsing = false;
@@ -107,6 +107,67 @@ namespace flex
 		}
 
 		return parseSucceeded;
+	}
+
+	Transform JSONParser::ParseTransform(const JSONObject& transformObject)
+	{
+		std::string posStr = transformObject.GetString("position");
+		std::string rotStr = transformObject.GetString("rotation");
+		std::string scaleStr = transformObject.GetString("scale");
+
+		glm::vec3 pos(0.0f);
+		if (!posStr.empty())
+		{
+			pos = ParseVec3(posStr);
+		}
+
+		glm::quat rot = glm::quat();
+		if (!rotStr.empty())
+		{
+			rot = ParseVec3(rotStr);
+		}
+
+		glm::vec3 scale(1.0f);
+		if (!scaleStr.empty())
+		{
+			scale = ParseVec3(scaleStr);
+		}
+
+		return Transform(pos, rot, scale);
+	}
+
+	bool JSONParser::SerializeTransform(Transform* transform, JSONField& outTransformField)
+	{
+		if (transform == nullptr)
+		{
+			return false;
+		}
+
+		outTransformField = {};
+		outTransformField.label = "transform";
+
+		JSONObject transformObject = {};
+
+		// TODO: Make this a parameter or remove field from scene files entirely if always the same
+		// All transform data is saved in local space (relative to parent)
+		transformObject.fields.push_back(JSONField("space", JSONValue(std::string("local"))));
+
+		glm::vec3 localPos = transform->GetLocalPosition();
+		glm::quat localRotQuat = transform->GetLocalRotation();
+		glm::vec3 localRotEuler = glm::eulerAngles(localRotQuat);
+		glm::vec3 localScale = transform->GetLocalScale();
+
+		std::string posStr = Vec3ToString(localPos);
+		std::string rotStr = Vec3ToString(localRotEuler);
+		std::string scaleStr = Vec3ToString(localScale);
+
+		transformObject.fields.push_back(JSONField("position", JSONValue(posStr)));
+		transformObject.fields.push_back(JSONField("rotation", JSONValue(rotStr)));
+		transformObject.fields.push_back(JSONField("scale", JSONValue(scaleStr)));
+
+		outTransformField.value = JSONValue(transformObject);
+
+		return true;
 	}
 
 	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
@@ -137,7 +198,7 @@ namespace flex
 	}
 	bool JSONParser::ParseField(const std::string& fileContents, i32* offset, JSONField& field)
 	{
-		size_t quoteStart = fileContents.find('/"', *offset);
+		size_t quoteStart = fileContents.find('\"', *offset);
 
 		if (quoteStart == std::string::npos)
 		{
@@ -145,7 +206,7 @@ namespace flex
 			return false;
 		}
 
-		size_t quoteEnd = fileContents.find('/"', quoteStart + 1);
+		size_t quoteEnd = fileContents.find('\"', quoteStart + 1);
 		if (quoteEnd == std::string::npos)
 		{
 			Logger::LogError("Couldn't find end quote after offset " + std::to_string(*offset));
@@ -168,45 +229,48 @@ namespace flex
 		{
 		case JSONValue::Type::STRING:
 		{
-			size_t quoteStart = fileContents.find('/"', *offset);
+			size_t strQuoteStart = fileContents.find('\"', *offset);
 
-			if (quoteStart == std::string::npos)
+			if (strQuoteStart == std::string::npos)
 			{
 				Logger::LogError("Couldn't find quote after offset " + std::to_string(*offset));
 				return false;
 			}
 
-			size_t quoteEnd = fileContents.find('/"', quoteStart + 1);
-			if (quoteEnd == std::string::npos)
+			size_t strQuoteEnd = fileContents.find('\"', strQuoteStart + 1);
+			if (strQuoteEnd == std::string::npos)
 			{
 				Logger::LogError("Couldn't find end quote after offset " + std::to_string(*offset));
 				return false;
 			}
 
-			std::string stringValue = fileContents.substr(quoteStart + 1, quoteEnd - (quoteStart + 1));
+			std::string stringValue = fileContents.substr(strQuoteStart + 1, strQuoteEnd - (strQuoteStart + 1));
 			field.value = JSONValue(stringValue);
 
-			*offset = quoteEnd + 1;
+			*offset = strQuoteEnd + 1;
 		} break;
 		case JSONValue::Type::INT:
 		{
-			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, quoteEnd + 2);
-			size_t intCharCount = nextNonAlphaNumeric - (quoteEnd + 2);
-			std::string intStr = fileContents.substr(quoteEnd + 2, intCharCount);
-			int intValue = stoi(intStr);
+			size_t intStart = quoteEnd + 2;
+			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart);
+			size_t intCharCount = nextNonAlphaNumeric - intStart;
+			std::string intStr = fileContents.substr(intStart, intCharCount);
+			i32 intValue = stoi(intStr);
 			field.value = JSONValue(intValue);
 
 			*offset = nextNonAlphaNumeric;
 		} break;
 		case JSONValue::Type::FLOAT:
 		{
-			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
-			size_t floatEnd = nextNonAlphaNumeric - (quoteEnd + 3);
-			std::string floatStr = fileContents.substr(quoteEnd + 3, floatEnd);
+			size_t floatStart = quoteEnd + 2;
+			size_t decminalIndex = NextNonAlphaNumeric(fileContents, floatStart);
+			size_t floatEnd = NextNonAlphaNumeric(fileContents, decminalIndex + 1);
+			size_t floatCharCount = floatEnd - floatStart;
+			std::string floatStr = fileContents.substr(floatStart, floatCharCount);
 			real floatValue = stof(floatStr);
 			field.value = JSONValue(floatValue);
 
-			*offset = floatEnd + 1;
+			*offset = floatEnd;
 		} break;
 		case JSONValue::Type::BOOL:
 		{
@@ -261,7 +325,7 @@ namespace flex
 		default:
 		{
 			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
-			Logger::LogError("Unhandled JSON value type: " + fileContents.substr(quoteEnd + 2), nextNonAlphaNumeric - (quoteEnd + 2));
+			Logger::LogError("Unhandled JSON value type: " + fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2)));
 			*offset = -1;
 			return false;
 		} break;
@@ -298,7 +362,7 @@ namespace flex
 		i32 openParenthesesCount = 0;   // (
 
 		bool inQuotes = false;
-		while (offset < fileContents.size())
+		while (offset < (i32)fileContents.size())
 		{
 			char currentChar = fileContents[offset];
 

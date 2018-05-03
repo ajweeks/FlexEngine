@@ -1,72 +1,155 @@
 #include "stdafx.hpp"
 
+#pragma warning(push, 0)
+#include <LinearMath/btTransform.h>
+#include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
+#include <BulletCollision/CollisionShapes/btCollisionShape.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#pragma warning(pop)
+
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
+#include "Physics/RigidBody.hpp"
 
 namespace flex
 {
-	GameObject::GameObject(GameObject* pParent) :
-		m_Parent(pParent)
+	GameObject::GameObject(const std::string& name, SerializableType serializableType) :
+		m_Name(name),
+		m_SerializableType(serializableType)
 	{
 		m_Transform.SetAsIdentity();
-
-		if (pParent)
-		{
-			m_Transform.SetParentTransform(&pParent->m_Transform);
-		}
+		m_Transform.SetGameObject(this);
 	}
 
 	GameObject::~GameObject()
 	{
-		m_Transform.RemoveAllChildTransforms();
-		m_Transform.SetParentTransform(nullptr);
+	}
 
-		for (size_t i = 0; i < m_Children.size(); ++i)
+	void GameObject::Initialize(const GameContext& gameContext)
+	{
+		if (m_RigidBody && m_CollisionShape)
 		{
-			SafeDelete(m_Children[i]);
+			btTransform startingTransform = TransformToBtTransform(m_Transform);
+			m_RigidBody->Initialize(m_CollisionShape, gameContext, startingTransform);
+		}
+
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->Initialize(gameContext);
+		}
+	}
+
+	void GameObject::PostInitialize(const GameContext& gameContext)
+	{
+		if (m_RenderID != InvalidRenderID)
+		{
+			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
+		}
+
+		for (auto child : m_Children)
+		{
+			child->PostInitialize(gameContext);
+		}
+	}
+
+	void GameObject::Destroy(const GameContext& gameContext)
+	{
+		if (m_RenderID != InvalidRenderID)
+		{
+			gameContext.renderer->DestroyRenderObject(m_RenderID);
+		}
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->Destroy(gameContext);
+			SafeDelete(*iter);
 		}
 		m_Children.clear();
+
+		// NOTE: SafeDelete does not work on this type
+		if (m_CollisionShape)
+		{
+			delete m_CollisionShape;
+			m_CollisionShape = nullptr;
+		}
+		SafeDelete(m_RigidBody);
+	}
+
+	void GameObject::Update(const GameContext& gameContext)
+	{
+		if (m_RigidBody)
+		{
+			m_Transform.MatchRigidBody(m_RigidBody, true);
+		}
+
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->Update(gameContext);
+		}
+	}
+
+	GameObject* GameObject::GetParent()
+	{
+		return m_Parent;
 	}
 
 	void GameObject::SetParent(GameObject* parent)
 	{
-		m_Parent = parent;
-
-		if (parent)
+		if (parent == this)
 		{
-			m_Transform.SetParentTransform(&parent->m_Transform);
+			Logger::LogError("Attempted to set parent as self! (" + m_Name + ")");
+			return;
 		}
+
+		m_Parent = parent;
 
 		m_Transform.Update();
 	}
 
-	void GameObject::AddChild(GameObject* child)
+	GameObject* GameObject::AddChild(GameObject* child)
 	{
+		if (!child)
+		{
+			return nullptr;
+		}
+
+		if (child == this)
+		{
+			Logger::LogError("Attempted to add self as child! (" + m_Name + ")");
+			return nullptr;
+		}
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			if (*iter == child)
 			{
-				return; // Don't add the same child twice
+				// Don't add the same child twice
+				return nullptr;
 			}
 		}
 
 		m_Children.push_back(child);
-		m_Transform.AddChildTransform(&child->m_Transform);
 		child->SetParent(this);
-		child->m_Transform.SetParentTransform(&m_Transform);
 
 		m_Transform.Update();
+
+		return child;
 	}
 
 	bool GameObject::RemoveChild(GameObject* child)
 	{
+		if (!child)
+		{
+			return false;
+		}
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			if (*iter == child)
 			{
-				(*iter)->m_Parent = nullptr;
-				(*iter)->m_Transform.RemoveAllChildTransforms();
-				m_Transform.RemoveChildTransform(&(*iter)->m_Transform);
+				child->SetParent(nullptr);
 				m_Children.erase(iter);
 				return true;
 			}
@@ -77,20 +160,22 @@ namespace flex
 
 	void GameObject::RemoveAllChildren()
 	{
-		m_Transform.RemoveAllChildTransforms();
-
 		auto iter = m_Children.begin();
 		while (iter != m_Children.end())
 		{
-			(*iter)->m_Parent = nullptr;
-			(*iter)->m_Transform.RemoveAllChildTransforms();
 			iter = m_Children.erase(iter);
 		}
+		m_Children.clear();
 	}
 
-	Transform& GameObject::GetTransform()
+	const std::vector<GameObject*>& GameObject::GetChildren() const
 	{
-		return m_Transform;
+		return m_Children;
+	}
+
+	Transform* GameObject::GetTransform()
+	{
+		return &m_Transform;
 	}
 
 	RenderID GameObject::GetRenderID() const
@@ -98,24 +183,9 @@ namespace flex
 		return m_RenderID;
 	}
 
-	void GameObject::Initialize(const GameContext& gameContext)
+	std::string GameObject::GetName() const
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-	}
-
-	void GameObject::PostInitialize(const GameContext& gameContext)
-	{
-		UNREFERENCED_PARAMETER(gameContext);
-	}
-
-	void GameObject::Update(const GameContext& gameContext)
-	{
-		UNREFERENCED_PARAMETER(gameContext);
-	}
-
-	void GameObject::Destroy(const GameContext& gameContext)
-	{
-		UNREFERENCED_PARAMETER(gameContext);
+		return m_Name;
 	}
 
 	void GameObject::SetRenderID(RenderID renderID)
@@ -123,33 +193,73 @@ namespace flex
 		m_RenderID = renderID;
 	}
 
-	void GameObject::RootInitialize(const GameContext& gameContext)
+	bool GameObject::IsSerializable() const
 	{
-		Initialize(gameContext);
+		return m_bSerializable;
+	}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+	void GameObject::SetSerializable(bool serializable)
+	{
+		m_bSerializable = serializable;
+	}
+
+	bool GameObject::IsStatic() const
+	{
+		return m_bStatic;
+	}
+
+	void GameObject::SetStatic(bool newStatic)
+	{
+		m_bStatic = newStatic;
+	}
+
+	bool GameObject::IsVisible() const
+	{
+		return m_bVisible;
+	}
+
+	void GameObject::SetVisible(bool visible, bool effectChildren)
+	{
+		m_bVisible = visible;
+
+		if (effectChildren)
 		{
-			(*iter)->RootInitialize(gameContext);
+			for (GameObject* child : m_Children)
+			{
+				child->SetVisible(visible, effectChildren);
+			}
 		}
 	}
 
-	void GameObject::RootUpdate(const GameContext& gameContext)
+	bool GameObject::IsVisibleInSceneExplorer() const
 	{
-		Update(gameContext);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootUpdate(gameContext);
-		}
+		return m_bVisibleInSceneExplorer;
 	}
 
-	void GameObject::RootDestroy(const GameContext& gameContext)
+	void GameObject::SetVisibleInSceneExplorer(bool visibleInSceneExplorer)
 	{
-		Destroy(gameContext);
+		m_bVisibleInSceneExplorer = visibleInSceneExplorer;
+	}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
-		{
-			(*iter)->RootDestroy(gameContext);
-		}
+	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)
+	{
+		m_CollisionShape = collisionShape;
+		return collisionShape;
+	}
+
+	btCollisionShape* GameObject::GetCollisionShape() const
+	{
+		return m_CollisionShape;
+	}
+
+	RigidBody* GameObject::SetRigidBody(RigidBody* rigidBody)
+	{
+		m_RigidBody = rigidBody;
+		return rigidBody;
+	}
+
+	RigidBody* GameObject::GetRigidBody() const
+	{
+		return m_RigidBody;
 	}
 } // namespace flex
