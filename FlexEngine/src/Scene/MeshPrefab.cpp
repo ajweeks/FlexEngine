@@ -48,7 +48,7 @@ namespace flex
 		m_VertexBufferData.Destroy();
 	}
 
-	void MeshPrefab::Shutdown()
+	void MeshPrefab::Destroy()
 	{
 		for (auto iter = m_LoadedMeshes.begin(); iter != m_LoadedMeshes.end(); /**/)
 		{

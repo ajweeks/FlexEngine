@@ -25,7 +25,7 @@ namespace flex
 #endif
 	}
 
-	void Logger::Shutdown()
+	void Logger::Destroy()
 	{
 #ifdef _WIN32
 		// Set console color back to white

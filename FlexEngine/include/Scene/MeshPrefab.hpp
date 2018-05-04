@@ -24,7 +24,7 @@ namespace flex
 		MeshPrefab(MaterialID materialID, const std::string& name = "");
 		virtual ~MeshPrefab();
 
-		static void Shutdown();
+		static void Destroy();
 
 		enum class Type
 		{

@@ -125,8 +125,9 @@ namespace flex
 		SafeDelete(m_GameContext.cameraManager);
 
 		DestroyWindowAndRenderer();
-		MeshPrefab::Shutdown();
-		Logger::Shutdown();
+		
+		MeshPrefab::Destroy();
+		Logger::Destroy();
 	}
 
 	void FlexEngine::CreateWindowAndRenderer()
