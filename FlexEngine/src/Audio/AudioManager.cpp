@@ -59,6 +59,9 @@ namespace flex
 		// TODO: Reuse buffers after sounds stop playing?
 		assert(newID < NUM_BUFFERS);
 
+		std::string friendlyName = filePath;
+		StripLeadingDirectories(friendlyName);
+		Logger::LogInfo("Loading audio source " + friendlyName);
 
 		// WAVE file
 		i32 format;
@@ -109,13 +112,13 @@ namespace flex
 		return newID;
 	}
 
-	void AudioManager::PlaySource(AudioSourceID sourceID)
+	void AudioManager::PlaySource(AudioSourceID sourceID, bool forceRestart)
 	{
 		assert(sourceID < s_Sources.size());
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
-		if (s_Sources[sourceID].state != AL_PLAYING)
+		if (forceRestart || s_Sources[sourceID].state != AL_PLAYING)
 		{
 			alSourcePlay(s_Sources[sourceID].source);
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);

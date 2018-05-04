@@ -16,7 +16,7 @@ namespace flex
 
 		static AudioSourceID AddAudioSource(const std::string& filePath);
 
-		static void PlaySource(AudioSourceID sourceID);
+		static void PlaySource(AudioSourceID sourceID, bool forceRestart = true);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
 
@@ -55,7 +55,7 @@ namespace flex
 			real pitch = 1.0f;
 
 			// AL_INITIAL, AL_PLAYING, AL_PAUSED, or AL_STOPPED
-			ALint state = AL_INITIAL;
+			ALenum state = AL_INITIAL;
 
 			bool bLooping = false;
 		};

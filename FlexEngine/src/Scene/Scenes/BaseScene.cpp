@@ -50,7 +50,6 @@ namespace flex
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
 		dud_dud_dud_dud = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav");
-		AudioManager::SetSourceLooping(dud_dud_dud_dud, true);
 		drmapan = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav");
 
 		JSONObject sceneRootObject;
