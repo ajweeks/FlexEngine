@@ -104,11 +104,7 @@ namespace flex
 		}
 
 		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
-		error = alGetError();
-		if (error != AL_NO_ERROR)
-		{
-			DisplayALError("alSourcei: ", error);
-		}
+		DisplayALError("alSourcei: ", alGetError());
 
 		return newID;
 	}
@@ -117,12 +113,13 @@ namespace flex
 	{
 		assert(sourceID < s_Sources.size());
 
-		alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
 		if (s_Sources[sourceID].state != AL_PLAYING)
 		{
 			alSourcePlay(s_Sources[sourceID].source);
-			alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+			DisplayALError("PlaySource: ", alGetError());
 		}
 	}
 
@@ -130,12 +127,13 @@ namespace flex
 	{
 		assert(sourceID < s_Sources.size());
 
-		alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
 		if (s_Sources[sourceID].state != AL_PAUSED)
 		{
 			alSourcePause(s_Sources[sourceID].source);
-			alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+			DisplayALError("PauseSource: ", alGetError());
 		}
 	}
 
@@ -143,12 +141,13 @@ namespace flex
 	{
 		assert(sourceID < s_Sources.size());
 
-		alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
 		if (s_Sources[sourceID].state != AL_STOPPED)
 		{
 			alSourceStop(s_Sources[sourceID].source);
-			alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+			DisplayALError("StopSource: ", alGetError());
 		}
 	}
 
@@ -181,6 +180,8 @@ namespace flex
 		s_Sources[sourceID].gain = gain;
 		Logger::LogInfo("gain: " + std::to_string(gain));
 		alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
+
+		DisplayALError("SetSourceGain: ", alGetError());
 	}
 
 	real AudioManager::GetSourceGain(AudioSourceID sourceID)
@@ -203,6 +204,8 @@ namespace flex
 
 		s_Sources[sourceID].bLooping = looping;
 		alSourcei(s_Sources[sourceID].source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
+
+		DisplayALError("SetSourceLooping: ", alGetError());
 	}
 
 	bool AudioManager::GetSourceLooping(AudioSourceID sourceID)
@@ -222,6 +225,8 @@ namespace flex
 		s_Sources[sourceID].pitch = pitch;
 		Logger::LogInfo("pitch: " + std::to_string(pitch));
 		alSourcef(s_Sources[sourceID].source, AL_PITCH, pitch);
+
+		DisplayALError("SetSourcePitch: ", alGetError());
 	}
 
 	real AudioManager::GetSourcePitch(AudioSourceID sourceID)
