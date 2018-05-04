@@ -235,12 +235,13 @@ namespace flex
 	{
 		switch (error)
 		{
-		case AL_INVALID_NAME:		Logger::LogError(str + "Invalid name");
-		case AL_ILLEGAL_ENUM:		Logger::LogError(str + "Invalid enum");
-		case AL_INVALID_VALUE:		Logger::LogError(str + "Invalid value");
-		case AL_INVALID_OPERATION:	Logger::LogError(str + "Invalid operation");
-		case AL_OUT_OF_MEMORY:		Logger::LogError(str + "Out of memory");
-		default:					Logger::LogError(str + "Unknown error");
+		case AL_NO_ERROR:			return;
+		case AL_INVALID_NAME:		Logger::LogError(str + "Invalid name"); break;
+		case AL_ILLEGAL_ENUM:		Logger::LogError(str + "Invalid enum"); break;
+		case AL_INVALID_VALUE:		Logger::LogError(str + "Invalid value"); break;
+		case AL_INVALID_OPERATION:	Logger::LogError(str + "Invalid operation"); break;
+		case AL_OUT_OF_MEMORY:		Logger::LogError(str + "Out of memory"); break;
+		default:					Logger::LogError(str + "Unknown error"); break;
 		}
 	}
 
