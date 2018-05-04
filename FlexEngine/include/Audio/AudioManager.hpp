@@ -20,9 +20,18 @@ namespace flex
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
 
+		/*
+		* Multiplies the source by gainScale
+		* Optionally prevents gain from reaching zero so that it 
+		* can be scale up again later
+		*/
+		static void ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool preventZero = true);
+
 		/* Volume of sound [0.0, 1.0] (logarithmic) */
 		static void SetSourceGain(AudioSourceID sourceID, real gain);
 		static real GetSourceGain(AudioSourceID sourceID);
+
+		static void AddToSourcePitch(AudioSourceID sourceID, real deltaPitch);
 
 		/* Pitch of sound [0.5, 2.0] */
 		static void SetSourcePitch(AudioSourceID sourceID, real pitch);

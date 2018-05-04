@@ -219,24 +219,20 @@ namespace flex
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
 		{
-			AudioManager::SetSourcePitch(dud_dud_dud_dud,
-											  AudioManager::GetSourcePitch(dud_dud_dud_dud) + 0.5f * gameContext.deltaTime);
+			AudioManager::AddToSourcePitch(dud_dud_dud_dud, 0.5f * gameContext.deltaTime);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
 		{
-			AudioManager::SetSourcePitch(dud_dud_dud_dud,
-											  AudioManager::GetSourcePitch(dud_dud_dud_dud) - 0.5f * gameContext.deltaTime);
+			AudioManager::AddToSourcePitch(dud_dud_dud_dud, -0.5f * gameContext.deltaTime);
 		}
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
 		{
-			AudioManager::SetSourceGain(dud_dud_dud_dud,
-											  AudioManager::GetSourceGain(dud_dud_dud_dud) * 1.1f);
+			AudioManager::ScaleSourceGain(dud_dud_dud_dud, 1.1f);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
 		{
-			AudioManager::SetSourceGain(dud_dud_dud_dud,
-											  AudioManager::GetSourceGain(dud_dud_dud_dud) / 1.1f);
+			AudioManager::ScaleSourceGain(dud_dud_dud_dud, 1.0f / 1.1f);
 		}
 
 

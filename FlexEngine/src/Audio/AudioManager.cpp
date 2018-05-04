@@ -152,6 +152,26 @@ namespace flex
 		}
 	}
 
+	void AudioManager::ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool preventZero)
+	{
+		assert(sourceID < s_Sources.size());
+
+		const real epsilon = 0.00001f;
+
+		if (preventZero && s_Sources[sourceID].gain == 0.0f)
+		{
+			s_Sources[sourceID].gain = epsilon;
+		}
+
+		real newGain = s_Sources[sourceID].gain * gainScale;
+		if (preventZero && newGain < epsilon)
+		{
+			// Prevent gain from reaching 0, so it can be scaled up again
+			newGain = epsilon;
+		}
+		SetSourceGain(sourceID, newGain);
+	}
+
 	void AudioManager::SetSourceGain(AudioSourceID sourceID, real gain)
 	{
 		assert(sourceID < s_Sources.size());
@@ -168,6 +188,13 @@ namespace flex
 		assert(sourceID < s_Sources.size());
 
 		return s_Sources[sourceID].gain;
+	}
+
+	void AudioManager::AddToSourcePitch(AudioSourceID sourceID, real deltaPitch)
+	{
+		assert(sourceID < s_Sources.size());
+
+		SetSourcePitch(sourceID, s_Sources[sourceID].pitch + deltaPitch);
 	}
 
 	void AudioManager::SetSourceLooping(AudioSourceID sourceID, bool looping)
