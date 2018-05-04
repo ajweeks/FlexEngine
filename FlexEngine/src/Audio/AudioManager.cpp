@@ -8,12 +8,12 @@
 
 namespace flex
 {
-	std::vector<AudioManager::AudioSource> AudioManager::m_Sources;
+	std::vector<AudioManager::Source> AudioManager::s_Sources;
 
 	ALCcontext* AudioManager::s_Context = nullptr;
 	ALCdevice* AudioManager::s_Device = nullptr;
 
-	ALuint AudioManager::m_Buffers[NUM_BUFFERS];
+	ALuint AudioManager::s_Buffers[NUM_BUFFERS];
 
 	void AudioManager::Initialize()
 	{
@@ -35,7 +35,7 @@ namespace flex
 
 		bool eaxPresent = alIsExtensionPresent("EAX2.0") == GL_TRUE;
 
-		alGenBuffers(NUM_BUFFERS, m_Buffers);
+		alGenBuffers(NUM_BUFFERS, s_Buffers);
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
@@ -55,7 +55,7 @@ namespace flex
 
 	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath)
 	{
-		AudioSourceID newID = m_Sources.size();
+		AudioSourceID newID = s_Sources.size();
 		// TODO: Reuse buffers after sounds stop playing?
 		assert(newID < NUM_BUFFERS);
 
@@ -75,27 +75,27 @@ namespace flex
 		if (error != AL_NO_ERROR)
 		{
 			DisplayALError("OpenAndParseWAVFile: ", error);
-			alDeleteBuffers(NUM_BUFFERS, m_Buffers);
+			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
 
 
 		// Buffer
-		alBufferData(m_Buffers[newID], format, data, size, freq);
+		alBufferData(s_Buffers[newID], format, data, size, freq);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
 			DisplayALError("alBufferData: ", error);
-			alDeleteBuffers(NUM_BUFFERS, m_Buffers);
+			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
 		delete[] data;
 
 
 		// Source
-		m_Sources.resize(m_Sources.size() + 1);
+		s_Sources.resize(s_Sources.size() + 1);
 
-		alGenSources(1, &m_Sources[newID].source);
+		alGenSources(1, &s_Sources[newID].source);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
@@ -103,7 +103,7 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
-		alSourcei(m_Sources[newID].source, AL_BUFFER, m_Buffers[newID]);
+		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
@@ -113,95 +113,95 @@ namespace flex
 		return newID;
 	}
 
-	void AudioManager::PlayAudioSource(AudioSourceID sourceID)
+	void AudioManager::PlaySource(AudioSourceID sourceID)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
-		alGetSourcei(sourceID, AL_SOURCE_STATE, &m_Sources[sourceID].state);
+		alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
-		if (m_Sources[sourceID].state != AL_PLAYING)
+		if (s_Sources[sourceID].state != AL_PLAYING)
 		{
-			alSourcePlay(m_Sources[sourceID].source);
-			alGetSourcei(sourceID, AL_SOURCE_STATE, &m_Sources[sourceID].state);
+			alSourcePlay(s_Sources[sourceID].source);
+			alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 		}
 	}
 
-	void AudioManager::PauseAudioSource(AudioSourceID sourceID)
+	void AudioManager::PauseSource(AudioSourceID sourceID)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
-		alGetSourcei(sourceID, AL_SOURCE_STATE, &m_Sources[sourceID].state);
+		alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
-		if (m_Sources[sourceID].state != AL_PAUSED)
+		if (s_Sources[sourceID].state != AL_PAUSED)
 		{
-			alSourcePause(m_Sources[sourceID].source);
-			alGetSourcei(sourceID, AL_SOURCE_STATE, &m_Sources[sourceID].state);
+			alSourcePause(s_Sources[sourceID].source);
+			alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 		}
 	}
 
-	void AudioManager::StopAudioSource(AudioSourceID sourceID)
+	void AudioManager::StopSource(AudioSourceID sourceID)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
-		alGetSourcei(sourceID, AL_SOURCE_STATE, &m_Sources[sourceID].state);
+		alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
-		if (m_Sources[sourceID].state != AL_STOPPED)
+		if (s_Sources[sourceID].state != AL_STOPPED)
 		{
-			alSourceStop(m_Sources[sourceID].source);
-			alGetSourcei(sourceID, AL_SOURCE_STATE, &m_Sources[sourceID].state);
+			alSourceStop(s_Sources[sourceID].source);
+			alGetSourcei(sourceID, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 		}
 	}
 
-	void AudioManager::SetAudioSourceGain(AudioSourceID sourceID, real gain)
+	void AudioManager::SetSourceGain(AudioSourceID sourceID, real gain)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
 		gain = glm::clamp(gain, 0.0f, 1.0f);
 
-		m_Sources[sourceID].gain = gain;
+		s_Sources[sourceID].gain = gain;
 		Logger::LogInfo("gain: " + std::to_string(gain));
-		alSourcef(m_Sources[sourceID].source, AL_GAIN, gain);
+		alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
 	}
 
-	real AudioManager::GetAudioSourceGain(AudioSourceID sourceID)
+	real AudioManager::GetSourceGain(AudioSourceID sourceID)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
-		return m_Sources[sourceID].gain;
+		return s_Sources[sourceID].gain;
 	}
 
-	void AudioManager::SetAudioSourceLooping(AudioSourceID sourceID, bool looping)
+	void AudioManager::SetSourceLooping(AudioSourceID sourceID, bool looping)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
-		m_Sources[sourceID].bLooping = looping;
-		alSourcei(m_Sources[sourceID].source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
+		s_Sources[sourceID].bLooping = looping;
+		alSourcei(s_Sources[sourceID].source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
 	}
 
-	bool AudioManager::GetAudioSourceLooping(AudioSourceID sourceID)
+	bool AudioManager::GetSourceLooping(AudioSourceID sourceID)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
-		return m_Sources[sourceID].bLooping;
+		return s_Sources[sourceID].bLooping;
 	}
 
-	void AudioManager::SetAudioSourcePitch(AudioSourceID sourceID, real pitch)
+	void AudioManager::SetSourcePitch(AudioSourceID sourceID, real pitch)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
 		// openAL range (found in al.h)
 		pitch = glm::clamp(pitch, 0.5f, 2.0f);
 
-		m_Sources[sourceID].pitch = pitch;
+		s_Sources[sourceID].pitch = pitch;
 		Logger::LogInfo("pitch: " + std::to_string(pitch));
-		alSourcef(m_Sources[sourceID].source, AL_PITCH, pitch);
+		alSourcef(s_Sources[sourceID].source, AL_PITCH, pitch);
 	}
 
-	real AudioManager::GetAudioSourcePitch(AudioSourceID sourceID)
+	real AudioManager::GetSourcePitch(AudioSourceID sourceID)
 	{
-		assert(sourceID < m_Sources.size());
+		assert(sourceID < s_Sources.size());
 
-		return m_Sources[sourceID].pitch;
+		return s_Sources[sourceID].pitch;
 	}
 
 	void AudioManager::DisplayALError(const std::string& str, ALenum error)

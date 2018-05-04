@@ -50,7 +50,7 @@ namespace flex
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
 		dud_dud_dud_dud = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav");
-		AudioManager::SetAudioSourceLooping(dud_dud_dud_dud, true);
+		AudioManager::SetSourceLooping(dud_dud_dud_dud, true);
 		drmapan = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav");
 
 		JSONObject sceneRootObject;
@@ -197,46 +197,46 @@ namespace flex
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
 		{
-			AudioManager::PlayAudioSource(dud_dud_dud_dud);
+			AudioManager::PlaySource(dud_dud_dud_dud);
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
 		{
-			AudioManager::PauseAudioSource(dud_dud_dud_dud);
+			AudioManager::PauseSource(dud_dud_dud_dud);
 		}
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
 		{
-			AudioManager::PlayAudioSource(drmapan);
+			AudioManager::PlaySource(drmapan);
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 		{
-			AudioManager::PauseAudioSource(drmapan);
+			AudioManager::PauseSource(drmapan);
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
 		{
-			AudioManager::StopAudioSource(drmapan);
+			AudioManager::StopSource(drmapan);
 		}
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
 		{
-			AudioManager::SetAudioSourcePitch(dud_dud_dud_dud,
-											  AudioManager::GetAudioSourcePitch(dud_dud_dud_dud) + 0.5f * gameContext.deltaTime);
+			AudioManager::SetSourcePitch(dud_dud_dud_dud,
+											  AudioManager::GetSourcePitch(dud_dud_dud_dud) + 0.5f * gameContext.deltaTime);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
 		{
-			AudioManager::SetAudioSourcePitch(dud_dud_dud_dud,
-											  AudioManager::GetAudioSourcePitch(dud_dud_dud_dud) - 0.5f * gameContext.deltaTime);
+			AudioManager::SetSourcePitch(dud_dud_dud_dud,
+											  AudioManager::GetSourcePitch(dud_dud_dud_dud) - 0.5f * gameContext.deltaTime);
 		}
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
 		{
-			AudioManager::SetAudioSourceGain(dud_dud_dud_dud,
-											  AudioManager::GetAudioSourceGain(dud_dud_dud_dud) * 1.1f);
+			AudioManager::SetSourceGain(dud_dud_dud_dud,
+											  AudioManager::GetSourceGain(dud_dud_dud_dud) * 1.1f);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
 		{
-			AudioManager::SetAudioSourceGain(dud_dud_dud_dud,
-											  AudioManager::GetAudioSourceGain(dud_dud_dud_dud) / 1.1f);
+			AudioManager::SetSourceGain(dud_dud_dud_dud,
+											  AudioManager::GetSourceGain(dud_dud_dud_dud) / 1.1f);
 		}
 
 
