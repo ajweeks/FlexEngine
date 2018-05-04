@@ -8,6 +8,8 @@
 
 #include <glm/gtx/matrix_decompose.hpp>
 
+#include "AL/al.h"
+
 #include "Logger.hpp"
 
 #pragma warning(push, 0) // Don't generate warnings for third party code
@@ -68,7 +70,7 @@ namespace flex
 
 		if (!file)
 		{
-			Logger::LogError("Unable to read file " + filePath);
+			Logger::LogError("Unable to read file: " + filePath);
 			return false;
 		}
 
@@ -81,6 +83,126 @@ namespace flex
 		file.close();
 
 		return true;
+	}
+
+	bool ParseWAVFile(const std::string& filePath, i32* format, void** data, i32* size, i32* freq)
+	{
+		std::vector<char> dataArray;
+		if (!ReadFile(filePath, dataArray))
+		{
+			Logger::LogError("Failed to parse WAV file: " + filePath);
+			return false;
+		}
+
+		if (dataArray.size() < 12)
+		{
+			Logger::LogError("Invalid WAV file: " + filePath);
+			return false;
+		}
+
+		u32 dataIndex = 0;
+		std::string chunkID(&dataArray[dataIndex], 4); dataIndex += 4;
+
+		u32 chunkSize = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
+		std::string waveID(&dataArray[dataIndex], 4); dataIndex += 4;
+		std::string subChunk1ID(&dataArray[dataIndex], 4); dataIndex += 4;
+
+		if (chunkID.compare("RIFF") != 0 ||
+			waveID.compare("WAVE") != 0 ||
+			subChunk1ID.compare("fmt ") != 0)
+		{
+			Logger::LogError("Invalid WAVE file header: " + filePath);
+			return false;
+		}
+
+		// TODO: Unsigned?
+		u32 subChunk1Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
+		if (subChunk1Size != 16)
+		{
+			Logger::LogError("Non-16 bit chunk size in WAVE files in unsupported: " + filePath);
+			return false;
+		}
+
+		u16 audioFormat = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
+		if (audioFormat != 1) // WAVE_FORMAT_PCM
+		{
+			Logger::LogError("WAVE file uses unsupported format (only PCM is allowed): " + filePath);
+			return false;
+		}
+
+		u16 channelCount = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
+		u32 samplesPerSec = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
+		u32 avgBytesPerSec = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
+		u16 blockAlign = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
+		u16 bitsPerSample = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
+
+		std::string subChunk2ID(&dataArray[dataIndex], 4); dataIndex += 4;
+		if (subChunk2ID.compare("data") != 0)
+		{
+			Logger::LogError("Invalid WAVE file: " + filePath);
+			return false;
+		}
+
+		u32 subChunk2Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
+		*data = new u8[subChunk2Size];
+		for (u32 i = 0; i < subChunk2Size; ++i)
+		{
+			(*((u8**)(data)))[i] = dataArray[dataIndex];
+			++dataIndex;
+		}
+
+		switch (channelCount)
+		{
+		case 1:
+		{
+			switch (bitsPerSample)
+			{
+			case 8:
+				*format = AL_FORMAT_MONO8;
+				break;
+			case 16:
+				*format = AL_FORMAT_MONO16;
+				break;
+			default:
+				Logger::LogError("WAVE file contains invalid bitsPerSample (must be 8 or 16): " + std::to_string(bitsPerSample));
+				break;
+			}
+		} break;
+		case 2:
+		{
+			switch (bitsPerSample)
+			{
+			case 8:
+				*format = AL_FORMAT_STEREO8;
+				break;
+			case 16:
+				*format = AL_FORMAT_STEREO16;
+				break;
+			default:
+				Logger::LogError("WAVE file contains invalid bitsPerSample (must be 8 or 16): " + std::to_string(bitsPerSample));
+				break;
+			}
+		} break;
+		default:
+		{
+			Logger::LogError("WAVE file contains invalid channel count (must be 1 or 2): " + std::to_string(channelCount));
+		} break;
+		}
+
+		*size = subChunk2Size;
+		*freq = samplesPerSec;
+
+		return true;
+	}
+
+	u32 Parse32u(char* ptr)
+	{
+		return ((u8)ptr[0]) + ((u8)ptr[1] << 8) + ((u8)ptr[2] << 16) + ((u8)ptr[3] << 24);
+	}
+
+	u16 Parse16u(char* ptr)
+	{
+		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
 	}
 
 	void StripLeadingDirectories(std::string& filePath)

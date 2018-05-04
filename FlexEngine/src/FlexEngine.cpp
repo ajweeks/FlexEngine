@@ -9,6 +9,7 @@
 
 #include "BulletDynamics/Dynamics/btDynamicsWorld.h"
 
+#include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
@@ -71,6 +72,8 @@ namespace flex
 		m_GameContext = {};
 		m_GameContext.engineInstance = this;
 
+		AudioManager::Initialize();
+
 		CreateWindowAndRenderer();
 
 		m_GameContext.inputManager = new InputManager();
@@ -127,6 +130,9 @@ namespace flex
 		DestroyWindowAndRenderer();
 		
 		MeshPrefab::Destroy();
+
+		AudioManager::Destroy();
+
 		Logger::Destroy();
 	}
 

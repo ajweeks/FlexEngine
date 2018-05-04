@@ -48,11 +48,13 @@ namespace flex
 	typedef u32 ShaderID;
 	typedef u32 MaterialID;
 	typedef u32 PointLightID;
+	typedef u32 AudioSourceID;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
 #define InvalidMaterialID ((MaterialID)u32_max)
 #define InvalidPointLightID ((PointLightID)u32_max)
+#define InvalidAudioSourceID ((AudioSourceID)u32_max)
 
 	template<bool> struct StaticAssert;
 	template<> struct StaticAssert<true> {};

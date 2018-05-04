@@ -76,6 +76,9 @@ namespace flex
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
+		AudioSourceID dud_dud_dud_dud;
+		AudioSourceID drmapan;
+
 	private:
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;

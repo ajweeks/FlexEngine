@@ -15,6 +15,7 @@
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #pragma warning(pop)
 
+#include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Helpers.hpp"
@@ -48,6 +49,9 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
+		dud_dud_dud_dud = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav");
+		AudioManager::SetAudioSourceLooping(dud_dud_dud_dud, true);
+		drmapan = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav");
 
 		JSONObject sceneRootObject;
 		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
@@ -190,6 +194,51 @@ namespace flex
 		{
 			m_PhysicsWorld->Update(gameContext.deltaTime);
 		}
+
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
+		{
+			AudioManager::PlayAudioSource(dud_dud_dud_dud);
+		}
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
+		{
+			AudioManager::PauseAudioSource(dud_dud_dud_dud);
+		}
+
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
+		{
+			AudioManager::PlayAudioSource(drmapan);
+		}
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
+		{
+			AudioManager::PauseAudioSource(drmapan);
+		}
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
+		{
+			AudioManager::StopAudioSource(drmapan);
+		}
+
+		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
+		{
+			AudioManager::SetAudioSourcePitch(dud_dud_dud_dud,
+											  AudioManager::GetAudioSourcePitch(dud_dud_dud_dud) + 0.5f * gameContext.deltaTime);
+		}
+		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
+		{
+			AudioManager::SetAudioSourcePitch(dud_dud_dud_dud,
+											  AudioManager::GetAudioSourcePitch(dud_dud_dud_dud) - 0.5f * gameContext.deltaTime);
+		}
+
+		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
+		{
+			AudioManager::SetAudioSourceGain(dud_dud_dud_dud,
+											  AudioManager::GetAudioSourceGain(dud_dud_dud_dud) * 1.1f);
+		}
+		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
+		{
+			AudioManager::SetAudioSourceGain(dud_dud_dud_dud,
+											  AudioManager::GetAudioSourceGain(dud_dud_dud_dud) / 1.1f);
+		}
+
 
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
 

@@ -118,6 +118,7 @@ configuration "vs*"
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
+		path.join(DEPENDENCIES_DIR, "openAL"),
 	}
 	debugdir "$(OutDir)"
 configuration { "vs*", "x32" }
@@ -125,14 +126,6 @@ configuration { "vs*", "x32" }
 	defines { "WIN32" }
 configuration { "x32" }
 	defines { "PLATFORM_x32" }
-configuration { "vs*", "x64" }
-	defines { "WIN64" }
-configuration { "x64" }
-	defines { "PLATFORM_x64" }
-configuration { "linux", "gmake"}
-	defines { "PLATFORM_Linux", "__linux__" }
-	includedirs { "/usr/include" }
-	buildoptions_cpp { "-std=c++14" }
 configuration {}
 
 
@@ -157,7 +150,7 @@ project "FlexEngine"
 	windowsPlatformPostBuild()
 
 	--Linked libraries
-    links { "opengl32", "glfw3", "vulkan-1", "assimp-vc140-mt" }
+    links { "opengl32", "glfw3", "vulkan-1", "assimp-vc140-mt", "OpenAL32" }
 
 
 configuration { "Debug" }

@@ -36,6 +36,18 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec);
 
+	/*
+	* Reads in a .wav file and fills in given values according to file contents
+	* Returns true if reading and parsing succeeded
+	*/
+	bool ParseWAVFile(const std::string& filePath, i32* format, void** data, i32* size, i32* freq);
+
+	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
+	u32 Parse32u(char* ptr);
+	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
+	u16 Parse16u(char* ptr);
+
+
 	// Removes all content before the final '/' or '\' 
 	void StripLeadingDirectories(std::string& filePath);
 
