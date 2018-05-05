@@ -300,13 +300,24 @@ namespace flex
 			return;
 		}
 
+		GLFWgamepadstate gamepad0State;
+		if (glfwGetGamepadState(0, &gamepad0State) != GLFW_FALSE)
+		{
+			gameContext.inputManager->UpdateGamepadState(0, gamepad0State.axes, gamepad0State.buttons);
+		}
+
+		GLFWgamepadstate gamepad1State;
+		if (glfwGetGamepadState(1, &gamepad1State) != GLFW_FALSE)
+		{
+			gameContext.inputManager->UpdateGamepadState(1, gamepad1State.axes, gamepad1State.buttons);
+		}
+
 		// ImGUI
 		ImGuiIO& io = ImGui::GetIO();
 
 		// Hide OS mouse cursor if ImGui is drawing it
 		glfwSetInputMode(m_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 	}
-
 
 	GLFWwindow* GLFWWindowWrapper::GetWindow() const
 	{

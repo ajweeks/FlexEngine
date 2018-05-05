@@ -19,7 +19,7 @@ namespace flex
 	{
 	}
 
-	void InputManager::Initialize()
+	void InputManager::Initialize(const GameContext& gameContext)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeyMap[ImGuiKey_Tab] = (i32)KeyCode::KEY_TAB;
@@ -46,6 +46,8 @@ namespace flex
 
 		m_ImGuiIniFilepathStr = RESOURCE_LOCATION + "imgui.ini";
 		io.IniFilename  = m_ImGuiIniFilepathStr.c_str();
+
+		ClearAllInputs(gameContext);
 	}
 
 	void InputManager::Update()
@@ -75,6 +77,48 @@ namespace flex
 		m_ScrollYOffset = 0.0f;
 	}
 
+	void InputManager::UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15])
+	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
+		for (i32 i = 0; i < 6; ++i)
+		{
+			m_GampadAxes[gamepadIndex][i] = axes[i];
+		}
+
+		// Only handle left & right sticks (last two axes are triggers, which don't have radial deadzones
+		HandleRadialDeadZone(&m_GampadAxes[gamepadIndex][0], &m_GampadAxes[gamepadIndex][1]);
+		HandleRadialDeadZone(&m_GampadAxes[gamepadIndex][2], &m_GampadAxes[gamepadIndex][3]);
+
+		m_GamepadButtonStates[gamepadIndex] = 0;
+		for (i32 i = 0; i < 15; ++i)
+		{
+			m_GamepadButtonStates[gamepadIndex] = m_GamepadButtonStates[gamepadIndex] | (buttons[i] << i);
+		}
+	}
+
+	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
+	void InputManager::HandleRadialDeadZone(real* x, real* y)
+	{
+		real deadzone = 0.25f;
+
+		glm::vec2 stick(*x, *y);
+		real stickMagnitude = glm::length(stick);
+		if (stickMagnitude < deadzone)
+		{
+			*x = 0.0f;
+			*y = 0.0f;
+		}
+		else
+		{
+			glm::vec2 stickDir = (stick / stickMagnitude);
+			glm::vec2 stickScaled = stickDir * ((stickMagnitude - deadzone) / (1.0f - deadzone));
+
+			*x = stickScaled.x;
+			*y = stickScaled.y;
+		}
+	}
+
 	i32 InputManager::GetKeyDown(KeyCode keyCode, bool ignoreImGui) const
 	{
 		if (!ignoreImGui && ImGui::GetIO().WantCaptureKeyboard)
@@ -94,6 +138,22 @@ namespace flex
 	bool InputManager::GetKeyPressed(KeyCode keyCode) const
 	{
 		return GetKeyDown(keyCode) == 1;
+	}
+
+	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button)
+	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
+		bool down = m_GamepadButtonStates[gamepadIndex] & (1 << (i32)button);
+		return down;
+	}
+
+	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis)
+	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+	
+		real axisValue = m_GampadAxes[gamepadIndex][(i32)axis];
+		return axisValue;
 	}
 
 	void InputManager::CursorPosCallback(double x, double y)
@@ -242,6 +302,7 @@ namespace flex
 	{
 		ClearMouseInput(gameContext);
 		ClearKeyboadInput(gameContext);
+		ClearGampadInput();
 	}
 
 	void InputManager::ClearMouseInput(const GameContext& gameContext)
@@ -276,6 +337,19 @@ namespace flex
 		for (size_t i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
 			m_MouseButtons[i].down = 0;
+		}
+	}
+
+	void InputManager::ClearGampadInput()
+	{
+		for (i32 i = 0; i < 2; ++i)
+		{
+			for (i32 j = 0; j < 6; ++j)
+			{
+				m_GampadAxes[i][j] = 0;
+			}
+
+			m_GamepadButtonStates[i] = 0;
 		}
 	}
 } // namespace flex

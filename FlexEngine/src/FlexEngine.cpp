@@ -90,7 +90,7 @@ namespace flex
 		m_GameContext.cameraManager->AddCamera(overheadCamera, false);
 
 		InitializeWindowAndRenderer();
-		m_GameContext.inputManager->Initialize();
+		m_GameContext.inputManager->Initialize(m_GameContext);
 
 		m_GameContext.physicsManager = new PhysicsManager();
 		m_GameContext.physicsManager->Initialize();

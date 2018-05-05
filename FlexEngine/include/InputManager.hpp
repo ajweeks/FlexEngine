@@ -176,6 +176,35 @@ namespace flex
 			_NONE = MOUSE_BUTTON_8 + 1
 		};
 
+		enum class GamepadButton
+		{
+			A					= 0,
+			B					= 1,
+			X					= 2,
+			Y					= 3,
+			LEFT_BUMPER			= 4,
+			RIGHT_BUMPER		= 5,
+			BACK				= 6,
+			START				= 7,
+			// 8 ?
+			LEFT_STICK_DOWN		= 9,
+			RIGHT_STICK_DOWN	= 10,
+			D_PAD_UP			= 11,
+			D_PAD_RIGHT			= 12,
+			D_PAD_DOWN			= 13,
+			D_PAD_LEFT			= 14
+		};
+
+		enum class GamepadAxis
+		{
+			LEFT_STICK_X = 0,
+			LEFT_STICK_Y = 1,
+			RIGHT_STICK_X = 2,
+			RIGHT_STICK_Y = 3,
+			LEFT_TRIGGER = 4,
+			RIGHT_TRIGGER = 5
+		};
+
 		struct Key
 		{
 			i32 down = 0; // A count of how many frames this key has been down for (0 means not down)
@@ -190,13 +219,18 @@ namespace flex
 		InputManager();
 		~InputManager();
 
-		void Initialize();
+		void Initialize(const GameContext& gameContext);
 
 		void Update();
 		void PostUpdate();
 
+		void UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15]);
+
 		i32 GetKeyDown(KeyCode keyCode, bool ignoreImGui = false) const;
 		bool GetKeyPressed(KeyCode keyCode) const;
+
+		bool IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button);
+		real GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis);
 
 		void CursorPosCallback(double x, double y);
 		void MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, i32 mods);
@@ -216,8 +250,11 @@ namespace flex
 		void ClearAllInputs(const GameContext& gameContext);
 		void ClearMouseInput(const GameContext& gameContext);
 		void ClearKeyboadInput(const GameContext& gameContext);
+		void ClearGampadInput();
 
 	private:
+		void HandleRadialDeadZone(real* x, real* y);
+
 		std::map<KeyCode, Key> m_Keys;
 
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
@@ -227,6 +264,14 @@ namespace flex
 		glm::vec2 m_PrevMousePosition = { 0, 0 };
 		real m_ScrollXOffset = 0;
 		real m_ScrollYOffset = 0;
+
+		// Bitfield used to store gamepad button states for each player
+		// (0 = up, 1 = down) (See GamepadButton enum)
+		i32 m_GamepadButtonStates[2];
+
+		// Stores the values of gamepad axes for each player
+		// In order: LEFT_STICK_X, LEFT_STICK_Y, RIGHT_STICK_X, RIGHT_STICK_Y, LEFT_TRIGGER, RIGHT_TRIGGER
+		real m_GampadAxes[2][6];
 
 		// Must be stored as member because ImGui will not make a copy
 		std::string m_ImGuiIniFilepathStr;

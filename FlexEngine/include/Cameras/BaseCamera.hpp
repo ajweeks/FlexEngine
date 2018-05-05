@@ -56,7 +56,11 @@ namespace flex
 		std::string GetName() const;
 
 	protected:
+		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
+		void CalculateAxisVectors();
 		void RecalculateViewProjection(const GameContext& gameContext);
+
+		void ClampPitch();
 
 		std::string m_Name;
 
@@ -68,13 +72,14 @@ namespace flex
 		real m_ZNear = 0;
 		real m_ZFar = 0;
 
-		real m_MoveSpeed = 0; // Keyboard
-		real m_PanSpeed = 0; // MMB
-		real m_DragDollySpeed = 0; // RMB
-		real m_ScrollDollySpeed = 0; // Scroll wheel
+		real m_MoveSpeed = 0;				// WASD or gamepad left stick
+		real m_PanSpeed = 0;				// MMB
+		real m_DragDollySpeed = 0;			// RMB
+		real m_ScrollDollySpeed = 0;		// Scroll wheel
 		real m_MoveSpeedFastMultiplier = 0;
 		real m_MoveSpeedSlowMultiplier = 0;
-		real m_RotationSpeed = 0;
+		real m_MouseRotationSpeed = 0;		// LMB drag or gamepad right stick
+		real m_GamepadRotationSpeed = 0;	// LMB drag or gamepad right stick
 
 		glm::vec3 m_Position;
 

@@ -16,12 +16,6 @@ namespace flex
 		virtual void Update(const GameContext& gameContext) override;
 
 		void LoadDefaultKeybindings();
-		void LoadAzertyKeybindings();
-
-		void SetYaw(real rawRad);
-		real GetYaw() const;
-		void SetPitch(real pitchRad);
-		real GetPitch() const;
 
 	private:
 		glm::vec3 m_DragStartPosition;

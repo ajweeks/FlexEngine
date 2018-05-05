@@ -26,7 +26,8 @@ namespace flex
 		m_ScrollDollySpeed(2.0f),
 		m_MoveSpeedFastMultiplier(3.5f),
 		m_MoveSpeedSlowMultiplier(0.05f),
-		m_RotationSpeed(0.0011f)
+		m_GamepadRotationSpeed(100.0f),
+		m_MouseRotationSpeed(0.001f)
 	{
 		ResetOrientation();
 		RecalculateViewProjection(gameContext);
@@ -147,6 +148,20 @@ namespace flex
 		m_Yaw = PI;
 	}
 
+	void BaseCamera::CalculateAxisVectors()
+	{
+		m_Forward = {};
+		m_Forward.x = cos(m_Pitch) * cos(m_Yaw);
+		m_Forward.y = sin(m_Pitch);
+		m_Forward.z = cos(m_Pitch) * sin(m_Yaw);
+		m_Forward = normalize(m_Forward);
+
+		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+
+		m_Right = normalize(glm::cross(worldUp, m_Forward));
+		m_Up = cross(m_Forward, m_Right);
+	}
+
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)
 	void BaseCamera::RecalculateViewProjection(const GameContext& gameContext)
 	{
@@ -162,6 +177,19 @@ namespace flex
 		m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
 		m_ViewProjection = m_Proj * m_View;
 
+	}
+
+	void BaseCamera::ClampPitch()
+	{
+		real pitchLimit = PI_DIV_TWO - 0.02f;
+		if (m_Pitch > pitchLimit)
+		{
+			m_Pitch = pitchLimit;
+		}
+		else if (m_Pitch < -pitchLimit)
+		{
+			m_Pitch = -pitchLimit;
+		}
 	}
 
 	real BaseCamera::GetYaw() const
@@ -196,17 +224,16 @@ namespace flex
 
 	void BaseCamera::SetRotationSpeed(real rotationSpeed)
 	{
-		m_RotationSpeed = rotationSpeed;
+		m_MouseRotationSpeed = rotationSpeed;
 	}
 
 	real BaseCamera::GetRotationSpeed() const
 	{
-		return m_RotationSpeed;
+		return m_MouseRotationSpeed;
 	}
 
 	std::string BaseCamera::GetName() const
 	{
 		return m_Name;
 	}
-
 } // namespace flex
