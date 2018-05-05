@@ -18,6 +18,9 @@ namespace flex
 		void LoadDefaultKeybindings();
 
 	private:
+		bool m_EnableGamepadMovement = false;
+		bool m_EnableKeyboardMovement = true;
+
 		glm::vec3 m_DragStartPosition;
 
 		InputManager::KeyCode m_MoveForwardKey;

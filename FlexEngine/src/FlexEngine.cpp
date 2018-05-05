@@ -15,12 +15,11 @@
 #include "Cameras/OverheadCamera.hpp"
 #include "Logger.hpp"
 #include "Helpers.hpp"
+#include "Physics/PhysicsManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/Scenes/Scene_02.hpp"
 #include "Scene/Scenes/TestScene.hpp"
-#include "Physics/PhysicsManager.hpp"
-#include "Physics/PhysicsWorld.hpp"
-
 #include "Time.hpp"
 
 namespace flex
@@ -129,7 +128,7 @@ namespace flex
 
 		DestroyWindowAndRenderer();
 		
-		MeshPrefab::Destroy();
+		MeshPrefab::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
 
@@ -224,8 +223,8 @@ namespace flex
 		BaseScene* scene01 = new BaseScene("scene 01", RESOURCE_LOCATION + "scenes/scene_01.json");
 		m_GameContext.sceneManager->AddScene(scene01, m_GameContext);
 
-		//BaseScene* scene02 = new BaseScene("scene 02", RESOURCE_LOCATION + "scenes/scene_02.json");
-		//m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
+		BaseScene* scene02 = new BaseScene("scene 02", RESOURCE_LOCATION + "scenes/scene_02.json");
+		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
@@ -358,7 +357,10 @@ namespace flex
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
+				i32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex();
 				m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
+
+				MeshPrefab::DestroyAllLoadedMeshes();
 
 				DestroyWindowAndRenderer();
 				CreateWindowAndRenderer();
@@ -366,6 +368,7 @@ namespace flex
 				SetupImGuiStyles();
 
 				LoadDefaultScenes();
+				m_GameContext.sceneManager->SetCurrentScene(currentSceneIndex, m_GameContext);
 
 				//m_GameContext.renderer->ReloadShaders(m_GameContext);
 

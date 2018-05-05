@@ -10,6 +10,7 @@ namespace flex
 {
 	class PhysicsWorld;
 	class ReflectionProbe;
+	class Player;
 	struct JSONObject;
 	struct JSONField;
 
@@ -78,6 +79,10 @@ namespace flex
 
 		AudioSourceID dud_dud_dud_dud;
 		AudioSourceID drmapan;
+		AudioSourceID blip;
+
+		Player* m_Player0 = nullptr;
+		Player* m_Player1 = nullptr;
 
 	private:
 		BaseScene(const BaseScene&) = delete;

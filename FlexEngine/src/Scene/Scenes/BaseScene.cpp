@@ -25,6 +25,7 @@
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshPrefab.hpp"
 #include "Scene/ReflectionProbe.hpp"
@@ -51,6 +52,7 @@ namespace flex
 
 		dud_dud_dud_dud = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav");
 		drmapan = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav");
+		blip = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav");
 
 		JSONObject sceneRootObject;
 		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
@@ -152,6 +154,13 @@ namespace flex
 		AddChild(m_WorldOrigin);
 
 
+		// Players
+		m_Player0 = new Player();
+		m_Player0->Initialize(gameContext, 0);
+
+		m_Player1 = new Player();
+		m_Player1->Initialize(gameContext, 1);
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->Initialize(gameContext);
@@ -168,6 +177,9 @@ namespace flex
 
 	void BaseScene::Destroy(const GameContext& gameContext)
 	{
+		gameContext.renderer->ClearDirectionalLight();
+		gameContext.renderer->ClearPointLights();
+
 		for (auto child : m_Children)
 		{
 			if (child)
@@ -177,6 +189,18 @@ namespace flex
 			}
 		}
 		m_Children.clear();
+
+		if (m_Player0)
+		{
+			m_Player0->Destroy(gameContext);
+			SafeDelete(m_Player0);
+		}
+
+		if (m_Player1)
+		{
+			m_Player1->Destroy(gameContext);
+			SafeDelete(m_Player1);
+		}
 
 		gameContext.renderer->SetSkyboxMesh(nullptr);
 
@@ -189,9 +213,18 @@ namespace flex
 
 	void BaseScene::Update(const GameContext& gameContext)
 	{
+		m_Player0->Update(gameContext);
+		m_Player1->Update(gameContext);
+
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Update(gameContext.deltaTime);
+		}
+
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
+		{
+			m_Grid->SetVisible(!m_Grid->IsVisible());
+			m_WorldOrigin->SetVisible(!m_WorldOrigin->IsVisible());
 		}
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
@@ -308,8 +341,8 @@ namespace flex
 				meshFilePath = RESOURCE_LOCATION + meshFilePath;
 			}
 			std::string meshPrefabName = meshObj.GetString("prefab");
-			bool flipNormalYZ = meshObj.GetBool("flipNormalYZ");
-			bool flipZ = meshObj.GetBool("flipZ");
+			bool swapNormalYZ = meshObj.GetBool("swapNormalYZ");
+			bool flipNormalZ = meshObj.GetBool("flipNormalZ");
 			bool flipU = meshObj.GetBool("flipU");
 			bool flipV = meshObj.GetBool("flipV");
 
@@ -332,8 +365,8 @@ namespace flex
 					MeshPrefab::ImportSettings importSettings = {};
 					importSettings.flipU = flipU;
 					importSettings.flipV = flipV;
-					importSettings.flipNormalZ = flipZ;
-					importSettings.swapNormalYZ = flipNormalYZ;
+					importSettings.flipNormalZ = flipNormalZ;
+					importSettings.swapNormalYZ = swapNormalYZ;
 
 					mesh->LoadFromFile(gameContext,
 						meshFilePath,
@@ -428,12 +461,11 @@ namespace flex
 				{
 					real mass = rigidBodyObj.GetFloat("mass");
 					bool bKinematic = rigidBodyObj.GetBool("kinematic");
-					bool bStatic = rigidBodyObj.GetBool("static");
 
 					RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
 					rigidBody->SetMass(mass);
 					rigidBody->SetKinematic(bKinematic);
-					rigidBody->SetStatic(bStatic);
+					rigidBody->SetStatic(newEntity->IsStatic());
 				}
 			}
 		} break;
@@ -625,6 +657,8 @@ namespace flex
 
 	void BaseScene::SerializeToFile(const GameContext& gameContext)
 	{
+		bool success = false;
+
 		JSONObject rootSceneObject = {};
 
 		i32 fileVersion = 1;
@@ -679,25 +713,34 @@ namespace flex
 		std::string fileContents = rootSceneObject.Print(0);
 
 		std::ofstream fileStream;
-		std::string fileName = m_JSONFilePath.substr(0, m_JSONFilePath.size() - 5);
-		std::string newFilePath = fileName + "_saved.json";
-		fileStream.open(newFilePath, std::ofstream::out | std::ofstream::trunc);
+		fileStream.open(m_JSONFilePath, std::ofstream::out | std::ofstream::trunc);
 
-		std::string cleanFileName = newFilePath.substr(RESOURCE_LOCATION.length());
+		std::string cleanFileName = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
 		Logger::LogInfo("Serializing scene to " + cleanFileName);
 
 		if (fileStream.is_open())
 		{
 			fileStream.write(fileContents.c_str(), fileContents.size());
+			success = true;
 		}
 		else
 		{
 			Logger::LogError("Failed to open file for writing: " + m_JSONFilePath + ", Can't serialize scene");
+			success = false;
 		}
 
 		Logger::LogInfo("Done serializing scene");
 
 		fileStream.close();
+
+		if (success)
+		{
+			AudioManager::PlaySource(blip);
+		}
+		else
+		{
+			AudioManager::PlaySource(dud_dud_dud_dud);
+		}
 	}
 
 	JSONObject BaseScene::SerializeObject(GameObject* gameObject, const GameContext& gameContext)
@@ -760,6 +803,12 @@ namespace flex
 				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
 			}
 
+			MeshPrefab::ImportSettings importSettings = mesh->GetImportSettings();
+			meshValue.fields.push_back(JSONField("swapNormalYZ", JSONValue(importSettings.swapNormalYZ)));
+			meshValue.fields.push_back(JSONField("flipNormalZ", JSONValue(importSettings.flipNormalZ)));
+			meshValue.fields.push_back(JSONField("flipU", JSONValue(importSettings.flipU)));
+			meshValue.fields.push_back(JSONField("flipV", JSONValue(importSettings.flipV)));
+
 			meshField.value = JSONValue(meshValue);
 			object.fields.push_back(meshField);
 
@@ -772,7 +821,7 @@ namespace flex
 				i32 materialIndex = GetMaterialIndex(material, gameContext);
 				if (materialIndex == -1)
 				{
-					Logger::LogError("Mesh object contains material not present in BaseScene::m_LoadedMaterials! Parsing this file will fail!");
+					Logger::LogError("Mesh object contains material not present in BaseScene::m_LoadedMaterials! Parsing this file will fail! (" + childName + ")");
 				}
 				else
 				{

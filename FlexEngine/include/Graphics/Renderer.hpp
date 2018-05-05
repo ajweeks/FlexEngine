@@ -82,6 +82,9 @@ namespace flex
 		bool InitializeDirectionalLight(const DirectionalLight& dirLight);
 		PointLightID InitializePointLight(const PointLight& pointLight);
 
+		void ClearDirectionalLight();
+		void ClearPointLights();
+
 		DirectionalLight& GetDirectionalLight();
 		PointLight& GetPointLight(PointLightID pointLight);
 		i32 GetNumPointLights();

@@ -37,7 +37,8 @@ namespace flex
 		btRigidBody* m_RigidBody = nullptr;
 		btMotionState* m_MotionState = nullptr;
 
-		real m_Mass = 0.0f;
+		// Must be 0 if static, non-zero otherwise
+		real m_Mass = 1.0f;
 		bool m_bStatic = false;
 		bool m_bKinematic = false;
 

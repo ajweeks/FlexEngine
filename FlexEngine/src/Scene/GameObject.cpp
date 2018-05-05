@@ -34,7 +34,6 @@ namespace flex
 			m_RigidBody->Initialize(m_CollisionShape, gameContext, startingTransform);
 		}
 
-
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->Initialize(gameContext);

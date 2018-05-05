@@ -149,6 +149,16 @@ namespace flex
 		return m_PointLights.size() - 1;
 	}
 
+	void Renderer::ClearDirectionalLight()
+	{
+		m_DirectionalLight = {};
+	}
+
+	void Renderer::ClearPointLights()
+	{
+		m_PointLights.clear();
+	}
+
 	DirectionalLight& Renderer::GetDirectionalLight()
 	{
 		return m_DirectionalLight;

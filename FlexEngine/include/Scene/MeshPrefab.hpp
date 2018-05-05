@@ -24,7 +24,9 @@ namespace flex
 		MeshPrefab(MaterialID materialID, const std::string& name = "");
 		virtual ~MeshPrefab();
 
-		static void Destroy();
+		static void DestroyAllLoadedMeshes();
+
+		virtual void Destroy(const GameContext& gameContext) override;
 
 		enum class Type
 		{
@@ -92,6 +94,7 @@ namespace flex
 
 		std::string GetFilepath() const;
 		PrefabShape GetShape() const;
+		ImportSettings GetImportSettings() const;
 
 	private:
 		struct LoadedMesh
@@ -120,6 +123,9 @@ namespace flex
 		VertexBufferData m_VertexBufferData = {};
 
 		std::vector<u32> m_Indices;
+
+		// Saved so we can reload meshes and serialize contents to file
+		ImportSettings m_ImportSettings;
 
 		static glm::vec4 m_DefaultColor_4;
 		static glm::vec3 m_DefaultPosition;

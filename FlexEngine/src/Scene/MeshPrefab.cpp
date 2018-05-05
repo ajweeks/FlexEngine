@@ -39,22 +39,28 @@ namespace flex
 	MeshPrefab::MeshPrefab(MaterialID materialID, const std::string& name) :
 		GameObject(name, SerializableType::MESH),
 		m_MaterialID(materialID),
-		m_UVScale(1.0f, 1.0f)
+		m_UVScale(1.0f, 1.0f),
+		m_ImportSettings()
 	{
 	}
 
 	MeshPrefab::~MeshPrefab()
 	{
-		m_VertexBufferData.Destroy();
 	}
 
-	void MeshPrefab::Destroy()
+	void MeshPrefab::DestroyAllLoadedMeshes()
 	{
 		for (auto iter = m_LoadedMeshes.begin(); iter != m_LoadedMeshes.end(); /**/)
 		{
 			SafeDelete(iter->second);
 			iter = m_LoadedMeshes.erase(iter);
 		}
+	}
+
+	void MeshPrefab::Destroy(const GameContext& gameContext)
+	{
+		m_VertexBufferData.Destroy();
+		GameObject::Destroy(gameContext);
 	}
 
 	void MeshPrefab::SetRequiredAttributes(VertexAttributes requiredAttributes)
@@ -84,6 +90,10 @@ namespace flex
 		m_Type = Type::FILE;
 		m_Shape = PrefabShape::NONE;
 		m_Filepath = filepath;
+		if (importSettings)
+		{
+			m_ImportSettings = *importSettings;
+		}
 
 		m_VertexBufferData.Destroy();
 
@@ -1070,6 +1080,11 @@ namespace flex
 	MeshPrefab::PrefabShape MeshPrefab::GetShape() const
 	{
 		return m_Shape;
+	}
+
+	MeshPrefab::ImportSettings MeshPrefab::GetImportSettings() const
+	{
+		return m_ImportSettings;
 	}
 
 	std::string MeshPrefab::GetFilepath() const

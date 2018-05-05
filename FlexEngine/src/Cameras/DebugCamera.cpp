@@ -27,7 +27,7 @@ namespace flex
 
 	void DebugCamera::Update(const GameContext& gameContext)
 	{
-		// Controller input
+		if (m_EnableGamepadMovement)
 		{
 			real yawO = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X) *
 				m_GamepadRotationSpeed * gameContext.deltaTime;
@@ -57,7 +57,7 @@ namespace flex
 				m_Forward * posZO * moveSpeedMultiplier;
 		}
 
-		// Keyboard input
+		if (m_EnableKeyboardMovement)
 		{
 			glm::vec2 look(0.0f);
 			if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
@@ -74,29 +74,32 @@ namespace flex
 			CalculateAxisVectors();
 
 			glm::vec3 translation(0.0f);
-			if (gameContext.inputManager->GetKeyDown(m_MoveForwardKey))
+			if (!gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 			{
-				translation += m_Forward;
-			}
-			if (gameContext.inputManager->GetKeyDown(m_MoveBackwardKey))
-			{
-				translation -= m_Forward;
-			}
-			if (gameContext.inputManager->GetKeyDown(m_MoveLeftKey))
-			{
-				translation += m_Right;
-			}
-			if (gameContext.inputManager->GetKeyDown(m_MoveRightKey))
-			{
-				translation -= m_Right;
-			}
-			if (gameContext.inputManager->GetKeyDown(m_MoveUpKey))
-			{
-				translation += m_Up;
-			}
-			if (gameContext.inputManager->GetKeyDown(m_MoveDownKey))
-			{
-				translation -= m_Up;
+				if (gameContext.inputManager->GetKeyDown(m_MoveForwardKey))
+				{
+					translation += m_Forward;
+				}
+				if (gameContext.inputManager->GetKeyDown(m_MoveBackwardKey))
+				{
+					translation -= m_Forward;
+				}
+				if (gameContext.inputManager->GetKeyDown(m_MoveLeftKey))
+				{
+					translation += m_Right;
+				}
+				if (gameContext.inputManager->GetKeyDown(m_MoveRightKey))
+				{
+					translation -= m_Right;
+				}
+				if (gameContext.inputManager->GetKeyDown(m_MoveUpKey))
+				{
+					translation += m_Up;
+				}
+				if (gameContext.inputManager->GetKeyDown(m_MoveDownKey))
+				{
+					translation -= m_Up;
+				}
 			}
 
 			if (gameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::MIDDLE))
@@ -139,8 +142,6 @@ namespace flex
 		}
 
 		RecalculateViewProjection(gameContext);
-
-		Logger::LogInfo(std::to_string(m_Pitch));
 	}
 
 	void DebugCamera::LoadDefaultKeybindings()
