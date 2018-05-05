@@ -31,11 +31,15 @@ namespace flex
 	{
 		ResetOrientation();
 		RecalculateViewProjection(gameContext);
-
 	}
 
 	BaseCamera::~BaseCamera()
 	{
+	}
+
+	void BaseCamera::Initialize(const GameContext& gameContext)
+	{
+		UNREFERENCED_PARAMETER(gameContext);
 	}
 
 	void BaseCamera::SetFOV(real FOV)
@@ -160,6 +164,12 @@ namespace flex
 
 		m_Right = normalize(glm::cross(worldUp, m_Forward));
 		m_Up = cross(m_Forward, m_Right);
+	}
+
+	void BaseCamera::CalculateYawAndPitchFromForward()
+	{
+		m_Pitch = asin(m_Forward.y);
+		m_Yaw = atan2(m_Forward.x, m_Forward.z);
 	}
 
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)

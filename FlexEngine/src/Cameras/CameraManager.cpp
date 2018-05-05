@@ -21,6 +21,11 @@ namespace flex
 		m_Cameras.clear();
 	}
 
+	void CameraManager::Initialize(const GameContext& gameContext)
+	{
+		m_Cameras[m_ActiveCameraIndex]->Initialize(gameContext);
+	}
+
 	void CameraManager::Update(const GameContext& gameContext)
 	{
 		m_Cameras[m_ActiveCameraIndex]->Update(gameContext);
@@ -52,7 +57,7 @@ namespace flex
 		}
 	}
 
-	void CameraManager::SwtichTo(BaseCamera* camera, bool align)
+	void CameraManager::SwtichTo(const GameContext& gameContext, BaseCamera* camera, bool align)
 	{
 		assert(camera);
 
@@ -64,16 +69,11 @@ namespace flex
 		}
 		else
 		{
-			if (align)
-			{
-				AlignCameras(m_Cameras[m_ActiveCameraIndex], camera);
-			}
-
-			m_ActiveCameraIndex = newCameraIndex;
+			SwtichToIndex(gameContext, newCameraIndex, align);
 		}
 	}
 
-	void CameraManager::SwtichToIndex(i32 index, bool align)
+	void CameraManager::SwtichToIndex(const GameContext& gameContext, i32 index, bool align)
 	{
 		if (index >= 0 && index < (i32)m_Cameras.size())
 		{
@@ -83,10 +83,12 @@ namespace flex
 			}
 
 			m_ActiveCameraIndex = index;
+
+			m_Cameras[m_ActiveCameraIndex]->Initialize(gameContext);
 		}
 	}
 
-	void CameraManager::SwtichToIndexRelative(i32 delta, bool align)
+	void CameraManager::SwtichToIndexRelative(const GameContext& gameContext, i32 delta, bool align)
 	{
 		i32 newIndex = m_ActiveCameraIndex + delta;
 		i32 numCameras = (i32)m_Cameras.size();
@@ -99,7 +101,7 @@ namespace flex
 			newIndex -= numCameras;
 		}
 
-		SwtichToIndex(newIndex, align);
+		SwtichToIndex(gameContext, newIndex, align);
 	}
 
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)

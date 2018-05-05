@@ -8,6 +8,8 @@
 #include "Logger.hpp"
 #include "Window/Window.hpp"
 #include "Helpers.hpp"
+#include "Scene/Scenes/BaseScene.hpp" 
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -22,7 +24,54 @@ namespace flex
 	{
 	}
 
+	void OverheadCamera::Initialize(const GameContext& gameContext)
+	{
+		player0 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		player1 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player1");
+
+		Update(gameContext);
+
+		BaseCamera::Initialize(gameContext);
+	}
+
 	void OverheadCamera::Update(const GameContext& gameContext)
 	{
+		glm::vec3 dPlayerPos = player0->GetTransform()->GetGlobalPosition() -
+			player1->GetTransform()->GetGlobalPosition();
+		real dist = glm::length(dPlayerPos);
+
+		glm::vec3 targetSpot = (player0->GetTransform()->GetGlobalPosition() +
+								player1->GetTransform()->GetGlobalPosition()) / 2.0f;
+
+		m_Forward = glm::normalize(targetSpot - m_Position);
+
+		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+		m_Right = normalize(glm::cross(worldUp, m_Forward));
+		m_Up = cross(m_Forward, m_Right);
+
+		real minHeight = 25.0f;
+		real maxHeight = 50.0f;
+		real minDistBack = 20.0f;
+		real maxDistBack = 50.0f;
+		
+		real targetYO = glm::clamp(dist * 1.0f, minHeight, maxHeight);
+		real targetZO = glm::clamp(dist * 1.0f, minDistBack, maxDistBack);
+
+		glm::vec3 upVec = glm::vec3(0, 1, 0);
+		glm::vec3 backVec = glm::vec3(0, 0, -1);
+
+		glm::vec3 targetPos = targetSpot + 
+			upVec * targetYO +
+			backVec * targetZO;
+		glm::vec3 dPos = targetPos - m_Position;
+		real dPosMag = glm::length(dPos);
+		if (dPosMag > glm::epsilon<real>())
+		{
+			real maxDist = glm::clamp(dPosMag * 1000.0f * gameContext.deltaTime, 0.0f, 10.0f);
+			m_Position = targetPos - maxDist * glm::normalize(dPos);
+		}
+
+		CalculateYawAndPitchFromForward();
+		RecalculateViewProjection(gameContext);
 	}
 } // namespace flex

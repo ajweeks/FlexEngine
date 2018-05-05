@@ -42,6 +42,9 @@ namespace flex
 		void RemoveChild(GameObject* gameObject, bool deleteChild);
 		void RemoveAllChildren(bool deleteChildren);
 
+		/* Returns the first found game object with tag, or nullptr if none exist */
+		GameObject* FirstObjectWithTag(const std::string& tag);
+
 	protected:
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
@@ -85,6 +88,9 @@ namespace flex
 		Player* m_Player1 = nullptr;
 
 	private:
+		/* Recursively searches through all game objects in search of one containing given tag */
+		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
+
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
 

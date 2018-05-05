@@ -42,6 +42,7 @@ namespace flex
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 		
 		m_Mesh = new MeshPrefab(matID, "Player " + std::to_string(index) + " mesh");
+		m_Mesh->AddTag("Player" + std::to_string(index));
 		m_Mesh->SetRigidBody(rigidBody);
 		m_Mesh->SetStatic(false);
 		m_Mesh->SetSerializable(false);

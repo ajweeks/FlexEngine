@@ -177,6 +177,20 @@ namespace flex
 		return &m_Transform;
 	}
 
+	void GameObject::AddTag(const std::string& tag)
+	{
+		if (std::find(m_Tags.begin(), m_Tags.end(), tag) == m_Tags.end())
+		{
+			m_Tags.push_back(tag);
+		}
+	}
+
+	bool GameObject::HasTag(const std::string& tag)
+	{
+		auto result = std::find(m_Tags.begin(), m_Tags.end(), tag);
+		return (result != m_Tags.end());
+	}
+
 	RenderID GameObject::GetRenderID() const
 	{
 		return m_RenderID;

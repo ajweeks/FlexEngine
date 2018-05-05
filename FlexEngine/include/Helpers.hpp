@@ -81,7 +81,7 @@ namespace flex
 	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
 
 	template<class T>
-	inline typename T::const_iterator Contains(const std::vector<T>& vec, const T& t)
+	inline typename std::vector<T>::const_iterator Contains(const std::vector<T>& vec, const T& t)
 	{
 		for (auto iter = vec.begin(); iter != vec.end(); ++iter)
 		{

@@ -1207,6 +1207,37 @@ namespace flex
 		}
 	}
 
+	GameObject* BaseScene::FirstObjectWithTag(const std::string& tag)
+	{
+		for (GameObject* gameObject : m_Children)
+		{
+			GameObject* result = FindObjectWithTag(tag, gameObject);
+			if (result)
+			{
+				return result;
+			}
+		}
+
+		return nullptr;
+	}
+
+	GameObject* BaseScene::FindObjectWithTag(const std::string& tag, GameObject* gameObject)
+	{
+		if (gameObject->HasTag(tag))
+		{
+			return gameObject;
+		}
+
+		for (GameObject* child : gameObject->m_Children)
+		{
+			GameObject* result = FindObjectWithTag(tag, child);
+			if (result)
+			{
+				return result;
+			}
+		}
+	}
+
 	std::vector<GameObject*>& BaseScene::GetRootObjects()
 	{
 		return m_Children;

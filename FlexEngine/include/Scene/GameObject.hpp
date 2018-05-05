@@ -30,6 +30,9 @@ namespace flex
 
 		virtual Transform* GetTransform();
 		
+		void AddTag(const std::string& tag);
+		bool HasTag(const std::string& tag);
+
 		RenderID GetRenderID() const;
 		void SetRenderID(RenderID renderID);
 
@@ -58,6 +61,8 @@ namespace flex
 		friend class BaseScene;
 
 		std::string m_Name;
+
+		std::vector<std::string> m_Tags;
 
 		Transform m_Transform;
 		RenderID m_RenderID = InvalidRenderID;

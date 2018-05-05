@@ -15,6 +15,7 @@ namespace flex
 		BaseCamera(const std::string& cameraName, GameContext& gameContext, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
 		~BaseCamera();
 
+		virtual void Initialize(const GameContext& gameContext);
 		virtual void Update(const GameContext& gameContext) = 0;
 
 		void SetFOV(real FOV);
@@ -58,6 +59,7 @@ namespace flex
 	protected:
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
 		void CalculateAxisVectors();
+		void CalculateYawAndPitchFromForward();
 		void RecalculateViewProjection(const GameContext& gameContext);
 
 		void ClampPitch();

@@ -83,10 +83,10 @@ namespace flex
 		debugCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		debugCamera->SetYaw(glm::radians(130.0f));
 		debugCamera->SetPitch(glm::radians(-10.0f));
-		m_GameContext.cameraManager->AddCamera(debugCamera, true);
+		m_GameContext.cameraManager->AddCamera(debugCamera, false);
 
 		OverheadCamera* overheadCamera = new OverheadCamera(m_GameContext);
-		m_GameContext.cameraManager->AddCamera(overheadCamera, false);
+		m_GameContext.cameraManager->AddCamera(overheadCamera, true);
 
 		InitializeWindowAndRenderer();
 		m_GameContext.inputManager->Initialize(m_GameContext);
@@ -105,7 +105,7 @@ namespace flex
 
 		SetupImGuiStyles();
 
-		m_GameContext.cameraManager->Update(m_GameContext); // Set initial values before first render
+		m_GameContext.cameraManager->Initialize(m_GameContext);
 	}
 
 	void FlexEngine::Destroy()
@@ -597,7 +597,7 @@ namespace flex
 
 					if (ImGui::Button(arrowPrevStr))
 					{
-						m_GameContext.cameraManager->SwtichToIndexRelative(-1, false);
+						m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, -1, false);
 					}
 
 					ImGui::SameLine();
@@ -610,7 +610,7 @@ namespace flex
 					ImGui::PushItemWidth(-1.0f);
 					if (ImGui::Button(arrowNextStr))
 					{
-						m_GameContext.cameraManager->SwtichToIndexRelative(1, false);
+						m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, 1, false);
 					}
 					ImGui::PopItemWidth();
 				}
