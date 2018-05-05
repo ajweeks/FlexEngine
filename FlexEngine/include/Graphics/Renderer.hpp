@@ -15,6 +15,8 @@
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
 
+class btIDebugDraw;
+
 namespace flex
 {
 	class MeshPrefab;
@@ -73,9 +75,11 @@ namespace flex
 
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 
-		virtual void ImGuiNewFrame() = 0;
+		virtual void NewFrame() = 0;
 
 		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
+
+		virtual btIDebugDraw* GetDebugDrawer() = 0;
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 

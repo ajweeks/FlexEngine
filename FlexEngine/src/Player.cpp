@@ -4,6 +4,7 @@
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "BulletCollision/CollisionShapes/btCapsuleShape.h"
+#include "BulletDynamics/ConstraintSolver/btHingeConstraint.h"
 
 #include "Scene/MeshPrefab.hpp"
 #include "Scene/Scenes/BaseScene.hpp"
@@ -36,8 +37,10 @@ namespace flex
 		MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
-		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
+		rigidBody->SetFriction(m_MoveFriction);
 
+		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
+		
 		m_Mesh = new MeshPrefab(matID, "Player " + std::to_string(index) + " mesh");
 		m_Mesh->SetRigidBody(rigidBody);
 		m_Mesh->SetStatic(false);
@@ -46,9 +49,15 @@ namespace flex
 		m_Mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/capsule.gltf");
 		m_Mesh->GetTransform()->SetGlobalPosition(glm::vec3(-5.0f + 5.0f * index, 5.0f, 0.0f));
 		gameContext.sceneManager->CurrentScene()->AddChild(m_Mesh);
-
+		
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
+	}
+
+	void Player::PostInitialize(const GameContext& gameContext)
+	{
+		m_Mesh->GetRigidBody()->GetRigidBodyInternal()->setAngularFactor(btVector3(0, 1, 0));
+		m_Mesh->GetRigidBody()->GetRigidBodyInternal()->setSleepingThresholds(0.0f, 0.0f);
 	}
 
 	void Player::Update(const GameContext& gameContext)

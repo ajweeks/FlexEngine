@@ -3031,9 +3031,18 @@ namespace flex
 SafeDelete(renderObject);
 		}
 
-		void GLRenderer::ImGuiNewFrame()
+		void GLRenderer::NewFrame()
 		{
+			if (m_PhysicsDebugDrawer)
+			{
+				m_PhysicsDebugDrawer->ClearLines();
+			}
 			ImGui_ImplGlfwGL3_NewFrame();
+		}
+
+		btIDebugDraw* GLRenderer::GetDebugDrawer()
+		{
+			return m_PhysicsDebugDrawer;
 		}
 
 		void GLRenderer::ImGuiRender()

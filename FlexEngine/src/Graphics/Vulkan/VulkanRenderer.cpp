@@ -2784,9 +2784,18 @@ namespace flex
 			m_RenderObjects[renderID] = nullptr;
 		}
 
-		void VulkanRenderer::ImGuiNewFrame()
+		void VulkanRenderer::NewFrame()
 		{
+			if (m_PhysicsDebugDrawer)
+			{
+				m_PhysicsDebugDrawer->ClearLines();
+			}
 			ImGui_ImplGlfwVulkan_NewFrame();
+		}
+
+		btIDebugDraw* VulkanRenderer::GetDebugDrawer()
+		{
+			return m_PhysicsDebugDrawer;
 		}
 
 		void VulkanRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)

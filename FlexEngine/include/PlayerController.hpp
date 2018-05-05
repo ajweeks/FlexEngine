@@ -15,8 +15,10 @@ namespace flex
 		void Destroy();
 
 	private:
-		real m_MoveSpeed = 1000.0f;
-		real m_JumpForce = 200.0f;
+		real m_MoveSpeed = 800.0f;
+		real m_JumpForce = 60.0f;
+		real m_RotateSpeed = 500.0f;
+		real m_RotateFriction = 4.0f;
 
 		i32 m_PlayerIndex = 0;
 

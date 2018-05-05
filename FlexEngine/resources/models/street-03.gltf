@@ -3,9 +3,9 @@
         {
             "bufferView" : 0, 
             "componentType" : 5123, 
-            "count" : 3264, 
+            "count" : 91116, 
             "max" : [
-                545
+                55654
             ], 
             "min" : [
                 0
@@ -15,32 +15,32 @@
         {
             "bufferView" : 1, 
             "componentType" : 5126, 
-            "count" : 546, 
+            "count" : 55655, 
             "max" : [
-                1.000000238418579, 
-                2.000000476837158, 
-                1.0000004768371582
+                54.937591552734375, 
+                9.388364791870117, 
+                25.29787826538086
             ], 
             "min" : [
-                -0.9999998211860657, 
-                -2.0, 
-                -0.9999992847442627
+                -22.772430419921875, 
+                -1.3816490173339844, 
+                -40.947265625
             ], 
             "type" : "VEC3"
         }, 
         {
             "bufferView" : 2, 
             "componentType" : 5126, 
-            "count" : 546, 
+            "count" : 55655, 
             "max" : [
-                0.99993896484375, 
                 1.0, 
-                0.99993896484375
+                1.0, 
+                1.0
             ], 
             "min" : [
-                -0.99993896484375, 
                 -1.0, 
-                -0.99993896484375
+                -1.0, 
+                -1.0
             ], 
             "type" : "VEC3"
         }
@@ -52,32 +52,32 @@
     "bufferViews" : [
         {
             "buffer" : 0, 
-            "byteLength" : 6528, 
+            "byteLength" : 182232, 
             "byteOffset" : 0, 
             "target" : 34963
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 6552, 
-            "byteOffset" : 6528, 
+            "byteLength" : 667860, 
+            "byteOffset" : 182232, 
             "target" : 34962
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 6552, 
-            "byteOffset" : 13080, 
+            "byteLength" : 667860, 
+            "byteOffset" : 850092, 
             "target" : 34962
         }
     ], 
     "buffers" : [
         {
-            "byteLength" : 19632, 
-            "uri" : "capsule.bin"
+            "byteLength" : 1517952, 
+            "uri" : "street-03.bin"
         }
     ], 
     "meshes" : [
         {
-            "name" : "Sphere", 
+            "name" : "Cube.011", 
             "primitives" : [
                 {
                     "attributes" : {
@@ -92,7 +92,18 @@
     "nodes" : [
         {
             "mesh" : 0, 
-            "name" : "Capsule"
+            "name" : "street", 
+            "rotation" : [
+                -8.146033536604591e-08, 
+                0.0, 
+                -0.0, 
+                1.0
+            ], 
+            "translation" : [
+                -35.12018966674805, 
+                1.4212002754211426, 
+                6.744446277618408
+            ]
         }
     ], 
     "scene" : 0, 

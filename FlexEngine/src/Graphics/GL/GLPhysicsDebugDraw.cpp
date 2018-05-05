@@ -92,7 +92,7 @@ namespace flex
 			Draw();
 		}
 
-		void GLPhysicsDebugDraw::clearLines()
+		void GLPhysicsDebugDraw::ClearLines()
 		{
 			m_LineSegments.clear();
 		}

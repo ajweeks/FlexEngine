@@ -117,7 +117,7 @@ namespace flex
 			Draw();
 		}
 
-		void VulkanPhysicsDebugDraw::clearLines()
+		void VulkanPhysicsDebugDraw::ClearLines()
 		{
 			m_LineSegments.clear();
 		}

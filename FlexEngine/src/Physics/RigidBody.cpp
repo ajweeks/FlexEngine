@@ -54,6 +54,7 @@ namespace flex
 		m_RigidBody->setFlags(flags);
 
 		m_RigidBody->setDamping(0.0f, 0.0f);
+		m_RigidBody->setFriction(m_Friction);
 
 		gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
 	}
@@ -99,6 +100,21 @@ namespace flex
 		return m_bStatic;
 	}
 
+	void RigidBody::SetFriction(real friction)
+	{
+		m_Friction = friction;
+
+		if (m_RigidBody)
+		{
+			m_RigidBody->setFriction(friction);
+		}
+	}
+
+	real RigidBody::GetFriction() const
+	{
+		return m_Friction;
+	}
+
 	void RigidBody::GetTransform(glm::vec3& outPos, glm::quat& outRot)
 	{
 		btTransform transform;
@@ -127,6 +143,21 @@ namespace flex
 	void RigidBody::SetScale(const glm::vec3& scale)
 	{
 		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(scale));
+	}
+
+	void RigidBody::GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward)
+	{
+		const btVector3 worldUp(0.0f, 1.0f, 0.0f);
+		// TODO: FIXME: HACK: Figure out why this needs to be negative (handed-ness?)
+		const btVector3 worldRight(-1.0f, 0.0f, 0.0f);
+		const btVector3 worldForward(0.0f, 0.0f, 1.0f);
+		btTransform transform;
+		m_RigidBody->getMotionState()->getWorldTransform(transform);
+		btQuaternion rot = transform.getRotation();
+		btMatrix3x3 rotMat(rot);
+		up = worldUp * rotMat;
+		right = worldRight * rotMat;
+		forward = worldForward * rotMat;
 	}
 
 	btRigidBody* RigidBody::GetRigidBodyInternal()

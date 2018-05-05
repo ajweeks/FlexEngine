@@ -22,6 +22,8 @@ namespace flex
 		bool IsKinematic() const;
 		void SetStatic(bool bStatic);
 		bool IsStatic() const;
+		void SetFriction(real friction);
+		real GetFriction() const;
 
 		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
 		//glm::vec3 GetPosition();
@@ -30,6 +32,8 @@ namespace flex
 		void SetPosition(const glm::vec3& pos);
 		void SetRotation(const glm::quat& rot);
 		void SetScale(const glm::vec3& scale);
+
+		void GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward);
 
 		btRigidBody* GetRigidBodyInternal();
 
@@ -41,6 +45,7 @@ namespace flex
 		real m_Mass = 1.0f;
 		bool m_bStatic = false;
 		bool m_bKinematic = false;
+		real m_Friction = 1.0f;
 
 		i32 m_Group = 0;
 		i32 m_Mask = 0;

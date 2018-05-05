@@ -12,6 +12,7 @@ namespace flex
 		~Player();
 
 		void Initialize(const GameContext& gameContext, i32 index);
+		void PostInitialize(const GameContext& gameContext);
 		void Update(const GameContext& gameContext);
 		void Destroy(const GameContext& gameContext);
 
@@ -22,6 +23,8 @@ namespace flex
 	private:
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
+
+		real m_MoveFriction = 1.1f;
 
 		MeshPrefab* m_Mesh = nullptr;
 		

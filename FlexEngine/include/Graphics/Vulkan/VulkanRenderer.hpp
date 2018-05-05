@@ -70,7 +70,9 @@ namespace flex
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 			
-			virtual void ImGuiNewFrame() override;
+			virtual void NewFrame() override;
+
+			virtual btIDebugDraw* GetDebugDrawer() override;
 
 		private:
 			friend VulkanPhysicsDebugDraw;

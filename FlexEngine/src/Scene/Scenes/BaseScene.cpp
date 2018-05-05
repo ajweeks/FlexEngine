@@ -169,6 +169,9 @@ namespace flex
 
 	void BaseScene::PostInitialize(const GameContext& gameContext)
 	{
+		m_Player0->PostInitialize(gameContext);
+		m_Player1->PostInitialize(gameContext);
+
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->PostInitialize(gameContext);

@@ -35,7 +35,7 @@ namespace flex
 			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
 
 			virtual void flushLines() override;
-			virtual void clearLines() override;
+			void ClearLines();
 
 		private:
 			void Draw();

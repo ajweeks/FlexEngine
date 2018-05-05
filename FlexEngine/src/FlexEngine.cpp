@@ -314,7 +314,8 @@ namespace flex
 			}
 
 			// Call as early as possible in the frame
-			m_GameContext.renderer->ImGuiNewFrame();
+			// Starts new ImGui frame and clears debug draw lines
+			m_GameContext.renderer->NewFrame();
 
 			DrawImGuiObjects();
 
@@ -362,10 +363,19 @@ namespace flex
 
 				MeshPrefab::DestroyAllLoadedMeshes();
 
+				if (m_GameContext.physicsManager)
+				{
+					m_GameContext.physicsManager->Destroy();
+					SafeDelete(m_GameContext.physicsManager);
+				}
+
 				DestroyWindowAndRenderer();
 				CreateWindowAndRenderer();
 				InitializeWindowAndRenderer();
 				SetupImGuiStyles();
+
+				m_GameContext.physicsManager = new PhysicsManager();
+				m_GameContext.physicsManager->Initialize();
 
 				LoadDefaultScenes();
 				m_GameContext.sceneManager->SetCurrentScene(currentSceneIndex, m_GameContext);
