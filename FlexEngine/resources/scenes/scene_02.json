@@ -14,6 +14,18 @@
 			"enable metallic sampler" : false,
 			"enable roughness sampler" : false,
 			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.700000, 0.750000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.300000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
 		}
 	],
 	"entities" : 
@@ -25,7 +37,6 @@
 			"static" : true,
 			"transform" : 
 			{
-				"space" : "local",
 				"position" : "0.000000, 0.000000, 0.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
@@ -47,8 +58,7 @@
 			"static" : true,
 			"transform" : 
 			{
-				"space" : "local",
-				"position" : "0.000000, -0.5, 0.000000",
+				"position" : "0.000000, -0.500000, 0.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "20.000000, 20.000000, 20.000000"
 			},
@@ -72,7 +82,7 @@
 				"kinematic" : false,
 				"static" : false
 			}
-		},
+		}
 	],
 	"point lights" : 
 	[
