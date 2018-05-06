@@ -6,7 +6,6 @@
 
 #include "GameContext.hpp"
 
-
 namespace flex
 {
 	class InputManager
@@ -250,7 +249,9 @@ namespace flex
 		void ClearAllInputs(const GameContext& gameContext);
 		void ClearMouseInput(const GameContext& gameContext);
 		void ClearKeyboadInput(const GameContext& gameContext);
-		void ClearGampadInput();
+		void ClearGampadInput(i32 gamepadIndex);
+
+		static i32 s_JoystickDisconnected;
 
 	private:
 		void HandleRadialDeadZone(real* x, real* y);

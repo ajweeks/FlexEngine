@@ -301,16 +301,37 @@ namespace flex
 		}
 
 		GLFWgamepadstate gamepad0State;
-		if (glfwGetGamepadState(0, &gamepad0State) != GLFW_FALSE)
+		static bool prevP0JoystickPresent = false;
+		if (glfwGetGamepadState(0, &gamepad0State) == GLFW_TRUE)
 		{
 			gameContext.inputManager->UpdateGamepadState(0, gamepad0State.axes, gamepad0State.buttons);
+			prevP0JoystickPresent = true;
+		}
+		else
+		{
+			if (prevP0JoystickPresent)
+			{
+				gameContext.inputManager->ClearGampadInput(0);
+				prevP0JoystickPresent = false;
+			}
 		}
 
 		GLFWgamepadstate gamepad1State;
-		if (glfwGetGamepadState(1, &gamepad1State) != GLFW_FALSE)
+		static bool prevP1JoystickPresent = false;
+		if (glfwGetGamepadState(1, &gamepad1State) == GLFW_TRUE)
 		{
 			gameContext.inputManager->UpdateGamepadState(1, gamepad1State.axes, gamepad1State.buttons);
+			prevP1JoystickPresent = true;
 		}
+		else
+		{
+			if (prevP1JoystickPresent)
+			{
+				gameContext.inputManager->ClearGampadInput(1);
+				prevP1JoystickPresent = false;
+			}
+		}
+
 
 		// ImGUI
 		ImGuiIO& io = ImGui::GetIO();

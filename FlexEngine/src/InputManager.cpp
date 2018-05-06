@@ -302,7 +302,8 @@ namespace flex
 	{
 		ClearMouseInput(gameContext);
 		ClearKeyboadInput(gameContext);
-		ClearGampadInput();
+		ClearGampadInput(0);
+		ClearGampadInput(1);
 	}
 
 	void InputManager::ClearMouseInput(const GameContext& gameContext)
@@ -340,16 +341,13 @@ namespace flex
 		}
 	}
 
-	void InputManager::ClearGampadInput()
+	void InputManager::ClearGampadInput(i32 gamepadIndex)
 	{
-		for (i32 i = 0; i < 2; ++i)
+		for (i32 j = 0; j < 6; ++j)
 		{
-			for (i32 j = 0; j < 6; ++j)
-			{
-				m_GampadAxes[i][j] = 0;
-			}
-
-			m_GamepadButtonStates[i] = 0;
+			m_GampadAxes[gamepadIndex][j] = 0;
 		}
+
+		m_GamepadButtonStates[gamepadIndex] = 0;
 	}
 } // namespace flex
