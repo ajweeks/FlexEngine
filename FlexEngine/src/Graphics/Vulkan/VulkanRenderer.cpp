@@ -30,7 +30,7 @@
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/MeshPrefab.hpp"
-#include "Scene/Scenes/BaseScene.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 #include "Physics/PhysicsWorld.hpp"
 

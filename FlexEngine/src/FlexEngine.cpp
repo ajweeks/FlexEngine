@@ -18,8 +18,8 @@
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Scene/Scenes/Scene_02.hpp"
-#include "Scene/Scenes/TestScene.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/MeshPrefab.hpp"
 #include "Time.hpp"
 
 namespace flex

@@ -8,7 +8,7 @@
 #include "Logger.hpp"
 #include "Window/Window.hpp"
 #include "Helpers.hpp"
-#include "Scene/Scenes/BaseScene.hpp" 
+#include "Scene/BaseScene.hpp" 
 #include "Scene/SceneManager.hpp"
 
 namespace flex

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "Scene/Scenes/BaseScene.hpp"
+#include "Scene/BaseScene.hpp"
 #include "GameContext.hpp"
 
 namespace flex

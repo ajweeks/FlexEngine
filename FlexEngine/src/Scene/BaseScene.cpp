@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#include "Scene/Scenes/BaseScene.hpp"
+#include "Scene/BaseScene.hpp"
 
 #include <glm/vec3.hpp>
 
@@ -53,6 +53,9 @@ namespace flex
 		dud_dud_dud_dud = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav");
 		drmapan = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav");
 		blip = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav");
+		//TRG_Banks = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/music/TRG_Banks.wav");
+		//AudioManager::SetSourceLooping(TRG_Banks, true);
+		//AudioManager::PlaySource(TRG_Banks);
 
 		JSONObject sceneRootObject;
 		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
@@ -176,6 +179,8 @@ namespace flex
 		{
 			(*iter)->PostInitialize(gameContext);
 		}
+
+		m_PhysicsWorld->GetWorld()->setDebugDrawer(gameContext.renderer->GetDebugDrawer());
 	}
 
 	void BaseScene::Destroy(const GameContext& gameContext)

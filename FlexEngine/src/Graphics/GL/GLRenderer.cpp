@@ -27,7 +27,7 @@
 #include "VertexAttribute.hpp"
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Scene/Scenes/BaseScene.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/MeshPrefab.hpp"
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
@@ -1552,8 +1552,6 @@ namespace flex
 			CheckGLErrorMessages();
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
-			btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-			world->setDebugDrawer(m_PhysicsDebugDrawer);
 
 			Logger::LogInfo("Ready!\n");
 		}
