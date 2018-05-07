@@ -16,6 +16,8 @@ namespace flex
 		void Initialize(const GameContext& gameContext);
 		void Update(const GameContext& gameContext);
 
+		void DestroyCameras();
+
 		BaseCamera* CurrentCamera() const;
 		i32 CameraCount() const;
 

@@ -345,12 +345,12 @@ namespace flex
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
 				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
-			
-				//m_GameContext.renderer->PostInitialize(m_GameContext);
+				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
 				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
+				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
 			// TODO: Figure out better
@@ -379,6 +379,8 @@ namespace flex
 
 				LoadDefaultScenes();
 				m_GameContext.sceneManager->SetCurrentScene(currentSceneIndex, m_GameContext);
+
+				m_GameContext.cameraManager->Initialize(m_GameContext);
 
 				//m_GameContext.renderer->ReloadShaders(m_GameContext);
 

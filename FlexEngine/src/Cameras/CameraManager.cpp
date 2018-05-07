@@ -14,11 +14,7 @@ namespace flex
 
 	CameraManager::~CameraManager()
 	{
-		for (u32 i = 0; i < m_Cameras.size(); ++i)
-		{
-			SafeDelete(m_Cameras[i]);
-		}
-		m_Cameras.clear();
+		DestroyCameras();
 	}
 
 	void CameraManager::Initialize(const GameContext& gameContext)
@@ -29,6 +25,16 @@ namespace flex
 	void CameraManager::Update(const GameContext& gameContext)
 	{
 		m_Cameras[m_ActiveCameraIndex]->Update(gameContext);
+	}
+
+	void CameraManager::DestroyCameras()
+	{
+		for (u32 i = 0; i < m_Cameras.size(); ++i)
+		{
+			SafeDelete(m_Cameras[i]);
+		}
+		m_Cameras.clear();
+		m_ActiveCameraIndex = -1;
 	}
 
 	BaseCamera* CameraManager::CurrentCamera() const
