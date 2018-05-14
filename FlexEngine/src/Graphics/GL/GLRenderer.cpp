@@ -199,7 +199,11 @@ namespace flex
 			m_RenderObjects.clear();
 			CheckGLErrorMessages();
 
-			SafeDelete(m_PhysicsDebugDrawer);
+			if (m_PhysicsDebugDrawer)
+			{
+				m_PhysicsDebugDrawer->Destroy();
+				SafeDelete(m_PhysicsDebugDrawer);
+			}
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_SpriteQuadVertexBufferData.Destroy();
@@ -362,11 +366,13 @@ namespace flex
 
 			mat.material.colorMultiplier = createInfo->colorMultiplier;
 
+			mat.material.engineMaterial = createInfo->engineMaterial;
+
 			if (shader.shader.needIrradianceSampler)
 			{
 				if (mat.irradianceSamplerID == InvalidID)
 				{
-					if (createInfo->irradianceSamplerMatID >= m_Materials.size())
+					if (m_Materials.find(createInfo->irradianceSamplerMatID) == m_Materials.end())
 					{
 						//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo->irradianceSamplerMatID));
 						mat.irradianceSamplerID = InvalidID;
@@ -390,7 +396,7 @@ namespace flex
 			{
 				if (mat.prefilteredMapSamplerID == InvalidID)
 				{
-					if (createInfo->prefilterMapSamplerMatID >= m_Materials.size())
+					if (m_Materials.find(createInfo->prefilterMapSamplerMatID) == m_Materials.end())
 					{
 						//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
 						mat.prefilteredMapSamplerID = InvalidID;
@@ -691,7 +697,7 @@ namespace flex
 				// Hopefully the first material works out okay! Should be better than crashing
 				renderObject->materialID = 0;
 
-				if (m_Materials.size() > 0)
+				if (!m_Materials.empty())
 				{
 					renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 				}
@@ -716,7 +722,7 @@ namespace flex
 				Logger::LogError("Render object is being created before any materials have been created!");
 			}
 
-			if (renderObject->materialID >= m_Materials.size())
+			if (m_Materials.find(renderObject->materialID) == m_Materials.end())
 			{
 				Logger::LogError("Uninitialized material with MaterialID " + std::to_string(renderObject->materialID));
 				return renderID;
@@ -804,7 +810,7 @@ namespace flex
 			auto iter = m_Materials.begin();
 			while (iter != m_Materials.end())
 			{
-				if (!iter->second.engineMaterial)
+				if (!iter->second.material.engineMaterial)
 				{
 					iter = m_Materials.erase(iter);
 				}
@@ -820,10 +826,7 @@ namespace flex
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
 			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
-			GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID);
-
-			// Only generate material once
-			if (equirectangularToCubeMatID == InvalidMaterialID)
+			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID))
 			{
 				MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 				equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
@@ -933,10 +936,7 @@ namespace flex
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
 			MaterialID prefilterMatID = InvalidMaterialID;
-			GetMaterialID("Prefilter", prefilterMatID);
-
-			// Only generate prefilter material once
-			if (prefilterMatID == InvalidMaterialID)
+			if (!GetMaterialID("Prefilter", prefilterMatID))
 			{
 				MaterialCreateInfo prefilterMaterialCreateInfo = {};
 				prefilterMaterialCreateInfo.name = "Prefilter";
@@ -1047,8 +1047,8 @@ namespace flex
 			MaterialCreateInfo brdfMaterialCreateInfo = {};
 			brdfMaterialCreateInfo.name = "BRDF";
 			brdfMaterialCreateInfo.shaderName = "brdf";
+			brdfMaterialCreateInfo.engineMaterial = true;
 			MaterialID brdfMatID = InitializeMaterial(gameContext, &brdfMaterialCreateInfo);
-			m_Materials[brdfMatID].engineMaterial = true;
 
 			if (m_1x1_NDC_Quad == nullptr)
 			{
@@ -1155,10 +1155,7 @@ namespace flex
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
 			MaterialID irrandianceMatID = InvalidMaterialID;
-			GetMaterialID("Irradiance", irrandianceMatID);
-
-			// Only generate material once
-			if (irrandianceMatID == InvalidMaterialID)
+			if (!GetMaterialID("Irradiance", irrandianceMatID))
 			{
 				MaterialCreateInfo irrandianceMatCreateInfo = {};
 				irrandianceMatCreateInfo.name = "Irradiance";
@@ -1377,7 +1374,6 @@ namespace flex
 
 		void GLRenderer::Initialize(const GameContext& gameContext)
 		{
-
 			CheckGLErrorMessages();
 
 			LoadShaders();
@@ -1469,15 +1465,15 @@ namespace flex
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
+			spriteMatCreateInfo.engineMaterial = true;
 			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
-			m_Materials[m_SpriteMatID].engineMaterial = true;
 
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
+			postProcessMatCreateInfo.engineMaterial = true;
 			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
-			m_Materials[m_PostProcessMatID].engineMaterial = true;
 
 			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
 			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
@@ -1613,6 +1609,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
+			m_PhysicsDebugDrawer->Initialize();
 
 			Logger::LogInfo("Ready!\n");
 		}
@@ -1710,17 +1707,18 @@ namespace flex
 			m_ForwardRenderObjectBatches.clear();
 			
 			// Sort render objects i32o deferred + forward buckets
-			for (size_t i = 0; i < m_Materials.size(); ++i)
+			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
 			{
-				ShaderID shaderID = m_Materials[i].material.shaderID;
+				MaterialID matID = iter->first;
+				ShaderID shaderID = iter->second.material.shaderID;
 				if (shaderID == InvalidShaderID)
 				{
-					Logger::LogWarning("GLRenderer::BatchRenderObjects > Material has invalid shaderID: " + m_Materials[i].material.name);
+					Logger::LogWarning("GLRenderer::BatchRenderObjects > Material has invalid shaderID: " + iter->second.material.name);
 					continue;
 				}
 				GLShader* shader = &m_Shaders[shaderID];
 
-				UpdateMaterialUniforms(gameContext, i);
+				UpdateMaterialUniforms(gameContext, matID);
 
 				if (shader->shader.deferred)
 				{
@@ -1730,7 +1728,7 @@ namespace flex
 						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
-							renderObject->materialID == i)
+							renderObject->materialID == matID)
 						{
 							m_DeferredRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1744,7 +1742,7 @@ namespace flex
 						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
-							renderObject->materialID == i)
+							renderObject->materialID == matID)
 						{
 							m_ForwardRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -2892,6 +2890,7 @@ namespace flex
 			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = m_ReflectionProbeMaterialID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
+			gBufferMaterialCreateInfo.engineMaterial = true;
 			gBufferMaterialCreateInfo.frameBuffers = {
 				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },
 				{ "normalRoughnessFrameBufferSampler",  &m_gBuffer_NormalRoughnessHandle.id },
@@ -2899,7 +2898,6 @@ namespace flex
 			};
 
 			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
-			m_Materials[gBufferMatID].engineMaterial = true;
 
 			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 

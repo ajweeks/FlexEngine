@@ -171,6 +171,8 @@ namespace flex
 		real constMetallic = 0;
 		real constRoughness = 0;
 		real constAO = 0;
+
+		bool engineMaterial = false;
 	};
 
 	struct Material
@@ -242,6 +244,9 @@ namespace flex
 		bool generateReflectionProbeMaps = false;
 
 		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
+
+		// If true, this material shouldn't be removed when switching scenes
+		bool engineMaterial = false;
 
 		// TODO: Make this more dynamic!
 		struct PushConstantBlock

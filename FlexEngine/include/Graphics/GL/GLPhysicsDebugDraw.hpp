@@ -23,6 +23,9 @@ namespace flex
 			GLPhysicsDebugDraw(const GameContext& gameContext);
 			virtual ~GLPhysicsDebugDraw();
 
+			void Initialize();
+			void Destroy();
+
 			void UpdateDebugMode();
 
 			virtual void reportErrorWarning(const char* warningString)  override;

@@ -88,9 +88,6 @@ namespace flex
 			u32 irradianceSamplerID = InvalidID;
 			u32 prefilteredMapSamplerID = InvalidID;
 			u32 brdfLUTSamplerID = InvalidID;
-
-			// Shouldn't be removed when switching scenes
-			bool engineMaterial = false;
 		};
 
 		struct GLRenderObject

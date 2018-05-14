@@ -353,13 +353,18 @@ namespace flex
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
-			// TODO: Figure out better
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
 				m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
+				//m_GameContext.renderer->
 				m_GameContext.cameraManager->Initialize(m_GameContext);
+			}
+
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
+			{
+				m_GameContext.renderer->ReloadShaders(m_GameContext);
 			}
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))

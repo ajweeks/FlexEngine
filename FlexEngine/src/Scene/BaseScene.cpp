@@ -131,23 +131,30 @@ namespace flex
 		}
 
 
-		// Grid
-		MaterialCreateInfo gridMatInfo = {};
-		gridMatInfo.shaderName = "color";
-		gridMatInfo.name = "Color";
-		m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
+		const std::string gridMatName = "Grid";
+		if (!gameContext.renderer->GetMaterialID(gridMatName, m_GridMaterialID))
+		{
+			MaterialCreateInfo gridMatInfo = {};
+			gridMatInfo.shaderName = "color";
+			gridMatInfo.name = gridMatName;
+			m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
+		}
 
-		m_Grid = new MeshPrefab(m_GridMaterialID, "Grid");
+		m_Grid = new MeshPrefab(m_GridMaterialID, gridMatName);
 		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
 		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 		m_Grid->SetSerializable(false);
 		m_Grid->SetStatic(true);
 		AddChild(m_Grid);
 
-		MaterialCreateInfo worldAxisMatInfo = {};
-		worldAxisMatInfo.shaderName = "color";
-		worldAxisMatInfo.name = "Color";
-		m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+		const std::string worldOriginMatName = "World origin";
+		if (!gameContext.renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+		{
+			MaterialCreateInfo worldAxisMatInfo = {};
+			worldAxisMatInfo.shaderName = "color";
+			worldAxisMatInfo.name = worldOriginMatName;
+			m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+		}
 
 		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
 		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);

@@ -19,16 +19,29 @@ namespace flex
 		GLPhysicsDebugDraw::GLPhysicsDebugDraw(const GameContext& gameContext) :
 			m_GameContext(gameContext)
 		{
+		}
+
+		GLPhysicsDebugDraw::~GLPhysicsDebugDraw()
+		{
+		}
+
+		void GLPhysicsDebugDraw::Initialize()
+		{
 			m_Renderer = (GLRenderer*)(m_GameContext.renderer);
-			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
+			const std::string debugMatName = "Debug";
+			if (!m_Renderer->GetMaterialID(debugMatName, m_MaterialID))
 			{
-				Logger::LogError("Failed to retrieve shader for GL physics debug draw!");
+				MaterialCreateInfo debugMatCreateInfo = {};
+				debugMatCreateInfo.shaderName = "color";
+				debugMatCreateInfo.name = debugMatName;
+				debugMatCreateInfo.engineMaterial = true;
+				m_MaterialID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &debugMatCreateInfo);
 			}
 
 			m_VertexBufferData = {};
 		}
-
-		GLPhysicsDebugDraw::~GLPhysicsDebugDraw()
+		
+		void GLPhysicsDebugDraw::Destroy()
 		{
 			m_VertexBufferData.Destroy();
 		}
