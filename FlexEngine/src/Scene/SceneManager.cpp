@@ -151,6 +151,11 @@ namespace flex
 		SetCurrentScene(newCurrentSceneIndex, gameContext);
 	}
 
+	void SceneManager::ReloadCurrentScene(const GameContext& gameContext)
+	{
+		SetCurrentScene(m_CurrentSceneIndex, gameContext);
+	}
+
 	u32 SceneManager::CurrentSceneIndex() const
 	{
 		return m_CurrentSceneIndex;

@@ -15,6 +15,7 @@ namespace flex
 		static void Destroy();
 
 		static AudioSourceID AddAudioSource(const std::string& filePath);
+		static void ClearAllAudioSources();
 
 		static void PlaySource(AudioSourceID sourceID, bool forceRestart = true);
 		static void PauseSource(AudioSourceID sourceID);

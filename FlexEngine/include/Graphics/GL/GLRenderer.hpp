@@ -29,6 +29,9 @@ namespace flex
 			virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
 
+			virtual void ClearRenderObjects() override;
+			virtual void ClearMaterials() override;
+
 			virtual void Update(const GameContext& gameContext) override;
 			virtual void Draw(const GameContext& gameContext) override;
 			virtual void DrawImGuiItems(const GameContext& gameContext) override;
@@ -71,6 +74,8 @@ namespace flex
 
 		private:
 			friend class GLPhysicsDebugDraw;
+
+			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
 			void ImGuiRender();
 			void DrawImGuiForGameObjectAndChildren(GameObject* gameObject);

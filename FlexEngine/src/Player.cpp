@@ -7,7 +7,7 @@
 #include "BulletDynamics/ConstraintSolver/btHingeConstraint.h"
 
 #include "Scene/MeshPrefab.hpp"
-#include "Scene/Scenes/BaseScene.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Physics/RigidBody.hpp"
 #include "InputManager.hpp"

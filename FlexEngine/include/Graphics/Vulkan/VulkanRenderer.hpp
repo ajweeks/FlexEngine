@@ -33,6 +33,9 @@ namespace flex
 			virtual u32 InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
 
+			virtual void ClearRenderObjects() override;
+			virtual void ClearMaterials() override;
+
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
 

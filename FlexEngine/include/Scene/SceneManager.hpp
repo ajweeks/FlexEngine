@@ -30,6 +30,7 @@ namespace flex
 		void SetCurrentScene(const std::string& sceneName, const GameContext& gameContext);
 		void SetNextSceneActive(const GameContext& gameContext);
 		void SetPreviousSceneActive(const GameContext& gameContext);
+		void ReloadCurrentScene(const GameContext& gameContext);
 
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;

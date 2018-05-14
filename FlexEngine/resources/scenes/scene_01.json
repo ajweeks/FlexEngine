@@ -4,7 +4,7 @@
 	"materials" : 
 	[
 		{
-			"name" : "pbr",
+			"name" : "pbr pink",
 			"shader" : "pbr",
 			"const albedo" : "0.780000, 0.120000, 0.110000",
 			"const metallic" : 0.000000,
@@ -16,7 +16,7 @@
 			"enable ao sampler" : false
 		},
 		{
-			"name" : "pbr",
+			"name" : "pbr grey",
 			"shader" : "pbr",
 			"const albedo" : "0.230000, 0.250000, 0.290000",
 			"const metallic" : 0.000000,
@@ -28,7 +28,19 @@
 			"enable ao sampler" : false
 		},
 		{
-			"name" : "pbr",
+			"name" : "pbr red",
+			"shader" : "pbr",
+			"const albedo" : "1.000000, 0.100000, 1.000000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr yellow",
 			"shader" : "pbr",
 			"const albedo" : "0.800000, 0.540000, 0.100000",
 			"const metallic" : 0.000000,
@@ -99,7 +111,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "528.422485, -323490.281250, -39.259293",
+				"position" : "528.422485, -323520.062500, -39.259293",
 				"rotation" : "0.795718, -0.330279, -0.526470",
 				"scale" : "2.000000, 2.000000, 2.000000"
 			},
@@ -150,8 +162,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.772835, 0.400000, -2.502493",
-				"rotation" : "-0.604363, 0.000000, -1.570796",
+				"position" : "-6.772762, 0.400000, -2.502607",
+				"rotation" : "-0.604364, 0.000000, -1.570796",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"mesh" : 
@@ -162,7 +174,7 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material index" : 2,
+			"material index" : 3,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -172,6 +184,37 @@
 			{
 				"mass" : 1.000000,
 				"kinematic" : false,
+				"static" : false
+			}
+		},
+		{
+			"name" : "valve",
+			"type" : "mesh",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "5.773954, 0.399999, 5.995772",
+				"rotation" : "-0.000003, 0.001214, 0.000003",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"mesh" : 
+			{
+				"file" : "models/valve.gltf",
+				"swapNormalYZ" : false,
+				"flipNormalZ" : false,
+				"flipU" : false,
+				"flipV" : false
+			},
+			"material index" : 2,
+			"collider" : 
+			{
+				"shape" : "cylinder",
+				"half extents" : "0.500000, 0.500000, 0.500000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : true,
 				"static" : false
 			}
 		},
@@ -212,7 +255,7 @@
 			"type" : "skybox",
 			"visible" : true,
 			"rotation" : "0.000000, -0.000000, 0.000000",
-			"material index" : 3
+			"material index" : 4
 		},
 		{
 			"name" : "Reflection Probe 01",

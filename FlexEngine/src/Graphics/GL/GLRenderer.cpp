@@ -32,6 +32,7 @@
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "..\..\..\include\Graphics\GL\GLRenderer.hpp"
 
 namespace flex
 {
@@ -75,8 +76,6 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
-			//m_DefaultTransform = Transform::Identity();
-
 			CheckGLErrorMessages();
 		}
 
@@ -90,17 +89,17 @@ namespace flex
 
 			spriteRenderObject->materialID = materialID;
 
-			GLMaterial* spriteMaterial = &m_Materials[spriteRenderObject->materialID];
-			GLShader* spriteShader = &m_Shaders[spriteMaterial->material.shaderID];
+			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
+			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
 
-			glUseProgram(spriteShader->program);
+			glUseProgram(spriteShader.program);
 			CheckGLErrorMessages();
 
 			real verticalScale = flipVertically ? -1.0f : 1.0f;
 
-			if (spriteShader->shader.constantBufferUniforms.HasUniform("verticalScale"))
+			if (spriteShader.shader.constantBufferUniforms.HasUniform("verticalScale"))
 			{
-				glUniform1f(spriteMaterial->uniformIDs.verticalScale, verticalScale);
+				glUniform1f(spriteMaterial.uniformIDs.verticalScale, verticalScale);
 				CheckGLErrorMessages();
 			}
 			
@@ -221,7 +220,10 @@ namespace flex
 			mat.material = {};
 			mat.material.name = createInfo->name;
 
-			const MaterialID materialID = m_Materials.size() - 1;
+			if (mat.material.name.empty())
+			{
+				Logger::LogWarning("Material doesn't have a name!");
+			}
 
 			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
 			{
@@ -657,7 +659,7 @@ namespace flex
 
 			glUseProgram(0);
 
-			return materialID;
+			return matID;
 		}
 
 		u32 GLRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
@@ -785,27 +787,62 @@ namespace flex
 			}
 		}
 
+		void GLRenderer::ClearRenderObjects()
+		{
+			for (GLRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject)
+				{
+					DestroyRenderObject(renderObject->renderID, renderObject);
+				}
+			}
+			m_RenderObjects.clear();
+		}
+
+		void GLRenderer::ClearMaterials()
+		{
+			auto iter = m_Materials.begin();
+			while (iter != m_Materials.end())
+			{
+				if (!iter->second.engineMaterial)
+				{
+					iter = m_Materials.erase(iter);
+				}
+				else
+				{
+					++iter;
+				}
+			}
+		}
+
 		void GLRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath)
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
-			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
-			equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
-			equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
-			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
-			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
-			// TODO: Make cyclable at runtime
-			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
-			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
+			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
+			GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID);
 
-			GLShader* equirectangularToCubemapShader = &m_Shaders[m_Materials[equirectangularToCubeMatID].material.shaderID];
-			GLMaterial* equirectangularToCubemapMaterial = &m_Materials[equirectangularToCubeMatID];
+			// Only generate material once
+			if (equirectangularToCubeMatID == InvalidMaterialID)
+			{
+				MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
+				equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
+				equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
+				equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
+				equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
+				// TODO: Make cyclable at runtime
+				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
+				equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
+			}
+
+			GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
+			GLShader& equirectangularToCubemapShader = m_Shaders[equirectangularToCubemapMaterial.material.shaderID];
 
 			// TODO: Handle no skybox being set gracefully
 			GLRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
-			GLMaterial* skyboxGLMaterial = &m_Materials[skyboxRenderObject->materialID];
+			GLMaterial& skyboxGLMaterial = m_Materials[skyboxRenderObject->materialID];
 
-			glUseProgram(equirectangularToCubemapShader->program);
+			glUseProgram(equirectangularToCubemapShader.program);
 			CheckGLErrorMessages();
 
 			// TODO: Store what location this texture is at (might not be 0)
@@ -814,15 +851,15 @@ namespace flex
 			CheckGLErrorMessages();
 
 			// Update object's uniforms under this shader's program
-			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.model, 1, false, 
+			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false, 
 				&m_SkyBoxMesh->GetTransform()->GetModelMatrix()[0][0]);
 			CheckGLErrorMessages();
 
-			glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.projection, 1, false, 
+			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, false, 
 				&m_CaptureProjection[0][0]);
 			CheckGLErrorMessages();
 
-			glm::vec2 cubemapSize = skyboxGLMaterial->material.cubemapSamplerSize;
+			glm::vec2 cubemapSize = skyboxGLMaterial.material.cubemapSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			CheckGLErrorMessages();
@@ -856,7 +893,7 @@ namespace flex
 
 			for (u32 i = 0; i < 6; ++i)
 			{
-				glUniformMatrix4fv(equirectangularToCubemapMaterial->uniformIDs.view, 1, false, 
+				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, false, 
 					&m_CaptureViews[i][0][0]);
 				CheckGLErrorMessages();
 
@@ -895,10 +932,18 @@ namespace flex
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
-			MaterialCreateInfo prefilterMaterialCreateInfo = {};
-			prefilterMaterialCreateInfo.name = "Prefilter";
-			prefilterMaterialCreateInfo.shaderName = "prefilter";
-			MaterialID prefilterMatID = InitializeMaterial(gameContext, &prefilterMaterialCreateInfo);
+			MaterialID prefilterMatID = InvalidMaterialID;
+			GetMaterialID("Prefilter", prefilterMatID);
+
+			// Only generate prefilter material once
+			if (prefilterMatID == InvalidMaterialID)
+			{
+				MaterialCreateInfo prefilterMaterialCreateInfo = {};
+				prefilterMaterialCreateInfo.name = "Prefilter";
+				prefilterMaterialCreateInfo.shaderName = "prefilter";
+				prefilterMatID = InitializeMaterial(gameContext, &prefilterMaterialCreateInfo);
+			}
+
 			GLMaterial& prefilterMat = m_Materials[prefilterMatID];
 			GLShader& prefilterShader = m_Shaders[prefilterMat.material.shaderID];
 
@@ -990,6 +1035,12 @@ namespace flex
 
 		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
 		{
+			if (m_1x1_NDC_Quad)
+			{
+				// Don't re-create material or object
+				return;
+			}
+
 			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
@@ -997,6 +1048,7 @@ namespace flex
 			brdfMaterialCreateInfo.name = "BRDF";
 			brdfMaterialCreateInfo.shaderName = "brdf";
 			MaterialID brdfMatID = InitializeMaterial(gameContext, &brdfMaterialCreateInfo);
+			m_Materials[brdfMatID].engineMaterial = true;
 
 			if (m_1x1_NDC_Quad == nullptr)
 			{
@@ -1102,12 +1154,19 @@ namespace flex
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
-			// Irradiance sampler generation
-			MaterialCreateInfo irrandianceMatCreateInfo = {};
-			irrandianceMatCreateInfo.name = "Irradiance";
-			irrandianceMatCreateInfo.shaderName = "irradiance";
-			irrandianceMatCreateInfo.enableCubemapSampler = true;
-			MaterialID irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
+			MaterialID irrandianceMatID = InvalidMaterialID;
+			GetMaterialID("Irradiance", irrandianceMatID);
+
+			// Only generate material once
+			if (irrandianceMatID == InvalidMaterialID)
+			{
+				MaterialCreateInfo irrandianceMatCreateInfo = {};
+				irrandianceMatCreateInfo.name = "Irradiance";
+				irrandianceMatCreateInfo.shaderName = "irradiance";
+				irrandianceMatCreateInfo.enableCubemapSampler = true;
+				irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
+			}
+
 			GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
 			GLShader& shader = m_Shaders[irradianceMat.material.shaderID];
 
@@ -1274,11 +1333,11 @@ namespace flex
 		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
 		{
 			// TODO: Store shaders using sorted data structure?
-			for (size_t i = 0; i < m_Materials.size(); ++i)
+			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
 			{
-				if (m_Materials[i].material.name.compare(materialName) == 0)
+				if (iter->second.material.name.compare(materialName) == 0)
 				{
-					materialID = i;
+					materialID = iter->first;
 					return true;
 				}
 			}
@@ -1411,12 +1470,14 @@ namespace flex
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
 			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
+			m_Materials[m_SpriteMatID].engineMaterial = true;
 
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
 			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
+			m_Materials[m_PostProcessMatID].engineMaterial = true;
 
 			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
 			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
@@ -1651,7 +1712,13 @@ namespace flex
 			// Sort render objects i32o deferred + forward buckets
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
-				GLShader* shader = &m_Shaders[m_Materials[i].material.shaderID];
+				ShaderID shaderID = m_Materials[i].material.shaderID;
+				if (shaderID == InvalidShaderID)
+				{
+					Logger::LogWarning("GLRenderer::BatchRenderObjects > Material has invalid shaderID: " + m_Materials[i].material.name);
+					continue;
+				}
+				GLShader* shader = &m_Shaders[shaderID];
 
 				UpdateMaterialUniforms(gameContext, i);
 
@@ -2832,6 +2899,7 @@ namespace flex
 			};
 
 			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
+			m_Materials[gBufferMatID].engineMaterial = true;
 
 			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 
@@ -3012,21 +3080,23 @@ namespace flex
 		void GLRenderer::DestroyRenderObject(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject)
+			DestroyRenderObject(renderID, renderObject);
+		}
+
+		void GLRenderer::DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject)
+		{
+			if (renderObject)
 			{
-				Logger::LogError("Invalid renderID passed to DestroyRenderObject: " + std::to_string(renderID));
-				return;
+				glDeleteBuffers(1, &renderObject->VBO);
+				if (renderObject->indexed)
+				{
+					glDeleteBuffers(1, &renderObject->IBO);
+				}
+
+				SafeDelete(renderObject);
 			}
 
-			m_RenderObjects[renderObject->renderID] = nullptr;
-
-			glDeleteBuffers(1, &renderObject->VBO);
-			if (renderObject->indexed)
-			{
-				glDeleteBuffers(1, &renderObject->IBO);
-			}
-
-SafeDelete(renderObject);
+			m_RenderObjects[renderID] = nullptr;
 		}
 
 		void GLRenderer::NewFrame()
@@ -3184,7 +3254,13 @@ SafeDelete(renderObject);
 
 		MaterialID GLRenderer::GetNextAvailableMaterialID()
 		{
-			return m_Materials.size();
+			// Return lowest available ID
+			MaterialID result = 0;
+			while (m_Materials.find(result) != m_Materials.end())
+			{
+				++result;
+			}
+			return result;
 		}
 
 		RenderID GLRenderer::GetNextAvailableRenderID() const

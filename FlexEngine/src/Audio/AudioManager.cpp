@@ -48,6 +48,7 @@ namespace flex
 	{
 		//s_Context = alcGetCurrentContext();
 		//s_Device = alcGetContextsDevice(s_Context);
+		ClearAllAudioSources();
 		alcMakeContextCurrent(NULL);
 		alcDestroyContext(s_Context);
 		alcCloseDevice(s_Device);
@@ -110,6 +111,15 @@ namespace flex
 		DisplayALError("alSourcei: ", alGetError());
 
 		return newID;
+	}
+
+	void AudioManager::ClearAllAudioSources()
+	{
+		for (Source& source : s_Sources)
+		{
+			alDeleteSources(1, &source.source);
+		}
+		s_Sources.clear();
 	}
 
 	void AudioManager::PlaySource(AudioSourceID sourceID, bool forceRestart)

@@ -185,9 +185,6 @@ namespace flex
 
 	void BaseScene::Destroy(const GameContext& gameContext)
 	{
-		gameContext.renderer->ClearDirectionalLight();
-		gameContext.renderer->ClearPointLights();
-
 		for (auto child : m_Children)
 		{
 			if (child)
@@ -210,7 +207,14 @@ namespace flex
 			SafeDelete(m_Player1);
 		}
 
+		AudioManager::ClearAllAudioSources();
+
+		m_LoadedMaterials.clear();
+
+		gameContext.renderer->ClearMaterials();
 		gameContext.renderer->SetSkyboxMesh(nullptr);
+		gameContext.renderer->ClearDirectionalLight();
+		gameContext.renderer->ClearPointLights();
 
 		if (m_PhysicsWorld)
 		{
@@ -485,6 +489,13 @@ namespace flex
 			}
 			else
 			{
+				Material& material = gameContext.renderer->GetMaterial(matID);
+				if (!material.generateHDRCubemapSampler &&
+					!material.generateCubemapSampler)
+				{
+					Logger::LogWarning("Invalid skybox material! Must generate cubemap sampler");
+				}
+
 				MeshPrefab* skyboxMesh = new MeshPrefab(matID, "Skybox");
 				skyboxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
 				AddChild(skyboxMesh);

@@ -33,6 +33,7 @@
 #include "Scene/BaseScene.hpp"
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "..\..\..\include\Graphics\Vulkan\VulkanRenderer.hpp"
 
 namespace flex
 {
@@ -2764,10 +2765,7 @@ namespace flex
 			{
 				if (*iter && (*iter)->renderID == renderID)
 				{
-					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &((*iter)->descriptorSet));
-
-					SafeDelete(*iter);
-					m_RenderObjects[renderID] = nullptr;
+					DestroyRenderObject(renderID, *iter);
 					return;
 				}
 			}
@@ -2778,7 +2776,6 @@ namespace flex
 			if (renderObject)
 			{
 				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
-
 				SafeDelete(renderObject);
 			}
 			m_RenderObjects[renderID] = nullptr;
@@ -2802,6 +2799,23 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(renderID);
+		}
+
+		void VulkanRenderer::ClearRenderObjects()
+		{
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject)
+				{
+					DestroyRenderObject(renderObject->renderID, renderObject);
+				}
+			}
+			m_RenderObjects.clear();
+		}
+
+		void VulkanRenderer::ClearMaterials()
+		{
+			m_Materials.clear();
 		}
 
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)

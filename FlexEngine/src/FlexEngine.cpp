@@ -358,38 +358,8 @@ namespace flex
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
-				i32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex();
-				m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
-
-				MeshPrefab::DestroyAllLoadedMeshes();
-
-				if (m_GameContext.physicsManager)
-				{
-					m_GameContext.physicsManager->Destroy();
-					SafeDelete(m_GameContext.physicsManager);
-				}
-
-				DestroyWindowAndRenderer();
-				CreateWindowAndRenderer();
-				InitializeWindowAndRenderer();
-				SetupImGuiStyles();
-
-				m_GameContext.physicsManager = new PhysicsManager();
-				m_GameContext.physicsManager->Initialize();
-
-				LoadDefaultScenes();
-				m_GameContext.sceneManager->SetCurrentScene(currentSceneIndex, m_GameContext);
-
+				m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
-
-				//m_GameContext.renderer->ReloadShaders(m_GameContext);
-
-				m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
-
-				m_GameContext.renderer->PostInitialize(m_GameContext);
-
-				m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
-				continue;
 			}
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
