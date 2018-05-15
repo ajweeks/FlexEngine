@@ -131,12 +131,22 @@ void main()
 	vec3 Lo = vec3(0.0);
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		if (!pointLights[i].enabled) continue;
+		if (!pointLights[i].enabled)
+		{
+			continue;
+		}
 
-		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
-		
 		float distance = length(pointLights[i].position.xyz - worldPos);
+
+		// This value still causes a visible harsh edge but our maps won't likely be 
+		// this large and we'll have overlapping lights which will hide this
+		if (distance > 125)
+		{
+			continue;
+		}
+
 		float attenuation = 1.0 / (distance * distance);
+		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
 		vec3 radiance = pointLights[i].color.rgb * attenuation;
 	
 		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
