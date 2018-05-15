@@ -5,7 +5,6 @@
 namespace flex
 {
 	class PlayerController;
-	class MeshComponent;
 
 	class Player : public GameObject
 	{
@@ -25,9 +24,5 @@ namespace flex
 		i32 m_Index = 0;
 
 		real m_MoveFriction = 1.1f;
-
-		MeshComponent* m_Mesh = nullptr;
-		
-
 	};
 } // namespace flex

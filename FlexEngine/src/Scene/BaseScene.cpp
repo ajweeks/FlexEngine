@@ -169,11 +169,9 @@ namespace flex
 		// Players
 		m_Player0 = new Player(0);
 		AddChild(m_Player0);
-		m_Player0->Initialize(gameContext);
 
 		m_Player1 = new Player(1);
 		AddChild(m_Player1);
-		m_Player1->Initialize(gameContext);
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
@@ -205,18 +203,6 @@ namespace flex
 			}
 		}
 		m_Children.clear();
-
-		if (m_Player0)
-		{
-			m_Player0->Destroy(gameContext);
-			SafeDelete(m_Player0);
-		}
-
-		if (m_Player1)
-		{
-			m_Player1->Destroy(gameContext);
-			SafeDelete(m_Player1);
-		}
 
 		AudioManager::ClearAllAudioSources();
 

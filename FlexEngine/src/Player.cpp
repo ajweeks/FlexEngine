@@ -42,15 +42,15 @@ namespace flex
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 		
 		// "Player " + std::to_string(m_Index) + " mesh"
-		m_Mesh = new MeshComponent(matID, this);
+		m_MeshComponent = new MeshComponent(matID, this);
 		AddTag("Player" + std::to_string(m_Index));
 		SetRigidBody(rigidBody);
 		SetStatic(false);
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
-		m_Mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/capsule.gltf");
+		m_MeshComponent->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/capsule.gltf");
 		m_Transform.SetGlobalPosition(glm::vec3(-5.0f + 5.0f * m_Index, 5.0f, 0.0f));
-		
+
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
 
@@ -68,6 +68,8 @@ namespace flex
 	void Player::Update(const GameContext& gameContext)
 	{
 		m_Controller->Update(gameContext);
+
+		GameObject::Update(gameContext);
 	}
 
 	void Player::Destroy(const GameContext& gameContext)
@@ -77,6 +79,8 @@ namespace flex
 			m_Controller->Destroy();
 			SafeDelete(m_Controller);
 		}
+
+		GameObject::Destroy(gameContext);
 	}
 
 	i32 Player::GetIndex() const

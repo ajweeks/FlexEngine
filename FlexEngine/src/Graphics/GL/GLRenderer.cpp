@@ -3043,12 +3043,18 @@ namespace flex
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject &&
-					m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+				if (renderObject)
 				{
-					GLMaterial* mat = &m_Materials[renderObject->materialID];
-					mat->irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
-					mat->prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
+					if (m_Materials.find(renderObject->materialID) == m_Materials.end())
+					{
+						Logger::LogError("Render object contains invalid material ID: " + std::to_string(renderObject->materialID));
+					}
+					else if (m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+					{
+						GLMaterial* mat = &m_Materials[renderObject->materialID];
+						mat->irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+						mat->prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
+					}
 				}
 			}
 		}

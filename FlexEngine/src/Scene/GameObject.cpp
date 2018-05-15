@@ -11,6 +11,7 @@
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Scene/MeshComponent.hpp"
 
 namespace flex
 {
@@ -58,6 +59,12 @@ namespace flex
 		if (m_RenderID != InvalidRenderID)
 		{
 			gameContext.renderer->DestroyRenderObject(m_RenderID);
+		}
+
+		if (m_MeshComponent)
+		{
+			m_MeshComponent->Destroy(gameContext);
+			SafeDelete(m_MeshComponent);
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
