@@ -6,6 +6,7 @@
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
 #include "Scene/GameObject.hpp"
@@ -85,6 +86,73 @@ namespace flex
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
+		switch (m_SerializableType)
+		{
+		case SerializableType::OBJECT:
+		{
+		} break;
+		case SerializableType::SKYBOX:
+		{
+		} break;
+		case SerializableType::REFLECTION_PROBE:
+		{
+		} break;
+		case SerializableType::VALVE:
+		{
+			static float rotation = 0.0f;
+
+			static float pJoystickX = 0.0f;
+			static float pJoystickY = 0.0f;
+
+			float joystickX = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X);
+			float joystickY = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y);
+
+			//Logger::LogInfo(std::to_string(pJoystickX) + " " + std::to_string(pJoystickY) + "\n" +
+			//				std::to_string(joystickX) + " " + std::to_string(joystickY));
+
+
+			static bool rotatingCW = false;
+
+			float minimumExtensionLength = 0.35f;
+			float extensionLength = glm::length(glm::vec2(joystickX, joystickY));
+			if (extensionLength > minimumExtensionLength)
+			{
+				if (pJoystickX < 0.0f && joystickX >= 0.0f)
+				{
+					rotatingCW = (joystickY < 0.0f);
+				}
+				else if (pJoystickX >= 0.0f && joystickX < 0.0f)
+				{
+					rotatingCW = (joystickY >= 0.0f);
+				}
+
+				if (pJoystickY < 0.0f && joystickY >= 0.0f)
+				{
+					rotatingCW = (joystickX >= 0.0f);
+				}
+				else if (pJoystickY >= 0.0f && joystickY < 0.0f)
+				{
+					rotatingCW = (joystickX < 0.0f);
+				}
+			}
+
+			pJoystickX = joystickX;
+			pJoystickY = joystickY;
+
+			float rotationSpeed = 2.0f * gameContext.deltaTime * extensionLength;
+			rotation += (rotatingCW ? -rotationSpeed : rotationSpeed);
+
+			m_RigidBody->GetRigidBodyInternal()->activate(true);
+			//float valveAngle = -atan2(joystickY, joystickX);
+			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, rotation, 0)));
+
+		} break;
+		case SerializableType::NONE:
+		default:
+		{
+		} break;
+		}
+
 		if (m_RigidBody)
 		{
 			m_Transform.MatchRigidBody(m_RigidBody, true);

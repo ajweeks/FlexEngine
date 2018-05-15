@@ -592,10 +592,9 @@ namespace flex
 			newEntity->SetCollisionShape(cylinderShape);
 
 			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-			rigidBody->SetMass(0.0f);
+			rigidBody->SetMass(1.0f);
 			rigidBody->SetKinematic(false);
-			rigidBody->SetStatic(true);
-
+			rigidBody->SetStatic(false);
 
 		} break;
 		case SerializableType::NONE:
