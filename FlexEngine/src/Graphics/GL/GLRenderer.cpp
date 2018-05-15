@@ -119,6 +119,12 @@ namespace flex
 			glBindTexture(GL_TEXTURE_2D, textureHandle);
 			CheckGLErrorMessages();
 
+			// TODO: Use member
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			CheckGLErrorMessages();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			CheckGLErrorMessages();
+
 			glDepthMask(GL_TRUE);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
