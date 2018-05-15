@@ -76,14 +76,11 @@ namespace flex
 		btRigidBody* pickedBody = nullptr;
 		i32 savedState;
 		btTypedConstraint* pickedConstraint = nullptr;
-		Logger::LogInfo("click!");
 
 		btCollisionWorld::ClosestRayResultCallback rayCallback(rayFromWorld, rayToWorld);
 		m_World->rayTest(rayFromWorld, rayToWorld, rayCallback);
 		if (rayCallback.hasHit())
 		{
-			Logger::LogInfo("Hit!");
-
 			btVector3 pickPos = rayCallback.m_hitPointWorld;
 			btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
 			if (body)

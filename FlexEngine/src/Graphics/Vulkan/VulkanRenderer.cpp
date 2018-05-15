@@ -29,7 +29,7 @@
 #include "VertexBufferData.hpp"
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Scene/MeshPrefab.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -378,8 +378,8 @@ namespace flex
 				RenderObjectCreateInfo gBufferCubemapCreateInfoOverrides = {};
 				gBufferCubemapCreateInfoOverrides.visibleInSceneExplorer = false;
 
-				m_gBufferCubemapMesh = new MeshPrefab(m_CubemapGBufferMaterialID, "GBuffer cubemap");
-				if (!m_gBufferCubemapMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX))
+				m_gBufferCubemapMesh = new MeshComponent(m_CubemapGBufferMaterialID, "GBuffer cubemap");
+				if (!m_gBufferCubemapMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX))
 				{
 					Logger::LogError("Failed to create GBuffer cubemap mesh prefab!");
 				}
@@ -2702,7 +2702,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(pointer);
 		}
 
-		void VulkanRenderer::SetSkyboxMesh(MeshPrefab* skyboxMesh)
+		void VulkanRenderer::SetSkyboxMesh(MeshComponent* skyboxMesh)
 		{
 			m_SkyBoxMesh = skyboxMesh;
 
@@ -2731,7 +2731,7 @@ namespace flex
 			}
 		}
 
-		MeshPrefab* VulkanRenderer::GetSkyboxMesh()
+		MeshComponent* VulkanRenderer::GetSkyboxMesh()
 		{
 			return m_SkyBoxMesh;
 		}

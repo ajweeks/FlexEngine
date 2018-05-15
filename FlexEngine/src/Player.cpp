@@ -6,7 +6,7 @@
 #include "BulletCollision/CollisionShapes/btCapsuleShape.h"
 #include "BulletDynamics/ConstraintSolver/btHingeConstraint.h"
 
-#include "Scene/MeshPrefab.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Physics/RigidBody.hpp"
@@ -15,7 +15,9 @@
 
 namespace flex
 {
-	Player::Player()
+	Player::Player(i32 index) :
+		GameObject("Player" + std::to_string(index), SerializableType::NONE),
+		m_Index(index)
 	{
 	}
 
@@ -23,12 +25,10 @@ namespace flex
 	{
 	}
 
-	void Player::Initialize(const GameContext& gameContext, i32 index)
+	void Player::Initialize(const GameContext& gameContext)
 	{
-		m_Index = index;
-
 		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Player " + std::to_string(index) + " material";
+		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
 		matCreateInfo.shaderName = "pbr";
 		matCreateInfo.constAlbedo = glm::vec3(0.89f, 0.93f, 0.98f);
 		matCreateInfo.constMetallic = 0.0f;
@@ -41,24 +41,28 @@ namespace flex
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 		
-		m_Mesh = new MeshPrefab(matID, "Player " + std::to_string(index) + " mesh");
-		m_Mesh->AddTag("Player" + std::to_string(index));
-		m_Mesh->SetRigidBody(rigidBody);
-		m_Mesh->SetStatic(false);
-		m_Mesh->SetSerializable(false);
-		m_Mesh->SetCollisionShape(collisionShape);
+		// "Player " + std::to_string(m_Index) + " mesh"
+		m_Mesh = new MeshComponent(matID, this);
+		AddTag("Player" + std::to_string(m_Index));
+		SetRigidBody(rigidBody);
+		SetStatic(false);
+		SetSerializable(false);
+		SetCollisionShape(collisionShape);
 		m_Mesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/capsule.gltf");
-		m_Mesh->GetTransform()->SetGlobalPosition(glm::vec3(-5.0f + 5.0f * index, 5.0f, 0.0f));
-		gameContext.sceneManager->CurrentScene()->AddChild(m_Mesh);
+		m_Transform.SetGlobalPosition(glm::vec3(-5.0f + 5.0f * m_Index, 5.0f, 0.0f));
 		
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
+
+		GameObject::Initialize(gameContext);
 	}
 
 	void Player::PostInitialize(const GameContext& gameContext)
 	{
-		m_Mesh->GetRigidBody()->GetRigidBodyInternal()->setAngularFactor(btVector3(0, 1, 0));
-		m_Mesh->GetRigidBody()->GetRigidBodyInternal()->setSleepingThresholds(0.0f, 0.0f);
+		m_RigidBody->GetRigidBodyInternal()->setAngularFactor(btVector3(0, 1, 0));
+		m_RigidBody->GetRigidBodyInternal()->setSleepingThresholds(0.0f, 0.0f);
+
+		GameObject::PostInitialize(gameContext);
 	}
 
 	void Player::Update(const GameContext& gameContext)
@@ -78,10 +82,5 @@ namespace flex
 	i32 Player::GetIndex() const
 	{
 		return m_Index;
-	}
-
-	RigidBody* Player::GetRigidBody()
-	{
-		return m_Mesh->GetRigidBody();
 	}
 } // namespace flex

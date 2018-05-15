@@ -1,24 +1,24 @@
 #pragma once
 
+#include "Scene/GameObject.hpp"
+
 namespace flex
 {
 	class PlayerController;
-	class MeshPrefab;
+	class MeshComponent;
 
-	class Player
+	class Player : public GameObject
 	{
 	public:
-		Player();
+		Player(i32 index);
 		~Player();
 
-		void Initialize(const GameContext& gameContext, i32 index);
-		void PostInitialize(const GameContext& gameContext);
-		void Update(const GameContext& gameContext);
-		void Destroy(const GameContext& gameContext);
+		virtual void Initialize(const GameContext& gameContext) override;
+		virtual void PostInitialize(const GameContext& gameContext) override;
+		virtual void Update(const GameContext& gameContext) override;
+		virtual void Destroy(const GameContext& gameContext) override;
 
 		i32 GetIndex() const;
-
-		RigidBody* GetRigidBody();
 
 	private:
 		PlayerController* m_Controller = nullptr;
@@ -26,7 +26,7 @@ namespace flex
 
 		real m_MoveFriction = 1.1f;
 
-		MeshPrefab* m_Mesh = nullptr;
+		MeshComponent* m_Mesh = nullptr;
 		
 
 	};

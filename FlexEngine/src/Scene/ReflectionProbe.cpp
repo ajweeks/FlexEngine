@@ -2,7 +2,7 @@
 #include "stdafx.hpp"
 
 #include "Scene/ReflectionProbe.hpp"
-#include "Scene/MeshPrefab.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/GameObject.hpp"
 
 namespace flex
@@ -53,19 +53,18 @@ namespace flex
 		m_CaptureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
 
-		m_SphereMesh = new MeshPrefab(reflectionProbeMaterialID, "Reflection probe mesh");
-		MeshPrefab::ImportSettings importSettings = {};
+		m_SphereMesh = new MeshComponent(reflectionProbeMaterialID, this);
+		MeshComponent::ImportSettings importSettings = {};
 		importSettings.swapNormalYZ = true;
 		importSettings.flipNormalZ = true;
 		m_SphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", &importSettings);
-		AddChild(m_SphereMesh);
-		m_SphereMesh->GetTransform()->Scale(1.5f);
-		// This object will get created at bootup
-		m_SphereMesh->SetSerializable(false);
+		//m_Transform.Scale(1.5f);
+		// Reflection probes get created at bootup
+		//SetSerializable(false);
 
 		if (!m_StartVisible)
 		{
-			SetSphereVisible(m_StartVisible, gameContext);
+			SetVisible(m_StartVisible);
 		}
 
 		std::string captureName = m_Name + " capture";
@@ -81,7 +80,7 @@ namespace flex
 		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
 		m_Capture->SetRenderID(captureRenderID);
 
-		m_SphereMesh->AddChild(m_Capture);
+		AddChild(m_Capture);
 
 		m_Transform.SetGlobalPosition(m_StartPosition);
 	}
@@ -95,15 +94,5 @@ namespace flex
 	MaterialID ReflectionProbe::GetCaptureMaterialID() const
 	{
 		return m_CaptureMatID;
-	}
-
-	bool ReflectionProbe::IsSphereVisible(const GameContext& gameContext) const
-	{
-		return m_SphereMesh->IsVisible();
-	}
-
-	void ReflectionProbe::SetSphereVisible(bool visible, const GameContext& gameContext)
-	{
-		m_SphereMesh->SetVisible(visible);
 	}
 }

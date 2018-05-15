@@ -28,7 +28,7 @@
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
-#include "Scene/MeshPrefab.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -356,7 +356,7 @@ namespace flex
 			if (m_SkyBoxMesh &&
 				m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
 			{
-				MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
+				MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
 
 				mat.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
 				mat.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
@@ -3024,7 +3024,7 @@ namespace flex
 			glUseProgram(last_program);
 		}
 
-		void GLRenderer::SetSkyboxMesh(MeshPrefab* skyboxMesh)
+		void GLRenderer::SetSkyboxMesh(GameObject* skyboxMesh)
 		{
 			m_SkyBoxMesh = skyboxMesh;
 
@@ -3033,7 +3033,7 @@ namespace flex
 				return;
 			}
 
-			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMaterialID();
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
 			if (skyboxMaterialID == InvalidMaterialID)
 			{
 				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
@@ -3053,7 +3053,7 @@ namespace flex
 			}
 		}
 
-		MeshPrefab* GLRenderer::GetSkyboxMesh()
+		GameObject* GLRenderer::GetSkyboxMesh()
 		{
 			return m_SkyBoxMesh;
 		}

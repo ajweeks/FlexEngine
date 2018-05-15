@@ -518,9 +518,10 @@ namespace flex
 	{
 		switch (type)
 		{
-		case SerializableType::MESH:				return "mesh";
+		case SerializableType::OBJECT:				return "object";
 		case SerializableType::SKYBOX:				return "skybox";
 		case SerializableType::REFLECTION_PROBE:	return "reflection probe";
+		case SerializableType::VALVE:				return "valve";
 		case SerializableType::NONE:				return "NONE";
 		default:									return "UNHANDLED SERIALIZABLE TYPE";
 		}
@@ -530,7 +531,7 @@ namespace flex
 	{
 		if (serializableTypeStr.compare("mesh") == 0)
 		{
-			return SerializableType::MESH;
+			return SerializableType::OBJECT;
 		}
 		else if (serializableTypeStr.compare("skybox") == 0)
 		{
@@ -539,6 +540,10 @@ namespace flex
 		else if (serializableTypeStr.compare("reflection probe") == 0)
 		{
 			return SerializableType::REFLECTION_PROBE;
+		}
+		else if (serializableTypeStr.compare("valve") == 0)
+		{
+			return SerializableType::VALVE;
 		}
 		else
 		{

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Scene/GameObject.hpp"
-
 #include <vector>
 
 #include <glm/vec2.hpp>
@@ -17,16 +15,19 @@
 
 namespace flex
 {
-	class MeshPrefab : public GameObject
+	class GameObject;
+
+	class MeshComponent
 	{
 	public:
-		MeshPrefab(const std::string& name = "");
-		MeshPrefab(MaterialID materialID, const std::string& name = "");
-		virtual ~MeshPrefab();
+		MeshComponent(GameObject* owner);
+		MeshComponent(MaterialID materialID, GameObject* owner);
+		~MeshComponent();
 
 		static void DestroyAllLoadedMeshes();
 
-		virtual void Destroy(const GameContext& gameContext) override;
+		void Update(const GameContext& gameContext);
+		void Destroy(const GameContext& gameContext);
 
 		enum class Type
 		{
@@ -81,8 +82,6 @@ namespace flex
 		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, 
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
-		virtual void Update(const GameContext& gameContext) override;
-
 		MaterialID GetMaterialID() const;
 		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
 		void SetUVScale(real uScale, real vScale);
@@ -104,6 +103,8 @@ namespace flex
 		};
 		static bool GetLoadedMesh(const std::string& filePath, const aiScene** scene);
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
+
+		GameObject* m_OwningGameObject = nullptr;
 
 		bool m_Initialized = false;
 

@@ -27,7 +27,7 @@
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
 #include "Scene/GameObject.hpp"
-#include "Scene/MeshPrefab.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/ReflectionProbe.hpp"
 
 namespace flex
@@ -140,8 +140,9 @@ namespace flex
 			m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
 		}
 
-		m_Grid = new MeshPrefab(m_GridMaterialID, gridMatName);
-		m_Grid->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::GRID);
+		m_Grid = new GameObject("Grid", SerializableType::NONE);
+		MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
+		gridMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::GRID);
 		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 		m_Grid->SetSerializable(false);
 		m_Grid->SetStatic(true);
@@ -156,8 +157,9 @@ namespace flex
 			m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
 		}
 
-		m_WorldOrigin = new MeshPrefab(m_WorldAxisMaterialID, "World origin");
-		m_WorldOrigin->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::WORLD_AXIS_GROUND);
+		m_WorldOrigin = new GameObject("World origin", SerializableType::NONE);
+		MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
+		orignMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::WORLD_AXIS_GROUND);
 		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 		m_WorldOrigin->SetSerializable(false);
 		m_WorldOrigin->SetStatic(true);
@@ -165,11 +167,13 @@ namespace flex
 
 
 		// Players
-		m_Player0 = new Player();
-		m_Player0->Initialize(gameContext, 0);
+		m_Player0 = new Player(0);
+		AddChild(m_Player0);
+		m_Player0->Initialize(gameContext);
 
-		m_Player1 = new Player();
-		m_Player1->Initialize(gameContext, 1);
+		m_Player1 = new Player(1);
+		AddChild(m_Player1);
+		m_Player1->Initialize(gameContext);
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
@@ -349,11 +353,11 @@ namespace flex
 			}
 		}
 
-		switch (entityType)
+		newEntity = new GameObject(objectName, entityType);
+
+		JSONObject meshObj;
+		if (obj.SetObjectChecked("mesh", meshObj))
 		{
-		case SerializableType::MESH:
-		{
-			JSONObject meshObj = obj.GetObject("mesh");
 			std::string meshFilePath = meshObj.GetString("file");
 			if (!meshFilePath.empty())
 			{
@@ -378,115 +382,121 @@ namespace flex
 
 				if (!meshFilePath.empty())
 				{
-					MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+					MeshComponent* mesh = new MeshComponent(matID, newEntity);
 					mesh->SetRequiredAttributes(requiredVertexAttributes);
 
-					MeshPrefab::ImportSettings importSettings = {};
+					MeshComponent::ImportSettings importSettings = {};
 					importSettings.flipU = flipU;
 					importSettings.flipV = flipV;
 					importSettings.flipNormalZ = flipNormalZ;
 					importSettings.swapNormalYZ = swapNormalYZ;
 
 					mesh->LoadFromFile(gameContext,
-						meshFilePath,
-						&importSettings);
+									   meshFilePath,
+									   &importSettings);
 
-					newEntity = mesh;
+					newEntity->SetMeshComponent(mesh);
 				}
 				else if (!meshPrefabName.empty())
 				{
-					MeshPrefab* mesh = new MeshPrefab(matID, objectName);
+					MeshComponent* mesh = new MeshComponent(matID, newEntity);
 					mesh->SetRequiredAttributes(requiredVertexAttributes);
 
-					MeshPrefab::PrefabShape prefabShape = MeshPrefab::StringToPrefabShape(meshPrefabName);
+					MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
 					mesh->LoadPrefabShape(gameContext, prefabShape);
 
-					newEntity = mesh;
+					newEntity->SetMeshComponent(mesh);
 				}
 				else
 				{
-					Logger::LogError("Unhandled mesh object " + objectName);
+					Logger::LogError("Unhandled mesh field on object: " + objectName);
 				}
 			}
+		}
 
-			JSONObject colliderObj;
-			if (obj.SetObjectChecked("collider", colliderObj))
+		JSONObject colliderObj;
+		if (obj.SetObjectChecked("collider", colliderObj))
+		{
+			std::string shapeStr = colliderObj.GetString("shape");
+			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
+
+			switch (shapeType)
 			{
-				std::string shapeStr = colliderObj.GetString("shape");
-				BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
-
-				switch (shapeType)
-				{
-				case BOX_SHAPE_PROXYTYPE:
-				{
-					glm::vec3 halfExtents;
-					colliderObj.SetVec3Checked("half extents", halfExtents);
-					btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-					btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-					newEntity->SetCollisionShape(boxShape);
-				} break;
-				case SPHERE_SHAPE_PROXYTYPE:
-				{
-					real radius = colliderObj.GetFloat("radius");
-					btSphereShape* sphereShape = new btSphereShape(radius);
-
-					newEntity->SetCollisionShape(sphereShape);
-				} break;
-				case CAPSULE_SHAPE_PROXYTYPE:
-				{
-					real radius = colliderObj.GetFloat("radius");
-					real height = colliderObj.GetFloat("height");
-					btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
-
-					newEntity->SetCollisionShape(capsuleShape);
-				} break;
-				case CONE_SHAPE_PROXYTYPE:
-				{
-					real radius = colliderObj.GetFloat("radius");
-					real height = colliderObj.GetFloat("height");
-					btConeShape* coneShape = new btConeShape(radius, height);
-
-					newEntity->SetCollisionShape(coneShape);
-				} break;
-				case CYLINDER_SHAPE_PROXYTYPE:
-				{
-					glm::vec3 halfExtents;
-					colliderObj.SetVec3Checked("half extents", halfExtents);
-					btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-					btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-					newEntity->SetCollisionShape(cylinderShape);
-				} break;
-				default:
-				{
-					Logger::LogError("Unhandled BroadphaseNativeType: " + shapeStr);
-				} break;
-				}
-
-
-				bool bIsTrigger = colliderObj.GetBool("trigger");
-				// TODO: Create btGhostObject to use for trigger
-			}
-
-			JSONObject rigidBodyObj;
-			if (obj.SetObjectChecked("rigid body", rigidBodyObj))
+			case BOX_SHAPE_PROXYTYPE:
 			{
-				if (newEntity->GetCollisionShape() == nullptr)
-				{
-					Logger::LogError("Serialized object contains \"rigid body\" field but no collider! (" + objectName + ")");
-				}
-				else
-				{
-					real mass = rigidBodyObj.GetFloat("mass");
-					bool bKinematic = rigidBodyObj.GetBool("kinematic");
+				glm::vec3 halfExtents;
+				colliderObj.SetVec3Checked("half extents", halfExtents);
+				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
 
-					RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-					rigidBody->SetMass(mass);
-					rigidBody->SetKinematic(bKinematic);
-					rigidBody->SetStatic(newEntity->IsStatic());
-				}
+				newEntity->SetCollisionShape(boxShape);
+			} break;
+			case SPHERE_SHAPE_PROXYTYPE:
+			{
+				real radius = colliderObj.GetFloat("radius");
+				btSphereShape* sphereShape = new btSphereShape(radius);
+
+				newEntity->SetCollisionShape(sphereShape);
+			} break;
+			case CAPSULE_SHAPE_PROXYTYPE:
+			{
+				real radius = colliderObj.GetFloat("radius");
+				real height = colliderObj.GetFloat("height");
+				btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
+
+				newEntity->SetCollisionShape(capsuleShape);
+			} break;
+			case CONE_SHAPE_PROXYTYPE:
+			{
+				real radius = colliderObj.GetFloat("radius");
+				real height = colliderObj.GetFloat("height");
+				btConeShape* coneShape = new btConeShape(radius, height);
+
+				newEntity->SetCollisionShape(coneShape);
+			} break;
+			case CYLINDER_SHAPE_PROXYTYPE:
+			{
+				glm::vec3 halfExtents;
+				colliderObj.SetVec3Checked("half extents", halfExtents);
+				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
+
+				newEntity->SetCollisionShape(cylinderShape);
+			} break;
+			default:
+			{
+				Logger::LogError("Unhandled BroadphaseNativeType: " + shapeStr);
+			} break;
 			}
+
+			bool bIsTrigger = colliderObj.GetBool("trigger");
+			// TODO: Create btGhostObject to use for trigger
+		}
+
+		JSONObject rigidBodyObj;
+		if (obj.SetObjectChecked("rigid body", rigidBodyObj))
+		{
+			if (newEntity->GetCollisionShape() == nullptr)
+			{
+				Logger::LogError("Serialized object contains \"rigid body\" field but no collider: " + objectName);
+			}
+			else
+			{
+				real mass = rigidBodyObj.GetFloat("mass");
+				bool bKinematic = rigidBodyObj.GetBool("kinematic");
+
+				RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
+				rigidBody->SetMass(mass);
+				rigidBody->SetKinematic(bKinematic);
+				rigidBody->SetStatic(newEntity->IsStatic());
+			}
+		}
+
+		switch (entityType)
+		{
+		case SerializableType::OBJECT:
+		{
+			// Nothing special to do
 		} break;
 		case SerializableType::SKYBOX:
 		{
@@ -503,44 +513,118 @@ namespace flex
 					Logger::LogWarning("Invalid skybox material! Must generate cubemap sampler");
 				}
 
-				MeshPrefab* skyboxMesh = new MeshPrefab(matID, "Skybox");
-				skyboxMesh->LoadPrefabShape(gameContext, MeshPrefab::PrefabShape::SKYBOX);
-				AddChild(skyboxMesh);
+				MeshComponent* skyboxMesh = new MeshComponent(matID, newEntity);
+				skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
+				newEntity->SetMeshComponent(skyboxMesh);
 
-				gameContext.renderer->SetSkyboxMesh(skyboxMesh);
+				gameContext.renderer->SetSkyboxMesh(newEntity);
 
 				glm::vec3 skyboxRotEuler;
 				if (obj.SetVec3Checked("rotation", skyboxRotEuler))
 				{
 					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
-					skyboxMesh->GetTransform()->SetGlobalRotation(skyboxRotation);
+					newEntity->GetTransform()->SetGlobalRotation(skyboxRotation);
 				}
 			}
 		} break;
 		case SerializableType::REFLECTION_PROBE:
 		{
-			bool visible = true;
-			obj.SetBoolChecked("visible", visible);
+			// Chrome ball material
+			MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
+			reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
+			reflectionProbeMaterialCreateInfo.shaderName = "pbr";
+			reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
+			reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
+			reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
+			reflectionProbeMaterialCreateInfo.constAO = 1.0f;
+			MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 
-			glm::vec3 position = glm::vec3(0.0f);
-			obj.SetVec3Checked("position", position);
+			// Probe capture material
+			MaterialCreateInfo probeCaptureMatCreateInfo = {};
+			probeCaptureMatCreateInfo.name = "Reflection probe capture";
+			probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
+			probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
+			probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
+			probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
+			probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
+			probeCaptureMatCreateInfo.enableIrradianceSampler = true;
+			probeCaptureMatCreateInfo.generateIrradianceSampler = true;
+			probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
+			probeCaptureMatCreateInfo.enablePrefilteredMap = true;
+			probeCaptureMatCreateInfo.generatePrefilteredMap = true;
+			probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
+			probeCaptureMatCreateInfo.enableBRDFLUT = true;
+			probeCaptureMatCreateInfo.frameBuffers = {
+				{ "positionMetallicFrameBufferSampler", nullptr },
+				{ "normalRoughnessFrameBufferSampler", nullptr },
+				{ "albedoAOFrameBufferSampler", nullptr },
+			};
+			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
-			ReflectionProbe* reflectionProbe = new ReflectionProbe(objectName, visible, position);
 
-			newEntity = reflectionProbe;
+			MeshComponent* sphereMesh = new MeshComponent(reflectionProbeMaterialID, newEntity);
+			MeshComponent::ImportSettings importSettings = {};
+			importSettings.swapNormalYZ = true;
+			importSettings.flipNormalZ = true;
+			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", &importSettings);
+			newEntity->SetMeshComponent(sphereMesh);
+			//m_Transform.Scale(1.5f);
+			// Reflection probes get created at bootup
+			//SetSerializable(false);
+
+			//if (!m_StartVisible)
+			//{
+			//	SetVisible(m_StartVisible);
+			//}
+
+			std::string captureName = objectName + "_capture";
+			GameObject* captureObject = new GameObject(captureName, SerializableType::NONE);
+			captureObject->SetVisible(false);
+
+			RenderObjectCreateInfo captureObjectCreateInfo = {};
+			captureObjectCreateInfo.vertexBufferData = nullptr;
+			captureObjectCreateInfo.materialID = captureMatID;
+			captureObjectCreateInfo.gameObject = captureObject;
+			captureObjectCreateInfo.visibleInSceneExplorer = false;
+
+			RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
+			captureObject->SetRenderID(captureRenderID);
+
+			newEntity->AddChild(captureObject);
+
+			gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
+		} break;
+		case SerializableType::VALVE:
+		{
+			MeshComponent* valveMesh = new MeshComponent(matID, newEntity);
+			valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
+			newEntity->SetMeshComponent(valveMesh);
+
+			btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
+			btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
+
+			newEntity->SetCollisionShape(cylinderShape);
+
+			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
+			rigidBody->SetMass(0.0f);
+			rigidBody->SetKinematic(false);
+			rigidBody->SetStatic(true);
+
+
 		} break;
 		case SerializableType::NONE:
+		{
 			// Assume this object is an empty parent object which holds no data itself but a transform
-			newEntity = new GameObject(objectName, SerializableType::NONE);
-			break;
+		} break;
 		default:
-			Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
-			break;
+		{
+			//Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
+		} break;
 		}
 
 		if (newEntity)
 		{
-			newEntity->SetVisible(bVisible);
+			newEntity->SetVisible(bVisible, false);
 			newEntity->SetVisibleInSceneExplorer(bVisibleInSceneGraph);
 			newEntity->m_Transform = transform;
 
@@ -781,10 +865,9 @@ namespace flex
 		std::string childName = gameObject->m_Name;
 
 		object.fields.push_back(JSONField("name", JSONValue(childName)));
-		SerializableType childType = gameObject->m_SerializableType;
-		std::string childTypeStr = SerializableTypeToString(childType);
-		object.fields.push_back(JSONField("type", JSONValue(childTypeStr)));
+		object.fields.push_back(JSONField("type", JSONValue(SerializableTypeToString(gameObject->m_SerializableType))));
 		object.fields.push_back(JSONField("visible", JSONValue(gameObject->IsVisible())));
+		// TODO: Only save/read this value when editor is included in build
 		if (!gameObject->IsVisibleInSceneExplorer())
 		{
 			object.fields.push_back(JSONField("visible in scene graph", 
@@ -796,32 +879,30 @@ namespace flex
 			object.fields.push_back(JSONField("static", JSONValue(true)));
 		}
 		
-		switch (childType)
+		JSONField transformField;
+		if (JSONParser::SerializeTransform(gameObject->GetTransform(), transformField))
 		{
-		case SerializableType::MESH:
+			object.fields.push_back(transformField);
+		}
+
+		MeshComponent* meshComponent = gameObject->GetMeshComponent();
+		if (meshComponent)
 		{
-			JSONField transformField;
-			if (JSONParser::SerializeTransform(gameObject->GetTransform(), transformField))
-			{
-				object.fields.push_back(transformField);
-			}
-
-			MeshPrefab* mesh = (MeshPrefab*)gameObject;
-
 			JSONField meshField = {};
 			meshField.label = "mesh";
 
 			JSONObject meshValue = {};
 
-			MeshPrefab::Type meshType = mesh->GetType();
-			if (meshType == MeshPrefab::Type::FILE)
+			MeshComponent::Type meshType = meshComponent->GetType();
+			if (meshType == MeshComponent::Type::FILE)
 			{
-				std::string meshFilepath = mesh->GetFilepath().substr(RESOURCE_LOCATION.length());
+				std::string meshFilepath = meshComponent->GetFilepath().substr(RESOURCE_LOCATION.length());
 				meshValue.fields.push_back(JSONField("file", JSONValue(meshFilepath)));
 			}
-			else if (meshType == MeshPrefab::Type::PREFAB)
+			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
+			else if (meshType == MeshComponent::Type::PREFAB)
 			{
-				std::string prefabShapeStr = MeshPrefab::PrefabShapeToString(mesh->GetShape());
+				std::string prefabShapeStr = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
 				meshValue.fields.push_back(JSONField("prefab", JSONValue(prefabShapeStr)));
 			}
 			else
@@ -829,7 +910,7 @@ namespace flex
 				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
 			}
 
-			MeshPrefab::ImportSettings importSettings = mesh->GetImportSettings();
+			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
 			meshValue.fields.push_back(JSONField("swapNormalYZ", JSONValue(importSettings.swapNormalYZ)));
 			meshValue.fields.push_back(JSONField("flipNormalZ", JSONValue(importSettings.flipNormalZ)));
 			meshValue.fields.push_back(JSONField("flipU", JSONValue(importSettings.flipU)));
@@ -837,13 +918,23 @@ namespace flex
 
 			meshField.value = JSONValue(meshValue);
 			object.fields.push_back(meshField);
+		}
 
-
-			RenderID meshRenderID = mesh->GetRenderID();
+		{
+			MaterialID matID = InvalidMaterialID;
 			RenderObjectCreateInfo renderObjectCreateInfo;
-			if (gameContext.renderer->GetRenderObjectCreateInfo(meshRenderID, renderObjectCreateInfo))
+			if (meshComponent)
 			{
-				const Material& material = gameContext.renderer->GetMaterial(renderObjectCreateInfo.materialID);
+				matID = meshComponent->GetMaterialID();
+			}
+			else if (gameContext.renderer->GetRenderObjectCreateInfo(gameObject->GetRenderID(), renderObjectCreateInfo))
+			{
+				matID = renderObjectCreateInfo.materialID;
+			}
+
+			if (matID != InvalidMaterialID)
+			{
+				const Material& material = gameContext.renderer->GetMaterial(matID);
 				i32 materialIndex = GetMaterialIndex(material, gameContext);
 				if (materialIndex == -1)
 				{
@@ -854,52 +945,6 @@ namespace flex
 					object.fields.push_back(JSONField("material index", JSONValue(materialIndex)));
 				}
 			}
-			else
-			{
-				Logger::LogWarning("BaseScene::SerializeObject failed to retrieve mesh object"
-					" create info, serialized data will be incomplete. Invalid render ID: " + 
-					std::to_string(meshRenderID));
-			}
-		} break;
-		case SerializableType::SKYBOX:
-		{
-			MeshPrefab* skyboxMesh = (MeshPrefab*)gameObject;
-
-			glm::vec3 skyboxRotEuler = glm::eulerAngles(skyboxMesh->GetTransform()->GetGlobalRotation());
-			object.fields.push_back(JSONField("rotation", JSONValue(Vec3ToString(skyboxRotEuler))));
-
-			const Material& material = gameContext.renderer->GetMaterial(skyboxMesh->GetMaterialID());
-			i32 materialIndex = GetMaterialIndex(material, gameContext);
-			if (materialIndex == -1)
-			{
-				Logger::LogError("Skybox contains material not present in BaseScene::m_LoadedMaterials! Parsing this file will fail!");
-			}
-			else
-			{
-				object.fields.push_back(JSONField("material index", JSONValue(materialIndex)));
-			}
-		} break;
-		case SerializableType::REFLECTION_PROBE:
-		{
-			ReflectionProbe* reflectionProbe = (ReflectionProbe*)gameObject;
-
-			glm::vec3 probePos = reflectionProbe->GetTransform()->GetGlobalPosition();
-			object.fields.push_back(JSONField("position", JSONValue(Vec3ToString(probePos))));
-
-			// TODO: Add probe-specific fields here like resolution and influence
-		} break;
-		case SerializableType::NONE:
-		{
-			JSONField transformField;
-			if (JSONParser::SerializeTransform(gameObject->GetTransform(), transformField))
-			{
-				object.fields.push_back(transformField);
-			}
-		} break;
-		default:
-		{
-			Logger::LogError("Unhandled serializable type encountered in BaseScene::SerializeToFile " + childTypeStr);
-		} break;
 		}
 
 		btCollisionShape* collisionShape = gameObject->GetCollisionShape();
@@ -982,6 +1027,32 @@ namespace flex
 
 			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
 		}
+
+		//switch (gameObject->m_SerializableType)
+		//{
+		//case SerializableType::OBJECT:
+		//{
+		//	// Nothing special to do
+		//} break;
+		//case SerializableType::SKYBOX:
+		//{
+		//} break;
+		//case SerializableType::REFLECTION_PROBE:
+		//{
+		//	// TODO: Add probe-specific fields here like resolution and influence
+		//} break;
+		//case SerializableType::VALVE:
+		//{
+		//	// TODO: Add instance-specific values to save here (speed, color, isBroken, current state, ...)
+		//} break;
+		//case SerializableType::NONE:
+		//{
+		//} break;
+		//default:
+		//{
+		//	//Logger::LogError("Unhandled serializable type encountered in BaseScene::SerializeToFile");
+		//} break;
+		//}
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		if (!gameObjectChildren.empty())

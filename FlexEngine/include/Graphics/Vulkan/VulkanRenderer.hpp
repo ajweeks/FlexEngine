@@ -14,7 +14,7 @@
 
 namespace flex
 {
-	class MeshPrefab;
+	class MeshComponent;
 
 	namespace vk
 	{
@@ -60,8 +60,8 @@ namespace flex
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
 				DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
-			virtual void SetSkyboxMesh(MeshPrefab* skyboxMesh) override;
-			virtual MeshPrefab* GetSkyboxMesh() override;
+			virtual void SetSkyboxMesh(MeshComponent* skyboxMesh) override;
+			virtual MeshComponent* GetSkyboxMesh() override;
 
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
@@ -258,7 +258,7 @@ namespace flex
 
 			FrameBuffer* m_CubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
-			MeshPrefab* m_gBufferCubemapMesh = nullptr;
+			MeshComponent* m_gBufferCubemapMesh = nullptr;
 			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
@@ -291,7 +291,7 @@ namespace flex
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			std::vector<u32> m_gBufferQuadIndices;
 
-			MeshPrefab* m_SkyBoxMesh = nullptr;
+			MeshComponent* m_SkyBoxMesh = nullptr;
 			
 			VkClearColorValue m_ClearColor;
 

@@ -4,13 +4,13 @@
 #include <vector>
 
 #include "GameContext.hpp"
-#include "Scene/GameObject.hpp"
 
 namespace flex
 {
 	class PhysicsWorld;
 	class ReflectionProbe;
 	class Player;
+	class GameObject;
 	struct JSONObject;
 	struct JSONField;
 
@@ -75,8 +75,8 @@ namespace flex
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 		
 		// TODO: Merge into one object type
-		MeshPrefab* m_Grid = nullptr;
-		MeshPrefab* m_WorldOrigin = nullptr;
+		GameObject* m_Grid = nullptr;
+		GameObject* m_WorldOrigin = nullptr;
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 

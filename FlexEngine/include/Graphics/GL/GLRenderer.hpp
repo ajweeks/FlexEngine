@@ -9,7 +9,7 @@
 
 namespace flex
 {
-	class MeshPrefab;
+	class MeshComponent;
 	class GameObject;
 
 	namespace gl
@@ -56,8 +56,8 @@ namespace flex
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 			
-			virtual void SetSkyboxMesh(MeshPrefab* skyboxMesh) override;
-			virtual MeshPrefab* GetSkyboxMesh() override;
+			virtual void SetSkyboxMesh(GameObject* skyboxMesh) override;
+			virtual GameObject* GetSkyboxMesh() override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;
@@ -190,7 +190,7 @@ namespace flex
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
 
-			MeshPrefab* m_SkyBoxMesh = nullptr;
+			GameObject* m_SkyBoxMesh = nullptr;
 			
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;

@@ -275,4 +275,15 @@ namespace flex
 	{
 		return m_RigidBody;
 	}
+
+	MeshComponent* GameObject::GetMeshComponent()
+	{
+		return m_MeshComponent;
+	}
+
+	MeshComponent* GameObject::SetMeshComponent(MeshComponent* meshComponent)
+	{
+		m_MeshComponent = meshComponent;
+		return meshComponent;
+	}
 } // namespace flex

@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#include "Scene/MeshPrefab.hpp"
+#include "Scene/MeshComponent.hpp"
 
 #include <assimp/vector3.h>
 #include <assimp/scene.h>
@@ -12,6 +12,7 @@
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Scene/GameObject.hpp"
 #include "Colors.hpp"
 #include "GameContext.hpp"
 #include "Helpers.hpp"
@@ -19,36 +20,36 @@
 
 namespace flex
 {
-	const real MeshPrefab::GRID_LINE_SPACING = 1.0f;
-	const u32 MeshPrefab::GRID_LINE_COUNT = 150;
+	const real MeshComponent::GRID_LINE_SPACING = 1.0f;
+	const u32 MeshComponent::GRID_LINE_COUNT = 150;
 
-	std::map<std::string, MeshPrefab::LoadedMesh*> MeshPrefab::m_LoadedMeshes;
+	std::map<std::string, MeshComponent::LoadedMesh*> MeshComponent::m_LoadedMeshes;
 
-	glm::vec4 MeshPrefab::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
-	glm::vec3 MeshPrefab::m_DefaultPosition(0.0f, 0.0f, 0.0f);
-	glm::vec3 MeshPrefab::m_DefaultTangent(1.0f, 0.0f, 0.0f);
-	glm::vec3 MeshPrefab::m_DefaultBitangent(0.0f, 0.0f, 1.0f);
-	glm::vec3 MeshPrefab::m_DefaultNormal(0.0f, 1.0f, 0.0f);
-	glm::vec2 MeshPrefab::m_DefaultTexCoord(0.0f, 0.0f);
+	glm::vec4 MeshComponent::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
+	glm::vec3 MeshComponent::m_DefaultPosition(0.0f, 0.0f, 0.0f);
+	glm::vec3 MeshComponent::m_DefaultTangent(1.0f, 0.0f, 0.0f);
+	glm::vec3 MeshComponent::m_DefaultBitangent(0.0f, 0.0f, 1.0f);
+	glm::vec3 MeshComponent::m_DefaultNormal(0.0f, 1.0f, 0.0f);
+	glm::vec2 MeshComponent::m_DefaultTexCoord(0.0f, 0.0f);
 
-	MeshPrefab::MeshPrefab(const std::string& name) :
-		MeshPrefab(0, name)
+	MeshComponent::MeshComponent(GameObject* owner) :
+		m_OwningGameObject(owner)
 	{
 	}
 
-	MeshPrefab::MeshPrefab(MaterialID materialID, const std::string& name) :
-		GameObject(name, SerializableType::MESH),
+	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner) :
+		m_OwningGameObject(owner),
 		m_MaterialID(materialID),
 		m_UVScale(1.0f, 1.0f),
 		m_ImportSettings()
 	{
 	}
 
-	MeshPrefab::~MeshPrefab()
+	MeshComponent::~MeshComponent()
 	{
 	}
 
-	void MeshPrefab::DestroyAllLoadedMeshes()
+	void MeshComponent::DestroyAllLoadedMeshes()
 	{
 		for (auto iter = m_LoadedMeshes.begin(); iter != m_LoadedMeshes.end(); /**/)
 		{
@@ -57,18 +58,17 @@ namespace flex
 		}
 	}
 
-	void MeshPrefab::Destroy(const GameContext& gameContext)
+	void MeshComponent::Destroy(const GameContext& gameContext)
 	{
 		m_VertexBufferData.Destroy();
-		GameObject::Destroy(gameContext);
 	}
 
-	void MeshPrefab::SetRequiredAttributes(VertexAttributes requiredAttributes)
+	void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
 	{
 		m_RequiredAttributes |= requiredAttributes;
 	}
 
-	bool MeshPrefab::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
+	bool MeshComponent::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
 	{
 		auto location = m_LoadedMeshes.find(filePath);
 		if (location == m_LoadedMeshes.end())
@@ -82,7 +82,7 @@ namespace flex
 		}
 	}
 
-	bool MeshPrefab::LoadFromFile(const GameContext& gameContext,
+	bool MeshComponent::LoadFromFile(const GameContext& gameContext,
 		const std::string& filepath,
 		ImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
@@ -97,7 +97,8 @@ namespace flex
 
 		m_VertexBufferData.Destroy();
 
-		m_Transform.SetGameObject(this);
+		// TODO: Move to game object?
+		m_OwningGameObject->GetTransform()->SetGameObject(m_OwningGameObject);
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
@@ -147,19 +148,19 @@ namespace flex
 			meshes[i] = scene->mMeshes[i];
 		}
 
-		if (m_Name.empty())
-		{
-			m_Name = meshes[0]->mName.C_Str();
+		//if (m_Name.empty())
+		//{
+		//	m_Name = meshes[0]->mName.C_Str();
 
-			if (m_Name.empty())
-			{
-				auto filePathParts = Split(filepath, '.');
-				std::string friendlyFileName = filePathParts[filePathParts.size() - 1];
-				StripLeadingDirectories(friendlyFileName);
+		//	if (m_Name.empty())
+		//	{
+		//		auto filePathParts = Split(filepath, '.');
+		//		std::string friendlyFileName = filePathParts[filePathParts.size() - 1];
+		//		StripLeadingDirectories(friendlyFileName);
 
-				m_Name = "Mesh prefab - " + friendlyFileName;
-			}
-		}
+		//		m_Name = "Mesh prefab - " + friendlyFileName;
+		//	}
+		//}
 
 		size_t totalVertCount = 0;
 
@@ -321,29 +322,31 @@ namespace flex
 			}
 		}
 
-		renderObjectCreateInfo.gameObject = this;
+		renderObjectCreateInfo.gameObject = m_OwningGameObject;
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
-		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));
+		RenderID renderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		m_OwningGameObject->SetRenderID(renderID);
 
-		gameContext.renderer->SetTopologyMode(m_RenderID, TopologyMode::TRIANGLE_LIST);
+		gameContext.renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
 
-		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
+		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, renderID);
 
 		m_Initialized = true;
 
 		return true;
 	}
 
-	bool MeshPrefab::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
+	bool MeshComponent::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
 		m_Type = Type::PREFAB;
 		m_Shape = shape;
 
 		m_VertexBufferData.Destroy();
 
-		m_Transform.SetGameObject(this);
+		// TODO: Move to game object?
+		m_OwningGameObject->GetTransform()->SetGameObject(m_OwningGameObject);
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
@@ -370,7 +373,7 @@ namespace flex
 			}
 		}
 
-		renderObjectCreateInfo.gameObject = this;
+		renderObjectCreateInfo.gameObject = m_OwningGameObject;
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
 		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
@@ -381,7 +384,7 @@ namespace flex
 
 		switch (shape)
 		{
-		case MeshPrefab::PrefabShape::CUBE:
+		case MeshComponent::PrefabShape::CUBE:
 		{
 			const std::array<glm::vec4, 6> colors = { Color::GREEN, Color::RED, Color::BLUE, Color::ORANGE, Color::YELLOW, Color::YELLOW };
 			vertexBufferDataCreateInfo.positions_3D =
@@ -618,7 +621,7 @@ namespace flex
 
 			defaultName = "Cube";
 		} break;
-		case MeshPrefab::PrefabShape::GRID:
+		case MeshComponent::PrefabShape::GRID:
 		{
 			const float lineMaxOpacity = 0.5f;
 			glm::vec4 lineColor = Color::GRAY;
@@ -679,7 +682,7 @@ namespace flex
 			topologyMode = TopologyMode::LINE_LIST;
 			defaultName = "Grid";
 		} break;
-		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:
+		case MeshComponent::PrefabShape::WORLD_AXIS_GROUND:
 		{
 			glm::vec4 centerLineColorX = Color::RED;
 			glm::vec4 centerLineColorY = Color::GREEN;
@@ -729,7 +732,7 @@ namespace flex
 			topologyMode = TopologyMode::LINE_LIST;
 			defaultName = "World Axis Ground Plane";
 		} break;
-		case MeshPrefab::PrefabShape::PLANE:
+		case MeshComponent::PrefabShape::PLANE:
 		{
 			vertexBufferDataCreateInfo.positions_3D =
 			{
@@ -805,7 +808,7 @@ namespace flex
 
 			defaultName = "Plane";
 		} break;
-		case MeshPrefab::PrefabShape::UV_SPHERE:
+		case MeshComponent::PrefabShape::UV_SPHERE:
 		{
 			// Vertices
 			glm::vec3 v1(0.0f, 1.0f, 0.0f); // Top vertex
@@ -898,10 +901,11 @@ namespace flex
 
 			defaultName = "UV Sphere";
 		} break;
-		case MeshPrefab::PrefabShape::SKYBOX:
+		case MeshComponent::PrefabShape::SKYBOX:
 		{
 			// TODO: Move to separate class?
-			m_SerializableType = SerializableType::SKYBOX;
+			// FIXME
+			//m_SerializableType = SerializableType::SKYBOX;
 			vertexBufferDataCreateInfo.positions_3D =
 			{
 				// Front
@@ -966,7 +970,7 @@ namespace flex
 		} break;
 		default:
 		{
-			Logger::LogWarning("Unhandled prefab shape passed to MeshPrefab::LoadPrefabShape: " + std::to_string((i32)shape));
+			Logger::LogWarning("Unhandled prefab shape passed to MeshComponent::LoadPrefabShape: " + std::to_string((i32)shape));
 			return false;
 		} break;
 		}
@@ -974,56 +978,57 @@ namespace flex
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		if (m_Name.empty() || defaultName.empty())
-		{
-			m_Name = defaultName;
-		}
 
-		SetRenderID(gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo));
+		//if (m_Name.empty() || defaultName.empty())
+		//{
+		//	m_Name = defaultName;
+		//}
 
-		gameContext.renderer->SetTopologyMode(m_RenderID, topologyMode);
-		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, m_RenderID);
+		RenderID renderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		m_OwningGameObject->SetRenderID(renderID);
+
+		gameContext.renderer->SetTopologyMode(renderID, topologyMode);
+		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, renderID);
 
 		m_Initialized = true;
 
 		return true;
 	}
 
-	void MeshPrefab::Update(const GameContext& gameContext)
+	void MeshComponent::Update(const GameContext& gameContext)
 	{
-		GameObject::Update(gameContext);
-
 		if (m_Shape == PrefabShape::GRID)
 		{
+			Transform* transform = m_OwningGameObject->GetTransform();
 			glm::vec3 camPos = gameContext.cameraManager->CurrentCamera()->GetPosition();
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
 				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
-				m_Transform.GetGlobalPosition().y,
+				transform->GetGlobalPosition().y,
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
-			m_Transform.SetGlobalPosition(newGridPos);
+			transform->SetGlobalPosition(newGridPos);
 		}
 	}
 
-	MaterialID MeshPrefab::GetMaterialID() const
+	MaterialID MeshComponent::GetMaterialID() const
 	{
 		return m_MaterialID;
 	}
 
-	void MeshPrefab::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
+	void MeshComponent::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
 	{
 		m_MaterialID = materialID;
 		if (m_Initialized)
 		{
-			gameContext.renderer->SetRenderObjectMaterialID(m_RenderID, materialID);
+			gameContext.renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
 		}
 	}
 
-	void MeshPrefab::SetUVScale(real uScale, real vScale)
+	void MeshComponent::SetUVScale(real uScale, real vScale)
 	{
 		m_UVScale = glm::vec2(uScale, vScale);
 	}
 
-	MeshPrefab::PrefabShape MeshPrefab::StringToPrefabShape(const std::string& prefabName)
+	MeshComponent::PrefabShape MeshComponent::StringToPrefabShape(const std::string& prefabName)
 	{
 		if (prefabName.compare("cube") == 0)
 		{
@@ -1057,37 +1062,37 @@ namespace flex
 
 	}
 
-	std::string MeshPrefab::PrefabShapeToString(PrefabShape shape)
+	std::string MeshComponent::PrefabShapeToString(PrefabShape shape)
 	{
 		switch (shape)
 		{
-		case MeshPrefab::PrefabShape::CUBE:					return "cube";
-		case MeshPrefab::PrefabShape::GRID:					return "grid";
-		case MeshPrefab::PrefabShape::WORLD_AXIS_GROUND:	return "world axis ground";
-		case MeshPrefab::PrefabShape::PLANE:				return "plane";
-		case MeshPrefab::PrefabShape::UV_SPHERE:			return "uv sphere";
-		case MeshPrefab::PrefabShape::SKYBOX:				return "skybox";
-		case MeshPrefab::PrefabShape::NONE:					return "NONE";
+		case MeshComponent::PrefabShape::CUBE:					return "cube";
+		case MeshComponent::PrefabShape::GRID:					return "grid";
+		case MeshComponent::PrefabShape::WORLD_AXIS_GROUND:	return "world axis ground";
+		case MeshComponent::PrefabShape::PLANE:				return "plane";
+		case MeshComponent::PrefabShape::UV_SPHERE:			return "uv sphere";
+		case MeshComponent::PrefabShape::SKYBOX:				return "skybox";
+		case MeshComponent::PrefabShape::NONE:					return "NONE";
 		default:											return "UNHANDLED PREFAB SHAPE";
 		}
 	}
 
-	MeshPrefab::Type MeshPrefab::GetType() const
+	MeshComponent::Type MeshComponent::GetType() const
 	{
 		return m_Type;
 	}
 
-	MeshPrefab::PrefabShape MeshPrefab::GetShape() const
+	MeshComponent::PrefabShape MeshComponent::GetShape() const
 	{
 		return m_Shape;
 	}
 
-	MeshPrefab::ImportSettings MeshPrefab::GetImportSettings() const
+	MeshComponent::ImportSettings MeshComponent::GetImportSettings() const
 	{
 		return m_ImportSettings;
 	}
 
-	std::string MeshPrefab::GetFilepath() const
+	std::string MeshComponent::GetFilepath() const
 	{
 		return m_Filepath;
 	}

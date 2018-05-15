@@ -19,7 +19,7 @@ class btIDebugDraw;
 
 namespace flex
 {
-	class MeshPrefab;
+	class MeshComponent;
 
 	class Renderer
 	{
@@ -65,8 +65,8 @@ namespace flex
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized,
 			i32 stride, void* pointer) = 0;
 
-		virtual void SetSkyboxMesh(MeshPrefab* skyboxMesh) = 0;
-		virtual MeshPrefab* GetSkyboxMesh() = 0;
+		virtual void SetSkyboxMesh(GameObject* skyboxMesh) = 0;
+		virtual GameObject* GetSkyboxMesh() = 0;
 
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
 

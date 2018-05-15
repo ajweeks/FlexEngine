@@ -19,7 +19,7 @@
 #include "Physics/PhysicsWorld.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
-#include "Scene/MeshPrefab.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Time.hpp"
 
 namespace flex
@@ -83,10 +83,10 @@ namespace flex
 		debugCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		debugCamera->SetYaw(glm::radians(130.0f));
 		debugCamera->SetPitch(glm::radians(-10.0f));
-		m_GameContext.cameraManager->AddCamera(debugCamera, false);
+		m_GameContext.cameraManager->AddCamera(debugCamera, true);
 
 		OverheadCamera* overheadCamera = new OverheadCamera(m_GameContext);
-		m_GameContext.cameraManager->AddCamera(overheadCamera, true);
+		m_GameContext.cameraManager->AddCamera(overheadCamera, false);
 
 		InitializeWindowAndRenderer();
 		m_GameContext.inputManager->Initialize(m_GameContext);
@@ -128,7 +128,7 @@ namespace flex
 
 		DestroyWindowAndRenderer();
 		
-		MeshPrefab::DestroyAllLoadedMeshes();
+		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
 

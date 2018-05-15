@@ -61,11 +61,22 @@ namespace flex
 
 	enum class SerializableType
 	{
-		MESH,
+		OBJECT,
 		SKYBOX,
 		REFLECTION_PROBE,
+		VALVE,
 		NONE
 	};
+
+	// TODO: Register these in a map with their respective enum values at runtime
+	//std::string SerializableTypeStrings[]
+	//{
+	//	"object",
+	//	"skybox",
+	//	"reflection probe",
+	//	"valve",
+	//	"NONE"
+	//};
 
 #define STATIC_ASSERT(e) StaticAssert<(e)>{}
 

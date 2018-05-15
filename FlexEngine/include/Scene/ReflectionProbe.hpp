@@ -4,7 +4,7 @@
 
 namespace flex
 {
-	class MeshPrefab;
+	class MeshComponent;
 
 	class ReflectionProbe : public GameObject
 	{
@@ -17,11 +17,8 @@ namespace flex
 
 		MaterialID GetCaptureMaterialID() const;
 
-		bool IsSphereVisible(const GameContext& gameContext) const;
-		void SetSphereVisible(bool visible, const GameContext& gameContext);
-
 	private:
-		MeshPrefab* m_SphereMesh = nullptr; // The object visible in the scene
+		MeshComponent* m_SphereMesh = nullptr; // The object visible in the scene
 		GameObject* m_Capture = nullptr; // The object doing the capturing
 		MaterialID m_CaptureMatID = 0;
 

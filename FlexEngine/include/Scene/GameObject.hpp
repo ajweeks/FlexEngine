@@ -56,6 +56,9 @@ namespace flex
 		RigidBody* SetRigidBody(RigidBody* rigidBody);
 		RigidBody* GetRigidBody() const;
 
+		MeshComponent* GetMeshComponent();
+		MeshComponent* SetMeshComponent(MeshComponent* meshComponent);
+
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
@@ -98,6 +101,8 @@ namespace flex
 
 		GameObject* m_Parent = nullptr;
 		std::vector<GameObject*> m_Children;
+
+		MeshComponent* m_MeshComponent = nullptr;
 
 	};
 } // namespace flex

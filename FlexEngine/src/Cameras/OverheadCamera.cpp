@@ -9,6 +9,7 @@
 #include "Window/Window.hpp"
 #include "Helpers.hpp"
 #include "Scene/BaseScene.hpp" 
+#include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
