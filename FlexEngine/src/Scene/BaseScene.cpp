@@ -13,6 +13,7 @@
 #include <BulletCollision/CollisionShapes/btConeShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
@@ -187,6 +188,11 @@ namespace flex
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->PostInitialize(gameContext);
+
+			if ((*iter)->m_SerializableType == SerializableType::VALVE)
+			{
+				(*iter)->GetRigidBody()->GetRigidBodyInternal()->setAngularFactor(btVector3(0, 1, 0));
+			}
 		}
 
 		m_PhysicsWorld->GetWorld()->setDebugDrawer(gameContext.renderer->GetDebugDrawer());
