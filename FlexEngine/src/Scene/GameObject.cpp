@@ -120,6 +120,7 @@ namespace flex
 			//				std::to_string(joystickX) + " " + std::to_string(joystickY));
 
 			static real stickRotationSpeed = 0.0f;
+			static real pStickRotationSpeed = 0.0f;
 
 			static bool rotatingCW = false;
 
@@ -260,12 +261,21 @@ namespace flex
 				}
 			}
 
+			if (stickRotationSpeed != 0.0f)
+			{
+				pStickRotationSpeed = stickRotationSpeed;
+			}
+			else
+			{
+				pStickRotationSpeed *= 0.8f;
+			}
+
 			previousQuadrant = currentQuadrant;
 
 			pJoystickX = joystickX;
 			pJoystickY = joystickY;
 
-			real rotationSpeed = 2.0f * gameContext.deltaTime * stickRotationSpeed;
+			real rotationSpeed = 2.0f * gameContext.deltaTime * pStickRotationSpeed;
 			rotation += (rotatingCW ? -rotationSpeed : rotationSpeed);
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
