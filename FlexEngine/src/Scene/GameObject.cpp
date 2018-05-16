@@ -99,6 +99,8 @@ namespace flex
 		} break;
 		case SerializableType::VALVE:
 		{
+			static RollingAverage averageRotationSpeeds(8);
+
 			//  0 | 1 
 			// - -1 --
 			//  3 | 2
@@ -133,24 +135,52 @@ namespace flex
 					stickStartTime = gameContext.elapsedTime;
 				}
 
-				if (pJoystickX < 0.0f && joystickX >= 0.0f)
-				{
-					rotatingCW = (joystickY < 0.0f);
-				}
-				else if (pJoystickX >= 0.0f && joystickX < 0.0f)
-				{
-					rotatingCW = (joystickY >= 0.0f);
-				}
+				//if (pJoystickX < 0.0f && joystickX >= 0.0f)
+				//{
+				//	rotatingCW = (joystickY < 0.0f);
+				//}
+				//else if (pJoystickX >= 0.0f && joystickX < 0.0f)
+				//{
+				//	rotatingCW = (joystickY >= 0.0f);
+				//}
 
-				if (pJoystickY < 0.0f && joystickY >= 0.0f)
-				{
-					rotatingCW = (joystickX >= 0.0f);
-				}
-				else if (pJoystickY >= 0.0f && joystickY < 0.0f)
-				{
-					rotatingCW = (joystickX < 0.0f);
-				}
+				//if (pJoystickY < 0.0f && joystickY >= 0.0f)
+				//{
+				//	rotatingCW = (joystickX >= 0.0f);
+				//}
+				//else if (pJoystickY >= 0.0f && joystickY < 0.0f)
+				//{
+				//	rotatingCW = (joystickX < 0.0f);
+				//}
 
+				real currentAngle = atan2(joystickY, joystickX) + PI;
+				real previousAngle = atan2(pJoystickY, pJoystickX) + PI;
+				// Asymptote occurs on left
+				if (joystickX < 0.0f)
+				{
+					if (pJoystickY < 0.0f && joystickY >= 0.0f)
+					{
+						// CCW
+						currentAngle -= TWO_PI;
+					}
+					else if (pJoystickY >= 0.0f && joystickY < 0.0f)
+					{
+						// CW
+						currentAngle += TWO_PI;
+					}
+				}
+				real currentRotationSpeed = (currentAngle - previousAngle) / gameContext.deltaTime;
+
+				averageRotationSpeeds.AddValue(currentRotationSpeed);
+				stickRotationSpeed = (-averageRotationSpeeds.currentAverage) * 0.45f;
+				real maxStickSpeed = 6.0f;
+				stickRotationSpeed = glm::clamp(stickRotationSpeed, -maxStickSpeed, maxStickSpeed);
+
+				//Logger::LogInfo(std::to_string(currentAngle) + ", " + 
+				//				std::to_string(previousAngle) + 
+				//				" diff: " + std::to_string(currentAngle - previousAngle) + 
+				//				" cur: " + std::to_string(currentRotationSpeed) + 
+				//				" avg: " + std::to_string(stickRotationSpeed));
 
 				if (joystickX > 0.0f)
 				{
@@ -167,6 +197,7 @@ namespace flex
 				stickStartingQuadrant = -1;
 				stickStartTime = -1.0f;
 				stickRotationSpeed = 0.0f;
+				averageRotationSpeeds.Reset();
 				for (i32 i = 0; i < 4; ++i)
 				{
 					wasInQuadrantSinceIdle[i] = false;
@@ -181,6 +212,18 @@ namespace flex
 				}
 				else
 				{
+					//bool rotatingCW = (previousQuadrant - currentQuadrant < 0);
+					//if (previousQuadrant == 3 && currentQuadrant == 0)
+					//{
+					//	rotatingCW = true;
+					//}
+					//else if (previousQuadrant == 0 && currentQuadrant == 3)
+					//{
+					//	rotatingCW = false;
+					//}
+
+					//rotatingCW = rotatingCW;
+
 					if (stickStartingQuadrant == currentQuadrant)
 					{
 						bool touchedAllQuadrants = true;
@@ -194,31 +237,20 @@ namespace flex
 
 						if (touchedAllQuadrants)
 						{
-							bool wasCW = (previousQuadrant - currentQuadrant < 0);
-							if (previousQuadrant == 3 && currentQuadrant == 0)
-							{
-								wasCW = true;
-							}
-							else if (previousQuadrant == 0 && currentQuadrant == 3)
-							{
-								wasCW = false;
-							}
-							
-							Logger::LogInfo("Full loop (" + std::string(wasCW ? "CW" : "CCW") + ")");
-							rotatingCW = wasCW;
+							Logger::LogInfo("Full loop (" + std::string(rotatingCW ? "CW" : "CCW") + ")");
 
-							real rotationTime = gameContext.elapsedTime - stickStartTime;
-							stickRotationSpeed = glm::clamp(1.0f / rotationTime, 0.1f, 5.0f);
+							//real rotationTime = gameContext.elapsedTime - stickStartTime;
+							//stickRotationSpeed = glm::clamp(1.0f / rotationTime, 0.1f, 5.0f);
 
-							stickStartTime = -1.0f;
+							//stickStartTime = -1.0f;
 
-							for (i32 i = 0; i < 4; ++i)
-							{
-								if (i != currentQuadrant)
-								{
-									wasInQuadrantSinceIdle[i] = false;
-								}
-							}
+							//for (i32 i = 0; i < 4; ++i)
+							//{
+							//	if (i != currentQuadrant)
+							//	{
+							//		wasInQuadrantSinceIdle[i] = false;
+							//	}
+							//}
 						}
 					}
 				}
