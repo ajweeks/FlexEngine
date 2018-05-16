@@ -583,4 +583,32 @@ namespace flex
 		stbi_image_free(pixels);
 	}
 
+	RollingAverage::RollingAverage(i32 valueCount)
+	{
+		prevValues.resize(valueCount);
+	}
+
+	void RollingAverage::AddValue(real newValue)
+	{
+		prevValues[currentIndex++] = newValue;
+		currentIndex %= prevValues.size();
+
+		std::for_each(prevValues.begin(), prevValues.end(), [this](real value)
+		{
+			currentAverage += value;
+		});
+
+		currentAverage /= prevValues.size();
+	}
+
+	void RollingAverage::Reset()
+	{
+		for (real& v : prevValues)
+		{
+			v = 0.0f;
+		}
+		currentIndex = 0;
+		currentAverage = 0.0f;
+	}
+
 } // namespace flex

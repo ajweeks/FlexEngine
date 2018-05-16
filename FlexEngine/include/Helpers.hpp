@@ -32,7 +32,18 @@ namespace flex
 		real* pixels;
 	};
 
-	std::string FloatToString(real f, i32 precision);
+	struct RollingAverage
+	{
+		RollingAverage(i32 valueCount);
+
+		void AddValue(real newValue);
+		void Reset();
+
+		real currentAverage;
+		std::vector<real> prevValues;
+
+		i32 currentIndex = 0;
+	};
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec);
 
@@ -111,6 +122,8 @@ namespace flex
 	{
 		return glm::vec4(color.r, color.g, color.b, color.a);
 	}
+
+	std::string FloatToString(real f, i32 precision);
 
 	// TODO: Remove: unused
 	//void Vec2ToString(const glm::vec2& vec, std::ostream& stream);
