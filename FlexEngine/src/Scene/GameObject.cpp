@@ -153,34 +153,38 @@ namespace flex
 				//	rotatingCW = (joystickX < 0.0f);
 				//}
 
-				real currentAngle = atan2(joystickY, joystickX) + PI;
-				real previousAngle = atan2(pJoystickY, pJoystickX) + PI;
-				// Asymptote occurs on left
-				if (joystickX < 0.0f)
+				// Ignore previous values generated when stick was inside dead zone
+				if (previousQuadrant != -1)
 				{
-					if (pJoystickY < 0.0f && joystickY >= 0.0f)
+					real currentAngle = atan2(joystickY, joystickX) + PI;
+					real previousAngle = atan2(pJoystickY, pJoystickX) + PI;
+					// Asymptote occurs on left
+					if (joystickX < 0.0f)
 					{
-						// CCW
-						currentAngle -= TWO_PI;
+						if (pJoystickY < 0.0f && joystickY >= 0.0f)
+						{
+							// CCW
+							currentAngle -= TWO_PI;
+						}
+						else if (pJoystickY >= 0.0f && joystickY < 0.0f)
+						{
+							// CW
+							currentAngle += TWO_PI;
+						}
 					}
-					else if (pJoystickY >= 0.0f && joystickY < 0.0f)
-					{
-						// CW
-						currentAngle += TWO_PI;
-					}
+					real currentRotationSpeed = (currentAngle - previousAngle) / gameContext.deltaTime;
+
+					averageRotationSpeeds.AddValue(currentRotationSpeed);
+					stickRotationSpeed = (-averageRotationSpeeds.currentAverage) * 0.45f;
+					real maxStickSpeed = 6.0f;
+					stickRotationSpeed = glm::clamp(stickRotationSpeed, -maxStickSpeed, maxStickSpeed);
+
+					//Logger::LogInfo(std::to_string(currentAngle) + ", " + 
+					//				std::to_string(previousAngle) + 
+					//				" diff: " + std::to_string(currentAngle - previousAngle) + 
+					//				" cur: " + std::to_string(currentRotationSpeed) + 
+					//				" avg: " + std::to_string(stickRotationSpeed));
 				}
-				real currentRotationSpeed = (currentAngle - previousAngle) / gameContext.deltaTime;
-
-				averageRotationSpeeds.AddValue(currentRotationSpeed);
-				stickRotationSpeed = (-averageRotationSpeeds.currentAverage) * 0.45f;
-				real maxStickSpeed = 6.0f;
-				stickRotationSpeed = glm::clamp(stickRotationSpeed, -maxStickSpeed, maxStickSpeed);
-
-				//Logger::LogInfo(std::to_string(currentAngle) + ", " + 
-				//				std::to_string(previousAngle) + 
-				//				" diff: " + std::to_string(currentAngle - previousAngle) + 
-				//				" cur: " + std::to_string(currentRotationSpeed) + 
-				//				" avg: " + std::to_string(stickRotationSpeed));
 
 				if (joystickX > 0.0f)
 				{
@@ -265,7 +269,6 @@ namespace flex
 			rotation += (rotatingCW ? -rotationSpeed : rotationSpeed);
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
-			//real valveAngle = -atan2(joystickY, joystickX);
 			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, rotation, 0)));
 
 		} break;
