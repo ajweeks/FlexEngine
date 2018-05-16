@@ -99,24 +99,40 @@ namespace flex
 		} break;
 		case SerializableType::VALVE:
 		{
-			static float rotation = 0.0f;
+			//  0 | 1 
+			// - -1 --
+			//  3 | 2
+			static i32 stickStartingQuadrant = -1;
+			static real stickStartTime = -1.0f;
+			static bool wasInQuadrantSinceIdle[4];
 
-			static float pJoystickX = 0.0f;
-			static float pJoystickY = 0.0f;
+			static real rotation = 0.0f;
 
-			float joystickX = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X);
-			float joystickY = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y);
+			static real pJoystickX = 0.0f;
+			static real pJoystickY = 0.0f;
+
+			real joystickX = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X);
+			real joystickY = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y);
 
 			//Logger::LogInfo(std::to_string(pJoystickX) + " " + std::to_string(pJoystickY) + "\n" +
 			//				std::to_string(joystickX) + " " + std::to_string(joystickY));
 
+			static real stickRotationSpeed = 0.0f;
 
 			static bool rotatingCW = false;
 
-			float minimumExtensionLength = 0.35f;
-			float extensionLength = glm::length(glm::vec2(joystickX, joystickY));
+			static i32 previousQuadrant = -1;
+			i32 currentQuadrant = -1;
+
+			real minimumExtensionLength = 0.35f;
+			real extensionLength = glm::length(glm::vec2(joystickX, joystickY));
 			if (extensionLength > minimumExtensionLength)
 			{
+				if (stickStartTime == -1.0f)
+				{
+					stickStartTime = gameContext.elapsedTime;
+				}
+
 				if (pJoystickX < 0.0f && joystickX >= 0.0f)
 				{
 					rotatingCW = (joystickY < 0.0f);
@@ -134,16 +150,90 @@ namespace flex
 				{
 					rotatingCW = (joystickX < 0.0f);
 				}
+
+
+				if (joystickX > 0.0f)
+				{
+					currentQuadrant = (joystickY > 0.0f ? 2 : 1);
+				}
+				else
+				{
+					currentQuadrant = (joystickY > 0.0f ? 3 : 0);
+				}
+				wasInQuadrantSinceIdle[currentQuadrant] = true;
 			}
+			else
+			{
+				stickStartingQuadrant = -1;
+				stickStartTime = -1.0f;
+				stickRotationSpeed = 0.0f;
+				for (i32 i = 0; i < 4; ++i)
+				{
+					wasInQuadrantSinceIdle[i] = false;
+				}
+			}
+
+			if (previousQuadrant != currentQuadrant)
+			{
+				if (previousQuadrant == -1)
+				{
+					stickStartingQuadrant = currentQuadrant;
+				}
+				else
+				{
+					if (stickStartingQuadrant == currentQuadrant)
+					{
+						bool touchedAllQuadrants = true;
+						for (i32 i = 0; i < 4; ++i)
+						{
+							if (!wasInQuadrantSinceIdle[i])
+							{
+								touchedAllQuadrants = false;
+							}
+						}
+
+						if (touchedAllQuadrants)
+						{
+							bool wasCW = (previousQuadrant - currentQuadrant < 0);
+							if (previousQuadrant == 3 && currentQuadrant == 0)
+							{
+								wasCW = true;
+							}
+							else if (previousQuadrant == 0 && currentQuadrant == 3)
+							{
+								wasCW = false;
+							}
+							
+							Logger::LogInfo("Full loop (" + std::string(wasCW ? "CW" : "CCW") + ")");
+							rotatingCW = wasCW;
+
+							real rotationTime = gameContext.elapsedTime - stickStartTime;
+							stickRotationSpeed = glm::clamp(1.0f / rotationTime, 0.1f, 5.0f);
+
+							stickStartTime = -1.0f;
+
+							for (i32 i = 0; i < 4; ++i)
+							{
+								if (i != currentQuadrant)
+								{
+									wasInQuadrantSinceIdle[i] = false;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			previousQuadrant = currentQuadrant;
 
 			pJoystickX = joystickX;
 			pJoystickY = joystickY;
 
-			float rotationSpeed = 2.0f * gameContext.deltaTime * extensionLength;
+			real rotationSpeed = 2.0f * gameContext.deltaTime * stickRotationSpeed;
 			rotation += (rotatingCW ? -rotationSpeed : rotationSpeed);
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
-			//float valveAngle = -atan2(joystickY, joystickX);
+			//real valveAngle = -atan2(joystickY, joystickX);
 			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, rotation, 0)));
 
 		} break;
