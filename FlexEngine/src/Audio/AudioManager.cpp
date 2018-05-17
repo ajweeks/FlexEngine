@@ -26,9 +26,14 @@ namespace flex
 			return;
 		}
 
-		PrintAudioDevices(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
+		bool printAvailableAudioDeviceNames = false;
+		if (printAvailableAudioDeviceNames)
+		{
+			PrintAudioDevices(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
+		}
 
-		Logger::LogInfo(std::string("Chosen device: ") + alcGetString(s_Device, ALC_DEVICE_SPECIFIER));
+		const ALchar* deviceName = alcGetString(s_Device, ALC_DEVICE_SPECIFIER);
+		Logger::LogInfo("Chosen audio device name: \"" + std::string(deviceName) + "\"");
 
 		s_Context = alcCreateContext(s_Device, NULL);
 		alcMakeContextCurrent(s_Context);
@@ -272,7 +277,7 @@ namespace flex
 		while (device && *device != '\0' && 
 			   next && *next != '\0')
 		{
-			Logger::LogInfo('\t' + device);
+			Logger::LogInfo("\t\t" + std::string(device));
 			size_t len = strlen(device);
 			device += (len + 1);
 			next += (len + 2);
