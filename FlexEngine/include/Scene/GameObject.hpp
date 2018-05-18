@@ -110,6 +110,17 @@ namespace flex
 		*/
 		bool m_bTrigger = false;
 
+		/*
+		* True if this object can currently be interacted with (can be based on
+		* player proximity, among other things)
+		*/
+		bool m_bInteractable = false;
+
+		/*
+		* True if the player is currently interacting with this object
+		*/
+		bool m_bInteractingWithPlayer = false;
+
 		btCollisionShape* m_CollisionShape = nullptr;
 		RigidBody* m_RigidBody = nullptr;
 

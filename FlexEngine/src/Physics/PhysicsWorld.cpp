@@ -198,7 +198,7 @@ namespace flex
 						if (physWorld->m_CollisionPairs.find(pair) == physWorld->m_CollisionPairs.end())
 						{
 							trigger->OnOverlapBegin(other);
-							Logger::LogInfo("Trigger collision begin " + obAGameObject->GetName() + " : " + obBGameObject->GetName());
+							//Logger::LogInfo("Trigger collision begin " + obAGameObject->GetName() + " : " + obBGameObject->GetName());
 						}
 					}
 				}
@@ -227,8 +227,8 @@ namespace flex
 		{
 			GameObject* triggerGameObject = (GameObject*)pair.first->getUserPointer();
 			GameObject* otherGameObject = (GameObject*)pair.second->getUserPointer();
-			Logger::LogInfo("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
-			triggerGameObject->OnOverlapBegin(otherGameObject);
+			//Logger::LogInfo("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
+			triggerGameObject->OnOverlapEnd(otherGameObject);
 		}
 
 

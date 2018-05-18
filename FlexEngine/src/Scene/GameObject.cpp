@@ -2,6 +2,7 @@
 
 #pragma warning(push, 0)
 #include <LinearMath/btTransform.h>
+#include <LinearMath/btIDebugDraw.h>
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
@@ -86,6 +87,14 @@ namespace flex
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
+		if (m_bInteractable)
+		{
+			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
+			auto pos = Vec3ToBtVec3(m_Transform.GetGlobalPosition());
+			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
+			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
+		}
+
 		switch (m_SerializableType)
 		{
 		case SerializableType::OBJECT:
@@ -499,9 +508,19 @@ namespace flex
 
 	void GameObject::OnOverlapBegin(GameObject* other)
 	{
+		if (other->HasTag("Player0") ||
+			other->HasTag("Player1"))
+		{
+			m_bInteractable = true;
+		}
 	}
 
 	void GameObject::OnOverlapEnd(GameObject* other)
 	{
+		if (other->HasTag("Player0") ||
+			other->HasTag("Player1"))
+		{
+			m_bInteractable = false;
+		}
 	}
 } // namespace flex
