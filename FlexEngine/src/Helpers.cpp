@@ -514,40 +514,45 @@ namespace flex
 		return result;
 	}
 
-	std::string SerializableTypeToString(SerializableType type)
+	std::string GameObjectTypeToString(GameObjectType type)
 	{
 		switch (type)
 		{
-		case SerializableType::OBJECT:				return "object";
-		case SerializableType::SKYBOX:				return "skybox";
-		case SerializableType::REFLECTION_PROBE:	return "reflection probe";
-		case SerializableType::VALVE:				return "valve";
-		case SerializableType::NONE:				return "NONE";
-		default:									return "UNHANDLED SERIALIZABLE TYPE";
+		case GameObjectType::OBJECT:				return "object";
+		case GameObjectType::PLAYER:				return "player";
+		case GameObjectType::SKYBOX:				return "skybox";
+		case GameObjectType::REFLECTION_PROBE:		return "reflection probe";
+		case GameObjectType::VALVE:					return "valve";
+		case GameObjectType::NONE:					return "NONE";
+		default:									return "UNHANDLED GAME OBJECT TYPE";
 		}
 	}
 
-	SerializableType StringToSerializableType(const std::string& serializableTypeStr)
+	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr)
 	{
-		if (serializableTypeStr.compare("mesh") == 0)
+		if (gameObjectTypeStr.compare("mesh") == 0)
 		{
-			return SerializableType::OBJECT;
+			return GameObjectType::OBJECT;
 		}
-		else if (serializableTypeStr.compare("skybox") == 0)
+		if (gameObjectTypeStr.compare("player") == 0)
 		{
-			return SerializableType::SKYBOX;
+			return GameObjectType::PLAYER;
 		}
-		else if (serializableTypeStr.compare("reflection probe") == 0)
+		else if (gameObjectTypeStr.compare("skybox") == 0)
 		{
-			return SerializableType::REFLECTION_PROBE;
+			return GameObjectType::SKYBOX;
 		}
-		else if (serializableTypeStr.compare("valve") == 0)
+		else if (gameObjectTypeStr.compare("reflection probe") == 0)
 		{
-			return SerializableType::VALVE;
+			return GameObjectType::REFLECTION_PROBE;
+		}
+		else if (gameObjectTypeStr.compare("valve") == 0)
+		{
+			return GameObjectType::VALVE;
 		}
 		else
 		{
-			return SerializableType::NONE;
+			return GameObjectType::NONE;
 		}
 	}
 

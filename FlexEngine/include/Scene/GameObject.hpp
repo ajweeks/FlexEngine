@@ -12,7 +12,7 @@ namespace flex
 	class GameObject
 	{
 	public:
-		GameObject(const std::string& name, SerializableType serializableType);
+		GameObject(const std::string& name, GameObjectType type);
 		virtual ~GameObject();
 
 		virtual void Initialize(const GameContext& gameContext);
@@ -78,7 +78,7 @@ namespace flex
 		Transform m_Transform;
 		RenderID m_RenderID = InvalidRenderID;
 
-		SerializableType m_SerializableType = SerializableType::NONE;
+		GameObjectType m_Type = GameObjectType::NONE;
 
 		/*
 		* If true, this object will be written out to file

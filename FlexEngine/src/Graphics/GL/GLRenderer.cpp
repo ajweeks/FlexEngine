@@ -1081,7 +1081,7 @@ namespace flex
 				m_1x1_NDC_QuadTransform = Transform::Identity();
 
 
-				GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", SerializableType::NONE);
+				GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::NONE);
 				m_PersistentObjects.push_back(oneByOneQuadGameObject);
 				// Don't render this normally, we'll draw it manually
 				oneByOneQuadGameObject->SetVisible(false);
@@ -1521,7 +1521,7 @@ namespace flex
 			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
 
 
-			GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", SerializableType::NONE);
+			GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", GameObjectType::NONE);
 			m_PersistentObjects.push_back(spriteQuadGameObject);
 			spriteQuadGameObject->SetVisible(false);
 
@@ -2932,7 +2932,7 @@ namespace flex
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
 
-			GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", SerializableType::NONE);
+			GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", GameObjectType::NONE);
 			m_PersistentObjects.push_back(gBufferQuadGameObject);
 			// Don't render the g buffer normally, we'll handle it separately
 			gBufferQuadGameObject->SetVisible(false);

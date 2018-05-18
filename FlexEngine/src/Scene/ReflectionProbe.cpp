@@ -8,7 +8,7 @@
 namespace flex
 {
 	ReflectionProbe::ReflectionProbe(const std::string& name, bool startVisible, const glm::vec3& startPosition) :
-		GameObject(name, SerializableType::REFLECTION_PROBE),
+		GameObject(name, GameObjectType::REFLECTION_PROBE),
 		m_StartVisible(startVisible),
 		m_StartPosition(startPosition)
 	{
@@ -68,7 +68,7 @@ namespace flex
 		}
 
 		std::string captureName = m_Name + " capture";
-		m_Capture = new GameObject(captureName, SerializableType::NONE);
+		m_Capture = new GameObject(captureName, GameObjectType::NONE);
 		m_Capture->SetVisible(false);
 
 		RenderObjectCreateInfo captureObjectCreateInfo = {};

@@ -59,9 +59,10 @@ namespace flex
 	template<bool> struct StaticAssert;
 	template<> struct StaticAssert<true> {};
 
-	enum class SerializableType
+	enum class GameObjectType
 	{
 		OBJECT,
+		PLAYER,
 		SKYBOX,
 		REFLECTION_PROBE,
 		VALVE,
@@ -69,9 +70,10 @@ namespace flex
 	};
 
 	// TODO: Register these in a map with their respective enum values at runtime
-	//std::string SerializableTypeStrings[]
+	//std::string GameObjectTypeStrings[]
 	//{
 	//	"object",
+	//	"player",
 	//	"skybox",
 	//	"reflection probe",
 	//	"valve",

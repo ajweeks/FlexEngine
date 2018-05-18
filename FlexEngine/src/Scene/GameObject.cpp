@@ -17,9 +17,9 @@
 
 namespace flex
 {
-	GameObject::GameObject(const std::string& name, SerializableType serializableType) :
+	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
-		m_SerializableType(serializableType)
+		m_Type(type)
 	{
 		m_Transform.SetAsIdentity();
 		m_Transform.SetGameObject(this);
@@ -96,18 +96,18 @@ namespace flex
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}
 
-		switch (m_SerializableType)
+		switch (m_Type)
 		{
-		case SerializableType::OBJECT:
-		{
-		} break;
-		case SerializableType::SKYBOX:
+		case GameObjectType::OBJECT:
 		{
 		} break;
-		case SerializableType::REFLECTION_PROBE:
+		case GameObjectType::SKYBOX:
 		{
 		} break;
-		case SerializableType::VALVE:
+		case GameObjectType::REFLECTION_PROBE:
+		{
+		} break;
+		case GameObjectType::VALVE:
 		{
 			static RollingAverage averageRotationSpeeds(8);
 
@@ -292,7 +292,7 @@ namespace flex
 			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, rotation, 0)));
 
 		} break;
-		case SerializableType::NONE:
+		case GameObjectType::NONE:
 		default:
 		{
 		} break;

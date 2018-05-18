@@ -141,7 +141,7 @@ namespace flex
 			m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
 		}
 
-		m_Grid = new GameObject("Grid", SerializableType::NONE);
+		m_Grid = new GameObject("Grid", GameObjectType::NONE);
 		MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
 		gridMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::GRID);
 		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
@@ -158,7 +158,7 @@ namespace flex
 			m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
 		}
 
-		m_WorldOrigin = new GameObject("World origin", SerializableType::NONE);
+		m_WorldOrigin = new GameObject("World origin", GameObjectType::NONE);
 		MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
 		orignMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::WORLD_AXIS_GROUND);
 		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
@@ -196,7 +196,7 @@ namespace flex
 				rb->GetRigidBodyInternal()->setUserPointer(*iter);
 			}
 
-			if ((*iter)->m_SerializableType == SerializableType::VALVE)
+			if ((*iter)->m_Type == GameObjectType::VALVE)
 			{
 				rb->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
 				auto rbInternal = rb->GetRigidBodyInternal();
@@ -325,7 +325,7 @@ namespace flex
 		GameObject* newEntity = nullptr;
 
 		std::string entityTypeStr = obj.GetString("type");
-		SerializableType entityType = StringToSerializableType(entityTypeStr);
+		GameObjectType entityType = StringToGameObjectType(entityTypeStr);
 
 		std::string objectName = obj.GetString("name");
 
@@ -499,11 +499,11 @@ namespace flex
 
 		switch (entityType)
 		{
-		case SerializableType::OBJECT:
+		case GameObjectType::OBJECT:
 		{
 			// Nothing special to do
 		} break;
-		case SerializableType::SKYBOX:
+		case GameObjectType::SKYBOX:
 		{
 			if (matID == InvalidMaterialID)
 			{
@@ -532,7 +532,7 @@ namespace flex
 				}
 			}
 		} break;
-		case SerializableType::REFLECTION_PROBE:
+		case GameObjectType::REFLECTION_PROBE:
 		{
 			// Chrome ball material
 			MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
@@ -583,7 +583,7 @@ namespace flex
 			//}
 
 			std::string captureName = objectName + "_capture";
-			GameObject* captureObject = new GameObject(captureName, SerializableType::NONE);
+			GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
 			captureObject->SetVisible(false);
 
 			RenderObjectCreateInfo captureObjectCreateInfo = {};
@@ -599,7 +599,7 @@ namespace flex
 
 			gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
 		} break;
-		case SerializableType::VALVE:
+		case GameObjectType::VALVE:
 		{
 			MeshComponent* valveMesh = new MeshComponent(matID, newEntity);
 			valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
@@ -615,7 +615,7 @@ namespace flex
 			rigidBody->SetKinematic(false);
 			rigidBody->SetStatic(false);
 		} break;
-		case SerializableType::NONE:
+		case GameObjectType::NONE:
 		{
 			// Assume this object is an empty parent object which holds no data itself but a transform
 		} break;
@@ -860,7 +860,7 @@ namespace flex
 	{
 		if (!gameObject->IsSerializable())
 		{
-			Logger::LogError("Attempted to serialize non-serializable class");
+			Logger::LogError("Attempted to serialize non-serializable object");
 			return{};
 		}
 
@@ -868,7 +868,7 @@ namespace flex
 		std::string childName = gameObject->m_Name;
 
 		object.fields.push_back(JSONField("name", JSONValue(childName)));
-		object.fields.push_back(JSONField("type", JSONValue(SerializableTypeToString(gameObject->m_SerializableType))));
+		object.fields.push_back(JSONField("type", JSONValue(GameObjectTypeToString(gameObject->m_Type))));
 		object.fields.push_back(JSONField("visible", JSONValue(gameObject->IsVisible())));
 		// TODO: Only save/read this value when editor is included in build
 		if (!gameObject->IsVisibleInSceneExplorer())
@@ -1030,32 +1030,6 @@ namespace flex
 
 			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
 		}
-
-		//switch (gameObject->m_SerializableType)
-		//{
-		//case SerializableType::OBJECT:
-		//{
-		//	// Nothing special to do
-		//} break;
-		//case SerializableType::SKYBOX:
-		//{
-		//} break;
-		//case SerializableType::REFLECTION_PROBE:
-		//{
-		//	// TODO: Add probe-specific fields here like resolution and influence
-		//} break;
-		//case SerializableType::VALVE:
-		//{
-		//	// TODO: Add instance-specific values to save here (speed, color, isBroken, current state, ...)
-		//} break;
-		//case SerializableType::NONE:
-		//{
-		//} break;
-		//default:
-		//{
-		//	//Logger::LogError("Unhandled serializable type encountered in BaseScene::SerializeToFile");
-		//} break;
-		//}
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		if (!gameObjectChildren.empty())

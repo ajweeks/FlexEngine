@@ -29,6 +29,7 @@ namespace flex
 
 	void PlayerController::Update(const GameContext& gameContext)
 	{
+		// TODO: Make frame-rate-independent!
 		btVector3 up, right, forward;
 		m_Player->GetRigidBody()->GetUpRightForward(up, right, forward);
 

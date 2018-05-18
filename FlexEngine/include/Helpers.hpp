@@ -148,7 +148,7 @@ namespace flex
 
 	bool StartsWith(const std::string& str, const std::string& start);
 
-	std::string SerializableTypeToString(SerializableType type);
-	SerializableType StringToSerializableType(const std::string& serializableTypeStr);
+	std::string GameObjectTypeToString(GameObjectType type);
+	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr);
 
 } // namespace flex

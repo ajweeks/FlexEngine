@@ -16,7 +16,7 @@
 namespace flex
 {
 	Player::Player(i32 index) :
-		GameObject("Player" + std::to_string(index), SerializableType::NONE),
+		GameObject("Player" + std::to_string(index), GameObjectType::NONE),
 		m_Index(index)
 	{
 	}
