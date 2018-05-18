@@ -18,7 +18,7 @@
 		{
 			"name" : "pbr grey",
 			"shader" : "pbr",
-			"const albedo" : "0.230000, 0.250000, 0.290000",
+			"const albedo" : "0.145, 0.18, 0.23",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
 			"const ao" : 1.000000,

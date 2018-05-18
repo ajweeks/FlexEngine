@@ -605,7 +605,7 @@ namespace flex
 			valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
 			newEntity->SetMeshComponent(valveMesh);
 
-			btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
+			btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
 			btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
 
 			newEntity->SetCollisionShape(cylinderShape);
