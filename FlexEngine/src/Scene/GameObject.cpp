@@ -90,7 +90,16 @@ namespace flex
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
-		if (m_bInteractable)
+
+		if (m_bInteractingWithPlayer)
+		{
+			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
+			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
+			auto pos = Vec3ToBtVec3(m_Transform.GetGlobalPosition());
+			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
+			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
+		}
+		else if (m_bInteractable)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
@@ -132,6 +141,12 @@ namespace flex
 
 			real joystickX = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X);
 			real joystickY = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y);
+
+			if (!m_bInteractingWithPlayer)
+			{
+				joystickX = 0.0f;
+				joystickY = 0.0f;
+			}
 
 			//Logger::LogInfo(std::to_string(pJoystickX) + " " + std::to_string(pJoystickY) + "\n" +
 			//				std::to_string(joystickX) + " " + std::to_string(joystickY));
