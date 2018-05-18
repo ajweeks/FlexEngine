@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Physics/PhysicsHelpers.hpp"
+
 class btRigidBody;
 class btCollisionShape;
 class btMotionState;
@@ -37,6 +39,9 @@ namespace flex
 
 		btRigidBody* GetRigidBodyInternal();
 
+		void SetPhysicsFlags(u32 flags);
+		u32 GetPhysicsFlags();
+
 	private:
 		btRigidBody* m_RigidBody = nullptr;
 		btMotionState* m_MotionState = nullptr;
@@ -49,5 +54,8 @@ namespace flex
 
 		i32 m_Group = 0;
 		i32 m_Mask = 0;
+
+		// Flags set from PhysicsFlag enum
+		u32 m_Flags = 0;
 	};
 } // namespace flex

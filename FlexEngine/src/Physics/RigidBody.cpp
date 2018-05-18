@@ -165,6 +165,16 @@ namespace flex
 		return m_RigidBody;
 	}
 
+	void RigidBody::SetPhysicsFlags(u32 flags)
+	{
+		m_Flags = flags;
+	}
+
+	u32 RigidBody::GetPhysicsFlags()
+	{
+		return m_Flags;
+	}
+
 	//glm::vec3 RigidBody::GetPosition()
 	//{
 	//	btTransform transform;

@@ -18,4 +18,11 @@ namespace flex
 	std::string CollisionShapeTypeToString(int shapeType);
 	BroadphaseNativeTypes StringToCollisionShapeType(const std::string& str);
 
+	enum class PhysicsFlag : u32
+	{
+		TRIGGER = (1 << 0),
+
+		MAX_FLAG = (1 << 31)
+	};
+
 } // namespace flex

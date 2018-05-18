@@ -13,8 +13,12 @@
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Physics/PhysicsManager.hpp"
+#include "Physics/PhysicsHelpers.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Scene/GameObject.hpp"
 #include "GameContext.hpp"
 #include "Logger.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -32,6 +36,9 @@ namespace flex
 		{
 			m_World = gameContext.physicsManager->CreateWorld();
 			
+			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
+
+			//m_World->getPairCache()->setInternalGhostPairCallback()
 			//m_World->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawAabb);
 		}
 	}
@@ -149,4 +156,87 @@ namespace flex
 
 		return rayTo;
 	}
+
+	void PhysicsInternalTickCallback(btDynamicsWorld* world, btScalar timeStep)
+	{
+		PhysicsWorld* physWorld = static_cast<PhysicsWorld*>(world->getWorldUserInfo());
+
+		std::set<std::pair<const btCollisionObject*, const btCollisionObject*>> collisionPairsFoundThisStep;
+
+		int numManifolds = world->getDispatcher()->getNumManifolds();
+		for (i32 i = 0; i < numManifolds; ++i)
+		{
+			btPersistentManifold* contactManifold = world->getDispatcher()->getManifoldByIndexInternal(i);
+			const btCollisionObject* obA = contactManifold->getBody0();
+			const btCollisionObject* obB = contactManifold->getBody1();
+
+			GameObject* obAGameObject = (GameObject*)obA->getUserPointer();
+			GameObject* obBGameObject = (GameObject*)obB->getUserPointer();
+
+			i32 numContacts = contactManifold->getNumContacts();
+
+			if (numContacts > 0 && obAGameObject && obBGameObject)
+			{
+				u32 obAFlags = obAGameObject->GetRigidBody()->GetPhysicsFlags();
+				u32 obBFlags = obBGameObject->GetRigidBody()->GetPhysicsFlags();
+
+				i32 bObATrigger = (obAFlags & (u32)PhysicsFlag::TRIGGER);
+				i32 bObBTrigger = (obBFlags & (u32)PhysicsFlag::TRIGGER);
+				// If exactly one of the two objects is a trigger (not both)
+				if (bObATrigger ^ bObBTrigger)
+				{
+					const btCollisionObject* triggerCollisionObject = (bObATrigger ? obA : obB);
+					const btCollisionObject* otherCollisionObject = (bObATrigger ? obB: obA);
+					GameObject* trigger = (bObATrigger ? obAGameObject : obBGameObject);
+					GameObject* other = (bObATrigger ? obBGameObject : obAGameObject);
+
+					if (!other->IsStatic())
+					{
+						std::pair<const btCollisionObject*, const btCollisionObject*> pair(triggerCollisionObject, otherCollisionObject);
+						collisionPairsFoundThisStep.insert(pair);
+
+						if (physWorld->m_CollisionPairs.find(pair) == physWorld->m_CollisionPairs.end())
+						{
+							trigger->OnOverlapBegin(other);
+							Logger::LogInfo("Trigger collision begin " + obAGameObject->GetName() + " : " + obBGameObject->GetName());
+						}
+					}
+				}
+			}
+
+			//for (i32 j = 0; j < numContacts; ++j)
+			//{
+			//	btManifoldPoint& pt = contactManifold->getContactPoint(j);
+			//	if (pt.getDistance() < 0.0f)
+			//	{
+			//		const btVector3& ptA = pt.getPositionWorldOnA();
+			//		const btVector3& ptB = pt.getPositionWorldOnB();
+			//		const btVector3& normalOnB = pt.m_normalWorldOnB;
+			//		//Logger::LogInfo("contact: " + std::to_string(normalOnB.getX()) + ", " + 
+			//		//				std::to_string(normalOnB.getY()) + ", " + std::to_string(normalOnB.getZ()));
+			//	}
+			//}
+		}
+
+		std::set<std::pair<const btCollisionObject*, const btCollisionObject*>> differentPairs;
+		std::set_difference(physWorld->m_CollisionPairs.begin(), physWorld->m_CollisionPairs.end(),
+							collisionPairsFoundThisStep.begin(), collisionPairsFoundThisStep.end(),
+							std::inserter(differentPairs, differentPairs.begin()));
+
+		for (auto pair : differentPairs)
+		{
+			GameObject* triggerGameObject = (GameObject*)pair.first->getUserPointer();
+			GameObject* otherGameObject = (GameObject*)pair.second->getUserPointer();
+			Logger::LogInfo("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
+			triggerGameObject->OnOverlapBegin(otherGameObject);
+		}
+
+
+		physWorld->m_CollisionPairs.clear();
+		for (auto pair : collisionPairsFoundThisStep)
+		{
+			physWorld->m_CollisionPairs.insert(pair);
+		}
+	}
 } // namespace flex
+

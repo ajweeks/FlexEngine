@@ -496,4 +496,12 @@ namespace flex
 		m_MeshComponent = meshComponent;
 		return meshComponent;
 	}
+
+	void GameObject::OnOverlapBegin(GameObject* other)
+	{
+	}
+
+	void GameObject::OnOverlapEnd(GameObject* other)
+	{
+	}
 } // namespace flex

@@ -189,9 +189,22 @@ namespace flex
 		{
 			(*iter)->PostInitialize(gameContext);
 
+			RigidBody* rb = (*iter)->GetRigidBody();
+
+			if (rb)
+			{
+				rb->GetRigidBodyInternal()->setUserPointer(*iter);
+			}
+
 			if ((*iter)->m_SerializableType == SerializableType::VALVE)
 			{
-				(*iter)->GetRigidBody()->GetRigidBodyInternal()->setAngularFactor(btVector3(0, 1, 0));
+				rb->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
+				auto rbInternal = rb->GetRigidBodyInternal();
+				rbInternal->setAngularFactor(btVector3(0, 1, 0));
+				// Mark as trigger
+				rbInternal->setCollisionFlags(
+					rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
+				rbInternal->setGravity(btVector3(0, 0, 0));
 			}
 		}
 
@@ -601,7 +614,6 @@ namespace flex
 			rigidBody->SetMass(1.0f);
 			rigidBody->SetKinematic(false);
 			rigidBody->SetStatic(false);
-
 		} break;
 		case SerializableType::NONE:
 		{

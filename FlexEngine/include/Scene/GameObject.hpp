@@ -59,6 +59,14 @@ namespace flex
 		MeshComponent* GetMeshComponent();
 		MeshComponent* SetMeshComponent(MeshComponent* meshComponent);
 
+		// Called if this object is a trigger and another object has begun to overlap
+		void OnOverlapBegin(GameObject* other);
+		// Called if this object is a trigger and another object is no longer overlapping
+		void OnOverlapEnd(GameObject* other);
+
+		// Filled if this object is a trigger
+		std::vector<GameObject*> overlappingObjects;
+
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
@@ -95,6 +103,12 @@ namespace flex
 		* If true, this object will be rendered to reflection probes
 		*/
 		bool m_bStatic = false;
+
+		/*
+		* If true this object will not physically interact with other game objects, and
+		* overlapping objects will cause OnOverlapBegin/End to be called
+		*/
+		bool m_bTrigger = false;
 
 		btCollisionShape* m_CollisionShape = nullptr;
 		RigidBody* m_RigidBody = nullptr;
