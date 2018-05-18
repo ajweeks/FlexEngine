@@ -16,7 +16,7 @@
 namespace flex
 {
 	Player::Player(i32 index) :
-		GameObject("Player" + std::to_string(index), GameObjectType::NONE),
+		GameObject("Player" + std::to_string(index), GameObjectType::PLAYER),
 		m_Index(index)
 	{
 	}
@@ -67,7 +67,35 @@ namespace flex
 
 	void Player::Update(const GameContext& gameContext)
 	{
-		m_Controller->Update(gameContext);
+		if (gameContext.inputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::X))
+		{
+			Player* p = (Player*)this;
+
+			std::vector<GameObject*> interactibleObjects;
+			gameContext.sceneManager->CurrentScene()->GetInteractibleObjects(interactibleObjects);
+
+			if (interactibleObjects.empty())
+			{
+				p->SetInteractingWith(nullptr);
+			}
+			else
+			{
+				GameObject* obj = interactibleObjects[0];
+				if (p->SetInteractingWith(obj))
+				{
+					obj->SetInteractingWithPlayer(true);
+				}
+				else
+				{
+					obj->SetInteractingWithPlayer(false);
+				}
+			}
+		}
+
+		if (!m_ObjectInteractingWith)
+		{
+			m_Controller->Update(gameContext);
+		}
 
 		GameObject::Update(gameContext);
 	}
@@ -86,5 +114,19 @@ namespace flex
 	i32 Player::GetIndex() const
 	{
 		return m_Index;
+	}
+
+	bool Player::SetInteractingWith(GameObject* gameObject)
+	{
+		if (m_ObjectInteractingWith == gameObject)
+		{
+			m_ObjectInteractingWith = nullptr;
+			return false;
+		}
+		else
+		{
+			m_ObjectInteractingWith = gameObject;
+			return true;
+		}
 	}
 } // namespace flex

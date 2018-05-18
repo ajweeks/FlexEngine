@@ -198,6 +198,7 @@ namespace flex
 						if (physWorld->m_CollisionPairs.find(pair) == physWorld->m_CollisionPairs.end())
 						{
 							trigger->OnOverlapBegin(other);
+							other->OnOverlapBegin(trigger);
 							//Logger::LogInfo("Trigger collision begin " + obAGameObject->GetName() + " : " + obBGameObject->GetName());
 						}
 					}
@@ -229,6 +230,7 @@ namespace flex
 			GameObject* otherGameObject = (GameObject*)pair.second->getUserPointer();
 			//Logger::LogInfo("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
 			triggerGameObject->OnOverlapEnd(otherGameObject);
+			otherGameObject->OnOverlapEnd(triggerGameObject);
 		}
 
 

@@ -37,6 +37,7 @@ namespace flex
 		void SerializeToFile(const GameContext& gameContext);
 
 		std::vector<GameObject*>& GetRootObjects();
+		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);
 
 		GameObject* AddChild(GameObject* gameObject);
 		void RemoveChild(GameObject* gameObject, bool deleteChild);

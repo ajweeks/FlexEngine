@@ -182,9 +182,6 @@ namespace flex
 
 	void BaseScene::PostInitialize(const GameContext& gameContext)
 	{
-		m_Player0->PostInitialize(gameContext);
-		m_Player1->PostInitialize(gameContext);
-
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
 			(*iter)->PostInitialize(gameContext);
@@ -241,9 +238,6 @@ namespace flex
 
 	void BaseScene::Update(const GameContext& gameContext)
 	{
-		m_Player0->Update(gameContext);
-		m_Player1->Update(gameContext);
-
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Update(gameContext.deltaTime);
@@ -1312,6 +1306,17 @@ namespace flex
 	std::vector<GameObject*>& BaseScene::GetRootObjects()
 	{
 		return m_Children;
+	}
+
+	void BaseScene::GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects)
+	{
+		for (auto child : m_Children)
+		{
+			if (child->m_bInteractable)
+			{
+				interactibleObjects.push_back(child);
+			}
+		}
 	}
 
 	std::string BaseScene::GetName() const

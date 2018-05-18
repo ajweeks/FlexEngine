@@ -10,10 +10,13 @@
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
-#include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Scene/SceneManager.hpp"
+#include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "GameContext.hpp"
+#include "Player.hpp"
 
 namespace flex
 {
@@ -100,6 +103,10 @@ namespace flex
 		{
 		case GameObjectType::OBJECT:
 		{
+		} break;
+		case GameObjectType::PLAYER:
+		{
+			// NOTE: Handled in Player class
 		} break;
 		case GameObjectType::SKYBOX:
 		{
@@ -509,19 +516,44 @@ namespace flex
 
 	void GameObject::OnOverlapBegin(GameObject* other)
 	{
-		if (other->HasTag("Player0") ||
-			other->HasTag("Player1"))
+		switch (m_Type)
 		{
-			m_bInteractable = true;
+		case GameObjectType::PLAYER:
+		{
+
+		} break;
+		default: // All non-player objects
+		{
+			if (other->HasTag("Player0") ||
+				other->HasTag("Player1"))
+			{
+				m_bInteractable = true;
+			}
+		} break;
 		}
 	}
 
 	void GameObject::OnOverlapEnd(GameObject* other)
 	{
-		if (other->HasTag("Player0") ||
-			other->HasTag("Player1"))
+		switch (m_Type)
 		{
-			m_bInteractable = false;
+		case GameObjectType::PLAYER:
+		{
+
+		} break;
+		default: // All non-player objects
+		{
+			if (other->HasTag("Player0") ||
+				other->HasTag("Player1"))
+			{
+				m_bInteractable = false;
+			}
+		} break;
 		}
+	}
+
+	void GameObject::SetInteractingWithPlayer(bool interactingWithPlayer)
+	{
+		m_bInteractingWithPlayer = interactingWithPlayer;
 	}
 } // namespace flex

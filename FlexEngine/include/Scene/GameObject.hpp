@@ -59,13 +59,15 @@ namespace flex
 		MeshComponent* GetMeshComponent();
 		MeshComponent* SetMeshComponent(MeshComponent* meshComponent);
 
-		// Called if this object is a trigger and another object has begun to overlap
+		// Called when another object has begun to overlap
 		void OnOverlapBegin(GameObject* other);
-		// Called if this object is a trigger and another object is no longer overlapping
+		// Called when another object is no longer overlapping
 		void OnOverlapEnd(GameObject* other);
 
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
+
+		void SetInteractingWithPlayer(bool interactingWithPlayer);
 
 	protected:
 		friend class BaseClass;
