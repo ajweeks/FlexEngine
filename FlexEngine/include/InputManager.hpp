@@ -229,6 +229,9 @@ namespace flex
 		bool GetKeyPressed(KeyCode keyCode) const;
 
 		bool IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button);
+		bool IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button);
+		bool IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button);
+
 		real GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis);
 
 		void CursorPosCallback(double x, double y);
@@ -268,7 +271,10 @@ namespace flex
 
 		// Bitfield used to store gamepad button states for each player
 		// (0 = up, 1 = down) (See GamepadButton enum)
-		i32 m_GamepadButtonStates[2];
+		u32 m_GamepadButtonStates[2];
+
+		u32 m_GamepadButtonsPressed[2];
+		u32 m_GamepadButtonsReleased[2];
 
 		// Stores the values of gamepad axes for each player
 		// In order: LEFT_STICK_X, LEFT_STICK_Y, RIGHT_STICK_X, RIGHT_STICK_Y, LEFT_TRIGGER, RIGHT_TRIGGER

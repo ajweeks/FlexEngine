@@ -86,15 +86,21 @@ namespace flex
 			m_GampadAxes[gamepadIndex][i] = axes[i];
 		}
 
-		// Only handle left & right sticks (last two axes are triggers, which don't have radial deadzones
+		// Only handle left & right sticks (last two axes are triggers, which don't have radial dead zones
 		HandleRadialDeadZone(&m_GampadAxes[gamepadIndex][0], &m_GampadAxes[gamepadIndex][1]);
 		HandleRadialDeadZone(&m_GampadAxes[gamepadIndex][2], &m_GampadAxes[gamepadIndex][3]);
+
+		u32 pStates = m_GamepadButtonStates[gamepadIndex];
 
 		m_GamepadButtonStates[gamepadIndex] = 0;
 		for (i32 i = 0; i < 15; ++i)
 		{
 			m_GamepadButtonStates[gamepadIndex] = m_GamepadButtonStates[gamepadIndex] | (buttons[i] << i);
 		}
+
+		u32 changedButtons = m_GamepadButtonStates[gamepadIndex] ^ pStates;
+		m_GamepadButtonsPressed[gamepadIndex] = changedButtons & m_GamepadButtonStates[gamepadIndex];
+		m_GamepadButtonsReleased[gamepadIndex] = changedButtons & (~m_GamepadButtonStates[gamepadIndex]);
 	}
 
 	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
@@ -146,6 +152,22 @@ namespace flex
 
 		bool down = m_GamepadButtonStates[gamepadIndex] & (1 << (i32)button);
 		return down;
+	}
+
+	bool InputManager::IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button)
+	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
+		bool pressed = m_GamepadButtonsPressed[gamepadIndex] & (1 << (i32)button);
+		return pressed;
+	}
+
+	bool InputManager::IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button)
+	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
+		bool released = m_GamepadButtonsReleased[gamepadIndex] & (1 << (i32)button);
+		return released;
 	}
 
 	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis)
@@ -349,5 +371,7 @@ namespace flex
 		}
 
 		m_GamepadButtonStates[gamepadIndex] = 0;
+		m_GamepadButtonsPressed[gamepadIndex] = 0;
+		m_GamepadButtonsReleased[gamepadIndex] = 0;
 	}
 } // namespace flex
