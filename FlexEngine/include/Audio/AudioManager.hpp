@@ -41,6 +41,8 @@ namespace flex
 		static void SetSourceLooping(AudioSourceID sourceID, bool looping);
 		static bool GetSourceLooping(AudioSourceID sourceID);
 
+		static bool IsSourcePlaying(AudioSourceID sourceID);
+
 	private:
 		static void DisplayALError(const std::string& str, ALenum error);
 

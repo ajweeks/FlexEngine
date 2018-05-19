@@ -1,10 +1,10 @@
-
 #include "stdafx.hpp"
 
 #include "Audio/AudioManager.hpp"
 
 #include "Logger.hpp"
 #include "Helpers.hpp"
+#include "..\..\include\Audio\AudioManager.hpp"
 
 namespace flex
 {
@@ -195,11 +195,14 @@ namespace flex
 
 		gain = glm::clamp(gain, 0.0f, 1.0f);
 
-		s_Sources[sourceID].gain = gain;
-		Logger::LogInfo("gain: " + std::to_string(gain));
-		alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
+		if (s_Sources[sourceID].gain != gain)
+		{
+			s_Sources[sourceID].gain = gain;
+			Logger::LogInfo("gain: " + std::to_string(gain));
+			alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
 
-		DisplayALError("SetSourceGain: ", alGetError());
+			DisplayALError("SetSourceGain: ", alGetError());
+		}
 	}
 
 	real AudioManager::GetSourceGain(AudioSourceID sourceID)
@@ -220,10 +223,13 @@ namespace flex
 	{
 		assert(sourceID < s_Sources.size());
 
-		s_Sources[sourceID].bLooping = looping;
-		alSourcei(s_Sources[sourceID].source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
+		if (s_Sources[sourceID].bLooping != looping)
+		{
+			s_Sources[sourceID].bLooping = looping;
+			alSourcei(s_Sources[sourceID].source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
 
-		DisplayALError("SetSourceLooping: ", alGetError());
+			DisplayALError("SetSourceLooping: ", alGetError());
+		}
 	}
 
 	bool AudioManager::GetSourceLooping(AudioSourceID sourceID)
@@ -233,6 +239,14 @@ namespace flex
 		return s_Sources[sourceID].bLooping;
 	}
 
+	bool AudioManager::IsSourcePlaying(AudioSourceID sourceID)
+	{
+		assert(sourceID < s_Sources.size());
+
+		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+		return (s_Sources[sourceID].state == AL_PLAYING);
+	}
+
 	void AudioManager::SetSourcePitch(AudioSourceID sourceID, real pitch)
 	{
 		assert(sourceID < s_Sources.size());
@@ -240,11 +254,14 @@ namespace flex
 		// openAL range (found in al.h)
 		pitch = glm::clamp(pitch, 0.5f, 2.0f);
 
-		s_Sources[sourceID].pitch = pitch;
-		Logger::LogInfo("pitch: " + std::to_string(pitch));
-		alSourcef(s_Sources[sourceID].source, AL_PITCH, pitch);
+		if (s_Sources[sourceID].pitch != pitch)
+		{
+			s_Sources[sourceID].pitch = pitch;
+			Logger::LogInfo("pitch: " + std::to_string(pitch));
+			alSourcef(s_Sources[sourceID].source, AL_PITCH, pitch);
 
-		DisplayALError("SetSourcePitch: ", alGetError());
+			DisplayALError("SetSourcePitch: ", alGetError());
+		}
 	}
 
 	real AudioManager::GetSourcePitch(AudioSourceID sourceID)

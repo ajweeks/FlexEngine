@@ -3,6 +3,8 @@
 #include "FlexEngine.hpp"
 
 #include <sstream>
+#include <stdlib.h> // srand, rand
+#include <time.h> // time
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -30,6 +32,9 @@ namespace flex
 
 	FlexEngine::FlexEngine()
 	{
+		// TODO: Add custom seeding for different random systems
+		std::srand(time(NULL));
+
 		RendererID preferredInitialRenderer = RendererID::GL;
 
 		m_RendererIndex = RendererID::_LAST_ELEMENT;

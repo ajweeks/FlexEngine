@@ -5,6 +5,7 @@
 #include "GameContext.hpp"
 #include "Transform.hpp"
 #include "Helpers.hpp"
+#include "Audio/RandomizedAudioSource.hpp"
 
 class btCollisionShape;
 
@@ -175,6 +176,7 @@ namespace flex
 		} m_RisingBlockMembers;
 
 		private:
+			static RandomizedAudioSource s_SqueakySounds;
 
 	};
 } // namespace flex

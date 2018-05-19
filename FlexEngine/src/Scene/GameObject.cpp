@@ -19,12 +19,19 @@
 
 namespace flex
 {
+	RandomizedAudioSource GameObject::s_SqueakySounds;
+
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
 		m_Type(type)
 	{
 		m_Transform.SetAsIdentity();
 		m_Transform.SetGameObject(this);
+
+		if (!s_SqueakySounds.IsInitialized())
+		{
+			s_SqueakySounds.Initialize(RESOURCE_LOCATION + "audio/squeak00.wav", 5);
+		}
 	}
 
 	GameObject::~GameObject()
@@ -270,7 +277,7 @@ namespace flex
 
 						if (touchedAllQuadrants)
 						{
-							Logger::LogInfo("Full loop (" + std::string(m_ValveMembers.rotatingCW ? "CW" : "CCW") + ")");
+							//Logger::LogInfo("Full loop (" + std::string(m_ValveMembers.rotatingCW ? "CW" : "CCW") + ")");
 
 							//real rotationTime = gameContext.elapsedTime - stickStartTime;
 							//stickRotationSpeed = glm::clamp(1.0f / rotationTime, 0.1f, 5.0f);
@@ -308,6 +315,29 @@ namespace flex
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, m_ValveMembers.rotation, 0)));
+
+			//Logger::LogInfo(std::to_string(rotationSpeed));
+
+			if (glm::abs(rotationSpeed) > 0.1f)
+			{
+				bool updatePitch = false;
+				if (!s_SqueakySounds.IsPlaying())
+				{
+					updatePitch = true;
+				}
+				
+				s_SqueakySounds.Play(false);
+
+				if (updatePitch)
+				{
+					s_SqueakySounds.SetPitch(glm::abs(rotationSpeed) * 4.0f + 0.5f);
+				}
+			}
+
+			else
+			{
+				//s_SqueakySounds.Stop();
+			}
 		} break;
 		case GameObjectType::RISING_BLOCK:
 		{
