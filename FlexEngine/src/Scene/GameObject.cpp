@@ -10,7 +10,6 @@
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
-#include "Helpers.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/GameObject.hpp"
@@ -34,6 +33,19 @@ namespace flex
 
 	void GameObject::Initialize(const GameContext& gameContext)
 	{
+		switch (m_Type)
+		{
+		case GameObjectType::VALVE:
+		{
+			m_ValveMembers.averageRotationSpeeds = RollingAverage(8);
+
+			for (i32 i = 0; i < 4; ++i)
+			{
+				m_ValveMembers.wasInQuadrantSinceIdle[i] = false;
+			}
+		} break;
+		}
+
 		if (m_RigidBody && m_CollisionShape)
 		{
 			btTransform startingTransform = TransformToBtTransform(m_Transform);
@@ -124,20 +136,6 @@ namespace flex
 		} break;
 		case GameObjectType::VALVE:
 		{
-			static RollingAverage averageRotationSpeeds(8);
-
-			//  0 | 1 
-			// - -1 --
-			//  3 | 2
-			static i32 stickStartingQuadrant = -1;
-			static real stickStartTime = -1.0f;
-			static bool wasInQuadrantSinceIdle[4];
-
-			static real rotation = 0.0f;
-
-			static real pJoystickX = 0.0f;
-			static real pJoystickY = 0.0f;
-			
 			real joystickX = 0.0f;
 			real joystickY = 0.0f;
 
@@ -151,21 +149,15 @@ namespace flex
 			//Logger::LogInfo(std::to_string(pJoystickX) + " " + std::to_string(pJoystickY) + "\n" +
 			//				std::to_string(joystickX) + " " + std::to_string(joystickY));
 
-			static real stickRotationSpeed = 0.0f;
-			static real pStickRotationSpeed = 0.0f;
-
-			static bool rotatingCW = false;
-
-			static i32 previousQuadrant = -1;
 			i32 currentQuadrant = -1;
 
 			real minimumExtensionLength = 0.35f;
 			real extensionLength = glm::length(glm::vec2(joystickX, joystickY));
 			if (extensionLength > minimumExtensionLength)
 			{
-				if (stickStartTime == -1.0f)
+				if (m_ValveMembers.stickStartTime == -1.0f)
 				{
-					stickStartTime = gameContext.elapsedTime;
+					m_ValveMembers.stickStartTime = gameContext.elapsedTime;
 				}
 
 				//if (pJoystickX < 0.0f && joystickX >= 0.0f)
@@ -187,19 +179,19 @@ namespace flex
 				//}
 
 				// Ignore previous values generated when stick was inside dead zone
-				if (previousQuadrant != -1)
+				if (m_ValveMembers.previousQuadrant != -1)
 				{
 					real currentAngle = atan2(joystickY, joystickX) + PI;
-					real previousAngle = atan2(pJoystickY, pJoystickX) + PI;
+					real previousAngle = atan2(m_ValveMembers.pJoystickY, m_ValveMembers.pJoystickX) + PI;
 					// Asymptote occurs on left
 					if (joystickX < 0.0f)
 					{
-						if (pJoystickY < 0.0f && joystickY >= 0.0f)
+						if (m_ValveMembers.pJoystickY < 0.0f && joystickY >= 0.0f)
 						{
 							// CCW
 							currentAngle -= TWO_PI;
 						}
-						else if (pJoystickY >= 0.0f && joystickY < 0.0f)
+						else if (m_ValveMembers.pJoystickY >= 0.0f && joystickY < 0.0f)
 						{
 							// CW
 							currentAngle += TWO_PI;
@@ -207,10 +199,10 @@ namespace flex
 					}
 					real currentRotationSpeed = (currentAngle - previousAngle) / gameContext.deltaTime;
 
-					averageRotationSpeeds.AddValue(currentRotationSpeed);
-					stickRotationSpeed = (-averageRotationSpeeds.currentAverage) * 0.45f;
+					m_ValveMembers.averageRotationSpeeds.AddValue(currentRotationSpeed);
+					m_ValveMembers.stickRotationSpeed = (-m_ValveMembers.averageRotationSpeeds.currentAverage) * 0.45f;
 					real maxStickSpeed = 6.0f;
-					stickRotationSpeed = glm::clamp(stickRotationSpeed, -maxStickSpeed, maxStickSpeed);
+					m_ValveMembers.stickRotationSpeed = glm::clamp(m_ValveMembers.stickRotationSpeed, -maxStickSpeed, maxStickSpeed);
 
 					//Logger::LogInfo(std::to_string(currentAngle) + ", " + 
 					//				std::to_string(previousAngle) + 
@@ -227,25 +219,25 @@ namespace flex
 				{
 					currentQuadrant = (joystickY > 0.0f ? 3 : 0);
 				}
-				wasInQuadrantSinceIdle[currentQuadrant] = true;
+				m_ValveMembers.wasInQuadrantSinceIdle[currentQuadrant] = true;
 			}
 			else
 			{
-				stickStartingQuadrant = -1;
-				stickStartTime = -1.0f;
-				stickRotationSpeed = 0.0f;
-				averageRotationSpeeds.Reset();
+				m_ValveMembers.stickStartingQuadrant = -1;
+				m_ValveMembers.stickStartTime = -1.0f;
+				m_ValveMembers.stickRotationSpeed = 0.0f;
+				m_ValveMembers.averageRotationSpeeds.Reset();
 				for (i32 i = 0; i < 4; ++i)
 				{
-					wasInQuadrantSinceIdle[i] = false;
+					m_ValveMembers.wasInQuadrantSinceIdle[i] = false;
 				}
 			}
 
-			if (previousQuadrant != currentQuadrant)
+			if (m_ValveMembers.previousQuadrant != currentQuadrant)
 			{
-				if (previousQuadrant == -1)
+				if (m_ValveMembers.previousQuadrant == -1)
 				{
-					stickStartingQuadrant = currentQuadrant;
+					m_ValveMembers.stickStartingQuadrant = currentQuadrant;
 				}
 				else
 				{
@@ -261,12 +253,12 @@ namespace flex
 
 					//rotatingCW = rotatingCW;
 
-					if (stickStartingQuadrant == currentQuadrant)
+					if (m_ValveMembers.stickStartingQuadrant == currentQuadrant)
 					{
 						bool touchedAllQuadrants = true;
 						for (i32 i = 0; i < 4; ++i)
 						{
-							if (!wasInQuadrantSinceIdle[i])
+							if (!m_ValveMembers.wasInQuadrantSinceIdle[i])
 							{
 								touchedAllQuadrants = false;
 							}
@@ -274,7 +266,7 @@ namespace flex
 
 						if (touchedAllQuadrants)
 						{
-							Logger::LogInfo("Full loop (" + std::string(rotatingCW ? "CW" : "CCW") + ")");
+							Logger::LogInfo("Full loop (" + std::string(m_ValveMembers.rotatingCW ? "CW" : "CCW") + ")");
 
 							//real rotationTime = gameContext.elapsedTime - stickStartTime;
 							//stickRotationSpeed = glm::clamp(1.0f / rotationTime, 0.1f, 5.0f);
@@ -293,25 +285,25 @@ namespace flex
 				}
 			}
 
-			if (stickRotationSpeed != 0.0f)
+			if (m_ValveMembers.stickRotationSpeed != 0.0f)
 			{
-				pStickRotationSpeed = stickRotationSpeed;
+				m_ValveMembers.pStickRotationSpeed = m_ValveMembers.stickRotationSpeed;
 			}
 			else
 			{
-				pStickRotationSpeed *= 0.8f;
+				m_ValveMembers.pStickRotationSpeed *= 0.8f;
 			}
 
-			previousQuadrant = currentQuadrant;
+			m_ValveMembers.previousQuadrant = currentQuadrant;
 
-			pJoystickX = joystickX;
-			pJoystickY = joystickY;
+			m_ValveMembers.pJoystickX = joystickX;
+			m_ValveMembers.pJoystickY = joystickY;
 
-			real rotationSpeed = 2.0f * gameContext.deltaTime * pStickRotationSpeed;
-			rotation += (rotatingCW ? -rotationSpeed : rotationSpeed);
+			real rotationSpeed = 2.0f * gameContext.deltaTime * m_ValveMembers.pStickRotationSpeed;
+			m_ValveMembers.rotation += (m_ValveMembers.rotatingCW ? -rotationSpeed : rotationSpeed);
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
-			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, rotation, 0)));
+			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, m_ValveMembers.rotation, 0)));
 
 		} break;
 		case GameObjectType::NONE:
@@ -542,6 +534,8 @@ namespace flex
 
 	void GameObject::OnOverlapBegin(GameObject* other)
 	{
+		overlappingObjects.push_back(other);
+
 		switch (m_Type)
 		{
 		case GameObjectType::PLAYER:
@@ -561,6 +555,18 @@ namespace flex
 
 	void GameObject::OnOverlapEnd(GameObject* other)
 	{
+		for (auto iter = overlappingObjects.begin(); iter != overlappingObjects.end(); /* */)
+		{
+			if (*iter == other)
+			{
+				iter = overlappingObjects.erase(iter);
+			}
+			else
+			{
+				++iter;
+			}
+		}
+
 		switch (m_Type)
 		{
 		case GameObjectType::PLAYER:

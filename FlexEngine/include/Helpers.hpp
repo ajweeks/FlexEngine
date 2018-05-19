@@ -34,6 +34,7 @@ namespace flex
 
 	struct RollingAverage
 	{
+		RollingAverage();
 		RollingAverage(i32 valueCount);
 
 		void AddValue(real newValue);

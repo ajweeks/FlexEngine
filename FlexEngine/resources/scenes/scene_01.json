@@ -187,37 +187,30 @@
 				"static" : false
 			}
 		},
-		{
-			"name" : "valve",
-			"type" : "valve",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "5.773954, 0.0, 5.995772",
-				"rotation" : "-0.000003, 0.001214, 0.000003",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			// "mesh" : 
-			// {
-			// 	"file" : "models/valve.gltf",
-			// 	"swapNormalYZ" : false,
-			// 	"flipNormalZ" : false,
-			// 	"flipU" : false,
-			// 	"flipV" : false
-			// },
-			"material index" : 2,
-			// "collider" : 
-			// {
-			// 	"shape" : "cylinder",
-			// 	"half extents" : "0.500000, 0.500000, 0.500000"
-			// },
-			// "rigid body" : 
-			// {
-			// 	"mass" : 1.000000,
-			// 	"kinematic" : true,
-			// 	"static" : false
-			// }
-		},
+    {
+      "name" : "valve 01",
+      "type" : "valve",
+      "visible" : true,
+      "transform" : 
+      {
+        "position" : "5.773954, 0.0, 5.995772",
+        "rotation" : "-0.000003, 0.001214, 0.000003",
+        "scale" : "1.000000, 1.000000, 1.000000"
+      },
+      "material index" : 2,
+    },
+    {
+      "name" : "valve 02",
+      "type" : "valve",
+      "visible" : true,
+      "transform" : 
+      {
+        "position" : "-4.0, 0.0, 2.0",
+        "rotation" : "-0.00000, 0.0, 0.0",
+        "scale" : "1.000000, 1.000000, 1.000000"
+      },
+      "material index" : 3,
+    },
 		{
 			"name" : "ground plane",
 			"type" : "object",

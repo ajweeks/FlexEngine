@@ -4,6 +4,7 @@
 
 #include "GameContext.hpp"
 #include "Transform.hpp"
+#include "Helpers.hpp"
 
 class btCollisionShape;
 
@@ -136,6 +137,31 @@ namespace flex
 		std::vector<GameObject*> m_Children;
 
 		MeshComponent* m_MeshComponent = nullptr;
+
+		// All fields which valves need to know about to do their thing
+		struct ValveMembers
+		{
+			RollingAverage averageRotationSpeeds;
+
+			//  0 | 1 
+			// - -1 --
+			//  3 | 2
+			i32 stickStartingQuadrant = -1;
+			real stickStartTime = -1.0f;
+			bool wasInQuadrantSinceIdle[4];
+
+			real rotation = 0.0f;
+
+			real pJoystickX = 0.0f;
+			real pJoystickY = 0.0f;
+
+			real stickRotationSpeed = 0.0f;
+			real pStickRotationSpeed = 0.0f;
+
+			bool rotatingCW = false;
+
+			i32 previousQuadrant = -1;
+		} m_ValveMembers;
 
 	};
 } // namespace flex

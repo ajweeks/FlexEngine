@@ -588,6 +588,11 @@ namespace flex
 		stbi_image_free(pixels);
 	}
 
+	RollingAverage::RollingAverage() :
+		RollingAverage(8)
+	{
+	}
+
 	RollingAverage::RollingAverage(i32 valueCount)
 	{
 		prevValues.resize(valueCount);

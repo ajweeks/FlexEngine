@@ -88,15 +88,24 @@ namespace flex
 				}
 				else
 				{
-					GameObject* obj = interactibleObjects[0];
-					GameObject* objInteractingWith = obj->GetObjectInteractingWith();
-					if (objInteractingWith == nullptr)
+					GameObject* interactibleObj = nullptr;
+					
+					for (GameObject* obj : interactibleObjects)
 					{
-						obj->SetInteractingWith(p);
-						p->SetInteractingWith(obj);
+						if (Contains(overlappingObjects, obj) != overlappingObjects.end())
+						{
+							interactibleObj = obj;
+						}
 					}
-					else
+
+					if (interactibleObj)
 					{
+						GameObject* objInteractingWith = interactibleObj->GetObjectInteractingWith();
+						if (objInteractingWith == nullptr)
+						{
+							interactibleObj->SetInteractingWith(p);
+							p->SetInteractingWith(interactibleObj);
+						}
 					}
 				}
 			}
