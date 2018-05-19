@@ -353,6 +353,17 @@ namespace flex
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
+				m_GameContext.inputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::RIGHT_BUMPER))
+			{
+				m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, 1, false);
+			}
+			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_MINUS) ||
+					 m_GameContext.inputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::LEFT_BUMPER))
+			{
+				m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, -1, false);
+			}
+
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
