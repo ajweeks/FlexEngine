@@ -193,7 +193,9 @@ namespace flex
 				rb->GetRigidBodyInternal()->setUserPointer(*iter);
 			}
 
-			if ((*iter)->m_Type == GameObjectType::VALVE)
+			switch ((*iter)->m_Type)
+			{
+			case GameObjectType::VALVE:
 			{
 				rb->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
 				auto rbInternal = rb->GetRigidBodyInternal();
@@ -202,6 +204,12 @@ namespace flex
 				rbInternal->setCollisionFlags(
 					rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
 				rbInternal->setGravity(btVector3(0, 0, 0));
+			} break;
+			case GameObjectType::RISING_BLOCK:
+			{
+				auto rbInternal = rb->GetRigidBodyInternal();
+				rbInternal->setGravity(btVector3(0, 0, 0));
+			} break;
 			}
 		}
 
@@ -608,6 +616,43 @@ namespace flex
 			rigidBody->SetMass(1.0f);
 			rigidBody->SetKinematic(false);
 			rigidBody->SetStatic(false);
+		} break;
+		case GameObjectType::RISING_BLOCK:
+		{
+			MeshComponent* cubeMesh = new MeshComponent(matID, newEntity);
+			cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
+			newEntity->SetMeshComponent(cubeMesh);
+
+			btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
+			btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+
+			newEntity->SetCollisionShape(boxShape);
+
+			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
+			rigidBody->SetMass(1.0f);
+			rigidBody->SetKinematic(true);
+			rigidBody->SetStatic(false);
+
+			JSONObject blockInfo = obj.GetObject("block info");
+			std::string valveName = blockInfo.GetString("valve name");
+			GameObject* valve;
+			for (GameObject* child : m_Children)
+			{
+				if (child->m_Name.compare(valveName) == 0)
+				{
+					newEntity->m_RisingBlockMembers.valve = child;
+					break;
+				}
+			}
+
+			if (!newEntity->m_RisingBlockMembers.valve)
+			{
+				Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
+			}
+
+			newEntity->m_RisingBlockMembers.maxHeight = blockInfo.GetFloat("max height");
+			newEntity->m_RisingBlockMembers.riseSpeed = blockInfo.GetFloat("rise speed");
+
 		} break;
 		case GameObjectType::NONE:
 		{
@@ -1024,6 +1069,22 @@ namespace flex
 
 			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
 		}
+
+		// Type-specific data
+		switch (gameObject->m_Type)
+		{
+		case GameObjectType::RISING_BLOCK:
+		{
+			std::vector<JSONField> fields;
+
+			fields.push_back(JSONField("valve name", JSONValue(gameObject->m_RisingBlockMembers.valve->GetName())));
+			fields.push_back(JSONField("max height", JSONValue(gameObject->m_RisingBlockMembers.maxHeight)));
+			fields.push_back(JSONField("rise speed", JSONValue(gameObject->m_RisingBlockMembers.riseSpeed)));
+
+			object.fields.push_back(JSONField("block info", JSONValue(fields)));
+		} break;
+		}
+
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		if (!gameObjectChildren.empty())

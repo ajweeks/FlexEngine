@@ -66,6 +66,7 @@ namespace flex
 		SKYBOX,
 		REFLECTION_PROBE,
 		VALVE,
+		RISING_BLOCK,
 		NONE
 	};
 

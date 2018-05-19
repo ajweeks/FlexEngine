@@ -114,8 +114,8 @@ namespace flex
 		bool m_bStatic = false;
 
 		/*
-		* If true this object will not physically interact with other game objects, and
-		* overlapping objects will cause OnOverlapBegin/End to be called
+		* If true this object will not collide with other game objects
+		* Overlapping objects will cause OnOverlapBegin/End to be called
 		*/
 		bool m_bTrigger = false;
 
@@ -138,6 +138,7 @@ namespace flex
 
 		MeshComponent* m_MeshComponent = nullptr;
 
+	public: // :grimacing:
 		// All fields which valves need to know about to do their thing
 		struct ValveMembers
 		{
@@ -162,6 +163,18 @@ namespace flex
 
 			i32 previousQuadrant = -1;
 		} m_ValveMembers;
+
+		struct RisingBlockMembers
+		{
+			GameObject* valve = nullptr;
+			real maxHeight = 1.0f;
+			real riseSpeed = 1.0f;
+
+			// Non-serialized fields
+			glm::vec3 startingPos;
+		} m_RisingBlockMembers;
+
+		private:
 
 	};
 } // namespace flex

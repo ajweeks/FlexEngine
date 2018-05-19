@@ -44,6 +44,10 @@ namespace flex
 				m_ValveMembers.wasInQuadrantSinceIdle[i] = false;
 			}
 		} break;
+		case GameObjectType::RISING_BLOCK:
+		{
+			m_RisingBlockMembers.startingPos = m_Transform.GetGlobalPosition();
+		} break;
 		}
 
 		if (m_RigidBody && m_CollisionShape)
@@ -304,7 +308,24 @@ namespace flex
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, m_ValveMembers.rotation, 0)));
+		} break;
+		case GameObjectType::RISING_BLOCK:
+		{
+			real height = -m_RisingBlockMembers.valve->m_ValveMembers.rotation * 
+				m_RisingBlockMembers.riseSpeed *
+				m_RisingBlockMembers.maxHeight;
+			height = glm::clamp(height, 0.0f, m_RisingBlockMembers.maxHeight);
+			
 
+			m_RigidBody->GetRigidBodyInternal()->activate(true);
+			btTransform transform;
+			m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
+			//transform.setRotation(QuaternionToBtQuaternion(glm::quat(glm::vec3(0, 0, 0))));
+			transform.setOrigin(Vec3ToBtVec3(glm::vec3(
+				m_RisingBlockMembers.startingPos.x, 
+				m_RisingBlockMembers.startingPos.y + height, 
+				m_RisingBlockMembers.startingPos.z)));
+			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
 		} break;
 		case GameObjectType::NONE:
 		default:

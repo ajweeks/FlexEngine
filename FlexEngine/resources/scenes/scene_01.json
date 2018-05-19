@@ -211,6 +211,42 @@
       },
       "material index" : 3,
     },
+    {
+      "name" : "rising block 01",
+      "type" : "rising block",
+      "block info" :
+      {
+        "valve name" : "valve 01",
+        "rise speed" : 0.2,
+        "max height" : 5.0
+      },
+      "visible" : true,
+      "transform" : 
+      {
+        "position" : "-6.0, 2.0, 8.0",
+        "rotation" : "-0.00000, 0.0, 0.0",
+        "scale" : "1.000000, 1.000000, 1.000000"
+      },
+      "material index" : 1,
+    },
+    {
+      "name" : "rising block 02",
+      "type" : "rising block",
+      "block info" :
+      {
+        "valve name" : "valve 02",
+        "rise speed" : 0.1,
+        "max height" : 3.0
+      },
+      "visible" : true,
+      "transform" : 
+      {
+        "position" : "6.0, 2.0, -4.0",
+        "rotation" : "-0.00000, 0.0, 0.0",
+        "scale" : "1.000000, 1.000000, 1.000000"
+      },
+      "material index" : 0,
+    },
 		{
 			"name" : "ground plane",
 			"type" : "object",
