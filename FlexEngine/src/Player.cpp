@@ -71,23 +71,33 @@ namespace flex
 		{
 			Player* p = (Player*)this;
 
-			std::vector<GameObject*> interactibleObjects;
-			gameContext.sceneManager->CurrentScene()->GetInteractibleObjects(interactibleObjects);
-
-			if (interactibleObjects.empty())
+			if (p->m_ObjectInteractingWith)
 			{
+				// Toggle interaction when already interacting
+				p->m_ObjectInteractingWith->SetInteractingWith(nullptr);
 				p->SetInteractingWith(nullptr);
 			}
 			else
 			{
-				GameObject* obj = interactibleObjects[0];
-				if (p->SetInteractingWith(obj))
+				std::vector<GameObject*> interactibleObjects;
+				gameContext.sceneManager->CurrentScene()->GetInteractibleObjects(interactibleObjects);
+
+				if (interactibleObjects.empty())
 				{
-					obj->SetInteractingWithPlayer(true);
+					p->SetInteractingWith(nullptr);
 				}
 				else
 				{
-					obj->SetInteractingWithPlayer(false);
+					GameObject* obj = interactibleObjects[0];
+					GameObject* objInteractingWith = obj->GetObjectInteractingWith();
+					if (objInteractingWith == nullptr)
+					{
+						obj->SetInteractingWith(p);
+						p->SetInteractingWith(obj);
+					}
+					else
+					{
+					}
 				}
 			}
 		}
@@ -114,19 +124,5 @@ namespace flex
 	i32 Player::GetIndex() const
 	{
 		return m_Index;
-	}
-
-	bool Player::SetInteractingWith(GameObject* gameObject)
-	{
-		if (m_ObjectInteractingWith == gameObject)
-		{
-			m_ObjectInteractingWith = nullptr;
-			return false;
-		}
-		else
-		{
-			m_ObjectInteractingWith = gameObject;
-			return true;
-		}
 	}
 } // namespace flex

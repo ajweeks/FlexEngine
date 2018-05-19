@@ -67,7 +67,13 @@ namespace flex
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
-		void SetInteractingWithPlayer(bool interactingWithPlayer);
+		/*
+		* Returns true if we are now interacting, or false
+		* if the object passed in is null or equals our already set interacting object
+		*/
+		bool SetInteractingWith(GameObject* gameObject);
+
+		GameObject* GetObjectInteractingWith();
 
 	protected:
 		friend class BaseClass;
@@ -119,9 +125,9 @@ namespace flex
 		bool m_bInteractable = false;
 
 		/*
-		* True if the player is currently interacting with this object
+		* Will point at the player we're interacting with, or the object if we're the player
 		*/
-		bool m_bInteractingWithPlayer = false;
+		GameObject* m_ObjectInteractingWith = nullptr;
 
 		btCollisionShape* m_CollisionShape = nullptr;
 		RigidBody* m_RigidBody = nullptr;

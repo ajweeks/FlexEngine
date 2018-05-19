@@ -90,8 +90,7 @@ namespace flex
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
-
-		if (m_bInteractingWithPlayer)
+		if (m_ObjectInteractingWith)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
@@ -138,14 +137,15 @@ namespace flex
 
 			static real pJoystickX = 0.0f;
 			static real pJoystickY = 0.0f;
+			
+			real joystickX = 0.0f;
+			real joystickY = 0.0f;
 
-			real joystickX = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X);
-			real joystickY = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y);
-
-			if (!m_bInteractingWithPlayer)
+			if (m_ObjectInteractingWith)
 			{
-				joystickX = 0.0f;
-				joystickY = 0.0f;
+				i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
+				joystickX = gameContext.inputManager->GetGamepadAxisValue(playerIndex, InputManager::GamepadAxis::RIGHT_STICK_X);
+				joystickY = gameContext.inputManager->GetGamepadAxisValue(playerIndex, InputManager::GamepadAxis::RIGHT_STICK_Y);
 			}
 
 			//Logger::LogInfo(std::to_string(pJoystickX) + " " + std::to_string(pJoystickY) + "\n" +
@@ -329,6 +329,17 @@ namespace flex
 		{
 			(*iter)->Update(gameContext);
 		}
+	}
+
+	bool GameObject::SetInteractingWith(GameObject* gameObject)
+	{
+		m_ObjectInteractingWith = gameObject;
+		return true;
+	}
+
+	GameObject* GameObject::GetObjectInteractingWith()
+	{
+		return m_ObjectInteractingWith;
 	}
 
 	GameObject* GameObject::GetParent()
@@ -565,10 +576,5 @@ namespace flex
 			}
 		} break;
 		}
-	}
-
-	void GameObject::SetInteractingWithPlayer(bool interactingWithPlayer)
-	{
-		m_bInteractingWithPlayer = interactingWithPlayer;
 	}
 } // namespace flex

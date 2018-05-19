@@ -68,11 +68,12 @@ namespace flex
 					gameContext.deltaTime);
 
 		btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
-		debugDrawer->drawLine(pos, pos + btVector3(0, 1, 0) * 5.0f, btVector3(1, 1, 1));
+		//debugDrawer->drawLine(pos, pos + btVector3(0, 1, 0) * 5.0f, btVector3(1, 1, 1));
 
-		debugDrawer->drawLine(pos, pos + up * 10.0f, btVector3(0, 1, 0));
-		debugDrawer->drawLine(pos, pos + forward * 10.0f, btVector3(0, 0, 1));
-		debugDrawer->drawLine(pos, pos + right * 10.0f, btVector3(1, 0, 0));
+		const real lineLength = 4.0f;
+		debugDrawer->drawLine(pos, pos + up * lineLength, btVector3(0, 1, 0));
+		debugDrawer->drawLine(pos, pos + forward * lineLength, btVector3(0, 0, 1));
+		debugDrawer->drawLine(pos, pos + right * lineLength, btVector3(1, 0, 0));
 
 		btQuaternion orientation = rb->getOrientation();
 		glm::vec3 euler = glm::eulerAngles(BtQuaternionToQuaternion(orientation));
