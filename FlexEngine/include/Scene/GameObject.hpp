@@ -143,6 +143,12 @@ namespace flex
 		// All fields which valves need to know about to do their thing
 		struct ValveMembers
 		{
+			// Serialized fields
+			real minRotation;
+			real maxRotation;
+
+			// Non-serialized fields
+
 			RollingAverage averageRotationSpeeds;
 
 			//  0 | 1 
@@ -168,8 +174,6 @@ namespace flex
 		struct RisingBlockMembers
 		{
 			GameObject* valve = nullptr;
-			real maxDist = 1.0f;
-			real moveSpeed = 1.0f;
 			glm::vec3 moveAxis;
 
 			// Non-serialized fields
@@ -177,6 +181,7 @@ namespace flex
 		} m_RisingBlockMembers;
 
 		private:
+			static AudioSourceID s_BunkSound;
 			static RandomizedAudioSource s_SqueakySounds;
 
 	};

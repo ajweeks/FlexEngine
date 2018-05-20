@@ -603,6 +603,20 @@ namespace flex
 		} break;
 		case GameObjectType::VALVE:
 		{
+			JSONObject valveInfo = obj.GetObject("valve info");
+			glm::vec2 valveRange;
+			valveInfo.SetVec2Checked("range", valveRange);
+			newEntity->m_ValveMembers.minRotation = valveRange.x;
+			newEntity->m_ValveMembers.maxRotation = valveRange.y;
+			if (glm::abs(newEntity->m_ValveMembers.maxRotation - newEntity->m_ValveMembers.minRotation) == 0.0f)
+			{
+				Logger::LogWarning("Valve's rotation range is 0, it will not be able to rotate!");
+			}
+			if (newEntity->m_ValveMembers.minRotation > newEntity->m_ValveMembers.maxRotation)
+			{
+				Logger::LogWarning("Valve's minimum rotation range is greater than its maximum! Undefined behavior");
+			}
+
 			MeshComponent* valveMesh = new MeshComponent(matID, newEntity);
 			valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
 			newEntity->SetMeshComponent(valveMesh);
@@ -650,18 +664,8 @@ namespace flex
 				Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
 			}
 
-			newEntity->m_RisingBlockMembers.maxDist = blockInfo.GetFloat("max dist");
-			newEntity->m_RisingBlockMembers.moveSpeed = blockInfo.GetFloat("move speed");
 			blockInfo.SetVec3Checked("move axis", newEntity->m_RisingBlockMembers.moveAxis);
 
-			if (newEntity->m_RisingBlockMembers.maxDist == 0.0f)
-			{
-				Logger::LogWarning("Rising block's max dist is 0! It won't be able to move");
-			}
-			if (newEntity->m_RisingBlockMembers.moveSpeed == 0.0f)
-			{
-				Logger::LogWarning("Rising block's move speed is 0! It won't be able to move");
-			}
 			if (newEntity->m_RisingBlockMembers.moveAxis == glm::vec3(0.0f))
 			{
 				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
@@ -1086,16 +1090,24 @@ namespace flex
 		// Type-specific data
 		switch (gameObject->m_Type)
 		{
+		case GameObjectType::VALVE:
+		{
+			JSONObject blockInfo;
+
+			glm::vec2 valveRange(gameObject->m_ValveMembers.minRotation,
+								 gameObject->m_ValveMembers.maxRotation);
+			blockInfo.fields.push_back(JSONField("range", JSONValue(Vec2ToString(valveRange))));
+
+			object.fields.push_back(JSONField("valve info", JSONValue(blockInfo)));
+		} break;
 		case GameObjectType::RISING_BLOCK:
 		{
-			std::vector<JSONField> fields;
+			JSONObject blockInfo;
 
-			fields.push_back(JSONField("valve name", JSONValue(gameObject->m_RisingBlockMembers.valve->GetName())));
-			fields.push_back(JSONField("max dist", JSONValue(gameObject->m_RisingBlockMembers.maxDist)));
-			fields.push_back(JSONField("move speed", JSONValue(gameObject->m_RisingBlockMembers.moveSpeed)));
-			fields.push_back(JSONField("move axis", JSONValue(Vec3ToString(gameObject->m_RisingBlockMembers.moveAxis))));
+			blockInfo.fields.push_back(JSONField("valve name", JSONValue(gameObject->m_RisingBlockMembers.valve->GetName())));
+			blockInfo.fields.push_back(JSONField("move axis", JSONValue(Vec3ToString(gameObject->m_RisingBlockMembers.moveAxis))));
 
-			object.fields.push_back(JSONField("block info", JSONValue(fields)));
+			object.fields.push_back(JSONField("block info", JSONValue(blockInfo)));
 		} break;
 		}
 

@@ -10,6 +10,7 @@
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
+#include "Audio/AudioManager.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/GameObject.hpp"
@@ -20,6 +21,7 @@
 namespace flex
 {
 	RandomizedAudioSource GameObject::s_SqueakySounds;
+	AudioSourceID GameObject::s_BunkSound;
 
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
@@ -31,6 +33,8 @@ namespace flex
 		if (!s_SqueakySounds.IsInitialized())
 		{
 			s_SqueakySounds.Initialize(RESOURCE_LOCATION + "audio/squeak00.wav", 5);
+
+			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/bunk.wav");
 		}
 	}
 
@@ -296,13 +300,24 @@ namespace flex
 				}
 			}
 
-			if (m_ValveMembers.stickRotationSpeed != 0.0f)
+			if ((m_ValveMembers.stickRotationSpeed < 0.0f &&
+				m_ValveMembers.rotation <= m_ValveMembers.minRotation) ||
+				(m_ValveMembers.stickRotationSpeed > 0.0f &&
+				m_ValveMembers.rotation >= m_ValveMembers.maxRotation))
 			{
-				m_ValveMembers.pStickRotationSpeed = m_ValveMembers.stickRotationSpeed;
+				m_ValveMembers.stickRotationSpeed = 0.0f;
+				m_ValveMembers.pStickRotationSpeed = 0.0f;
 			}
 			else
 			{
-				m_ValveMembers.pStickRotationSpeed *= 0.8f;
+				if (m_ValveMembers.stickRotationSpeed != 0.0f)
+				{
+					m_ValveMembers.pStickRotationSpeed = m_ValveMembers.stickRotationSpeed;
+				}
+				else
+				{
+					m_ValveMembers.pStickRotationSpeed *= 0.8f;
+				}
 			}
 
 			m_ValveMembers.previousQuadrant = currentQuadrant;
@@ -312,6 +327,29 @@ namespace flex
 
 			real rotationSpeed = 2.0f * gameContext.deltaTime * m_ValveMembers.pStickRotationSpeed;
 			m_ValveMembers.rotation += (m_ValveMembers.rotatingCW ? -rotationSpeed : rotationSpeed);
+			real overshoot = 0.0f;
+			if (m_ValveMembers.rotation > m_ValveMembers.maxRotation)
+			{
+				overshoot = m_ValveMembers.rotation - m_ValveMembers.maxRotation;
+				m_ValveMembers.rotation = m_ValveMembers.maxRotation;
+			}
+			else if (m_ValveMembers.rotation < m_ValveMembers.minRotation)
+			{
+				overshoot = m_ValveMembers.minRotation - m_ValveMembers.rotation;
+				m_ValveMembers.rotation = m_ValveMembers.minRotation;
+			}
+			if (overshoot != 0.0f &&
+				glm::abs(m_ValveMembers.averageRotationSpeeds.currentAverage) > 0.01f)
+			{
+				real gain = glm::abs(overshoot) * 8.0f;
+				gain = glm::clamp(gain, 0.0f, 1.0f);
+				AudioManager::SetSourceGain(s_BunkSound, gain);
+				AudioManager::PlaySource(s_BunkSound, true);
+				Logger::LogInfo(std::to_string(overshoot) + ", " + std::to_string(gain));
+				m_ValveMembers.stickRotationSpeed = 0.0f;
+				m_ValveMembers.pStickRotationSpeed = 0.0f;
+				m_ValveMembers.averageRotationSpeeds.Reset();
+			}
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, m_ValveMembers.rotation, 0)));
@@ -336,10 +374,11 @@ namespace flex
 		} break;
 		case GameObjectType::RISING_BLOCK:
 		{
-			real distRisen = -m_RisingBlockMembers.valve->m_ValveMembers.rotation * 
-				m_RisingBlockMembers.moveSpeed *
-				m_RisingBlockMembers.maxDist;
-			distRisen = glm::clamp(distRisen, 0.0f, m_RisingBlockMembers.maxDist);
+			real minDist = m_RisingBlockMembers.valve->m_ValveMembers.minRotation;
+			real maxDist = m_RisingBlockMembers.valve->m_ValveMembers.maxRotation;
+			real totalDist = (maxDist - minDist);
+			real dist = m_RisingBlockMembers.valve->m_ValveMembers.rotation;
+			//dist = glm::clamp(dist, minDist, maxDist);
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			btTransform transform;
@@ -347,14 +386,26 @@ namespace flex
 			//transform.setRotation(QuaternionToBtQuaternion(glm::quat(glm::vec3(0, 0, 0))));
 			transform.setOrigin(Vec3ToBtVec3(
 				m_RisingBlockMembers.startingPos + 
-				distRisen * m_RisingBlockMembers.moveAxis));
+				dist * m_RisingBlockMembers.moveAxis));
 			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
 
-			btVector3 pos = Vec3ToBtVec3(m_RisingBlockMembers.startingPos);
+			btVector3 startPos = Vec3ToBtVec3(m_RisingBlockMembers.startingPos);
 			gameContext.renderer->GetDebugDrawer()->drawLine(
-				pos,
-				pos + Vec3ToBtVec3(m_RisingBlockMembers.moveAxis * m_RisingBlockMembers.maxDist),
+				startPos,
+				startPos + Vec3ToBtVec3(m_RisingBlockMembers.moveAxis * maxDist),
 				btVector3(1, 1, 1));
+			if (minDist < 0.0f)
+			{
+				gameContext.renderer->GetDebugDrawer()->drawLine(
+					startPos,
+					startPos + Vec3ToBtVec3(m_RisingBlockMembers.moveAxis * minDist),
+					btVector3(0.99f, 0.6f, 0.6f));
+			}
+
+			gameContext.renderer->GetDebugDrawer()->drawLine(
+				startPos,
+				startPos + Vec3ToBtVec3(m_RisingBlockMembers.moveAxis * dist),
+				btVector3(0.3f, 0.3f, 0.5f));
 		} break;
 		case GameObjectType::NONE:
 		default:
