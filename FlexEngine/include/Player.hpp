@@ -19,10 +19,14 @@ namespace flex
 
 		i32 GetIndex() const;
 
+		real GetHeight() const;
+
 	private:
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
 		real m_MoveFriction = 1.2f;
+
+		real m_Height = 4.0f;
 	};
 } // namespace flex

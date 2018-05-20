@@ -198,7 +198,7 @@ namespace flex
 		if (s_Sources[sourceID].gain != gain)
 		{
 			s_Sources[sourceID].gain = gain;
-			Logger::LogInfo("gain: " + std::to_string(gain));
+			//Logger::LogInfo("gain: " + std::to_string(gain));
 			alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
 
 			DisplayALError("SetSourceGain: ", alGetError());
@@ -257,7 +257,7 @@ namespace flex
 		if (s_Sources[sourceID].pitch != pitch)
 		{
 			s_Sources[sourceID].pitch = pitch;
-			Logger::LogInfo("pitch: " + std::to_string(pitch));
+			//Logger::LogInfo("pitch: " + std::to_string(pitch));
 			alSourcef(s_Sources[sourceID].source, AL_PITCH, pitch);
 
 			DisplayALError("SetSourcePitch: ", alGetError());

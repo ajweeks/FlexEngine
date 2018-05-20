@@ -2,14 +2,20 @@
 
 #include "PlayerController.hpp"
 
-#include "BulletDynamics/Dynamics/btRigidBody.h"
-#include "LinearMath/btIDebugDraw.h"
+#include <LinearMath/btIDebugDraw.h>
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
-#include "Scene/GameObject.hpp"
-#include "Physics/RigidBody.hpp"
+#include "GameContext.hpp"
 #include "InputManager.hpp"
-#include "Player.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
+#include "Physics/PhysicsWorld.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Player.hpp"
+#include "Scene/GameObject.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -25,6 +31,9 @@ namespace flex
 	{
 		m_Player = player;
 		m_PlayerIndex = m_Player->GetIndex();
+
+		assert(m_PlayerIndex == 0 ||
+			   m_PlayerIndex == 1);
 	}
 
 	void PlayerController::Update(const GameContext& gameContext)
@@ -50,22 +59,33 @@ namespace flex
 		btVector3 force(0.0f, 0.0f, 0.0f);
 		btVector3 torque(0.0f, 0.0f, 0.0f);
 
-		force += right * m_MoveSpeed *
+		// is-grounded check
+		{
+			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetGlobalPosition());
+			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.1f), 0);
+
+			//gameContext.renderer->GetDebugDrawer()->drawLine(rayStart, rayEnd, btVector3(0, 0, 1));
+
+			btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+			btDiscreteDynamicsWorld* physWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			// TODO: Do several raytests to allow jumping off an edge
+			physWorld->rayTest(rayStart, rayEnd, rayCallback);
+			m_bGrounded = rayCallback.hasHit();
+			if (m_bGrounded &&
+				gameContext.inputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::A))
+			{
+				force += up * m_JumpForce;
+			}
+		}
+
+		real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
+		force += right * m_MoveSpeed * inAirMovementMultiplier *
 			gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X) *
 			gameContext.deltaTime;
 
-		force += forward * m_MoveSpeed *
+		force += forward * m_MoveSpeed *inAirMovementMultiplier *
 			-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y) *
 			gameContext.deltaTime;
-
-		bool grounded = true;
-
-
-
-		if (gameContext.inputManager->IsGamepadButtonDown(m_PlayerIndex, InputManager::GamepadButton::A))
-		{
-			force += up * m_JumpForce;
-		}
 
 		torque.setY(m_RotateSpeed *
 					gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X) *
@@ -88,6 +108,17 @@ namespace flex
 		btVector3 angularVel = rb->getAngularVelocity();
 		angularVel.setY(angularVel.getY() * (1.0 - gameContext.deltaTime * m_RotateFriction));
 		rb->setAngularVelocity(angularVel);
+
+
+		bool bDrawVelocity = true;
+		if (bDrawVelocity)
+		{
+			real scale = 1.0f;
+			btVector3 start = Vec3ToBtVec3(m_Player->GetTransform()->GetGlobalPosition());
+			btVector3 end = start + m_Player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity() * scale;
+			gameContext.renderer->GetDebugDrawer()->drawLine(start, end, btVector3(0.1f, 0.85f, 0.98f));
+		}
+
 
 		//btTransform newTransform = rb->getWorldTransform();
 		//btQuaternion newRotation = newTransform.getRotation();

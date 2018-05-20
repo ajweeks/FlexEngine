@@ -4,7 +4,6 @@
 
 #pragma warning(push, 0)
 #include <LinearMath/btVector3.h>
-#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
@@ -76,7 +75,42 @@ namespace flex
 		return m_World;
 	}
 
-	bool PhysicsWorld::PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld)
+	btVector3 PhysicsWorld::GenerateRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y)
+	{
+		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+		btVector3 rayFrom = Vec3ToBtVec3(camera->GetPosition());
+		btVector3 rayForward = Vec3ToBtVec3(camera->GetForward());
+		float farPlane = camera->GetZFar();
+		rayForward *= farPlane;
+
+		btVector3 vertical = Vec3ToBtVec3(camera->GetUp());
+		btVector3 horizontal = Vec3ToBtVec3(camera->GetRight());
+
+		float fov = camera->GetFOV();
+		float tanfov = tanf(0.5f * fov);
+
+		horizontal *= 2.0f * farPlane * tanfov;
+		vertical *= 2.0f * farPlane * tanfov;
+
+		float frameBufferWidth = gameContext.window->GetFrameBufferSize().x;
+		float frameBufferHeight = gameContext.window->GetFrameBufferSize().y;
+
+		btScalar aspect = frameBufferWidth / frameBufferHeight;
+
+		horizontal *= aspect;
+
+		btVector3 rayToCenter = rayFrom + rayForward;
+		btVector3 dHor = horizontal * 1.0f / frameBufferWidth;
+		btVector3 dVert = vertical * 1.0f / frameBufferHeight;
+
+		btVector3 rayTo = rayToCenter + 0.5f * horizontal + 0.5f * vertical;
+		rayTo -= btScalar(x) * dHor;
+		rayTo -= btScalar(y) * dVert;
+
+		return rayTo;
+	}
+
+	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld)
 	{
 		btVector3 hitPos;
 		float pickingDist;
@@ -116,45 +150,10 @@ namespace flex
 			hitPos = pickPos;
 			pickingDist = (pickPos - rayFromWorld).length();
 
-			return true;
+			return pickedBody;
 		}
 
-		return false;
-	}
-
-	btVector3 PhysicsWorld::GenerateRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y)
-	{
-		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
-		btVector3 rayFrom = Vec3ToBtVec3(camera->GetPosition());
-		btVector3 rayForward = Vec3ToBtVec3(camera->GetForward());
-		float farPlane = camera->GetZFar();
-		rayForward *= farPlane;
-
-		btVector3 vertical = Vec3ToBtVec3(camera->GetUp());
-		btVector3 horizontal = Vec3ToBtVec3(camera->GetRight());
-
-		float fov = camera->GetFOV();
-		float tanfov = tanf(0.5f * fov);
-
-		horizontal *= 2.0f * farPlane * tanfov;
-		vertical *= 2.0f * farPlane * tanfov;
-
-		float frameBufferWidth = gameContext.window->GetFrameBufferSize().x;
-		float frameBufferHeight = gameContext.window->GetFrameBufferSize().y;
-
-		btScalar aspect = frameBufferWidth / frameBufferHeight;
-
-		horizontal *= aspect;
-
-		btVector3 rayToCenter = rayFrom + rayForward;
-		btVector3 dHor = horizontal * 1.0f / frameBufferWidth;
-		btVector3 dVert = vertical * 1.0f / frameBufferHeight;
-
-		btVector3 rayTo = rayToCenter + 0.5f * horizontal + 0.5f * vertical;
-		rayTo -= btScalar(x) * dHor;
-		rayTo -= btScalar(y) * dVert;
-
-		return rayTo;
+		return nullptr;
 	}
 
 	void PhysicsInternalTickCallback(btDynamicsWorld* world, btScalar timeStep)

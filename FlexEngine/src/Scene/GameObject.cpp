@@ -333,11 +333,6 @@ namespace flex
 					s_SqueakySounds.SetPitch(glm::abs(rotationSpeed) * 4.0f + 0.5f);
 				}
 			}
-
-			else
-			{
-				//s_SqueakySounds.Stop();
-			}
 		} break;
 		case GameObjectType::RISING_BLOCK:
 		{

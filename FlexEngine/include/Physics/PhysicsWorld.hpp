@@ -8,8 +8,11 @@
 #include <utility>
 #include <set>
 
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+
 class btDiscreteDynamicsWorld;
 class btDynamicsWorld;
+class btRigidBody;
 class btCollisionObject;
 
 namespace flex
@@ -29,8 +32,9 @@ namespace flex
 
 		btDiscreteDynamicsWorld* GetWorld();
 
-		btVector3 GenerateRayFromScreenPos(const GameContext& gameContext, int x, int y);
-		bool PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld);
+		btVector3 GenerateRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y);
+
+		btRigidBody* PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld);
 
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);

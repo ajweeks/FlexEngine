@@ -134,4 +134,9 @@ namespace flex
 	{
 		return m_Index;
 	}
+
+	real Player::GetHeight() const
+	{
+		return m_Height;
+	}
 } // namespace flex

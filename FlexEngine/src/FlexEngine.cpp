@@ -9,7 +9,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include "BulletDynamics/Dynamics/btDynamicsWorld.h"
+#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -336,7 +336,7 @@ namespace flex
 				btVector3 rayStart(cameraPos);
 				btVector3 rayEnd = physicsWorld->GenerateRayFromScreenPos(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
 
-				if (physicsWorld->PickBody(rayStart, rayEnd))
+				if (physicsWorld->PickBody(rayStart, rayEnd) != nullptr)
 				{
 					m_GameContext.inputManager->ClearMouseInput(m_GameContext);
 				}
