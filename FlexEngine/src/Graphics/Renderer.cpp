@@ -55,9 +55,9 @@ namespace flex
 
 		const bool local = (transformSpace == 0);
 
-		glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetGlobalPosition();
-		glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetGlobalRotation())));
-		glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetGlobalScale();
+		glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetWorldlPosition();
+		glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetWorldlRotation())));
+		glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetWorldlScale();
 
 		bool valueChanged = false;
 
@@ -75,9 +75,9 @@ namespace flex
 			}
 			else
 			{
-				transform->SetGlobalPosition(translation);
-				transform->SetGlobalRotation(glm::quat(glm::radians(rotation)));
-				transform->SetGlobalScale(scale);
+				transform->SetWorldlPosition(translation);
+				transform->SetWorldRotation(glm::quat(glm::radians(rotation)));
+				transform->SetWorldScale(scale);
 			}
 		}
 

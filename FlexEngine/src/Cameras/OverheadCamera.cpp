@@ -37,12 +37,12 @@ namespace flex
 
 	void OverheadCamera::Update(const GameContext& gameContext)
 	{
-		glm::vec3 dPlayerPos = player0->GetTransform()->GetGlobalPosition() -
-			player1->GetTransform()->GetGlobalPosition();
+		glm::vec3 dPlayerPos = player0->GetTransform()->GetWorldlPosition() -
+			player1->GetTransform()->GetWorldlPosition();
 		real dist = glm::length(dPlayerPos);
 
-		glm::vec3 targetSpot = (player0->GetTransform()->GetGlobalPosition() +
-								player1->GetTransform()->GetGlobalPosition()) / 2.0f;
+		glm::vec3 targetSpot = (player0->GetTransform()->GetWorldlPosition() +
+								player1->GetTransform()->GetWorldlPosition()) / 2.0f;
 
 		m_Forward = glm::normalize(targetSpot - m_Position);
 

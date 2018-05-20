@@ -82,7 +82,7 @@ namespace flex
 
 		AddChild(m_Capture);
 
-		m_Transform.SetGlobalPosition(m_StartPosition);
+		m_Transform.SetWorldlPosition(m_StartPosition);
 	}
 
 	void ReflectionProbe::PostInitialize(const GameContext& gameContext)

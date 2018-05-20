@@ -530,7 +530,7 @@ namespace flex
 				if (obj.SetVec3Checked("rotation", skyboxRotEuler))
 				{
 					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
-					newEntity->GetTransform()->SetGlobalRotation(skyboxRotation);
+					newEntity->GetTransform()->SetWorldRotation(skyboxRotation);
 				}
 			}
 		} break;

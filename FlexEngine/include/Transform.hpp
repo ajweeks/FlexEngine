@@ -30,26 +30,26 @@ namespace flex
 		void SetAsIdentity();
 
 		glm::vec3 GetLocalPosition() const;
-		glm::vec3 GetGlobalPosition() const;
+		glm::vec3 GetWorldlPosition() const;
 
 		glm::quat GetLocalRotation() const;
-		glm::quat GetGlobalRotation() const;
+		glm::quat GetWorldlRotation() const;
 
 		glm::vec3 GetLocalScale() const;
-		glm::vec3 GetGlobalScale() const;
+		glm::vec3 GetWorldlScale() const;
 
 		void SetLocalPosition(const glm::vec3& position);
-		void SetGlobalPosition(const glm::vec3& position);
+		void SetWorldlPosition(const glm::vec3& position);
 
 		void SetLocalRotation(const glm::quat& quatRotation);
-		void SetGlobalRotation(const glm::quat& quatRotation);
+		void SetWorldRotation(const glm::quat& quatRotation);
 		void SetLocalRotation(const glm::vec3& eulerAnglesRad);
-		void SetGlobalRotation(const glm::vec3& eulerAnglesRad);
+		void SetWorldRotation(const glm::vec3& eulerAnglesRad);
 		void SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad);
-		void SetGlobalRotation(real eulerXRad, real eulerYRad, real eulerZRad);
+		void SetWorldRotation(real eulerXRad, real eulerYRad, real eulerZRad);
 
 		void SetLocalScale(const glm::vec3& scale);
-		void SetGlobalScale(const glm::vec3& scale);
+		void SetWorldScale(const glm::vec3& scale);
 
 		void MatchRigidBody(RigidBody* rigidBody, bool forceUpdate = false);
 
@@ -81,9 +81,9 @@ namespace flex
 		glm::quat localRotation;
 		glm::vec3 localScale;
 
-		glm::vec3 globalPosition;
-		glm::quat globalRotation;
-		glm::vec3 globalScale;
+		glm::vec3 worldPosition;
+		glm::quat worldRotation;
+		glm::vec3 worldScale;
 
 		GameObject* m_GameObject = nullptr;
 

@@ -61,7 +61,7 @@ namespace flex
 
 		// is-grounded check
 		{
-			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetGlobalPosition());
+			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldlPosition());
 			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);
 
 			//gameContext.renderer->GetDebugDrawer()->drawLine(rayStart, rayEnd, btVector3(0, 0, 1));
@@ -114,7 +114,7 @@ namespace flex
 		if (bDrawVelocity)
 		{
 			real scale = 1.0f;
-			btVector3 start = Vec3ToBtVec3(m_Player->GetTransform()->GetGlobalPosition());
+			btVector3 start = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldlPosition());
 			btVector3 end = start + m_Player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity() * scale;
 			gameContext.renderer->GetDebugDrawer()->drawLine(start, end, btVector3(0.1f, 0.85f, 0.98f));
 		}

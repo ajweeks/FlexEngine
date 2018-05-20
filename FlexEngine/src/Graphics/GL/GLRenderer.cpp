@@ -2060,7 +2060,7 @@ namespace flex
 					CheckGLErrorMessages();
 					
 					// TODO: Test if this is actually correct
-					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetGlobalPosition();
+					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldlPosition();
 					for (size_t face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
