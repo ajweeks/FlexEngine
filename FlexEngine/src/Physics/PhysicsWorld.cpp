@@ -122,7 +122,7 @@ namespace flex
 		return false;
 	}
 
-	btVector3 PhysicsWorld::GetRayTo(const GameContext& gameContext, i32 x, i32 y)
+	btVector3 PhysicsWorld::GenerateRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y)
 	{
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
 		btVector3 rayFrom = Vec3ToBtVec3(camera->GetPosition());

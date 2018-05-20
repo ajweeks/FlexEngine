@@ -58,6 +58,10 @@ namespace flex
 			-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y) *
 			gameContext.deltaTime;
 
+		bool grounded = true;
+
+
+
 		if (gameContext.inputManager->IsGamepadButtonDown(m_PlayerIndex, InputManager::GamepadButton::A))
 		{
 			force += up * m_JumpForce;

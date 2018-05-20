@@ -334,7 +334,7 @@ namespace flex
 
 				btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
 				btVector3 rayStart(cameraPos);
-				btVector3 rayEnd = physicsWorld->GetRayTo(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
+				btVector3 rayEnd = physicsWorld->GenerateRayFromScreenPos(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
 
 				if (physicsWorld->PickBody(rayStart, rayEnd))
 				{
