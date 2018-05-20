@@ -62,7 +62,7 @@ namespace flex
 		// is-grounded check
 		{
 			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetGlobalPosition());
-			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.1f), 0);
+			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);
 
 			//gameContext.renderer->GetDebugDrawer()->drawLine(rayStart, rayEnd, btVector3(0, 0, 1));
 

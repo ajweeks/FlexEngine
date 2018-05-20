@@ -212,13 +212,14 @@
       "material index" : 3,
     },
     {
-      "name" : "rising block 01",
+      "name" : "moving block 01",
       "type" : "rising block",
       "block info" :
       {
         "valve name" : "valve 01",
-        "rise speed" : 0.2,
-        "max height" : 5.0
+        "move speed" : 0.1,
+        "max dist" : 5.0,
+        "move axis" : "0, 1, 0.5"
       },
       "visible" : true,
       "transform" : 
@@ -230,13 +231,14 @@
       "material index" : 1,
     },
     {
-      "name" : "rising block 02",
+      "name" : "moving block 02",
       "type" : "rising block",
       "block info" :
       {
         "valve name" : "valve 02",
-        "rise speed" : 0.1,
-        "max height" : 3.0
+        "move speed" : 0.3,
+        "max dist" : 8.0,
+        "move axis" : "1, 0, 0"
       },
       "visible" : true,
       "transform" : 

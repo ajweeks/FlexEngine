@@ -336,21 +336,25 @@ namespace flex
 		} break;
 		case GameObjectType::RISING_BLOCK:
 		{
-			real height = -m_RisingBlockMembers.valve->m_ValveMembers.rotation * 
-				m_RisingBlockMembers.riseSpeed *
-				m_RisingBlockMembers.maxHeight;
-			height = glm::clamp(height, 0.0f, m_RisingBlockMembers.maxHeight);
-			
+			real distRisen = -m_RisingBlockMembers.valve->m_ValveMembers.rotation * 
+				m_RisingBlockMembers.moveSpeed *
+				m_RisingBlockMembers.maxDist;
+			distRisen = glm::clamp(distRisen, 0.0f, m_RisingBlockMembers.maxDist);
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			btTransform transform;
 			m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
 			//transform.setRotation(QuaternionToBtQuaternion(glm::quat(glm::vec3(0, 0, 0))));
-			transform.setOrigin(Vec3ToBtVec3(glm::vec3(
-				m_RisingBlockMembers.startingPos.x, 
-				m_RisingBlockMembers.startingPos.y + height, 
-				m_RisingBlockMembers.startingPos.z)));
+			transform.setOrigin(Vec3ToBtVec3(
+				m_RisingBlockMembers.startingPos + 
+				distRisen * m_RisingBlockMembers.moveAxis));
 			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
+
+			btVector3 pos = Vec3ToBtVec3(m_RisingBlockMembers.startingPos);
+			gameContext.renderer->GetDebugDrawer()->drawLine(
+				pos,
+				pos + Vec3ToBtVec3(m_RisingBlockMembers.moveAxis * m_RisingBlockMembers.maxDist),
+				btVector3(1, 1, 1));
 		} break;
 		case GameObjectType::NONE:
 		default:

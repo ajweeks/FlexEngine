@@ -168,8 +168,9 @@ namespace flex
 		struct RisingBlockMembers
 		{
 			GameObject* valve = nullptr;
-			real maxHeight = 1.0f;
-			real riseSpeed = 1.0f;
+			real maxDist = 1.0f;
+			real moveSpeed = 1.0f;
+			glm::vec3 moveAxis;
 
 			// Non-serialized fields
 			glm::vec3 startingPos;

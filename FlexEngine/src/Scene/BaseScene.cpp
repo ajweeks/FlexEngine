@@ -650,9 +650,22 @@ namespace flex
 				Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
 			}
 
-			newEntity->m_RisingBlockMembers.maxHeight = blockInfo.GetFloat("max height");
-			newEntity->m_RisingBlockMembers.riseSpeed = blockInfo.GetFloat("rise speed");
+			newEntity->m_RisingBlockMembers.maxDist = blockInfo.GetFloat("max dist");
+			newEntity->m_RisingBlockMembers.moveSpeed = blockInfo.GetFloat("move speed");
+			blockInfo.SetVec3Checked("move axis", newEntity->m_RisingBlockMembers.moveAxis);
 
+			if (newEntity->m_RisingBlockMembers.maxDist == 0.0f)
+			{
+				Logger::LogWarning("Rising block's max dist is 0! It won't be able to move");
+			}
+			if (newEntity->m_RisingBlockMembers.moveSpeed == 0.0f)
+			{
+				Logger::LogWarning("Rising block's move speed is 0! It won't be able to move");
+			}
+			if (newEntity->m_RisingBlockMembers.moveAxis == glm::vec3(0.0f))
+			{
+				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
+			}
 		} break;
 		case GameObjectType::NONE:
 		{
@@ -1078,8 +1091,9 @@ namespace flex
 			std::vector<JSONField> fields;
 
 			fields.push_back(JSONField("valve name", JSONValue(gameObject->m_RisingBlockMembers.valve->GetName())));
-			fields.push_back(JSONField("max height", JSONValue(gameObject->m_RisingBlockMembers.maxHeight)));
-			fields.push_back(JSONField("rise speed", JSONValue(gameObject->m_RisingBlockMembers.riseSpeed)));
+			fields.push_back(JSONField("max dist", JSONValue(gameObject->m_RisingBlockMembers.maxDist)));
+			fields.push_back(JSONField("move speed", JSONValue(gameObject->m_RisingBlockMembers.moveSpeed)));
+			fields.push_back(JSONField("move axis", JSONValue(Vec3ToString(gameObject->m_RisingBlockMembers.moveAxis))));
 
 			object.fields.push_back(JSONField("block info", JSONValue(fields)));
 		} break;
