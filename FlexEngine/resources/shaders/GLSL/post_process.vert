@@ -4,10 +4,10 @@ uniform float verticalScale = 1; // Set to -1 to flip vertically
 
 in vec2 in_Position2D;
 in vec2 in_TexCoord;
-in vec3 in_Color;
+in vec4 in_Color;
 
 out vec2 ex_TexCoord;
-out vec3 ex_Color;
+out vec4 ex_Color;
 
 void main()
 {

@@ -101,8 +101,9 @@ namespace flex
 
 			void SwapBuffers(const GameContext& gameContext);
 
-			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically = false);
+			void DrawSprites(const GameContext& gameContext);
+			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
 			bool GetLoadedTexture(const std::string& filePath, u32& handle);
 
@@ -175,6 +176,8 @@ namespace flex
 			u32 m_OffscreenRBO = 0;
 
 			FrameBufferHandle m_LoadingTextureHandle;
+			FrameBufferHandle m_WorkTextureHandle;
+
 			// TODO: Use a mesh prefab here
 			VertexBufferData m_SpriteQuadVertexBufferData;
 			RenderID m_SpriteQuadRenderID;

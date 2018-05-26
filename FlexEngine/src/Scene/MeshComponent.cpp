@@ -1019,7 +1019,7 @@ namespace flex
 	void MeshComponent::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
 	{
 		m_MaterialID = materialID;
-		if (m_Initialized)
+		if (m_Initialized && m_OwningGameObject)
 		{
 			gameContext.renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
 		}

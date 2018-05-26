@@ -43,113 +43,6 @@ namespace flex
 			gameContext.renderer = this;
 
 			CheckGLErrorMessages();
-
-			m_BRDFTextureSize = { 512, 512 };
-			m_BRDFTextureHandle = {};
-			m_BRDFTextureHandle.internalFormat = GL_RG16F;
-			m_BRDFTextureHandle.format = GL_RG;
-			m_BRDFTextureHandle.type = GL_FLOAT;
-
-			m_OffscreenTextureHandle = {};
-			m_OffscreenTextureHandle.internalFormat = GL_RGBA16F;
-			m_OffscreenTextureHandle.format = GL_RGBA;
-			m_OffscreenTextureHandle.type = GL_FLOAT;
-
-			m_LoadingTextureHandle = {};
-			m_LoadingTextureHandle.internalFormat = GL_RGBA;
-			m_LoadingTextureHandle.format = GL_RGBA;
-			m_LoadingTextureHandle.type = GL_FLOAT;
-
-
-			m_gBuffer_PositionMetallicHandle = {};
-			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
-			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
-
-			m_gBuffer_NormalRoughnessHandle = {};
-			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
-			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
-
-			m_gBuffer_DiffuseAOHandle = {};
-			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
-			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
-			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
-
-			CheckGLErrorMessages();
-		}
-
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
-		{
-			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
-			if (!spriteRenderObject)
-			{
-				return;
-			}
-
-			spriteRenderObject->materialID = materialID;
-
-			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
-			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
-
-			glUseProgram(spriteShader.program);
-			CheckGLErrorMessages();
-
-			real verticalScale = flipVertically ? -1.0f : 1.0f;
-
-			if (spriteShader.shader.constantBufferUniforms.HasUniform("verticalScale"))
-			{
-				glUniform1f(spriteMaterial.uniformIDs.verticalScale, verticalScale);
-				CheckGLErrorMessages();
-			}
-			
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-			CheckGLErrorMessages();
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			CheckGLErrorMessages();
-
-			glBindVertexArray(spriteRenderObject->VAO);
-			CheckGLErrorMessages();
-			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
-			CheckGLErrorMessages();
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, textureHandle);
-			CheckGLErrorMessages();
-
-			// TODO: Use member
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			CheckGLErrorMessages();
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			CheckGLErrorMessages();
-
-			glDepthMask(GL_TRUE);
-
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
-
-			if (spriteRenderObject->enableCulling)
-			{
-				glEnable(GL_CULL_FACE);
-			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
-
-			glCullFace(spriteRenderObject->cullFace);
-			CheckGLErrorMessages();
-
-			glDepthFunc(spriteRenderObject->depthTestReadFunc);
-			CheckGLErrorMessages();
-
-			glDepthMask(spriteRenderObject->depthWriteEnable);
-			CheckGLErrorMessages();
-
-			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
-			CheckGLErrorMessages();
 		}
 
 		GLRenderer::~GLRenderer()
@@ -223,8 +116,6 @@ namespace flex
 
 		MaterialID GLRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			CheckGLErrorMessages();
 
 			MaterialID matID = GetNextAvailableMaterialID();
@@ -280,6 +171,7 @@ namespace flex
 				{ "hdrEquirectangularSampler",		&mat.uniformIDs.hdrEquirectangularSampler },
 				{ "enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
 				{ "verticalScale",					&mat.uniformIDs.verticalScale },
+				{ "transformMat",					&mat.uniformIDs.transformMat },
 			};
 
 			const u32 uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
@@ -1385,6 +1277,41 @@ namespace flex
 		{
 			CheckGLErrorMessages();
 
+			m_BRDFTextureSize = { 512, 512 };
+			m_BRDFTextureHandle = {};
+			m_BRDFTextureHandle.internalFormat = GL_RG16F;
+			m_BRDFTextureHandle.format = GL_RG;
+			m_BRDFTextureHandle.type = GL_FLOAT;
+
+			m_OffscreenTextureHandle = {};
+			m_OffscreenTextureHandle.internalFormat = GL_RGBA16F;
+			m_OffscreenTextureHandle.format = GL_RGBA;
+			m_OffscreenTextureHandle.type = GL_FLOAT;
+
+			m_LoadingTextureHandle = {};
+			m_LoadingTextureHandle.internalFormat = GL_RGBA;
+			m_LoadingTextureHandle.format = GL_RGBA;
+			m_LoadingTextureHandle.type = GL_FLOAT;
+
+
+			m_gBuffer_PositionMetallicHandle = {};
+			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
+			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
+			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
+
+			m_gBuffer_NormalRoughnessHandle = {};
+			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
+			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
+			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
+
+			m_gBuffer_DiffuseAOHandle = {};
+			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
+
+
+			CheckGLErrorMessages();
+
 			LoadShaders();
 
 			CheckGLErrorMessages();
@@ -1469,7 +1396,8 @@ namespace flex
 			};
 
 			// Sprite quad
-			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, true);
+			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
+			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
@@ -1535,6 +1463,8 @@ namespace flex
 			spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
 			spriteQuadCreateInfo.enableCulling = false;
 			spriteQuadCreateInfo.visibleInSceneExplorer = false;
+			spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			spriteQuadCreateInfo.depthWriteEnable = false;
 			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
 
 			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
@@ -1680,6 +1610,9 @@ namespace flex
 		{
 			CheckGLErrorMessages();
 
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			CheckGLErrorMessages();
+
 			DrawCallInfo drawCallInfo = {};
 
 			// TODO: Don't sort render objects frame! Only when things are added/removed
@@ -1695,6 +1628,8 @@ namespace flex
 			}
 
 			ImGuiRender();
+			
+			DrawSprites(gameContext);
 
 			SwapBuffers(gameContext);
 		}
@@ -1987,6 +1922,185 @@ namespace flex
 		void GLRenderer::DrawOffscreenTexture(const GameContext& gameContext)
 		{
 			DrawSpriteQuad(gameContext, m_OffscreenTextureHandle.id, m_PostProcessMatID, true);
+		}
+
+		void GLRenderer::DrawSprites(const GameContext& gameContext)
+		{
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID);
+		}
+
+		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
+		{
+			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
+			if (!spriteRenderObject)
+			{
+				return;
+			}
+
+			spriteRenderObject->materialID = materialID;
+
+			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
+			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
+
+			glUseProgram(spriteShader.program);
+			CheckGLErrorMessages();
+
+			//glEnable(GL_BLEND);
+			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			real verticalScale = flipVertically ? -1.0f : 1.0f;
+
+			if (spriteShader.shader.constantBufferUniforms.HasUniform("verticalScale"))
+			{
+				glUniform1f(spriteMaterial.uniformIDs.verticalScale, verticalScale);
+				CheckGLErrorMessages();
+			}
+
+			if (spriteShader.shader.constantBufferUniforms.HasUniform("transformMat"))
+			{
+				glm::mat3 transformMat(
+					0.5f, 0.0f, 0.0f,
+					0.0f, 0.5f, 0.0f,
+					0.0f, 0.0f, 0.5f);
+
+				glUniformMatrix3fv(spriteMaterial.uniformIDs.transformMat, 1, false, &transformMat[0][0]);
+				CheckGLErrorMessages();
+			}
+
+			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+			CheckGLErrorMessages();
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			CheckGLErrorMessages();
+
+			glBindVertexArray(spriteRenderObject->VAO);
+			CheckGLErrorMessages();
+			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
+			CheckGLErrorMessages();
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, textureHandle);
+			CheckGLErrorMessages();
+
+			// TODO: Use member
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			CheckGLErrorMessages();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			CheckGLErrorMessages();
+
+			glDepthMask(GL_TRUE);
+
+			//glClear(GL_DEPTH_BUFFER_BIT);
+			//CheckGLErrorMessages();
+
+			if (spriteRenderObject->enableCulling)
+			{
+				glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				glDisable(GL_CULL_FACE);
+			}
+
+			glCullFace(spriteRenderObject->cullFace);
+			CheckGLErrorMessages();
+
+			glDepthFunc(spriteRenderObject->depthTestReadFunc);
+			CheckGLErrorMessages();
+
+			glDepthMask(spriteRenderObject->depthWriteEnable);
+			CheckGLErrorMessages();
+
+			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
+			CheckGLErrorMessages();
+
+
+
+
+
+
+			//GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
+			//if (!spriteRenderObject)
+			//{
+			//	Logger::LogWarning("Attempted to draw sprite while sprite render object was invalid!");
+			//	return;
+			//}
+
+			//spriteRenderObject->materialID = materialID;
+
+			//GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
+			//GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
+
+			//glUseProgram(spriteShader.program);
+			//CheckGLErrorMessages();
+
+			//glEnable(GL_BLEND);
+			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			//real verticalScale = flipVertically ? -1.0f : 1.0f;
+
+			//if (spriteShader.shader.constantBufferUniforms.HasUniform("verticalScale"))
+			//{
+			//	glUniform1f(spriteMaterial.uniformIDs.verticalScale, verticalScale);
+			//	CheckGLErrorMessages();
+			//}
+
+			//if (spriteShader.shader.constantBufferUniforms.HasUniform("transformMat"))
+			//{
+			//	glm::mat3 transformMat(
+			//		0.5f, 0.0f, 0.0f,
+			//		0.0f, 0.5f, 0.0f,
+			//		0.0f, 0.0f, 0.5f);
+
+			//	glUniformMatrix3fv(spriteMaterial.uniformIDs.transformMat, 1, false, &transformMat[0][0]);
+			//	CheckGLErrorMessages();
+			//}
+
+			//glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			//glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+			//CheckGLErrorMessages();
+
+			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			//CheckGLErrorMessages();
+
+			//glBindVertexArray(spriteRenderObject->VAO);
+			//CheckGLErrorMessages();
+			//glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
+			//CheckGLErrorMessages();
+
+			//glActiveTexture(GL_TEXTURE0);
+			//glBindTexture(GL_TEXTURE_2D, textureHandle);
+			//CheckGLErrorMessages();
+
+			//// TODO: Use member
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			//CheckGLErrorMessages();
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			//CheckGLErrorMessages();
+
+			//glDepthMask(GL_TRUE);
+
+			//if (spriteRenderObject->enableCulling)
+			//{
+			//	glEnable(GL_CULL_FACE);
+			//}
+			//else
+			//{
+			//	glDisable(GL_CULL_FACE);
+			//}
+
+			//glCullFace(spriteRenderObject->cullFace);
+			//CheckGLErrorMessages();
+
+			//glDepthFunc(spriteRenderObject->depthTestReadFunc);
+			//CheckGLErrorMessages();
+
+			//glDepthMask(spriteRenderObject->depthWriteEnable);
+			//CheckGLErrorMessages();
+
+			//glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
+			//CheckGLErrorMessages();
 		}
 
 		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
@@ -2483,6 +2597,7 @@ namespace flex
 			// Sprite
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("transformMat");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;

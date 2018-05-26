@@ -67,6 +67,7 @@ namespace flex
 				i32 hdrEquirectangularSampler;
 				i32 enableIrradianceSampler;
 				i32 verticalScale;
+				i32 transformMat;
 			};
 			UniformIDs uniformIDs;
 
