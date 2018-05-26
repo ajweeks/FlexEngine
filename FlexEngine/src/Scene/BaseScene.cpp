@@ -1396,6 +1396,8 @@ namespace flex
 				return result;
 			}
 		}
+
+		return nullptr;
 	}
 
 	std::vector<GameObject*>& BaseScene::GetRootObjects()

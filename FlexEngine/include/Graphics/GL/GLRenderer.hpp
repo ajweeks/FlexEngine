@@ -101,7 +101,10 @@ namespace flex
 
 			void SwapBuffers(const GameContext& gameContext);
 
-			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically = false);
+			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, 
+								MaterialID materialID,
+								const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
+								AnchorPoint anchor);
 			void DrawSprites(const GameContext& gameContext);
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 

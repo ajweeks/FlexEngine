@@ -81,6 +81,21 @@ namespace flex
 	//	"NONE"
 	//};
 
+	// Screen-space anchors
+	enum class AnchorPoint
+	{
+		CENTER,
+		TOP_LEFT,
+		TOP,
+		TOP_RIGHT,
+		RIGHT,
+		BOTTOM_RIGHT,
+		BOTTOM,
+		BOTTOM_LEFT,
+		LEFT,
+		WHOLE // cover the whole screen
+	};
+
 #define STATIC_ASSERT(e) StaticAssert<(e)>{}
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))

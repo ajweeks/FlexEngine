@@ -170,7 +170,6 @@ namespace flex
 				{ "constAO",						&mat.uniformIDs.constAO },
 				{ "hdrEquirectangularSampler",		&mat.uniformIDs.hdrEquirectangularSampler },
 				{ "enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
-				{ "verticalScale",					&mat.uniformIDs.verticalScale },
 				{ "transformMat",					&mat.uniformIDs.transformMat },
 			};
 
@@ -1469,7 +1468,13 @@ namespace flex
 
 			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
 
-			DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID);
+			{
+				glm::vec3 pos(0.0f);
+				glm::quat rot = glm::quat();
+				glm::vec3 scale(1.0f);
+				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID,
+							   pos, rot, scale, AnchorPoint::WHOLE);
+			}
 			SwapBuffers(gameContext);
 
 			if (m_BRDFTextureHandle.id == 0)
@@ -1921,15 +1926,43 @@ namespace flex
 
 		void GLRenderer::DrawOffscreenTexture(const GameContext& gameContext)
 		{
-			DrawSpriteQuad(gameContext, m_OffscreenTextureHandle.id, m_PostProcessMatID, true);
+			glm::vec3 pos(0.0f);
+			glm::quat rot = glm::quat();
+			glm::vec3 scale(1.0f, -1.0f, 1.0f);
+			DrawSpriteQuad(gameContext, m_OffscreenTextureHandle.id, m_PostProcessMatID,
+						   pos, rot, scale, AnchorPoint::WHOLE);
 		}
 
 		void GLRenderer::DrawSprites(const GameContext& gameContext)
 		{
-			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID);
+			glm::vec3 pos(0.0f);
+			glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
+			glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
+			glm::vec3 scale(100.0f);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot, scale, AnchorPoint::BOTTOM);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot, scale, AnchorPoint::BOTTOM_LEFT);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot2, scale, AnchorPoint::LEFT);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot, scale, AnchorPoint::TOP_LEFT);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot2, scale, AnchorPoint::TOP);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot, scale, AnchorPoint::TOP_RIGHT);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot2, scale, AnchorPoint::RIGHT);
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+						   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER);
 		}
 
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, MaterialID materialID, bool flipVertically)
+		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle,
+										MaterialID materialID,
+										const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
+										AnchorPoint anchor)
 		{
 			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
 			if (!spriteRenderObject)
@@ -1948,22 +1981,71 @@ namespace flex
 			//glEnable(GL_BLEND);
 			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			real verticalScale = flipVertically ? -1.0f : 1.0f;
-
-			if (spriteShader.shader.constantBufferUniforms.HasUniform("verticalScale"))
-			{
-				glUniform1f(spriteMaterial.uniformIDs.verticalScale, verticalScale);
-				CheckGLErrorMessages();
-			}
-
 			if (spriteShader.shader.constantBufferUniforms.HasUniform("transformMat"))
 			{
-				glm::mat3 transformMat(
-					0.5f, 0.0f, 0.0f,
-					0.0f, 0.5f, 0.0f,
-					0.0f, 0.0f, 0.5f);
+				const glm::vec2i frameSize = gameContext.window->GetFrameBufferSize();
 
-				glUniformMatrix3fv(spriteMaterial.uniformIDs.transformMat, 1, false, &transformMat[0][0]);
+				glm::vec3 scale(1.0f);
+				
+				if (anchor != AnchorPoint::WHOLE)
+				{
+					scale = glm::vec3(1.0f / frameSize.x, 1.0f / frameSize.y, 1.0f);
+				}
+				////scale *= glm::min(frameSize.x * 2.0f, frameSize.y * 2.0f);
+				//scale *= 400.0f;
+				//const real minScale = 0.2f;
+				//const real maxScale = 0.5f;
+				//scale *= glm::vec3((sin(gameContext.elapsedTime * 0.4f) * 0.5f + 0.5f) * (maxScale - minScale) + minScale);
+				scale *= scaleOff;
+
+				glm::quat rotation = rotationOff;
+
+				glm::vec3 translation(0.0f);
+				switch (anchor)
+				{
+				case AnchorPoint::CENTER:
+					// Already centered (zero)
+					break;
+				case AnchorPoint::TOP_LEFT:
+					translation = glm::vec3(-1.0f + (scale.x), (1.0f - scale.y), 0.0f);
+					break;
+				case AnchorPoint::TOP:
+					translation = glm::vec3(0.0f, (1.0f - scale.y), 0.0f);
+					break;
+				case AnchorPoint::TOP_RIGHT:
+					translation = glm::vec3(1.0f - (scale.x), (1.0f - scale.y), 0.0f);
+					break;
+				case AnchorPoint::RIGHT:
+					translation = glm::vec3(1.0f - (scale.x), 0.0f, 0.0f);
+					break;
+				case AnchorPoint::BOTTOM_RIGHT:
+					translation = glm::vec3(1.0f - (scale.x), (-1.0f + scale.y), 0.0f);
+					break;
+				case AnchorPoint::BOTTOM:
+					translation = glm::vec3(0.0f, (-1.0f + scale.y), 0.0f);
+					break;
+				case AnchorPoint::BOTTOM_LEFT:
+					translation = glm::vec3(-1.0f + (scale.x), (-1.0f + scale.y), 0.0f);
+					break;
+				case AnchorPoint::LEFT:
+					translation = glm::vec3(-1.0f + (scale.x), 0.0f, 0.0f);
+					break;
+				case AnchorPoint::WHOLE:
+					// Already centered (zero)
+					break;
+				default:
+					break;
+				}
+
+				translation += posOff;
+
+				glm::mat4 matScale = glm::scale(glm::mat4(1.0f), scale);
+				glm::mat4 matRot = glm::mat4(rotation);
+				glm::mat4 matTrans = glm::translate(glm::mat4(1.0f), translation);
+				// What about SRT? :o
+				glm::mat4 transformMat = matTrans * matScale * matRot;
+				
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
 				CheckGLErrorMessages();
 			}
 
@@ -2014,93 +2096,6 @@ namespace flex
 
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
-
-
-
-
-
-
-			//GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
-			//if (!spriteRenderObject)
-			//{
-			//	Logger::LogWarning("Attempted to draw sprite while sprite render object was invalid!");
-			//	return;
-			//}
-
-			//spriteRenderObject->materialID = materialID;
-
-			//GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
-			//GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
-
-			//glUseProgram(spriteShader.program);
-			//CheckGLErrorMessages();
-
-			//glEnable(GL_BLEND);
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-			//real verticalScale = flipVertically ? -1.0f : 1.0f;
-
-			//if (spriteShader.shader.constantBufferUniforms.HasUniform("verticalScale"))
-			//{
-			//	glUniform1f(spriteMaterial.uniformIDs.verticalScale, verticalScale);
-			//	CheckGLErrorMessages();
-			//}
-
-			//if (spriteShader.shader.constantBufferUniforms.HasUniform("transformMat"))
-			//{
-			//	glm::mat3 transformMat(
-			//		0.5f, 0.0f, 0.0f,
-			//		0.0f, 0.5f, 0.0f,
-			//		0.0f, 0.0f, 0.5f);
-
-			//	glUniformMatrix3fv(spriteMaterial.uniformIDs.transformMat, 1, false, &transformMat[0][0]);
-			//	CheckGLErrorMessages();
-			//}
-
-			//glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			//glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-			//CheckGLErrorMessages();
-
-			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			//CheckGLErrorMessages();
-
-			//glBindVertexArray(spriteRenderObject->VAO);
-			//CheckGLErrorMessages();
-			//glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
-			//CheckGLErrorMessages();
-
-			//glActiveTexture(GL_TEXTURE0);
-			//glBindTexture(GL_TEXTURE_2D, textureHandle);
-			//CheckGLErrorMessages();
-
-			//// TODO: Use member
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			//CheckGLErrorMessages();
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			//CheckGLErrorMessages();
-
-			//glDepthMask(GL_TRUE);
-
-			//if (spriteRenderObject->enableCulling)
-			//{
-			//	glEnable(GL_CULL_FACE);
-			//}
-			//else
-			//{
-			//	glDisable(GL_CULL_FACE);
-			//}
-
-			//glCullFace(spriteRenderObject->cullFace);
-			//CheckGLErrorMessages();
-
-			//glDepthFunc(spriteRenderObject->depthTestReadFunc);
-			//CheckGLErrorMessages();
-
-			//glDepthMask(spriteRenderObject->depthWriteEnable);
-			//CheckGLErrorMessages();
-
-			//glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
-			//CheckGLErrorMessages();
 		}
 
 		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
@@ -2604,7 +2599,8 @@ namespace flex
 
 			// Post processing
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("verticalScale");
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("transformMat");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
