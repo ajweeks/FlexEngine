@@ -17,7 +17,7 @@ namespace flex
 	class BaseScene
 	{
 	public:
-		BaseScene(const std::string& name, const std::string& jsonFilePath);
+		BaseScene(const std::string& jsonFilePath);
 		virtual ~BaseScene();
 
 		virtual void Initialize(const GameContext& gameContext);
@@ -26,6 +26,7 @@ namespace flex
 		virtual void Update(const GameContext& gameContext);
 
 		std::string GetName() const;
+		std::string GetJSONFilePath() const;
 
 		PhysicsWorld* GetPhysicsWorld();
 

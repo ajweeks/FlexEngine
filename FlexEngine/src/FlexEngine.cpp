@@ -225,11 +225,14 @@ namespace flex
 
 	void FlexEngine::LoadDefaultScenes()
 	{
-		BaseScene* scene01 = new BaseScene("scene 01", RESOURCE_LOCATION + "scenes/scene_01.json");
+		BaseScene* scene01 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_01.json");
 		m_GameContext.sceneManager->AddScene(scene01, m_GameContext);
 
-		BaseScene* scene02 = new BaseScene("scene 02", RESOURCE_LOCATION + "scenes/scene_02.json");
+		BaseScene* scene02 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_02.json");
 		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
+
+		BaseScene* scene03 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_03.json");
+		m_GameContext.sceneManager->AddScene(scene03, m_GameContext);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const

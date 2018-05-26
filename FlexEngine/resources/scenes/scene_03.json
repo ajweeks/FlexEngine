@@ -1,10 +1,10 @@
 {
 	"version" : 1,
-	"name" : "scene_01",
+	"name" : "scene_03",
 	"materials" : 
 	[
 		{
-			"name" : "pbr",
+			"name" : "pbr grey",
 			"shader" : "pbr",
 			"const albedo" : "0.780000, 0.120000, 0.110000",
 			"const metallic" : 0.000000,
@@ -40,6 +40,18 @@
 			"enable ao sampler" : false
 		},
 		{
+			"name" : "pbr chrome",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.800000, 0.800000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
 			"name" : "Skybox",
 			"shader" : "skybox",
 			"const albedo" : "0.000000, 0.000000, 0.000000",
@@ -60,8 +72,8 @@
 	"entities" : 
 	[
 		{
-			"name" : "holder of things",
-			"type" : "NONE",
+			"name" : "Sponza",
+			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
@@ -69,115 +81,19 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"children" : 
-			[
-				{
-					"name" : "Sphere 01",
-					"type" : "mesh",
-					"visible" : true,
-					"transform" : 
-					{
-						"position" : "3.000000, 5.000000, 0.000000",
-						"rotation" : "0.000000, -0.000000, 0.000000",
-						"scale" : "1.000000, 2.000000, 1.000000"
-					},
-					"mesh" : 
-					{
-						"file" : "models/ico-sphere.gltf",
-						"swapNormalYZ" : false,
-						"flipNormalZ" : false,
-						"flipU" : false,
-						"flipV" : false
-					},
-					"material index" : 0
-				}
-			]
-		},
-		{
-			"name" : "Sphere 02",
-			"type" : "mesh",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "528.422485, -323490.281250, -39.259293",
-				"rotation" : "0.795718, -0.330279, -0.526470",
-				"scale" : "2.000000, 2.000000, 2.000000"
-			},
 			"mesh" : 
 			{
-				"file" : "models/ico-sphere.gltf",
+				"file" : "models/sponza/sponza.glb",
 				"swapNormalYZ" : false,
 				"flipNormalZ" : false,
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material index" : 0,
-			"collider" : 
-			{
-				"shape" : "sphere",
-				"radius" : 1.000000
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false
-			}
-		},
-		{
-			"name" : "mori knob",
-			"type" : "mesh",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "-2.000000, 0.000000, -4.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"mesh" : 
-			{
-				"file" : "models/mori-knob.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material index" : 1
-		},
-		{
-			"name" : "chamfer box",
-			"type" : "mesh",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "-6.772835, 0.400000, -2.502493",
-				"rotation" : "-0.604363, 0.000000, -1.570796",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"mesh" : 
-			{
-				"file" : "models/chamfer-box.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material index" : 2,
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500000, 0.500000, 0.500000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false
-			}
+			"material index" : 0
 		},
 		{
 			"name" : "ground plane",
-			"type" : "mesh",
+			"type" : "object",
 			"visible" : true,
 			"static" : true,
 			"transform" : 
@@ -211,24 +127,34 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
-			"rotation" : "0.000000, -0.000000, 0.000000",
-			"material index" : 3
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material index" : 4
 		},
 		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
-			"position" : "10.000000, 0.000000, 0.000000"
+			"transform" : 
+			{
+				"position" : "3.100000, 1.000000, 0.000000",
+				"rotation" : "0.036652, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			}
 		}
 	],
 	"point lights" : 
 	[
 		{
 			"name" : "Point light 01",
-			"position" : "9.100000, -3.100000, -43.500004",
-			"color" : "0.685328, 0.670172, 0.988630",
-			"enabled" : true,
-			"brightness" : 251.082016
+			"position" : "0.000000, 10.900001, 0.000000",
+			"color" : "0.926747, 0.926159, 0.892008",
+			"enabled" : false,
+			"brightness" : 793.388062
 		}
 	],
 	"directional light" : 
@@ -236,6 +162,6 @@
 		"direction" : "0.380000, 0.750000, -0.160000",
 		"color" : "1.000000, 1.000000, 1.000000",
 		"enabled" : true,
-		"brightness" : 10.000000
+		"brightness" : 2.355000
 	}
 }

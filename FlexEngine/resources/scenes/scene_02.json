@@ -43,13 +43,25 @@
 			"generate prefiltered map" : true,
 			"generated prefiltered map size" : "128.000000, 128.000000",
 			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
+		},
+		{
+			"name" : "pbr chrome",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.800000, 0.800000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
 		}
 	],
 	"entities" : 
 	[
 		{
 			"name" : "Street",
-			"type" : "mesh",
+			"type" : "object",
 			"visible" : true,
 			"static" : true,
 			"transform" : 
@@ -70,7 +82,7 @@
 		},
 		{
 			"name" : "ground plane",
-			"type" : "mesh",
+			"type" : "object",
 			"visible" : false,
 			"static" : true,
 			"transform" : 
@@ -104,9 +116,26 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
-			"rotation" : "0.000000, -0.000000, 0.000000",
+			"transform" : 
+			{
+				"position" : "0.000000, -0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
 			"material index" : 2
 		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 5.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material index" : 0
+		}
 	],
 	"point lights" : 
 	[

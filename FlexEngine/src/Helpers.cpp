@@ -531,7 +531,7 @@ namespace flex
 
 	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr)
 	{
-		if (gameObjectTypeStr.compare("mesh") == 0)
+		if (gameObjectTypeStr.compare("object") == 0)
 		{
 			return GameObjectType::OBJECT;
 		}

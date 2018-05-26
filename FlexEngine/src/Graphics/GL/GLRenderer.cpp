@@ -196,7 +196,8 @@ namespace flex
 				{
 					if (m_RenderObjects[i])
 					{
-						Logger::LogError(m_RenderObjects[i]->gameObject->GetName());
+						Logger::LogError("render object with material name: " + m_RenderObjects[i]->materialName);
+						//Logger::LogError(m_RenderObjects[i]->gameObject->GetName());
 						DestroyRenderObject(m_RenderObjects[i]->renderID);
 					}
 				}
@@ -204,6 +205,8 @@ namespace flex
 			}
 			m_RenderObjects.clear();
 			CheckGLErrorMessages();
+
+			m_SkyBoxMesh = nullptr;
 
 			if (m_PhysicsDebugDrawer)
 			{
@@ -2038,7 +2041,7 @@ namespace flex
 				BindTextures(shader, material);
 
 				// TODO: OPTIMIZATION: Create DrawRenderObjectBatchToCubemap rather than check bool
-				if (drawCallInfo.renderToCubemap)
+				if (drawCallInfo.renderToCubemap && renderObject->gameObject->IsStatic())
 				{
 					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
@@ -2054,6 +2057,13 @@ namespace flex
 					
 					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 					CheckGLErrorMessages();
+
+					if (material->uniformIDs.projection == 0)
+					{
+						Logger::LogWarning("Attempted to draw object to cubemap but "
+										   "uniformIDs.projection is not set! " + renderObject->gameObject->GetName());
+						continue;
+					}
 
 					// Use capture projection matrix
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
@@ -3047,13 +3057,19 @@ namespace flex
 				{
 					if (m_Materials.find(renderObject->materialID) == m_Materials.end())
 					{
-						Logger::LogError("Render object contains invalid material ID: " + std::to_string(renderObject->materialID));
+						Logger::LogError("Render object contains invalid material ID: " + 
+										 std::to_string(renderObject->materialID) + 
+										 ", material name: " + renderObject->materialName);
 					}
-					else if (m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader.needPrefilteredMap)
+					else
 					{
-						GLMaterial* mat = &m_Materials[renderObject->materialID];
-						mat->irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
-						mat->prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
+						GLMaterial& material = m_Materials[renderObject->materialID];
+						GLShader& shader = m_Shaders[material.material.shaderID];
+						if (shader.shader.needPrefilteredMap)
+						{
+							material.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+							material.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
+						}
 					}
 				}
 			}
@@ -3103,6 +3119,7 @@ namespace flex
 					glDeleteBuffers(1, &renderObject->IBO);
 				}
 
+				renderObject->gameObject = nullptr;
 				SafeDelete(renderObject);
 			}
 

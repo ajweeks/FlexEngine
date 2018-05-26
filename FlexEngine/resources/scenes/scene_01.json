@@ -39,18 +39,30 @@
 			"enable roughness sampler" : false,
 			"enable ao sampler" : false
 		},
-		{
-			"name" : "pbr yellow",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.540000, 0.100000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.200000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
-		},
+    {
+      "name" : "pbr yellow",
+      "shader" : "pbr",
+      "const albedo" : "0.800000, 0.540000, 0.100000",
+      "const metallic" : 0.000000,
+      "const roughness" : 0.200000,
+      "const ao" : 1.000000,
+      "enable albedo sampler" : false,
+      "enable metallic sampler" : false,
+      "enable roughness sampler" : false,
+      "enable ao sampler" : false
+    },
+    {
+      "name" : "pbr chrome",
+      "shader" : "pbr",
+      "const albedo" : "0.800000, 0.8, 0.8",
+      "const metallic" : 1.000000,
+      "const roughness" : 0.000000,
+      "const ao" : 1.000000,
+      "enable albedo sampler" : false,
+      "enable metallic sampler" : false,
+      "enable roughness sampler" : false,
+      "enable ao sampler" : false
+    },
 		{
 			"name" : "Skybox",
 			"shader" : "skybox",
@@ -295,7 +307,7 @@
         "rotation" : "0.000000, -0.500000, 1.000000",
         "scale" : "1.000000, 1.000000, 1.000000"
       },
-			"material index" : 4
+			"material index" : 5
 		},
 		{
 			"name" : "Reflection Probe 01",
@@ -307,6 +319,7 @@
         "rotation" : "0.000000, -0.000000, 0.000000",
         "scale" : "1.000000, 1.000000, 1.000000"
       },
+      "material index" : 4
 		}
 	],
 	"point lights" : 

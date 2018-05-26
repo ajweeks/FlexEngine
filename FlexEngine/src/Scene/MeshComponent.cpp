@@ -61,6 +61,8 @@ namespace flex
 	void MeshComponent::Destroy(const GameContext& gameContext)
 	{
 		m_VertexBufferData.Destroy();
+		m_OwningGameObject = nullptr;
+		m_Initialized = false;
 	}
 
 	void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)

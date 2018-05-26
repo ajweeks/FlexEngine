@@ -33,8 +33,7 @@
 
 namespace flex
 {
-	BaseScene::BaseScene(const std::string& name, const std::string& jsonFilePath) :
-		m_Name(name),
+	BaseScene::BaseScene(const std::string& jsonFilePath) :
 		m_JSONFilePath(jsonFilePath)
 	{
 	}
@@ -141,7 +140,7 @@ namespace flex
 			m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
 		}
 
-		m_Grid = new GameObject("Grid", GameObjectType::NONE);
+		m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
 		MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
 		gridMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::GRID);
 		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
@@ -158,7 +157,7 @@ namespace flex
 			m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
 		}
 
-		m_WorldOrigin = new GameObject("World origin", GameObjectType::NONE);
+		m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
 		MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
 		orignMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::WORLD_AXIS_GROUND);
 		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
@@ -218,7 +217,7 @@ namespace flex
 
 	void BaseScene::Destroy(const GameContext& gameContext)
 	{
-		for (auto child : m_Children)
+		for (GameObject* child : m_Children)
 		{
 			if (child)
 			{
@@ -517,7 +516,7 @@ namespace flex
 				if (!material.generateHDRCubemapSampler &&
 					!material.generateCubemapSampler)
 				{
-					Logger::LogWarning("Invalid skybox material! Must generate cubemap sampler");
+					Logger::LogWarning("Invalid skybox material! Material must be set to generate cubemap sampler");
 				}
 
 				MeshComponent* skyboxMesh = new MeshComponent(matID, newEntity);
@@ -537,14 +536,14 @@ namespace flex
 		case GameObjectType::REFLECTION_PROBE:
 		{
 			// Chrome ball material
-			MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
-			reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
-			reflectionProbeMaterialCreateInfo.shaderName = "pbr";
-			reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
-			reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
-			reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
-			reflectionProbeMaterialCreateInfo.constAO = 1.0f;
-			MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
+			//MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
+			//reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
+			//reflectionProbeMaterialCreateInfo.shaderName = "pbr";
+			//reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
+			//reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
+			//reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
+			//reflectionProbeMaterialCreateInfo.constAO = 1.0f;
+			//MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 
 			// Probe capture material
 			MaterialCreateInfo probeCaptureMatCreateInfo = {};
@@ -568,8 +567,9 @@ namespace flex
 			};
 			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
+			MaterialID sphereMatID = obj.GetInt("material index");
 
-			MeshComponent* sphereMesh = new MeshComponent(reflectionProbeMaterialID, newEntity);
+			MeshComponent* sphereMesh = new MeshComponent(sphereMatID, newEntity);
 			MeshComponent::ImportSettings importSettings = {};
 			importSettings.swapNormalYZ = true;
 			importSettings.flipNormalZ = true;
@@ -586,6 +586,7 @@ namespace flex
 
 			std::string captureName = objectName + "_capture";
 			GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
+			captureObject->SetSerializable(false);
 			captureObject->SetVisible(false);
 
 			RenderObjectCreateInfo captureObjectCreateInfo = {};
@@ -920,6 +921,10 @@ namespace flex
 			return{};
 		}
 
+		// Prefab types shouldn't serialize certain fields, such as meshes
+		bool bIsPrefab = (gameObject->m_Type != GameObjectType::OBJECT &&
+						  gameObject->m_Type != GameObjectType::NONE);
+
 		JSONObject object;
 		std::string childName = gameObject->m_Name;
 
@@ -945,7 +950,7 @@ namespace flex
 		}
 
 		MeshComponent* meshComponent = gameObject->GetMeshComponent();
-		if (meshComponent)
+		if (meshComponent && !bIsPrefab)
 		{
 			JSONField meshField = {};
 			meshField.label = "mesh";
@@ -997,7 +1002,10 @@ namespace flex
 				i32 materialIndex = GetMaterialIndex(material, gameContext);
 				if (materialIndex == -1)
 				{
-					Logger::LogError("Mesh object contains material not present in BaseScene::m_LoadedMaterials! Parsing this file will fail! (" + childName + ")");
+				//	Logger::LogError("Mesh object contains material not present in "
+				//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
+				//					 "Child name: " + childName + 
+				//					 ", matID: " + std::to_string(matID));
 				}
 				else
 				{
@@ -1409,6 +1417,11 @@ namespace flex
 	std::string BaseScene::GetName() const
 	{
 		return m_Name;
+	}
+
+	std::string BaseScene::GetJSONFilePath() const
+	{
+		return m_JSONFilePath;
 	}
 
 	PhysicsWorld* BaseScene::GetPhysicsWorld()

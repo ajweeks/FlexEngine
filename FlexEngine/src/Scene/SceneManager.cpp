@@ -33,7 +33,7 @@ namespace flex
 		bool unique = true;
 		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&unique, newScene](BaseScene* scene) mutable
 		{
-			if (scene->GetName().compare(newScene->GetName()) == 0)
+			if (scene->GetJSONFilePath().compare(newScene->GetJSONFilePath()) == 0)
 			{
 				unique = false;
 			}

@@ -88,15 +88,16 @@ namespace flex
 
 	void GameObject::Destroy(const GameContext& gameContext)
 	{
-		if (m_RenderID != InvalidRenderID)
-		{
-			gameContext.renderer->DestroyRenderObject(m_RenderID);
-		}
-
 		if (m_MeshComponent)
 		{
 			m_MeshComponent->Destroy(gameContext);
 			SafeDelete(m_MeshComponent);
+		}
+
+		if (m_RenderID != InvalidRenderID)
+		{
+			gameContext.renderer->DestroyRenderObject(m_RenderID);
+			m_RenderID = InvalidRenderID;
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
@@ -112,6 +113,7 @@ namespace flex
 			delete m_CollisionShape;
 			m_CollisionShape = nullptr;
 		}
+
 		SafeDelete(m_RigidBody);
 	}
 
