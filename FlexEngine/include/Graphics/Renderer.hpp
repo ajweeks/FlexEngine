@@ -29,6 +29,7 @@ namespace flex
 
 		virtual void Initialize(const GameContext& gameContext) = 0;
 		virtual void PostInitialize(const GameContext& gameContext) = 0;
+		virtual void Destroy() = 0;
 
 		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
 		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;

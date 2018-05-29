@@ -219,8 +219,17 @@ namespace flex
 
 	void FlexEngine::DestroyWindowAndRenderer()
 	{
-		SafeDelete(m_GameContext.renderer);
-		SafeDelete(m_GameContext.window);
+		if (m_GameContext.renderer)
+		{
+			m_GameContext.renderer->Destroy();
+			SafeDelete(m_GameContext.renderer);
+		}
+
+		if (m_GameContext.window)
+		{
+			m_GameContext.window->Destroy();
+			SafeDelete(m_GameContext.window);
+		}
 	}
 
 	void FlexEngine::LoadDefaultScenes()

@@ -119,6 +119,7 @@ configuration "vs*"
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
 		path.join(DEPENDENCIES_DIR, "openAL"),
+		path.join(DEPENDENCIES_DIR, "freetype/include"),
 	}
 	debugdir "$(OutDir)"
 configuration { "vs*", "x32" }
@@ -154,11 +155,11 @@ project "FlexEngine"
 
 
 configuration { "Debug" }
-	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug" } 
+	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" } 
 configuration { "Development" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath" }
+	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 configuration { "Shipping" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath" } 
+	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
 configuration {}
 
 	--Additional includedirs

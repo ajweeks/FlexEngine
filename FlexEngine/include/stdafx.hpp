@@ -12,6 +12,9 @@
 
 #include "Types.hpp"
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #if COMPILE_VULKAN
 #pragma warning(push, 0) // Don't generate warnings for 3rd party code    
 	#include <glad/glad.h>

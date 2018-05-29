@@ -4,7 +4,6 @@ uniform mat4 transformMat;
 
 in vec2 in_Position2D;
 in vec2 in_TexCoord;
-in vec4 in_Color;
 
 out vec2 ex_TexCoord;
 out vec4 ex_Color;
@@ -12,7 +11,6 @@ out vec4 ex_Color;
 void main()
 {
 	ex_TexCoord = in_TexCoord;
-	ex_Color = in_Color;
 	vec3 transformedPos = (vec4(in_Position2D, 0, 1) * transformMat).xyz;
 	gl_Position = vec4(transformedPos, 1);
 }

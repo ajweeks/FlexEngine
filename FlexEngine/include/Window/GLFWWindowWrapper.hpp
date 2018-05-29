@@ -15,8 +15,9 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
+		virtual void Destroy() override;
+
 		virtual void RetrieveMonitorInfo(GameContext& gameContext) override;
-		void SetUpCallbacks();
 
 		virtual void SetSize(i32 width, i32 height) override;
 		virtual void OnSizeChanged(i32 width, i32 height) override;
@@ -33,6 +34,8 @@ namespace flex
 		virtual void ToggleFullscreen(bool force = false) override;
 
 		GLFWwindow* GetWindow() const;
+
+		void SetUpCallbacks();
 
 		const char* GetClipboardText();
 		void SetClipboardText(const char* text);

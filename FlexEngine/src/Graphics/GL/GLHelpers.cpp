@@ -281,6 +281,160 @@ namespace flex
 
 			return success;
 		}
+		
+		TextureParameters::TextureParameters(bool bGenMipMaps, bool bIsDepthTex) :
+			bGenMipMaps(bGenMipMaps),
+			bIsDepthTex(bIsDepthTex),
+			borderColor(1.0f)
+		{
+			if (bGenMipMaps)
+			{
+				minFilter = GL_LINEAR_MIPMAP_LINEAR;
+			}
+		}
+
+		GLTexture::GLTexture(GLuint handle, i32 width, i32 height, i32 depth):
+			m_Handle(handle),
+			m_Width(width),
+			m_Height(height),
+			m_Depth(depth)
+		{
+		}
+
+		GLTexture::GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type, i32 depth) :
+			m_Width(width),
+			m_Height(height),
+			m_InternalFormat(internalFormat),
+			m_Format(format),
+			m_Type(type),
+			m_Depth(depth)
+		{
+			glGenTextures(1, &m_Handle);
+			CheckGLErrorMessages();
+			m_Parameters = {};
+		}
+
+		GLTexture::~GLTexture()
+		{
+			glDeleteTextures(1, &m_Handle);
+			CheckGLErrorMessages();
+		}
+
+		GLuint GLTexture::GetHandle()
+		{
+			return m_Handle;
+		}
+
+		glm::vec2i GLTexture::GetResolution()
+		{
+			return glm::vec2i(m_Width, m_Height);
+		}
+
+		void GLTexture::Build(void* data)
+		{
+			if (m_Depth == 1)
+			{
+				glBindTexture(GL_TEXTURE_2D, m_Handle);
+				CheckGLErrorMessages();
+				glTexImage2D(GL_TEXTURE_2D, 0, m_InternalFormat, m_Width, m_Height, 0, m_Format, m_Type, data);
+				CheckGLErrorMessages();
+			}
+			else
+			{
+				glBindTexture(GL_TEXTURE_3D, m_Handle);
+				CheckGLErrorMessages();
+				glTexImage3D(GL_TEXTURE_3D, 0, m_InternalFormat, m_Width, m_Height, m_Depth, 0, m_Format, m_Type, data);
+				CheckGLErrorMessages();
+			}
+		}
+
+		void GLTexture::SetParameters(TextureParameters params)
+		{
+			GLenum target = GetTarget();
+			glBindTexture(target, m_Handle);
+			if (m_Parameters.minFilter != params.minFilter)
+			{
+				glTexParameteri(target, GL_TEXTURE_MIN_FILTER, params.minFilter);
+				CheckGLErrorMessages();
+			}
+
+			if (m_Parameters.magFilter != params.magFilter)
+			{
+				glTexParameteri(target, GL_TEXTURE_MAG_FILTER, params.magFilter);
+				CheckGLErrorMessages();
+			}
+
+			if (m_Parameters.wrapS != params.wrapS)
+			{
+				glTexParameteri(target, GL_TEXTURE_WRAP_S, params.wrapS);
+				CheckGLErrorMessages();
+			}
+
+			if (m_Parameters.wrapT != params.wrapT)
+			{
+				glTexParameteri(target, GL_TEXTURE_WRAP_T, params.wrapT);
+				CheckGLErrorMessages();
+			}
+
+			if (m_Parameters.borderColor != params.borderColor)
+			{
+				glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &params.borderColor.r);
+				CheckGLErrorMessages();
+			}
+
+			if (m_Parameters.bGenMipMaps == false && params.bGenMipMaps == true)
+			{
+				glGenerateMipmap(target);
+				CheckGLErrorMessages();
+			}
+
+			if (params.bIsDepthTex && m_Parameters.compareMode != params.compareMode)
+			{
+				glTexParameteri(target, GL_TEXTURE_COMPARE_MODE, params.compareMode);//shadow map comp mode
+				CheckGLErrorMessages();
+			}
+
+			if (m_Depth > 1)
+			{
+				if (m_Parameters.wrapR != params.wrapR)
+				{
+					glTexParameteri(target, GL_TEXTURE_WRAP_R, params.wrapR);
+					CheckGLErrorMessages();
+				}
+			}
+
+			m_Parameters = params;
+		}
+
+		GLenum GLTexture::GetTarget()
+		{
+			return (m_Depth == 1 ? GL_TEXTURE_2D : GL_TEXTURE_3D);
+		}
+
+		bool GLTexture::Resize(glm::vec2i newSize)
+		{
+			if (newSize.x > m_Width || newSize.y > m_Height)
+			{
+				m_Width = newSize.x; m_Height = newSize.y;
+				glDeleteTextures(1, &m_Handle);
+				glGenTextures(1, &m_Handle);
+				CheckGLErrorMessages();
+				Build();
+
+				TextureParameters tempParams = m_Parameters;
+				m_Parameters = {};
+				SetParameters(tempParams);
+
+				return true;
+			}
+			else
+			{
+				m_Width = newSize.x; m_Height = newSize.y;
+				Build();
+
+				return false;
+			}
+		}
 
 		bool LoadGLShaders(u32 program, GLShader& shader)
 		{
@@ -653,6 +807,7 @@ namespace flex
 				return DepthTestFunc::NONE;
 			}
 		}
+
 	} // namespace gl
 } // namespace flex
 

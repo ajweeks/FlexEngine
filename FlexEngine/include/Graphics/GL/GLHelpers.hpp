@@ -160,6 +160,60 @@ namespace flex
 
 		bool GenerateGLCubemap(GLCubemapCreateInfo& createInfo);
 
+		struct TextureParameters
+		{
+			TextureParameters(bool bGenMipMaps = false, bool bIsDepthTex = false);
+
+			//Parameters
+			i32 minFilter = GL_LINEAR;
+			i32 magFilter = GL_LINEAR;
+			i32 wrapS = GL_REPEAT;
+			i32 wrapT = GL_REPEAT;
+			i32 wrapR = GL_REPEAT;
+			glm::vec4 borderColor;
+
+			bool bGenMipMaps = false;
+			bool bIsDepthTex = false;
+
+			i32 compareMode = GL_COMPARE_REF_TO_TEXTURE;
+		};
+
+		struct GLTexture
+		{
+		public:
+			GLTexture(GLuint handle, i32 width, i32 height, i32 depth = 1);
+			GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type, i32 depth = 1);
+			~GLTexture();
+
+			GLuint GetHandle();
+
+			glm::vec2i GetResolution();
+
+			void Build(void* data = nullptr);
+			void SetParameters(TextureParameters params);
+
+			GLenum GetTarget();
+
+			// Returns true if regenerated 
+			// If this is a framebuffer texture, upscaling won't work properly
+			// unless it is reattached to the framebuffer object
+			bool Resize(glm::vec2i newSize);
+
+		private:
+			GLuint m_Handle;
+
+			i32 m_Width;
+			i32 m_Height;
+
+			i32 m_Depth; // A value of 1 implies a 2D texture
+
+			i32 m_InternalFormat = GL_RGB;
+			GLenum m_Format = GL_RGB;
+			GLenum m_Type = GL_FLOAT;
+
+			TextureParameters m_Parameters;
+		};
+
 		bool LoadGLShaders(u32 program, GLShader& shader);
 		bool LinkProgram(u32 program);
 

@@ -32,7 +32,10 @@ namespace flex
 		virtual void Initialize() = 0;
 		/* Called after the window has been created */
 		virtual void PostInitialize() = 0;
+		virtual void Destroy() = 0;
+
 		virtual void RetrieveMonitorInfo(GameContext& gameContext) = 0;
+
 		virtual void Create(glm::vec2i size, glm::vec2i pos) = 0;
 
 		virtual void Update(const GameContext& gameContext);

@@ -15,10 +15,11 @@
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
 
-#include "BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h"
+#include <BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h>
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Graphics/BitmapFont.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
 #include "Logger.hpp"
@@ -32,7 +33,6 @@
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 #include "Physics/PhysicsWorld.hpp"
-#include "..\..\..\include\Graphics\GL\GLRenderer.hpp"
 
 namespace flex
 {
@@ -47,8 +47,308 @@ namespace flex
 
 		GLRenderer::~GLRenderer()
 		{
-			CheckGLErrorMessages();
 			
+		}
+
+		void GLRenderer::Initialize(const GameContext& gameContext)
+		{
+			CheckGLErrorMessages();
+
+			m_BRDFTextureSize = { 512, 512 };
+			m_BRDFTextureHandle = {};
+			m_BRDFTextureHandle.internalFormat = GL_RG16F;
+			m_BRDFTextureHandle.format = GL_RG;
+			m_BRDFTextureHandle.type = GL_FLOAT;
+
+			m_OffscreenTextureHandle = {};
+			m_OffscreenTextureHandle.internalFormat = GL_RGBA16F;
+			m_OffscreenTextureHandle.format = GL_RGBA;
+			m_OffscreenTextureHandle.type = GL_FLOAT;
+
+			m_LoadingTextureHandle = {};
+			m_LoadingTextureHandle.internalFormat = GL_RGBA;
+			m_LoadingTextureHandle.format = GL_RGBA;
+			m_LoadingTextureHandle.type = GL_FLOAT;
+
+
+			m_gBuffer_PositionMetallicHandle = {};
+			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
+			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
+			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
+
+			m_gBuffer_NormalRoughnessHandle = {};
+			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
+			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
+			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
+
+			m_gBuffer_DiffuseAOHandle = {};
+			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
+
+
+			CheckGLErrorMessages();
+
+			LoadShaders();
+
+			CheckGLErrorMessages();
+
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LEQUAL);
+			CheckGLErrorMessages();
+
+			glFrontFace(GL_CCW);
+			CheckGLErrorMessages();
+
+			// Prevent seams from appearing on lower mip map levels of cubemaps
+			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+
+			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
+			{
+				glGenFramebuffers(1, &m_CaptureFBO);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				CheckGLErrorMessages();
+
+				glGenRenderbuffers(1, &m_CaptureRBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512); // TODO: Remove 512
+				CheckGLErrorMessages();
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
+				CheckGLErrorMessages();
+
+				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				{
+					Logger::LogError("Capture frame buffer is incomplete!");
+				}
+
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glBindRenderbuffer(GL_RENDERBUFFER, 0);
+				CheckGLErrorMessages();
+			}
+
+			// Offscreen framebuffer
+			{
+				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+				glGenFramebuffers(1, &m_OffscreenFBO);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
+				CheckGLErrorMessages();
+
+				glGenRenderbuffers(1, &m_OffscreenRBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, frameBufferSize.x, frameBufferSize.y);
+				CheckGLErrorMessages();
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_OffscreenRBO);
+				CheckGLErrorMessages();
+
+				GenerateFrameBufferTexture(&m_OffscreenTextureHandle.id,
+										   0,
+										   m_OffscreenTextureHandle.internalFormat,
+										   m_OffscreenTextureHandle.format,
+										   m_OffscreenTextureHandle.type,
+										   frameBufferSize);
+
+				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				{
+					Logger::LogError("Offscreen frame buffer is incomplete!");
+				}
+
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glBindRenderbuffer(GL_RENDERBUFFER, 0);
+				CheckGLErrorMessages();
+			}
+
+			const real captureProjectionNearPlane = gameContext.cameraManager->CurrentCamera()->GetZNear();
+			const real captureProjectionFarPlane = gameContext.cameraManager->CurrentCamera()->GetZFar();
+			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
+			m_CaptureViews =
+			{
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+			};
+
+			// Sprite quad
+			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
+			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
+
+			MaterialCreateInfo spriteMatCreateInfo = {};
+			spriteMatCreateInfo.name = "Sprite material";
+			spriteMatCreateInfo.shaderName = "sprite";
+			spriteMatCreateInfo.engineMaterial = true;
+			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
+
+
+			MaterialCreateInfo postProcessMatCreateInfo = {};
+			postProcessMatCreateInfo.name = "Post process material";
+			postProcessMatCreateInfo.shaderName = "post_process";
+			postProcessMatCreateInfo.engineMaterial = true;
+			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
+
+			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
+			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
+				glm::vec2(-1.0f,  1.0f),
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(1.0f,  1.0f),
+
+				glm::vec2(1.0f,  1.0f),
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(1.0f, -1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 0.0f),
+
+				glm::vec2(1.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+				glm::vec4(1.0f),
+			};
+
+			spriteQuadVertexBufferDataCreateInfo.attributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			m_SpriteQuadVertexBufferData = {};
+			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
+
+
+			GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", GameObjectType::NONE);
+			m_PersistentObjects.push_back(spriteQuadGameObject);
+			spriteQuadGameObject->SetVisible(false);
+
+			RenderObjectCreateInfo spriteQuadCreateInfo = {};
+			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
+			spriteQuadCreateInfo.materialID = m_SpriteMatID;
+			spriteQuadCreateInfo.depthWriteEnable = false;
+			spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
+			spriteQuadCreateInfo.enableCulling = false;
+			spriteQuadCreateInfo.visibleInSceneExplorer = false;
+			spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			spriteQuadCreateInfo.depthWriteEnable = false;
+			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
+
+			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
+
+			{
+				glm::vec3 pos(0.0f);
+				glm::quat rot = glm::quat();
+				glm::vec3 scale(1.0f);
+				glm::vec4 color(1.0f);
+				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID,
+							   pos, rot, scale, AnchorPoint::WHOLE, color);
+			}
+			SwapBuffers(gameContext);
+
+			if (m_BRDFTextureHandle.id == 0)
+			{
+				Logger::LogInfo("Generating BRDF LUT");
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false,
+										m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+			}
+
+			ImGui::CreateContext();
+			CheckGLErrorMessages();
+
+
+			// G-buffer objects
+			glGenFramebuffers(1, &m_gBufferHandle);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+
+			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
+									   0,
+									   m_gBuffer_PositionMetallicHandle.internalFormat,
+									   m_gBuffer_PositionMetallicHandle.format,
+									   m_gBuffer_PositionMetallicHandle.type,
+									   frameBufferSize);
+
+			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
+									   1,
+									   m_gBuffer_NormalRoughnessHandle.internalFormat,
+									   m_gBuffer_NormalRoughnessHandle.format,
+									   m_gBuffer_NormalRoughnessHandle.type,
+									   frameBufferSize);
+
+			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
+									   2,
+									   m_gBuffer_DiffuseAOHandle.internalFormat,
+									   m_gBuffer_DiffuseAOHandle.format,
+									   m_gBuffer_DiffuseAOHandle.type,
+									   frameBufferSize);
+
+			// Create and attach depth buffer
+			glGenRenderbuffers(1, &m_gBufferDepthHandle);
+			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				Logger::LogError("Framebuffer not complete!");
+			}
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			//GenerateGBuffer(gameContext);
+
+			if (m_BRDFTextureHandle.id == 0)
+			{
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false,
+										m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+			}
+
+			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::PostInitialize(const GameContext& gameContext)
+		{
+			GenerateGBuffer(gameContext);
+
+			std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
+			LoadFont(gameContext, fontFilePath, 12);
+
+
+			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
+			if (castedWindow == nullptr)
+			{
+				Logger::LogError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!");
+				return;
+			}
+
+			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
+			CheckGLErrorMessages();
+
+			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
+			m_PhysicsDebugDrawer->Initialize();
+
+			Logger::LogInfo("Ready!\n");
+		}
+
+		void GLRenderer::Destroy()
+		{
+			CheckGLErrorMessages();
+
+			SafeDelete(font);
+
 			ImGui_ImplGlfwGL3_Shutdown();
 			ImGui::DestroyContext();
 
@@ -1272,292 +1572,6 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::Initialize(const GameContext& gameContext)
-		{
-			CheckGLErrorMessages();
-
-			m_BRDFTextureSize = { 512, 512 };
-			m_BRDFTextureHandle = {};
-			m_BRDFTextureHandle.internalFormat = GL_RG16F;
-			m_BRDFTextureHandle.format = GL_RG;
-			m_BRDFTextureHandle.type = GL_FLOAT;
-
-			m_OffscreenTextureHandle = {};
-			m_OffscreenTextureHandle.internalFormat = GL_RGBA16F;
-			m_OffscreenTextureHandle.format = GL_RGBA;
-			m_OffscreenTextureHandle.type = GL_FLOAT;
-
-			m_LoadingTextureHandle = {};
-			m_LoadingTextureHandle.internalFormat = GL_RGBA;
-			m_LoadingTextureHandle.format = GL_RGBA;
-			m_LoadingTextureHandle.type = GL_FLOAT;
-
-
-			m_gBuffer_PositionMetallicHandle = {};
-			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
-			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
-
-			m_gBuffer_NormalRoughnessHandle = {};
-			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
-			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
-
-			m_gBuffer_DiffuseAOHandle = {};
-			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
-			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
-			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
-
-
-			CheckGLErrorMessages();
-
-			LoadShaders();
-
-			CheckGLErrorMessages();
-
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_LEQUAL);
-			CheckGLErrorMessages();
-
-			glFrontFace(GL_CCW);
-			CheckGLErrorMessages();
-
-			// Prevent seams from appearing on lower mip map levels of cubemaps
-			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
-
-			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
-			{
-				glGenFramebuffers(1, &m_CaptureFBO);
-				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
-
-				glGenRenderbuffers(1, &m_CaptureRBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512); // TODO: Remove 512
-				CheckGLErrorMessages();
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
-
-				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				{
-					Logger::LogError("Capture frame buffer is incomplete!");
-				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glBindRenderbuffer(GL_RENDERBUFFER, 0);
-				CheckGLErrorMessages();
-			}
-
-			// Offscreen framebuffer
-			{
-				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-
-				glGenFramebuffers(1, &m_OffscreenFBO);
-				glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
-				CheckGLErrorMessages();
-
-				glGenRenderbuffers(1, &m_OffscreenRBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, frameBufferSize.x, frameBufferSize.y);
-				CheckGLErrorMessages();
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_OffscreenRBO);
-				CheckGLErrorMessages();
-
-				GenerateFrameBufferTexture(&m_OffscreenTextureHandle.id,
-					0,
-					m_OffscreenTextureHandle.internalFormat,
-					m_OffscreenTextureHandle.format,
-					m_OffscreenTextureHandle.type,
-					frameBufferSize);
-
-				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				{
-					Logger::LogError("Offscreen frame buffer is incomplete!");
-				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glBindRenderbuffer(GL_RENDERBUFFER, 0);
-				CheckGLErrorMessages();
-			}
-
-			const real captureProjectionNearPlane = gameContext.cameraManager->CurrentCamera()->GetZNear();
-			const real captureProjectionFarPlane = gameContext.cameraManager->CurrentCamera()->GetZFar();
-			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
-			m_CaptureViews =
-			{
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
-			};
-
-			// Sprite quad
-			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
-			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
-
-			MaterialCreateInfo spriteMatCreateInfo = {};
-			spriteMatCreateInfo.name = "Sprite material";
-			spriteMatCreateInfo.shaderName = "sprite";
-			spriteMatCreateInfo.engineMaterial = true;
-			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
-
-
-			MaterialCreateInfo postProcessMatCreateInfo = {};
-			postProcessMatCreateInfo.name = "Post process material";
-			postProcessMatCreateInfo.shaderName = "post_process";
-			postProcessMatCreateInfo.engineMaterial = true;
-			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
-
-			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
-			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
-				glm::vec2(-1.0f,  1.0f),
-				glm::vec2(-1.0f, -1.0f),
-				glm::vec2(1.0f,  1.0f),
-
-				glm::vec2(1.0f,  1.0f),
-				glm::vec2(-1.0f, -1.0f),
-				glm::vec2(1.0f, -1.0f),
-			};
-
-			spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, 0.0f),
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(1.0f, 0.0f),
-
-				glm::vec2(1.0f, 0.0f),
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(1.0f, 1.0f),
-			};
-
-			spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-			};
-
-			spriteQuadVertexBufferDataCreateInfo.attributes = 
-				(u32)VertexAttribute::POSITION_2D | 
-				(u32)VertexAttribute::UV | 
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-
-			m_SpriteQuadVertexBufferData = {};
-			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
-
-
-			GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", GameObjectType::NONE);
-			m_PersistentObjects.push_back(spriteQuadGameObject);
-			spriteQuadGameObject->SetVisible(false);
-
-			RenderObjectCreateInfo spriteQuadCreateInfo = {};
-			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
-			spriteQuadCreateInfo.materialID = m_SpriteMatID;
-			spriteQuadCreateInfo.depthWriteEnable = false;
-			spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
-			spriteQuadCreateInfo.enableCulling = false;
-			spriteQuadCreateInfo.visibleInSceneExplorer = false;
-			spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-			spriteQuadCreateInfo.depthWriteEnable = false;
-			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
-
-			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
-
-			{
-				glm::vec3 pos(0.0f);
-				glm::quat rot = glm::quat();
-				glm::vec3 scale(1.0f);
-				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID,
-							   pos, rot, scale, AnchorPoint::WHOLE);
-			}
-			SwapBuffers(gameContext);
-
-			if (m_BRDFTextureHandle.id == 0)
-			{
-				Logger::LogInfo("Generating BRDF LUT");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, 
-					m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
-			}
-
-			ImGui::CreateContext();
-			CheckGLErrorMessages();
-
-
-			// G-buffer objects
-			glGenFramebuffers(1, &m_gBufferHandle);
-			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-
-			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
-				0,
-				m_gBuffer_PositionMetallicHandle.internalFormat,
-				m_gBuffer_PositionMetallicHandle.format,
-				m_gBuffer_PositionMetallicHandle.type,
-				frameBufferSize);
-
-			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
-				1,
-				m_gBuffer_NormalRoughnessHandle.internalFormat,
-				m_gBuffer_NormalRoughnessHandle.format,
-				m_gBuffer_NormalRoughnessHandle.type,
-				frameBufferSize);
-
-			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
-				2,
-				m_gBuffer_DiffuseAOHandle.internalFormat,
-				m_gBuffer_DiffuseAOHandle.format,
-				m_gBuffer_DiffuseAOHandle.type,
-				frameBufferSize);
-
-			// Create and attach depth buffer
-			glGenRenderbuffers(1, &m_gBufferDepthHandle);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
-
-			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			{
-				Logger::LogError("Framebuffer not complete!");
-			}
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			//GenerateGBuffer(gameContext);
-
-			if (m_BRDFTextureHandle.id == 0)
-			{
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, 
-					m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
-			}
-
-			CheckGLErrorMessages();
-		}
-
-		void GLRenderer::PostInitialize(const GameContext& gameContext)
-		{
-			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
-			if (castedWindow == nullptr)
-			{
-				Logger::LogError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!");
-				return;
-			}
-
-			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
-			CheckGLErrorMessages();
-
-			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
-			m_PhysicsDebugDrawer->Initialize();
-
-			Logger::LogInfo("Ready!\n");
-		}
-
 		void GLRenderer::GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glGenTextures(1, handle);
@@ -1929,8 +1943,9 @@ namespace flex
 			glm::vec3 pos(0.0f);
 			glm::quat rot = glm::quat();
 			glm::vec3 scale(1.0f, -1.0f, 1.0f);
+			glm::vec4 color(1.0f);
 			DrawSpriteQuad(gameContext, m_OffscreenTextureHandle.id, m_PostProcessMatID,
-						   pos, rot, scale, AnchorPoint::WHOLE);
+						   pos, rot, scale, AnchorPoint::WHOLE, color);
 		}
 
 		void GLRenderer::DrawSprites(const GameContext& gameContext)
@@ -1939,30 +1954,32 @@ namespace flex
 			glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
 			glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
 			glm::vec3 scale(100.0f);
+			glm::vec4 color(1.0f);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot, scale, AnchorPoint::BOTTOM);
+						   pos, rot, scale, AnchorPoint::BOTTOM, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT);
+						   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot, scale, AnchorPoint::BOTTOM_LEFT);
+						   pos, rot, scale, AnchorPoint::BOTTOM_LEFT, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot2, scale, AnchorPoint::LEFT);
+						   pos, rot2, scale, AnchorPoint::LEFT, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot, scale, AnchorPoint::TOP_LEFT);
+						   pos, rot, scale, AnchorPoint::TOP_LEFT, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot2, scale, AnchorPoint::TOP);
+						   pos, rot2, scale, AnchorPoint::TOP, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot, scale, AnchorPoint::TOP_RIGHT);
+						   pos, rot, scale, AnchorPoint::TOP_RIGHT, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot2, scale, AnchorPoint::RIGHT);
+						   pos, rot2, scale, AnchorPoint::RIGHT, color);
 			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-						   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER);
+						   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f));
 		}
 
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle,
 										MaterialID materialID,
 										const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
-										AnchorPoint anchor)
+										AnchorPoint anchor,
+										const glm::vec4& color)
 		{
 			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
 			if (!spriteRenderObject)
@@ -1978,10 +1995,7 @@ namespace flex
 			glUseProgram(spriteShader.program);
 			CheckGLErrorMessages();
 
-			//glEnable(GL_BLEND);
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-			if (spriteShader.shader.constantBufferUniforms.HasUniform("transformMat"))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
 			{
 				const glm::vec2i frameSize = gameContext.window->GetFrameBufferSize();
 
@@ -2049,6 +2063,12 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
+			{
+				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &color.r);
+				CheckGLErrorMessages();
+			}
+
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 			CheckGLErrorMessages();
@@ -2071,10 +2091,11 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			CheckGLErrorMessages();
 
+			// TODO: Is this neceessary to clear the depth?
 			glDepthMask(GL_TRUE);
 
-			//glClear(GL_DEPTH_BUFFER_BIT);
-			//CheckGLErrorMessages();
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 			if (spriteRenderObject->enableCulling)
 			{
@@ -2372,6 +2393,327 @@ namespace flex
 			return binding;
 		}
 
+		bool GLRenderer::LoadFont(const GameContext& gameContext, const std::string& filePath, i32 size)
+		{
+			// TODO: Determine via monitor struct
+			glm::vec2i monitorDPI(300, 300);
+			
+			FT_Error error;
+			error = FT_Init_FreeType(&ft);
+			if (error != FT_Err_Ok)
+			{
+				Logger::LogError("Could not init FreeType");
+				return false;
+			}
+
+			u32 fontPixelSize = 12;
+
+			std::vector<char> fileMemory;
+			ReadFile(filePath, fileMemory);
+
+			FT_Face face;
+			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
+			if (error == FT_Err_Unknown_File_Format)
+			{
+				Logger::LogError("Unhandled font file format: " + filePath);
+			}
+			else if (error != FT_Err_Ok)
+			{
+				Logger::LogError("Failed to create new font face: " + filePath);
+			}
+			if (!face)
+			{
+				Logger::LogError("Failed to create face");
+				return false;
+			}
+
+			error = FT_Set_Char_Size(face,
+									 0, fontPixelSize * 64,
+									 monitorDPI.x, monitorDPI.y);
+
+			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
+
+			Logger::LogInfo("Loaded font " + filePath);
+			Logger::LogInfo("num glyphs in font: " + std::to_string(face->num_glyphs));
+
+			//u32 penX = 0;
+			//u32 penY = 0;
+
+			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
+			font = new BitmapFont(size, fontName, face->num_glyphs);
+
+			// font->m_UseKerning = FT_HAS_KERNING(face) != 0;
+
+			// Atlas helper variables
+			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
+			glm::vec2i maxPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
+			bool horizontal = false; // Direction this pass expands the map in (internal moves are !horizontal)
+			u32 posCount = 1; // Internal move count in this pass
+			u32 curPos = 0;   // Internal move count
+			u32 channel = 0;  // Channel to add to
+
+			u32 padding = 1;
+			u32 spread = 5;
+			u32 totPadding = padding + spread;
+
+			// TODO: Rename
+			u32 highRes = 32;
+
+			//struct TempChar
+			//{
+			//	FontMetric metric;
+			//	GLTexture* texture;
+			//};
+			std::map<i32, FontMetric*> characters;
+			for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
+			{
+				FontMetric* metric = font->GetMetric(static_cast<wchar_t>(c));
+				if (metric)
+				{
+					metric->Character = static_cast<wchar_t>(c);
+				}
+
+				u32 glyphIndex = FT_Get_Char_Index(face, c);
+				++glyphIndex;
+
+				// TODO: continue if glyphIndex == 0?
+
+				if (font->GetUseKerning() && glyphIndex)
+				{
+					for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
+					{
+						FT_Vector delta;
+
+						u32 prevIdx = FT_Get_Char_Index(face, previous);
+						FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
+
+						if (delta.x || delta.y)
+						{
+							metric->Kerning[static_cast<char>(previous)] =
+								glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
+						}
+					}
+				}
+
+				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT))
+				{
+					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
+					continue;
+				}
+
+
+				u32 width = face->glyph->bitmap.width + totPadding * 2;
+				u32 height = face->glyph->bitmap.rows + totPadding * 2;
+
+
+				metric->Width = (u32)width;
+				metric->Height = (u32)height;
+				metric->OffsetX = (i16)face->glyph->bitmap_left + (i16)totPadding;
+				metric->OffsetY = -(i16)(face->glyph->bitmap_top + (i16)totPadding);
+				metric->AdvanceX = (real)face->glyph->advance.x / 64.0f;
+
+				// Generate atlas coordinates
+				metric->Page = 0;
+				metric->Channel = (u8)channel;
+				metric->TexCoord = startPos[channel];
+				if (horizontal)
+				{
+					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
+					startPos[channel].y += height;
+					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
+				}
+				else
+				{
+					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
+					startPos[channel].x += width;
+					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
+				}
+				channel++;
+				if (channel == 4)
+				{
+					channel = 0;
+					curPos++;
+					if (curPos == posCount)
+					{
+						curPos = 0;
+						horizontal = !horizontal;
+						if (horizontal)
+						{
+							for (u8 cha = 0; cha < 4; ++cha)
+							{
+								startPos[cha] = glm::vec2i(maxPos[cha].x, 0);
+							}
+						}
+						else
+						{
+							for (u8 cha = 0; cha < 4; ++cha)
+							{
+								startPos[cha] = glm::vec2i(0, maxPos[cha].y);
+							}
+							posCount++;
+						}
+					}
+				}
+
+				metric->IsValid = true;
+
+				characters[c] = metric;
+			}
+
+			glm::vec2i textureSize(
+				std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
+				std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
+			font->SetTextureSize(textureSize);
+
+			//Setup rendering
+			TextureParameters params(false);
+			params.wrapS = GL_CLAMP_TO_EDGE;
+			params.wrapT = GL_CLAMP_TO_EDGE;
+
+			GLTexture* fontTex = font->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
+			fontTex->Build();
+			fontTex->SetParameters(params);
+
+			GLuint captureFBO;
+			GLuint captureRBO;
+
+			glGenFramebuffers(1, &captureFBO);
+			CheckGLErrorMessages();
+			glGenRenderbuffers(1, &captureRBO);
+			CheckGLErrorMessages();
+
+			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+			CheckGLErrorMessages();
+			glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+			CheckGLErrorMessages();
+
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, textureSize.x, textureSize.y);
+			CheckGLErrorMessages();
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, font->GetTexture()->GetHandle(), 0);
+			CheckGLErrorMessages();
+
+			glViewport(0, 0, textureSize.x, textureSize.y);
+			CheckGLErrorMessages();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			CheckGLErrorMessages();
+
+			LoadShaders();
+
+
+			ShaderID computeSDFShaderID;
+			GetShaderID("compute_sdf", computeSDFShaderID);
+			GLShader& computeSDFShader = m_Shaders[computeSDFShaderID];
+
+			glUseProgram(computeSDFShader.program);
+
+			glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
+			auto texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
+			auto charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
+			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
+			glUniform1f(glGetUniformLocation(computeSDFShader.program, "highRes"), (real)highRes);
+
+			params.wrapS = GL_CLAMP_TO_BORDER;
+			params.wrapT = GL_CLAMP_TO_BORDER;
+			params.borderColor = glm::vec4(0.0f);
+
+			glEnable(GL_BLEND);
+			glBlendEquation(GL_FUNC_ADD);
+			glBlendFunc(GL_ONE, GL_ONE);
+			CheckGLErrorMessages();
+
+			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+
+			//Render to Glyphs atlas
+			FT_Set_Pixel_Sizes(face, 0, size);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			CheckGLErrorMessages();
+
+			for (auto& character : characters)
+			{
+				auto metric = character.second;
+
+				u32 glyphIndex = FT_Get_Char_Index(face, metric->Character);
+				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT))
+				{
+					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
+					continue;
+				}
+
+				if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
+				{
+					if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+					{
+						Logger::LogError("Failed to render glyph with index " + std::to_string(glyphIndex));
+						continue;
+					}
+				}
+
+				u32 width = face->glyph->bitmap.width;
+				u32 height = face->glyph->bitmap.rows;
+				GLTexture* texture = new GLTexture(width, height, GL_RED, GL_RED, GL_UNSIGNED_BYTE);
+				texture->Build(face->glyph->bitmap.buffer);
+				texture->SetParameters(params);
+
+				if (metric->Width > 0 && metric->Height > 0)
+				{
+					glm::vec2i res = glm::vec2i(metric->Width - padding * 2, metric->Height - padding * 2);
+					glm::vec2i viewportTL = glm::vec2i(metric->TexCoord) + glm::vec2i(padding);
+
+					glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
+					//Logger::LogWarning(std::to_string(viewportTL.x) + ", " + std::to_string(viewportTL.y) + " - " +
+					//				   std::to_string(res.x) + ", " + std::to_string(res.y));
+					CheckGLErrorMessages();
+					glActiveTexture(GL_TEXTURE0);
+					CheckGLErrorMessages();
+					glBindTexture(GL_TEXTURE_2D, texture->GetHandle());
+					CheckGLErrorMessages();
+
+					glUniform1i(texChannel, metric->Channel);
+					glUniform2f(charResolution, (real)res.x, (real)res.y);
+
+					//PrimitiveRenderer::GetInstance()->Draw<primitives::Quad>();
+					glBindVertexArray(gBufferRenderObject->VAO);
+					CheckGLErrorMessages();
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					CheckGLErrorMessages();
+					glBindVertexArray(0);
+					CheckGLErrorMessages();
+				}
+
+				delete texture;
+
+				// Modify texture coordinates after rendering sprite
+				metric->TexCoord = metric->TexCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
+			}
+
+			// Cleanup
+			glDisable(GL_BLEND);
+
+			FT_Done_Face(face);
+			FT_Done_FreeType(ft);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			glViewport(0, 0,
+					   gameContext.window->GetFrameBufferSize().x,
+					   gameContext.window->GetFrameBufferSize().y);
+
+			//glDeleteRenderbuffers(1, &captureRBO);
+			//glDeleteFramebuffers(1, &captureFBO);
+
+			CheckGLErrorMessages();
+
+			//// DrawTexture(face->glyph->bitmap, penX + face->glyph->bitmap_left, penY + face->glyph->bitmap_top);
+
+			//// RSH 6 divides value by 64 to get value in pixels
+			////penX += (face->glyph->advance.x >> 6);
+
+
+
+			return true;
+		}
+
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
 		{
 			auto location = m_LoadedTextures.find(filePath);
@@ -2423,6 +2765,7 @@ namespace flex
 				{ "background", RESOURCE_LOCATION + "shaders/GLSL/background.vert", RESOURCE_LOCATION + "shaders/GLSL/background.frag" },
 				{ "sprite", RESOURCE_LOCATION + "shaders/GLSL/sprite.vert", RESOURCE_LOCATION + "shaders/GLSL/sprite.frag" },
 				{ "post_process", RESOURCE_LOCATION + "shaders/GLSL/post_process.vert", RESOURCE_LOCATION + "shaders/GLSL/post_process.frag" },
+				{ "compute_sdf", RESOURCE_LOCATION + "shaders/GLSL/ComputeSDF.vert", RESOURCE_LOCATION + "shaders/GLSL/ComputeSDF.frag" },
 			};
 
 			ShaderID shaderID = 0;
@@ -2592,17 +2935,33 @@ namespace flex
 			// Sprite
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("transformMat");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
 			++shaderID;
 
 			// Post processing
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("transformMat");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
+			++shaderID;
+
+			// Compute SDF
+			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			// TODO: Move some of these to constant buffer
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("charResolution");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("spread");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("highResTex");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texChannel");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("sdfResolution");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("highRes");
 			++shaderID;
 
 			for (size_t i = 0; i < m_Shaders.size(); ++i)

@@ -77,15 +77,6 @@ namespace flex
 
 	GLFWWindowWrapper::~GLFWWindowWrapper()
 	{
-		for (size_t i = 0; i < m_WindowIcons.size(); ++i)
-		{
-			SafeDelete(m_WindowIcons[i].pixels);
-		}
-
-		if (m_Window)
-		{
-			m_Window = nullptr;
-		}
 	}
 
 	void GLFWWindowWrapper::Initialize()
@@ -107,6 +98,19 @@ namespace flex
 		// TODO: Set window location/size based on previous session (load from disk)
 		glfwGetWindowSize(m_Window, &m_LastWindowedSize.x, &m_LastWindowedSize.y);
 		glfwGetWindowPos(m_Window, &m_LastWindowedPos.x, &m_LastWindowedPos.y);
+	}
+
+	void GLFWWindowWrapper::Destroy()
+	{
+		for (size_t i = 0; i < m_WindowIcons.size(); ++i)
+		{
+			SafeDelete(m_WindowIcons[i].pixels);
+		}
+
+		if (m_Window)
+		{
+			m_Window = nullptr;
+		}
 	}
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo(GameContext& gameContext)

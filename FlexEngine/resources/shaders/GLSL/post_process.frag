@@ -1,9 +1,9 @@
 #version 450
 
 uniform sampler2D in_Texture;
+uniform vec4 colorMultiplier;
 
 in vec2 ex_TexCoord;
-in vec4 ex_Color;
 
 out vec4 out_Color;
 
@@ -41,10 +41,10 @@ void main()
 
 
 
-	vec4 color = ex_Color * texture(in_Texture, ex_TexCoord);
+	vec4 color = texture(in_Texture, ex_TexCoord);
 
 	color.rgb = color.rgb / (color.rgb + vec3(1.0f)); // Reinhard tone-mapping
 	color.rgb = pow(color.rgb, vec3(1.0f / 2.2f)); // Gamma correction
 
-	out_Color = color;
+	out_Color = colorMultiplier * color;
 }

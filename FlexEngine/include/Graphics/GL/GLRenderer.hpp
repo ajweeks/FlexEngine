@@ -11,6 +11,7 @@ namespace flex
 {
 	class MeshComponent;
 	class GameObject;
+	class BitmapFont;
 
 	namespace gl
 	{
@@ -24,6 +25,7 @@ namespace flex
 
 			virtual void Initialize(const GameContext& gameContext) override;
 			virtual void PostInitialize(const GameContext& gameContext) override;
+			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
 			virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
@@ -104,7 +106,8 @@ namespace flex
 			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, 
 								MaterialID materialID,
 								const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
-								AnchorPoint anchor);
+								AnchorPoint anchor,
+								const glm::vec4& color);
 			void DrawSprites(const GameContext& gameContext);
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
@@ -138,6 +141,8 @@ namespace flex
 			u32 BindFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 			// Returns the next binding that would be used
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
+
+			bool LoadFont(const GameContext& gameContext, const std::string& filePath, i32 size);
 
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
@@ -210,6 +215,12 @@ namespace flex
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
+
+
+
+
+			FT_Library ft;
+			BitmapFont* font = nullptr;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;
