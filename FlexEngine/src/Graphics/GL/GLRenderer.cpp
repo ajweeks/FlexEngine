@@ -2409,7 +2409,7 @@ namespace flex
 			u32 fontPixelSize = 12;
 
 			std::vector<char> fileMemory;
-			ReadFile(filePath, fileMemory);
+			ReadFile(filePath, fileMemory, true);
 
 			FT_Face face;
 			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);

@@ -64,9 +64,14 @@ namespace flex
 		return stream.str();
 	}
 
-	bool ReadFile(const std::string& filePath, std::vector<char>& vec)
+	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
-		std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+		int fileMode = std::ios::in | std::ios::ate;
+		if (bBinaryFile)
+		{
+			fileMode |= std::ios::binary;
+		}
+		std::ifstream file(filePath.c_str(), fileMode);
 
 		if (!file)
 		{
@@ -88,7 +93,7 @@ namespace flex
 	bool ParseWAVFile(const std::string& filePath, i32* format, void** data, i32* size, i32* freq)
 	{
 		std::vector<char> dataArray;
-		if (!ReadFile(filePath, dataArray))
+		if (!ReadFile(filePath, dataArray, true))
 		{
 			Logger::LogError("Failed to parse WAV file: " + filePath);
 			return false;

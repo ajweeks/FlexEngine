@@ -46,7 +46,7 @@ namespace flex
 		i32 currentIndex = 0;
 	};
 
-	bool ReadFile(const std::string& filePath, std::vector<char>& vec);
+	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile);
 
 	/*
 	* Reads in a .wav file and fills in given values according to file contents

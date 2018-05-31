@@ -454,13 +454,13 @@ namespace flex
 			StripLeadingDirectories(fragFileName);
 			Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
 
-			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode))
+			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode, false))
 			{
 				Logger::LogError("Could not find vertex shader " + shader.shader.name);
 			}
 			shader.shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
 
-			if (!ReadFile(shader.shader.fragmentShaderFilePath, shader.shader.fragmentShaderCode))
+			if (!ReadFile(shader.shader.fragmentShaderFilePath, shader.shader.fragmentShaderCode, false))
 			{
 				Logger::LogError("Could not find fragment shader " + shader.shader.name);
 			}
