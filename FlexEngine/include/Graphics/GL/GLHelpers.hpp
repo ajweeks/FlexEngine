@@ -69,6 +69,7 @@ namespace flex
 				i32 enableIrradianceSampler;
 				i32 verticalScale;
 				i32 transformMat;
+				i32 texSize;
 			};
 			UniformIDs uniformIDs;
 

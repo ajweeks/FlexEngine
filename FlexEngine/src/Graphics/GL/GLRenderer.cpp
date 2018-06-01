@@ -17,6 +17,8 @@
 
 #include <BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h>
 
+#include <freetype/ftbitmap.h>
+
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Graphics/BitmapFont.hpp"
@@ -183,68 +185,131 @@ namespace flex
 			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
 
 
+			MaterialCreateInfo fontMatCreateInfo = {};
+			fontMatCreateInfo.name = "Font material";
+			fontMatCreateInfo.shaderName = "font";
+			fontMatCreateInfo.engineMaterial = true;
+			m_FontMatID = InitializeMaterial(gameContext, &fontMatCreateInfo);
+
+
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
 			postProcessMatCreateInfo.engineMaterial = true;
 			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
 
-			VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
-			spriteQuadVertexBufferDataCreateInfo.positions_2D = {
-				glm::vec2(-1.0f,  1.0f),
-				glm::vec2(-1.0f, -1.0f),
-				glm::vec2(1.0f,  1.0f),
+			// Sprite quad
+			{
+				VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
+				spriteQuadVertexBufferDataCreateInfo.positions_2D = {
+					glm::vec2(-1.0f,  1.0f),
+					glm::vec2(-1.0f, -1.0f),
+					glm::vec2(1.0f,  1.0f),
 
-				glm::vec2(1.0f,  1.0f),
-				glm::vec2(-1.0f, -1.0f),
-				glm::vec2(1.0f, -1.0f),
-			};
+					glm::vec2(1.0f,  1.0f),
+					glm::vec2(-1.0f, -1.0f),
+					glm::vec2(1.0f, -1.0f),
+				};
 
-			spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, 0.0f),
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(1.0f, 0.0f),
+				spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
+					glm::vec2(0.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 0.0f),
 
-				glm::vec2(1.0f, 0.0f),
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(1.0f, 1.0f),
-			};
+					glm::vec2(1.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 1.0f),
+				};
 
-			spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
+				spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
+					glm::vec4(1.0f),
+					glm::vec4(1.0f),
+					glm::vec4(1.0f),
 
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-				glm::vec4(1.0f),
-			};
+					glm::vec4(1.0f),
+					glm::vec4(1.0f),
+					glm::vec4(1.0f),
+				};
 
-			spriteQuadVertexBufferDataCreateInfo.attributes =
-				(u32)VertexAttribute::POSITION_2D |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+				spriteQuadVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION_2D |
+					(u32)VertexAttribute::UV |
+					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
-			m_SpriteQuadVertexBufferData = {};
-			m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
+				m_SpriteQuadVertexBufferData = {};
+				m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
 
 
-			GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", GameObjectType::NONE);
-			m_PersistentObjects.push_back(spriteQuadGameObject);
-			spriteQuadGameObject->SetVisible(false);
+				GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", GameObjectType::NONE);
+				m_PersistentObjects.push_back(spriteQuadGameObject);
+				spriteQuadGameObject->SetVisible(false);
 
-			RenderObjectCreateInfo spriteQuadCreateInfo = {};
-			spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
-			spriteQuadCreateInfo.materialID = m_SpriteMatID;
-			spriteQuadCreateInfo.depthWriteEnable = false;
-			spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
-			spriteQuadCreateInfo.enableCulling = false;
-			spriteQuadCreateInfo.visibleInSceneExplorer = false;
-			spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-			spriteQuadCreateInfo.depthWriteEnable = false;
-			m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
+				RenderObjectCreateInfo spriteQuadCreateInfo = {};
+				spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
+				spriteQuadCreateInfo.materialID = m_SpriteMatID;
+				spriteQuadCreateInfo.depthWriteEnable = false;
+				spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
+				spriteQuadCreateInfo.enableCulling = false;
+				spriteQuadCreateInfo.visibleInSceneExplorer = false;
+				spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				spriteQuadCreateInfo.depthWriteEnable = false;
+				m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
 
-			m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
+				m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
+			}
+
+			// Text quad
+			{
+				VertexBufferData::CreateInfo textQuadVertexBufferDataCreateInfo = {};
+				textQuadVertexBufferDataCreateInfo.positions_2D = {
+					glm::vec2(0.0f,  0.0f)
+				};
+
+				textQuadVertexBufferDataCreateInfo.texCoords_UV = {
+					glm::vec2(0.0f, 0.0f)
+				};
+
+				textQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
+					glm::vec4(1.0f)
+				};
+
+				textQuadVertexBufferDataCreateInfo.extraVec4s = {
+					glm::vec4(1.0f)
+				};
+
+				textQuadVertexBufferDataCreateInfo.extraInts = {
+					0
+				};
+
+				textQuadVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION_2D |
+					(u32)VertexAttribute::UV |
+					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+					(u32)VertexAttribute::EXTRA_VEC4 |
+					(u32)VertexAttribute::EXTRA_INT;
+
+				m_TextQuadVertexBufferData = {};
+				m_TextQuadVertexBufferData.Initialize(&textQuadVertexBufferDataCreateInfo);
+
+
+				GameObject* textQuadGameObject = new GameObject("Text Quad", GameObjectType::NONE);
+				m_PersistentObjects.push_back(textQuadGameObject);
+				textQuadGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo textQuadCreateInfo = {};
+				textQuadCreateInfo.vertexBufferData = &m_TextQuadVertexBufferData;
+				textQuadCreateInfo.materialID = m_FontMatID;
+				textQuadCreateInfo.depthWriteEnable = false;
+				textQuadCreateInfo.gameObject = textQuadGameObject;
+				textQuadCreateInfo.enableCulling = false;
+				textQuadCreateInfo.visibleInSceneExplorer = false;
+				textQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				textQuadCreateInfo.depthWriteEnable = false;
+				m_TextQuadRenderID = InitializeRenderObject(gameContext, &textQuadCreateInfo);
+
+				m_TextQuadVertexBufferData.DescribeShaderVariables(this, m_TextQuadRenderID);
+			}
+
 
 			{
 				glm::vec3 pos(0.0f);
@@ -323,8 +388,9 @@ namespace flex
 		{
 			GenerateGBuffer(gameContext);
 
-			std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
-			LoadFont(gameContext, fontFilePath, 12);
+			std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceSansVariable-Roman.ttf";
+			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
+			LoadFont(gameContext, fontFilePath, 16);
 
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
@@ -376,7 +442,7 @@ namespace flex
 			m_PersistentObjects.clear();
 
 			DestroyRenderObject(m_SpriteQuadRenderID);
-
+			DestroyRenderObject(m_TextQuadRenderID);
 			DestroyRenderObject(m_GBufferQuadRenderID);
 
 			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
@@ -409,6 +475,7 @@ namespace flex
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_SpriteQuadVertexBufferData.Destroy();
+			m_TextQuadVertexBufferData.Destroy();
 
 			// TODO: Is this wanted here?
 			glfwTerminate();
@@ -471,6 +538,7 @@ namespace flex
 				{ "hdrEquirectangularSampler",		&mat.uniformIDs.hdrEquirectangularSampler },
 				{ "enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
 				{ "transformMat",					&mat.uniformIDs.transformMat },
+				{ "texSize",					&mat.uniformIDs.texSize },
 			};
 
 			const u32 uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
@@ -1982,18 +2050,18 @@ namespace flex
 			// TODO: Use orthographic proj matrix to avoid having to 
 			// divide out screen aspect ratio manually
 
-			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
-			if (!spriteRenderObject)
+			GLRenderObject* textQuadRenderObject = GetRenderObject(m_TextQuadRenderID);
+			if (!textQuadRenderObject)
 			{
 				return;
 			}
 
-			spriteRenderObject->materialID = m_SpriteMatID;
+			textQuadRenderObject->materialID = m_FontMatID;
 
-			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
-			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
+			GLMaterial& fontMaterial = m_Materials[textQuadRenderObject->materialID];
+			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
 
-			glUseProgram(spriteShader.program);
+			glUseProgram(fontShader.program);
 			CheckGLErrorMessages();
 
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
@@ -2006,31 +2074,36 @@ namespace flex
 			
 			glm::mat4 ortho = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.01f, 100.0f);
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
+			if (fontShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
 			{
 				glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), spriteScale);
-				glUniformMatrix4fv(spriteMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
+				glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
 				CheckGLErrorMessages();
 			}
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
+			if (fontShader.shader.dynamicBufferUniforms.HasUniform("texSize"))
+			{
+				glm::vec2 texSize = (glm::vec2)m_FntSourceCodePro->GetTexture()->GetResolution();
+				glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
+				CheckGLErrorMessages();
+			}
+
+			if (fontShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			{
 				glm::vec4 color(1.0f);
-				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &color.r);
+				glUniform4fv(fontMaterial.uniformIDs.colorMultiplier, 1, &color.r);
 				CheckGLErrorMessages();
 			}
 
-			glViewport(10, 10, 
-						(GLsizei)(frameBufferSize.x / 2.0f),
-						(GLsizei)(frameBufferSize.y / 2.0f));
+			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
 			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			CheckGLErrorMessages();
 
-			glBindVertexArray(spriteRenderObject->VAO);
+			glBindVertexArray(textQuadRenderObject->VAO);
 			CheckGLErrorMessages();
-			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
+			glBindBuffer(GL_ARRAY_BUFFER, textQuadRenderObject->VBO);
 			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0);
@@ -2048,7 +2121,7 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			CheckGLErrorMessages();
 
-			glCullFace(spriteRenderObject->cullFace);
+			glCullFace(textQuadRenderObject->cullFace);
 			CheckGLErrorMessages();
 
 			glDepthFunc(GL_ALWAYS);
@@ -2059,8 +2132,9 @@ namespace flex
 
 			glDisable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			CheckGLErrorMessages();
 
-			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
+			glDrawArrays(GL_POINTS, 0, (GLsizei)textQuadRenderObject->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
@@ -2898,6 +2972,7 @@ namespace flex
 				{ "sprite", RESOURCE_LOCATION + "shaders/GLSL/sprite.vert", RESOURCE_LOCATION + "shaders/GLSL/sprite.frag" },
 				{ "post_process", RESOURCE_LOCATION + "shaders/GLSL/post_process.vert", RESOURCE_LOCATION + "shaders/GLSL/post_process.frag" },
 				{ "compute_sdf", RESOURCE_LOCATION + "shaders/GLSL/ComputeSDF.vert", RESOURCE_LOCATION + "shaders/GLSL/ComputeSDF.frag" },
+				{ "font", RESOURCE_LOCATION + "shaders/GLSL/font.vert", RESOURCE_LOCATION + "shaders/GLSL/font.frag",  RESOURCE_LOCATION + "shaders/GLSL/font.geom" },
 			};
 
 			ShaderID shaderID = 0;
@@ -3094,6 +3169,17 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texChannel");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("sdfResolution");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("highRes");
+			++shaderID;
+
+			// Font
+			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texSize");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("threshold");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("outline");
 			++shaderID;
 
 			for (size_t i = 0; i < m_Shaders.size(); ++i)

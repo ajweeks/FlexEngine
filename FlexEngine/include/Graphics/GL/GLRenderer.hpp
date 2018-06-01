@@ -191,7 +191,11 @@ namespace flex
 			VertexBufferData m_SpriteQuadVertexBufferData;
 			RenderID m_SpriteQuadRenderID;
 			
+			VertexBufferData m_TextQuadVertexBufferData;
+			RenderID m_TextQuadRenderID;
+
 			MaterialID m_SpriteMatID = InvalidMaterialID;
+			MaterialID m_FontMatID = InvalidMaterialID;
 			MaterialID m_PostProcessMatID = InvalidMaterialID;
 
 			u32 m_CaptureFBO = 0;

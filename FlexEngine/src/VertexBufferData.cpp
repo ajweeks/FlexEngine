@@ -93,6 +93,18 @@ namespace flex
 				memcpy(pDataLocation, &createInfo->normals[i], sizeof(glm::vec3));
 				pDataLocation = (real*)pDataLocation + 3;
 			}
+
+			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
+			{
+				memcpy(pDataLocation, &createInfo->extraVec4s[i], sizeof(glm::vec4));
+				pDataLocation = (real*)pDataLocation + 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
+			{
+				memcpy(pDataLocation, &createInfo->extraInts[i], sizeof(i32));
+				pDataLocation = (real*)pDataLocation + 1;
+			}
 		}
 	}
 
@@ -127,9 +139,11 @@ namespace flex
 			{ "in_Tangent", 3 },
 			{ "in_Bitangent", 3 },
 			{ "in_Normal", 3 },
+			{ "in_ExtraVec4", 4 },
+			{ "in_ExtraInt", 1 },
 		};
 
-		const size_t vertexTypeCount = sizeof(vertexTypes) / sizeof(vertexTypes[0]);
+		const size_t vertexTypeCount = ARRAY_SIZE(vertexTypes);
 		real* currentLocation = (real*)0;
 		for (size_t i = 0; i < vertexTypeCount; ++i)
 		{
