@@ -2739,8 +2739,21 @@ namespace flex
 					}
 				}
 
-				u32 width = face->glyph->bitmap.width;
-				u32 height = face->glyph->bitmap.rows;
+				if (face->glyph->bitmap.width == 0 ||
+					face->glyph->bitmap.rows == 0)
+				{
+					continue;
+				}
+
+				FT_Bitmap alignedBitmap{};
+				if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
+				{
+					Logger::LogError("Couldn't align free type bitmap size");
+					continue;
+				}
+
+				u32 width = alignedBitmap.width;
+				u32 height = alignedBitmap.rows;
 
 				if (width == 0 ||
 					height == 0)
@@ -2757,7 +2770,7 @@ namespace flex
 
 				glBindTexture(GL_TEXTURE_2D, texHandle);
 				CheckGLErrorMessages();
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
 				CheckGLErrorMessages();
 
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -2808,6 +2821,8 @@ namespace flex
 
 				// Modify texture coordinates after rendering sprite
 				metric->TexCoord = metric->TexCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
+
+				FT_Bitmap_Done(ft, &alignedBitmap);
 			}
 
 
