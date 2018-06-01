@@ -94,7 +94,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_LEQUAL);
+			//glDepthFunc(GL_LEQUAL);
 			CheckGLErrorMessages();
 
 			glFrontFace(GL_CCW);
@@ -347,7 +347,7 @@ namespace flex
 		{
 			CheckGLErrorMessages();
 
-			SafeDelete(font);
+			SafeDelete(m_FntSourceCodePro);
 
 			ImGui_ImplGlfwGL3_Shutdown();
 			ImGui::DestroyContext();
@@ -1650,6 +1650,8 @@ namespace flex
 			
 			DrawSprites(gameContext);
 
+			DrawText(gameContext);
+
 			SwapBuffers(gameContext);
 		}
 
@@ -1975,6 +1977,98 @@ namespace flex
 						   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f));
 		}
 
+		void GLRenderer::DrawText(const GameContext& gameContext)
+		{
+			// TODO: Use orthographic proj matrix to avoid having to 
+			// divide out screen aspect ratio manually
+
+			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
+			if (!spriteRenderObject)
+			{
+				return;
+			}
+
+			spriteRenderObject->materialID = m_SpriteMatID;
+
+			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
+			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
+
+			glUseProgram(spriteShader.program);
+			CheckGLErrorMessages();
+
+			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+			glm::vec2i texSize = m_FntSourceCodePro->GetTexture()->GetResolution();
+			real texAspectRatio = texSize.y / (real)texSize.x;
+			glm::vec3 spriteScale(1.0f, texAspectRatio, 1.0f);
+			real screenAspectRatioInv = frameBufferSize.x / frameBufferSize.y;
+			spriteScale *= screenAspectRatioInv;
+			
+			glm::mat4 ortho = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.01f, 100.0f);
+
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
+			{
+				glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), spriteScale);
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
+				CheckGLErrorMessages();
+			}
+
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
+			{
+				glm::vec4 color(1.0f);
+				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &color.r);
+				CheckGLErrorMessages();
+			}
+
+			glViewport(10, 10, 
+						(GLsizei)(frameBufferSize.x / 2.0f),
+						(GLsizei)(frameBufferSize.y / 2.0f));
+			CheckGLErrorMessages();
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			CheckGLErrorMessages();
+
+			glBindVertexArray(spriteRenderObject->VAO);
+			CheckGLErrorMessages();
+			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
+			CheckGLErrorMessages();
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, m_FntSourceCodePro->GetTexture()->GetHandle());
+			CheckGLErrorMessages();
+
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			//CheckGLErrorMessages();
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			//CheckGLErrorMessages();
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			//CheckGLErrorMessages();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			CheckGLErrorMessages();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			CheckGLErrorMessages();
+
+			glCullFace(spriteRenderObject->cullFace);
+			CheckGLErrorMessages();
+
+			glDepthFunc(GL_ALWAYS);
+			CheckGLErrorMessages();
+
+			glDepthMask(GL_FALSE);
+			CheckGLErrorMessages();
+
+			glDisable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
+			CheckGLErrorMessages();
+
+			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+
+			glBindVertexArray(0);
+			glUseProgram(0);
+		}
+
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle,
 										MaterialID materialID,
 										const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
@@ -2091,7 +2185,7 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			CheckGLErrorMessages();
 
-			// TODO: Is this neceessary to clear the depth?
+			// TODO: Is this necessary to clear the depth?
 			glDepthMask(GL_TRUE);
 
 			glEnable(GL_BLEND);
@@ -2406,8 +2500,6 @@ namespace flex
 				return false;
 			}
 
-			u32 fontPixelSize = 12;
-
 			std::vector<char> fileMemory;
 			ReadFile(filePath, fileMemory, true);
 
@@ -2416,19 +2508,17 @@ namespace flex
 			if (error == FT_Err_Unknown_File_Format)
 			{
 				Logger::LogError("Unhandled font file format: " + filePath);
+				return false;
 			}
-			else if (error != FT_Err_Ok)
+			else if (error != FT_Err_Ok ||
+					 !face)
 			{
 				Logger::LogError("Failed to create new font face: " + filePath);
-			}
-			if (!face)
-			{
-				Logger::LogError("Failed to create face");
 				return false;
 			}
 
 			error = FT_Set_Char_Size(face,
-									 0, fontPixelSize * 64,
+									 0, size * 64,
 									 monitorDPI.x, monitorDPI.y);
 
 			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
@@ -2436,21 +2526,18 @@ namespace flex
 			Logger::LogInfo("Loaded font " + filePath);
 			Logger::LogInfo("num glyphs in font: " + std::to_string(face->num_glyphs));
 
-			//u32 penX = 0;
-			//u32 penY = 0;
-
 			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
-			font = new BitmapFont(size, fontName, face->num_glyphs);
+			m_FntSourceCodePro = new BitmapFont(size, fontName, face->num_glyphs);
 
 			// font->m_UseKerning = FT_HAS_KERNING(face) != 0;
 
 			// Atlas helper variables
 			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
 			glm::vec2i maxPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
-			bool horizontal = false; // Direction this pass expands the map in (internal moves are !horizontal)
+			bool bHorizontal = false; // Direction this pass expands the map in (internal moves are !bHorizontal)
 			u32 posCount = 1; // Internal move count in this pass
 			u32 curPos = 0;   // Internal move count
-			u32 channel = 0;  // Channel to add to
+			u32 channel = 0;  // Current channel writing to
 
 			u32 padding = 1;
 			u32 spread = 5;
@@ -2467,18 +2554,22 @@ namespace flex
 			std::map<i32, FontMetric*> characters;
 			for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
 			{
-				FontMetric* metric = font->GetMetric(static_cast<wchar_t>(c));
-				if (metric)
+				FontMetric* metric = m_FntSourceCodePro->GetMetric((wchar_t)c);
+				if (!metric)
 				{
-					metric->Character = static_cast<wchar_t>(c);
+					continue;
 				}
 
+				metric->Character = (wchar_t)c;
+
 				u32 glyphIndex = FT_Get_Char_Index(face, c);
-				++glyphIndex;
+				// TODO: Is this correct?
+				if (glyphIndex == 0)
+				{
+					continue;
+				}
 
-				// TODO: continue if glyphIndex == 0?
-
-				if (font->GetUseKerning() && glyphIndex)
+				if (m_FntSourceCodePro->GetUseKerning() && glyphIndex)
 				{
 					for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
 					{
@@ -2495,7 +2586,7 @@ namespace flex
 					}
 				}
 
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT))
+				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 				{
 					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
 					continue;
@@ -2516,7 +2607,7 @@ namespace flex
 				metric->Page = 0;
 				metric->Channel = (u8)channel;
 				metric->TexCoord = startPos[channel];
-				if (horizontal)
+				if (bHorizontal)
 				{
 					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
 					startPos[channel].y += height;
@@ -2536,8 +2627,8 @@ namespace flex
 					if (curPos == posCount)
 					{
 						curPos = 0;
-						horizontal = !horizontal;
-						if (horizontal)
+						bHorizontal = !bHorizontal;
+						if (bHorizontal)
 						{
 							for (u8 cha = 0; cha < 4; ++cha)
 							{
@@ -2563,14 +2654,14 @@ namespace flex
 			glm::vec2i textureSize(
 				std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 				std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
-			font->SetTextureSize(textureSize);
+			m_FntSourceCodePro->SetTextureSize(textureSize);
 
 			//Setup rendering
 			TextureParameters params(false);
 			params.wrapS = GL_CLAMP_TO_EDGE;
 			params.wrapT = GL_CLAMP_TO_EDGE;
 
-			GLTexture* fontTex = font->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
+			GLTexture* fontTex = m_FntSourceCodePro->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
 			fontTex->Build();
 			fontTex->SetParameters(params);
 
@@ -2589,17 +2680,15 @@ namespace flex
 
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, textureSize.x, textureSize.y);
 			CheckGLErrorMessages();
+			// TODO: Don't use depth buffer
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, font->GetTexture()->GetHandle(), 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, textureSize.x, textureSize.y);
 			CheckGLErrorMessages();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
-
-			LoadShaders();
-
 
 			ShaderID computeSDFShaderID;
 			GetShaderID("compute_sdf", computeSDFShaderID);
@@ -2613,10 +2702,6 @@ namespace flex
 			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
 			glUniform1f(glGetUniformLocation(computeSDFShader.program, "highRes"), (real)highRes);
 
-			params.wrapS = GL_CLAMP_TO_BORDER;
-			params.wrapT = GL_CLAMP_TO_BORDER;
-			params.borderColor = glm::vec4(0.0f);
-
 			glEnable(GL_BLEND);
 			glBlendEquation(GL_FUNC_ADD);
 			glBlendFunc(GL_ONE, GL_ONE);
@@ -2625,8 +2710,8 @@ namespace flex
 			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 
 			//Render to Glyphs atlas
-			FT_Set_Pixel_Sizes(face, 0, size);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			FT_Set_Pixel_Sizes(face, 0, size * highRes);
+			//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			CheckGLErrorMessages();
 
 			for (auto& character : characters)
@@ -2634,7 +2719,12 @@ namespace flex
 				auto metric = character.second;
 
 				u32 glyphIndex = FT_Get_Char_Index(face, metric->Character);
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT))
+				if (glyphIndex == 0)
+				{
+					continue;
+				}
+
+				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 				{
 					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
 					continue;
@@ -2651,12 +2741,42 @@ namespace flex
 
 				u32 width = face->glyph->bitmap.width;
 				u32 height = face->glyph->bitmap.rows;
-				GLTexture* texture = new GLTexture(width, height, GL_RED, GL_RED, GL_UNSIGNED_BYTE);
-				texture->Build(face->glyph->bitmap.buffer);
-				texture->SetParameters(params);
+
+				if (width == 0 ||
+					height == 0)
+				{
+					continue;
+				}
+
+				GLuint texHandle;
+				glGenTextures(1, &texHandle);
+				CheckGLErrorMessages();
+				
+				glActiveTexture(GL_TEXTURE0);
+				CheckGLErrorMessages();
+
+				glBindTexture(GL_TEXTURE_2D, texHandle);
+				CheckGLErrorMessages();
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+				CheckGLErrorMessages();
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				CheckGLErrorMessages();
+				glm::vec4 borderColor(0.0f);
+				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
+				CheckGLErrorMessages();
 
 				if (metric->Width > 0 && metric->Height > 0)
 				{
+					//glm::vec2i res = glm::vec2i(metric->Width - totPadding * 2, metric->Height - totPadding * 2);
 					glm::vec2i res = glm::vec2i(metric->Width - padding * 2, metric->Height - padding * 2);
 					glm::vec2i viewportTL = glm::vec2i(metric->TexCoord) + glm::vec2i(padding);
 
@@ -2666,26 +2786,30 @@ namespace flex
 					CheckGLErrorMessages();
 					glActiveTexture(GL_TEXTURE0);
 					CheckGLErrorMessages();
-					glBindTexture(GL_TEXTURE_2D, texture->GetHandle());
+					glBindTexture(GL_TEXTURE_2D, texHandle);
 					CheckGLErrorMessages();
 
 					glUniform1i(texChannel, metric->Channel);
 					glUniform2f(charResolution, (real)res.x, (real)res.y);
-
-					//PrimitiveRenderer::GetInstance()->Draw<primitives::Quad>();
+					CheckGLErrorMessages();
+					glActiveTexture(GL_TEXTURE0);
 					glBindVertexArray(gBufferRenderObject->VAO);
 					CheckGLErrorMessages();
-					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
+					CheckGLErrorMessages();
+					glDrawArrays(gBufferRenderObject->topology, 0,
+						(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 					glBindVertexArray(0);
 					CheckGLErrorMessages();
 				}
 
-				delete texture;
+				glDeleteTextures(1, &texHandle);
 
 				// Modify texture coordinates after rendering sprite
 				metric->TexCoord = metric->TexCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
 			}
+
 
 			// Cleanup
 			glDisable(GL_BLEND);
@@ -2699,17 +2823,10 @@ namespace flex
 					   gameContext.window->GetFrameBufferSize().x,
 					   gameContext.window->GetFrameBufferSize().y);
 
-			//glDeleteRenderbuffers(1, &captureRBO);
-			//glDeleteFramebuffers(1, &captureFBO);
+			glDeleteRenderbuffers(1, &captureRBO);
+			glDeleteFramebuffers(1, &captureFBO);
 
 			CheckGLErrorMessages();
-
-			//// DrawTexture(face->glyph->bitmap, penX + face->glyph->bitmap_left, penY + face->glyph->bitmap_top);
-
-			//// RSH 6 divides value by 64 to get value in pixels
-			////penX += (face->glyph->advance.x >> 6);
-
-
 
 			return true;
 		}

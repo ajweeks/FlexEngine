@@ -61,7 +61,8 @@ namespace flex
 		gl::GLTexture* SetTexture(gl::GLTexture* newTex);
 		gl::GLTexture* GetTexture();
 
-		static const i32 CHAR_COUNT = 256;
+		// TODO: Investigate crash when this value is higher (256)
+		static const i32 CHAR_COUNT = 200;
 
 	private:
 		FontMetric m_CharTable[CHAR_COUNT];

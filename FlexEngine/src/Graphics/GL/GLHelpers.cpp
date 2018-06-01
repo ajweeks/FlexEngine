@@ -316,8 +316,6 @@ namespace flex
 
 		GLTexture::~GLTexture()
 		{
-			glDeleteTextures(1, &m_Handle);
-			CheckGLErrorMessages();
 		}
 
 		GLuint GLTexture::GetHandle()
@@ -344,6 +342,15 @@ namespace flex
 				glBindTexture(GL_TEXTURE_3D, m_Handle);
 				CheckGLErrorMessages();
 				glTexImage3D(GL_TEXTURE_3D, 0, m_InternalFormat, m_Width, m_Height, m_Depth, 0, m_Format, m_Type, data);
+				CheckGLErrorMessages();
+			}
+		}
+
+		void GLTexture::Destroy()
+		{
+			if (m_Handle != 0)
+			{
+				glDeleteTextures(1, &m_Handle);
 				CheckGLErrorMessages();
 			}
 		}

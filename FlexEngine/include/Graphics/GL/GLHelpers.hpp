@@ -190,6 +190,7 @@ namespace flex
 			glm::vec2i GetResolution();
 
 			void Build(void* data = nullptr);
+			void Destroy();
 			void SetParameters(TextureParameters params);
 
 			GLenum GetTarget();
@@ -200,12 +201,12 @@ namespace flex
 			bool Resize(glm::vec2i newSize);
 
 		private:
-			GLuint m_Handle;
+			GLuint m_Handle = 0;
 
-			i32 m_Width;
-			i32 m_Height;
+			i32 m_Width = 0;
+			i32 m_Height = 0;
 
-			i32 m_Depth; // A value of 1 implies a 2D texture
+			i32 m_Depth = 1; // A value of 1 implies a 2D texture
 
 			i32 m_InternalFormat = GL_RGB;
 			GLenum m_Format = GL_RGB;

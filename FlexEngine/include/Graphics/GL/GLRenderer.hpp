@@ -109,6 +109,7 @@ namespace flex
 								AnchorPoint anchor,
 								const glm::vec4& color);
 			void DrawSprites(const GameContext& gameContext);
+			void DrawText(const GameContext& gameContext);
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
 			bool GetLoadedTexture(const std::string& filePath, u32& handle);
@@ -220,7 +221,7 @@ namespace flex
 
 
 			FT_Library ft;
-			BitmapFont* font = nullptr;
+			BitmapFont* m_FntSourceCodePro = nullptr;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

@@ -13,7 +13,9 @@ out vec4 outColor;
 
 void main()
 {
-	bool local = texture(highResTex, ex_TexCoord).r > 0.5;
+	bool insideChar = texture(highResTex, ex_TexCoord).r > 0.5;
+
+	//outColor =  vec4(texture(highResTex, ex_TexCoord.xy).r, 0, 0, 1);
 
 	// Get closest opposite
 	vec2 startPos = ex_TexCoord - (vec2(spread) / charResolution);
@@ -29,8 +31,8 @@ void main()
 			float dist = length(diff);
 			if (dist < closest)
 			{
-				bool sampled = texture(highResTex, samplePos).r > 0.5;
-				if (sampled != local)
+				bool sampleInsideChar = texture(highResTex, samplePos).r > 0.5;
+				if (sampleInsideChar != insideChar)
 				{
 					closest = dist;
 				}
@@ -40,7 +42,7 @@ void main()
 
 	// Bring into range [0, 1]
 	float diff = closest / (spread * 2.0);
-	float val = 0.5 + (local ? diff : -diff);
+	float val = 0.5 + (insideChar ? diff : -diff);
 
 	//apply to output color
 	vec4 color = vec4(0);
