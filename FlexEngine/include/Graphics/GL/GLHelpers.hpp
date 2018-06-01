@@ -22,8 +22,9 @@ namespace flex
 		struct GLShader
 		{
 			GLShader(const std::string& name,
-				const std::string& vertexShaderFilePath,
-				const std::string& fragmentShaderFilePath);
+					 const std::string& vertexShaderFilePath,
+					 const std::string& fragmentShaderFilePath,
+					 const std::string& geometryShaderFilePath = "");
 
 			Shader shader;
 

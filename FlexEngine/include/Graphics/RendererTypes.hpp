@@ -289,16 +289,19 @@ namespace flex
 	struct Shader
 	{
 		Shader(const std::string& name,
-			const std::string& vertexShaderFilePath,
-			const std::string& fragmentShaderFilePath);
+			   const std::string& vertexShaderFilePath,
+			   const std::string& fragmentShaderFilePath,
+			   const std::string& geometryShaderFilePath = "");
 
 		std::string name = "";
 
 		std::string vertexShaderFilePath = "";
 		std::string fragmentShaderFilePath = "";
+		std::string geometryShaderFilePath = "";
 
 		std::vector<char> vertexShaderCode = {};
 		std::vector<char> fragmentShaderCode = {};
+		std::vector<char> geometryShaderCode = {};
 
 		Uniforms constantBufferUniforms = {};
 		Uniforms dynamicBufferUniforms = {};

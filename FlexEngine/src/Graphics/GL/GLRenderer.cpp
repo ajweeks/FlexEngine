@@ -3088,7 +3088,12 @@ namespace flex
 
 				if (!LoadGLShaders(m_Shaders[i].program, m_Shaders[i]))
 				{
-					Logger::LogError("Couldn't load shaders " + m_Shaders[i].shader.vertexShaderFilePath + " and " + m_Shaders[i].shader.fragmentShaderFilePath + "!");
+					std::string fileNames = m_Shaders[i].shader.vertexShaderFilePath + " & " + m_Shaders[i].shader.fragmentShaderFilePath;
+					if (!m_Shaders[i].shader.geometryShaderFilePath.empty())
+					{
+						fileNames += " & " + m_Shaders[i].shader.geometryShaderFilePath;
+					}
+					Logger::LogError("Couldn't load/compile shaders: " + fileNames);
 				}
 
 				LinkProgram(m_Shaders[i].program);

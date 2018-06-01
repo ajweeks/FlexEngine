@@ -447,7 +447,9 @@ namespace flex
 		{
 			CheckGLErrorMessages();
 
-			bool success = true;
+			bool bSuccess = true;
+
+			bool bLoadGeometryShader = (!shader.shader.geometryShaderFilePath.empty());
 
 			GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 			CheckGLErrorMessages();
@@ -455,23 +457,50 @@ namespace flex
 			GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 			CheckGLErrorMessages();
 
+			GLuint geometryShaderID = 0;
+			if (bLoadGeometryShader)
+			{
+				geometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
+				CheckGLErrorMessages();
+			}
+
 			std::string vertFileName = shader.shader.vertexShaderFilePath;
 			StripLeadingDirectories(vertFileName);
 			std::string fragFileName = shader.shader.fragmentShaderFilePath;
 			StripLeadingDirectories(fragFileName);
-			Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+			std::string geomFileName;
+			if (bLoadGeometryShader)
+			{
+				geomFileName = shader.shader.geometryShaderFilePath;
+				StripLeadingDirectories(geomFileName);
+
+				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName + " & " + geomFileName);
+			}
+			else
+			{
+				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+			}
 
 			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode, false))
 			{
-				Logger::LogError("Could not find vertex shader " + shader.shader.name);
+				Logger::LogError("Could not find vertex shader: " + shader.shader.name);
 			}
 			shader.shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
 
 			if (!ReadFile(shader.shader.fragmentShaderFilePath, shader.shader.fragmentShaderCode, false))
 			{
-				Logger::LogError("Could not find fragment shader " + shader.shader.name);
+				Logger::LogError("Could not find fragment shader: " + shader.shader.name);
 			}
 			shader.shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
+
+			if (bLoadGeometryShader)
+			{
+				if (!ReadFile(shader.shader.geometryShaderFilePath, shader.shader.geometryShaderCode, false))
+				{
+					Logger::LogError("Could not find geometry shader: " + shader.shader.name);
+				}
+				shader.shader.geometryShaderCode.push_back('\0'); // Signal end of string with terminator character
+			}
 
 			GLint result = GL_FALSE;
 			i32 infoLogLength;
@@ -489,10 +518,10 @@ namespace flex
 				vertexShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(vertexShaderID, infoLogLength, NULL, (GLchar*)vertexShaderErrorMessage.data());
 				Logger::LogError(vertexShaderErrorMessage);
-				success = false;
+				bSuccess = false;
 			}
 
-			// Compile Fragment Shader
+			// Compile fragment shader
 			char const* fragmentSourcePointer = shader.shader.fragmentShaderCode.data();
 			glShaderSource(fragmentShaderID, 1, &fragmentSourcePointer, NULL);
 			glCompileShader(fragmentShaderID);
@@ -505,14 +534,38 @@ namespace flex
 				fragmentShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(fragmentShaderID, infoLogLength, NULL, (GLchar*)fragmentShaderErrorMessage.data());
 				Logger::LogError(fragmentShaderErrorMessage);
-				success = false;
+				bSuccess = false;
+			}
+			
+			if (bLoadGeometryShader)
+			{
+				// Compile geometry shader
+				char const* geometrySourcePointer = shader.shader.geometryShaderCode.data();
+				glShaderSource(geometryShaderID, 1, &geometrySourcePointer, NULL);
+				glCompileShader(geometryShaderID);
+
+				glGetShaderiv(geometryShaderID, GL_COMPILE_STATUS, &result);
+				if (result == GL_FALSE)
+				{
+					glGetShaderiv(geometryShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
+					std::string geometryShaderErrorMessage;
+					geometryShaderErrorMessage.resize((size_t)infoLogLength);
+					glGetShaderInfoLog(geometryShaderID, infoLogLength, NULL, 
+						(GLchar*)geometryShaderErrorMessage.data());
+					Logger::LogError(geometryShaderErrorMessage);
+					bSuccess = false;
+				}
 			}
 
 			glAttachShader(program, vertexShaderID);
 			glAttachShader(program, fragmentShaderID);
+			if (bLoadGeometryShader)
+			{
+				glAttachShader(program, geometryShaderID);
+			}
 			CheckGLErrorMessages();
 
-			return success;
+			return bSuccess;
 		}
 
 		bool LinkProgram(u32 program)
@@ -536,8 +589,11 @@ namespace flex
 			return true;
 		}
 
-		GLShader::GLShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath) :
-			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
+		GLShader::GLShader(const std::string& name,
+						   const std::string& vertexShaderFilePath,
+						   const std::string& fragmentShaderFilePath,
+						   const std::string& geometryShaderFilePath) :
+			shader(name, vertexShaderFilePath, fragmentShaderFilePath, geometryShaderFilePath)
 		{
 		}
 
