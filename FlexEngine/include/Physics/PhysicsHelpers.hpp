@@ -22,7 +22,7 @@ namespace flex
 	{
 		TRIGGER = (1 << 0),
 
-		MAX_FLAG = (1 << 31)
+		MAX_FLAG = (1 << 30)
 	};
 
 } // namespace flex

@@ -90,7 +90,7 @@ namespace flex
 		sceneRootObject.SetStringChecked("name", m_Name);
 
 		std::vector<JSONObject> materialsArray = sceneRootObject.GetObjectArray("materials");
-		for (i32 i = 0; i < materialsArray.size(); ++i)
+		for (u32 i = 0; i < materialsArray.size(); ++i)
 		{
 			MaterialCreateInfo matCreateInfo = {};
 			ParseMaterialJSONObject(materialsArray[i], matCreateInfo);
@@ -347,7 +347,7 @@ namespace flex
 		if (obj.SetIntChecked("material index", materialIndex))
 		{
 			if (materialIndex >= 0 &&
-				materialIndex < m_LoadedMaterials.size())
+				materialIndex < (i32)m_LoadedMaterials.size())
 			{
 				matID = m_LoadedMaterials[materialIndex];
 			}
@@ -475,7 +475,7 @@ namespace flex
 			} break;
 			}
 
-			bool bIsTrigger = colliderObj.GetBool("trigger");
+			//bool bIsTrigger = colliderObj.GetBool("trigger");
 			// TODO: Create btGhostObject to use for trigger
 		}
 
@@ -650,7 +650,6 @@ namespace flex
 
 			JSONObject blockInfo = obj.GetObject("block info");
 			std::string valveName = blockInfo.GetString("valve name");
-			GameObject* valve;
 			for (GameObject* child : m_Children)
 			{
 				if (child->m_Name.compare(valveName) == 0)
@@ -779,12 +778,12 @@ namespace flex
 	i32 BaseScene::GetMaterialIndex(const Material& material, const GameContext& gameContext)
 	{
 		i32 materialIndex = -1;
-		for (i32 j = 0; j < m_LoadedMaterials.size(); ++j)
+		for (u32 j = 0; j < m_LoadedMaterials.size(); ++j)
 		{
 			Material& loadedMat = gameContext.renderer->GetMaterial(m_LoadedMaterials[j]);
 			if (loadedMat.Equals(material, gameContext))
 			{
-				materialIndex = j;
+				materialIndex = (i32)j;
 				break;
 			}
 		}
@@ -793,6 +792,8 @@ namespace flex
 
 	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		std::string posStr = obj.GetString("position");
 		pointLight.position = glm::vec4(ParseVec3(posStr), 0);
 
@@ -812,6 +813,8 @@ namespace flex
 
 	void BaseScene::CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		std::string dirStr = obj.GetString("direction");
 		directionalLight.direction = glm::vec4(ParseVec3(dirStr), 0);
 
@@ -1149,6 +1152,8 @@ namespace flex
 
 	JSONObject BaseScene::SerializeMaterial(const Material& material, const GameContext& gameContext)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		JSONObject materialObject = {};
 
 		materialObject.fields.push_back(JSONField("name", JSONValue(material.name)));
@@ -1171,7 +1176,6 @@ namespace flex
 		static const bool defaultEnableAlbedo = true;
 		if (shader.needAlbedoSampler && material.enableAlbedoSampler != defaultEnableAlbedo)
 		{
-			std::string constAlbedoStr = Vec4ToString(material.constAlbedo);
 			materialObject.fields.push_back(JSONField("enable albedo sampler",
 				JSONValue(material.enableAlbedoSampler)));
 		}
@@ -1276,6 +1280,8 @@ namespace flex
 
 	JSONObject BaseScene::SerializePointLight(PointLight& pointLight, const GameContext& gameContext)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		JSONObject object;
 
 		object.fields.push_back(JSONField("name", JSONValue(pointLight.name)));
@@ -1294,6 +1300,8 @@ namespace flex
 
 	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		JSONObject object;
 
 		std::string dirStr = Vec3ToString(directionalLight.direction);
