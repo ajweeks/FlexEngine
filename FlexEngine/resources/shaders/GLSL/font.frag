@@ -3,7 +3,7 @@
 uniform sampler2D in_Texture;
 
 uniform float threshold = 0.5;
-uniform float outline = 0.06;
+uniform float outline = 0.2;
 
 in GSO
 {
@@ -18,7 +18,7 @@ void main()
 {
 	vec4 color;
 
-	float texValue = texture(in_Texture, vec2(inputs.texCoord.x, 1-inputs.texCoord.y))[inputs.channel];
+	float texValue = texture(in_Texture, inputs.texCoord)[inputs.channel];
 	if (texValue < threshold)
 	{
 		discard;

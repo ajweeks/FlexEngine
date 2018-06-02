@@ -11,31 +11,33 @@ namespace flex
 	{
 		glm::vec2 GetKerningOffset(wchar_t previous);
 
-		bool IsValid = false;
-		wchar_t Character = 0;
+		bool bIsValid = false;
+		wchar_t character = 0;
 
-		u16 Width = 0;
-		u16 Height = 0;
-		i16 OffsetX = 0;
-		i16 OffsetY = 0;
+		u16 width = 0;
+		u16 height = 0;
+		i16 offsetX = 0;
+		i16 offsetY = 0;
 
-		float AdvanceX = 0;
-		std::map<wchar_t, glm::vec2> Kerning;
+		float advanceX = 0;
+		std::map<wchar_t, glm::vec2> kerning;
 
-		u8 Page = 0;
-		u8 Channel = 0;
-		glm::vec2 TexCoord;
+		//u8 page = 0;
+		u8 channel = 0;
+		glm::vec2 texCoord;
 	};
 
+	// Stores text render commands issued during the 
+	// frame to later be converted to "TextVertex"s
 	struct TextCache
 	{
 	public:
-		TextCache(const std::string& text, glm::vec2 pos, glm::vec4 col, i16 size);
+		TextCache(const std::string& text, glm::vec2 position, glm::vec4 col, i32 size);
 
-		const std::string Text;
-		glm::vec2 Position;
-		glm::vec4 Color;
-		i16 Size;
+		std::string str;
+		glm::vec2 pos;
+		glm::vec4 color;
+		i32 size;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);
@@ -45,7 +47,7 @@ namespace flex
 	class BitmapFont
 	{
 	public:
-		BitmapFont(i32 size, const std::string& name, i32 charCount);
+		BitmapFont(i16 size, const std::string& name, i32 charCount);
 		~BitmapFont();
 
 		static bool IsCharValid(wchar_t character);
@@ -65,6 +67,9 @@ namespace flex
 		static const i32 CHAR_COUNT = 200;
 
 	private:
+		// TODO: Remove
+		friend class flex::gl::GLRenderer;
+
 		FontMetric m_CharTable[CHAR_COUNT];
 		std::vector<TextCache> m_TextCache;
 

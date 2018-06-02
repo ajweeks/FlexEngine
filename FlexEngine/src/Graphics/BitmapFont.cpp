@@ -5,7 +5,7 @@
 
 namespace flex
 {
-	BitmapFont::BitmapFont(i32 size, const std::string& name, i32 charCount) :
+	BitmapFont::BitmapFont(i16 size, const std::string& name, i32 charCount) :
 		m_FontSize(size),
 		m_Name(name),
 		m_CharacterCount(charCount)
@@ -16,7 +16,7 @@ namespace flex
 		// TODO: Is this needed? (double check in release config)
 		for (i32 i = 0; i < CHAR_COUNT; ++i)
 		{
-			m_CharTable[i].Kerning = std::map<wchar_t, glm::vec2>();
+			m_CharTable[i].kerning = std::map<wchar_t, glm::vec2>();
 		}
 	}
 
@@ -44,8 +44,8 @@ namespace flex
 	{
 		glm::vec2 kerningVec(0.0f);
 
-		auto kerningIt = Kerning.find(previous);
-		if (kerningIt != Kerning.end())
+		auto kerningIt = kerning.find(previous);
+		if (kerningIt != kerning.end())
 		{
 			kerningVec = kerningIt->second;
 		}
@@ -53,8 +53,8 @@ namespace flex
 		return kerningVec;
 	}
 
-	TextCache::TextCache(const std::string& text, glm::vec2 pos, glm::vec4 col, i16 size) :
-		Text(text), Position(pos), Color(col), Size(size)
+	TextCache::TextCache(const std::string& str, glm::vec2 pos, glm::vec4 color, i32 size) :
+		str(str), pos(pos), color(color), size(size)
 	{
 	}
 

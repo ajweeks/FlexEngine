@@ -5,6 +5,7 @@
 
 #include <map>
 
+#include "Types.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 
 namespace flex
@@ -145,6 +146,9 @@ namespace flex
 
 			bool LoadFont(const GameContext& gameContext, const std::string& filePath, i32 size);
 
+			void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size);
+			void UpdateTextBuffer();
+
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
 
@@ -190,9 +194,20 @@ namespace flex
 			// TODO: Use a mesh prefab here
 			VertexBufferData m_SpriteQuadVertexBufferData;
 			RenderID m_SpriteQuadRenderID;
-			
-			VertexBufferData m_TextQuadVertexBufferData;
-			RenderID m_TextQuadRenderID;
+
+			struct TextVertex
+			{
+				glm::vec2 pos;
+				glm::vec2 uv;
+				glm::vec4 color;
+				//glm::vec2 size;
+				glm::vec4 charSize; // uses the "extra vec4s" slot
+				i32 channel; // uses extra ints slot
+			};
+
+			u32 m_TextQuadVBO = 0;
+			u32 m_TextQuadVAO = 0;
+			VertexBufferData m_TextQuadsVertexBufferData;
 
 			MaterialID m_SpriteMatID = InvalidMaterialID;
 			MaterialID m_FontMatID = InvalidMaterialID;

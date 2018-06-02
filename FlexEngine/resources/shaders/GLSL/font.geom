@@ -32,7 +32,7 @@ void main()
 	vec2 pos = inputs[0].position;
 	vec2 uv = inputs[0].texCoord;
 	
-	vec2 normUV = vec2(1, 1);//vec2(charSize.x, charSize.y) / texSize;
+	vec2 normUV = vec2(charSize.x, charSize.y) / texSize;
 	
 	outputs.channel = inputs[0].channel;
 	gl_Position = transformMat * vec4(pos.x, pos.y + charSize.y, 0, 1);
