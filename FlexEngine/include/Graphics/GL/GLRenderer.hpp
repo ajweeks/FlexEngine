@@ -202,8 +202,7 @@ namespace flex
 				glm::vec2 pos;
 				glm::vec2 uv;
 				glm::vec4 color;
-				//glm::vec2 size;
-				glm::vec4 charSize; // uses the "extra vec4s" slot
+				glm::vec4 RGCharSizeBScale; // RG: char size, B: scale, A: unused
 				i32 channel; // uses extra ints slot
 			};
 

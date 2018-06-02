@@ -32,12 +32,12 @@ namespace flex
 	struct TextCache
 	{
 	public:
-		TextCache(const std::string& text, glm::vec2 position, glm::vec4 col, i32 size);
+		TextCache(const std::string& text, glm::vec2 position, glm::vec4 col, real scale);
 
 		std::string str;
 		glm::vec2 pos;
 		glm::vec4 color;
-		i32 size;
+		real scale;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);

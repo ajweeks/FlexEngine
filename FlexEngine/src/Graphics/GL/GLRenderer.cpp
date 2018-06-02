@@ -1675,7 +1675,7 @@ namespace flex
 			DrawSprites(gameContext);
 
 			SetFont(m_FntUbuntuCondensed);
-			DrawString("Hello world!", glm::vec4(0.5f, 1, 1, 1), glm::vec2(-350.0f, -1.0f), 32);
+			DrawString("Hello world!", glm::vec4(0.5f, 1, 1, 1), glm::vec2(-350.0f, -1.0f), (i32)(24 + sin(gameContext.elapsedTime) * 4));
 			SetFont(m_FntSourceCodePro);
 			DrawString("Hi", glm::vec4(1.0f, 0, 0, 1), glm::vec2(-250.0f, -150.0f), 16);
 
@@ -2648,7 +2648,7 @@ namespace flex
 				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
 				glVertexAttribPointer(1, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
 				glVertexAttribPointer(2, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
-				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSize));
+				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, RGCharSizeBScale));
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
 				CheckGLErrorMessages();
 
@@ -2668,7 +2668,8 @@ namespace flex
 
 		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size)
 		{
-			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, size));
+			real scale = ((real)size) / m_CurrentFont->GetFontSize();
+			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, scale));
 		}
 
 		void GLRenderer::UpdateTextBuffer()
@@ -2706,7 +2707,8 @@ namespace flex
 								glm::vec2 pos(currentCache.pos.x + (totalAdvanceX + metric->offsetX),
 											  currentCache.pos.y + (metric->offsetY));
 
-								glm::vec4 charSize(metric->width, metric->height, 0, 0);
+								real scale = currentCache.scale;
+								glm::vec4 extraVec4(metric->width, metric->height, scale, 0);
 
 								i32 texChannel = (i32)metric->channel;
 
@@ -2714,7 +2716,7 @@ namespace flex
 								vert.pos = pos;
 								vert.uv = metric->texCoord;
 								vert.color = currentCache.color;
-								vert.charSize = charSize;
+								vert.RGCharSizeBScale = extraVec4;
 								vert.channel = texChannel;
 
 								textVertices.push_back(vert);
