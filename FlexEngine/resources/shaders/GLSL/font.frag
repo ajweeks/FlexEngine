@@ -3,7 +3,8 @@
 uniform sampler2D in_Texture;
 
 uniform float threshold = 0.5;
-uniform float outline = 0.2;
+//uniform float outline = 0.2;
+uniform float soften = 0.04;
 
 in GSO
 {
@@ -19,19 +20,16 @@ void main()
 	vec4 color;
 
 	float texValue = texture(in_Texture, inputs.texCoord)[inputs.channel];
-	if (texValue < threshold)
+	if (texValue < threshold - soften)
 	{
 		discard;
 	}
 
-	if (texValue < threshold + outline)
-	{
-		color = vec4(0, 0, 0, 1);
-	}
-	else
-	{
-		color = inputs.color;
-	}
+	float max = threshold + soften;
+	float min = threshold - soften;
+	float a = (texValue - min) / (max - min);
 
+	color = inputs.color;
+	color.a = mix(0, inputs.color.a, a);
 	out_Color = color;
 }

@@ -336,8 +336,13 @@ namespace flex
 			GenerateGBuffer(gameContext);
 
 			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceSansVariable-Roman.ttf";
-			std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
-			LoadFont(gameContext, fontFilePath, 28);
+			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/bahnschrift.ttf";
+
+			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
+			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 24);
+
+			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
+			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 24);
 
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
@@ -352,15 +357,20 @@ namespace flex
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
 			m_PhysicsDebugDrawer->Initialize();
-
-			Logger::LogInfo("Ready!\n");
 		}
 
 		void GLRenderer::Destroy()
 		{
 			CheckGLErrorMessages();
 
-			SafeDelete(m_FntSourceCodePro);
+			glDeleteVertexArrays(1, &m_TextQuadVAO);
+			glDeleteBuffers(1, &m_TextQuadVBO);
+
+			for (BitmapFont* font : m_Fonts)
+			{
+				SafeDelete(font);
+			}
+			m_Fonts.clear();
 
 			ImGui_ImplGlfwGL3_Shutdown();
 			ImGui::DestroyContext();
@@ -1664,7 +1674,10 @@ namespace flex
 			
 			DrawSprites(gameContext);
 
+			SetFont(m_FntUbuntuCondensed);
 			DrawString("Hello world!", glm::vec4(0.5f, 1, 1, 1), glm::vec2(-350.0f, -1.0f), 32);
+			SetFont(m_FntSourceCodePro);
+			DrawString("Hi", glm::vec4(1.0f, 0, 0, 1), glm::vec2(-250.0f, -150.0f), 16);
 
 			UpdateTextBuffer();
 			DrawText(gameContext);
@@ -1994,95 +2007,6 @@ namespace flex
 			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f));
 		}
 
-		void GLRenderer::DrawText(const GameContext& gameContext)
-		{
-			GLMaterial& fontMaterial = m_Materials[m_FontMatID];
-			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
-
-			glUseProgram(fontShader.program);
-			CheckGLErrorMessages();
-
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-			glm::vec2i texSize = m_FntSourceCodePro->GetTexture()->GetResolution();
-			
-			if (fontShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
-			{
-				// TODO: Find out how font sizes actually work
-				i16 fontSize = m_FntSourceCodePro->GetFontSize() / 12;
-				//real windowScale = glm::min(frameBufferSize.x, frameBufferSize.y);
-				//real windowAspectRatio = frameBufferSize.y / frameBufferSize.x;
-				glm::mat4 transformMat = glm::translate(glm::mat4(1.0f), glm::vec3(sin(gameContext.elapsedTime)/frameBufferSize.x,0, 0));
-				transformMat = glm::scale(transformMat, glm::vec3(
-					(1.0f / frameBufferSize.x) * fontSize,
-					-(1.0f / frameBufferSize.y) * fontSize,
-					1.0f));
-				glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
-				CheckGLErrorMessages();
-			}
-
-			if (fontShader.shader.dynamicBufferUniforms.HasUniform("texSize"))
-			{
-				glm::vec2 texSize = (glm::vec2)m_FntSourceCodePro->GetTexture()->GetResolution();
-				glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
-				CheckGLErrorMessages();
-			}
-
-			if (fontShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
-			{
-				glm::vec4 color(1.0f);
-				glUniform4fv(fontMaterial.uniformIDs.colorMultiplier, 1, &color.r);
-				CheckGLErrorMessages();
-			}
-
-			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
-			CheckGLErrorMessages();
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			CheckGLErrorMessages();
-
-			glBindVertexArray(m_TextQuadVAO);
-			CheckGLErrorMessages();
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-			CheckGLErrorMessages();
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, m_FntSourceCodePro->GetTexture()->GetHandle());
-			CheckGLErrorMessages();
-
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			//CheckGLErrorMessages();
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			//CheckGLErrorMessages();
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-			//CheckGLErrorMessages();
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			CheckGLErrorMessages();
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			CheckGLErrorMessages();
-
-			glDisable(GL_CULL_FACE);
-			CheckGLErrorMessages();
-
-			glDepthFunc(GL_ALWAYS);
-			CheckGLErrorMessages();
-
-			glDepthMask(GL_FALSE);
-			CheckGLErrorMessages();
-
-			glDisable(GL_BLEND);
-			CheckGLErrorMessages();
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			//CheckGLErrorMessages();
-
-			glDrawArrays(GL_POINTS, 0, (GLsizei)m_FntSourceCodePro->m_BufferSize);
-			CheckGLErrorMessages();
-
-			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-
-			glBindVertexArray(0);
-			glUseProgram(0);
-		}
-
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle,
 										MaterialID materialID,
 										const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
@@ -2223,6 +2147,605 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
+			CheckGLErrorMessages();
+		}
+
+		void GLRenderer::DrawText(const GameContext& gameContext)
+		{
+			GLMaterial& fontMaterial = m_Materials[m_FontMatID];
+			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			glUseProgram(fontShader.program);
+			CheckGLErrorMessages();
+
+			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("soften"))
+			//{
+			//	real soften = ((sin(gameContext.elapsedTime) * 0.5f + 0.5f) * 0.25f);
+			//	glUniform1f(glGetUniformLocation(fontShader.program, "soften"), soften);
+			//	CheckGLErrorMessages();
+			//}
+			
+			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
+			//{
+			//	glm::vec4 color(1.0f);
+			//	glUniform4fv(fontMaterial.uniformIDs.colorMultiplier, 1, &color.r);
+			//	CheckGLErrorMessages();
+			//}
+
+			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
+			CheckGLErrorMessages();
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			CheckGLErrorMessages();
+
+			glBindVertexArray(m_TextQuadVAO);
+			CheckGLErrorMessages();
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+			CheckGLErrorMessages();
+
+			for (BitmapFont* font : m_Fonts)
+			{
+				if (font->m_BufferSize > 0)
+				{
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->GetHandle());
+					CheckGLErrorMessages();
+
+					if (fontShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
+					{
+						// TODO: Find out how font sizes actually work
+						i16 fontSize = font->GetFontSize() / 12;
+						//real windowScale = glm::min(frameBufferSize.x, frameBufferSize.y);
+						//real windowAspectRatio = frameBufferSize.y / frameBufferSize.x;
+						glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), glm::vec3(
+							(1.0f / frameBufferSize.x) * fontSize,
+							-(1.0f / frameBufferSize.y) * fontSize,
+							1.0f));
+						//transformMat = glm::translate(transformMat,
+						//							  glm::vec3(sin(gameContext.elapsedTime) / frameBufferSize.x * 5.0f, 0, 0));
+						glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
+						CheckGLErrorMessages();
+					}
+
+					if (fontShader.shader.dynamicBufferUniforms.HasUniform("texSize"))
+					{
+						glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
+						glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
+						CheckGLErrorMessages();
+					}
+
+					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+					//CheckGLErrorMessages();
+					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+					//CheckGLErrorMessages();
+					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+					//CheckGLErrorMessages();
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					CheckGLErrorMessages();
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					CheckGLErrorMessages();
+
+					glDisable(GL_CULL_FACE);
+					CheckGLErrorMessages();
+
+					glDepthFunc(GL_ALWAYS);
+					CheckGLErrorMessages();
+
+					glDepthMask(GL_FALSE);
+					CheckGLErrorMessages();
+
+					glEnable(GL_BLEND);
+					CheckGLErrorMessages();
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					CheckGLErrorMessages();
+
+					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
+					CheckGLErrorMessages();
+				}
+			}
+
+			glBindVertexArray(0);
+			glUseProgram(0);
+		}
+
+		bool GLRenderer::LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i32 size)
+		{
+			// TODO: Determine via monitor struct
+			glm::vec2i monitorDPI(300, 300);
+
+			FT_Error error;
+			error = FT_Init_FreeType(&ft);
+			if (error != FT_Err_Ok)
+			{
+				Logger::LogError("Could not init FreeType");
+				return false;
+			}
+
+			std::vector<char> fileMemory;
+			ReadFile(filePath, fileMemory, true);
+
+			FT_Face face;
+			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
+			if (error == FT_Err_Unknown_File_Format)
+			{
+				Logger::LogError("Unhandled font file format: " + filePath);
+				return false;
+			}
+			else if (error != FT_Err_Ok ||
+					 !face)
+			{
+				Logger::LogError("Failed to create new font face: " + filePath);
+				return false;
+			}
+
+			error = FT_Set_Char_Size(face,
+									 0, size * 64,
+									 monitorDPI.x, monitorDPI.y);
+
+			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
+
+			std::string fileName = filePath;
+			StripLeadingDirectories(fileName);
+			Logger::LogInfo("Loaded font " + fileName);
+
+			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
+			*font = new BitmapFont(size, fontName, face->num_glyphs);
+			BitmapFont* newFont = *font; // Shortcut
+
+			m_Fonts.push_back(newFont);
+
+			// font->m_UseKerning = FT_HAS_KERNING(face) != 0;
+
+			// Atlas helper variables
+			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
+			glm::vec2i maxPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
+			bool bHorizontal = false; // Direction this pass expands the map in (internal moves are !bHorizontal)
+			u32 posCount = 1; // Internal move count in this pass
+			u32 curPos = 0;   // Internal move count
+			u32 channel = 0;  // Current channel writing to
+
+			u32 padding = 1;
+			u32 spread = 5;
+			u32 totPadding = padding + spread;
+
+			// TODO: Rename
+			u32 highRes = 32;
+
+			//struct TempChar
+			//{
+			//	FontMetric metric;
+			//	GLTexture* texture;
+			//};
+			std::map<i32, FontMetric*> characters;
+			for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
+			{
+				FontMetric* metric = newFont->GetMetric((wchar_t)c);
+				if (!metric)
+				{
+					continue;
+				}
+
+				metric->character = (wchar_t)c;
+
+				u32 glyphIndex = FT_Get_Char_Index(face, c);
+				// TODO: Is this correct?
+				if (glyphIndex == 0)
+				{
+					continue;
+				}
+
+				if (newFont->GetUseKerning() && glyphIndex)
+				{
+					for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
+					{
+						FT_Vector delta;
+
+						u32 prevIdx = FT_Get_Char_Index(face, previous);
+						FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
+
+						if (delta.x || delta.y)
+						{
+							metric->kerning[static_cast<char>(previous)] =
+								glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
+						}
+					}
+				}
+
+				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+				{
+					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
+					continue;
+				}
+
+
+				u32 width = face->glyph->bitmap.width + totPadding * 2;
+				u32 height = face->glyph->bitmap.rows + totPadding * 2;
+
+
+				metric->width = (u32)width;
+				metric->height = (u32)height;
+				metric->offsetX = (i16)face->glyph->bitmap_left + (i16)totPadding;
+				metric->offsetY = -(i16)(face->glyph->bitmap_top + (i16)totPadding);
+				metric->advanceX = (real)face->glyph->advance.x / 64.0f;
+
+				// Generate atlas coordinates
+				//metric->page = 0;
+				metric->channel = (u8)channel;
+				metric->texCoord = startPos[channel];
+				if (bHorizontal)
+				{
+					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
+					startPos[channel].y += height;
+					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
+				}
+				else
+				{
+					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
+					startPos[channel].x += width;
+					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
+				}
+				channel++;
+				if (channel == 4)
+				{
+					channel = 0;
+					curPos++;
+					if (curPos == posCount)
+					{
+						curPos = 0;
+						bHorizontal = !bHorizontal;
+						if (bHorizontal)
+						{
+							for (u8 cha = 0; cha < 4; ++cha)
+							{
+								startPos[cha] = glm::vec2i(maxPos[cha].x, 0);
+							}
+						}
+						else
+						{
+							for (u8 cha = 0; cha < 4; ++cha)
+							{
+								startPos[cha] = glm::vec2i(0, maxPos[cha].y);
+							}
+							posCount++;
+						}
+					}
+				}
+
+				metric->bIsValid = true;
+
+				characters[c] = metric;
+			}
+
+			glm::vec2i textureSize(
+				std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
+				std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
+			newFont->SetTextureSize(textureSize);
+
+			//Setup rendering
+			TextureParameters params(false);
+			params.wrapS = GL_CLAMP_TO_EDGE;
+			params.wrapT = GL_CLAMP_TO_EDGE;
+
+			GLTexture* fontTex = newFont->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
+			fontTex->Build();
+			fontTex->SetParameters(params);
+
+			GLuint captureFBO;
+			GLuint captureRBO;
+
+			glGenFramebuffers(1, &captureFBO);
+			CheckGLErrorMessages();
+			glGenRenderbuffers(1, &captureRBO);
+			CheckGLErrorMessages();
+
+			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+			CheckGLErrorMessages();
+			glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+			CheckGLErrorMessages();
+
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, textureSize.x, textureSize.y);
+			CheckGLErrorMessages();
+			// TODO: Don't use depth buffer
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
+			CheckGLErrorMessages();
+
+			glViewport(0, 0, textureSize.x, textureSize.y);
+			CheckGLErrorMessages();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			CheckGLErrorMessages();
+
+			ShaderID computeSDFShaderID;
+			GetShaderID("compute_sdf", computeSDFShaderID);
+			GLShader& computeSDFShader = m_Shaders[computeSDFShaderID];
+
+			glUseProgram(computeSDFShader.program);
+
+			glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
+			auto texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
+			auto charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
+			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
+			glUniform1f(glGetUniformLocation(computeSDFShader.program, "highRes"), (real)highRes);
+
+			glEnable(GL_BLEND);
+			glBlendEquation(GL_FUNC_ADD);
+			glBlendFunc(GL_ONE, GL_ONE);
+			CheckGLErrorMessages();
+
+			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+
+			//Render to Glyphs atlas
+			FT_Set_Pixel_Sizes(face, 0, size * highRes);
+			//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			CheckGLErrorMessages();
+
+			for (auto& character : characters)
+			{
+				auto metric = character.second;
+
+				u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+				if (glyphIndex == 0)
+				{
+					continue;
+				}
+
+				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+				{
+					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
+					continue;
+				}
+
+				if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
+				{
+					if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+					{
+						Logger::LogError("Failed to render glyph with index " + std::to_string(glyphIndex));
+						continue;
+					}
+				}
+
+				if (face->glyph->bitmap.width == 0 ||
+					face->glyph->bitmap.rows == 0)
+				{
+					continue;
+				}
+
+				FT_Bitmap alignedBitmap{};
+				if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
+				{
+					Logger::LogError("Couldn't align free type bitmap size");
+					continue;
+				}
+
+				u32 width = alignedBitmap.width;
+				u32 height = alignedBitmap.rows;
+
+				if (width == 0 ||
+					height == 0)
+				{
+					continue;
+				}
+
+				GLuint texHandle;
+				glGenTextures(1, &texHandle);
+				CheckGLErrorMessages();
+
+				glActiveTexture(GL_TEXTURE0);
+				CheckGLErrorMessages();
+
+				glBindTexture(GL_TEXTURE_2D, texHandle);
+				CheckGLErrorMessages();
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
+				CheckGLErrorMessages();
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				CheckGLErrorMessages();
+				glm::vec4 borderColor(0.0f);
+				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
+				CheckGLErrorMessages();
+
+				if (metric->width > 0 && metric->height > 0)
+				{
+					//glm::vec2i res = glm::vec2i(metric->Width - totPadding * 2, metric->Height - totPadding * 2);
+					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
+					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
+
+					glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
+					//Logger::LogWarning(std::to_string(viewportTL.x) + ", " + std::to_string(viewportTL.y) + " - " +
+					//				   std::to_string(res.x) + ", " + std::to_string(res.y));
+					CheckGLErrorMessages();
+					glActiveTexture(GL_TEXTURE0);
+					CheckGLErrorMessages();
+					glBindTexture(GL_TEXTURE_2D, texHandle);
+					CheckGLErrorMessages();
+
+					glUniform1i(texChannel, metric->channel);
+					glUniform2f(charResolution, (real)res.x, (real)res.y);
+					CheckGLErrorMessages();
+					glActiveTexture(GL_TEXTURE0);
+					glBindVertexArray(gBufferRenderObject->VAO);
+					CheckGLErrorMessages();
+					glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
+					CheckGLErrorMessages();
+					glDrawArrays(gBufferRenderObject->topology, 0,
+						(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
+					CheckGLErrorMessages();
+					glBindVertexArray(0);
+					CheckGLErrorMessages();
+				}
+
+				glDeleteTextures(1, &texHandle);
+
+				// Modify texture coordinates after rendering sprite
+				metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
+
+				FT_Bitmap_Done(ft, &alignedBitmap);
+			}
+
+
+			// Cleanup
+			glDisable(GL_BLEND);
+
+			FT_Done_Face(face);
+			FT_Done_FreeType(ft);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			glViewport(0, 0,
+					   gameContext.window->GetFrameBufferSize().x,
+					   gameContext.window->GetFrameBufferSize().y);
+
+			glDeleteRenderbuffers(1, &captureRBO);
+			glDeleteFramebuffers(1, &captureFBO);
+
+			CheckGLErrorMessages();
+
+
+
+			// Initialize font shader things
+			{
+				GLMaterial& mat = m_Materials[m_FontMatID];
+				GLShader& shader = m_Shaders[mat.material.shaderID];
+				glUseProgram(shader.program);
+				//m_uTransform = glGetUniformLocation(m_pTextShader->GetProgram(), "transform");
+				//m_uTexSize = glGetUniformLocation(m_pTextShader->GetProgram(), "texSize");
+
+				//u32 texLoc = glGetUniformLocation(shader.program, "in_Texture");
+				//glUniform1i(texLoc, 0);
+
+				glGenVertexArrays(1, &m_TextQuadVAO);
+				glGenBuffers(1, &m_TextQuadVBO);
+				CheckGLErrorMessages();
+
+
+				glBindVertexArray(m_TextQuadVAO);
+				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+				CheckGLErrorMessages();
+
+				//set data and attributes
+				// TODO: ?
+				i32 bufferSize = 50;
+				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
+				CheckGLErrorMessages();
+
+				glEnableVertexAttribArray(0);
+				glEnableVertexAttribArray(1);
+				glEnableVertexAttribArray(2);
+				glEnableVertexAttribArray(3);
+				glEnableVertexAttribArray(4);
+				CheckGLErrorMessages();
+
+				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
+				glVertexAttribPointer(1, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
+				glVertexAttribPointer(2, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
+				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSize));
+				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
+				CheckGLErrorMessages();
+
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glBindVertexArray(0);
+			}
+
+			Logger::LogInfo("Rendered font atlas for " + fileName);
+
+			return true;
+		}
+
+		void GLRenderer::SetFont(BitmapFont* font)
+		{
+			m_CurrentFont = font;
+		}
+
+		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size)
+		{
+			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, size));
+		}
+
+		void GLRenderer::UpdateTextBuffer()
+		{
+			std::vector<TextVertex> textVertices;
+			for (auto font : m_Fonts)
+			{
+				font->m_BufferStart = (i32)(textVertices.size());
+				font->m_BufferSize = 0;
+
+				for (i32 i = 0; i < font->m_TextCache.size(); ++i)
+				{
+					TextCache& currentCache = font->m_TextCache[i];
+					std::string currentStr = currentCache.str;
+
+					// TODO: Use kerning values
+					//i32 fontSize = font->GetFontSize();
+					real totalAdvanceX = 0;
+
+					for (i32 j = 0; j < currentStr.length(); ++j)
+					{
+						char c = currentStr[j];
+
+						if (BitmapFont::IsCharValid(c))
+						{
+							FontMetric* metric = font->GetMetric(c);
+							if (metric->bIsValid)
+							{
+								if (c == ' ')
+								{
+									totalAdvanceX += metric->advanceX;
+									continue;
+								}
+
+								glm::vec2 pos(currentCache.pos.x + (totalAdvanceX + metric->offsetX),
+											  currentCache.pos.y + (metric->offsetY));
+
+								glm::vec4 charSize(metric->width, metric->height, 0, 0);
+
+								i32 texChannel = (i32)metric->channel;
+
+								TextVertex vert{};
+								vert.pos = pos;
+								vert.uv = metric->texCoord;
+								vert.color = currentCache.color;
+								vert.charSize = charSize;
+								vert.channel = texChannel;
+
+								textVertices.push_back(vert);
+
+								totalAdvanceX += metric->advanceX;
+							}
+							else
+							{
+								Logger::LogWarning("Attempted to draw char with invalid metric: " + std::to_string(c) + " in font " + font->m_Name);
+							}
+						}
+						else
+						{
+							Logger::LogWarning("Attempted to draw invalid char: " + std::to_string(c) + " in font " + font->m_Name);
+						}
+					}
+				}
+
+				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
+				font->m_TextCache.clear();
+			}
+
+
+			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex));
+
+			glBindVertexArray(m_TextQuadVAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+			CheckGLErrorMessages();
+			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
 			CheckGLErrorMessages();
 		}
 
@@ -2500,505 +3023,6 @@ namespace flex
 			return binding;
 		}
 
-		bool GLRenderer::LoadFont(const GameContext& gameContext, const std::string& filePath, i32 size)
-		{
-			// TODO: Determine via monitor struct
-			glm::vec2i monitorDPI(300, 300);
-			
-			FT_Error error;
-			error = FT_Init_FreeType(&ft);
-			if (error != FT_Err_Ok)
-			{
-				Logger::LogError("Could not init FreeType");
-				return false;
-			}
-
-			std::vector<char> fileMemory;
-			ReadFile(filePath, fileMemory, true);
-
-			FT_Face face;
-			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
-			if (error == FT_Err_Unknown_File_Format)
-			{
-				Logger::LogError("Unhandled font file format: " + filePath);
-				return false;
-			}
-			else if (error != FT_Err_Ok ||
-					 !face)
-			{
-				Logger::LogError("Failed to create new font face: " + filePath);
-				return false;
-			}
-
-			error = FT_Set_Char_Size(face,
-									 0, size * 64,
-									 monitorDPI.x, monitorDPI.y);
-
-			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
-
-			Logger::LogInfo("Loaded font " + filePath);
-			Logger::LogInfo("num glyphs in font: " + std::to_string(face->num_glyphs));
-
-			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
-			m_FntSourceCodePro = new BitmapFont(size, fontName, face->num_glyphs);
-
-			// font->m_UseKerning = FT_HAS_KERNING(face) != 0;
-
-			// Atlas helper variables
-			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
-			glm::vec2i maxPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
-			bool bHorizontal = false; // Direction this pass expands the map in (internal moves are !bHorizontal)
-			u32 posCount = 1; // Internal move count in this pass
-			u32 curPos = 0;   // Internal move count
-			u32 channel = 0;  // Current channel writing to
-
-			u32 padding = 1;
-			u32 spread = 5;
-			u32 totPadding = padding + spread;
-
-			// TODO: Rename
-			u32 highRes = 32;
-
-			//struct TempChar
-			//{
-			//	FontMetric metric;
-			//	GLTexture* texture;
-			//};
-			std::map<i32, FontMetric*> characters;
-			for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
-			{
-				FontMetric* metric = m_FntSourceCodePro->GetMetric((wchar_t)c);
-				if (!metric)
-				{
-					continue;
-				}
-
-				metric->character = (wchar_t)c;
-
-				u32 glyphIndex = FT_Get_Char_Index(face, c);
-				// TODO: Is this correct?
-				if (glyphIndex == 0)
-				{
-					continue;
-				}
-
-				if (m_FntSourceCodePro->GetUseKerning() && glyphIndex)
-				{
-					for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
-					{
-						FT_Vector delta;
-
-						u32 prevIdx = FT_Get_Char_Index(face, previous);
-						FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
-
-						if (delta.x || delta.y)
-						{
-							metric->kerning[static_cast<char>(previous)] =
-								glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
-						}
-					}
-				}
-
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
-				{
-					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
-					continue;
-				}
-
-
-				u32 width = face->glyph->bitmap.width + totPadding * 2;
-				u32 height = face->glyph->bitmap.rows + totPadding * 2;
-
-
-				metric->width = (u32)width;
-				metric->height = (u32)height;
-				metric->offsetX = (i16)face->glyph->bitmap_left + (i16)totPadding;
-				metric->offsetY = -(i16)(face->glyph->bitmap_top + (i16)totPadding);
-				metric->advanceX = (real)face->glyph->advance.x / 64.0f;
-
-				// Generate atlas coordinates
-				//metric->page = 0;
-				metric->channel = (u8)channel;
-				metric->texCoord = startPos[channel];
-				if (bHorizontal)
-				{
-					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
-					startPos[channel].y += height;
-					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
-				}
-				else
-				{
-					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
-					startPos[channel].x += width;
-					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
-				}
-				channel++;
-				if (channel == 4)
-				{
-					channel = 0;
-					curPos++;
-					if (curPos == posCount)
-					{
-						curPos = 0;
-						bHorizontal = !bHorizontal;
-						if (bHorizontal)
-						{
-							for (u8 cha = 0; cha < 4; ++cha)
-							{
-								startPos[cha] = glm::vec2i(maxPos[cha].x, 0);
-							}
-						}
-						else
-						{
-							for (u8 cha = 0; cha < 4; ++cha)
-							{
-								startPos[cha] = glm::vec2i(0, maxPos[cha].y);
-							}
-							posCount++;
-						}
-					}
-				}
-
-				metric->bIsValid = true;
-
-				characters[c] = metric;
-			}
-
-			glm::vec2i textureSize(
-				std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
-				std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
-			m_FntSourceCodePro->SetTextureSize(textureSize);
-
-			//Setup rendering
-			TextureParameters params(false);
-			params.wrapS = GL_CLAMP_TO_EDGE;
-			params.wrapT = GL_CLAMP_TO_EDGE;
-
-			GLTexture* fontTex = m_FntSourceCodePro->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
-			fontTex->Build();
-			fontTex->SetParameters(params);
-
-			GLuint captureFBO;
-			GLuint captureRBO;
-
-			glGenFramebuffers(1, &captureFBO);
-			CheckGLErrorMessages();
-			glGenRenderbuffers(1, &captureRBO);
-			CheckGLErrorMessages();
-
-			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-			CheckGLErrorMessages();
-
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, textureSize.x, textureSize.y);
-			CheckGLErrorMessages();
-			// TODO: Don't use depth buffer
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
-			CheckGLErrorMessages();
-
-			glViewport(0, 0, textureSize.x, textureSize.y);
-			CheckGLErrorMessages();
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
-
-			ShaderID computeSDFShaderID;
-			GetShaderID("compute_sdf", computeSDFShaderID);
-			GLShader& computeSDFShader = m_Shaders[computeSDFShaderID];
-
-			glUseProgram(computeSDFShader.program);
-
-			glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
-			auto texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
-			auto charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
-			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
-			glUniform1f(glGetUniformLocation(computeSDFShader.program, "highRes"), (real)highRes);
-
-			glEnable(GL_BLEND);
-			glBlendEquation(GL_FUNC_ADD);
-			glBlendFunc(GL_ONE, GL_ONE);
-			CheckGLErrorMessages();
-
-			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-
-			//Render to Glyphs atlas
-			FT_Set_Pixel_Sizes(face, 0, size * highRes);
-			//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			CheckGLErrorMessages();
-
-			for (auto& character : characters)
-			{
-				auto metric = character.second;
-
-				u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
-				if (glyphIndex == 0)
-				{
-					continue;
-				}
-
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
-				{
-					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
-					continue;
-				}
-
-				if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
-				{
-					if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
-					{
-						Logger::LogError("Failed to render glyph with index " + std::to_string(glyphIndex));
-						continue;
-					}
-				}
-
-				if (face->glyph->bitmap.width == 0 ||
-					face->glyph->bitmap.rows == 0)
-				{
-					continue;
-				}
-
-				FT_Bitmap alignedBitmap{};
-				if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
-				{
-					Logger::LogError("Couldn't align free type bitmap size");
-					continue;
-				}
-
-				u32 width = alignedBitmap.width;
-				u32 height = alignedBitmap.rows;
-
-				if (width == 0 ||
-					height == 0)
-				{
-					continue;
-				}
-
-				GLuint texHandle;
-				glGenTextures(1, &texHandle);
-				CheckGLErrorMessages();
-				
-				glActiveTexture(GL_TEXTURE0);
-				CheckGLErrorMessages();
-
-				glBindTexture(GL_TEXTURE_2D, texHandle);
-				CheckGLErrorMessages();
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
-				CheckGLErrorMessages();
-
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				CheckGLErrorMessages();
-				glm::vec4 borderColor(0.0f);
-				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
-				CheckGLErrorMessages();
-
-				if (metric->width > 0 && metric->height > 0)
-				{
-					//glm::vec2i res = glm::vec2i(metric->Width - totPadding * 2, metric->Height - totPadding * 2);
-					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
-					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
-
-					glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
-					//Logger::LogWarning(std::to_string(viewportTL.x) + ", " + std::to_string(viewportTL.y) + " - " +
-					//				   std::to_string(res.x) + ", " + std::to_string(res.y));
-					CheckGLErrorMessages();
-					glActiveTexture(GL_TEXTURE0);
-					CheckGLErrorMessages();
-					glBindTexture(GL_TEXTURE_2D, texHandle);
-					CheckGLErrorMessages();
-
-					glUniform1i(texChannel, metric->channel);
-					glUniform2f(charResolution, (real)res.x, (real)res.y);
-					CheckGLErrorMessages();
-					glActiveTexture(GL_TEXTURE0);
-					glBindVertexArray(gBufferRenderObject->VAO);
-					CheckGLErrorMessages();
-					glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
-					CheckGLErrorMessages();
-					glDrawArrays(gBufferRenderObject->topology, 0,
-						(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
-					glBindVertexArray(0);
-					CheckGLErrorMessages();
-				}
-
-				glDeleteTextures(1, &texHandle);
-
-				// Modify texture coordinates after rendering sprite
-				metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
-
-				FT_Bitmap_Done(ft, &alignedBitmap);
-			}
-
-
-			// Cleanup
-			glDisable(GL_BLEND);
-
-			FT_Done_Face(face);
-			FT_Done_FreeType(ft);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			glViewport(0, 0,
-					   gameContext.window->GetFrameBufferSize().x,
-					   gameContext.window->GetFrameBufferSize().y);
-
-			glDeleteRenderbuffers(1, &captureRBO);
-			glDeleteFramebuffers(1, &captureFBO);
-
-			CheckGLErrorMessages();
-
-
-
-			// Initialize font shader things
-			{
-				GLMaterial& mat = m_Materials[m_FontMatID];
-				GLShader& shader = m_Shaders[mat.material.shaderID];
-				glUseProgram(shader.program);
-				//m_uTransform = glGetUniformLocation(m_pTextShader->GetProgram(), "transform");
-				//m_uTexSize = glGetUniformLocation(m_pTextShader->GetProgram(), "texSize");
-
-				//u32 texLoc = glGetUniformLocation(shader.program, "in_Texture");
-				//glUniform1i(texLoc, 0);
-
-				glGenVertexArrays(1, &m_TextQuadVAO);
-				glGenBuffers(1, &m_TextQuadVBO);
-				CheckGLErrorMessages();
-
-
-				glBindVertexArray(m_TextQuadVAO);
-				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-				CheckGLErrorMessages();
-
-				//set data and attributes
-				// TODO: ?
-				i32 bufferSize = 500;
-				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
-				CheckGLErrorMessages();
-
-				glEnableVertexAttribArray(0);
-				glEnableVertexAttribArray(1);
-				glEnableVertexAttribArray(2);
-				glEnableVertexAttribArray(3);
-				glEnableVertexAttribArray(4);
-				CheckGLErrorMessages();
-
-				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
-				glVertexAttribPointer(1, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
-				glVertexAttribPointer(2, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
-				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSize));
-				glVertexAttribIPointer(4, (GLint)1, GL_UNSIGNED_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
-				CheckGLErrorMessages();
-
-				glBindBuffer(GL_ARRAY_BUFFER, 0);
-				glBindVertexArray(0);
-			}
-
-			return true;
-		}
-
-		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size)
-		{
-			m_FntSourceCodePro->m_TextCache.push_back(TextCache(str, pos, color, size));
-		}
-
-		void GLRenderer::UpdateTextBuffer()
-		{
-			std::vector<TextVertex> textVertices;
-			for (i32 i = 0; i < m_FntSourceCodePro->m_TextCache.size(); ++i)
-			{
-				TextCache& currentCache = m_FntSourceCodePro->m_TextCache[i];
-				std::string currentStr = currentCache.str;
-
-				// TODO: Use kerning values
-				//i32 fontSize = m_FntSourceCodePro->GetFontSize();
-				real totalAdvanceX = 0;
-
-				for (i32 j = 0; j < currentStr.length(); ++j)
-				{
-					char c = currentStr[j];
-
-					if (BitmapFont::IsCharValid(c))
-					{
-						FontMetric* metric = m_FntSourceCodePro->GetMetric(c);
-						if (metric->bIsValid)
-						{
-							if (c == ' ')
-							{
-								totalAdvanceX += metric->advanceX;
-								continue;
-							}
-
-							glm::vec2 pos(currentCache.pos.x + (totalAdvanceX + metric->offsetX),
-										  currentCache.pos.y + (metric->offsetY));
-
-							glm::vec4 charSize(metric->width, metric->height, 0, 0);
-
-							i32 texChannel = (i32)metric->channel;
-
-							//VertexBufferData::CreateInfo textQuadVertexBufferDataCreateInfo = {};
-							//textQuadVertexBufferDataCreateInfo.positions_2D = { pos };
-							//textQuadVertexBufferDataCreateInfo.texCoords_UV = { metric->texCoord };
-							//textQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = { currentCache.color };
-							//textQuadVertexBufferDataCreateInfo.extraVec4s = { charSize };
-							//textQuadVertexBufferDataCreateInfo.extraInts = { texChannel };
-
-							//textQuadVertexBufferDataCreateInfo.attributes =
-							//	(u32)VertexAttribute::POSITION_2D |
-							//	(u32)VertexAttribute::UV |
-							//	(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-							//	(u32)VertexAttribute::EXTRA_VEC4 |
-							//	(u32)VertexAttribute::EXTRA_INT;
-
-							//VertexBufferData textQuadVertexBufferData = {};
-							//textQuadVertexBufferData.Initialize(&textQuadVertexBufferDataCreateInfo);
-							//m_TextQuadsVertexBufferData.push_back(textQuadVertexBufferData);
-
-							TextVertex vert{};
-							vert.pos = pos;
-							vert.uv = metric->texCoord;
-							vert.color = currentCache.color;
-							vert.charSize = charSize;
-							vert.channel = texChannel;
-
-							textVertices.push_back(vert);
-
-							totalAdvanceX += metric->advanceX;
-						}
-						else
-						{
-							Logger::LogWarning("Attempted to draw char with invalid metric: " + c);
-						}
-					}
-					else
-					{
-						Logger::LogWarning("Attempted to draw invalid char: " + c);
-					}
-				}
-			}
-			m_FntSourceCodePro->m_TextCache.clear();
-
-			m_FntSourceCodePro->m_BufferSize = (i32)(textVertices.size() * (sizeof(TextVertex)/sizeof(float)));
-
-			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex));
-
-			glBindVertexArray(m_TextQuadVAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-			CheckGLErrorMessages();
-			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindVertexArray(0);
-			CheckGLErrorMessages();
-		}
-
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
 		{
 			auto location = m_LoadedTextures.find(filePath);
@@ -3258,7 +3282,8 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texSize");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("threshold");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("outline");
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("outline");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("soften");
 			++shaderID;
 
 			for (size_t i = 0; i < m_Shaders.size(); ++i)

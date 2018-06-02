@@ -111,6 +111,13 @@ namespace flex
 								const glm::vec4& color);
 			void DrawSprites(const GameContext& gameContext);
 			void DrawText(const GameContext& gameContext);
+
+			bool LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i32 size);
+
+			void SetFont(BitmapFont* font);
+			void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size);
+			void UpdateTextBuffer();
+
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
 			bool GetLoadedTexture(const std::string& filePath, u32& handle);
@@ -143,11 +150,6 @@ namespace flex
 			u32 BindFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 			// Returns the next binding that would be used
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
-
-			bool LoadFont(const GameContext& gameContext, const std::string& filePath, i32 size);
-
-			void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size);
-			void UpdateTextBuffer();
 
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
@@ -237,9 +239,10 @@ namespace flex
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 
-
-
 			FT_Library ft;
+			BitmapFont* m_CurrentFont = nullptr;
+			std::vector<BitmapFont*> m_Fonts;
+			BitmapFont* m_FntUbuntuCondensed = nullptr;
 			BitmapFont* m_FntSourceCodePro = nullptr;
 
 			GLRenderer(const GLRenderer&) = delete;
