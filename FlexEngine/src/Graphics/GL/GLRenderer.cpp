@@ -174,10 +174,10 @@ namespace flex
 				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			// Sprite quad
 			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
 			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
 
+			// Sprite quad
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
@@ -258,6 +258,7 @@ namespace flex
 				m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
 			}
 
+			// Draw loading text
 			{
 				glm::vec3 pos(0.0f);
 				glm::quat rot = glm::quat();
@@ -265,8 +266,8 @@ namespace flex
 				glm::vec4 color(1.0f);
 				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID,
 							   pos, rot, scale, AnchorPoint::WHOLE, color);
+				SwapBuffers(gameContext);
 			}
-			SwapBuffers(gameContext);
 
 			if (m_BRDFTextureHandle.id == 0)
 			{
@@ -319,8 +320,6 @@ namespace flex
 			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			//GenerateGBuffer(gameContext);
-
 			if (m_BRDFTextureHandle.id == 0)
 			{
 				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false,
@@ -339,7 +338,7 @@ namespace flex
 			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/bahnschrift.ttf";
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
-			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 24);
+			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 12);
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
 			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 24);
@@ -2196,15 +2195,11 @@ namespace flex
 					if (fontShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
 					{
 						// TODO: Find out how font sizes actually work
-						i16 fontSize = font->GetFontSize() / 12;
-						//real windowScale = glm::min(frameBufferSize.x, frameBufferSize.y);
-						//real windowAspectRatio = frameBufferSize.y / frameBufferSize.x;
+						real scale = ((real)font->GetFontSize()) / 12.0f;
 						glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), glm::vec3(
-							(1.0f / frameBufferSize.x) * fontSize,
-							-(1.0f / frameBufferSize.y) * fontSize,
+							(1.0f / frameBufferSize.x) * scale,
+							-(1.0f / frameBufferSize.y) * scale,
 							1.0f));
-						//transformMat = glm::translate(transformMat,
-						//							  glm::vec3(sin(gameContext.elapsedTime) / frameBufferSize.x * 5.0f, 0, 0));
 						glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
 						CheckGLErrorMessages();
 					}
@@ -2216,12 +2211,6 @@ namespace flex
 						CheckGLErrorMessages();
 					}
 
-					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-					//CheckGLErrorMessages();
-					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-					//CheckGLErrorMessages();
-					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-					//CheckGLErrorMessages();
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 					CheckGLErrorMessages();
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -2310,14 +2299,8 @@ namespace flex
 			u32 spread = 5;
 			u32 totPadding = padding + spread;
 
-			// TODO: Rename
-			u32 highRes = 32;
+			u32 sampleDensity = 32;
 
-			//struct TempChar
-			//{
-			//	FontMetric metric;
-			//	GLTexture* texture;
-			//};
 			std::map<i32, FontMetric*> characters;
 			for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
 			{
@@ -2467,7 +2450,7 @@ namespace flex
 			auto texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
 			auto charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
 			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
-			glUniform1f(glGetUniformLocation(computeSDFShader.program, "highRes"), (real)highRes);
+			glUniform1f(glGetUniformLocation(computeSDFShader.program, "sampleDensity"), (real)sampleDensity);
 
 			glEnable(GL_BLEND);
 			glBlendEquation(GL_FUNC_ADD);
@@ -2477,9 +2460,7 @@ namespace flex
 			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 
 			//Render to Glyphs atlas
-			FT_Set_Pixel_Sizes(face, 0, size * highRes);
-			//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			CheckGLErrorMessages();
+			FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
 			for (auto& character : characters)
 			{
@@ -2556,13 +2537,10 @@ namespace flex
 
 				if (metric->width > 0 && metric->height > 0)
 				{
-					//glm::vec2i res = glm::vec2i(metric->Width - totPadding * 2, metric->Height - totPadding * 2);
 					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
 					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
 
 					glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
-					//Logger::LogWarning(std::to_string(viewportTL.x) + ", " + std::to_string(viewportTL.y) + " - " +
-					//				   std::to_string(res.x) + ", " + std::to_string(res.y));
 					CheckGLErrorMessages();
 					glActiveTexture(GL_TEXTURE0);
 					CheckGLErrorMessages();
@@ -2586,7 +2564,6 @@ namespace flex
 
 				glDeleteTextures(1, &texHandle);
 
-				// Modify texture coordinates after rendering sprite
 				metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
 
 				FT_Bitmap_Done(ft, &alignedBitmap);
@@ -2648,7 +2625,7 @@ namespace flex
 				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
 				glVertexAttribPointer(1, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
 				glVertexAttribPointer(2, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
-				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, RGCharSizeBScale));
+				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, RGCharSize));
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
 				CheckGLErrorMessages();
 
@@ -2707,8 +2684,7 @@ namespace flex
 								glm::vec2 pos(currentCache.pos.x + (totalAdvanceX + metric->offsetX),
 											  currentCache.pos.y + (metric->offsetY));
 
-								real scale = currentCache.scale;
-								glm::vec4 extraVec4(metric->width, metric->height, scale, 0);
+								glm::vec4 extraVec4(metric->width, metric->height, 0, 0);
 
 								i32 texChannel = (i32)metric->channel;
 
@@ -2716,7 +2692,7 @@ namespace flex
 								vert.pos = pos;
 								vert.uv = metric->texCoord;
 								vert.color = currentCache.color;
-								vert.RGCharSizeBScale = extraVec4;
+								vert.RGCharSize = extraVec4;
 								vert.channel = texChannel;
 
 								textVertices.push_back(vert);
@@ -3687,11 +3663,43 @@ namespace flex
 		}
 
 
+		void GLRenderer::GenerateGBufferVertexBuffer()
+		{
+			if (m_gBufferQuadVertexBufferData.pDataStart == nullptr)
+			{
+				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
+
+				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
+					glm::vec3(-1.0f,  1.0f, 0.0f),
+					glm::vec3(-1.0f, -1.0f, 0.0f),
+					glm::vec3(1.0f,  1.0f, 0.0f),
+
+					glm::vec3(1.0f, -1.0f, 0.0f),
+					glm::vec3(1.0f,  1.0f, 0.0f),
+					glm::vec3(-1.0f, -1.0f, 0.0f),
+				};
+
+				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(0.0f, 0.0f),
+					glm::vec2(1.0f, 1.0f),
+
+					glm::vec2(1.0f, 0.0f),
+					glm::vec2(1.0f, 1.0f),
+					glm::vec2(0.0f, 0.0f),
+				};
+
+				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
+
+				m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+			}
+		}
+
 		void GLRenderer::GenerateGBuffer(const GameContext& gameContext)
 		{
-			if (m_gBufferQuadVertexBufferData.pDataStart)
+			if (!m_gBufferQuadVertexBufferData.pDataStart)
 			{
-				return; // GBuffer quad has already been generated
+				GenerateGBufferVertexBuffer();
 			}
 
 			// TODO: Allow user to not set this and have a backup plan (disable deferred rendering?)
@@ -3713,32 +3721,6 @@ namespace flex
 			};
 
 			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
-
-			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
-
-			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
-				glm::vec3(-1.0f,  1.0f, 0.0f),
-				glm::vec3(-1.0f, -1.0f, 0.0f),
-				glm::vec3(1.0f,  1.0f, 0.0f),
-
-				glm::vec3(1.0f, -1.0f, 0.0f),
-				glm::vec3(1.0f,  1.0f, 0.0f),
-				glm::vec3(-1.0f, -1.0f, 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, 1.0f),
-				glm::vec2(0.0f, 0.0f),
-				glm::vec2(1.0f, 1.0f),
-
-				glm::vec2(1.0f, 0.0f),
-				glm::vec2(1.0f, 1.0f),
-				glm::vec2(0.0f, 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
-
-			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
 
 			GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", GameObjectType::NONE);

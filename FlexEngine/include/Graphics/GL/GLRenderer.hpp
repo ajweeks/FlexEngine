@@ -93,6 +93,7 @@ namespace flex
 			void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec);
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
+			void GenerateGBufferVertexBuffer();
 			void GenerateGBuffer(const GameContext& gameContext);
 
 			// Draw all static geometry to the given render object's cubemap texture
@@ -202,7 +203,7 @@ namespace flex
 				glm::vec2 pos;
 				glm::vec2 uv;
 				glm::vec4 color;
-				glm::vec4 RGCharSizeBScale; // RG: char size, B: scale, A: unused
+				glm::vec4 RGCharSize; // RG: char size, BA: unused
 				i32 channel; // uses extra ints slot
 			};
 
