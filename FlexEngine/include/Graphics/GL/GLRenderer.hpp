@@ -12,7 +12,6 @@ namespace flex
 {
 	class MeshComponent;
 	class GameObject;
-	class BitmapFont;
 
 	namespace gl
 	{
@@ -75,6 +74,9 @@ namespace flex
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
+			virtual void SetFont(BitmapFont* font) override;
+			virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos) override;
+			
 		private:
 			friend class GLPhysicsDebugDraw;
 
@@ -115,8 +117,6 @@ namespace flex
 
 			bool LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i32 size);
 
-			void SetFont(BitmapFont* font);
-			void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size);
 			void UpdateTextBuffer();
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
@@ -238,12 +238,7 @@ namespace flex
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
-
 			FT_Library ft;
-			BitmapFont* m_CurrentFont = nullptr;
-			std::vector<BitmapFont*> m_Fonts;
-			BitmapFont* m_FntUbuntuCondensed = nullptr;
-			BitmapFont* m_FntSourceCodePro = nullptr;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

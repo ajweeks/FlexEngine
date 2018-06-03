@@ -338,10 +338,10 @@ namespace flex
 			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/bahnschrift.ttf";
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
-			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 12);
+			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 16);
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
-			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 24);
+			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 10);
 
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
@@ -1674,9 +1674,9 @@ namespace flex
 			DrawSprites(gameContext);
 
 			SetFont(m_FntUbuntuCondensed);
-			DrawString("Hello world!", glm::vec4(0.5f, 1, 1, 1), glm::vec2(-350.0f, -1.0f), (i32)(24 + sin(gameContext.elapsedTime) * 4));
+			DrawString("Hello world!", glm::vec4(0.5f, 1, 1, 1), glm::vec2(-350.0f, -1.0f));
 			SetFont(m_FntSourceCodePro);
-			DrawString("Hi", glm::vec4(1.0f, 0, 0, 1), glm::vec2(-250.0f, -150.0f), 16);
+			DrawString("Hi", glm::vec4(1.0f, 0, 0, 1), glm::vec2(-250.0f, -150.0f));
 
 			UpdateTextBuffer();
 			DrawText(gameContext);
@@ -2643,10 +2643,10 @@ namespace flex
 			m_CurrentFont = font;
 		}
 
-		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, i32 size)
+		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos)
 		{
-			real scale = ((real)size) / m_CurrentFont->GetFontSize();
-			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, scale));
+			//real scale = ((real)size) / m_CurrentFont->GetFontSize();
+			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, 1.0f));
 		}
 
 		void GLRenderer::UpdateTextBuffer()

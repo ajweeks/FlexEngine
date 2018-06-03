@@ -128,6 +128,12 @@ namespace flex
 
 		//newTransform.setRotation(newRotation);
 		//rb->setWorldTransform(newTransform);
+
+
+		
+		gameContext.renderer->SetFont(gameContext.renderer->m_FntSourceCodePro);
+		std::string playerVelStr = "Vel--1: " + Vec3ToString(BtVec3ToVec3(rb->getLinearVelocity()));
+		gameContext.renderer->DrawString(playerVelStr, glm::vec4(1.0f), glm::vec2(100.0f, 100.0f));
 	}
 
 	void PlayerController::Destroy()

@@ -20,6 +20,7 @@ class btIDebugDraw;
 namespace flex
 {
 	class MeshComponent;
+	class BitmapFont;
 
 	class Renderer
 	{
@@ -85,6 +86,9 @@ namespace flex
 
 		virtual btIDebugDraw* GetDebugDrawer() = 0;
 
+		virtual void SetFont(BitmapFont* font) = 0;
+		virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos) = 0;
+
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
 		bool InitializeDirectionalLight(const DirectionalLight& dirLight);
@@ -98,6 +102,9 @@ namespace flex
 		i32 GetNumPointLights();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
+
+		BitmapFont* m_FntUbuntuCondensed = nullptr;
+		BitmapFont* m_FntSourceCodePro = nullptr;
 
 	protected:
 		/*
@@ -124,6 +131,9 @@ namespace flex
 
 		/* Objects that are created at bootup and stay active until shutdown, regardless of scene */
 		std::vector<GameObject*> m_PersistentObjects;
+		
+		BitmapFont* m_CurrentFont = nullptr;
+		std::vector<BitmapFont*> m_Fonts;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;
