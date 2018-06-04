@@ -61,7 +61,7 @@ namespace flex
 
 		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
 
-		i32 GetMaterialIndex(const Material& material, const GameContext& gameContext);
+		i32 GetMaterialArrayIndex(const Material& material, const GameContext& gameContext);
 
 		std::string m_Name;
 		std::string m_JSONFilePath;
@@ -70,7 +70,7 @@ namespace flex
 
 		/*
 		* Stores all unique initialized materials we've created
-		* A "material index" is used to index into this array
+		* A "material array index" is used to index into this array
 		*/
 		std::vector<MaterialID> m_LoadedMaterials;
 

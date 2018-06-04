@@ -89,7 +89,7 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material index" : 0
+			"material array index" : 0
 		},
 		{
 			"name" : "ground plane",
@@ -110,7 +110,7 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material index" : 1,
+			"material array index" : 1,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -133,7 +133,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material index" : 4
+			"material array index" : 4
 		},
 		{
 			"name" : "Reflection Probe 01",

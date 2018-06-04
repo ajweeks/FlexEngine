@@ -343,19 +343,19 @@ namespace flex
 		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
 
 		MaterialID matID = InvalidMaterialID;
-		i32 materialIndex = -1;
-		if (obj.SetIntChecked("material index", materialIndex))
+		i32 materialArrayIndex = -1;
+		if (obj.SetIntChecked("material array index", materialArrayIndex))
 		{
-			if (materialIndex >= 0 &&
-				materialIndex < (i32)m_LoadedMaterials.size())
+			if (materialArrayIndex >= 0 &&
+				materialArrayIndex < (i32)m_LoadedMaterials.size())
 			{
-				matID = m_LoadedMaterials[materialIndex];
+				matID = m_LoadedMaterials[materialArrayIndex];
 			}
 			else
 			{
 				matID = InvalidMaterialID;
 				Logger::LogError("Invalid material index for entity " + objectName + ": " +
-					std::to_string(materialIndex));
+					std::to_string(materialArrayIndex));
 			}
 		}
 
@@ -567,8 +567,8 @@ namespace flex
 			};
 			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
-			 i32 materialIndex = obj.GetInt("material index");
-			 MaterialID sphereMatID = m_LoadedMaterials[materialIndex];
+			 i32 materialArrayIndex = obj.GetInt("material array index");
+			 MaterialID sphereMatID = m_LoadedMaterials[materialArrayIndex];
 
 			MeshComponent* sphereMesh = new MeshComponent(sphereMatID, newEntity);
 			MeshComponent::ImportSettings importSettings = {};
@@ -776,19 +776,19 @@ namespace flex
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
 	}
 
-	i32 BaseScene::GetMaterialIndex(const Material& material, const GameContext& gameContext)
+	i32 BaseScene::GetMaterialArrayIndex(const Material& material, const GameContext& gameContext)
 	{
-		i32 materialIndex = -1;
+		i32 materialArrayIndex = -1;
 		for (u32 j = 0; j < m_LoadedMaterials.size(); ++j)
 		{
 			Material& loadedMat = gameContext.renderer->GetMaterial(m_LoadedMaterials[j]);
 			if (loadedMat.Equals(material, gameContext))
 			{
-				materialIndex = (i32)j;
+				materialArrayIndex = (i32)j;
 				break;
 			}
 		}
-		return materialIndex;
+		return materialArrayIndex;
 	}
 
 	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
@@ -1003,8 +1003,8 @@ namespace flex
 			if (matID != InvalidMaterialID)
 			{
 				const Material& material = gameContext.renderer->GetMaterial(matID);
-				i32 materialIndex = GetMaterialIndex(material, gameContext);
-				if (materialIndex == -1)
+				i32 materialArrayIndex = GetMaterialArrayIndex(material, gameContext);
+				if (materialArrayIndex == -1)
 				{
 				//	Logger::LogError("Mesh object contains material not present in "
 				//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
@@ -1013,7 +1013,7 @@ namespace flex
 				}
 				else
 				{
-					object.fields.push_back(JSONField("material index", JSONValue(materialIndex)));
+					object.fields.push_back(JSONField("material array index", JSONValue(materialArrayIndex)));
 				}
 			}
 		}
