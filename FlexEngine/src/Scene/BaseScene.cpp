@@ -567,7 +567,8 @@ namespace flex
 			};
 			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
-			MaterialID sphereMatID = obj.GetInt("material index");
+			 i32 materialIndex = obj.GetInt("material index");
+			 MaterialID sphereMatID = m_LoadedMaterials[materialIndex];
 
 			MeshComponent* sphereMesh = new MeshComponent(sphereMatID, newEntity);
 			MeshComponent::ImportSettings importSettings = {};
