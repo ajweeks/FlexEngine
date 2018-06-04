@@ -62,10 +62,15 @@ namespace flex
 			m_BRDFTextureHandle.format = GL_RG;
 			m_BRDFTextureHandle.type = GL_FLOAT;
 
-			m_OffscreenTextureHandle = {};
-			m_OffscreenTextureHandle.internalFormat = GL_RGBA16F;
-			m_OffscreenTextureHandle.format = GL_RGBA;
-			m_OffscreenTextureHandle.type = GL_FLOAT;
+			m_OffscreenTexture0Handle = {};
+			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
+			m_OffscreenTexture0Handle.format = GL_RGBA;
+			m_OffscreenTexture0Handle.type = GL_FLOAT;
+
+			m_OffscreenTexture1Handle = {};
+			m_OffscreenTexture1Handle.internalFormat = GL_RGBA16F;
+			m_OffscreenTexture1Handle.format = GL_RGBA;
+			m_OffscreenTexture1Handle.type = GL_FLOAT;
 
 			m_LoadingTextureHandle = {};
 			m_LoadingTextureHandle.internalFormat = GL_RGBA;
@@ -129,36 +134,11 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			// Offscreen framebuffer
+			// Offscreen framebuffers
 			{
 				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
-
-				glGenFramebuffers(1, &m_OffscreenFBO);
-				glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
-				CheckGLErrorMessages();
-
-				glGenRenderbuffers(1, &m_OffscreenRBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, frameBufferSize.x, frameBufferSize.y);
-				CheckGLErrorMessages();
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_OffscreenRBO);
-				CheckGLErrorMessages();
-
-				GenerateFrameBufferTexture(&m_OffscreenTextureHandle.id,
-										   0,
-										   m_OffscreenTextureHandle.internalFormat,
-										   m_OffscreenTextureHandle.format,
-										   m_OffscreenTextureHandle.type,
-										   frameBufferSize);
-
-				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				{
-					Logger::LogError("Offscreen frame buffer is incomplete!");
-				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glBindRenderbuffer(GL_RENDERBUFFER, 0);
-				CheckGLErrorMessages();
+				CreateOffscreenFrameBuffer(&m_Offscreen0FBO, &m_Offscreen0RBO, frameBufferSize, m_OffscreenTexture0Handle);
+				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, frameBufferSize, m_OffscreenTexture1Handle);
 			}
 
 			const real captureProjectionNearPlane = gameContext.cameraManager->CurrentCamera()->GetZNear();
@@ -197,18 +177,26 @@ namespace flex
 			postProcessMatCreateInfo.shaderName = "post_process";
 			postProcessMatCreateInfo.engineMaterial = true;
 			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
+			
+
+			MaterialCreateInfo postFXAAMatCreateInfo = {};
+			postFXAAMatCreateInfo.name = "FXAA";
+			postFXAAMatCreateInfo.shaderName = "post_fxaa";
+			postFXAAMatCreateInfo.engineMaterial = true;
+			m_PostFXAAMatID = InitializeMaterial(gameContext, &postFXAAMatCreateInfo);
+			
 
 			// Sprite quad
 			{
 				VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
 				spriteQuadVertexBufferDataCreateInfo.positions_2D = {
-					glm::vec2(-1.0f,  1.0f),
-					glm::vec2(-1.0f, -1.0f),
-					glm::vec2(1.0f,  1.0f),
+					glm::vec2(-1.0f,  -1.0f),
+					glm::vec2(-1.0f, 1.0f),
+					glm::vec2(1.0f,  -1.0f),
 
-					glm::vec2(1.0f,  1.0f),
-					glm::vec2(-1.0f, -1.0f),
-					glm::vec2(1.0f, -1.0f),
+					glm::vec2(1.0f,  -1.0f),
+					glm::vec2(-1.0f, 1.0f),
+					glm::vec2(1.0f, 1.0f),
 				};
 
 				spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
@@ -262,9 +250,9 @@ namespace flex
 			{
 				glm::vec3 pos(0.0f);
 				glm::quat rot = glm::quat();
-				glm::vec3 scale(1.0f);
+				glm::vec3 scale(1.0f, -1.0f, 1.0f);
 				glm::vec4 color(1.0f);
-				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, m_SpriteMatID,
+				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, 0, 0, m_SpriteMatID,
 							   pos, rot, scale, AnchorPoint::WHOLE, color);
 				SwapBuffers(gameContext);
 			}
@@ -1673,10 +1661,9 @@ namespace flex
 			
 			DrawSprites(gameContext);
 
+			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_bEnableFXAA ? "1" : "0");
 			SetFont(m_FntUbuntuCondensed);
-			DrawString("Hello world!", glm::vec4(0.5f, 1, 1, 1), glm::vec2(-350.0f, -1.0f));
-			SetFont(m_FntSourceCodePro);
-			DrawString("Hi", glm::vec4(1.0f, 0, 0, 1), glm::vec2(-250.0f, -150.0f));
+			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(300.0f, 300.0f));
 
 			UpdateTextBuffer();
 			DrawText(gameContext);
@@ -1814,7 +1801,7 @@ namespace flex
 				const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
-				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_OffscreenRBO);
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, 
 					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 				CheckGLErrorMessages();
@@ -1903,9 +1890,9 @@ namespace flex
 			}
 			else
 			{
-				glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
 				CheckGLErrorMessages();
-				glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_Offscreen0RBO);
 				CheckGLErrorMessages();
 
 				glDepthMask(GL_TRUE);
@@ -1955,9 +1942,9 @@ namespace flex
 
 		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
 			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, m_OffscreenRBO);
+			glBindRenderbuffer(GL_RENDERBUFFER, m_Offscreen0RBO);
 			CheckGLErrorMessages();
 
 			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
@@ -1971,12 +1958,31 @@ namespace flex
 
 		void GLRenderer::DrawOffscreenTexture(const GameContext& gameContext)
 		{
+			i32 FBO = m_Offscreen1FBO;
+			i32 RBO = m_Offscreen1RBO;
+
+			if (!m_bEnableFXAA)
+			{
+				FBO = 0;
+				RBO = 0;
+			}
+
 			glm::vec3 pos(0.0f);
 			glm::quat rot = glm::quat();
-			glm::vec3 scale(1.0f, -1.0f, 1.0f);
+			glm::vec3 scale(1.0f, 1.0f, 1.0f);
 			glm::vec4 color(1.0f);
-			DrawSpriteQuad(gameContext, m_OffscreenTextureHandle.id, m_PostProcessMatID,
-						   pos, rot, scale, AnchorPoint::WHOLE, color);
+			DrawSpriteQuad(gameContext, m_OffscreenTexture0Handle.id, FBO, RBO,
+						   m_PostProcessMatID, pos, rot, scale, AnchorPoint::WHOLE, color);
+
+			if (m_bEnableFXAA)
+			{
+				FBO = 0;
+				RBO = 0;
+
+				scale = glm::vec3(1.0f, 1.0f, 1.0f);
+				DrawSpriteQuad(gameContext, m_OffscreenTexture1Handle.id, FBO, RBO,
+							   m_PostFXAAMatID, pos, rot, scale, AnchorPoint::WHOLE, color);
+			}
 		}
 
 		void GLRenderer::DrawSprites(const GameContext& gameContext)
@@ -1986,7 +1992,7 @@ namespace flex
 			glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
 			glm::vec3 scale(100.0f);
 			glm::vec4 color(1.0f);
-			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
 						   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color);
@@ -2006,9 +2012,14 @@ namespace flex
 			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f));
 		}
 
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle,
+		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, 
+										u32 inputTextureHandle,
+										u32 FBO, 
+										u32 RBO,
 										MaterialID materialID,
-										const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
+										const glm::vec3& posOff, 
+										const glm::quat& rotationOff, 
+										const glm::vec3& scaleOff,
 										AnchorPoint anchor,
 										const glm::vec4& color)
 		{
@@ -2103,7 +2114,9 @@ namespace flex
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 			CheckGLErrorMessages();
 
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+			CheckGLErrorMessages();
+			glBindRenderbuffer(GL_RENDERBUFFER, RBO);
 			CheckGLErrorMessages();
 
 			glBindVertexArray(spriteRenderObject->VAO);
@@ -2112,7 +2125,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, textureHandle);
+			glBindTexture(GL_TEXTURE_2D, inputTextureHandle);
 			CheckGLErrorMessages();
 
 			// TODO: Use member
@@ -2645,6 +2658,8 @@ namespace flex
 
 		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos)
 		{
+			assert(m_CurrentFont != nullptr);
+
 			//real scale = ((real)size) / m_CurrentFont->GetFontSize();
 			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, 1.0f));
 		}
@@ -3001,6 +3016,36 @@ namespace flex
 			return binding;
 		}
 
+		void GLRenderer::CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, FrameBufferHandle& handle)
+		{
+			glGenFramebuffers(1, FBO);
+			glBindFramebuffer(GL_FRAMEBUFFER, *FBO);
+			CheckGLErrorMessages();
+
+			glGenRenderbuffers(1, RBO);
+			glBindRenderbuffer(GL_RENDERBUFFER, *RBO);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size.x, size.y);
+			CheckGLErrorMessages();
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *RBO);
+			CheckGLErrorMessages();
+
+			GenerateFrameBufferTexture(&handle.id,
+									   0,
+									   handle.internalFormat,
+									   handle.format,
+									   handle.type,
+									   size);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				Logger::LogError("Offscreen frame buffer is incomplete!");
+			}
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			CheckGLErrorMessages();
+		}
+
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
 		{
 			auto location = m_LoadedTextures.find(filePath);
@@ -3052,6 +3097,7 @@ namespace flex
 				{ "background", RESOURCE_LOCATION + "shaders/GLSL/background.vert", RESOURCE_LOCATION + "shaders/GLSL/background.frag" },
 				{ "sprite", RESOURCE_LOCATION + "shaders/GLSL/sprite.vert", RESOURCE_LOCATION + "shaders/GLSL/sprite.frag" },
 				{ "post_process", RESOURCE_LOCATION + "shaders/GLSL/post_process.vert", RESOURCE_LOCATION + "shaders/GLSL/post_process.frag" },
+				{ "post_fxaa", RESOURCE_LOCATION + "shaders/GLSL/post_fxaa.vert", RESOURCE_LOCATION + "shaders/GLSL/post_fxaa.frag" },
 				{ "compute_sdf", RESOURCE_LOCATION + "shaders/GLSL/ComputeSDF.vert", RESOURCE_LOCATION + "shaders/GLSL/ComputeSDF.frag" },
 				{ "font", RESOURCE_LOCATION + "shaders/GLSL/font.vert", RESOURCE_LOCATION + "shaders/GLSL/font.frag",  RESOURCE_LOCATION + "shaders/GLSL/font.geom" },
 			};
@@ -3238,6 +3284,20 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
 			++shaderID;
 
+			// Post FXAA (Fast approximate anti-aliasing)
+			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("lumaThresholdMin");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("lumaThresholdMax");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("mulReduce");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("minReduce");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("maxSpan");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("texelStep");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("bDEBUGShowEdges");
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			++shaderID;
+
 			// Compute SDF
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
@@ -3378,6 +3438,20 @@ namespace flex
 				}
 			}
 
+			if (shader->shader.constantBufferUniforms.HasUniform("texelStep"))
+			{
+				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
+				SetVec2f(material->material.shaderID, "texelStep", texelStep);
+				CheckGLErrorMessages();
+			}
+
+			if (shader->shader.constantBufferUniforms.HasUniform("bDEBUGShowEdges"))
+			{
+				SetInt(material->material.shaderID, "bDEBUGShowEdges", m_bEnableFXAADEBUGShowEdges ? 1 : 0);
+				CheckGLErrorMessages();
+			}
+
 			glUseProgram(last_program);
 			CheckGLErrorMessages();
 		}
@@ -3514,15 +3588,26 @@ namespace flex
 
 			const glm::vec2i newFrameBufferSize(width, height);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, m_OffscreenFBO);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
 			CheckGLErrorMessages();
-			ResizeFrameBufferTexture(m_OffscreenTextureHandle.id,
-				m_OffscreenTextureHandle.internalFormat,
-				m_OffscreenTextureHandle.format,
-				m_OffscreenTextureHandle.type,
-				newFrameBufferSize);
+			ResizeFrameBufferTexture(m_OffscreenTexture0Handle.id,
+									 m_OffscreenTexture0Handle.internalFormat,
+									 m_OffscreenTexture0Handle.format,
+									 m_OffscreenTexture0Handle.type,
+									 newFrameBufferSize);
 
-			ResizeRenderBuffer(m_OffscreenRBO, newFrameBufferSize);
+			ResizeRenderBuffer(m_Offscreen0RBO, newFrameBufferSize);
+
+
+			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen1FBO);
+			CheckGLErrorMessages();
+			ResizeFrameBufferTexture(m_OffscreenTexture1Handle.id,
+									 m_OffscreenTexture1Handle.internalFormat,
+									 m_OffscreenTexture1Handle.format,
+									 m_OffscreenTexture1Handle.type,
+									 newFrameBufferSize);
+
+			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize);
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
@@ -3597,12 +3682,25 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
+		void GLRenderer::SetInt(ShaderID shaderID, const std::string & valName, i32 val)
+		{
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			if (location == -1)
+			{
+				Logger::LogWarning("i32 " + valName + " couldn't be found!");
+			}
+			CheckGLErrorMessages();
+
+			glUniform1i(location, val);
+			CheckGLErrorMessages();
+		}
+
 		void GLRenderer::SetUInt(ShaderID shaderID, const std::string& valName, u32 val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
 			if (location == -1)
 			{
-				Logger::LogWarning("Unsigned i32 " + valName + " couldn't be found!");
+				Logger::LogWarning("u32 " + valName + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 

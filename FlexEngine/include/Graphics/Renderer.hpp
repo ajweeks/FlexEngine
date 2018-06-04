@@ -101,6 +101,12 @@ namespace flex
 		PointLight& GetPointLight(PointLightID pointLight);
 		i32 GetNumPointLights();
 
+		bool GetFXAAEnabled() const;
+		void SetFXAAEnabled(bool bEnabled);
+
+		bool GetFXAADEBUGShowEdgesEnabled() const;
+		void SetFXAADEBUGShowEdgesEnabled(bool bEnabled);
+
 		static const u32 MAX_TEXTURE_DIM = 65536;
 
 		BitmapFont* m_FntUbuntuCondensed = nullptr;
@@ -134,6 +140,9 @@ namespace flex
 		
 		BitmapFont* m_CurrentFont = nullptr;
 		std::vector<BitmapFont*> m_Fonts;
+
+		bool m_bEnableFXAA = true;
+		bool m_bEnableFXAADEBUGShowEdges = false;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

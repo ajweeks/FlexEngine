@@ -78,6 +78,15 @@ namespace flex
 			virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos) override;
 			
 		private:
+
+			struct FrameBufferHandle
+			{
+				u32 id;
+				GLenum format;
+				GLenum internalFormat;
+				GLenum type;
+			};
+
 			friend class GLPhysicsDebugDraw;
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
@@ -89,6 +98,7 @@ namespace flex
 
 			// TODO: Either use these functions or remove them
 			void SetFloat(ShaderID shaderID, const std::string& valName, real val);
+			void SetInt(ShaderID shaderID, const std::string& valName, i32 val);
 			void SetUInt(ShaderID shaderID, const std::string& valName, u32 val);
 			void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec);
 			void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec);
@@ -107,9 +117,14 @@ namespace flex
 
 			void SwapBuffers(const GameContext& gameContext);
 
-			void DrawSpriteQuad(const GameContext& gameContext, u32 textureHandle, 
+			void DrawSpriteQuad(const GameContext& gameContext,
+								u32 inputTextureHandle, 
+								u32 FBO, // 0 for rendering to final RT
+								u32 RBO, // 0 for rendering to final RT
 								MaterialID materialID,
-								const glm::vec3& posOff, const glm::quat& rotationOff, const glm::vec3& scaleOff,
+								const glm::vec3& posOff, 
+								const glm::quat& rotationOff, 
+								const glm::vec3& scaleOff,
 								AnchorPoint anchor,
 								const glm::vec4& color);
 			void DrawSprites(const GameContext& gameContext);
@@ -152,6 +167,8 @@ namespace flex
 			// Returns the next binding that would be used
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
+			void CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, FrameBufferHandle& handle);
+
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
 
@@ -168,14 +185,6 @@ namespace flex
 			u32 m_gBufferHandle = 0;
 			u32 m_gBufferDepthHandle = 0;
 
-			struct FrameBufferHandle
-			{
-				u32 id;
-				GLenum format;
-				GLenum internalFormat;
-				GLenum type;
-			};
-
 			// TODO: Resize all framebuffers automatically by inserting into container
 			// TODO: Remove ??
 			FrameBufferHandle m_gBuffer_PositionMetallicHandle;
@@ -187,9 +196,13 @@ namespace flex
 
 			// Everything is drawn to this texture before being drawn to the default 
 			// frame buffer through some post-processing effects
-			FrameBufferHandle m_OffscreenTextureHandle; 
-			u32 m_OffscreenFBO = 0;
-			u32 m_OffscreenRBO = 0;
+			FrameBufferHandle m_OffscreenTexture0Handle; 
+			u32 m_Offscreen0FBO = 0;
+			u32 m_Offscreen0RBO = 0;
+
+			FrameBufferHandle m_OffscreenTexture1Handle;
+			u32 m_Offscreen1FBO = 0;
+			u32 m_Offscreen1RBO = 0;
 
 			FrameBufferHandle m_LoadingTextureHandle;
 			FrameBufferHandle m_WorkTextureHandle;
@@ -214,6 +227,7 @@ namespace flex
 			MaterialID m_SpriteMatID = InvalidMaterialID;
 			MaterialID m_FontMatID = InvalidMaterialID;
 			MaterialID m_PostProcessMatID = InvalidMaterialID;
+			MaterialID m_PostFXAAMatID = InvalidMaterialID;
 
 			u32 m_CaptureFBO = 0;
 			u32 m_CaptureRBO = 0;

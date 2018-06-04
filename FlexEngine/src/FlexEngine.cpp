@@ -501,11 +501,30 @@ namespace flex
 			static const char* rendererSettingsStr = "Renderer settings";
 			if (ImGui::TreeNode(rendererSettingsStr))
 			{
-				bool vSyncEnabled = m_GameContext.renderer->GetVSyncEnabled();
+				bool bVSyncEnabled = m_GameContext.renderer->GetVSyncEnabled();
 				static const char* vSyncEnabledStr = "VSync";
-				if (ImGui::Checkbox(vSyncEnabledStr, &vSyncEnabled))
+				if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
 				{
-					m_GameContext.renderer->SetVSyncEnabled(vSyncEnabled);
+					m_GameContext.renderer->SetVSyncEnabled(bVSyncEnabled);
+				}
+
+				bool bFXAAEnabled = m_GameContext.renderer->GetFXAAEnabled();
+				static const char* fxaaEnabledStr = "FXAA";
+				if (ImGui::Checkbox(fxaaEnabledStr, &bFXAAEnabled))
+				{
+					m_GameContext.renderer->SetFXAAEnabled(bFXAAEnabled);
+				}
+
+				if (bFXAAEnabled)
+				{
+					ImGui::Indent();
+					bool bFXAADEBUGShowEdgesEnabled = m_GameContext.renderer->GetFXAADEBUGShowEdgesEnabled();
+					static const char* fxaaShowEdgesEnabledStr = "Show edges";
+					if (ImGui::Checkbox(fxaaShowEdgesEnabledStr, &bFXAADEBUGShowEdgesEnabled))
+					{
+						m_GameContext.renderer->SetFXAADEBUGShowEdgesEnabled(bFXAADEBUGShowEdgesEnabled);
+					}
+					ImGui::Unindent();
 				}
 
 				static const char* uiScaleStr = "UI Scale";

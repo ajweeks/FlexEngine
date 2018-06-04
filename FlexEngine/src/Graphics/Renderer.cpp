@@ -173,4 +173,24 @@ namespace flex
 	{
 		return m_PointLights.size();
 	}
+
+	bool Renderer::GetFXAAEnabled() const
+	{
+		return m_bEnableFXAA;
+	}
+
+	void Renderer::SetFXAAEnabled(bool bEnabled)
+	{
+		m_bEnableFXAA = bEnabled;
+	}
+	
+	bool Renderer::GetFXAADEBUGShowEdgesEnabled() const
+	{
+		return m_bEnableFXAADEBUGShowEdges;
+	}
+
+	void Renderer::SetFXAADEBUGShowEdgesEnabled(bool bEnabled)
+	{
+		m_bEnableFXAADEBUGShowEdges = bEnabled;
+	}
 } // namespace flex
