@@ -559,9 +559,9 @@ namespace flex
 		return m_bSerializable;
 	}
 
-	void GameObject::SetSerializable(bool serializable)
+	void GameObject::SetSerializable(bool bSerializable)
 	{
-		m_bSerializable = serializable;
+		m_bSerializable = bSerializable;
 	}
 
 	bool GameObject::IsStatic() const
@@ -569,9 +569,9 @@ namespace flex
 		return m_bStatic;
 	}
 
-	void GameObject::SetStatic(bool newStatic)
+	void GameObject::SetStatic(bool bStatic)
 	{
-		m_bStatic = newStatic;
+		m_bStatic = bStatic;
 	}
 
 	bool GameObject::IsVisible() const

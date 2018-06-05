@@ -119,6 +119,10 @@ namespace flex
 			u32 indexBuffer = 0;
 			std::vector<u32>* indices = nullptr;
 
+			// If true this object will be drawn after post processing
+			// and not drawn in shipping builds
+			bool editorObject = false;
+
 			MaterialID materialID = InvalidMaterialID;
 		};
 

@@ -899,6 +899,7 @@ namespace flex
 			renderObject->enableCulling = createInfo->enableCulling ? GL_TRUE : GL_FALSE;
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
+			renderObject->editorObject = createInfo->editorObject;
 
 			if (renderObject->materialID == InvalidMaterialID)
 			{
@@ -1397,6 +1398,9 @@ namespace flex
 			glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+			CheckGLErrorMessages();
+			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+			CheckGLErrorMessages();
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
 			CheckGLErrorMessages();
 
@@ -1647,9 +1651,12 @@ namespace flex
 
 			// TODO: Don't sort render objects frame! Only when things are added/removed
 			BatchRenderObjects(gameContext);
+
+			// World-space objects
 			DrawDeferredObjects(gameContext, drawCallInfo);
 			DrawGBufferQuad(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
+			DrawWorldSpaceSprites(gameContext);
 			DrawOffscreenTexture(gameContext);
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
@@ -1657,16 +1664,19 @@ namespace flex
 				PhysicsDebugRender(gameContext);
 			}
 
-			ImGuiRender();
-			
-			DrawSprites(gameContext);
+			DrawEditorObjects(gameContext, drawCallInfo);
 
+			// Screen-space objects
 			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_bEnableFXAA ? "1" : "0");
 			SetFont(m_FntUbuntuCondensed);
 			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(300.0f, 300.0f));
 
 			UpdateTextBuffer();
 			DrawText(gameContext);
+
+			DrawScreenSpaceSprites(gameContext);
+
+			ImGuiRender();
 
 			SwapBuffers(gameContext);
 		}
@@ -1686,6 +1696,7 @@ namespace flex
 			*/
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
+			m_EditorRenderObjectBatch.clear();
 			
 			// Sort render objects i32o deferred + forward buckets
 			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
@@ -1709,7 +1720,8 @@ namespace flex
 						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
-							renderObject->materialID == matID)
+							renderObject->materialID == matID &&
+							!renderObject->editorObject)
 						{
 							m_DeferredRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1723,11 +1735,23 @@ namespace flex
 						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
-							renderObject->materialID == matID)
+							renderObject->materialID == matID &&
+							!renderObject->editorObject)
 						{
 							m_ForwardRenderObjectBatches.back().push_back(renderObject);
 						}
 					}
+				}
+			}
+
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				GLRenderObject* renderObject = GetRenderObject(i);
+				if (renderObject &&
+					renderObject->gameObject->IsVisible() &&
+					renderObject->editorObject)
+				{
+					m_EditorRenderObjectBatch.push_back(renderObject);
 				}
 			}
 		}
@@ -1942,11 +1966,6 @@ namespace flex
 
 		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
-			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, m_Offscreen0RBO);
-			CheckGLErrorMessages();
-
 			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
 			{
 				if (!m_ForwardRenderObjectBatches[i].empty())
@@ -1954,6 +1973,11 @@ namespace flex
 					DrawRenderObjectBatch(gameContext, m_ForwardRenderObjectBatches[i], drawCallInfo);
 				}
 			}
+		}
+
+		void GLRenderer::DrawEditorObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		{
+			DrawRenderObjectBatch(gameContext, m_EditorRenderObjectBatch, drawCallInfo);
 		}
 
 		void GLRenderer::DrawOffscreenTexture(const GameContext& gameContext)
@@ -1972,7 +1996,7 @@ namespace flex
 			glm::vec3 scale(1.0f, 1.0f, 1.0f);
 			glm::vec4 color(1.0f);
 			DrawSpriteQuad(gameContext, m_OffscreenTexture0Handle.id, FBO, RBO,
-						   m_PostProcessMatID, pos, rot, scale, AnchorPoint::WHOLE, color);
+						   m_PostProcessMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
 
 			if (m_bEnableFXAA)
 			{
@@ -1981,11 +2005,25 @@ namespace flex
 
 				scale = glm::vec3(1.0f, 1.0f, 1.0f);
 				DrawSpriteQuad(gameContext, m_OffscreenTexture1Handle.id, FBO, RBO,
-							   m_PostFXAAMatID, pos, rot, scale, AnchorPoint::WHOLE, color);
+							   m_PostFXAAMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
 			}
+
+			{
+				const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
+				CheckGLErrorMessages();
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+				CheckGLErrorMessages();
+				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y,
+								  0, 0, frameBufferSize.x, frameBufferSize.y,
+								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+				CheckGLErrorMessages();
+			}
+
 		}
 
-		void GLRenderer::DrawSprites(const GameContext& gameContext)
+		void GLRenderer::DrawScreenSpaceSprites(const GameContext& gameContext)
 		{
 			glm::vec3 pos(0.0f);
 			glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
@@ -2012,6 +2050,17 @@ namespace flex
 			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f));
 		}
 
+		void GLRenderer::DrawWorldSpaceSprites(const GameContext& gameContext)
+		{
+			//glm::vec3 pos(0.0f);
+			//glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
+			//glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
+			//glm::vec3 scale(100.0f);
+			//glm::vec4 color(1.0f);
+			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
+			//			   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
+		}
+
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, 
 										u32 inputTextureHandle,
 										u32 FBO, 
@@ -2021,7 +2070,8 @@ namespace flex
 										const glm::quat& rotationOff, 
 										const glm::vec3& scaleOff,
 										AnchorPoint anchor,
-										const glm::vec4& color)
+										const glm::vec4& color,
+										bool writeDepth)
 		{
 			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
 			if (!spriteRenderObject)
@@ -2135,7 +2185,14 @@ namespace flex
 			CheckGLErrorMessages();
 
 			// TODO: Is this necessary to clear the depth?
-			glDepthMask(GL_TRUE);
+			if (writeDepth)
+			{
+				glDepthMask(GL_TRUE);
+			}
+			else
+			{
+				glDepthMask(GL_FALSE);
+			}
 
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

@@ -274,6 +274,8 @@ namespace flex
 
 		DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
 		bool depthWriteEnable = true;
+
+		bool editorObject = false;
 	};
 
 	struct Uniforms

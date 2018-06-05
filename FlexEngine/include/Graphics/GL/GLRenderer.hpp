@@ -117,6 +117,7 @@ namespace flex
 
 			void SwapBuffers(const GameContext& gameContext);
 
+			// TODO: Put all params into struct!
 			void DrawSpriteQuad(const GameContext& gameContext,
 								u32 inputTextureHandle, 
 								u32 FBO, // 0 for rendering to final RT
@@ -126,8 +127,10 @@ namespace flex
 								const glm::quat& rotationOff, 
 								const glm::vec3& scaleOff,
 								AnchorPoint anchor,
-								const glm::vec4& color);
-			void DrawSprites(const GameContext& gameContext);
+								const glm::vec4& color,
+								bool writeDepth = true);
+			void DrawScreenSpaceSprites(const GameContext& gameContext);
+			void DrawWorldSpaceSprites(const GameContext& gameContext);
 			void DrawText(const GameContext& gameContext);
 
 			bool LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i32 size);
@@ -158,6 +161,7 @@ namespace flex
 			void DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
+			void DrawEditorObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawOffscreenTexture(const GameContext& gameContext);
 
 			// Returns the next binding that would be used
@@ -249,6 +253,8 @@ namespace flex
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
+			// All render objects which have "editorObject" set to true
+			std::vector<GLRenderObject*> m_EditorRenderObjectBatch;
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 

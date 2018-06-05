@@ -131,40 +131,48 @@ namespace flex
 		}
 
 
-		const std::string gridMatName = "Grid";
-		if (!gameContext.renderer->GetMaterialID(gridMatName, m_GridMaterialID))
 		{
-			MaterialCreateInfo gridMatInfo = {};
-			gridMatInfo.shaderName = "color";
-			gridMatInfo.name = gridMatName;
-			m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
+			const std::string gridMatName = "Grid";
+			if (!gameContext.renderer->GetMaterialID(gridMatName, m_GridMaterialID))
+			{
+				MaterialCreateInfo gridMatInfo = {};
+				gridMatInfo.shaderName = "color";
+				gridMatInfo.name = gridMatName;
+				m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
+			}
+
+			m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
+			MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
+			RenderObjectCreateInfo createInfo = {};
+			createInfo.editorObject = true;
+			gridMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::GRID, &createInfo);
+			m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
+			m_Grid->SetSerializable(false);
+			m_Grid->SetStatic(true);
+			AddChild(m_Grid);
 		}
 
-		m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
-		MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
-		gridMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::GRID);
-		m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
-		m_Grid->SetSerializable(false);
-		m_Grid->SetStatic(true);
-		AddChild(m_Grid);
 
-		const std::string worldOriginMatName = "World origin";
-		if (!gameContext.renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
 		{
-			MaterialCreateInfo worldAxisMatInfo = {};
-			worldAxisMatInfo.shaderName = "color";
-			worldAxisMatInfo.name = worldOriginMatName;
-			m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+			const std::string worldOriginMatName = "World origin";
+			if (!gameContext.renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+			{
+				MaterialCreateInfo worldAxisMatInfo = {};
+				worldAxisMatInfo.shaderName = "color";
+				worldAxisMatInfo.name = worldOriginMatName;
+				m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+			}
+
+			m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
+			MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
+			RenderObjectCreateInfo createInfo = {};
+			createInfo.editorObject = true;
+			orignMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
+			m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
+			m_WorldOrigin->SetSerializable(false);
+			m_WorldOrigin->SetStatic(true);
+			AddChild(m_WorldOrigin);
 		}
-
-		m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
-		MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
-		orignMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::WORLD_AXIS_GROUND);
-		m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
-		m_WorldOrigin->SetSerializable(false);
-		m_WorldOrigin->SetStatic(true);
-		AddChild(m_WorldOrigin);
-
 
 		// Players
 		m_Player0 = new Player(0);

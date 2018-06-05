@@ -41,10 +41,10 @@ namespace flex
 		std::string GetName() const;
 
 		bool IsSerializable() const;
-		void SetSerializable(bool serializable);
+		void SetSerializable(bool bSerializable);
 
 		bool IsStatic() const;
-		void SetStatic(bool newStatic);
+		void SetStatic(bool bStatic);
 
 		bool IsVisible() const;
 		void SetVisible(bool visible, bool effectChildren = true);
