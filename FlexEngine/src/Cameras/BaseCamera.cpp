@@ -30,6 +30,7 @@ namespace flex
 		m_MouseRotationSpeed(0.001f)
 	{
 		ResetOrientation();
+		CalculateAxisVectors();
 		RecalculateViewProjection(gameContext);
 	}
 
