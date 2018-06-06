@@ -1,7 +1,7 @@
 #version 450
 
 uniform sampler2D in_Texture;
-uniform float lumaThresholdMax = 1.0/8.0;
+uniform float lumaThresholdMax = 1.0/3.0;
 uniform float lumaThresholdMin = 1.0/16.0;
 uniform float mulReduce = 1.0/8.0;
 uniform float minReduce = 1.0/128.0;
