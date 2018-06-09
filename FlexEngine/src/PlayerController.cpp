@@ -7,6 +7,7 @@
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
+#include "Cameras/CameraManager.hpp"
 #include "GameContext.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
@@ -38,6 +39,17 @@ namespace flex
 
 	void PlayerController::Update(const GameContext& gameContext)
 	{
+		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
+			gameContext.inputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::RIGHT_BUMPER))
+		{
+			gameContext.cameraManager->SwtichToIndexRelative(gameContext, 1, false);
+		}
+		else if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_MINUS) ||
+				 gameContext.inputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::LEFT_BUMPER))
+		{
+			gameContext.cameraManager->SwtichToIndexRelative(gameContext, -1, false);
+		}
+
 		// TODO: Make frame-rate-independent!
 		btVector3 up, right, forward;
 		m_Player->GetRigidBody()->GetUpRightForward(up, right, forward);
@@ -59,7 +71,7 @@ namespace flex
 		btVector3 force(0.0f, 0.0f, 0.0f);
 		btVector3 torque(0.0f, 0.0f, 0.0f);
 
-		// is-grounded check
+		// Grounded check
 		{
 			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldlPosition());
 			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);

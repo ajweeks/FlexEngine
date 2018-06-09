@@ -25,6 +25,17 @@ namespace flex
 		static const u32 EngineVersionMinor;
 		static const u32 EngineVersionPatch;
 
+		enum class SoundEffect
+		{
+			dud_dud_dud_dud,
+			drmapan,
+			blip,
+
+			LAST_ELEMENT
+		};
+
+		static AudioSourceID GetAudioSourceID(SoundEffect effect);
+
 	private:
 		enum class RendererID
 		{
@@ -52,6 +63,9 @@ namespace flex
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
 		std::string m_RendererName = "";
+
+		// Indexed using SoundEffect enum
+		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
 		bool m_Running = false;
 

@@ -11,6 +11,8 @@
 
 namespace flex
 {
+	const real InputManager::MAX_JOYSTICK_ROTATION_SPEED = 15.0f;
+
 	InputManager::InputManager()
 	{
 	}
@@ -50,8 +52,9 @@ namespace flex
 		ClearAllInputs(gameContext);
 	}
 
-	void InputManager::Update()
+	void InputManager::Update(const GameContext& gameContext)
 	{
+		// Keyboard keys
 		for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
 		{
 			if (iter->second.down > 0)
@@ -60,6 +63,7 @@ namespace flex
 			}
 		}
 
+		// Mouse buttons
 		for (size_t i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
 			if (m_MouseButtons[i].down > 0)
@@ -67,6 +71,65 @@ namespace flex
 				++m_MouseButtons[i].down;
 				m_MouseButtonDrags[i].endLocation = m_MousePosition;
 			}
+		}
+
+		// Gamepads
+		for (i32 i = 0; i < 2; ++i)
+		{
+			real joystickX = GetGamepadAxisValue(i, GamepadAxis::RIGHT_STICK_X);
+			real joystickY = GetGamepadAxisValue(i, GamepadAxis::RIGHT_STICK_Y);
+
+			i32 currentQuadrant = -1;
+
+			real minimumExtensionLength = 0.35f;
+			real extensionLength = glm::length(glm::vec2(joystickX, joystickY));
+			if (extensionLength > minimumExtensionLength)
+			{
+				if (m_GamepadStates[i].previousQuadrant != -1)
+				{
+					real currentAngle = atan2(joystickY, joystickX) + PI;
+					real previousAngle = atan2(m_GamepadStates[i].pJoystickY, m_GamepadStates[i].pJoystickX) + PI;
+					// Asymptote occurs on left
+					if (joystickX < 0.0f)
+					{
+						if (m_GamepadStates[i].pJoystickY < 0.0f && joystickY >= 0.0f)
+						{
+							// CCW
+							currentAngle -= TWO_PI;
+						}
+						else if (m_GamepadStates[i].pJoystickY >= 0.0f && joystickY < 0.0f)
+						{
+							// CW
+							currentAngle += TWO_PI;
+						}
+					}
+
+					real stickRotationSpeed = (currentAngle - previousAngle) / gameContext.deltaTime;
+					stickRotationSpeed = glm::clamp(stickRotationSpeed,
+													-MAX_JOYSTICK_ROTATION_SPEED,
+													MAX_JOYSTICK_ROTATION_SPEED);
+
+					m_GamepadStates[i].averageRotationSpeeds.AddValue(stickRotationSpeed);
+				}
+
+				if (joystickX > 0.0f)
+				{
+					currentQuadrant = (joystickY > 0.0f ? 2 : 1);
+				}
+				else
+				{
+					currentQuadrant = (joystickY > 0.0f ? 3 : 0);
+				}
+			}
+			else
+			{
+				m_GamepadStates[i].averageRotationSpeeds.Reset();
+			}
+
+			m_GamepadStates[i].previousQuadrant = currentQuadrant;
+
+			m_GamepadStates[i].pJoystickX = joystickX;
+			m_GamepadStates[i].pJoystickY = joystickY;
 		}
 	}
 
@@ -83,24 +146,45 @@ namespace flex
 
 		for (i32 i = 0; i < 6; ++i)
 		{
-			m_GampadAxes[gamepadIndex][i] = axes[i];
+			m_GamepadStates[gamepadIndex].axes[i] = axes[i];
 		}
 
-		// Only handle left & right sticks (last two axes are triggers, which don't have radial dead zones
-		HandleRadialDeadZone(&m_GampadAxes[gamepadIndex][0], &m_GampadAxes[gamepadIndex][1]);
-		HandleRadialDeadZone(&m_GampadAxes[gamepadIndex][2], &m_GampadAxes[gamepadIndex][3]);
+		HandleRadialDeadZone(&m_GamepadStates[gamepadIndex].axes[0], &m_GamepadStates[gamepadIndex].axes[1]);
+		HandleRadialDeadZone(&m_GamepadStates[gamepadIndex].axes[2], &m_GamepadStates[gamepadIndex].axes[3]);
 
-		u32 pStates = m_GamepadButtonStates[gamepadIndex];
+		u32 pStates = m_GamepadStates[gamepadIndex].buttonStates;
 
-		m_GamepadButtonStates[gamepadIndex] = 0;
+		m_GamepadStates[gamepadIndex].buttonStates = 0;
 		for (i32 i = 0; i < 15; ++i)
 		{
-			m_GamepadButtonStates[gamepadIndex] = m_GamepadButtonStates[gamepadIndex] | (buttons[i] << i);
+			m_GamepadStates[gamepadIndex].buttonStates = m_GamepadStates[gamepadIndex].buttonStates | (buttons[i] << i);
 		}
 
-		u32 changedButtons = m_GamepadButtonStates[gamepadIndex] ^ pStates;
-		m_GamepadButtonsPressed[gamepadIndex] = changedButtons & m_GamepadButtonStates[gamepadIndex];
-		m_GamepadButtonsReleased[gamepadIndex] = changedButtons & (~m_GamepadButtonStates[gamepadIndex]);
+		u32 changedButtons = m_GamepadStates[gamepadIndex].buttonStates ^ pStates;
+		m_GamepadStates[gamepadIndex].buttonsPressed = changedButtons & m_GamepadStates[gamepadIndex].buttonStates;
+		m_GamepadStates[gamepadIndex].buttonsReleased = changedButtons & (~m_GamepadStates[gamepadIndex].buttonStates);
+
+		//if (changedButtons)
+		//{
+		//	for (i32 i = 0; i < 15; ++i)
+		//	{
+		//		Logger::LogInfo(std::to_string(m_GamepadStates[gamepadIndex].buttonsPressed & (1 << i)), false);
+		//	}
+		//	Logger::LogInfo("");
+		//	for (i32 i = 0; i < 15; ++i)
+		//	{
+		//		Logger::LogInfo(std::to_string(m_GamepadStates[gamepadIndex].buttonsReleased & (1 << i)), false);
+		//	}
+
+		//	Logger::LogInfo("");
+		//}
+	}
+
+	InputManager::GamepadState& InputManager::GetGamepadState(i32 gamepadIndex)
+	{
+		assert(gamepadIndex == 0 ||
+			   gamepadIndex == 1);
+		return m_GamepadStates[gamepadIndex];
 	}
 
 	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
@@ -150,7 +234,7 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool down = m_GamepadButtonStates[gamepadIndex] & (1 << (i32)button);
+		bool down = m_GamepadStates[gamepadIndex].buttonStates & (1 << (i32)button);
 		return down;
 	}
 
@@ -158,7 +242,7 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool pressed = m_GamepadButtonsPressed[gamepadIndex] & (1 << (i32)button);
+		bool pressed = m_GamepadStates[gamepadIndex].buttonsPressed & (1 << (i32)button);
 		return pressed;
 	}
 
@@ -166,7 +250,7 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool released = m_GamepadButtonsReleased[gamepadIndex] & (1 << (i32)button);
+		bool released = m_GamepadStates[gamepadIndex].buttonsReleased & (1 << (i32)button);
 		return released;
 	}
 
@@ -174,7 +258,7 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 	
-		real axisValue = m_GampadAxes[gamepadIndex][(i32)axis];
+		real axisValue = m_GamepadStates[gamepadIndex].axes[(i32)axis];
 		return axisValue;
 	}
 
@@ -367,11 +451,14 @@ namespace flex
 	{
 		for (i32 j = 0; j < 6; ++j)
 		{
-			m_GampadAxes[gamepadIndex][j] = 0;
+			m_GamepadStates[gamepadIndex].axes[j] = 0;
 		}
 
-		m_GamepadButtonStates[gamepadIndex] = 0;
-		m_GamepadButtonsPressed[gamepadIndex] = 0;
-		m_GamepadButtonsReleased[gamepadIndex] = 0;
+		m_GamepadStates[gamepadIndex].buttonStates = 0;
+		m_GamepadStates[gamepadIndex].buttonsPressed = 0;
+		m_GamepadStates[gamepadIndex].buttonsReleased = 0;
+
+		m_GamepadStates[gamepadIndex].averageRotationSpeeds = 
+			RollingAverage(m_GamepadStates[gamepadIndex].framesToAverageOver);
 	}
 } // namespace flex

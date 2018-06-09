@@ -48,7 +48,10 @@ namespace flex
 #ifdef _WIN32
 			SetConsoleTextAttribute(m_ConsoleHandle, CONSOLE_COLOR_INFO);
 #endif
-			std::cout << "[INFO] ";
+			if (newline)
+			{
+				std::cout << "[INFO] ";
+			}
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
@@ -61,7 +64,10 @@ namespace flex
 #ifdef _WIN32
 			SetConsoleTextAttribute(m_ConsoleHandle, CONSOLE_COLOR_WARNING);
 #endif
-			std::cout << "[WARNING] ";
+			if (newline)
+			{
+				std::cout << "[WARNING] ";
+			}
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
@@ -74,7 +80,10 @@ namespace flex
 #ifdef _WIN32
 			SetConsoleTextAttribute(m_ConsoleHandle, CONSOLE_COLOR_ERROR);
 #endif
-			std::cout << "[ERROR] ";
+			if (newline)
+			{
+				std::cout << "[ERROR] ";
+			}
 		} break;
 		default:
 		{
@@ -104,7 +113,10 @@ namespace flex
 #ifdef _WIN32
 			SetConsoleTextAttribute(m_ConsoleHandle, CONSOLE_COLOR_INFO);
 #endif
-			std::wcout << L"[INFO] ";
+			if (newline)
+			{
+				std::wcout << L"[INFO] ";
+			}
 		} break;
 		case Logger::LogLevel::LOG_WARNING:
 		{
@@ -117,7 +129,10 @@ namespace flex
 #ifdef _WIN32
 			SetConsoleTextAttribute(m_ConsoleHandle, CONSOLE_COLOR_WARNING);
 #endif
-			std::wcout << L"[WARNING] ";
+			if (newline)
+			{
+				std::wcout << L"[WARNING] ";
+			}
 		} break;
 		case Logger::LogLevel::LOG_ERROR:
 		{
@@ -130,7 +145,10 @@ namespace flex
 #ifdef _WIN32
 			SetConsoleTextAttribute(m_ConsoleHandle, CONSOLE_COLOR_ERROR);
 #endif
-			std::wcout << L"[ERROR] ";
+			if (newline)
+			{
+				std::wcout << L"[ERROR] ";
+			}
 		} break;
 		default:
 		{

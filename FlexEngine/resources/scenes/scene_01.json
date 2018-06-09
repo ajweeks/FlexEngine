@@ -78,7 +78,7 @@
 			"generated irradiance cubemap size" : "32.000000, 32.000000",
 			"generate prefiltered map" : true,
 			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
+			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Ref.hdr"
 		}
 	],
 	"entities" : 
@@ -123,8 +123,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "528.422485, -323520.062500, -39.259293",
-				"rotation" : "0.795718, -0.330279, -0.526470",
+				"position" : "5, 32, -9",
+				"rotation" : "0, -0, -0",
 				"scale" : "2.000000, 2.000000, 2.000000"
 			},
 			"mesh" : 
@@ -304,7 +304,7 @@
       "transform" : 
       {
         "position" : "0.000000, 0.00000, 0.000000",
-        "rotation" : "0.000000, -0.500000, 1.000000",
+        "rotation" : "0.000000, -0.000000, 0.000000",
         "scale" : "1.000000, 1.000000, 1.000000"
       },
 			"material array index" : 5

@@ -82,11 +82,6 @@ namespace flex
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
-		AudioSourceID dud_dud_dud_dud;
-		AudioSourceID drmapan;
-		AudioSourceID blip;
-		//AudioSourceID TRG_Banks;
-
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 

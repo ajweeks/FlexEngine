@@ -19,6 +19,7 @@
 #include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "Logger.hpp"
@@ -49,13 +50,6 @@ namespace flex
 		m_PhysicsWorld->Initialize(gameContext);
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-
-		dud_dud_dud_dud = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav");
-		drmapan = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav");
-		blip = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav");
-		//TRG_Banks = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/music/TRG_Banks.wav");
-		//AudioManager::SetSourceLooping(TRG_Banks, true);
-		//AudioManager::PlaySource(TRG_Banks);
 
 		JSONObject sceneRootObject;
 		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
@@ -235,8 +229,6 @@ namespace flex
 		}
 		m_Children.clear();
 
-		AudioManager::ClearAllAudioSources();
-
 		m_LoadedMaterials.clear();
 
 		gameContext.renderer->ClearMaterials();
@@ -266,42 +258,46 @@ namespace flex
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
 		{
-			AudioManager::PlaySource(dud_dud_dud_dud);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
 		{
-			AudioManager::PauseSource(dud_dud_dud_dud);
+			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
 		{
-			AudioManager::PlaySource(drmapan);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 		{
-			AudioManager::PauseSource(drmapan);
+			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
 		{
-			AudioManager::StopSource(drmapan);
+			AudioManager::StopSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
 		{
-			AudioManager::AddToSourcePitch(dud_dud_dud_dud, 0.5f * gameContext.deltaTime);
+			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										   0.5f * gameContext.deltaTime);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
 		{
-			AudioManager::AddToSourcePitch(dud_dud_dud_dud, -0.5f * gameContext.deltaTime);
+			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										   -0.5f * gameContext.deltaTime);
 		}
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
 		{
-			AudioManager::ScaleSourceGain(dud_dud_dud_dud, 1.1f);
+			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										  1.1f);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
 		{
-			AudioManager::ScaleSourceGain(dud_dud_dud_dud, 1.0f / 1.1f);
+			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										  1.0f / 1.1f);
 		}
 
 
@@ -917,11 +913,11 @@ namespace flex
 
 		if (success)
 		{
-			AudioManager::PlaySource(blip);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
 		}
 		else
 		{
-			AudioManager::PlaySource(dud_dud_dud_dud);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 	}
 

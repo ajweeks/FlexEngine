@@ -5,6 +5,7 @@
 #include <glm/vec2.hpp>
 
 #include "GameContext.hpp"
+#include "Helpers.hpp" // For RollingAverage
 
 namespace flex
 {
@@ -215,15 +216,33 @@ namespace flex
 			glm::vec2 endLocation;
 		};
 
+		struct GamepadState
+		{
+			// Bitfield used to store gamepad button states for each player
+			// 0 = up, 1 = down (See GamepadButton enum)
+			u32 buttonStates = 0;
+			u32 buttonsPressed = 0;
+			u32 buttonsReleased = 0;
+
+			// LEFT_STICK_X, LEFT_STICK_Y, RIGHT_STICK_X, RIGHT_STICK_Y, LEFT_TRIGGER, RIGHT_TRIGGER
+			real axes[6];
+			RollingAverage averageRotationSpeeds;
+			i32 framesToAverageOver = 10;
+			real pJoystickX = 0.0f;
+			real pJoystickY = 0.0f;
+			i32 previousQuadrant = -1;
+		};
+
 		InputManager();
 		~InputManager();
 
 		void Initialize(const GameContext& gameContext);
 
-		void Update();
+		void Update(const GameContext& gameContext);
 		void PostUpdate();
 
 		void UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15]);
+		GamepadState& GetGamepadState(i32 gamepadIndex);
 
 		i32 GetKeyDown(KeyCode keyCode, bool ignoreImGui = false) const;
 		bool GetKeyPressed(KeyCode keyCode) const;
@@ -269,16 +288,9 @@ namespace flex
 		real m_ScrollXOffset = 0;
 		real m_ScrollYOffset = 0;
 
-		// Bitfield used to store gamepad button states for each player
-		// (0 = up, 1 = down) (See GamepadButton enum)
-		u32 m_GamepadButtonStates[2];
+		GamepadState m_GamepadStates[2];
 
-		u32 m_GamepadButtonsPressed[2];
-		u32 m_GamepadButtonsReleased[2];
-
-		// Stores the values of gamepad axes for each player
-		// In order: LEFT_STICK_X, LEFT_STICK_Y, RIGHT_STICK_X, RIGHT_STICK_Y, LEFT_TRIGGER, RIGHT_TRIGGER
-		real m_GampadAxes[2][6];
+		static const real MAX_JOYSTICK_ROTATION_SPEED;
 
 		// Must be stored as member because ImGui will not make a copy
 		std::string m_ImGuiIniFilepathStr;

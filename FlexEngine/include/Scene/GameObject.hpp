@@ -139,36 +139,25 @@ namespace flex
 
 		MeshComponent* m_MeshComponent = nullptr;
 
-	public: // :grimacing:
+	public:
 		// All fields which valves need to know about to do their thing
 		struct ValveMembers
 		{
 			// Serialized fields
-			real minRotation;
-			real maxRotation;
+			real minRotation = 0.0f;
+			real maxRotation = 0.0f;
+
+			// Multiplied with value retrieved from input manager
+			real rotationSpeedScale = 1.0f;
+
+			// 1 = never slow down, 0 = slow down immediately
+			real invSlowDownRate = 0.85f;
 
 			// Non-serialized fields
-
-			RollingAverage averageRotationSpeeds;
-
-			//  0 | 1 
-			// - -1 --
-			//  3 | 2
-			i32 stickStartingQuadrant = -1;
-			real stickStartTime = -1.0f;
-			bool wasInQuadrantSinceIdle[4];
+			real rotationSpeed = 0.0f;
+			real pRotationSpeed = 0.0f;
 
 			real rotation = 0.0f;
-
-			real pJoystickX = 0.0f;
-			real pJoystickY = 0.0f;
-
-			real stickRotationSpeed = 0.0f;
-			real pStickRotationSpeed = 0.0f;
-
-			bool rotatingCW = false;
-
-			i32 previousQuadrant = -1;
 		} m_ValveMembers;
 
 		struct RisingBlockMembers

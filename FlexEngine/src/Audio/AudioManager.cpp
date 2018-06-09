@@ -51,8 +51,6 @@ namespace flex
 
 	void AudioManager::Destroy()
 	{
-		//s_Context = alcGetCurrentContext();
-		//s_Device = alcGetContextsDevice(s_Context);
 		ClearAllAudioSources();
 		alcMakeContextCurrent(NULL);
 		alcDestroyContext(s_Context);
