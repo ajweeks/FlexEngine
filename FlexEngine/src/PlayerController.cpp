@@ -100,7 +100,7 @@ namespace flex
 			gameContext.deltaTime;
 
 		torque.setY(m_RotateSpeed *
-					gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X) *
+					-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X) *
 					gameContext.deltaTime);
 
 		btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();

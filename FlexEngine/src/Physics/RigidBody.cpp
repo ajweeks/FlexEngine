@@ -148,16 +148,15 @@ namespace flex
 	void RigidBody::GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward)
 	{
 		const btVector3 worldUp(0.0f, 1.0f, 0.0f);
-		// TODO: FIXME: HACK: Figure out why this needs to be negative (handed-ness?)
-		const btVector3 worldRight(-1.0f, 0.0f, 0.0f);
+		const btVector3 worldRight(1.0f, 0.0f, 0.0f);
 		const btVector3 worldForward(0.0f, 0.0f, 1.0f);
-		btTransform transform;
-		m_RigidBody->getMotionState()->getWorldTransform(transform);
+		const btTransform& transform = m_RigidBody->getWorldTransform();
+		
 		btQuaternion rot = transform.getRotation();
 		btMatrix3x3 rotMat(rot);
-		up = worldUp * rotMat;
-		right = worldRight * rotMat;
-		forward = worldForward * rotMat;
+		up = rotMat * worldUp;
+		right = rotMat * worldRight;
+		forward = rotMat * worldForward;
 	}
 
 	btRigidBody* RigidBody::GetRigidBodyInternal()

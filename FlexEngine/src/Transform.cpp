@@ -4,6 +4,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
@@ -25,9 +26,16 @@ namespace flex
 		localPosition(position),
 		localRotation(rotation),
 		localScale(scale),
-		worldPosition(localPosition),
-		worldRotation(localRotation),
-		worldScale(localScale)
+		worldPosition(position),
+		worldRotation(rotation),
+		worldScale(scale),
+		localTransform(glm::translate(glm::mat4(1.0f), position) *
+					   // Cast away constness
+					   glm::mat4((glm::quat)rotation) *
+					   glm::scale(glm::mat4(1.0f), scale)),
+		worldTransform(glm::translate(glm::mat4(1.0f), position) *
+					   glm::mat4((glm::quat)rotation) *
+					   glm::scale(glm::mat4(1.0f), scale))
 	{
 	}
 
@@ -35,9 +43,15 @@ namespace flex
 		localPosition(position),
 		localRotation(rotation),
 		localScale(glm::vec3(1.0f)),
-		worldPosition(localPosition),
-		worldRotation(localRotation),
-		worldScale(localScale)
+		worldPosition(position),
+		worldRotation(rotation),
+		worldScale(glm::vec3(1.0f)),
+		localTransform(glm::translate(glm::mat4(1.0f), position) *
+					   glm::mat4((glm::quat)rotation) *
+					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f))),
+		worldTransform(glm::translate(glm::mat4(1.0f), position) *
+					   glm::mat4((glm::quat)rotation) *
+					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)))
 	{
 	}
 
@@ -45,9 +59,15 @@ namespace flex
 		localPosition(position),
 		localRotation(glm::quat(glm::vec3(0.0f))),
 		localScale(glm::vec3(1.0f)),
-		worldPosition(localPosition),
-		worldRotation(localRotation),
-		worldScale(localScale)
+		worldPosition(position),
+		worldRotation(glm::quat(glm::vec3(0.0f))),
+		worldScale(glm::vec3(1.0f)),
+		localTransform(glm::translate(glm::mat4(1.0f), position) *
+					   glm::mat4(glm::quat(glm::vec3(0.0f))) *
+					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f))),
+		worldTransform(glm::translate(glm::mat4(1.0f), worldPosition) *
+					   glm::mat4(glm::quat(glm::vec3(0.0f))) *
+					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)))
 	{
 	}
 
@@ -57,7 +77,13 @@ namespace flex
 		localScale(other.localScale),
 		worldPosition(other.worldPosition),
 		worldRotation(other.worldRotation),
-		worldScale(other.worldScale)
+		worldScale(other.worldScale),
+		localTransform(glm::translate(glm::mat4(1.0f), other.localPosition) *
+					   glm::mat4((glm::quat)other.localRotation) *
+					   glm::scale(glm::mat4(1.0f), other.localScale)),
+		worldTransform(glm::translate(glm::mat4(1.0f), other.worldPosition) *
+					   glm::mat4((glm::quat)other.worldRotation) *
+					   glm::scale(glm::mat4(1.0f), other.worldScale))
 	{
 	}
 
@@ -67,7 +93,13 @@ namespace flex
 		localScale(std::move(other.localScale)),
 		worldPosition(std::move(other.worldPosition)),
 		worldRotation(std::move(other.worldRotation)),
-		worldScale(std::move(other.worldScale))
+		worldScale(std::move(other.worldScale)),
+		localTransform(glm::translate(glm::mat4(1.0f), localPosition) *
+					   glm::mat4(localRotation) *
+					   glm::scale(glm::mat4(1.0f), localScale)),
+		worldTransform(glm::translate(glm::mat4(1.0f), worldPosition) *
+					   glm::mat4(worldRotation) *
+					   glm::scale(glm::mat4(1.0f), worldScale))
 	{
 	}
 
@@ -79,8 +111,13 @@ namespace flex
 		worldPosition = other.worldPosition;
 		worldRotation = other.worldRotation;
 		worldScale = other.worldScale;
-
-		return *this;
+		localTransform = glm::mat4(glm::translate(glm::mat4(1.0f), localPosition) *
+								   glm::mat4(localRotation) *
+								   glm::scale(glm::mat4(1.0f), localScale));
+		worldTransform = glm::mat4(glm::translate(glm::mat4(1.0f), worldPosition) *
+								   glm::mat4(worldRotation) *
+								   glm::scale(glm::mat4(1.0f), worldScale));
+			return *this;
 	}
 
 	Transform& Transform::operator=(const Transform&& other)
@@ -93,6 +130,12 @@ namespace flex
 			worldPosition = std::move(other.worldPosition);
 			worldRotation = std::move(other.worldRotation);
 			worldScale = std::move(other.worldScale);
+			localTransform = glm::mat4(glm::translate(glm::mat4(1.0f), localPosition) *
+									   glm::mat4(localRotation) *
+									   glm::scale(glm::mat4(1.0f), localScale));
+			worldTransform = glm::mat4(glm::translate(glm::mat4(1.0f), worldPosition) *
+									   glm::mat4(worldRotation) *
+									   glm::scale(glm::mat4(1.0f), worldScale));
 		}
 
 		return *this;
@@ -168,16 +211,6 @@ namespace flex
 		*this = m_Identity;
 	}
 
-	glm::mat4 Transform::GetModelMatrix()
-	{
-		glm::mat4 matTrans = glm::translate(glm::mat4(1.0f), worldPosition);
-		glm::mat4 matRot = glm::mat4(worldRotation);
-		glm::mat4 matScale = glm::scale(glm::mat4(1.0f), worldScale);
-		glm::mat4 matModel = matTrans * matRot * matScale;
-
-		return matModel;
-	}
-
 	bool Transform::IsIdentity() const
 	{
 		bool identity = (localPosition == m_Identity.localPosition &&
@@ -205,8 +238,26 @@ namespace flex
 		return m_GameObject;
 	}
 
+	glm::mat4 Transform::GetWorldTransform()
+	{
+		return worldTransform;
+	}
+
+	glm::mat4 Transform::GetLocalTransform()
+	{
+		return localTransform;
+	}
+
 	void Transform::UpdateParentTransform()
 	{
+		localTransform = (glm::translate(glm::mat4(1.0f), localPosition) *
+						  glm::mat4(localRotation) *
+						  glm::scale(glm::mat4(1.0f), localScale));
+
+		glm::vec3 localSkew;
+		glm::vec4 localPerspective;
+		glm::decompose(localTransform, localScale, localRotation, localPosition, localSkew, localPerspective);
+
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
@@ -220,24 +271,29 @@ namespace flex
 
 	void Transform::UpdateChildTransforms()
 	{
+		// Our local matrix should already have been updated at this point (in UpdateParentTransform)
+
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
 			Transform* parentTransform = parent->GetTransform();
 
-			worldPosition = parentTransform->worldPosition + localPosition;
-			worldScale = parentTransform->worldScale * localScale;
-			worldRotation = parentTransform->worldRotation * localRotation;
+			worldTransform = parentTransform->GetWorldTransform() * localTransform;
+
+			glm::vec3 worldSkew;
+			glm::vec4 worldPerspective;
+			glm::decompose(worldTransform, worldScale, worldRotation, worldPosition, worldSkew, worldPerspective);
 		}
 		else
 		{
+			worldTransform = localTransform;
 			worldPosition = localPosition;
 			worldRotation = localRotation;
 			worldScale = localScale;
 		}
 
-		const std::vector<GameObject*>& childrenTransforms = m_GameObject->GetChildren();
-		for (auto iter = childrenTransforms.begin(); iter != childrenTransforms.end(); ++iter)
+		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+		for (auto iter = children.begin(); iter != children.end(); ++iter)
 		{
 			(*iter)->GetTransform()->UpdateChildTransforms();
 		}
@@ -290,7 +346,7 @@ namespace flex
 		else
 		{
 			localPosition = position;
-			// NOTE: World position will be set in next function call
+			// NOTE: World position will be set in UpdateParentTransform
 		}
 		
 		UpdateParentTransform();
@@ -313,7 +369,7 @@ namespace flex
 		else
 		{
 			localRotation = quatRotation;
-			// World rotation will be set in next function call
+			// World rotation will be set in UpdateParentTransform
 		}
 
 		UpdateParentTransform();
@@ -336,7 +392,7 @@ namespace flex
 		else
 		{
 			localRotation = glm::quat(eulerAnglesRad);
-			// World rotation will be set in next function call
+			// World rotation will be set in UpdateParentTransform
 		}
 
 		UpdateParentTransform();
@@ -359,7 +415,7 @@ namespace flex
 		else
 		{
 			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad));
-			// World rotation will be set in next function call
+			// World rotation will be set in UpdateParentTransform
 		}
 
 		UpdateParentTransform();
@@ -382,7 +438,7 @@ namespace flex
 		else
 		{
 			localScale = scale;
-			// World scale will be set in next function call
+			// World scale will be set in UpdateParentTransform
 		}
 
 		UpdateParentTransform();
@@ -402,5 +458,4 @@ namespace flex
 			SetWorldRotation(rot);
 		}
 	}
-
 } // namespace flex
