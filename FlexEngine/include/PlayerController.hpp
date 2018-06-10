@@ -15,10 +15,15 @@ namespace flex
 		void Destroy();
 
 	private:
-		real m_MoveSpeed = 800.0f;
-		real m_JumpForce = 250.0f;
+		real m_MoveAcceleration = 50.0f;
+		real m_MaxMoveSpeed = 14.0f;
 		real m_RotateSpeed = 500.0f;
-		real m_RotateFriction = 4.0f;
+		real m_RotateFriction = 0.05f;
+		// How quickly to turn towards direction of movement
+		real m_RotationSnappiness = 0.8f;
+		// If the player has a velocity magnitude of this value or lower, their
+		// rotation speed will linearly decrease as their velocity approaches 0
+		real m_MaxSlowDownRotationSpeedVel = 10.0f;
 
 		i32 m_PlayerIndex = -1;
 
