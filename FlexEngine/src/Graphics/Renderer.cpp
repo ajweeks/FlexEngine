@@ -41,11 +41,11 @@ namespace flex
 		Transform* transform = gameObject->GetTransform();
 		static int transformSpace = 0;
 
-		if (bStatic)
-		{
-			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-		}
+		//if (bStatic)
+		//{
+		//	ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+		//	ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+		//}
 
 		static const char* localStr = "local";
 		static const char* globalStr = "global";
@@ -81,12 +81,11 @@ namespace flex
 			}
 		}
 
-		if (bStatic)
-		{
-			ImGui::PopItemFlag();
-			ImGui::PopStyleVar();
-		}
-
+		//if (bStatic)
+		//{
+		//	ImGui::PopItemFlag();
+		//	ImGui::PopStyleVar();
+		//}
 	}
 
 	void Renderer::DrawImGuiLights()
