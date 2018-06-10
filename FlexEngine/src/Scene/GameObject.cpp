@@ -123,7 +123,6 @@ namespace flex
 		}
 		else if (m_bInteractable)
 		{
-			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
 			auto pos = Vec3ToBtVec3(m_Transform.GetWorldlPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
@@ -147,15 +146,24 @@ namespace flex
 		} break;
 		case GameObjectType::VALVE:
 		{
-			if (!m_ObjectInteractingWith)
+			// True when our rotation is changed by another object (rising block)
+			bool bRotatedByOtherObject = false;
+			real currentAbsAvgRotationSpeed = 0.0f;
+			if (m_ObjectInteractingWith)
 			{
-				break;
+				i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
+
+				const InputManager::GamepadState& gamepadState = gameContext.inputManager->GetGamepadState(playerIndex);
+				m_ValveMembers.rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * m_ValveMembers.rotationSpeedScale;
+				currentAbsAvgRotationSpeed = glm::abs(gamepadState.averageRotationSpeeds.currentAverage);
 			}
-
-			i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
-
-			const InputManager::GamepadState& gamepadState = gameContext.inputManager->GetGamepadState(playerIndex);
-			m_ValveMembers.rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * m_ValveMembers.rotationSpeedScale;
+			else
+			{
+				m_ValveMembers.rotationSpeed = (m_ValveMembers.rotation - m_ValveMembers.pRotation) / gameContext.deltaTime;
+				// Not entirely true but needed to trigger sound
+				currentAbsAvgRotationSpeed = glm::abs(m_ValveMembers.rotationSpeed);
+				bRotatedByOtherObject = (glm::abs(m_ValveMembers.rotation - m_ValveMembers.pRotation) > 0);
+			}
 
 			if ((m_ValveMembers.rotationSpeed < 0.0f &&
 				m_ValveMembers.rotation <= m_ValveMembers.minRotation) ||
@@ -177,8 +185,11 @@ namespace flex
 				}
 			}
 
-			real rotationSpeed = gameContext.deltaTime * m_ValveMembers.pRotationSpeed;
-			m_ValveMembers.rotation += rotationSpeed;
+			if (!bRotatedByOtherObject)
+			{
+				real rotationSpeed = gameContext.deltaTime * m_ValveMembers.pRotationSpeed;
+				m_ValveMembers.rotation += rotationSpeed;
+			}
 			real overshoot = 0.0f;
 			if (m_ValveMembers.rotation > m_ValveMembers.maxRotation)
 			{
@@ -192,7 +203,7 @@ namespace flex
 			}
 
 			if (overshoot != 0.0f &&
-				glm::abs(gamepadState.averageRotationSpeeds.currentAverage) > 0.01f)
+				currentAbsAvgRotationSpeed > 0.01f)
 			{
 				real gain = glm::abs(overshoot) * 8.0f;
 				gain = glm::clamp(gain, 0.0f, 1.0f);
@@ -206,19 +217,15 @@ namespace flex
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, m_ValveMembers.rotation, 0)));
 
-			if (glm::abs(rotationSpeed) > 0.1f)
+			if (glm::abs(m_ValveMembers.rotationSpeed) > 0.2f)
 			{
-				bool updatePitch = false;
-				if (!s_SqueakySounds.IsPlaying())
-				{
-					updatePitch = true;
-				}
+				bool updateGain = !s_SqueakySounds.IsPlaying();
 				
 				s_SqueakySounds.Play(false);
 
-				if (updatePitch)
+				if (updateGain)
 				{
-					s_SqueakySounds.SetPitch(glm::abs(rotationSpeed) * 4.0f + 0.5f);
+					s_SqueakySounds.SetGain(glm::abs(m_ValveMembers.rotationSpeed) * 2.0f - 0.2f);
 				}
 			}
 		} break;
@@ -226,15 +233,43 @@ namespace flex
 		{
 			real minDist = m_RisingBlockMembers.valve->m_ValveMembers.minRotation;
 			real maxDist = m_RisingBlockMembers.valve->m_ValveMembers.maxRotation;
-			real totalDist = (maxDist - minDist);
+			//real totalDist = (maxDist - minDist);
 			real dist = m_RisingBlockMembers.valve->m_ValveMembers.rotation;
+
+			real playerControlledValveRotationSpeed = 0.0f;
+			if (m_RisingBlockMembers.valve->bBeingInteractedWith)
+			{
+				i32 playerIndex = ((Player*)m_RisingBlockMembers.valve->m_ObjectInteractingWith)->GetIndex();
+				const InputManager::GamepadState& gamepadState = gameContext.inputManager->GetGamepadState(playerIndex);
+				playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
+					m_RisingBlockMembers.valve->m_ValveMembers.rotationSpeedScale;
+			}
+
+			if (m_RisingBlockMembers.bAffectedByGravity &&
+				m_RisingBlockMembers.valve->m_ValveMembers.rotation >= 
+					m_RisingBlockMembers.valve->m_ValveMembers.minRotation + 0.1f)
+			{
+				// Apply gravity by rotating valve
+				real fallSpeed = 6.0f;
+				real distMult = 1.0f - glm::clamp(playerControlledValveRotationSpeed / 2.0f, 0.0f, 1.0f);
+				real dDist = (fallSpeed * gameContext.deltaTime * distMult);
+				dist -= Lerp(m_RisingBlockMembers.pdDistBlockMoved, dDist, 0.1f);
+				m_RisingBlockMembers.pdDistBlockMoved = dDist;
+
+				// NOTE: Don't clamp out of bounds rotation here, valve object 
+				// will handle it and play correct "overshoot" sound
+				//dist = glm::clamp(dist, minDist, maxDist);
+
+				m_RisingBlockMembers.valve->m_ValveMembers.rotation = dist;
+			}
+
+			glm::vec3 newPos = m_RisingBlockMembers.startingPos +
+				dist * m_RisingBlockMembers.moveAxis;
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			btTransform transform;
 			m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
-			transform.setOrigin(Vec3ToBtVec3(
-				m_RisingBlockMembers.startingPos + 
-				dist * m_RisingBlockMembers.moveAxis));
+			transform.setOrigin(Vec3ToBtVec3(newPos));
 			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
 
 			btVector3 startPos = Vec3ToBtVec3(m_RisingBlockMembers.startingPos);
@@ -275,6 +310,9 @@ namespace flex
 	bool GameObject::SetInteractingWith(GameObject* gameObject)
 	{
 		m_ObjectInteractingWith = gameObject;
+
+		bBeingInteractedWith = (gameObject != nullptr);
+
 		return true;
 	}
 

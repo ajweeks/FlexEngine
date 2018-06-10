@@ -1373,6 +1373,7 @@ namespace flex
 				irrandianceMatCreateInfo.name = "Irradiance";
 				irrandianceMatCreateInfo.shaderName = "irradiance";
 				irrandianceMatCreateInfo.enableCubemapSampler = true;
+				irrandianceMatCreateInfo.engineMaterial = true;
 				irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
 			}
 

@@ -654,15 +654,31 @@ namespace flex
 			rigidBody->SetStatic(false);
 
 			JSONObject blockInfo = obj.GetObject("block info");
-			std::string valveName = blockInfo.GetString("valve name");
-			for (GameObject* child : m_Children)
+			std::string valveName;
+			if (blockInfo.SetStringChecked("valve name", valveName))
 			{
-				if (child->m_Name.compare(valveName) == 0)
+				if (valveName.empty())
 				{
-					newEntity->m_RisingBlockMembers.valve = child;
-					break;
+					Logger::LogWarning("Rising block field's valve name is empty!");
+				}
+				else
+				{
+					for (GameObject* child : m_Children)
+					{
+						if (child->m_Name.compare(valveName) == 0)
+						{
+							newEntity->m_RisingBlockMembers.valve = child;
+							break;
+						}
+					}
 				}
 			}
+			else
+			{
+				Logger::LogWarning("Rising block info field doesn't contain a valve name!");
+			}
+
+			blockInfo.SetBoolChecked("affected by gravity", newEntity->m_RisingBlockMembers.bAffectedByGravity);
 
 			if (!newEntity->m_RisingBlockMembers.valve)
 			{

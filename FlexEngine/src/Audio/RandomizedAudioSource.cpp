@@ -68,6 +68,16 @@ namespace flex
 		}
 	}
 
+	void RandomizedAudioSource::SetGain(real gain)
+	{
+		m_Gain = gain;
+
+		for (AudioSourceID id : m_SourceIDs)
+		{
+			AudioManager::SetSourceGain(id, gain);
+		}
+	}
+
 	void RandomizedAudioSource::SetPitch(real pitch)
 	{
 		m_Pitch = pitch;

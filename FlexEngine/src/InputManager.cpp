@@ -163,21 +163,6 @@ namespace flex
 		u32 changedButtons = m_GamepadStates[gamepadIndex].buttonStates ^ pStates;
 		m_GamepadStates[gamepadIndex].buttonsPressed = changedButtons & m_GamepadStates[gamepadIndex].buttonStates;
 		m_GamepadStates[gamepadIndex].buttonsReleased = changedButtons & (~m_GamepadStates[gamepadIndex].buttonStates);
-
-		//if (changedButtons)
-		//{
-		//	for (i32 i = 0; i < 15; ++i)
-		//	{
-		//		Logger::LogInfo(std::to_string(m_GamepadStates[gamepadIndex].buttonsPressed & (1 << i)), false);
-		//	}
-		//	Logger::LogInfo("");
-		//	for (i32 i = 0; i < 15; ++i)
-		//	{
-		//		Logger::LogInfo(std::to_string(m_GamepadStates[gamepadIndex].buttonsReleased & (1 << i)), false);
-		//	}
-
-		//	Logger::LogInfo("");
-		//}
 	}
 
 	InputManager::GamepadState& InputManager::GetGamepadState(i32 gamepadIndex)

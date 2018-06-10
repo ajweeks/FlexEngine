@@ -237,7 +237,8 @@
       "block info" :
       {
         "valve name" : "valve 01",
-        "move axis" : "0, 1, 0.5"
+        "move axis" : "0, 1, 0.5",
+        "affected by gravity" : true
       },
       "visible" : true,
       "transform" : 
