@@ -529,6 +529,7 @@ namespace flex
 		case GameObjectType::REFLECTION_PROBE:		return "reflection probe";
 		case GameObjectType::VALVE:					return "valve";
 		case GameObjectType::RISING_BLOCK:			return "rising block";
+		case GameObjectType::GLASS_WINDOW:			return "glass window";
 		case GameObjectType::NONE:					return "NONE";
 		default:									return "UNHANDLED GAME OBJECT TYPE";
 		}
@@ -559,6 +560,10 @@ namespace flex
 		else if (gameObjectTypeStr.compare("rising block") == 0)
 		{
 			return GameObjectType::RISING_BLOCK;
+		}
+		else if (gameObjectTypeStr.compare("glass window") == 0)
+		{
+			return GameObjectType::GLASS_WINDOW;
 		}
 		else
 		{

@@ -113,6 +113,9 @@ namespace flex
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
+		// TODO: FIXME: Remove this soon
+		m_GameContext = (GameContext*)&gameContext;
+
 		if (m_ObjectInteractingWith)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
@@ -289,6 +292,10 @@ namespace flex
 				startPos,
 				startPos + Vec3ToBtVec3(m_RisingBlockMembers.moveAxis * dist),
 				btVector3(0.3f, 0.3f, 0.5f));
+		} break;
+		case GameObjectType::GLASS_WINDOW:
+		{
+			
 		} break;
 		case GameObjectType::NONE:
 		default:
@@ -488,6 +495,12 @@ namespace flex
 
 	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)
 	{
+		if (m_CollisionShape)
+		{
+			delete m_CollisionShape;
+			m_CollisionShape = nullptr;
+		}
+
 		m_CollisionShape = collisionShape;
 		return collisionShape;
 	}
@@ -523,19 +536,25 @@ namespace flex
 	{
 		overlappingObjects.push_back(other);
 
-		switch (m_Type)
-		{
-		case GameObjectType::PLAYER:
-		{
-
-		} break;
-		default: // All non-player objects
+		if (m_Type != GameObjectType::PLAYER)
 		{
 			if (other->HasTag("Player0") ||
 				other->HasTag("Player1"))
 			{
 				m_bInteractable = true;
 			}
+		}
+
+		switch (m_Type)
+		{
+		case GameObjectType::GLASS_WINDOW:
+		{
+			m_MeshComponent->LoadFromFile(*m_GameContext, RESOURCE_LOCATION + "models/glass-window-broken.gltf");
+			m_GlassWindowMembers.bBroken = true;
+		} break;
+		default:
+		{
+			
 		} break;
 		}
 	}

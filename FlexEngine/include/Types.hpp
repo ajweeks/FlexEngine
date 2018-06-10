@@ -67,6 +67,7 @@ namespace flex
 		REFLECTION_PROBE,
 		VALVE,
 		RISING_BLOCK,
+		GLASS_WINDOW,
 		NONE
 	};
 

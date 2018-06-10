@@ -81,6 +81,8 @@ namespace flex
 		friend class BaseClass;
 		friend class BaseScene;
 
+		GameContext* m_GameContext = nullptr;
+
 		std::string m_Name;
 
 		std::vector<std::string> m_Tags;
@@ -178,6 +180,12 @@ namespace flex
 
 			real pdDistBlockMoved = 0.0f;
 		} m_RisingBlockMembers;
+
+		struct GlassWindowMembers
+		{
+
+			bool bBroken = false;
+		} m_GlassWindowMembers;
 
 		private:
 			static AudioSourceID s_BunkSound;

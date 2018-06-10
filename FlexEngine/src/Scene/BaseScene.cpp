@@ -643,17 +643,13 @@ namespace flex
 			cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
 			newEntity->SetMeshComponent(cubeMesh);
 
-			btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
-			btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-			newEntity->SetCollisionShape(boxShape);
-
 			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
 			rigidBody->SetMass(1.0f);
 			rigidBody->SetKinematic(true);
 			rigidBody->SetStatic(false);
 
 			JSONObject blockInfo = obj.GetObject("block info");
+
 			std::string valveName;
 			if (blockInfo.SetStringChecked("valve name", valveName))
 			{
@@ -691,6 +687,23 @@ namespace flex
 			{
 				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
 			}
+		} break;
+		case GameObjectType::GLASS_WINDOW:
+		{
+			JSONObject windowInfo = obj.GetObject("window info");
+
+			bool bBroken = false;
+			windowInfo.SetBoolChecked("broken", bBroken);
+
+			MeshComponent* windowMesh = new MeshComponent(matID, newEntity);
+			windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + 
+				(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
+			newEntity->SetMeshComponent(windowMesh);
+
+			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
+			rigidBody->SetMass(1.0f);
+			rigidBody->SetKinematic(true);
+			rigidBody->SetStatic(false);
 		} break;
 		case GameObjectType::NONE:
 		{
@@ -1141,6 +1154,14 @@ namespace flex
 			blockInfo.fields.push_back(JSONField("affected by gravity", JSONValue(gameObject->m_RisingBlockMembers.bAffectedByGravity)));
 
 			object.fields.push_back(JSONField("block info", JSONValue(blockInfo)));
+		} break;
+		case GameObjectType::GLASS_WINDOW:
+		{
+			JSONObject windowInfo;
+
+			windowInfo.fields.push_back(JSONField("broken", JSONValue(gameObject->m_GlassWindowMembers.bBroken)));
+
+			object.fields.push_back(JSONField("window info", JSONValue(windowInfo)));
 		} break;
 		}
 

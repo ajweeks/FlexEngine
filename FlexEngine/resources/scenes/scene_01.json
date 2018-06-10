@@ -4,6 +4,23 @@
 	"materials" : 
 	[
 		{
+			"name" : "Skybox",
+			"shader" : "skybox",
+			"const albedo" : "0.000000, 0.000000, 0.000000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000,
+			"generate hdr cubemap sampler" : true,
+			"enable cubemap sampler" : true,
+			"enable cubemap trilinear filtering" : true,
+			"generated cubemap size" : "512.000000, 512.000000",
+			"generate irradiance sampler" : true,
+			"generated irradiance cubemap size" : "32.000000, 32.000000",
+			"generate prefiltered map" : true,
+			"generated prefiltered map size" : "128.000000, 128.000000",
+			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Ref.hdr"
+		},
+		{
 			"name" : "pbr purple",
 			"shader" : "pbr",
 			"const albedo" : "0.200000, 0.120000, 0.350000",
@@ -64,22 +81,18 @@
 			"enable ao sampler" : false
 		},
 		{
-			"name" : "Skybox",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
+			"name" : "glass",
+			"shader" : "pbr",
+			//"color multiplier" : "1, 1, 1, 0.1"
+			"const albedo" : "0.45, 0.89, 0.78",
+			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Ref.hdr"
-		}
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
 	],
 	"entities" : 
 	[
@@ -113,7 +126,7 @@
 						"flipU" : false,
 						"flipV" : false
 					},
-					"material array index" : 0
+					"material array index" : 1
 				}
 			]
 		},
@@ -135,7 +148,7 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material array index" : 0,
+			"material array index" : 1,
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -166,7 +179,7 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material array index" : 1
+			"material array index" : 2
 		},
 		{
 			"name" : "chamfer box",
@@ -186,7 +199,7 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material array index" : 3,
+			"material array index" : 4,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -209,7 +222,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 2,
+			"material array index" : 3,
 			"collider" : 
 			{
 				"shape" : "cylinder",
@@ -236,7 +249,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 3,
+			"material array index" : 4,
 			"collider" : 
 			{
 				"shape" : "cylinder",
@@ -263,7 +276,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 1,
+			"material array index" : 2,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -292,7 +305,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 0,
+			"material array index" : 1,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -309,6 +322,33 @@
 				"valve name" : "valve 02",
 				"move axis" : "1.000000, 0.000000, 0.000000",
 				"affected by gravity" : false
+			}
+		},
+		{
+			"name" : "glass 01",
+			"type" : "glass window",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "10.000000, 2.000000, -6.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 6,
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000000, 1.000000, 0.030000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : true,
+				"static" : false
+			},
+			"window info" : 
+			{
+				"broken" : false
 			}
 		},
 		{
@@ -330,7 +370,7 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material array index" : 1,
+			"material array index" : 2,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -353,7 +393,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 5
+			"material array index" : 0
 		},
 		{
 			"name" : "Reflection Probe 01",
@@ -365,7 +405,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 4
+			"material array index" : 5
 		}
 	],
 	"point lights" : 
