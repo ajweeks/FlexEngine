@@ -6,7 +6,7 @@
 		{
 			"name" : "pbr purple",
 			"shader" : "pbr",
-			"const albedo" : "0.2, 0.120000, 0.35",
+			"const albedo" : "0.200000, 0.120000, 0.350000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.250000,
 			"const ao" : 1.000000,
@@ -18,7 +18,7 @@
 		{
 			"name" : "pbr grey",
 			"shader" : "pbr",
-			"const albedo" : "0.145, 0.18, 0.23",
+			"const albedo" : "0.145000, 0.180000, 0.230000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
 			"const ao" : 1.000000,
@@ -30,7 +30,7 @@
 		{
 			"name" : "valve mat",
 			"shader" : "pbr",
-			"const albedo" : "0.10000, 0.260000, 0.1",
+			"const albedo" : "0.100000, 0.260000, 0.100000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.500000,
 			"const ao" : 1.000000,
@@ -39,30 +39,30 @@
 			"enable roughness sampler" : false,
 			"enable ao sampler" : false
 		},
-    {
-      "name" : "pbr yellow",
-      "shader" : "pbr",
-      "const albedo" : "0.800000, 0.540000, 0.100000",
-      "const metallic" : 0.000000,
-      "const roughness" : 0.200000,
-      "const ao" : 1.000000,
-      "enable albedo sampler" : false,
-      "enable metallic sampler" : false,
-      "enable roughness sampler" : false,
-      "enable ao sampler" : false
-    },
-    {
-      "name" : "pbr chrome",
-      "shader" : "pbr",
-      "const albedo" : "0.800000, 0.8, 0.8",
-      "const metallic" : 1.000000,
-      "const roughness" : 0.000000,
-      "const ao" : 1.000000,
-      "enable albedo sampler" : false,
-      "enable metallic sampler" : false,
-      "enable roughness sampler" : false,
-      "enable ao sampler" : false
-    },
+		{
+			"name" : "pbr yellow",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.540000, 0.100000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr chrome",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.800000, 0.800000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
 		{
 			"name" : "Skybox",
 			"shader" : "skybox",
@@ -123,8 +123,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "5, 32, -9",
-				"rotation" : "0, -0, -0",
+				"position" : "5.000000, 16.862020, -9.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "2.000000, 2.000000, 2.000000"
 			},
 			"mesh" : 
@@ -174,9 +174,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.772762, 0.400000, -2.502607",
-				"rotation" : "-0.604364, 0.000000, -1.570796",
-				"scale" : "1.000000, 1.000000, 1.000000"
+				"position" : "-6.774745, 0.400000, -2.504515",
+				"rotation" : "-0.604327, -0.000000, -1.570797",
+				"scale" : "0.999998, 0.999999, 1.000000"
 			},
 			"mesh" : 
 			{
@@ -199,73 +199,118 @@
 				"static" : false
 			}
 		},
-    {
-      "name" : "valve 01",
-      "type" : "valve",
-      "visible" : true,
-      "valve info" : 
-      {
-        "range" : "0, 10.0"
-      },
-      "transform" : 
-      {
-        "position" : "5.773954, 0.0, 5.995772",
-        "rotation" : "-0.000003, 0.001214, 0.000003",
-        "scale" : "1.000000, 1.000000, 1.000000"
-      },
-      "material array index" : 2,
-    },
-    {
-      "name" : "valve 02",
-      "type" : "valve",
-      "visible" : true,
-      "valve info" : 
-      {
-        "range" : "-5, 5"
-      },
-      "transform" : 
-      {
-        "position" : "-4.0, 0.0, 2.0",
-        "rotation" : "-0.00000, 0.0, 0.0",
-        "scale" : "1.000000, 1.000000, 1.000000"
-      },
-      "material array index" : 3,
-    },
-    {
-      "name" : "moving block 01",
-      "type" : "rising block",
-      "block info" :
-      {
-        "valve name" : "valve 01",
-        "move axis" : "0, 1, 0.5",
-        "affected by gravity" : true
-      },
-      "visible" : true,
-      "transform" : 
-      {
-        "position" : "-6.0, 2.0, 8.0",
-        "rotation" : "-0.00000, 0.0, 0.0",
-        "scale" : "1.000000, 1.000000, 1.000000"
-      },
-      "material array index" : 1,
-    },
-    {
-      "name" : "moving block 02",
-      "type" : "rising block",
-      "block info" :
-      {
-        "valve name" : "valve 02",
-        "move axis" : "1, 0, 0"
-      },
-      "visible" : true,
-      "transform" : 
-      {
-        "position" : "6.0, 2.0, -4.0",
-        "rotation" : "-0.00000, 0.0, 0.0",
-        "scale" : "1.000000, 1.000000, 1.000000"
-      },
-      "material array index" : 0,
-    },
+		{
+			"name" : "valve 01",
+			"type" : "valve",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "5.773954, 0.000000, 5.995772",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 2,
+			"collider" : 
+			{
+				"shape" : "cylinder",
+				"half extents" : "1.500000, 1.000000, 1.500000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false
+			},
+			"valve info" : 
+			{
+				"range" : "0.000000, 10.000000"
+			}
+		},
+		{
+			"name" : "valve 02",
+			"type" : "valve",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "-4.000000, 0.000000, 2.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 3,
+			"collider" : 
+			{
+				"shape" : "cylinder",
+				"half extents" : "1.500000, 1.000000, 1.500000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false
+			},
+			"valve info" : 
+			{
+				"range" : "-5.000000, 5.000000"
+			}
+		},
+		{
+			"name" : "moving block 01",
+			"type" : "rising block",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "-6.000000, 2.000000, 8.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 1,
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000000, 1.000000, 1.000000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : true,
+				"static" : false
+			},
+			"block info" : 
+			{
+				"valve name" : "valve 01",
+				"move axis" : "0.000000, 1.000000, 0.500000",
+				"affected by gravity" : true
+			}
+		},
+		{
+			"name" : "moving block 02",
+			"type" : "rising block",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "6.000000, 2.000000, -4.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 0,
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000000, 1.000000, 1.000000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : true,
+				"static" : false
+			},
+			"block info" : 
+			{
+				"valve name" : "valve 02",
+				"move axis" : "1.000000, 0.000000, 0.000000",
+				"affected by gravity" : false
+			}
+		},
 		{
 			"name" : "ground plane",
 			"type" : "object",
@@ -302,12 +347,12 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
-      "transform" : 
-      {
-        "position" : "0.000000, 0.00000, 0.000000",
-        "rotation" : "0.000000, -0.000000, 0.000000",
-        "scale" : "1.000000, 1.000000, 1.000000"
-      },
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
 			"material array index" : 5
 		},
 		{
@@ -315,12 +360,12 @@
 			"type" : "reflection probe",
 			"visible" : true,
 			"transform" : 
-		      {
-		        "position" : "0.000000, 5.00000, 0.000000",
-		        "rotation" : "0.000000, -0.000000, 0.000000",
-		        "scale" : "1.000000, 1.000000, 1.000000"
-		      },
-		      "material array index" : 4
+			{
+				"position" : "0.000000, 5.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 4
 		}
 	],
 	"point lights" : 
