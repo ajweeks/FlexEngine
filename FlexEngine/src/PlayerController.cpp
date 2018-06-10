@@ -111,12 +111,15 @@ namespace flex
 		rb->setAngularVelocity(angularVel);
 
 		const btVector3& vel = rb->getLinearVelocity();
-		real velMagnitude = vel.length();
+		btVector3 xzVel(vel.getX(), 0, vel.getZ());
+		real xzVelMagnitude = xzVel.length();
 		bool bMaxVel = false;
-		if (velMagnitude > m_MaxMoveSpeed)
+		if (xzVelMagnitude > m_MaxMoveSpeed)
 		{
-			rb->setLinearVelocity(vel.normalized() * m_MaxMoveSpeed);
-			velMagnitude = m_MaxMoveSpeed;
+			btVector3 xzVelNorm = xzVel.normalized();
+			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);;
+			rb->setLinearVelocity(newVel);
+			xzVelMagnitude = m_MaxMoveSpeed;
 			bMaxVel = true;
 		}
 		bool bDrawVelocity = true;
@@ -129,13 +132,13 @@ namespace flex
 		}
 
 		// Look in direction of movement
-		if (velMagnitude > 0.1f)
+		if (xzVelMagnitude > 0.1f)
 		{
 			btTransform& transform = rb->getWorldTransform();
 			btQuaternion oldRotation = transform.getRotation();
 			real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
 			btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
-			real movementSpeedSlowdown = glm::clamp(velMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
+			real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
 			real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown;
 			btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
 			transform.setRotation(newRotation);
