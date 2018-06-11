@@ -31,6 +31,7 @@ namespace flex
 	const u32 FlexEngine::EngineVersionPatch = 0;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
+	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
 
 	FlexEngine::FlexEngine()
 	{
@@ -115,6 +116,22 @@ namespace flex
 		SetupImGuiStyles();
 
 		m_GameContext.cameraManager->Initialize(m_GameContext);
+
+
+		if (s_AudioSourceIDs.empty())
+		{
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav"));
+		}
+	}
+
+	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
+	{
+		assert((i32)effect >= 0);
+		assert((i32)effect < (i32)SoundEffect::LAST_ELEMENT);
+
+		return s_AudioSourceIDs[(i32)effect];
 	}
 
 	void FlexEngine::Destroy()
@@ -327,7 +344,7 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
 			{
-				m_GameContext.inputManager->Update();
+				m_GameContext.inputManager->Update(m_GameContext);
 				m_GameContext.inputManager->PostUpdate();
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 				CycleRenderer();
@@ -374,17 +391,6 @@ namespace flex
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
-				m_GameContext.inputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::RIGHT_BUMPER))
-			{
-				m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, 1, false);
-			}
-			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_MINUS) ||
-					 m_GameContext.inputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::LEFT_BUMPER))
-			{
-				m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, -1, false);
-			}
-
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
@@ -424,7 +430,7 @@ namespace flex
 			}
 
 			// TODO: Consolidate functions?
-			m_GameContext.inputManager->Update();
+			m_GameContext.inputManager->Update(m_GameContext);
 			m_GameContext.inputManager->PostUpdate();
 
 			m_GameContext.renderer->Update(m_GameContext);

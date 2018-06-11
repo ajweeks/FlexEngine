@@ -25,7 +25,9 @@ namespace flex
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
-		real m_MoveFriction = 1.2f;
+		GameObject* m_Slingshot = nullptr;
+
+		real m_MoveFriction = 3.0f;
 
 		real m_Height = 4.0f;
 	};

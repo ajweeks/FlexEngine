@@ -54,6 +54,24 @@ namespace flex
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
 
+
+		MaterialCreateInfo slingshotMatCreateInfo = {};
+		slingshotMatCreateInfo.name = "Slingshot material";
+		slingshotMatCreateInfo.shaderName = "pbr";
+		slingshotMatCreateInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.02f);
+		slingshotMatCreateInfo.constMetallic = 0.0f;
+		slingshotMatCreateInfo.constRoughness = 1.0f;
+		slingshotMatCreateInfo.constAO = 1.0f;
+		MaterialID slingshotMatID = gameContext.renderer->InitializeMaterial(gameContext, &slingshotMatCreateInfo);
+
+		m_Slingshot = new GameObject("Slingshot", GameObjectType::NONE);
+		MeshComponent* slignshotMesh = m_Slingshot->SetMeshComponent(new MeshComponent(slingshotMatID, m_Slingshot));
+		slignshotMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/slingshot.gltf");
+
+		AddChild(m_Slingshot);
+
+		m_Slingshot->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 1.0f));
+
 		GameObject::Initialize(gameContext);
 	}
 

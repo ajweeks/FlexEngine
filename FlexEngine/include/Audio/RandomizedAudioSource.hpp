@@ -13,6 +13,7 @@ namespace flex
 		void Pause();
 		void Stop();
 
+		void SetGain(real volume);
 		void SetPitch(real pitch);
 
 		bool IsInitialized() const;
@@ -24,6 +25,7 @@ namespace flex
 		bool m_bInitialized = false;
 
 		real m_Pitch = 1.0f;
+		real m_Gain = 1.0f;
 
 		std::vector<AudioSourceID> m_SourceIDs;
 		AudioSourceID m_LastPlayedID = InvalidAudioSourceID;

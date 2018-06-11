@@ -1076,7 +1076,7 @@ namespace flex
 
 			// Update object's uniforms under this shader's program
 			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false, 
-				&m_SkyBoxMesh->GetTransform()->GetModelMatrix()[0][0]);
+				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, false, 
@@ -1174,7 +1174,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, false, 
-				&m_SkyBoxMesh->GetTransform()->GetModelMatrix()[0][0]);
+				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
@@ -1382,6 +1382,7 @@ namespace flex
 				irrandianceMatCreateInfo.name = "Irradiance";
 				irrandianceMatCreateInfo.shaderName = "irradiance";
 				irrandianceMatCreateInfo.enableCubemapSampler = true;
+				irrandianceMatCreateInfo.engineMaterial = true;
 				irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
 			}
 
@@ -1394,7 +1395,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, false, 
-				&m_SkyBoxMesh->GetTransform()->GetModelMatrix()[0][0]);
+				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
@@ -1767,11 +1768,6 @@ namespace flex
 
 		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-			CheckGLErrorMessages();
-
 			if (drawCallInfo.renderToCubemap)
 			{
 				// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
@@ -1789,6 +1785,13 @@ namespace flex
 				CheckGLErrorMessages();
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+				CheckGLErrorMessages();
+			}
+			else
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+				CheckGLErrorMessages();
+				glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
 				CheckGLErrorMessages();
 			}
 
@@ -1873,7 +1876,7 @@ namespace flex
 
 				UpdateMaterialUniforms(gameContext, cubemapObject->materialID);
 				UpdatePerObjectUniforms(cubemapObject->materialID, 
-					skybox->gameObject->GetTransform()->GetModelMatrix(), gameContext);
+					skybox->gameObject->GetTransform()->GetWorldTransform(), gameContext);
 
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
@@ -3528,7 +3531,7 @@ namespace flex
 				return;
 			}
 
-			glm::mat4 model = renderObject->gameObject->GetTransform()->GetModelMatrix();
+			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
 			UpdatePerObjectUniforms(renderObject->materialID, model, gameContext);
 		}
 

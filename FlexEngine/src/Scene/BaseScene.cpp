@@ -19,6 +19,7 @@
 #include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "Logger.hpp"
@@ -49,13 +50,6 @@ namespace flex
 		m_PhysicsWorld->Initialize(gameContext);
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-
-		dud_dud_dud_dud = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav");
-		drmapan = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav");
-		blip = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav");
-		//TRG_Banks = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/music/TRG_Banks.wav");
-		//AudioManager::SetSourceLooping(TRG_Banks, true);
-		//AudioManager::PlaySource(TRG_Banks);
 
 		std::string friendlySceneFilepath = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
 		Logger::LogInfo("Loading scene from JSON file: " + friendlySceneFilepath);
@@ -235,8 +229,6 @@ namespace flex
 		}
 		m_Children.clear();
 
-		AudioManager::ClearAllAudioSources();
-
 		m_LoadedMaterials.clear();
 
 		gameContext.renderer->ClearMaterials();
@@ -266,42 +258,46 @@ namespace flex
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
 		{
-			AudioManager::PlaySource(dud_dud_dud_dud);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
 		{
-			AudioManager::PauseSource(dud_dud_dud_dud);
+			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
 		{
-			AudioManager::PlaySource(drmapan);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 		{
-			AudioManager::PauseSource(drmapan);
+			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
 		{
-			AudioManager::StopSource(drmapan);
+			AudioManager::StopSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
 		{
-			AudioManager::AddToSourcePitch(dud_dud_dud_dud, 0.5f * gameContext.deltaTime);
+			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										   0.5f * gameContext.deltaTime);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
 		{
-			AudioManager::AddToSourcePitch(dud_dud_dud_dud, -0.5f * gameContext.deltaTime);
+			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										   -0.5f * gameContext.deltaTime);
 		}
 
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
 		{
-			AudioManager::ScaleSourceGain(dud_dud_dud_dud, 1.1f);
+			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										  1.1f);
 		}
 		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
 		{
-			AudioManager::ScaleSourceGain(dud_dud_dud_dud, 1.0f / 1.1f);
+			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
+										  1.0f / 1.1f);
 		}
 
 
@@ -647,26 +643,38 @@ namespace flex
 			cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
 			newEntity->SetMeshComponent(cubeMesh);
 
-			btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
-			btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-			newEntity->SetCollisionShape(boxShape);
-
 			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
 			rigidBody->SetMass(1.0f);
 			rigidBody->SetKinematic(true);
 			rigidBody->SetStatic(false);
 
 			JSONObject blockInfo = obj.GetObject("block info");
-			std::string valveName = blockInfo.GetString("valve name");
-			for (GameObject* child : m_Children)
+
+			std::string valveName;
+			if (blockInfo.SetStringChecked("valve name", valveName))
 			{
-				if (child->m_Name.compare(valveName) == 0)
+				if (valveName.empty())
 				{
-					newEntity->m_RisingBlockMembers.valve = child;
-					break;
+					Logger::LogWarning("Rising block field's valve name is empty!");
+				}
+				else
+				{
+					for (GameObject* child : m_Children)
+					{
+						if (child->m_Name.compare(valveName) == 0)
+						{
+							newEntity->m_RisingBlockMembers.valve = child;
+							break;
+						}
+					}
 				}
 			}
+			else
+			{
+				Logger::LogWarning("Rising block info field doesn't contain a valve name!");
+			}
+
+			blockInfo.SetBoolChecked("affected by gravity", newEntity->m_RisingBlockMembers.bAffectedByGravity);
 
 			if (!newEntity->m_RisingBlockMembers.valve)
 			{
@@ -679,6 +687,23 @@ namespace flex
 			{
 				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
 			}
+		} break;
+		case GameObjectType::GLASS_WINDOW:
+		{
+			JSONObject windowInfo = obj.GetObject("window info");
+
+			bool bBroken = false;
+			windowInfo.SetBoolChecked("broken", bBroken);
+
+			MeshComponent* windowMesh = new MeshComponent(matID, newEntity);
+			windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + 
+				(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
+			newEntity->SetMeshComponent(windowMesh);
+
+			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
+			rigidBody->SetMass(1.0f);
+			rigidBody->SetKinematic(true);
+			rigidBody->SetStatic(false);
 		} break;
 		case GameObjectType::NONE:
 		{
@@ -902,12 +927,12 @@ namespace flex
 		if (success)
 		{
 			Logger::LogInfo("Done serializing scene");
-			AudioManager::PlaySource(blip);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
 		}
 		else
 		{
 			Logger::LogError("Failed to open file for writing: " + m_JSONFilePath + ", Can't serialize scene");
-			AudioManager::PlaySource(dud_dud_dud_dud);
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 	}
 
@@ -1112,8 +1137,17 @@ namespace flex
 
 			blockInfo.fields.push_back(JSONField("valve name", JSONValue(gameObject->m_RisingBlockMembers.valve->GetName())));
 			blockInfo.fields.push_back(JSONField("move axis", JSONValue(Vec3ToString(gameObject->m_RisingBlockMembers.moveAxis))));
+			blockInfo.fields.push_back(JSONField("affected by gravity", JSONValue(gameObject->m_RisingBlockMembers.bAffectedByGravity)));
 
 			object.fields.push_back(JSONField("block info", JSONValue(blockInfo)));
+		} break;
+		case GameObjectType::GLASS_WINDOW:
+		{
+			JSONObject windowInfo;
+
+			windowInfo.fields.push_back(JSONField("broken", JSONValue(gameObject->m_GlassWindowMembers.bBroken)));
+
+			object.fields.push_back(JSONField("window info", JSONValue(windowInfo)));
 		} break;
 		}
 

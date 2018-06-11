@@ -81,6 +81,8 @@ namespace flex
 		friend class BaseClass;
 		friend class BaseScene;
 
+		GameContext* m_GameContext = nullptr;
+
 		std::string m_Name;
 
 		std::vector<std::string> m_Tags;
@@ -139,46 +141,51 @@ namespace flex
 
 		MeshComponent* m_MeshComponent = nullptr;
 
-	public: // :grimacing:
+		bool bBeingInteractedWith = false;
+
+	public:
 		// All fields which valves need to know about to do their thing
 		struct ValveMembers
 		{
 			// Serialized fields
-			real minRotation;
-			real maxRotation;
+			real minRotation = 0.0f;
+			real maxRotation = 0.0f;
 
 			// Non-serialized fields
+			// Multiplied with value retrieved from input manager
+			real rotationSpeedScale = 1.0f;
 
-			RollingAverage averageRotationSpeeds;
+			// 1 = never slow down, 0 = slow down immediately
+			real invSlowDownRate = 0.85f;
 
-			//  0 | 1 
-			// - -1 --
-			//  3 | 2
-			i32 stickStartingQuadrant = -1;
-			real stickStartTime = -1.0f;
-			bool wasInQuadrantSinceIdle[4];
+			real rotationSpeed = 0.0f;
+			real pRotationSpeed = 0.0f;
 
+			real pRotation = 0.0f;
 			real rotation = 0.0f;
-
-			real pJoystickX = 0.0f;
-			real pJoystickY = 0.0f;
-
-			real stickRotationSpeed = 0.0f;
-			real pStickRotationSpeed = 0.0f;
-
-			bool rotatingCW = false;
-
-			i32 previousQuadrant = -1;
 		} m_ValveMembers;
 
 		struct RisingBlockMembers
 		{
-			GameObject* valve = nullptr;
+			// Serialized fields
+			GameObject* valve = nullptr; // (object name is serialized)
 			glm::vec3 moveAxis;
+
+			// If true this block will "fall" to its minimum 
+			// value when a player is not interacting with it
+			bool bAffectedByGravity = false;
 
 			// Non-serialized fields
 			glm::vec3 startingPos;
+
+			real pdDistBlockMoved = 0.0f;
 		} m_RisingBlockMembers;
+
+		struct GlassWindowMembers
+		{
+
+			bool bBroken = false;
+		} m_GlassWindowMembers;
 
 		private:
 			static AudioSourceID s_BunkSound;

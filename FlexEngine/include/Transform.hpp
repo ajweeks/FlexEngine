@@ -64,8 +64,6 @@ namespace flex
 		void Scale(const glm::vec3& deltaScale);
 		void Scale(real deltaScale);
 		void Scale(real deltaX, real deltaY, real deltaZ);
-		
-		glm::mat4 GetModelMatrix();
 
 		bool IsIdentity() const;
 		static Transform Identity();
@@ -73,9 +71,15 @@ namespace flex
 		void SetGameObject(GameObject* gameObject);
 		GameObject* GetGameObject() const;
 
+		glm::mat4 GetWorldTransform();
+		glm::mat4 GetLocalTransform();
+
 	private:
 		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
 		void UpdateChildTransforms(); // Used to go back down to the lowest node of the parent-child tree
+
+		glm::mat4 localTransform;
+		glm::mat4 worldTransform;
 
 		glm::vec3 localPosition;
 		glm::quat localRotation;
