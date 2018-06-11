@@ -512,6 +512,8 @@ namespace flex
 
 	RigidBody* GameObject::SetRigidBody(RigidBody* rigidBody)
 	{
+		SafeDelete(m_RigidBody);
+
 		m_RigidBody = rigidBody;
 		return rigidBody;
 	}
