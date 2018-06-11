@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <direct.h> // For _getcwd
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -46,7 +47,24 @@ namespace flex
 		i32 currentIndex = 0;
 	};
 
+	bool FileExists(const std::string& filePath);
+
+	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile);
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile);
+
+	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
+	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
+
+	bool DirectoryExists(const std::string& absoluteDirectoryPath);
+
+	// Removes all content before final '/' or '\' 
+	void StripLeadingDirectories(std::string& filePath);
+
+	// Removes all content after final '/' or '\'
+	// NOTE: If path describes a directory and doesn't end in a slash, final directory will be removed
+	void ExtractDirectoryString(std::string& filePath);
+
+	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
 
 	/*
 	* Reads in a .wav file and fills in given values according to file contents
@@ -59,9 +77,6 @@ namespace flex
 	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
 	u16 Parse16u(char* ptr);
 
-
-	// Removes all content before the final '/' or '\' 
-	void StripLeadingDirectories(std::string& filePath);
 
 	std::vector<std::string> Split(const std::string& str, char delim);
 
@@ -126,11 +141,6 @@ namespace flex
 
 	std::string FloatToString(real f, i32 precision);
 
-	// TODO: Remove: unused
-	//void Vec2ToString(const glm::vec2& vec, std::ostream& stream);
-	//void Vec3ToString(const glm::vec3& vec, std::ostream& stream);
-	//void Vec4ToString(const glm::vec4& vec, std::ostream& stream);
-
 	std::string Vec2ToString(const glm::vec2& vec);
 	std::string Vec3ToString(const glm::vec3& vec);
 	std::string Vec4ToString(const glm::vec4& vec);
@@ -151,5 +161,9 @@ namespace flex
 
 	std::string GameObjectTypeToString(GameObjectType type);
 	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr);
+
+	// Must be called at least once to set g_CurrentWorkingDirectory!
+	void RetrieveCurrentWorkingDirectory();
+	std::string RelativePathToAbsolute(const std::string& relativePath);
 
 } // namespace flex

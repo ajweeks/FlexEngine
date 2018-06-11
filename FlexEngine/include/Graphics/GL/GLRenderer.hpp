@@ -96,6 +96,9 @@ namespace flex
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 
+			void LoadSettingsFromDisk();
+			void SaveSettingsToDisk();
+
 			// TODO: Either use these functions or remove them
 			void SetFloat(ShaderID shaderID, const std::string& valName, real val);
 			void SetInt(ShaderID shaderID, const std::string& valName, i32 val);
@@ -259,6 +262,8 @@ namespace flex
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 			FT_Library ft;
+
+			std::string m_SettingsFilePathAbs;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

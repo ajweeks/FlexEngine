@@ -25,6 +25,9 @@ namespace flex
 		static const u32 EngineVersionMinor;
 		static const u32 EngineVersionPatch;
 
+		// TODO: Figure out how to make this not cause a memory leak!
+		static std::string s_CurrentWorkingDirectory;
+
 	private:
 		enum class RendererID
 		{

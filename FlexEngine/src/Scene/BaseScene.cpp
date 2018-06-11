@@ -57,15 +57,15 @@ namespace flex
 		//AudioManager::SetSourceLooping(TRG_Banks, true);
 		//AudioManager::PlaySource(TRG_Banks);
 
+		std::string friendlySceneFilepath = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
+		Logger::LogInfo("Loading scene from JSON file: " + friendlySceneFilepath);
+
 		JSONObject sceneRootObject;
 		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
 		{
 			Logger::LogError("Failed to parse scene JSON file \"" + m_JSONFilePath + "\"");
 			return;
 		}
-
-		std::string friendlySceneFilepath = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
-		Logger::LogInfo("Loading scene from JSON file: " + friendlySceneFilepath);
 
 		const bool printSceneContentsToConsole = false;
 		if (printSceneContentsToConsole)
@@ -894,33 +894,19 @@ namespace flex
 
 		std::string fileContents = rootSceneObject.Print(0);
 
-		std::ofstream fileStream;
-		fileStream.open(m_JSONFilePath, std::ofstream::out | std::ofstream::trunc);
-
 		std::string cleanFileName = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
 		Logger::LogInfo("Serializing scene to " + cleanFileName);
 
-		if (fileStream.is_open())
-		{
-			fileStream.write(fileContents.c_str(), fileContents.size());
-			success = true;
-		}
-		else
-		{
-			Logger::LogError("Failed to open file for writing: " + m_JSONFilePath + ", Can't serialize scene");
-			success = false;
-		}
-
-		Logger::LogInfo("Done serializing scene");
-
-		fileStream.close();
+		success = WriteFile(m_JSONFilePath, fileContents, false);
 
 		if (success)
 		{
+			Logger::LogInfo("Done serializing scene");
 			AudioManager::PlaySource(blip);
 		}
 		else
 		{
+			Logger::LogError("Failed to open file for writing: " + m_JSONFilePath + ", Can't serialize scene");
 			AudioManager::PlaySource(dud_dud_dud_dud);
 		}
 	}

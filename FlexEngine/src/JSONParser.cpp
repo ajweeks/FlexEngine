@@ -12,27 +12,37 @@ namespace flex
 {
 	bool JSONParser::Parse(const std::string& filePath, JSONObject& rootObject)
 	{
-		std::ifstream ifStream(filePath, std::fstream::ate);
-		if (!ifStream)
+		//std::ifstream ifStream(filePath, std::fstream::ate);
+		//if (!ifStream)
+		//{
+		//	Logger::LogError("Couldn't find JSON file: " + filePath);
+		//	return false;
+		//}
+
+
+		//size_t fileSize = (size_t)ifStream.tellg();
+		//ifStream.seekg(0, ifStream.beg);
+
+		//if (fileSize == 0)
+		//{
+		//	Logger::LogError("Attempted to parse empty JSON file: " + filePath);
+		//	return false;
+		//}
+
+		//std::string fileContents;
+		//fileContents.reserve(fileSize);
+		//fileContents.assign(
+		//	std::istreambuf_iterator<char>(ifStream),
+		//	std::istreambuf_iterator<char>());
+
+
+
+		std::string fileContents;
+		if (!ReadFile(filePath, fileContents, false))
 		{
 			Logger::LogError("Couldn't find JSON file: " + filePath);
 			return false;
 		}
-
-		size_t fileSize = (size_t)ifStream.tellg();
-		ifStream.seekg(0, ifStream.beg);
-
-		if (fileSize == 0)
-		{
-			Logger::LogError("Attempted to parse empty JSON file: " + filePath);
-			return false;
-		}
-
-		std::string fileContents;
-		fileContents.reserve(fileSize);
-		fileContents.assign(
-			std::istreambuf_iterator<char>(ifStream),
-			std::istreambuf_iterator<char>());
 
 		size_t firstBracket = fileContents.find("{");
 		size_t lastBracket = fileContents.rfind("}");
@@ -192,20 +202,21 @@ namespace flex
 
 		return true;
 	}
+
 	bool JSONParser::ParseField(const std::string& fileContents, i32* offset, JSONField& field)
 	{
 		size_t quoteStart = fileContents.find('\"', *offset);
 
 		if (quoteStart == std::string::npos)
 		{
-			Logger::LogError("Couldn't find quote after offset " + std::to_string(*offset));
+			Logger::LogError("Couldn't find opening quote after offset " + std::to_string(*offset));
 			return false;
 		}
 
 		size_t quoteEnd = fileContents.find('\"', quoteStart + 1);
 		if (quoteEnd == std::string::npos)
 		{
-			Logger::LogError("Couldn't find end quote after offset " + std::to_string(*offset));
+			Logger::LogError("Couldn't find closing quote after offset " + std::to_string(*offset));
 			return false;
 		}
 

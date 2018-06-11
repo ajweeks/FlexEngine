@@ -3,8 +3,8 @@
 #include "FlexEngine.hpp"
 
 #include <sstream>
-#include <stdlib.h> // srand, rand
-#include <time.h> // time
+#include <stdlib.h> // For srand, rand
+#include <time.h> // For time
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -30,10 +30,14 @@ namespace flex
 	const u32 FlexEngine::EngineVersionMinor = 5;
 	const u32 FlexEngine::EngineVersionPatch = 0;
 
+	std::string FlexEngine::s_CurrentWorkingDirectory;
+
 	FlexEngine::FlexEngine()
 	{
 		// TODO: Add custom seeding for different random systems
 		std::srand(time(NULL));
+
+		RetrieveCurrentWorkingDirectory();
 
 		RendererID preferredInitialRenderer = RendererID::GL;
 

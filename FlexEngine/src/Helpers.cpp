@@ -11,6 +11,7 @@
 #include "AL/al.h"
 
 #include "Logger.hpp"
+#include "FlexEngine.hpp"
 
 #pragma warning(push, 0) // Don't generate warnings for third party code
 #define STB_IMAGE_IMPLEMENTATION
@@ -64,6 +65,50 @@ namespace flex
 		return stream.str();
 	}
 
+	bool FileExists(const std::string& filePath)
+	{
+		std::ifstream file(filePath.c_str());
+		bool exists = file.good();
+		file.close();
+
+		return exists;
+	}
+
+	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile)
+	{
+		int fileMode = std::ios::in | std::ios::ate;
+		if (bBinaryFile)
+		{
+			fileMode |= std::ios::binary;
+		}
+		std::ifstream file(filePath.c_str(), fileMode);
+
+		if (!file)
+		{
+			Logger::LogError("Unable to read file: " + filePath);
+			return false;
+		}
+
+		std::streampos length = file.tellg();
+
+		fileContents.resize((size_t)length);
+
+		file.seekg(0, std::ios::beg);
+		file.read(&fileContents[0], length);
+		file.close();
+
+		// Remove extra null terminators caused by Windows line endings
+		for (i32 charIndex = 0; charIndex < fileContents.size() - 1; ++charIndex)
+		{
+			if (fileContents[charIndex] == '\0')
+			{
+				fileContents = fileContents.substr(0, charIndex);
+			}
+		}
+
+		return true;
+	}
+
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
 		int fileMode = std::ios::in | std::ios::ate;
@@ -88,6 +133,107 @@ namespace flex
 		file.close();
 
 		return true;
+	}
+
+	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile)
+	{
+		std::vector<char> vec(fileContents.begin(), fileContents.end());
+		return WriteFile(filePath, vec, bBinaryFile);
+	}
+
+	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
+	{
+		std::string directoryStr = filePath;
+		ExtractDirectoryString(directoryStr);
+
+		CreateDirectoryRecursive(directoryStr);
+
+		std::ofstream fileStream(filePath, std::ofstream::out | std::ofstream::trunc);
+
+		if (fileStream.is_open())
+		{
+			fileStream.write(&vec[0], vec.size());
+			fileStream.close();
+
+			return true;
+		}
+
+		return false;
+	}
+
+	bool DirectoryExists(const std::string& absoluteDirectoryPath)
+	{
+		if (absoluteDirectoryPath.find("..") != std::string::npos)
+		{
+			Logger::LogError("Attempted to create directory using relative path! Must specify absolute path!");
+			return false;
+		}
+
+		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
+
+		return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+			    dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+	}
+
+	void StripLeadingDirectories(std::string& filePath)
+	{
+		size_t finalSlash = filePath.rfind('/');
+		if (finalSlash == std::string::npos)
+		{
+			finalSlash = filePath.rfind('\\');
+		}
+
+		if (finalSlash == std::string::npos)
+		{
+			return; // There are no directories to remove
+		}
+		else
+		{
+			filePath = filePath.substr(finalSlash + 1);
+		}
+	}
+
+	void ExtractDirectoryString(std::string& filePath)
+	{
+		size_t finalSlash = filePath.rfind('/');
+		if (finalSlash == std::string::npos)
+		{
+			finalSlash = filePath.rfind('\\');
+		}
+
+		if (finalSlash == std::string::npos)
+		{
+			return; // There are no directories to remove
+		}
+		else
+		{
+			filePath = filePath.substr(0, finalSlash + 1);
+		}
+	}
+
+	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
+	{
+		if (absoluteDirectoryPath.find("..") != std::string::npos)
+		{
+			Logger::LogError("Attempted to create directory using relative path! Must specify absolute path!");
+			return;
+		}
+
+		if (DirectoryExists(absoluteDirectoryPath))
+		{
+			// Directory already exists!
+			return;
+		}
+
+		const char* cstr = absoluteDirectoryPath.c_str();
+
+		u32 pos = 0;
+		do 
+		{
+			pos = absoluteDirectoryPath.find_first_of("\\/", pos + 1);
+			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
+			GetLastError();// == ERROR_ALREADY_EXISTS;
+		} while (pos != std::string::npos);
 	}
 
 	bool ParseWAVFile(const std::string& filePath, i32* format, void** data, i32* size, i32* freq)
@@ -208,24 +354,6 @@ namespace flex
 	u16 Parse16u(char* ptr)
 	{
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
-	}
-
-	void StripLeadingDirectories(std::string& filePath)
-	{
-		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash == std::string::npos)
-		{
-			finalSlash = filePath.rfind('\\');
-		}
-
-		if (finalSlash == std::string::npos)
-		{
-			return; // There are no directories to remove
-		}
-		else
-		{
-			filePath = filePath.substr(finalSlash + 1);
-		}
 	}
 
 	std::vector<std::string> Split(const std::string& str, char delim)
@@ -369,21 +497,6 @@ namespace flex
 			return result;
 		}
 	}
-
-	//void Vec2ToString(const glm::vec2& vec, std::ostream& stream)
-	//{
-	//	stream << vec.x << " " << vec.y;
-	//}
-
-	//void Vec3ToString(const glm::vec3& vec, std::ostream& stream)
-	//{
-	//	stream << vec.x << " " << vec.y << " " << vec.z;
-	//}
-
-	//void Vec4ToString(const glm::vec4& vec, std::ostream& stream)
-	//{
-	//	stream << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
-	//}
 
 	std::string Vec2ToString(const glm::vec2& vec)
 	{
@@ -564,6 +677,54 @@ namespace flex
 		{
 			return GameObjectType::NONE;
 		}
+	}
+
+	void RetrieveCurrentWorkingDirectory()
+	{
+		char* cwdBuffer = nullptr;
+		const i32 maxPathLength = MAX_PATH;
+		FlexEngine::s_CurrentWorkingDirectory = _getcwd(cwdBuffer, maxPathLength);
+		if (cwdBuffer)
+		{
+			delete cwdBuffer;
+		}
+	}
+
+	std::string RelativePathToAbsolute(const std::string& relativePath)
+	{
+		size_t nextDoubleDot = relativePath.find("..");
+
+		std::string workingDirectory = FlexEngine::s_CurrentWorkingDirectory;
+
+		std::string strippedFilePath = relativePath;
+
+		while (nextDoubleDot != std::string::npos)
+		{
+			size_t lastSlash = workingDirectory.find_last_of("\\/");
+			if (lastSlash == std::string::npos)
+			{
+				Logger::LogWarning("Invalidly formed relative path! " + relativePath);
+				nextDoubleDot = std::string::npos;
+			}
+			else
+			{
+				workingDirectory = workingDirectory.substr(0, lastSlash);
+				strippedFilePath = strippedFilePath.substr(nextDoubleDot);
+				nextDoubleDot = relativePath.find("..", nextDoubleDot + 2);
+			}
+		}
+
+		std::for_each(strippedFilePath.begin(), strippedFilePath.end(), [](char& c) 
+		{
+			if (c == '/')
+			{
+				c = '\\';
+			}
+		});
+
+		std::string absolutePath = workingDirectory + '\\' + strippedFilePath;
+
+		return absolutePath;
 	}
 
 	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)

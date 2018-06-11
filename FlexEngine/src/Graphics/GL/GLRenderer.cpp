@@ -35,14 +35,21 @@
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "JSONParser.hpp"
+#include "JSONTypes.hpp"
 
 namespace flex
 {
 	namespace gl
 	{
+
 		GLRenderer::GLRenderer(GameContext& gameContext)
 		{
+			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/renderer-settings.ini"));
+
 			gameContext.renderer = this;
+
+			LoadSettingsFromDisk();
 
 			CheckGLErrorMessages();
 		}
@@ -348,6 +355,8 @@ namespace flex
 
 		void GLRenderer::Destroy()
 		{
+			SaveSettingsToDisk();
+
 			CheckGLErrorMessages();
 
 			glDeleteVertexArrays(1, &m_TextQuadVAO);
@@ -1798,10 +1807,7 @@ namespace flex
 
 			for (size_t i = 0; i < m_DeferredRenderObjectBatches.size(); ++i)
 			{
-				if (!m_DeferredRenderObjectBatches[i].empty())
-				{
-					DrawRenderObjectBatch(gameContext, m_DeferredRenderObjectBatches[i], drawCallInfo);
-				}
+				DrawRenderObjectBatch(gameContext, m_DeferredRenderObjectBatches[i], drawCallInfo);
 			}
 
 			glUseProgram(0);
@@ -1968,10 +1974,7 @@ namespace flex
 		{
 			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
 			{
-				if (!m_ForwardRenderObjectBatches[i].empty())
-				{
-					DrawRenderObjectBatch(gameContext, m_ForwardRenderObjectBatches[i], drawCallInfo);
-				}
+				DrawRenderObjectBatch(gameContext, m_ForwardRenderObjectBatches[i], drawCallInfo);
 			}
 		}
 
@@ -2801,7 +2804,10 @@ namespace flex
 
 		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
-			assert(!batchedRenderObjects.empty());
+			if (batchedRenderObjects.empty())
+			{
+				return;
+			}
 
 			GLMaterial* material = &m_Materials[batchedRenderObjects[0]->materialID];
 			GLShader* glShader = &m_Shaders[material->material.shaderID];
@@ -4088,17 +4094,55 @@ namespace flex
 			physicsWorld->debugDrawWorld();
 		}
 
+		void GLRenderer::LoadSettingsFromDisk()
+		{
+			if (m_SettingsFilePathAbs.empty())
+			{
+				Logger::LogError("Failed to read renderer settings to disk: file path is not set!");
+				return;
+			}
+
+			if (FileExists(m_SettingsFilePathAbs))
+			{
+				JSONObject rootObject{};
+
+				if (JSONParser::Parse(m_SettingsFilePathAbs, rootObject))
+				{
+					m_VSyncEnabled = rootObject.GetBool("enable v-sync");
+					m_bEnableFXAA = rootObject.GetBool("enable fxaa");
+					
+				}
+				else
+				{
+					Logger::LogError("Failed to read renderer settings file, but it exists!");
+				}
+			}
+		}
+
+		void GLRenderer::SaveSettingsToDisk()
+		{
+			if (m_SettingsFilePathAbs.empty())
+			{
+				Logger::LogError("Failed to save renderer settings to disk: file path is not set!");
+				return;
+			}
+
+			JSONObject rootObject{};
+
+			rootObject.fields.push_back(JSONField("enable v-sync", JSONValue(m_VSyncEnabled)));
+			rootObject.fields.push_back(JSONField("enable fxaa", JSONValue(m_bEnableFXAA)));
+
+			std::string fileContents = rootObject.Print(0);
+
+			WriteFile(m_SettingsFilePathAbs, fileContents, false);
+		}
+
 		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
-				//const u32 objectCount = GetRenderObjectCount();
-				//const u32 objectCapacity = GetRenderObjectCapacity();
-				//const std::string objectCountStr("Render object count/capacity: " + std::to_string//(objectCount) + "/" + std::to_string(objectCapacity));
-				//ImGui::Text(objectCountStr.c_str());
-
 				if (ImGui::TreeNode("Render Objects"))
 				{
 					std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
