@@ -185,17 +185,23 @@ namespace flex
 	{
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			(*iter)->PostInitialize(gameContext);
+			GameObject* gameObject = *iter;
 
-			RigidBody* rb = (*iter)->GetRigidBody();
+			gameObject->PostInitialize(gameContext);
+
+			RigidBody* rb = gameObject->GetRigidBody();
 
 			if (rb)
 			{
-				rb->GetRigidBodyInternal()->setUserPointer(*iter);
+				rb->GetRigidBodyInternal()->setUserPointer(gameObject);
 			}
 
-			switch ((*iter)->m_Type)
+			switch (gameObject->m_Type)
 			{
+			case GameObjectType::REFLECTION_PROBE:
+			{
+				gameContext.renderer->SetReflectionProbeMaterial(gameObject->m_ReflectionProbeMembers.captureMatID);
+			} break;
 			case GameObjectType::VALVE:
 			{
 				rb->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
@@ -334,13 +340,6 @@ namespace flex
 
 		std::string objectName = obj.GetString("name");
 
-		Transform transform = Transform::Identity();
-		if (obj.HasField("transform"))
-		{
-			JSONObject transformObj = obj.GetObject("transform");
-			transform = JSONParser::ParseTransform(transformObj);
-		}
-
 		bool bVisible = true;
 		obj.SetBoolChecked("visible", bVisible);
 		bool bVisibleInSceneGraph = true;
@@ -365,63 +364,19 @@ namespace flex
 
 		newEntity = new GameObject(objectName, entityType);
 
+
+		Transform transform = Transform::Identity();
+		JSONObject transformObj;
+		if (obj.SetObjectChecked("transform", transformObj))
+		{
+			transform = JSONParser::ParseTransform(transformObj);
+		}
+		newEntity->m_Transform = transform;
+
 		JSONObject meshObj;
 		if (obj.SetObjectChecked("mesh", meshObj))
 		{
-			std::string meshFilePath = meshObj.GetString("file");
-			if (!meshFilePath.empty())
-			{
-				meshFilePath = RESOURCE_LOCATION + meshFilePath;
-			}
-			std::string meshPrefabName = meshObj.GetString("prefab");
-			bool swapNormalYZ = meshObj.GetBool("swapNormalYZ");
-			bool flipNormalZ = meshObj.GetBool("flipNormalZ");
-			bool flipU = meshObj.GetBool("flipU");
-			bool flipV = meshObj.GetBool("flipV");
-
-			if (matID == InvalidMaterialID)
-			{
-				Logger::LogError("Mesh entity requires material index: " + objectName);
-			}
-			else
-			{
-				Material& material = gameContext.renderer->GetMaterial(matID);
-				Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-				VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
-
-				if (!meshFilePath.empty())
-				{
-					MeshComponent* mesh = new MeshComponent(matID, newEntity);
-					mesh->SetRequiredAttributes(requiredVertexAttributes);
-
-					MeshComponent::ImportSettings importSettings = {};
-					importSettings.flipU = flipU;
-					importSettings.flipV = flipV;
-					importSettings.flipNormalZ = flipNormalZ;
-					importSettings.swapNormalYZ = swapNormalYZ;
-
-					mesh->LoadFromFile(gameContext,
-									   meshFilePath,
-									   &importSettings);
-
-					newEntity->SetMeshComponent(mesh);
-				}
-				else if (!meshPrefabName.empty())
-				{
-					MeshComponent* mesh = new MeshComponent(matID, newEntity);
-					mesh->SetRequiredAttributes(requiredVertexAttributes);
-
-					MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
-					mesh->LoadPrefabShape(gameContext, prefabShape);
-
-					newEntity->SetMeshComponent(mesh);
-				}
-				else
-				{
-					Logger::LogError("Unhandled mesh field on object: " + objectName);
-				}
-			}
+			ParseMeshObject(gameContext, meshObj, newEntity, matID);
 		}
 
 		JSONObject colliderObj;
@@ -502,6 +457,14 @@ namespace flex
 			}
 		}
 
+		VertexAttributes requiredVertexAttributes = 0;
+		if (matID != InvalidMaterialID)
+		{
+			Material& material = gameContext.renderer->GetMaterial(matID);
+			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+			requiredVertexAttributes = shader.vertexAttributes;
+		}
+
 		switch (entityType)
 		{
 		case GameObjectType::OBJECT:
@@ -524,7 +487,9 @@ namespace flex
 				}
 
 				MeshComponent* skyboxMesh = new MeshComponent(matID, newEntity);
+				skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
 				skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
+				assert(newEntity->GetMeshComponent() == nullptr);
 				newEntity->SetMeshComponent(skyboxMesh);
 
 				gameContext.renderer->SetSkyboxMesh(newEntity);
@@ -571,24 +536,23 @@ namespace flex
 			};
 			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
-			 i32 materialArrayIndex = obj.GetInt("material array index");
-			 MaterialID sphereMatID = m_LoadedMaterials[materialArrayIndex];
+			i32 materialArrayIndex = obj.GetInt("material array index");
+			MaterialID sphereMatID = m_LoadedMaterials[materialArrayIndex];
+
+			Material& sphereMat = gameContext.renderer->GetMaterial(sphereMatID);
+			Shader& sphereShader = gameContext.renderer->GetShader(sphereMat.shaderID);
+			VertexAttributes sphereRequiredVertexAttributes = sphereShader.vertexAttributes;
 
 			MeshComponent* sphereMesh = new MeshComponent(sphereMatID, newEntity);
+			sphereMesh->SetRequiredAttributes(sphereRequiredVertexAttributes);
+
 			MeshComponent::ImportSettings importSettings = {};
 			importSettings.swapNormalYZ = true;
 			importSettings.flipNormalZ = true;
+			assert(newEntity->GetMeshComponent() == nullptr);
 			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", &importSettings);
 			newEntity->SetMeshComponent(sphereMesh);
-			//m_Transform.Scale(1.5f);
-			// Reflection probes get created at bootup
-			//SetSerializable(false);
-
-			//if (!m_StartVisible)
-			//{
-			//	SetVisible(m_StartVisible);
-			//}
-
+			
 			std::string captureName = objectName + "_capture";
 			GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
 			captureObject->SetSerializable(false);
@@ -604,6 +568,8 @@ namespace flex
 			captureObject->SetRenderID(captureRenderID);
 
 			newEntity->AddChild(captureObject);
+
+			newEntity->m_ReflectionProbeMembers.captureMatID = captureMatID;
 
 			gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
 		} break;
@@ -624,7 +590,9 @@ namespace flex
 			}
 
 			MeshComponent* valveMesh = new MeshComponent(matID, newEntity);
+			valveMesh->SetRequiredAttributes(requiredVertexAttributes);
 			valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
+			assert(newEntity->GetMeshComponent() == nullptr);
 			newEntity->SetMeshComponent(valveMesh);
 
 			btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
@@ -640,7 +608,9 @@ namespace flex
 		case GameObjectType::RISING_BLOCK:
 		{
 			MeshComponent* cubeMesh = new MeshComponent(matID, newEntity);
+			cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
 			cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
+			assert(newEntity->GetMeshComponent() == nullptr);
 			newEntity->SetMeshComponent(cubeMesh);
 
 			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
@@ -696,8 +666,10 @@ namespace flex
 			windowInfo.SetBoolChecked("broken", bBroken);
 
 			MeshComponent* windowMesh = new MeshComponent(matID, newEntity);
+			windowMesh->SetRequiredAttributes(requiredVertexAttributes);
 			windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + 
 				(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
+			assert(newEntity->GetMeshComponent() == nullptr);
 			newEntity->SetMeshComponent(windowMesh);
 
 			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
@@ -807,6 +779,67 @@ namespace flex
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
+	}
+
+	MeshComponent* BaseScene::ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newEntity, MaterialID matID)
+	{
+		MeshComponent* result = nullptr;
+
+		std::string meshFilePath = meshObject.GetString("file");
+		if (!meshFilePath.empty())
+		{
+			meshFilePath = RESOURCE_LOCATION + meshFilePath;
+		}
+		std::string meshPrefabName = meshObject.GetString("prefab");
+		bool swapNormalYZ = meshObject.GetBool("swapNormalYZ");
+		bool flipNormalZ = meshObject.GetBool("flipNormalZ");
+		bool flipU = meshObject.GetBool("flipU");
+		bool flipV = meshObject.GetBool("flipV");
+
+		if (matID == InvalidMaterialID)
+		{
+			Logger::LogError("Mesh entity requires material index: " + newEntity->GetName());
+		}
+		else
+		{
+			Material& material = gameContext.renderer->GetMaterial(matID);
+			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+
+			if (!meshFilePath.empty())
+			{
+				result = new MeshComponent(matID, newEntity);
+				result->SetRequiredAttributes(requiredVertexAttributes);
+
+				MeshComponent::ImportSettings importSettings = {};
+				importSettings.flipU = flipU;
+				importSettings.flipV = flipV;
+				importSettings.flipNormalZ = flipNormalZ;
+				importSettings.swapNormalYZ = swapNormalYZ;
+
+				result->LoadFromFile(gameContext,
+								   meshFilePath,
+								   &importSettings);
+
+				newEntity->SetMeshComponent(result);
+			}
+			else if (!meshPrefabName.empty())
+			{
+				result = new MeshComponent(matID, newEntity);
+				result->SetRequiredAttributes(requiredVertexAttributes);
+
+				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
+				result->LoadPrefabShape(gameContext, prefabShape);
+
+				newEntity->SetMeshComponent(result);
+			}
+			else
+			{
+				Logger::LogError("Unhandled mesh field on object: " + newEntity->GetName());
+			}
+		}
+
+		return result;
 	}
 
 	i32 BaseScene::GetMaterialArrayIndex(const Material& material, const GameContext& gameContext)

@@ -92,7 +92,7 @@
     "nodes" : [
         {
             "mesh" : 0, 
-            "name" : "Cylinder"
+            "name" : "slingshot"
         }
     ], 
     "scene" : 0, 

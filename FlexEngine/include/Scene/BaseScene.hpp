@@ -60,6 +60,7 @@ namespace flex
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
 
 		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
+		MeshComponent* ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newEntity, MaterialID matID);
 
 		i32 GetMaterialArrayIndex(const Material& material, const GameContext& gameContext);
 

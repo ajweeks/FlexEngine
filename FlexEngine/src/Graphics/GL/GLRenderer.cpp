@@ -153,12 +153,12 @@ namespace flex
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
 			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
@@ -996,11 +996,11 @@ namespace flex
 				Logger::LogInfo("Done");
 
 				// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-				Logger::LogInfo("Capturing reflection probe");
-				CaptureSceneToCubemap(gameContext, renderID);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-				Logger::LogInfo("Done");
+				//Logger::LogInfo("Capturing reflection probe");
+				//CaptureSceneToCubemap(gameContext, renderID);
+				//GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+				//GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+				//Logger::LogInfo("Done");
 
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
@@ -1524,7 +1524,7 @@ namespace flex
 			DrawDeferredObjects(gameContext, drawCallInfo);
 			drawCallInfo.deferred = false;
 			DrawGBufferQuad(gameContext, drawCallInfo);
-			DrawForwardObjects(gameContext, drawCallInfo);
+			//DrawForwardObjects(gameContext, drawCallInfo);
 			
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -2849,6 +2849,17 @@ namespace flex
 					glDisable(GL_CULL_FACE);
 				}
 
+				// TODO: Move to translucent pass?
+				if (shader->translucent)
+				{
+					glEnable(GL_BLEND);
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				}
+				else
+				{
+					glDisable(GL_BLEND);
+				}
+
 				glDepthFunc(renderObject->depthTestReadFunc);
 				CheckGLErrorMessages();
 
@@ -2903,9 +2914,9 @@ namespace flex
 
 						if (drawCallInfo.deferred)
 						{
-							constexpr i32 numBuffers = 3;
-							u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-							glDrawBuffers(numBuffers, attachments);
+							//constexpr i32 numBuffers = 3;
+							//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+							//glDrawBuffers(numBuffers, attachments);
 
 							for (size_t j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
 							{
@@ -2924,17 +2935,6 @@ namespace flex
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 						CheckGLErrorMessages();
-
-						// TODO: Move to translucent pass?
-						if (shader->translucent)
-						{
-							glEnable(GL_BLEND);
-							glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-						}
-						else
-						{
-							glDisable(GL_BLEND);
-						}
 
 						if (renderObject->indexed)
 						{
@@ -3176,6 +3176,12 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = true;
 			m_Shaders[shaderID].shader.needDiffuseSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::TANGENT |
+				(u32)VertexAttribute::BITANGENT |
+				(u32)VertexAttribute::NORMAL;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3184,6 +3190,7 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableDiffuseSampler");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
+			m_Shaders[shaderID].shader.vertexAttributes =
 			++shaderID;
 
 			// Deferred combine
@@ -3193,6 +3200,9 @@ namespace flex
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
@@ -3214,6 +3224,8 @@ namespace flex
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3236,6 +3248,9 @@ namespace flex
 			m_Shaders[shaderID].shader.translucent = true;
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
@@ -3248,6 +3263,12 @@ namespace flex
 			m_Shaders[shaderID].shader.needRoughnessSampler = true;
 			m_Shaders[shaderID].shader.needAOSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::TANGENT |
+				(u32)VertexAttribute::BITANGENT |
+				(u32)VertexAttribute::NORMAL;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3272,6 +3293,8 @@ namespace flex
 			// Skybox
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3284,6 +3307,8 @@ namespace flex
 			// Equirectangular to Cube
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needHDREquirectangularSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3295,6 +3320,8 @@ namespace flex
 			// Irradiance
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3306,6 +3333,8 @@ namespace flex
 			// Prefilter
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3317,6 +3346,10 @@ namespace flex
 			// BRDF
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.vertexAttributes = 0; // No vertex attributes! Not even position (vertex index determines pos)
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
@@ -3324,6 +3357,8 @@ namespace flex
 			// Background
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.needCubemapSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
@@ -3335,6 +3370,9 @@ namespace flex
 			// Sprite
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
@@ -3344,6 +3382,9 @@ namespace flex
 			// Post processing
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
@@ -3360,6 +3401,9 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("maxSpan");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("texelStep");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("bDEBUGShowEdges");
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
@@ -3367,6 +3411,9 @@ namespace flex
 			// Compute SDF
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			// TODO: Move some of these to constant buffer
@@ -3381,6 +3428,12 @@ namespace flex
 			// Font
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::EXTRA_VEC4 |
+				(u32)VertexAttribute::EXTRA_INT;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");

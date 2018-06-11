@@ -2,10 +2,10 @@
     "accessors" : [
         {
             "bufferView" : 0, 
-            "componentType" : 5121, 
-            "count" : 36, 
+            "componentType" : 5123, 
+            "count" : 1584, 
             "max" : [
-                23
+                1027
             ], 
             "min" : [
                 0
@@ -15,23 +15,23 @@
         {
             "bufferView" : 1, 
             "componentType" : 5126, 
-            "count" : 24, 
+            "count" : 1028, 
             "max" : [
-                0.031575798988342285, 
-                1.000000238418579, 
-                1.000000238418579
+                1.0, 
+                0.031575921922922134, 
+                1.0
             ], 
             "min" : [
-                -0.031575798988342285, 
-                -1.000000238418579, 
-                -1.000000238418579
+                -1.0, 
+                -0.0328078493475914, 
+                -1.0
             ], 
             "type" : "VEC3"
         }, 
         {
             "bufferView" : 2, 
             "componentType" : 5126, 
-            "count" : 24, 
+            "count" : 1028, 
             "max" : [
                 1.0, 
                 1.0, 
@@ -43,6 +43,38 @@
                 -1.0
             ], 
             "type" : "VEC3"
+        }, 
+        {
+            "bufferView" : 3, 
+            "componentType" : 5126, 
+            "count" : 1028, 
+            "max" : [
+                1.0, 
+                1.0, 
+                1.0, 
+                1.0
+            ], 
+            "min" : [
+                -1.0, 
+                -1.0, 
+                -1.0, 
+                1.0
+            ], 
+            "type" : "VEC4"
+        }, 
+        {
+            "bufferView" : 4, 
+            "componentType" : 5126, 
+            "count" : 1028, 
+            "max" : [
+                1.0, 
+                1.0
+            ], 
+            "min" : [
+                0.0, 
+                0.0
+            ], 
+            "type" : "VEC2"
         }
     ], 
     "asset" : {
@@ -52,37 +84,51 @@
     "bufferViews" : [
         {
             "buffer" : 0, 
-            "byteLength" : 36, 
+            "byteLength" : 3168, 
             "byteOffset" : 0, 
             "target" : 34963
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 288, 
-            "byteOffset" : 36, 
+            "byteLength" : 12336, 
+            "byteOffset" : 3168, 
             "target" : 34962
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 288, 
-            "byteOffset" : 324, 
+            "byteLength" : 12336, 
+            "byteOffset" : 15504, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 16448, 
+            "byteOffset" : 27840, 
+            "target" : 34962
+        }, 
+        {
+            "buffer" : 0, 
+            "byteLength" : 8224, 
+            "byteOffset" : 44288, 
             "target" : 34962
         }
     ], 
     "buffers" : [
         {
-            "byteLength" : 612, 
+            "byteLength" : 52512, 
             "uri" : "glass-window-whole.bin"
         }
     ], 
     "meshes" : [
         {
-            "name" : "Cube", 
+            "name" : "Cube.001", 
             "primitives" : [
                 {
                     "attributes" : {
                         "NORMAL" : 2, 
-                        "POSITION" : 1
+                        "POSITION" : 1, 
+                        "TANGENT" : 3, 
+                        "TEXCOORD_0" : 4
                     }, 
                     "indices" : 0
                 }

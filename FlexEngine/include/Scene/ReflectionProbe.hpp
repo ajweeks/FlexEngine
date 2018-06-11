@@ -6,10 +6,11 @@ namespace flex
 {
 	class MeshComponent;
 
+	// TODO: DELETE!! UNUSED
 	class ReflectionProbe : public GameObject
 	{
 	public:
-		ReflectionProbe(const std::string& name, bool startVisible = true, const glm::vec3& startPosition = glm::vec3(0.0f));
+		ReflectionProbe(const std::string& name, const glm::vec3& startPosition = glm::vec3(0.0f));
 		virtual ~ReflectionProbe();
 
 		virtual void Initialize(const GameContext& gameContext) override;
@@ -22,7 +23,6 @@ namespace flex
 		GameObject* m_Capture = nullptr; // The object doing the capturing
 		MaterialID m_CaptureMatID = 0;
 
-		bool m_StartVisible = true;
 		glm::vec3 m_StartPosition;
 
 		// bool enabled, ivec4 influenceBoundingBox, bool update (real updateFrequency?), ...

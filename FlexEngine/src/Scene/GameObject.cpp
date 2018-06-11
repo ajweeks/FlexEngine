@@ -134,19 +134,6 @@ namespace flex
 
 		switch (m_Type)
 		{
-		case GameObjectType::OBJECT:
-		{
-		} break;
-		case GameObjectType::PLAYER:
-		{
-			// NOTE: Handled in Player class
-		} break;
-		case GameObjectType::SKYBOX:
-		{
-		} break;
-		case GameObjectType::REFLECTION_PROBE:
-		{
-		} break;
 		case GameObjectType::VALVE:
 		{
 			// True when our rotation is changed by another object (rising block)
@@ -292,14 +279,6 @@ namespace flex
 				startPos,
 				startPos + Vec3ToBtVec3(m_RisingBlockMembers.moveAxis * dist),
 				btVector3(0.3f, 0.3f, 0.5f));
-		} break;
-		case GameObjectType::GLASS_WINDOW:
-		{
-			
-		} break;
-		case GameObjectType::NONE:
-		default:
-		{
 		} break;
 		}
 

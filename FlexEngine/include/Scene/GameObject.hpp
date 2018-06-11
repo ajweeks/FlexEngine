@@ -187,6 +187,11 @@ namespace flex
 			bool bBroken = false;
 		} m_GlassWindowMembers;
 
+		struct ReflectionProbeMembers
+		{
+			MaterialID captureMatID = 0;
+		} m_ReflectionProbeMembers;
+
 		private:
 			static AudioSourceID s_BunkSound;
 			static RandomizedAudioSource s_SqueakySounds;
