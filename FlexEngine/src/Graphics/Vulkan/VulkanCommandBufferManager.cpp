@@ -2,6 +2,7 @@
 #if COMPILE_VULKAN
 
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 

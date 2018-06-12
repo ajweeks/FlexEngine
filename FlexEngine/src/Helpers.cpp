@@ -6,17 +6,17 @@
 #include <iomanip>
 #include <fstream>
 
+#pragma warning(push, 0)
 #include <glm/gtx/matrix_decompose.hpp>
 
 #include "AL/al.h"
 
-#include "Logger.hpp"
-#include "FlexEngine.hpp"
-
-#pragma warning(push, 0) // Don't generate warnings for third party code
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #pragma warning(pop)
+
+#include "FlexEngine.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {
@@ -98,7 +98,7 @@ namespace flex
 		file.close();
 
 		// Remove extra null terminators caused by Windows line endings
-		for (i32 charIndex = 0; charIndex < fileContents.size() - 1; ++charIndex)
+		for (u32 charIndex = 0; charIndex < fileContents.size() - 1; ++charIndex)
 		{
 			if (fileContents[charIndex] == '\0')
 			{
@@ -111,7 +111,7 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
-		int fileMode = std::ios::in | std::ios::ate;
+		i32 fileMode = std::ios::in | std::ios::ate;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -148,7 +148,12 @@ namespace flex
 
 		CreateDirectoryRecursive(directoryStr);
 
-		std::ofstream fileStream(filePath, std::ofstream::out | std::ofstream::trunc);
+		i32 fileMode =std::ios::out | std::ios::trunc;
+		if (bBinaryFile)
+		{
+			fileMode |= std::ios::binary;
+		}
+		std::ofstream fileStream(filePath, fileMode);
 
 		if (fileStream.is_open())
 		{
@@ -225,8 +230,6 @@ namespace flex
 			return;
 		}
 
-		const char* cstr = absoluteDirectoryPath.c_str();
-
 		u32 pos = 0;
 		do 
 		{
@@ -236,7 +239,7 @@ namespace flex
 		} while (pos != std::string::npos);
 	}
 
-	bool ParseWAVFile(const std::string& filePath, i32* format, void** data, i32* size, i32* freq)
+	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
 	{
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))
@@ -298,8 +301,24 @@ namespace flex
 		*data = new u8[subChunk2Size];
 		for (u32 i = 0; i < subChunk2Size; ++i)
 		{
-			(*((u8**)(data)))[i] = dataArray[dataIndex];
+			(*data)[i] = dataArray[dataIndex];
 			++dataIndex;
+		}
+
+		bool bPrintWavStats = false;
+		if (bPrintWavStats)
+		{
+			std::string fileName = filePath;
+			StripLeadingDirectories(fileName);
+			Logger::LogInfo("Stats about WAV file:" + fileName +
+							":\nchannel count: " + std::to_string(channelCount) +
+							", samples/s: " + std::to_string(samplesPerSec) +
+							", average bytes/s: " + std::to_string(avgBytesPerSec) +
+							", block align: " + std::to_string(blockAlign) +
+							", bits/sample: " + std::to_string(bitsPerSample) +
+							", chunk size: " + std::to_string(chunkSize) +
+							", sub chunk2 ID: " + subChunk2ID +
+							", sub chunk 2 size: " + std::to_string(subChunk2Size));
 		}
 
 		switch (channelCount)
@@ -686,12 +705,11 @@ namespace flex
 
 	void RetrieveCurrentWorkingDirectory()
 	{
-		char* cwdBuffer = nullptr;
-		const i32 maxPathLength = MAX_PATH;
-		FlexEngine::s_CurrentWorkingDirectory = _getcwd(cwdBuffer, maxPathLength);
-		if (cwdBuffer)
+		char cwdBuffer[MAX_PATH];
+		char* ans = _getcwd(cwdBuffer, sizeof(cwdBuffer));
+		if (ans)
 		{
-			delete cwdBuffer;
+			FlexEngine::s_CurrentWorkingDirectory = ans;
 		}
 	}
 

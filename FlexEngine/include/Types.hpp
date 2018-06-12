@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <limits>
 
+#pragma warning(push, 0)
 #include <glm/vec2.hpp>
+#pragma warning(pop)
 
 namespace flex
 {

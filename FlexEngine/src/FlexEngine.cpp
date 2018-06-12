@@ -6,17 +6,19 @@
 #include <stdlib.h> // For srand, rand
 #include <time.h> // For time
 
+#pragma warning(push, 0)
 #include <imgui.h>
 #include <imgui_internal.h>
 
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
+#pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
-#include "Logger.hpp"
 #include "Helpers.hpp"
+#include "Logger.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Scene/SceneManager.hpp"
@@ -36,7 +38,7 @@ namespace flex
 	FlexEngine::FlexEngine()
 	{
 		// TODO: Add custom seeding for different random systems
-		std::srand(time(NULL));
+		std::srand((u32)time(NULL));
 
 		RetrieveCurrentWorkingDirectory();
 
@@ -256,13 +258,13 @@ namespace flex
 	void FlexEngine::LoadDefaultScenes()
 	{
 		BaseScene* scene01 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_01.json");
-		m_GameContext.sceneManager->AddScene(scene01, m_GameContext);
+		m_GameContext.sceneManager->AddScene(scene01);
 
 		BaseScene* scene02 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_02.json");
-		m_GameContext.sceneManager->AddScene(scene02, m_GameContext);
+		m_GameContext.sceneManager->AddScene(scene02);
 
 		BaseScene* scene03 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_03.json");
-		m_GameContext.sceneManager->AddScene(scene03, m_GameContext);
+		m_GameContext.sceneManager->AddScene(scene03);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const

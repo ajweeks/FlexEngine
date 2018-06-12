@@ -2,11 +2,11 @@
 
 #include "Scene/BaseScene.hpp"
 
-#include <glm/vec3.hpp>
-
 #include <fstream>
 
 #pragma warning(push, 0)
+#include <glm/vec3.hpp>
+
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
@@ -30,7 +30,6 @@
 #include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
-#include "Scene/ReflectionProbe.hpp"
 
 namespace flex
 {
@@ -536,15 +535,8 @@ namespace flex
 			};
 			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
 
-			i32 materialArrayIndex = obj.GetInt("material array index");
-			MaterialID sphereMatID = m_LoadedMaterials[materialArrayIndex];
-
-			Material& sphereMat = gameContext.renderer->GetMaterial(sphereMatID);
-			Shader& sphereShader = gameContext.renderer->GetShader(sphereMat.shaderID);
-			VertexAttributes sphereRequiredVertexAttributes = sphereShader.vertexAttributes;
-
-			MeshComponent* sphereMesh = new MeshComponent(sphereMatID, newEntity);
-			sphereMesh->SetRequiredAttributes(sphereRequiredVertexAttributes);
+			MeshComponent* sphereMesh = new MeshComponent(matID, newEntity);
+			sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
 
 			MeshComponent::ImportSettings importSettings = {};
 			importSettings.swapNormalYZ = true;
@@ -848,7 +840,7 @@ namespace flex
 		for (u32 j = 0; j < m_LoadedMaterials.size(); ++j)
 		{
 			Material& loadedMat = gameContext.renderer->GetMaterial(m_LoadedMaterials[j]);
-			if (loadedMat.Equals(material, gameContext))
+			if (loadedMat.Equals(material))
 			{
 				materialArrayIndex = (i32)j;
 				break;

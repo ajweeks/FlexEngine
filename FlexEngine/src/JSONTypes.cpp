@@ -6,6 +6,10 @@
 
 namespace flex
 {
+	JSONObject JSONObject::s_EmptyObject;
+	std::vector<JSONObject> JSONObject::s_EmptyObjectArray;
+	std::vector<JSONField> JSONObject::s_EmptyFieldArray;
+
 	JSONValue::Type JSONValue::TypeFromChar(char c, const std::string& stringAfter)
 	{
 		switch (c)
@@ -245,7 +249,7 @@ namespace flex
 				return field.value.fieldArrayValue;
 			}
 		}
-		return {};
+		return s_EmptyFieldArray;
 	}
 
 	bool JSONObject::SetFieldArrayChecked(const std::string & label, std::vector<JSONField>& value) const
@@ -267,7 +271,7 @@ namespace flex
 				return field.value.objectArrayValue;
 			}
 		}
-		return {};
+		return s_EmptyObjectArray;
 	}
 
 	bool JSONObject::SetObjectArrayChecked(const std::string & label, std::vector<JSONObject>& value) const
@@ -289,7 +293,7 @@ namespace flex
 				return field.value.objectValue;
 			}
 		}
-		return JSONObject();
+		return s_EmptyObject;
 	}
 
 	bool JSONObject::SetObjectChecked(const std::string& label, JSONObject& value) const

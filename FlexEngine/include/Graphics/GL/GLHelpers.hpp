@@ -12,7 +12,6 @@
 #include "Logger.hpp"
 #include "Types.hpp"
 
-
 namespace flex
 {
 	namespace gl

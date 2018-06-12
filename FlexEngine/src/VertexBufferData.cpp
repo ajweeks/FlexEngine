@@ -3,10 +3,8 @@
 
 #include "VertexBufferData.hpp"
 
-#include <cstdlib>
-
-#include "VertexAttribute.hpp"
 #include "Logger.hpp"
+#include "VertexAttribute.hpp"
 
 namespace flex
 {

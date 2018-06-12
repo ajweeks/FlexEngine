@@ -3,11 +3,11 @@
 
 #include "Window/GLFWWindowWrapper.hpp"
 
-#include "Graphics/GL/GLHelpers.hpp"
-#include "InputManager.hpp"
-#include "Helpers.hpp"
-#include "Logger.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/GL/GLHelpers.hpp"
+#include "Helpers.hpp"
+#include "InputManager.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {

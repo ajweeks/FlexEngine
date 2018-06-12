@@ -2,7 +2,9 @@
 
 #include <map>
 
+#pragma warning(push, 0)
 #include <glm/vec2.hpp>
+#pragma warning(pop)
 
 #include "GameContext.hpp"
 #include "Helpers.hpp" // For RollingAverage

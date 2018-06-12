@@ -2,16 +2,18 @@
 
 #include "Player.hpp"
 
+#pragma warning(push, 0)
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "BulletCollision/CollisionShapes/btCapsuleShape.h"
 #include "BulletDynamics/ConstraintSolver/btHingeConstraint.h"
+#pragma warning(pop)
 
-#include "Scene/MeshComponent.hpp"
-#include "Scene/BaseScene.hpp"
-#include "Scene/SceneManager.hpp"
-#include "Physics/RigidBody.hpp"
 #include "InputManager.hpp"
+#include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/MeshComponent.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {

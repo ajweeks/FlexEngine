@@ -9,34 +9,36 @@
 #include <utility>
 #include <functional>
 
+#pragma warning(push, 0)
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
 
-#include <BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
 #include <freetype/ftbitmap.h>
+#pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "GameContext.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
-#include "Logger.hpp"
-#include "Window/Window.hpp"
-#include "Window/GLFWWindowWrapper.hpp"
-#include "VertexAttribute.hpp"
-#include "GameContext.hpp"
-#include "Scene/SceneManager.hpp"
-#include "Scene/BaseScene.hpp"
-#include "Scene/MeshComponent.hpp"
-#include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
-#include "Physics/PhysicsWorld.hpp"
 #include "JSONParser.hpp"
 #include "JSONTypes.hpp"
+#include "Logger.hpp"
+#include "Physics/PhysicsWorld.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
+#include "Scene/MeshComponent.hpp"
+#include "Scene/SceneManager.hpp"
+#include "VertexAttribute.hpp"
+#include "Window/Window.hpp"
+#include "Window/GLFWWindowWrapper.hpp"
 
 namespace flex
 {
@@ -1089,10 +1091,10 @@ namespace flex
 			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
-			glViewport(0, 0, cubemapSize.x, cubemapSize.y);
+			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
 			glBindVertexArray(skyboxRenderObject->VAO);
@@ -1339,7 +1341,7 @@ namespace flex
 			glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
 			CheckGLErrorMessages();
 
-			glViewport(0, 0, BRDFLUTSize.x, BRDFLUTSize.y);
+			glViewport(0, 0, (GLsizei)BRDFLUTSize.x, (GLsizei)BRDFLUTSize.y);
 			CheckGLErrorMessages();
 
 			if (m_1x1_NDC_Quad->enableCulling)
@@ -1411,10 +1413,10 @@ namespace flex
 			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
-			glViewport(0, 0, cubemapSize.x, cubemapSize.y);
+			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
 			if (skybox->enableCulling)
@@ -1484,7 +1486,7 @@ namespace flex
 			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -1781,7 +1783,7 @@ namespace flex
 				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				CheckGLErrorMessages();
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
+				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 				CheckGLErrorMessages();
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -1864,7 +1866,8 @@ namespace flex
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				CheckGLErrorMessages();
 				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24,
-					cubemapMaterial->material.cubemapSamplerSize.x, cubemapMaterial->material.cubemapSamplerSize.y);
+					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.x, 
+					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.y);
 				CheckGLErrorMessages();
 
 				glUseProgram(cubemapShader->program);
@@ -2058,6 +2061,7 @@ namespace flex
 
 		void GLRenderer::DrawWorldSpaceSprites(const GameContext& gameContext)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
 			//glm::vec3 pos(0.0f);
 			//glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
 			//glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
@@ -2315,7 +2319,7 @@ namespace flex
 			glUseProgram(0);
 		}
 
-		bool GLRenderer::LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i32 size)
+		bool GLRenderer::LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size)
 		{
 			// TODO: Determine via monitor struct
 			glm::vec2i monitorDPI(300, 300);
@@ -2423,10 +2427,10 @@ namespace flex
 				u32 height = face->glyph->bitmap.rows + totPadding * 2;
 
 
-				metric->width = (u32)width;
-				metric->height = (u32)height;
-				metric->offsetX = (i16)face->glyph->bitmap_left + (i16)totPadding;
-				metric->offsetY = -(i16)(face->glyph->bitmap_top + (i16)totPadding);
+				metric->width = (u16)width;
+				metric->height = (u16)height;
+				metric->offsetX = (i16)(face->glyph->bitmap_left + totPadding);
+				metric->offsetY = -(i16)(face->glyph->bitmap_top + totPadding);
 				metric->advanceX = (real)face->glyph->advance.x / 64.0f;
 
 				// Generate atlas coordinates
@@ -2735,7 +2739,7 @@ namespace flex
 				font->m_BufferStart = (i32)(textVertices.size());
 				font->m_BufferSize = 0;
 
-				for (i32 i = 0; i < font->m_TextCache.size(); ++i)
+				for (u32 i = 0; i < font->m_TextCache.size(); ++i)
 				{
 					TextCache& currentCache = font->m_TextCache[i];
 					std::string currentStr = currentCache.str;
@@ -2744,7 +2748,7 @@ namespace flex
 					//i32 fontSize = font->GetFontSize();
 					real totalAdvanceX = 0;
 
-					for (i32 j = 0; j < currentStr.length(); ++j)
+					for (u32 j = 0; j < currentStr.length(); ++j)
 					{
 						char c = currentStr[j];
 
@@ -2882,7 +2886,7 @@ namespace flex
 					CheckGLErrorMessages();
 					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 					CheckGLErrorMessages();
-					glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, cubemapSize.x, cubemapSize.y);
+					glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 					CheckGLErrorMessages();
 					
 					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -3176,6 +3180,7 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = true;
 			m_Shaders[shaderID].shader.needDiffuseSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -3459,6 +3464,14 @@ namespace flex
 				}
 
 				LinkProgram(m_Shaders[i].program);
+
+				// No need to keep the code in memory
+				m_Shaders[i].shader.vertexShaderCode.clear();
+				m_Shaders[i].shader.vertexShaderCode.shrink_to_fit();
+				m_Shaders[i].shader.fragmentShaderCode.clear();
+				m_Shaders[i].shader.fragmentShaderCode.shrink_to_fit();
+				m_Shaders[i].shader.geometryShaderCode.clear();
+				m_Shaders[i].shader.geometryShaderCode.shrink_to_fit();
 			}
 
 			CheckGLErrorMessages();
@@ -3769,9 +3782,9 @@ namespace flex
 			outInfo.visible = renderObject->gameObject->IsVisible();
 			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
-			outInfo.enableCulling = renderObject->enableCulling;
+			outInfo.enableCulling = (renderObject->enableCulling == GL_TRUE);
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
-			outInfo.depthWriteEnable = renderObject->depthWriteEnable;
+			outInfo.depthWriteEnable = (renderObject->depthWriteEnable == GL_TRUE);
 
 			return true;
 		}
@@ -3957,7 +3970,7 @@ namespace flex
 
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
-			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+			//GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 		}
 
 		u32 GLRenderer::GetRenderObjectCount() const

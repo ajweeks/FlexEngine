@@ -1,5 +1,6 @@
 #include "stdafx.hpp"
 
+#pragma warning(push, 0)
 #include <BulletCollision/BroadphaseCollision/btDbvtBroadphase.h>
 #include <BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h>
 #include <BulletCollision/CollisionDispatch/btCollisionDispatcher.h>
@@ -8,6 +9,7 @@
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#pragma warning(pop)
 
 #include "Physics/PhysicsManager.hpp"
 

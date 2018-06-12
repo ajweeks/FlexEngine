@@ -5,13 +5,11 @@
 
 #include <algorithm>
 #include <set>
-#include <iostream>
 #include <unordered_map>
 #include <functional>
 
 #pragma warning(push, 0) // Don't generate warnings for third party code
 #include "stb_image.h"
-#pragma warning(pop)
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -19,6 +17,7 @@
 #include "ImGui/imgui_impl_glfw_vulkan.h"
 
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+#pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
@@ -33,7 +32,6 @@
 #include "Scene/BaseScene.hpp"
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 #include "Physics/PhysicsWorld.hpp"
-#include "..\..\..\include\Graphics\Vulkan\VulkanRenderer.hpp"
 
 namespace flex
 {

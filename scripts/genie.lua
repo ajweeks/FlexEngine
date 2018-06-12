@@ -5,12 +5,6 @@
 --   and the Multi-threade DLL flag (/MD) in release
 -- 
 
--- 
--- TODO: 
--- [ ] Figure out how to disable warnings for individual files
--- [ ] 
--- 
-
 
 solution "FlexEngine"
 	configurations {

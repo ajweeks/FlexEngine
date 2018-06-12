@@ -5,14 +5,15 @@
 #include <array>
 #include <map>
 
+#pragma warning(push, 0)
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#pragma warning(pop)
 
 #include "GameContext.hpp"
-
-#include "VertexBufferData.hpp"
-#include "Transform.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
+#include "Transform.hpp"
+#include "VertexBufferData.hpp"
 
 namespace flex
 {
@@ -177,7 +178,7 @@ namespace flex
 
 	struct Material
 	{
-		bool Equals(const Material& other, const GameContext& gameContext);
+		bool Equals(const Material& other);
 
 		std::string name = "";
 

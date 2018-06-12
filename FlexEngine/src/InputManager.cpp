@@ -4,7 +4,9 @@
 
 #include <assert.h>
 
+#pragma warning(push, 0)
 #include "imgui.h"
+#pragma warning(pop)
 
 #include "Logger.hpp"
 #include "Window/Window.hpp"
@@ -219,7 +221,7 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool down = m_GamepadStates[gamepadIndex].buttonStates & (1 << (i32)button);
+		bool down = ((m_GamepadStates[gamepadIndex].buttonStates & (1 << (i32)button)) != 0);
 		return down;
 	}
 
@@ -227,7 +229,7 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool pressed = m_GamepadStates[gamepadIndex].buttonsPressed & (1 << (i32)button);
+		bool pressed = ((m_GamepadStates[gamepadIndex].buttonsPressed & (1 << (i32)button)) != 0);
 		return pressed;
 	}
 
@@ -235,7 +237,7 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool released = m_GamepadStates[gamepadIndex].buttonsReleased & (1 << (i32)button);
+		bool released = ((m_GamepadStates[gamepadIndex].buttonsReleased & (1 << (i32)button)) != 0);
 		return released;
 	}
 

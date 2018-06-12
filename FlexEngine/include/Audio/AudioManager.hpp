@@ -1,7 +1,9 @@
 #pragma once
 
+#pragma warning(push, 0)
 #include "AL/al.h"
 #include "AL/alc.h"
+#pragma warning(pop)
 
 #include <string>
 #include <vector>

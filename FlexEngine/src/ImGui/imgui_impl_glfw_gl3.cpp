@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #if COMPILE_OPEN_GL
+#pragma warning(push, 0)
 
 // ImGui GLFW binding with OpenGL3 + shaders
 // (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
@@ -490,4 +491,5 @@ void ImGui_ImplGlfwGL3_NewFrame()
 	ImGui::NewFrame();
 }
 
+#pragma warning(pop)
 #endif // COMPILE_OPEN_GL

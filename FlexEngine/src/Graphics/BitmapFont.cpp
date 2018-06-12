@@ -2,7 +2,6 @@
 
 #include "Graphics/BitmapFont.hpp"
 
-
 namespace flex
 {
 	BitmapFont::BitmapFont(i16 size, const std::string& name, i32 charCount) :

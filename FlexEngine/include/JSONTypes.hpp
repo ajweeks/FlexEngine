@@ -54,6 +54,10 @@ namespace flex
 		bool SetObjectChecked(const std::string& label, JSONObject& value) const;
 
 		std::string Print(i32 tabCount);
+
+		static JSONObject s_EmptyObject;
+		static std::vector<JSONObject> s_EmptyObjectArray;
+		static std::vector<JSONField> s_EmptyFieldArray;
 	};
 
 	struct JSONValue

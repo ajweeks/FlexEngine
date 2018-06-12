@@ -28,7 +28,7 @@ namespace flex
 		m_Scenes[m_CurrentSceneIndex]->Update(gameContext);
 	}
 
-	void SceneManager::AddScene(BaseScene* newScene, const GameContext& gameContext)
+	void SceneManager::AddScene(BaseScene* newScene)
 	{
 		bool unique = true;
 		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&unique, newScene](BaseScene* scene) mutable

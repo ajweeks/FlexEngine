@@ -72,7 +72,7 @@ namespace flex
 	{
 	}
 
-	bool Material::Equals(const Material& other, const GameContext& gameContext)
+	bool Material::Equals(const Material& other)
 	{
 		// TODO: FIXME: Pls don't do this :(
 		// memcmp instead ???
@@ -104,7 +104,6 @@ namespace flex
 				generateRoughnessSampler == other.generateRoughnessSampler &&
 				enableRoughnessSampler == other.enableRoughnessSampler &&
 				roughnessTexturePath == other.roughnessTexturePath &&
-				albedoTexturePath == other.albedoTexturePath &&
 				generateAOSampler == other.generateAOSampler &&
 				enableAOSampler == other.enableAOSampler &&
 				aoTexturePath == other.aoTexturePath &&

@@ -2,8 +2,10 @@
 
 #include "Graphics/Renderer.hpp"
 
+#pragma warning(push, 0)
 #include <imgui.h>
 #include <imgui_internal.h>
+#pragma warning(pop)
 
 #include "Logger.hpp"
 #include "Scene/GameObject.hpp"

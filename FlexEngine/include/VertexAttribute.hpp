@@ -1,8 +1,8 @@
 #pragma once
 
+#pragma warning(push, 0)
 #include <glm/Integer.hpp>
-
-
+#pragma warning(pop)
 
 namespace flex
 {

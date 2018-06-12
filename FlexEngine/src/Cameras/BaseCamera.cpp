@@ -2,12 +2,14 @@
 
 #include "Cameras/BaseCamera.hpp"
 
+#pragma warning(push, 0)
 #include <glm/vec2.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#pragma warning(pop)
 
+#include "Helpers.hpp"
 #include "Logger.hpp"
 #include "Window/Window.hpp"
-#include "Helpers.hpp"
 
 namespace flex
 {

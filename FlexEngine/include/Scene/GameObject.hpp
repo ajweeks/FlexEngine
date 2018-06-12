@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include "GameContext.hpp"
-#include "Transform.hpp"
-#include "Helpers.hpp"
 #include "Audio/RandomizedAudioSource.hpp"
+#include "GameContext.hpp"
+#include "Helpers.hpp"
+#include "Transform.hpp"
 
 class btCollisionShape;
 
@@ -183,7 +183,6 @@ namespace flex
 
 		struct GlassWindowMembers
 		{
-
 			bool bBroken = false;
 		} m_GlassWindowMembers;
 

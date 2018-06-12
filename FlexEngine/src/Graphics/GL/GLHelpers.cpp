@@ -6,7 +6,9 @@
 #include <sstream>
 #include <fstream>
 
+#pragma warning(push, 0)
 #include "stb_image.h"
+#pragma warning(pop)
 
 #include "Helpers.hpp"
 
@@ -172,7 +174,7 @@ namespace flex
 					for (size_t i = 0; i < 6; ++i)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat,
-							createInfo.textureSize.x, createInfo.textureSize.y, 0, format, type, nullptr);
+							(GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, format, type, nullptr);
 						CheckGLErrorMessages();
 					}
 				}
@@ -214,7 +216,8 @@ namespace flex
 					CheckGLErrorMessages();
 					for (i32 i = 0; i < 6; i++)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, createInfo.textureSize.x, createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, 
+									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
 						CheckGLErrorMessages();
 					}
 
@@ -268,7 +271,8 @@ namespace flex
 					for (size_t i = 0; i < 6; ++i)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24,
-							createInfo.textureSize.x, createInfo.textureSize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+							(GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 
+							0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 						CheckGLErrorMessages();
 					}
 

@@ -2,13 +2,14 @@
 
 #include <vector>
 
+#pragma warning(push, 0)
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
-
+#pragma warning(pop)
 
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
@@ -126,7 +127,7 @@ namespace flex
 		std::vector<u32> m_Indices;
 
 		// Saved so we can reload meshes and serialize contents to file
-		ImportSettings m_ImportSettings;
+		ImportSettings m_ImportSettings = {};
 
 		static glm::vec4 m_DefaultColor_4;
 		static glm::vec3 m_DefaultPosition;

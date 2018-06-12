@@ -19,7 +19,7 @@ namespace flex
 		i16 offsetX = 0;
 		i16 offsetY = 0;
 
-		float advanceX = 0;
+		real advanceX = 0;
 		std::map<wchar_t, glm::vec2> kerning;
 
 		//u8 page = 0;

@@ -7,13 +7,12 @@
 #include "stb_image.h"
 #pragma warning(pop)
 
+#include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+#include "Graphics/Vulkan/VulkanDevice.hpp"
+#include "Helpers.hpp"
 #include "Logger.hpp"
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
-#include "VertexAttribute.hpp"
-#include "Helpers.hpp"
-#include "Graphics/Vulkan/VulkanDevice.hpp"
-#include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
 
 namespace flex
 {

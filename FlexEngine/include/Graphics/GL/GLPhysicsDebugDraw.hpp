@@ -1,15 +1,16 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include "LinearMath\btIDebugDraw.h"
-
-#include "Types.hpp"
-
-#include <glad\glad.h>
-
 #include <vector>
 
+#pragma warning(push, 0)
+#include <glad\glad.h>
+
+#include "LinearMath\btIDebugDraw.h"
+#pragma warning(pop)
+
 #include "GameContext.hpp"
+#include "Types.hpp"
 
 namespace flex
 {

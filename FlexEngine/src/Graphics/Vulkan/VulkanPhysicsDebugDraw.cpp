@@ -1,16 +1,16 @@
 #include "stdafx.hpp"
 #if COMPILE_VULKAN
 
-#include "Graphics\Vulkan\VulkanPhysicsDebugDraw.hpp"
-#include "Graphics\Vulkan\VulkanHelpers.hpp"
-#include "Graphics\Vulkan\VulkanRenderer.hpp"
-#include "VertexAttribute.hpp"
+#include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 
-#include "Logger.hpp"
-#include "Graphics/Renderer.hpp"
-#include "GameContext.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "GameContext.hpp"
+#include "Graphics/Renderer.hpp"
+#include "Graphics/Vulkan/VulkanHelpers.hpp"
+#include "Graphics/Vulkan/VulkanRenderer.hpp"
+#include "Logger.hpp"
 #include "Scene/GameObject.hpp"
+#include "VertexAttribute.hpp"
 
 namespace flex
 {

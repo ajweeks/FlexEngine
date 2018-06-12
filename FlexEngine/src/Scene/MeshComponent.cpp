@@ -2,21 +2,23 @@
 
 #include "Scene/MeshComponent.hpp"
 
+#include <string>
+
+#pragma warning(push, 0)
 #include <assimp/vector3.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
 #include <glm/gtc/matrix_transform.hpp>
-
-#include <string>
+#pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
-#include "Scene/GameObject.hpp"
 #include "Colors.hpp"
 #include "GameContext.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
@@ -60,6 +62,8 @@ namespace flex
 
 	void MeshComponent::Destroy(const GameContext& gameContext)
 	{
+		UNREFERENCED_PARAMETER(gameContext);
+
 		m_VertexBufferData.Destroy();
 		m_OwningGameObject = nullptr;
 		m_Initialized = false;

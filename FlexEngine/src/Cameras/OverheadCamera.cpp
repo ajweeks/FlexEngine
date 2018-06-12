@@ -2,15 +2,17 @@
 
 #include "Cameras/OverheadCamera.hpp"
 
+#pragma warning(push, 0)
 #include <glm/vec2.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#pragma warning(pop)
 
-#include "Logger.hpp"
-#include "Window/Window.hpp"
 #include "Helpers.hpp"
+#include "Logger.hpp"
 #include "Scene/BaseScene.hpp" 
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

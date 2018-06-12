@@ -1,9 +1,9 @@
 #pragma once
 
-#define NOMINMAX
-
 #define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 0
+
+#define NOMINMAX
 
 #pragma warning(disable : 4201) // nonstandard extension used: nanmeless struct/union
 //#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'
@@ -12,11 +12,13 @@
 
 #include "Types.hpp"
 
+#pragma warning(push, 0)
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#pragma warning(pop)
 
 #if COMPILE_VULKAN
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#pragma warning(push, 0)
 	#include <glad/glad.h>
 	#include <vulkan/vulkan.hpp>
 	#include <GLFW/glfw3.h>
@@ -28,7 +30,8 @@
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#pragma warning(push, 0)
+// TODO: Does this line need to be included above earlier include in Vulkan section?
 #define GLFW_EXPOSE_NATIVE_WIN32
 	#include <glad/glad.h>
 	#include <GLFW/glfw3.h>
@@ -65,7 +68,7 @@ inline void SafeDelete(T &pObjectToDelete)
 #define btAssert(e) assert(e)
 #endif
 
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#pragma warning(push, 0)
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED

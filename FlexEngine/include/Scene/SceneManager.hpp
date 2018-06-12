@@ -15,7 +15,7 @@ namespace flex
 
 		void UpdateAndRender(const GameContext& gameContext);
 
-		void AddScene(BaseScene* newScene, const GameContext& gameContext);
+		void AddScene(BaseScene* newScene);
 
 		/* To be called after AddScene */
 		void InitializeCurrentScene(const GameContext& gameContext);

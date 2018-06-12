@@ -4,6 +4,7 @@
 #include <vector>
 #include <direct.h> // For _getcwd
 
+#pragma warning(push, 0)
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -13,6 +14,7 @@
 #include <assimp/color4.h>
 
 #include "imgui.h"
+#pragma warning(pop)
 
 #include "Types.hpp"
 
@@ -70,7 +72,7 @@ namespace flex
 	* Reads in a .wav file and fills in given values according to file contents
 	* Returns true if reading and parsing succeeded
 	*/
-	bool ParseWAVFile(const std::string& filePath, i32* format, void** data, i32* size, i32* freq);
+	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
 
 	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
 	u32 Parse32u(char* ptr);

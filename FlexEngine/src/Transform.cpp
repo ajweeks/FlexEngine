@@ -2,6 +2,7 @@
 
 #include "Transform.hpp"
 
+#pragma warning(push, 0)
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
@@ -9,6 +10,7 @@
 #include <glm/mat4x4.hpp>
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
+#pragma warning(pop)
 
 #include "Physics/RigidBody.hpp"
 #include "Scene/GameObject.hpp"
@@ -65,7 +67,7 @@ namespace flex
 		localTransform(glm::translate(glm::mat4(1.0f), position) *
 					   glm::mat4(glm::quat(glm::vec3(0.0f))) *
 					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f))),
-		worldTransform(glm::translate(glm::mat4(1.0f), worldPosition) *
+		worldTransform(glm::translate(glm::mat4(1.0f), position) *
 					   glm::mat4(glm::quat(glm::vec3(0.0f))) *
 					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)))
 	{
@@ -77,14 +79,14 @@ namespace flex
 		localScale(other.localScale),
 		worldPosition(other.worldPosition),
 		worldRotation(other.worldRotation),
-		worldScale(other.worldScale),
-		localTransform(glm::translate(glm::mat4(1.0f), other.localPosition) *
-					   glm::mat4((glm::quat)other.localRotation) *
-					   glm::scale(glm::mat4(1.0f), other.localScale)),
-		worldTransform(glm::translate(glm::mat4(1.0f), other.worldPosition) *
-					   glm::mat4((glm::quat)other.worldRotation) *
-					   glm::scale(glm::mat4(1.0f), other.worldScale))
+		worldScale(other.worldScale)
 	{
+		localTransform = (glm::translate(glm::mat4(1.0f), other.localPosition) *
+						  glm::mat4((glm::quat)other.localRotation) *
+						  glm::scale(glm::mat4(1.0f), other.localScale));
+		worldTransform = (glm::translate(glm::mat4(1.0f), other.worldPosition) *
+					      glm::mat4((glm::quat)other.worldRotation) *
+					      glm::scale(glm::mat4(1.0f), other.worldScale));
 	}
 
 	Transform::Transform(const Transform&& other) :
@@ -93,14 +95,14 @@ namespace flex
 		localScale(std::move(other.localScale)),
 		worldPosition(std::move(other.worldPosition)),
 		worldRotation(std::move(other.worldRotation)),
-		worldScale(std::move(other.worldScale)),
-		localTransform(glm::translate(glm::mat4(1.0f), localPosition) *
-					   glm::mat4(localRotation) *
-					   glm::scale(glm::mat4(1.0f), localScale)),
-		worldTransform(glm::translate(glm::mat4(1.0f), worldPosition) *
-					   glm::mat4(worldRotation) *
-					   glm::scale(glm::mat4(1.0f), worldScale))
+		worldScale(std::move(other.worldScale))
 	{
+		localTransform = (glm::translate(glm::mat4(1.0f), localPosition) *
+						  glm::mat4(localRotation) *
+						  glm::scale(glm::mat4(1.0f), localScale));
+		worldTransform = (glm::translate(glm::mat4(1.0f), worldPosition) *
+					      glm::mat4(worldRotation) *
+					      glm::scale(glm::mat4(1.0f), worldScale));
 	}
 
 	Transform& Transform::operator=(const Transform& other)

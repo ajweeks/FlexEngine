@@ -80,20 +80,20 @@ namespace flex
 		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
 		btVector3 rayFrom = Vec3ToBtVec3(camera->GetPosition());
 		btVector3 rayForward = Vec3ToBtVec3(camera->GetForward());
-		float farPlane = camera->GetZFar();
+		real farPlane = camera->GetZFar();
 		rayForward *= farPlane;
 
 		btVector3 vertical = Vec3ToBtVec3(camera->GetUp());
 		btVector3 horizontal = Vec3ToBtVec3(camera->GetRight());
 
-		float fov = camera->GetFOV();
-		float tanfov = tanf(0.5f * fov);
+		real fov = camera->GetFOV();
+		real tanfov = tanf(0.5f * fov);
 
 		horizontal *= 2.0f * farPlane * tanfov;
 		vertical *= 2.0f * farPlane * tanfov;
 
-		float frameBufferWidth = gameContext.window->GetFrameBufferSize().x;
-		float frameBufferHeight = gameContext.window->GetFrameBufferSize().y;
+		real frameBufferWidth = (real)gameContext.window->GetFrameBufferSize().x;
+		real frameBufferHeight = (real)gameContext.window->GetFrameBufferSize().y;
 
 		btScalar aspect = frameBufferWidth / frameBufferHeight;
 
@@ -112,11 +112,11 @@ namespace flex
 
 	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld)
 	{
-		btVector3 hitPos;
-		float pickingDist;
+		btVector3 hitPos(0.0f, 0.0f, 0.0f);
+		real pickingDist = 0.0f;
 		btRigidBody* pickedBody = nullptr;
-		i32 savedState;
-		btTypedConstraint* pickedConstraint = nullptr;
+		//i32 savedState = 0;
+		//btTypedConstraint* pickedConstraint = nullptr;
 
 		btCollisionWorld::ClosestRayResultCallback rayCallback(rayFromWorld, rayToWorld);
 		m_World->rayTest(rayFromWorld, rayToWorld, rayCallback);
@@ -158,6 +158,8 @@ namespace flex
 
 	void PhysicsInternalTickCallback(btDynamicsWorld* world, btScalar timeStep)
 	{
+		UNREFERENCED_PARAMETER(timeStep);
+
 		PhysicsWorld* physWorld = static_cast<PhysicsWorld*>(world->getWorldUserInfo());
 
 		std::set<std::pair<const btCollisionObject*, const btCollisionObject*>> collisionPairsFoundThisStep;

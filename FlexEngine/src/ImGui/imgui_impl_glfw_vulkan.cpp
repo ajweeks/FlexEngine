@@ -1,5 +1,6 @@
 #include "stdafx.hpp"
 #if COMPILE_VULKAN
+#pragma warning(push, 0)
 
 // ImGui GLFW binding with Vulkan + shaders
 
@@ -896,4 +897,5 @@ void ImGui_ImplGlfwVulkan_DrawFrame(VkCommandBuffer command_buffer)
 	g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }
 
+#pragma warning(pop)
 #endif // COMPILE_VULKAN

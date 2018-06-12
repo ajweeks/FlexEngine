@@ -11,12 +11,12 @@
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
+#include "GameContext.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Scene/SceneManager.hpp"
+#include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
-#include "GameContext.hpp"
-#include "Player.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -255,12 +255,15 @@ namespace flex
 
 			glm::vec3 newPos = m_RisingBlockMembers.startingPos +
 				dist * m_RisingBlockMembers.moveAxis;
-
-			m_RigidBody->GetRigidBodyInternal()->activate(true);
-			btTransform transform;
-			m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
-			transform.setOrigin(Vec3ToBtVec3(newPos));
-			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
+			
+			if (m_RigidBody)
+			{
+				m_RigidBody->GetRigidBodyInternal()->activate(true);
+				btTransform transform;
+				m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
+				transform.setOrigin(Vec3ToBtVec3(newPos));
+				m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
+			}
 
 			btVector3 startPos = Vec3ToBtVec3(m_RisingBlockMembers.startingPos);
 			gameContext.renderer->GetDebugDrawer()->drawLine(

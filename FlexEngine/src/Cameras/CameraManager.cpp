@@ -2,6 +2,7 @@
 #include "stdafx.hpp"
 
 #include "Cameras/CameraManager.hpp"
+
 #include "Cameras/BaseCamera.hpp"
 #include "GameContext.hpp"
 #include "Logger.hpp"

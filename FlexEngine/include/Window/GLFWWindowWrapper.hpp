@@ -1,7 +1,9 @@
 #pragma once
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
+#pragma warning(push, 0)
 #include <GLFW/glfw3.h>
+#pragma warning(pop)
 
 #include "Window.hpp"
 

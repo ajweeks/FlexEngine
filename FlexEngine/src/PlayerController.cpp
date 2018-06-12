@@ -2,10 +2,12 @@
 
 #include "PlayerController.hpp"
 
+#pragma warning(push, 0)
 #include <LinearMath/btIDebugDraw.h>
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
 #include "GameContext.hpp"
@@ -107,7 +109,7 @@ namespace flex
 		rb->applyCentralForce(force);
 
 		btVector3 angularVel = rb->getAngularVelocity();
-		angularVel.setY(angularVel.getY() * (1.0 - m_RotateFriction));
+		angularVel.setY(angularVel.getY() * (1.0f - m_RotateFriction));
 		rb->setAngularVelocity(angularVel);
 
 		const btVector3& vel = rb->getLinearVelocity();

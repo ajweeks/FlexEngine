@@ -136,7 +136,7 @@ namespace flex
 			void DrawWorldSpaceSprites(const GameContext& gameContext);
 			void DrawText(const GameContext& gameContext);
 
-			bool LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i32 size);
+			bool LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size);
 
 			void UpdateTextBuffer();
 

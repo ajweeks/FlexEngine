@@ -4,7 +4,6 @@
 
 #include "Logger.hpp"
 #include "Helpers.hpp"
-#include "..\..\include\Audio\AudioManager.hpp"
 
 namespace flex
 {
@@ -38,7 +37,7 @@ namespace flex
 		s_Context = alcCreateContext(s_Device, NULL);
 		alcMakeContextCurrent(s_Context);
 
-		bool eaxPresent = alIsExtensionPresent("EAX2.0") == GL_TRUE;
+		//bool eaxPresent = (alIsExtensionPresent("EAX2.0") == GL_TRUE);
 
 		alGenBuffers(NUM_BUFFERS, s_Buffers);
 		ALenum error = alGetError();
@@ -69,7 +68,7 @@ namespace flex
 
 		// WAVE file
 		i32 format;
-		void* data;
+		u8* data;
 		i32 size;
 		i32 freq;
 		if (!ParseWAVFile(filePath, &format, &data, &size, &freq))

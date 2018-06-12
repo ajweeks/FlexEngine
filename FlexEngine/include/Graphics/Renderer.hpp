@@ -5,8 +5,10 @@
 #include <array>
 #include <map>
 
+#pragma warning(push, 0)
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#pragma warning(pop)
 
 #include "GameContext.hpp"
 

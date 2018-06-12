@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
 #include <sstream>
 
 #pragma warning(push, 0) // Don't generate warnings for 3rd party code    

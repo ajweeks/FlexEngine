@@ -1,14 +1,13 @@
 #pragma once
 
-#pragma warning(push, 0)
-#include <LinearMath/btVector3.h>
-#include <LinearMath/btScalar.h>
-#pragma warning(pop)
-
 #include <utility>
 #include <set>
 
+#pragma warning(push, 0)
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <LinearMath/btVector3.h>
+#include <LinearMath/btScalar.h>
+#pragma warning(pop)
 
 class btDiscreteDynamicsWorld;
 class btDynamicsWorld;

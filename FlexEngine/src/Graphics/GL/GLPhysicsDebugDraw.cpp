@@ -1,16 +1,16 @@
 #include "stdafx.hpp"
 #if COMPILE_OPEN_GL
 
-#include "Graphics\GL\GLPhysicsDebugDraw.hpp"
-#include "Graphics\GL\GLHelpers.hpp"
-#include "Graphics\GL\GLRenderer.hpp"
-#include "VertexAttribute.hpp"
+#include "Graphics/GL/GLPhysicsDebugDraw.hpp"
 
-#include "Logger.hpp"
-#include "Graphics/Renderer.hpp"
-#include "GameContext.hpp"
-#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "GameContext.hpp"
+#include "Graphics/GL/GLHelpers.hpp"
+#include "Graphics/GL/GLRenderer.hpp"
+#include "Graphics/Renderer.hpp"
+#include "Logger.hpp"
+#include "VertexAttribute.hpp"
 
 namespace flex
 {
@@ -78,11 +78,15 @@ namespace flex
 		void GLPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
 		{
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
+			UNREFERENCED_PARAMETER(location);
+			UNREFERENCED_PARAMETER(textString);
 		}
 
 		void GLPhysicsDebugDraw::setDebugMode(int debugMode)
 		{
 			// NOTE: Call UpdateDebugMode instead of this
+			// This stub needs to exist to override pure virtual function
+			UNREFERENCED_PARAMETER(debugMode);
 		}
 
 		int GLPhysicsDebugDraw::getDebugMode() const
@@ -98,6 +102,11 @@ namespace flex
 		void GLPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
 		{
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
+			UNREFERENCED_PARAMETER(PointOnB);
+			UNREFERENCED_PARAMETER(normalOnB);
+			UNREFERENCED_PARAMETER(distance);
+			UNREFERENCED_PARAMETER(lifeTime);
+			UNREFERENCED_PARAMETER(color);
 		}
 		
 		void GLPhysicsDebugDraw::flushLines()
@@ -125,7 +134,6 @@ namespace flex
 
 			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
 			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
-			Shader* shader = &glShader->shader;
 
 			VertexBufferData::CreateInfo createInfo = {};
 			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);

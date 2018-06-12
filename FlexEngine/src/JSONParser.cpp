@@ -2,41 +2,17 @@
 #include "stdafx.hpp"
 
 #include "JSONParser.hpp"
-#include "Logger.hpp"
-#include "Helpers.hpp"
 
 #include <fstream>
 #include <cwctype>
+
+#include "Helpers.hpp"
+#include "Logger.hpp"
 
 namespace flex
 {
 	bool JSONParser::Parse(const std::string& filePath, JSONObject& rootObject)
 	{
-		//std::ifstream ifStream(filePath, std::fstream::ate);
-		//if (!ifStream)
-		//{
-		//	Logger::LogError("Couldn't find JSON file: " + filePath);
-		//	return false;
-		//}
-
-
-		//size_t fileSize = (size_t)ifStream.tellg();
-		//ifStream.seekg(0, ifStream.beg);
-
-		//if (fileSize == 0)
-		//{
-		//	Logger::LogError("Attempted to parse empty JSON file: " + filePath);
-		//	return false;
-		//}
-
-		//std::string fileContents;
-		//fileContents.reserve(fileSize);
-		//fileContents.assign(
-		//	std::istreambuf_iterator<char>(ifStream),
-		//	std::istreambuf_iterator<char>());
-
-
-
 		std::string fileContents;
 		if (!ReadFile(filePath, fileContents, false))
 		{
@@ -44,8 +20,8 @@ namespace flex
 			return false;
 		}
 
-		size_t firstBracket = fileContents.find("{");
-		size_t lastBracket = fileContents.rfind("}");
+		size_t firstBracket = fileContents.find('{');
+		size_t lastBracket = fileContents.rfind('}');
 
 		if (firstBracket == std::string::npos ||
 			lastBracket == std::string::npos || 
@@ -92,9 +68,6 @@ namespace flex
 
 			++i;
 		}
-
-		//Logger::LogInfo("Cleaned JSON file:");
-		//Logger::LogInfo(fileContents);
 
 		rootObject = {};
 
@@ -360,7 +333,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Unhandled opening bracket type: " + openingBracket);
+			Logger::LogError("Unhandled opening bracket type: " + std::to_string(openingBracket));
 			return -1;
 		}
 
