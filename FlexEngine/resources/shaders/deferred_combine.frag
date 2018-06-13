@@ -29,9 +29,8 @@ struct PointLight
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 uniform vec4 camPos;
-
-const float PI = 3.14159265359;
 uniform bool enableIrradianceSampler;
+const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
 layout (binding = 1) uniform sampler2D normalRoughnessFrameBufferSampler;
