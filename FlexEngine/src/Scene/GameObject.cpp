@@ -192,6 +192,8 @@ namespace flex
 				m_ValveMembers.rotation = m_ValveMembers.minRotation;
 			}
 
+			m_ValveMembers.pRotation = m_ValveMembers.rotation;
+
 			if (overshoot != 0.0f &&
 				currentAbsAvgRotationSpeed > 0.01f)
 			{
