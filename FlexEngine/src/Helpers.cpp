@@ -797,6 +797,7 @@ namespace flex
 		prevValues[currentIndex++] = newValue;
 		currentIndex %= prevValues.size();
 
+		currentAverage = 0.0f;
 		std::for_each(prevValues.begin(), prevValues.end(), [this](real value)
 		{
 			currentAverage += value;
