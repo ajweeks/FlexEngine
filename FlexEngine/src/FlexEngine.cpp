@@ -515,25 +515,6 @@ namespace flex
 					m_GameContext.renderer->SetVSyncEnabled(bVSyncEnabled);
 				}
 
-				bool bFXAAEnabled = m_GameContext.renderer->GetFXAAEnabled();
-				static const char* fxaaEnabledStr = "FXAA";
-				if (ImGui::Checkbox(fxaaEnabledStr, &bFXAAEnabled))
-				{
-					m_GameContext.renderer->SetFXAAEnabled(bFXAAEnabled);
-				}
-
-				if (bFXAAEnabled)
-				{
-					ImGui::Indent();
-					bool bFXAADEBUGShowEdgesEnabled = m_GameContext.renderer->GetFXAADEBUGShowEdgesEnabled();
-					static const char* fxaaShowEdgesEnabledStr = "Show edges";
-					if (ImGui::Checkbox(fxaaShowEdgesEnabledStr, &bFXAADEBUGShowEdgesEnabled))
-					{
-						m_GameContext.renderer->SetFXAADEBUGShowEdgesEnabled(bFXAADEBUGShowEdgesEnabled);
-					}
-					ImGui::Unindent();
-				}
-
 				static const char* uiScaleStr = "UI Scale";
 				ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
 
@@ -606,6 +587,34 @@ namespace flex
 
 					static const char* drawFramesStr = "Draw Frames";
 					ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
+
+					ImGui::TreePop();
+				}
+
+				static const char* postProcessStr = "Post processing";
+				if (ImGui::TreeNode(postProcessStr))
+				{
+					Renderer::PostProcessSettings& postProcessSettings = m_GameContext.renderer->GetPostProcessSettings();
+
+					static const char* fxaaEnabledStr = "FXAA";
+					ImGui::Checkbox(fxaaEnabledStr, &postProcessSettings.bEnableFXAA);
+
+					if (postProcessSettings.bEnableFXAA)
+					{
+						ImGui::Indent();
+						static const char* fxaaShowEdgesEnabledStr = "Show edges";
+						ImGui::Checkbox(fxaaShowEdgesEnabledStr, &postProcessSettings.bEnableFXAADEBUGShowEdges);
+						ImGui::Unindent();
+					}
+
+					static const char* brightnessStr = "Brightness (RGB)";
+					ImGui::SliderFloat3(brightnessStr, &postProcessSettings.brightness.r, 0.0f, 2.5f);
+
+					static const char* offsetStr = "Offset";
+					ImGui::SliderFloat3(offsetStr, &postProcessSettings.offset.r, -0.35f, 0.35f);
+
+					static const char* saturationStr = "Saturation";
+					ImGui::SliderFloat(saturationStr, &postProcessSettings.saturation, 0.0f, 2.0f);
 
 					ImGui::TreePop();
 				}

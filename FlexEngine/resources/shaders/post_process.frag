@@ -2,6 +2,7 @@
 
 uniform sampler2D in_Texture;
 uniform vec4 colorMultiplier;
+uniform mat4 contrastBrightnessSaturation;
 
 in vec2 ex_TexCoord;
 
@@ -42,6 +43,8 @@ void main()
 
 
 	vec4 color = texture(in_Texture, ex_TexCoord);
+
+	color.rgb = (contrastBrightnessSaturation * vec4(color.rgb, 1)).rgb;
 
 	color.rgb = color.rgb / (color.rgb + vec3(1.0f)); // Reinhard tone-mapping
 	color.rgb = pow(color.rgb, vec3(1.0f / 2.2f)); // Gamma correction

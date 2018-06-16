@@ -473,6 +473,7 @@ namespace flex
 				{ "modelInvTranspose", 				&mat.uniformIDs.modelInvTranspose },
 				{ "modelViewProjection",			&mat.uniformIDs.modelViewProjection },
 				{ "colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
+				{ "contrastBrightnessSaturation", 	&mat.uniformIDs.contrastBrightnessSaturation },
 				{ "view", 							&mat.uniformIDs.view },
 				{ "viewInv", 						&mat.uniformIDs.viewInv },
 				{ "viewProjection", 				&mat.uniformIDs.viewProjection },
@@ -492,7 +493,7 @@ namespace flex
 				{ "hdrEquirectangularSampler",		&mat.uniformIDs.hdrEquirectangularSampler },
 				{ "enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
 				{ "transformMat",					&mat.uniformIDs.transformMat },
-				{ "texSize",					&mat.uniformIDs.texSize },
+				{ "texSize",						&mat.uniformIDs.texSize },
 			};
 
 			const u32 uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
@@ -1701,9 +1702,9 @@ namespace flex
 			DrawEditorObjects(gameContext, drawCallInfo);
 
 			// Screen-space objects
-			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_bEnableFXAA ? "1" : "0");
+			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
 			SetFont(m_FntUbuntuCondensed);
-			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(300.0f, 300.0f));
+			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(600.0f, 800.0f));
 
 			UpdateTextBuffer();
 			DrawText(gameContext);
@@ -2016,7 +2017,7 @@ namespace flex
 			i32 FBO = m_Offscreen1FBO;
 			i32 RBO = m_Offscreen1RBO;
 
-			if (!m_bEnableFXAA)
+			if (!m_PostProcessSettings.bEnableFXAA)
 			{
 				FBO = 0;
 				RBO = 0;
@@ -2029,7 +2030,7 @@ namespace flex
 			DrawSpriteQuad(gameContext, m_OffscreenTexture0Handle.id, FBO, RBO,
 						   m_PostProcessMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
 
-			if (m_bEnableFXAA)
+			if (m_PostProcessSettings.bEnableFXAA)
 			{
 				FBO = 0;
 				RBO = 0;
@@ -2190,6 +2191,37 @@ namespace flex
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			{
 				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &color.r);
+				CheckGLErrorMessages();
+			}
+
+			// http://www.graficaobscura.com/matrix/
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("contrastBrightnessSaturation"))
+			{
+				real sat = m_PostProcessSettings.saturation;
+				glm::vec3 brightness = m_PostProcessSettings.brightness;
+				glm::vec3 offset = m_PostProcessSettings.offset;
+
+				glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
+				real a = (1.0f - sat) * wgt.r + sat;
+				real b = (1.0f - sat) * wgt.r;
+				real c = (1.0f - sat) * wgt.r;
+				real d = (1.0f - sat) * wgt.g;
+				real e = (1.0f - sat) * wgt.g + sat;
+				real f = (1.0f - sat) * wgt.g;
+				real g = (1.0f - sat) * wgt.b;
+				real h = (1.0f - sat) * wgt.b;
+				real i = (1.0f - sat) * wgt.b + sat;
+				glm::mat4 satMat = {
+					a, b, c, 0,
+					d, e, f, 0,
+					g, h, i, 0,
+					0, 0, 0, 1
+				};
+
+				glm::mat4 contrastBrightnessSaturation = 
+					glm::translate(glm::scale(satMat, brightness), offset);
+
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.contrastBrightnessSaturation, 1, false, &contrastBrightnessSaturation[0][0]);
 				CheckGLErrorMessages();
 			}
 
@@ -3416,6 +3448,7 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("contrastBrightnessSaturation");
 			++shaderID;
 
 			// Post FXAA (Fast approximate anti-aliasing)
@@ -3602,7 +3635,7 @@ namespace flex
 
 			if (shader->shader.constantBufferUniforms.HasUniform("bDEBUGShowEdges"))
 			{
-				SetInt(material->material.shaderID, "bDEBUGShowEdges", m_bEnableFXAADEBUGShowEdges ? 1 : 0);
+				SetInt(material->material.shaderID, "bDEBUGShowEdges", m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 				CheckGLErrorMessages();
 			}
 
@@ -4200,8 +4233,10 @@ namespace flex
 				if (JSONParser::Parse(m_SettingsFilePathAbs, rootObject))
 				{
 					m_VSyncEnabled = rootObject.GetBool("enable v-sync");
-					m_bEnableFXAA = rootObject.GetBool("enable fxaa");
-					
+					m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
+					m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
+					m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
+					m_PostProcessSettings.saturation = rootObject.GetFloat(	"saturation");
 				}
 				else
 				{
@@ -4221,7 +4256,10 @@ namespace flex
 			JSONObject rootObject{};
 
 			rootObject.fields.push_back(JSONField("enable v-sync", JSONValue(m_VSyncEnabled)));
-			rootObject.fields.push_back(JSONField("enable fxaa", JSONValue(m_bEnableFXAA)));
+			rootObject.fields.push_back(JSONField("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA)));
+			rootObject.fields.push_back(JSONField("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness))));
+			rootObject.fields.push_back(JSONField("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset))));
+			rootObject.fields.push_back(JSONField("saturation", JSONValue(m_PostProcessSettings.saturation)));
 
 			std::string fileContents = rootObject.Print(0);
 

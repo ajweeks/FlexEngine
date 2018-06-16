@@ -103,11 +103,18 @@ namespace flex
 		PointLight& GetPointLight(PointLightID pointLight);
 		i32 GetNumPointLights();
 
-		bool GetFXAAEnabled() const;
-		void SetFXAAEnabled(bool bEnabled);
+		struct PostProcessSettings
+		{
+			bool bEnabled = true;
 
-		bool GetFXAADEBUGShowEdgesEnabled() const;
-		void SetFXAADEBUGShowEdgesEnabled(bool bEnabled);
+			real saturation = 1.0f;
+			glm::vec3 brightness;
+			glm::vec3 offset;
+			bool bEnableFXAA = true;
+			bool bEnableFXAADEBUGShowEdges = false;
+		};
+			
+		PostProcessSettings& GetPostProcessSettings();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
 
@@ -143,8 +150,7 @@ namespace flex
 		BitmapFont* m_CurrentFont = nullptr;
 		std::vector<BitmapFont*> m_Fonts;
 
-		bool m_bEnableFXAA = true;
-		bool m_bEnableFXAADEBUGShowEdges = false;
+		PostProcessSettings m_PostProcessSettings;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;
