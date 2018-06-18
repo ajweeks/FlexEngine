@@ -50,9 +50,11 @@ namespace flex
 
 		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
-		virtual void ReloadShaders(GameContext& gameContext) = 0;
+		virtual void ReloadShaders() = 0;
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
+
+		virtual void OnSceneChanged(const GameContext& gameContext) = 0;
 
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info

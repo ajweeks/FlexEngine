@@ -317,13 +317,6 @@ namespace flex
 			}
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			if (m_BRDFTextureHandle.id == 0)
-			{
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false,
-										m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
-			}
-
 			CheckGLErrorMessages();
 		}
 
@@ -437,6 +430,8 @@ namespace flex
 
 		MaterialID GLRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			CheckGLErrorMessages();
 
 			MaterialID matID = GetNextAvailableMaterialID();
@@ -591,21 +586,6 @@ namespace flex
 
 			mat.material.engineMaterial = createInfo->engineMaterial;
 
-			//if (shader.shader.needIrradianceSampler)
-			//{
-			//	if (mat.irradianceSamplerID == InvalidID)
-			//	{
-			//		if (m_Materials.find(createInfo->irradianceSamplerMatID) == m_Materials.end())
-			//		{
-			//			//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid irradianceSamplerMatID: " + std::to_string(createInfo-//>irradianceSamplerMatID));
-			//			mat.irradianceSamplerID = InvalidID;
-			//		}
-			//		else
-			//		{
-			//			mat.irradianceSamplerID = m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID;
-			//		}
-			//	}
-			//}
 			if (shader.shader.needIrradianceSampler)
 			{
 				if (createInfo->irradianceSamplerMatID == InvalidID)
@@ -617,15 +597,16 @@ namespace flex
 					mat.irradianceSamplerID = m_Materials[createInfo->irradianceSamplerMatID].irradianceSamplerID;
 				}
 			}
+
 			if (shader.shader.needBRDFLUT)
 			{
 				if (m_BRDFTextureHandle.id == 0)
 				{
-					GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false, m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-					GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+					Logger::LogInfo("BRDF LUT has not been generated before material which uses it!");
 				}
 				mat.brdfLUTSamplerID = m_BRDFTextureHandle.id;
 			}
+
 			if (shader.shader.needPrefilteredMap)
 			{
 				if (createInfo->prefilterMapSamplerMatID == InvalidID)
@@ -637,21 +618,6 @@ namespace flex
 					mat.prefilteredMapSamplerID = m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID;
 				}
 			}
-			//if (shader.shader.needPrefilteredMap)
-			//{
-			//	if (mat.prefilteredMapSamplerID == InvalidID)
-			//	{
-			//		if (m_Materials.find(createInfo->prefilterMapSamplerMatID) == m_Materials.end())
-			//		{
-			//			//Logger::LogError("material being initialized in GLRenderer::InitializeMaterial attempting to use invalid prefilterMapSamplerMatID: " + std::to_string(createInfo->prefilterMapSamplerMatID));
-			//			mat.prefilteredMapSamplerID = InvalidID;
-			//		}
-			//		else
-			//		{
-			//			mat.prefilteredMapSamplerID = m_Materials[createInfo->prefilterMapSamplerMatID].prefilteredMapSamplerID;
-			//		}
-			//	}
-			//}
 
 			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
 			mat.material.generatePrefilteredMap = createInfo->generatePrefilteredMap;
@@ -1353,7 +1319,7 @@ namespace flex
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
 
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTextureID, 0);
@@ -1379,10 +1345,10 @@ namespace flex
 			glCullFace(m_1x1_NDC_Quad->cullFace);
 			CheckGLErrorMessages();
 
-			glDepthFunc(m_1x1_NDC_Quad->depthTestReadFunc);
+			glDepthFunc(GL_ALWAYS);
 			CheckGLErrorMessages();
 
-			glDepthMask(m_1x1_NDC_Quad->depthWriteEnable);
+			glDepthMask(GL_FALSE);
 			CheckGLErrorMessages();
 
 			// Render quad
@@ -1520,15 +1486,14 @@ namespace flex
 				// Clear all gbuffers
 				if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
 				{
-					for (size_t i = 0; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
+					// Skip first buffer, it'll be cleared below
+					for (size_t i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
 					{
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, 
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
 						CheckGLErrorMessages();
 
-						glDepthMask(GL_TRUE);
-
-						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+						glClear(GL_COLOR_BUFFER_BIT);
 						CheckGLErrorMessages();
 					}
 				}
@@ -1537,8 +1502,8 @@ namespace flex
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 				CheckGLErrorMessages();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+									   GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 				CheckGLErrorMessages();
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1548,9 +1513,9 @@ namespace flex
 			drawCallInfo.deferred = true;
 			DrawDeferredObjects(gameContext, drawCallInfo);
 			drawCallInfo.deferred = false;
-			DrawGBufferQuad(gameContext, drawCallInfo);
-			//DrawForwardObjects(gameContext, drawCallInfo);
-			
+			DrawGBufferContents(gameContext, drawCallInfo);
+			DrawForwardObjects(gameContext, drawCallInfo);
+
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
@@ -1688,8 +1653,10 @@ namespace flex
 			BatchRenderObjects(gameContext);
 
 			// World-space objects
+			drawCallInfo.deferred = true;
 			DrawDeferredObjects(gameContext, drawCallInfo);
-			DrawGBufferQuad(gameContext, drawCallInfo);
+			drawCallInfo.deferred = false;
+			DrawGBufferContents(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawWorldSpaceSprites(gameContext);
 			DrawOffscreenTexture(gameContext);
@@ -1733,7 +1700,7 @@ namespace flex
 			m_ForwardRenderObjectBatches.clear();
 			m_EditorRenderObjectBatch.clear();
 			
-			// Sort render objects i32o deferred + forward buckets
+			// Sort render objects into deferred + forward buckets
 			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
 			{
 				MaterialID matID = iter->first;
@@ -1789,10 +1756,44 @@ namespace flex
 					m_EditorRenderObjectBatch.push_back(renderObject);
 				}
 			}
+
+#if _DEBUG
+			u32 visibleObjectCount = 0;
+			for (GLRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->gameObject->IsVisible() &&
+					!renderObject->editorObject)
+				{
+					++visibleObjectCount;
+				}
+			}
+
+			u32 accountedForObjectCount = 0;
+			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			{
+				accountedForObjectCount += batch.size();
+			}
+
+			for (std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
+			{
+				accountedForObjectCount += batch.size();
+			}
+
+			if (visibleObjectCount != accountedForObjectCount)
+			{
+				Logger::LogError("BatchRenderObjects didn't account for every visible object!");
+			}
+#endif
 		}
 
 		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
+			if (!drawCallInfo.deferred)
+			{
+				Logger::LogError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferrred!");
+			}
+
 			if (drawCallInfo.renderToCubemap)
 			{
 				// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
@@ -1867,8 +1868,13 @@ namespace flex
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		}
 
-		void GLRenderer::DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawGBufferContents(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
+			if (drawCallInfo.deferred)
+			{
+				Logger::LogError("DrawGBufferQuad was called with a drawCallInfo set to deferred!");
+			}
+
 			if (!m_gBufferQuadVertexBufferData.pDataStart)
 			{
 				// Generate GBuffer if not already generated
@@ -2001,6 +2007,11 @@ namespace flex
 
 		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
+			if (drawCallInfo.deferred)
+			{
+				Logger::LogError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!");
+			}
+
 			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
 			{
 				DrawRenderObjectBatch(gameContext, m_ForwardRenderObjectBatches[i], drawCallInfo);
@@ -2929,8 +2940,10 @@ namespace flex
 				BindTextures(shader, material);
 
 				// TODO: OPTIMIZATION: Create DrawRenderObjectBatchToCubemap rather than check bool
-				if (drawCallInfo.renderToCubemap && renderObject->gameObject->IsStatic())
+				if (drawCallInfo.renderToCubemap)
 				{
+					// renderObject->gameObject->IsStatic()
+
 					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
 					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
@@ -3170,6 +3183,14 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
+		void GLRenderer::RemoveMaterial(MaterialID materialID)
+		{
+			assert(materialID != InvalidMaterialID);
+			assert(materialID < m_Materials.size());
+
+			m_Materials.erase(materialID);
+		}
+
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
 		{
 			auto location = m_LoadedTextures.find(filePath);
@@ -3184,10 +3205,8 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::ReloadShaders(GameContext& gameContext)
+		void GLRenderer::ReloadShaders()
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			UnloadShaders();
 			LoadShaders();
 
@@ -3405,7 +3424,6 @@ namespace flex
 			// BRDF
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.vertexAttributes = 0; // No vertex attributes! Not even position (vertex index determines pos)
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -3820,6 +3838,11 @@ namespace flex
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
 		}
 
+		void GLRenderer::OnSceneChanged(const GameContext& gameContext)
+		{
+			GenerateGBuffer(gameContext);
+		}
+
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{
 			outInfo = {};
@@ -3990,8 +4013,35 @@ namespace flex
 			// TODO: Allow user to not set this and have a backup plan (disable deferred rendering?)
 			assert(m_ReflectionProbeMaterialID != InvalidMaterialID);
 
+			std::string gBufferMatName = "GBuffer material";
+			std::string gBufferName = "GBuffer quad";
+			// Remove existing material if present (this be true when reloading the scene)
+			{
+				MaterialID existingGBufferMatID = InvalidMaterialID;
+				if (GetMaterialID(gBufferMatName, existingGBufferMatID))
+				{
+					RemoveMaterial(existingGBufferMatID);
+				}
+
+				for (auto iter = m_PersistentObjects.begin(); iter != m_PersistentObjects.end(); ++iter)
+				{
+					GameObject* gameObject = *iter;
+					if (gameObject->GetName().compare(gBufferName) == 0)
+					{
+						SafeDelete(gameObject);
+						m_PersistentObjects.erase(iter);
+						break;
+					}
+				}
+
+				if (m_GBufferQuadRenderID != InvalidID)
+				{
+					DestroyRenderObject(m_GBufferQuadRenderID);
+				}
+			}
+
 			MaterialCreateInfo gBufferMaterialCreateInfo = {};
-			gBufferMaterialCreateInfo.name = "GBuffer material";
+			gBufferMaterialCreateInfo.name = gBufferMatName;
 			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
 			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
 			gBufferMaterialCreateInfo.irradianceSamplerMatID = m_ReflectionProbeMaterialID;
@@ -4008,7 +4058,7 @@ namespace flex
 			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
 
 
-			GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", GameObjectType::NONE);
+			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::NONE);
 			m_PersistentObjects.push_back(gBufferQuadGameObject);
 			// Don't render the g buffer normally, we'll handle it separately
 			gBufferQuadGameObject->SetVisible(false);

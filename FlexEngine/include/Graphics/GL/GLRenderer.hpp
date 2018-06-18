@@ -40,13 +40,15 @@ namespace flex
 
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
-			virtual void ReloadShaders(GameContext& gameContext) override;
+			virtual void ReloadShaders() override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
-			
+
+			virtual void OnSceneChanged(const GameContext& gameContext) override;
+
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
@@ -162,7 +164,8 @@ namespace flex
 
 			void BatchRenderObjects(const GameContext& gameContext);
 			void DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
-			void DrawGBufferQuad(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
+			// Draws the GBuffer quad, or the GBuffer cube if rendering to a cubemap
+			void DrawGBufferContents(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawEditorObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
 			void DrawOffscreenTexture(const GameContext& gameContext);
@@ -175,6 +178,8 @@ namespace flex
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
 			void CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, FrameBufferHandle& handle);
+
+			void RemoveMaterial(MaterialID materialID);
 
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;

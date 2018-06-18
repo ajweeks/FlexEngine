@@ -13,7 +13,6 @@ void main()
 	ivec2 texSize = textureSize(in_Texture, 0);
 	vec2 pixelSize = vec2(1.0 / texSize.x, 1.0 / texSize.y);
 
-
 	// Edge detection
 	{
 		//float dx =  (texture(in_Texture, ex_TexCoord).r - texture(in_Texture, ex_TexCoord + vec2(pixelSize.x, 0)).r) +

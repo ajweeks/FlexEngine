@@ -96,6 +96,8 @@ namespace flex
 
 		m_Scenes[m_CurrentSceneIndex]->Initialize(gameContext);
 		m_Scenes[m_CurrentSceneIndex]->PostInitialize(gameContext);
+
+		gameContext.renderer->OnSceneChanged(gameContext);
 	}
 
 	void SceneManager::SetCurrentScene(BaseScene* scene, const GameContext& gameContext)
