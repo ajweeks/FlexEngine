@@ -141,10 +141,7 @@ namespace flex
 			}
 		}
 
-		if (!m_ObjectInteractingWith)
-		{
-			m_Controller->Update(gameContext);
-		}
+		m_Controller->Update(gameContext);
 
 		GameObject::Update(gameContext);
 	}

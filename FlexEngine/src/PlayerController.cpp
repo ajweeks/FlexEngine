@@ -51,7 +51,6 @@ namespace flex
 		{
 			gameContext.cameraManager->SwtichToIndexRelative(gameContext, -1, false);
 		}
-
 		// TODO: Make frame-rate-independent!
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
@@ -75,23 +74,22 @@ namespace flex
 			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldlPosition());
 			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);
 
-			//gameContext.renderer->GetDebugDrawer()->drawLine(rayStart, rayEnd, btVector3(0, 0, 1));
-
 			btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
 			btDiscreteDynamicsWorld* physWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			// TODO: Do several raytests to allow jumping off an edge
 			physWorld->rayTest(rayStart, rayEnd, rayCallback);
 			m_bGrounded = rayCallback.hasHit();
-			
 		}
 
+		if (!m_Player->GetObjectInteractingWith())
+		{
+			real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
+			force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier *
+				-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
 
-		real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
-		force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier *
-			-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
-
-		force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration *inAirMovementMultiplier *
-			-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+			force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration * inAirMovementMultiplier *
+				-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+		}
 
 		btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
 
