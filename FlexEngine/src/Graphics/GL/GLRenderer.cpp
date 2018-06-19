@@ -1621,14 +1621,18 @@ namespace flex
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
-			// TODO: Move keybind catches out to FlexEngine or Renderer base Update and
-			// call renderer-specific code
+			if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
+			{
+				m_bShowImGui = !m_bShowImGui;
+			}
+
 			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
 					GLRenderObject* renderObject = *iter;
-					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
+					if (renderObject && 
+						m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
 						Logger::LogInfo("Capturing reflection probe");
 						CaptureSceneToCubemap(gameContext, renderObject->renderID);
@@ -1678,7 +1682,10 @@ namespace flex
 
 			DrawScreenSpaceSprites(gameContext);
 
-			ImGuiRender();
+			if (m_bShowImGui)
+			{
+				ImGuiRender();
+			}
 
 			SwapBuffers(gameContext);
 		}
@@ -4246,7 +4253,11 @@ namespace flex
 			{
 				m_PhysicsDebugDrawer->ClearLines();
 			}
-			ImGui_ImplGlfwGL3_NewFrame();
+
+			if (m_bShowImGui)
+			{
+				ImGui_ImplGlfwGL3_NewFrame();
+			}
 		}
 
 		btIDebugDraw* GLRenderer::GetDebugDrawer()

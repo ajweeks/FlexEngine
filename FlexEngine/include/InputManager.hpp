@@ -247,7 +247,7 @@ namespace flex
 		GamepadState& GetGamepadState(i32 gamepadIndex);
 
 		i32 GetKeyDown(KeyCode keyCode, bool ignoreImGui = false) const;
-		bool GetKeyPressed(KeyCode keyCode) const;
+		bool GetKeyPressed(KeyCode keyCode, bool ignoreImGui = false) const;
 
 		bool IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button);
 		bool IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button);

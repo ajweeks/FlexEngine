@@ -212,9 +212,9 @@ namespace flex
 		return 0;
 	}
 
-	bool InputManager::GetKeyPressed(KeyCode keyCode) const
+	bool InputManager::GetKeyPressed(KeyCode keyCode, bool ignoreImGui) const
 	{
-		return GetKeyDown(keyCode) == 1;
+		return GetKeyDown(keyCode, ignoreImGui) == 1;
 	}
 
 	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button)

@@ -154,6 +154,8 @@ namespace flex
 
 		PostProcessSettings m_PostProcessSettings;
 
+		bool m_bShowImGui = true;
+
 	private:
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer(const Renderer&) = delete;

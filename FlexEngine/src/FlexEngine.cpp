@@ -418,11 +418,11 @@ namespace flex
 				m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext);
 			}
 
+			m_GameContext.renderer->Update(m_GameContext);
+
 			// TODO: Consolidate functions?
 			m_GameContext.inputManager->Update(m_GameContext);
 			m_GameContext.inputManager->PostUpdate();
-
-			m_GameContext.renderer->Update(m_GameContext);
 
 			m_GameContext.renderer->Draw(m_GameContext);
 		}
@@ -484,14 +484,9 @@ namespace flex
 	{
 		ImGui::ShowDemoWindow();
 
-		static bool windowOpen = true;
-		if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1))
-		{
-			windowOpen = !windowOpen;
-		}
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
-		if (ImGui::Begin(titleCharStr, &windowOpen))
+		if (ImGui::Begin(titleCharStr))
 		{
 			static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
 			static const char* renderNameStr = rendererNameStringStr.c_str();
