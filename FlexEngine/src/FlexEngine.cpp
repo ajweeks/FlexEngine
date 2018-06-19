@@ -177,13 +177,13 @@ namespace flex
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			m_GameContext.window = new vk::VulkanWindowWrapper(titleString + " - Vulkan", m_GameContext);
+			m_GameContext.window = new vk::VulkanWindowWrapper(titleString, m_GameContext);
 		}
 #endif
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			m_GameContext.window = new gl::GLWindowWrapper(titleString + " - OpenGL", m_GameContext);
+			m_GameContext.window = new gl::GLWindowWrapper(titleString, m_GameContext);
 		}
 #endif
 		if (m_GameContext.window == nullptr)
@@ -234,7 +234,7 @@ namespace flex
 
 	void FlexEngine::InitializeWindowAndRenderer()
 	{
-		m_GameContext.window->SetUpdateWindowTitleFrequency(0.4f);
+		m_GameContext.window->SetUpdateWindowTitleFrequency(0.5f);
 		m_GameContext.window->PostInitialize();
 
 		m_GameContext.renderer->Initialize(m_GameContext);

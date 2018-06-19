@@ -2386,9 +2386,6 @@ namespace flex
 
 		bool GLRenderer::LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size)
 		{
-			// TODO: Determine via monitor struct
-			glm::vec2i monitorDPI(300, 300);
-
 			FT_Error error;
 			error = FT_Init_FreeType(&ft);
 			if (error != FT_Err_Ok)
@@ -2416,7 +2413,8 @@ namespace flex
 
 			error = FT_Set_Char_Size(face,
 									 0, size * 64,
-									 monitorDPI.x, monitorDPI.y);
+									 (FT_UInt)gameContext.monitor.DPI.x, 
+									 (FT_UInt)gameContext.monitor.DPI.y);
 
 			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 

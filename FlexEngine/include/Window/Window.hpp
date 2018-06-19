@@ -59,8 +59,6 @@ namespace flex
 		/* Returns whether or not this window is the last window the user interacted with */
 		bool HasFocus() const;
 
-		void SetShowFPSInTitleBar(bool showFPS);
-		void SetShowMSInTitleBar(bool showMS);
 		// Set to 0 to update window title every frame
 		void SetUpdateWindowTitleFrequency(real updateFrequencyinSeconds);
 
@@ -141,7 +139,7 @@ namespace flex
 		CursorMode m_CursorMode = CursorMode::NORMAL;
 
 	private:
-		std::string GenerateWindowTitle(real dt);
+		std::string GenerateWindowTitle(const GameContext& gameContext);
 
 		Window(const Window&) = delete;
 		Window& operator=(const Window&) = delete;

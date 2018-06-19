@@ -135,6 +135,12 @@ namespace flex
 		gameContext.monitor.greenBits = vidMode->greenBits;
 		gameContext.monitor.blueBits = vidMode->blueBits;
 		gameContext.monitor.refreshRate = vidMode->refreshRate;
+		
+		// 25.4mm = 1 inch
+		i32 widthMM, heightMM;
+		glfwGetMonitorPhysicalSize(monitor, &widthMM, &heightMM);
+		gameContext.monitor.DPI = glm::vec2(vidMode->width / (widthMM / 25.4f),
+											vidMode->height / (heightMM / 25.4f));
 
 		glfwGetMonitorContentScale(monitor, &gameContext.monitor.contentScaleX, &gameContext.monitor.contentScaleY);
 	}

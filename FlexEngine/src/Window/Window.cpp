@@ -9,6 +9,8 @@
 #include "Helpers.hpp"
 #include "Logger.hpp"
 #include "Time.hpp"
+#include "GameContext.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -36,7 +38,7 @@ namespace flex
 		if (m_SecondsSinceTitleUpdate >= m_UpdateWindowTitleFrequency)
 		{
 			m_SecondsSinceTitleUpdate = 0.0f;
-			SetWindowTitle(GenerateWindowTitle(gameContext.deltaTime));
+			SetWindowTitle(GenerateWindowTitle(gameContext));
 		}
 
 		if (m_CursorMode == CursorMode::HIDDEN)
@@ -88,34 +90,22 @@ namespace flex
 		return m_HasFocus;
 	}
 
-	std::string Window::GenerateWindowTitle(real dt)
+	std::string Window::GenerateWindowTitle(const GameContext& gameContext)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
+		result += " | " + gameContext.sceneManager->CurrentScene()->GetName();
 		if (m_ShowMSInWindowTitle)
 		{
-			result += "   " + Time::MillisecondsToString(dt, 2);
+			result += " | " + Time::MillisecondsToString(gameContext.deltaTime, 2);
 		}
 		if (m_ShowFPSInWindowTitle)
 		{
-			result += +" | " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
+			result += +" : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
 		}
-		//if (m_ShowFPSInWindowTitle)
-		//{
-		//	result += +" | " + FloatToString(1.0f / dt, 0) + " FPS ";
-		//}
+		
 
 		return result;
-	}
-
-	void Window::SetShowFPSInTitleBar(bool showFPS)
-	{
-		m_ShowFPSInWindowTitle = showFPS;
-	}
-
-	void Window::SetShowMSInTitleBar(bool showMS)
-	{
-		m_ShowMSInWindowTitle = showMS;
 	}
 
 	void Window::SetUpdateWindowTitleFrequency(real updateFrequencyinSeconds)
