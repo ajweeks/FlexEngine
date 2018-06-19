@@ -85,6 +85,14 @@ inline void SafeDelete(T &pObjectToDelete)
 #define PI_DIV_FOUR (glm::quarter_pi<real>())
 #define THREE_OVER_TWO_PI (glm::three_over_two_pi<real>())
 
+#if _DEBUG
+#define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
+#define PROFILE_END(blockName) Profiler::End(blockName);
+#else
+#define PROFILE_BEGIN(blockName)
+#define PROFILE_END(blockName)
+#endif
+
 namespace flex
 {
 	static const std::string RESOURCE_LOCATION = "../../../FlexEngine/resources/";

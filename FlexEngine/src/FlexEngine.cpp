@@ -21,6 +21,7 @@
 #include "Logger.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "Profiler.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -309,10 +310,10 @@ namespace flex
 	void FlexEngine::UpdateAndRender()
 	{
 		m_Running = true;
-		sec frameStartTime = Time::Now();
+		sec frameStartTime = Time::CurrentSeconds();
 		while (m_Running)
 		{
-			sec frameEndTime = Time::Now();
+			sec frameEndTime = Time::CurrentSeconds();
 			sec dt = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
@@ -320,6 +321,8 @@ namespace flex
 
 			m_GameContext.deltaTime = dt;
 			m_GameContext.elapsedTime = frameEndTime;
+
+			Profiler::StartFrame();
 
 			m_GameContext.window->PollEvents();
 
@@ -409,7 +412,12 @@ namespace flex
 			}
 
 			m_GameContext.cameraManager->Update(m_GameContext);
+
+			PROFILE_BEGIN("Scene UpdateAndRender");
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
+			PROFILE_END("Scene UpdateAndRender");
+
+			
 			m_GameContext.window->Update(m_GameContext);
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
@@ -418,13 +426,25 @@ namespace flex
 				m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext);
 			}
 
+			bool bWriteProfilingResultsToFile = 
+				m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
+
 			m_GameContext.renderer->Update(m_GameContext);
 
 			// TODO: Consolidate functions?
 			m_GameContext.inputManager->Update(m_GameContext);
 			m_GameContext.inputManager->PostUpdate();
 
+			PROFILE_BEGIN("Render");
 			m_GameContext.renderer->Draw(m_GameContext);
+			PROFILE_END("Render");
+
+			Profiler::EndFrame(true);
+
+			if (bWriteProfilingResultsToFile)
+			{
+				Profiler::PrintResultsToFile();
+			}
 		}
 	}
 

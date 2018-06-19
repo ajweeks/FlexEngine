@@ -7,14 +7,24 @@
 
 namespace flex
 {
-	sec Time::Now()
+	sec Time::CurrentSeconds()
 	{
 		return (sec)glfwGetTime();
 	}
 
-	real Time::Difference(real start, real end)
+	us Time::CurrentMicoseconds()
 	{
-		return end - start;
+		return ConvertFormats(CurrentSeconds(), Format::SECOND, Format::MICROSECOND);
+	}
+
+	ms Time::CurrentMilliseconds()
+	{
+		return ConvertFormats(CurrentSeconds(), Format::SECOND, Format::MILLISECOND);
+	}
+
+	ns Time::CurrentNanoseconds()
+	{
+		return ConvertFormats(CurrentSeconds(), Format::SECOND, Format::NANOSECOND);
 	}
 
 	real Time::ConvertFormats(real value, Format from, Format to)

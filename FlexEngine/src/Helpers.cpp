@@ -143,11 +143,6 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
-		std::string directoryStr = filePath;
-		ExtractDirectoryString(directoryStr);
-
-		CreateDirectoryRecursive(directoryStr);
-
 		i32 fileMode =std::ios::out | std::ios::trunc;
 		if (bBinaryFile)
 		{

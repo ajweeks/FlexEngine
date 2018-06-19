@@ -4328,6 +4328,9 @@ namespace flex
 
 			std::string fileContents = rootObject.Print(0);
 
+			// TODO: 
+			// CreateDirectoryRecursive()
+
 			WriteFile(m_SettingsFilePathAbs, fileContents, false);
 		}
 
