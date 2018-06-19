@@ -139,7 +139,7 @@ namespace flex
 			real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
 			btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
 			real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
-			real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown;
+			real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown * gameContext.deltaTime;
 			btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
 			transform.setRotation(newRotation);
 		}
