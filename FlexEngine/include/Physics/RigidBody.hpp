@@ -6,6 +6,7 @@ class btRigidBody;
 class btCollisionShape;
 class btMotionState;
 class btTransform;
+class btTypedConstraint;
 
 namespace flex
 {
@@ -17,6 +18,8 @@ namespace flex
 
 		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform);
 		void Destroy(const GameContext& gameContext);
+
+		void AddConstraint(btTypedConstraint* constraint);
 
 		void SetMass(real mass);
 		real GetMass() const;
@@ -45,6 +48,8 @@ namespace flex
 	private:
 		btRigidBody* m_RigidBody = nullptr;
 		btMotionState* m_MotionState = nullptr;
+
+		std::vector<btTypedConstraint*> m_Constraints;
 
 		// Must be 0 if static, non-zero otherwise
 		real m_Mass = 1.0f;

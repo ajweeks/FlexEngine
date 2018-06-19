@@ -63,11 +63,23 @@ namespace flex
 	{
 		if (m_RigidBody)
 		{
+			for (btTypedConstraint* constraint : m_Constraints)
+			{
+				m_RigidBody->removeConstraintRef(constraint);
+				SafeDelete(constraint);
+			}
+
 			gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->removeRigidBody(m_RigidBody);
 			SafeDelete(m_RigidBody);
 		}
 
 		SafeDelete(m_MotionState);
+	}
+
+	void RigidBody::AddConstraint(btTypedConstraint* constraint)
+	{
+		m_RigidBody->addConstraintRef(constraint);
+		m_Constraints.push_back(constraint);
 	}
 
 	void RigidBody::SetMass(real mass)

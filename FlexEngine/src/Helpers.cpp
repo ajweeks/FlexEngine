@@ -180,6 +180,66 @@ namespace flex
 			    dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
 	}
 
+	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	{
+		HANDLE hFind;
+		WIN32_FIND_DATAA findData;
+
+		std::string editedDirPath = directoryPath + "\\*";
+
+		hFind = FindFirstFile(editedDirPath.c_str(), &findData);
+		
+		if (hFind == INVALID_HANDLE_VALUE)
+		{
+			Logger::LogError("Failed to find any file in directory " + editedDirPath);
+			return false;
+		}
+
+		do
+		{
+			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				// Skip over directories
+				//Logger::LogInfo(findData.cFileName);
+			}
+			else
+			{
+				bool foundFileTypeMatches = false;
+				if (fileType == "*")
+				{
+					foundFileTypeMatches = true;
+				}
+				else
+				{
+					std::string foundFileType = Split(findData.cFileName, '.')[1];
+					if (foundFileType == fileType)
+					{
+						foundFileTypeMatches = true;
+					}
+				}
+
+				if (foundFileTypeMatches)
+				{
+					// File size retrieval:
+					//LARGE_INTEGER filesize;
+					//filesize.LowPart = findData.nFileSizeLow;
+					//filesize.HighPart = findData.nFileSizeHigh;
+
+					filePaths.push_back(directoryPath + "\\" + findData.cFileName);
+				}
+			}
+		} while (FindNextFile(hFind, &findData) != 0);
+
+		DWORD dwError = GetLastError();
+		if (dwError != ERROR_NO_MORE_FILES)
+		{
+			Logger::LogError("Error encountered while finding files in directory " + editedDirPath);
+			return false;
+		}
+
+		return true;
+	}
+
 	void StripLeadingDirectories(std::string& filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
@@ -214,6 +274,20 @@ namespace flex
 		{
 			filePath = filePath.substr(0, finalSlash + 1);
 		}
+	}
+
+	void StripFileType(std::string& filePath)
+	{
+		assert(filePath.find('.') != std::string::npos);
+
+		filePath = Split(filePath, '.')[0];
+	}
+
+	void ExtractFileType(std::string& filePathInTypeOut)
+	{
+		assert(filePathInTypeOut.find('.') != std::string::npos);
+
+		filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
 	}
 
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
@@ -648,6 +722,17 @@ namespace flex
 		}
 
 		bool result = (str.substr(0, start.length()).compare(start) == 0);
+		return result;
+	}
+
+	bool EndsWith(const std::string& str, const std::string& end)
+	{
+		if (str.length() < end.length())
+		{
+			return false;
+		}
+
+		bool result = (str.substr(str.length() - end.length()).compare(end) == 0);
 		return result;
 	}
 

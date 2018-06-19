@@ -158,6 +158,61 @@ namespace flex
 		SetCurrentScene(m_CurrentSceneIndex, gameContext);
 	}
 
+	void SceneManager::AddFoundScenes()
+	{
+		const std::string savedDirStr = RelativePathToAbsolute(RESOURCE_LOCATION + "scenes/saved");
+		const std::string defaultDirStr = RelativePathToAbsolute(RESOURCE_LOCATION + "scenes/default");
+		
+		if (!DirectoryExists(savedDirStr))
+		{
+			CreateDirectoryRecursive(savedDirStr);
+		}
+
+		// Find and load all saved scene files
+		std::vector<std::string> foundFileNames;
+		if (FindFilesInDirectory(savedDirStr, foundFileNames, "json"))
+		{
+			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
+			{
+				BaseScene* newScene = new BaseScene(*iter);
+				m_Scenes.push_back(newScene);
+			}
+		}
+
+		// Load the default for any scenes which don't have a corresponding save file
+		foundFileNames.clear();
+		if (FindFilesInDirectory(defaultDirStr, foundFileNames, "json"))
+		{
+			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
+			{
+				std::string fileName = *iter;
+				
+				bool sceneAlreadyAdded = false;
+				for (auto sceneIter = m_Scenes.begin(); sceneIter != m_Scenes.end(); ++sceneIter)
+				{
+					std::string foundFileName = fileName;
+					StripLeadingDirectories(foundFileName);
+					StripFileType(foundFileName);
+
+					std::string sceneFileName = (*sceneIter)->GetJSONFilePath();
+					StripLeadingDirectories(sceneFileName);
+					StripFileType(sceneFileName);
+					if (StartsWith(sceneFileName, foundFileName))
+					{
+						sceneAlreadyAdded = true;
+						break;
+					}
+				}
+
+				if (!sceneAlreadyAdded)
+				{
+					BaseScene* newScene = new BaseScene(*iter);
+					m_Scenes.push_back(newScene);
+				}
+			}
+		}
+	}
+
 	u32 SceneManager::CurrentSceneIndex() const
 	{
 		return m_CurrentSceneIndex;
@@ -175,10 +230,11 @@ namespace flex
 
 	void SceneManager::DestroyAllScenes(const GameContext& gameContext)
 	{
+		m_Scenes[m_CurrentSceneIndex]->Destroy(gameContext);
+
 		auto iter = m_Scenes.begin();
 		while (iter != m_Scenes.end())
 		{
-			(*iter)->Destroy(gameContext);
 			SafeDelete(*iter);
 			iter = m_Scenes.erase(iter);
 		}

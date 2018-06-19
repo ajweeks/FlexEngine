@@ -59,12 +59,20 @@ namespace flex
 
 	bool DirectoryExists(const std::string& absoluteDirectoryPath);
 
+	// Returns true if any files were found
+	// Set fileType to "*" to retrieve all files
+	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
+
 	// Removes all content before final '/' or '\' 
 	void StripLeadingDirectories(std::string& filePath);
 
 	// Removes all content after final '/' or '\'
 	// NOTE: If path describes a directory and doesn't end in a slash, final directory will be removed
 	void ExtractDirectoryString(std::string& filePath);
+
+	void StripFileType(std::string& filePath);
+
+	void ExtractFileType(std::string& filePathInTypeOut);
 
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
 
@@ -160,6 +168,7 @@ namespace flex
 	void ToUpper(std::string& str);
 
 	bool StartsWith(const std::string& str, const std::string& start);
+	bool EndsWith(const std::string& str, const std::string& end);
 
 	std::string GameObjectTypeToString(GameObjectType type);
 	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr);

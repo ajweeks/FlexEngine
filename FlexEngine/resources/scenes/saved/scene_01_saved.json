@@ -83,8 +83,7 @@
 		{
 			"name" : "glass",
 			"shader" : "pbr",
-			//"color multiplier" : "1, 1, 1, 0.1"
-			"const albedo" : "0.45, 0.89, 0.78",
+			"const albedo" : "0.450000, 0.890000, 0.780000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
 			"const ao" : 1.000000,
@@ -92,7 +91,7 @@
 			"enable metallic sampler" : false,
 			"enable roughness sampler" : false,
 			"enable ao sampler" : false
-		},
+		}
 	],
 	"entities" : 
 	[
@@ -102,7 +101,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "5.000000, 16.862020, -9.000000",
+				"position" : "5.000000, 15.533682, -9.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "2.000000, 2.000000, 2.000000"
 			},
@@ -153,8 +152,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.774745, 0.400000, -2.504515",
-				"rotation" : "-0.604327, -0.000000, -1.570797",
+				"position" : "-6.774740, 0.400000, -2.504451",
+				"rotation" : "-0.604340, 0.000000, -1.570796",
 				"scale" : "0.999998, 0.999999, 1.000000"
 			},
 			"mesh" : 
@@ -238,7 +237,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.000000, 2.000000, 8.000000",
+				"position" : "-6.000000, 2.100000, 8.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
@@ -267,7 +266,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "6.000000, 2.000000, -4.000000",
+				"position" : "6.000000, 2.100000, -4.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
@@ -296,8 +295,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "10.000000, 2.000000, -6.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
+				"position" : "10.000000, 0.896525, -5.999999",
+				"rotation" : "0.000007, -0.000008, -0.000001",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"material array index" : 6,
@@ -314,7 +313,7 @@
 			},
 			"window info" : 
 			{
-				"broken" : true
+				"broken" : false
 			}
 		},
 		{

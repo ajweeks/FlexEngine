@@ -54,7 +54,6 @@ namespace flex
 		void CreateWindowAndRenderer();
 		void InitializeWindowAndRenderer();
 		void DestroyWindowAndRenderer();
-		void LoadDefaultScenes();
 		void SetupImGuiStyles();
 		void DrawImGuiObjects();
 

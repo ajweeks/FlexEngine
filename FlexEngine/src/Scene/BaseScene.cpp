@@ -944,19 +944,38 @@ namespace flex
 
 		std::string fileContents = rootSceneObject.Print(0);
 
-		std::string cleanFileName = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
+		std::string fileType = m_JSONFilePath;
+		ExtractFileType(fileType);
+
+		std::string savedFilePathName = m_JSONFilePath;
+		StripLeadingDirectories(savedFilePathName);
+		StripFileType(savedFilePathName);
+
+		bool containsSavedPostfix = EndsWith(savedFilePathName, "_saved");
+
+		savedFilePathName = RESOURCE_LOCATION + "scenes/saved/" + savedFilePathName + 
+			(containsSavedPostfix ? "." : "_saved.") + fileType;
+		std::string cleanFileName = savedFilePathName;
+		StripLeadingDirectories(cleanFileName);
 		Logger::LogInfo("Serializing scene to " + cleanFileName);
 
-		success = WriteFile(m_JSONFilePath, fileContents, false);
+		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
+		success = WriteFile(savedFilePathName, fileContents, false);
 
 		if (success)
 		{
+			if (!containsSavedPostfix)
+			{
+				// Filepath didn't previously contain _saved postfix
+				m_JSONFilePath = savedFilePathName;
+			}
+
 			Logger::LogInfo("Done serializing scene");
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
 		}
 		else
 		{
-			Logger::LogError("Failed to open file for writing: " + m_JSONFilePath + ", Can't serialize scene");
+			Logger::LogError("Failed to open file for writing: " + savedFilePathName + ", Can't serialize scene");
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 	}

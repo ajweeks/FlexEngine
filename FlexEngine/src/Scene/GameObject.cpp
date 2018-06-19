@@ -7,6 +7,7 @@
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
@@ -69,6 +70,22 @@ namespace flex
 
 	void GameObject::PostInitialize(const GameContext& gameContext)
 	{
+		switch (m_Type)
+		{
+		case GameObjectType::RISING_BLOCK:
+		{
+			//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getWorldTransform();
+			//btFixedConstraint* constraint = new btFixedConstraint(
+			//	*m_RigidBody->GetRigidBodyInternal(),
+			//	*m_RigidBody->GetRigidBodyInternal(),
+			//	transform,
+			//	transform);
+			////constraint->setAngularLowerLimit(btVector3(0, 0, 0));
+			////constraint->setAngularUpperLimit(btVector3(0, 0, 0));
+			//m_RigidBody->AddConstraint(constraint);
+		}
+		}
+
 		if (m_RenderID != InvalidRenderID)
 		{
 			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
@@ -108,7 +125,11 @@ namespace flex
 			m_CollisionShape = nullptr;
 		}
 
-		SafeDelete(m_RigidBody);
+		if (m_RigidBody)
+		{
+			m_RigidBody->Destroy(gameContext);
+			SafeDelete(m_RigidBody);
+		}
 	}
 
 	void GameObject::Update(const GameContext& gameContext)
@@ -264,6 +285,7 @@ namespace flex
 				btTransform transform;
 				m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
 				transform.setOrigin(Vec3ToBtVec3(newPos));
+				transform.setRotation(btQuaternion::getIdentity());
 				m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
 			}
 

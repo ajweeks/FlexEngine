@@ -32,6 +32,9 @@ namespace flex
 		void SetPreviousSceneActive(const GameContext& gameContext);
 		void ReloadCurrentScene(const GameContext& gameContext);
 
+		// Adds all scenes found in scenes directory
+		void AddFoundScenes();
+
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
 		u32 GetSceneCount() const;

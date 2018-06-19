@@ -107,7 +107,7 @@ namespace flex
 		m_GameContext.physicsManager->Initialize();
 
 		m_GameContext.sceneManager = new SceneManager();
-		LoadDefaultScenes();
+		m_GameContext.sceneManager->AddFoundScenes();
 
 		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 
@@ -255,18 +255,6 @@ namespace flex
 		}
 	}
 
-	void FlexEngine::LoadDefaultScenes()
-	{
-		BaseScene* scene01 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_01.json");
-		m_GameContext.sceneManager->AddScene(scene01);
-
-		BaseScene* scene02 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_02.json");
-		m_GameContext.sceneManager->AddScene(scene02);
-
-		BaseScene* scene03 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_03.json");
-		m_GameContext.sceneManager->AddScene(scene03);
-	}
-
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
 	{
 		switch (rendererID)
@@ -312,12 +300,9 @@ namespace flex
 
 		SetupImGuiStyles();
 
-		LoadDefaultScenes();
-
+		m_GameContext.sceneManager->AddFoundScenes();
 		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
-
 		m_GameContext.renderer->PostInitialize(m_GameContext);
-
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 	}
 
@@ -344,6 +329,8 @@ namespace flex
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 			}
 
+			// Disabled for now since we only support Open GL
+#if 0
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
 			{
 				m_GameContext.inputManager->Update(m_GameContext);
@@ -352,6 +339,7 @@ namespace flex
 				CycleRenderer();
 				continue;
 			}
+#endif
 
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
@@ -759,11 +747,31 @@ namespace flex
 
 				ImGui::SameLine();
 
+
 				const u32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
 				const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
 				const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() +
 					" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
 				ImGui::TextUnformatted(currentSceneStr.c_str());
+
+				if (ImGui::IsItemHovered())
+				{
+					std::string filePath = m_GameContext.sceneManager->CurrentScene()->GetJSONFilePath();
+					size_t lastSlash = filePath.rfind('\\');
+					if (lastSlash != std::string::npos)
+					{
+						size_t secondLastSlash = filePath.rfind('\\', lastSlash - 1);
+						if (secondLastSlash != std::string::npos)
+						{
+							ImGui::BeginTooltip();
+
+							std::string fileNameWithOneDir = filePath.substr(secondLastSlash);
+							ImGui::TextUnformatted(fileNameWithOneDir.c_str());
+
+							ImGui::EndTooltip();
+						}
+					}
+				}
 
 				ImGui::SameLine();
 				if (ImGui::Button(arrowNextStr))
