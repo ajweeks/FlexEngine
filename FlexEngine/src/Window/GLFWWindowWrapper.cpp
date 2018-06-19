@@ -190,7 +190,10 @@ namespace flex
 	{
 		m_Size = glm::vec2i(width, height);
 		m_FrameBufferSize = m_Size;
-		m_LastWindowedSize = m_Size;
+		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		{
+			m_LastWindowedSize = m_Size;
+		}
 
 		if (m_GameContextRef.renderer)
 		{
