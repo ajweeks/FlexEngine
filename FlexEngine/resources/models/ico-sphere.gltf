@@ -3,9 +3,9 @@
         {
             "bufferView" : 0, 
             "componentType" : 5123, 
-            "count" : 3840, 
+            "count" : 1584, 
             "max" : [
-                747
+                322
             ], 
             "min" : [
                 0
@@ -15,30 +15,30 @@
         {
             "bufferView" : 1, 
             "componentType" : 5126, 
-            "count" : 748, 
+            "count" : 323, 
             "max" : [
-                0.5, 
-                0.5, 
-                0.4999999701976776
+                1.0, 
+                1.0, 
+                1.0
             ], 
             "min" : [
-                -0.4999999701976776, 
-                -0.5, 
-                -0.4999999701976776
+                -1.0, 
+                -1.0, 
+                -1.0
             ], 
             "type" : "VEC3"
         }, 
         {
             "bufferView" : 2, 
             "componentType" : 5126, 
-            "count" : 748, 
+            "count" : 323, 
             "max" : [
-                0.999969482421875, 
+                1.0, 
                 1.0, 
                 1.0
             ], 
             "min" : [
-                -0.999969482421875, 
+                -1.0, 
                 -1.0, 
                 -1.0
             ], 
@@ -47,17 +47,17 @@
         {
             "bufferView" : 3, 
             "componentType" : 5126, 
-            "count" : 748, 
+            "count" : 323, 
             "max" : [
-                0.9207316637039185, 
-                0.6015198826789856, 
-                0.9552431702613831, 
+                1.0, 
+                1.0, 
+                0.06553928554058075, 
                 1.0
             ], 
             "min" : [
-                -0.9207315444946289, 
-                -0.6015199422836304, 
-                -0.9552428126335144, 
+                -1.0, 
+                -1.0, 
+                -0.06553927063941956, 
                 1.0
             ], 
             "type" : "VEC4"
@@ -65,14 +65,14 @@
         {
             "bufferView" : 4, 
             "componentType" : 5126, 
-            "count" : 748, 
+            "count" : 323, 
             "max" : [
-                1.0, 
-                1.0
+                0.9999998211860657, 
+                0.9999998211860657
             ], 
             "min" : [
                 0.0, 
-                5.960464477539063e-08
+                0.0
             ], 
             "type" : "VEC2"
         }
@@ -84,44 +84,44 @@
     "bufferViews" : [
         {
             "buffer" : 0, 
-            "byteLength" : 7680, 
+            "byteLength" : 3168, 
             "byteOffset" : 0, 
             "target" : 34963
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 8976, 
-            "byteOffset" : 7680, 
+            "byteLength" : 3876, 
+            "byteOffset" : 3168, 
             "target" : 34962
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 8976, 
-            "byteOffset" : 16656, 
+            "byteLength" : 3876, 
+            "byteOffset" : 7044, 
             "target" : 34962
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 11968, 
-            "byteOffset" : 25632, 
+            "byteLength" : 5168, 
+            "byteOffset" : 10920, 
             "target" : 34962
         }, 
         {
             "buffer" : 0, 
-            "byteLength" : 5984, 
-            "byteOffset" : 37600, 
+            "byteLength" : 2584, 
+            "byteOffset" : 16088, 
             "target" : 34962
         }
     ], 
     "buffers" : [
         {
-            "byteLength" : 43584, 
+            "byteLength" : 18672, 
             "uri" : "ico-sphere.bin"
         }
     ], 
     "meshes" : [
         {
-            "name" : "Icosphere", 
+            "name" : "Untitled.003", 
             "primitives" : [
                 {
                     "attributes" : {
@@ -138,7 +138,30 @@
     "nodes" : [
         {
             "mesh" : 0, 
-            "name" : "Icosphere"
+            "name" : "Sphere003", 
+            "rotation" : [
+                -2.1855697696082643e-08, 
+                -4.235164736271502e-22, 
+                -0.0, 
+                1.0
+            ], 
+            "scale" : [
+                0.5, 
+                0.5, 
+                0.5
+            ]
+        }, 
+        {
+            "children" : [
+                0
+            ], 
+            "name" : "SceneRoot", 
+            "rotation" : [
+                -3.090862321641907e-08, 
+                0.7071067094802856, 
+                -0.7071068286895752, 
+                -3.0908616110991716e-08
+            ]
         }
     ], 
     "scene" : 0, 
@@ -146,7 +169,7 @@
         {
             "name" : "Scene", 
             "nodes" : [
-                0
+                1
             ]
         }
     ]

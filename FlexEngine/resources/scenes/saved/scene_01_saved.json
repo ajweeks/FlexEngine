@@ -21,16 +21,15 @@
 			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Ref.hdr"
 		},
 		{
-			"name" : "pbr purple",
+			"name" : "pbr textured",
 			"shader" : "pbr",
-			"const albedo" : "0.200000, 0.120000, 0.350000",
+			"const albedo" : "0.000000, 0.000000, 0.000000",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.250000,
+			"const roughness" : 0.550000,
 			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "textures/2k_earth_daymap.jpg"
 		},
 		{
 			"name" : "pbr grey",
@@ -38,11 +37,7 @@
 			"const albedo" : "0.145000, 0.180000, 0.230000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "valve mat",
@@ -50,11 +45,7 @@
 			"const albedo" : "0.100000, 0.260000, 0.100000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.500000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr yellow",
@@ -62,11 +53,7 @@
 			"const albedo" : "0.800000, 0.540000, 0.100000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr chrome",
@@ -74,11 +61,7 @@
 			"const albedo" : "0.800000, 0.800000, 0.800000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "glass",
@@ -86,11 +69,7 @@
 			"const albedo" : "0.450000, 0.890000, 0.780000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		}
 	],
 	"entities" : 
@@ -101,9 +80,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "5.000000, 15.533682, -9.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "2.000000, 2.000000, 2.000000"
+				"position" : "4.999793, 0.900000, -8.999992",
+				"rotation" : "-0.000041, -0.000000, 0.000214",
+				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"mesh" : 
 			{
@@ -152,9 +131,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.774740, 0.400000, -2.504451",
-				"rotation" : "-0.604340, 0.000000, -1.570796",
-				"scale" : "0.999998, 0.999999, 1.000000"
+				"position" : "-6.774524, 0.400000, -2.504793",
+				"rotation" : "-0.604342, 0.000000, -1.570796",
+				"scale" : "0.999993, 0.999999, 0.999999"
 			},
 			"mesh" : 
 			{
@@ -295,9 +274,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "10.000000, 0.896525, -5.999999",
-				"rotation" : "0.000007, -0.000008, -0.000001",
-				"scale" : "1.000000, 1.000000, 1.000000"
+				"position" : "10.001152, 0.900001, -6.001817",
+				"rotation" : "-0.001638, -0.000081, 0.000052",
+				"scale" : "1.000000, 0.999991, 0.999991"
 			},
 			"material array index" : 6,
 			"collider" : 

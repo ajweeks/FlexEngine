@@ -3087,11 +3087,17 @@ namespace flex
 				{
 					if (tex.enabled)
 					{
-
-						GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
-						glActiveTexture(activeTexture);
-						glBindTexture(tex.target, (GLuint)tex.textureID);
-						CheckGLErrorMessages();
+						if (tex.textureID == InvalidID)
+						{
+							Logger::LogError("TextureID is invalid! material: " + glMaterial->material.name + " binding: " + std::to_string(binding));
+						}
+						else
+						{
+							GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
+							glActiveTexture(activeTexture);
+							glBindTexture(tex.target, (GLuint)tex.textureID);
+							CheckGLErrorMessages();
+						}
 					}
 					++binding;
 				}

@@ -146,7 +146,7 @@ namespace flex
 
 	void Window::WindowFocusCallback(i32 focused)
 	{
-		m_HasFocus = focused != 0;
+		m_HasFocus = (focused != 0);
 	}
 
 	void Window::CursorPosCallback(double x, double y)

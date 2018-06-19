@@ -50,13 +50,14 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
-		std::string friendlySceneFilepath = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
-		Logger::LogInfo("Loading scene from JSON file: " + friendlySceneFilepath);
+		std::string friendlySceneFilepath = m_JSONFilePath;
+		StripLeadingDirectories(friendlySceneFilepath);
+		Logger::LogInfo("Loading scene from: " + friendlySceneFilepath);
 
 		JSONObject sceneRootObject;
 		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
 		{
-			Logger::LogError("Failed to parse scene JSON file \"" + m_JSONFilePath + "\"");
+			Logger::LogError("Failed to parse scene file: " + m_JSONFilePath);
 			return;
 		}
 
@@ -538,11 +539,8 @@ namespace flex
 			MeshComponent* sphereMesh = new MeshComponent(matID, newEntity);
 			sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
 
-			MeshComponent::ImportSettings importSettings = {};
-			importSettings.swapNormalYZ = true;
-			importSettings.flipNormalZ = true;
 			assert(newEntity->GetMeshComponent() == nullptr);
-			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", &importSettings);
+			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf");
 			newEntity->SetMeshComponent(sphereMesh);
 			
 			std::string captureName = objectName + "_capture";
@@ -1246,32 +1244,60 @@ namespace flex
 		materialObject.fields.push_back(JSONField("const ao",
 			JSONValue(material.constAO)));
 
-		static const bool defaultEnableAlbedo = true;
+		static const bool defaultEnableAlbedo = false;
 		if (shader.needAlbedoSampler && material.enableAlbedoSampler != defaultEnableAlbedo)
 		{
 			materialObject.fields.push_back(JSONField("enable albedo sampler",
-				JSONValue(material.enableAlbedoSampler)));
+											JSONValue(material.enableAlbedoSampler)));
 		}
 
-		static const bool defaultEnableMetallicSampler = true;
+		static const bool defaultEnableMetallicSampler = false;
 		if (shader.needMetallicSampler && material.enableMetallicSampler != defaultEnableMetallicSampler)
 		{
 			materialObject.fields.push_back(JSONField("enable metallic sampler",
-				JSONValue(material.enableMetallicSampler)));
+											JSONValue(material.enableMetallicSampler)));
 		}
 
-		static const bool defaultEnableRoughness = true;
+		static const bool defaultEnableRoughness = false;
 		if (shader.needRoughnessSampler && material.enableRoughnessSampler != defaultEnableRoughness)
 		{
 			materialObject.fields.push_back(JSONField("enable roughness sampler",
-				JSONValue(material.enableRoughnessSampler)));
+											JSONValue(material.enableRoughnessSampler)));
 		}
 
-		static const bool defaultEnableAO = true;
+		static const bool defaultEnableAO = false;
 		if (shader.needAOSampler && material.enableAOSampler != defaultEnableAO)
 		{
 			materialObject.fields.push_back(JSONField("enable ao sampler",
-				JSONValue(material.enableAOSampler)));
+											JSONValue(material.enableAOSampler)));
+		}
+
+		static const bool defaultGenerateAlbedo = false;
+		if (shader.needAlbedoSampler && material.generateAlbedoSampler != defaultGenerateAlbedo)
+		{
+			materialObject.fields.push_back(JSONField("generate albedo sampler",
+											JSONValue(material.generateAlbedoSampler)));
+		}
+
+		static const bool defaultGenerateMetallicSampler = false;
+		if (shader.needMetallicSampler && material.generateMetallicSampler != defaultGenerateMetallicSampler)
+		{
+			materialObject.fields.push_back(JSONField("generate metallic sampler",
+											JSONValue(material.generateMetallicSampler)));
+		}
+
+		static const bool defaultGenerateRoughness = false;
+		if (shader.needRoughnessSampler && material.generateRoughnessSampler != defaultGenerateRoughness)
+		{
+			materialObject.fields.push_back(JSONField("generate roughness sampler",
+											JSONValue(material.generateRoughnessSampler)));
+		}
+
+		static const bool defaultGenerateAO = false;
+		if (shader.needAOSampler && material.generateAOSampler != defaultGenerateAO)
+		{
+			materialObject.fields.push_back(JSONField("generate ao sampler",
+											JSONValue(material.generateAOSampler)));
 		}
 
 		if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())

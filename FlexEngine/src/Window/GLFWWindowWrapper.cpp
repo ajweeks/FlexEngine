@@ -168,11 +168,7 @@ namespace flex
 	{
 		m_FrameBufferSize = glm::vec2i(width, height);
 		m_Size = m_FrameBufferSize;
-		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
-		{
-			m_LastWindowedSize = m_FrameBufferSize;
-		}
-		// TODO: Call OnFrameBufferSize here?
+		
 		if (m_GameContextRef.renderer)
 		{
 			m_GameContextRef.renderer->OnWindowSizeChanged(width, height);
@@ -414,6 +410,21 @@ namespace flex
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+
+		//if (window->GetFullscreenMode() != Window::FullscreenMode::WINDOWED)
+		//{
+		//	if (focused)
+		//	{
+		//		glfwRestoreWindow(glfwWindow);
+		//		Logger::LogInfo("found");
+		//	}
+		//	else
+		//	{
+		//		glfwIconifyWindow(glfwWindow);
+		//		Logger::LogInfo("lost");
+		//	}
+		//}
+
 		window->WindowFocusCallback(focused);
 	}
 
