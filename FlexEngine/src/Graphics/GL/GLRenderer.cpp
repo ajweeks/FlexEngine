@@ -1033,7 +1033,9 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath)
+		void GLRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext,
+															   MaterialID cubemapMaterialID, 
+															   const std::string& environmentMapPath)
 		{
 			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
@@ -1942,6 +1944,11 @@ namespace flex
 				CheckGLErrorMessages();
 
 				glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+				// Override cam pos with reflection probe pos
+				glm::vec3 reflectionProbePos(cubemapObject->gameObject->GetTransform()->GetWorldPosition());
+				glUniform4fv(cubemapMaterial->uniformIDs.camPos, 1, &reflectionProbePos.x);
+				CheckGLErrorMessages();
 
 				for (i32 face = 0; face < 6; ++face)
 				{
