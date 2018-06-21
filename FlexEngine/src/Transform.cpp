@@ -306,7 +306,7 @@ namespace flex
 		return localPosition;
 	}
 
-	glm::vec3 Transform::GetWorldlPosition() const
+	glm::vec3 Transform::GetWorldPosition() const
 	{
 		return worldPosition;
 	}
@@ -343,7 +343,7 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
-			localPosition = position - parent->GetTransform()->GetWorldlPosition();
+			localPosition = position - parent->GetTransform()->GetWorldPosition();
 		}
 		else
 		{

@@ -32,7 +32,7 @@ namespace flex
 		void SetAsIdentity();
 
 		glm::vec3 GetLocalPosition() const;
-		glm::vec3 GetWorldlPosition() const;
+		glm::vec3 GetWorldPosition() const;
 
 		glm::quat GetLocalRotation() const;
 		glm::quat GetWorldlRotation() const;

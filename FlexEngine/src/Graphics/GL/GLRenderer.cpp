@@ -1066,8 +1066,8 @@ namespace flex
 			CheckGLErrorMessages();
 
 			// Update object's uniforms under this shader's program
-			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false, 
-				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
+			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false,
+							   &m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, false, 
@@ -2976,7 +2976,7 @@ namespace flex
 					CheckGLErrorMessages();
 					
 					// TODO: Test if this is actually correct
-					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldlPosition();
+					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
 					for (size_t face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);

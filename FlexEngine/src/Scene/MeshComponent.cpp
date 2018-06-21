@@ -1010,7 +1010,7 @@ namespace flex
 			glm::vec3 camPos = gameContext.cameraManager->CurrentCamera()->GetPosition();
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
 				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
-				transform->GetWorldlPosition().y,
+				transform->GetWorldPosition().y,
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
 			transform->SetWorldlPosition(newGridPos);
 		}

@@ -52,7 +52,7 @@ namespace flex
 		} break;
 		case GameObjectType::RISING_BLOCK:
 		{
-			m_RisingBlockMembers.startingPos = m_Transform.GetWorldlPosition();
+			m_RisingBlockMembers.startingPos = m_Transform.GetWorldPosition();
 		} break;
 		}
 
@@ -141,14 +141,14 @@ namespace flex
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
-			auto pos = Vec3ToBtVec3(m_Transform.GetWorldlPosition());
+			auto pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
 			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
-			auto pos = Vec3ToBtVec3(m_Transform.GetWorldlPosition());
+			auto pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}

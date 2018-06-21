@@ -71,7 +71,7 @@ namespace flex
 
 		// Grounded check
 		{
-			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldlPosition());
+			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldPosition());
 			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);
 
 			btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
