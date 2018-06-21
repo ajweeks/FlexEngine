@@ -34,6 +34,7 @@ namespace flex
 		//glm::vec3 GetPosition();
 		//glm::quat GetRotation();
 		
+		void SetSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos);
 		void SetPosition(const glm::vec3& pos);
 		void SetRotation(const glm::quat& rot);
 		void SetScale(const glm::vec3& scale);

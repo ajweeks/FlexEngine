@@ -558,26 +558,6 @@ namespace flex
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
 
-
-
-
-
-
-
-			// TODO: FIXME!!!
-			if (m_SkyBoxMesh &&
-				m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
-			{
-				MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
-
-				mat.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
-				mat.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
-			}
-
-
-
-
-
 			mat.material.environmentMapPath = createInfo->environmentMapPath;
 
 			mat.material.generateReflectionProbeMaps = createInfo->generateReflectionProbeMaps;

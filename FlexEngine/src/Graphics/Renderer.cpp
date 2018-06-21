@@ -9,6 +9,7 @@
 
 #include "Logger.hpp"
 #include "Scene/GameObject.hpp"
+#include "Physics/RigidBody.hpp"
 
 namespace flex
 {
@@ -72,14 +73,33 @@ namespace flex
 			if (local)
 			{
 				transform->SetLocalPosition(translation);
-				transform->SetLocalRotation(glm::quat(glm::radians(rotation)));
+				glm::quat newRot(glm::radians(rotation));
+				transform->SetLocalRotation(newRot);
 				transform->SetLocalScale(scale);
+
+				if (gameObject->GetRigidBody())
+				{
+					transform->Update();
+
+					gameObject->GetRigidBody()->SetSRT(transform->GetWorldlScale(),
+													   transform->GetWorldlRotation(),
+													   transform->GetWorldPosition());
+				}
 			}
 			else
 			{
 				transform->SetWorldlPosition(translation);
 				transform->SetWorldRotation(glm::quat(glm::radians(rotation)));
 				transform->SetWorldScale(scale);
+
+				if (gameObject->GetRigidBody())
+				{
+					transform->Update();
+
+					gameObject->GetRigidBody()->SetSRT(transform->GetWorldlScale(),
+													   transform->GetWorldlRotation(),
+													   transform->GetWorldPosition());
+				}
 			}
 		}
 
