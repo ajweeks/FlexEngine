@@ -25,6 +25,9 @@ namespace flex
 		static void LogWarning(const std::wstring& message, bool newline = true);
 		static void LogError(const std::wstring& message, bool newline = true);
 
+		static void LogNewLine();
+		static void LogNewLineW();
+
 		static void Log(const std::string& message, LogLevel logLevel, bool newline);
 		static void Log(const std::wstring& message, LogLevel logLevel, bool newline);
 

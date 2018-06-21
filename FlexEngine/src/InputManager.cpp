@@ -65,12 +65,37 @@ namespace flex
 			}
 		}
 
-		// Mouse buttons
-		for (size_t i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+#if 0 // Log mouse states
+		Logger::LogInfo("states:   ", false);
+		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			if (m_MouseButtons[i].down > 0)
+			Logger::LogInfo(std::string((m_MouseButtonStates & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+		}
+		Logger::LogNewLine();
+
+		Logger::LogInfo("pressed:  ", false);
+		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+		{
+			Logger::LogInfo(std::string((m_MouseButtonsPressed & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+		}
+		Logger::LogNewLine();
+
+		Logger::LogInfo("released: ", false);
+		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+		{
+			Logger::LogInfo(std::string((m_MouseButtonsReleased & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+		}
+		Logger::LogNewLine();
+		Logger::LogNewLine();
+#endif
+
+		// Mouse buttons
+		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+		{
+			m_MouseButtonsPressed  &= ~(1 << i);
+			m_MouseButtonsReleased &= ~(1 << i);
+			if (m_MouseButtonStates & (1 << i))
 			{
-				++m_MouseButtons[i].down;
 				m_MouseButtonDrags[i].endLocation = m_MousePosition;
 			}
 		}
@@ -157,7 +182,7 @@ namespace flex
 		u32 pStates = m_GamepadStates[gamepadIndex].buttonStates;
 
 		m_GamepadStates[gamepadIndex].buttonStates = 0;
-		for (i32 i = 0; i < 15; ++i)
+		for (i32 i = 0; i < GAMEPAD_BUTTON_COUNT; ++i)
 		{
 			m_GamepadStates[gamepadIndex].buttonStates = m_GamepadStates[gamepadIndex].buttonStates | (buttons[i] << i);
 		}
@@ -262,33 +287,29 @@ namespace flex
 		UNREFERENCED_PARAMETER(gameContext);
 		UNREFERENCED_PARAMETER(mods);
 
-		assert((i32)mouseButton < MOUSE_BUTTON_COUNT);
+		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
 
 		if (action == Action::PRESS)
 		{
-			++m_MouseButtons[(i32)mouseButton].down;
+			m_MouseButtonStates    |=  (1 << (u32)mouseButton);
+			m_MouseButtonsPressed  |=  (1 << (u32)mouseButton);
+			m_MouseButtonsReleased &= ~(1 << (u32)mouseButton);
+
 			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
-			//if (button == MouseButton::LEFT)
-			//{
-			//	gameContext.window->SetCursorMode(Window::CursorMode::HIDDEN);
-			//}
 		}
 		else if (action == Action::RELEASE)
 		{
-			m_MouseButtons[(i32)mouseButton].down = 0;
+			m_MouseButtonStates    &= ~(1 << (u32)mouseButton);
+			m_MouseButtonsPressed  &= ~(1 << (u32)mouseButton);
+			m_MouseButtonsReleased |=  (1 << (u32)mouseButton);
+
 			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
-
-			//if (button == MouseButton::LEFT)
-			//{
-			//	gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
-			//}
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.MouseDown[(i32)mouseButton] = m_MouseButtons[(i32)mouseButton].down > 0;
-		io.MouseClicked[(i32)mouseButton] = m_MouseButtons[(i32)mouseButton].down == 1;
+		io.MouseDown[(i32)mouseButton] = (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
 
 	void InputManager::ScrollCallback(double xOffset, double yOffset)
@@ -366,12 +387,31 @@ namespace flex
 
 		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
-		return m_MouseButtons[(i32)mouseButton].down;
+		return (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
 
 	bool InputManager::GetMouseButtonClicked(MouseButton mouseButton) const
 	{
-		return (GetMouseButtonDown(mouseButton) == 1);
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
+			return 0;
+		}
+
+		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+
+		return (m_MouseButtonsPressed & (1 << (i32)mouseButton)) != 0;
+	}
+
+	bool InputManager::GetMouseButtonReleased(MouseButton mouseButton) const
+	{
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
+			return 0;
+		}
+
+		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+
+		return (m_MouseButtonsReleased & (1 << (i32)mouseButton)) != 0;
 	}
 
 	real InputManager::GetVerticalScrollDistance() const
@@ -405,10 +445,9 @@ namespace flex
 		m_ScrollXOffset = 0.0f;
 		m_ScrollYOffset = 0.0f;
 
-		for (i32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
-		{
-			m_MouseButtons[i].down = 0;
-		}
+		m_MouseButtonStates = 0;
+		m_MouseButtonsPressed = 0;
+		m_MouseButtonsReleased = 0;
 
 		gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
 
@@ -426,11 +465,6 @@ namespace flex
 		for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
 		{
 			iter->second.down = 0;
-		}
-
-		for (size_t i = 0; i < MOUSE_BUTTON_COUNT; ++i)
-		{
-			m_MouseButtons[i].down = 0;
 		}
 	}
 

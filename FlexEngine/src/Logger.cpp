@@ -265,4 +265,14 @@ namespace flex
 	{
 		Log(message, LogLevel::LOG_ERROR, newline);
 	}
+
+	void Logger::LogNewLine()
+	{
+		std::cout << std::endl;
+	}
+
+	void Logger::LogNewLineW()
+	{
+		std::wcout << std::endl;
+	}
 } // namespace flex

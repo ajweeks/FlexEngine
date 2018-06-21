@@ -194,7 +194,9 @@ namespace flex
 			D_PAD_UP			= 11,
 			D_PAD_RIGHT			= 12,
 			D_PAD_DOWN			= 13,
-			D_PAD_LEFT			= 14
+			D_PAD_LEFT			= 14,
+
+			_COUNT				= 15
 		};
 
 		enum class GamepadAxis
@@ -266,6 +268,7 @@ namespace flex
 		glm::vec2 GetMouseMovement() const;
 		i32 GetMouseButtonDown(MouseButton mouseButton) const;
 		bool GetMouseButtonClicked(MouseButton mouseButton) const;
+		bool GetMouseButtonReleased(MouseButton mouseButton) const;
 		real GetVerticalScrollDistance() const;
 
 		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
@@ -282,8 +285,11 @@ namespace flex
 
 		std::map<KeyCode, Key> m_Keys;
 
+		static const i32 GAMEPAD_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
-		Key m_MouseButtons[MOUSE_BUTTON_COUNT];
+		u32 m_MouseButtonStates;
+		u32 m_MouseButtonsPressed;
+		u32 m_MouseButtonsReleased;
 		MouseDrag m_MouseButtonDrags[MOUSE_BUTTON_COUNT];
 		glm::vec2 m_MousePosition = { 0, 0 };
 		glm::vec2 m_PrevMousePosition = { 0, 0 };
