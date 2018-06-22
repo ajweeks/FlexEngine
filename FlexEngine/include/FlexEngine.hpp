@@ -77,6 +77,8 @@ namespace flex
 
 		static GameObject* m_CurrentlySelectedObject;
 
+		GameObject* m_TransformGizmo = nullptr;
+
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;
 	};

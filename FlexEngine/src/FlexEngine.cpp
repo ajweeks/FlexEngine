@@ -115,14 +115,41 @@ namespace flex
 
 		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 
+		// Transform gizmo
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Transform";
+			matCreateInfo.shaderName = "color";
+			matCreateInfo.constAlbedo = glm::vec3(1.0f);
+			matCreateInfo.engineMaterial = true;
+			MaterialID transformMatID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
+
+			m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
+			MeshComponent* transformMesh = m_TransformGizmo->SetMeshComponent(new MeshComponent(transformMatID, m_TransformGizmo));
+
+			Material& transformGizmoMaterial = m_GameContext.renderer->GetMaterial(transformMatID);
+			Shader& transformGizmoShader = m_GameContext.renderer->GetShader(transformGizmoMaterial.shaderID);
+			VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
+
+			RenderObjectCreateInfo renderObjectCreateInfo = {};
+			renderObjectCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			renderObjectCreateInfo.depthWriteEnable = false;
+
+			transformMesh->SetRequiredAttributes(requiredVertexAttributes);
+			transformMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo.fbx", nullptr, &renderObjectCreateInfo);
+			m_TransformGizmo->Initialize(m_GameContext);
+			m_TransformGizmo->GetTransform()->Scale(0.1f);
+		}
+
 		m_GameContext.renderer->PostInitialize(m_GameContext);
+
+		m_TransformGizmo->PostInitialize(m_GameContext);
 
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 
 		SetupImGuiStyles();
 
 		m_GameContext.cameraManager->Initialize(m_GameContext);
-
 
 		if (s_AudioSourceIDs.empty())
 		{
@@ -143,6 +170,12 @@ namespace flex
 	void FlexEngine::Destroy()
 	{
 		m_CurrentlySelectedObject = nullptr;
+
+		if (m_TransformGizmo)
+		{
+			m_TransformGizmo->Destroy(m_GameContext);
+			SafeDelete(m_TransformGizmo);
+		}
 
 		if (m_GameContext.sceneManager)
 		{
@@ -445,6 +478,15 @@ namespace flex
 			m_GameContext.cameraManager->Update(m_GameContext);
 
 			PROFILE_BEGIN("Scene UpdateAndRender");
+			if (m_CurrentlySelectedObject)
+			{
+				m_TransformGizmo->SetVisible(true);
+				m_TransformGizmo->GetTransform()->SetWorldlPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
+			}
+			else
+			{
+				m_TransformGizmo->SetVisible(false);
+			}
 			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
 			PROFILE_END("Scene UpdateAndRender");
 
@@ -538,7 +580,7 @@ namespace flex
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-		ImGui::SetNextWindowSize(ImVec2(0.0f, m_GameContext.window->GetFrameBufferSize().y),
+		ImGui::SetNextWindowSize(ImVec2(0.0f, (real)m_GameContext.window->GetFrameBufferSize().y),
 								 ImGuiCond_Always);
 		if (ImGui::Begin(titleCharStr, nullptr, flags))
 		{
@@ -839,9 +881,9 @@ namespace flex
 			}
 
 			m_GameContext.renderer->DrawImGuiItems(m_GameContext);
-		}
-		ImGui::End();
 
+			ImGui::End();
+		}
 	}
 
 	void FlexEngine::Stop()

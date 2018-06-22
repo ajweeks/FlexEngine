@@ -48,7 +48,7 @@ namespace flex
 		io.KeyMap[ImGuiKey_Y] = (i32)KeyCode::KEY_Y; // for text edit CTRL+Y: redo
 		io.KeyMap[ImGuiKey_Z] = (i32)KeyCode::KEY_Z; // for text edit CTRL+Z: undo
 
-		m_ImGuiIniFilepathStr = RESOURCE_LOCATION + "imgui.ini";
+		m_ImGuiIniFilepathStr = RESOURCE_LOCATION + "config/imgui.ini";
 		io.IniFilename  = m_ImGuiIniFilepathStr.c_str();
 
 		ClearAllInputs(gameContext);

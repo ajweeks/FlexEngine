@@ -939,7 +939,8 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			if (createInfo->indices != nullptr)
+			if (createInfo->indices != nullptr &&
+				!createInfo->indices->empty())
 			{
 				renderObject->indexed = true;
 
@@ -4261,8 +4262,11 @@ namespace flex
 
 		void GLRenderer::ImGuiRender()
 		{
-			ImGui::Render();
-			ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+			if (m_bShowImGui)
+			{
+				ImGui::Render();
+				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+			}
 		}
 
 		void GLRenderer::PhysicsDebugRender(const GameContext& gameContext)
@@ -4349,8 +4353,8 @@ namespace flex
 					DrawGameObjectNameAndChildren(rootObjects[i]);
 				}
 
-				ImGui::EndChild();
 			}
+			ImGui::EndChild();
 
 			DrawImGuiLights();
 		}
@@ -4436,12 +4440,6 @@ namespace flex
 			bool bHasChildren = !gameObject->GetChildren().empty();
 			bool bSelected = (gameObject == FlexEngine::GetSelectedObject());
 
-			real indentAmount = ImGui::GetTreeNodeToLabelSpacing();
-			if (bHasChildren)
-			{
-				//ImGui::Unindent(indentAmount);
-			}
-
 			const std::string objectID("##" + objectName + "-visible");
 			bool visible = gameObject->IsVisible();
 			if (ImGui::Checkbox(objectID.c_str(), &visible))
@@ -4449,8 +4447,6 @@ namespace flex
 				gameObject->SetVisible(visible);
 			}
 			ImGui::SameLine();
-
-			//ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, ImGui::GetFontSize() * 3); // Increase spacing to differentiate leaves from expanded contents.
 
 			ImGuiTreeNodeFlags node_flags = 
 				ImGuiTreeNodeFlags_OpenOnArrow |
@@ -4460,7 +4456,6 @@ namespace flex
 			if (bHasChildren)
 			{
 				bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
-				//ImGui::PopStyleVar();
 
 				if (ImGui::IsItemClicked())
 				{
@@ -4478,14 +4473,11 @@ namespace flex
 
 					ImGui::TreePop();
 				}
-
-				//ImGui::Indent(indentAmount);
 			}
 			else
 			{
-				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
+				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 				ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
-				//ImGui::PopStyleVar();
 
 				if (ImGui::IsItemClicked())
 				{

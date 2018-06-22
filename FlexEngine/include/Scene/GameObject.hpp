@@ -47,10 +47,10 @@ namespace flex
 		void SetStatic(bool bStatic);
 
 		bool IsVisible() const;
-		void SetVisible(bool visible, bool effectChildren = true);
+		void SetVisible(bool bVisible, bool effectChildren = true);
 
 		bool IsVisibleInSceneExplorer() const;
-		void SetVisibleInSceneExplorer(bool visibleInSceneExplorer);
+		void SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer);
 
 		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);
 		btCollisionShape* GetCollisionShape() const;

@@ -475,15 +475,18 @@ namespace flex
 		return m_bVisible;
 	}
 
-	void GameObject::SetVisible(bool visible, bool effectChildren)
+	void GameObject::SetVisible(bool bVisible, bool effectChildren)
 	{
-		m_bVisible = visible;
-
-		if (effectChildren)
+		if (m_bVisible != bVisible)
 		{
-			for (GameObject* child : m_Children)
+			m_bVisible = bVisible;
+
+			if (effectChildren)
 			{
-				child->SetVisible(visible, effectChildren);
+				for (GameObject* child : m_Children)
+				{
+					child->SetVisible(bVisible, effectChildren);
+				}
 			}
 		}
 	}
@@ -493,9 +496,12 @@ namespace flex
 		return m_bVisibleInSceneExplorer;
 	}
 
-	void GameObject::SetVisibleInSceneExplorer(bool visibleInSceneExplorer)
+	void GameObject::SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer)
 	{
-		m_bVisibleInSceneExplorer = visibleInSceneExplorer;
+		if (m_bVisibleInSceneExplorer != bVisibleInSceneExplorer)
+		{
+			m_bVisibleInSceneExplorer = bVisibleInSceneExplorer;
+		}
 	}
 
 	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)

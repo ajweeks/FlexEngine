@@ -362,7 +362,7 @@ bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window)
 	//io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
 	//io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
 	//io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
-	io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
+	//io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
 
 	io.SetClipboardTextFn = ImGui_ImplGlfwGL3_SetClipboardText;
 	io.GetClipboardTextFn = ImGui_ImplGlfwGL3_GetClipboardText;

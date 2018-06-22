@@ -71,7 +71,7 @@ namespace flex
 
 	void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
 	{
-		m_RequiredAttributes |= requiredAttributes;
+		m_RequiredAttributes = requiredAttributes;
 	}
 
 	bool MeshComponent::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
@@ -154,20 +154,6 @@ namespace flex
 			meshes[i] = scene->mMeshes[i];
 		}
 
-		//if (m_Name.empty())
-		//{
-		//	m_Name = meshes[0]->mName.C_Str();
-
-		//	if (m_Name.empty())
-		//	{
-		//		auto filePathParts = Split(filepath, '.');
-		//		std::string friendlyFileName = filePathParts[filePathParts.size() - 1];
-		//		StripLeadingDirectories(friendlyFileName);
-
-		//		m_Name = "Mesh prefab - " + friendlyFileName;
-		//	}
-		//}
-
 		size_t totalVertCount = 0;
 
 		for (aiMesh* mesh : meshes)
@@ -175,15 +161,13 @@ namespace flex
 			const size_t numMeshVerts = mesh->mNumVertices;
 			totalVertCount += numMeshVerts;
 
-			// Cached bools per-mesh
 			const bool meshHasVertexColors0 = mesh->HasVertexColors(0);
 			const bool meshHasTangentsAndBitangents = mesh->HasTangentsAndBitangents();
 			const bool meshHasNormals = mesh->HasNormals();
 			const bool meshHasTexCoord0 = mesh->HasTextureCoords(0);
-
-			// All meshes need positions
+			
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-
+			
 			for (size_t i = 0; i < numMeshVerts; ++i)
 			{
 				// Position
@@ -985,11 +969,7 @@ namespace flex
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-
-		//if (m_Name.empty() || defaultName.empty())
-		//{
-		//	m_Name = defaultName;
-		//}
+		renderObjectCreateInfo.indices = &m_Indices;
 
 		RenderID renderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
