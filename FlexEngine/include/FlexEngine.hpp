@@ -9,6 +9,8 @@
 
 namespace flex
 {
+	class GameObject;
+
 	class FlexEngine final
 	{
 	public:
@@ -19,6 +21,9 @@ namespace flex
 		void UpdateAndRender();
 		void Stop();
 		
+		static GameObject* GetSelectedObject();
+		static void SetSelectedObject(GameObject* gameObject);
+
 		static std::string EngineVersionString();
 
 		static const u32 EngineVersionMajor;
@@ -60,6 +65,7 @@ namespace flex
 		std::string RenderIDToString(RendererID rendererID) const;
 
 		u32 m_RendererCount = 0;
+		bool m_Running = false;
 
 		GameContext m_GameContext = {};
 
@@ -69,7 +75,7 @@ namespace flex
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
-		bool m_Running = false;
+		static GameObject* m_CurrentlySelectedObject;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

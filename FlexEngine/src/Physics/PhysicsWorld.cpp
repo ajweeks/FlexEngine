@@ -130,11 +130,11 @@ namespace flex
 				{
 					pickedBody = body;
 
-					pickedBody->activate(true);
-					pickedBody->clearForces();
-
-					btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
-					pickedBody->applyForce({ 0, 600, 0 }, localPivot);
+					//pickedBody->activate(true);
+					//pickedBody->clearForces();
+					//
+					//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
+					//pickedBody->applyForce({ 0, 600, 0 }, localPivot);
 
 					//savedState = pickedBody->getActivationState();
 					//pickedBody->setActivationState(DISABLE_DEACTIVATION);

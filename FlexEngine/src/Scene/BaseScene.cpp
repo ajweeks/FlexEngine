@@ -168,7 +168,6 @@ namespace flex
 			AddChild(m_WorldOrigin);
 		}
 
-		// Players
 		m_Player0 = new Player(0);
 		AddChild(m_Player0);
 

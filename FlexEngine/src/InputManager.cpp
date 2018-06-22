@@ -304,7 +304,6 @@ namespace flex
 			m_MouseButtonsPressed  &= ~(1 << (u32)mouseButton);
 			m_MouseButtonsReleased |=  (1 << (u32)mouseButton);
 
-			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
 		}
 
@@ -449,6 +448,11 @@ namespace flex
 		m_MouseButtonsPressed = 0;
 		m_MouseButtonsReleased = 0;
 
+		for (i32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+		{
+			m_MouseButtonDrags[i].startLocation = glm::vec2(0.0f);
+			m_MouseButtonDrags[i].endLocation = glm::vec2(0.0f);
+		}
 		gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
 
 

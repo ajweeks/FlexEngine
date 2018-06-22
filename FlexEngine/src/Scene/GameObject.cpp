@@ -58,8 +58,7 @@ namespace flex
 
 		if (m_RigidBody && m_CollisionShape)
 		{
-			btTransform startingTransform = TransformToBtTransform(m_Transform);
-			m_RigidBody->Initialize(m_CollisionShape, gameContext, startingTransform);
+			m_RigidBody->Initialize(m_CollisionShape, gameContext, m_Transform);
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)

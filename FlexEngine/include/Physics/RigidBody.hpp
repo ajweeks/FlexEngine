@@ -16,7 +16,7 @@ namespace flex
 		RigidBody(i32 group = 1, i32 mask = 1);
 		virtual ~RigidBody();
 
-		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform);
+		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, const Transform& transform);
 		void Destroy(const GameContext& gameContext);
 
 		void AddConstraint(btTypedConstraint* constraint);

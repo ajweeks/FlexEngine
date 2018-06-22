@@ -94,7 +94,8 @@ namespace flex
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
 			void ImGuiRender();
-			void DrawImGuiForGameObjectAndChildren(GameObject* gameObject);
+			void DrawGameObjectImGui(GameObject* gameObject);
+			void DrawGameObjectNameAndChildren(GameObject* gameObject);
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 

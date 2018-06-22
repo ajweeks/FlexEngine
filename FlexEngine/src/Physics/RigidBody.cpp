@@ -24,7 +24,7 @@ namespace flex
 	{
 	}
 
-	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, btTransform& startingTransform)
+	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, const Transform& transform)
 	{
 		btVector3 localInertia(0, 0, 0);
 		if (!m_bStatic)
@@ -37,6 +37,7 @@ namespace flex
 			assert(m_Mass == 0); // Static objects must have a mass of 0!
 		}
 
+		btTransform startingTransform = TransformToBtTransform(transform);
 		m_MotionState = new btDefaultMotionState(startingTransform);
 		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
 
@@ -57,6 +58,8 @@ namespace flex
 		m_RigidBody->setFriction(m_Friction);
 
 		gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
+
+		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(transform.GetWorldlScale()));
 	}
 
 	void RigidBody::Destroy(const GameContext& gameContext)

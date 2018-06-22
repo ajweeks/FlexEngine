@@ -23,6 +23,7 @@
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "FlexEngine.hpp"
 #include "GameContext.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
@@ -4325,24 +4326,36 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			if (ImGui::CollapsingHeader("Scene info"))
-			{
-				if (ImGui::TreeNode("Render Objects"))
-				{
-					std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
-					for (size_t i = 0; i < rootObjects.size(); ++i)
-					{
-						DrawImGuiForGameObjectAndChildren(rootObjects[i]);
-					}
+			GameObject* selectedObject = FlexEngine::GetSelectedObject();
 
-					ImGui::TreePop();
+			real selectedObjectAreaHeight = 220;
+			ImGui::BeginChild("SelectedObject",
+							  ImVec2(ImGui::GetWindowContentRegionWidth(), selectedObjectAreaHeight),
+							  true);
+
+			if (selectedObject)
+			{
+				DrawGameObjectImGui(selectedObject);
+			}
+
+			ImGui::EndChild();
+
+			ImGui::Text("Render Objects");
+			if (ImGui::BeginChild("Render Objects"))
+			{
+				std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
+				for (size_t i = 0; i < rootObjects.size(); ++i)
+				{
+					DrawGameObjectNameAndChildren(rootObjects[i]);
 				}
 
-				DrawImGuiLights();
+				ImGui::EndChild();
 			}
+
+			DrawImGuiLights();
 		}
 
-		void GLRenderer::DrawImGuiForGameObjectAndChildren(GameObject* gameObject)
+		void GLRenderer::DrawGameObjectImGui(GameObject* gameObject)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
@@ -4364,6 +4377,71 @@ namespace flex
 				objectName = std::string(gameObject->GetName());
 			}
 
+			ImGui::Text(objectName.c_str());
+
+			const std::string objectID("Visible##" + objectName);
+			bool visible = gameObject->IsVisible();
+			if (ImGui::Checkbox(objectID.c_str(), &visible))
+			{
+				gameObject->SetVisible(visible);
+			}
+
+			if (renderObject)
+			{
+				const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
+				ImGui::TextUnformatted(renderIDStr.c_str());
+			}
+
+			DrawImGuiForRenderObjectCommon(gameObject);
+
+			if (renderObject)
+			{
+				GLMaterial& material = m_Materials[renderObject->materialID];
+				GLShader& shader = m_Shaders[material.material.shaderID];
+
+				std::string matNameStr = "Material: " + material.material.name;
+				std::string shaderNameStr = "Shader: " + shader.shader.name;
+				ImGui::TextUnformatted(matNameStr.c_str());
+				ImGui::TextUnformatted(shaderNameStr.c_str());
+
+				if (material.uniformIDs.enableIrradianceSampler)
+				{
+					ImGui::Checkbox("Enable Irradiance Sampler", &material.material.enableIrradianceSampler);
+				}
+			}
+		}
+
+		void GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject)
+		{
+			RenderID renderID = gameObject->GetRenderID();
+			GLRenderObject* renderObject = nullptr;
+			std::string objectName;
+			if (renderID != InvalidRenderID)
+			{
+				renderObject = GetRenderObject(renderID);
+				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
+
+				if (!gameObject->IsVisibleInSceneExplorer())
+				{
+					return;
+				}
+			}
+			else
+			{
+				// TODO: FIXME: This will fail if multiple objects share the same name
+				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
+				objectName = std::string(gameObject->GetName());
+			}
+
+			bool bHasChildren = !gameObject->GetChildren().empty();
+			bool bSelected = (gameObject == FlexEngine::GetSelectedObject());
+
+			real indentAmount = ImGui::GetTreeNodeToLabelSpacing();
+			if (bHasChildren)
+			{
+				//ImGui::Unindent(indentAmount);
+			}
+
 			const std::string objectID("##" + objectName + "-visible");
 			bool visible = gameObject->IsVisible();
 			if (ImGui::Checkbox(objectID.c_str(), &visible))
@@ -4371,41 +4449,48 @@ namespace flex
 				gameObject->SetVisible(visible);
 			}
 			ImGui::SameLine();
-			if (ImGui::TreeNode(objectName.c_str()))
+
+			//ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, ImGui::GetFontSize() * 3); // Increase spacing to differentiate leaves from expanded contents.
+
+			ImGuiTreeNodeFlags node_flags = 
+				ImGuiTreeNodeFlags_OpenOnArrow |
+				ImGuiTreeNodeFlags_OpenOnDoubleClick | 
+				(bSelected ? ImGuiTreeNodeFlags_Selected : 0);
+
+			if (bHasChildren)
 			{
-				if (renderObject)
+				bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+				//ImGui::PopStyleVar();
+
+				if (ImGui::IsItemClicked())
 				{
-					const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
-					ImGui::TextUnformatted(renderIDStr.c_str());
+					FlexEngine::SetSelectedObject(gameObject);
 				}
-
-				DrawImGuiForRenderObjectCommon(gameObject);
-
-				if (renderObject)
+				if (node_open)
 				{
-					GLMaterial& material = m_Materials[renderObject->materialID];
-					GLShader& shader = m_Shaders[material.material.shaderID];
-
-					std::string matNameStr = "Material: " + material.material.name;
-					std::string shaderNameStr = "Shader: " + shader.shader.name;
-					ImGui::TextUnformatted(matNameStr.c_str());
-					ImGui::TextUnformatted(shaderNameStr.c_str());
-
-					if (material.uniformIDs.enableIrradianceSampler)
+					ImGui::Indent();
+					const std::vector<GameObject*>& children = gameObject->GetChildren();
+					for (GameObject* child : children)
 					{
-						ImGui::Checkbox("Enable Irradiance Sampler", &material.material.enableIrradianceSampler);
+						DrawGameObjectNameAndChildren(child);
 					}
+					ImGui::Unindent();
+
+					ImGui::TreePop();
 				}
 
-				ImGui::Indent();
-				const std::vector<GameObject*>& children = gameObject->GetChildren();
-				for (GameObject* child : children)
+				//ImGui::Indent(indentAmount);
+			}
+			else
+			{
+				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
+				ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+				//ImGui::PopStyleVar();
+
+				if (ImGui::IsItemClicked())
 				{
-					DrawImGuiForGameObjectAndChildren(child);
+					FlexEngine::SetSelectedObject(gameObject);
 				}
-				ImGui::Unindent();
-
-				ImGui::TreePop();
 			}
 		}
 

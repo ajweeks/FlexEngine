@@ -11,6 +11,7 @@
 #include <imgui_internal.h>
 
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
@@ -22,9 +23,10 @@
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Profiler.hpp"
-#include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Time.hpp"
 
 namespace flex
@@ -35,6 +37,7 @@ namespace flex
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
+	GameObject* FlexEngine::m_CurrentlySelectedObject = nullptr;
 
 	FlexEngine::FlexEngine()
 	{
@@ -139,6 +142,8 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
+		m_CurrentlySelectedObject = nullptr;
+
 		if (m_GameContext.sceneManager)
 		{
 			m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
@@ -273,6 +278,7 @@ namespace flex
 		// TODO? ??
 		//m_GameContext.renderer->InvalidateFontObjects();
 
+		m_CurrentlySelectedObject = nullptr;
 		m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
 		DestroyWindowAndRenderer();
 
@@ -351,20 +357,42 @@ namespace flex
 			DrawImGuiObjects();
 
 			// TODO: Bring keybindings out to external file (or at least variables)
-			if (m_GameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::LEFT) &&
-				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+			if (m_GameContext.inputManager->GetMouseButtonReleased(InputManager::MouseButton::LEFT))
 			{
-				glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
+				glm::vec2 dragDist = m_GameContext.inputManager->GetMouseDragDistance(InputManager::MouseButton::LEFT);
+				real maxMoveDist = 1.0f;
 
-				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
-
-				btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
-				btVector3 rayStart(cameraPos);
-				btVector3 rayEnd = physicsWorld->GenerateRayFromScreenPos(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
-
-				if (physicsWorld->PickBody(rayStart, rayEnd) != nullptr)
+				// If mouse hasn't moved then the user clicked on something - select it
+				if (glm::length(dragDist) < maxMoveDist)
 				{
-					m_GameContext.inputManager->ClearMouseInput(m_GameContext);
+					glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
+
+					PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
+
+					btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
+					btVector3 rayStart(cameraPos);
+					btVector3 rayEnd = physicsWorld->GenerateRayFromScreenPos(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
+
+					btRigidBody* pickedBody = physicsWorld->PickBody(rayStart, rayEnd);
+
+					if (pickedBody != nullptr)
+					{
+						GameObject* pickedGameObject = (GameObject*)(pickedBody->getUserPointer());
+
+						if (pickedGameObject)
+						{
+							m_CurrentlySelectedObject = pickedGameObject;
+							m_GameContext.inputManager->ClearMouseInput(m_GameContext);
+						}
+						else
+						{
+							m_CurrentlySelectedObject = nullptr;
+						}
+					}
+					else
+					{
+						m_CurrentlySelectedObject = nullptr;
+					}
 				}
 			}
 
@@ -375,11 +403,13 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
+				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
+				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
@@ -393,6 +423,7 @@ namespace flex
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
+				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
@@ -458,7 +489,7 @@ namespace flex
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
 		style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
+		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.85f);
 		style.Colors[ImGuiCol_ChildWindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 		style.Colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
 		style.Colors[ImGuiCol_Border] = ImVec4(0.70f, 0.70f, 0.70f, 0.40f);
@@ -506,7 +537,10 @@ namespace flex
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
-		if (ImGui::Begin(titleCharStr))
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		ImGui::SetNextWindowSize(ImVec2(0.0f, m_GameContext.window->GetFrameBufferSize().y),
+								 ImGuiCond_Always);
+		if (ImGui::Begin(titleCharStr, nullptr, flags))
 		{
 			static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
 			static const char* renderNameStr = rendererNameStringStr.c_str();
@@ -813,6 +847,16 @@ namespace flex
 	void FlexEngine::Stop()
 	{
 		m_Running = false;
+	}
+
+	GameObject* FlexEngine::GetSelectedObject()
+	{
+		return m_CurrentlySelectedObject;
+	}
+
+	void FlexEngine::SetSelectedObject(GameObject* gameObject)
+	{
+		m_CurrentlySelectedObject = gameObject;
 	}
 	
 	std::string FlexEngine::EngineVersionString()
