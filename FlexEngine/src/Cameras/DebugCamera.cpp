@@ -8,6 +8,7 @@
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
+#include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
 #include "Window/Window.hpp"
@@ -62,7 +63,8 @@ namespace flex
 		if (m_EnableKeyboardMovement)
 		{
 			glm::vec2 look(0.0f);
-			if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
+			if (!gameContext.engineInstance->IsDraggingGizmo() &&
+				gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
 			{
 				look = gameContext.inputManager->GetMouseMovement();
 				look.y = -look.y;
@@ -104,7 +106,7 @@ namespace flex
 				}
 			}
 
-			if (gameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::MIDDLE))
+			if (gameContext.inputManager->GetMouseButtonPressed(InputManager::MouseButton::MIDDLE))
 			{
 				m_DragStartPosition = m_Position;
 			}

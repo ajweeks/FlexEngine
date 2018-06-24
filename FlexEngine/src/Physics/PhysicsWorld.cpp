@@ -7,6 +7,7 @@
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
@@ -104,7 +105,7 @@ namespace flex
 		return rayDirection;
 	}
 
-	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayStart, const btVector3& rayEnd)
+	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayStart, const btVector3& rayEnd, u32 collisionType, const std::string& requiredTag)
 	{
 		//btVector3 hitPos(0.0f, 0.0f, 0.0f);
 		//real pickingDist = 0.0f;
@@ -112,33 +113,44 @@ namespace flex
 		//i32 savedState = 0;
 		//btTypedConstraint* pickedConstraint = nullptr;
 
-		btCollisionWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+		btCollisionWorld::AllHitsRayResultCallback rayCallback(rayStart, rayEnd);
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
 		if (rayCallback.hasHit())
 		{
-			btVector3 pickPos = rayCallback.m_hitPointWorld;
-			btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
-			if (body)
+			for (i32 i = 0; i < rayCallback.m_hitPointWorld.size(); ++i)
 			{
-				//if (!(body->isStaticObject() || body->isKinematicObject()))
+				btVector3 pickPos = rayCallback.m_hitPointWorld[i];
+				btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
+				if (body) // &&
+					//(body->getBroadphaseProxy()->m_collisionFilterGroup & collisionType))
 				{
-					pickedBody = body;
+					//if (!(body->isStaticObject() || body->isKinematicObject()))
+					{
+						GameObject* pickedGameObject = (GameObject*)body->getUserPointer();
 
-					//pickedBody->activate(true);
-					//pickedBody->clearForces();
-					//
-					//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
-					//pickedBody->applyForce({ 0, 600, 0 }, localPivot);
+						if (pickedGameObject)
+						{
+							pickedBody = body;
+							break;
+						}
 
-					//savedState = pickedBody->getActivationState();
-					//pickedBody->setActivationState(DISABLE_DEACTIVATION);
 
-					//btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body, localPivot);
-					//dynamicsWorld->addConstraint(p2p, true);
-					//pickedConstraint = p2p;
-					//btScalar mousePickClamping = 30.f;
-					//p2p->m_setting.m_impulseClamp = mousePickClamping;
-					//p2p->m_setting.m_tau = 0.001f;
+						//pickedBody->activate(true);
+						//pickedBody->clearForces();
+						//
+						//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
+						//pickedBody->applyForce({ 0, 600, 0 }, localPivot);
+
+						//savedState = pickedBody->getActivationState();
+						//pickedBody->setActivationState(DISABLE_DEACTIVATION);
+
+						//btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body, localPivot);
+						//dynamicsWorld->addConstraint(p2p, true);
+						//pickedConstraint = p2p;
+						//btScalar mousePickClamping = 30.f;
+						//p2p->m_setting.m_impulseClamp = mousePickClamping;
+						//p2p->m_setting.m_tau = 0.001f;
+					}
 				}
 			}
 			//hitPos = pickPos;

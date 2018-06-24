@@ -4330,7 +4330,7 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			GameObject* selectedObject = FlexEngine::GetSelectedObject();
+			GameObject* selectedObject = gameContext.engineInstance->GetSelectedObject();
 
 			ImGui::NewLine();
 
@@ -4352,7 +4352,7 @@ namespace flex
 				std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
 				for (size_t i = 0; i < rootObjects.size(); ++i)
 				{
-					DrawGameObjectNameAndChildren(rootObjects[i]);
+					DrawGameObjectNameAndChildren(rootObjects[i], gameContext);
 				}
 
 			}
@@ -4412,7 +4412,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject)
+		void GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject, const GameContext& gameContext)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
@@ -4430,7 +4430,7 @@ namespace flex
 			}
 
 			bool bHasChildren = !gameObject->GetChildren().empty();
-			bool bSelected = (gameObject == FlexEngine::GetSelectedObject());
+			bool bSelected = (gameObject == gameContext.engineInstance->GetSelectedObject());
 
 			bool visible = gameObject->IsVisible();
 			const std::string objectVisibleLabel(objectID + "-visible");
@@ -4451,7 +4451,7 @@ namespace flex
 
 				if (ImGui::IsItemClicked())
 				{
-					FlexEngine::SetSelectedObject(gameObject);
+					gameContext.engineInstance->SetSelectedObject(gameObject);
 				}
 				if (node_open)
 				{
@@ -4459,7 +4459,7 @@ namespace flex
 					const std::vector<GameObject*>& children = gameObject->GetChildren();
 					for (GameObject* child : children)
 					{
-						DrawGameObjectNameAndChildren(child);
+						DrawGameObjectNameAndChildren(child, gameContext);
 					}
 					ImGui::Unindent();
 
@@ -4473,7 +4473,7 @@ namespace flex
 
 				if (ImGui::IsItemClicked())
 				{
-					FlexEngine::SetSelectedObject(gameObject);
+					gameContext.engineInstance->SetSelectedObject(gameObject);
 				}
 			}
 		}

@@ -21,8 +21,10 @@ namespace flex
 		void UpdateAndRender();
 		void Stop();
 		
-		static GameObject* GetSelectedObject();
-		static void SetSelectedObject(GameObject* gameObject);
+		GameObject* GetSelectedObject();
+		void SetSelectedObject(GameObject* gameObject);
+
+		bool IsDraggingGizmo() const;
 
 		static std::string EngineVersionString();
 
@@ -43,6 +45,7 @@ namespace flex
 		};
 
 		static AudioSourceID GetAudioSourceID(SoundEffect effect);
+
 
 	private:
 		enum class RendererID
@@ -67,6 +70,8 @@ namespace flex
 		void PreSceneChange();
 		void OnSceneChanged();
 
+		void DeselectCurrentlySelectedObject();
+
 		u32 m_RendererCount = 0;
 		bool m_Running = false;
 
@@ -78,10 +83,16 @@ namespace flex
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
-		static GameObject* m_CurrentlySelectedObject;
+		GameObject* m_CurrentlySelectedObject;
 
 		GameObject* m_TransformGizmo = nullptr;
-		MaterialID m_TransformGizmoMatID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;
+
+		glm::vec3 m_TransformGizmoDragStartPos;
+		bool m_bDraggingGizmo = false;
+		i32 m_DraggingAxisIndex = -1;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

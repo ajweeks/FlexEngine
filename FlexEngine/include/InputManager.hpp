@@ -266,8 +266,8 @@ namespace flex
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		glm::vec2 GetMouseMovement() const;
-		i32 GetMouseButtonDown(MouseButton mouseButton) const;
-		bool GetMouseButtonClicked(MouseButton mouseButton) const;
+		bool GetMouseButtonDown(MouseButton mouseButton) const;
+		bool GetMouseButtonPressed(MouseButton mouseButton) const;
 		bool GetMouseButtonReleased(MouseButton mouseButton) const;
 		real GetVerticalScrollDistance() const;
 

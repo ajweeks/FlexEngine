@@ -377,7 +377,7 @@ namespace flex
 		return m_MousePosition - m_PrevMousePosition;
 	}
 
-	i32 InputManager::GetMouseButtonDown(MouseButton mouseButton) const
+	bool InputManager::GetMouseButtonDown(MouseButton mouseButton) const
 	{
 		if (ImGui::GetIO().WantCaptureMouse)
 		{
@@ -389,7 +389,7 @@ namespace flex
 		return (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
 
-	bool InputManager::GetMouseButtonClicked(MouseButton mouseButton) const
+	bool InputManager::GetMouseButtonPressed(MouseButton mouseButton) const
 	{
 		if (ImGui::GetIO().WantCaptureMouse)
 		{

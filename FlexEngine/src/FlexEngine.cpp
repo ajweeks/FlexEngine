@@ -41,7 +41,6 @@ namespace flex
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
-	GameObject* FlexEngine::m_CurrentlySelectedObject = nullptr;
 
 	FlexEngine::FlexEngine()
 	{
@@ -79,6 +78,8 @@ namespace flex
 		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
 
 		//Logger::SetLogWarnings(false);
+
+		DeselectCurrentlySelectedObject();
 	}
 
 	FlexEngine::~FlexEngine()
@@ -119,14 +120,16 @@ namespace flex
 
 		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 
-		// Transform gizmo
+		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.name = "Transform";
 			matCreateInfo.shaderName = "color";
 			matCreateInfo.constAlbedo = glm::vec3(1.0f);
 			matCreateInfo.engineMaterial = true;
-			m_TransformGizmoMatID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
+			m_TransformGizmoMatXID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
+			m_TransformGizmoMatYID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
+			m_TransformGizmoMatZID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
 		}
 
 		m_GameContext.renderer->PostInitialize(m_GameContext);
@@ -156,7 +159,7 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
-		m_CurrentlySelectedObject = nullptr;
+		DeselectCurrentlySelectedObject();
 
 		if (m_TransformGizmo)
 		{
@@ -222,7 +225,7 @@ namespace flex
 		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
 
 		float desiredAspectRatio = 16.0f / 9.0f;
-		float desiredWindowSizeScreenPercetange = 0.6f;
+		float desiredWindowSizeScreenPercetange = 0.4f;
 
 		// What kind of monitor has different scales along each axis?
 		assert(m_GameContext.monitor.contentScaleX == m_GameContext.monitor.contentScaleY);
@@ -304,7 +307,7 @@ namespace flex
 
 	void FlexEngine::OnSceneChanged()
 	{
-		Material& transformGizmoMaterial = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatID);
+		Material& transformGizmoMaterial = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatXID);
 		Shader& transformGizmoShader = m_GameContext.renderer->GetShader(transformGizmoMaterial.shaderID);
 		VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
 
@@ -312,21 +315,23 @@ namespace flex
 		renderObjectCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 		renderObjectCreateInfo.depthWriteEnable = false;
 
-		real cylinderRadius = 0.15f;
-		real cylinderHeight = 1.5f;
+		real cylinderRadius = 0.2f;
+		real cylinderHeight = 1.6f;
 
 		u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
+		u32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
+		u32 rbMask = 1;
 
 		// X Axis
 		GameObject* transformXAxis = new GameObject("Transform gizmo x axis", GameObjectType::NONE);
-		transformXAxis->AddTag("transform gizmo x");
+		transformXAxis->AddTag("transform gizmo");
 		transformXAxis->SetVisibleInSceneExplorer(false);
-		MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatID, transformXAxis));
+		MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
 
 		btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 		transformXAxis->SetCollisionShape(xAxisShape);
 
-		RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody((u32)CollisionType::EDITOR_OBJECT, (u32)CollisionType::NOTHING));
+		RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
 		gizmoXAxisRB->SetMass(0.0f);
 		gizmoXAxisRB->SetKinematic(true);
 		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
@@ -336,14 +341,14 @@ namespace flex
 
 		// Y Axis
 		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
-		transformYAxis->AddTag("transform gizmo y");
+		transformYAxis->AddTag("transform gizmo");
 		transformYAxis->SetVisibleInSceneExplorer(false);
-		MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatID, transformYAxis));
+		MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
 
 		btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 		transformYAxis->SetCollisionShape(yAxisShape);
 
-		RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody((u32)CollisionType::EDITOR_OBJECT, (u32)CollisionType::NOTHING));
+		RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
 		gizmoYAxisRB->SetMass(0.0f);
 		gizmoYAxisRB->SetKinematic(true);
 		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
@@ -353,14 +358,15 @@ namespace flex
 
 		// Z Axis
 		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
-		transformZAxis->AddTag("transform gizmo z");
+		transformZAxis->AddTag("transform gizmo");
 		transformZAxis->SetVisibleInSceneExplorer(false);
-		MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatID, transformZAxis));
+
+		MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
 
 		btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 		transformZAxis->SetCollisionShape(zAxisShape);
 
-		RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody((u32)CollisionType::EDITOR_OBJECT, (u32)CollisionType::NOTHING));
+		RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
 		gizmoZAxisRB->SetMass(0.0f);
 		gizmoZAxisRB->SetKinematic(true);
 		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
@@ -389,12 +395,19 @@ namespace flex
 		m_TransformGizmo->PostInitialize(m_GameContext);
 	}
 
+	void FlexEngine::DeselectCurrentlySelectedObject()
+	{
+		m_CurrentlySelectedObject = nullptr;
+		m_DraggingAxisIndex = -1;
+		m_bDraggingGizmo = false;
+	}
+
 	void FlexEngine::CycleRenderer()
 	{
 		// TODO? ??
 		//m_GameContext.renderer->InvalidateFontObjects();
 
-		m_CurrentlySelectedObject = nullptr;
+		DeselectCurrentlySelectedObject();
 		PreSceneChange();
 		m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
 		DestroyWindowAndRenderer();
@@ -474,10 +487,10 @@ namespace flex
 
 			DrawImGuiObjects();
 
-			GameObject* hoveredOverGameObject = nullptr;
-
 			// Hovered object
 			{
+				GameObject* hoveredOverGameObject = nullptr;
+
 				glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
 				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
 				btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
@@ -490,63 +503,176 @@ namespace flex
 
 				btRigidBody* pickedBody = physicsWorld->PickBody(rayStart, rayEnd);
 
-				if (pickedBody != nullptr)
+				Material& xMat = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatXID);
+				Material& yMat = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatYID);
+				Material& zMat = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatZID);
+				glm::vec4 white(1.0f);
+				if (m_DraggingAxisIndex != 0)
+				{
+					xMat.colorMultiplier = white;
+				}
+				if (m_DraggingAxisIndex != 1)
+				{
+					yMat.colorMultiplier = white;
+				}
+				if (m_DraggingAxisIndex != 2)
+				{
+					zMat.colorMultiplier = white;
+				}
+
+				std::vector<GameObject*> transformAxes = m_TransformGizmo->GetChildren();
+
+				real selectedMultiplier = 8.0f;
+				glm::vec4 selectedColor(selectedMultiplier, selectedMultiplier, selectedMultiplier, 1.0f);
+
+				// TODO: Bring keybindings out to external file (or at least variables)
+				InputManager::MouseButton dragButton = InputManager::MouseButton::LEFT;
+				bool bMouseDown = m_GameContext.inputManager->GetMouseButtonDown(dragButton);
+				bool bMousePressed = m_GameContext.inputManager->GetMouseButtonPressed(dragButton);
+				bool bMouseReleased = m_GameContext.inputManager->GetMouseButtonReleased(dragButton);
+
+				if (!m_bDraggingGizmo && pickedBody)
 				{
 					hoveredOverGameObject = (GameObject*)(pickedBody->getUserPointer());
 
 					if (hoveredOverGameObject)
 					{
-						std::vector<GameObject*> transformAxes = m_TransformGizmo->GetChildren();
-						if (hoveredOverGameObject == transformAxes[0]) // X Axis
+						btRigidBody* pickedTransform = physicsWorld->PickBody(rayStart, rayEnd, (u32)CollisionType::EDITOR_OBJECT);
+						if (pickedTransform)
 						{
-							Material& mat = m_GameContext.renderer->GetMaterial(
-								transformAxes[0]->GetMeshComponent()->GetMaterialID());
+							GameObject* pickedTransformGameObject = (GameObject*)(pickedTransform->getUserPointer());
 
-							mat.colorMultiplier = glm::vec4(1.2f);
-						}
-						else if (hoveredOverGameObject == transformAxes[1]) // Y Axis
-						{
-							Material& mat = m_GameContext.renderer->GetMaterial(
-								transformAxes[0]->GetMeshComponent()->GetMaterialID());
+							if (pickedTransformGameObject)
+							{
+								real hoverMultiplier = 3.0f;
+								glm::vec4 hoverColor(hoverMultiplier, hoverMultiplier, hoverMultiplier, 1.0f);
 
-							mat.colorMultiplier = glm::vec4(1.2f);
-						}
-						else if (hoveredOverGameObject == transformAxes[2]) // Z Axis
-						{
-							Material& mat = m_GameContext.renderer->GetMaterial(
-								transformAxes[0]->GetMeshComponent()->GetMaterialID());
-
-							mat.colorMultiplier = glm::vec4(1.2f);
+								if (hoveredOverGameObject == transformAxes[0]) // X Axis
+								{
+									if (bMousePressed)
+									{
+										m_DraggingAxisIndex = 0;
+										xMat.colorMultiplier = selectedColor;
+									}
+									else
+									{
+										xMat.colorMultiplier = hoverColor;
+									}
+								}
+								else if (hoveredOverGameObject == transformAxes[1]) // Y Axis
+								{
+									if (bMousePressed)
+									{
+										m_DraggingAxisIndex = 1;
+										yMat.colorMultiplier = selectedColor;
+									}
+									else
+									{
+										yMat.colorMultiplier = hoverColor;
+									}
+								}
+								else if (hoveredOverGameObject == transformAxes[2]) // Z Axis
+								{
+									if (bMousePressed)
+									{
+										m_DraggingAxisIndex = 2;
+										zMat.colorMultiplier = selectedColor;
+									}
+									else
+									{
+										zMat.colorMultiplier = hoverColor;
+									}
+								}
+							}
 						}
 					}
 				}
-			}
 
-			// TODO: Bring keybindings out to external file (or at least variables)
-			if (m_GameContext.inputManager->GetMouseButtonReleased(InputManager::MouseButton::LEFT))
-			{
-				glm::vec2 dragDist = m_GameContext.inputManager->GetMouseDragDistance(InputManager::MouseButton::LEFT);
-				real maxMoveDist = 1.0f;
-
-				// If mouse hasn't moved then the user clicked on something - select it
-				if (glm::length(dragDist) < maxMoveDist)
+				if (bMouseDown || bMouseReleased)
 				{
-					if (hoveredOverGameObject)
+					glm::vec2 dragDist = m_GameContext.inputManager->GetMouseDragDistance(dragButton);
+					real maxMoveDist = 1.0f;
+
+					if (bMouseReleased)
 					{
-						RigidBody* rb = hoveredOverGameObject->GetRigidBody();
-						if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
+						if (m_bDraggingGizmo)
 						{
-							m_CurrentlySelectedObject = hoveredOverGameObject;
-							m_GameContext.inputManager->ClearMouseInput(m_GameContext);
+							m_bDraggingGizmo = false;
+							m_DraggingAxisIndex = -1;
 						}
 						else
 						{
-							m_CurrentlySelectedObject = nullptr;
+							// If mouse hasn't moved then the user clicked on something - select it
+							if (glm::length(dragDist) < maxMoveDist)
+							{
+								if (hoveredOverGameObject)
+								{
+									RigidBody* rb = hoveredOverGameObject->GetRigidBody();
+									if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
+									{
+										m_CurrentlySelectedObject = hoveredOverGameObject;
+										m_GameContext.inputManager->ClearMouseInput(m_GameContext);
+									}
+									else
+									{
+										DeselectCurrentlySelectedObject();
+									}
+								}
+								else
+								{
+									DeselectCurrentlySelectedObject();
+								}
+							}
 						}
 					}
-					else
+
+					// Handle dragging transform gizmo
+					if (m_CurrentlySelectedObject)
 					{
-						m_CurrentlySelectedObject = nullptr;
+						Transform* selectedObjectTransform = m_CurrentlySelectedObject->GetTransform();
+						real scale = 0.01f;
+						if (m_DraggingAxisIndex == 0) // X Axis
+						{
+							if (bMousePressed)
+							{
+								m_bDraggingGizmo = true;
+								m_TransformGizmoDragStartPos = selectedObjectTransform->GetLocalPosition();
+							}
+							else if (bMouseDown)
+							{
+								glm::vec3 right = selectedObjectTransform->GetWorldlRotation() * glm::vec3(1, 0, 0);
+								glm::vec3 deltaPos = (dragDist.x * scale * right);
+								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
+							}
+						}
+						else if (m_DraggingAxisIndex == 1) // Y Axis
+						{
+							if (bMousePressed)
+							{
+								m_bDraggingGizmo = true;
+								m_TransformGizmoDragStartPos = selectedObjectTransform->GetLocalPosition();
+							}
+							else if (bMouseDown)
+							{
+								glm::vec3 up = selectedObjectTransform->GetWorldlRotation() * glm::vec3(0, 1, 0);
+								glm::vec3 deltaPos = up * -dragDist.y * scale;
+								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
+							}
+						}
+						else if (m_DraggingAxisIndex == 2) // Z Axis
+						{
+							if (bMousePressed)
+							{
+								m_bDraggingGizmo = true;
+								m_TransformGizmoDragStartPos = selectedObjectTransform->GetLocalPosition();
+							}
+							else if (bMouseDown)
+							{
+								glm::vec3 forward = selectedObjectTransform->GetWorldlRotation() * glm::vec3(0, 0, 1);
+								glm::vec3 deltaPos = forward * -dragDist.x * scale;
+								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
+							}
+						}
 					}
 				}
 			}
@@ -608,6 +734,7 @@ namespace flex
 			{
 				m_TransformGizmo->SetVisible(true);
 				m_TransformGizmo->GetTransform()->SetWorldPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
+				m_TransformGizmo->GetTransform()->SetWorldRotation(m_CurrentlySelectedObject->GetTransform()->GetWorldlRotation());
 			}
 			else
 			{
@@ -1037,6 +1164,16 @@ namespace flex
 	void FlexEngine::SetSelectedObject(GameObject* gameObject)
 	{
 		m_CurrentlySelectedObject = gameObject;
+
+		if (gameObject == nullptr)
+		{
+			DeselectCurrentlySelectedObject();
+		}
+	}
+
+	bool FlexEngine::IsDraggingGizmo() const
+	{
+		return m_bDraggingGizmo;
 	}
 	
 	std::string FlexEngine::EngineVersionString()
