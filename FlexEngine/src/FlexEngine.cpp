@@ -12,16 +12,20 @@
 
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
+#include <LinearMath/btIDebugDraw.h>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Logger.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "Physics/RigidBody.hpp"
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -122,30 +126,13 @@ namespace flex
 			matCreateInfo.shaderName = "color";
 			matCreateInfo.constAlbedo = glm::vec3(1.0f);
 			matCreateInfo.engineMaterial = true;
-			MaterialID transformMatID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
-
-			m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
-			MeshComponent* transformMesh = m_TransformGizmo->SetMeshComponent(new MeshComponent(transformMatID, m_TransformGizmo));
-
-			Material& transformGizmoMaterial = m_GameContext.renderer->GetMaterial(transformMatID);
-			Shader& transformGizmoShader = m_GameContext.renderer->GetShader(transformGizmoMaterial.shaderID);
-			VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
-
-			RenderObjectCreateInfo renderObjectCreateInfo = {};
-			renderObjectCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-			renderObjectCreateInfo.depthWriteEnable = false;
-
-			transformMesh->SetRequiredAttributes(requiredVertexAttributes);
-			transformMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo.fbx", nullptr, &renderObjectCreateInfo);
-			m_TransformGizmo->Initialize(m_GameContext);
-			m_TransformGizmo->GetTransform()->Scale(0.1f);
+			m_TransformGizmoMatID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
 		}
 
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 
-		m_TransformGizmo->PostInitialize(m_GameContext);
-
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
+		OnSceneChanged();
 
 		SetupImGuiStyles();
 
@@ -306,13 +293,110 @@ namespace flex
 		}
 	}
 
+	void FlexEngine::PreSceneChange()
+	{
+		if (m_TransformGizmo)
+		{
+			m_TransformGizmo->Destroy(m_GameContext);
+			SafeDelete(m_TransformGizmo);
+		}
+	}
+
+	void FlexEngine::OnSceneChanged()
+	{
+		Material& transformGizmoMaterial = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatID);
+		Shader& transformGizmoShader = m_GameContext.renderer->GetShader(transformGizmoMaterial.shaderID);
+		VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
+
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+		renderObjectCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+		renderObjectCreateInfo.depthWriteEnable = false;
+
+		real cylinderRadius = 0.15f;
+		real cylinderHeight = 1.5f;
+
+		u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
+
+		// X Axis
+		GameObject* transformXAxis = new GameObject("Transform gizmo x axis", GameObjectType::NONE);
+		transformXAxis->AddTag("transform gizmo x");
+		transformXAxis->SetVisibleInSceneExplorer(false);
+		MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatID, transformXAxis));
+
+		btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+		transformXAxis->SetCollisionShape(xAxisShape);
+
+		RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody((u32)CollisionType::EDITOR_OBJECT, (u32)CollisionType::NOTHING));
+		gizmoXAxisRB->SetMass(0.0f);
+		gizmoXAxisRB->SetKinematic(true);
+		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
+
+		xAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		xAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-x-axis.fbx", nullptr, &renderObjectCreateInfo);
+
+		// Y Axis
+		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
+		transformYAxis->AddTag("transform gizmo y");
+		transformYAxis->SetVisibleInSceneExplorer(false);
+		MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatID, transformYAxis));
+
+		btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+		transformYAxis->SetCollisionShape(yAxisShape);
+
+		RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody((u32)CollisionType::EDITOR_OBJECT, (u32)CollisionType::NOTHING));
+		gizmoYAxisRB->SetMass(0.0f);
+		gizmoYAxisRB->SetKinematic(true);
+		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
+
+		yAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		yAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-y-axis.fbx", nullptr, &renderObjectCreateInfo);
+
+		// Z Axis
+		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
+		transformZAxis->AddTag("transform gizmo z");
+		transformZAxis->SetVisibleInSceneExplorer(false);
+		MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatID, transformZAxis));
+
+		btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+		transformZAxis->SetCollisionShape(zAxisShape);
+
+		RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody((u32)CollisionType::EDITOR_OBJECT, (u32)CollisionType::NOTHING));
+		gizmoZAxisRB->SetMass(0.0f);
+		gizmoZAxisRB->SetKinematic(true);
+		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
+
+		zAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		zAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-z-axis.fbx", nullptr, &renderObjectCreateInfo);
+
+
+		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
+		m_TransformGizmo->SetVisibleInSceneExplorer(false);
+
+		m_TransformGizmo->AddChild(transformXAxis);
+		m_TransformGizmo->AddChild(transformYAxis);
+		m_TransformGizmo->AddChild(transformZAxis);
+		m_TransformGizmo->Initialize(m_GameContext);
+
+
+		gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+		gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+		gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+		gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+		gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+		m_TransformGizmo->PostInitialize(m_GameContext);
+	}
+
 	void FlexEngine::CycleRenderer()
 	{
 		// TODO? ??
 		//m_GameContext.renderer->InvalidateFontObjects();
 
 		m_CurrentlySelectedObject = nullptr;
-		m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
+		PreSceneChange();
+		m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
 		DestroyWindowAndRenderer();
 
 		while (true)
@@ -344,6 +428,7 @@ namespace flex
 		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
+		OnSceneChanged();
 	}
 
 	void FlexEngine::UpdateAndRender()
@@ -389,6 +474,54 @@ namespace flex
 
 			DrawImGuiObjects();
 
+			GameObject* hoveredOverGameObject = nullptr;
+
+			// Hovered object
+			{
+				glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
+				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
+				btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
+
+				real maxDist = 1000.0f;
+
+				btVector3 rayStart(cameraPos);
+				btVector3 rayDir = physicsWorld->GenerateDirectionRayFromScreenPos(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
+				btVector3 rayEnd = rayStart + rayDir * maxDist;
+
+				btRigidBody* pickedBody = physicsWorld->PickBody(rayStart, rayEnd);
+
+				if (pickedBody != nullptr)
+				{
+					hoveredOverGameObject = (GameObject*)(pickedBody->getUserPointer());
+
+					if (hoveredOverGameObject)
+					{
+						std::vector<GameObject*> transformAxes = m_TransformGizmo->GetChildren();
+						if (hoveredOverGameObject == transformAxes[0]) // X Axis
+						{
+							Material& mat = m_GameContext.renderer->GetMaterial(
+								transformAxes[0]->GetMeshComponent()->GetMaterialID());
+
+							mat.colorMultiplier = glm::vec4(1.2f);
+						}
+						else if (hoveredOverGameObject == transformAxes[1]) // Y Axis
+						{
+							Material& mat = m_GameContext.renderer->GetMaterial(
+								transformAxes[0]->GetMeshComponent()->GetMaterialID());
+
+							mat.colorMultiplier = glm::vec4(1.2f);
+						}
+						else if (hoveredOverGameObject == transformAxes[2]) // Z Axis
+						{
+							Material& mat = m_GameContext.renderer->GetMaterial(
+								transformAxes[0]->GetMeshComponent()->GetMaterialID());
+
+							mat.colorMultiplier = glm::vec4(1.2f);
+						}
+					}
+				}
+			}
+
 			// TODO: Bring keybindings out to external file (or at least variables)
 			if (m_GameContext.inputManager->GetMouseButtonReleased(InputManager::MouseButton::LEFT))
 			{
@@ -398,23 +531,12 @@ namespace flex
 				// If mouse hasn't moved then the user clicked on something - select it
 				if (glm::length(dragDist) < maxMoveDist)
 				{
-					glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
-
-					PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
-
-					btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
-					btVector3 rayStart(cameraPos);
-					btVector3 rayEnd = physicsWorld->GenerateRayFromScreenPos(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
-
-					btRigidBody* pickedBody = physicsWorld->PickBody(rayStart, rayEnd);
-
-					if (pickedBody != nullptr)
+					if (hoveredOverGameObject)
 					{
-						GameObject* pickedGameObject = (GameObject*)(pickedBody->getUserPointer());
-
-						if (pickedGameObject)
+						RigidBody* rb = hoveredOverGameObject->GetRigidBody();
+						if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
 						{
-							m_CurrentlySelectedObject = pickedGameObject;
+							m_CurrentlySelectedObject = hoveredOverGameObject;
 							m_GameContext.inputManager->ClearMouseInput(m_GameContext);
 						}
 						else
@@ -438,12 +560,14 @@ namespace flex
 			{
 				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
+				OnSceneChanged();
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
 				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
+				OnSceneChanged();
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
@@ -457,7 +581,9 @@ namespace flex
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
 				m_CurrentlySelectedObject = nullptr;
+				PreSceneChange();
 				m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
+				OnSceneChanged();
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
@@ -481,7 +607,7 @@ namespace flex
 			if (m_CurrentlySelectedObject)
 			{
 				m_TransformGizmo->SetVisible(true);
-				m_TransformGizmo->GetTransform()->SetWorldlPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
+				m_TransformGizmo->GetTransform()->SetWorldPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
 			}
 			else
 			{
@@ -579,10 +705,10 @@ namespace flex
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
-		ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 		ImGui::SetNextWindowSize(ImVec2(0.0f, (real)m_GameContext.window->GetFrameBufferSize().y),
 								 ImGuiCond_Always);
-		if (ImGui::Begin(titleCharStr, nullptr, flags))
+		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))
 		{
 			static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
 			static const char* renderNameStr = rendererNameStringStr.c_str();
@@ -826,9 +952,11 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
+					PreSceneChange();
 					m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
+					OnSceneChanged();
 				}
-
+				
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::BeginTooltip();
@@ -838,36 +966,46 @@ namespace flex
 
 				ImGui::SameLine();
 
+				BaseScene* currentScene = m_GameContext.sceneManager->CurrentScene();
 
 				const u32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
 				const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
-				const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() +
+				const std::string currentSceneStr(currentScene->GetName() +
 					" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
 				ImGui::TextUnformatted(currentSceneStr.c_str());
 
 				if (ImGui::IsItemHovered())
 				{
-					std::string filePath = m_GameContext.sceneManager->CurrentScene()->GetJSONFilePath();
-					size_t lastSlash = filePath.rfind('\\');
-					if (lastSlash != std::string::npos)
+					std::string fileName = currentScene->GetShortFilePath();
+					ImGui::BeginTooltip();
+					ImGui::TextUnformatted(fileName.c_str());
+					ImGui::EndTooltip();
+				}
+
+				if (currentScene->IsUsingSaveFile())
+				{
+					if (ImGui::BeginPopupContextItem("item context menu"))
 					{
-						size_t secondLastSlash = filePath.rfind('\\', lastSlash - 1);
-						if (secondLastSlash != std::string::npos)
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						if (ImGui::Selectable("Hard reload (deletes save file!)"))
 						{
-							ImGui::BeginTooltip();
-
-							std::string fileNameWithOneDir = filePath.substr(secondLastSlash);
-							ImGui::TextUnformatted(fileNameWithOneDir.c_str());
-
-							ImGui::EndTooltip();
+							DeleteFile(currentScene->GetFilePath());
+							PreSceneChange();
+							m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
+							OnSceneChanged();
 						}
+						ImGui::PopStyleColor();
+
+						ImGui::EndPopup();
 					}
 				}
 
 				ImGui::SameLine();
 				if (ImGui::Button(arrowNextStr))
 				{
+					PreSceneChange();
 					m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
+					OnSceneChanged();
 				}
 				if (ImGui::IsItemHovered())
 				{

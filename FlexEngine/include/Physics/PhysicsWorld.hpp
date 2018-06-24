@@ -31,9 +31,9 @@ namespace flex
 
 		btDiscreteDynamicsWorld* GetWorld();
 
-		btVector3 GenerateRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y);
+		btVector3 GenerateDirectionRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y);
 
-		btRigidBody* PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld);
+		btRigidBody* PickBody(const btVector3& rayStart, const btVector3& rayEnd);
 
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);

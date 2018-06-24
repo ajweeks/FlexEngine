@@ -184,10 +184,11 @@ namespace flex
 			return;
 		}
 
+		m_View = glm::lookAt(m_Position, m_Position + m_Forward, m_Up);
+
 		real aspectRatio = windowSize.x / (real)windowSize.y;
 		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
 
-		m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
 		m_ViewProjection = m_Proj * m_View;
 
 	}

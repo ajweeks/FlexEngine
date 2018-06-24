@@ -81,14 +81,12 @@ namespace flex
 				{
 					transform->Update();
 
-					gameObject->GetRigidBody()->SetSRT(transform->GetWorldlScale(),
-													   transform->GetWorldlRotation(),
-													   transform->GetWorldPosition());
+					gameObject->GetRigidBody()->MatchParentTransform();
 				}
 			}
 			else
 			{
-				transform->SetWorldlPosition(translation);
+				transform->SetWorldPosition(translation);
 				transform->SetWorldRotation(glm::quat(glm::radians(rotation)));
 				transform->SetWorldScale(scale);
 
@@ -96,9 +94,7 @@ namespace flex
 				{
 					transform->Update();
 
-					gameObject->GetRigidBody()->SetSRT(transform->GetWorldlScale(),
-													   transform->GetWorldlRotation(),
-													   transform->GetWorldPosition());
+					gameObject->GetRigidBody()->MatchParentTransform();
 				}
 			}
 		}

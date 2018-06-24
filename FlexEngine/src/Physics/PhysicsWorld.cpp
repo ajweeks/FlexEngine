@@ -75,58 +75,52 @@ namespace flex
 		return m_World;
 	}
 
-	btVector3 PhysicsWorld::GenerateRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y)
+	btVector3 PhysicsWorld::GenerateDirectionRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y)
 	{
-		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
-		btVector3 rayFrom = Vec3ToBtVec3(camera->GetPosition());
-		btVector3 rayForward = Vec3ToBtVec3(camera->GetForward());
-		real farPlane = camera->GetZFar();
-		rayForward *= farPlane;
-
-		btVector3 vertical = Vec3ToBtVec3(camera->GetUp());
-		btVector3 horizontal = Vec3ToBtVec3(camera->GetRight());
-
-		real fov = camera->GetFOV();
-		real tanfov = tanf(0.5f * fov);
-
-		horizontal *= 2.0f * farPlane * tanfov;
-		vertical *= 2.0f * farPlane * tanfov;
-
 		real frameBufferWidth = (real)gameContext.window->GetFrameBufferSize().x;
 		real frameBufferHeight = (real)gameContext.window->GetFrameBufferSize().y;
+		btScalar aspectRatio = frameBufferWidth / frameBufferHeight;
 
-		btScalar aspect = frameBufferWidth / frameBufferHeight;
+		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+		real fov = camera->GetFOV();
+		real tanFov = tanf(0.5f * fov);
 
-		horizontal *= aspect;
+		real pixelScreenX = 2.0f * ((x + 0.5f) / frameBufferWidth) - 1.0f;
+		real pixelScreenY = 1.0f - 2.0f * ((y + 0.5f) / frameBufferHeight);
 
-		btVector3 rayToCenter = rayFrom + rayForward;
-		btVector3 dHor = horizontal * 1.0f / frameBufferWidth;
-		btVector3 dVert = vertical * 1.0f / frameBufferHeight;
+		real pixelCameraX = pixelScreenX * aspectRatio * tanFov;
+		real pixelCameraY = pixelScreenY * tanFov;
 
-		btVector3 rayTo = rayToCenter + 0.5f * horizontal + 0.5f * vertical;
-		rayTo -= btScalar(x) * dHor;
-		rayTo -= btScalar(y) * dVert;
 
-		return rayTo;
+		glm::mat4 cameraView = glm::inverse(camera->GetView());
+
+		glm::vec4 rayOrigin(0, 0, 0, 1);
+		glm::vec3 rayOriginWorld = cameraView * rayOrigin;
+
+		glm::vec3 rayPWorld = cameraView * glm::vec4(pixelCameraX, pixelCameraY, -1.0f, 1);
+		btVector3 rayDirection = Vec3ToBtVec3(rayPWorld - rayOriginWorld);
+		rayDirection.normalize();
+
+		return rayDirection;
 	}
 
-	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayFromWorld, const btVector3& rayToWorld)
+	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayStart, const btVector3& rayEnd)
 	{
-		btVector3 hitPos(0.0f, 0.0f, 0.0f);
-		real pickingDist = 0.0f;
+		//btVector3 hitPos(0.0f, 0.0f, 0.0f);
+		//real pickingDist = 0.0f;
 		btRigidBody* pickedBody = nullptr;
 		//i32 savedState = 0;
 		//btTypedConstraint* pickedConstraint = nullptr;
 
-		btCollisionWorld::ClosestRayResultCallback rayCallback(rayFromWorld, rayToWorld);
-		m_World->rayTest(rayFromWorld, rayToWorld, rayCallback);
+		btCollisionWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+		m_World->rayTest(rayStart, rayEnd, rayCallback);
 		if (rayCallback.hasHit())
 		{
 			btVector3 pickPos = rayCallback.m_hitPointWorld;
 			btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
 			if (body)
 			{
-				if (!(body->isStaticObject() || body->isKinematicObject()))
+				//if (!(body->isStaticObject() || body->isKinematicObject()))
 				{
 					pickedBody = body;
 
@@ -147,13 +141,11 @@ namespace flex
 					//p2p->m_setting.m_tau = 0.001f;
 				}
 			}
-			hitPos = pickPos;
-			pickingDist = (pickPos - rayFromWorld).length();
-
-			return pickedBody;
+			//hitPos = pickPos;
+			//pickingDist = (pickPos - rayFromWorld).length();
 		}
 
-		return nullptr;
+		return pickedBody;
 	}
 
 	void PhysicsInternalTickCallback(btDynamicsWorld* world, btScalar timeStep)

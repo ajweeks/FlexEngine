@@ -161,6 +161,11 @@ namespace flex
 		return false;
 	}
 
+	void DeleteFile(const std::string& filePath)
+	{
+		::DeleteFile(filePath.c_str());
+	}
+
 	bool DirectoryExists(const std::string& absoluteDirectoryPath)
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)

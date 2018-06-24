@@ -41,7 +41,7 @@ namespace flex
 		glm::vec3 GetWorldlScale() const;
 
 		void SetLocalPosition(const glm::vec3& position);
-		void SetWorldlPosition(const glm::vec3& position);
+		void SetWorldPosition(const glm::vec3& position);
 
 		void SetLocalRotation(const glm::quat& quatRotation);
 		void SetWorldRotation(const glm::quat& quatRotation);
@@ -52,8 +52,6 @@ namespace flex
 
 		void SetLocalScale(const glm::vec3& scale);
 		void SetWorldScale(const glm::vec3& scale);
-
-		void MatchRigidBody(RigidBody* rigidBody, bool forceUpdate = false);
 
 
 		void Translate(const glm::vec3& deltaPosition);

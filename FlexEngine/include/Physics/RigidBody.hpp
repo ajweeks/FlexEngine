@@ -16,7 +16,7 @@ namespace flex
 		RigidBody(i32 group = 1, i32 mask = 1);
 		virtual ~RigidBody();
 
-		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, const Transform& transform);
+		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, Transform* parentTransform);
 		void Destroy(const GameContext& gameContext);
 
 		void AddConstraint(btTypedConstraint* constraint);
@@ -31,13 +31,18 @@ namespace flex
 		real GetFriction() const;
 
 		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
-		//glm::vec3 GetPosition();
-		//glm::quat GetRotation();
 		
-		void SetSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos);
-		void SetPosition(const glm::vec3& pos);
-		void SetRotation(const glm::quat& rot);
-		void SetScale(const glm::vec3& scale);
+		// Set local transform (relative to parent transform)
+		void SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos);
+		void SetLocalPosition(const glm::vec3& pos);
+		void SetLocalRotation(const glm::quat& rot);
+		void SetLocalScale(const glm::vec3& scale);
+
+		// Applies physics-driven transform to parent transform (taking into account local transform)
+		void UpdateParentTransform();
+
+		// Sets physics-driven transform to parent transform (taking into account local transform)
+		void MatchParentTransform();
 
 		void GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward);
 
@@ -51,6 +56,11 @@ namespace flex
 		btMotionState* m_MotionState = nullptr;
 
 		std::vector<btTypedConstraint*> m_Constraints;
+
+		Transform* m_ParentTransform = nullptr;
+		glm::vec3 m_LocalPosition;
+		glm::quat m_LocalRotation;
+		glm::vec3 m_LocalScale;
 
 		// Must be 0 if static, non-zero otherwise
 		real m_Mass = 1.0f;

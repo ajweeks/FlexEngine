@@ -33,8 +33,8 @@
 
 namespace flex
 {
-	BaseScene::BaseScene(const std::string& jsonFilePath) :
-		m_JSONFilePath(jsonFilePath)
+	BaseScene::BaseScene(const std::string& fileName) :
+		m_FileName(fileName)
 	{
 	}
 
@@ -50,14 +50,32 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
-		std::string friendlySceneFilepath = m_JSONFilePath;
-		StripLeadingDirectories(friendlySceneFilepath);
-		Logger::LogInfo("Loading scene from: " + friendlySceneFilepath);
+		// Use save file if exists, otherwise use default
+		const std::string savedShortPath = "scenes/saved/" + m_FileName;
+		const std::string defaultShortPath = "scenes/default/" + m_FileName;
+		const std::string savedPath = RESOURCE_LOCATION + savedShortPath;
+		const std::string defaultPath = RESOURCE_LOCATION + defaultShortPath;
+		m_bUsingSaveFile = FileExists(savedPath);
+
+		std::string shortFilePath;
+		std::string filePath;
+		if (m_bUsingSaveFile)
+		{
+			shortFilePath = savedShortPath;
+			filePath = savedPath;
+		}
+		else
+		{
+			shortFilePath = defaultShortPath;
+			filePath = defaultPath;
+		}
+
+		Logger::LogInfo("Loading scene from: " + savedShortPath);
 
 		JSONObject sceneRootObject;
-		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
+		if (!JSONParser::Parse(filePath, sceneRootObject))
 		{
-			Logger::LogError("Failed to parse scene file: " + m_JSONFilePath);
+			Logger::LogError("Failed to parse scene file: " + savedShortPath);
 			return;
 		}
 
@@ -187,36 +205,6 @@ namespace flex
 			GameObject* gameObject = *iter;
 
 			gameObject->PostInitialize(gameContext);
-
-			RigidBody* rb = gameObject->GetRigidBody();
-
-			if (rb)
-			{
-				rb->GetRigidBodyInternal()->setUserPointer(gameObject);
-			}
-
-			switch (gameObject->m_Type)
-			{
-			case GameObjectType::REFLECTION_PROBE:
-			{
-				gameContext.renderer->SetReflectionProbeMaterial(gameObject->m_ReflectionProbeMembers.captureMatID);
-			} break;
-			case GameObjectType::VALVE:
-			{
-				rb->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
-				auto rbInternal = rb->GetRigidBodyInternal();
-				rbInternal->setAngularFactor(btVector3(0, 1, 0));
-				// Mark as trigger
-				rbInternal->setCollisionFlags(
-					rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
-				rbInternal->setGravity(btVector3(0, 0, 0));
-			} break;
-			case GameObjectType::RISING_BLOCK:
-			{
-				auto rbInternal = rb->GetRigidBodyInternal();
-				rbInternal->setGravity(btVector3(0, 0, 0));
-			} break;
-			}
 		}
 
 		m_PhysicsWorld->GetWorld()->setDebugDrawer(gameContext.renderer->GetDebugDrawer());
@@ -938,37 +926,21 @@ namespace flex
 			JSONValue(SerializeDirectionalLight(dirLight, gameContext)));
 		rootSceneObject.fields.push_back(directionalLightsField);
 
-
 		std::string fileContents = rootSceneObject.Print(0);
 
-		std::string fileType = m_JSONFilePath;
-		ExtractFileType(fileType);
 
-		std::string savedFilePathName = m_JSONFilePath;
-		StripLeadingDirectories(savedFilePathName);
-		StripFileType(savedFilePathName);
-
-		bool containsSavedPostfix = EndsWith(savedFilePathName, "_saved");
-
-		savedFilePathName = RESOURCE_LOCATION + "scenes/saved/" + savedFilePathName + 
-			(containsSavedPostfix ? "." : "_saved.") + fileType;
-		std::string cleanFileName = savedFilePathName;
-		StripLeadingDirectories(cleanFileName);
-		Logger::LogInfo("Serializing scene to " + cleanFileName);
+		std::string shortSavedFileName = "scenes/saved/" + m_FileName;
+		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
+		Logger::LogInfo("Serializing scene to " + shortSavedFileName);
 
 		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
 		success = WriteFile(savedFilePathName, fileContents, false);
 
 		if (success)
 		{
-			if (!containsSavedPostfix)
-			{
-				// Filepath didn't previously contain _saved postfix
-				m_JSONFilePath = savedFilePathName;
-			}
-
 			Logger::LogInfo("Done serializing scene");
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
+			m_bUsingSaveFile = true;
 		}
 		else
 		{
@@ -1527,9 +1499,33 @@ namespace flex
 		return m_Name;
 	}
 
-	std::string BaseScene::GetJSONFilePath() const
+	std::string BaseScene::GetFilePath() const
 	{
-		return m_JSONFilePath;
+		if (m_bUsingSaveFile)
+		{
+			return RESOURCE_LOCATION + "scenes/saved/" + m_FileName;
+		}
+		else
+		{
+			return RESOURCE_LOCATION + "scenes/default/" + m_FileName;
+		}
+	}
+
+	std::string BaseScene::GetShortFilePath() const
+	{
+		if (m_bUsingSaveFile)
+		{
+			return "scenes/saved/" + m_FileName;
+		}
+		else
+		{
+			return "scenes/default/" + m_FileName;
+		}
+	}
+
+	bool BaseScene::IsUsingSaveFile() const
+	{
+		return m_bUsingSaveFile;
 	}
 
 	PhysicsWorld* BaseScene::GetPhysicsWorld()

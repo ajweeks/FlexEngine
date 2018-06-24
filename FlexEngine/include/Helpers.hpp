@@ -57,6 +57,8 @@ namespace flex
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
 
+	void DeleteFile(const std::string& filePath);
+
 	bool DirectoryExists(const std::string& absoluteDirectoryPath);
 
 	// Returns true if any files were found

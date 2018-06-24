@@ -294,6 +294,11 @@ namespace flex
 			worldScale = localScale;
 		}
 
+		if (m_GameObject->GetRigidBody())
+		{
+			m_GameObject->GetRigidBody()->MatchParentTransform();
+		}
+
 		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
 		for (auto iter = children.begin(); iter != children.end(); ++iter)
 		{
@@ -338,7 +343,7 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::SetWorldlPosition(const glm::vec3& position)
+	void Transform::SetWorldPosition(const glm::vec3& position)
 	{
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
@@ -444,20 +449,5 @@ namespace flex
 		}
 
 		UpdateParentTransform();
-	}
-
-	void Transform::MatchRigidBody(RigidBody* rigidBody, bool forceUpdate)
-	{
-		btRigidBody* rb = rigidBody->GetRigidBodyInternal();
-		bool update = forceUpdate || (!rb->isStaticObject() && rb->isActive());
-		if (update)
-		{
-			glm::vec3 pos;
-			glm::quat rot;
-			rigidBody->GetTransform(pos, rot);
-
-			SetWorldlPosition(pos);
-			SetWorldRotation(rot);
-		}
 	}
 } // namespace flex

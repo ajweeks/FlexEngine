@@ -103,9 +103,6 @@ namespace flex
 
 		m_VertexBufferData.Destroy();
 
-		// TODO: Move to game object?
-		m_OwningGameObject->GetTransform()->SetGameObject(m_OwningGameObject);
-
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
 		const aiScene* scene = nullptr;
@@ -676,7 +673,7 @@ namespace flex
 		case MeshComponent::PrefabShape::WORLD_AXIS_GROUND:
 		{
 			glm::vec4 centerLineColorX = Color::RED;
-			glm::vec4 centerLineColorY = Color::GREEN;
+			glm::vec4 centerLineColorZ = Color::BLUE;
 
 			const size_t vertexCount = 4 * 2; // 4 verts per line (to allow for fading) *------**------*
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
@@ -693,7 +690,7 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, halfWidth });
 
 			float opacityCenter = 1.0f;
-			glm::vec4 colorCenter = centerLineColorX;
+			glm::vec4 colorCenter = centerLineColorZ;
 			colorCenter.a = opacityCenter;
 			glm::vec4 colorEnds = colorCenter;
 			colorEnds.a = 0.0f;
@@ -707,7 +704,7 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
 			vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, 0.0f });
 
-			colorCenter = centerLineColorY;
+			colorCenter = centerLineColorX;
 			colorCenter.a = opacityCenter;
 			colorEnds = colorCenter;
 			colorEnds.a = 0.0f;
@@ -992,7 +989,7 @@ namespace flex
 				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
 				transform->GetWorldPosition().y,
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
-			transform->SetWorldlPosition(newGridPos);
+			transform->SetWorldPosition(newGridPos);
 		}
 	}
 

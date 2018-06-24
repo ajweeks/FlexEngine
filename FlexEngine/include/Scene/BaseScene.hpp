@@ -17,7 +17,7 @@ namespace flex
 	class BaseScene
 	{
 	public:
-		BaseScene(const std::string& jsonFilePath);
+		BaseScene(const std::string& fileName);
 		virtual ~BaseScene();
 
 		virtual void Initialize(const GameContext& gameContext);
@@ -26,7 +26,10 @@ namespace flex
 		virtual void Update(const GameContext& gameContext);
 
 		std::string GetName() const;
-		std::string GetJSONFilePath() const;
+		std::string GetFilePath() const;
+		std::string GetShortFilePath() const;
+
+		bool IsUsingSaveFile() const;
 
 		PhysicsWorld* GetPhysicsWorld();
 
@@ -65,9 +68,11 @@ namespace flex
 		i32 GetMaterialArrayIndex(const Material& material, const GameContext& gameContext);
 
 		std::string m_Name;
-		std::string m_JSONFilePath;
+		std::string m_FileName;
 
 		std::vector<GameObject*> m_Children;
+
+		bool m_bUsingSaveFile = false;
 
 		/*
 		* Stores all unique initialized materials we've created

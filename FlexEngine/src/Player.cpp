@@ -55,7 +55,7 @@ namespace flex
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
 		m_MeshComponent->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/capsule.gltf");
-		m_Transform.SetWorldlPosition(glm::vec3(-5.0f + 5.0f * m_Index, 5.0f, 0.0f));
+		m_Transform.SetWorldPosition(glm::vec3(-5.0f + 5.0f * m_Index, 5.0f, 0.0f));
 
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);

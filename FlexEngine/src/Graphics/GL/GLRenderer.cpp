@@ -4332,6 +4332,8 @@ namespace flex
 
 			GameObject* selectedObject = FlexEngine::GetSelectedObject();
 
+			ImGui::NewLine();
+
 			real selectedObjectAreaHeight = 220;
 			ImGui::BeginChild("SelectedObject",
 							  ImVec2(ImGui::GetWindowContentRegionWidth(), selectedObjectAreaHeight),
@@ -4345,7 +4347,7 @@ namespace flex
 			ImGui::EndChild();
 
 			ImGui::Text("Render Objects");
-			if (ImGui::BeginChild("Render Objects"))
+			if (ImGui::BeginChild("Render Objects", ImVec2(0, 500)))
 			{
 				std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
 				for (size_t i = 0; i < rootObjects.size(); ++i)
@@ -4363,29 +4365,24 @@ namespace flex
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
-			std::string objectName;
+			std::string objectName = gameObject->GetName();
+			std::string objectID;
 			if (renderID != InvalidRenderID)
 			{
 				renderObject = GetRenderObject(renderID);
-				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
+				objectID = "##" + std::to_string(renderObject->renderID);
 
 				if (!gameObject->IsVisibleInSceneExplorer())
 				{
 					return;
 				}
 			}
-			else
-			{
-				// TODO: FIXME: This will fail if multiple objects share the same name
-				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
-				objectName = std::string(gameObject->GetName());
-			}
 
 			ImGui::Text(objectName.c_str());
 
-			const std::string objectID("Visible##" + objectName);
 			bool visible = gameObject->IsVisible();
-			if (ImGui::Checkbox(objectID.c_str(), &visible))
+			const std::string objectVisibleLabel("Visible" + objectID + objectName);
+			if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
 			{
 				gameObject->SetVisible(visible);
 			}
@@ -4419,30 +4416,25 @@ namespace flex
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
-			std::string objectName;
+			std::string objectName = gameObject->GetName();
+			std::string objectID;
 			if (renderID != InvalidRenderID)
 			{
 				renderObject = GetRenderObject(renderID);
-				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
+				objectID = "##" + std::to_string(renderObject->renderID);
 
 				if (!gameObject->IsVisibleInSceneExplorer())
 				{
 					return;
 				}
 			}
-			else
-			{
-				// TODO: FIXME: This will fail if multiple objects share the same name
-				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
-				objectName = std::string(gameObject->GetName());
-			}
 
 			bool bHasChildren = !gameObject->GetChildren().empty();
 			bool bSelected = (gameObject == FlexEngine::GetSelectedObject());
 
-			const std::string objectID("##" + objectName + "-visible");
 			bool visible = gameObject->IsVisible();
-			if (ImGui::Checkbox(objectID.c_str(), &visible))
+			const std::string objectVisibleLabel(objectID + "-visible");
+			if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
 			{
 				gameObject->SetVisible(visible);
 			}

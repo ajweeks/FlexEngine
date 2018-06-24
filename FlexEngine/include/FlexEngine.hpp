@@ -64,6 +64,9 @@ namespace flex
 
 		std::string RenderIDToString(RendererID rendererID) const;
 
+		void PreSceneChange();
+		void OnSceneChanged();
+
 		u32 m_RendererCount = 0;
 		bool m_Running = false;
 
@@ -78,6 +81,7 @@ namespace flex
 		static GameObject* m_CurrentlySelectedObject;
 
 		GameObject* m_TransformGizmo = nullptr;
+		MaterialID m_TransformGizmoMatID = InvalidMaterialID;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

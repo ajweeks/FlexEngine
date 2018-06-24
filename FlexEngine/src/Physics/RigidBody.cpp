@@ -3,8 +3,8 @@
 #include "Physics/RigidBody.hpp"
 
 #pragma warning(push, 0)
-#include "btBulletDynamicsCommon.h"
-#include "btBulletCollisionCommon.h"
+#include <btBulletDynamicsCommon.h>
+#include <btBulletCollisionCommon.h>
 #pragma warning(pop)
 
 #include "GameContext.hpp"
@@ -16,7 +16,10 @@ namespace flex
 {
 	RigidBody::RigidBody(i32 group, i32 mask) :
 		m_Group(group),
-		m_Mask(mask)
+		m_Mask(mask),
+		m_LocalPosition(0.0f),
+		m_LocalRotation(glm::quat(glm::vec3(0.0f))),
+		m_LocalScale(1.0f)
 	{
 	}
 
@@ -24,8 +27,10 @@ namespace flex
 	{
 	}
 
-	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, const Transform& transform)
+	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, Transform* parentTransform)
 	{
+		m_ParentTransform = parentTransform;
+
 		btVector3 localInertia(0, 0, 0);
 		if (!m_bStatic)
 		{
@@ -37,7 +42,7 @@ namespace flex
 			assert(m_Mass == 0); // Static objects must have a mass of 0!
 		}
 
-		btTransform startingTransform = TransformToBtTransform(transform);
+		btTransform startingTransform = TransformToBtTransform(*parentTransform);
 		m_MotionState = new btDefaultMotionState(startingTransform);
 		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
 
@@ -59,7 +64,7 @@ namespace flex
 
 		gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
 
-		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(transform.GetWorldlScale()));
+		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(parentTransform->GetWorldlScale()));
 	}
 
 	void RigidBody::Destroy(const GameContext& gameContext)
@@ -139,41 +144,67 @@ namespace flex
 		outRot = BtQuaternionToQuaternion(transform.getRotation());
 	}
 
-	void RigidBody::SetSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos)
+	void RigidBody::SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos)
 	{
-		btTransform transform;
-		m_RigidBody->getMotionState()->getWorldTransform(transform);
-		transform.setOrigin(Vec3ToBtVec3(pos));
-		transform.setRotation(QuaternionToBtQuaternion(rot));
-		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(scale));
-		m_RigidBody->setWorldTransform(transform);
+		m_LocalPosition = pos;
+		m_LocalRotation = rot;
+		m_LocalScale = scale;
 
-		m_RigidBody->activate();
+		MatchParentTransform();
 	}
 
-	void RigidBody::SetPosition(const glm::vec3& pos)
+	void RigidBody::SetLocalPosition(const glm::vec3& pos)
 	{
-		btTransform transform;
-		m_RigidBody->getMotionState()->getWorldTransform(transform);
-		transform.setOrigin(Vec3ToBtVec3(pos));
-		m_RigidBody->setWorldTransform(transform);
+		m_LocalPosition = pos;
 
-		m_RigidBody->activate();
+		MatchParentTransform();
 	}
 
-	void RigidBody::SetRotation(const glm::quat& rot)
+	void RigidBody::SetLocalRotation(const glm::quat& rot)
 	{
-		btTransform transform;
-		m_RigidBody->getMotionState()->getWorldTransform(transform);
-		transform.setRotation(QuaternionToBtQuaternion(rot));
-		m_RigidBody->setWorldTransform(transform);
+		m_LocalRotation = rot;
 
-		m_RigidBody->activate();
+		MatchParentTransform();
 	}
 
-	void RigidBody::SetScale(const glm::vec3& scale)
+	void RigidBody::SetLocalScale(const glm::vec3& scale)
 	{
-		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(scale));
+		m_LocalScale = scale;
+
+		MatchParentTransform();
+	}
+
+	void RigidBody::UpdateParentTransform()
+	{
+		if (!m_ParentTransform)
+		{
+			// NOTE: This should only be true before the first frame
+			return;
+		}
+
+		btTransform transform = m_RigidBody->getWorldTransform();
+
+		m_ParentTransform->SetLocalPosition(BtVec3ToVec3(transform.getOrigin()) - m_LocalPosition);
+		m_ParentTransform->SetLocalRotation(BtQuaternionToQuaternion(transform.getRotation()) - m_LocalRotation);
+		m_ParentTransform->SetLocalScale(BtVec3ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()) / m_LocalScale);
+	}
+
+	void RigidBody::MatchParentTransform()
+	{
+		if (!m_ParentTransform)
+		{
+			// NOTE: This should only be true before the first frame
+			return;
+		}
+
+		btTransform transform = btTransform::getIdentity();
+		transform.setOrigin(Vec3ToBtVec3(m_LocalPosition + m_ParentTransform->GetWorldPosition()));
+		transform.setRotation(QuaternionToBtQuaternion(m_LocalRotation * m_ParentTransform->GetWorldlRotation()));
+		//if (m_RigidBody->getCollisionShape())
+		//{
+		//	m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldlScale()));
+		//}
+		m_RigidBody->setWorldTransform(transform);
 
 		m_RigidBody->activate();
 	}

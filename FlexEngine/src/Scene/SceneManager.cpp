@@ -33,7 +33,7 @@ namespace flex
 		bool unique = true;
 		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&unique, newScene](BaseScene* scene) mutable
 		{
-			if (scene->GetJSONFilePath().compare(newScene->GetJSONFilePath()) == 0)
+			if (scene->GetFilePath().compare(newScene->GetFilePath()) == 0)
 			{
 				unique = false;
 			}
@@ -174,7 +174,10 @@ namespace flex
 		{
 			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
 			{
-				BaseScene* newScene = new BaseScene(*iter);
+				std::string fileName = *iter;
+				StripLeadingDirectories(fileName);
+
+				BaseScene* newScene = new BaseScene(fileName);
 				m_Scenes.push_back(newScene);
 			}
 		}
@@ -185,19 +188,18 @@ namespace flex
 		{
 			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
 			{
-				std::string fileName = *iter;
+				std::string filePath = *iter;
 				
 				bool sceneAlreadyAdded = false;
 				for (auto sceneIter = m_Scenes.begin(); sceneIter != m_Scenes.end(); ++sceneIter)
 				{
-					std::string foundFileName = fileName;
+					std::string foundFileName = filePath;
 					StripLeadingDirectories(foundFileName);
-					StripFileType(foundFileName);
 
-					std::string sceneFileName = (*sceneIter)->GetJSONFilePath();
+					std::string sceneFileName = (*sceneIter)->GetFilePath();
 					StripLeadingDirectories(sceneFileName);
-					StripFileType(sceneFileName);
-					if (StartsWith(sceneFileName, foundFileName))
+
+					if (sceneFileName.compare(foundFileName) == 0)
 					{
 						sceneAlreadyAdded = true;
 						break;
@@ -206,7 +208,9 @@ namespace flex
 
 				if (!sceneAlreadyAdded)
 				{
-					BaseScene* newScene = new BaseScene(*iter);
+					std::string fileName = filePath;
+					StripLeadingDirectories(fileName);
+					BaseScene* newScene = new BaseScene(fileName);
 					m_Scenes.push_back(newScene);
 				}
 			}

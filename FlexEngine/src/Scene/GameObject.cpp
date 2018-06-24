@@ -56,9 +56,16 @@ namespace flex
 		} break;
 		}
 
-		if (m_RigidBody && m_CollisionShape)
+		if (m_RigidBody)
 		{
-			m_RigidBody->Initialize(m_CollisionShape, gameContext, m_Transform);
+			if (!m_CollisionShape)
+			{
+				Logger::LogError("Game object contains rigid body but no collision shape! Must call SetCollisionShape before Initialize");
+			}
+			else
+			{
+				m_RigidBody->Initialize(m_CollisionShape, gameContext, &m_Transform);
+			}
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
@@ -69,10 +76,29 @@ namespace flex
 
 	void GameObject::PostInitialize(const GameContext& gameContext)
 	{
+		RigidBody* rb = GetRigidBody();
+
 		switch (m_Type)
 		{
+		case GameObjectType::REFLECTION_PROBE:
+		{
+			gameContext.renderer->SetReflectionProbeMaterial(m_ReflectionProbeMembers.captureMatID);
+		} break;
+		case GameObjectType::VALVE:
+		{
+			rb->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
+			auto rbInternal = rb->GetRigidBodyInternal();
+			rbInternal->setAngularFactor(btVector3(0, 1, 0));
+			// Mark as trigger
+			rbInternal->setCollisionFlags(
+				rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
+			rbInternal->setGravity(btVector3(0, 0, 0));
+		} break;
 		case GameObjectType::RISING_BLOCK:
 		{
+			auto rbInternal = rb->GetRigidBodyInternal();
+			rbInternal->setGravity(btVector3(0, 0, 0));
+
 			//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getWorldTransform();
 			//btFixedConstraint* constraint = new btFixedConstraint(
 			//	*m_RigidBody->GetRigidBodyInternal(),
@@ -82,12 +108,17 @@ namespace flex
 			////constraint->setAngularLowerLimit(btVector3(0, 0, 0));
 			////constraint->setAngularUpperLimit(btVector3(0, 0, 0));
 			//m_RigidBody->AddConstraint(constraint);
-		}
+		} break;
 		}
 
 		if (m_RenderID != InvalidRenderID)
 		{
 			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
+		}
+
+		if (rb)
+		{
+			rb->GetRigidBodyInternal()->setUserPointer(this);
 		}
 
 		for (auto child : m_Children)
@@ -98,6 +129,13 @@ namespace flex
 
 	void GameObject::Destroy(const GameContext& gameContext)
 	{
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			(*iter)->Destroy(gameContext);
+			SafeDelete(*iter);
+		}
+		m_Children.clear();
+
 		if (m_MeshComponent)
 		{
 			m_MeshComponent->Destroy(gameContext);
@@ -110,12 +148,11 @@ namespace flex
 			m_RenderID = InvalidRenderID;
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		if (m_RigidBody)
 		{
-			(*iter)->Destroy(gameContext);
-			SafeDelete(*iter);
+			m_RigidBody->Destroy(gameContext);
+			SafeDelete(m_RigidBody);
 		}
-		m_Children.clear();
 
 		// NOTE: SafeDelete does not work on this type
 		if (m_CollisionShape)
@@ -124,11 +161,6 @@ namespace flex
 			m_CollisionShape = nullptr;
 		}
 
-		if (m_RigidBody)
-		{
-			m_RigidBody->Destroy(gameContext);
-			SafeDelete(m_RigidBody);
-		}
 	}
 
 	void GameObject::Update(const GameContext& gameContext)
@@ -227,7 +259,8 @@ namespace flex
 			}
 
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
-			m_RigidBody->SetRotation(glm::quat(glm::vec3(0, m_ValveMembers.rotation, 0)));
+			m_Transform.SetLocalRotation(glm::quat(glm::vec3(0, m_ValveMembers.rotation, 0)));
+			m_RigidBody->UpdateParentTransform();
 
 			if (glm::abs(m_ValveMembers.rotationSpeed) > 0.2f)
 			{
@@ -310,7 +343,15 @@ namespace flex
 
 		if (m_RigidBody)
 		{
-			m_Transform.MatchRigidBody(m_RigidBody, true);
+			if (m_RigidBody->IsKinematic())
+			{
+				m_RigidBody->MatchParentTransform();
+			}
+			else
+			{
+				// Rigid body will take these changes into account
+				m_RigidBody->UpdateParentTransform();
+			}
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
