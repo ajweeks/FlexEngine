@@ -347,6 +347,8 @@ namespace flex
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
 			m_PhysicsDebugDrawer->Initialize();
+
+			Logger::LogInfo("Renderer initialized!");
 		}
 
 		void GLRenderer::Destroy()
@@ -966,14 +968,12 @@ namespace flex
 				CaptureSceneToCubemap(gameContext, renderID);
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-				Logger::LogInfo("Done");
 
 				// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
 				//Logger::LogInfo("Capturing reflection probe");
 				//CaptureSceneToCubemap(gameContext, renderID);
 				//GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 				//GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-				//Logger::LogInfo("Done");
 
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
@@ -1622,7 +1622,6 @@ namespace flex
 						CaptureSceneToCubemap(gameContext, renderObject->renderID);
 						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-						Logger::LogInfo("Done");
 					}
 				}
 			}
@@ -3186,7 +3185,6 @@ namespace flex
 		void GLRenderer::RemoveMaterial(MaterialID materialID)
 		{
 			assert(materialID != InvalidMaterialID);
-			assert(materialID < m_Materials.size());
 
 			m_Materials.erase(materialID);
 		}
@@ -3840,6 +3838,7 @@ namespace flex
 
 		void GLRenderer::OnSceneChanged(const GameContext& gameContext)
 		{
+			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer(gameContext);
 		}
 

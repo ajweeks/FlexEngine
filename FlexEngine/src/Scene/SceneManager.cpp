@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "Logger.hpp"
+#include "FlexEngine.hpp"
 
 namespace flex
 {
@@ -53,7 +54,12 @@ namespace flex
 	{
 		assert(!m_Scenes.empty());
 
+		gameContext.engineInstance->PreSceneChange();
+
 		CurrentScene()->Initialize(gameContext);
+
+		gameContext.renderer->OnSceneChanged(gameContext);
+		gameContext.engineInstance->OnSceneChanged();
 	}
 
 	void SceneManager::PostInitializeCurrentScene(const GameContext& gameContext)
@@ -87,6 +93,8 @@ namespace flex
 			return;
 		}
 
+		gameContext.engineInstance->PreSceneChange();
+
 		if (m_CurrentSceneIndex != u32_max)
 		{
 			m_Scenes[m_CurrentSceneIndex]->Destroy(gameContext);
@@ -94,10 +102,8 @@ namespace flex
 
 		m_CurrentSceneIndex = sceneIndex;
 
-		m_Scenes[m_CurrentSceneIndex]->Initialize(gameContext);
-		m_Scenes[m_CurrentSceneIndex]->PostInitialize(gameContext);
-
-		gameContext.renderer->OnSceneChanged(gameContext);
+		InitializeCurrentScene(gameContext);
+		PostInitializeCurrentScene(gameContext);
 	}
 
 	void SceneManager::SetCurrentScene(BaseScene* scene, const GameContext& gameContext)

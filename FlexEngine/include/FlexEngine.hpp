@@ -26,6 +26,9 @@ namespace flex
 
 		bool IsDraggingGizmo() const;
 
+		void PreSceneChange();
+		void OnSceneChanged();
+
 		static std::string EngineVersionString();
 
 		static const u32 EngineVersionMajor;
@@ -66,9 +69,6 @@ namespace flex
 		void DrawImGuiObjects();
 
 		std::string RenderIDToString(RendererID rendererID) const;
-
-		void PreSceneChange();
-		void OnSceneChanged();
 
 		void DeselectCurrentlySelectedObject();
 

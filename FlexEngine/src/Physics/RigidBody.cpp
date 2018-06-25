@@ -5,6 +5,8 @@
 #pragma warning(push, 0)
 #include <btBulletDynamicsCommon.h>
 #include <btBulletCollisionCommon.h>
+
+#include <glm/gtc/matrix_transform.hpp>
 #pragma warning(pop)
 
 #include "GameContext.hpp"
@@ -64,7 +66,7 @@ namespace flex
 
 		gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
 
-		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(parentTransform->GetWorldlScale()));
+		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(parentTransform->GetWorldScale()));
 	}
 
 	void RigidBody::Destroy(const GameContext& gameContext)
@@ -197,9 +199,20 @@ namespace flex
 			return;
 		}
 
+		glm::mat4 parentTransformMat = glm::mat4(m_ParentTransform->GetWorldRotation());
+		parentTransformMat = glm::translate(parentTransformMat, m_ParentTransform->GetWorldPosition());
+		
+		glm::mat4 childTransformMat = glm::mat4(m_LocalRotation);
+		childTransformMat = glm::translate(childTransformMat, m_LocalPosition);
+
+		glm::mat4 finalTransformMat = parentTransformMat * childTransformMat;
+
 		btTransform transform = btTransform::getIdentity();
-		transform.setOrigin(Vec3ToBtVec3(m_LocalPosition + m_ParentTransform->GetWorldPosition()));
-		transform.setRotation(QuaternionToBtQuaternion(m_LocalRotation * m_ParentTransform->GetWorldlRotation()));
+		transform.setFromOpenGLMatrix(&finalTransformMat[0][0]);
+		//parentTransformMat.setRotation(QuaternionToBtQuaternion(m_ParentTransform->GetWorldRotation()));
+
+		//transform.setOrigin(Vec3ToBtVec3(m_LocalPosition + m_ParentTransform->GetWorldPosition()));
+		//transform.setRotation(QuaternionToBtQuaternion(m_LocalRotation * m_ParentTransform->GetWorldRotation()));
 		//if (m_RigidBody->getCollisionShape())
 		//{
 		//	m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldlScale()));

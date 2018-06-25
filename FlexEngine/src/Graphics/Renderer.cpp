@@ -59,8 +59,8 @@ namespace flex
 		const bool local = (transformSpace == 0);
 
 		glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetWorldPosition();
-		glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetWorldlRotation())));
-		glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetWorldlScale();
+		glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetWorldRotation())));
+		glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetWorldScale();
 
 		bool valueChanged = false;
 

@@ -118,8 +118,6 @@ namespace flex
 		m_GameContext.sceneManager = new SceneManager();
 		m_GameContext.sceneManager->AddFoundScenes();
 
-		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
-
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
@@ -132,10 +130,11 @@ namespace flex
 			m_TransformGizmoMatZID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
 		}
 
+		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
-		OnSceneChanged();
 
 		SetupImGuiStyles();
 
@@ -441,7 +440,6 @@ namespace flex
 		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
-		OnSceneChanged();
 	}
 
 	void FlexEngine::UpdateAndRender()
@@ -522,8 +520,11 @@ namespace flex
 
 				std::vector<GameObject*> transformAxes = m_TransformGizmo->GetChildren();
 
-				real selectedMultiplier = 8.0f;
-				glm::vec4 selectedColor(selectedMultiplier, selectedMultiplier, selectedMultiplier, 1.0f);
+				real gizmoHoverMultiplier = 3.0f;
+				real gizmoSelectedMultiplier = 8.0f;
+
+				glm::vec4 selectedColor(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
+				glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
 
 				// TODO: Bring keybindings out to external file (or at least variables)
 				InputManager::MouseButton dragButton = InputManager::MouseButton::LEFT;
@@ -544,8 +545,6 @@ namespace flex
 
 							if (pickedTransformGameObject)
 							{
-								real hoverMultiplier = 3.0f;
-								glm::vec4 hoverColor(hoverMultiplier, hoverMultiplier, hoverMultiplier, 1.0f);
 
 								if (hoveredOverGameObject == transformAxes[0]) // X Axis
 								{
@@ -602,7 +601,7 @@ namespace flex
 						}
 						else
 						{
-							// If mouse hasn't moved then the user clicked on something - select it
+							// If the mouse hasn't moved then the user clicked on something - select it
 							if (glm::length(dragDist) < maxMoveDist)
 							{
 								if (hoveredOverGameObject)
@@ -640,7 +639,7 @@ namespace flex
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 right = selectedObjectTransform->GetWorldlRotation() * glm::vec3(1, 0, 0);
+								glm::vec3 right = selectedObjectTransform->GetWorldRotation() * glm::vec3(1, 0, 0);
 								glm::vec3 deltaPos = (dragDist.x * scale * right);
 								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
 							}
@@ -654,7 +653,7 @@ namespace flex
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 up = selectedObjectTransform->GetWorldlRotation() * glm::vec3(0, 1, 0);
+								glm::vec3 up = selectedObjectTransform->GetWorldRotation() * glm::vec3(0, 1, 0);
 								glm::vec3 deltaPos = up * -dragDist.y * scale;
 								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
 							}
@@ -668,7 +667,7 @@ namespace flex
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 forward = selectedObjectTransform->GetWorldlRotation() * glm::vec3(0, 0, 1);
+								glm::vec3 forward = selectedObjectTransform->GetWorldRotation() * glm::vec3(0, 0, 1);
 								glm::vec3 deltaPos = forward * -dragDist.x * scale;
 								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
 							}
@@ -686,14 +685,12 @@ namespace flex
 			{
 				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
-				OnSceneChanged();
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
 				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
-				OnSceneChanged();
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
@@ -707,9 +704,7 @@ namespace flex
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
 				m_CurrentlySelectedObject = nullptr;
-				PreSceneChange();
 				m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
-				OnSceneChanged();
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
@@ -734,7 +729,7 @@ namespace flex
 			{
 				m_TransformGizmo->SetVisible(true);
 				m_TransformGizmo->GetTransform()->SetWorldPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
-				m_TransformGizmo->GetTransform()->SetWorldRotation(m_CurrentlySelectedObject->GetTransform()->GetWorldlRotation());
+				m_TransformGizmo->GetTransform()->SetWorldRotation(m_CurrentlySelectedObject->GetTransform()->GetWorldRotation());
 			}
 			else
 			{
@@ -1079,9 +1074,7 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
-					PreSceneChange();
 					m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
-					OnSceneChanged();
 				}
 				
 				if (ImGui::IsItemHovered())
@@ -1117,9 +1110,7 @@ namespace flex
 						if (ImGui::Selectable("Hard reload (deletes save file!)"))
 						{
 							DeleteFile(currentScene->GetFilePath());
-							PreSceneChange();
 							m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
-							OnSceneChanged();
 						}
 						ImGui::PopStyleColor();
 
@@ -1130,9 +1121,7 @@ namespace flex
 				ImGui::SameLine();
 				if (ImGui::Button(arrowNextStr))
 				{
-					PreSceneChange();
 					m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
-					OnSceneChanged();
 				}
 				if (ImGui::IsItemHovered())
 				{

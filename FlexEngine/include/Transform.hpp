@@ -35,10 +35,10 @@ namespace flex
 		glm::vec3 GetWorldPosition() const;
 
 		glm::quat GetLocalRotation() const;
-		glm::quat GetWorldlRotation() const;
+		glm::quat GetWorldRotation() const;
 
 		glm::vec3 GetLocalScale() const;
-		glm::vec3 GetWorldlScale() const;
+		glm::vec3 GetWorldScale() const;
 
 		void SetLocalPosition(const glm::vec3& position);
 		void SetWorldPosition(const glm::vec3& position);

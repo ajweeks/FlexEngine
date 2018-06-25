@@ -321,7 +321,7 @@ namespace flex
 		return localRotation;
 	}
 
-	glm::quat Transform::GetWorldlRotation() const
+	glm::quat Transform::GetWorldRotation() const
 	{
 		return worldRotation;
 	}
@@ -331,7 +331,7 @@ namespace flex
 		return localScale;
 	}
 
-	glm::vec3 Transform::GetWorldlScale() const
+	glm::vec3 Transform::GetWorldScale() const
 	{
 		return worldScale;
 	}
@@ -371,7 +371,7 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
-			localRotation = quatRotation - parent->GetTransform()->GetWorldlRotation();
+			localRotation = quatRotation - parent->GetTransform()->GetWorldRotation();
 		}
 		else
 		{
@@ -394,7 +394,7 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
-			localRotation = glm::quat(eulerAnglesRad) - parent->GetTransform()->GetWorldlRotation();
+			localRotation = glm::quat(eulerAnglesRad) - parent->GetTransform()->GetWorldRotation();
 		}
 		else
 		{
@@ -417,7 +417,7 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
-			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad)) - parent->GetTransform()->GetWorldlRotation();
+			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad)) - parent->GetTransform()->GetWorldRotation();
 		}
 		else
 		{
@@ -440,7 +440,7 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
-			localScale = scale / parent->GetTransform()->GetWorldlScale();
+			localScale = scale / parent->GetTransform()->GetWorldScale();
 		}
 		else
 		{
