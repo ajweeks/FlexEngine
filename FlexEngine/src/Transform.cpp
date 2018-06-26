@@ -203,11 +203,6 @@ namespace flex
 		Scale(glm::vec3(deltaX, deltaY, deltaZ));
 	}
 
-	void Transform::Update()
-	{
-		UpdateParentTransform();
-	}
-
 	void Transform::SetAsIdentity()
 	{
 		*this = m_Identity;
@@ -336,14 +331,17 @@ namespace flex
 		return worldScale;
 	}
 
-	void Transform::SetLocalPosition(const glm::vec3& position)
+	void Transform::SetLocalPosition(const glm::vec3& position, bool bUpdateChain /* = true */)
 	{
 		localPosition = position;
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetWorldPosition(const glm::vec3& position)
+	void Transform::SetWorldPosition(const glm::vec3& position, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
@@ -356,17 +354,23 @@ namespace flex
 			// NOTE: World position will be set in UpdateParentTransform
 		}
 		
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetLocalRotation(const glm::quat& quatRotation)
+	void Transform::SetLocalRotation(const glm::quat& quatRotation, bool bUpdateChain /* = true */)
 	{
 		localRotation = quatRotation;
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetWorldRotation(const glm::quat& quatRotation)
+	void Transform::SetWorldRotation(const glm::quat& quatRotation, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
@@ -379,17 +383,23 @@ namespace flex
 			// World rotation will be set in UpdateParentTransform
 		}
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetLocalRotation(const glm::vec3& eulerAnglesRad)
+	void Transform::SetLocalRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain /* = true */)
 	{
 		localRotation = glm::quat(eulerAnglesRad);
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetWorldRotation(const glm::vec3& eulerAnglesRad)
+	void Transform::SetWorldRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
@@ -402,17 +412,23 @@ namespace flex
 			// World rotation will be set in UpdateParentTransform
 		}
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad)
+	void Transform::SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain /* = true */)
 	{
 		localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad));
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetWorldRotation(real eulerXRad, real eulerYRad, real eulerZRad)
+	void Transform::SetWorldRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
@@ -425,17 +441,23 @@ namespace flex
 			// World rotation will be set in UpdateParentTransform
 		}
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetLocalScale(const glm::vec3& scale)
+	void Transform::SetLocalScale(const glm::vec3& scale, bool bUpdateChain /* = true */)
 	{
 		localScale = scale;
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
 	}
 
-	void Transform::SetWorldScale(const glm::vec3& scale)
+	void Transform::SetWorldScale(const glm::vec3& scale, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
@@ -448,6 +470,24 @@ namespace flex
 			// World scale will be set in UpdateParentTransform
 		}
 
-		UpdateParentTransform();
+		if (bUpdateChain)
+		{
+			UpdateParentTransform();
+		}
+	}
+
+	void Transform::SetWorldFromMatrix(const glm::mat4& mat, bool bUpdateChain /* = true */)
+	{
+		glm::vec3 pos;
+		glm::quat rot;
+		glm::vec3 scale;
+		glm::vec3 skew;
+		glm::vec4 perspective;
+		if (glm::decompose(mat, scale, rot, pos, skew, perspective))
+		{
+			SetWorldPosition(pos, false);
+			SetWorldRotation(rot, false);
+			SetWorldScale(scale, bUpdateChain);
+		}
 	}
 } // namespace flex

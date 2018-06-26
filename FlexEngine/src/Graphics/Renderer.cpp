@@ -50,17 +50,21 @@ namespace flex
 		//	ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
 		//}
 
-		static const char* localStr = "local";
-		static const char* globalStr = "global";
+		//static const char* localStr = "local";
+		//static const char* globalStr = "global";
+		//
+		//ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
+		//ImGui::RadioButton(globalStr, &transformSpace, 1);
+		//
+		//const bool local = (transformSpace == 0);
 
-		ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
-		ImGui::RadioButton(globalStr, &transformSpace, 1);
+		//glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetWorldPosition();
+		//glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetWorldRotation())));
+		//glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetWorldScale();
 
-		const bool local = (transformSpace == 0);
-
-		glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetWorldPosition();
-		glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetWorldRotation())));
-		glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetWorldScale();
+		glm::vec3 translation = transform->GetLocalPosition();
+		glm::vec3 rotation = glm::degrees((glm::eulerAngles(transform->GetLocalRotation())));
+		glm::vec3 scale = transform->GetLocalScale();
 
 		bool valueChanged = false;
 
@@ -70,33 +74,28 @@ namespace flex
 
 		if (valueChanged)
 		{
-			if (local)
+			//if (local)
 			{
-				transform->SetLocalPosition(translation);
-				glm::quat newRot(glm::radians(rotation));
-				transform->SetLocalRotation(newRot);
-				transform->SetLocalScale(scale);
+				transform->SetLocalPosition(translation, false);
+				transform->SetLocalRotation(glm::quat(glm::radians(rotation)), false);
+				transform->SetLocalScale(scale, true);
 
 				if (gameObject->GetRigidBody())
 				{
-					transform->Update();
-
 					gameObject->GetRigidBody()->MatchParentTransform();
 				}
 			}
-			else
-			{
-				transform->SetWorldPosition(translation);
-				transform->SetWorldRotation(glm::quat(glm::radians(rotation)));
-				transform->SetWorldScale(scale);
-
-				if (gameObject->GetRigidBody())
-				{
-					transform->Update();
-
-					gameObject->GetRigidBody()->MatchParentTransform();
-				}
-			}
+			//else
+			//{
+			//	transform->SetWorldPosition(translation, false);
+			//	transform->SetWorldRotation(glm::quat(glm::radians(rotation)), false);
+			//	transform->SetWorldScale(scale, true);
+			//
+			//	if (gameObject->GetRigidBody())
+			//	{
+			//		gameObject->GetRigidBody()->MatchParentTransform();
+			//	}
+			//}
 		}
 
 		//if (bStatic)

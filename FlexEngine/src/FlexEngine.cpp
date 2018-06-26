@@ -635,13 +635,13 @@ namespace flex
 							if (bMousePressed)
 							{
 								m_bDraggingGizmo = true;
-								m_TransformGizmoDragStartPos = selectedObjectTransform->GetLocalPosition();
+								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 right = selectedObjectTransform->GetWorldRotation() * glm::vec3(1, 0, 0);
+								glm::vec3 right = selectedObjectTransform->GetLocalRotation() * glm::vec3(1, 0, 0);
 								glm::vec3 deltaPos = (dragDist.x * scale * right);
-								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
+								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
 							}
 						}
 						else if (m_DraggingAxisIndex == 1) // Y Axis
@@ -649,13 +649,13 @@ namespace flex
 							if (bMousePressed)
 							{
 								m_bDraggingGizmo = true;
-								m_TransformGizmoDragStartPos = selectedObjectTransform->GetLocalPosition();
+								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 up = selectedObjectTransform->GetWorldRotation() * glm::vec3(0, 1, 0);
+								glm::vec3 up = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 1, 0);
 								glm::vec3 deltaPos = up * -dragDist.y * scale;
-								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
+								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
 							}
 						}
 						else if (m_DraggingAxisIndex == 2) // Z Axis
@@ -663,13 +663,13 @@ namespace flex
 							if (bMousePressed)
 							{
 								m_bDraggingGizmo = true;
-								m_TransformGizmoDragStartPos = selectedObjectTransform->GetLocalPosition();
+								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 forward = selectedObjectTransform->GetWorldRotation() * glm::vec3(0, 0, 1);
+								glm::vec3 forward = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 0, 1);
 								glm::vec3 deltaPos = forward * -dragDist.x * scale;
-								selectedObjectTransform->SetLocalPosition(m_TransformGizmoDragStartPos + deltaPos);
+								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
 							}
 						}
 					}

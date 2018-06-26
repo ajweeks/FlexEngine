@@ -178,17 +178,22 @@ namespace flex
 
 	void RigidBody::UpdateParentTransform()
 	{
-		if (!m_ParentTransform)
-		{
-			// NOTE: This should only be true before the first frame
-			return;
-		}
+		assert(m_ParentTransform);
 
 		btTransform transform = m_RigidBody->getWorldTransform();
 
-		m_ParentTransform->SetLocalPosition(BtVec3ToVec3(transform.getOrigin()) - m_LocalPosition);
-		m_ParentTransform->SetLocalRotation(BtQuaternionToQuaternion(transform.getRotation()) - m_LocalRotation);
-		m_ParentTransform->SetLocalScale(BtVec3ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()) / m_LocalScale);
+		glm::mat4 worldTransformMat = glm::translate(glm::mat4(1.0f), BtVec3ToVec3(transform.getOrigin())) *
+			glm::mat4(BtQuaternionToQuaternion(transform.getRotation())) *
+			glm::scale(glm::mat4(1.0f), BtVec3ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
+
+		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
+			glm::mat4(m_LocalRotation) *
+			glm::scale(glm::mat4(1.0f), m_LocalScale);
+		glm::mat4 invChildTransformMat = glm::inverse(childTransformMat);
+
+		glm::mat4 finalTransformMat = worldTransformMat * invChildTransformMat;
+
+		m_ParentTransform->SetWorldFromMatrix(finalTransformMat);
 	}
 
 	void RigidBody::MatchParentTransform()
@@ -199,25 +204,23 @@ namespace flex
 			return;
 		}
 
-		glm::mat4 parentTransformMat = glm::mat4(m_ParentTransform->GetWorldRotation());
-		parentTransformMat = glm::translate(parentTransformMat, m_ParentTransform->GetWorldPosition());
+		glm::mat4 parentTransformMat = glm::translate(glm::mat4(1.0f), m_ParentTransform->GetWorldPosition())
+			* glm::mat4(m_ParentTransform->GetWorldRotation());
 		
-		glm::mat4 childTransformMat = glm::mat4(m_LocalRotation);
-		childTransformMat = glm::translate(childTransformMat, m_LocalPosition);
+		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
+			glm::mat4(m_LocalRotation);
 
 		glm::mat4 finalTransformMat = parentTransformMat * childTransformMat;
 
 		btTransform transform = btTransform::getIdentity();
-		transform.setFromOpenGLMatrix(&finalTransformMat[0][0]);
-		//parentTransformMat.setRotation(QuaternionToBtQuaternion(m_ParentTransform->GetWorldRotation()));
 
-		//transform.setOrigin(Vec3ToBtVec3(m_LocalPosition + m_ParentTransform->GetWorldPosition()));
-		//transform.setRotation(QuaternionToBtQuaternion(m_LocalRotation * m_ParentTransform->GetWorldRotation()));
-		//if (m_RigidBody->getCollisionShape())
-		//{
-		//	m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldlScale()));
-		//}
+		transform.setFromOpenGLMatrix(&finalTransformMat[0][0]);
 		m_RigidBody->setWorldTransform(transform);
+
+		if (m_RigidBody->getCollisionShape())
+		{
+			m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldScale()));
+		}
 
 		m_RigidBody->activate();
 	}

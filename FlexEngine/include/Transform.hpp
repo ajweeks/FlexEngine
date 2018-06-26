@@ -26,9 +26,6 @@ namespace flex
 
 		~Transform();
 		
-		// Call when parent-child trees need to be updated
-		void Update(); 
-
 		void SetAsIdentity();
 
 		glm::vec3 GetLocalPosition() const;
@@ -40,19 +37,20 @@ namespace flex
 		glm::vec3 GetLocalScale() const;
 		glm::vec3 GetWorldScale() const;
 
-		void SetLocalPosition(const glm::vec3& position);
-		void SetWorldPosition(const glm::vec3& position);
+		void SetLocalPosition(const glm::vec3& position, bool bUpdateChain = true);
+		void SetWorldPosition(const glm::vec3& position, bool bUpdateChain = true);
 
-		void SetLocalRotation(const glm::quat& quatRotation);
-		void SetWorldRotation(const glm::quat& quatRotation);
-		void SetLocalRotation(const glm::vec3& eulerAnglesRad);
-		void SetWorldRotation(const glm::vec3& eulerAnglesRad);
-		void SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad);
-		void SetWorldRotation(real eulerXRad, real eulerYRad, real eulerZRad);
+		void SetLocalRotation(const glm::quat& quatRotation, bool bUpdateChain = true);
+		void SetWorldRotation(const glm::quat& quatRotation, bool bUpdateChain = true);
+		void SetLocalRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain = true);
+		void SetWorldRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain = true);
+		void SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain = true);
+		void SetWorldRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain = true);
 
-		void SetLocalScale(const glm::vec3& scale);
-		void SetWorldScale(const glm::vec3& scale);
+		void SetLocalScale(const glm::vec3& scale, bool bUpdateChain = true);
+		void SetWorldScale(const glm::vec3& scale, bool bUpdateChain = true);
 
+		void SetWorldFromMatrix(const glm::mat4& mat, bool bUpdateChain = true);
 
 		void Translate(const glm::vec3& deltaPosition);
 		void Translate(real deltaX, real deltaY, real deltaZ);
@@ -74,8 +72,9 @@ namespace flex
 		glm::mat4 GetWorldTransform();
 		glm::mat4 GetLocalTransform();
 
-	private:
 		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
+
+	private:
 		void UpdateChildTransforms(); // Used to go back down to the lowest node of the parent-child tree
 
 		glm::mat4 localTransform;

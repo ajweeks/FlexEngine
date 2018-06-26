@@ -389,7 +389,7 @@ namespace flex
 
 		m_Parent = parent;
 
-		m_Transform.Update();
+		m_Transform.UpdateParentTransform();
 	}
 
 	GameObject* GameObject::AddChild(GameObject* child)
@@ -417,7 +417,7 @@ namespace flex
 		m_Children.push_back(child);
 		child->SetParent(this);
 
-		m_Transform.Update();
+		m_Transform.UpdateParentTransform();
 
 		return child;
 	}

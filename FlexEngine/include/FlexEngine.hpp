@@ -90,7 +90,7 @@ namespace flex
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;
 
-		glm::vec3 m_TransformGizmoDragStartPos;
+		glm::vec3 m_SelectedObjectDragStartPos;
 		bool m_bDraggingGizmo = false;
 		i32 m_DraggingAxisIndex = -1;
 
