@@ -969,12 +969,6 @@ namespace flex
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
 
-				// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-				//Logger::LogInfo("Capturing reflection probe");
-				//CaptureSceneToCubemap(gameContext, renderID);
-				//GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-				//GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
 				//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
@@ -1604,6 +1598,27 @@ namespace flex
 		void GLRenderer::Update(const GameContext& gameContext)
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
+
+			// This fixes the weird artifacts in refl probes, but obviously isn't ideal...
+			//static i32 count = 0;
+			//if (++count == 1)
+			//{
+			//	for (GLRenderObject* renderObject : m_RenderObjects)
+			//	{
+			//		if (renderObject)
+			//		{
+			//			GLMaterial& material = m_Materials[renderObject->materialID];
+
+			//			if (material.material.generateReflectionProbeMaps)
+			//			{
+			//				Logger::LogInfo("Capturing reflection probe");
+			//				CaptureSceneToCubemap(gameContext, renderObject->renderID);
+			//				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
+			//				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+			//			}
+			//		}
+			//	}
+			//}
 
 			if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
 			{

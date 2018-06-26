@@ -43,9 +43,9 @@ namespace flex
 		std::vector<GameObject*>& GetRootObjects();
 		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);
 
-		GameObject* AddChild(GameObject* gameObject);
-		void RemoveChild(GameObject* gameObject, bool deleteChild);
-		void RemoveAllChildren(bool deleteChildren);
+		GameObject* AddRootObject(GameObject* gameObject);
+		void RemoveRootObject(GameObject* gameObject, bool deleteRootObject);
+		void RemoveAllRootObjects(bool deleteRootObjects);
 
 		/* Returns the first found game object with tag, or nullptr if none exist */
 		GameObject* FirstObjectWithTag(const std::string& tag);
@@ -53,7 +53,7 @@ namespace flex
 	protected:
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
-		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
+		GameObject* CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID = InvalidMaterialID);
 		void CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight);
 		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
 
@@ -67,10 +67,15 @@ namespace flex
 
 		i32 GetMaterialArrayIndex(const Material& material, const GameContext& gameContext);
 
+		void ParseFoundPrefabFiles();
+
+		MaterialID ParseMatID(const JSONObject& object);
+		void ParseUniqueObjectFields(const GameContext& gameContext, const JSONObject& object, GameObjectType type, MaterialID matID, GameObject* gameObject);
+
 		std::string m_Name;
 		std::string m_FileName;
 
-		std::vector<GameObject*> m_Children;
+		std::vector<GameObject*> m_RootObjects;
 
 		bool m_bUsingSaveFile = false;
 
@@ -90,6 +95,8 @@ namespace flex
 
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
+
+		std::vector<JSONObject> m_ParsedPrefabs;
 
 	private:
 		/* Recursively searches through all game objects in search of one containing given tag */

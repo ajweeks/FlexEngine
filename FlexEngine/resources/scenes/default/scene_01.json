@@ -26,11 +26,7 @@
 			"const albedo" : "0.200000, 0.120000, 0.350000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.250000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr grey",
@@ -38,11 +34,7 @@
 			"const albedo" : "0.145000, 0.180000, 0.230000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "valve mat",
@@ -50,11 +42,7 @@
 			"const albedo" : "0.100000, 0.260000, 0.100000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.500000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr yellow",
@@ -62,11 +50,7 @@
 			"const albedo" : "0.800000, 0.540000, 0.100000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr chrome",
@@ -74,25 +58,16 @@
 			"const albedo" : "0.800000, 0.800000, 0.800000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "glass",
 			"shader" : "pbr",
-			//"color multiplier" : "1, 1, 1, 0.1"
-			"const albedo" : "0.45, 0.89, 0.78",
+			"const albedo" : "0.450000, 0.890000, 0.780000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
-		},
+			"const ao" : 1.000000
+		}
 	],
 	"entities" : 
 	[
@@ -102,9 +77,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "5.000000, 16.862020, -9.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "2.000000, 2.000000, 2.000000"
+				"position" : "4.998530, 3.899998, -9.002559",
+				"rotation" : "-0.000414, 0.000000, 0.000263",
+				"scale" : "1.999999, 1.999997, 1.999999"
 			},
 			"mesh" : 
 			{
@@ -118,7 +93,7 @@
 			"collider" : 
 			{
 				"shape" : "sphere",
-				"radius" : 1.000000
+				"radius" : 1
 			},
 			"rigid body" : 
 			{
@@ -153,9 +128,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.774745, 0.400000, -2.504515",
-				"rotation" : "-0.604327, -0.000000, -1.570797",
-				"scale" : "0.999998, 0.999999, 1.000000"
+				"position" : "-6.774747, 0.399998, -2.504515",
+				"rotation" : "-0.604325, 0.000000, -1.570795",
+				"scale" : "0.999998, 0.999998, 1.000000"
 			},
 			"mesh" : 
 			{
@@ -169,7 +144,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.500000, 0.500000, 0.500000"
+				"half extents" : "0.499998, 0.499998, 0.500000"
 			},
 			"rigid body" : 
 			{
@@ -180,7 +155,8 @@
 		},
 		{
 			"name" : "valve 01",
-			"type" : "valve",
+			"type" : "prefab",
+			"prefab type" : "valve",
 			"visible" : true,
 			"transform" : 
 			{
@@ -189,17 +165,6 @@
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"material array index" : 3,
-			"collider" : 
-			{
-				"shape" : "cylinder",
-				"half extents" : "1.500000, 1.000000, 1.500000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false
-			},
 			"valve info" : 
 			{
 				"range" : "0.000000, 10.000000"
@@ -207,7 +172,8 @@
 		},
 		{
 			"name" : "valve 02",
-			"type" : "valve",
+			"type" : "prefab",
+			"prefab type" : "valve",
 			"visible" : true,
 			"transform" : 
 			{
@@ -216,17 +182,6 @@
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"material array index" : 4,
-			"collider" : 
-			{
-				"shape" : "cylinder",
-				"half extents" : "1.500000, 1.000000, 1.500000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false
-			},
 			"valve info" : 
 			{
 				"range" : "-5.000000, 5.000000"

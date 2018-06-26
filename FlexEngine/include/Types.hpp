@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string>
 
 #pragma warning(push, 0)
 #include <glm/vec2.hpp>
@@ -70,19 +71,26 @@ namespace flex
 		VALVE,
 		RISING_BLOCK,
 		GLASS_WINDOW,
+		
+
+		// NOTE: Add new types above this line
+		// NOTE: All additions *must* be also added to GameObjectTypeStrings in the same order!
 		NONE
 	};
 
-	// TODO: Register these in a map with their respective enum values at runtime
-	//std::string GameObjectTypeStrings[]
-	//{
-	//	"object",
-	//	"player",
-	//	"skybox",
-	//	"reflection probe",
-	//	"valve",
-	//	"NONE"
-	//};
+	static std::string GameObjectTypeStrings[] =
+	{
+		"object",
+		"player",
+		"skybox",
+		"reflection probe",
+		"valve",
+		"rising block",
+		"glass window",
+
+
+		"NONE"
+	};
 
 	// Screen-space anchors
 	enum class AnchorPoint

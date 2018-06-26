@@ -128,6 +128,9 @@ namespace flex
 		*/
 		bool m_bInteractable = false;
 
+		bool m_bLoadedFromPrefab = false;
+		std::string m_PrefabName;
+
 		/*
 		* Will point at the player we're interacting with, or the object if we're the player
 		*/

@@ -44,6 +44,8 @@ namespace flex
 
 	void BaseScene::Initialize(const GameContext& gameContext)
 	{
+		ParseFoundPrefabFiles();
+
 		// Physics world
 		m_PhysicsWorld = new PhysicsWorld();
 		m_PhysicsWorld->Initialize(gameContext);
@@ -116,7 +118,7 @@ namespace flex
 		const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
 		for (const JSONObject& rootEntity : rootEntities)
 		{
-			AddChild(CreateEntityFromJSON(gameContext, rootEntity));
+			AddRootObject(CreateGameObjectFromJSON(gameContext, rootEntity));
 		}
 
 		if (sceneRootObject.HasField("point lights"))
@@ -161,7 +163,7 @@ namespace flex
 			m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 			m_Grid->SetSerializable(false);
 			m_Grid->SetStatic(true);
-			AddChild(m_Grid);
+			AddRootObject(m_Grid);
 		}
 
 
@@ -183,16 +185,16 @@ namespace flex
 			m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 			m_WorldOrigin->SetSerializable(false);
 			m_WorldOrigin->SetStatic(true);
-			AddChild(m_WorldOrigin);
+			AddRootObject(m_WorldOrigin);
 		}
 
 		m_Player0 = new Player(0);
-		AddChild(m_Player0);
+		AddRootObject(m_Player0);
 
 		m_Player1 = new Player(1);
-		AddChild(m_Player1);
+		AddRootObject(m_Player1);
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
 		{
 			(*iter)->Initialize(gameContext);
 		}
@@ -200,7 +202,7 @@ namespace flex
 
 	void BaseScene::PostInitialize(const GameContext& gameContext)
 	{
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
 		{
 			GameObject* gameObject = *iter;
 
@@ -212,15 +214,15 @@ namespace flex
 
 	void BaseScene::Destroy(const GameContext& gameContext)
 	{
-		for (GameObject* child : m_Children)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (child)
+			if (rootObject)
 			{
-				child->Destroy(gameContext);
-				SafeDelete(child);
+				rootObject->Destroy(gameContext);
+				SafeDelete(rootObject);
 			}
 		}
-		m_Children.clear();
+		m_RootObjects.clear();
 
 		m_LoadedMaterials.clear();
 
@@ -309,21 +311,71 @@ namespace flex
 			gameContext.renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
 		}
 
-		for (GameObject* child : m_Children)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (child)
+			if (rootObject)
 			{
-				child->Update(gameContext);
+				rootObject->Update(gameContext);
 			}
 		}
 	}
 
-	GameObject* BaseScene::CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj)
+	GameObject* BaseScene::CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID /* = InvalidMaterialID */)
 	{
-		GameObject* newEntity = nullptr;
+		GameObject* newGameObject = nullptr;
 
 		std::string entityTypeStr = obj.GetString("type");
-		GameObjectType entityType = StringToGameObjectType(entityTypeStr);
+
+		if (entityTypeStr.compare("prefab") == 0)
+		{
+			std::string prefabTypeStr = obj.GetString("prefab type");
+			JSONObject* prefab = nullptr;
+
+			for (JSONObject& parsedPrefab : m_ParsedPrefabs)
+			{
+				if (parsedPrefab.GetString("name").compare(prefabTypeStr) == 0)
+				{
+					prefab = &parsedPrefab;
+				}
+			}
+
+			if (prefab == nullptr)
+			{
+				Logger::LogError("Invalid prefab type: " + prefabTypeStr);
+
+				return nullptr;
+			}
+			else
+			{
+				std::string name = obj.GetString("name");
+
+				MaterialID matID = ParseMatID(obj);
+
+				GameObject* prefabInstance = CreateGameObjectFromJSON(gameContext, *prefab, matID);
+				prefabInstance->m_bLoadedFromPrefab = true;
+				prefabInstance->m_PrefabName = prefabInstance->m_Name;
+
+				prefabInstance->m_Name = name;
+
+				bool bVisible = true;
+				obj.SetBoolChecked("visible", bVisible);
+				prefabInstance->SetVisible(bVisible, false);
+
+				JSONObject transformObj;
+				if (obj.SetObjectChecked("transform", transformObj))
+				{
+					prefabInstance->m_Transform = JSONParser::ParseTransform(transformObj);
+				}
+
+				GameObjectType type = StringToGameObjectType(prefab->GetString("type"));
+
+				ParseUniqueObjectFields(gameContext, obj, type, matID, prefabInstance);
+
+				return prefabInstance;
+			}
+		}
+
+		GameObjectType gameObjectType = StringToGameObjectType(entityTypeStr);
 
 		std::string objectName = obj.GetString("name");
 
@@ -333,37 +385,28 @@ namespace flex
 		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
 
 		MaterialID matID = InvalidMaterialID;
-		i32 materialArrayIndex = -1;
-		if (obj.SetIntChecked("material array index", materialArrayIndex))
+		if (overriddenMatID != InvalidMaterialID)
 		{
-			if (materialArrayIndex >= 0 &&
-				materialArrayIndex < (i32)m_LoadedMaterials.size())
-			{
-				matID = m_LoadedMaterials[materialArrayIndex];
-			}
-			else
-			{
-				matID = InvalidMaterialID;
-				Logger::LogError("Invalid material index for entity " + objectName + ": " +
-					std::to_string(materialArrayIndex));
-			}
+			matID = overriddenMatID;
+		}
+		else
+		{
+			matID = ParseMatID(obj);
 		}
 
-		newEntity = new GameObject(objectName, entityType);
+		newGameObject = new GameObject(objectName, gameObjectType);
 
 
-		Transform transform = Transform::Identity();
 		JSONObject transformObj;
 		if (obj.SetObjectChecked("transform", transformObj))
 		{
-			transform = JSONParser::ParseTransform(transformObj);
+			newGameObject->m_Transform = JSONParser::ParseTransform(transformObj);
 		}
-		newEntity->m_Transform = transform;
 
 		JSONObject meshObj;
 		if (obj.SetObjectChecked("mesh", meshObj))
 		{
-			ParseMeshObject(gameContext, meshObj, newEntity, matID);
+			ParseMeshObject(gameContext, meshObj, newGameObject, matID);
 		}
 
 		JSONObject colliderObj;
@@ -381,14 +424,14 @@ namespace flex
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
 
-				newEntity->SetCollisionShape(boxShape);
+				newGameObject->SetCollisionShape(boxShape);
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
 				real radius = colliderObj.GetFloat("radius");
 				btSphereShape* sphereShape = new btSphereShape(radius);
 
-				newEntity->SetCollisionShape(sphereShape);
+				newGameObject->SetCollisionShape(sphereShape);
 			} break;
 			case CAPSULE_SHAPE_PROXYTYPE:
 			{
@@ -396,7 +439,7 @@ namespace flex
 				real height = colliderObj.GetFloat("height");
 				btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
 
-				newEntity->SetCollisionShape(capsuleShape);
+				newGameObject->SetCollisionShape(capsuleShape);
 			} break;
 			case CONE_SHAPE_PROXYTYPE:
 			{
@@ -404,7 +447,7 @@ namespace flex
 				real height = colliderObj.GetFloat("height");
 				btConeShape* coneShape = new btConeShape(radius, height);
 
-				newEntity->SetCollisionShape(coneShape);
+				newGameObject->SetCollisionShape(coneShape);
 			} break;
 			case CYLINDER_SHAPE_PROXYTYPE:
 			{
@@ -413,7 +456,7 @@ namespace flex
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
 
-				newEntity->SetCollisionShape(cylinderShape);
+				newGameObject->SetCollisionShape(cylinderShape);
 			} break;
 			default:
 			{
@@ -428,7 +471,7 @@ namespace flex
 		JSONObject rigidBodyObj;
 		if (obj.SetObjectChecked("rigid body", rigidBodyObj))
 		{
-			if (newEntity->GetCollisionShape() == nullptr)
+			if (newGameObject->GetCollisionShape() == nullptr)
 			{
 				Logger::LogError("Serialized object contains \"rigid body\" field but no collider: " + objectName);
 			}
@@ -437,10 +480,10 @@ namespace flex
 				real mass = rigidBodyObj.GetFloat("mass");
 				bool bKinematic = rigidBodyObj.GetBool("kinematic");
 
-				RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
+				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
 				rigidBody->SetMass(mass);
 				rigidBody->SetKinematic(bKinematic);
-				rigidBody->SetStatic(newEntity->IsStatic());
+				rigidBody->SetStatic(newGameObject->IsStatic());
 			}
 		}
 
@@ -452,228 +495,17 @@ namespace flex
 			requiredVertexAttributes = shader.vertexAttributes;
 		}
 
-		switch (entityType)
+		ParseUniqueObjectFields(gameContext, obj, gameObjectType, matID, newGameObject);
+
+		if (newGameObject)
 		{
-		case GameObjectType::OBJECT:
-		{
-			// Nothing special to do
-		} break;
-		case GameObjectType::SKYBOX:
-		{
-			if (matID == InvalidMaterialID)
-			{
-				Logger::LogError("Failed to create skybox material from serialized values! Can't create skybox.");
-			}
-			else
-			{
-				Material& material = gameContext.renderer->GetMaterial(matID);
-				if (!material.generateHDRCubemapSampler &&
-					!material.generateCubemapSampler)
-				{
-					Logger::LogWarning("Invalid skybox material! Material must be set to generate cubemap sampler");
-				}
-
-				MeshComponent* skyboxMesh = new MeshComponent(matID, newEntity);
-				skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
-				skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
-				assert(newEntity->GetMeshComponent() == nullptr);
-				newEntity->SetMeshComponent(skyboxMesh);
-
-				gameContext.renderer->SetSkyboxMesh(newEntity);
-
-				glm::vec3 skyboxRotEuler;
-				if (obj.SetVec3Checked("rotation", skyboxRotEuler))
-				{
-					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
-					newEntity->GetTransform()->SetWorldRotation(skyboxRotation);
-				}
-			}
-		} break;
-		case GameObjectType::REFLECTION_PROBE:
-		{
-			// Chrome ball material
-			//MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
-			//reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
-			//reflectionProbeMaterialCreateInfo.shaderName = "pbr";
-			//reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
-			//reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
-			//reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
-			//reflectionProbeMaterialCreateInfo.constAO = 1.0f;
-			//MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
-
-			// Probe capture material
-			MaterialCreateInfo probeCaptureMatCreateInfo = {};
-			probeCaptureMatCreateInfo.name = "Reflection probe capture";
-			probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-			probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-			probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-			probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-			probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-			probeCaptureMatCreateInfo.enableIrradianceSampler = true;
-			probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-			probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-			probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-			probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-			probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-			probeCaptureMatCreateInfo.enableBRDFLUT = true;
-			probeCaptureMatCreateInfo.frameBuffers = {
-				{ "positionMetallicFrameBufferSampler", nullptr },
-				{ "normalRoughnessFrameBufferSampler", nullptr },
-				{ "albedoAOFrameBufferSampler", nullptr },
-			};
-			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
-
-			MeshComponent* sphereMesh = new MeshComponent(matID, newEntity);
-			sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
-
-			assert(newEntity->GetMeshComponent() == nullptr);
-			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf");
-			newEntity->SetMeshComponent(sphereMesh);
-			
-			std::string captureName = objectName + "_capture";
-			GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
-			captureObject->SetSerializable(false);
-			captureObject->SetVisible(false);
-
-			RenderObjectCreateInfo captureObjectCreateInfo = {};
-			captureObjectCreateInfo.vertexBufferData = nullptr;
-			captureObjectCreateInfo.materialID = captureMatID;
-			captureObjectCreateInfo.gameObject = captureObject;
-			captureObjectCreateInfo.visibleInSceneExplorer = false;
-
-			RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
-			captureObject->SetRenderID(captureRenderID);
-
-			newEntity->AddChild(captureObject);
-
-			newEntity->m_ReflectionProbeMembers.captureMatID = captureMatID;
-
-			gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
-		} break;
-		case GameObjectType::VALVE:
-		{
-			JSONObject valveInfo = obj.GetObject("valve info");
-			glm::vec2 valveRange;
-			valveInfo.SetVec2Checked("range", valveRange);
-			newEntity->m_ValveMembers.minRotation = valveRange.x;
-			newEntity->m_ValveMembers.maxRotation = valveRange.y;
-			if (glm::abs(newEntity->m_ValveMembers.maxRotation - newEntity->m_ValveMembers.minRotation) == 0.0f)
-			{
-				Logger::LogWarning("Valve's rotation range is 0, it will not be able to rotate!");
-			}
-			if (newEntity->m_ValveMembers.minRotation > newEntity->m_ValveMembers.maxRotation)
-			{
-				Logger::LogWarning("Valve's minimum rotation range is greater than its maximum! Undefined behavior");
-			}
-
-			MeshComponent* valveMesh = new MeshComponent(matID, newEntity);
-			valveMesh->SetRequiredAttributes(requiredVertexAttributes);
-			valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
-			assert(newEntity->GetMeshComponent() == nullptr);
-			newEntity->SetMeshComponent(valveMesh);
-
-			btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
-			btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-			newEntity->SetCollisionShape(cylinderShape);
-
-			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(false);
-			rigidBody->SetStatic(false);
-		} break;
-		case GameObjectType::RISING_BLOCK:
-		{
-			MeshComponent* cubeMesh = new MeshComponent(matID, newEntity);
-			cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
-			cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
-			assert(newEntity->GetMeshComponent() == nullptr);
-			newEntity->SetMeshComponent(cubeMesh);
-
-			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(true);
-			rigidBody->SetStatic(false);
-
-			JSONObject blockInfo = obj.GetObject("block info");
-
-			std::string valveName;
-			if (blockInfo.SetStringChecked("valve name", valveName))
-			{
-				if (valveName.empty())
-				{
-					Logger::LogWarning("Rising block field's valve name is empty!");
-				}
-				else
-				{
-					for (GameObject* child : m_Children)
-					{
-						if (child->m_Name.compare(valveName) == 0)
-						{
-							newEntity->m_RisingBlockMembers.valve = child;
-							break;
-						}
-					}
-				}
-			}
-			else
-			{
-				Logger::LogWarning("Rising block info field doesn't contain a valve name!");
-			}
-
-			blockInfo.SetBoolChecked("affected by gravity", newEntity->m_RisingBlockMembers.bAffectedByGravity);
-
-			if (!newEntity->m_RisingBlockMembers.valve)
-			{
-				Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
-			}
-
-			blockInfo.SetVec3Checked("move axis", newEntity->m_RisingBlockMembers.moveAxis);
-
-			if (newEntity->m_RisingBlockMembers.moveAxis == glm::vec3(0.0f))
-			{
-				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
-			}
-		} break;
-		case GameObjectType::GLASS_WINDOW:
-		{
-			JSONObject windowInfo = obj.GetObject("window info");
-
-			bool bBroken = false;
-			windowInfo.SetBoolChecked("broken", bBroken);
-
-			MeshComponent* windowMesh = new MeshComponent(matID, newEntity);
-			windowMesh->SetRequiredAttributes(requiredVertexAttributes);
-			windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + 
-				(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
-			assert(newEntity->GetMeshComponent() == nullptr);
-			newEntity->SetMeshComponent(windowMesh);
-
-			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(true);
-			rigidBody->SetStatic(false);
-		} break;
-		case GameObjectType::NONE:
-		{
-			// Assume this object is an empty parent object which holds no data itself but a transform
-		} break;
-		default:
-		{
-			//Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
-		} break;
-		}
-
-		if (newEntity)
-		{
-			newEntity->SetVisible(bVisible, false);
-			newEntity->SetVisibleInSceneExplorer(bVisibleInSceneGraph);
-			newEntity->m_Transform = transform;
+			newGameObject->SetVisible(bVisible, false);
+			newGameObject->SetVisibleInSceneExplorer(bVisibleInSceneGraph);
 
 			bool bStatic = false;
 			if (obj.SetBoolChecked("static", bStatic))
 			{
-				newEntity->SetStatic(bStatic);
+				newGameObject->SetStatic(bStatic);
 			}
 
 			if (obj.HasField("children"))
@@ -681,12 +513,12 @@ namespace flex
 				std::vector<JSONObject> children = obj.GetObjectArray("children");
 				for (const auto& child : children)
 				{
-					newEntity->AddChild(CreateEntityFromJSON(gameContext, child));
+					newGameObject->AddChild(CreateGameObjectFromJSON(gameContext, child));
 				}
 			}
 		}
 
-		return newEntity;
+		return newGameObject;
 	}
 
 	void BaseScene::ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
@@ -758,7 +590,7 @@ namespace flex
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
 	}
 
-	MeshComponent* BaseScene::ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newEntity, MaterialID matID)
+	MeshComponent* BaseScene::ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newGameObject, MaterialID matID)
 	{
 		MeshComponent* result = nullptr;
 
@@ -775,7 +607,7 @@ namespace flex
 
 		if (matID == InvalidMaterialID)
 		{
-			Logger::LogError("Mesh entity requires material index: " + newEntity->GetName());
+			Logger::LogError("Mesh object requires material index: " + newGameObject->GetName());
 		}
 		else
 		{
@@ -785,7 +617,7 @@ namespace flex
 
 			if (!meshFilePath.empty())
 			{
-				result = new MeshComponent(matID, newEntity);
+				result = new MeshComponent(matID, newGameObject);
 				result->SetRequiredAttributes(requiredVertexAttributes);
 
 				MeshComponent::ImportSettings importSettings = {};
@@ -798,21 +630,21 @@ namespace flex
 								   meshFilePath,
 								   &importSettings);
 
-				newEntity->SetMeshComponent(result);
+				newGameObject->SetMeshComponent(result);
 			}
 			else if (!meshPrefabName.empty())
 			{
-				result = new MeshComponent(matID, newEntity);
+				result = new MeshComponent(matID, newGameObject);
 				result->SetRequiredAttributes(requiredVertexAttributes);
 
 				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
 				result->LoadPrefabShape(gameContext, prefabShape);
 
-				newEntity->SetMeshComponent(result);
+				newGameObject->SetMeshComponent(result);
 			}
 			else
 			{
-				Logger::LogError("Unhandled mesh field on object: " + newEntity->GetName());
+				Logger::LogError("Unhandled mesh field on object: " + newGameObject->GetName());
 			}
 		}
 
@@ -832,6 +664,290 @@ namespace flex
 			}
 		}
 		return materialArrayIndex;
+	}
+
+	void BaseScene::ParseFoundPrefabFiles()
+	{
+		m_ParsedPrefabs.clear();
+
+		std::vector<std::string> foundFiles;
+		if (FindFilesInDirectory(RESOURCE_LOCATION + "scenes/prefabs/", foundFiles, ".json"))
+		{
+			for (const std::string& foundFilePath : foundFiles)
+			{
+				std::string fileName = foundFilePath;
+				StripLeadingDirectories(fileName);
+				Logger::LogInfo("Parsing prefab: " + fileName);
+
+				JSONObject obj;
+				if (JSONParser::Parse(foundFilePath, obj))
+				{
+					m_ParsedPrefabs.push_back(obj);
+				}
+				else
+				{
+					Logger::LogError("Failed to parse prefab file: " + foundFilePath);
+				}
+			}
+		}
+		else
+		{
+			Logger::LogError("Failed to find files in \"scenes/prefabs/\" !");
+		}
+	}
+
+	MaterialID BaseScene::ParseMatID(const JSONObject& object)
+	{
+		MaterialID matID = InvalidMaterialID;
+		i32 materialArrayIndex = -1;
+		if (object.SetIntChecked("material array index", materialArrayIndex))
+		{
+			if (materialArrayIndex >= 0 &&
+				materialArrayIndex < (i32)m_LoadedMaterials.size())
+			{
+				matID = m_LoadedMaterials[materialArrayIndex];
+			}
+			else
+			{
+				matID = InvalidMaterialID;
+				Logger::LogError("Invalid material index for entity " + object.GetString("name") + ": " +
+								 std::to_string(materialArrayIndex));
+			}
+		}
+		return matID;
+	}
+
+	void BaseScene::ParseUniqueObjectFields(const GameContext& gameContext, const JSONObject& object, GameObjectType type, MaterialID matID, GameObject* newGameObject)
+	{
+		Material& material = gameContext.renderer->GetMaterial(matID);
+		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+
+		switch (type)
+		{
+		case GameObjectType::OBJECT:
+		{
+			// Nothing special to do
+		} break;
+		case GameObjectType::SKYBOX:
+		{
+			if (matID == InvalidMaterialID)
+			{
+				Logger::LogError("Failed to create skybox material from serialized values! Can't create skybox.");
+			}
+			else
+			{
+				if (!material.generateHDRCubemapSampler &&
+					!material.generateCubemapSampler)
+				{
+					Logger::LogWarning("Invalid skybox material! Material must be set to generate cubemap sampler");
+				}
+
+				MeshComponent* skyboxMesh = new MeshComponent(matID, newGameObject);
+				skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
+				skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
+				assert(newGameObject->GetMeshComponent() == nullptr);
+				newGameObject->SetMeshComponent(skyboxMesh);
+
+				gameContext.renderer->SetSkyboxMesh(newGameObject);
+
+				glm::vec3 skyboxRotEuler;
+				if (object.SetVec3Checked("rotation", skyboxRotEuler))
+				{
+					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
+					newGameObject->GetTransform()->SetWorldRotation(skyboxRotation);
+				}
+			}
+		} break;
+		case GameObjectType::REFLECTION_PROBE:
+		{
+			// Chrome ball material
+			//MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
+			//reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
+			//reflectionProbeMaterialCreateInfo.shaderName = "pbr";
+			//reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
+			//reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
+			//reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
+			//reflectionProbeMaterialCreateInfo.constAO = 1.0f;
+			//MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
+
+			// Probe capture material
+			MaterialCreateInfo probeCaptureMatCreateInfo = {};
+			probeCaptureMatCreateInfo.name = "Reflection probe capture";
+			probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
+			probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
+			probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
+			probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
+			probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
+			probeCaptureMatCreateInfo.enableIrradianceSampler = true;
+			probeCaptureMatCreateInfo.generateIrradianceSampler = true;
+			probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
+			probeCaptureMatCreateInfo.enablePrefilteredMap = true;
+			probeCaptureMatCreateInfo.generatePrefilteredMap = true;
+			probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
+			probeCaptureMatCreateInfo.enableBRDFLUT = true;
+			probeCaptureMatCreateInfo.frameBuffers = {
+				{ "positionMetallicFrameBufferSampler", nullptr },
+				{ "normalRoughnessFrameBufferSampler", nullptr },
+				{ "albedoAOFrameBufferSampler", nullptr },
+			};
+			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
+
+			MeshComponent* sphereMesh = new MeshComponent(matID, newGameObject);
+			sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
+
+			assert(newGameObject->GetMeshComponent() == nullptr);
+			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf");
+			newGameObject->SetMeshComponent(sphereMesh);
+
+			std::string captureName = newGameObject->m_Name + "_capture";
+			GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
+			captureObject->SetSerializable(false);
+			captureObject->SetVisible(false);
+
+			RenderObjectCreateInfo captureObjectCreateInfo = {};
+			captureObjectCreateInfo.vertexBufferData = nullptr;
+			captureObjectCreateInfo.materialID = captureMatID;
+			captureObjectCreateInfo.gameObject = captureObject;
+			captureObjectCreateInfo.visibleInSceneExplorer = false;
+
+			RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
+			captureObject->SetRenderID(captureRenderID);
+
+			newGameObject->AddChild(captureObject);
+
+			newGameObject->m_ReflectionProbeMembers.captureMatID = captureMatID;
+
+			gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
+		} break;
+		case GameObjectType::VALVE:
+		{
+			JSONObject valveInfo;
+			if (object.SetObjectChecked("valve info", valveInfo))
+			{
+				glm::vec2 valveRange;
+				valveInfo.SetVec2Checked("range", valveRange);
+				newGameObject->m_ValveMembers.minRotation = valveRange.x;
+				newGameObject->m_ValveMembers.maxRotation = valveRange.y;
+				if (glm::abs(newGameObject->m_ValveMembers.maxRotation - newGameObject->m_ValveMembers.minRotation) <= 0.0001f)
+				{
+					Logger::LogWarning("Valve's rotation range is 0, it will not be able to rotate!");
+				}
+				if (newGameObject->m_ValveMembers.minRotation > newGameObject->m_ValveMembers.maxRotation)
+				{
+					Logger::LogWarning("Valve's minimum rotation range is greater than its maximum! Undefined behavior");
+				}
+			}
+
+			if (!newGameObject->m_MeshComponent)
+			{
+				MeshComponent* valveMesh = new MeshComponent(matID, newGameObject);
+				valveMesh->SetRequiredAttributes(requiredVertexAttributes);
+				valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
+				assert(newGameObject->GetMeshComponent() == nullptr);
+				newGameObject->SetMeshComponent(valveMesh);
+			}
+
+			if (!newGameObject->m_CollisionShape)
+			{
+				btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
+				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
+
+				newGameObject->SetCollisionShape(cylinderShape);
+			}
+
+			if (!newGameObject->m_RigidBody)
+			{
+				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
+				rigidBody->SetMass(1.0f);
+				rigidBody->SetKinematic(false);
+				rigidBody->SetStatic(false);
+			}
+		} break;
+		case GameObjectType::RISING_BLOCK:
+		{
+			if (!newGameObject->m_MeshComponent)
+			{
+				MeshComponent* cubeMesh = new MeshComponent(matID, newGameObject);
+				cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
+				cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
+				newGameObject->SetMeshComponent(cubeMesh);
+			}
+
+			if (!newGameObject->m_RigidBody)
+			{
+				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
+				rigidBody->SetMass(1.0f);
+				rigidBody->SetKinematic(true);
+				rigidBody->SetStatic(false);
+			}
+
+			std::string valveName;
+			JSONObject blockInfo;
+			if (object.SetObjectChecked("block info", blockInfo))
+			{
+				valveName = blockInfo.GetString("valve name");
+
+				if (valveName.empty())
+				{
+					Logger::LogWarning("Rising block field's valve name is empty!");
+				}
+				else
+				{
+					for (GameObject* rootObject : m_RootObjects)
+					{
+						if (rootObject->m_Name.compare(valveName) == 0)
+						{
+							newGameObject->m_RisingBlockMembers.valve = rootObject;
+							break;
+						}
+					}
+				}
+			}
+			else
+			{
+				Logger::LogWarning("Rising block \"block info\" field missing!");
+			}
+
+			blockInfo.SetBoolChecked("affected by gravity", newGameObject->m_RisingBlockMembers.bAffectedByGravity);
+
+			if (!newGameObject->m_RisingBlockMembers.valve)
+			{
+				Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
+			}
+
+			blockInfo.SetVec3Checked("move axis", newGameObject->m_RisingBlockMembers.moveAxis);
+
+			if (newGameObject->m_RisingBlockMembers.moveAxis == glm::vec3(0.0f))
+			{
+				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
+			}
+		} break;
+		case GameObjectType::GLASS_WINDOW:
+		{
+			JSONObject windowInfo = object.GetObject("window info");
+
+			bool bBroken = false;
+			windowInfo.SetBoolChecked("broken", bBroken);
+
+			if (!newGameObject->m_MeshComponent)
+			{
+				MeshComponent* windowMesh = new MeshComponent(matID, newGameObject);
+				windowMesh->SetRequiredAttributes(requiredVertexAttributes);
+				windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION +
+					(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
+				newGameObject->SetMeshComponent(windowMesh);
+			}
+
+			if (!newGameObject->m_RigidBody)
+			{
+				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
+				rigidBody->SetMass(1.0f);
+				rigidBody->SetKinematic(true);
+				rigidBody->SetStatic(false);
+			}
+		} break;
+		}
 	}
 
 	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
@@ -899,11 +1015,11 @@ namespace flex
 		JSONField entitiesField = {};
 		entitiesField.label = "entities";
 		std::vector<JSONObject> entitiesArray;
-		for (GameObject* child : m_Children)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (child->IsSerializable())
+			if (rootObject->IsSerializable())
 			{
-				entitiesArray.push_back(SerializeObject(child, gameContext));
+				entitiesArray.push_back(SerializeObject(rootObject, gameContext));
 			}
 		}
 		entitiesField.value = JSONValue(entitiesArray);
@@ -957,15 +1073,25 @@ namespace flex
 			return{};
 		}
 
-		// Prefab types shouldn't serialize certain fields, such as meshes
-		bool bIsPrefab = (gameObject->m_Type != GameObjectType::OBJECT &&
+		// Non-basic objects shouldn't serialize certain fields which are constant across all instances
+		bool bIsBasicObject = (gameObject->m_Type != GameObjectType::OBJECT &&
 						  gameObject->m_Type != GameObjectType::NONE);
 
 		JSONObject object;
-		std::string childName = gameObject->m_Name;
+		std::string objectName = gameObject->m_Name;
 
-		object.fields.push_back(JSONField("name", JSONValue(childName)));
-		object.fields.push_back(JSONField("type", JSONValue(GameObjectTypeToString(gameObject->m_Type))));
+		object.fields.push_back(JSONField("name", JSONValue(objectName)));
+
+		if (gameObject->m_bLoadedFromPrefab)
+		{
+			object.fields.push_back(JSONField("type", JSONValue(std::string("prefab"))));
+			object.fields.push_back(JSONField("prefab type", JSONValue(gameObject->m_PrefabName)));
+		}
+		else
+		{
+			object.fields.push_back(JSONField("type", JSONValue(GameObjectTypeToString(gameObject->m_Type))));
+		}
+
 		object.fields.push_back(JSONField("visible", JSONValue(gameObject->IsVisible())));
 		// TODO: Only save/read this value when editor is included in build
 		if (!gameObject->IsVisibleInSceneExplorer())
@@ -986,7 +1112,9 @@ namespace flex
 		}
 
 		MeshComponent* meshComponent = gameObject->GetMeshComponent();
-		if (meshComponent && !bIsPrefab)
+		if (meshComponent && 
+			!bIsBasicObject &&
+			!gameObject->m_bLoadedFromPrefab)
 		{
 			JSONField meshField = {};
 			meshField.label = "mesh";
@@ -1040,7 +1168,7 @@ namespace flex
 				{
 				//	Logger::LogError("Mesh object contains material not present in "
 				//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
-				//					 "Child name: " + childName + 
+				//					 "Object name: " + objectName + 
 				//					 ", matID: " + std::to_string(matID));
 				}
 				else
@@ -1051,7 +1179,8 @@ namespace flex
 		}
 
 		btCollisionShape* collisionShape = gameObject->GetCollisionShape();
-		if (collisionShape)
+		if (collisionShape &&
+			!gameObject->m_bLoadedFromPrefab)
 		{
 			JSONObject colliderObj;
 
@@ -1109,7 +1238,8 @@ namespace flex
 		}
 
 		RigidBody* rigidBody = gameObject->GetRigidBody();
-		if (rigidBody)
+		if (rigidBody &&
+			!gameObject->m_bLoadedFromPrefab)
 		{
 			JSONObject rigidBodyObj;
 
@@ -1386,40 +1516,40 @@ namespace flex
 		return object;
 	}
 
-	GameObject* BaseScene::AddChild(GameObject* gameObject)
+	GameObject* BaseScene::AddRootObject(GameObject* gameObject)
 	{
 		if (!gameObject)
 		{
 			return nullptr;
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
 		{
 			if (*iter == gameObject)
 			{
-				Logger::LogWarning("Attempting to add child to scene again");
+				Logger::LogWarning("Attempted to add same root object to scene more than once");
 				return nullptr;
 			}
 		}
 
-		m_Children.push_back(gameObject);
+		m_RootObjects.push_back(gameObject);
 
 		return gameObject;
 	}
 
-	void BaseScene::RemoveChild(GameObject* gameObject, bool deleteChild)
+	void BaseScene::RemoveRootObject(GameObject* gameObject, bool deleteRootObject)
 	{
-		auto iter = m_Children.begin();
-		while (iter != m_Children.end())
+		auto iter = m_RootObjects.begin();
+		while (iter != m_RootObjects.end())
 		{
 			if (*iter == gameObject)
 			{
-				if (deleteChild)
+				if (deleteRootObject)
 				{
 					SafeDelete(*iter);
 				}
 
-				iter = m_Children.erase(iter);
+				iter = m_RootObjects.erase(iter);
 				return;
 			}
 			else
@@ -1431,23 +1561,23 @@ namespace flex
 		Logger::LogWarning("Attempting to remove non-existent child from scene");
 	}
 
-	void BaseScene::RemoveAllChildren(bool deleteChildren)
+	void BaseScene::RemoveAllRootObjects(bool deleteRootObjects)
 	{
-		auto iter = m_Children.begin();
-		while (iter != m_Children.end())
+		auto iter = m_RootObjects.begin();
+		while (iter != m_RootObjects.end())
 		{
-			if (deleteChildren)
+			if (deleteRootObjects)
 			{
 				delete *iter;
 			}
 
-			iter = m_Children.erase(iter);
+			iter = m_RootObjects.erase(iter);
 		}
 	}
 
 	GameObject* BaseScene::FirstObjectWithTag(const std::string& tag)
 	{
-		for (GameObject* gameObject : m_Children)
+		for (GameObject* gameObject : m_RootObjects)
 		{
 			GameObject* result = FindObjectWithTag(tag, gameObject);
 			if (result)
@@ -1480,16 +1610,16 @@ namespace flex
 
 	std::vector<GameObject*>& BaseScene::GetRootObjects()
 	{
-		return m_Children;
+		return m_RootObjects;
 	}
 
 	void BaseScene::GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects)
 	{
-		for (auto child : m_Children)
+		for (auto rootObject : m_RootObjects)
 		{
-			if (child->m_bInteractable)
+			if (rootObject->m_bInteractable)
 			{
-				interactibleObjects.push_back(child);
+				interactibleObjects.push_back(rootObject);
 			}
 		}
 	}

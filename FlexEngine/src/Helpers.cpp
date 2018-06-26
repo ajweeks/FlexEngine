@@ -182,16 +182,35 @@ namespace flex
 
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
 	{
+		std::string cleanedFileType = fileType;
+		{
+			size_t dotPos = cleanedFileType.find('.');
+			if (dotPos != std::string::npos)
+			{
+				cleanedFileType.erase(dotPos, 1);
+			}
+		}
+		
+		bool bPathContainsBackslash = (directoryPath.find('\\') != std::string::npos);
+		char slashChar = (bPathContainsBackslash ? '\\' : '/');
+
+		std::string cleanedDirPath = directoryPath;
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != slashChar)
+		{
+			cleanedDirPath += slashChar;
+		}
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+
 		HANDLE hFind;
 		WIN32_FIND_DATAA findData;
 
-		std::string editedDirPath = directoryPath + "\\*";
-
-		hFind = FindFirstFile(editedDirPath.c_str(), &findData);
+		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
 		
 		if (hFind == INVALID_HANDLE_VALUE)
 		{
-			Logger::LogError("Failed to find any file in directory " + editedDirPath);
+			Logger::LogError("Failed to find any file in directory " + cleanedDirPath);
 			return false;
 		}
 
@@ -205,14 +224,14 @@ namespace flex
 			else
 			{
 				bool foundFileTypeMatches = false;
-				if (fileType == "*")
+				if (cleanedFileType == "*")
 				{
 					foundFileTypeMatches = true;
 				}
 				else
 				{
 					std::string foundFileType = Split(findData.cFileName, '.')[1];
-					if (foundFileType == fileType)
+					if (foundFileType == cleanedFileType)
 					{
 						foundFileTypeMatches = true;
 					}
@@ -225,7 +244,7 @@ namespace flex
 					//filesize.LowPart = findData.nFileSizeLow;
 					//filesize.HighPart = findData.nFileSizeHigh;
 
-					filePaths.push_back(directoryPath + "\\" + findData.cFileName);
+					filePaths.push_back(cleanedDirPath + findData.cFileName);
 				}
 			}
 		} while (FindNextFile(hFind, &findData) != 0);
@@ -233,7 +252,7 @@ namespace flex
 		DWORD dwError = GetLastError();
 		if (dwError != ERROR_NO_MORE_FILES)
 		{
-			Logger::LogError("Error encountered while finding files in directory " + editedDirPath);
+			Logger::LogError("Error encountered while finding files in directory " + cleanedDirPath);
 			return false;
 		}
 
@@ -738,54 +757,20 @@ namespace flex
 
 	std::string GameObjectTypeToString(GameObjectType type)
 	{
-		switch (type)
-		{
-		case GameObjectType::OBJECT:				return "object";
-		case GameObjectType::PLAYER:				return "player";
-		case GameObjectType::SKYBOX:				return "skybox";
-		case GameObjectType::REFLECTION_PROBE:		return "reflection probe";
-		case GameObjectType::VALVE:					return "valve";
-		case GameObjectType::RISING_BLOCK:			return "rising block";
-		case GameObjectType::GLASS_WINDOW:			return "glass window";
-		case GameObjectType::NONE:					return "NONE";
-		default:									return "UNHANDLED GAME OBJECT TYPE";
-		}
+		return GameObjectTypeStrings[(i32)type];
 	}
 
 	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr)
 	{
-		if (gameObjectTypeStr.compare("object") == 0)
+		for (i32 i = 0; i < (i32)GameObjectType::NONE; ++i)
 		{
-			return GameObjectType::OBJECT;
+			if (GameObjectTypeStrings[i].compare(gameObjectTypeStr) == 0)
+			{
+				return (GameObjectType)i;
+			}
 		}
-		if (gameObjectTypeStr.compare("player") == 0)
-		{
-			return GameObjectType::PLAYER;
-		}
-		else if (gameObjectTypeStr.compare("skybox") == 0)
-		{
-			return GameObjectType::SKYBOX;
-		}
-		else if (gameObjectTypeStr.compare("reflection probe") == 0)
-		{
-			return GameObjectType::REFLECTION_PROBE;
-		}
-		else if (gameObjectTypeStr.compare("valve") == 0)
-		{
-			return GameObjectType::VALVE;
-		}
-		else if (gameObjectTypeStr.compare("rising block") == 0)
-		{
-			return GameObjectType::RISING_BLOCK;
-		}
-		else if (gameObjectTypeStr.compare("glass window") == 0)
-		{
-			return GameObjectType::GLASS_WINDOW;
-		}
-		else
-		{
-			return GameObjectType::NONE;
-		}
+
+		return GameObjectType::NONE;
 	}
 
 	void RetrieveCurrentWorkingDirectory()

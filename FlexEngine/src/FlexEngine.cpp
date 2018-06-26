@@ -676,6 +676,11 @@ namespace flex
 				}
 			}
 
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_ESCAPE))
+			{
+				DeselectCurrentlySelectedObject();
+			}
+
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 			{
 				m_GameContext.renderer->SetVSyncEnabled(!m_GameContext.renderer->GetVSyncEnabled());
