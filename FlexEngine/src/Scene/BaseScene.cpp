@@ -534,12 +534,11 @@ namespace flex
 
 		std::vector<FilePathMaterialParam> filePathParams =
 		{
-			{ &createInfoOut.diffuseTexturePath, "diffuse texture filepath" },
-			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
 			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
 			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
 			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
 			{ &createInfoOut.aoTexturePath, "ao texture filepath" },
+			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
 			{ &createInfoOut.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
 			{ &createInfoOut.environmentMapPath, "environment map path" },
 		};
@@ -553,10 +552,6 @@ namespace flex
 			}
 		}
 
-		material.SetBoolChecked("generate diffuse sampler", createInfoOut.generateDiffuseSampler);
-		material.SetBoolChecked("enable diffuse sampler", createInfoOut.enableDiffuseSampler);
-		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
-		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
 		material.SetBoolChecked("generate albedo sampler", createInfoOut.generateAlbedoSampler);
 		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
 		material.SetBoolChecked("generate metallic sampler", createInfoOut.generateMetallicSampler);
@@ -565,6 +560,8 @@ namespace flex
 		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
 		material.SetBoolChecked("generate ao sampler", createInfoOut.generateAOSampler);
 		material.SetBoolChecked("enable ao sampler", createInfoOut.enableAOSampler);
+		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
+		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
 		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
 		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
 		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
@@ -1380,6 +1377,13 @@ namespace flex
 											JSONValue(material.enableAOSampler)));
 		}
 
+		static const bool defaultEnableNormal = false;
+		if (shader.needNormalSampler && material.enableNormalSampler != defaultEnableNormal)
+		{
+			materialObject.fields.push_back(JSONField("enable normal sampler",
+											JSONValue(material.enableNormalSampler)));
+		}
+
 		static const bool defaultGenerateAlbedo = false;
 		if (shader.needAlbedoSampler && material.generateAlbedoSampler != defaultGenerateAlbedo)
 		{
@@ -1408,6 +1412,13 @@ namespace flex
 											JSONValue(material.generateAOSampler)));
 		}
 
+		static const bool defaultGenerateNormal = false;
+		if (shader.needNormalSampler && material.generateNormalSampler != defaultGenerateNormal)
+		{
+			materialObject.fields.push_back(JSONField("generate normal sampler",
+											JSONValue(material.generateNormalSampler)));
+		}
+
 		if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())
 		{
 			std::string albedoTexturePath = material.albedoTexturePath.substr(RESOURCE_LOCATION.length());
@@ -1434,6 +1445,13 @@ namespace flex
 			std::string aoTexturePath = material.aoTexturePath.substr(RESOURCE_LOCATION.length());
 			materialObject.fields.push_back(JSONField("ao texture filepath",
 				JSONValue(aoTexturePath)));
+		}
+
+		if (shader.needNormalSampler && !material.normalTexturePath.empty())
+		{
+			std::string normalTexturePath = material.normalTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("normal texture filepath",
+											JSONValue(normalTexturePath)));
 		}
 
 		if (material.generateHDRCubemapSampler)
