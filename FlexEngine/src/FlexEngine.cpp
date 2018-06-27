@@ -310,9 +310,9 @@ namespace flex
 		Shader& transformGizmoShader = m_GameContext.renderer->GetShader(transformGizmoMaterial.shaderID);
 		VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
 
-		RenderObjectCreateInfo renderObjectCreateInfo = {};
-		renderObjectCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-		renderObjectCreateInfo.depthWriteEnable = false;
+		RenderObjectCreateInfo gizmoAxisCreateInfo = {};
+		gizmoAxisCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+		gizmoAxisCreateInfo.depthWriteEnable = true;
 
 		real cylinderRadius = 0.2f;
 		real cylinderHeight = 1.6f;
@@ -336,7 +336,7 @@ namespace flex
 		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
 
 		xAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
-		xAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-x-axis.fbx", nullptr, &renderObjectCreateInfo);
+		xAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-x-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 		// Y Axis
 		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
@@ -353,7 +353,7 @@ namespace flex
 		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
 
 		yAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
-		yAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-y-axis.fbx", nullptr, &renderObjectCreateInfo);
+		yAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-y-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 		// Z Axis
 		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
@@ -371,7 +371,7 @@ namespace flex
 		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
 
 		zAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
-		zAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-z-axis.fbx", nullptr, &renderObjectCreateInfo);
+		zAxisMesh->LoadFromFile(m_GameContext, RESOURCE_LOCATION + "models/transform-gizmo-z-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
