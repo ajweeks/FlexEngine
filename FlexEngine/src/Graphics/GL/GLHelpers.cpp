@@ -270,7 +270,7 @@ namespace flex
 
 					for (size_t i = 0; i < 6; ++i)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24,
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT16,
 							(GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 
 							0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 						CheckGLErrorMessages();

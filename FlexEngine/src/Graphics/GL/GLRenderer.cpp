@@ -129,7 +129,7 @@ namespace flex
 
 				glGenRenderbuffers(1, &m_CaptureRBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512); // TODO: Remove 512
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, 512, 512); // TODO: Remove 512
 				CheckGLErrorMessages();
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
 				CheckGLErrorMessages();
@@ -307,7 +307,7 @@ namespace flex
 			// Create and attach depth buffer
 			glGenRenderbuffers(1, &m_gBufferDepthHandle);
 			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, frameBufferSize.x, frameBufferSize.y);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -1060,7 +1060,7 @@ namespace flex
 			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -1179,7 +1179,7 @@ namespace flex
 				assert(mipHeight <= Renderer::MAX_TEXTURE_DIM);
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, mipWidth, mipHeight);
 				CheckGLErrorMessages();
 
 				glViewport(0, 0, mipWidth, mipHeight);
@@ -1354,7 +1354,7 @@ namespace flex
 			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -1419,7 +1419,7 @@ namespace flex
 			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -1550,10 +1550,10 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size)
+		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat)
 		{
 			glBindRenderbuffer(GL_RENDERBUFFER, handle);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, size.x, size.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, size.x, size.y);
 		}
 
 		void GLRenderer::Update(const GameContext& gameContext)
@@ -1775,7 +1775,7 @@ namespace flex
 				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				CheckGLErrorMessages();
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 				CheckGLErrorMessages();
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -1862,7 +1862,7 @@ namespace flex
 				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				CheckGLErrorMessages();
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24,
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat,
 					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.x, 
 					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.y);
 				CheckGLErrorMessages();
@@ -2541,7 +2541,7 @@ namespace flex
 			glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
 			CheckGLErrorMessages();
 
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, textureSize.x, textureSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
 			CheckGLErrorMessages();
 			// TODO: Don't use depth buffer
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
@@ -2911,7 +2911,7 @@ namespace flex
 					CheckGLErrorMessages();
 					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 					CheckGLErrorMessages();
-					glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 					CheckGLErrorMessages();
 					
 					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -3125,7 +3125,7 @@ namespace flex
 
 			glGenRenderbuffers(1, RBO);
 			glBindRenderbuffer(GL_RENDERBUFFER, *RBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size.x, size.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, size.x, size.y);
 			CheckGLErrorMessages();
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *RBO);
 			CheckGLErrorMessages();
@@ -3141,9 +3141,6 @@ namespace flex
 			{
 				Logger::LogError("Offscreen frame buffer is incomplete!");
 			}
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 			CheckGLErrorMessages();
 		}
 
@@ -3759,7 +3756,7 @@ namespace flex
 									 m_OffscreenTexture0Handle.type,
 									 newFrameBufferSize);
 
-			ResizeRenderBuffer(m_Offscreen0RBO, newFrameBufferSize);
+			ResizeRenderBuffer(m_Offscreen0RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen1FBO);
@@ -3770,7 +3767,7 @@ namespace flex
 									 m_OffscreenTexture1Handle.type,
 									 newFrameBufferSize);
 
-			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize);
+			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
@@ -3793,7 +3790,7 @@ namespace flex
 				m_gBuffer_DiffuseAOHandle.type,
 				newFrameBufferSize);
 
-			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
+			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 		}
 
 		void GLRenderer::OnSceneChanged(const GameContext& gameContext)

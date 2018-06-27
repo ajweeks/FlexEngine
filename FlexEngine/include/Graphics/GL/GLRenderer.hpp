@@ -157,7 +157,7 @@ namespace flex
 
 			void GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
-			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size);
+			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
 			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
 			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
@@ -217,6 +217,9 @@ namespace flex
 			u32 m_Offscreen1FBO = 0;
 			u32 m_Offscreen1RBO = 0;
 
+			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
+
+
 			FrameBufferHandle m_LoadingTextureHandle;
 			FrameBufferHandle m_WorkTextureHandle;
 
@@ -244,6 +247,7 @@ namespace flex
 
 			u32 m_CaptureFBO = 0;
 			u32 m_CaptureRBO = 0;
+			GLenum m_CaptureDepthInternalFormat = GL_DEPTH_COMPONENT16;
 
 			glm::vec3 m_ClearColor = { 1.0f, 0.0f, 1.0f };
 

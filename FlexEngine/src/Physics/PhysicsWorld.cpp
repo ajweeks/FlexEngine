@@ -134,7 +134,6 @@ namespace flex
 							break;
 						}
 
-
 						//pickedBody->activate(true);
 						//pickedBody->clearForces();
 						//
