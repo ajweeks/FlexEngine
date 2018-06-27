@@ -38,7 +38,7 @@ namespace flex
 		* Only writes data that has non-default values (e.g. an identity 
 		* transform is not saved)
 		*/
-		void SerializeToFile(const GameContext& gameContext);
+		void SerializeToFile(const GameContext& gameContext, bool bSaveOverDefault = false);
 
 		std::vector<GameObject*>& GetRootObjects();
 		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);

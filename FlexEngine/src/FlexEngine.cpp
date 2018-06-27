@@ -1109,13 +1109,39 @@ namespace flex
 
 				if (currentScene->IsUsingSaveFile())
 				{
-					if (ImGui::BeginPopupContextItem("item context menu"))
+					if (ImGui::BeginPopupContextItem("save default context item"))
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						if (ImGui::Selectable("Save over default file"))
+						{
+							m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext, true);
+						}
+						ImGui::PopStyleColor();
+
+						ImGui::EndPopup();
+					}
+
+					if (ImGui::BeginPopupContextItem("hard reload context item"))
 					{
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 						if (ImGui::Selectable("Hard reload (deletes save file!)"))
 						{
 							DeleteFile(currentScene->GetFilePath());
 							m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
+						}
+						ImGui::PopStyleColor();
+
+						ImGui::EndPopup();
+					}
+				}
+				else
+				{
+					if (ImGui::BeginPopupContextItem("save default context item"))
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						if (ImGui::Selectable("Save over default"))
+						{
+							m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext, true);
 						}
 						ImGui::PopStyleColor();
 

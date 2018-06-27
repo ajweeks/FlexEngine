@@ -988,7 +988,7 @@ namespace flex
 		}
 	}
 
-	void BaseScene::SerializeToFile(const GameContext& gameContext)
+	void BaseScene::SerializeToFile(const GameContext& gameContext, bool bSaveOverDefault /* = false */)
 	{
 		bool success = false;
 
@@ -1044,11 +1044,18 @@ namespace flex
 
 		std::string fileContents = rootSceneObject.Print(0);
 
-
-		std::string shortSavedFileName = "scenes/saved/" + m_FileName;
-		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
+		std::string shortSavedFileName;
+		if (bSaveOverDefault)
+		{
+			shortSavedFileName = "scenes/default/" + m_FileName;
+		}
+		else
+		{
+			shortSavedFileName = "scenes/saved/" + m_FileName;
+		}
 		Logger::LogInfo("Serializing scene to " + shortSavedFileName);
 
+		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
 		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
 		success = WriteFile(savedFilePathName, fileContents, false);
 
