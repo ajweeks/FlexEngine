@@ -139,8 +139,6 @@ namespace flex
 					Logger::LogError("Capture frame buffer is incomplete!");
 				}
 
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glBindRenderbuffer(GL_RENDERBUFFER, 0);
 				CheckGLErrorMessages();
 			}
 
@@ -316,7 +314,6 @@ namespace flex
 			{
 				Logger::LogError("Framebuffer not complete!");
 			}
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			CheckGLErrorMessages();
 		}
@@ -1020,8 +1017,6 @@ namespace flex
 															   MaterialID cubemapMaterialID, 
 															   const std::string& environmentMapPath)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-
 			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
 			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID))
 			{
@@ -1117,21 +1112,10 @@ namespace flex
 			// Generate mip maps for generated cubemap
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-			glUseProgram(0);
-			glBindVertexArray(0);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
 		void GLRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-
 			MaterialID prefilterMatID = InvalidMaterialID;
 			if (!GetMaterialID("Prefilter", prefilterMatID))
 			{
@@ -1222,12 +1206,6 @@ namespace flex
 			// TODO: Make this a togglable bool param for the shader (or roughness param)
 			// Visualize prefiltered map as skybox:
 			//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
-
-			glUseProgram(0);
-			glBindVertexArray(0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
 		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
@@ -1237,9 +1215,6 @@ namespace flex
 				// Don't re-create material or object
 				return;
 			}
-
-			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 
 			MaterialCreateInfo brdfMaterialCreateInfo = {};
 			brdfMaterialCreateInfo.name = "BRDF";
@@ -1339,18 +1314,10 @@ namespace flex
 			// Render quad
 			glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
 			CheckGLErrorMessages();
-			
-			glBindVertexArray(0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glUseProgram(last_program);
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
 		void GLRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-
 			MaterialID irrandianceMatID = InvalidMaterialID;
 			if (!GetMaterialID("Irradiance", irrandianceMatID))
 			{
@@ -1429,18 +1396,10 @@ namespace flex
 				glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
 				CheckGLErrorMessages();
 			}
-
-			glUseProgram(0);
-			glBindVertexArray(0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
 		void GLRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-
 			BatchRenderObjects(gameContext);
 
 			DrawCallInfo drawCallInfo = {};
@@ -1500,11 +1459,6 @@ namespace flex
 			drawCallInfo.deferred = false;
 			DrawGBufferContents(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SwapBuffers(const GameContext& gameContext)
@@ -1680,7 +1634,9 @@ namespace flex
 			// Screen-space objects
 			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
 			SetFont(m_FntUbuntuCondensed);
-			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(600.0f, 800.0f));
+			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(
+					   gameContext.window->GetSize().x/2.0f - 10.0f, 
+					   gameContext.window->GetSize().y/2.0f));
 
 			UpdateTextBuffer();
 			DrawText(gameContext);
@@ -1966,9 +1922,6 @@ namespace flex
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
 					CheckGLErrorMessages();
 				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				CheckGLErrorMessages();
 			}
 			else
 			{
@@ -2736,17 +2689,10 @@ namespace flex
 			FT_Done_Face(face);
 			FT_Done_FreeType(ft);
 
-			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			//glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			glViewport(0, 0,
-					   gameContext.window->GetFrameBufferSize().x,
-					   gameContext.window->GetFrameBufferSize().y);
-
 			glDeleteRenderbuffers(1, &captureRBO);
 			glDeleteFramebuffers(1, &captureFBO);
 
 			CheckGLErrorMessages();
-
 
 
 			// Initialize font shader things
@@ -2788,9 +2734,6 @@ namespace flex
 				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, RGCharSize));
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
 				CheckGLErrorMessages();
-
-				glBindBuffer(GL_ARRAY_BUFFER, 0);
-				glBindVertexArray(0);
 			}
 
 			Logger::LogInfo("Rendered font atlas for " + fileName);
@@ -3572,8 +3515,6 @@ namespace flex
 
 		void GLRenderer::UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID)
 		{
-			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-
 			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 			
@@ -3676,9 +3617,6 @@ namespace flex
 				SetInt(material->material.shaderID, "bDEBUGShowEdges", m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 				CheckGLErrorMessages();
 			}
-
-			glUseProgram(last_program);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
@@ -4135,8 +4073,6 @@ namespace flex
 
 		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
-			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
@@ -4165,10 +4101,6 @@ namespace flex
 			GLenum glRenderType = DataTypeToGLType(dataType);
 			glVertexAttribPointer((GLuint)location, size, glRenderType, (GLboolean)normalized, stride, pointer);
 			CheckGLErrorMessages();
-
-			glBindVertexArray(0);
-
-			glUseProgram(last_program);
 		}
 
 		void GLRenderer::SetSkyboxMesh(GameObject* skyboxMesh)
