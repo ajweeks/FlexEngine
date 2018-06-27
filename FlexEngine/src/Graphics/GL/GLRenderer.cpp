@@ -331,9 +331,12 @@ namespace flex
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
 			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 16);
 
+			glFlush();
+
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
 			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 10);
 
+			glFlush();
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
 			if (castedWindow == nullptr)
@@ -969,6 +972,8 @@ namespace flex
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
 
+				glFlush();
+
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
 				//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
@@ -978,6 +983,8 @@ namespace flex
 				GenerateCubemapFromHDREquirectangular(gameContext, renderObject->materialID, material.material.environmentMapPath);
 				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+
+				glFlush();
 			}
 		}
 
@@ -2078,13 +2085,13 @@ namespace flex
 
 		void GLRenderer::DrawScreenSpaceSprites(const GameContext& gameContext)
 		{
-			glm::vec3 pos(0.0f);
-			glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
-			glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
-			glm::vec3 scale(100.0f);
-			glm::vec4 color(1.0f);
-			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
-						   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
+			//glm::vec3 pos(0.0f);
+			//glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
+			//glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
+			//glm::vec3 scale(100.0f);
+			//glm::vec4 color(1.0f);
+			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
+			//			   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
@@ -2729,8 +2736,8 @@ namespace flex
 			FT_Done_Face(face);
 			FT_Done_FreeType(ft);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			//glBindRenderbuffer(GL_RENDERBUFFER, 0);
 			glViewport(0, 0,
 					   gameContext.window->GetFrameBufferSize().x,
 					   gameContext.window->GetFrameBufferSize().y);
