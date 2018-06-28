@@ -78,7 +78,10 @@ namespace flex
 
 			virtual void SetFont(BitmapFont* font) override;
 			virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos) override;
-			
+
+			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) override;
+			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
+
 		private:
 
 			struct FrameBufferHandle
@@ -99,8 +102,6 @@ namespace flex
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 
-			void LoadSettingsFromDisk();
-			void SaveSettingsToDisk();
 
 			// TODO: Either use these functions or remove them
 			void SetFloat(ShaderID shaderID, const std::string& valName, real val);
@@ -273,6 +274,7 @@ namespace flex
 
 			FT_Library ft;
 
+			std::string m_DefaultSettingsFilePathAbs;
 			std::string m_SettingsFilePathAbs;
 
 			GLRenderer(const GLRenderer&) = delete;

@@ -93,6 +93,9 @@ namespace flex
 		virtual void SetFont(BitmapFont* font) = 0;
 		virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos) = 0;
 
+		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) = 0;
+		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
+
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
 		bool InitializeDirectionalLight(const DirectionalLight& dirLight);

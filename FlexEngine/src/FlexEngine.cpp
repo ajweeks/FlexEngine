@@ -173,6 +173,8 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
+		SaveCommonSettingsToDisk();
+
 		DeselectCurrentlySelectedObject();
 
 		if (m_TransformGizmo)
@@ -323,7 +325,6 @@ namespace flex
 
 	void FlexEngine::OnSceneChanged()
 	{
-		// Update "last opened scene" name
 		SaveCommonSettingsToDisk();
 
 		Material& transformGizmoMaterial = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatXID);
@@ -782,6 +783,13 @@ namespace flex
 			m_GameContext.renderer->Draw(m_GameContext);
 			PROFILE_END("Render");
 
+			m_SecondsSinceLastCommonSettingsFileSave += m_GameContext.deltaTime;
+			if (m_SecondsSinceLastCommonSettingsFileSave > m_SecondsBetweenCommonSettingsFileSave)
+			{
+				m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
+				SaveCommonSettingsToDisk();
+			}
+
 			Profiler::EndFrame(true);
 
 			if (bWriteProfilingResultsToFile)
@@ -948,6 +956,33 @@ namespace flex
 				if (ImGui::TreeNode(postProcessStr))
 				{
 					Renderer::PostProcessSettings& postProcessSettings = m_GameContext.renderer->GetPostProcessSettings();
+
+					if (ImGui::Button("  Save  "))
+					{
+						m_GameContext.renderer->SaveSettingsToDisk(false);
+					}
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.12f, 0.09f, 1));
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.04f, 0.01f, 1));
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
+					{
+						ImGui::SameLine();
+						if (ImGui::Button("Reload defaults"))
+						{
+							m_GameContext.renderer->LoadSettingsFromDisk(true);
+						}
+
+						ImGui::SameLine();
+						if (ImGui::Button("Save over defaults"))
+						{
+							m_GameContext.renderer->SaveSettingsToDisk(true);
+						}
+					}
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
 
 					static const char* fxaaEnabledStr = "FXAA";
 					ImGui::Checkbox(fxaaEnabledStr, &postProcessSettings.bEnableFXAA);
@@ -1126,9 +1161,7 @@ namespace flex
 						{
 							m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext, true);
 						}
-						ImGui::PopStyleColor();
 
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 						if (ImGui::Selectable("Hard reload (deletes save file!)"))
 						{
 							DeleteFile(currentScene->GetFilePath());
@@ -1259,6 +1292,21 @@ namespace flex
 					m_GameContext.sceneManager->SetCurrentScene(lastOpenedSceneName, m_GameContext);
 				}
 
+				JSONObject cameraTransform;
+				if (rootObject.SetObjectChecked("camera transform", cameraTransform))
+				{
+					BaseCamera* cam = m_GameContext.cameraManager->CurrentCamera();
+					cam->SetPosition(ParseVec3(cameraTransform.GetString("position")));
+					cam->SetPitch(cameraTransform.GetFloat("pitch"));
+					cam->SetYaw(cameraTransform.GetFloat("yaw"));
+				}
+
+				real masterGain;
+				if (rootObject.SetFloatChecked("master gain", masterGain))
+				{
+					AudioManager::SetMasterGain(masterGain);
+				}
+
 				return true;
 			}
 			else
@@ -1284,9 +1332,21 @@ namespace flex
 		std::string lastOpenedSceneName = m_GameContext.sceneManager->CurrentScene()->GetFileName();
 		rootObject.fields.push_back(JSONField("last opened scene", JSONValue(lastOpenedSceneName)));
 
+		BaseCamera* cam = m_GameContext.cameraManager->CurrentCamera();
+		std::string posStr = Vec3ToString(cam->GetPosition());
+		real pitch = cam->GetPitch();
+		real yaw = cam->GetYaw();
+		JSONObject cameraTransform = {};
+		cameraTransform.fields.push_back(JSONField("position", JSONValue(posStr)));
+		cameraTransform.fields.push_back(JSONField("pitch", JSONValue(pitch)));
+		cameraTransform.fields.push_back(JSONField("yaw", JSONValue(yaw)));
+		rootObject.fields.push_back(JSONField("camera transform", JSONValue(cameraTransform)));
+
+		real masterGain = AudioManager::GetMasterGain();
+		rootObject.fields.push_back(JSONField("master gain", JSONValue(masterGain)));
+
 		std::string fileContents = rootObject.Print(0);
 
-		Logger::LogInfo("Serializing common settings from " + m_CommonSettingsFileName);
 		WriteFile(m_CommonSettingsAbsFilePath, fileContents, false);
 	}
 

@@ -48,6 +48,7 @@ namespace flex
 
 		GLRenderer::GLRenderer(GameContext& gameContext)
 		{
+			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/default-renderer-settings.ini"));
 			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/renderer-settings.ini"));
 
 			gameContext.renderer = this;
@@ -353,8 +354,6 @@ namespace flex
 
 		void GLRenderer::Destroy()
 		{
-			SaveSettingsToDisk();
-
 			CheckGLErrorMessages();
 
 			glDeleteVertexArrays(1, &m_TextQuadVAO);
@@ -4227,55 +4226,65 @@ namespace flex
 			physicsWorld->debugDrawWorld();
 		}
 
-		void GLRenderer::LoadSettingsFromDisk()
+		void GLRenderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
 		{
-			if (m_SettingsFilePathAbs.empty())
+			std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
+
+			if (!bLoadDefaults && !FileExists(m_SettingsFilePathAbs))
 			{
-				Logger::LogError("Failed to read renderer settings to disk: file path is not set!");
-				return;
+				filePath = m_DefaultSettingsFilePathAbs;
+
+				if (!FileExists(filePath))
+				{
+					Logger::LogError("Failed to find renderer settings files on disk!");
+					return;
+				}
 			}
 
-			if (FileExists(m_SettingsFilePathAbs))
+			if (bLoadDefaults && FileExists(m_SettingsFilePathAbs))
 			{
-				JSONObject rootObject{};
+				DeleteFile(m_SettingsFilePathAbs);
+			}
 
-				if (JSONParser::Parse(m_SettingsFilePathAbs, rootObject))
-				{
-					m_VSyncEnabled = rootObject.GetBool("enable v-sync");
-					m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
-					m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
-					m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
-					m_PostProcessSettings.saturation = rootObject.GetFloat(	"saturation");
-				}
-				else
-				{
-					Logger::LogError("Failed to read renderer settings file, but it exists!");
-				}
+			JSONObject rootObject;
+			if (JSONParser::Parse(filePath, rootObject))
+			{
+				m_VSyncEnabled = rootObject.GetBool("enable v-sync");
+				m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
+				m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
+				m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
+				m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
+			}
+			else
+			{
+				Logger::LogError("Failed to read renderer settings file, but it exists!");
 			}
 		}
-
-		void GLRenderer::SaveSettingsToDisk()
+		
+		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */)
 		{
-			if (m_SettingsFilePathAbs.empty())
+			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
+
+			if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
+			{
+				DeleteFile(m_SettingsFilePathAbs);
+			}
+
+			if (filePath.empty())
 			{
 				Logger::LogError("Failed to save renderer settings to disk: file path is not set!");
 				return;
 			}
 
 			JSONObject rootObject{};
-
 			rootObject.fields.push_back(JSONField("enable v-sync", JSONValue(m_VSyncEnabled)));
 			rootObject.fields.push_back(JSONField("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA)));
 			rootObject.fields.push_back(JSONField("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness))));
 			rootObject.fields.push_back(JSONField("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset))));
 			rootObject.fields.push_back(JSONField("saturation", JSONValue(m_PostProcessSettings.saturation)));
-
 			std::string fileContents = rootObject.Print(0);
 
-			// TODO: 
-			// CreateDirectoryRecursive()
-
-			WriteFile(m_SettingsFilePathAbs, fileContents, false);
+			WriteFile(filePath, fileContents, false);
 		}
 
 		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)

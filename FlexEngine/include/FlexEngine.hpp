@@ -87,7 +87,7 @@ namespace flex
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
-		GameObject* m_CurrentlySelectedObject;
+		GameObject* m_CurrentlySelectedObject = nullptr;
 
 		GameObject* m_TransformGizmo = nullptr;
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
@@ -100,6 +100,9 @@ namespace flex
 
 		std::string m_CommonSettingsFileName;
 		std::string m_CommonSettingsAbsFilePath;
+
+		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
+		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;
