@@ -166,4 +166,9 @@ namespace flex
 	{
 		return m_Height;
 	}
+
+	PlayerController* Player::GetController()
+	{
+		return m_Controller;
+	}
 } // namespace flex

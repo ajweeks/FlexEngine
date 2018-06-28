@@ -58,6 +58,7 @@ namespace flex
 			SafeDelete(iter->second);
 			iter = m_LoadedMeshes.erase(iter);
 		}
+		m_LoadedMeshes.clear();
 	}
 
 	void MeshComponent::Destroy(const GameContext& gameContext)
@@ -105,14 +106,18 @@ namespace flex
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
+		std::string meshFileName = filepath;
+		StripLeadingDirectories(meshFileName);
+
 		const aiScene* scene = nullptr;
-		if (!GetLoadedMesh(filepath, &scene))
+		if (GetLoadedMesh(filepath, &scene))
+		{
+			Logger::LogInfo("Reusing loaded mesh from " + meshFileName);
+		}
+		else
 		{
 			// Mesh hasn't been loaded before, load it now
-
-			std::string fileName = filepath;
-			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Loading mesh " + fileName);
+			Logger::LogInfo("Loading mesh " + meshFileName);
 
 			auto meshObj = m_LoadedMeshes.emplace(filepath, new LoadedMesh());
 			LoadedMesh* loadedMesh = meshObj.first->second;

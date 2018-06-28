@@ -18,8 +18,8 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext) override;
 
 		i32 GetIndex() const;
-
 		real GetHeight() const;
+		PlayerController* GetController();
 
 	private:
 		PlayerController* m_Controller = nullptr;

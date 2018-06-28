@@ -124,6 +124,18 @@ namespace flex
 		s_Sources.clear();
 	}
 
+	void AudioManager::SetMasterGain(real masterGain)
+	{
+		alListenerf(AL_GAIN, masterGain);
+	}
+
+	real AudioManager::GetMasterGain()
+	{
+		real gain;
+		alGetListenerf(AL_GAIN, &gain);
+		return gain;
+	}
+
 	void AudioManager::PlaySource(AudioSourceID sourceID, bool forceRestart)
 	{
 		assert(sourceID < s_Sources.size());

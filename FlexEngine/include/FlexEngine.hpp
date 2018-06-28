@@ -72,6 +72,10 @@ namespace flex
 
 		void DeselectCurrentlySelectedObject();
 
+		// Returns true if the common settings file existed and was valid
+		bool LoadCommonSettingsFromDisk();
+		void SaveCommonSettingsToDisk();
+
 		u32 m_RendererCount = 0;
 		bool m_Running = false;
 
@@ -93,6 +97,9 @@ namespace flex
 		glm::vec3 m_SelectedObjectDragStartPos;
 		bool m_bDraggingGizmo = false;
 		i32 m_DraggingAxisIndex = -1;
+
+		std::string m_CommonSettingsFileName;
+		std::string m_CommonSettingsAbsFilePath;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

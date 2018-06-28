@@ -39,6 +39,10 @@ namespace flex
 			   m_PlayerIndex == 1);
 	}
 
+	void PlayerController::Destroy()
+	{
+	}
+
 	void PlayerController::Update(const GameContext& gameContext)
 	{
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
@@ -58,12 +62,7 @@ namespace flex
 
 		if (gameContext.inputManager->IsGamepadButtonDown(m_PlayerIndex, InputManager::GamepadButton::BACK))
 		{
-			rb->clearForces();
-			rb->setLinearVelocity(btVector3(0, 0, 0));
-			rb->setAngularVelocity(btVector3(0, 0, 0));
-			btTransform identity = btTransform::getIdentity();
-			identity.setOrigin(btVector3(0, 5, 0));
-			rb->setWorldTransform(identity);
+			ResetTransformAndVelocities();
 			return;
 		}
 
@@ -145,7 +144,15 @@ namespace flex
 		}
 	}
 
-	void PlayerController::Destroy()
+	void PlayerController::ResetTransformAndVelocities()
 	{
+		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
+
+		rb->clearForces();
+		rb->setLinearVelocity(btVector3(0, 0, 0));
+		rb->setAngularVelocity(btVector3(0, 0, 0));
+		btTransform identity = btTransform::getIdentity();
+		identity.setOrigin(btVector3(0, 5, 0));
+		rb->setWorldTransform(identity);
 	}
 } // namespace flex

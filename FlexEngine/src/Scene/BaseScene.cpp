@@ -1614,6 +1614,23 @@ namespace flex
 		return nullptr;
 	}
 
+	Player* BaseScene::GetPlayer(i32 index)
+	{
+		if (index == 0)
+		{
+			return m_Player0;
+		}
+		else if (index == 1)
+		{
+			return m_Player1;
+		}
+		else
+		{
+			Logger::LogError("Requested invalid player from BaseScene with index: " + std::to_string(index));
+			return nullptr;
+		}
+	}
+
 	GameObject* BaseScene::FindObjectWithTag(const std::string& tag, GameObject* gameObject)
 	{
 		if (gameObject->HasTag(tag))

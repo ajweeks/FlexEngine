@@ -22,11 +22,15 @@
 #include "Cameras/OverheadCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
+#include "JSONTypes.hpp"
+#include "JSONParser.hpp"
 #include "Logger.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Profiler.hpp"
+#include "Player.hpp"
+#include "PlayerController.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -48,6 +52,12 @@ namespace flex
 		std::srand((u32)time(NULL));
 
 		RetrieveCurrentWorkingDirectory();
+
+		std::string configDirAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/"));
+		m_CommonSettingsFileName = "common.ini";
+		m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
+
+		CreateDirectoryRecursive(configDirAbs);
 
 		RendererID preferredInitialRenderer = RendererID::GL;
 
@@ -130,7 +140,12 @@ namespace flex
 			m_TransformGizmoMatZID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
 		}
 
-		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+		// Attempt to load previously saved scene, if common settings file
+		// doesn't exist however then just initialize the first scene we found
+		if (!LoadCommonSettingsFromDisk())
+		{
+			m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+		}
 
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 
@@ -302,10 +317,15 @@ namespace flex
 			m_TransformGizmo->Destroy(m_GameContext);
 			SafeDelete(m_TransformGizmo);
 		}
+
+		DeselectCurrentlySelectedObject();
 	}
 
 	void FlexEngine::OnSceneChanged()
 	{
+		// Update "last opened scene" name
+		SaveCommonSettingsToDisk();
+
 		Material& transformGizmoMaterial = m_GameContext.renderer->GetMaterial(m_TransformGizmoMatXID);
 		Shader& transformGizmoShader = m_GameContext.renderer->GetShader(transformGizmoMaterial.shaderID);
 		VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
@@ -394,13 +414,6 @@ namespace flex
 		m_TransformGizmo->PostInitialize(m_GameContext);
 	}
 
-	void FlexEngine::DeselectCurrentlySelectedObject()
-	{
-		m_CurrentlySelectedObject = nullptr;
-		m_DraggingAxisIndex = -1;
-		m_bDraggingGizmo = false;
-	}
-
 	void FlexEngine::CycleRenderer()
 	{
 		// TODO? ??
@@ -437,7 +450,14 @@ namespace flex
 		SetupImGuiStyles();
 
 		m_GameContext.sceneManager->AddFoundScenes();
-		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+		
+		// Attempt to load previously saved scene, if common settings file
+		// doesn't exist however then just initialize the first scene we found
+		if (!LoadCommonSettingsFromDisk())
+		{
+			m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+		}
+
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 	}
@@ -688,13 +708,11 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
-				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
-				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
@@ -708,9 +726,7 @@ namespace flex
 			{
 				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
 
-				m_CurrentlySelectedObject = nullptr;
 				m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
-				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
@@ -832,7 +848,7 @@ namespace flex
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
-		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove;
 		ImGui::SetNextWindowSize(ImVec2(0.0f, (real)m_GameContext.window->GetFrameBufferSize().y),
 								 ImGuiCond_Always);
 		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))
@@ -1082,13 +1098,6 @@ namespace flex
 					m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
 				}
 				
-				if (ImGui::IsItemHovered())
-				{
-					ImGui::BeginTooltip();
-					ImGui::TextUnformatted("Previous scene");
-					ImGui::EndTooltip();
-				}
-
 				ImGui::SameLine();
 
 				BaseScene* currentScene = m_GameContext.sceneManager->CurrentScene();
@@ -1109,7 +1118,7 @@ namespace flex
 
 				if (currentScene->IsUsingSaveFile())
 				{
-					if (ImGui::BeginPopupContextItem("save default context item"))
+					if (ImGui::BeginPopupContextItem("save default context item 1"))
 					{
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 						if (ImGui::Selectable("Save over default file"))
@@ -1118,11 +1127,6 @@ namespace flex
 						}
 						ImGui::PopStyleColor();
 
-						ImGui::EndPopup();
-					}
-
-					if (ImGui::BeginPopupContextItem("hard reload context item"))
-					{
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 						if (ImGui::Selectable("Hard reload (deletes save file!)"))
 						{
@@ -1136,7 +1140,7 @@ namespace flex
 				}
 				else
 				{
-					if (ImGui::BeginPopupContextItem("save default context item"))
+					if (ImGui::BeginPopupContextItem("save default context item 2"))
 					{
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 						if (ImGui::Selectable("Save over default"))
@@ -1154,12 +1158,46 @@ namespace flex
 				{
 					m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
 				}
-				if (ImGui::IsItemHovered())
+
+				ImGui::TreePop();
+			}
+			
+			const char* reloadStr = "Reloading";
+			if (ImGui::TreeNode(reloadStr))
+			{
+				if (ImGui::Button("Reload scene file"))
 				{
-					ImGui::BeginTooltip();
-					static const char* nextSceneStr = "Next scene";
-					ImGui::TextUnformatted(nextSceneStr);
-					ImGui::EndTooltip();
+					m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
+				}
+
+				if (ImGui::Button("Hard reload scene file (reloads all meshes)"))
+				{
+					Logger::LogInfo("Clearing all loaded meshes");
+					MeshComponent::DestroyAllLoadedMeshes();
+					m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
+				}
+
+				if (ImGui::Button("Reload all shaders"))
+				{
+					m_GameContext.renderer->ReloadShaders();
+				}
+
+				if (ImGui::Button("Reload player positions"))
+				{
+					m_GameContext.sceneManager->CurrentScene()->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
+					m_GameContext.sceneManager->CurrentScene()->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
+				}
+
+				ImGui::TreePop();
+			}
+
+			const char* audioStr = "Audio";
+			if (ImGui::TreeNode(audioStr))
+			{
+				real gain = AudioManager::GetMasterGain();
+				if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
+				{
+					AudioManager::SetMasterGain(gain);
 				}
 
 				ImGui::TreePop();
@@ -1189,6 +1227,66 @@ namespace flex
 		{
 			DeselectCurrentlySelectedObject();
 		}
+	}
+
+	void FlexEngine::DeselectCurrentlySelectedObject()
+	{
+		m_CurrentlySelectedObject = nullptr;
+		m_DraggingAxisIndex = -1;
+		m_bDraggingGizmo = false;
+	}
+
+	bool FlexEngine::LoadCommonSettingsFromDisk()
+	{
+		if (m_CommonSettingsAbsFilePath.empty())
+		{
+			Logger::LogError("Failed to read common settings to disk: file path is not set!");
+			return false;
+		}
+
+		if (FileExists(m_CommonSettingsAbsFilePath))
+		{
+			Logger::LogInfo("Loading common settings from " + m_CommonSettingsFileName);
+
+			JSONObject rootObject{};
+
+			if (JSONParser::Parse(m_CommonSettingsAbsFilePath, rootObject))
+			{
+				std::string lastOpenedSceneName = rootObject.GetString("last opened scene");
+				if (!lastOpenedSceneName.empty())
+				{
+					m_GameContext.sceneManager->SetCurrentScene(lastOpenedSceneName, m_GameContext);
+				}
+
+				return true;
+			}
+			else
+			{
+				Logger::LogError("Failed to read common settings file, but it exists!");
+				return false;
+			}
+		}
+
+		return false;
+	}
+
+	void FlexEngine::SaveCommonSettingsToDisk()
+	{
+		if (m_CommonSettingsAbsFilePath.empty())
+		{
+			Logger::LogError("Failed to save common settings to disk: file path is not set!");
+			return;
+		}
+
+		JSONObject rootObject{};
+
+		std::string lastOpenedSceneName = m_GameContext.sceneManager->CurrentScene()->GetFileName();
+		rootObject.fields.push_back(JSONField("last opened scene", JSONValue(lastOpenedSceneName)));
+
+		std::string fileContents = rootObject.Print(0);
+
+		Logger::LogInfo("Serializing common settings from " + m_CommonSettingsFileName);
+		WriteFile(m_CommonSettingsAbsFilePath, fileContents, false);
 	}
 
 	bool FlexEngine::IsDraggingGizmo() const

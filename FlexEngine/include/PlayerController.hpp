@@ -14,6 +14,8 @@ namespace flex
 		void Update(const GameContext& gameContext);
 		void Destroy();
 
+		void ResetTransformAndVelocities();
+
 	private:
 		real m_MoveAcceleration = 50.0f;
 		real m_MaxMoveSpeed = 14.0f;
