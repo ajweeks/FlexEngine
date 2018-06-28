@@ -183,6 +183,8 @@ namespace flex
 
 			void RemoveMaterial(MaterialID materialID);
 
+			void DoImGuiRenameGameObjectContextMenu(GameObject* gameObject);
+
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
 

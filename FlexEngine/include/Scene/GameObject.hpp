@@ -39,6 +39,7 @@ namespace flex
 		void SetRenderID(RenderID renderID);
 
 		std::string GetName() const;
+		void SetName(const std::string& newName);
 
 		bool IsSerializable() const;
 		void SetSerializable(bool bSerializable);

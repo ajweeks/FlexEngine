@@ -1041,16 +1041,29 @@ namespace flex
 
 		std::string fileContents = rootSceneObject.Print(0);
 
+		std::string defaultShortSaveFilePath = "scenes/default/" + m_FileName;
+		std::string savedShortSaveFilePath = "scenes/saved/" + m_FileName;
 		std::string shortSavedFileName;
 		if (bSaveOverDefault)
 		{
-			shortSavedFileName = "scenes/default/" + m_FileName;
+			shortSavedFileName = defaultShortSaveFilePath;
 		}
 		else
 		{
-			shortSavedFileName = "scenes/saved/" + m_FileName;
+			shortSavedFileName = savedShortSaveFilePath;
 		}
 		Logger::LogInfo("Serializing scene to " + shortSavedFileName);
+		
+		if (bSaveOverDefault)
+		{
+			m_bUsingSaveFile = false;
+
+			if (FileExists(RESOURCE_LOCATION + savedShortSaveFilePath))
+			{
+				DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
+			}
+		}
+
 
 		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
 		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
@@ -1060,7 +1073,11 @@ namespace flex
 		{
 			Logger::LogInfo("Done serializing scene");
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
-			m_bUsingSaveFile = true;
+
+			if (!bSaveOverDefault)
+			{
+				m_bUsingSaveFile = true;
+			}
 		}
 		else
 		{

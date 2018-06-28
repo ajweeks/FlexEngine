@@ -3154,6 +3154,29 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
+		void GLRenderer::DoImGuiRenameGameObjectContextMenu(GameObject* gameObject)
+		{
+			std::string contextMenuID = "context window game object " + gameObject->GetName() + std::to_string(gameObject->GetRenderID());
+			if (ImGui::BeginPopupContextItem(contextMenuID.c_str()))
+			{
+				const size_t maxStrLen = 256;
+				std::string newObjectName = gameObject->GetName();
+				newObjectName.resize(maxStrLen);
+				if (ImGui::InputText("New name", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					size_t firstTerminator = newObjectName.find('\0');
+					if (firstTerminator != std::string::npos)
+					{
+						newObjectName = newObjectName.substr(0, firstTerminator);
+					}
+
+					gameObject->SetName(newObjectName);
+				}
+
+				ImGui::EndPopup();
+			}
+		}
+
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
 		{
 			auto location = m_LoadedTextures.find(filePath);
@@ -4321,7 +4344,6 @@ namespace flex
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
-			std::string objectName = gameObject->GetName();
 			std::string objectID;
 			if (renderID != InvalidRenderID)
 			{
@@ -4334,10 +4356,12 @@ namespace flex
 				}
 			}
 
-			ImGui::Text(objectName.c_str());
+			ImGui::Text(gameObject->GetName().c_str());
+
+			DoImGuiRenameGameObjectContextMenu(gameObject);
 
 			bool visible = gameObject->IsVisible();
-			const std::string objectVisibleLabel("Visible" + objectID + objectName);
+			const std::string objectVisibleLabel("Visible" + objectID + gameObject->GetName());
 			if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
 			{
 				gameObject->SetVisible(visible);
@@ -4405,6 +4429,8 @@ namespace flex
 			{
 				bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
 
+				DoImGuiRenameGameObjectContextMenu(gameObject);
+
 				if (ImGui::IsItemClicked())
 				{
 					gameContext.engineInstance->SetSelectedObject(gameObject);
@@ -4426,6 +4452,8 @@ namespace flex
 			{
 				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 				ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+
+				DoImGuiRenameGameObjectContextMenu(gameObject);
 
 				if (ImGui::IsItemClicked())
 				{

@@ -72,14 +72,14 @@
 	"entities" : 
 	[
 		{
-			"name" : "Sphere 02",
+			"name" : "Sphere 01",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "4.998530, 3.899998, -9.002559",
-				"rotation" : "-0.000414, 0.000000, 0.000263",
-				"scale" : "1.999999, 1.999997, 1.999999"
+				"position" : "47.761673, -28918.404297, -164.847290",
+				"rotation" : "-0.550148, 0.245541, -0.966690",
+				"scale" : "1.999826, 1.999842, 1.999865"
 			},
 			"mesh" : 
 			{
@@ -93,7 +93,7 @@
 			"collider" : 
 			{
 				"shape" : "sphere",
-				"radius" : 1
+				"radius" : 511.623383
 			},
 			"rigid body" : 
 			{
@@ -103,7 +103,7 @@
 			}
 		},
 		{
-			"name" : "mori knob",
+			"name" : "Mori Knob",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
@@ -123,14 +123,14 @@
 			"material array index" : 2
 		},
 		{
-			"name" : "chamfer box",
+			"name" : "Chamfer Box",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.774747, 0.399998, -2.504515",
-				"rotation" : "-0.604325, 0.000000, -1.570795",
-				"scale" : "0.999998, 0.999998, 1.000000"
+				"position" : "-6.774756, 0.399972, -2.504515",
+				"rotation" : "-0.604318, 0.000000, -1.570796",
+				"scale" : "0.999992, 0.999992, 1.000000"
 			},
 			"mesh" : 
 			{
@@ -144,7 +144,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.499998, 0.499998, 0.500000"
+				"half extents" : "0.499972, 0.499974, 0.500000"
 			},
 			"rigid body" : 
 			{
@@ -154,7 +154,7 @@
 			}
 		},
 		{
-			"name" : "valve 01",
+			"name" : "Valve 01",
 			"type" : "prefab",
 			"prefab type" : "valve",
 			"visible" : true,
@@ -171,7 +171,7 @@
 			}
 		},
 		{
-			"name" : "valve 02",
+			"name" : "Valve 02",
 			"type" : "prefab",
 			"prefab type" : "valve",
 			"visible" : true,
@@ -188,7 +188,7 @@
 			}
 		},
 		{
-			"name" : "moving block 01",
+			"name" : "Moving Block 01",
 			"type" : "rising block",
 			"visible" : true,
 			"transform" : 
@@ -211,13 +211,13 @@
 			},
 			"block info" : 
 			{
-				"valve name" : "valve 01",
+				"valve name" : "Valve 01",
 				"move axis" : "0.000000, 1.000000, 0.500000",
 				"affected by gravity" : true
 			}
 		},
 		{
-			"name" : "moving block 02",
+			"name" : "Moving Block 02",
 			"type" : "rising block",
 			"visible" : true,
 			"transform" : 
@@ -240,13 +240,13 @@
 			},
 			"block info" : 
 			{
-				"valve name" : "valve 02",
+				"valve name" : "Valve 02",
 				"move axis" : "1.000000, 0.000000, 0.000000",
 				"affected by gravity" : false
 			}
 		},
 		{
-			"name" : "glass 01",
+			"name" : "Glass 01",
 			"type" : "glass window",
 			"visible" : true,
 			"transform" : 
@@ -269,11 +269,11 @@
 			},
 			"window info" : 
 			{
-				"broken" : true
+				"broken" : false
 			}
 		},
 		{
-			"name" : "ground plane",
+			"name" : "Ground Plane",
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
@@ -295,7 +295,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000000, 1.000000, 1.000000"
+				"half extents" : "1000000053026226176.000000, 1.000000, 1000000053026226176.000000"
 			},
 			"rigid body" : 
 			{

@@ -486,6 +486,11 @@ namespace flex
 		return m_Name;
 	}
 
+	void GameObject::SetName(const std::string& newName)
+	{
+		m_Name = newName;
+	}
+
 	void GameObject::SetRenderID(RenderID renderID)
 	{
 		m_RenderID = renderID;

@@ -1154,7 +1154,7 @@ namespace flex
 
 				if (currentScene->IsUsingSaveFile())
 				{
-					if (ImGui::BeginPopupContextItem("save default context item 1"))
+					if (ImGui::BeginPopupContextItem("scene context menu 1"))
 					{
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 						if (ImGui::Selectable("Save over default file"))
@@ -1174,7 +1174,7 @@ namespace flex
 				}
 				else
 				{
-					if (ImGui::BeginPopupContextItem("save default context item 2"))
+					if (ImGui::BeginPopupContextItem("scene context menu 2"))
 					{
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 						if (ImGui::Selectable("Save over default"))
