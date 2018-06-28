@@ -303,6 +303,7 @@ namespace flex
 			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
 			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
 			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+			renderObjectCreateInfo.editorObject = optionalCreateInfo->editorObject;
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{

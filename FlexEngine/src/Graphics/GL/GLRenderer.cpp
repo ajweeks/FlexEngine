@@ -1392,7 +1392,7 @@ namespace flex
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].irradianceSamplerID, 0);
 				CheckGLErrorMessages();
 
-				// Should be drawing cube here, not object (relfection probe's sphere is being drawn
+				// Should be drawing cube here, not object (reflection probe's sphere is being drawn
 				glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
 				CheckGLErrorMessages();
 			}
@@ -1403,8 +1403,8 @@ namespace flex
 			BatchRenderObjects(gameContext);
 
 			DrawCallInfo drawCallInfo = {};
-			drawCallInfo.renderToCubemap = true;
 			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
+			drawCallInfo.bRenderToCubemap = true;
 
 			// Clear cubemap faces
 			GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
@@ -1427,7 +1427,7 @@ namespace flex
 
 			for (size_t face = 0; face < 6; ++face)
 			{
-				// Clear all gbuffers
+				// Clear all G-Buffers
 				if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
 				{
 					// Skip first buffer, it'll be cleared below
@@ -1454,9 +1454,9 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			drawCallInfo.deferred = true;
+			drawCallInfo.bDeferred = true;
 			DrawDeferredObjects(gameContext, drawCallInfo);
-			drawCallInfo.deferred = false;
+			drawCallInfo.bDeferred = false;
 			DrawGBufferContents(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 		}
@@ -1616,9 +1616,9 @@ namespace flex
 			BatchRenderObjects(gameContext);
 
 			// World-space objects
-			drawCallInfo.deferred = true;
+			drawCallInfo.bDeferred = true;
 			DrawDeferredObjects(gameContext, drawCallInfo);
-			drawCallInfo.deferred = false;
+			drawCallInfo.bDeferred = false;
 			DrawGBufferContents(gameContext, drawCallInfo);
 			DrawForwardObjects(gameContext, drawCallInfo);
 			DrawWorldSpaceSprites(gameContext);
@@ -1632,11 +1632,13 @@ namespace flex
 			DrawEditorObjects(gameContext, drawCallInfo);
 
 			// Screen-space objects
+#if 0
 			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
 			SetFont(m_FntUbuntuCondensed);
 			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(
 					   gameContext.window->GetSize().x/2.0f - 10.0f, 
 					   gameContext.window->GetSize().y/2.0f));
+#endif
 
 			UpdateTextBuffer();
 			DrawText(gameContext);
@@ -1757,12 +1759,12 @@ namespace flex
 
 		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			if (!drawCallInfo.deferred)
+			if (!drawCallInfo.bDeferred)
 			{
 				Logger::LogError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferrred!");
 			}
 
-			if (drawCallInfo.renderToCubemap)
+			if (drawCallInfo.bRenderToCubemap)
 			{
 				// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
 
@@ -1783,6 +1785,9 @@ namespace flex
 			}
 			else
 			{
+				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+
 				glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
@@ -1818,8 +1823,8 @@ namespace flex
 				CheckGLErrorMessages();
 			}
 
-			// Copy depth from gbuffer to default render target
-			if (drawCallInfo.renderToCubemap)
+			// Copy depth from G-Buffer to default render target
+			if (drawCallInfo.bRenderToCubemap)
 			{
 				// No blit is needed, right? We already drew to the cubemap depth?
 			}
@@ -1838,7 +1843,7 @@ namespace flex
 
 		void GLRenderer::DrawGBufferContents(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			if (drawCallInfo.deferred)
+			if (drawCallInfo.bDeferred)
 			{
 				Logger::LogError("DrawGBufferQuad was called with a drawCallInfo set to deferred!");
 			}
@@ -1848,8 +1853,8 @@ namespace flex
 				// Generate GBuffer if not already generated
 				GenerateGBuffer(gameContext);
 			}
-
-			if (drawCallInfo.renderToCubemap)
+			
+			if (drawCallInfo.bRenderToCubemap)
 			{
 				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
@@ -1977,7 +1982,7 @@ namespace flex
 
 		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
 		{
-			if (drawCallInfo.deferred)
+			if (drawCallInfo.bDeferred)
 			{
 				Logger::LogError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!");
 			}
@@ -2293,6 +2298,8 @@ namespace flex
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			CheckGLErrorMessages();
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			CheckGLErrorMessages();
 
 			glBindVertexArray(m_TextQuadVAO);
 			CheckGLErrorMessages();
@@ -2349,9 +2356,6 @@ namespace flex
 					CheckGLErrorMessages();
 				}
 			}
-
-			glBindVertexArray(0);
-			glUseProgram(0);
 		}
 
 		bool GLRenderer::LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size)
@@ -2897,8 +2901,7 @@ namespace flex
 
 				BindTextures(shader, material);
 
-				// TODO: OPTIMIZATION: Create DrawRenderObjectBatchToCubemap rather than check bool
-				if (drawCallInfo.renderToCubemap)
+				if (drawCallInfo.bRenderToCubemap)
 				{
 					// renderObject->gameObject->IsStatic()
 
@@ -2941,7 +2944,7 @@ namespace flex
 						glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
 						CheckGLErrorMessages();
 
-						if (drawCallInfo.deferred)
+						if (drawCallInfo.bDeferred)
 						{
 							//constexpr i32 numBuffers = 3;
 							//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
@@ -2980,7 +2983,8 @@ namespace flex
 				}
 				else
 				{
-					// renderToCubemap is false, just render normally
+					glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+					glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 					// TODO: Move to translucent pass?
 					if (shader->translucent)
@@ -3304,6 +3308,7 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
@@ -3742,9 +3747,6 @@ namespace flex
 			{
 				return;
 			}
-
-			glViewport(0, 0, width, height);
-			CheckGLErrorMessages();
 
 			const glm::vec2i newFrameBufferSize(width, height);
 
@@ -4286,7 +4288,7 @@ namespace flex
 
 			real selectedObjectAreaHeight = 220;
 			ImGui::BeginChild("SelectedObject",
-							  ImVec2(ImGui::GetWindowContentRegionWidth(), selectedObjectAreaHeight),
+							  ImVec2(0, selectedObjectAreaHeight),
 							  true);
 
 			if (selectedObject)
@@ -4297,16 +4299,11 @@ namespace flex
 			ImGui::EndChild();
 
 			ImGui::Text("Render Objects");
-			if (ImGui::BeginChild("Render Objects", ImVec2(0, 500)))
+			std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
+			for (size_t i = 0; i < rootObjects.size(); ++i)
 			{
-				std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
-				for (size_t i = 0; i < rootObjects.size(); ++i)
-				{
-					DrawGameObjectNameAndChildren(rootObjects[i], gameContext);
-				}
-
+				DrawGameObjectNameAndChildren(rootObjects[i], gameContext);
 			}
-			ImGui::EndChild();
 
 			DrawImGuiLights();
 		}

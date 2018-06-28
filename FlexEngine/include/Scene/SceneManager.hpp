@@ -27,7 +27,7 @@ namespace flex
 
 		void SetCurrentScene(u32 sceneIndex, const GameContext& gameContext);
 		void SetCurrentScene(BaseScene* scene, const GameContext& gameContext);
-		void SetCurrentScene(const std::string& sceneName, const GameContext& gameContext);
+		void SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext);
 		void SetNextSceneActive(const GameContext& gameContext);
 		void SetPreviousSceneActive(const GameContext& gameContext);
 		void ReloadCurrentScene(const GameContext& gameContext);
@@ -44,6 +44,9 @@ namespace flex
 	private:
 		u32 m_CurrentSceneIndex = u32_max;
 		std::vector<BaseScene*> m_Scenes;
+
+		std::string m_SavedDirStr;
+		std::string m_DefaultDirStr;
 
 		SceneManager(const SceneManager&) = delete;
 		SceneManager& operator=(const SceneManager&) = delete;

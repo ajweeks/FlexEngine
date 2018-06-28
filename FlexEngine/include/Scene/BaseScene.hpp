@@ -28,6 +28,7 @@ namespace flex
 		std::string GetName() const;
 		std::string GetFilePath() const;
 		std::string GetShortFilePath() const;
+		std::string GetFileName() const;
 
 		bool IsUsingSaveFile() const;
 
@@ -49,6 +50,8 @@ namespace flex
 
 		/* Returns the first found game object with tag, or nullptr if none exist */
 		GameObject* FirstObjectWithTag(const std::string& tag);
+
+		Player* GetPlayer(i32 index);
 
 	protected:
 		PhysicsWorld* m_PhysicsWorld = nullptr;
@@ -99,7 +102,10 @@ namespace flex
 		std::vector<JSONObject> m_ParsedPrefabs;
 
 	private:
-		/* Recursively searches through all game objects in search of one containing given tag */
+		/*
+		* Recursively searches through all game objects and returns first
+		* one containing given tag, or nullptr if none exist
+		*/
 		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
 
 		BaseScene(const BaseScene&) = delete;

@@ -333,6 +333,7 @@ namespace flex
 		RenderObjectCreateInfo gizmoAxisCreateInfo = {};
 		gizmoAxisCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 		gizmoAxisCreateInfo.depthWriteEnable = true;
+		gizmoAxisCreateInfo.editorObject = true;
 
 		real cylinderRadius = 0.2f;
 		real cylinderHeight = 1.6f;

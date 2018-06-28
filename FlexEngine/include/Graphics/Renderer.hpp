@@ -137,8 +137,8 @@ namespace flex
 		struct DrawCallInfo
 		{
 			RenderID cubemapObjectRenderID = InvalidRenderID;
-			bool renderToCubemap = false;
-			bool deferred = false;
+			bool bRenderToCubemap = false;
+			bool bDeferred = false;
 		};
 		
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial

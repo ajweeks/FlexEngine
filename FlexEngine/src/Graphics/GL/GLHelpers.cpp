@@ -61,6 +61,7 @@ namespace flex
 
 		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
+			// TODO: OPTIMIZATION: Cache loaded textures in the same manner as meshes to avoid loading textures multiple times
 			GLFWimage image = LoadGLFWimage(filePath, false, flipVertically);
 
 			if (!image.pixels)

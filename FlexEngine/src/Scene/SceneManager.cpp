@@ -6,12 +6,20 @@
 
 #include "Logger.hpp"
 #include "FlexEngine.hpp"
+#include "Cameras/CameraManager.hpp"
 
 namespace flex
 {
 	SceneManager::SceneManager() :
 		m_CurrentSceneIndex(0)
 	{
+		m_SavedDirStr = RelativePathToAbsolute(RESOURCE_LOCATION + "scenes/saved");
+		m_DefaultDirStr = RelativePathToAbsolute(RESOURCE_LOCATION + "scenes/default");
+
+		if (!DirectoryExists(m_SavedDirStr))
+		{
+			CreateDirectoryRecursive(m_SavedDirStr);
+		}
 	}
 
 	SceneManager::~SceneManager()
@@ -60,6 +68,7 @@ namespace flex
 
 		gameContext.renderer->OnSceneChanged(gameContext);
 		gameContext.engineInstance->OnSceneChanged();
+		gameContext.cameraManager->Initialize(gameContext);
 	}
 
 	void SceneManager::PostInitializeCurrentScene(const GameContext& gameContext)
@@ -120,18 +129,18 @@ namespace flex
 		Logger::LogError("Attempt to set current scene to " + scene->GetName() + " failed because it was not found in the scene manager!");
 	}
 
-	void SceneManager::SetCurrentScene(const std::string& sceneName, const GameContext& gameContext)
+	void SceneManager::SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
-			if (m_Scenes[i]->GetName().compare(sceneName) == 0)
+			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
 				SetCurrentScene(i, gameContext);
 				return;
 			}
 		}
 
-		Logger::LogError("Attempt to set scene to " + sceneName + " failed, it does not exist in the SceneManager");
+		Logger::LogError("Attempt to set scene to " + sceneFileName + " failed, it does not exist in the SceneManager");
 	}
 
 	void SceneManager::SetNextSceneActive(const GameContext& gameContext)
@@ -166,17 +175,9 @@ namespace flex
 
 	void SceneManager::AddFoundScenes()
 	{
-		const std::string savedDirStr = RelativePathToAbsolute(RESOURCE_LOCATION + "scenes/saved");
-		const std::string defaultDirStr = RelativePathToAbsolute(RESOURCE_LOCATION + "scenes/default");
-		
-		if (!DirectoryExists(savedDirStr))
-		{
-			CreateDirectoryRecursive(savedDirStr);
-		}
-
 		// Find and load all saved scene files
 		std::vector<std::string> foundFileNames;
-		if (FindFilesInDirectory(savedDirStr, foundFileNames, "json"))
+		if (FindFilesInDirectory(m_SavedDirStr, foundFileNames, "json"))
 		{
 			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
 			{
@@ -190,7 +191,7 @@ namespace flex
 
 		// Load the default for any scenes which don't have a corresponding save file
 		foundFileNames.clear();
-		if (FindFilesInDirectory(defaultDirStr, foundFileNames, "json"))
+		if (FindFilesInDirectory(m_DefaultDirStr, foundFileNames, "json"))
 		{
 			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
 			{

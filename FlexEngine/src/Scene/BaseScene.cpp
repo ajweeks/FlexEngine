@@ -1695,6 +1695,11 @@ namespace flex
 		}
 	}
 
+	std::string BaseScene::GetFileName() const
+	{
+		return m_FileName;
+	}
+
 	bool BaseScene::IsUsingSaveFile() const
 	{
 		return m_bUsingSaveFile;
