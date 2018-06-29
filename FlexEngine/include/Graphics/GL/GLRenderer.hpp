@@ -27,8 +27,8 @@ namespace flex
 			virtual void PostInitialize(const GameContext& gameContext) override;
 			virtual void Destroy() override;
 
-			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
-			virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
+			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) override;
+			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
 
 			virtual void ClearRenderObjects() override;
@@ -47,7 +47,7 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
-			virtual void OnSceneChanged(const GameContext& gameContext) override;
+			virtual void OnSceneChanged() override;
 
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
@@ -113,13 +113,13 @@ namespace flex
 			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
 
 			void GenerateGBufferVertexBuffer();
-			void GenerateGBuffer(const GameContext& gameContext);
+			void GenerateGBuffer();
 
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
-			void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
-			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
-			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
+			void GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath);
+			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
+			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
 			void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
 			void SwapBuffers(const GameContext& gameContext);

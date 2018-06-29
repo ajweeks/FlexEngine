@@ -28,7 +28,7 @@ namespace flex
 		static void DestroyAllLoadedMeshes();
 
 		void Update(const GameContext& gameContext);
-		void Destroy(const GameContext& gameContext);
+		void Destroy();
 
 		enum class Type
 		{

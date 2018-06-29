@@ -135,9 +135,9 @@ namespace flex
 			matCreateInfo.shaderName = "color";
 			matCreateInfo.constAlbedo = glm::vec3(1.0f);
 			matCreateInfo.engineMaterial = true;
-			m_TransformGizmoMatXID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
-			m_TransformGizmoMatYID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
-			m_TransformGizmoMatZID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &matCreateInfo);
+			m_TransformGizmoMatXID = m_GameContext.renderer->InitializeMaterial(&matCreateInfo);
+			m_TransformGizmoMatYID = m_GameContext.renderer->InitializeMaterial(&matCreateInfo);
+			m_TransformGizmoMatZID = m_GameContext.renderer->InitializeMaterial(&matCreateInfo);
 		}
 
 		// Attempt to load previously saved scene, if common settings file
@@ -560,7 +560,7 @@ namespace flex
 
 					if (hoveredOverGameObject)
 					{
-						btRigidBody* pickedTransform = physicsWorld->PickBody(rayStart, rayEnd, (u32)CollisionType::EDITOR_OBJECT);
+						btRigidBody* pickedTransform = physicsWorld->PickBody(rayStart, rayEnd);
 						if (pickedTransform)
 						{
 							GameObject* pickedTransformGameObject = (GameObject*)(pickedTransform->getUserPointer());

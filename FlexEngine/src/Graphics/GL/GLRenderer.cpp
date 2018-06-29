@@ -171,28 +171,28 @@ namespace flex
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
 			spriteMatCreateInfo.engineMaterial = true;
-			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
+			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
 
 
 			MaterialCreateInfo fontMatCreateInfo = {};
 			fontMatCreateInfo.name = "Font material";
 			fontMatCreateInfo.shaderName = "font";
 			fontMatCreateInfo.engineMaterial = true;
-			m_FontMatID = InitializeMaterial(gameContext, &fontMatCreateInfo);
+			m_FontMatID = InitializeMaterial(&fontMatCreateInfo);
 
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
 			postProcessMatCreateInfo.engineMaterial = true;
-			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
+			m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
 			
 
 			MaterialCreateInfo postFXAAMatCreateInfo = {};
 			postFXAAMatCreateInfo.name = "FXAA";
 			postFXAAMatCreateInfo.shaderName = "post_fxaa";
 			postFXAAMatCreateInfo.engineMaterial = true;
-			m_PostFXAAMatID = InitializeMaterial(gameContext, &postFXAAMatCreateInfo);
+			m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 			
 
 			// Sprite quad
@@ -250,7 +250,7 @@ namespace flex
 				spriteQuadCreateInfo.visibleInSceneExplorer = false;
 				spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				spriteQuadCreateInfo.depthWriteEnable = false;
-				m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
+				m_SpriteQuadRenderID = InitializeRenderObject(&spriteQuadCreateInfo);
 
 				m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
 			}
@@ -321,7 +321,7 @@ namespace flex
 
 		void GLRenderer::PostInitialize(const GameContext& gameContext)
 		{
-			GenerateGBuffer(gameContext);
+			GenerateGBuffer();
 
 			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceSansVariable-Roman.ttf";
 			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/bahnschrift.ttf";
@@ -430,10 +430,8 @@ namespace flex
 			glfwTerminate();
 		}
 
-		MaterialID GLRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
+		MaterialID GLRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			CheckGLErrorMessages();
 
 			MaterialID matID = GetNextAvailableMaterialID();
@@ -861,10 +859,8 @@ namespace flex
 			return matID;
 		}
 
-		u32 GLRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+		u32 GLRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			const RenderID renderID = GetNextAvailableRenderID();
 
 			assert(createInfo->materialID != InvalidMaterialID);
@@ -965,8 +961,8 @@ namespace flex
 			{
 				Logger::LogInfo("Capturing reflection probe");
 				CaptureSceneToCubemap(gameContext, renderID);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 
 				glFlush();
 
@@ -976,9 +972,9 @@ namespace flex
 			}
 			else if (material.material.generateIrradianceSampler)
 			{
-				GenerateCubemapFromHDREquirectangular(gameContext, renderObject->materialID, material.material.environmentMapPath);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+				GenerateCubemapFromHDREquirectangular(renderObject->materialID, material.material.environmentMapPath);
+				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 
 				glFlush();
 			}
@@ -1012,8 +1008,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext,
-															   MaterialID cubemapMaterialID, 
+		void GLRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, 
 															   const std::string& environmentMapPath)
 		{
 			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
@@ -1026,7 +1021,7 @@ namespace flex
 				equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 				// TODO: Make cyclable at runtime
 				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
-				equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
+				equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 			}
 
 			GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
@@ -1113,7 +1108,7 @@ namespace flex
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 		}
 
-		void GLRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void GLRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
 			MaterialID prefilterMatID = InvalidMaterialID;
 			if (!GetMaterialID("Prefilter", prefilterMatID))
@@ -1121,7 +1116,7 @@ namespace flex
 				MaterialCreateInfo prefilterMaterialCreateInfo = {};
 				prefilterMaterialCreateInfo.name = "Prefilter";
 				prefilterMaterialCreateInfo.shaderName = "prefilter";
-				prefilterMatID = InitializeMaterial(gameContext, &prefilterMaterialCreateInfo);
+				prefilterMatID = InitializeMaterial(&prefilterMaterialCreateInfo);
 			}
 
 			GLMaterial& prefilterMat = m_Materials[prefilterMatID];
@@ -1219,7 +1214,7 @@ namespace flex
 			brdfMaterialCreateInfo.name = "BRDF";
 			brdfMaterialCreateInfo.shaderName = "brdf";
 			brdfMaterialCreateInfo.engineMaterial = true;
-			MaterialID brdfMatID = InitializeMaterial(gameContext, &brdfMaterialCreateInfo);
+			MaterialID brdfMatID = InitializeMaterial(&brdfMaterialCreateInfo);
 
 			if (m_1x1_NDC_Quad == nullptr)
 			{
@@ -1259,7 +1254,7 @@ namespace flex
 				quadCreateInfo.depthWriteEnable = false;
 				quadCreateInfo.visibleInSceneExplorer = false;
 
-				RenderID quadRenderID = InitializeRenderObject(gameContext, &quadCreateInfo);
+				RenderID quadRenderID = InitializeRenderObject(&quadCreateInfo);
 				m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
 
 				if (!m_1x1_NDC_Quad)
@@ -1315,7 +1310,7 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void GLRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
 		{
 			MaterialID irrandianceMatID = InvalidMaterialID;
 			if (!GetMaterialID("Irradiance", irrandianceMatID))
@@ -1325,7 +1320,7 @@ namespace flex
 				irrandianceMatCreateInfo.shaderName = "irradiance";
 				irrandianceMatCreateInfo.enableCubemapSampler = true;
 				irrandianceMatCreateInfo.engineMaterial = true;
-				irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
+				irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
 			}
 
 			GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
@@ -1573,8 +1568,8 @@ namespace flex
 			//			{
 			//				Logger::LogInfo("Capturing reflection probe");
 			//				CaptureSceneToCubemap(gameContext, renderObject->renderID);
-			//				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-			//				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+			//				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+			//				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 			//			}
 			//		}
 			//	}
@@ -1595,8 +1590,8 @@ namespace flex
 					{
 						Logger::LogInfo("Capturing reflection probe");
 						CaptureSceneToCubemap(gameContext, renderObject->renderID);
-						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 					}
 				}
 			}
@@ -1850,7 +1845,7 @@ namespace flex
 			if (!m_gBufferQuadVertexBufferData.pDataStart)
 			{
 				// Generate GBuffer if not already generated
-				GenerateGBuffer(gameContext);
+				GenerateGBuffer();
 			}
 			
 			if (drawCallInfo.bRenderToCubemap)
@@ -2044,6 +2039,8 @@ namespace flex
 
 		void GLRenderer::DrawScreenSpaceSprites(const GameContext& gameContext)
 		{
+			UNREFERENCED_PARAMETER(gameContext);
+
 			//glm::vec3 pos(0.0f);
 			//glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
 			//glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
@@ -3826,10 +3823,10 @@ namespace flex
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 		}
 
-		void GLRenderer::OnSceneChanged(const GameContext& gameContext)
+		void GLRenderer::OnSceneChanged()
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
-			GenerateGBuffer(gameContext);
+			GenerateGBuffer();
 		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -3992,7 +3989,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::GenerateGBuffer(const GameContext& gameContext)
+		void GLRenderer::GenerateGBuffer()
 		{
 			if (!m_gBufferQuadVertexBufferData.pDataStart)
 			{
@@ -4044,7 +4041,7 @@ namespace flex
 				{ "albedoAOFrameBufferSampler",  &m_gBuffer_DiffuseAOHandle.id },
 			};
 
-			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
+			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
 
 			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::NONE);
@@ -4060,7 +4057,7 @@ namespace flex
 			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
 			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
-			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
+			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
 
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
@@ -4323,8 +4320,6 @@ namespace flex
 
 		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			GameObject* selectedObject = gameContext.engineInstance->GetSelectedObject();
 
 			ImGui::NewLine();

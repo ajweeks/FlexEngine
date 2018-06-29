@@ -35,7 +35,7 @@ namespace flex
 				debugMatCreateInfo.shaderName = "color";
 				debugMatCreateInfo.name = debugMatName;
 				debugMatCreateInfo.engineMaterial = true;
-				m_MaterialID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &debugMatCreateInfo);
+				m_MaterialID = m_GameContext.renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
 			m_VertexBufferData = {};

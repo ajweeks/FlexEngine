@@ -36,7 +36,7 @@ namespace flex
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.constRoughness = 0.98f;
 		matCreateInfo.constAO = 1.0f;
-		MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
+		MaterialID matID = gameContext.renderer->InitializeMaterial(&matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
 		rigidBody->SetFriction(m_MoveFriction);
@@ -68,7 +68,7 @@ namespace flex
 		slingshotMatCreateInfo.constMetallic = 0.0f;
 		slingshotMatCreateInfo.constRoughness = 1.0f;
 		slingshotMatCreateInfo.constAO = 1.0f;
-		MaterialID slingshotMatID = gameContext.renderer->InitializeMaterial(gameContext, &slingshotMatCreateInfo);
+		MaterialID slingshotMatID = gameContext.renderer->InitializeMaterial(&slingshotMatCreateInfo);
 
 		m_Slingshot = new GameObject("Slingshot", GameObjectType::NONE);
 		MeshComponent* slingshotMesh = m_Slingshot->SetMeshComponent(new MeshComponent(slingshotMatID, m_Slingshot));

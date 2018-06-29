@@ -57,13 +57,13 @@ namespace flex
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		GameObject* CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID = InvalidMaterialID);
-		void CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight);
-		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
+		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
+		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
 
 		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
 		JSONObject SerializeMaterial(const Material& material, const GameContext& gameContext);
-		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);
-		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
+		JSONObject SerializePointLight(PointLight& pointLight);
+		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight);
 
 		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
 		MeshComponent* ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newEntity, MaterialID matID);

@@ -109,7 +109,7 @@ namespace flex
 			MaterialCreateInfo matCreateInfo = {};
 			ParseMaterialJSONObject(materialsArray[i], matCreateInfo);
 
-			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
+			MaterialID matID = gameContext.renderer->InitializeMaterial(&matCreateInfo);
 			m_LoadedMaterials.push_back(matID);
 		}
 
@@ -128,7 +128,7 @@ namespace flex
 			for (const JSONObject& pointLightObj : pointLightsArray)
 			{
 				PointLight pointLight = {};
-				CreatePointLightFromJSON(gameContext, pointLightObj, pointLight);
+				CreatePointLightFromJSON(pointLightObj, pointLight);
 
 				gameContext.renderer->InitializePointLight(pointLight);
 			}
@@ -139,7 +139,7 @@ namespace flex
 			const JSONObject& directionalLightObj = sceneRootObject.GetObject("directional light");
 
 			DirectionalLight dirLight = {};
-			CreateDirectionalLightFromJSON(gameContext, directionalLightObj, dirLight);
+			CreateDirectionalLightFromJSON(directionalLightObj, dirLight);
 			
 			gameContext.renderer->InitializeDirectionalLight(dirLight);
 		}
@@ -152,7 +152,7 @@ namespace flex
 				MaterialCreateInfo gridMatInfo = {};
 				gridMatInfo.shaderName = "color";
 				gridMatInfo.name = gridMatName;
-				m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
+				m_GridMaterialID = gameContext.renderer->InitializeMaterial(&gridMatInfo);
 			}
 
 			m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
@@ -174,7 +174,7 @@ namespace flex
 				MaterialCreateInfo worldAxisMatInfo = {};
 				worldAxisMatInfo.shaderName = "color";
 				worldAxisMatInfo.name = worldOriginMatName;
-				m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+				m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(&worldAxisMatInfo);
 			}
 
 			m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
@@ -788,7 +788,7 @@ namespace flex
 				{ "normalRoughnessFrameBufferSampler", nullptr },
 				{ "albedoAOFrameBufferSampler", nullptr },
 			};
-			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
+			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
 			MeshComponent* sphereMesh = new MeshComponent(matID, newGameObject);
 			sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
@@ -808,7 +808,7 @@ namespace flex
 			captureObjectCreateInfo.gameObject = captureObject;
 			captureObjectCreateInfo.visibleInSceneExplorer = false;
 
-			RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
+			RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(&captureObjectCreateInfo);
 			captureObject->SetRenderID(captureRenderID);
 
 			newGameObject->AddChild(captureObject);
@@ -947,10 +947,8 @@ namespace flex
 		}
 	}
 
-	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
+	void BaseScene::CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		std::string posStr = obj.GetString("position");
 		pointLight.position = glm::vec4(ParseVec3(posStr), 0);
 
@@ -968,10 +966,8 @@ namespace flex
 		obj.SetStringChecked("name", pointLight.name);
 	}
 
-	void BaseScene::CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight)
+	void BaseScene::CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		std::string dirStr = obj.GetString("direction");
 		directionalLight.direction = glm::vec4(ParseVec3(dirStr), 0);
 
@@ -1029,14 +1025,14 @@ namespace flex
 		for (i32 i = 0; i < gameContext.renderer->GetNumPointLights(); ++i)
 		{
 			PointLight& pointLight = gameContext.renderer->GetPointLight(i);
-			pointLightsArray.push_back(SerializePointLight(pointLight, gameContext));
+			pointLightsArray.push_back(SerializePointLight(pointLight));
 		}
 		pointLightsField.value = JSONValue(pointLightsArray);
 		rootSceneObject.fields.push_back(pointLightsField);
 
 		DirectionalLight& dirLight = gameContext.renderer->GetDirectionalLight();
 		JSONField directionalLightsField("directional light",
-			JSONValue(SerializeDirectionalLight(dirLight, gameContext)));
+			JSONValue(SerializeDirectionalLight(dirLight)));
 		rootSceneObject.fields.push_back(directionalLightsField);
 
 		std::string fileContents = rootSceneObject.Print(0);
@@ -1345,8 +1341,6 @@ namespace flex
 
 	JSONObject BaseScene::SerializeMaterial(const Material& material, const GameContext& gameContext)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		JSONObject materialObject = {};
 
 		materialObject.fields.push_back(JSONField("name", JSONValue(material.name)));
@@ -1520,10 +1514,8 @@ namespace flex
 		return materialObject;
 	}
 
-	JSONObject BaseScene::SerializePointLight(PointLight& pointLight, const GameContext& gameContext)
+	JSONObject BaseScene::SerializePointLight(PointLight& pointLight)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		JSONObject object;
 
 		object.fields.push_back(JSONField("name", JSONValue(pointLight.name)));
@@ -1540,10 +1532,8 @@ namespace flex
 		return object;
 	}
 
-	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext)
+	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		JSONObject object;
 
 		std::string dirStr = Vec3ToString(directionalLight.direction);

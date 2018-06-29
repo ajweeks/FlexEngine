@@ -258,7 +258,7 @@ namespace flex
 		real GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis);
 
 		void CursorPosCallback(double x, double y);
-		void MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, i32 mods);
+		void MouseButtonCallback(MouseButton mouseButton, Action action, i32 mods);
 		void ScrollCallback(double xOffset, double yOffset);
 		void KeyCallback(KeyCode keycode, Action action, i32 mods);
 		void CharCallback(u32 character);
@@ -275,7 +275,7 @@ namespace flex
 
 		void ClearAllInputs(const GameContext& gameContext);
 		void ClearMouseInput(const GameContext& gameContext);
-		void ClearKeyboadInput(const GameContext& gameContext);
+		void ClearKeyboadInput();
 		void ClearGampadInput(i32 gamepadIndex);
 
 		static i32 s_JoystickDisconnected;

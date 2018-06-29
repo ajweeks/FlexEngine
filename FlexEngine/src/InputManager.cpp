@@ -282,9 +282,8 @@ namespace flex
 		io.MousePos = m_MousePosition;
 	}
 
-	void InputManager::MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, i32 mods)
+	void InputManager::MouseButtonCallback(MouseButton mouseButton, Action action, i32 mods)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
 		UNREFERENCED_PARAMETER(mods);
 
 		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
@@ -433,7 +432,7 @@ namespace flex
 	void InputManager::ClearAllInputs(const GameContext& gameContext)
 	{
 		ClearMouseInput(gameContext);
-		ClearKeyboadInput(gameContext);
+		ClearKeyboadInput();
 		ClearGampadInput(0);
 		ClearGampadInput(1);
 	}
@@ -462,10 +461,8 @@ namespace flex
 		io.MouseWheel = m_ScrollYOffset;
 	}
 
-	void InputManager::ClearKeyboadInput(const GameContext& gameContext)
+	void InputManager::ClearKeyboadInput()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
 		{
 			iter->second.down = 0;

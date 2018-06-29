@@ -66,7 +66,7 @@ namespace flex
 
 		CurrentScene()->Initialize(gameContext);
 
-		gameContext.renderer->OnSceneChanged(gameContext);
+		gameContext.renderer->OnSceneChanged();
 		gameContext.engineInstance->OnSceneChanged();
 		gameContext.cameraManager->Initialize(gameContext);
 	}

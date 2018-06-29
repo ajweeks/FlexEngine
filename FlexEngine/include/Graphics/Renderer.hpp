@@ -34,8 +34,8 @@ namespace flex
 		virtual void PostInitialize(const GameContext& gameContext) = 0;
 		virtual void Destroy() = 0;
 
-		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
-		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
+		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) = 0;
+		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
 		virtual void ClearRenderObjects() = 0;
@@ -54,7 +54,7 @@ namespace flex
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		virtual void OnSceneChanged(const GameContext& gameContext) = 0;
+		virtual void OnSceneChanged() = 0;
 
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info

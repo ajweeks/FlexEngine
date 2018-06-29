@@ -138,7 +138,7 @@ namespace flex
 
 		if (m_MeshComponent)
 		{
-			m_MeshComponent->Destroy(gameContext);
+			m_MeshComponent->Destroy();
 			SafeDelete(m_MeshComponent);
 		}
 

@@ -61,10 +61,8 @@ namespace flex
 		m_LoadedMeshes.clear();
 	}
 
-	void MeshComponent::Destroy(const GameContext& gameContext)
+	void MeshComponent::Destroy()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		m_VertexBufferData.Destroy();
 		m_OwningGameObject = nullptr;
 		m_Initialized = false;
@@ -319,7 +317,7 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
-		RenderID renderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		RenderID renderID = gameContext.renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
 
 		gameContext.renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
@@ -974,7 +972,7 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
 
-		RenderID renderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		RenderID renderID = gameContext.renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
 
 		gameContext.renderer->SetTopologyMode(renderID, topologyMode);

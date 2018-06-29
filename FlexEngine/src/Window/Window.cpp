@@ -141,7 +141,7 @@ namespace flex
 
 	void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, i32 mods)
 	{
-		m_GameContextRef.inputManager->MouseButtonCallback(m_GameContextRef, mouseButton, action, mods);
+		m_GameContextRef.inputManager->MouseButtonCallback(mouseButton, action, mods);
 	}
 
 	void Window::WindowFocusCallback(i32 focused)
