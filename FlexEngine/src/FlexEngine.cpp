@@ -241,7 +241,7 @@ namespace flex
 		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
 
 		float desiredAspectRatio = 16.0f / 9.0f;
-		float desiredWindowSizeScreenPercetange = 0.4f;
+		float desiredWindowSizeScreenPercetange = 0.85f;
 
 		// What kind of monitor has different scales along each axis?
 		assert(m_GameContext.monitor.contentScaleX == m_GameContext.monitor.contentScaleY);
@@ -869,6 +869,33 @@ namespace flex
 			static const char* rendererSettingsStr = "Renderer settings";
 			if (ImGui::TreeNode(rendererSettingsStr))
 			{
+				if (ImGui::Button("  Save  "))
+				{
+					m_GameContext.renderer->SaveSettingsToDisk(false);
+				}
+
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.12f, 0.09f, 1));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.04f, 0.01f, 1));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
+				{
+					ImGui::SameLine();
+					if (ImGui::Button("Save over defaults"))
+					{
+						m_GameContext.renderer->SaveSettingsToDisk(true);
+					}
+
+					ImGui::SameLine();
+					if (ImGui::Button("Reload defaults"))
+					{
+						m_GameContext.renderer->LoadSettingsFromDisk(true);
+					}
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
 				bool bVSyncEnabled = m_GameContext.renderer->GetVSyncEnabled();
 				static const char* vSyncEnabledStr = "VSync";
 				if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
@@ -876,18 +903,15 @@ namespace flex
 					m_GameContext.renderer->SetVSyncEnabled(bVSyncEnabled);
 				}
 
-				static const char* uiScaleStr = "UI Scale";
-				ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
-
-				static const char* windowModeStr = "##WindowMode";
-				static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
-				static const i32 windowModeCount = 2;
-				i32 currentItemIndex = (i32)m_GameContext.window->GetFullscreenMode();
-				if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
-				{
-					Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
-					m_GameContext.window->SetFullscreenMode(newFullscreenMode);
-				}
+				//static const char* windowModeStr = "##WindowMode";
+				//static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
+				//static const i32 windowModeCount = 2;
+				//i32 currentItemIndex = (i32)m_GameContext.window->GetFullscreenMode();
+				//if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
+				//{
+				//	Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
+				//	m_GameContext.window->SetFullscreenMode(newFullscreenMode);
+				//}
 
 				static const char* physicsDebuggingStr = "Physics debugging";
 				if (ImGui::TreeNode(physicsDebuggingStr))
@@ -957,32 +981,11 @@ namespace flex
 				{
 					Renderer::PostProcessSettings& postProcessSettings = m_GameContext.renderer->GetPostProcessSettings();
 
-					if (ImGui::Button("  Save  "))
+					bool bPostProcessingEnabled = m_GameContext.renderer->GetPostProcessingEnabled();
+					if (ImGui::Checkbox("Enabled", &bPostProcessingEnabled))
 					{
-						m_GameContext.renderer->SaveSettingsToDisk(false);
+						m_GameContext.renderer->SetPostProcessingEnabled(bPostProcessingEnabled);
 					}
-
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
-					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.12f, 0.09f, 1));
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.04f, 0.01f, 1));
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
-					{
-						ImGui::SameLine();
-						if (ImGui::Button("Reload defaults"))
-						{
-							m_GameContext.renderer->LoadSettingsFromDisk(true);
-						}
-
-						ImGui::SameLine();
-						if (ImGui::Button("Save over defaults"))
-						{
-							m_GameContext.renderer->SaveSettingsToDisk(true);
-						}
-					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
 
 					static const char* fxaaEnabledStr = "FXAA";
 					ImGui::Checkbox(fxaaEnabledStr, &postProcessSettings.bEnableFXAA);
@@ -996,13 +999,32 @@ namespace flex
 					}
 
 					static const char* brightnessStr = "Brightness (RGB)";
-					ImGui::SliderFloat3(brightnessStr, &postProcessSettings.brightness.r, 0.0f, 2.5f);
+					real maxBrightness = 2.5f;
+					ImGui::SliderFloat3(brightnessStr, &postProcessSettings.brightness.r, 0.0f, maxBrightness);
+					ImGui::SameLine();
+					ImGui::ColorButton("##1", ImVec4(
+						postProcessSettings.brightness.r / maxBrightness,
+						postProcessSettings.brightness.g / maxBrightness,
+						postProcessSettings.brightness.b / maxBrightness, 1));
 
-					static const char* offsetStr = "Offset";
-					ImGui::SliderFloat3(offsetStr, &postProcessSettings.offset.r, -0.35f, 0.35f);
+					static const char* offsetStr = "Offset (RGB)";
+					real minOffset = -0.35f;
+					real maxOffset = 0.35f;
+					ImGui::SliderFloat3(offsetStr, &postProcessSettings.offset.r, minOffset, maxOffset);
+					ImGui::SameLine();
+					ImGui::ColorButton("##2", ImVec4(
+						(postProcessSettings.offset.r-minOffset) / (maxOffset-minOffset),
+						(postProcessSettings.offset.g-minOffset) / (maxOffset-minOffset),
+						(postProcessSettings.offset.b-minOffset) / (maxOffset-minOffset), 1));
 
 					static const char* saturationStr = "Saturation";
-					ImGui::SliderFloat(saturationStr, &postProcessSettings.saturation, 0.0f, 2.0f);
+					const real maxSaturation = 2.0f;
+					ImGui::SliderFloat(saturationStr, &postProcessSettings.saturation, 0.0f, maxSaturation);
+					ImGui::SameLine();
+					ImGui::ColorButton("##3", ImVec4(
+						postProcessSettings.saturation / maxSaturation,
+						postProcessSettings.saturation / maxSaturation,
+						postProcessSettings.saturation / maxSaturation, 1));
 
 					ImGui::TreePop();
 				}

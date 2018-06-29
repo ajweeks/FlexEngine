@@ -2002,7 +2002,9 @@ namespace flex
 			i32 FBO = m_Offscreen1FBO;
 			i32 RBO = m_Offscreen1RBO;
 
-			if (!m_PostProcessSettings.bEnableFXAA)
+			bool bFXAAEnabled = (m_bPostProcessingEnabled && m_PostProcessSettings.bEnableFXAA);
+
+			if (!bFXAAEnabled)
 			{
 				FBO = 0;
 				RBO = 0;
@@ -2015,7 +2017,7 @@ namespace flex
 			DrawSpriteQuad(gameContext, m_OffscreenTexture0Handle.id, FBO, RBO,
 						   m_PostProcessMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
 
-			if (m_PostProcessSettings.bEnableFXAA)
+			if (bFXAAEnabled)
 			{
 				FBO = 0;
 				RBO = 0;
@@ -2182,29 +2184,36 @@ namespace flex
 			// http://www.graficaobscura.com/matrix/
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("contrastBrightnessSaturation"))
 			{
-				real sat = m_PostProcessSettings.saturation;
-				glm::vec3 brightness = m_PostProcessSettings.brightness;
-				glm::vec3 offset = m_PostProcessSettings.offset;
+				glm::mat4 contrastBrightnessSaturation;
+				if (m_bPostProcessingEnabled)
+				{
+					real sat = m_PostProcessSettings.saturation;
+					glm::vec3 brightness = m_PostProcessSettings.brightness;
+					glm::vec3 offset = m_PostProcessSettings.offset;
 
-				glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
-				real a = (1.0f - sat) * wgt.r + sat;
-				real b = (1.0f - sat) * wgt.r;
-				real c = (1.0f - sat) * wgt.r;
-				real d = (1.0f - sat) * wgt.g;
-				real e = (1.0f - sat) * wgt.g + sat;
-				real f = (1.0f - sat) * wgt.g;
-				real g = (1.0f - sat) * wgt.b;
-				real h = (1.0f - sat) * wgt.b;
-				real i = (1.0f - sat) * wgt.b + sat;
-				glm::mat4 satMat = {
-					a, b, c, 0,
-					d, e, f, 0,
-					g, h, i, 0,
-					0, 0, 0, 1
-				};
+					glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
+					real a = (1.0f - sat) * wgt.r + sat;
+					real b = (1.0f - sat) * wgt.r;
+					real c = (1.0f - sat) * wgt.r;
+					real d = (1.0f - sat) * wgt.g;
+					real e = (1.0f - sat) * wgt.g + sat;
+					real f = (1.0f - sat) * wgt.g;
+					real g = (1.0f - sat) * wgt.b;
+					real h = (1.0f - sat) * wgt.b;
+					real i = (1.0f - sat) * wgt.b + sat;
+					glm::mat4 satMat = {
+						a, b, c, 0,
+						d, e, f, 0,
+						g, h, i, 0,
+						0, 0, 0, 1
+					};
 
-				glm::mat4 contrastBrightnessSaturation = 
-					glm::translate(glm::scale(satMat, brightness), offset);
+					contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
+				}
+				else
+				{
+					contrastBrightnessSaturation = glm::mat4(1.0f);
+				}
 
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.contrastBrightnessSaturation, 1, false, &contrastBrightnessSaturation[0][0]);
 				CheckGLErrorMessages();
@@ -3849,14 +3858,14 @@ namespace flex
 
 		void GLRenderer::SetVSyncEnabled(bool enableVSync)
 		{
-			m_VSyncEnabled = enableVSync;
+			m_bVSyncEnabled = enableVSync;
 			glfwSwapInterval(enableVSync ? 1 : 0);
 			CheckGLErrorMessages();
 		}
 
 		bool GLRenderer::GetVSyncEnabled()
 		{
-			return m_VSyncEnabled;
+			return m_bVSyncEnabled;
 		}
 
 		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, real val)
@@ -4272,7 +4281,8 @@ namespace flex
 			JSONObject rootObject;
 			if (JSONParser::Parse(filePath, rootObject))
 			{
-				m_VSyncEnabled = rootObject.GetBool("enable v-sync");
+				m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
+				m_bVSyncEnabled = rootObject.GetBool("enable v-sync");
 				m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
 				m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
 				m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
@@ -4300,7 +4310,8 @@ namespace flex
 			}
 
 			JSONObject rootObject{};
-			rootObject.fields.push_back(JSONField("enable v-sync", JSONValue(m_VSyncEnabled)));
+			rootObject.fields.push_back(JSONField("enable post-processing", JSONValue(m_bPostProcessingEnabled)));
+			rootObject.fields.push_back(JSONField("enable v-sync", JSONValue(m_bVSyncEnabled)));
 			rootObject.fields.push_back(JSONField("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA)));
 			rootObject.fields.push_back(JSONField("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness))));
 			rootObject.fields.push_back(JSONField("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset))));

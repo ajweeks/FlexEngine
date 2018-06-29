@@ -12,6 +12,9 @@ namespace flex
 	std::map<std::string, ms> Profiler::s_Timings;
 	std::string Profiler::s_PendingCSV;
 
+	// Any frame time longer than this will be clipped to this value
+	const ms MAX_FRAME_TIME = 100;
+
 	void Profiler::StartFrame()
 	{
 		s_Timings.clear();
@@ -30,7 +33,8 @@ namespace flex
 
 		if (bPrintTimings)
 		{
-			s_PendingCSV.append(std::to_string(s_FrameEndTime - s_FrameStartTime) + ",");
+			ms frameTime = glm::min(s_FrameEndTime - s_FrameStartTime, MAX_FRAME_TIME);
+			s_PendingCSV.append(std::to_string(frameTime) + ",");
 
 			//Logger::LogInfo("Profiler results:");
 			//Logger::LogInfo("Whole frame: " + std::to_string(s_FrameEndTime - s_FrameStartTime) + "ms");

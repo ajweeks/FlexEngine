@@ -96,6 +96,9 @@ namespace flex
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) = 0;
 		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
 
+		void SetPostProcessingEnabled(bool bEnabled);
+		bool GetPostProcessingEnabled() const;
+
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
 		bool InitializeDirectionalLight(const DirectionalLight& dirLight);
@@ -146,7 +149,7 @@ namespace flex
 		
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
-		bool m_VSyncEnabled = true;
+		bool m_bVSyncEnabled = true;
 		PhysicsDebuggingSettings m_PhysicsDebuggingSettings;
 
 		/* Objects that are created at bootup and stay active until shutdown, regardless of scene */
@@ -158,6 +161,7 @@ namespace flex
 		PostProcessSettings m_PostProcessSettings;
 
 		bool m_bShowImGui = true;
+		bool m_bPostProcessingEnabled = true;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

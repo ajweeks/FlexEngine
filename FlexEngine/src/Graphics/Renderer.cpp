@@ -26,6 +26,16 @@ namespace flex
 		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
 	}
 
+	void Renderer::SetPostProcessingEnabled(bool bEnabled)
+	{
+		m_bPostProcessingEnabled = bEnabled;
+	}
+
+	bool Renderer::GetPostProcessingEnabled() const
+	{
+		return m_bPostProcessingEnabled;
+	}
+
 	PhysicsDebuggingSettings& Renderer::GetPhysicsDebuggingSettings()
 	{
 		return m_PhysicsDebuggingSettings;
