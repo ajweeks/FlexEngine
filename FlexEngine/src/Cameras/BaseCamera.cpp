@@ -28,7 +28,9 @@ namespace flex
 		m_ScrollDollySpeed(2.0f),
 		m_MoveSpeedFastMultiplier(3.5f),
 		m_MoveSpeedSlowMultiplier(0.05f),
-		m_GamepadRotationSpeed(100.0f),
+		m_TurnSpeedFastMultiplier(2.0f),
+		m_TurnSpeedSlowMultiplier(0.1f),
+		m_GamepadRotationSpeed(2.0f),
 		m_MouseRotationSpeed(0.001f)
 	{
 		ResetOrientation();

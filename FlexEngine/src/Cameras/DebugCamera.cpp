@@ -16,7 +16,9 @@
 namespace flex
 {
 	DebugCamera::DebugCamera(GameContext& gameContext, real FOV, real zNear, real zFar) :
-		BaseCamera("Debug Camera", gameContext, FOV, zNear, zFar)
+		BaseCamera("Debug Camera", gameContext, FOV, zNear, zFar),
+		m_MoveVel(0.0f),
+		m_TurnVel(0.0f)
 	{
 		ResetOrientation();
 		RecalculateViewProjection(gameContext);
@@ -30,18 +32,31 @@ namespace flex
 
 	void DebugCamera::Update(const GameContext& gameContext)
 	{
+		glm::vec3 targetDPos(0.0f);
+
 		if (m_EnableGamepadMovement)
 		{
+			bool turnFast = gameContext.inputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::RIGHT_BUMPER);
+			bool turnSlow = gameContext.inputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::LEFT_BUMPER);
+			real turnSpeedMultiplier = turnFast ? m_TurnSpeedFastMultiplier : turnSlow ? m_TurnSpeedSlowMultiplier : 1.0f;
+
 			real yawO = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X) *
-				m_GamepadRotationSpeed * gameContext.deltaTime;
+				m_GamepadRotationSpeed * turnSpeedMultiplier * gameContext.deltaTime;
 			real pitchO = -gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y) *
-				m_GamepadRotationSpeed * gameContext.deltaTime;
-			m_Yaw += yawO * gameContext.deltaTime;
-			m_Pitch += pitchO * gameContext.deltaTime;
+				m_GamepadRotationSpeed * turnSpeedMultiplier * gameContext.deltaTime;
+
+			m_TurnVel += glm::vec2(yawO, pitchO);
+
+			m_Yaw += m_TurnVel.x;
+			m_Pitch += m_TurnVel.y;
 			ClampPitch();
 			m_Pitch = glm::clamp(m_Pitch, -glm::pi<real>(), glm::pi<real>());
 
 			CalculateAxisVectors();
+
+			bool moveFast = gameContext.inputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::RIGHT_BUMPER);
+			bool moveSlow = gameContext.inputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::LEFT_BUMPER);
+			real moveSpeedMultiplier = moveFast ? m_MoveSpeedFastMultiplier : moveSlow ? m_MoveSpeedSlowMultiplier : 1.0f;
 
 			real posYO = -gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_TRIGGER) *
 				m_MoveSpeed * 0.5f * gameContext.deltaTime;
@@ -52,9 +67,7 @@ namespace flex
 			real posZO = -gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_STICK_Y) *
 				m_MoveSpeed * gameContext.deltaTime;
 
-			bool moveFast = gameContext.inputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::RIGHT_BUMPER);
-			real moveSpeedMultiplier = moveFast ? m_MoveSpeedFastMultiplier : 1.0f;
-			m_Position +=
+			targetDPos +=
 				m_Right * posXO * moveSpeedMultiplier +
 				m_Up * posYO * moveSpeedMultiplier +
 				m_Forward * posZO * moveSpeedMultiplier;
@@ -69,8 +82,21 @@ namespace flex
 				look = gameContext.inputManager->GetMouseMovement();
 				look.y = -look.y;
 
-				m_Yaw += look.x * m_MouseRotationSpeed;
-				m_Pitch += look.y * m_MouseRotationSpeed;
+				real turnSpeedMultiplier = 1.0f;
+				if (gameContext.inputManager->GetKeyDown(m_MoveFasterKey))
+				{
+					turnSpeedMultiplier = m_TurnSpeedFastMultiplier;
+				}
+				else if (gameContext.inputManager->GetKeyDown(m_MoveSlowerKey))
+				{
+					turnSpeedMultiplier = m_TurnSpeedSlowMultiplier;
+				}
+
+				m_TurnVel += glm::vec2(look.x * m_MouseRotationSpeed * turnSpeedMultiplier,
+									   look.y * m_MouseRotationSpeed * turnSpeedMultiplier);
+				
+				m_Yaw += m_TurnVel.x;
+				m_Pitch += m_TurnVel.y;
 
 				ClampPitch();
 			}
@@ -130,20 +156,27 @@ namespace flex
 				translation += m_Forward * -zoom.y * m_DragDollySpeed;
 			}
 
-			real speedMultiplier = 1.0f;
+			real moveSpeedMultiplier = 1.0f;
 			if (gameContext.inputManager->GetKeyDown(m_MoveFasterKey))
 			{
-				speedMultiplier = m_MoveSpeedFastMultiplier;
+				moveSpeedMultiplier = m_MoveSpeedFastMultiplier;
 			}
 			else if (gameContext.inputManager->GetKeyDown(m_MoveSlowerKey))
 			{
-				speedMultiplier = m_MoveSpeedSlowMultiplier;
+				moveSpeedMultiplier = m_MoveSpeedSlowMultiplier;
 			}
 
-			glm::vec3 finalTranslation = translation * m_MoveSpeed * speedMultiplier * gameContext.deltaTime;
-			Translate(finalTranslation);
-			m_DragStartPosition += finalTranslation;
+
+			targetDPos += translation * m_MoveSpeed * moveSpeedMultiplier * gameContext.deltaTime;
 		}
+
+		m_MoveVel += targetDPos;
+
+		Translate(m_MoveVel);
+		m_DragStartPosition += m_MoveVel;
+
+		m_MoveVel *= m_MoveLag;
+		m_TurnVel *= m_TurnLag;
 
 		RecalculateViewProjection(gameContext);
 	}

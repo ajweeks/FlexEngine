@@ -18,10 +18,16 @@ namespace flex
 		void LoadDefaultKeybindings();
 
 	private:
-		bool m_EnableGamepadMovement = false;
+		bool m_EnableGamepadMovement = true;
 		bool m_EnableKeyboardMovement = true;
 
 		glm::vec3 m_DragStartPosition;
+
+		// [0, 1) 0 = no lag, higher values give smoother movement
+		real m_MoveLag = 0.6f;
+		real m_TurnLag = 0.4f;
+		glm::vec3 m_MoveVel;
+		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
 
 		InputManager::KeyCode m_MoveForwardKey;
 		InputManager::KeyCode m_MoveBackwardKey;

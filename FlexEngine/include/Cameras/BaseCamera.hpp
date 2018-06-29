@@ -82,8 +82,10 @@ namespace flex
 		real m_ScrollDollySpeed = 0;		// Scroll wheel
 		real m_MoveSpeedFastMultiplier = 0;
 		real m_MoveSpeedSlowMultiplier = 0;
-		real m_MouseRotationSpeed = 0;		// LMB drag or gamepad right stick
-		real m_GamepadRotationSpeed = 0;	// LMB drag or gamepad right stick
+		real m_TurnSpeedFastMultiplier = 0;
+		real m_TurnSpeedSlowMultiplier = 0;
+		real m_MouseRotationSpeed = 0;		// LMB drag
+		real m_GamepadRotationSpeed = 0;	// Gamepad right stick
 
 		glm::vec3 m_Position;
 
