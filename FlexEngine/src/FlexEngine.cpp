@@ -125,9 +125,6 @@ namespace flex
 		m_GameContext.physicsManager = new PhysicsManager();
 		m_GameContext.physicsManager->Initialize();
 
-		m_GameContext.sceneManager = new SceneManager();
-		m_GameContext.sceneManager->AddFoundScenes();
-
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
@@ -140,15 +137,13 @@ namespace flex
 			m_TransformGizmoMatZID = m_GameContext.renderer->InitializeMaterial(&matCreateInfo);
 		}
 
-		// Attempt to load previously saved scene, if common settings file
-		// doesn't exist however then just initialize the first scene we found
-		if (!LoadCommonSettingsFromDisk())
-		{
-			m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
-		}
+		m_GameContext.sceneManager = new SceneManager();
+		m_GameContext.sceneManager->AddFoundScenes();
 
+		LoadCommonSettingsFromDisk();
+
+		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);		
 		m_GameContext.renderer->PostInitialize(m_GameContext);
-
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 
 		SetupImGuiStyles();
@@ -453,13 +448,9 @@ namespace flex
 
 		m_GameContext.sceneManager->AddFoundScenes();
 		
-		// Attempt to load previously saved scene, if common settings file
-		// doesn't exist however then just initialize the first scene we found
-		if (!LoadCommonSettingsFromDisk())
-		{
-			m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
-		}
+		LoadCommonSettingsFromDisk();
 
+		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
 		m_GameContext.renderer->PostInitialize(m_GameContext);
 		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
 	}
@@ -710,12 +701,12 @@ namespace flex
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
-				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
+				m_GameContext.sceneManager->SetNextSceneActiveAndInit(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
 			{
-				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
+				m_GameContext.sceneManager->SetPreviousSceneActiveAndInit(m_GameContext);
 				m_GameContext.cameraManager->Initialize(m_GameContext);
 			}
 
@@ -1153,7 +1144,7 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
-					m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
+					m_GameContext.sceneManager->SetPreviousSceneActiveAndInit(m_GameContext);
 				}
 				
 				ImGui::SameLine();
@@ -1212,7 +1203,7 @@ namespace flex
 				ImGui::SameLine();
 				if (ImGui::Button(arrowNextStr))
 				{
-					m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
+					m_GameContext.sceneManager->SetNextSceneActiveAndInit(m_GameContext);
 				}
 
 				ImGui::TreePop();
