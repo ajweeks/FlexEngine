@@ -8,6 +8,7 @@
 
 #include "Helpers.hpp"
 #include "Logger.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
@@ -116,6 +117,24 @@ namespace flex
 			scale = ParseVec3(scaleStr);
 		}
 
+		if (isnan(pos.x) || isnan(pos.y) || isnan(pos.z))
+		{
+			Logger::LogError("Read nan from transform pos in serialized scene file!");
+			pos = glm::vec3(0.0f);
+		}
+
+		if (isnan(rot.x) || isnan(rot.y) || isnan(rot.z))
+		{
+			Logger::LogError("Read nan from transform rot in serialized scene file!");
+			rot = glm::vec3(0.0f);
+		}
+
+		if (isnan(scale.x) || isnan(scale.y) || isnan(scale.z))
+		{
+			Logger::LogError("Read nan from transform scale in serialized scene file!");
+			scale = glm::vec3(1.0f);
+		}
+
 		return Transform(pos, rot, scale);
 	}
 
@@ -135,6 +154,24 @@ namespace flex
 		glm::quat localRotQuat = transform->GetLocalRotation();
 		glm::vec3 localRotEuler = glm::eulerAngles(localRotQuat);
 		glm::vec3 localScale = transform->GetLocalScale();
+
+		if (isnan(localPos.x) || isnan(localPos.y) || isnan(localPos.z))
+		{
+			Logger::LogError("Attempted to serialize nan! (" + transform->GetGameObject()->GetName() + "'s pos) - writing default value instead");
+			localPos = glm::vec3(0.0f);
+		}
+
+		if (isnan(localRotEuler.x) || isnan(localRotEuler.y) || isnan(localRotEuler.z))
+		{
+			Logger::LogError("Attempted to serialize nan! (" + transform->GetGameObject()->GetName() + "'s rot) - writing default value instead");
+			localRotEuler = glm::vec3(0.0f);
+		}
+		
+		if (isnan(localScale.x) || isnan(localScale.y) || isnan(localScale.z))
+		{
+			Logger::LogError("Attempted to serialize nan! (" + transform->GetGameObject()->GetName() + "'s scale) - writing default value instead");
+			localScale = glm::vec3(1.0f);
+		}
 
 		std::string posStr = Vec3ToString(localPos);
 		std::string rotStr = Vec3ToString(localRotEuler);

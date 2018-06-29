@@ -465,7 +465,11 @@ namespace flex
 			sec dt = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-			if (dt < 0.0f) dt = 0.0f;
+			if (dt <= 0.0f)
+			{
+				// Not zero since dt can be used as a denominator
+				dt = 0.0001f;
+			}
 
 			m_GameContext.deltaTime = dt;
 			m_GameContext.elapsedTime = frameEndTime;
