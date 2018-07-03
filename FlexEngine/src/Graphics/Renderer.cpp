@@ -151,7 +151,7 @@ namespace flex
 			bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
 			bool bRemovedPointLight = false;
 
-			if (ImGui::BeginPopupContextItem(objectName.c_str()))
+			if (ImGui::BeginPopupContextItem())
 			{
 				static const char* removePointLightStr = "Remove point light";
 				if (ImGui::Button(removePointLightStr))

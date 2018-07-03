@@ -57,8 +57,15 @@ namespace flex
 
 		Player* GetPlayer(i32 index);
 
+		// Deletes and removes targetObject if exists in scene
+		// Returns true if targetObject was found
+		bool DeleteGameObject(const GameContext& gameContext, GameObject* targetObject);
+
 	protected:
-		PhysicsWorld* m_PhysicsWorld = nullptr;
+		// Recursively finds game object which matches targetObject
+		// by crawling down parentObject's children
+		// Returns true if targetObject was found
+		bool DeleteGameObjectRecursive(const GameContext& gameContext, GameObject* parentObject, GameObject* targetObject);
 
 		GameObject* CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID = InvalidMaterialID);
 		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
@@ -81,6 +88,8 @@ namespace flex
 
 		void CreateSkybox(const GameContext& gameContext, MaterialID matID, GameObject* newGameObject, const glm::vec3& rotationEuler);
 		void CreateReflectionProbe(const GameContext& gameContext, MaterialID sphereMatID, GameObject* newGameObject);
+
+		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		std::string m_Name;
 		std::string m_FileName;

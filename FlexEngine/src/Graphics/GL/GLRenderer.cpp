@@ -41,6 +41,7 @@
 #include "Window/Window.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Profiler.hpp"
+#include "imgui_internal.h"
 
 namespace flex
 {
@@ -3209,15 +3210,31 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
-		void GLRenderer::DoImGuiRenameGameObjectContextMenu(GameObject* gameObject)
+		void GLRenderer::DoGameObjectContextMenu(const GameContext& gameContext, GameObject** gameObjectRef)
 		{
-			std::string contextMenuID = "context window game object " + gameObject->GetName() + std::to_string(gameObject->GetRenderID());
-			if (ImGui::BeginPopupContextItem(contextMenuID.c_str()))
+			GameObject* gameObject = *gameObjectRef;
+
+			std::string contextMenuIDStr = "context window game object " + gameObject->GetName() + std::to_string(gameObject->GetRenderID());
+			ImGuiWindow* window = GImGui->CurrentWindow;
+			const char* contextMenuIDCStr = contextMenuIDStr.c_str();
+			ImGuiID contextMenuID = window->GetID(contextMenuIDCStr);
+			static std::string newObjectName = gameObject->GetName();
+			const size_t maxStrLen = 256;
+
+			bool bItemClicked = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && ImGui::IsMouseClicked(1);
+			if (bItemClicked)
 			{
-				const size_t maxStrLen = 256;
-				std::string newObjectName = gameObject->GetName();
+				newObjectName = gameObject->GetName();
 				newObjectName.resize(maxStrLen);
-				if (ImGui::InputText("Object name", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue))
+			}
+
+			if (ImGui::BeginPopupContextItem(contextMenuIDCStr))
+			{
+				bool bRename = ImGui::InputText("##rename-game-object", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bRename |= ImGui::Button("Rename");
+
+				if (bRename)
 				{
 					size_t firstTerminator = newObjectName.find('\0');
 					if (firstTerminator != std::string::npos)
@@ -3226,6 +3243,58 @@ namespace flex
 					}
 
 					gameObject->SetName(newObjectName);
+
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				static const char* deleteObjectStr = "Delete object";
+				const std::string deleteObjectPopupID = "Delete object";
+				if (ImGui::Button("Delete"))
+				{
+					ImGui::OpenPopup(deleteObjectPopupID.c_str());
+				}
+
+				if (ImGui::BeginPopupModal(deleteObjectPopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+				{
+					static std::string objectName = gameObject->GetName();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+					std::string textStr = "Are you sure you want to permanently delete " + objectName + "?";
+					ImGui::Text(textStr.c_str());
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.12f, 0.09f, 1));
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.04f, 0.01f, 1));
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
+					if (ImGui::Button("Delete"))
+					{
+						if (gameContext.sceneManager->CurrentScene()->DeleteGameObject(gameContext, gameObject))
+						{
+							*gameObjectRef = nullptr;
+							ImGui::CloseCurrentPopup();
+						}
+						else
+						{
+							Logger::LogWarning("Failed to delete game object: " + gameObject->GetName());
+						}
+					}
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Cancel"))
+					{
+						ImGui::CloseCurrentPopup();
+						ImGui::ClosePopup(contextMenuID); // Also exit out of first popup (context menu)
+					}
+
+					ImGui::EndPopup();
 				}
 
 				ImGui::EndPopup();
@@ -4388,7 +4457,7 @@ namespace flex
 
 			if (selectedObject)
 			{
-				DrawGameObjectImGui(selectedObject);
+				DrawGameObjectImGui(gameContext, selectedObject);
 			}
 
 			ImGui::EndChild();
@@ -4397,13 +4466,80 @@ namespace flex
 			std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
 			for (size_t i = 0; i < rootObjects.size(); ++i)
 			{
-				DrawGameObjectNameAndChildren(rootObjects[i], gameContext);
+				DrawGameObjectNameAndChildren(gameContext, rootObjects[i]);
+			}
+
+			static bool bInvalidName = false;
+			static std::string newObjectName = "New Object";
+
+			static const char* addRenderObjectStr = "Add render object...";
+			static const char* addRenderObjectPopupStr = "Add render object";
+			if (ImGui::Button(addRenderObjectStr))
+			{
+				ImGui::OpenPopup(addRenderObjectPopupStr);
+				newObjectName = "New Object";
+				bInvalidName = false;
+			}
+
+			if (ImGui::BeginPopupModal(addRenderObjectPopupStr, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				const size_t maxStrLen = 256;
+				newObjectName.resize(maxStrLen);
+
+				if (bInvalidName)
+				{
+					ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4());
+				}
+
+				bool bCreate = ImGui::InputText("##New-object-name", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue);
+
+				if (bInvalidName)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				bCreate |= ImGui::Button("Create");
+
+				if (bCreate)
+				{
+					size_t firstTerminator = newObjectName.find('\0');
+					if (firstTerminator != std::string::npos)
+					{
+						newObjectName = newObjectName.substr(0, firstTerminator);
+					}
+
+					if (newObjectName.empty())
+					{
+						bInvalidName = true;
+					}
+					else
+					{
+						MaterialID matID = 0;
+
+						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
+						MeshComponent* meshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+						meshComponent->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::CUBE);
+
+						gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
 			}
 
 			DrawImGuiLights();
 		}
 
-		void GLRenderer::DrawGameObjectImGui(GameObject* gameObject)
+		void GLRenderer::DrawGameObjectImGui(const GameContext& gameContext, GameObject* gameObject)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
@@ -4421,7 +4557,13 @@ namespace flex
 
 			ImGui::Text(gameObject->GetName().c_str());
 
-			DoImGuiRenameGameObjectContextMenu(gameObject);
+			DoGameObjectContextMenu(gameContext, &gameObject);
+
+			if (!gameObject)
+			{
+				// Early return if object was just deleted
+				return;
+			}
 
 			bool visible = gameObject->IsVisible();
 			const std::string objectVisibleLabel("Visible" + objectID + gameObject->GetName());
@@ -4455,7 +4597,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject, const GameContext& gameContext)
+		void GLRenderer::DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
@@ -4478,7 +4620,7 @@ namespace flex
 			{
 				bool bChildVisibleInSceneExplorer = false;
 				// Make sure at least one child is visible in scene explorer
-				for (i32 i = 0; i < gameObjectChildren.size(); ++i)
+				for (u32 i = 0; i < gameObjectChildren.size(); ++i)
 				{
 					if (gameObjectChildren[i]->IsVisibleInSceneExplorer())
 					{
@@ -4511,21 +4653,24 @@ namespace flex
 			{
 				bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
 
-				DoImGuiRenameGameObjectContextMenu(gameObject);
+				DoGameObjectContextMenu(gameContext, &gameObject);
 
-				if (ImGui::IsItemClicked())
+				if (gameObject && ImGui::IsItemClicked())
 				{
 					gameContext.engineInstance->SetSelectedObject(gameObject);
 				}
 				if (node_open)
 				{
-					ImGui::Indent();
-					const std::vector<GameObject*>& children = gameObject->GetChildren();
-					for (GameObject* child : children)
+					if (gameObject)
 					{
-						DrawGameObjectNameAndChildren(child, gameContext);
+						ImGui::Indent();
+						const std::vector<GameObject*>& children = gameObject->GetChildren();
+						for (GameObject* child : children)
+						{
+							DrawGameObjectNameAndChildren(gameContext, child);
+						}
+						ImGui::Unindent();
 					}
-					ImGui::Unindent();
 
 					ImGui::TreePop();
 				}
@@ -4535,9 +4680,9 @@ namespace flex
 				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 				ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
 
-				DoImGuiRenameGameObjectContextMenu(gameObject);
+				DoGameObjectContextMenu(gameContext, &gameObject);
 
-				if (ImGui::IsItemClicked())
+				if (gameObject && ImGui::IsItemClicked())
 				{
 					gameContext.engineInstance->SetSelectedObject(gameObject);
 				}

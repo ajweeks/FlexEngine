@@ -376,6 +376,54 @@ namespace flex
 		}
 	}
 
+	bool BaseScene::DeleteGameObject(const GameContext& gameContext, GameObject* targetObject)
+	{
+		for (GameObject* gameObject : m_RootObjects)
+		{
+			if (DeleteGameObjectRecursive(gameContext, gameObject, targetObject))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool BaseScene::DeleteGameObjectRecursive(const GameContext& gameContext, GameObject* parentObject, GameObject* targetObject)
+	{
+		if (parentObject == targetObject)
+		{
+			if (parentObject->m_Parent)
+			{
+				parentObject->m_Parent->RemoveChild(parentObject);
+			}
+			parentObject->Destroy(gameContext);
+
+			auto result = Contains(m_RootObjects, parentObject);
+			if (result != m_RootObjects.end())
+			{
+				m_RootObjects.erase(result);
+			}
+
+			if (parentObject == gameContext.engineInstance->GetSelectedObject())
+			{
+				gameContext.engineInstance->SetSelectedObject(nullptr);
+			}
+
+			SafeDelete(targetObject);
+			return true;
+		}
+
+		for (GameObject* childObject : parentObject->m_Children)
+		{
+			if (DeleteGameObjectRecursive(gameContext, childObject, targetObject))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	GameObject* BaseScene::CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID /* = InvalidMaterialID */)
 	{
 		GameObject* newGameObject = nullptr;

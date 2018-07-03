@@ -1210,8 +1210,8 @@ namespace flex
 					m_GameContext.sceneManager->SetNextSceneActiveAndInit(m_GameContext);
 				}
 
-				static const char* addSceneStr = "Add scene";
-				std::string addScenePopupID = "add scene popup";
+				static const char* addSceneStr = "Add scene...";
+				std::string addScenePopupID = "Add scene";
 				if (ImGui::Button(addSceneStr))
 				{
 					ImGui::OpenPopup(addScenePopupID.c_str());
@@ -1252,8 +1252,8 @@ namespace flex
 
 				ImGui::SameLine();
 
-				static const char* deleteSceneStr = "Delete scene";
-				std::string deleteScenePopupID = "delete scene popup";
+				static const char* deleteSceneStr = "Delete scene...";
+				const std::string deleteScenePopupID = "Delete scene";
 				if (ImGui::Button(deleteSceneStr))
 				{
 					ImGui::OpenPopup(deleteScenePopupID.c_str());

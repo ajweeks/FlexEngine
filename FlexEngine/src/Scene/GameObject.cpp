@@ -160,7 +160,6 @@ namespace flex
 			delete m_CollisionShape;
 			m_CollisionShape = nullptr;
 		}
-
 	}
 
 	void GameObject::Update(const GameContext& gameContext)

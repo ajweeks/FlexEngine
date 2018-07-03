@@ -97,8 +97,8 @@ namespace flex
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
 			void ImGuiRender();
-			void DrawGameObjectImGui(GameObject* gameObject);
-			void DrawGameObjectNameAndChildren(GameObject* gameObject, const GameContext& gameContext);
+			void DrawGameObjectImGui(const GameContext& gameContext, GameObject* gameObject);
+			void DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject);
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 
@@ -183,7 +183,8 @@ namespace flex
 
 			void RemoveMaterial(MaterialID materialID);
 
-			void DoImGuiRenameGameObjectContextMenu(GameObject* gameObject);
+			// If the object gets deleted this frame *gameObjectRef gets set to nullptr
+			void DoGameObjectContextMenu(const GameContext& gameContext, GameObject** gameObjectRef);
 
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
