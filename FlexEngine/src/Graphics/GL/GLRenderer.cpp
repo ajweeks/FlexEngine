@@ -4472,7 +4472,26 @@ namespace flex
 				}
 			}
 
-			bool bHasChildren = !gameObject->GetChildren().empty();
+			const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
+			bool bHasChildren = !gameObjectChildren.empty();
+			if (bHasChildren)
+			{
+				bool bChildVisibleInSceneExplorer = false;
+				// Make sure at least one child is visible in scene explorer
+				for (i32 i = 0; i < gameObjectChildren.size(); ++i)
+				{
+					if (gameObjectChildren[i]->IsVisibleInSceneExplorer())
+					{
+						bChildVisibleInSceneExplorer = true;
+						break;
+					}
+				}
+	
+				if (!bChildVisibleInSceneExplorer)
+				{
+					bHasChildren = false;
+				}
+			}
 			bool bSelected = (gameObject == gameContext.engineInstance->GetSelectedObject());
 
 			bool visible = gameObject->IsVisible();

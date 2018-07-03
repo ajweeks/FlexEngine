@@ -996,6 +996,7 @@ namespace flex
 		GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
 		captureObject->SetSerializable(false);
 		captureObject->SetVisible(false);
+		captureObject->SetVisibleInSceneExplorer(false);
 
 		RenderObjectCreateInfo captureObjectCreateInfo = {};
 		captureObjectCreateInfo.vertexBufferData = nullptr;

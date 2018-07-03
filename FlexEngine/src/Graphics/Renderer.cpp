@@ -78,9 +78,9 @@ namespace flex
 
 		bool valueChanged = false;
 
-		valueChanged = ImGui::DragFloat3("Translation", &translation[0], 0.1f) || valueChanged;
-		valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.1f) || valueChanged;
-		valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
+		valueChanged = ImGui::DragFloat3("T", &translation[0], 0.1f) || valueChanged;
+		valueChanged = ImGui::DragFloat3("R", &rotation[0], 0.1f) || valueChanged;
+		valueChanged = ImGui::DragFloat3("S", &scale[0], 0.01f) || valueChanged;
 
 		if (valueChanged)
 		{
@@ -117,85 +117,81 @@ namespace flex
 
 	void Renderer::DrawImGuiLights()
 	{
-		if (ImGui::TreeNode("Lights"))
+		ImGui::Text("Lights");
+		ImGui::AlignFirstTextHeightToWidgets();
+
+		ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
+
+		bool dirLightEnabled = m_DirectionalLight.enabled == 1;
+		ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
+		m_DirectionalLight.enabled = dirLightEnabled ? 1 : 0;
+		ImGui::SameLine();
+		if (ImGui::TreeNode("Directional Light"))
 		{
-			ImGui::AlignFirstTextHeightToWidgets();
+			ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
 
-			ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
+			ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
 
-			bool dirLightEnabled = m_DirectionalLight.enabled == 1;
-			ImGui::Checkbox("##dir-light-enabled", &dirLightEnabled);
-			m_DirectionalLight.enabled = dirLightEnabled ? 1 : 0;
+			ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
+
+			ImGui::TreePop();
+		}
+
+		i32 i = 0;
+		while (i < (i32)m_PointLights.size())
+		{
+			const std::string iStr = std::to_string(i);
+			const std::string objectName("Point Light##" + iStr);
+
+			bool PointLightEnabled = m_PointLights[i].enabled == 1;
+			ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
+			m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
 			ImGui::SameLine();
-			if (ImGui::TreeNode("Directional Light"))
+
+			bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
+			bool bRemovedPointLight = false;
+
+			if (ImGui::BeginPopupContextItem(objectName.c_str()))
 			{
-				ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
+				static const char* removePointLightStr = "Remove point light";
+				if (ImGui::Button(removePointLightStr))
+				{
+					m_PointLights.erase(m_PointLights.begin() + i);
+					bRemovedPointLight = true;
+					ImGui::CloseCurrentPopup();
+				}
 
-				ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
+				ImGui::EndPopup();
+			}
 
-				ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
+			if (!bRemovedPointLight && bTreeOpen)
+			{
+				ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
 
+				ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
+
+				ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
+			}
+
+			if (bTreeOpen)
+			{
 				ImGui::TreePop();
 			}
 
-			i32 i = 0;
-			while (i < (i32)m_PointLights.size())
+			if (!bRemovedPointLight)
 			{
-				const std::string iStr = std::to_string(i);
-				const std::string objectName("Point Light##" + iStr);
-
-				bool PointLightEnabled = m_PointLights[i].enabled == 1;
-				ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
-				m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
-				ImGui::SameLine();
-
-				bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
-				bool bRemovedPointLight = false;
-
-				if (ImGui::BeginPopupContextItem(objectName.c_str()))
-				{
-					static const char* removePointLightStr = "Remove point light";
-					if (ImGui::Button(removePointLightStr))
-					{
-						m_PointLights.erase(m_PointLights.begin() + i);
-						bRemovedPointLight = true;
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::EndPopup();
-				}
-
-				if (!bRemovedPointLight && bTreeOpen)
-				{
-					ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
-
-					ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
-
-					ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
-				}
-
-				if (bTreeOpen)
-				{
-					ImGui::TreePop();
-				}
-
-				if (!bRemovedPointLight)
-				{
-					++i;
-				}
+				++i;
 			}
+		}
 
-			if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
+		if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
+		{
+			static const char* newPointLightStr = "Add point light";
+			if (ImGui::Button(newPointLightStr))
 			{
-				static const char* newPointLightStr = "Add point light";
-				if (ImGui::Button(newPointLightStr))
-				{
-					PointLight newPointLight = {};
-					InitializePointLight(newPointLight);
-				}
+				PointLight newPointLight = {};
+				InitializePointLight(newPointLight);
 			}
-
-			ImGui::TreePop();
 		}
 	}
 
