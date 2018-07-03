@@ -4707,6 +4707,8 @@ namespace flex
 
 					ImGui::SetDragDropPayload(m_RenderObjectPayloadCStr, data, size);
 
+					ImGui::Text(gameObject->GetName().c_str());
+
 					ImGui::EndDragDropSource();
 				}
 			}
