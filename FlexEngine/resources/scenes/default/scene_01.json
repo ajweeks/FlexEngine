@@ -72,12 +72,32 @@
 	"entities" : 
 	[
 		{
+			"name" : "Cornell Box",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "-21.200001, 0.000002, -0.004907",
+				"rotation" : "-1.570796, 1.570308, 0.000000",
+				"scale" : "19.999908, 19.999928, 19.999893"
+			},
+			"mesh" : 
+			{
+				"file" : "models/CornellBox/cornell-box.fbx",
+				"swapNormalYZ" : false,
+				"flipNormalZ" : false,
+				"flipU" : false,
+				"flipV" : false
+			},
+			"material array index" : 2
+		},
+		{
 			"name" : "Sphere 01",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "47.761673, -28918.404297, -164.847290",
+				"position" : "671.130859, -1027710.062500, -2287.723145",
 				"rotation" : "-0.550148, 0.245541, -0.966690",
 				"scale" : "1.999826, 1.999842, 1.999865"
 			},
@@ -93,7 +113,7 @@
 			"collider" : 
 			{
 				"shape" : "sphere",
-				"radius" : 511.623383
+				"radius" : 1046802.062500
 			},
 			"rigid body" : 
 			{
@@ -108,9 +128,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-2.000000, 0.000000, -4.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
+				"position" : "0.596793, 0.000000, 9.821850",
+				"rotation" : "0.000000, -0.794125, 0.000000",
+				"scale" : "0.999999, 1.000000, 0.999999"
 			},
 			"mesh" : 
 			{
@@ -128,9 +148,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-6.774756, 0.399972, -2.504515",
-				"rotation" : "-0.604318, 0.000000, -1.570796",
-				"scale" : "0.999992, 0.999992, 1.000000"
+				"position" : "-36.866379, 30.230469, 96.274612",
+				"rotation" : "-0.699139, 0.416403, -1.513134",
+				"scale" : "0.999980, 0.999982, 0.999997"
 			},
 			"mesh" : 
 			{
@@ -144,7 +164,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.499972, 0.499974, 0.500000"
+				"half extents" : "0.499887, 0.499889, 0.499995"
 			},
 			"rigid body" : 
 			{
@@ -160,8 +180,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "5.773954, 0.000000, 5.995772",
-				"rotation" : "0.000000, -0.000000, 0.000000",
+				"position" : "10.000000, 0.000000, -6.000000",
+				"rotation" : "0.000000, 0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"material array index" : 3,
@@ -177,8 +197,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-4.000000, 0.000000, 2.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
+				"position" : "7.000000, 0.000000, 10.000000",
+				"rotation" : "0.000000, 0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"material array index" : 4,
@@ -295,7 +315,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1000000053026226176.000000, 1.000000, 1000000053026226176.000000"
+				"half extents" : "inf, 1.000000, inf"
 			},
 			"rigid body" : 
 			{
@@ -333,10 +353,10 @@
 	[
 		{
 			"name" : "Point light 01",
-			"position" : "9.100000, -3.100000, -43.500004",
-			"color" : "0.685328, 0.670172, 0.988630",
+			"position" : "0.000000, 37.500000, 0.000000",
+			"color" : "0.999905, 0.999900, 1.000000",
 			"enabled" : true,
-			"brightness" : 251.082016
+			"brightness" : 1000.000061
 		}
 	],
 	"directional light" : 

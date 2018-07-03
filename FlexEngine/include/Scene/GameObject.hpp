@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "Audio/RandomizedAudioSource.hpp"
-#include "GameContext.hpp"
 #include "Helpers.hpp"
 #include "Transform.hpp"
 
@@ -81,8 +80,6 @@ namespace flex
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
-
-		GameContext* m_GameContext = nullptr;
 
 		std::string m_Name;
 

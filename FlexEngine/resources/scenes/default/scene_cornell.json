@@ -39,7 +39,7 @@
 		{
 			"name" : "pbr white",
 			"shader" : "pbr",
-			"const albedo" : "0.99, 0.99, 0.99",
+			"const albedo" : "0.990000, 0.990000, 0.990000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.900000,
 			"const ao" : 1.000000
@@ -47,18 +47,6 @@
 	],
 	"entities" : 
 	[
-		{
-			"name" : "Reflection Probe 01",
-			"type" : "reflection probe",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "0.000000, 20.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material array index" : 0
-		},
 		{
 			"name" : "Skybox",
 			"type" : "skybox",
@@ -72,14 +60,26 @@
 			"material array index" : 1
 		},
 		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "10.200001, 20.000000, 0.000000",
+				"rotation" : "-3.141592, 1.148427, -3.141592",
+				"scale" : "0.999999, 1.000000, 0.999999"
+			},
+			"material array index" : 0
+		},
+		{
 			"name" : "Cornell Box",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "-1.570753, 1.570106, 0.000043",
-				"scale" : "19.999861, 19.999882, 19.999870"
+				"position" : "-17.610001, -0.000002, 0.006283",
+				"rotation" : "-1.566242, 1.568843, 0.004539",
+				"scale" : "19.999269, 19.999754, 19.999008"
 			},
 			"mesh" : 
 			{
@@ -98,7 +98,7 @@
 			"transform" : 
 			{
 				"position" : "6.848998, 5.205111, -12.373000",
-				"rotation" : "-0.000414, 0.000000, 0.000263",
+				"rotation" : "-0.000414, -0.000000, 0.000263",
 				"scale" : "3.000000, 3.000000, 3.000000"
 			},
 			"mesh" : 
@@ -118,7 +118,7 @@
 			"transform" : 
 			{
 				"position" : "-0.269232, 8.073162, -9.520214",
-				"rotation" : "-0.000414, 0.000000, 0.000263",
+				"rotation" : "-0.000414, -0.000000, 0.000263",
 				"scale" : "5.000000, 5.000000, 5.000000"
 			},
 			"mesh" : 
@@ -137,9 +137,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-7.395920, -0.000001, 9.607220",
-				"rotation" : "0.000000, -1.123992, 0.000000",
-				"scale" : "4.999999, 5.000000, 4.999999"
+				"position" : "-12.514131, 0.000000, 7.708018",
+				"rotation" : "0.000000, -1.434660, 0.000000",
+				"scale" : "5.000000, 5.000000, 5.000000"
 			},
 			"mesh" : 
 			{

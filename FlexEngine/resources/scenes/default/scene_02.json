@@ -9,11 +9,7 @@
 			"const albedo" : "0.800000, 0.700000, 0.750000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.300000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr",
@@ -21,11 +17,7 @@
 			"const albedo" : "0.800000, 0.700000, 0.750000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.300000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "Skybox",
@@ -50,11 +42,7 @@
 			"const albedo" : "0.800000, 0.800000, 0.800000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		}
 	],
 	"entities" : 
@@ -103,7 +91,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "100.000000, 0.100000, 100.000000"
+				"half extents" : "2000.000000, 2.000000, 2000.000000"
 			},
 			"rigid body" : 
 			{
@@ -130,7 +118,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 5.000000, 0.000000",
+				"position" : "-7.300000, 8.600000, 8.500000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},

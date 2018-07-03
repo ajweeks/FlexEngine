@@ -165,9 +165,6 @@ namespace flex
 
 	void GameObject::Update(const GameContext& gameContext)
 	{
-		// TODO: FIXME: Remove this soon
-		m_GameContext = (GameContext*)&gameContext;
-
 		if (m_ObjectInteractingWith)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
@@ -602,19 +599,6 @@ namespace flex
 			{
 				m_bInteractable = true;
 			}
-		}
-
-		switch (m_Type)
-		{
-		case GameObjectType::GLASS_WINDOW:
-		{
-			m_MeshComponent->LoadFromFile(*m_GameContext, RESOURCE_LOCATION + "models/glass-window-broken.gltf");
-			m_GlassWindowMembers.bBroken = true;
-		} break;
-		default:
-		{
-			
-		} break;
 		}
 	}
 

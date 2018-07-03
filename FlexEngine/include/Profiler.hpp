@@ -14,7 +14,10 @@ namespace flex
 
 		static void PrintResultsToFile();
 
+		static void PrintBlockDuration(const std::string& blockName);
+
 	private:
+		// Second field holds start time of block until block is ended, then it contains block duration
 		static std::map<std::string, ms> s_Timings;
 		static ms s_FrameStartTime;
 		static ms s_FrameEndTime;

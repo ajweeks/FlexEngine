@@ -188,11 +188,11 @@ namespace flex
 			AddRootObject(m_WorldOrigin);
 		}
 
-		m_Player0 = new Player(0);
-		AddRootObject(m_Player0);
-
-		m_Player1 = new Player(1);
-		AddRootObject(m_Player1);
+		//m_Player0 = new Player(0);
+		//AddRootObject(m_Player0);
+		//
+		//m_Player1 = new Player(1);
+		//AddRootObject(m_Player1);
 
 		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
 		{

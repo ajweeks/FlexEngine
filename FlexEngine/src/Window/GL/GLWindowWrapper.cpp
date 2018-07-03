@@ -33,13 +33,13 @@ namespace flex
 
 #if _DEBUG
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-#endif
+#endif // _DEBUG
 
 			// Don't hide window when losing focus in Windowed Fullscreen
 			glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
 
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
@@ -66,6 +66,21 @@ namespace flex
 			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 			CheckGLErrorMessages();
 
+#if _DEBUG
+			if (glDebugMessageCallback)
+			{
+				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+				glDebugMessageCallback(glDebugOutput, nullptr);
+				GLuint unusedIds = 0;
+				glDebugMessageControl(GL_DONT_CARE,
+									  GL_DONT_CARE,
+									  GL_DONT_CARE,
+									  0,
+									  &unusedIds,
+									  true);
+			}
+#endif // _DEBUG
+
 			Logger::LogInfo("OpenGL loaded");
 			Logger::LogInfo("Vendor:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
 			Logger::LogInfo("Renderer:\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
@@ -90,10 +105,10 @@ namespace flex
 				return;
 			}
 
-			Logger::LogInfo("---------------");
-			Logger::LogInfo("Debug message (" + std::to_string(id) + "): " + message);
-
 			std::stringstream ss;
+			ss << "---------------" << std::endl << "\t";
+			ss << "GL Debug message (" << id << "): " << message;
+
 			switch (source)
 			{
 			case GL_DEBUG_SOURCE_API:             ss << "Source: API"; break;
@@ -103,7 +118,7 @@ namespace flex
 			case GL_DEBUG_SOURCE_APPLICATION:     ss << "Source: Application"; break;
 			case GL_DEBUG_SOURCE_OTHER:           ss << "Source: Other"; break;
 			}
-			ss << std::endl;
+			ss << std::endl << "\t";
 
 			switch (type)
 			{
@@ -117,7 +132,7 @@ namespace flex
 			case GL_DEBUG_TYPE_POP_GROUP:           ss << "Type: Pop Group"; break;
 			case GL_DEBUG_TYPE_OTHER:               ss << "Type: Other"; break;
 			}
-			ss << std::endl;
+			ss << std::endl << "\t";
 
 			switch (severity)
 			{
@@ -126,9 +141,9 @@ namespace flex
 			case GL_DEBUG_SEVERITY_LOW:          ss << "Severity: low"; break;
 			case GL_DEBUG_SEVERITY_NOTIFICATION: ss << "Severity: notification"; break;
 			}
-			ss << std::endl;
 
-			Logger::LogInfo(ss.str());
+			Logger::LogError(ss.str());
+			Logger::LogError("---------------");
 		}
 	} // namespace gl
 } // namespace flex

@@ -28,7 +28,8 @@ namespace flex
 
 		if (s_UnendedTimings != 0)
 		{
-			Logger::LogError("Uneven number of profile blocks!");
+			Logger::LogError("Uneven number of profile blocks! (" +
+							 std::to_string(s_UnendedTimings) + ')');
 		}
 
 		if (bPrintTimings)
@@ -95,6 +96,15 @@ namespace flex
 		else
 		{
 			Logger::LogInfo("Failed to write profiling results to " + filePath);
+		}
+	}
+
+	void Profiler::PrintBlockDuration(const std::string& blockName)
+	{
+		auto result = s_Timings.find(blockName);
+		if (result != s_Timings.end())
+		{
+			Logger::LogInfo("    Block duration \"" + blockName + "\": " + FloatToString(result->second, 2) + "ms");
 		}
 	}
 } // namespace flex

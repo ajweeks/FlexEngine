@@ -23,7 +23,7 @@
 namespace flex
 {
 	const real MeshComponent::GRID_LINE_SPACING = 1.0f;
-	const u32 MeshComponent::GRID_LINE_COUNT = 150;
+	const u32 MeshComponent::GRID_LINE_COUNT = 151; // Keep odd to align with origin
 
 	std::map<std::string, MeshComponent::LoadedMesh*> MeshComponent::m_LoadedMeshes;
 

@@ -26,7 +26,7 @@ void main()
 
 
 
-	// Chromatic abberation
+	// Chromatic aberration
 	{
 		//float abberationScale = 0.15;
 		//float distFromCenterN = length(ex_TexCoord - vec2(0.5, 0.5)) * 2.0;

@@ -40,12 +40,12 @@
 #include "VertexAttribute.hpp"
 #include "Window/Window.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
+#include "Profiler.hpp"
 
 namespace flex
 {
 	namespace gl
 	{
-
 		GLRenderer::GLRenderer(GameContext& gameContext)
 		{
 			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/default-renderer-settings.ini"));
@@ -166,7 +166,6 @@ namespace flex
 			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
 			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
 
-			// Sprite quad
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
@@ -327,14 +326,21 @@ namespace flex
 			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/bahnschrift.ttf";
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
+			PROFILE_BEGIN("load font UbuntuCondensed");
 			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 16);
+			PROFILE_END("load font UbuntuCondensed");
 
-			glFlush();
+			//glFlush();
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
+			PROFILE_BEGIN("load font SourceCodePro");
 			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 10);
+			PROFILE_END("load font SourceCodePro");
 
-			glFlush();
+			//glFlush();
+
+			Profiler::PrintBlockDuration("load font UbuntuCondensed");
+			Profiler::PrintBlockDuration("load font SourceCodePro");
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
 			if (castedWindow == nullptr)
@@ -432,7 +438,8 @@ namespace flex
 
 		MaterialID GLRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo)
 		{
-			CheckGLErrorMessages();
+			std::string profileBlockName = "init mat 1st half " + createInfo->name + " " + std::to_string(rand());
+			PROFILE_BEGIN(profileBlockName);
 
 			MaterialID matID = GetNextAvailableMaterialID();
 			m_Materials.insert(std::pair<MaterialID, GLMaterial>(matID, {}));
@@ -460,7 +467,7 @@ namespace flex
 			GLShader& shader = m_Shaders[mat.material.shaderID];
 
 			glUseProgram(shader.program);
-			CheckGLErrorMessages();
+
 
 			// TODO: Is this really needed? (do things dynamically instead?)
 			UniformInfo uniformInfo[] = {
@@ -506,7 +513,8 @@ namespace flex
 				}
 			}
 
-			CheckGLErrorMessages();
+			PROFILE_END(profileBlockName);
+			Profiler::PrintBlockDuration(profileBlockName);
 
 			mat.material.diffuseTexturePath = createInfo->diffuseTexturePath;
 			mat.material.generateDiffuseSampler = createInfo->generateDiffuseSampler;
@@ -650,13 +658,20 @@ namespace flex
 						{
 							if (!GetLoadedTexture(samplerCreateInfo.filepath, *samplerCreateInfo.id))
 							{
+								std::string fileNameClean = samplerCreateInfo.filepath;
+								StripLeadingDirectories(fileNameClean);
+								std::string profileBlockName = "load texture " + fileNameClean;
+								PROFILE_BEGIN(profileBlockName);
 								// Texture hasn't been loaded yet, load it now
 								samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, samplerCreateInfo.flipVertically, false);
+								PROFILE_END(profileBlockName);
+
+								Profiler::PrintBlockDuration(profileBlockName);
+
 								m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
 							}
 
 							i32 uniformLocation = glGetUniformLocation(shader.program, samplerCreateInfo.textureName.c_str());
-							CheckGLErrorMessages();
 							if (uniformLocation == -1)
 							{
 								Logger::LogWarning(samplerCreateInfo.textureName + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
@@ -664,7 +679,6 @@ namespace flex
 							else
 							{
 								glUniform1i(uniformLocation, binding);
-								CheckGLErrorMessages();
 							}
 						}
 					}
@@ -677,7 +691,6 @@ namespace flex
 			{
 				const char* frameBufferName = frameBufferPair.first.c_str();
 				i32 positionLocation = glGetUniformLocation(shader.program, frameBufferName);
-				CheckGLErrorMessages();
 				if (positionLocation == -1)
 				{
 					Logger::LogWarning(frameBufferPair.first + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
@@ -685,7 +698,6 @@ namespace flex
 				else
 				{
 					glUniform1i(positionLocation, binding);
-					CheckGLErrorMessages();
 				}
 				++binding;
 			}
@@ -712,7 +724,6 @@ namespace flex
 					GenerateGLCubemap(cubemapCreateInfo);
 
 					i32 uniformLocation = glGetUniformLocation(shader.program, "cubemapSampler");
-					CheckGLErrorMessages();
 					if (uniformLocation == -1)
 					{
 						Logger::LogWarning("cubemapSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
@@ -721,7 +732,6 @@ namespace flex
 					{
 						glUniform1i(uniformLocation, binding);
 					}
-					CheckGLErrorMessages();
 					++binding;
 				}
 			}
@@ -767,7 +777,6 @@ namespace flex
 			{
 				// TODO: Save location for binding later?
 				i32 uniformLocation = glGetUniformLocation(shader.program, "cubemapSampler");
-				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
 					Logger::LogWarning("cubemapSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
@@ -776,14 +785,12 @@ namespace flex
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
 
 			if (shader.shader.needBRDFLUT)
 			{
 				i32 uniformLocation = glGetUniformLocation(shader.program, "brdfLUT");
-				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
 					Logger::LogWarning("brdfLUT was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
@@ -792,7 +799,6 @@ namespace flex
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
 
@@ -812,7 +818,6 @@ namespace flex
 			if (shader.shader.needIrradianceSampler)
 			{
 				i32 uniformLocation = glGetUniformLocation(shader.program, "irradianceSampler");
-				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
 					Logger::LogWarning("irradianceSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
@@ -821,7 +826,6 @@ namespace flex
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
 
@@ -841,7 +845,6 @@ namespace flex
 			if (shader.shader.needPrefilteredMap)
 			{
 				i32 uniformLocation = glGetUniformLocation(shader.program, "prefilterMap");
-				CheckGLErrorMessages();
 				if (uniformLocation == -1)
 				{
 					Logger::LogWarning("prefilterMap was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
@@ -850,11 +853,8 @@ namespace flex
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
-
-			glUseProgram(0);
 
 			return matID;
 		}
@@ -957,14 +957,32 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			GLMaterial& material = m_Materials[renderObject->materialID];
 
+			// glFlush calls help RenderDoc replay frames without crashing
+
 			if (material.material.generateReflectionProbeMaps)
 			{
-				Logger::LogInfo("Capturing reflection probe");
+				std::string profileBlockName = "capturing scene to cubemap " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
 				CaptureSceneToCubemap(gameContext, renderID);
-				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
 
-				glFlush();
+				profileBlockName = "generating irradiance sampler for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+				
+				profileBlockName = "generating prefiltered map for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+
+
 
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
@@ -972,11 +990,28 @@ namespace flex
 			}
 			else if (material.material.generateIrradianceSampler)
 			{
+				std::string profileBlockName = "generating cubemap for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
 				GenerateCubemapFromHDREquirectangular(renderObject->materialID, material.material.environmentMapPath);
-				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
 
-				glFlush();
+				
+				profileBlockName = "generating irradiance sampler for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+
+
+				profileBlockName = "generating prefiltered map for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
 			}
 		}
 
@@ -1014,6 +1049,8 @@ namespace flex
 			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
 			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID))
 			{
+				std::string profileBlockName = "generating equirectangular mat";
+				PROFILE_BEGIN(profileBlockName);
 				MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 				equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
 				equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
@@ -1022,7 +1059,12 @@ namespace flex
 				// TODO: Make cyclable at runtime
 				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
 				equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
 			}
+
+			std::string profileBlockName = "generating cubemap first half";
+			PROFILE_BEGIN(profileBlockName);
 
 			GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
 			GLShader& equirectangularToCubemapShader = m_Shaders[equirectangularToCubemapMaterial.material.shaderID];
@@ -1033,7 +1075,7 @@ namespace flex
 
 			glUseProgram(equirectangularToCubemapShader.program);
 			CheckGLErrorMessages();
-
+			
 			// TODO: Store what location this texture is at (might not be 0)
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
@@ -1106,6 +1148,9 @@ namespace flex
 			// Generate mip maps for generated cubemap
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+			PROFILE_END(profileBlockName);
+			Profiler::PrintBlockDuration(profileBlockName);
 		}
 
 		void GLRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
@@ -1315,12 +1360,16 @@ namespace flex
 			MaterialID irrandianceMatID = InvalidMaterialID;
 			if (!GetMaterialID("Irradiance", irrandianceMatID))
 			{
+				std::string profileBlockName = "generating irradiance mat";
+				PROFILE_BEGIN(profileBlockName);
 				MaterialCreateInfo irrandianceMatCreateInfo = {};
 				irrandianceMatCreateInfo.name = "Irradiance";
 				irrandianceMatCreateInfo.shaderName = "irradiance";
 				irrandianceMatCreateInfo.enableCubemapSampler = true;
 				irrandianceMatCreateInfo.engineMaterial = true;
 				irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
 			}
 
 			GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
@@ -1330,7 +1379,7 @@ namespace flex
 
 			glUseProgram(shader.program);
 			CheckGLErrorMessages();
-
+			
 			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, false, 
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 			CheckGLErrorMessages();
@@ -1372,13 +1421,13 @@ namespace flex
 			glDepthMask(skybox->depthWriteEnable);
 			CheckGLErrorMessages();
 
+			glBindVertexArray(skybox->VAO);
+			CheckGLErrorMessages();
+			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
+			CheckGLErrorMessages();
+
 			for (u32 i = 0; i < 6; ++i)
 			{
-				glBindVertexArray(skybox->VAO);
-				CheckGLErrorMessages();
-				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-				CheckGLErrorMessages();
-
 				glUniformMatrix4fv(irradianceMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
 				CheckGLErrorMessages();
 
@@ -1839,7 +1888,7 @@ namespace flex
 		{
 			if (drawCallInfo.bDeferred)
 			{
-				Logger::LogError("DrawGBufferQuad was called with a drawCallInfo set to deferred!");
+				Logger::LogError("DrawGBufferContents was called with a drawCallInfo set to deferred!");
 			}
 
 			if (!m_gBufferQuadVertexBufferData.pDataStart)

@@ -40,8 +40,9 @@
 
 #if _DEBUG
 #ifndef CheckGLErrorMessages
-void _CheckGLErrorMessages(const char *file, flex::i32 line);
-#define CheckGLErrorMessages() _CheckGLErrorMessages(__FILE__,__LINE__)
+//void _CheckGLErrorMessages(const char *file, flex::i32 line);
+#define CheckGLErrorMessages()
+//#define CheckGLErrorMessages() _CheckGLErrorMessages(__FILE__,__LINE__)
 #endif // CheckGLErrorMessages
 #else
 #define CheckGLErrorMessages() 

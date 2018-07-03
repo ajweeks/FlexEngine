@@ -20,7 +20,7 @@ namespace flex
 		{
 			HWND hWnd = GetConsoleWindow();
 			// TODO: Set these based on display resolution
-			i32 consoleWidth = 700;
+			i32 consoleWidth = 800;
 			i32 consoleHeight = 800;
 
 			// The following four variables store the bounding rectangle of all monitors
