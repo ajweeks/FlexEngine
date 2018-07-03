@@ -375,6 +375,14 @@ namespace flex
 		return m_Parent;
 	}
 
+	void GameObject::DetachFromParent()
+	{
+		if (m_Parent)
+		{
+			m_Parent->RemoveChild(this);
+		}
+	}
+
 	void GameObject::SetParent(GameObject* parent)
 	{
 		if (parent == this)
@@ -399,6 +407,11 @@ namespace flex
 		{
 			Logger::LogError("Attempted to add self as child! (" + m_Name + ")");
 			return nullptr;
+		}
+
+		if (child == m_Parent)
+		{
+			DetachFromParent();
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
@@ -451,6 +464,25 @@ namespace flex
 	const std::vector<GameObject*>& GameObject::GetChildren() const
 	{
 		return m_Children;
+	}
+
+	bool GameObject::HasChild(GameObject* child, bool bRecurse)
+	{
+		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		{
+			if (*iter == child)
+			{
+				return true;
+			}
+
+			if (bRecurse && 
+				*iter && 
+				(*iter)->HasChild(child, bRecurse))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	Transform* GameObject::GetTransform()

@@ -4463,10 +4463,38 @@ namespace flex
 			ImGui::EndChild();
 
 			ImGui::Text("Render Objects");
+
+			// Dropping objects onto this text makes them root objects
+			if (ImGui::BeginDragDropTarget())
+			{
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
+
+				if (payload && payload->Data)
+				{
+					std::string dataType(payload->DataType);
+					RenderID* draggedRenderID = (RenderID*)payload->Data;
+					GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
+					GameObject* draggedGameObject = draggedRenderObject->gameObject;
+					if (draggedGameObject)
+					{
+						// If we're a child of the dragged object then don't allow (causes infinite recursion)
+						if (draggedGameObject->GetParent())
+						{
+							draggedGameObject->DetachFromParent();
+							gameContext.sceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+						}
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+
 			std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
 			for (size_t i = 0; i < rootObjects.size(); ++i)
 			{
-				DrawGameObjectNameAndChildren(gameContext, rootObjects[i]);
+				if (DrawGameObjectNameAndChildren(gameContext, rootObjects[i]))
+				{
+					break;
+				}
 			}
 
 			static bool bInvalidName = false;
@@ -4514,7 +4542,7 @@ namespace flex
 					}
 					else
 					{
-						MaterialID matID = 0;
+						MaterialID matID = gameContext.sceneManager->CurrentScene()->GetMaterialIDs()[0];
 
 						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 						MeshComponent* meshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
@@ -4597,7 +4625,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject)
+		bool GLRenderer::DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
@@ -4610,7 +4638,7 @@ namespace flex
 
 				if (!gameObject->IsVisibleInSceneExplorer())
 				{
-					return;
+					return false;
 				}
 			}
 
@@ -4649,44 +4677,105 @@ namespace flex
 				ImGuiTreeNodeFlags_OpenOnDoubleClick | 
 				(bSelected ? ImGuiTreeNodeFlags_Selected : 0);
 
-			if (bHasChildren)
-			{
-				bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
-
-				DoGameObjectContextMenu(gameContext, &gameObject);
-
-				if (gameObject && ImGui::IsItemClicked())
-				{
-					gameContext.engineInstance->SetSelectedObject(gameObject);
-				}
-				if (node_open)
-				{
-					if (gameObject)
-					{
-						ImGui::Indent();
-						const std::vector<GameObject*>& children = gameObject->GetChildren();
-						for (GameObject* child : children)
-						{
-							DrawGameObjectNameAndChildren(gameContext, child);
-						}
-						ImGui::Unindent();
-					}
-
-					ImGui::TreePop();
-				}
-			}
-			else
+			if (!bHasChildren)
 			{
 				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-				ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+			}
 
-				DoGameObjectContextMenu(gameContext, &gameObject);
+			bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
 
-				if (gameObject && ImGui::IsItemClicked())
+			DoGameObjectContextMenu(gameContext, &gameObject);
+
+			if (!gameObject)
+			{
+				// Early return when object was just deleted
+				return false;
+			}
+
+			if (ImGui::IsItemClicked())
+			{
+				gameContext.engineInstance->SetSelectedObject(gameObject);
+			}
+
+			if (ImGui::IsItemActive())
+			{
+				if (ImGui::BeginDragDropSource())
 				{
-					gameContext.engineInstance->SetSelectedObject(gameObject);
+					RenderID draggedRenderID = gameObject->GetRenderID();
+					const void* data = (void*)(&draggedRenderID);
+					size_t size = sizeof(RenderID);
+
+					ImGui::SetDragDropPayload(m_RenderObjectPayloadCStr, data, size);
+
+					ImGui::EndDragDropSource();
 				}
 			}
+
+			bool bParentChildTreeChanged = false;
+			if (ImGui::BeginDragDropTarget())
+			{
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
+
+				if (payload && payload->Data)
+				{
+					std::string dataType(payload->DataType);
+					RenderID* draggedRenderID = (RenderID*)payload->Data;
+					GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
+					GameObject* draggedGameObject = draggedRenderObject->gameObject;
+					if (draggedGameObject)
+					{
+						// If we're a child of the dragged object then don't allow (causes infinite recursion)
+						if (!draggedGameObject->HasChild(gameObject, true))
+						{
+							bool bRemovedRootObj = false;
+							if (draggedGameObject->GetParent())
+							{
+								draggedGameObject->DetachFromParent();
+							}
+							else
+							{
+								gameContext.sceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
+								bRemovedRootObj = true;
+							}
+
+							if (bRemovedRootObj && gameObject->GetParent() == draggedGameObject)
+							{
+								gameContext.sceneManager->CurrentScene()->AddRootObject(gameObject);
+							}
+
+							gameObject->AddChild(draggedGameObject);
+							bParentChildTreeChanged = true;
+						}
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			if (node_open && bHasChildren)
+			{
+				if (!bParentChildTreeChanged && gameObject)
+				{
+					ImGui::Indent();
+					// Don't cache results since children can change during this recursive call
+					for (GameObject* child : gameObject->GetChildren())
+					{
+						if (DrawGameObjectNameAndChildren(gameContext, child))
+						{
+							// If parent-child tree changed then early out
+
+							ImGui::Unindent();
+							ImGui::TreePop();
+
+							return true;
+						}
+					}
+					ImGui::Unindent();
+				}
+
+				ImGui::TreePop();
+			}
+
+			return bParentChildTreeChanged;
 		}
 
 		void GLRenderer::UpdateRenderObjectVertexData(RenderID renderID)

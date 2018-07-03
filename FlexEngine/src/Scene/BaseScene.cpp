@@ -820,9 +820,15 @@ namespace flex
 
 	void BaseScene::ParseUniqueObjectFields(const GameContext& gameContext, const JSONObject& object, GameObjectType type, MaterialID matID, GameObject* newGameObject)
 	{
-		Material& material = gameContext.renderer->GetMaterial(matID);
-		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+		Material* material = nullptr;
+		Shader* shader = nullptr;
+		VertexAttributes requiredVertexAttributes = 0;
+		if (matID != InvalidMaterialID)
+		{
+			material = &gameContext.renderer->GetMaterial(matID);
+			shader = &gameContext.renderer->GetShader(material->shaderID);
+			requiredVertexAttributes = shader->vertexAttributes;
+		}
 
 		switch (type)
 		{
@@ -838,8 +844,8 @@ namespace flex
 			}
 			else
 			{
-				if (!material.generateHDRCubemapSampler &&
-					!material.generateCubemapSampler)
+				if (!material->generateHDRCubemapSampler &&
+					!material->generateCubemapSampler)
 				{
 					Logger::LogWarning("Invalid skybox material! Material must be set to generate cubemap sampler");
 				}
@@ -1740,6 +1746,11 @@ namespace flex
 
 			iter = m_RootObjects.erase(iter);
 		}
+	}
+
+	std::vector<MaterialID> BaseScene::GetMaterialIDs()
+	{
+		return m_LoadedMaterials;
 	}
 
 	GameObject* BaseScene::FirstObjectWithTag(const std::string& tag)

@@ -98,7 +98,10 @@ namespace flex
 
 			void ImGuiRender();
 			void DrawGameObjectImGui(const GameContext& gameContext, GameObject* gameObject);
-			void DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject);
+			/*
+			* Returns true if the parent-child tree changed during this call
+			*/
+			bool DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject);
 
 			void PhysicsDebugRender(const GameContext& gameContext);
 
@@ -279,6 +282,9 @@ namespace flex
 
 			std::string m_DefaultSettingsFilePathAbs;
 			std::string m_SettingsFilePathAbs;
+
+			// Must be 12 chars or less
+			const char* m_RenderObjectPayloadCStr = "renderobject";
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

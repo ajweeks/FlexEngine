@@ -23,11 +23,14 @@ namespace flex
 
 		void SetParent(GameObject* parent);
 		GameObject* GetParent();
+		void DetachFromParent();
 
 		GameObject* AddChild(GameObject* child);
 		bool RemoveChild(GameObject* child);
 		void RemoveAllChildren();
 		const std::vector<GameObject*>& GetChildren() const;
+
+		bool HasChild(GameObject* child, bool bRecurse);
 
 		virtual Transform* GetTransform();
 		
