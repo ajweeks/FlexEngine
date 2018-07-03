@@ -3660,20 +3660,28 @@ namespace flex
 
 			if (shader->shader.constantBufferUniforms.HasUniform("pointLights"))
 			{
-				for (size_t i = 0; i < m_PointLights.size(); ++i)
+				for (size_t i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 				{
 					const std::string numberStr = std::to_string(i);
 
-					if (m_PointLights[i].enabled)
+					if (i < m_PointLights.size())
 					{
-						SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 1);
-						CheckGLErrorMessages();
+						if (m_PointLights[i].enabled)
+						{
+							SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 1);
+							CheckGLErrorMessages();
 
-						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
-						CheckGLErrorMessages();
+							SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
+							CheckGLErrorMessages();
 
-						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color * m_PointLights[i].brightness);
-						CheckGLErrorMessages();
+							SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color * m_PointLights[i].brightness);
+							CheckGLErrorMessages();
+						}
+						else
+						{
+							SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 0);
+							CheckGLErrorMessages();
+						}
 					}
 					else
 					{

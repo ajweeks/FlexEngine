@@ -105,7 +105,7 @@ namespace flex
 
 		u32 enabled = 1;
 
-		real brightness = 1.0f;
+		real brightness = 500.0f;
 		std::string name;
 	};
 

@@ -125,6 +125,7 @@ namespace flex
 		PostProcessSettings& GetPostProcessSettings();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
+		static const u32 MAX_POINT_LIGHT_COUNT = 4;
 
 		BitmapFont* m_FntUbuntuCondensed = nullptr;
 		BitmapFont* m_FntSourceCodePro = nullptr;

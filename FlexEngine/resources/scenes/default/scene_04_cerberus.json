@@ -102,32 +102,18 @@
 	"point lights" : 
 	[
 		{
-			"name" : "Point light 01",
-			"position" : "5.800000, 13.900001, -0.700000",
-			"color" : "0.926747, 0.926159, 0.892008",
+			"name" : "",
+			"position" : "13.900001, 7.500000, 9.800000",
+			"color" : "0.523781, 0.546497, 1.000000",
 			"enabled" : true,
-			"brightness" : 579.104004
+			"brightness" : 500.000000
 		},
 		{
-			"name" : "Point light 02",
-			"position" : "9.500000, -2.100000, 12.600000",
-			"color" : "0.926747, 0.926159, 0.892008",
+			"name" : "",
+			"position" : "7.900001, 4.200000, -6.900000",
+			"color" : "0.934571, 0.659195, 0.327762",
 			"enabled" : true,
-			"brightness" : 394.030029
-		},
-		{
-			"name" : "Point light 03",
-			"position" : "5.500000, 4.100000, -6.000000",
-			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : true,
-			"brightness" : 274.627014
-		},
-		{
-			"name" : "Point light 04",
-			"position" : "5.400000, 14.300001, 5.800000",
-			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : true,
-			"brightness" : 382.090027
+			"brightness" : 395.833008
 		}
 	],
 	"directional light" : 

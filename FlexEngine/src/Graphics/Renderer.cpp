@@ -138,7 +138,8 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			for (size_t i = 0; i < m_PointLights.size(); ++i)
+			i32 i = 0;
+			while (i < (i32)m_PointLights.size())
 			{
 				const std::string iStr = std::to_string(i);
 				const std::string objectName("Point Light##" + iStr);
@@ -147,15 +148,50 @@ namespace flex
 				ImGui::Checkbox(std::string("##enabled" + iStr).c_str(), &PointLightEnabled);
 				m_PointLights[i].enabled = PointLightEnabled ? 1 : 0;
 				ImGui::SameLine();
-				if (ImGui::TreeNode(objectName.c_str()))
+
+				bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
+				bool bRemovedPointLight = false;
+
+				if (ImGui::BeginPopupContextItem(objectName.c_str()))
+				{
+					static const char* removePointLightStr = "Remove point light";
+					if (ImGui::Button(removePointLightStr))
+					{
+						m_PointLights.erase(m_PointLights.begin() + i);
+						bRemovedPointLight = true;
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
+				if (!bRemovedPointLight && bTreeOpen)
 				{
 					ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
 
 					ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
 
 					ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
+				}
 
+				if (bTreeOpen)
+				{
 					ImGui::TreePop();
+				}
+
+				if (!bRemovedPointLight)
+				{
+					++i;
+				}
+			}
+
+			if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
+			{
+				static const char* newPointLightStr = "Add point light";
+				if (ImGui::Button(newPointLightStr))
+				{
+					PointLight newPointLight = {};
+					InitializePointLight(newPointLight);
 				}
 			}
 
@@ -171,6 +207,12 @@ namespace flex
 
 	PointLightID Renderer::InitializePointLight(const PointLight& pointLight)
 	{
+		if (m_PointLights.size() == MAX_POINT_LIGHT_COUNT)
+		{
+			Logger::LogWarning("Attempted to add point light when already at max capacity! (" + std::to_string(MAX_POINT_LIGHT_COUNT) + ')');
+			return InvalidPointLightID;
+		}
+
 		m_PointLights.push_back(pointLight);
 		return m_PointLights.size() - 1;
 	}
