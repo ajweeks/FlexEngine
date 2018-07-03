@@ -29,6 +29,10 @@ namespace flex
 		/* Sets value to the result of ParseVec4(GetString(label)) if that field is present */
 		bool SetVec4Checked(const std::string& label, glm::vec4& value) const;
 
+		glm::vec2 GetVec2(const std::string& label) const;
+		glm::vec3 GetVec3(const std::string& label) const;
+		glm::vec4 GetVec4(const std::string& label) const;
+
 		i32 GetInt(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetIntChecked(const std::string& label, int& value) const;

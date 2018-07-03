@@ -26,15 +26,18 @@ namespace flex
 		void RemoveScene(BaseScene* scene, const GameContext& gameContext);
 
 		/* Destroys previous scene if exists, then sets current index (NOTE: Does *not* initialize new scene! */
-		void SetCurrentScene(u32 sceneIndex, const GameContext& gameContext);
-		void SetCurrentScene(BaseScene* scene, const GameContext& gameContext);
-		void SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext);
+		void SetCurrentScene(u32 sceneIndex, const GameContext& gameContext, bool bPrintErrorOnFailure = true);
+		void SetCurrentScene(BaseScene* scene, const GameContext& gameContext, bool bPrintErrorOnFailure = true);
+		void SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext, bool bPrintErrorOnFailure = true);
 		void SetNextSceneActiveAndInit(const GameContext& gameContext);
 		void SetPreviousSceneActiveAndInit(const GameContext& gameContext);
 		void ReloadCurrentScene(const GameContext& gameContext);
 
 		// Adds all scenes found in scenes directory
 		void AddFoundScenes();
+
+		void DeleteCurrentScene(const GameContext& gameContext);
+		void CreateNewScene(const GameContext& gameContext, const std::string& name, bool bSwitchImmediately);
 
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;

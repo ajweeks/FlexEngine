@@ -1210,6 +1210,89 @@ namespace flex
 					m_GameContext.sceneManager->SetNextSceneActiveAndInit(m_GameContext);
 				}
 
+				static const char* addSceneStr = "Add scene";
+				std::string addScenePopupID = "add scene popup";
+				if (ImGui::Button(addSceneStr))
+				{
+					ImGui::OpenPopup(addScenePopupID.c_str());
+				}
+
+				if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+				{
+					static std::string newSceneName = std::to_string(m_GameContext.sceneManager->GetSceneCount());
+
+					const size_t maxStrLen = 256;
+					newSceneName.resize(maxStrLen);
+					bool bCreate = ImGui::InputText("Scene name", (char*)newSceneName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue);
+
+					bCreate |= ImGui::Button("Create");
+
+					if (bCreate)
+					{
+						size_t firstTerminator = newSceneName.find('\0');
+						if (firstTerminator != std::string::npos)
+						{
+							newSceneName = newSceneName.substr(0, firstTerminator);
+						}
+
+						m_GameContext.sceneManager->CreateNewScene(m_GameContext, newSceneName, true);
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Cancel"))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
+				ImGui::SameLine();
+
+				static const char* deleteSceneStr = "Delete scene";
+				std::string deleteScenePopupID = "delete scene popup";
+				if (ImGui::Button(deleteSceneStr))
+				{
+					ImGui::OpenPopup(deleteScenePopupID.c_str());
+				}
+
+				if (ImGui::BeginPopupModal(deleteScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+				{
+					static std::string sceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+					std::string textStr = "Are you sure you want to permanently delete " + sceneName + "?";
+					ImGui::Text(textStr.c_str());
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.12f, 0.09f, 1));
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.04f, 0.01f, 1));
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
+					if (ImGui::Button("Delete"))
+					{
+						m_GameContext.sceneManager->DeleteCurrentScene(m_GameContext);
+
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Cancel"))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
 				ImGui::TreePop();
 			}
 			
@@ -1306,7 +1389,8 @@ namespace flex
 				std::string lastOpenedSceneName = rootObject.GetString("last opened scene");
 				if (!lastOpenedSceneName.empty())
 				{
-					m_GameContext.sceneManager->SetCurrentScene(lastOpenedSceneName, m_GameContext);
+					// Don't print errors if not found, file might have been deleted since last session
+					m_GameContext.sceneManager->SetCurrentScene(lastOpenedSceneName, m_GameContext, false);
 				}
 
 				JSONObject cameraTransform;

@@ -165,6 +165,33 @@ namespace flex
 		return false;
 	}
 
+	glm::vec2 JSONObject::GetVec2(const std::string& label) const
+	{
+		if (HasField(label))
+		{
+			return ParseVec2(GetString(label));
+		}
+		return glm::vec2(0.0f);
+	}
+
+	glm::vec3 JSONObject::GetVec3(const std::string& label) const
+	{
+		if (HasField(label))
+		{
+			return ParseVec3(GetString(label));
+		}
+		return glm::vec3(0.0f);
+	}
+
+	glm::vec4 JSONObject::GetVec4(const std::string& label) const
+	{
+		if (HasField(label))
+		{
+			return ParseVec4(GetString(label));
+		}
+		return glm::vec4(0.0f);
+	}
+
 	i32 JSONObject::GetInt(const std::string& label) const
 	{
 		for (auto& field : fields)

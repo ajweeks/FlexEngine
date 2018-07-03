@@ -1,4 +1,4 @@
-﻿#include "stdafx.hpp"
+﻿	#include "stdafx.hpp"
 
 #include "Scene/SceneManager.hpp"
 
@@ -93,9 +93,9 @@ namespace flex
 		}
 	}
 
-	void SceneManager::SetCurrentScene(u32 sceneIndex, const GameContext& gameContext)
+	void SceneManager::SetCurrentScene(u32 sceneIndex, const GameContext& gameContext, bool bPrintErrorOnFailure /* = true */)
 	{
-		if (sceneIndex >= m_Scenes.size())
+		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
 			Logger::LogError("Attempt to set scene to index " + std::to_string(sceneIndex) +
 				" failed, it does not exist in the SceneManager");
@@ -112,32 +112,38 @@ namespace flex
 		m_CurrentSceneIndex = sceneIndex;
 	}
 
-	void SceneManager::SetCurrentScene(BaseScene* scene, const GameContext& gameContext)
+	void SceneManager::SetCurrentScene(BaseScene* scene, const GameContext& gameContext, bool bPrintErrorOnFailure /* = true */)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
 			if (m_Scenes[i]->GetName().compare(scene->GetName()) == 0)
 			{
-				SetCurrentScene(i, gameContext);
+				SetCurrentScene(i, gameContext, bPrintErrorOnFailure);
 				return;
 			}
 		}
 
-		Logger::LogError("Attempt to set current scene to " + scene->GetName() + " failed because it was not found in the scene manager!");
+		if (bPrintErrorOnFailure)
+		{
+			Logger::LogError("Attempt to set current scene to " + scene->GetName() + " failed because it was not found in the scene manager!");
+		}
 	}
 
-	void SceneManager::SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext)
+	void SceneManager::SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext, bool bPrintErrorOnFailure /* = true */)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
-				SetCurrentScene(i, gameContext);
+				SetCurrentScene(i, gameContext, bPrintErrorOnFailure);
 				return;
 			}
 		}
 
-		Logger::LogError("Attempt to set scene to " + sceneFileName + " failed, it does not exist in the SceneManager");
+		if (bPrintErrorOnFailure)
+		{
+			Logger::LogError("Attempt to set scene to " + sceneFileName + " failed, it does not exist in the SceneManager");
+		}
 	}
 
 	void SceneManager::SetNextSceneActiveAndInit(const GameContext& gameContext)
@@ -228,6 +234,61 @@ namespace flex
 				}
 			}
 		}
+	}
+
+	void SceneManager::DeleteCurrentScene(const GameContext& gameContext)
+	{
+		if (m_Scenes.size() == 1)
+		{
+			Logger::LogWarning("Attempted to delete only remaining scene!");
+			return;
+		}
+
+		if (m_CurrentSceneIndex == u32_max)
+		{
+			Logger::LogWarning("Attempted to delete current scene when no scene is active!");
+			return;
+		}
+
+		i32 oldSceneIndex = m_CurrentSceneIndex;
+		i32 newSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
+
+		SetCurrentScene(newSceneIndex, gameContext);
+
+		m_Scenes[oldSceneIndex]->DeleteSaveFiles();
+		SafeDelete(m_Scenes[oldSceneIndex]);
+		m_Scenes.erase(m_Scenes.begin() + oldSceneIndex);
+
+		// Account for previous scene being removed if we didn't wrap around
+		if (newSceneIndex > oldSceneIndex)
+		{
+			m_CurrentSceneIndex = oldSceneIndex;
+		}
+
+		InitializeCurrentScene(gameContext);
+		PostInitializeCurrentScene(gameContext);
+	}
+
+	void SceneManager::CreateNewScene(const GameContext& gameContext, const std::string& name, bool bSwitchImmediately)
+	{
+		const i32 newSceneIndex = m_Scenes.size();
+
+		std::string fileName = "scene_" + name + ".json";
+
+		BaseScene* newScene = new BaseScene(fileName);
+		newScene->SetName(name);
+		//newScene->SerializeToFile(gameContext, true);
+
+		m_Scenes.push_back(newScene);
+
+		if (bSwitchImmediately)
+		{
+			SetCurrentScene(newSceneIndex, gameContext);
+			InitializeCurrentScene(gameContext);
+			PostInitializeCurrentScene(gameContext);
+		}
+
+		m_Scenes[m_CurrentSceneIndex]->SerializeToFile(gameContext, true);
 	}
 
 	u32 SceneManager::CurrentSceneIndex() const

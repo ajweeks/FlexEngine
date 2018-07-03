@@ -72,76 +72,132 @@ namespace flex
 			filePath = defaultPath;
 		}
 
-		Logger::LogInfo("Loading scene from: " + savedShortPath);
-
-		JSONObject sceneRootObject;
-		if (!JSONParser::Parse(filePath, sceneRootObject))
+		if (FileExists(filePath))
 		{
-			Logger::LogError("Failed to parse scene file: " + savedShortPath);
-			return;
-		}
+			Logger::LogInfo("Loading scene from: " + shortFilePath);
 
-		const bool printSceneContentsToConsole = false;
-		if (printSceneContentsToConsole)
-		{
-			Logger::LogInfo("Parsed scene file:");
-			Logger::LogInfo(sceneRootObject.Print(0));
-		}
-
-		int sceneVersion = sceneRootObject.GetInt("version");
-		if (sceneVersion != 1)
-		{
-			if (sceneRootObject.HasField("version"))
+			JSONObject sceneRootObject;
+			if (!JSONParser::Parse(filePath, sceneRootObject))
 			{
-				Logger::LogError("Unhandled scene version! Max handled version: 1, This version: " + std::to_string(sceneVersion));
+				Logger::LogError("Failed to parse scene file: " + shortFilePath);
+				return;
 			}
-			else
+
+			const bool printSceneContentsToConsole = false;
+			if (printSceneContentsToConsole)
 			{
-				Logger::LogError("Scene version missing from scene file. Assuming version 1");
+				Logger::LogInfo("Parsed scene file:");
+				Logger::LogInfo(sceneRootObject.Print(0));
 			}
-		}
 
-		sceneRootObject.SetStringChecked("name", m_Name);
-
-		std::vector<JSONObject> materialsArray = sceneRootObject.GetObjectArray("materials");
-		for (u32 i = 0; i < materialsArray.size(); ++i)
-		{
-			MaterialCreateInfo matCreateInfo = {};
-			ParseMaterialJSONObject(materialsArray[i], matCreateInfo);
-
-			MaterialID matID = gameContext.renderer->InitializeMaterial(&matCreateInfo);
-			m_LoadedMaterials.push_back(matID);
-		}
-
-
-		// This holds all the entities in the scene which do not have a parent
-		const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
-		for (const JSONObject& rootEntity : rootEntities)
-		{
-			AddRootObject(CreateGameObjectFromJSON(gameContext, rootEntity));
-		}
-
-		if (sceneRootObject.HasField("point lights"))
-		{
-			const std::vector<JSONObject>& pointLightsArray = sceneRootObject.GetObjectArray("point lights");
-
-			for (const JSONObject& pointLightObj : pointLightsArray)
+			int sceneVersion = sceneRootObject.GetInt("version");
+			if (sceneVersion != 1)
 			{
-				PointLight pointLight = {};
-				CreatePointLightFromJSON(pointLightObj, pointLight);
-
-				gameContext.renderer->InitializePointLight(pointLight);
+				if (sceneRootObject.HasField("version"))
+				{
+					Logger::LogError("Unhandled scene version! Max handled version: 1, This version: " + std::to_string(sceneVersion));
+				}
+				else
+				{
+					Logger::LogError("Scene version missing from scene file. Assuming version 1");
+				}
 			}
+
+			sceneRootObject.SetStringChecked("name", m_Name);
+
+			std::vector<JSONObject> materialsArray = sceneRootObject.GetObjectArray("materials");
+			for (u32 i = 0; i < materialsArray.size(); ++i)
+			{
+				MaterialCreateInfo matCreateInfo = {};
+				ParseMaterialJSONObject(materialsArray[i], matCreateInfo);
+
+				MaterialID matID = gameContext.renderer->InitializeMaterial(&matCreateInfo);
+				m_LoadedMaterials.push_back(matID);
+			}
+
+
+			// This holds all the entities in the scene which do not have a parent
+			const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
+			for (const JSONObject& rootEntity : rootEntities)
+			{
+				AddRootObject(CreateGameObjectFromJSON(gameContext, rootEntity));
+			}
+
+			if (sceneRootObject.HasField("point lights"))
+			{
+				const std::vector<JSONObject>& pointLightsArray = sceneRootObject.GetObjectArray("point lights");
+
+				for (const JSONObject& pointLightObj : pointLightsArray)
+				{
+					PointLight pointLight = {};
+					CreatePointLightFromJSON(pointLightObj, pointLight);
+
+					gameContext.renderer->InitializePointLight(pointLight);
+				}
+			}
+
+			if (sceneRootObject.HasField("directional light"))
+			{
+				const JSONObject& directionalLightObj = sceneRootObject.GetObject("directional light");
+
+				DirectionalLight dirLight = {};
+				CreateDirectionalLightFromJSON(directionalLightObj, dirLight);
+
+				gameContext.renderer->InitializeDirectionalLight(dirLight);
+			}
+
 		}
-
-		if (sceneRootObject.HasField("directional light"))
+		else
 		{
-			const JSONObject& directionalLightObj = sceneRootObject.GetObject("directional light");
+			// File doesn't exist, create a new one
+			Logger::LogInfo("Creating new scene at: " + shortFilePath);
 
-			DirectionalLight dirLight = {};
-			CreateDirectionalLightFromJSON(directionalLightObj, dirLight);
-			
-			gameContext.renderer->InitializeDirectionalLight(dirLight);
+			// Skybox
+			{
+				MaterialCreateInfo skyboxMatCreateInfo = {};
+				skyboxMatCreateInfo.name = "Skybox";
+				skyboxMatCreateInfo.shaderName = "skybox";
+				skyboxMatCreateInfo.generateHDRCubemapSampler = true;
+				skyboxMatCreateInfo.enableCubemapSampler = true;
+				skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
+				skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
+				skyboxMatCreateInfo.generateIrradianceSampler = true;
+				skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
+				skyboxMatCreateInfo.generatePrefilteredMap = true;
+				skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
+				skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
+
+				MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(&skyboxMatCreateInfo);
+
+				m_LoadedMaterials.push_back(skyboxMatID);
+
+				GameObject* skybox = new GameObject("Skybox", GameObjectType::SKYBOX);
+
+				CreateSkybox(gameContext, skyboxMatID, skybox, glm::vec3(0.0f));
+
+				AddRootObject(skybox);
+			}
+
+			// Reflection probe
+			{
+				MaterialCreateInfo reflectionProbeMatCreateInfo = {};
+				reflectionProbeMatCreateInfo.name = "Reflection Probe";
+				reflectionProbeMatCreateInfo.shaderName = "pbr";
+				reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+				reflectionProbeMatCreateInfo.constMetallic = 1.0f;
+				reflectionProbeMatCreateInfo.constRoughness = 0.0f;
+				reflectionProbeMatCreateInfo.constAO = 1.0f;
+
+				MaterialID sphereMatID = gameContext.renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
+
+				m_LoadedMaterials.push_back(sphereMatID);
+
+				GameObject* reflectionProbeSphere = new GameObject("Reflection Probe 01", GameObjectType::REFLECTION_PROBE);
+				
+				CreateReflectionProbe(gameContext, sphereMatID, reflectionProbeSphere);
+
+				AddRootObject(reflectionProbeSphere);
+			}
 		}
 
 
@@ -740,82 +796,14 @@ namespace flex
 					Logger::LogWarning("Invalid skybox material! Material must be set to generate cubemap sampler");
 				}
 
-				MeshComponent* skyboxMesh = new MeshComponent(matID, newGameObject);
-				skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
-				skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
-				assert(newGameObject->GetMeshComponent() == nullptr);
-				newGameObject->SetMeshComponent(skyboxMesh);
+				glm::vec3 skyboxRotEuler = object.GetVec3("rotation");
 
-				gameContext.renderer->SetSkyboxMesh(newGameObject);
-
-				glm::vec3 skyboxRotEuler;
-				if (object.SetVec3Checked("rotation", skyboxRotEuler))
-				{
-					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
-					newGameObject->GetTransform()->SetWorldRotation(skyboxRotation);
-				}
+				CreateSkybox(gameContext, matID, newGameObject, skyboxRotEuler);
 			}
 		} break;
 		case GameObjectType::REFLECTION_PROBE:
 		{
-			// Chrome ball material
-			//MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
-			//reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
-			//reflectionProbeMaterialCreateInfo.shaderName = "pbr";
-			//reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
-			//reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
-			//reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
-			//reflectionProbeMaterialCreateInfo.constAO = 1.0f;
-			//MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
-
-			// Probe capture material
-			MaterialCreateInfo probeCaptureMatCreateInfo = {};
-			probeCaptureMatCreateInfo.name = "Reflection probe capture";
-			probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-			probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-			probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-			probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-			probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-			probeCaptureMatCreateInfo.enableIrradianceSampler = true;
-			probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-			probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-			probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-			probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-			probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-			probeCaptureMatCreateInfo.enableBRDFLUT = true;
-			probeCaptureMatCreateInfo.frameBuffers = {
-				{ "positionMetallicFrameBufferSampler", nullptr },
-				{ "normalRoughnessFrameBufferSampler", nullptr },
-				{ "albedoAOFrameBufferSampler", nullptr },
-			};
-			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
-
-			MeshComponent* sphereMesh = new MeshComponent(matID, newGameObject);
-			sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
-
-			assert(newGameObject->GetMeshComponent() == nullptr);
-			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf");
-			newGameObject->SetMeshComponent(sphereMesh);
-
-			std::string captureName = newGameObject->m_Name + "_capture";
-			GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
-			captureObject->SetSerializable(false);
-			captureObject->SetVisible(false);
-
-			RenderObjectCreateInfo captureObjectCreateInfo = {};
-			captureObjectCreateInfo.vertexBufferData = nullptr;
-			captureObjectCreateInfo.materialID = captureMatID;
-			captureObjectCreateInfo.gameObject = captureObject;
-			captureObjectCreateInfo.visibleInSceneExplorer = false;
-
-			RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(&captureObjectCreateInfo);
-			captureObject->SetRenderID(captureRenderID);
-
-			newGameObject->AddChild(captureObject);
-
-			newGameObject->m_ReflectionProbeMembers.captureMatID = captureMatID;
-
-			gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
+			CreateReflectionProbe(gameContext, matID, newGameObject);
 		} break;
 		case GameObjectType::VALVE:
 		{
@@ -945,6 +933,84 @@ namespace flex
 			}
 		} break;
 		}
+	}
+
+	void BaseScene::CreateSkybox(const GameContext& gameContext, 
+								 MaterialID matID, 
+								 GameObject* newGameObject, 
+								 const glm::vec3& rotationEuler)
+	{
+		Material& material = gameContext.renderer->GetMaterial(matID);
+		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+
+		MeshComponent* skyboxMesh = new MeshComponent(matID, newGameObject);
+		skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
+		skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
+		assert(newGameObject->GetMeshComponent() == nullptr);
+		newGameObject->SetMeshComponent(skyboxMesh);
+
+		newGameObject->GetTransform()->SetWorldRotation(glm::quat(rotationEuler));
+
+		gameContext.renderer->SetSkyboxMesh(newGameObject);
+	}
+
+	void BaseScene::CreateReflectionProbe(const GameContext& gameContext, 
+										  MaterialID sphereMatID, 
+										  GameObject* newGameObject)
+	{
+		Material& material = gameContext.renderer->GetMaterial(sphereMatID);
+		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+
+		// Probe capture material
+		MaterialCreateInfo probeCaptureMatCreateInfo = {};
+		probeCaptureMatCreateInfo.name = "Reflection probe capture";
+		probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
+		probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
+		probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
+		probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
+		probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
+		probeCaptureMatCreateInfo.enableIrradianceSampler = true;
+		probeCaptureMatCreateInfo.generateIrradianceSampler = true;
+		probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
+		probeCaptureMatCreateInfo.enablePrefilteredMap = true;
+		probeCaptureMatCreateInfo.generatePrefilteredMap = true;
+		probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
+		probeCaptureMatCreateInfo.enableBRDFLUT = true;
+		probeCaptureMatCreateInfo.frameBuffers = {
+			{ "positionMetallicFrameBufferSampler", nullptr },
+			{ "normalRoughnessFrameBufferSampler", nullptr },
+			{ "albedoAOFrameBufferSampler", nullptr },
+		};
+		MaterialID captureMatID = gameContext.renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
+
+		MeshComponent* sphereMesh = new MeshComponent(sphereMatID, newGameObject);
+		sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
+
+		assert(newGameObject->GetMeshComponent() == nullptr);
+		sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf");
+		newGameObject->SetMeshComponent(sphereMesh);
+
+		std::string captureName = newGameObject->m_Name + "_capture";
+		GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
+		captureObject->SetSerializable(false);
+		captureObject->SetVisible(false);
+
+		RenderObjectCreateInfo captureObjectCreateInfo = {};
+		captureObjectCreateInfo.vertexBufferData = nullptr;
+		captureObjectCreateInfo.materialID = captureMatID;
+		captureObjectCreateInfo.gameObject = captureObject;
+		captureObjectCreateInfo.visibleInSceneExplorer = false;
+
+		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(&captureObjectCreateInfo);
+		captureObject->SetRenderID(captureRenderID);
+
+		newGameObject->AddChild(captureObject);
+
+		newGameObject->m_ReflectionProbeMembers.captureMatID = captureMatID;
+
+		gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
 	void BaseScene::CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight)
@@ -1080,6 +1146,26 @@ namespace flex
 			Logger::LogError("Failed to open file for writing: " + savedFilePathName + ", Can't serialize scene");
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
+	}
+
+	void BaseScene::DeleteSaveFiles()
+	{
+		std::string defaultShortSaveFilePath = "scenes/default/" + m_FileName;
+		std::string savedShortSaveFilePath = "scenes/saved/" + m_FileName;
+
+		Logger::LogInfo("Deleting scene's save files (" + m_Name + ')');
+
+		if (FileExists(RESOURCE_LOCATION + savedShortSaveFilePath))
+		{
+			DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
+		}
+
+		if (FileExists(RESOURCE_LOCATION + defaultShortSaveFilePath))
+		{
+			DeleteFile(RESOURCE_LOCATION + defaultShortSaveFilePath);
+		}
+
+		m_bUsingSaveFile = false;
 	}
 
 	JSONObject BaseScene::SerializeObject(GameObject* gameObject, const GameContext& gameContext)
@@ -1671,6 +1757,12 @@ namespace flex
 				interactibleObjects.push_back(rootObject);
 			}
 		}
+	}
+
+	void BaseScene::SetName(const std::string& name)
+	{
+		assert(!name.empty());
+		m_Name = name;
 	}
 
 	std::string BaseScene::GetName() const

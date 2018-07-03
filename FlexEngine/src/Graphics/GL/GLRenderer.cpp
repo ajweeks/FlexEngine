@@ -660,13 +660,13 @@ namespace flex
 							{
 								std::string fileNameClean = samplerCreateInfo.filepath;
 								StripLeadingDirectories(fileNameClean);
-								std::string profileBlockName = "load texture " + fileNameClean;
-								PROFILE_BEGIN(profileBlockName);
+								std::string textureProfileBlockName = "load texture " + fileNameClean;
+								PROFILE_BEGIN(textureProfileBlockName);
 								// Texture hasn't been loaded yet, load it now
 								samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, samplerCreateInfo.flipVertically, false);
-								PROFILE_END(profileBlockName);
+								PROFILE_END(textureProfileBlockName);
 
-								Profiler::PrintBlockDuration(profileBlockName);
+								Profiler::PrintBlockDuration(textureProfileBlockName);
 
 								m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
 							}
@@ -3217,7 +3217,7 @@ namespace flex
 				const size_t maxStrLen = 256;
 				std::string newObjectName = gameObject->GetName();
 				newObjectName.resize(maxStrLen);
-				if (ImGui::InputText("New name", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue))
+				if (ImGui::InputText("Object name", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue))
 				{
 					size_t firstTerminator = newObjectName.find('\0');
 					if (firstTerminator != std::string::npos)

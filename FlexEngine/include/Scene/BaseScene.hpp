@@ -17,6 +17,7 @@ namespace flex
 	class BaseScene
 	{
 	public:
+		// fileName e.g. "scene_01.json"
 		BaseScene(const std::string& fileName);
 		virtual ~BaseScene();
 
@@ -25,6 +26,7 @@ namespace flex
 		virtual void Destroy(const GameContext& gameContext);
 		virtual void Update(const GameContext& gameContext);
 
+		void SetName(const std::string& name);
 		std::string GetName() const;
 		std::string GetFilePath() const;
 		std::string GetShortFilePath() const;
@@ -40,6 +42,8 @@ namespace flex
 		* transform is not saved)
 		*/
 		void SerializeToFile(const GameContext& gameContext, bool bSaveOverDefault = false);
+
+		void DeleteSaveFiles();
 
 		std::vector<GameObject*>& GetRootObjects();
 		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);
@@ -74,6 +78,9 @@ namespace flex
 
 		MaterialID ParseMatID(const JSONObject& object);
 		void ParseUniqueObjectFields(const GameContext& gameContext, const JSONObject& object, GameObjectType type, MaterialID matID, GameObject* gameObject);
+
+		void CreateSkybox(const GameContext& gameContext, MaterialID matID, GameObject* newGameObject, const glm::vec3& rotationEuler);
+		void CreateReflectionProbe(const GameContext& gameContext, MaterialID sphereMatID, GameObject* newGameObject);
 
 		std::string m_Name;
 		std::string m_FileName;
