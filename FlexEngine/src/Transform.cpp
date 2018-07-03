@@ -203,6 +203,24 @@ namespace flex
 		Scale(glm::vec3(deltaX, deltaY, deltaZ));
 	}
 
+	void Transform::SetWorldTransform(const glm::mat4& desiredWorldTransform)
+	{
+		if (m_GameObject->GetParent())
+		{
+			localTransform = glm::inverse(m_GameObject->GetParent()->GetTransform()->GetWorldTransform()) * desiredWorldTransform;
+		}
+		else
+		{
+			localTransform = desiredWorldTransform;
+		}
+
+		glm::vec3 localSkew;
+		glm::vec4 localPerspective;
+		glm::decompose(localTransform, localScale, localRotation, localPosition, localSkew, localPerspective);
+
+		UpdateParentTransform();
+	}
+
 	void Transform::SetAsIdentity()
 	{
 		*this = m_Identity;
@@ -247,14 +265,11 @@ namespace flex
 
 	void Transform::UpdateParentTransform()
 	{
+		// TODO: Move this
 		localTransform = (glm::translate(glm::mat4(1.0f), localPosition) *
 						  glm::mat4(localRotation) *
 						  glm::scale(glm::mat4(1.0f), localScale));
-
-		glm::vec3 localSkew;
-		glm::vec4 localPerspective;
-		glm::decompose(localTransform, localScale, localRotation, localPosition, localSkew, localPerspective);
-
+		
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{

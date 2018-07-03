@@ -63,6 +63,8 @@ namespace flex
 		void Scale(real deltaScale);
 		void Scale(real deltaX, real deltaY, real deltaZ);
 
+		void SetWorldTransform(const glm::mat4& desiredWorldTransform);
+
 		bool IsIdentity() const;
 		static Transform Identity();
 

@@ -49,7 +49,10 @@ namespace flex
 		}
 
 		bool bStatic = gameObject->IsStatic();
-		ImGui::Text("Static: %s", (bStatic ? "true" : "false"));
+		if (ImGui::Checkbox("Static", &bStatic))
+		{
+			gameObject->SetStatic(bStatic);
+		}
 
 		Transform* transform = gameObject->GetTransform();
 		static int transformSpace = 0;

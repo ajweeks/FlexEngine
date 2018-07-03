@@ -409,6 +409,9 @@ namespace flex
 			return nullptr;
 		}
 
+		Transform* childTransform = child->GetTransform();
+		glm::mat4 childWorldTransform = childTransform->GetWorldTransform();
+
 		if (child == m_Parent)
 		{
 			DetachFromParent();
@@ -424,9 +427,10 @@ namespace flex
 		}
 
 		m_Children.push_back(child);
+
 		child->SetParent(this);
 
-		m_Transform.UpdateParentTransform();
+		childTransform->SetWorldTransform(childWorldTransform);
 
 		return child;
 	}
@@ -442,7 +446,12 @@ namespace flex
 		{
 			if (*iter == child)
 			{
+				glm::mat4 childWorldTransform = child->GetTransform()->GetWorldTransform();
+
 				child->SetParent(nullptr);
+
+				child->GetTransform()->SetWorldTransform(childWorldTransform);
+
 				m_Children.erase(iter);
 				return true;
 			}
