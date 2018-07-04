@@ -104,32 +104,29 @@ namespace flex
 			CalculateAxisVectors();
 
 			glm::vec3 translation(0.0f);
-			if (!gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+			if (gameContext.inputManager->GetKeyDown(m_MoveForwardKey))
 			{
-				if (gameContext.inputManager->GetKeyDown(m_MoveForwardKey))
-				{
-					translation += m_Forward;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveBackwardKey))
-				{
-					translation -= m_Forward;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveLeftKey))
-				{
-					translation += m_Right;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveRightKey))
-				{
-					translation -= m_Right;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveUpKey))
-				{
-					translation += m_Up;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveDownKey))
-				{
-					translation -= m_Up;
-				}
+				translation += m_Forward;
+			}
+			if (gameContext.inputManager->GetKeyDown(m_MoveBackwardKey))
+			{
+				translation -= m_Forward;
+			}
+			if (gameContext.inputManager->GetKeyDown(m_MoveLeftKey))
+			{
+				translation += m_Right;
+			}
+			if (gameContext.inputManager->GetKeyDown(m_MoveRightKey))
+			{
+				translation -= m_Right;
+			}
+			if (gameContext.inputManager->GetKeyDown(m_MoveUpKey))
+			{
+				translation += m_Up;
+			}
+			if (gameContext.inputManager->GetKeyDown(m_MoveDownKey))
+			{
+				translation -= m_Up;
 			}
 
 			if (gameContext.inputManager->GetMouseButtonPressed(InputManager::MouseButton::MIDDLE))

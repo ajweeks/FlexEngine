@@ -7,6 +7,7 @@
 
 #include "Types.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
+#include "VertexBufferData.hpp"
 
 namespace flex
 {
@@ -107,13 +108,13 @@ namespace flex
 
 
 			// TODO: Either use these functions or remove them
-			void SetFloat(ShaderID shaderID, const std::string& valName, real val);
-			void SetInt(ShaderID shaderID, const std::string& valName, i32 val);
-			void SetUInt(ShaderID shaderID, const std::string& valName, u32 val);
-			void SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec);
-			void SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec);
-			void SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec);
-			void SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat);
+			void SetFloat(ShaderID shaderID, const char* valName, real val);
+			void SetInt(ShaderID shaderID, const char* valName, i32 val);
+			void SetUInt(ShaderID shaderID, const char* valName, u32 val);
+			void SetVec2f(ShaderID shaderID, const char* vecName, const glm::vec2& vec);
+			void SetVec3f(ShaderID shaderID, const char* vecName, const glm::vec3& vec);
+			void SetVec4f(ShaderID shaderID, const char* vecName, const glm::vec4& vec);
+			void SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat);
 
 			void GenerateGBufferVertexBuffer();
 			void GenerateGBuffer();

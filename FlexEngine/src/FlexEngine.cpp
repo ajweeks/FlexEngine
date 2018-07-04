@@ -853,6 +853,7 @@ namespace flex
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
 		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove;
+		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(0.0f, (real)m_GameContext.window->GetFrameBufferSize().y),
 								 ImGuiCond_Always);
 		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))

@@ -1733,6 +1733,10 @@ namespace flex
 			no		 3
 			no		 5
 			*/
+
+			static const char* profileBlockName = "batch render objects";
+			PROFILE_BEGIN(profileBlockName);
+
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
 			m_EditorRenderObjectBatch.clear();
@@ -1822,6 +1826,8 @@ namespace flex
 				Logger::LogError("BatchRenderObjects didn't account for every visible object!");
 			}
 #endif
+
+			PROFILE_END(profileBlockName);
 		}
 
 		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
@@ -3718,104 +3724,121 @@ namespace flex
 			glm::vec4 camPos = glm::vec4(gameContext.cameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 
-			if (shader->shader.constantBufferUniforms.HasUniform("view"))
+			static const char* viewStr = "view";
+			if (shader->shader.constantBufferUniforms.HasUniform(viewStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("viewInv"))
+			static const char* viewInvStr = "viewInv";
+			if (shader->shader.constantBufferUniforms.HasUniform(viewInvStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.viewInv, 1, false, &viewInv[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("projection"))
+			static const char* projectionStr = "projection";
+			if (shader->shader.constantBufferUniforms.HasUniform(projectionStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &proj[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("viewProjection"))
+			static const char* viewProjectionStr = "viewProjection";
+			if (shader->shader.constantBufferUniforms.HasUniform(viewProjectionStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, false, &viewProj[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("camPos"))
+			static const char* camPosStr = "camPos";
+			if (shader->shader.constantBufferUniforms.HasUniform(camPosStr))
 			{
 				glUniform4f(material->uniformIDs.camPos,
 					camPos.x,
 					camPos.y,
 					camPos.z,
 					camPos.w);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("dirLight"))
+			static const char* dirLightStr = "dirLight";
+			if (shader->shader.constantBufferUniforms.HasUniform(dirLightStr))
 			{
+				static const char* dirLightEnabledStr = "dirLight.enabled";
 				if (m_DirectionalLight.enabled)
 				{
-					SetUInt(material->material.shaderID, "dirLight.enabled", 1);
-					CheckGLErrorMessages();
-					SetVec4f(material->material.shaderID, "dirLight.direction", m_DirectionalLight.direction);
-					CheckGLErrorMessages();
-					SetVec4f(material->material.shaderID, "dirLight.color", m_DirectionalLight.color * m_DirectionalLight.brightness);
-					CheckGLErrorMessages();
+					SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
+					static const char* dirLightDirectionStr = "dirLight.direction";
+					SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight.direction);
+					static const char* dirLightColorStr = "dirLight.color";
+					SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight.color * m_DirectionalLight.brightness);
 				}
 				else
 				{
-					SetUInt(material->material.shaderID, "dirLight.enabled", 0);
-					CheckGLErrorMessages();
+					SetUInt(material->material.shaderID, dirLightEnabledStr, 0);
 				}
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("pointLights"))
+			static const char* pointLightsStr = "pointLights";
+			if (shader->shader.constantBufferUniforms.HasUniform(pointLightsStr))
 			{
 				for (size_t i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 				{
-					const std::string numberStr = std::to_string(i);
+					const std::string numberStr(std::to_string(i));
+					const char* numberCStr = numberStr.c_str();
+					static const i32 strStartLen = 16;
+					char pointLightStrStart[strStartLen]; // Handles up to 99 numbers
+					strcpy_s(pointLightStrStart, "pointLights[");
+					strcat_s(pointLightStrStart, numberCStr);
+					strcat_s(pointLightStrStart, "]");
+					strcat_s(pointLightStrStart, "\0");
 
+					char enabledStr[strStartLen + 8];
+					strcpy_s(enabledStr, pointLightStrStart);
+					static const char* dotEnabledStr = ".enabled";
+					strcat_s(enabledStr, dotEnabledStr);
 					if (i < m_PointLights.size())
 					{
 						if (m_PointLights[i].enabled)
 						{
-							SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 1);
-							CheckGLErrorMessages();
+							SetUInt(material->material.shaderID, enabledStr, 1);
 
-							SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
-							CheckGLErrorMessages();
+							char positionStr[strStartLen + 9];
+							strcpy_s(positionStr, pointLightStrStart);
+							static const char* dotPositionStr = ".position";
+							strcat_s(positionStr, dotPositionStr);
+							SetVec4f(material->material.shaderID, positionStr, m_PointLights[i].position);
 
-							SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color * m_PointLights[i].brightness);
-							CheckGLErrorMessages();
+							char colorStr[strStartLen + 6];
+							strcpy_s(colorStr, pointLightStrStart);
+							static const char* dotColorStr = ".color";
+							strcat_s(colorStr, dotColorStr);
+							SetVec4f(material->material.shaderID, colorStr, m_PointLights[i].color * m_PointLights[i].brightness);
 						}
 						else
 						{
-							SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 0);
-							CheckGLErrorMessages();
+							SetUInt(material->material.shaderID, enabledStr, 0);
 						}
 					}
 					else
 					{
-						SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 0);
-						CheckGLErrorMessages();
+						SetUInt(material->material.shaderID, enabledStr, 0);
 					}
 				}
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("texelStep"))
+			static const char* texelStepStr = "texelStep";
+			if (shader->shader.constantBufferUniforms.HasUniform(texelStepStr))
 			{
 				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 				glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
-				SetVec2f(material->material.shaderID, "texelStep", texelStep);
-				CheckGLErrorMessages();
+				SetVec2f(material->material.shaderID, texelStepStr, texelStep);
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("bDEBUGShowEdges"))
+			static const char* bDEBUGShowEdgesStr = "bDEBUGShowEdges";
+			if (shader->shader.constantBufferUniforms.HasUniform(bDEBUGShowEdgesStr))
 			{
-				SetInt(material->material.shaderID, "bDEBUGShowEdges", m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
-				CheckGLErrorMessages();
+				SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 			}
+
+			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
@@ -4034,12 +4057,12 @@ namespace flex
 			return m_bVSyncEnabled;
 		}
 
-		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, real val)
+		void GLRenderer::SetFloat(ShaderID shaderID, const char* valName, real val)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Float " + valName + " couldn't be found!");
+				Logger::LogWarning("Float " + std::string(valName) + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 
@@ -4047,12 +4070,12 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetInt(ShaderID shaderID, const std::string & valName, i32 val)
+		void GLRenderer::SetInt(ShaderID shaderID, const char* valName, i32 val)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("i32 " + valName + " couldn't be found!");
+				Logger::LogWarning("i32 " + std::string(valName) + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 
@@ -4060,12 +4083,12 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetUInt(ShaderID shaderID, const std::string& valName, u32 val)
+		void GLRenderer::SetUInt(ShaderID shaderID, const char* valName, u32 val)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("u32 " + valName + " couldn't be found!");
+				Logger::LogWarning("u32 " + std::string(valName) + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 
@@ -4073,12 +4096,12 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec)
+		void GLRenderer::SetVec2f(ShaderID shaderID, const char* vecName, const glm::vec2& vec)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec2f " + vecName + " couldn't be found!");
+				Logger::LogWarning("Vec2f " + std::string(vecName) + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 
@@ -4086,12 +4109,12 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec)
+		void GLRenderer::SetVec3f(ShaderID shaderID, const char* vecName, const glm::vec3& vec)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec3f " + vecName + " couldn't be found!");
+				Logger::LogWarning("Vec3f " + std::string(vecName) + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 
@@ -4099,12 +4122,12 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec)
+		void GLRenderer::SetVec4f(ShaderID shaderID, const char* vecName, const glm::vec4& vec)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec4f " + vecName + " couldn't be found!");
+				Logger::LogWarning("Vec4f " + std::string(vecName) + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 
@@ -4112,12 +4135,12 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat)
+		void GLRenderer::SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Mat4f " + matName + " couldn't be found!");
+				Logger::LogWarning("Mat4f " + std::string(matName) + " couldn't be found!");
 			}
 			CheckGLErrorMessages();
 

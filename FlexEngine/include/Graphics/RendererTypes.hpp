@@ -10,13 +10,12 @@
 #include <glm/mat4x4.hpp>
 #pragma warning(pop)
 
-#include "GameContext.hpp"
-#include "Physics/PhysicsDebuggingSettings.hpp"
-#include "Transform.hpp"
-#include "VertexBufferData.hpp"
+#include "Functors.hpp"
 
 namespace flex
 {
+	class VertexBufferData;
+
 	enum class ClearFlag
 	{
 		COLOR =   (1 << 0),
@@ -281,11 +280,11 @@ namespace flex
 
 	struct Uniforms
 	{
-		std::map<std::string, bool> types;
+		std::map<const char*, bool, strCmp> types;
 
-		bool HasUniform(const std::string& name) const;
-		void AddUniform(const std::string& name);
-		void RemoveUniform(const std::string& name);
+		bool HasUniform(const char* name) const;
+		void AddUniform(const char* name);
+		void RemoveUniform(const char* name);
 		u32 CalculateSize(i32 PointLightCount);
 	};
 

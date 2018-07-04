@@ -16,6 +16,7 @@
 #include "imgui.h"
 #pragma warning(pop)
 
+#include "Graphics/RendererTypes.hpp"
 #include "Types.hpp"
 
 namespace flex
@@ -183,5 +184,4 @@ namespace flex
 	// Must be called at least once to set g_CurrentWorkingDirectory!
 	void RetrieveCurrentWorkingDirectory();
 	std::string RelativePathToAbsolute(const std::string& relativePath);
-
 } // namespace flex

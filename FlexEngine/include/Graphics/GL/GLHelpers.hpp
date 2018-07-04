@@ -9,6 +9,7 @@
 #include <GLFW/glfw3.h>
 #pragma warning(pop)
 
+#include "Graphics/RendererTypes.hpp"
 #include "Logger.hpp"
 #include "Types.hpp"
 

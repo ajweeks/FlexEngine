@@ -9,7 +9,7 @@ namespace flex
 	i32 Profiler::s_UnendedTimings = 0;
 	ms Profiler::s_FrameStartTime = 0;
 	ms Profiler::s_FrameEndTime = 0;
-	std::map<std::string, ms> Profiler::s_Timings;
+	std::unordered_map<u64, ms> Profiler::s_Timings;
 	std::string Profiler::s_PendingCSV;
 
 	// Any frame time longer than this will be clipped to this value
@@ -51,34 +51,51 @@ namespace flex
 		}
 	}
 
-	void Profiler::Begin(const std::string& blockName)
+	void Profiler::Begin(const char* blockName)
 	{
-		if (s_Timings.find(blockName) != s_Timings.end())
+		u64 hash = Hash(blockName);
+
+		if (s_Timings.find(hash) != s_Timings.end())
 		{
-			Logger::LogError("Profiler::Begin called more than once!");
+			Logger::LogError("Profiler::Begin called more than once! Block name: " + std::string(blockName) +
+							 " (hash: " + std::to_string(hash) + ')');
 		}
 
 		ms now = Time::CurrentMilliseconds();
-		s_Timings.insert({ blockName, now });
+		s_Timings.insert({ hash, now });
 
 		++s_UnendedTimings;
 	}
 
-	void Profiler::End(const std::string& blockName)
+	void Profiler::Begin(const std::string& blockName)
 	{
-		auto result = s_Timings.find(blockName);
+		Begin(blockName.c_str());
+	}
+
+	void Profiler::End(const char* blockName)
+	{
+		u64 hash = Hash(blockName);
+
+		auto result = s_Timings.find(hash);
 
 		if (result == s_Timings.end())
 		{
-			Logger::LogError("Profiler::End called before Begin was called!");
+			Logger::LogError("Profiler::End called before Begin was called! Block name: " + std::string(blockName) +
+							 " (hash: " + std::to_string(hash) + ')');
+			return;
 		}
 
 		ms now = Time::CurrentMilliseconds();
 		ms start = result->second;
 		ms elapsed = now - start;
-		s_Timings.at(blockName) = elapsed;
+		s_Timings.at(hash) = elapsed;
 
 		--s_UnendedTimings;
+	}
+
+	void Profiler::End(const std::string& blockName)
+	{
+		End(blockName.c_str());
 	}
 
 	void Profiler::PrintResultsToFile()
@@ -99,12 +116,26 @@ namespace flex
 		}
 	}
 
-	void Profiler::PrintBlockDuration(const std::string& blockName)
+	void Profiler::PrintBlockDuration(const char* blockName)
 	{
-		auto result = s_Timings.find(blockName);
+		u64 hash = Hash(blockName);
+
+		auto result = s_Timings.find(hash);
 		if (result != s_Timings.end())
 		{
-			Logger::LogInfo("    Block duration \"" + blockName + "\": " + FloatToString(result->second, 2) + "ms");
+			Logger::LogInfo("    Block duration \"" + std::string(blockName) + "\": " + FloatToString(result->second, 2) + "ms");
 		}
+	}
+
+	void Profiler::PrintBlockDuration(const std::string& blockName)
+	{
+		PrintBlockDuration(blockName.c_str());
+	}
+
+	u64 Profiler::Hash(const char* str)
+	{
+		size_t result = std::hash<std::string>{}(str);
+		
+		return (u64)result;
 	}
 } // namespace flex

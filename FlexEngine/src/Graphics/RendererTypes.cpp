@@ -6,22 +6,22 @@
 
 namespace flex
 {
-	bool Uniforms::HasUniform(const std::string& name) const
+	bool Uniforms::HasUniform(const char* name) const
 	{
 		return (types.find(name) != types.end());
 	}
 
-	void Uniforms::AddUniform(const std::string& name)
+	void Uniforms::AddUniform(const char* name)
 	{
-		types.insert(std::pair<std::string, bool>(name, true));
+		types.insert({ name, true });
 	}
 
-	void Uniforms::RemoveUniform(const std::string& name)
+	void Uniforms::RemoveUniform(const char* name)
 	{
 		auto location = types.find(name);
 		if (location == types.end())
 		{
-			Logger::LogWarning("Attempted to remove uniform that doesn't exist! " + name);
+			Logger::LogWarning("Attempted to remove uniform that doesn't exist! " + std::string(name));
 		}
 		else
 		{
