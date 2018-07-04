@@ -71,7 +71,7 @@ namespace flex
 		* Loads a mesh from file
 		*/
 		bool LoadFromFile(const GameContext& gameContext, 
-			const std::string& filepath,
+			const std::string& filePath,
 			ImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
@@ -117,7 +117,7 @@ namespace flex
 		static const u32 GRID_LINE_COUNT;
 
 		Type m_Type = Type::NONE;
-		std::string m_Filepath;
+		std::string m_FilePath;
 
 		glm::vec2 m_UVScale = { 1,1 };
 

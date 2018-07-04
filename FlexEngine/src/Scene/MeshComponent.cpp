@@ -88,13 +88,13 @@ namespace flex
 	}
 
 	bool MeshComponent::LoadFromFile(const GameContext& gameContext,
-		const std::string& filepath,
+		const std::string& filePath,
 		ImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		m_Type = Type::FILE;
 		m_Shape = PrefabShape::NONE;
-		m_Filepath = filepath;
+		m_FilePath = filePath;
 		if (importSettings)
 		{
 			m_ImportSettings = *importSettings;
@@ -104,11 +104,11 @@ namespace flex
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
-		std::string meshFileName = filepath;
+		std::string meshFileName = filePath;
 		StripLeadingDirectories(meshFileName);
 
 		const aiScene* scene = nullptr;
-		if (GetLoadedMesh(filepath, &scene))
+		if (GetLoadedMesh(filePath, &scene))
 		{
 			Logger::LogInfo("Reusing loaded mesh from " + meshFileName);
 		}
@@ -117,10 +117,10 @@ namespace flex
 			// Mesh hasn't been loaded before, load it now
 			Logger::LogInfo("Loading mesh " + meshFileName);
 
-			auto meshObj = m_LoadedMeshes.emplace(filepath, new LoadedMesh());
+			auto meshObj = m_LoadedMeshes.emplace(filePath, new LoadedMesh());
 			LoadedMesh* loadedMesh = meshObj.first->second;
 
-			loadedMesh->scene = loadedMesh->importer.ReadFile(filepath,
+			loadedMesh->scene = loadedMesh->importer.ReadFile(filePath,
 				aiProcess_FindInvalidData |
 				aiProcess_GenNormals |
 				aiProcess_CalcTangentSpace
@@ -137,14 +137,14 @@ namespace flex
 
 		if (!scene)
 		{
-			Logger::LogError("Failed to load mesh " + filepath);
+			Logger::LogError("Failed to load mesh " + filePath);
 			return false;
 		}
 
 
 		if (!scene->HasMeshes())
 		{
-			Logger::LogWarning("Loaded mesh file has no meshes! " + filepath);
+			Logger::LogWarning("Loaded mesh file has no meshes! " + filePath);
 			return false;
 		}
 
@@ -361,7 +361,7 @@ namespace flex
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+				Logger::LogError("Can not override indices in LoadPrefabShape! Ignoring passed in data");
 			}
 		}
 
@@ -1082,6 +1082,6 @@ namespace flex
 
 	std::string MeshComponent::GetFilepath() const
 	{
-		return m_Filepath;
+		return m_FilePath;
 	}
 } // namespace flex
