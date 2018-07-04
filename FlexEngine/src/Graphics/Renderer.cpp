@@ -121,7 +121,7 @@ namespace flex
 	void Renderer::DrawImGuiLights()
 	{
 		ImGui::Text("Lights");
-		ImGui::AlignFirstTextHeightToWidgets();
+		ImGui::AlignTextToFramePadding();
 
 		ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
 
