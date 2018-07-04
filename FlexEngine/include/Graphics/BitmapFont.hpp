@@ -9,7 +9,7 @@ namespace flex
 
 	struct FontMetric
 	{
-		glm::vec2 GetKerningOffset(wchar_t previous);
+		glm::vec2 GetKerningOffset(wchar_t leftChar, wchar_t rightChar);
 
 		bool bIsValid = false;
 		wchar_t character = 0;
@@ -20,7 +20,7 @@ namespace flex
 		i16 offsetY = 0;
 
 		real advanceX = 0;
-		std::map<wchar_t, glm::vec2> kerning;
+		std::map<std::string, glm::vec2> kerning;
 
 		//u8 page = 0;
 		u8 channel = 0;
@@ -32,12 +32,13 @@ namespace flex
 	struct TextCache
 	{
 	public:
-		TextCache(const std::string& text, glm::vec2 position, glm::vec4 col, real scale);
+		TextCache(const std::string& text, glm::vec2 position, glm::vec4 col, real xSpacing, const std::vector<real>& letterYOffsets);
 
 		std::string str;
 		glm::vec2 pos;
 		glm::vec4 color;
-		real scale;
+		real xSpacing;
+		std::vector<real> letterYOffsets;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);
@@ -56,7 +57,7 @@ namespace flex
 		void SetMetric(const FontMetric& metric, wchar_t character);
 
 		i16 GetFontSize() const;
-		bool GetUseKerning() const;
+		bool UseKerning() const;
 
 		void SetTextureSize(const glm::vec2i& texSize);
 

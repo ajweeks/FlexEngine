@@ -15,7 +15,7 @@ namespace flex
 		// TODO: Is this needed? (double check in release config)
 		for (i32 i = 0; i < CHAR_COUNT; ++i)
 		{
-			m_CharTable[i].kerning = std::map<wchar_t, glm::vec2>();
+			m_CharTable[i].kerning = std::map<std::string, glm::vec2>();
 		}
 	}
 
@@ -39,11 +39,13 @@ namespace flex
 		return &m_CharTable[character];
 	}
 
-	glm::vec2 FontMetric::GetKerningOffset(wchar_t previous)
+	glm::vec2 FontMetric::GetKerningOffset(wchar_t leftChar, wchar_t rightChar)
 	{
 		glm::vec2 kerningVec(0.0f);
 
-		auto kerningIt = kerning.find(previous);
+		std::string charKey(std::string(1, leftChar) + std::string(1, rightChar));
+
+		auto kerningIt = kerning.find(charKey);
 		if (kerningIt != kerning.end())
 		{
 			kerningVec = kerningIt->second;
@@ -52,11 +54,12 @@ namespace flex
 		return kerningVec;
 	}
 
-	TextCache::TextCache(const std::string& str, glm::vec2 pos, glm::vec4 color, real scale) :
+	TextCache::TextCache(const std::string& str, glm::vec2 pos, glm::vec4 color, real xSpacing, const std::vector<real>& letterYOffsets) :
 		str(str),
 		pos(pos),
 		color(color),
-		scale(scale)
+		xSpacing(xSpacing),
+		letterYOffsets(letterYOffsets)
 	{
 	}
 
@@ -65,7 +68,7 @@ namespace flex
 		return m_FontSize;
 	}
 
-	bool BitmapFont::GetUseKerning() const
+	bool BitmapFont::UseKerning() const
 	{
 		return m_bUseKerning;
 	}

@@ -328,7 +328,7 @@ namespace flex
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
 			PROFILE_BEGIN("load font UbuntuCondensed");
-			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 16);
+			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 36);
 			PROFILE_END("load font UbuntuCondensed");
 
 			//glFlush();
@@ -1677,11 +1677,34 @@ namespace flex
 
 			// Screen-space objects
 #if 0
-			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
+			std::vector<real> letterYOffsets1;
+			letterYOffsets1.reserve(26);
+			for (i32 i = 0; i < 26; ++i)
+			{
+				letterYOffsets1.push_back(sin(i * 0.75f + gameContext.elapsedTime * 3.0f) * 5.0f);
+			}
+			std::vector<real> letterYOffsets2;
+			letterYOffsets2.reserve(26);
+			for (i32 i = 0; i < 26; ++i)
+			{
+				letterYOffsets2.push_back(cos(i + gameContext.elapsedTime * 10.0f) * 5.0f);
+			}
+			std::vector<real> letterYOffsets3;
+			letterYOffsets3.reserve(44);
+			for (i32 i = 0; i < 44; ++i)
+			{
+				letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + gameContext.elapsedTime * 6.0f) * 4.0f);
+			}
+			
 			SetFont(m_FntUbuntuCondensed);
-			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(
-					   gameContext.window->GetSize().x/2.0f - 10.0f, 
-					   gameContext.window->GetSize().y/2.0f));
+			std::string str("abcdefghijklmnopqrstuvwxyz");
+			DrawString(str, glm::vec4(0.95f), glm::vec2(-400, -50), 15, letterYOffsets1);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), glm::vec2(-400, 50), 3, letterYOffsets2);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-400, 150), 5, letterYOffsets3);
+
+			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
 #endif
 
 			UpdateTextBuffer();
@@ -2373,6 +2396,7 @@ namespace flex
 					{
 						// TODO: Find out how font sizes actually work
 						real scale = ((real)font->GetFontSize()) / 12.0f;
+						glm::mat4 ortho = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
 						glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), glm::vec3(
 							(1.0f / frameBufferSize.x) * scale,
 							-(1.0f / frameBufferSize.y) * scale,
@@ -2457,7 +2481,7 @@ namespace flex
 
 			m_Fonts.push_back(newFont);
 
-			// font->m_UseKerning = FT_HAS_KERNING(face) != 0;
+			newFont->m_bUseKerning = FT_HAS_KERNING(face) != 0;
 
 			// Atlas helper variables
 			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
@@ -2491,7 +2515,7 @@ namespace flex
 					continue;
 				}
 
-				if (newFont->GetUseKerning() && glyphIndex)
+				if (newFont->UseKerning() && glyphIndex)
 				{
 					for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
 					{
@@ -2500,9 +2524,10 @@ namespace flex
 						u32 prevIdx = FT_Get_Char_Index(face, previous);
 						FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
 
-						if (delta.x || delta.y)
+						if (delta.x != 0 || delta.y != 0)
 						{
-							metric->kerning[static_cast<char>(previous)] =
+							std::string charKey(std::string(1, (wchar_t)previous) + std::string(1, (wchar_t)c));
+							metric->kerning[charKey] =
 								glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
 						}
 					}
@@ -2805,12 +2830,12 @@ namespace flex
 			m_CurrentFont = font;
 		}
 
-		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos)
+		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, real spacing, const std::vector<real>& letterYOffsets)
 		{
 			assert(m_CurrentFont != nullptr);
 
 			//real scale = ((real)size) / m_CurrentFont->GetFontSize();
-			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, 1.0f));
+			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, spacing, letterYOffsets));
 		}
 
 		void GLRenderer::UpdateTextBuffer()
@@ -2826,13 +2851,16 @@ namespace flex
 					TextCache& currentCache = font->m_TextCache[i];
 					std::string currentStr = currentCache.str;
 
-					// TODO: Use kerning values
-					//i32 fontSize = font->GetFontSize();
+					assert(currentCache.letterYOffsets.size() == currentStr.size());
+
+					i32 fontSize = font->GetFontSize();
+
 					real totalAdvanceX = 0;
 
+					wchar_t prevChar = ' ';
 					for (u32 j = 0; j < currentStr.length(); ++j)
 					{
-						char c = currentStr[j];
+						wchar_t c = currentStr[j];
 
 						if (BitmapFont::IsCharValid(c))
 						{
@@ -2841,14 +2869,27 @@ namespace flex
 							{
 								if (c == ' ')
 								{
-									totalAdvanceX += metric->advanceX;
+									totalAdvanceX += metric->advanceX + currentCache.xSpacing;
+									prevChar = c;
 									continue;
 								}
+								
+								glm::vec2 pos = currentCache.pos +
+									glm::vec2(totalAdvanceX + metric->offsetX, 
+											  metric->offsetY + currentCache.letterYOffsets[j]);
 
-								glm::vec2 pos(currentCache.pos.x + (totalAdvanceX + metric->offsetX),
-											  currentCache.pos.y + (metric->offsetY));
+								if (font->UseKerning())
+								{
+									std::string charKey(std::string(1, prevChar) + std::string(1, c));
 
-								glm::vec4 extraVec4(metric->width, metric->height, 0, 0);
+									auto kerningResult = metric->kerning.find(charKey);
+									if (kerningResult != metric->kerning.end())
+									{
+										pos += kerningResult->second;// *(real)fontSize;
+									}
+								}
+
+								glm::vec4 charSize(metric->width, metric->height, 0, 0);
 
 								i32 texChannel = (i32)metric->channel;
 
@@ -2856,12 +2897,12 @@ namespace flex
 								vert.pos = pos;
 								vert.uv = metric->texCoord;
 								vert.color = currentCache.color;
-								vert.RGCharSize = extraVec4;
+								vert.RGCharSize = charSize;
 								vert.channel = texChannel;
 
 								textVertices.push_back(vert);
 
-								totalAdvanceX += metric->advanceX;
+								totalAdvanceX += metric->advanceX + currentCache.xSpacing;
 							}
 							else
 							{
@@ -2872,6 +2913,8 @@ namespace flex
 						{
 							Logger::LogWarning("Attempted to draw invalid char: " + std::to_string(c) + " in font " + font->m_Name);
 						}
+
+						prevChar = c;
 					}
 				}
 

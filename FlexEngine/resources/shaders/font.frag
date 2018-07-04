@@ -4,7 +4,7 @@ uniform sampler2D in_Texture;
 
 uniform float threshold = 0.5;
 //uniform float outline = 0.2;
-uniform float soften = 0.04;
+uniform float soften = 0.035;
 
 in GSO
 {

@@ -77,7 +77,7 @@ namespace flex
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
 			virtual void SetFont(BitmapFont* font) override;
-			virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos) override;
+			virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, real spacing, const std::vector<real>& letterYOffsets) override;
 
 			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
