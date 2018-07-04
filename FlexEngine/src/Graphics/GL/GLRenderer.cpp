@@ -2526,7 +2526,7 @@ namespace flex
 
 						if (delta.x != 0 || delta.y != 0)
 						{
-							std::string charKey(std::string(1, (wchar_t)previous) + std::string(1, (wchar_t)c));
+							std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
 							metric->kerning[charKey] =
 								glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
 						}
@@ -2853,7 +2853,7 @@ namespace flex
 
 					assert(currentCache.letterYOffsets.size() == currentStr.size());
 
-					i32 fontSize = font->GetFontSize();
+					//i32 fontSize = font->GetFontSize();
 
 					real totalAdvanceX = 0;
 
@@ -2880,7 +2880,7 @@ namespace flex
 
 								if (font->UseKerning())
 								{
-									std::string charKey(std::string(1, prevChar) + std::string(1, c));
+									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
 									auto kerningResult = metric->kerning.find(charKey);
 									if (kerningResult != metric->kerning.end())

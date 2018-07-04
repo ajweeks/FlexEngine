@@ -20,7 +20,7 @@ namespace flex
 		i16 offsetY = 0;
 
 		real advanceX = 0;
-		std::map<std::string, glm::vec2> kerning;
+		std::map<std::wstring, glm::vec2> kerning;
 
 		//u8 page = 0;
 		u8 channel = 0;

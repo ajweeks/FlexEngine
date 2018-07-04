@@ -15,7 +15,7 @@ namespace flex
 		// TODO: Is this needed? (double check in release config)
 		for (i32 i = 0; i < CHAR_COUNT; ++i)
 		{
-			m_CharTable[i].kerning = std::map<std::string, glm::vec2>();
+			m_CharTable[i].kerning = std::map<std::wstring, glm::vec2>();
 		}
 	}
 
@@ -43,7 +43,7 @@ namespace flex
 	{
 		glm::vec2 kerningVec(0.0f);
 
-		std::string charKey(std::string(1, leftChar) + std::string(1, rightChar));
+		std::wstring charKey(std::wstring(1, leftChar) + std::wstring(1, rightChar));
 
 		auto kerningIt = kerning.find(charKey);
 		if (kerningIt != kerning.end())
