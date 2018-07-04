@@ -280,8 +280,8 @@ namespace flex
 		case JSONValue::Type::FLOAT:
 		{
 			size_t floatStart = quoteEnd + 2;
-			size_t decminalIndex = NextNonAlphaNumeric(fileContents, floatStart);
-			size_t floatEnd = NextNonAlphaNumeric(fileContents, decminalIndex + 1);
+			size_t decimalIndex = fileContents.find('.', floatStart);
+			size_t floatEnd = NextNonAlphaNumeric(fileContents, decimalIndex + 1);
 			size_t floatCharCount = floatEnd - floatStart;
 			std::string floatStr = fileContents.substr(floatStart, floatCharCount);
 			real floatValue = stof(floatStr);
