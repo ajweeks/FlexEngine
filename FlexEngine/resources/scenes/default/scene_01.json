@@ -279,7 +279,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000000, 1.000000, 0.030000"
+				"half extents" : "1.000000, 0.050000, 1.0"
 			},
 			"rigid body" : 
 			{
@@ -315,7 +315,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "inf, 1.000000, inf"
+				"half extents" : "1.0, 1.000000, 1.0"
 			},
 			"rigid body" : 
 			{

@@ -105,10 +105,10 @@ namespace flex
 			pos = ParseVec3(posStr);
 		}
 
-		glm::quat rot = glm::quat();
+		glm::vec3 rotEuler(0.0f);
 		if (!rotStr.empty())
 		{
-			rot = ParseVec3(rotStr);
+			rotEuler = ParseVec3(rotStr);
 		}
 
 		glm::vec3 scale(1.0f);
@@ -117,25 +117,30 @@ namespace flex
 			scale = ParseVec3(scaleStr);
 		}
 
-		if (isnan(pos.x) || isnan(pos.y) || isnan(pos.z))
+		// Check we aren't getting garbage data in
+#if _DEBUG
+		if (IsNanOrInf(pos))
 		{
-			Logger::LogError("Read nan from transform pos in serialized scene file!");
+			Logger::LogError("Read garbage value from transform pos in serialized scene file! Using default value instead");
 			pos = glm::vec3(0.0f);
 		}
 
-		if (isnan(rot.x) || isnan(rot.y) || isnan(rot.z))
+		if (IsNanOrInf(rotEuler))
 		{
-			Logger::LogError("Read nan from transform rot in serialized scene file!");
-			rot = glm::vec3(0.0f);
+			Logger::LogError("Read garbage value from transform rot in serialized scene file! Using default value instead");
+			rotEuler = glm::vec3(0.0f);
 		}
 
-		if (isnan(scale.x) || isnan(scale.y) || isnan(scale.z))
+		if (IsNanOrInf(scale))
 		{
-			Logger::LogError("Read nan from transform scale in serialized scene file!");
+			Logger::LogError("Read garbage value from transform scale in serialized scene file! Using default value instead");
 			scale = glm::vec3(1.0f);
 		}
+#endif
 
-		return Transform(pos, rot, scale);
+		glm::quat rotQuat = glm::quat(rotEuler);
+
+		return Transform(pos, rotQuat, scale);
 	}
 
 	bool JSONParser::SerializeTransform(Transform* transform, JSONField& outTransformField)
@@ -152,26 +157,27 @@ namespace flex
 
 		glm::vec3 localPos = transform->GetLocalPosition();
 		glm::quat localRotQuat = transform->GetLocalRotation();
-		glm::vec3 localRotEuler = glm::eulerAngles(localRotQuat);
 		glm::vec3 localScale = transform->GetLocalScale();
-
-		if (isnan(localPos.x) || isnan(localPos.y) || isnan(localPos.z))
+		
+		if (IsNanOrInf(localPos))
 		{
-			Logger::LogError("Attempted to serialize nan! (" + transform->GetGameObject()->GetName() + "'s pos) - writing default value instead");
+			Logger::LogError("Attempted to serialize garbage value for " + transform->GetGameObject()->GetName() + "'s pos - writing default value instead");
 			localPos = glm::vec3(0.0f);
 		}
 
-		if (isnan(localRotEuler.x) || isnan(localRotEuler.y) || isnan(localRotEuler.z))
+		if (IsNanOrInf(localRotQuat))
 		{
-			Logger::LogError("Attempted to serialize nan! (" + transform->GetGameObject()->GetName() + "'s rot) - writing default value instead");
-			localRotEuler = glm::vec3(0.0f);
+			Logger::LogError("Attempted to serialize garbage value for " + transform->GetGameObject()->GetName() + "'s rot - writing default value instead");
+			localRotQuat = glm::quat();
 		}
-		
-		if (isnan(localScale.x) || isnan(localScale.y) || isnan(localScale.z))
+
+		if (IsNanOrInf(localScale))
 		{
-			Logger::LogError("Attempted to serialize nan! (" + transform->GetGameObject()->GetName() + "'s scale) - writing default value instead");
+			Logger::LogError("Attempted to serialize garbage value for " + transform->GetGameObject()->GetName() + "'s scale - writing default value instead");
 			localScale = glm::vec3(1.0f);
 		}
+
+		glm::vec3 localRotEuler = glm::eulerAngles(localRotQuat);
 
 		std::string posStr = Vec3ToString(localPos);
 		std::string rotStr = Vec3ToString(localRotEuler);

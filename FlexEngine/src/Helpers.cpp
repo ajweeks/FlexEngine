@@ -610,6 +610,30 @@ namespace flex
 		}
 	}
 
+	bool IsNanOrInf(const glm::vec2& vec)
+	{
+		return (isnan(vec.x) || isnan(vec.y) || 
+				isinf(vec.x) || isinf(vec.y));
+	}
+
+	bool IsNanOrInf(const glm::vec3& vec)
+	{
+		return (isnan(vec.x) || isnan(vec.y) || isnan(vec.z) ||
+				isinf(vec.x) || isinf(vec.y) || isinf(vec.z));
+	}
+
+	bool IsNanOrInf(const glm::vec4& vec)
+	{
+		return (isnan(vec.x) || isnan(vec.y) || isnan(vec.z) || isnan(vec.w) ||
+				isinf(vec.x) || isinf(vec.y) || isinf(vec.z) || isinf(vec.w));
+	}
+
+	bool IsNanOrInf(const glm::quat& quat)
+	{
+		return (isnan(quat.x) || isnan(quat.y) || isnan(quat.z) || isnan(quat.w) ||
+				isinf(quat.x) || isinf(quat.y) || isinf(quat.z) || isinf(quat.w));
+	}
+
 	std::string Vec2ToString(const glm::vec2& vec)
 	{
 		std::string result(std::to_string(vec.x) + ", " +
@@ -885,5 +909,4 @@ namespace flex
 		currentIndex = 0;
 		currentAverage = 0.0f;
 	}
-
 } // namespace flex
