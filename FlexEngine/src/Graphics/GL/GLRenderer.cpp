@@ -4471,7 +4471,7 @@ namespace flex
 			if (JSONParser::Parse(filePath, rootObject))
 			{
 				m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
-				m_bVSyncEnabled = rootObject.GetBool("enable v-sync");
+				SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
 				m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
 				m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
 				m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
