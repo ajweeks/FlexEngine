@@ -36,19 +36,57 @@ namespace flex
 		real* pixels;
 	};
 
+	template <class T>
 	struct RollingAverage
 	{
 		RollingAverage();
 		RollingAverage(i32 valueCount);
 
-		void AddValue(real newValue);
+		void AddValue(T newValue);
 		void Reset();
 
-		real currentAverage;
-		std::vector<real> prevValues;
+		T currentAverage;
+		std::vector<T> prevValues;
 
 		i32 currentIndex = 0;
 	};
+
+	template<class T>
+	inline RollingAverage<T>::RollingAverage()
+	{
+	}
+
+	template <class T>
+	RollingAverage<T>::RollingAverage(i32 valueCount)
+	{
+		prevValues.resize(valueCount);
+	}
+
+	template <class T>
+	void RollingAverage<T>::AddValue(T newValue)
+	{
+		prevValues[currentIndex++] = newValue;
+		currentIndex %= prevValues.size();
+
+		currentAverage = T();
+		std::for_each(prevValues.begin(), prevValues.end(), [&](T value)
+		{
+			currentAverage += value;
+		});
+
+		currentAverage /= prevValues.size();
+	}
+
+	template <class T>
+	void RollingAverage<T>::Reset()
+	{
+		for (T& v : prevValues)
+		{
+			v = T();
+		}
+		currentIndex = 0;
+		currentAverage = T();
+	}
 
 	bool FileExists(const std::string& filePath);
 

@@ -230,7 +230,7 @@ namespace flex
 
 			// LEFT_STICK_X, LEFT_STICK_Y, RIGHT_STICK_X, RIGHT_STICK_Y, LEFT_TRIGGER, RIGHT_TRIGGER
 			real axes[6];
-			RollingAverage averageRotationSpeeds;
+			RollingAverage<real> averageRotationSpeeds;
 			i32 framesToAverageOver = 10;
 			real pJoystickX = 0.0f;
 			real pJoystickY = 0.0f;

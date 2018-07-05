@@ -481,6 +481,6 @@ namespace flex
 		m_GamepadStates[gamepadIndex].buttonsReleased = 0;
 
 		m_GamepadStates[gamepadIndex].averageRotationSpeeds = 
-			RollingAverage(m_GamepadStates[gamepadIndex].framesToAverageOver);
+			RollingAverage<real>(m_GamepadStates[gamepadIndex].framesToAverageOver);
 	}
 } // namespace flex
