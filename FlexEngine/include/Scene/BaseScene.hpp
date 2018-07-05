@@ -28,8 +28,12 @@ namespace flex
 
 		void SetName(const std::string& name);
 		std::string GetName() const;
-		std::string GetFilePath() const;
-		std::string GetShortFilePath() const;
+		std::string GetDefaultRelativeFilePath() const;
+		std::string GetRelativeFilePath() const;
+		std::string GetShortRelativeFilePath() const;
+		// Creates a new file at the specified location and copies this scene's data in to it
+		// Always copies saved file if exists, old files can optionally be deleted
+		bool SetFileName(const std::string& fileName, bool bDeletePreviousFiles);
 		std::string GetFileName() const;
 
 		bool IsUsingSaveFile() const;

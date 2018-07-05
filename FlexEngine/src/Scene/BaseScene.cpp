@@ -28,6 +28,7 @@
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
+#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 
@@ -1141,6 +1142,9 @@ namespace flex
 	{
 		bool success = false;
 
+		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
+		PROFILE_BEGIN(profileBlockName);
+
 		JSONObject rootSceneObject = {};
 
 		i32 fileVersion = 1;
@@ -1223,13 +1227,15 @@ namespace flex
 
 		if (success)
 		{
-			Logger::LogInfo("Done serializing scene");
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
 
 			if (!bSaveOverDefault)
 			{
 				m_bUsingSaveFile = true;
 			}
+
+			PROFILE_END(profileBlockName);
+			Profiler::PrintBlockDuration(profileBlockName);
 		}
 		else
 		{
@@ -1866,7 +1872,12 @@ namespace flex
 		return m_Name;
 	}
 
-	std::string BaseScene::GetFilePath() const
+	std::string BaseScene::GetDefaultRelativeFilePath() const
+	{
+		return RESOURCE_LOCATION + "scenes/default/" + m_FileName;
+	}
+
+	std::string BaseScene::GetRelativeFilePath() const
 	{
 		if (m_bUsingSaveFile)
 		{
@@ -1878,7 +1889,7 @@ namespace flex
 		}
 	}
 
-	std::string BaseScene::GetShortFilePath() const
+	std::string BaseScene::GetShortRelativeFilePath() const
 	{
 		if (m_bUsingSaveFile)
 		{
@@ -1888,6 +1899,54 @@ namespace flex
 		{
 			return "scenes/default/" + m_FileName;
 		}
+	}
+
+	bool BaseScene::SetFileName(const std::string& fileName, bool bDeletePreviousFiles)
+	{
+		bool success = false;
+
+		std::string absDefaultFilePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
+		std::string defaultAbsFileDir = absDefaultFilePathFrom;
+		ExtractDirectoryString(defaultAbsFileDir);
+		std::string absDefaultFilePathTo = defaultAbsFileDir + fileName;
+		if (CopyFile(absDefaultFilePathFrom, absDefaultFilePathTo))
+		{
+			if (m_bUsingSaveFile)
+			{
+				std::string absSavedFilePathFrom = RelativePathToAbsolute(GetRelativeFilePath());
+				std::string savedAbsFileDir = absSavedFilePathFrom;
+				ExtractDirectoryString(savedAbsFileDir);
+				std::string absSavedFilePathTo = savedAbsFileDir + fileName;
+				if (CopyFile(absSavedFilePathFrom, absSavedFilePathTo))
+				{
+					success = true;
+				}
+			}
+			else
+			{
+				success = true;
+			}
+
+			// Don't delete files unless copies worked
+			if (success)
+			{
+				if (bDeletePreviousFiles)
+				{
+					std::string pAbsDefaultFilePath = RelativePathToAbsolute(GetDefaultRelativeFilePath());
+					DeleteFile(pAbsDefaultFilePath, false);
+
+					if (m_bUsingSaveFile)
+					{
+						std::string pAbsSavedFilePath = RelativePathToAbsolute(GetRelativeFilePath());
+						DeleteFile(pAbsSavedFilePath, false);
+					}
+				}
+
+				m_FileName = fileName;
+			}
+		}
+
+		return success;
 	}
 
 	std::string BaseScene::GetFileName() const

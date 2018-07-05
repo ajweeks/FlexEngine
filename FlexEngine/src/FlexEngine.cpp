@@ -505,7 +505,10 @@ namespace flex
 			// Starts new ImGui frame and clears debug draw lines
 			m_GameContext.renderer->NewFrame(m_GameContext);
 
-			DrawImGuiObjects();
+			if (m_bRenderImGui)
+			{
+				DrawImGuiObjects();
+			}
 
 			// Hovered object
 			{
@@ -791,6 +794,12 @@ namespace flex
 			// We can update this now that the renderer has had a chance to end the frame
 			m_bRenderImGui = renderImGuiNextFrame;
 
+			if (!m_bRenderImGui)
+			{
+				// Prevent mouse from being ignored while hovering over invisible ImGui elements
+				ImGui::GetIO().WantCaptureMouse = false;
+			}
+
 			m_SecondsSinceLastCommonSettingsFileSave += m_GameContext.deltaTime;
 			if (m_SecondsSinceLastCommonSettingsFileSave > m_SecondsBetweenCommonSettingsFileSave)
 			{
@@ -864,11 +873,6 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
-		if (!m_bRenderImGui)
-		{
-			return;
-		}
-
 		ImGui::ShowDemoWindow();
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
@@ -1179,52 +1183,284 @@ namespace flex
 				const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
 				const std::string currentSceneStr(currentScene->GetName() +
 					" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
-				ImGui::TextUnformatted(currentSceneStr.c_str());
+				ImGui::Text(currentSceneStr.c_str());
+
+				bool bClicked = ImGui::IsMouseReleased(1) && 
+								ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
 
 				if (ImGui::IsItemHovered())
 				{
-					std::string fileName = currentScene->GetShortFilePath();
+					std::string fileName = currentScene->GetShortRelativeFilePath();
 					ImGui::BeginTooltip();
 					ImGui::TextUnformatted(fileName.c_str());
 					ImGui::EndTooltip();
 				}
 
-				if (currentScene->IsUsingSaveFile())
+				if (ImGui::BeginPopupContextItem("scene context menu 1"))
 				{
-					if (ImGui::BeginPopupContextItem("scene context menu 1"))
 					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-						if (ImGui::Selectable("Save over default file"))
+						const i32 sceneNameMaxCharCount = 256;
+						static char newSceneName[sceneNameMaxCharCount];
+						static char newSceneFileName[sceneNameMaxCharCount];
+						if (bClicked)
 						{
-							m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext, true);
+							strcpy_s(newSceneName, currentScene->GetName().c_str());
+							strcpy_s(newSceneFileName, currentScene->GetFileName().c_str());
 						}
 
-						if (ImGui::Selectable("Hard reload (deletes save file!)"))
+						bool bRenameScene = ImGui::InputText("##rename-scene",
+															 newSceneName,
+															 sceneNameMaxCharCount,
+															 ImGuiInputTextFlags_EnterReturnsTrue);
+
+						ImGui::SameLine();
+
+						bRenameScene |= ImGui::Button("Rename scene");
+
+						if (bRenameScene)
 						{
-							DeleteFile(currentScene->GetFilePath());
+							currentScene->SetName(newSceneName);
+							// Don't close popup here since we will likely want to save that change
+						}
+
+						bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
+																	 newSceneFileName,
+															 sceneNameMaxCharCount,
+															 ImGuiInputTextFlags_EnterReturnsTrue);
+
+						ImGui::SameLine();
+
+						bRenameSceneFileName |= ImGui::Button("Rename file");
+
+						if (bRenameSceneFileName)
+						{
+							if (currentScene->SetFileName(newSceneFileName, true))
+							{
+								ImGui::CloseCurrentPopup();
+							}
+						}
+					}
+
+					if (currentScene->IsUsingSaveFile())
+					{
+						if (ImGui::Button("Save"))
+						{
+							currentScene->SerializeToFile(m_GameContext, false);
+
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::SameLine();
+
+						ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+						if (ImGui::Button("Save over default"))
+						{
+							currentScene->SerializeToFile(m_GameContext, true);
+
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Hard reload (deletes save file!)"))
+						{
+							DeleteFile(currentScene->GetRelativeFilePath());
 							m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
-						}
-						ImGui::PopStyleColor();
 
-						ImGui::EndPopup();
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
 					}
-				}
-				else
-				{
-					if (ImGui::BeginPopupContextItem("scene context menu 2"))
+					else
 					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-						if (ImGui::Selectable("Save over default"))
+						if (ImGui::Button("Save"))
 						{
-							m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext, true);
+							currentScene->SerializeToFile(m_GameContext, false);
+
+							ImGui::CloseCurrentPopup();
 						}
+
+						ImGui::SameLine();
+
+						ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+						if (ImGui::Button("Save over default"))
+						{
+							currentScene->SerializeToFile(m_GameContext, true);
+
+							ImGui::CloseCurrentPopup();
+						}
+
 						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+					}
+
+					static const char* duplicateScenePopupLabel = "Duplicate scene";
+					const i32 sceneNameMaxCharCount = 256;
+					static char newSceneName[sceneNameMaxCharCount];
+					static char newSceneFileName[sceneNameMaxCharCount];
+					if (ImGui::Button("Duplicate..."))
+					{
+						ImGui::OpenPopup(duplicateScenePopupLabel);
+
+						std::string newSceneNameStr = currentScene->GetName();
+						newSceneNameStr += " Copy";
+						strcpy_s(newSceneName, newSceneNameStr.c_str());
+
+						std::string newSceneFileNameStr = currentScene->GetFileName();
+						StripFileType(newSceneFileNameStr);
+						i16 numNumericalChars = 0;
+						i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
+						if (numNumericalChars > 0)
+						{
+							u32 charsBeforeNum = (newSceneFileNameStr.length() - numNumericalChars);
+							newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
+								IntToString(numEndingWith + 1, numNumericalChars) + ".json";
+						}
+						else
+						{
+							newSceneFileNameStr += "_01.json";
+						}
+						strcpy_s(newSceneFileName, newSceneFileNameStr.c_str());
+					}
+
+					bool bCloseContextMenu = false;
+					if (ImGui::BeginPopupModal(duplicateScenePopupLabel,
+						NULL,
+						ImGuiWindowFlags_AlwaysAutoResize))
+					{
+
+						bool bDuplicateScene = ImGui::InputText("Name##duplicate-scene-name",
+																newSceneName,
+																sceneNameMaxCharCount,
+																ImGuiInputTextFlags_EnterReturnsTrue);
+
+						bDuplicateScene |= ImGui::InputText("File name##duplicate-scene-file-path",
+															newSceneFileName,
+															sceneNameMaxCharCount,
+															ImGuiInputTextFlags_EnterReturnsTrue);
+
+						bDuplicateScene |= ImGui::Button("Duplicate");
+
+						bool bValidInput = true;
+
+						if (strlen(newSceneName) == 0 || 
+							strlen(newSceneFileName) == 0 ||
+							!EndsWith(newSceneFileName, ".json"))
+						{
+							bValidInput = false;
+						}
+
+						if (bDuplicateScene && bValidInput)
+						{
+							std::string filePathFrom = RelativePathToAbsolute(currentScene->GetDefaultRelativeFilePath());
+							std::string sceneFileDir = filePathFrom;
+							ExtractDirectoryString(sceneFileDir);
+							std::string filePathTo = sceneFileDir + newSceneFileName;
+
+							if (!FileExists(filePathTo))
+							{
+								if (CopyFile(filePathFrom, filePathTo))
+								{
+									BaseScene* newScene = new BaseScene(newSceneFileName);
+									m_GameContext.sceneManager->AddScene(newScene);
+									m_GameContext.sceneManager->SetCurrentScene(newScene, m_GameContext);
+
+									m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+									m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
+									newScene->SetName(newSceneName);
+									m_GameContext.cameraManager->Initialize(m_GameContext);
+
+									m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext, true);
+
+									bCloseContextMenu = true;
+
+									ImGui::CloseCurrentPopup();
+								}
+							}
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Cancel"))
+						{
+							ImGui::CloseCurrentPopup();
+						}
 
 						ImGui::EndPopup();
 					}
+
+					ImGui::SameLine();
+
+					static const char* deleteSceneStr = "Delete scene...";
+					const std::string deleteScenePopupID = "Delete scene";
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+					if (ImGui::Button(deleteSceneStr))
+					{
+						ImGui::OpenPopup(deleteScenePopupID.c_str());
+					}
+
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+
+					if (ImGui::BeginPopupModal(deleteScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+					{
+						static std::string sceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
+
+						ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+						std::string textStr = "Are you sure you want to permanently delete " + sceneName + "?";
+						ImGui::Text(textStr.c_str());
+						ImGui::PopStyleColor();
+
+						ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+						if (ImGui::Button("Delete"))
+						{
+							m_GameContext.sceneManager->DeleteCurrentScene(m_GameContext);
+
+							ImGui::CloseCurrentPopup();
+
+							bCloseContextMenu = true;
+						}
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Cancel"))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::EndPopup();
+					}
+
+					if (bCloseContextMenu)
+					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
 				}
 
 				ImGui::SameLine();
+
 				if (ImGui::Button(arrowNextStr))
 				{
 					m_GameContext.sceneManager->SetNextSceneActiveAndInit(m_GameContext);
@@ -1259,47 +1495,6 @@ namespace flex
 
 						ImGui::CloseCurrentPopup();
 					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("Cancel"))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::EndPopup();
-				}
-
-				ImGui::SameLine();
-
-				static const char* deleteSceneStr = "Delete scene...";
-				const std::string deleteScenePopupID = "Delete scene";
-				if (ImGui::Button(deleteSceneStr))
-				{
-					ImGui::OpenPopup(deleteScenePopupID.c_str());
-				}
-
-				if (ImGui::BeginPopupModal(deleteScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
-				{
-					static std::string sceneName = m_GameContext.sceneManager->CurrentScene()->GetName();
-
-					ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
-					std::string textStr = "Are you sure you want to permanently delete " + sceneName + "?";
-					ImGui::Text(textStr.c_str());
-					ImGui::PopStyleColor();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-					if (ImGui::Button("Delete"))
-					{
-						m_GameContext.sceneManager->DeleteCurrentScene(m_GameContext);
-
-						ImGui::CloseCurrentPopup();
-					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
 
 					ImGui::SameLine();
 

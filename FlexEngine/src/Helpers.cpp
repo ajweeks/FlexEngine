@@ -20,10 +20,10 @@
 
 namespace flex
 {
-	ImVec4 g_WarningTextColor(1, 0, 0, 1);
-	ImVec4 g_WarningButtonColor(0.65f, 0.12f, 0.09f, 1);
-	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1);
-	ImVec4 g_WarningButtonActiveColor(0.35f, 0, 0, 1);
+	ImVec4 g_WarningTextColor(1.0f, 0.25f, 0.25f, 1.0f);
+	ImVec4 g_WarningButtonColor(0.65f, 0.12f, 0.09f, 1.0f);
+	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
+	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha, bool flipVertically)
 	{
@@ -192,9 +192,33 @@ namespace flex
 		return false;
 	}
 
-	void DeleteFile(const std::string& filePath)
+	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure)
 	{
-		::DeleteFile(filePath.c_str());
+		if (::DeleteFile(filePath.c_str()))
+		{
+			return true;
+		}
+		else
+		{
+			if (bPrintErrorOnFailure)
+			{
+				Logger::LogError("Failed to delete file " + filePath);
+			}
+			return false;
+		}
+	}
+
+	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
+	{
+		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
+		{
+			return true;
+		}
+		else
+		{
+			Logger::LogError("Failed to copy file from \"" + filePathFrom + "\" to \"" + filePathTo + '\"');
+			return false;
+		}
 	}
 
 	bool DirectoryExists(const std::string& absoluteDirectoryPath)

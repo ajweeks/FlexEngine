@@ -441,9 +441,6 @@ namespace flex
 
 		MaterialID GLRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo)
 		{
-			std::string profileBlockName = "init mat 1st half " + createInfo->name + " " + std::to_string(rand());
-			PROFILE_BEGIN(profileBlockName);
-
 			MaterialID matID = GetNextAvailableMaterialID();
 			m_Materials.insert(std::pair<MaterialID, GLMaterial>(matID, {}));
 			GLMaterial& mat = m_Materials.at(matID);
@@ -515,9 +512,6 @@ namespace flex
 					}
 				}
 			}
-
-			PROFILE_END(profileBlockName);
-			Profiler::PrintBlockDuration(profileBlockName);
 
 			mat.material.diffuseTexturePath = createInfo->diffuseTexturePath;
 			mat.material.generateDiffuseSampler = createInfo->generateDiffuseSampler;
@@ -1066,9 +1060,6 @@ namespace flex
 				Profiler::PrintBlockDuration(profileBlockName);
 			}
 
-			std::string profileBlockName = "generating cubemap first half";
-			PROFILE_BEGIN(profileBlockName);
-
 			GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
 			GLShader& equirectangularToCubemapShader = m_Shaders[equirectangularToCubemapMaterial.material.shaderID];
 
@@ -1151,9 +1142,6 @@ namespace flex
 			// Generate mip maps for generated cubemap
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-			PROFILE_END(profileBlockName);
-			Profiler::PrintBlockDuration(profileBlockName);
 		}
 
 		void GLRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)

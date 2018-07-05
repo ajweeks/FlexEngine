@@ -101,7 +101,9 @@ namespace flex
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
 
-	void DeleteFile(const std::string& filePath);
+	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
+
+	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo);
 
 	bool DirectoryExists(const std::string& absoluteDirectoryPath);
 
@@ -116,10 +118,13 @@ namespace flex
 	// NOTE: If path describes a directory and doesn't end in a slash, final directory will be removed
 	void ExtractDirectoryString(std::string& filePath);
 
+	// Removes all chars after first '.' occurrence
 	void StripFileType(std::string& filePath);
 
+	// Removes all chars before first '.' occurrence
 	void ExtractFileType(std::string& filePathInTypeOut);
 
+	// Creates directories for each listed in string
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
 
 	/*

@@ -42,7 +42,7 @@ namespace flex
 		bool unique = true;
 		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&unique, newScene](BaseScene* scene) mutable
 		{
-			if (scene->GetFilePath().compare(newScene->GetFilePath()) == 0)
+			if (scene->GetRelativeFilePath().compare(newScene->GetRelativeFilePath()) == 0)
 			{
 				unique = false;
 			}
@@ -62,7 +62,7 @@ namespace flex
 	{
 		assert(!m_Scenes.empty());
 
-		gameContext.engineInstance->PreSceneChange();
+		//gameContext.engineInstance->PreSceneChange();
 
 		CurrentScene()->Initialize(gameContext);
 
@@ -116,7 +116,7 @@ namespace flex
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
-			if (m_Scenes[i]->GetName().compare(scene->GetName()) == 0)
+			if (m_Scenes[i]->GetFileName().compare(scene->GetFileName()) == 0)
 			{
 				SetCurrentScene(i, gameContext, bPrintErrorOnFailure);
 				return;
@@ -215,7 +215,7 @@ namespace flex
 					std::string foundFileName = filePath;
 					StripLeadingDirectories(foundFileName);
 
-					std::string sceneFileName = (*sceneIter)->GetFilePath();
+					std::string sceneFileName = (*sceneIter)->GetRelativeFilePath();
 					StripLeadingDirectories(sceneFileName);
 
 					if (sceneFileName.compare(foundFileName) == 0)
