@@ -31,7 +31,7 @@ namespace flex
 		m_TurnSpeedFastMultiplier(2.0f),
 		m_TurnSpeedSlowMultiplier(0.1f),
 		m_GamepadRotationSpeed(2.0f),
-		m_MouseRotationSpeed(0.001f)
+		m_MouseRotationSpeed(0.0015f)
 	{
 		ResetOrientation();
 		CalculateAxisVectors();
