@@ -17,6 +17,7 @@
 #include "ImGui/imgui_impl_glfw_gl3.h"
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 
 #include <freetype/ftbitmap.h>
 #pragma warning(pop)
@@ -40,6 +41,7 @@
 #include "VertexAttribute.hpp"
 #include "Window/Window.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
+#include "Physics/RigidBody.hpp"
 #include "Profiler.hpp"
 #include "imgui_internal.h"
 
@@ -3257,35 +3259,43 @@ namespace flex
 
 		void GLRenderer::DoGameObjectContextMenu(const GameContext& gameContext, GameObject** gameObjectRef)
 		{
+			static const char* renameObjectPopupLabel = "##rename-game-object";
+			static const char* renameObjectButtonStr = "Rename";
+			static const char* duplicateObjectButtonStr = "Duplicate...";
+			static const char* duplicateObjectPopupLabel = "Duplicate game object";
+			static const char* deletePopupStr = "Delete object";
+			static const char* deleteButtonStr = "Delete";
+			static const char* deleteCancelButtonStr = "Cancel";
+
 			GameObject* gameObject = *gameObjectRef;
 
 			std::string contextMenuIDStr = "context window game object " + gameObject->GetName() + std::to_string(gameObject->GetRenderID());
-			ImGuiWindow* window = GImGui->CurrentWindow;
-			const char* contextMenuIDCStr = contextMenuIDStr.c_str();
-			ImGuiID contextMenuID = window->GetID(contextMenuIDCStr);
 			static std::string newObjectName = gameObject->GetName();
 			const size_t maxStrLen = 256;
 
-			bool bItemClicked = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && ImGui::IsMouseClicked(1);
+			bool bItemClicked = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && 
+								ImGui::IsMouseClicked(1);
 			if (bItemClicked)
 			{
 				newObjectName = gameObject->GetName();
 				newObjectName.resize(maxStrLen);
 			}
 
-			if (ImGui::BeginPopupContextItem(contextMenuIDCStr))
+			if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
 			{
-				bool bRename = ImGui::InputText("##rename-game-object", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue);
+				bool bRename = ImGui::InputText(renameObjectPopupLabel,
+												(char*)newObjectName.data(), 
+												maxStrLen, 
+												ImGuiInputTextFlags_EnterReturnsTrue);
 
-				bRename |= ImGui::Button("Rename");
+				bRename |= ImGui::Button(renameObjectButtonStr);
 
-				if (bRename)
+				bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+				if (bRename && !bInvalidName)
 				{
-					size_t firstTerminator = newObjectName.find('\0');
-					if (firstTerminator != std::string::npos)
-					{
-						newObjectName = newObjectName.substr(0, firstTerminator);
-					}
+					// Remove excess trailing \0 chars
+					newObjectName = std::string(newObjectName.c_str());
 
 					gameObject->SetName(newObjectName);
 
@@ -3294,14 +3304,23 @@ namespace flex
 
 				ImGui::SameLine();
 
-				static const char* deleteObjectStr = "Delete object";
-				const std::string deleteObjectPopupID = "Delete object";
-				if (ImGui::Button("Delete"))
+				if (DoDuplicateGameObjectButton(gameContext, gameObject, duplicateObjectButtonStr, duplicateObjectPopupLabel))
 				{
-					ImGui::OpenPopup(deleteObjectPopupID.c_str());
+					*gameObjectRef = nullptr;
+					ImGui::CloseCurrentPopup();
 				}
 
-				if (ImGui::BeginPopupModal(deleteObjectPopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+				ImGui::SameLine();
+
+				if (ImGui::Button(deleteButtonStr))
+				{
+					ImGui::OpenPopup(deletePopupStr);
+				}
+
+				if (ImGui::BeginPopupModal(deletePopupStr, NULL,
+					ImGuiWindowFlags_AlwaysAutoResize |
+					ImGuiWindowFlags_NoSavedSettings |
+					ImGuiWindowFlags_NoNavInputs))
 				{
 					static std::string objectName = gameObject->GetName();
 
@@ -3310,11 +3329,10 @@ namespace flex
 					ImGui::Text(textStr.c_str());
 					ImGui::PopStyleColor();
 
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
 					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.12f, 0.09f, 1));
 					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.04f, 0.01f, 1));
 					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
-					if (ImGui::Button("Delete"))
+					if (ImGui::Button(deleteButtonStr))
 					{
 						if (gameContext.sceneManager->CurrentScene()->DeleteGameObject(gameContext, gameObject))
 						{
@@ -3329,14 +3347,12 @@ namespace flex
 					ImGui::PopStyleColor();
 					ImGui::PopStyleColor();
 					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
 
 					ImGui::SameLine();
 
-					if (ImGui::Button("Cancel"))
+					if (ImGui::Button(deleteCancelButtonStr))
 					{
 						ImGui::CloseCurrentPopup();
-						ImGui::ClosePopup(contextMenuID); // Also exit out of first popup (context menu)
 					}
 
 					ImGui::EndPopup();
@@ -3344,6 +3360,207 @@ namespace flex
 
 				ImGui::EndPopup();
 			}
+		}
+
+		void GLRenderer::DoCreateGameObjectButton(const GameContext& gameContext, const char* buttonName, const char* popupName)
+		{
+			static const char* defaultNewName = "New_Object_01";
+			static const char* newObjectNameInputLabel = "##new-object-name";
+			static const char* createButtonStr = "Create";
+			static const char* cancelStr = "Cancel";
+
+			static std::string newObjectName = defaultNewName;
+
+			if (ImGui::Button(buttonName))
+			{
+				ImGui::OpenPopup(popupName);
+				newObjectName = defaultNewName;
+			}
+
+			if (ImGui::BeginPopupModal(popupName, NULL,
+				ImGuiWindowFlags_AlwaysAutoResize |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoNavInputs))
+			{
+				const size_t maxStrLen = 256;
+				newObjectName.resize(maxStrLen);
+
+
+				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
+												(char*)newObjectName.data(),
+												maxStrLen,
+												ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bCreate |= ImGui::Button(createButtonStr);
+
+				bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+				if (bCreate && !bInvalidName)
+				{
+					// Remove excess trailing \0 chars
+					newObjectName = std::string(newObjectName.c_str());
+
+					if (!newObjectName.empty())
+					{
+						MaterialID matID = gameContext.sceneManager->CurrentScene()->GetMaterialIDs()[0];
+
+						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
+						MeshComponent* meshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+						meshComponent->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::CUBE);
+
+						gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(cancelStr))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+		}
+
+		bool GLRenderer::DoDuplicateGameObjectButton(const GameContext& gameContext, GameObject* objectToCopy, const char* buttonName, const char* popupName)
+		{
+			static const char* newObjectNameInputLabel = "##new-object-name";
+			static const char* duplicateObjectButtonStr = "Duplicate";
+			static const char* cancelButtonStr = "Cancel";
+
+			bool bDuplicated = false;
+
+			static std::string newObjectName = "";
+
+			const size_t maxStrLen = 256;
+
+			if (ImGui::Button(buttonName))
+			{
+				ImGui::OpenPopup(popupName);
+				newObjectName = objectToCopy->GetName();
+				i16 numNumericalChars;
+				int numEndingWith = GetNumberEndingWith(newObjectName, numNumericalChars);
+				if (numEndingWith == -1)
+				{
+					newObjectName += "_01";
+				}
+				else
+				{
+					newObjectName = newObjectName.substr(0, newObjectName.length() - numNumericalChars) +
+						IntToString(numEndingWith + 1, (u16)numNumericalChars);
+				}
+				newObjectName.resize(maxStrLen);
+			}
+
+			if (ImGui::BeginPopupModal(popupName, NULL,
+				ImGuiWindowFlags_AlwaysAutoResize |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoNavInputs))
+			{
+
+				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
+												(char*)newObjectName.data(),
+												maxStrLen,
+												ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bCreate |= ImGui::Button(duplicateObjectButtonStr);
+
+				bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+				if (bCreate && !bInvalidName)
+				{
+					// Remove excess trailing \0 chars
+					newObjectName = std::string(newObjectName.c_str());
+
+					if (!newObjectName.empty())
+					{
+						RenderObjectCreateInfo createInfo = {};
+						gameContext.renderer->GetRenderObjectCreateInfo(objectToCopy->GetRenderID(), createInfo);
+
+						// Make it clear we aren't copying vertex or index data directly
+						createInfo.vertexBufferData = nullptr;
+						createInfo.indices = nullptr;
+
+						MaterialID matID = createInfo.materialID;
+						GameObjectType objectType = objectToCopy->GetType();
+						GameObject* newGameObject = new GameObject(newObjectName, objectType);
+
+						*newGameObject->GetTransform() = *objectToCopy->GetTransform();
+
+						if (objectToCopy->GetParent())
+						{
+							objectToCopy->GetParent()->AddChild(newGameObject);
+						}
+
+						for (auto tag : objectToCopy->GetTags())
+						{
+							newGameObject->AddTag(tag);
+						}
+
+						MeshComponent* meshComponentToCopy = objectToCopy->GetMeshComponent();
+						if (meshComponentToCopy)
+						{
+							MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+							MeshComponent::Type prefabType = meshComponentToCopy->GetType();
+							if (prefabType == MeshComponent::Type::PREFAB)
+							{
+								MeshComponent::PrefabShape shape = meshComponentToCopy->GetShape();
+								newMeshComponent->LoadPrefabShape(gameContext, shape, &createInfo);
+							}
+							else if (prefabType == MeshComponent::Type::FILE)
+							{
+								std::string filePath = meshComponentToCopy->GetFilepath();
+								MeshComponent::ImportSettings importSettings = meshComponentToCopy->GetImportSettings();
+								newMeshComponent->LoadFromFile(gameContext, filePath, &importSettings, &createInfo);
+							}
+							else
+							{
+								Logger::LogError("Unhandled mesh component prefab type encountered while duplicating object");
+							}
+						}
+
+						RigidBody* rbToCopy = objectToCopy->GetRigidBody();
+						if (rbToCopy)
+						{
+							RigidBody* newRB = newGameObject->SetRigidBody(new RigidBody(rbToCopy->GetGroup(), rbToCopy->GetMask()));
+							newRB->SetStatic(rbToCopy->IsStatic());
+							newRB->SetKinematic(rbToCopy->IsKinematic());
+							newRB->SetFriction(rbToCopy->GetFriction());
+							newRB->SetMass(rbToCopy->GetMass());
+							newRB->SetLocalSRT(rbToCopy->GetLocalScale(), rbToCopy->GetLocalRotation(), rbToCopy->GetLocalPosition());
+							newRB->SetPhysicsFlags(rbToCopy->GetPhysicsFlags());
+
+							btCollisionShape* collisionShape = rbToCopy->GetRigidBodyInternal()->getCollisionShape();
+							newGameObject->SetCollisionShape(collisionShape);
+						}
+
+						if (newGameObject->GetParent() == nullptr)
+						{
+							gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
+						}
+
+						bDuplicated = true;
+
+						gameContext.engineInstance->SetSelectedObject(newGameObject);
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(cancelButtonStr))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			return bDuplicated;
 		}
 
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
@@ -4550,72 +4767,7 @@ namespace flex
 				}
 			}
 
-			static bool bInvalidName = false;
-			static std::string newObjectName = "New Object";
-
-			static const char* addRenderObjectStr = "Add render object...";
-			static const char* addRenderObjectPopupStr = "Add render object";
-			if (ImGui::Button(addRenderObjectStr))
-			{
-				ImGui::OpenPopup(addRenderObjectPopupStr);
-				newObjectName = "New Object";
-				bInvalidName = false;
-			}
-
-			if (ImGui::BeginPopupModal(addRenderObjectPopupStr, NULL, ImGuiWindowFlags_AlwaysAutoResize))
-			{
-				const size_t maxStrLen = 256;
-				newObjectName.resize(maxStrLen);
-
-				if (bInvalidName)
-				{
-					ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4());
-				}
-
-				bool bCreate = ImGui::InputText("##New-object-name", (char*)newObjectName.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue);
-
-				if (bInvalidName)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				bCreate |= ImGui::Button("Create");
-
-				if (bCreate)
-				{
-					size_t firstTerminator = newObjectName.find('\0');
-					if (firstTerminator != std::string::npos)
-					{
-						newObjectName = newObjectName.substr(0, firstTerminator);
-					}
-
-					if (newObjectName.empty())
-					{
-						bInvalidName = true;
-					}
-					else
-					{
-						MaterialID matID = gameContext.sceneManager->CurrentScene()->GetMaterialIDs()[0];
-
-						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
-						MeshComponent* meshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						meshComponent->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::CUBE);
-
-						gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
-
-						ImGui::CloseCurrentPopup();
-					}
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
+			DoCreateGameObjectButton(gameContext, "Add render object...", "Add render object");
 
 			DrawImGuiLights();
 		}
@@ -4739,71 +4891,69 @@ namespace flex
 
 			DoGameObjectContextMenu(gameContext, &gameObject);
 
-			if (!gameObject)
+			bool bParentChildTreeChanged = (gameObject == nullptr);
+			if (gameObject)
 			{
-				// Early return when object was just deleted
-				return false;
-			}
-
-			if (ImGui::IsItemClicked())
-			{
-				gameContext.engineInstance->SetSelectedObject(gameObject);
-			}
-
-			if (ImGui::IsItemActive())
-			{
-				if (ImGui::BeginDragDropSource())
+				if (ImGui::IsItemClicked())
 				{
-					RenderID draggedRenderID = gameObject->GetRenderID();
-					const void* data = (void*)(&draggedRenderID);
-					size_t size = sizeof(RenderID);
-
-					ImGui::SetDragDropPayload(m_RenderObjectPayloadCStr, data, size);
-
-					ImGui::Text(gameObject->GetName().c_str());
-
-					ImGui::EndDragDropSource();
+					gameContext.engineInstance->SetSelectedObject(gameObject);
 				}
-			}
 
-			bool bParentChildTreeChanged = false;
-			if (ImGui::BeginDragDropTarget())
-			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
-
-				if (payload && payload->Data)
+				if (ImGui::IsItemActive())
 				{
-					std::string dataType(payload->DataType);
-					RenderID* draggedRenderID = (RenderID*)payload->Data;
-					GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
-					GameObject* draggedGameObject = draggedRenderObject->gameObject;
-					if (draggedGameObject)
+					if (ImGui::BeginDragDropSource())
 					{
-						// If we're a child of the dragged object then don't allow (causes infinite recursion)
-						if (!draggedGameObject->HasChild(gameObject, true))
-						{
-							bool bRemovedRootObj = false;
-							if (draggedGameObject->GetParent())
-							{
-								draggedGameObject->DetachFromParent();
-							}
-							else
-							{
-								gameContext.sceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
-								bRemovedRootObj = true;
-							}
+						RenderID draggedRenderID = gameObject->GetRenderID();
+						const void* data = (void*)(&draggedRenderID);
+						size_t size = sizeof(RenderID);
 
-							if (bRemovedRootObj && gameObject->GetParent() == draggedGameObject)
-							{
-								gameContext.sceneManager->CurrentScene()->AddRootObject(gameObject);
-							}
+						ImGui::SetDragDropPayload(m_RenderObjectPayloadCStr, data, size);
 
-							gameObject->AddChild(draggedGameObject);
-							bParentChildTreeChanged = true;
-						}
+						ImGui::Text(gameObject->GetName().c_str());
+
+						ImGui::EndDragDropSource();
 					}
 				}
-				ImGui::EndDragDropTarget();
+
+				if (ImGui::BeginDragDropTarget())
+				{
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
+
+					if (payload && payload->Data)
+					{
+						std::string dataType(payload->DataType);
+						RenderID* draggedRenderID = (RenderID*)payload->Data;
+						GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
+						GameObject* draggedGameObject = draggedRenderObject->gameObject;
+						if (draggedGameObject)
+						{
+							// If we're a child of the dragged object then don't allow (causes infinite recursion)
+							if (!draggedGameObject->HasChild(gameObject, true))
+							{
+								bool bRemovedRootObj = false;
+								if (draggedGameObject->GetParent())
+								{
+									draggedGameObject->DetachFromParent();
+								}
+								else
+								{
+									gameContext.sceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
+									bRemovedRootObj = true;
+								}
+
+								if (bRemovedRootObj && gameObject->GetParent() == draggedGameObject)
+								{
+									gameContext.sceneManager->CurrentScene()->AddRootObject(gameObject);
+								}
+
+								gameObject->AddChild(draggedGameObject);
+								bParentChildTreeChanged = true;
+							}
+						}
+					}
+
+					ImGui::EndDragDropTarget();
+				}
 			}
 
 			if (node_open && bHasChildren)

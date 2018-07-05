@@ -65,6 +65,32 @@ namespace flex
 		return stream.str();
 	}
 
+	std::string IntToString(i32 i, u16 minChars)
+	{
+		std::string result = std::to_string(glm::abs(i));
+
+		if (i < 0)
+		{
+			if (result.length() < minChars)
+			{
+				result = '-' + std::string(minChars - result.length(), '0') + result;
+			}
+			else
+			{
+				result = '-' + result;
+			}
+		}
+		else
+		{
+			if (result.length() < minChars)
+			{
+				result = std::string(minChars - result.length(), '0') + result;
+			}
+		}
+
+		return result;
+	}
+
 	bool FileExists(const std::string& filePath)
 	{
 		std::ifstream file(filePath.c_str());
@@ -777,6 +803,35 @@ namespace flex
 
 		bool result = (str.substr(str.length() - end.length()).compare(end) == 0);
 		return result;
+	}
+
+	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars)
+	{
+		if (str.empty())
+		{
+			outNumNumericalChars = 0;
+			return -1;
+		}
+
+		u16 strLen = (u16)str.size();
+
+		if (!isdigit(str[strLen - 1]))
+		{
+			outNumNumericalChars = 0;
+			return -1;
+		}
+
+		i16 firstDigit = strLen - 1;
+		while (firstDigit >= 0 && isdigit(str[firstDigit]))
+		{
+			firstDigit--;
+		}
+		firstDigit++;
+
+		i32 num = (i32)atoi(str.substr(firstDigit).c_str());
+		outNumNumericalChars = (strLen - firstDigit);
+
+		return num;
 	}
 
 	std::string GameObjectTypeToString(GameObjectType type)

@@ -36,6 +36,7 @@ namespace flex
 		
 		void AddTag(const std::string& tag);
 		bool HasTag(const std::string& tag);
+		std::vector<std::string> GetTags() const;
 
 		RenderID GetRenderID() const;
 		void SetRenderID(RenderID renderID);
@@ -79,6 +80,55 @@ namespace flex
 		bool SetInteractingWith(GameObject* gameObject);
 
 		GameObject* GetObjectInteractingWith();
+
+		GameObjectType GetType() const;
+
+		struct ValveMembers
+		{
+			// Serialized fields
+			real minRotation = 0.0f;
+			real maxRotation = 0.0f;
+
+			// Non-serialized fields
+			// Multiplied with value retrieved from input manager
+			real rotationSpeedScale = 1.0f;
+
+			// 1 = never slow down, 0 = slow down immediately
+			real invSlowDownRate = 0.85f;
+
+			real rotationSpeed = 0.0f;
+			real pRotationSpeed = 0.0f;
+
+			real pRotation = 0.0f;
+			real rotation = 0.0f;
+		} m_ValveMembers;
+
+		struct RisingBlockMembers
+		{
+			// Serialized fields
+			GameObject* valve = nullptr; // (object name is serialized)
+			glm::vec3 moveAxis;
+
+			// If true this block will "fall" to its minimum 
+			// value when a player is not interacting with it
+			bool bAffectedByGravity = false;
+
+			// Non-serialized fields
+			glm::vec3 startingPos;
+
+			real pdDistBlockMoved = 0.0f;
+		} m_RisingBlockMembers;
+
+		struct GlassWindowMembers
+		{
+			bool bBroken = false;
+		} m_GlassWindowMembers;
+
+		struct ReflectionProbeMembers
+		{
+			MaterialID captureMatID = 0;
+		} m_ReflectionProbeMembers;
+
 
 	protected:
 		friend class BaseClass;
@@ -146,54 +196,6 @@ namespace flex
 		MeshComponent* m_MeshComponent = nullptr;
 
 		bool bBeingInteractedWith = false;
-
-	public:
-		// All fields which valves need to know about to do their thing
-		struct ValveMembers
-		{
-			// Serialized fields
-			real minRotation = 0.0f;
-			real maxRotation = 0.0f;
-
-			// Non-serialized fields
-			// Multiplied with value retrieved from input manager
-			real rotationSpeedScale = 1.0f;
-
-			// 1 = never slow down, 0 = slow down immediately
-			real invSlowDownRate = 0.85f;
-
-			real rotationSpeed = 0.0f;
-			real pRotationSpeed = 0.0f;
-
-			real pRotation = 0.0f;
-			real rotation = 0.0f;
-		} m_ValveMembers;
-
-		struct RisingBlockMembers
-		{
-			// Serialized fields
-			GameObject* valve = nullptr; // (object name is serialized)
-			glm::vec3 moveAxis;
-
-			// If true this block will "fall" to its minimum 
-			// value when a player is not interacting with it
-			bool bAffectedByGravity = false;
-
-			// Non-serialized fields
-			glm::vec3 startingPos;
-
-			real pdDistBlockMoved = 0.0f;
-		} m_RisingBlockMembers;
-
-		struct GlassWindowMembers
-		{
-			bool bBroken = false;
-		} m_GlassWindowMembers;
-
-		struct ReflectionProbeMembers
-		{
-			MaterialID captureMatID = 0;
-		} m_ReflectionProbeMembers;
 
 		private:
 			static AudioSourceID s_BunkSound;

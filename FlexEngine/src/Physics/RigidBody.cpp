@@ -176,6 +176,31 @@ namespace flex
 		MatchParentTransform();
 	}
 
+	i32 RigidBody::GetGroup() const
+	{
+		return m_Group;
+	}
+
+	i32 RigidBody::GetMask() const
+	{
+		return m_Mask;
+	}
+
+	glm::vec3 RigidBody::GetLocalPosition() const
+	{
+		return m_LocalPosition;
+	}
+
+	glm::quat RigidBody::GetLocalRotation() const
+	{
+		return m_LocalRotation;
+	}
+
+	glm::vec3 RigidBody::GetLocalScale() const
+	{
+		return m_LocalScale;
+	}
+
 	void RigidBody::UpdateParentTransform()
 	{
 		assert(m_ParentTransform);
@@ -253,20 +278,4 @@ namespace flex
 	{
 		return m_Flags;
 	}
-
-	//glm::vec3 RigidBody::GetPosition()
-	//{
-	//	btTransform transform;
-	//	m_RigidBody->getMotionState()->getWorldTransform(transform);
-
-	//	return FromBtVec3(transform.getOrigin());
-	//}
-
-	//glm::quat RigidBody::GetRotation()
-	//{
-	//	btTransform transform;
-	//	m_RigidBody->getMotionState()->getWorldTransform(transform);
-
-	//	return FromBtQuaternion(transform.getRotation());
-	//}
 } // namespace flex

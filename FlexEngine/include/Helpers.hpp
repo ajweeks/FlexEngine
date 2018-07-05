@@ -197,6 +197,9 @@ namespace flex
 
 	std::string FloatToString(real f, i32 precision);
 
+	// String will be padded with '0's to be at least minChars long (excluding a leading '-' for negative numbers)
+	std::string IntToString(i32 i, u16 minChars);
+
 	std::string Vec2ToString(const glm::vec2& vec);
 	std::string Vec3ToString(const glm::vec3& vec);
 	std::string Vec4ToString(const glm::vec4& vec);
@@ -215,6 +218,10 @@ namespace flex
 
 	bool StartsWith(const std::string& str, const std::string& start);
 	bool EndsWith(const std::string& str, const std::string& end);
+
+	// Returns the number str ends with or -1 if last char isn't numeral
+	// outNumNumericalChars will be set to the number of chars in the num (e.g. "001" => 3)
+	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars);
 
 	std::string GameObjectTypeToString(GameObjectType type);
 	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr);

@@ -370,6 +370,11 @@ namespace flex
 		return m_ObjectInteractingWith;
 	}
 
+	GameObjectType GameObject::GetType() const
+	{
+		return m_Type;
+	}
+
 	GameObject* GameObject::GetParent()
 	{
 		return m_Parent;
@@ -391,9 +396,11 @@ namespace flex
 			return;
 		}
 
+		glm::mat4 worldTransform = m_Transform.GetWorldTransform();
+
 		m_Parent = parent;
 
-		m_Transform.UpdateParentTransform();
+		m_Transform.SetWorldTransform(worldTransform);
 	}
 
 	GameObject* GameObject::AddChild(GameObject* child)
@@ -511,6 +518,11 @@ namespace flex
 	{
 		auto result = std::find(m_Tags.begin(), m_Tags.end(), tag);
 		return (result != m_Tags.end());
+	}
+
+	std::vector<std::string> GameObject::GetTags() const
+	{
+		return m_Tags;
 	}
 
 	RenderID GameObject::GetRenderID() const

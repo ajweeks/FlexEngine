@@ -392,22 +392,40 @@ namespace flex
 	{
 		if (parentObject == targetObject)
 		{
-			if (parentObject->m_Parent)
+			// Target's parent pointer will be cleared upon removing from parent, cache it before that happens
+			GameObject* targetParent = targetObject->m_Parent;
+			if (targetObject->m_Parent)
 			{
-				parentObject->m_Parent->RemoveChild(parentObject);
+				targetObject->m_Parent->RemoveChild(targetObject);
 			}
-			parentObject->Destroy(gameContext);
-
-			auto result = Contains(m_RootObjects, parentObject);
-			if (result != m_RootObjects.end())
+			else
 			{
-				m_RootObjects.erase(result);
+				auto result = Contains(m_RootObjects, targetObject);
+				if (result != m_RootObjects.end())
+				{
+					m_RootObjects.erase(result);
+				}
 			}
 
-			if (parentObject == gameContext.engineInstance->GetSelectedObject())
+			for (GameObject* childObject : targetObject->m_Children)
+			{
+				if (targetParent)
+				{
+					targetParent->AddChild(childObject);
+				}
+				else
+				{
+					AddRootObject(childObject);
+				}
+			}
+			targetObject->m_Children.clear();
+
+			if (targetObject == gameContext.engineInstance->GetSelectedObject())
 			{
 				gameContext.engineInstance->SetSelectedObject(nullptr);
 			}
+
+			targetObject->Destroy(gameContext);
 
 			SafeDelete(targetObject);
 			return true;
@@ -1705,6 +1723,7 @@ namespace flex
 			}
 		}
 
+		gameObject->SetParent(nullptr);
 		m_RootObjects.push_back(gameObject);
 
 		return gameObject;

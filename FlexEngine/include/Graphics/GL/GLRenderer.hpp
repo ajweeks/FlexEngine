@@ -188,6 +188,9 @@ namespace flex
 
 			// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 			void DoGameObjectContextMenu(const GameContext& gameContext, GameObject** gameObjectRef);
+			void DoCreateGameObjectButton(const GameContext& gameContext, const char* buttonName, const char* popupName);
+			// Returns true if object was duplicated
+			bool DoDuplicateGameObjectButton(const GameContext& gameContext, GameObject* objectToCopy, const char* buttonName, const char* popupName);
 
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;

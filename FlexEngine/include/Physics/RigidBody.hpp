@@ -38,6 +38,13 @@ namespace flex
 		void SetLocalRotation(const glm::quat& rot);
 		void SetLocalScale(const glm::vec3& scale);
 
+		i32 GetGroup() const;
+		i32 GetMask() const;
+
+		glm::vec3 GetLocalPosition() const;
+		glm::quat GetLocalRotation() const;
+		glm::vec3 GetLocalScale() const;
+
 		// Applies physics-driven transform to parent transform (taking into account local transform)
 		void UpdateParentTransform();
 
