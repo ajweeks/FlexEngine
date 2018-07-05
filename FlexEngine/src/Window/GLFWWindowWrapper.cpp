@@ -11,6 +11,8 @@
 
 namespace flex
 {
+	std::array<bool, MAX_JOYSTICK_COUNT> g_JoysticksConnected;
+
 	GLFWWindowWrapper::GLFWWindowWrapper(std::string title, GameContext& gameContext) :
 		Window(title, gameContext)
 	{
@@ -89,6 +91,21 @@ namespace flex
 			exit(EXIT_FAILURE);
 		}
 
+		i32 numJoysticksConnected = 0;
+		for (i32 i = 0; i < MAX_JOYSTICK_COUNT; ++i)
+		{
+			g_JoysticksConnected[i] = (glfwJoystickPresent(i) == GLFW_TRUE);
+			if (g_JoysticksConnected[i])
+			{
+				++numJoysticksConnected;
+			}
+		}
+
+		if (numJoysticksConnected > 0)
+		{
+			Logger::LogInfo(std::to_string(numJoysticksConnected) + " joysticks connected on bootup");
+		}
+
 		// TODO: Look into supporting system-DPI awareness
 		//SetProcessDPIAware();
 	}
@@ -162,6 +179,7 @@ namespace flex
 		glfwSetFramebufferSizeCallback(m_Window, GLFWFramebufferSizeCallback);
 		glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
+		glfwSetJoystickCallback(GLFWJoystickCallback);
 	}
 
 	void GLFWWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
@@ -456,6 +474,26 @@ namespace flex
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->FrameBufferSizeCallback(width, height);
+	}
+
+	void GLFWJoystickCallback(i32 JID, i32 event)
+	{
+		if (JID > MAX_JOYSTICK_COUNT)
+		{
+			Logger::LogWarning("Unhandled joystick connection event, JID out of range: " + std::to_string(JID));
+			return;
+		}
+
+		if (event == GLFW_CONNECTED)
+		{
+			Logger::LogInfo("Joystick " + std::to_string(JID) + " connected");
+		}
+		else if (event == GLFW_DISCONNECTED)
+		{
+			Logger::LogInfo("Joystick " + std::to_string(JID) + " disconnected");
+		}
+
+		g_JoysticksConnected[JID] = (event == GLFW_CONNECTED);
 	}
 
 	InputManager::Action GLFWActionToInputManagerAction(i32 glfwAction)

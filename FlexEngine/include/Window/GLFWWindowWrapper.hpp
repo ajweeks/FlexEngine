@@ -72,6 +72,11 @@ namespace flex
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
+	void GLFWJoystickCallback(i32 JID, i32 event);
+
+	// Stores whether a controller is connected or not
+	const i32 MAX_JOYSTICK_COUNT = 4;
+	extern std::array<bool, MAX_JOYSTICK_COUNT> g_JoysticksConnected;
 
 } // namespace flex
 
