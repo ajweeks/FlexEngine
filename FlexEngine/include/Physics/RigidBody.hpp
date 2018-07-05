@@ -14,6 +14,8 @@ namespace flex
 	{
 	public:
 		RigidBody(i32 group = 1, i32 mask = 1);
+		// NOTE: This copy constructor does not initialize data, it only copies POD fields
+		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();
 
 		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, Transform* parentTransform);

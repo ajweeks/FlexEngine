@@ -376,11 +376,13 @@ namespace flex
 		}
 	}
 
-	bool BaseScene::DeleteGameObject(const GameContext& gameContext, GameObject* targetObject)
+	bool BaseScene::DestroyGameObject(const GameContext& gameContext,
+									 GameObject* targetObject,
+									 bool bDeleteChildren)
 	{
 		for (GameObject* gameObject : m_RootObjects)
 		{
-			if (DeleteGameObjectRecursive(gameContext, gameObject, targetObject))
+			if (DestroyGameObjectRecursive(gameContext, gameObject, targetObject, bDeleteChildren))
 			{
 				return true;
 			}
@@ -388,15 +390,18 @@ namespace flex
 		return false;
 	}
 
-	bool BaseScene::DeleteGameObjectRecursive(const GameContext& gameContext, GameObject* parentObject, GameObject* targetObject)
+	bool BaseScene::DestroyGameObjectRecursive(const GameContext& gameContext,
+											  GameObject* currentObject,
+											  GameObject* targetObject,
+											  bool bDeleteChildren)
 	{
-		if (parentObject == targetObject)
+		if (currentObject == targetObject)
 		{
 			// Target's parent pointer will be cleared upon removing from parent, cache it before that happens
 			GameObject* targetParent = targetObject->m_Parent;
 			if (targetObject->m_Parent)
 			{
-				targetObject->m_Parent->RemoveChild(targetObject);
+				targetParent->RemoveChild(targetObject);
 			}
 			else
 			{
@@ -407,22 +412,32 @@ namespace flex
 				}
 			}
 
-			for (GameObject* childObject : targetObject->m_Children)
+			// Set children's parents
+			if (!bDeleteChildren)
 			{
-				if (targetParent)
+				for (GameObject* childObject : targetObject->m_Children)
 				{
-					targetParent->AddChild(childObject);
-				}
-				else
-				{
-					AddRootObject(childObject);
+					if (targetParent)
+					{
+						targetParent->AddChild(childObject);
+					}
+					else
+					{
+						AddRootObject(childObject);
+					}
 				}
 			}
-			targetObject->m_Children.clear();
 
 			if (targetObject == gameContext.engineInstance->GetSelectedObject())
 			{
 				gameContext.engineInstance->SetSelectedObject(nullptr);
+			}
+
+			// If children are still in m_Children array when
+			// targetObject is destroyed they will also be destroyed
+			if (!bDeleteChildren)
+			{
+				targetObject->m_Children.clear();
 			}
 
 			targetObject->Destroy(gameContext);
@@ -431,9 +446,9 @@ namespace flex
 			return true;
 		}
 
-		for (GameObject* childObject : parentObject->m_Children)
+		for (GameObject* childObject : currentObject->m_Children)
 		{
-			if (DeleteGameObjectRecursive(gameContext, childObject, targetObject))
+			if (DestroyGameObjectRecursive(gameContext, childObject, targetObject, bDeleteChildren))
 			{
 				return true;
 			}
@@ -442,7 +457,9 @@ namespace flex
 		return false;
 	}
 
-	GameObject* BaseScene::CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	GameObject* BaseScene::CreateGameObjectFromJSON(const GameContext& gameContext,
+													const JSONObject& obj,
+													MaterialID overriddenMatID /* = InvalidMaterialID */)
 	{
 		GameObject* newGameObject = nullptr;
 

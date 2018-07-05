@@ -16,6 +16,10 @@ namespace flex
 		GameObject(const std::string& name, GameObjectType type);
 		virtual ~GameObject();
 
+		// Returns a new game object which is a direct copy of this object, parented to parent
+		// If parent == nullptr then new object will have same parent as this object
+		GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren);
+
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void PostInitialize(const GameContext& gameContext);
 		virtual void Destroy(const GameContext& gameContext);

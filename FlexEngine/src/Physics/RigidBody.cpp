@@ -25,6 +25,21 @@ namespace flex
 	{
 	}
 
+	RigidBody::RigidBody(const RigidBody& other) :
+		m_ParentTransform(nullptr),
+		m_LocalPosition(other.m_LocalPosition),
+		m_LocalRotation(other.m_LocalRotation),
+		m_LocalScale(other.m_LocalScale),
+		m_Mass(other.m_Mass),
+		m_bStatic(other.m_bStatic),
+		m_bKinematic(other.m_bKinematic),
+		m_Friction(other.m_Friction),
+		m_Group(other.m_Group),
+		m_Mask(other.m_Mask),
+		m_Flags(other.m_Flags)
+	{
+	}
+
 	RigidBody::~RigidBody()
 	{
 	}

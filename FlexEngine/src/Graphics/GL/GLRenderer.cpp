@@ -3334,7 +3334,7 @@ namespace flex
 					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
 					if (ImGui::Button(deleteButtonStr))
 					{
-						if (gameContext.sceneManager->CurrentScene()->DeleteGameObject(gameContext, gameObject))
+						if (gameContext.sceneManager->CurrentScene()->DestroyGameObject(gameContext, gameObject, true))
 						{
 							*gameObjectRef = nullptr;
 							ImGui::CloseCurrentPopup();
@@ -3477,70 +3477,7 @@ namespace flex
 
 					if (!newObjectName.empty())
 					{
-						RenderObjectCreateInfo createInfo = {};
-						gameContext.renderer->GetRenderObjectCreateInfo(objectToCopy->GetRenderID(), createInfo);
-
-						// Make it clear we aren't copying vertex or index data directly
-						createInfo.vertexBufferData = nullptr;
-						createInfo.indices = nullptr;
-
-						MaterialID matID = createInfo.materialID;
-						GameObjectType objectType = objectToCopy->GetType();
-						GameObject* newGameObject = new GameObject(newObjectName, objectType);
-
-						*newGameObject->GetTransform() = *objectToCopy->GetTransform();
-
-						if (objectToCopy->GetParent())
-						{
-							objectToCopy->GetParent()->AddChild(newGameObject);
-						}
-
-						for (auto tag : objectToCopy->GetTags())
-						{
-							newGameObject->AddTag(tag);
-						}
-
-						MeshComponent* meshComponentToCopy = objectToCopy->GetMeshComponent();
-						if (meshComponentToCopy)
-						{
-							MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-							MeshComponent::Type prefabType = meshComponentToCopy->GetType();
-							if (prefabType == MeshComponent::Type::PREFAB)
-							{
-								MeshComponent::PrefabShape shape = meshComponentToCopy->GetShape();
-								newMeshComponent->LoadPrefabShape(gameContext, shape, &createInfo);
-							}
-							else if (prefabType == MeshComponent::Type::FILE)
-							{
-								std::string filePath = meshComponentToCopy->GetFilepath();
-								MeshComponent::ImportSettings importSettings = meshComponentToCopy->GetImportSettings();
-								newMeshComponent->LoadFromFile(gameContext, filePath, &importSettings, &createInfo);
-							}
-							else
-							{
-								Logger::LogError("Unhandled mesh component prefab type encountered while duplicating object");
-							}
-						}
-
-						RigidBody* rbToCopy = objectToCopy->GetRigidBody();
-						if (rbToCopy)
-						{
-							RigidBody* newRB = newGameObject->SetRigidBody(new RigidBody(rbToCopy->GetGroup(), rbToCopy->GetMask()));
-							newRB->SetStatic(rbToCopy->IsStatic());
-							newRB->SetKinematic(rbToCopy->IsKinematic());
-							newRB->SetFriction(rbToCopy->GetFriction());
-							newRB->SetMass(rbToCopy->GetMass());
-							newRB->SetLocalSRT(rbToCopy->GetLocalScale(), rbToCopy->GetLocalRotation(), rbToCopy->GetLocalPosition());
-							newRB->SetPhysicsFlags(rbToCopy->GetPhysicsFlags());
-
-							btCollisionShape* collisionShape = rbToCopy->GetRigidBodyInternal()->getCollisionShape();
-							newGameObject->SetCollisionShape(collisionShape);
-						}
-
-						if (newGameObject->GetParent() == nullptr)
-						{
-							gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
-						}
+						GameObject* newGameObject = objectToCopy->CopySelf(gameContext, nullptr, newObjectName, true);
 
 						bDuplicated = true;
 

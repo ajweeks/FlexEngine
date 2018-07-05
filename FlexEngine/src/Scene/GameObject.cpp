@@ -43,6 +43,88 @@ namespace flex
 	{
 	}
 
+	GameObject* GameObject::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	{
+		GameObject* newGameObject = new GameObject(newObjectName, m_Type);
+
+		RenderObjectCreateInfo createInfo = {};
+		gameContext.renderer->GetRenderObjectCreateInfo(m_RenderID, createInfo);
+
+		// Make it clear we aren't copying vertex or index data directly
+		createInfo.vertexBufferData = nullptr;
+		createInfo.indices = nullptr;
+
+		MaterialID matID = createInfo.materialID;
+		*newGameObject->GetTransform() = m_Transform;
+
+		if (parent)
+		{
+			parent->AddChild(newGameObject);
+		}
+		else
+		{
+			if (m_Parent)
+			{
+				m_Parent->AddChild(newGameObject);
+			}
+			else
+			{
+				gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
+			}
+		}
+
+		for (auto tag : m_Tags)
+		{
+			newGameObject->AddTag(tag);
+		}
+
+		if (m_MeshComponent)
+		{
+			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+			MeshComponent::Type prefabType = m_MeshComponent->GetType();
+			if (prefabType == MeshComponent::Type::PREFAB)
+			{
+				MeshComponent::PrefabShape shape = m_MeshComponent->GetShape();
+				newMeshComponent->LoadPrefabShape(gameContext, shape, &createInfo);
+			}
+			else if (prefabType == MeshComponent::Type::FILE)
+			{
+				std::string filePath = m_MeshComponent->GetFilepath();
+				MeshComponent::ImportSettings importSettings = m_MeshComponent->GetImportSettings();
+				newMeshComponent->LoadFromFile(gameContext, filePath, &importSettings, &createInfo);
+			}
+			else
+			{
+				Logger::LogError("Unhandled mesh component prefab type encountered while duplicating object");
+			}
+		}
+
+		if (m_RigidBody)
+		{
+			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
+
+			btCollisionShape* collisionShape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+			newGameObject->SetCollisionShape(collisionShape);
+
+			// TODO: Copy over constraints here
+		}
+
+		newGameObject->Initialize(gameContext);
+		newGameObject->PostInitialize(gameContext);
+
+		if (bCopyChildren)
+		{
+			for (GameObject* child : m_Children)
+			{
+				std::string newChildName = child->GetName();
+				GameObject* newChild = child->CopySelf(gameContext, newGameObject, newChildName, bCopyChildren);
+				newGameObject->AddChild(newChild);
+			}
+		}
+
+		return newGameObject;
+	}
+
 	void GameObject::Initialize(const GameContext& gameContext)
 	{
 		switch (m_Type)

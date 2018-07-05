@@ -61,13 +61,12 @@ namespace flex
 
 		// Deletes and removes targetObject if exists in scene
 		// Returns true if targetObject was found
-		bool DeleteGameObject(const GameContext& gameContext, GameObject* targetObject);
+		bool DestroyGameObject(const GameContext& gameContext, GameObject* targetObject, bool bDeleteChildren);
 
 	protected:
-		// Recursively finds game object which matches targetObject
-		// by crawling down parentObject's children
-		// Returns true if targetObject was found
-		bool DeleteGameObjectRecursive(const GameContext& gameContext, GameObject* parentObject, GameObject* targetObject);
+		// Recursively finds targetObject in currentObject's children
+		// Returns true if targetObject was found and deleted
+		bool DestroyGameObjectRecursive(const GameContext& gameContext, GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
 
 		GameObject* CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID = InvalidMaterialID);
 		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
