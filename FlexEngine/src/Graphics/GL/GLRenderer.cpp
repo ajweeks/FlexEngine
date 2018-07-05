@@ -3111,7 +3111,6 @@ namespace flex
 						CheckGLErrorMessages();
 					}
 				}
-
 			}
 		}
 
@@ -3324,14 +3323,14 @@ namespace flex
 				{
 					static std::string objectName = gameObject->GetName();
 
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+					ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
 					std::string textStr = "Are you sure you want to permanently delete " + objectName + "?";
 					ImGui::Text(textStr.c_str());
 					ImGui::PopStyleColor();
 
-					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.12f, 0.09f, 1));
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.04f, 0.01f, 1));
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0, 0, 1));
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
 					if (ImGui::Button(deleteButtonStr))
 					{
 						if (gameContext.sceneManager->CurrentScene()->DestroyGameObject(gameContext, gameObject, true))

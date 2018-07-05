@@ -21,6 +21,11 @@
 
 namespace flex
 {
+	extern ImVec4 g_WarningTextColor;
+	extern ImVec4 g_WarningButtonColor;
+	extern ImVec4 g_WarningButtonHoveredColor;
+	extern ImVec4 g_WarningButtonActiveColor;
+
 	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha = false, bool flipVertically = false);
 	void DestroyGLFWimage(GLFWimage& image);
 
