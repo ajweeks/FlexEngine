@@ -100,6 +100,12 @@ namespace flex
 
 	void Profiler::PrintResultsToFile()
 	{
+		if (s_PendingCSV.empty())
+		{
+			Logger::LogWarning("Attempted to print profiler results to file before any results were generated! Did you set bPrintTimings when calling EndFrame?");
+			return;
+		}
+
 		std::string directory = RESOURCE_LOCATION + "profiles/";
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
 		CreateDirectoryRecursive(absoluteDirectory);

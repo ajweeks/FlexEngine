@@ -470,11 +470,7 @@ namespace flex
 			sec dt = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-			if (dt <= 0.0f)
-			{
-				// Not zero since dt can be used as a denominator
-				dt = 0.0001f;
-			}
+			dt = glm::clamp(dt, m_MinDT, m_MaxDT);
 
 			m_GameContext.deltaTime = dt;
 			m_GameContext.elapsedTime = frameEndTime;
@@ -802,12 +798,15 @@ namespace flex
 				SaveCommonSettingsToDisk();
 			}
 
-			Profiler::EndFrame(true);
+			bool bLogProfilerResults = (m_FrameCount > 3);
+			Profiler::EndFrame(bLogProfilerResults);
 
 			if (bWriteProfilingResultsToFile)
 			{
 				Profiler::PrintResultsToFile();
 			}
+
+			++m_FrameCount;
 		}
 	}
 

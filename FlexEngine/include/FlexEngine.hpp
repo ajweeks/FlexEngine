@@ -82,6 +82,11 @@ namespace flex
 		bool m_Running = false;
 
 		bool m_bRenderImGui = true;
+		u32 m_FrameCount = 0;
+
+		sec m_MinDT = 0.0001f;
+		sec m_MaxDT = 1.0f;
+
 		GameContext m_GameContext = {};
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
