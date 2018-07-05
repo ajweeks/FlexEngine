@@ -3249,7 +3249,7 @@ namespace flex
 			static const char* renameObjectPopupLabel = "##rename-game-object";
 			static const char* renameObjectButtonStr = "Rename";
 			static const char* duplicateObjectButtonStr = "Duplicate...";
-			static const char* duplicateObjectPopupLabel = "Duplicate game object";
+			static const char* duplicateObjectPopupLabel = "Duplicate object";
 			static const char* deletePopupStr = "Delete object";
 			static const char* deleteButtonStr = "Delete";
 			static const char* deleteCancelButtonStr = "Cancel";
@@ -3275,6 +3275,8 @@ namespace flex
 												maxStrLen, 
 												ImGuiInputTextFlags_EnterReturnsTrue);
 
+				ImGui::SameLine();
+
 				bRename |= ImGui::Button(renameObjectButtonStr);
 
 				bool bInvalidName = std::string(newObjectName.c_str()).empty();
@@ -3288,8 +3290,6 @@ namespace flex
 
 					ImGui::CloseCurrentPopup();
 				}
-
-				ImGui::SameLine();
 
 				if (DoDuplicateGameObjectButton(gameContext, gameObject, duplicateObjectButtonStr, duplicateObjectPopupLabel))
 				{

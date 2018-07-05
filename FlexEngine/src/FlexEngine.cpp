@@ -1475,7 +1475,7 @@ namespace flex
 
 				if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
 				{
-					static std::string newSceneName = std::to_string(m_GameContext.sceneManager->GetSceneCount());
+					static std::string newSceneName = "Scene_" + IntToString(m_GameContext.sceneManager->GetSceneCount(), 2);
 
 					const size_t maxStrLen = 256;
 					newSceneName.resize(maxStrLen);
