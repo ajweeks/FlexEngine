@@ -411,6 +411,11 @@ namespace flex
 		m_TransformGizmo->PostInitialize(m_GameContext);
 	}
 
+	bool FlexEngine::IsRenderingImGui() const
+	{
+		return m_bRenderImGui;
+	}
+
 	void FlexEngine::CycleRenderer()
 	{
 		// TODO? ??
@@ -496,9 +501,13 @@ namespace flex
 			}
 #endif
 
+			// This variable should be the one changed during this frame so we always
+			// end frames that we start, next frame we will begin using the new value
+			bool renderImGuiNextFrame = m_bRenderImGui;
+
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
-			m_GameContext.renderer->NewFrame();
+			m_GameContext.renderer->NewFrame(m_GameContext);
 
 			DrawImGuiObjects();
 
@@ -693,6 +702,11 @@ namespace flex
 				}
 			}
 
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
+			{
+				renderImGuiNextFrame = !renderImGuiNextFrame;
+			}
+
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_ESCAPE))
 			{
 				DeselectCurrentlySelectedObject();
@@ -778,6 +792,9 @@ namespace flex
 			m_GameContext.renderer->Draw(m_GameContext);
 			PROFILE_END("Render");
 
+			// We can update this now that the renderer has had a chance to end the frame
+			m_bRenderImGui = renderImGuiNextFrame;
+
 			m_SecondsSinceLastCommonSettingsFileSave += m_GameContext.deltaTime;
 			if (m_SecondsSinceLastCommonSettingsFileSave > m_SecondsBetweenCommonSettingsFileSave)
 			{
@@ -848,6 +865,11 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
+		if (!m_bRenderImGui)
+		{
+			return;
+		}
+
 		ImGui::ShowDemoWindow();
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());

@@ -84,7 +84,7 @@ namespace flex
 
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 
-		virtual void NewFrame() = 0;
+		virtual void NewFrame(const GameContext& gameContext) = 0;
 
 		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
@@ -161,7 +161,6 @@ namespace flex
 
 		PostProcessSettings m_PostProcessSettings;
 
-		bool m_bShowImGui = true;
 		bool m_bPostProcessingEnabled = true;
 
 	private:

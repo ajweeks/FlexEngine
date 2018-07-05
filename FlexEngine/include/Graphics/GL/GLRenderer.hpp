@@ -73,7 +73,7 @@ namespace flex
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 			
-			virtual void NewFrame() override;
+			virtual void NewFrame(const GameContext& gameContext) override;
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
@@ -97,7 +97,6 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
-			void ImGuiRender();
 			void DrawGameObjectImGui(const GameContext& gameContext, GameObject* gameObject);
 			/*
 			* Returns true if the parent-child tree changed during this call

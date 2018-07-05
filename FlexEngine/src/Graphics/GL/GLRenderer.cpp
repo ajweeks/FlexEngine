@@ -1625,11 +1625,6 @@ namespace flex
 			//	}
 			//}
 
-			if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
-			{
-				m_bShowImGui = !m_bShowImGui;
-			}
-
 			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
@@ -1712,9 +1707,10 @@ namespace flex
 
 			DrawScreenSpaceSprites(gameContext);
 
-			if (m_bShowImGui)
+			if (gameContext.engineInstance->IsRenderingImGui())
 			{
-				ImGuiRender();
+				ImGui::Render();
+				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 			}
 
 			SwapBuffers(gameContext);
@@ -4414,14 +4410,14 @@ namespace flex
 			m_RenderObjects[renderID] = nullptr;
 		}
 
-		void GLRenderer::NewFrame()
+		void GLRenderer::NewFrame(const GameContext& gameContext)
 		{
 			if (m_PhysicsDebugDrawer)
 			{
 				m_PhysicsDebugDrawer->ClearLines();
 			}
 
-			if (m_bShowImGui)
+			if (gameContext.engineInstance->IsRenderingImGui())
 			{
 				ImGui_ImplGlfwGL3_NewFrame();
 			}
@@ -4430,15 +4426,6 @@ namespace flex
 		btIDebugDraw* GLRenderer::GetDebugDrawer()
 		{
 			return m_PhysicsDebugDrawer;
-		}
-
-		void GLRenderer::ImGuiRender()
-		{
-			if (m_bShowImGui)
-			{
-				ImGui::Render();
-				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
-			}
 		}
 
 		void GLRenderer::PhysicsDebugRender(const GameContext& gameContext)

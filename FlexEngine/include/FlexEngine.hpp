@@ -29,6 +29,8 @@ namespace flex
 		void PreSceneChange();
 		void OnSceneChanged();
 
+		bool IsRenderingImGui() const;
+
 		static std::string EngineVersionString();
 
 		static const u32 EngineVersionMajor;
@@ -79,6 +81,7 @@ namespace flex
 		u32 m_RendererCount = 0;
 		bool m_Running = false;
 
+		bool m_bRenderImGui = true;
 		GameContext m_GameContext = {};
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
