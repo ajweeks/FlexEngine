@@ -67,6 +67,8 @@ namespace flex
 		// Returns true if targetObject was found
 		bool DestroyGameObject(const GameContext& gameContext, GameObject* targetObject, bool bDeleteChildren);
 
+		bool IsLoaded() const;
+
 	protected:
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
@@ -102,6 +104,8 @@ namespace flex
 		std::vector<GameObject*> m_RootObjects;
 
 		bool m_bUsingSaveFile = false;
+
+		bool m_bLoaded = false;
 
 		/*
 		* Stores all unique initialized materials we've created

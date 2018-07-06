@@ -1447,27 +1447,36 @@ namespace flex
 		{
 			{
 				const i32 sceneNameMaxCharCount = 256;
-				static char newSceneName[sceneNameMaxCharCount];
+
+				// We don't know the names of scene's that haven't been loaded
+				if (scene->IsLoaded())
+				{
+					static char newSceneName[sceneNameMaxCharCount];
+					if (bClicked)
+					{
+						strcpy_s(newSceneName, scene->GetName().c_str());
+					}
+
+					bool bRenameScene = ImGui::InputText("##rename-scene",
+														 newSceneName,
+														 sceneNameMaxCharCount,
+														 ImGuiInputTextFlags_EnterReturnsTrue);
+
+					ImGui::SameLine();
+
+					bRenameScene |= ImGui::Button("Rename scene");
+
+					if (bRenameScene)
+					{
+						scene->SetName(newSceneName);
+						// Don't close popup here since we will likely want to save that change
+					}
+				}
+
 				static char newSceneFileName[sceneNameMaxCharCount];
 				if (bClicked)
 				{
-					strcpy_s(newSceneName, scene->GetName().c_str());
 					strcpy_s(newSceneFileName, scene->GetFileName().c_str());
-				}
-
-				bool bRenameScene = ImGui::InputText("##rename-scene",
-													 newSceneName,
-													 sceneNameMaxCharCount,
-													 ImGuiInputTextFlags_EnterReturnsTrue);
-
-				ImGui::SameLine();
-
-				bRenameScene |= ImGui::Button("Rename scene");
-
-				if (bRenameScene)
-				{
-					scene->SetName(newSceneName);
-					// Don't close popup here since we will likely want to save that change
 				}
 
 				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
@@ -1481,9 +1490,40 @@ namespace flex
 
 				if (bRenameSceneFileName)
 				{
-					if (scene->SetFileName(newSceneFileName, true))
+					std::string newSceneFileNameStr(newSceneFileName);
+					std::string fileDir = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
+					ExtractDirectoryString(fileDir);
+					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
+					bool bNameEmpty = newSceneFileNameStr.empty();
+					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
+					bool bFileExists = FileExists(newSceneFilePath);
+					bool bSceneNameValid = (!bNameEmpty &&
+											bCorrectFileType &&
+											!bFileExists);
+
+					if (bSceneNameValid)
 					{
-						ImGui::CloseCurrentPopup();
+						if (scene->SetFileName(newSceneFileNameStr, true))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+					}
+					else
+					{
+						Logger::LogError("Attempted name scene with invalid name: " + newSceneFileNameStr, false);
+						if (bNameEmpty)
+						{
+							Logger::LogError(" (file name is empty!)");
+						}
+						else if (!bCorrectFileType)
+						{
+							Logger::LogError(" (must end with \".json\"!)");
+						}
+						else if (bFileExists)
+						{
+							Logger::LogError(" (file already exists!)");
+						}
+						Logger::LogNewLine();
 					}
 				}
 			}

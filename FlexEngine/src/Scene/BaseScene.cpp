@@ -146,7 +146,6 @@ namespace flex
 
 				gameContext.renderer->InitializeDirectionalLight(dirLight);
 			}
-
 		}
 		else
 		{
@@ -255,6 +254,8 @@ namespace flex
 		{
 			(*iter)->Initialize(gameContext);
 		}
+
+		m_bLoaded = true;
 	}
 
 	void BaseScene::PostInitialize(const GameContext& gameContext)
@@ -271,6 +272,8 @@ namespace flex
 
 	void BaseScene::Destroy(const GameContext& gameContext)
 	{
+		m_bLoaded = false;
+
 		for (GameObject* rootObject : m_RootObjects)
 		{
 			if (rootObject)
@@ -389,6 +392,11 @@ namespace flex
 			}
 		}
 		return false;
+	}
+
+	bool BaseScene::IsLoaded() const
+	{
+		return m_bLoaded;
 	}
 
 	bool BaseScene::DestroyGameObjectRecursive(const GameContext& gameContext,
@@ -1911,6 +1919,11 @@ namespace flex
 	bool BaseScene::SetFileName(const std::string& fileName, bool bDeletePreviousFiles)
 	{
 		bool success = false;
+
+		if (fileName == m_FileName)
+		{
+			return true;
+		}
 
 		std::string absDefaultFilePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
 		std::string defaultAbsFileDir = absDefaultFilePathFrom;

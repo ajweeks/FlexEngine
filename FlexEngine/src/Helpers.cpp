@@ -285,10 +285,16 @@ namespace flex
 				}
 				else
 				{
-					std::string foundFileType = Split(findData.cFileName, '.')[1];
-					if (foundFileType == cleanedFileType)
+					std::string fileNameStr(findData.cFileName);
+					size_t dotPos = fileNameStr.find('.');
+
+					if (dotPos != std::string::npos)
 					{
-						foundFileTypeMatches = true;
+						std::string foundFileType = Split(fileNameStr, '.')[1];
+						if (foundFileType == cleanedFileType)
+						{
+							foundFileTypeMatches = true;
+						}
 					}
 				}
 
