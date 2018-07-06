@@ -89,6 +89,9 @@ namespace flex
 		// TODO: Add brightness multiplier here
 		glm::vec4 direction = { 0, 0, 1, 0 };
 
+		// Not used for rendering but allows users to position in the world
+		glm::vec3 position = glm::vec3(0.0f);
+
 		glm::vec4 color = glm::vec4(1.0f);
 
 		u32 enabled = 1;

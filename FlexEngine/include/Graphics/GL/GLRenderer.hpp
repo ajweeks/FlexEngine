@@ -84,8 +84,7 @@ namespace flex
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
 
 		private:
-
-			struct FrameBufferHandle
+			struct TextureHandle
 			{
 				u32 id;
 				GLenum format;
@@ -127,18 +126,25 @@ namespace flex
 
 			void SwapBuffers(const GameContext& gameContext);
 
-			// TODO: Put all params into struct!
+			struct SpriteQuadDrawInfo
+			{
+				RenderID spriteObjectRenderID;
+				u32 inputTextureHandle = 0;
+				u32 FBO = 0; // 0 for rendering to final RT
+				u32 RBO = 0; // 0 for rendering to final RT
+				MaterialID materialID = InvalidMaterialID;
+				glm::vec3 pos = glm::vec3(0.0f);
+				glm::quat rotation = glm::quat(glm::vec3(0.0f));
+				glm::vec3 scale = glm::vec3(1.0f);
+				AnchorPoint anchor = AnchorPoint::TOP_LEFT;
+				glm::vec4 color = glm::vec4(1.0f);
+				bool screenSpace = true;
+				bool readDepth = true;
+				bool writeDepth = true;
+			};
+
 			void DrawSpriteQuad(const GameContext& gameContext,
-								u32 inputTextureHandle, 
-								u32 FBO, // 0 for rendering to final RT
-								u32 RBO, // 0 for rendering to final RT
-								MaterialID materialID,
-								const glm::vec3& posOff, 
-								const glm::quat& rotationOff, 
-								const glm::vec3& scaleOff,
-								AnchorPoint anchor,
-								const glm::vec4& color,
-								bool writeDepth = true);
+								const SpriteQuadDrawInfo& drawInfo);
 			void DrawScreenSpaceSprites(const GameContext& gameContext);
 			void DrawWorldSpaceSprites(const GameContext& gameContext);
 			void DrawText(const GameContext& gameContext);
@@ -182,7 +188,7 @@ namespace flex
 			// Returns the next binding that would be used
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
-			void CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, FrameBufferHandle& handle);
+			void CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, TextureHandle& handle);
 
 			void RemoveMaterial(MaterialID materialID);
 
@@ -210,32 +216,37 @@ namespace flex
 
 			// TODO: Resize all framebuffers automatically by inserting into container
 			// TODO: Remove ??
-			FrameBufferHandle m_gBuffer_PositionMetallicHandle;
-			FrameBufferHandle m_gBuffer_NormalRoughnessHandle;
-			FrameBufferHandle m_gBuffer_DiffuseAOHandle;
+			TextureHandle m_gBuffer_PositionMetallicHandle;
+			TextureHandle m_gBuffer_NormalRoughnessHandle;
+			TextureHandle m_gBuffer_DiffuseAOHandle;
 
-			FrameBufferHandle m_BRDFTextureHandle;
+			TextureHandle m_BRDFTextureHandle;
 			glm::vec2 m_BRDFTextureSize;
 
 			// Everything is drawn to this texture before being drawn to the default 
 			// frame buffer through some post-processing effects
-			FrameBufferHandle m_OffscreenTexture0Handle; 
+			TextureHandle m_OffscreenTexture0Handle; 
 			u32 m_Offscreen0FBO = 0;
 			u32 m_Offscreen0RBO = 0;
 
-			FrameBufferHandle m_OffscreenTexture1Handle;
+			TextureHandle m_OffscreenTexture1Handle;
 			u32 m_Offscreen1FBO = 0;
 			u32 m_Offscreen1RBO = 0;
 
 			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
 
 
-			FrameBufferHandle m_LoadingTextureHandle;
-			FrameBufferHandle m_WorkTextureHandle;
+			TextureHandle m_LoadingTextureHandle;
+			//TextureHandle m_WorkTextureHandle;
+
+			TextureHandle m_PointLightIconHandle;
+			TextureHandle m_DirectionalLightIconHandle;
 
 			// TODO: Use a mesh prefab here
-			VertexBufferData m_SpriteQuadVertexBufferData;
-			RenderID m_SpriteQuadRenderID;
+			VertexBufferData m_Quad3DVertexBufferData;
+			RenderID m_Quad3DRenderID;
+			VertexBufferData m_Quad2DVertexBufferData;
+			RenderID m_Quad2DRenderID;
 
 			struct TextVertex
 			{

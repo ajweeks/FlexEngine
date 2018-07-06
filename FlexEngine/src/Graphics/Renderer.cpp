@@ -133,6 +133,7 @@ namespace flex
 		
 		if (ImGui::TreeNode("Directional Light"))
 		{
+			ImGui::DragFloat3("Position", &m_DirectionalLight.position.x, 0.1f);
 			ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
 			ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
 			ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);

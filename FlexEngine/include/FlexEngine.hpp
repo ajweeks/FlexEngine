@@ -31,6 +31,8 @@ namespace flex
 
 		bool IsRenderingImGui() const;
 
+		bool IsRenderingEditorObjects() const;
+
 		static std::string EngineVersionString();
 
 		static const u32 EngineVersionMajor;
@@ -50,7 +52,6 @@ namespace flex
 		};
 
 		static AudioSourceID GetAudioSourceID(SoundEffect effect);
-
 
 	private:
 		enum class RendererID
@@ -85,6 +86,8 @@ namespace flex
 
 		bool m_bRenderImGui = true;
 		u32 m_FrameCount = 0;
+
+		bool m_bRenderEditorObjects = true;
 
 		sec m_MinDT = 0.0001f;
 		sec m_MaxDT = 1.0f;

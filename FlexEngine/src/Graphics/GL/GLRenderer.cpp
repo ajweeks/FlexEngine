@@ -12,6 +12,7 @@
 #pragma warning(push, 0)
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
@@ -92,6 +93,17 @@ namespace flex
 			m_LoadingTextureHandle.type = GL_FLOAT;
 
 
+			m_PointLightIconHandle = {};
+			m_PointLightIconHandle.internalFormat = GL_RGBA;
+			m_PointLightIconHandle.format = GL_RGBA;
+			m_PointLightIconHandle.type = GL_FLOAT;
+
+			m_DirectionalLightIconHandle = {};
+			m_DirectionalLightIconHandle.internalFormat = GL_RGBA;
+			m_DirectionalLightIconHandle.format = GL_RGBA;
+			m_DirectionalLightIconHandle.type = GL_FLOAT;
+
+
 			m_gBuffer_PositionMetallicHandle = {};
 			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
 			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
@@ -166,8 +178,11 @@ namespace flex
 				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
-			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
+			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false, false);
+			//GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
+
+			GenerateGLTexture(m_PointLightIconHandle.id, RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", true, false, true);
+			GenerateGLTexture(m_DirectionalLightIconHandle.id, RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", true, false, true);
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
@@ -197,20 +212,20 @@ namespace flex
 			m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 			
 
-			// Sprite quad
+			// 2D Quad
 			{
-				VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
-				spriteQuadVertexBufferDataCreateInfo.positions_2D = {
+				VertexBufferData::CreateInfo quad2DVertexBufferDataCreateInfo = {};
+				quad2DVertexBufferDataCreateInfo.positions_2D = {
 					glm::vec2(-1.0f,  -1.0f),
 					glm::vec2(-1.0f, 1.0f),
 					glm::vec2(1.0f,  -1.0f),
-
+							
 					glm::vec2(1.0f,  -1.0f),
 					glm::vec2(-1.0f, 1.0f),
 					glm::vec2(1.0f, 1.0f),
 				};
 
-				spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				quad2DVertexBufferDataCreateInfo.texCoords_UV = {
 					glm::vec2(0.0f, 0.0f),
 					glm::vec2(0.0f, 1.0f),
 					glm::vec2(1.0f, 0.0f),
@@ -220,59 +235,116 @@ namespace flex
 					glm::vec2(1.0f, 1.0f),
 				};
 
-				spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
+				quad2DVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION_2D |
+					(u32)VertexAttribute::UV;
 
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
+				m_Quad2DVertexBufferData = {};
+				m_Quad2DVertexBufferData.Initialize(&quad2DVertexBufferDataCreateInfo);
+
+
+				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::NONE);
+				m_PersistentObjects.push_back(quad2DGameObject);
+				quad2DGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo quad2DCreateInfo = {};
+				quad2DCreateInfo.vertexBufferData = &m_Quad2DVertexBufferData;
+				quad2DCreateInfo.materialID = m_PostProcessMatID;
+				quad2DCreateInfo.depthWriteEnable = false;
+				quad2DCreateInfo.gameObject = quad2DGameObject;
+				quad2DCreateInfo.enableCulling = false;
+				quad2DCreateInfo.visibleInSceneExplorer = false;
+				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				quad2DCreateInfo.depthWriteEnable = false;
+				m_Quad2DRenderID = InitializeRenderObject(&quad2DCreateInfo);
+
+				m_Quad2DVertexBufferData.DescribeShaderVariables(this, m_Quad2DRenderID);
+			}
+
+			// 3D Quad
+			{
+				VertexBufferData::CreateInfo quad3DVertexBufferDataCreateInfo = {};
+				quad3DVertexBufferDataCreateInfo.positions_3D = {
+					glm::vec3(-1.0f,  -1.0f, 0.0f),
+					glm::vec3(-1.0f, 1.0f, 0.0f),
+					glm::vec3(1.0f,  -1.0f, 0.0f),
+
+					glm::vec3(1.0f,  -1.0f, 0.0f),
+					glm::vec3(-1.0f, 1.0f, 0.0f),
+					glm::vec3(1.0f, 1.0f, 0.0f),
 				};
 
-				spriteQuadVertexBufferDataCreateInfo.attributes =
-					(u32)VertexAttribute::POSITION_2D |
-					(u32)VertexAttribute::UV |
-					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+				quad3DVertexBufferDataCreateInfo.texCoords_UV = {
+					glm::vec2(0.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 0.0f),
 
-				m_SpriteQuadVertexBufferData = {};
-				m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
+					glm::vec2(1.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 1.0f),
+				};
 
 
-				GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", GameObjectType::NONE);
-				m_PersistentObjects.push_back(spriteQuadGameObject);
-				spriteQuadGameObject->SetVisible(false);
+				quad3DVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV;
 
-				RenderObjectCreateInfo spriteQuadCreateInfo = {};
-				spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
-				spriteQuadCreateInfo.materialID = m_SpriteMatID;
-				spriteQuadCreateInfo.depthWriteEnable = false;
-				spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
-				spriteQuadCreateInfo.enableCulling = false;
-				spriteQuadCreateInfo.visibleInSceneExplorer = false;
-				spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				spriteQuadCreateInfo.depthWriteEnable = false;
-				m_SpriteQuadRenderID = InitializeRenderObject(&spriteQuadCreateInfo);
+				m_Quad3DVertexBufferData = {};
+				m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
 
-				m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
+
+				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::NONE);
+				m_PersistentObjects.push_back(quad3DGameObject);
+				quad3DGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo quad3DCreateInfo = {};
+				quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
+				quad3DCreateInfo.materialID = m_SpriteMatID;
+				quad3DCreateInfo.depthWriteEnable = false;
+				quad3DCreateInfo.gameObject = quad3DGameObject;
+				quad3DCreateInfo.enableCulling = false;
+				quad3DCreateInfo.visibleInSceneExplorer = false;
+				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				quad3DCreateInfo.depthWriteEnable = false;
+				quad3DCreateInfo.editorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
+
+				m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
 			}
 
 			// Draw loading text
 			{
-				glm::vec3 pos(0.0f);
-				glm::quat rot = glm::quat();
-				glm::vec3 scale(1.0f, -1.0f, 1.0f);
+				//glm::vec3 pos(0.0f);
+				//glm::quat rot = glm::quat(glm::vec3(0.0f));
+				//glm::vec3 scale(1.0f, -1.0f, 1.0f);
 				glm::vec4 color(1.0f);
-				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, 0, 0, m_SpriteMatID,
-							   pos, rot, scale, AnchorPoint::WHOLE, color);
+
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.screenSpace = true;
+				drawInfo.readDepth = false;
+				drawInfo.writeDepth = false;
+				//drawInfo.pos = pos;
+				//drawInfo.rotation = rot;
+				//drawInfo.scale = scale;
+				drawInfo.materialID = m_SpriteMatID;
+				drawInfo.color = color;
+				drawInfo.anchor = AnchorPoint::WHOLE;
+				drawInfo.inputTextureHandle = m_LoadingTextureHandle.id;
+				drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+				DrawSpriteQuad(gameContext, drawInfo);
 				SwapBuffers(gameContext);
 			}
 
 			if (m_BRDFTextureHandle.id == 0)
 			{
 				Logger::LogInfo("Generating BRDF LUT");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false,
-										m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
+				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, 
+										m_BRDFTextureSize, 
+										false,
+										m_BRDFTextureHandle.internalFormat, 
+										m_BRDFTextureHandle.format,
+										m_BRDFTextureHandle.type);
 				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
 
@@ -400,7 +472,8 @@ namespace flex
 			}
 			m_PersistentObjects.clear();
 
-			DestroyRenderObject(m_SpriteQuadRenderID);
+			DestroyRenderObject(m_Quad3DRenderID);
+			DestroyRenderObject(m_Quad2DRenderID);
 			
 			DestroyRenderObject(m_GBufferQuadRenderID);
 
@@ -433,7 +506,8 @@ namespace flex
 			}
 
 			m_gBufferQuadVertexBufferData.Destroy();
-			m_SpriteQuadVertexBufferData.Destroy();
+			m_Quad2DVertexBufferData.Destroy();
+			m_Quad3DVertexBufferData.Destroy();
 
 			// TODO: Is this wanted here?
 			glfwTerminate();
@@ -618,26 +692,28 @@ namespace flex
 				std::string filepath;
 				std::string textureName;
 				bool flipVertically;
-				std::function<bool(u32&, const std::string&, bool, bool)> createFunction;
+				bool alpha;
+				bool generateMipMaps;
+				std::function<bool(u32&, const std::string&, bool, bool, bool)> createFunction;
 			};
 
 			// Samplers that need to be loaded from file
 			SamplerCreateInfo samplerCreateInfos[] =
 			{
 				{ shader.shader.needAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID, 
-				createInfo->albedoTexturePath, "albedoSampler", false, GenerateGLTexture },
+				createInfo->albedoTexturePath, "albedoSampler", false, false, true, GenerateGLTexture },
 				{ shader.shader.needMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID, 
-				createInfo->metallicTexturePath, "metallicSampler", false,GenerateGLTexture },
+				createInfo->metallicTexturePath, "metallicSampler", false, false,true, GenerateGLTexture },
 				{ shader.shader.needRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID, 
-				createInfo->roughnessTexturePath, "roughnessSampler" ,false, GenerateGLTexture },
+				createInfo->roughnessTexturePath, "roughnessSampler" ,false, false, true,GenerateGLTexture },
 				{ shader.shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID, 
-				createInfo->aoTexturePath, "aoSampler", false,GenerateGLTexture },
+				createInfo->aoTexturePath, "aoSampler", false,false, true,GenerateGLTexture },
 				{ shader.shader.needDiffuseSampler, mat.material.generateDiffuseSampler, &mat.diffuseSamplerID, 
-				createInfo->diffuseTexturePath, "diffuseSampler", false,GenerateGLTexture },
+				createInfo->diffuseTexturePath, "diffuseSampler", false,false, true,GenerateGLTexture },
 				{ shader.shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID, 
-				createInfo->normalTexturePath, "normalSampler",false, GenerateGLTexture },
+				createInfo->normalTexturePath, "normalSampler",false, false, true,GenerateGLTexture },
 				{ shader.shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
-				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", true, GenerateHDRGLTexture },
+				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", true, true, false, GenerateHDRGLTexture },
 			};
 
 			i32 binding = 0;
@@ -660,7 +736,11 @@ namespace flex
 								std::string textureProfileBlockName = "load texture " + fileNameClean;
 								PROFILE_BEGIN(textureProfileBlockName);
 								// Texture hasn't been loaded yet, load it now
-								samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, samplerCreateInfo.flipVertically, false);
+								samplerCreateInfo.createFunction(*samplerCreateInfo.id, 
+																 samplerCreateInfo.filepath,
+																 samplerCreateInfo.alpha,
+																 samplerCreateInfo.flipVertically,
+																 samplerCreateInfo.generateMipMaps);
 								PROFILE_END(textureProfileBlockName);
 
 								Profiler::PrintBlockDuration(textureProfileBlockName);
@@ -958,6 +1038,8 @@ namespace flex
 
 			if (material.material.generateReflectionProbeMaps)
 			{
+				BatchRenderObjects(gameContext);
+
 				std::string profileBlockName = "capturing scene to cubemap " + renderObject->gameObject->GetName();
 				PROFILE_BEGIN(profileBlockName);
 				CaptureSceneToCubemap(gameContext, renderID);
@@ -1434,8 +1516,6 @@ namespace flex
 
 		void GLRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
 		{
-			BatchRenderObjects(gameContext);
-
 			DrawCallInfo drawCallInfo = {};
 			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
 			drawCallInfo.bRenderToCubemap = true;
@@ -1623,7 +1703,6 @@ namespace flex
 					if (renderObject && 
 						m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
-						Logger::LogInfo("Capturing reflection probe");
 						CaptureSceneToCubemap(gameContext, renderObject->renderID);
 						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
 						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
@@ -1658,7 +1737,10 @@ namespace flex
 				PhysicsDebugRender(gameContext);
 			}
 
-			DrawEditorObjects(gameContext, drawCallInfo);
+			if (gameContext.engineInstance->IsRenderingEditorObjects())
+			{
+				DrawEditorObjects(gameContext, drawCallInfo);
+			}
 
 			// Screen-space objects
 #if 0
@@ -2071,20 +2153,35 @@ namespace flex
 			}
 
 			glm::vec3 pos(0.0f);
-			glm::quat rot = glm::quat();
-			glm::vec3 scale(1.0f, 1.0f, 1.0f);
+			glm::quat rot = glm::quat(glm::vec3(0.0));
+			glm::vec3 scale(1.0f);
 			glm::vec4 color(1.0f);
-			DrawSpriteQuad(gameContext, m_OffscreenTexture0Handle.id, FBO, RBO,
-						   m_PostProcessMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
+
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.screenSpace = false;
+			drawInfo.readDepth = false;
+			drawInfo.writeDepth = false;
+			drawInfo.FBO = FBO;
+			drawInfo.RBO = RBO;
+			drawInfo.pos = pos;
+			drawInfo.rotation = rot;
+			drawInfo.scale = scale;
+			drawInfo.materialID = m_PostProcessMatID;
+			drawInfo.color = color;
+			drawInfo.anchor = AnchorPoint::WHOLE;
+			drawInfo.inputTextureHandle = m_OffscreenTexture0Handle.id;
+			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
+
+			DrawSpriteQuad(gameContext, drawInfo);
 
 			if (bFXAAEnabled)
 			{
 				FBO = 0;
 				RBO = 0;
 
-				scale = glm::vec3(1.0f, 1.0f, 1.0f);
-				DrawSpriteQuad(gameContext, m_OffscreenTexture1Handle.id, FBO, RBO,
-							   m_PostFXAAMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
+				drawInfo.inputTextureHandle = m_OffscreenTexture1Handle.id;
+				drawInfo.materialID = m_PostFXAAMatID;
+				DrawSpriteQuad(gameContext, drawInfo);
 			}
 
 			{
@@ -2112,56 +2209,80 @@ namespace flex
 			//glm::vec3 scale(100.0f);
 			//glm::vec4 color(1.0f);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
+			//			   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color);
+			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::BOTTOM_LEFT, color);
+			//			   pos, rot, scale, AnchorPoint::BOTTOM_LEFT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::LEFT, color);
+			//			   pos, rot2, scale, AnchorPoint::LEFT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::TOP_LEFT, color);
+			//			   pos, rot, scale, AnchorPoint::TOP_LEFT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::TOP, color);
+			//			   pos, rot2, scale, AnchorPoint::TOP, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::TOP_RIGHT, color);
+			//			   pos, rot, scale, AnchorPoint::TOP_RIGHT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::RIGHT, color);
+			//			   pos, rot2, scale, AnchorPoint::RIGHT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f));
+			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f), true);
 		}
 
 		void GLRenderer::DrawWorldSpaceSprites(const GameContext& gameContext)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-			//glm::vec3 pos(0.0f);
-			//glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
-			//glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
-			//glm::vec3 scale(100.0f);
-			//glm::vec4 color(1.0f);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
+			glm::quat rot = glm::quat(glm::vec3(0.0f));
+			glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.FBO = m_Offscreen0FBO;
+			drawInfo.RBO = m_Offscreen0RBO;
+			drawInfo.screenSpace = false;
+			drawInfo.readDepth = true;
+			drawInfo.writeDepth = true;
+			drawInfo.rotation = rot;
+			drawInfo.scale = scale;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+			BaseCamera* cam = gameContext.cameraManager->CurrentCamera();
+			glm::vec3 camPos = cam->GetPosition();
+			glm::vec3 camUp = cam->GetUp();
+			for (const PointLight& pointLight : m_PointLights)
+			{
+				if (pointLight.enabled)
+				{
+					drawInfo.pos = pointLight.position;
+					drawInfo.color = pointLight.color * 1.5f;
+					drawInfo.inputTextureHandle = m_PointLightIconHandle.id;
+					//glm::vec3 dpos = glm::normalize(drawInfo.pos - cam->GetPosition());
+					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight.position, camUp);
+					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+					DrawSpriteQuad(gameContext, drawInfo);
+				}
+			}
+			
+			if (m_DirectionalLight.enabled)
+			{
+				drawInfo.color = m_DirectionalLight.color * 1.5f;
+				drawInfo.pos = m_DirectionalLight.position;
+				drawInfo.inputTextureHandle = m_DirectionalLightIconHandle.id;
+				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight.position, camUp);
+				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+				DrawSpriteQuad(gameContext, drawInfo);
+			}
 		}
 
 		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, 
-										u32 inputTextureHandle,
-										u32 FBO, 
-										u32 RBO,
-										MaterialID materialID,
-										const glm::vec3& posOff, 
-										const glm::quat& rotationOff, 
-										const glm::vec3& scaleOff,
-										AnchorPoint anchor,
-										const glm::vec4& color,
-										bool writeDepth)
+										const SpriteQuadDrawInfo& drawInfo)
 		{
-			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
-			if (!spriteRenderObject)
+			GLRenderObject* spriteRenderObject = GetRenderObject(drawInfo.spriteObjectRenderID);
+			if (!spriteRenderObject ||
+				(spriteRenderObject->editorObject && !gameContext.engineInstance->IsRenderingEditorObjects()))
 			{
 				return;
 			}
 
-			spriteRenderObject->materialID = materialID;
+			spriteRenderObject->materialID = drawInfo.materialID;
 
 			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
 			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
@@ -2171,75 +2292,113 @@ namespace flex
 
 			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("model"))
 			{
-				glm::vec3 scale(1.0f);
-				
-				if (anchor != AnchorPoint::WHOLE)
+				glm::vec3 translation = drawInfo.pos;
+				glm::quat rotation = drawInfo.rotation;
+				glm::vec3 scale = drawInfo.scale;
+
+				if (drawInfo.screenSpace)
 				{
-					scale = glm::vec3(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y, 1.0f);
+					scale.y *= -1;
+
+					if (drawInfo.anchor != AnchorPoint::WHOLE)
+					{
+						scale *= glm::vec3(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y, 1.0f);
+					}
+					////scale *= glm::min(frameBufferSize.x * 2.0f, frameBufferSize.y * 2.0f);
+					//scale *= 400.0f;
+					//const real minScale = 0.2f;
+					//const real maxScale = 0.5f;
+					//scale *= glm::vec3((sin(gameContext.elapsedTime * 0.4f) * 0.5f + 0.5f) * (maxScale - minScale) + minScale);
+
+					switch (drawInfo.anchor)
+					{
+					case AnchorPoint::CENTER:
+						// Already centered (zero)
+						break;
+					case AnchorPoint::TOP_LEFT:
+						translation += glm::vec3(-1.0f + (scale.x), (1.0f - scale.y), 0.0f);
+						break;
+					case AnchorPoint::TOP:
+						translation += glm::vec3(0.0f, (1.0f - scale.y), 0.0f);
+						break;
+					case AnchorPoint::TOP_RIGHT:
+						translation += glm::vec3(1.0f - (scale.x), (1.0f - scale.y), 0.0f);
+						break;
+					case AnchorPoint::RIGHT:
+						translation += glm::vec3(1.0f - (scale.x), 0.0f, 0.0f);
+						break;
+					case AnchorPoint::BOTTOM_RIGHT:
+						translation += glm::vec3(1.0f - (scale.x), (-1.0f + scale.y), 0.0f);
+						break;
+					case AnchorPoint::BOTTOM:
+						translation += glm::vec3(0.0f, (-1.0f + scale.y), 0.0f);
+						break;
+					case AnchorPoint::BOTTOM_LEFT:
+						translation += glm::vec3(-1.0f + (scale.x), (-1.0f + scale.y), 0.0f);
+						break;
+					case AnchorPoint::LEFT:
+						translation += glm::vec3(-1.0f + (scale.x), 0.0f, 0.0f);
+						break;
+					case AnchorPoint::WHOLE:
+						// Already centered (zero)
+						break;
+					default:
+						break;
+					}
 				}
-				////scale *= glm::min(frameBufferSize.x * 2.0f, frameBufferSize.y * 2.0f);
-				//scale *= 400.0f;
-				//const real minScale = 0.2f;
-				//const real maxScale = 0.5f;
-				//scale *= glm::vec3((sin(gameContext.elapsedTime * 0.4f) * 0.5f + 0.5f) * (maxScale - minScale) + minScale);
-				scale *= scaleOff;
-
-				glm::quat rotation = rotationOff;
-
-				glm::vec3 translation(0.0f);
-				switch (anchor)
-				{
-				case AnchorPoint::CENTER:
-					// Already centered (zero)
-					break;
-				case AnchorPoint::TOP_LEFT:
-					translation = glm::vec3(-1.0f + (scale.x), (1.0f - scale.y), 0.0f);
-					break;
-				case AnchorPoint::TOP:
-					translation = glm::vec3(0.0f, (1.0f - scale.y), 0.0f);
-					break;
-				case AnchorPoint::TOP_RIGHT:
-					translation = glm::vec3(1.0f - (scale.x), (1.0f - scale.y), 0.0f);
-					break;
-				case AnchorPoint::RIGHT:
-					translation = glm::vec3(1.0f - (scale.x), 0.0f, 0.0f);
-					break;
-				case AnchorPoint::BOTTOM_RIGHT:
-					translation = glm::vec3(1.0f - (scale.x), (-1.0f + scale.y), 0.0f);
-					break;
-				case AnchorPoint::BOTTOM:
-					translation = glm::vec3(0.0f, (-1.0f + scale.y), 0.0f);
-					break;
-				case AnchorPoint::BOTTOM_LEFT:
-					translation = glm::vec3(-1.0f + (scale.x), (-1.0f + scale.y), 0.0f);
-					break;
-				case AnchorPoint::LEFT:
-					translation = glm::vec3(-1.0f + (scale.x), 0.0f, 0.0f);
-					break;
-				case AnchorPoint::WHOLE:
-					// Already centered (zero)
-					break;
-				default:
-					break;
-				}
-
-				translation += posOff;
 
 				glm::mat4 matScale = glm::scale(glm::mat4(1.0f), scale);
 				glm::mat4 matRot = glm::mat4(rotation);
 				glm::mat4 matTrans = glm::translate(glm::mat4(1.0f), translation);
 				// What about SRT? :o
-				glm::mat4 transformMat = matTrans * matScale * matRot;
-				
-				glUniformMatrix4fv(spriteMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
+				glm::mat4 model = matTrans * matRot * matScale;
+				//glm::mat4 model = matTrans * matScale * matRot;
+
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, true, &model[0][0]);
 				CheckGLErrorMessages();
+			}
+
+			if (spriteShader.shader.constantBufferUniforms.HasUniform("view"))
+			{
+				if (drawInfo.screenSpace)
+				{
+					glm::mat4 view = glm::mat4(1.0f); // gameContext.cameraManager->CurrentCamera()->GetView();
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
+					CheckGLErrorMessages();
+				}
+				else
+				{
+					glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
+					CheckGLErrorMessages();
+				}
+			}
+
+			if (spriteShader.shader.constantBufferUniforms.HasUniform("projection"))
+			{
+				if (drawInfo.screenSpace)
+				{
+					glm::mat4 projection = glm::mat4(1.0f); // gameContext.cameraManager->CurrentCamera()->GetProjection();
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
+					CheckGLErrorMessages();
+				}
+				else
+				{
+					glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
+					CheckGLErrorMessages();
+				}
 			}
 
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			{
-				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &color.r);
+				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
 				CheckGLErrorMessages();
 			}
 
@@ -2284,9 +2443,9 @@ namespace flex
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 			CheckGLErrorMessages();
 
-			glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+			glBindFramebuffer(GL_FRAMEBUFFER, drawInfo.FBO);
 			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+			glBindRenderbuffer(GL_RENDERBUFFER, drawInfo.RBO);
 			CheckGLErrorMessages();
 
 			glBindVertexArray(spriteRenderObject->VAO);
@@ -2295,7 +2454,7 @@ namespace flex
 			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, inputTextureHandle);
+			glBindTexture(GL_TEXTURE_2D, drawInfo.inputTextureHandle);
 			CheckGLErrorMessages();
 
 			// TODO: Use member
@@ -2304,8 +2463,16 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			CheckGLErrorMessages();
 
-			// TODO: Is this necessary to clear the depth?
-			if (writeDepth)
+			if (drawInfo.readDepth)
+			{
+				glDepthFunc(GL_LEQUAL);
+			}
+			else
+			{
+				glDepthFunc(GL_ALWAYS);
+			}
+
+			if (drawInfo.writeDepth)
 			{
 				glDepthMask(GL_TRUE);
 			}
@@ -3210,7 +3377,7 @@ namespace flex
 			return binding;
 		}
 
-		void GLRenderer::CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, FrameBufferHandle& handle)
+		void GLRenderer::CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, TextureHandle& handle)
 		{
 			glGenFramebuffers(1, FBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, *FBO);
@@ -3744,12 +3911,15 @@ namespace flex
 			// Sprite
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
+
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
 			++shaderID;
 
@@ -3761,7 +3931,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("contrastBrightnessSaturation");
 			++shaderID;

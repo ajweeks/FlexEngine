@@ -9,11 +9,7 @@
 			"const albedo" : "0.780000, 0.120000, 0.110000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.250000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr",
@@ -21,11 +17,7 @@
 			"const albedo" : "0.230000, 0.250000, 0.290000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr",
@@ -33,11 +25,7 @@
 			"const albedo" : "0.800000, 0.540000, 0.100000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "pbr chrome",
@@ -45,11 +33,7 @@
 			"const albedo" : "0.800000, 0.800000, 0.800000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
-			"const ao" : 1.000000,
-			"enable albedo sampler" : false,
-			"enable metallic sampler" : false,
-			"enable roughness sampler" : false,
-			"enable ao sampler" : false
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "Skybox",
@@ -114,7 +98,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "100.000000, 1.000000, 100.000000"
+				"half extents" : "10000.000000, 1.000000, 10000.000000"
 			},
 			"rigid body" : 
 			{
@@ -161,6 +145,7 @@
 	"directional light" : 
 	{
 		"direction" : "0.380000, 0.750000, -0.160000",
+		"position" : "0.000000, 0.000000, 0.000000",
 		"color" : "1.000000, 1.000000, 1.000000",
 		"enabled" : true,
 		"brightness" : 2.355000

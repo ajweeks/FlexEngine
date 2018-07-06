@@ -50,6 +50,54 @@
 			"generate prefiltered map" : true,
 			"generated prefiltered map size" : "128.000000, 128.000000",
 			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
+		},
+		{
+			"name" : "cerberus",
+			"shader" : "pbr",
+			"const albedo" : "0.000000, 0.000000, 0.000000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000,
+			"enable albedo sampler" : true,
+			"enable metallic sampler" : true,
+			"enable roughness sampler" : true,
+			"enable ao sampler" : true,
+			"enable normal sampler" : true,
+			"generate albedo sampler" : true,
+			"generate metallic sampler" : true,
+			"generate roughness sampler" : true,
+			"generate ao sampler" : true,
+			"generate normal sampler" : true,
+			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga",
+			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga",
+			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga",
+			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO.tga",
+			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga"
+		},
+		{
+			"name" : "pbr chrome",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.800000, 0.800000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "Skybox",
+			"shader" : "skybox",
+			"const albedo" : "0.000000, 0.000000, 0.000000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000,
+			"generate hdr cubemap sampler" : true,
+			"enable cubemap sampler" : true,
+			"enable cubemap trilinear filtering" : true,
+			"generated cubemap size" : "512.000000, 512.000000",
+			"generate irradiance sampler" : true,
+			"generated irradiance cubemap size" : "32.000000, 32.000000",
+			"generate prefiltered map" : true,
+			"generated prefiltered map size" : "128.000000, 128.000000",
+			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
 		}
 	],
 	"entities" : 
@@ -81,9 +129,76 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"position" : "0.000000, 1.140000, 0.000000",
+						"position" : "0.000000, -0.333000, 0.295000",
 						"rotation" : "0.000000, -0.000000, 0.000000",
-						"scale" : "0.100000, 0.100000, 0.100000"
+						"scale" : "0.005000, 0.005000, 0.005000"
+					},
+					"mesh" : 
+					{
+						"prefab" : "cube",
+						"swapNormalYZ" : false,
+						"flipNormalZ" : false,
+						"flipU" : false,
+						"flipV" : false
+					},
+					"material array index" : 0
+				}
+			]
+		},
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 2
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "3.100000, 1.000000, 0.000000",
+				"rotation" : "0.036652, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 1
+		},
+		{
+			"name" : "Cerberus",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 7.800000, -5.900000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "20.000000, 20.000000, 20.000000"
+			},
+			"mesh" : 
+			{
+				"file" : "Cerberus_by_Andrew_Maximov/cerberus.glb",
+				"swapNormalYZ" : true,
+				"flipNormalZ" : true,
+				"flipU" : false,
+				"flipV" : true
+			},
+			"material array index" : 0,
+			"children" : 
+			[
+				{
+					"name" : "New Object",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"position" : "0.000000, -0.333000, 0.295000",
+						"rotation" : "0.000000, -0.000000, 0.000000",
+						"scale" : "0.005000, 0.005000, 0.005000"
 					},
 					"mesh" : 
 					{
@@ -126,24 +241,39 @@
 	[
 		{
 			"name" : "",
+			"position" : "4.700000, 13.300000, 15.900000",
+			"color" : "0.523781, 0.546497, 1.000000",
+			"enabled" : true,
+			"brightness" : 206.572998
+		},
+		{
+			"name" : "",
+			"position" : "-4.400000, 9.800000, -13.200000",
+			"color" : "0.886507, 0.853158, 0.471757",
+			"enabled" : true,
+			"brightness" : 370.891998
+		},
+		{
+			"name" : "",
 			"position" : "13.900001, 7.500000, 9.800000",
 			"color" : "0.523781, 0.546497, 1.000000",
 			"enabled" : true,
-			"brightness" : 500.000000
+			"brightness" : 356.807007
 		},
 		{
 			"name" : "",
 			"position" : "7.900001, 4.200000, -6.900000",
 			"color" : "0.934571, 0.659195, 0.327762",
 			"enabled" : true,
-			"brightness" : 395.833008
+			"brightness" : 323.944000
 		}
 	],
 	"directional light" : 
 	{
 		"direction" : "0.380000, 0.750000, -0.160000",
-		"color" : "1.000000, 1.000000, 1.000000",
+		"position" : "0.700000, 20.000000, -1.000000",
+		"color" : "0.870165, 0.826675, 0.589158",
 		"enabled" : true,
-		"brightness" : 2.355000
+		"brightness" : 1.127000
 	}
 }

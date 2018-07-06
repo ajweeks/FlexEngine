@@ -416,6 +416,11 @@ namespace flex
 		return m_bRenderImGui;
 	}
 
+	bool FlexEngine::IsRenderingEditorObjects() const
+	{
+		return m_bRenderEditorObjects;
+	}
+
 	void FlexEngine::CycleRenderer()
 	{
 		// TODO? ??
@@ -654,6 +659,7 @@ namespace flex
 					if (m_CurrentlySelectedObject)
 					{
 						Transform* selectedObjectTransform = m_CurrentlySelectedObject->GetTransform();
+						glm::vec3 selectedObjectScale = selectedObjectTransform->GetWorldScale();
 						real scale = 0.01f;
 						if (m_DraggingAxisIndex == 0) // X Axis
 						{
@@ -665,7 +671,7 @@ namespace flex
 							else if (bMouseDown)
 							{
 								glm::vec3 right = selectedObjectTransform->GetLocalRotation() * glm::vec3(1, 0, 0);
-								glm::vec3 deltaPos = (dragDist.x * scale * right);
+								glm::vec3 deltaPos = (dragDist.x * scale * selectedObjectScale.x * right);
 								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
 							}
 						}
@@ -679,7 +685,7 @@ namespace flex
 							else if (bMouseDown)
 							{
 								glm::vec3 up = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 1, 0);
-								glm::vec3 deltaPos = up * -dragDist.y * scale;
+								glm::vec3 deltaPos = (-dragDist.y * selectedObjectScale.y * scale * up);
 								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
 							}
 						}
@@ -693,12 +699,17 @@ namespace flex
 							else if (bMouseDown)
 							{
 								glm::vec3 forward = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 0, 1);
-								glm::vec3 deltaPos = forward * -dragDist.x * scale;
+								glm::vec3 deltaPos = (-dragDist.x * selectedObjectScale.z * scale * forward);
 								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
 							}
 						}
 					}
 				}
+			}
+
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
+			{
+				m_bRenderEditorObjects = !m_bRenderEditorObjects;
 			}
 
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))

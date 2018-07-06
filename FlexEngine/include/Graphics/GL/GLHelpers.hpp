@@ -146,10 +146,10 @@ namespace flex
 
 		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type);
 		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
-		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
-		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps);
+		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps);
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
 
 		struct GLCubemapCreateInfo
 		{

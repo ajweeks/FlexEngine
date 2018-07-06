@@ -61,6 +61,38 @@ namespace flex
 		image.pixels = nullptr;
 	}
 
+	bool HDRImage::Load(const std::string& hdrFilePath, bool alpha, bool flipVertically)
+	{
+		filePath = hdrFilePath;
+
+		std::string fileName = hdrFilePath;
+		StripLeadingDirectories(fileName);
+		Logger::LogInfo("Loading HDR texture " + fileName);
+
+		stbi_set_flip_vertically_on_load(flipVertically);
+
+		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, alpha ? STBI_rgb_alpha : STBI_rgb);
+
+		channelCount = 4;
+
+		if (!pixels)
+		{
+			Logger::LogError("Failed to load HDR image at " + filePath);
+			return false;
+		}
+
+		assert(width <= Renderer::MAX_TEXTURE_DIM);
+		assert(height <= Renderer::MAX_TEXTURE_DIM);
+		assert(channelCount > 0);
+
+		return true;
+	}
+
+	void HDRImage::Free()
+	{
+		stbi_image_free(pixels);
+	}
+
 	std::string FloatToString(real f, i32 precision)
 	{
 		std::stringstream stream;
@@ -932,37 +964,5 @@ namespace flex
 		std::string absolutePath = workingDirectory + '\\' + strippedFilePath;
 
 		return absolutePath;
-	}
-
-	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)
-	{
-		filePath = hdrFilePath;
-
-		std::string fileName = hdrFilePath;
-		StripLeadingDirectories(fileName);
-		Logger::LogInfo("Loading HDR texture " + fileName);
-
-		stbi_set_flip_vertically_on_load(flipVertically);
-
-		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
-
-		channelCount = 4;
-
-		if (!pixels)
-		{
-			Logger::LogError("Failed to load HDR image at " + filePath);
-			return false;
-		}
-		
-		assert(width <= Renderer::MAX_TEXTURE_DIM);
-		assert(height <= Renderer::MAX_TEXTURE_DIM);
-		assert(channelCount > 0);
-
-		return true;
-	}
-
-	void HDRImage::Free()
-	{
-		stbi_image_free(pixels);
 	}
 } // namespace flex

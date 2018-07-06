@@ -305,12 +305,6 @@ namespace flex
 			m_PhysicsWorld->Update(gameContext.deltaTime);
 		}
 
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
-		{
-			m_Grid->SetVisible(!m_Grid->IsVisible());
-			m_WorldOrigin->SetVisible(!m_WorldOrigin->IsVisible());
-		}
-
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
@@ -1136,6 +1130,12 @@ namespace flex
 		std::string dirStr = obj.GetString("direction");
 		directionalLight.direction = glm::vec4(ParseVec3(dirStr), 0);
 
+		std::string posStr = obj.GetString("position");
+		if (!posStr.empty())
+		{
+			directionalLight.position = ParseVec3(posStr);
+		}
+
 		obj.SetVec4Checked("color", directionalLight.color);
 
 		obj.SetFloatChecked("brightness", directionalLight.brightness);
@@ -1735,6 +1735,9 @@ namespace flex
 
 		std::string dirStr = Vec3ToString(directionalLight.direction);
 		object.fields.push_back(JSONField("direction", JSONValue(dirStr)));
+
+		std::string posStr = Vec3ToString(directionalLight.position);
+		object.fields.push_back(JSONField("position", JSONValue(posStr)));
 
 		std::string colorStr = Vec3ToString(directionalLight.color);
 		object.fields.push_back(JSONField("color", JSONValue(colorStr)));
