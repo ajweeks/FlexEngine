@@ -20,6 +20,8 @@ namespace flex
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void Update(const GameContext& gameContext) = 0;
 
+		virtual void OnSceneChanged(const GameContext& gameContext);
+
 		void SetFOV(real FOV);
 		real GetFOV() const;
 		void SetZNear(real zNear);

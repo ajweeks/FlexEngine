@@ -47,6 +47,11 @@ namespace flex
 		UNREFERENCED_PARAMETER(gameContext);
 	}
 
+	void BaseCamera::OnSceneChanged(const GameContext& gameContext)
+	{
+		UNREFERENCED_PARAMETER(gameContext);
+	}
+
 	void BaseCamera::SetFOV(real FOV)
 	{
 		m_FOV = FOV;

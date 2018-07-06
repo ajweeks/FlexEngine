@@ -208,7 +208,7 @@ namespace flex
 	std::string FloatToString(real f, i32 precision);
 
 	// String will be padded with '0's to be at least minChars long (excluding a leading '-' for negative numbers)
-	std::string IntToString(i32 i, u16 minChars);
+	std::string IntToString(i32 i, u16 minChars = 0);
 
 	std::string Vec2ToString(const glm::vec2& vec);
 	std::string Vec3ToString(const glm::vec3& vec);

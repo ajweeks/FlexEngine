@@ -28,6 +28,11 @@ namespace flex
 		m_Cameras[m_ActiveCameraIndex]->Update(gameContext);
 	}
 
+	void CameraManager::OnSceneChanged(const GameContext& gameContext)
+	{
+		m_Cameras[m_ActiveCameraIndex]->OnSceneChanged(gameContext);
+	}
+
 	void CameraManager::DestroyCameras()
 	{
 		for (u32 i = 0; i < m_Cameras.size(); ++i)
@@ -48,7 +53,7 @@ namespace flex
 		return (i32)m_Cameras.size();
 	}
 
-	void CameraManager::AddCamera(BaseCamera* camera, bool switchTo)
+	void CameraManager::AddCamera(BaseCamera* camera, bool bSwitchTo)
 	{
 		assert(camera);
 
@@ -57,14 +62,14 @@ namespace flex
 		{
 			m_Cameras.push_back(camera);
 
-			if (switchTo || m_ActiveCameraIndex == -1)
+			if (bSwitchTo || m_ActiveCameraIndex == -1)
 			{
 				m_ActiveCameraIndex = (m_Cameras.size() - 1);
 			}
 		}
 	}
 
-	void CameraManager::SwtichTo(const GameContext& gameContext, BaseCamera* camera, bool align)
+	void CameraManager::SwtichTo(const GameContext& gameContext, BaseCamera* camera, bool bAlign)
 	{
 		assert(camera);
 
@@ -76,15 +81,15 @@ namespace flex
 		}
 		else
 		{
-			SwtichToIndex(gameContext, newCameraIndex, align);
+			SwtichToIndex(gameContext, newCameraIndex, bAlign);
 		}
 	}
 
-	void CameraManager::SwtichToIndex(const GameContext& gameContext, i32 index, bool align)
+	void CameraManager::SwtichToIndex(const GameContext& gameContext, i32 index, bool bAlign)
 	{
 		if (index >= 0 && index < (i32)m_Cameras.size())
 		{
-			if (align)
+			if (bAlign)
 			{
 				AlignCameras(m_Cameras[m_ActiveCameraIndex], m_Cameras[index]);
 			}
@@ -95,7 +100,7 @@ namespace flex
 		}
 	}
 
-	void CameraManager::SwtichToIndexRelative(const GameContext& gameContext, i32 delta, bool align)
+	void CameraManager::SetActiveIndexRelative(const GameContext& gameContext, i32 delta, bool bAlign)
 	{
 		i32 newIndex = m_ActiveCameraIndex + delta;
 		i32 numCameras = (i32)m_Cameras.size();
@@ -108,7 +113,7 @@ namespace flex
 			newIndex -= numCameras;
 		}
 
-		SwtichToIndex(gameContext, newIndex, align);
+		SwtichToIndex(gameContext, newIndex, bAlign);
 	}
 
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)

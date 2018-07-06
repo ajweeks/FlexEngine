@@ -48,12 +48,12 @@ namespace flex
 		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
 			gameContext.inputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::RIGHT_BUMPER))
 		{
-			gameContext.cameraManager->SwtichToIndexRelative(gameContext, 1, false);
+			gameContext.cameraManager->SetActiveIndexRelative(gameContext, 1, false);
 		}
 		else if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_MINUS) ||
 				 gameContext.inputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::LEFT_BUMPER))
 		{
-			gameContext.cameraManager->SwtichToIndexRelative(gameContext, -1, false);
+			gameContext.cameraManager->SetActiveIndexRelative(gameContext, -1, false);
 		}
 		// TODO: Make frame-rate-independent!
 

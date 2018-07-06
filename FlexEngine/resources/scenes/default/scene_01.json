@@ -1,8 +1,56 @@
 {
 	"version" : 1,
-	"name" : "scene_01",
+	"name" : "scene_03",
 	"materials" : 
 	[
+		{
+			"name" : "pbr grey",
+			"shader" : "pbr",
+			"const albedo" : "0.780000, 0.120000, 0.110000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.250000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr",
+			"shader" : "pbr",
+			"const albedo" : "0.230000, 0.250000, 0.290000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.540000, 0.100000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
+		{
+			"name" : "pbr chrome",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.800000, 0.800000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 1.000000,
+			"enable albedo sampler" : false,
+			"enable metallic sampler" : false,
+			"enable roughness sampler" : false,
+			"enable ao sampler" : false
+		},
 		{
 			"name" : "Skybox",
 			"shader" : "skybox",
@@ -18,282 +66,33 @@
 			"generated irradiance cubemap size" : "32.000000, 32.000000",
 			"generate prefiltered map" : true,
 			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Ref.hdr"
-		},
-		{
-			"name" : "pbr purple",
-			"shader" : "pbr",
-			"const albedo" : "0.200000, 0.120000, 0.350000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.250000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr grey",
-			"shader" : "pbr",
-			"const albedo" : "0.145000, 0.180000, 0.230000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.200000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "valve mat",
-			"shader" : "pbr",
-			"const albedo" : "0.100000, 0.260000, 0.100000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.500000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr yellow",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.540000, 0.100000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.200000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr chrome",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "glass",
-			"shader" : "pbr",
-			"const albedo" : "0.450000, 0.890000, 0.780000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
+			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
 		}
 	],
 	"entities" : 
 	[
 		{
-			"name" : "Cornell Box",
+			"name" : "Sponza",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-21.200001, 0.000002, -0.004907",
-				"rotation" : "-1.570796, 1.570308, 0.000000",
-				"scale" : "19.999908, 19.999928, 19.999893"
-			},
-			"mesh" : 
-			{
-				"file" : "models/CornellBox/cornell-box.fbx",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 2
-		},
-		{
-			"name" : "Sphere 01",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "671.130859, -1027710.062500, -2287.723145",
-				"rotation" : "-0.550148, 0.245541, -0.966690",
-				"scale" : "1.999826, 1.999842, 1.999865"
-			},
-			"mesh" : 
-			{
-				"file" : "models/ico-sphere.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 1,
-			"collider" : 
-			{
-				"shape" : "sphere",
-				"radius" : 1046802.062500
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false
-			}
-		},
-		{
-			"name" : "Mori Knob",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "0.596793, 0.000000, 9.821850",
-				"rotation" : "0.000000, -0.794125, 0.000000",
-				"scale" : "0.999999, 1.000000, 0.999999"
-			},
-			"mesh" : 
-			{
-				"file" : "models/mori-knob.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 2
-		},
-		{
-			"name" : "Chamfer Box",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "-36.866379, 30.230469, 96.274612",
-				"rotation" : "-0.699139, 0.416403, -1.513134",
-				"scale" : "0.999980, 0.999982, 0.999997"
-			},
-			"mesh" : 
-			{
-				"file" : "models/chamfer-box.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 4,
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.499887, 0.499889, 0.499995"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false
-			}
-		},
-		{
-			"name" : "Valve 01",
-			"type" : "prefab",
-			"prefab type" : "valve",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "10.000000, 0.000000, -6.000000",
-				"rotation" : "0.000000, 0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material array index" : 3,
-			"valve info" : 
-			{
-				"range" : "0.000000, 10.000000"
-			}
-		},
-		{
-			"name" : "Valve 02",
-			"type" : "prefab",
-			"prefab type" : "valve",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "7.000000, 0.000000, 10.000000",
-				"rotation" : "0.000000, 0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material array index" : 4,
-			"valve info" : 
-			{
-				"range" : "-5.000000, 5.000000"
-			}
-		},
-		{
-			"name" : "Moving Block 01",
-			"type" : "rising block",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "-6.000000, 2.100000, 8.000000",
+				"position" : "0.000000, 0.000000, 0.000000",
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 2,
-			"collider" : 
+			"mesh" : 
 			{
-				"shape" : "box",
-				"half extents" : "1.000000, 1.000000, 1.000000"
+				"file" : "models/sponza/sponza.glb",
+				"swapNormalYZ" : false,
+				"flipNormalZ" : false,
+				"flipU" : false,
+				"flipV" : false
 			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : true,
-				"static" : false
-			},
-			"block info" : 
-			{
-				"valve name" : "Valve 01",
-				"move axis" : "0.000000, 1.000000, 0.500000",
-				"affected by gravity" : true
-			}
+			"material array index" : 0
 		},
 		{
-			"name" : "Moving Block 02",
-			"type" : "rising block",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "6.000000, 2.100000, -4.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material array index" : 1,
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000000, 1.000000, 1.000000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : true,
-				"static" : false
-			},
-			"block info" : 
-			{
-				"valve name" : "Valve 02",
-				"move axis" : "1.000000, 0.000000, 0.000000",
-				"affected by gravity" : false
-			}
-		},
-		{
-			"name" : "Glass 01",
-			"type" : "glass window",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "10.000000, 2.000000, -6.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material array index" : 6,
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000000, 0.050000, 1.0"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : true,
-				"static" : false
-			},
-			"window info" : 
-			{
-				"broken" : false
-			}
-		},
-		{
-			"name" : "Ground Plane",
+			"name" : "ground plane",
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
@@ -311,11 +110,11 @@
 				"flipU" : false,
 				"flipV" : false
 			},
-			"material array index" : 2,
+			"material array index" : 1,
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.0, 1.000000, 1.0"
+				"half extents" : "100.000000, 1.000000, 100.000000"
 			},
 			"rigid body" : 
 			{
@@ -334,7 +133,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 0
+			"material array index" : 4
 		},
 		{
 			"name" : "Reflection Probe 01",
@@ -342,21 +141,21 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 8.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
+				"position" : "3.100000, 1.000000, 0.000000",
+				"rotation" : "0.036652, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 5
+			"material array index" : 3
 		}
 	],
 	"point lights" : 
 	[
 		{
 			"name" : "Point light 01",
-			"position" : "0.000000, 37.500000, 0.000000",
-			"color" : "0.999905, 0.999900, 1.000000",
-			"enabled" : true,
-			"brightness" : 1000.000061
+			"position" : "0.000000, 10.900001, 0.000000",
+			"color" : "0.926747, 0.926159, 0.892008",
+			"enabled" : false,
+			"brightness" : 793.388062
 		}
 	],
 	"directional light" : 
@@ -364,6 +163,6 @@
 		"direction" : "0.380000, 0.750000, -0.160000",
 		"color" : "1.000000, 1.000000, 1.000000",
 		"enabled" : true,
-		"brightness" : 10.000000
+		"brightness" : 2.355000
 	}
 }

@@ -1249,16 +1249,23 @@ namespace flex
 		std::string defaultShortSaveFilePath = "scenes/default/" + m_FileName;
 		std::string savedShortSaveFilePath = "scenes/saved/" + m_FileName;
 
-		Logger::LogInfo("Deleting scene's save files (" + m_Name + ')');
+		bool bDefaultFileExists = FileExists(RESOURCE_LOCATION + defaultShortSaveFilePath);
+		bool bSavedFileExists = FileExists(RESOURCE_LOCATION + savedShortSaveFilePath);
 
-		if (FileExists(RESOURCE_LOCATION + savedShortSaveFilePath))
+		if (bSavedFileExists ||
+			bDefaultFileExists)
 		{
-			DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
-		}
+			Logger::LogInfo("Deleting scene's save files (" + m_FileName + ')');
 
-		if (FileExists(RESOURCE_LOCATION + defaultShortSaveFilePath))
-		{
-			DeleteFile(RESOURCE_LOCATION + defaultShortSaveFilePath);
+			if (bDefaultFileExists)
+			{
+				DeleteFile(RESOURCE_LOCATION + defaultShortSaveFilePath);
+			}
+
+			if (bSavedFileExists)
+			{
+				DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
+			}
 		}
 
 		m_bUsingSaveFile = false;

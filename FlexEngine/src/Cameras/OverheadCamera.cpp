@@ -29,16 +29,26 @@ namespace flex
 
 	void OverheadCamera::Initialize(const GameContext& gameContext)
 	{
-		player0 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player0");
-		player1 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player1");
-
+		FindPlayers(gameContext);
 		Update(gameContext);
 
 		BaseCamera::Initialize(gameContext);
 	}
 
+	void OverheadCamera::OnSceneChanged(const GameContext& gameContext)
+	{
+		FindPlayers(gameContext);
+		Update(gameContext);
+	}
+
 	void OverheadCamera::Update(const GameContext& gameContext)
 	{
+		if (!player0 ||
+			!player1)
+		{
+			return;
+		}
+
 		glm::vec3 dPlayerPos = player0->GetTransform()->GetWorldPosition() -
 			player1->GetTransform()->GetWorldPosition();
 		real dist = glm::length(dPlayerPos);
@@ -77,4 +87,11 @@ namespace flex
 		CalculateYawAndPitchFromForward();
 		RecalculateViewProjection(gameContext);
 	}
+
+	void OverheadCamera::FindPlayers(const GameContext& gameContext)
+	{
+		player0 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		player1 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player1");
+	}
+
 } // namespace flex

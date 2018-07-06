@@ -4644,9 +4644,8 @@ namespace flex
 
 			ImGui::NewLine();
 
-			real selectedObjectAreaHeight = 220;
 			ImGui::BeginChild("SelectedObject",
-							  ImVec2(0, selectedObjectAreaHeight),
+							  ImVec2(-20, 220),
 							  true);
 
 			if (selectedObject)

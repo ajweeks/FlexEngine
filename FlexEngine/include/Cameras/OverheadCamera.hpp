@@ -16,9 +16,12 @@ namespace flex
 		~OverheadCamera();
 
 		virtual void Initialize(const GameContext& gameContext) override;
+		virtual void OnSceneChanged(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
 
 	private:
+		void FindPlayers(const GameContext& gameContext);
+
 		GameObject* player0 = nullptr;
 		GameObject* player1 = nullptr;
 

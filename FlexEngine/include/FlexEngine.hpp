@@ -78,6 +78,8 @@ namespace flex
 		bool LoadCommonSettingsFromDisk();
 		void SaveCommonSettingsToDisk();
 
+		void DoSceneContextMenu(BaseScene* scene);
+
 		u32 m_RendererCount = 0;
 		bool m_Running = false;
 
@@ -86,6 +88,10 @@ namespace flex
 
 		sec m_MinDT = 0.0001f;
 		sec m_MaxDT = 1.0f;
+
+		real m_ImGuiMainWindowWidthMin = 200;
+		real m_ImGuiMainWindowWidthMax = 0;
+		real m_ImGuiMainWindowWidth = 350;
 
 		GameContext m_GameContext = {};
 

@@ -25,7 +25,8 @@ namespace flex
 
 		// [0, 1) 0 = no lag, higher values give smoother movement
 		real m_MoveLag = 0.5f;
-		real m_TurnLag = 0.3f;
+		// TODO: Remove turn lag entirely?
+		real m_TurnLag = 0.1f;
 		glm::vec3 m_MoveVel;
 		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
 
