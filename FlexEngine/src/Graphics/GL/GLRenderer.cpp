@@ -1749,7 +1749,7 @@ namespace flex
 			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + gameContext.elapsedTime * 6.0f) * 4.0f);
 			//}
 			
-			SetFont(m_FntUbuntuCondensed);
+			SetFont(m_FntSourceCodePro);
 			//std::string str("abcdefghijklmnopqrstuvwxyz");
 			//DrawString(str, glm::vec4(0.95f), glm::vec2(0.0f), 15, letterYOffsets1);
 			//str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
@@ -1757,19 +1757,22 @@ namespace flex
 			//str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
 			//DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-1.0f, 1.0f), 5, letterYOffsets3);
 
-			std::string str = std::string("XYZ");
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//std::string str = std::string("XYZ");
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
-			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.1f, 0.01f), 3, letterYOffsetsEmpty);
+			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, letterYOffsetsEmpty);
+			//glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			//std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
+			//DrawString(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, letterYOffsetsEmpty);
 #endif
 
 			DrawScreenSpaceSprites(gameContext);
@@ -2234,7 +2237,7 @@ namespace flex
 			drawInfo.inputTextureHandle = m_WorkTextureHandle.id;
 			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
-			DrawSpriteQuad(gameContext, drawInfo);
+			//DrawSpriteQuad(gameContext, drawInfo);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,

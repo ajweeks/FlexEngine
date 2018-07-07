@@ -70,7 +70,7 @@ namespace flex
 		REFLECTION_PROBE,
 		VALVE,
 		RISING_BLOCK,
-		GLASS_WINDOW,
+		GLASS_PANE,
 		
 
 		// NOTE: Add new types above this line
@@ -86,7 +86,7 @@ namespace flex
 		"reflection probe",
 		"valve",
 		"rising block",
-		"glass window",
+		"glass pane",
 
 
 		"NONE"

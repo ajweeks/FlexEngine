@@ -149,7 +149,7 @@ namespace flex
 		}
 		else
 		{
-			// File doesn't exist, create a new one
+			// File doesn't exist, create a new blank one
 			Logger::LogInfo("Creating new scene at: " + shortFilePath);
 
 			// Skybox
@@ -166,14 +166,14 @@ namespace flex
 				skyboxMatCreateInfo.generatePrefilteredMap = true;
 				skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
 				skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
-
 				MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
 				m_LoadedMaterials.push_back(skyboxMatID);
 
-				GameObject* skybox = new GameObject("Skybox", GameObjectType::SKYBOX);
-
-				CreateSkybox(gameContext, skyboxMatID, skybox, glm::vec3(0.0f));
+				Skybox* skybox = new Skybox("Skybox");
+				
+				JSONObject emptyObj = {};
+				skybox->ParseUniqueFields(gameContext, emptyObj, this, skyboxMatID);
 
 				AddRootObject(skybox);
 			}
@@ -187,16 +187,16 @@ namespace flex
 				reflectionProbeMatCreateInfo.constMetallic = 1.0f;
 				reflectionProbeMatCreateInfo.constRoughness = 0.0f;
 				reflectionProbeMatCreateInfo.constAO = 1.0f;
-
 				MaterialID sphereMatID = gameContext.renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
 
 				m_LoadedMaterials.push_back(sphereMatID);
 
-				GameObject* reflectionProbeSphere = new GameObject("Reflection Probe 01", GameObjectType::REFLECTION_PROBE);
+				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 				
-				CreateReflectionProbe(gameContext, sphereMatID, reflectionProbeSphere);
+				JSONObject emptyObj = {};
+				reflectionProbe->ParseUniqueFields(gameContext, emptyObj, this, sphereMatID);
 
-				AddRootObject(reflectionProbeSphere);
+				AddRootObject(reflectionProbe);
 			}
 		}
 
@@ -509,9 +509,7 @@ namespace flex
 					prefabInstance->m_Transform = JSONParser::ParseTransform(transformObj);
 				}
 
-				GameObjectType type = StringToGameObjectType(prefab->GetString("type"));
-
-				ParseUniqueObjectFields(gameContext, obj, type, matID, prefabInstance);
+				prefabInstance->ParseUniqueFields(gameContext, obj, this, matID);
 
 				return prefabInstance;
 			}
@@ -536,7 +534,31 @@ namespace flex
 			matID = ParseMatID(obj);
 		}
 
-		newGameObject = new GameObject(objectName, gameObjectType);
+		switch (gameObjectType)
+		{
+		case GameObjectType::PLAYER:
+			Logger::LogError("Player was serialized to scene file!");
+			break;
+		case GameObjectType::SKYBOX:
+			newGameObject = new Skybox(objectName);
+			break;
+		case GameObjectType::REFLECTION_PROBE:
+			newGameObject = new ReflectionProbe(objectName);
+			break;
+		case GameObjectType::VALVE:
+			newGameObject = new Valve(objectName);
+			break;
+		case GameObjectType::RISING_BLOCK:
+			newGameObject = new RisingBlock(objectName);
+			break;
+		case GameObjectType::GLASS_PANE:
+			newGameObject = new GlassPane(objectName);
+			break;
+		case GameObjectType::OBJECT: // Fall through
+		case GameObjectType::NONE:
+			newGameObject = new GameObject(objectName, gameObjectType);
+			break;
+		}
 
 
 		JSONObject transformObj;
@@ -637,7 +659,7 @@ namespace flex
 			requiredVertexAttributes = shader.vertexAttributes;
 		}
 
-		ParseUniqueObjectFields(gameContext, obj, gameObjectType, matID, newGameObject);
+		newGameObject->ParseUniqueFields(gameContext, obj, this, matID);
 
 		if (newGameObject)
 		{
@@ -854,256 +876,6 @@ namespace flex
 			}
 		}
 		return matID;
-	}
-
-	void BaseScene::ParseUniqueObjectFields(const GameContext& gameContext, const JSONObject& object, GameObjectType type, MaterialID matID, GameObject* newGameObject)
-	{
-		Material* material = nullptr;
-		Shader* shader = nullptr;
-		VertexAttributes requiredVertexAttributes = 0;
-		if (matID != InvalidMaterialID)
-		{
-			material = &gameContext.renderer->GetMaterial(matID);
-			shader = &gameContext.renderer->GetShader(material->shaderID);
-			requiredVertexAttributes = shader->vertexAttributes;
-		}
-
-		switch (type)
-		{
-		case GameObjectType::OBJECT:
-		{
-			// Nothing special to do
-		} break;
-		case GameObjectType::SKYBOX:
-		{
-			if (matID == InvalidMaterialID)
-			{
-				Logger::LogError("Failed to create skybox material from serialized values! Can't create skybox.");
-			}
-			else
-			{
-				if (!material->generateHDRCubemapSampler &&
-					!material->generateCubemapSampler)
-				{
-					Logger::LogWarning("Invalid skybox material! Material must be set to generate cubemap sampler");
-				}
-
-				glm::vec3 skyboxRotEuler = object.GetVec3("rotation");
-
-				CreateSkybox(gameContext, matID, newGameObject, skyboxRotEuler);
-			}
-		} break;
-		case GameObjectType::REFLECTION_PROBE:
-		{
-			CreateReflectionProbe(gameContext, matID, newGameObject);
-		} break;
-		case GameObjectType::VALVE:
-		{
-			JSONObject valveInfo;
-			if (object.SetObjectChecked("valve info", valveInfo))
-			{
-				glm::vec2 valveRange;
-				valveInfo.SetVec2Checked("range", valveRange);
-				newGameObject->m_ValveMembers.minRotation = valveRange.x;
-				newGameObject->m_ValveMembers.maxRotation = valveRange.y;
-				if (glm::abs(newGameObject->m_ValveMembers.maxRotation - newGameObject->m_ValveMembers.minRotation) <= 0.0001f)
-				{
-					Logger::LogWarning("Valve's rotation range is 0, it will not be able to rotate!");
-				}
-				if (newGameObject->m_ValveMembers.minRotation > newGameObject->m_ValveMembers.maxRotation)
-				{
-					Logger::LogWarning("Valve's minimum rotation range is greater than its maximum! Undefined behavior");
-				}
-			}
-
-			if (!newGameObject->m_MeshComponent)
-			{
-				MeshComponent* valveMesh = new MeshComponent(matID, newGameObject);
-				valveMesh->SetRequiredAttributes(requiredVertexAttributes);
-				valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
-				assert(newGameObject->GetMeshComponent() == nullptr);
-				newGameObject->SetMeshComponent(valveMesh);
-			}
-
-			if (!newGameObject->m_CollisionShape)
-			{
-				btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
-				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-				newGameObject->SetCollisionShape(cylinderShape);
-			}
-
-			if (!newGameObject->m_RigidBody)
-			{
-				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
-				rigidBody->SetMass(1.0f);
-				rigidBody->SetKinematic(false);
-				rigidBody->SetStatic(false);
-			}
-		} break;
-		case GameObjectType::RISING_BLOCK:
-		{
-			if (!newGameObject->m_MeshComponent)
-			{
-				MeshComponent* cubeMesh = new MeshComponent(matID, newGameObject);
-				cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
-				cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
-				newGameObject->SetMeshComponent(cubeMesh);
-			}
-
-			if (!newGameObject->m_RigidBody)
-			{
-				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
-				rigidBody->SetMass(1.0f);
-				rigidBody->SetKinematic(true);
-				rigidBody->SetStatic(false);
-			}
-
-			std::string valveName;
-			JSONObject blockInfo;
-			if (object.SetObjectChecked("block info", blockInfo))
-			{
-				valveName = blockInfo.GetString("valve name");
-
-				if (valveName.empty())
-				{
-					Logger::LogWarning("Rising block field's valve name is empty!");
-				}
-				else
-				{
-					for (GameObject* rootObject : m_RootObjects)
-					{
-						if (rootObject->m_Name.compare(valveName) == 0)
-						{
-							newGameObject->m_RisingBlockMembers.valve = rootObject;
-							break;
-						}
-					}
-				}
-			}
-			else
-			{
-				Logger::LogWarning("Rising block \"block info\" field missing!");
-			}
-
-			blockInfo.SetBoolChecked("affected by gravity", newGameObject->m_RisingBlockMembers.bAffectedByGravity);
-
-			if (!newGameObject->m_RisingBlockMembers.valve)
-			{
-				Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
-			}
-
-			blockInfo.SetVec3Checked("move axis", newGameObject->m_RisingBlockMembers.moveAxis);
-
-			if (newGameObject->m_RisingBlockMembers.moveAxis == glm::vec3(0.0f))
-			{
-				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
-			}
-		} break;
-		case GameObjectType::GLASS_WINDOW:
-		{
-			JSONObject windowInfo = object.GetObject("window info");
-
-			bool bBroken = false;
-			windowInfo.SetBoolChecked("broken", bBroken);
-
-			if (!newGameObject->m_MeshComponent)
-			{
-				MeshComponent* windowMesh = new MeshComponent(matID, newGameObject);
-				windowMesh->SetRequiredAttributes(requiredVertexAttributes);
-				windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION +
-					(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
-				newGameObject->SetMeshComponent(windowMesh);
-			}
-
-			if (!newGameObject->m_RigidBody)
-			{
-				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
-				rigidBody->SetMass(1.0f);
-				rigidBody->SetKinematic(true);
-				rigidBody->SetStatic(false);
-			}
-		} break;
-		}
-	}
-
-	void BaseScene::CreateSkybox(const GameContext& gameContext, 
-								 MaterialID matID, 
-								 GameObject* newGameObject, 
-								 const glm::vec3& rotationEuler)
-	{
-		Material& material = gameContext.renderer->GetMaterial(matID);
-		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
-		MeshComponent* skyboxMesh = new MeshComponent(matID, newGameObject);
-		skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
-		skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
-		assert(newGameObject->GetMeshComponent() == nullptr);
-		newGameObject->SetMeshComponent(skyboxMesh);
-
-		newGameObject->GetTransform()->SetWorldRotation(glm::quat(rotationEuler));
-
-		gameContext.renderer->SetSkyboxMesh(newGameObject);
-	}
-
-	void BaseScene::CreateReflectionProbe(const GameContext& gameContext, 
-										  MaterialID sphereMatID, 
-										  GameObject* newGameObject)
-	{
-		Material& material = gameContext.renderer->GetMaterial(sphereMatID);
-		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
-		// Probe capture material
-		MaterialCreateInfo probeCaptureMatCreateInfo = {};
-		probeCaptureMatCreateInfo.name = "Reflection probe capture";
-		probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-		probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-		probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-		probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-		probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-		probeCaptureMatCreateInfo.enableIrradianceSampler = true;
-		probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-		probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-		probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-		probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-		probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		probeCaptureMatCreateInfo.enableBRDFLUT = true;
-		probeCaptureMatCreateInfo.frameBuffers = {
-			{ "positionMetallicFrameBufferSampler", nullptr },
-			{ "normalRoughnessFrameBufferSampler", nullptr },
-			{ "albedoAOFrameBufferSampler", nullptr },
-		};
-		MaterialID captureMatID = gameContext.renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
-
-		MeshComponent* sphereMesh = new MeshComponent(sphereMatID, newGameObject);
-		sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
-
-		assert(newGameObject->GetMeshComponent() == nullptr);
-		sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf");
-		newGameObject->SetMeshComponent(sphereMesh);
-
-		std::string captureName = newGameObject->m_Name + "_capture";
-		GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
-		captureObject->SetSerializable(false);
-		captureObject->SetVisible(false);
-		captureObject->SetVisibleInSceneExplorer(false);
-
-		RenderObjectCreateInfo captureObjectCreateInfo = {};
-		captureObjectCreateInfo.vertexBufferData = nullptr;
-		captureObjectCreateInfo.materialID = captureMatID;
-		captureObjectCreateInfo.gameObject = captureObject;
-		captureObjectCreateInfo.visibleInSceneExplorer = false;
-
-		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(&captureObjectCreateInfo);
-		captureObject->SetRenderID(captureRenderID);
-
-		newGameObject->AddChild(captureObject);
-
-		newGameObject->m_ReflectionProbeMembers.captureMatID = captureMatID;
-
-		gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
 	void BaseScene::CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight)
@@ -1475,39 +1247,7 @@ namespace flex
 			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
 		}
 
-		// Type-specific data
-		switch (gameObject->m_Type)
-		{
-		case GameObjectType::VALVE:
-		{
-			JSONObject blockInfo;
-
-			glm::vec2 valveRange(gameObject->m_ValveMembers.minRotation,
-								 gameObject->m_ValveMembers.maxRotation);
-			blockInfo.fields.push_back(JSONField("range", JSONValue(Vec2ToString(valveRange))));
-
-			object.fields.push_back(JSONField("valve info", JSONValue(blockInfo)));
-		} break;
-		case GameObjectType::RISING_BLOCK:
-		{
-			JSONObject blockInfo;
-
-			blockInfo.fields.push_back(JSONField("valve name", JSONValue(gameObject->m_RisingBlockMembers.valve->GetName())));
-			blockInfo.fields.push_back(JSONField("move axis", JSONValue(Vec3ToString(gameObject->m_RisingBlockMembers.moveAxis))));
-			blockInfo.fields.push_back(JSONField("affected by gravity", JSONValue(gameObject->m_RisingBlockMembers.bAffectedByGravity)));
-
-			object.fields.push_back(JSONField("block info", JSONValue(blockInfo)));
-		} break;
-		case GameObjectType::GLASS_WINDOW:
-		{
-			JSONObject windowInfo;
-
-			windowInfo.fields.push_back(JSONField("broken", JSONValue(gameObject->m_GlassWindowMembers.bBroken)));
-
-			object.fields.push_back(JSONField("window info", JSONValue(windowInfo)));
-		} break;
-		}
-
+		gameObject->SerializeUniqueFields(object);
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		if (!gameObjectChildren.empty())

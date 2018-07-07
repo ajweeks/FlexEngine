@@ -5,11 +5,14 @@
 #include "Audio/RandomizedAudioSource.hpp"
 #include "Helpers.hpp"
 #include "Transform.hpp"
+#include "JSONTypes.hpp"
 
 class btCollisionShape;
 
 namespace flex
 {
+	class BaseScene;
+
 	class GameObject
 	{
 	public:
@@ -18,7 +21,10 @@ namespace flex
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
-		GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren);
+		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren);
+
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
+		virtual void SerializeUniqueFields(JSONObject& parentObject);
 
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void PostInitialize(const GameContext& gameContext);
@@ -87,56 +93,11 @@ namespace flex
 
 		GameObjectType GetType() const;
 
-		struct ValveMembers
-		{
-			// Serialized fields
-			real minRotation = 0.0f;
-			real maxRotation = 0.0f;
-
-			// Non-serialized fields
-			// Multiplied with value retrieved from input manager
-			real rotationSpeedScale = 1.0f;
-
-			// 1 = never slow down, 0 = slow down immediately
-			real invSlowDownRate = 0.85f;
-
-			real rotationSpeed = 0.0f;
-			real pRotationSpeed = 0.0f;
-
-			real pRotation = 0.0f;
-			real rotation = 0.0f;
-		} m_ValveMembers;
-
-		struct RisingBlockMembers
-		{
-			// Serialized fields
-			GameObject* valve = nullptr; // (object name is serialized)
-			glm::vec3 moveAxis;
-
-			// If true this block will "fall" to its minimum 
-			// value when a player is not interacting with it
-			bool bAffectedByGravity = false;
-
-			// Non-serialized fields
-			glm::vec3 startingPos;
-
-			real pdDistBlockMoved = 0.0f;
-		} m_RisingBlockMembers;
-
-		struct GlassWindowMembers
-		{
-			bool bBroken = false;
-		} m_GlassWindowMembers;
-
-		struct ReflectionProbeMembers
-		{
-			MaterialID captureMatID = 0;
-		} m_ReflectionProbeMembers;
-
-
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
+
+		void CopyGenericFields(const GameContext& gameContext, GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
 		std::string m_Name;
 
@@ -201,9 +162,107 @@ namespace flex
 
 		bool bBeingInteractedWith = false;
 
-		private:
-			static AudioSourceID s_BunkSound;
-			static RandomizedAudioSource s_SqueakySounds;
+		static AudioSourceID s_BunkSound;
+		static RandomizedAudioSource s_SqueakySounds;
+	};
 
+	// Child classes
+
+	class Valve : public GameObject
+	{
+	public:
+		Valve(const std::string& name);
+
+		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
+		virtual void PostInitialize(const GameContext& gameContext) override;
+		virtual void Update(const GameContext& gameContext) override;
+
+		// Serialized fields
+		real minRotation = 0.0f;
+		real maxRotation = 0.0f;
+
+		// Non-serialized fields
+		// Multiplied with value retrieved from input manager
+		real rotationSpeedScale = 1.0f;
+
+		// 1 = never slow down, 0 = slow down immediately
+		real invSlowDownRate = 0.85f;
+
+		real rotationSpeed = 0.0f;
+		real pRotationSpeed = 0.0f;
+
+		real rotation = 0.0f;
+		real pRotation = 0.0f;
+	};
+
+	class RisingBlock : public GameObject
+	{
+	public:
+		RisingBlock(const std::string& name);
+
+		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
+		virtual void Initialize(const GameContext& gameContext) override;
+		virtual void PostInitialize(const GameContext& gameContext) override;
+		virtual void Update(const GameContext& gameContext) override;
+
+		// Serialized fields
+		Valve* valve = nullptr; // (object name is serialized)
+		glm::vec3 moveAxis;
+
+		// If true this block will "fall" to its minimum 
+		// value when a player is not interacting with it
+		bool bAffectedByGravity = false;
+
+		// Non-serialized fields
+		glm::vec3 startingPos;
+
+		real pdDistBlockMoved = 0.0f;
+	};
+
+	class GlassPane : public GameObject
+	{
+	public:
+		GlassPane(const std::string& name);
+
+		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
+		bool bBroken = false;
+	};
+
+	class ReflectionProbe : public GameObject
+	{
+	public:
+		ReflectionProbe(const std::string& name);
+
+		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
+		virtual void PostInitialize(const GameContext& gameContext) override;
+
+		MaterialID captureMatID = 0;
+	};
+
+	class Skybox : public GameObject
+	{
+	public:
+		Skybox(const std::string& name);
+
+		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
 	};
 } // namespace flex

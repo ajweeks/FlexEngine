@@ -91,10 +91,6 @@ namespace flex
 		void ParseFoundPrefabFiles();
 
 		MaterialID ParseMatID(const JSONObject& object);
-		void ParseUniqueObjectFields(const GameContext& gameContext, const JSONObject& object, GameObjectType type, MaterialID matID, GameObject* gameObject);
-
-		void CreateSkybox(const GameContext& gameContext, MaterialID matID, GameObject* newGameObject, const glm::vec3& rotationEuler);
-		void CreateReflectionProbe(const GameContext& gameContext, MaterialID sphereMatID, GameObject* newGameObject);
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
