@@ -1,6 +1,6 @@
 {
 	"version" : 1,
-	"name" : "scene_03",
+	"name" : "Sponza",
 	"materials" : 
 	[
 		{
@@ -98,7 +98,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "10000.000000, 1.000000, 10000.000000"
+				"half extents" : "1000000.000000, 1.000000, 1000000.000000"
 			},
 			"rigid body" : 
 			{
