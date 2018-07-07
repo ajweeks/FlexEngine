@@ -54,8 +54,9 @@ namespace flex
 		return kerningVec;
 	}
 
-	TextCache::TextCache(const std::string& str, glm::vec2 pos, glm::vec4 color, real xSpacing, const std::vector<real>& letterYOffsets) :
+	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, const std::vector<real>& letterYOffsets) :
 		str(str),
+		anchor(anchor),
 		pos(pos),
 		color(color),
 		xSpacing(xSpacing),

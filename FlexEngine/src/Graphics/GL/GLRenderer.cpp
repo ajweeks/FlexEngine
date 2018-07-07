@@ -389,25 +389,18 @@ namespace flex
 		{
 			GenerateGBuffer();
 
-			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceSansVariable-Roman.ttf";
-			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/bahnschrift.ttf";
-
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
 			PROFILE_BEGIN("load font UbuntuCondensed");
 			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 36);
 			PROFILE_END("load font UbuntuCondensed");
-
-			//glFlush();
+			Profiler::PrintBlockDuration("load font UbuntuCondensed");
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
 			PROFILE_BEGIN("load font SourceCodePro");
 			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 10);
 			PROFILE_END("load font SourceCodePro");
-
-			//glFlush();
-
-			Profiler::PrintBlockDuration("load font UbuntuCondensed");
 			Profiler::PrintBlockDuration("load font SourceCodePro");
+
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
 			if (castedWindow == nullptr)
@@ -1736,40 +1729,52 @@ namespace flex
 
 			// Screen-space objects
 #if 1
-			std::vector<real> letterYOffsets1;
-			letterYOffsets1.reserve(26);
-			for (i32 i = 0; i < 26; ++i)
-			{
-				letterYOffsets1.push_back(sin(i * 0.75f + gameContext.elapsedTime * 3.0f) * 5.0f);
-			}
-			std::vector<real> letterYOffsets2;
-			letterYOffsets2.reserve(26);
-			for (i32 i = 0; i < 26; ++i)
-			{
-				letterYOffsets2.push_back(cos(i + gameContext.elapsedTime * 10.0f) * 5.0f);
-			}
-			std::vector<real> letterYOffsets3;
-			letterYOffsets3.reserve(44);
-			for (i32 i = 0; i < 44; ++i)
-			{
-				letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + gameContext.elapsedTime * 6.0f) * 4.0f);
-			}
+			std::vector<real> letterYOffsetsEmpty;
+			//std::vector<real> letterYOffsets1;
+			//letterYOffsets1.reserve(26);
+			//for (i32 i = 0; i < 26; ++i)
+			//{
+			//	letterYOffsets1.push_back(sin(i * 0.75f + gameContext.elapsedTime * 3.0f) * 5.0f);
+			//}
+			//std::vector<real> letterYOffsets2;
+			//letterYOffsets2.reserve(26);
+			//for (i32 i = 0; i < 26; ++i)
+			//{
+			//	letterYOffsets2.push_back(cos(i + gameContext.elapsedTime * 10.0f) * 5.0f);
+			//}
+			//std::vector<real> letterYOffsets3;
+			//letterYOffsets3.reserve(44);
+			//for (i32 i = 0; i < 44; ++i)
+			//{
+			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + gameContext.elapsedTime * 6.0f) * 4.0f);
+			//}
 			
 			SetFont(m_FntUbuntuCondensed);
-			std::string str("abcdefghijklmnopqrstuvwxyz");
-			DrawString(str, glm::vec4(0.95f), glm::vec2(-400, -50), 15, letterYOffsets1);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), glm::vec2(-400, 50), 3, letterYOffsets2);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-400, 150), 5, letterYOffsets3);
+			//std::string str("abcdefghijklmnopqrstuvwxyz");
+			//DrawString(str, glm::vec4(0.95f), glm::vec2(0.0f), 15, letterYOffsets1);
+			//str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			//DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), glm::vec2(0.0f, -1.0f), 3, letterYOffsets2);
+			//str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			//DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-1.0f, 1.0f), 5, letterYOffsets3);
+
+			std::string str = std::string("O");
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
+			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.1f, 0.01f), 3, letterYOffsetsEmpty);
 #endif
 
-			UpdateTextBuffer();
-			DrawText(gameContext);
-
 			DrawScreenSpaceSprites(gameContext);
+
+			UpdateTextBuffer(gameContext);
+			DrawText(gameContext);
 
 			if (gameContext.engineInstance->IsRenderingImGui())
 			{
@@ -2376,9 +2381,7 @@ namespace flex
 			{
 				if (drawInfo.screenSpace)
 				{
-					real r = aspectRatio;
-					real t = 1.0f;
-					glm::mat4 view = glm::ortho(-r, r, -t, t);
+					glm::mat4 view = glm::mat4(1.0f);
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
 					CheckGLErrorMessages();
@@ -2396,7 +2399,9 @@ namespace flex
 			{
 				if (drawInfo.screenSpace)
 				{
-					glm::mat4 projection = glm::mat4(1.0f);
+					real r = aspectRatio;
+					real t = 1.0f;
+					glm::mat4 projection = glm::ortho(-r, r, -t, t);
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
 					CheckGLErrorMessages();
@@ -2563,50 +2568,34 @@ namespace flex
 				{
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->GetHandle());
-					CheckGLErrorMessages();
 
-					if (fontShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
-					{
-						// TODO: Find out how font sizes actually work
-						real scale = ((real)font->GetFontSize()) / 12.0f;
-						real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
-						real max = 10.0f;
-						real r = aspectRatio * max;
-						real t = max;
-						glm::mat4 ortho = glm::ortho(-r, r, -t, t);
-						glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), glm::vec3(scale, -scale, 1.0f));
-						glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
-						CheckGLErrorMessages();
-					}
+					real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+					real r = aspectRatio;
+					real t = 1.0f;
+					glm::mat4 ortho = glm::ortho(-r, r, -t, t);
 
-					if (fontShader.shader.dynamicBufferUniforms.HasUniform("texSize"))
-					{
-						glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
-						glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
-						CheckGLErrorMessages();
-					}
+					// TODO: Find out how font sizes actually work
+					//real scale = ((real)font->GetFontSize()) / 12.0f + sin(gameContext.elapsedTime) * 2.0f;
+					glm::vec3 scaleVec(1.0f, -1.0f, 1.0f);
+
+					glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), scaleVec) * ortho;
+					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
+
+					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
+					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-					CheckGLErrorMessages();
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-					CheckGLErrorMessages();
 
 					glDisable(GL_CULL_FACE);
-					CheckGLErrorMessages();
 
 					glDepthFunc(GL_ALWAYS);
-					CheckGLErrorMessages();
-
 					glDepthMask(GL_FALSE);
-					CheckGLErrorMessages();
 
 					glEnable(GL_BLEND);
-					CheckGLErrorMessages();
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					CheckGLErrorMessages();
 
 					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
-					CheckGLErrorMessages();
 				}
 			}
 		}
@@ -2790,26 +2779,18 @@ namespace flex
 			GLuint captureRBO;
 
 			glGenFramebuffers(1, &captureFBO);
-			CheckGLErrorMessages();
 			glGenRenderbuffers(1, &captureRBO);
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-			CheckGLErrorMessages();
 
 			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
-			CheckGLErrorMessages();
 			// TODO: Don't use depth buffer
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
-			CheckGLErrorMessages();
 
 			glViewport(0, 0, textureSize.x, textureSize.y);
-			CheckGLErrorMessages();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
 
 			ShaderID computeSDFShaderID;
 			GetShaderID("compute_sdf", computeSDFShaderID);
@@ -2826,7 +2807,6 @@ namespace flex
 			glEnable(GL_BLEND);
 			glBlendEquation(GL_FUNC_ADD);
 			glBlendFunc(GL_ONE, GL_ONE);
-			CheckGLErrorMessages();
 
 			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 
@@ -2882,29 +2862,19 @@ namespace flex
 
 				GLuint texHandle;
 				glGenTextures(1, &texHandle);
-				CheckGLErrorMessages();
 
 				glActiveTexture(GL_TEXTURE0);
-				CheckGLErrorMessages();
 
 				glBindTexture(GL_TEXTURE_2D, texHandle);
-				CheckGLErrorMessages();
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
-				CheckGLErrorMessages();
 
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				CheckGLErrorMessages();
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				CheckGLErrorMessages();
 				glm::vec4 borderColor(0.0f);
 				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
-				CheckGLErrorMessages();
 
 				if (metric->width > 0 && metric->height > 0)
 				{
@@ -2912,25 +2882,17 @@ namespace flex
 					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
 
 					glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
-					CheckGLErrorMessages();
 					glActiveTexture(GL_TEXTURE0);
-					CheckGLErrorMessages();
 					glBindTexture(GL_TEXTURE_2D, texHandle);
-					CheckGLErrorMessages();
 
 					glUniform1i(texChannel, metric->channel);
 					glUniform2f(charResolution, (real)res.x, (real)res.y);
-					CheckGLErrorMessages();
 					glActiveTexture(GL_TEXTURE0);
 					glBindVertexArray(gBufferRenderObject->VAO);
-					CheckGLErrorMessages();
 					glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
-					CheckGLErrorMessages();
 					glDrawArrays(gBufferRenderObject->topology, 0,
 						(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
 					glBindVertexArray(0);
-					CheckGLErrorMessages();
 				}
 
 				glDeleteTextures(1, &texHandle);
@@ -2950,48 +2912,36 @@ namespace flex
 			glDeleteRenderbuffers(1, &captureRBO);
 			glDeleteFramebuffers(1, &captureFBO);
 
-			CheckGLErrorMessages();
-
 
 			// Initialize font shader things
 			{
 				GLMaterial& mat = m_Materials[m_FontMatID];
 				GLShader& shader = m_Shaders[mat.material.shaderID];
 				glUseProgram(shader.program);
-				//m_uTransform = glGetUniformLocation(m_pTextShader->GetProgram(), "transform");
-				//m_uTexSize = glGetUniformLocation(m_pTextShader->GetProgram(), "texSize");
-
-				//u32 texLoc = glGetUniformLocation(shader.program, "in_Texture");
-				//glUniform1i(texLoc, 0);
 
 				glGenVertexArrays(1, &m_TextQuadVAO);
 				glGenBuffers(1, &m_TextQuadVBO);
-				CheckGLErrorMessages();
 
 
 				glBindVertexArray(m_TextQuadVAO);
 				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-				CheckGLErrorMessages();
 
 				//set data and attributes
 				// TODO: ?
 				i32 bufferSize = 50;
 				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
-				CheckGLErrorMessages();
 
 				glEnableVertexAttribArray(0);
 				glEnableVertexAttribArray(1);
 				glEnableVertexAttribArray(2);
 				glEnableVertexAttribArray(3);
 				glEnableVertexAttribArray(4);
-				CheckGLErrorMessages();
 
 				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
 				glVertexAttribPointer(1, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
 				glVertexAttribPointer(2, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
-				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, RGCharSize));
+				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSizePixelsCharSizeNorm));
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
-				CheckGLErrorMessages();
 			}
 
 			Logger::LogInfo("Rendered font atlas for " + fileName);
@@ -3004,16 +2954,23 @@ namespace flex
 			m_CurrentFont = font;
 		}
 
-		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, real spacing, const std::vector<real>& letterYOffsets)
+		void GLRenderer::DrawString(const std::string& str,
+									const glm::vec4& color,
+									AnchorPoint anchor,
+									const glm::vec2& pos,
+									real spacing,
+									const std::vector<real>& letterYOffsets)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			//real scale = ((real)size) / m_CurrentFont->GetFontSize();
-			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, spacing, letterYOffsets));
+			m_CurrentFont->m_TextCache.push_back(TextCache(str, anchor, pos, color, spacing, letterYOffsets));
 		}
 
-		void GLRenderer::UpdateTextBuffer()
+		void GLRenderer::UpdateTextBuffer(const GameContext& gameContext)
 		{
+			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
 			std::vector<TextVertex> textVertices;
 			for (auto font : m_Fonts)
 			{
@@ -3025,11 +2982,51 @@ namespace flex
 					TextCache& currentCache = font->m_TextCache[i];
 					std::string currentStr = currentCache.str;
 
-					assert(currentCache.letterYOffsets.size() == currentStr.size());
-
-					//i32 fontSize = font->GetFontSize();
+					bool bUseLetterYOffsets = !currentCache.letterYOffsets.empty();
+					if (bUseLetterYOffsets)
+					{
+						assert(currentCache.letterYOffsets.size() == currentStr.size());
+					}
 
 					real totalAdvanceX = 0;
+
+					glm::vec2 basePos(0.0f);
+
+					switch (currentCache.anchor)
+					{
+					case AnchorPoint::CENTER:
+						// Already centered (zero)
+						break;
+					case AnchorPoint::TOP_LEFT:
+						basePos = glm::vec3(-aspectRatio, -1.0f, 0.0f);
+						break;
+					case AnchorPoint::TOP:
+						basePos = glm::vec3(0.0f, -1.0f, 0.0f);
+						break;
+					case AnchorPoint::TOP_RIGHT:
+						basePos = glm::vec3(aspectRatio, -1.0f, 0.0f);
+						break;
+					case AnchorPoint::RIGHT:
+						basePos = glm::vec3(aspectRatio, 0.0f, 0.0f);
+						break;
+					case AnchorPoint::BOTTOM_RIGHT:
+						basePos = glm::vec3(aspectRatio, 1.0f, 0.0f);
+						break;
+					case AnchorPoint::BOTTOM:
+						basePos = glm::vec3(0.0f, 1.0f, 0.0f);
+						break;
+					case AnchorPoint::BOTTOM_LEFT:
+						basePos = glm::vec3(-aspectRatio, 1.0f, 0.0f);
+						break;
+					case AnchorPoint::LEFT:
+						basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
+						break;
+					case AnchorPoint::WHOLE:
+						// Already centered (zero)
+						break;
+					default:
+						break;
+					}
 
 					wchar_t prevChar = ' ';
 					for (u32 j = 0; j < currentStr.length(); ++j)
@@ -3048,30 +3045,37 @@ namespace flex
 									continue;
 								}
 								
-								glm::vec2 pos = currentCache.pos +
-									glm::vec2(totalAdvanceX + metric->offsetX, 
-											  metric->offsetY + currentCache.letterYOffsets[j]);
+								real scale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
+
+								real yOff = (bUseLetterYOffsets ? currentCache.letterYOffsets[j] : 0.0f);
+
+								glm::vec2 pos = glm::vec2(currentCache.pos.x * aspectRatio, currentCache.pos.y) +
+									glm::vec2(totalAdvanceX + metric->offsetX - metric->width / 2.0f,
+											  metric->offsetY + metric->height / 2.0f + yOff)
+									* scale;
 
 								if (font->UseKerning())
 								{
 									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
+								
 									auto kerningResult = metric->kerning.find(charKey);
 									if (kerningResult != metric->kerning.end())
 									{
-										pos += kerningResult->second;// *(real)fontSize;
+										pos += kerningResult->second * scale;
 									}
 								}
 
-								glm::vec4 charSize(metric->width, metric->height, 0, 0);
+								glm::vec4 charSizePixelsCharSizeNorm(
+									metric->width, metric->height,
+									metric->width * scale, metric->height * scale);
 
 								i32 texChannel = (i32)metric->channel;
 
 								TextVertex vert{};
-								vert.pos = pos;
+								vert.pos = basePos + pos;
 								vert.uv = metric->texCoord;
 								vert.color = currentCache.color;
-								vert.RGCharSize = charSize;
+								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 								vert.channel = texChannel;
 
 								textVertices.push_back(vert);
@@ -3101,11 +3105,9 @@ namespace flex
 
 			glBindVertexArray(m_TextQuadVAO);
 			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-			CheckGLErrorMessages();
 			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)

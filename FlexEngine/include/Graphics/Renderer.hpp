@@ -91,7 +91,12 @@ namespace flex
 		virtual btIDebugDraw* GetDebugDrawer() = 0;
 
 		virtual void SetFont(BitmapFont* font) = 0;
-		virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, real spacing, const std::vector<real>& letterYOffsets) = 0;
+		virtual void DrawString(const std::string& str,
+								const glm::vec4& color,
+								AnchorPoint anchor,
+								const glm::vec2& pos,
+								real spacing,
+								const std::vector<real>& letterYOffsets) = 0;
 
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) = 0;
 		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;

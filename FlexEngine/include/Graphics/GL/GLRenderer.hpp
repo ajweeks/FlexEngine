@@ -78,7 +78,12 @@ namespace flex
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
 			virtual void SetFont(BitmapFont* font) override;
-			virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos, real spacing, const std::vector<real>& letterYOffsets) override;
+			virtual void DrawString(const std::string& str,
+									const glm::vec4& color,
+									AnchorPoint anchor, 
+									const glm::vec2& pos, // Positional offset from anchor
+									real spacing, // Horizontal per-char spacing
+									const std::vector<real>& letterYOffsets) override;
 
 			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
@@ -151,7 +156,7 @@ namespace flex
 
 			bool LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size);
 
-			void UpdateTextBuffer();
+			void UpdateTextBuffer(const GameContext& gameContext);
 
 			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
@@ -253,7 +258,7 @@ namespace flex
 				glm::vec2 pos;
 				glm::vec2 uv;
 				glm::vec4 color;
-				glm::vec4 RGCharSize; // RG: char size, BA: unused
+				glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
 				i32 channel; // uses extra ints slot
 			};
 
