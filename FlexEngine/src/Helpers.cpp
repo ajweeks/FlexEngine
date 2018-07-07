@@ -128,6 +128,16 @@ namespace flex
 		return result;
 	}
 
+	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, const std::vector<real>& letterYOffsets) :
+		str(str),
+		anchor(anchor),
+		pos(pos),
+		color(color),
+		xSpacing(xSpacing),
+		letterYOffsets(letterYOffsets)
+	{
+	}
+
 	bool FileExists(const std::string& filePath)
 	{
 		std::ifstream file(filePath.c_str());

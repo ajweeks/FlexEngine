@@ -92,6 +92,25 @@ namespace flex
 		currentIndex = 0;
 		currentAverage = T();
 	}
+	
+	// Stores text render commands issued during the 
+	// frame to later be converted to "TextVertex"s
+	struct TextCache
+	{
+	public:
+		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, const std::vector<real>& letterYOffsets);
+
+		std::string str;
+		AnchorPoint anchor;
+		glm::vec2 pos;
+		glm::vec4 color;
+		real xSpacing;
+		std::vector<real> letterYOffsets;
+
+	private:
+		//TextCache& operator=(const TextCache &tmp);
+
+	};
 
 	bool FileExists(const std::string& filePath);
 

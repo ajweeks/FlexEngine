@@ -8,6 +8,7 @@
 #include "Types.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "VertexBufferData.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -84,6 +85,9 @@ namespace flex
 									const glm::vec2& pos, // Positional offset from anchor
 									real spacing, // Horizontal per-char spacing
 									const std::vector<real>& letterYOffsets) override;
+
+			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
+			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
 			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;

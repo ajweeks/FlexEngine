@@ -1757,7 +1757,7 @@ namespace flex
 			//str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
 			//DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-1.0f, 1.0f), 5, letterYOffsets3);
 
-			std::string str = std::string("O");
+			std::string str = std::string("XYZ");
 			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
 			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
 			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
@@ -1766,6 +1766,7 @@ namespace flex
 			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
 			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
 			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
 			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.1f, 0.01f), 3, letterYOffsetsEmpty);
@@ -2963,13 +2964,59 @@ namespace flex
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCache.push_back(TextCache(str, anchor, pos, color, spacing, letterYOffsets));
+			m_CurrentFont->m_TextCaches.push_back(TextCache(str, anchor, pos, color, spacing, letterYOffsets));
+		}
+
+		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
+		{
+			real strWidth = 0;
+
+			wchar_t prevChar = ' ';
+			for (wchar_t c : textCache.str)
+			{
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+
+					if (font->UseKerning())
+					{
+						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
+
+						auto kerningResult = metric->kerning.find(charKey);
+						if (kerningResult != metric->kerning.end())
+						{
+							strWidth += kerningResult->second.x;
+						}
+					}
+
+					strWidth += metric->advanceX + textCache.xSpacing;
+				}
+			}
+
+			return strWidth;
+		}
+
+		real GLRenderer::GetStringHeight(const TextCache& textCache, BitmapFont* font) const
+		{
+			real strHeight = 0;
+
+			for (char c : textCache.str)
+			{
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+					strHeight = glm::max(strHeight, (real)(metric->height));
+				}
+			}
+
+			return strHeight;
 		}
 
 		void GLRenderer::UpdateTextBuffer(const GameContext& gameContext)
 		{
 			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
 			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+			real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
 
 			std::vector<TextVertex> textVertices;
 			for (auto font : m_Fonts)
@@ -2977,9 +3024,9 @@ namespace flex
 				font->m_BufferStart = (i32)(textVertices.size());
 				font->m_BufferSize = 0;
 
-				for (u32 i = 0; i < font->m_TextCache.size(); ++i)
+				for (u32 i = 0; i < font->m_TextCaches.size(); ++i)
 				{
-					TextCache& currentCache = font->m_TextCache[i];
+					TextCache& currentCache = font->m_TextCaches[i];
 					std::string currentStr = currentCache.str;
 
 					bool bUseLetterYOffsets = !currentCache.letterYOffsets.empty();
@@ -2991,38 +3038,38 @@ namespace flex
 					real totalAdvanceX = 0;
 
 					glm::vec2 basePos(0.0f);
+					real strWidth = GetStringWidth(currentCache, font) * frameBufferScale;
+					real strHeight = GetStringHeight(currentCache, font) * frameBufferScale;
 
 					switch (currentCache.anchor)
 					{
-					case AnchorPoint::CENTER:
-						// Already centered (zero)
-						break;
 					case AnchorPoint::TOP_LEFT:
-						basePos = glm::vec3(-aspectRatio, -1.0f, 0.0f);
+						basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
 						break;
 					case AnchorPoint::TOP:
-						basePos = glm::vec3(0.0f, -1.0f, 0.0f);
+						basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
 						break;
 					case AnchorPoint::TOP_RIGHT:
-						basePos = glm::vec3(aspectRatio, -1.0f, 0.0f);
+						basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
 						break;
 					case AnchorPoint::RIGHT:
-						basePos = glm::vec3(aspectRatio, 0.0f, 0.0f);
+						basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
 						break;
 					case AnchorPoint::BOTTOM_RIGHT:
-						basePos = glm::vec3(aspectRatio, 1.0f, 0.0f);
+						basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
 						break;
 					case AnchorPoint::BOTTOM:
-						basePos = glm::vec3(0.0f, 1.0f, 0.0f);
+						basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
 						break;
 					case AnchorPoint::BOTTOM_LEFT:
-						basePos = glm::vec3(-aspectRatio, 1.0f, 0.0f);
+						basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
 						break;
 					case AnchorPoint::LEFT:
 						basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
 						break;
+					case AnchorPoint::CENTER: // Fall through
 					case AnchorPoint::WHOLE:
-						// Already centered (zero)
+						basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
 						break;
 					default:
 						break;
@@ -3045,14 +3092,12 @@ namespace flex
 									continue;
 								}
 								
-								real scale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
-
 								real yOff = (bUseLetterYOffsets ? currentCache.letterYOffsets[j] : 0.0f);
 
 								glm::vec2 pos = glm::vec2(currentCache.pos.x * aspectRatio, currentCache.pos.y) +
-									glm::vec2(totalAdvanceX + metric->offsetX - metric->width / 2.0f,
-											  metric->offsetY + metric->height / 2.0f + yOff)
-									* scale;
+									glm::vec2(totalAdvanceX + metric->offsetX - metric->width / 3.0f,
+											  metric->offsetY + metric->height / 3.0f + yOff)
+									* frameBufferScale;
 
 								if (font->UseKerning())
 								{
@@ -3061,13 +3106,13 @@ namespace flex
 									auto kerningResult = metric->kerning.find(charKey);
 									if (kerningResult != metric->kerning.end())
 									{
-										pos += kerningResult->second * scale;
+										pos += kerningResult->second * frameBufferScale;
 									}
 								}
 
 								glm::vec4 charSizePixelsCharSizeNorm(
 									metric->width, metric->height,
-									metric->width * scale, metric->height * scale);
+									metric->width * frameBufferScale, metric->height * frameBufferScale);
 
 								i32 texChannel = (i32)metric->channel;
 
@@ -3097,7 +3142,7 @@ namespace flex
 				}
 
 				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
-				font->m_TextCache.clear();
+				font->m_TextCaches.clear();
 			}
 
 
