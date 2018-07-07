@@ -237,7 +237,7 @@ namespace flex
 
 
 			TextureHandle m_LoadingTextureHandle;
-			//TextureHandle m_WorkTextureHandle;
+			TextureHandle m_WorkTextureHandle;
 
 			TextureHandle m_PointLightIconHandle;
 			TextureHandle m_DirectionalLightIconHandle;

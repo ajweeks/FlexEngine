@@ -179,7 +179,7 @@ namespace flex
 			};
 
 			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false, false);
-			//GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
+			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false, true);
 
 			GenerateGLTexture(m_PointLightIconHandle.id, RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", true, false, true);
 			GenerateGLTexture(m_DirectionalLightIconHandle.id, RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", true, false, true);
@@ -314,20 +314,12 @@ namespace flex
 
 			// Draw loading text
 			{
-				//glm::vec3 pos(0.0f);
-				//glm::quat rot = glm::quat(glm::vec3(0.0f));
-				//glm::vec3 scale(1.0f, -1.0f, 1.0f);
-				glm::vec4 color(1.0f);
-
 				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.scale = glm::vec3(1.0f, -1.0f, 1.0f);
 				drawInfo.screenSpace = true;
 				drawInfo.readDepth = false;
 				drawInfo.writeDepth = false;
-				//drawInfo.pos = pos;
-				//drawInfo.rotation = rot;
-				//drawInfo.scale = scale;
 				drawInfo.materialID = m_SpriteMatID;
-				drawInfo.color = color;
 				drawInfo.anchor = AnchorPoint::WHOLE;
 				drawInfo.inputTextureHandle = m_LoadingTextureHandle.id;
 				drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
@@ -1743,7 +1735,7 @@ namespace flex
 			}
 
 			// Screen-space objects
-#if 0
+#if 1
 			std::vector<real> letterYOffsets1;
 			letterYOffsets1.reserve(26);
 			for (i32 i = 0; i < 26; ++i)
@@ -2158,7 +2150,7 @@ namespace flex
 			glm::vec4 color(1.0f);
 
 			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.screenSpace = false;
+			drawInfo.screenSpace = true;
 			drawInfo.readDepth = false;
 			drawInfo.writeDepth = false;
 			drawInfo.FBO = FBO;
@@ -2168,7 +2160,7 @@ namespace flex
 			drawInfo.scale = scale;
 			drawInfo.materialID = m_PostProcessMatID;
 			drawInfo.color = color;
-			drawInfo.anchor = AnchorPoint::WHOLE;
+			drawInfo.anchor = AnchorPoint::CENTER;
 			drawInfo.inputTextureHandle = m_OffscreenTexture0Handle.id;
 			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
 
@@ -2178,6 +2170,7 @@ namespace flex
 			{
 				FBO = 0;
 				RBO = 0;
+				scale.y = -1.0f;
 
 				drawInfo.inputTextureHandle = m_OffscreenTexture1Handle.id;
 				drawInfo.materialID = m_PostFXAAMatID;
@@ -2203,13 +2196,39 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(gameContext);
 
-			//glm::vec3 pos(0.0f);
-			//glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
-			//glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
-			//glm::vec3 scale(100.0f);
-			//glm::vec4 color(1.0f);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color, true);
+			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
+
+			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
+			{
+				pos.x += gameContext.deltaTime * 1.0f;
+			}
+			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
+			{
+				pos.x -= gameContext.deltaTime * 1.0f;
+			}
+			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
+			{
+				pos.y += gameContext.deltaTime * 1.0f;
+			}
+			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
+			{
+				pos.y -= gameContext.deltaTime * 1.0f;
+			}
+
+			glm::vec3 scale(0.25f, -0.25f, 1.0f);
+
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.screenSpace = true;
+			drawInfo.readDepth = false;
+			drawInfo.writeDepth = false;
+			drawInfo.pos = pos;
+			drawInfo.scale = scale;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.anchor = AnchorPoint::TOP_LEFT;
+			drawInfo.inputTextureHandle = m_WorkTextureHandle.id;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+			DrawSpriteQuad(gameContext, drawInfo);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color, true);
 			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
@@ -2230,7 +2249,6 @@ namespace flex
 
 		void GLRenderer::DrawWorldSpaceSprites(const GameContext& gameContext)
 		{
-			glm::quat rot = glm::quat(glm::vec3(0.0f));
 			glm::vec3 scale(1.0f, -1.0f, 1.0f);
 
 			SpriteQuadDrawInfo drawInfo = {};
@@ -2239,7 +2257,6 @@ namespace flex
 			drawInfo.screenSpace = false;
 			drawInfo.readDepth = true;
 			drawInfo.writeDepth = true;
-			drawInfo.rotation = rot;
 			drawInfo.scale = scale;
 			drawInfo.materialID = m_SpriteMatID;
 			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
@@ -2254,7 +2271,6 @@ namespace flex
 					drawInfo.pos = pointLight.position;
 					drawInfo.color = pointLight.color * 1.5f;
 					drawInfo.inputTextureHandle = m_PointLightIconHandle.id;
-					//glm::vec3 dpos = glm::normalize(drawInfo.pos - cam->GetPosition());
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight.position, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(gameContext, drawInfo);
@@ -2291,26 +2307,23 @@ namespace flex
 			CheckGLErrorMessages();
 
 			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("model"))
 			{
 				glm::vec3 translation = drawInfo.pos;
+				translation.x /= aspectRatio;
 				glm::quat rotation = drawInfo.rotation;
 				glm::vec3 scale = drawInfo.scale;
+				glm::vec3 absScale = glm::abs(scale);
+				absScale.x /= aspectRatio;
 
 				if (drawInfo.screenSpace)
 				{
-					scale.y *= -1;
-
-					if (drawInfo.anchor != AnchorPoint::WHOLE)
+					if (drawInfo.anchor == AnchorPoint::WHOLE)
 					{
-						scale *= glm::vec3(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y, 1.0f);
+						scale.x *= aspectRatio;
 					}
-					////scale *= glm::min(frameBufferSize.x * 2.0f, frameBufferSize.y * 2.0f);
-					//scale *= 400.0f;
-					//const real minScale = 0.2f;
-					//const real maxScale = 0.5f;
-					//scale *= glm::vec3((sin(gameContext.elapsedTime * 0.4f) * 0.5f + 0.5f) * (maxScale - minScale) + minScale);
 
 					switch (drawInfo.anchor)
 					{
@@ -2318,28 +2331,28 @@ namespace flex
 						// Already centered (zero)
 						break;
 					case AnchorPoint::TOP_LEFT:
-						translation += glm::vec3(-1.0f + (scale.x), (1.0f - scale.y), 0.0f);
+						translation += glm::vec3(-1.0f + (absScale.x), (1.0f - absScale.y), 0.0f);
 						break;
 					case AnchorPoint::TOP:
-						translation += glm::vec3(0.0f, (1.0f - scale.y), 0.0f);
+						translation += glm::vec3(0.0f, (1.0f - absScale.y), 0.0f);
 						break;
 					case AnchorPoint::TOP_RIGHT:
-						translation += glm::vec3(1.0f - (scale.x), (1.0f - scale.y), 0.0f);
+						translation += glm::vec3(1.0f - absScale.x, (1.0f - absScale.y), 0.0f);
 						break;
 					case AnchorPoint::RIGHT:
-						translation += glm::vec3(1.0f - (scale.x), 0.0f, 0.0f);
+						translation += glm::vec3(1.0f - absScale.x, 0.0f, 0.0f);
 						break;
 					case AnchorPoint::BOTTOM_RIGHT:
-						translation += glm::vec3(1.0f - (scale.x), (-1.0f + scale.y), 0.0f);
+						translation += glm::vec3(1.0f - absScale.x, (-1.0f + absScale.y), 0.0f);
 						break;
 					case AnchorPoint::BOTTOM:
-						translation += glm::vec3(0.0f, (-1.0f + scale.y), 0.0f);
+						translation += glm::vec3(0.0f, (-1.0f + absScale.y), 0.0f);
 						break;
 					case AnchorPoint::BOTTOM_LEFT:
-						translation += glm::vec3(-1.0f + (scale.x), (-1.0f + scale.y), 0.0f);
+						translation += glm::vec3(-1.0f + absScale.x, (-1.0f + absScale.y), 0.0f);
 						break;
 					case AnchorPoint::LEFT:
-						translation += glm::vec3(-1.0f + (scale.x), 0.0f, 0.0f);
+						translation += glm::vec3(-1.0f + absScale.x, 0.0f, 0.0f);
 						break;
 					case AnchorPoint::WHOLE:
 						// Already centered (zero)
@@ -2349,12 +2362,11 @@ namespace flex
 					}
 				}
 
-				glm::mat4 matScale = glm::scale(glm::mat4(1.0f), scale);
-				glm::mat4 matRot = glm::mat4(rotation);
-				glm::mat4 matTrans = glm::translate(glm::mat4(1.0f), translation);
-				// What about SRT? :o
-				glm::mat4 model = matTrans * matRot * matScale;
-				//glm::mat4 model = matTrans * matScale * matRot;
+				translation.x *= aspectRatio;
+				
+				glm::mat4 model = (glm::translate(glm::mat4(1.0f), translation) *
+								   glm::mat4(rotation) *
+								   glm::scale(glm::mat4(1.0f), scale));
 
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, true, &model[0][0]);
 				CheckGLErrorMessages();
@@ -2364,7 +2376,9 @@ namespace flex
 			{
 				if (drawInfo.screenSpace)
 				{
-					glm::mat4 view = glm::mat4(1.0f); // gameContext.cameraManager->CurrentCamera()->GetView();
+					real r = aspectRatio;
+					real t = 1.0f;
+					glm::mat4 view = glm::ortho(-r, r, -t, t);
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
 					CheckGLErrorMessages();
@@ -2382,7 +2396,7 @@ namespace flex
 			{
 				if (drawInfo.screenSpace)
 				{
-					glm::mat4 projection = glm::mat4(1.0f); // gameContext.cameraManager->CurrentCamera()->GetProjection();
+					glm::mat4 projection = glm::mat4(1.0f);
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
 					CheckGLErrorMessages();
@@ -2555,11 +2569,12 @@ namespace flex
 					{
 						// TODO: Find out how font sizes actually work
 						real scale = ((real)font->GetFontSize()) / 12.0f;
-						glm::mat4 ortho = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
-						glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), glm::vec3(
-							(1.0f / frameBufferSize.x) * scale,
-							-(1.0f / frameBufferSize.y) * scale,
-							1.0f));
+						real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+						real max = 10.0f;
+						real r = aspectRatio * max;
+						real t = max;
+						glm::mat4 ortho = glm::ortho(-r, r, -t, t);
+						glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), glm::vec3(scale, -scale, 1.0f));
 						glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
 						CheckGLErrorMessages();
 					}
