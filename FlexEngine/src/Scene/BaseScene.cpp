@@ -586,7 +586,7 @@ namespace flex
 		for (MaterialID matID : m_LoadedMaterials)
 		{
 			Material& material = gameContext.renderer->GetMaterial(matID);
-			materialsArray.push_back(SerializeMaterial(material, gameContext));
+			materialsArray.push_back(material.SerializeToJSON(gameContext));
 		}
 		materialsField.value = JSONValue(materialsArray);
 		rootSceneObject.fields.push_back(materialsField);
@@ -597,7 +597,10 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				objectsArray.push_back(SerializeObject(rootObject, gameContext));
+				if (rootObject->IsSerializable())
+				{
+					objectsArray.push_back(rootObject->SerializeToJSON(gameContext, this));
+				}
 			}
 		}
 		rootSceneObject.fields.push_back(JSONField("objects", JSONValue(objectsArray)));
@@ -693,194 +696,6 @@ namespace flex
 		}
 
 		m_bUsingSaveFile = false;
-	}
-
-	JSONObject BaseScene::SerializeObject(GameObject* gameObject, const GameContext& gameContext)
-	{
-		if (!gameObject->IsSerializable())
-		{
-			Logger::LogError("Attempted to serialize non-serializable object");
-			return{};
-		}
-
-		JSONObject object = gameObject->SerializeToJSON(gameContext, this);
-
-		return object;
-	}
-
-	JSONObject BaseScene::SerializeMaterial(const Material& material, const GameContext& gameContext)
-	{
-		JSONObject materialObject = {};
-
-		materialObject.fields.push_back(JSONField("name", JSONValue(material.name)));
-
-		const Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-		materialObject.fields.push_back(JSONField("shader", JSONValue(shader.name)));
-
-		// TODO: Find out way of determining if the following four  values
-		// are used by the shader (only currently used by PBR I think)
-		std::string constAlbedoStr = Vec3ToString(material.constAlbedo);
-		materialObject.fields.push_back(JSONField("const albedo",
-			JSONValue(constAlbedoStr)));
-		materialObject.fields.push_back(JSONField("const metallic",
-			JSONValue(material.constMetallic)));
-		materialObject.fields.push_back(JSONField("const roughness",
-			JSONValue(material.constRoughness)));
-		materialObject.fields.push_back(JSONField("const ao",
-			JSONValue(material.constAO)));
-
-		static const bool defaultEnableAlbedo = false;
-		if (shader.needAlbedoSampler && material.enableAlbedoSampler != defaultEnableAlbedo)
-		{
-			materialObject.fields.push_back(JSONField("enable albedo sampler",
-											JSONValue(material.enableAlbedoSampler)));
-		}
-
-		static const bool defaultEnableMetallicSampler = false;
-		if (shader.needMetallicSampler && material.enableMetallicSampler != defaultEnableMetallicSampler)
-		{
-			materialObject.fields.push_back(JSONField("enable metallic sampler",
-											JSONValue(material.enableMetallicSampler)));
-		}
-
-		static const bool defaultEnableRoughness = false;
-		if (shader.needRoughnessSampler && material.enableRoughnessSampler != defaultEnableRoughness)
-		{
-			materialObject.fields.push_back(JSONField("enable roughness sampler",
-											JSONValue(material.enableRoughnessSampler)));
-		}
-
-		static const bool defaultEnableAO = false;
-		if (shader.needAOSampler && material.enableAOSampler != defaultEnableAO)
-		{
-			materialObject.fields.push_back(JSONField("enable ao sampler",
-											JSONValue(material.enableAOSampler)));
-		}
-
-		static const bool defaultEnableNormal = false;
-		if (shader.needNormalSampler && material.enableNormalSampler != defaultEnableNormal)
-		{
-			materialObject.fields.push_back(JSONField("enable normal sampler",
-											JSONValue(material.enableNormalSampler)));
-		}
-
-		static const bool defaultGenerateAlbedo = false;
-		if (shader.needAlbedoSampler && material.generateAlbedoSampler != defaultGenerateAlbedo)
-		{
-			materialObject.fields.push_back(JSONField("generate albedo sampler",
-											JSONValue(material.generateAlbedoSampler)));
-		}
-
-		static const bool defaultGenerateMetallicSampler = false;
-		if (shader.needMetallicSampler && material.generateMetallicSampler != defaultGenerateMetallicSampler)
-		{
-			materialObject.fields.push_back(JSONField("generate metallic sampler",
-											JSONValue(material.generateMetallicSampler)));
-		}
-
-		static const bool defaultGenerateRoughness = false;
-		if (shader.needRoughnessSampler && material.generateRoughnessSampler != defaultGenerateRoughness)
-		{
-			materialObject.fields.push_back(JSONField("generate roughness sampler",
-											JSONValue(material.generateRoughnessSampler)));
-		}
-
-		static const bool defaultGenerateAO = false;
-		if (shader.needAOSampler && material.generateAOSampler != defaultGenerateAO)
-		{
-			materialObject.fields.push_back(JSONField("generate ao sampler",
-											JSONValue(material.generateAOSampler)));
-		}
-
-		static const bool defaultGenerateNormal = false;
-		if (shader.needNormalSampler && material.generateNormalSampler != defaultGenerateNormal)
-		{
-			materialObject.fields.push_back(JSONField("generate normal sampler",
-											JSONValue(material.generateNormalSampler)));
-		}
-
-		if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())
-		{
-			std::string albedoTexturePath = material.albedoTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("albedo texture filepath",
-				JSONValue(albedoTexturePath)));
-		}
-
-		if (shader.needMetallicSampler && !material.metallicTexturePath.empty())
-		{
-			std::string metallicTexturePath = material.metallicTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("metallic texture filepath",
-				JSONValue(metallicTexturePath)));
-		}
-
-		if (shader.needRoughnessSampler && !material.roughnessTexturePath.empty())
-		{
-			std::string roughnessTexturePath = material.roughnessTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("roughness texture filepath",
-				JSONValue(roughnessTexturePath)));
-		}
-
-		if (shader.needAOSampler && !material.aoTexturePath.empty())
-		{
-			std::string aoTexturePath = material.aoTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("ao texture filepath",
-				JSONValue(aoTexturePath)));
-		}
-
-		if (shader.needNormalSampler && !material.normalTexturePath.empty())
-		{
-			std::string normalTexturePath = material.normalTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("normal texture filepath",
-											JSONValue(normalTexturePath)));
-		}
-
-		if (material.generateHDRCubemapSampler)
-		{
-			materialObject.fields.push_back(JSONField("generate hdr cubemap sampler",
-				JSONValue(material.generateHDRCubemapSampler)));
-		}
-
-		if (shader.needCubemapSampler)
-		{
-			materialObject.fields.push_back(JSONField("enable cubemap sampler",
-				JSONValue(material.enableCubemapSampler)));
-
-			materialObject.fields.push_back(JSONField("enable cubemap trilinear filtering",
-				JSONValue(material.enableCubemapTrilinearFiltering)));
-
-			std::string cubemapSamplerSizeStr = Vec2ToString(material.cubemapSamplerSize);
-			materialObject.fields.push_back(JSONField("generated cubemap size",
-				JSONValue(cubemapSamplerSizeStr)));
-		}
-
-		if (shader.needIrradianceSampler || material.irradianceSamplerSize.x > 0)
-		{
-			materialObject.fields.push_back(JSONField("generate irradiance sampler",
-				JSONValue(material.generateIrradianceSampler)));
-
-			std::string irradianceSamplerSizeStr = Vec2ToString(material.irradianceSamplerSize);
-			materialObject.fields.push_back(JSONField("generated irradiance cubemap size",
-				JSONValue(irradianceSamplerSizeStr)));
-		}
-
-		if (shader.needPrefilteredMap || material.prefilteredMapSize.x > 0)
-		{
-			materialObject.fields.push_back(JSONField("generate prefiltered map",
-				JSONValue(material.generatePrefilteredMap)));
-
-			std::string prefilteredMapSizeStr = Vec2ToString(material.prefilteredMapSize);
-			materialObject.fields.push_back(JSONField("generated prefiltered map size",
-				JSONValue(prefilteredMapSizeStr)));
-		}
-
-		if (!material.environmentMapPath.empty())
-		{
-			std::string cleanedEnvMapPath = material.environmentMapPath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("environment map path",
-				JSONValue(cleanedEnvMapPath)));
-		}
-
-		return materialObject;
 	}
 
 	JSONObject BaseScene::SerializePointLight(PointLight& pointLight)

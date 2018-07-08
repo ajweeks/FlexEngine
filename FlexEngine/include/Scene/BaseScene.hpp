@@ -79,8 +79,6 @@ namespace flex
 		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
 		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
 
-		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
-		JSONObject SerializeMaterial(const Material& material, const GameContext& gameContext);
 		JSONObject SerializePointLight(PointLight& pointLight);
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight);
 

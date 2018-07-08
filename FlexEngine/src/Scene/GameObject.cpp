@@ -334,11 +334,7 @@ namespace flex
 			object.fields.push_back(JSONField("static", JSONValue(true)));
 		}
 
-		JSONField transformField;
-		if (GetTransform()->SerializeToJSON(transformField))
-		{
-			object.fields.push_back(transformField);
-		}
+		object.fields.push_back(GetTransform()->SerializeToJSON());
 
 		MeshComponent* meshComponent = GetMeshComponent();
 		if (meshComponent &&

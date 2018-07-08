@@ -14,9 +14,6 @@ namespace flex
 
 	struct JSONObject
 	{
-		std::vector<JSONField> fields;
-
-
 		bool HasField(const std::string& label) const;
 
 		std::string GetString(const std::string& label) const;
@@ -62,6 +59,8 @@ namespace flex
 		static JSONObject s_EmptyObject;
 		static std::vector<JSONObject> s_EmptyObjectArray;
 		static std::vector<JSONField> s_EmptyFieldArray;
+
+		std::vector<JSONField> fields;
 	};
 
 	struct JSONValue

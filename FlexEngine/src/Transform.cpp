@@ -197,9 +197,9 @@ namespace flex
 		return Transform(pos, rotQuat, scale);
 	}
 
-	bool Transform::SerializeToJSON(JSONField& transformField)
+	JSONField Transform::SerializeToJSON()
 	{
-		transformField = {};
+		JSONField transformField = {};
 		transformField.label = "transform";
 
 		JSONObject transformObject = {};
@@ -234,7 +234,7 @@ namespace flex
 
 		transformField.value = JSONValue(transformObject);
 
-		return true;
+		return transformField;
 	}
 
 	void Transform::Translate(const glm::vec3& deltaPosition)

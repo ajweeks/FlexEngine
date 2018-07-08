@@ -194,4 +194,151 @@ namespace flex
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
 	}
+
+	JSONObject Material::SerializeToJSON(const GameContext& gameContext) const
+	{
+		JSONObject materialObject = {};
+
+		materialObject.fields.push_back(JSONField("name", JSONValue(name)));
+
+		const Shader& shader = gameContext.renderer->GetShader(shaderID);
+		materialObject.fields.push_back(JSONField("shader", JSONValue(shader.name)));
+
+		// TODO: Find out way of determining if the following four  values
+		// are used by the shader (only currently used by PBR I think)
+		std::string constAlbedoStr = Vec3ToString(constAlbedo);
+		materialObject.fields.push_back(JSONField("const albedo", JSONValue(constAlbedoStr)));
+		materialObject.fields.push_back(JSONField("const metallic", JSONValue(constMetallic)));
+		materialObject.fields.push_back(JSONField("const roughness", JSONValue(constRoughness)));
+		materialObject.fields.push_back(JSONField("const ao", JSONValue(constAO)));
+
+		static const bool defaultEnableAlbedo = false;
+		if (shader.needAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
+		{
+			materialObject.fields.push_back(JSONField("enable albedo sampler", JSONValue(enableAlbedoSampler)));
+		}
+
+		static const bool defaultEnableMetallicSampler = false;
+		if (shader.needMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
+		{
+			materialObject.fields.push_back(JSONField("enable metallic sampler", JSONValue(enableMetallicSampler)));
+		}
+
+		static const bool defaultEnableRoughness = false;
+		if (shader.needRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
+		{
+			materialObject.fields.push_back(JSONField("enable roughness sampler", JSONValue(enableRoughnessSampler)));
+		}
+
+		static const bool defaultEnableAO = false;
+		if (shader.needAOSampler && enableAOSampler != defaultEnableAO)
+		{
+			materialObject.fields.push_back(JSONField("enable ao sampler", JSONValue(enableAOSampler)));
+		}
+
+		static const bool defaultEnableNormal = false;
+		if (shader.needNormalSampler && enableNormalSampler != defaultEnableNormal)
+		{
+			materialObject.fields.push_back(JSONField("enable normal sampler", JSONValue(enableNormalSampler)));
+		}
+
+		static const bool defaultGenerateAlbedo = false;
+		if (shader.needAlbedoSampler && generateAlbedoSampler != defaultGenerateAlbedo)
+		{
+			materialObject.fields.push_back(JSONField("generate albedo sampler", JSONValue(generateAlbedoSampler)));
+		}
+
+		static const bool defaultGenerateMetallicSampler = false;
+		if (shader.needMetallicSampler && generateMetallicSampler != defaultGenerateMetallicSampler)
+		{
+			materialObject.fields.push_back(JSONField("generate metallic sampler", JSONValue(generateMetallicSampler)));
+		}
+
+		static const bool defaultGenerateRoughness = false;
+		if (shader.needRoughnessSampler && generateRoughnessSampler != defaultGenerateRoughness)
+		{
+			materialObject.fields.push_back(JSONField("generate roughness sampler", JSONValue(generateRoughnessSampler)));
+		}
+
+		static const bool defaultGenerateAO = false;
+		if (shader.needAOSampler && generateAOSampler != defaultGenerateAO)
+		{
+			materialObject.fields.push_back(JSONField("generate ao sampler", JSONValue(generateAOSampler)));
+		}
+
+		static const bool defaultGenerateNormal = false;
+		if (shader.needNormalSampler && generateNormalSampler != defaultGenerateNormal)
+		{
+			materialObject.fields.push_back(JSONField("generate normal sampler", JSONValue(generateNormalSampler)));
+		}
+
+		if (shader.needAlbedoSampler && !albedoTexturePath.empty())
+		{
+			std::string shortAlbedoTexturePath = albedoTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("albedo texture filepath", JSONValue(shortAlbedoTexturePath)));
+		}
+
+		if (shader.needMetallicSampler && !metallicTexturePath.empty())
+		{
+			std::string shortMetallicTexturePath = metallicTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("metallic texture filepath", JSONValue(shortMetallicTexturePath)));
+		}
+
+		if (shader.needRoughnessSampler && !roughnessTexturePath.empty())
+		{
+			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("roughness texture filepath", JSONValue(shortRoughnessTexturePath)));
+		}
+
+		if (shader.needAOSampler && !aoTexturePath.empty())
+		{
+			std::string shortAOTexturePath = aoTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("ao texture filepath", JSONValue(shortAOTexturePath)));
+		}
+
+		if (shader.needNormalSampler && !normalTexturePath.empty())
+		{
+			std::string shortNormalTexturePath = normalTexturePath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("normal texture filepath", JSONValue(shortNormalTexturePath)));
+		}
+
+		if (generateHDRCubemapSampler)
+		{
+			materialObject.fields.push_back(JSONField("generate hdr cubemap sampler", JSONValue(generateHDRCubemapSampler)));
+		}
+
+		if (shader.needCubemapSampler)
+		{
+			materialObject.fields.push_back(JSONField("enable cubemap sampler", JSONValue(enableCubemapSampler)));
+
+			materialObject.fields.push_back(JSONField("enable cubemap trilinear filtering", JSONValue(enableCubemapTrilinearFiltering)));
+
+			std::string cubemapSamplerSizeStr = Vec2ToString(cubemapSamplerSize);
+			materialObject.fields.push_back(JSONField("generated cubemap size", JSONValue(cubemapSamplerSizeStr)));
+		}
+
+		if (shader.needIrradianceSampler || irradianceSamplerSize.x > 0)
+		{
+			materialObject.fields.push_back(JSONField("generate irradiance sampler", JSONValue(generateIrradianceSampler)));
+
+			std::string irradianceSamplerSizeStr = Vec2ToString(irradianceSamplerSize);
+			materialObject.fields.push_back(JSONField("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr)));
+		}
+
+		if (shader.needPrefilteredMap || prefilteredMapSize.x > 0)
+		{
+			materialObject.fields.push_back(JSONField("generate prefiltered map", JSONValue(generatePrefilteredMap)));
+
+			std::string prefilteredMapSizeStr = Vec2ToString(prefilteredMapSize);
+			materialObject.fields.push_back(JSONField("generated prefiltered map size", JSONValue(prefilteredMapSizeStr)));
+		}
+
+		if (!environmentMapPath.empty())
+		{
+			std::string cleanedEnvMapPath = environmentMapPath.substr(RESOURCE_LOCATION.length());
+			materialObject.fields.push_back(JSONField("environment map path", JSONValue(cleanedEnvMapPath)));
+		}
+
+		return materialObject;
+	}
 } // namespace flex
