@@ -23,7 +23,6 @@
 #include "Cameras/BaseCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
 #include "GameContext.hpp"
@@ -133,13 +132,13 @@ namespace flex
 
 			if (activeRenderObjectCount)
 			{
-				Logger::LogError("Not all render objects were destroyed!");
+				PrintError("Not all render objects were destroyed!");
 
 				for (RenderObjectIter iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
 					if (*iter)
 					{
-						Logger::LogError("Render object " + (*iter)->gameObject->GetName() + " was not destroyed");
+						PrintError("Render object " + (*iter)->gameObject->GetName() + " was not destroyed");
 						DestroyRenderObject((*iter)->renderID, *iter);
 					}
 				}
@@ -276,7 +275,7 @@ namespace flex
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
 			if (castedWindow == nullptr)
 			{
-				Logger::LogError("VulkanRenderer::PostInitialize expected gameContext.window to be of type GLFWWindowWrapper!");
+				PrintError("VulkanRenderer::PostInitialize expected gameContext.window to be of type GLFWWindowWrapper!");
 				return;
 			}
 
@@ -285,7 +284,7 @@ namespace flex
 			ShaderID deferredCombineShaderID;
 			if (!GetShaderID("deferred_combine", deferredCombineShaderID))
 			{
-				Logger::LogError("Failed to find deferred_combine shader!");
+				PrintError("Failed to find deferred_combine shader!");
 			}
 
 			assert(m_SkyBoxMesh);
@@ -379,7 +378,7 @@ namespace flex
 				m_gBufferCubemapMesh = new MeshComponent(m_CubemapGBufferMaterialID, "GBuffer cubemap");
 				if (!m_gBufferCubemapMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX))
 				{
-					Logger::LogError("Failed to create GBuffer cubemap mesh prefab!");
+					PrintError("Failed to create GBuffer cubemap mesh prefab!");
 				}
 				else
 				{
@@ -461,18 +460,18 @@ namespace flex
 
 				if (renderObjectMat.material.generateReflectionProbeMaps)
 				{
-					Logger::LogInfo("Capturing reflection probe");
+					Print("Capturing reflection probe");
 					CaptureSceneToCubemap(gameContext, i);
 					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-					Logger::LogInfo("Done");
+					Print("Done");
 
 					// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-					Logger::LogInfo("Capturing reflection probe");
+					Print("Capturing reflection probe");
 					CaptureSceneToCubemap(gameContext, i);
 					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-					Logger::LogInfo("Done");
+					Print("Done");
 
 					// Display captured cubemap as skybox (GL code)
 					//m_LoadedMaterials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
@@ -496,7 +495,7 @@ namespace flex
 
 
 			m_PostInitialized = true;
-			Logger::LogInfo("Ready!\n");
+			Print("Ready!\n");
 		}
 
 		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject)
@@ -658,7 +657,7 @@ namespace flex
 			ShaderID equirectangularToCubeShaderID;
 			if (!GetShaderID(equirectangularToCubeMatCreateInfo.shaderName, equirectangularToCubeShaderID))
 			{
-				Logger::LogError("Failed to find equirectangular_to_cube shader ID!");
+				PrintError("Failed to find equirectangular_to_cube shader ID!");
 				return;
 			}
 			VulkanShader& equirectangularToCubeShader = m_Shaders[equirectangularToCubeShaderID];
@@ -775,13 +774,13 @@ namespace flex
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(equirectangularToCubeShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + equirectangularToCubeShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + equirectangularToCubeShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(equirectangularToCubeShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + equirectangularToCubeShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + equirectangularToCubeShader.shader.fragmentShaderFilePath);
 			}
 
 			shaderStages[0] = {};
@@ -848,12 +847,12 @@ namespace flex
 
 			if (vertexIndexBufferPair.vertexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
-				Logger::LogError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader " + skyboxMat.name + ")");
+				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader " + skyboxMat.name + ")");
 			}
 			if (skyboxRenderObject->indexed && 
 				vertexIndexBufferPair.indexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
-				Logger::LogError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader " + skyboxMat.name + ")");
+				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader " + skyboxMat.name + ")");
 			}
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
@@ -1236,7 +1235,7 @@ namespace flex
 			ShaderID irradianceShaderID;
 			if (!GetShaderID("irradiance", irradianceShaderID))
 			{
-				Logger::LogError("Failed to find irradiance shader!");
+				PrintError("Failed to find irradiance shader!");
 				return;
 			}
 			VulkanShader& irradianceShader = m_Shaders[irradianceShaderID];
@@ -1244,13 +1243,13 @@ namespace flex
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(irradianceShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + irradianceShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + irradianceShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(irradianceShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + irradianceShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + irradianceShader.shader.fragmentShaderFilePath);
 			}
 
 			shaderStages[0] = {};
@@ -1545,20 +1544,20 @@ namespace flex
 			ShaderID prefilterShaderID;
 			if (!GetShaderID("prefilter", prefilterShaderID))
 			{
-				Logger::LogError("Failed to find prefilter shader!");
+				PrintError("Failed to find prefilter shader!");
 			}
 			VulkanShader& prefilterShader = m_Shaders[prefilterShaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(prefilterShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + prefilterShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + prefilterShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(prefilterShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + prefilterShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + prefilterShader.shader.fragmentShaderFilePath);
 			}
 
 			CreateUniformBuffers(&prefilterShader);
@@ -2021,20 +2020,20 @@ namespace flex
 			ShaderID brdfShaderID;
 			if (!GetShaderID("brdf", brdfShaderID))
 			{
-				Logger::LogError("Failed to find brdf shader!");
+				PrintError("Failed to find brdf shader!");
 			}
 			VulkanShader& brdfShader = m_Shaders[brdfShaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(brdfShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + brdfShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + brdfShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(brdfShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + brdfShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + brdfShader.shader.fragmentShaderFilePath);
 			}
 
 			shaderStages[0] = {};
@@ -2107,11 +2106,11 @@ namespace flex
 			{
 				if (createInfo->shaderName.empty())
 				{
-					Logger::LogError("Material's shader not set! MaterialCreateInfo::shaderName must be filled in");
+					PrintError("Material's shader not set! MaterialCreateInfo::shaderName must be filled in");
 				}
 				else
 				{
-					Logger::LogError("Material's shader not set! Shader name " + createInfo->shaderName + " not found");
+					PrintError("Material's shader not set! Shader name " + createInfo->shaderName + " not found");
 				}
 
 				// TODO: Handle more gracefully (use placeholder shader)
@@ -2179,7 +2178,7 @@ namespace flex
 			{
 				if (!m_BRDFTexture)
 				{
-					Logger::LogInfo("Generating BRDF LUT");
+					Print("Generating BRDF LUT");
 					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, m_BRDFSize.x, m_BRDFSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
@@ -2369,7 +2368,7 @@ namespace flex
 
 			if (prevMatCapacity != newMatCapacity)
 			{
-				Logger::LogError("VulkanRenderer::m_LoadedMaterials was reallocated! Local references will become invalid! New high water line: " + std::to_string(newMatCapacity) + " (previous was " + std::to_string(prevMatCapacity) + ")");
+				PrintError("VulkanRenderer::m_LoadedMaterials was reallocated! Local references will become invalid! New high water line: " + std::to_string(newMatCapacity) + " (previous was " + std::to_string(prevMatCapacity) + ")");
 			}
 
 
@@ -2390,12 +2389,12 @@ namespace flex
 			{
 				if (m_Materials.empty())
 				{
-					Logger::LogError("Render object created before any materials have been created! Returning...");
+					PrintError("Render object created before any materials have been created! Returning...");
 					return InvalidRenderID;
 				}
 				else
 				{
-					Logger::LogError("Render object doesn't have its material ID set! Using first available material");
+					PrintError("Render object doesn't have its material ID set! Using first available material");
 					renderObject->materialID = 0;
 				}
 			}
@@ -2463,7 +2462,7 @@ namespace flex
 
 			if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
 			{
-				Logger::LogError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: " + (i32)topology);
+				PrintError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: " + (i32)topology);
 			}
 			else
 			{
@@ -2487,11 +2486,11 @@ namespace flex
 					VulkanRenderObject* renderObject = *iter;
 					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
-						Logger::LogInfo("Capturing reflection probe");
+						Print("Capturing reflection probe");
 						CaptureSceneToCubemap(gameContext, renderObject->renderID);
 						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
 						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-						Logger::LogInfo("Done");
+						Print("Done");
 					}
 				}
 			}
@@ -2712,7 +2711,7 @@ namespace flex
 			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetMaterialID();
 			if (skyboxMatierialID == InvalidMaterialID)
 			{
-				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
+				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
 				return;
 			}
 
@@ -2743,7 +2742,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
+				PrintError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
 			}
 		}
 
@@ -2822,7 +2821,7 @@ namespace flex
 			if (renderID > m_RenderObjects.size() ||
 				renderID == InvalidRenderID)
 			{
-				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
 				return nullptr;
 			}
 #endif 
@@ -2880,7 +2879,7 @@ namespace flex
 			appInfo.engineVersion = VK_MAKE_VERSION(FlexEngine::EngineVersionMajor, FlexEngine::EngineVersionMinor, FlexEngine::EngineVersionPatch);
 			appInfo.apiVersion = VK_API_VERSION_1_0;
 
-			Logger::LogInfo("Vulkan Version: 1.1.70.0");
+			Print("Vulkan Version: 1.1.70.0");
 
 			VkInstanceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -3632,13 +3631,13 @@ namespace flex
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(shader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + shader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + shader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(shader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + shader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + shader.shader.fragmentShaderFilePath);
 			}
 
 			VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -4591,7 +4590,7 @@ namespace flex
 			void* vertexDataStart = malloc(size);
 			if (!vertexDataStart)
 			{
-				Logger::LogError("Failed to allocate memory for vertex buffer " + std::to_string(shaderID) + "! Attempted to allocate " + std::to_string(size) + " bytes");
+				PrintError("Failed to allocate memory for vertex buffer " + std::to_string(shaderID) + "! Attempted to allocate " + std::to_string(size) + " bytes");
 				return 0;
 			}
 
@@ -4616,7 +4615,7 @@ namespace flex
 
 			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
-				Logger::LogError("Failed to create static vertex buffer (no verts use shader index " + std::to_string(shaderID) + "!)");
+				PrintError("Failed to create static vertex buffer (no verts use shader index " + std::to_string(shaderID) + "!)");
 				return 0;
 			}
 
@@ -5571,15 +5570,15 @@ namespace flex
 				StripLeadingDirectories(vertFileName);
 				std::string fragFileName = m_Shaders[i].shader.fragmentShaderFilePath;
 				StripLeadingDirectories(fragFileName);
-				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+				Print("Loading shaders " + vertFileName + " & " + fragFileName);
 
 				if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode))
 				{
-					Logger::LogError("Could not find vertex shader " + shader.name);
+					PrintError("Could not find vertex shader " + shader.name);
 				}
 				if (!ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode))
 				{
-					Logger::LogError("Could not find fragment shader " + shader.name);
+					PrintError("Could not find fragment shader " + shader.name);
 				}
 			}
 		}
@@ -5679,21 +5678,21 @@ namespace flex
 			switch (flags)
 			{
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
-				Logger::LogInfo(msg);
+				Print(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_WARNING_BIT_EXT:
-				Logger::LogWarning(msg);
+				PrintWarn(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
-				Logger::LogWarning(msg);
+				PrintWarn(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_ERROR_BIT_EXT:
-				Logger::LogError(msg);
+				PrintError(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_DEBUG_BIT_EXT:
 				// Fall through
 			default:
-				Logger::LogError(msg);
+				PrintError(msg);
 				break;
 			}
 

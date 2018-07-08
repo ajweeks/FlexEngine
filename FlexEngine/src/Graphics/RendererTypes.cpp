@@ -2,8 +2,6 @@
 
 #include "Graphics/RendererTypes.hpp"
 
-#include "Logger.hpp"
-
 namespace flex
 {
 	bool Uniforms::HasUniform(const char* name) const
@@ -21,7 +19,7 @@ namespace flex
 		auto location = types.find(name);
 		if (location == types.end())
 		{
-			Logger::LogWarning("Attempted to remove uniform that doesn't exist! " + std::string(name));
+			PrintWarn("Attempted to remove uniform that doesn't exist! %s\n", name);
 		}
 		else
 		{

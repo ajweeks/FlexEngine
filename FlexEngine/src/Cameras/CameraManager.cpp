@@ -5,7 +5,6 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "GameContext.hpp"
-#include "Logger.hpp"
 
 namespace flex
 {
@@ -77,7 +76,7 @@ namespace flex
 
 		if (newCameraIndex == -1)
 		{
-			Logger::LogError("Attempted to switch to camera which doesn't exist! " + camera->GetName());
+			PrintError("Attempted to switch to camera which doesn't exist! %s\n", camera->GetName().c_str());
 		}
 		else
 		{

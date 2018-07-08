@@ -8,7 +8,6 @@
 #include "Graphics/Renderer.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
-#include "Logger.hpp"
 #include "Scene/GameObject.hpp"
 #include "VertexAttribute.hpp"
 
@@ -37,7 +36,7 @@ namespace flex
 			m_Renderer = (VulkanRenderer*)(m_GameContext.renderer);
 			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
 			{
-				Logger::LogError("Failed to retrieve shader for Vulkan physics debug draw!");
+				PrintError("Failed to retrieve shader for Vulkan physics debug draw!");
 			}
 
 			m_VertexBufferData = {};
@@ -84,7 +83,7 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::reportErrorWarning(const char* warningString)
 		{
-			Logger::LogError("VulkanPhysicsDebugDraw > " + std::string(warningString));
+			PrintError("VulkanPhysicsDebugDraw > " + std::string(warningString));
 		}
 
 		void VulkanPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)

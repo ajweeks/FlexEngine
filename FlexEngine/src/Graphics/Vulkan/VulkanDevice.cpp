@@ -3,8 +3,6 @@
 
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 
-#include "Logger.hpp"
-
 namespace flex
 {
 	namespace vk
@@ -70,7 +68,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("GetMemoryType could not find specified memory type");
+				PrintError("GetMemoryType could not find specified memory type\n");
 				return 0;
 			}
 		}

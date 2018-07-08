@@ -13,6 +13,7 @@
 //#pragma warning(disable : 4710) // function not inlined
 
 #include "Types.hpp"
+#include "Logger.hpp"
 
 #pragma warning(push, 0)
 #include <ft2build.h>

@@ -7,7 +7,6 @@
 #include <imgui_internal.h>
 #pragma warning(pop)
 
-#include "Logger.hpp"
 #include "Scene/GameObject.hpp"
 #include "Physics/RigidBody.hpp"
 
@@ -210,7 +209,7 @@ namespace flex
 	{
 		if (m_PointLights.size() == MAX_POINT_LIGHT_COUNT)
 		{
-			Logger::LogWarning("Attempted to add point light when already at max capacity! (" + std::to_string(MAX_POINT_LIGHT_COUNT) + ')');
+			PrintWarn("Attempted to add point light when already at max capacity of %i\n", MAX_POINT_LIGHT_COUNT);
 			return InvalidPointLightID;
 		}
 

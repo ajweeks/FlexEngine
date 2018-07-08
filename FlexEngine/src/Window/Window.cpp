@@ -7,7 +7,6 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Time.hpp"
 #include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"

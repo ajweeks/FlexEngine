@@ -8,7 +8,6 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Scene/BaseScene.hpp" 
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"

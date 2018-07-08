@@ -5,7 +5,6 @@
 #include <stdlib.h> // rand
 
 #include "Audio/AudioManager.hpp"
-#include "Logger.hpp"
 
 namespace flex
 {

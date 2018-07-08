@@ -9,7 +9,6 @@
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLRenderer.hpp"
 #include "Graphics/Renderer.hpp"
-#include "Logger.hpp"
 #include "VertexAttribute.hpp"
 
 namespace flex
@@ -72,7 +71,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::reportErrorWarning(const char* warningString)
 		{
-			Logger::LogError("GLPhysicsDebugDraw > " + std::string(warningString));
+			PrintError("DebugDraw error: %s\n", warningString);
 		}
 
 		void GLPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
@@ -128,7 +127,7 @@ namespace flex
 
 			if (m_MaterialID == InvalidMaterialID)
 			{
-				Logger::LogError("Attempted to draw GLPhysicsDebug objects before material has been set");
+				PrintError("Attempted to draw GLPhysicsDebug objects before material has been set\n");
 				return;
 			}
 

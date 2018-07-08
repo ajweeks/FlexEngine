@@ -2,8 +2,6 @@
 
 #include "VertexAttribute.hpp"
 
-#include "Logger.hpp"
-
 namespace flex
 {
 	u32 CalculateVertexStride(VertexAttributes vertexAttributes)
@@ -54,7 +52,7 @@ namespace flex
 
 		if (stride == 0)
 		{
-			Logger::LogWarning("Vertex attribute stride is 0!");
+			PrintWarn("Vertex stride is 0!\n");
 		}
 
 		return stride;

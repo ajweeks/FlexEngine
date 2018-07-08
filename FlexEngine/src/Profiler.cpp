@@ -28,8 +28,7 @@ namespace flex
 
 		if (s_UnendedTimings != 0)
 		{
-			Logger::LogError("Uneven number of profile blocks! (" +
-							 std::to_string(s_UnendedTimings) + ')');
+			PrintError("Uneven number of profile blocks! (%i)\n", s_UnendedTimings);
 		}
 
 		if (bPrintTimings)
@@ -37,15 +36,15 @@ namespace flex
 			ms frameTime = glm::min(s_FrameEndTime - s_FrameStartTime, MAX_FRAME_TIME);
 			s_PendingCSV.append(std::to_string(frameTime) + ",");
 
-			//Logger::LogInfo("Profiler results:");
-			//Logger::LogInfo("Whole frame: " + std::to_string(s_FrameEndTime - s_FrameStartTime) + "ms");
-			//Logger::LogInfo("---");
+			//Print("Profiler results:");
+			//Print("Whole frame: " + std::to_string(s_FrameEndTime - s_FrameStartTime) + "ms");
+			//Print("---");
 			for (auto element : s_Timings)
 			{
 				//s_PendingCSV.append(std::string(element.first) + "," +
 				//					std::to_string(element.second) + '\n');
 
-				//Logger::LogInfo(std::string(element.first) + ": " + 
+				//Print(std::string(element.first) + ": " + 
 				//				std::to_string(element.second) + "ms");
 			}
 		}
@@ -57,8 +56,8 @@ namespace flex
 
 		if (s_Timings.find(hash) != s_Timings.end())
 		{
-			Logger::LogError("Profiler::Begin called more than once! Block name: " + std::string(blockName) +
-							 " (hash: " + std::to_string(hash) + ')');
+			PrintError("Profiler::Begin called more than once! Block name: %s (hash: %i)\n",
+					   blockName, hash);
 		}
 
 		ms now = Time::CurrentMilliseconds();
@@ -80,8 +79,8 @@ namespace flex
 
 		if (result == s_Timings.end())
 		{
-			Logger::LogError("Profiler::End called before Begin was called! Block name: " + std::string(blockName) +
-							 " (hash: " + std::to_string(hash) + ')');
+			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n", 
+					   blockName, hash);
 			return;
 		}
 
@@ -102,7 +101,8 @@ namespace flex
 	{
 		if (s_PendingCSV.empty())
 		{
-			Logger::LogWarning("Attempted to print profiler results to file before any results were generated! Did you set bPrintTimings when calling EndFrame?");
+			PrintWarn("Attempted to print profiler results to file before any results were generated!"
+					  "Did you set bPrintTimings when calling EndFrame?\n");
 			return;
 		}
 
@@ -114,11 +114,11 @@ namespace flex
 
 		if (WriteFile(filePath, s_PendingCSV, false))
 		{
-			Logger::LogInfo("Wrote profiling results to " + filePath);
+			Print("Wrote profiling results to %s\n", filePath.c_str());
 		}
 		else
 		{
-			Logger::LogInfo("Failed to write profiling results to " + filePath);
+			Print("Failed to write profiling results to %s\n", filePath.c_str());
 		}
 	}
 
@@ -129,7 +129,7 @@ namespace flex
 		auto result = s_Timings.find(hash);
 		if (result != s_Timings.end())
 		{
-			Logger::LogInfo("    Block duration \"" + std::string(blockName) + "\": " + FloatToString(result->second, 2) + "ms");
+			Print("    Block duration \"%s\": %.2fms\n", blockName, result->second);
 		}
 	}
 

@@ -17,7 +17,6 @@
 #include "Physics/RigidBody.hpp"
 #include "Scene/GameObject.hpp"
 #include "GameContext.hpp"
-#include "Logger.hpp"
 #include "Helpers.hpp"
 
 namespace flex
@@ -199,7 +198,7 @@ namespace flex
 						{
 							trigger->OnOverlapBegin(other);
 							other->OnOverlapBegin(trigger);
-							//Logger::LogInfo("Trigger collision begin " + obAGameObject->GetName() + " : " + obBGameObject->GetName());
+							//Print("Trigger collision begin " + obAGameObject->GetName() + " : " + obBGameObject->GetName());
 						}
 					}
 				}
@@ -213,7 +212,7 @@ namespace flex
 			//		const btVector3& ptA = pt.getPositionWorldOnA();
 			//		const btVector3& ptB = pt.getPositionWorldOnB();
 			//		const btVector3& normalOnB = pt.m_normalWorldOnB;
-			//		//Logger::LogInfo("contact: " + std::to_string(normalOnB.getX()) + ", " + 
+			//		//Print("contact: " + std::to_string(normalOnB.getX()) + ", " + 
 			//		//				std::to_string(normalOnB.getY()) + ", " + std::to_string(normalOnB.getZ()));
 			//	}
 			//}
@@ -228,7 +227,7 @@ namespace flex
 		{
 			GameObject* triggerGameObject = (GameObject*)pair.first->getUserPointer();
 			GameObject* otherGameObject = (GameObject*)pair.second->getUserPointer();
-			//Logger::LogInfo("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
+			//Print("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
 			triggerGameObject->OnOverlapEnd(otherGameObject);
 			otherGameObject->OnOverlapEnd(triggerGameObject);
 		}

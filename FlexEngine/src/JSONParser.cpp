@@ -7,7 +7,6 @@
 #include <cwctype>
 
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Scene/GameObject.hpp"
 
 namespace flex
@@ -17,7 +16,7 @@ namespace flex
 		std::string fileContents;
 		if (!ReadFile(filePath, fileContents, false))
 		{
-			Logger::LogError("Couldn't find JSON file: " + filePath);
+			PrintError("Couldn't find JSON file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -28,7 +27,7 @@ namespace flex
 			lastBracket == std::string::npos || 
 			firstBracket > lastBracket)
 		{
-			Logger::LogError("Failed to parse JSON file. No valid bracket pairs found!");
+			PrintError("Failed to parse JSON file. No valid bracket pairs found!\n");
 		}
 
 		bool inQuote = false;
@@ -98,7 +97,7 @@ namespace flex
 		i32 objectClosingBracket = MatchingBracket('{', fileContents, *offset);
 		if (objectClosingBracket == -1)
 		{
-			Logger::LogError("Couldn't find matching bracket for '{'");
+			PrintError("Couldn't find matching bracket for '{'\n");
 			return false;
 		}
 
@@ -126,14 +125,14 @@ namespace flex
 
 		if (quoteStart == std::string::npos)
 		{
-			Logger::LogError("Couldn't find opening quote after offset " + std::to_string(*offset));
+			PrintError("Couldn't find opening quote after offset %i\n", *offset);
 			return false;
 		}
 
 		size_t quoteEnd = fileContents.find('\"', quoteStart + 1);
 		if (quoteEnd == std::string::npos)
 		{
-			Logger::LogError("Couldn't find closing quote after offset " + std::to_string(*offset));
+			PrintError("Couldn't find closing quote after offset %i\n", *offset);
 			return false;
 		}
 
@@ -142,7 +141,7 @@ namespace flex
 
 		if (fileContents[quoteEnd + 1] != ':')
 		{
-			Logger::LogError("Invalidly formatted JSON file (':' must occur after a field label)");
+			PrintError("Invalidly formatted JSON file (':' must occur after a field label)\n");
 			return false;
 		}
 
@@ -157,14 +156,14 @@ namespace flex
 
 			if (strQuoteStart == std::string::npos)
 			{
-				Logger::LogError("Couldn't find quote after offset " + std::to_string(*offset));
+				PrintError("Couldn't find quote after offset %i\n", offset);
 				return false;
 			}
 
 			size_t strQuoteEnd = fileContents.find('\"', strQuoteStart + 1);
 			if (strQuoteEnd == std::string::npos)
 			{
-				Logger::LogError("Couldn't find end quote after offset " + std::to_string(*offset));
+				PrintError("Couldn't find end quote after offset %i\n", *offset);
 				return false;
 			}
 
@@ -221,7 +220,7 @@ namespace flex
 			i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
 			if (arrayClosingBracket == -1)
 			{
-				Logger::LogError("Couldn't find matching bracket " + field.label + " (for '[' )");
+				PrintError("Couldn't find matching bracket %s (for '['\n", field.label.c_str());
 				return false;
 			}
 
@@ -249,7 +248,7 @@ namespace flex
 		default:
 		{
 			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
-			Logger::LogError("Unhandled JSON value type: " + fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2)));
+			PrintError("Unhandled JSON value type: %s\n", fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2)).c_str());
 			*offset = -1;
 			return false;
 		} break;
@@ -277,7 +276,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Unhandled opening bracket type: " + std::to_string(openingBracket));
+			PrintError("Unhandled opening bracket type: %c\n" + openingBracket);
 			return -1;
 		}
 

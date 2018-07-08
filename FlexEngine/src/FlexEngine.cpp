@@ -24,7 +24,6 @@
 #include "Helpers.hpp"
 #include "JSONTypes.hpp"
 #include "JSONParser.hpp"
-#include "Logger.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -81,13 +80,11 @@ namespace flex
 
 		m_RendererName = RenderIDToString(m_RendererIndex);
 
-		Logger::Initialize();
+		GetConsoleHandle();
 
-		Logger::LogInfo(std::to_string(m_RendererCount) + " renderer" + (m_RendererCount > 1 ? "s" : "") + " enabled");
-		Logger::LogInfo("Current renderer: " + m_RendererName);
-		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
-
-		//Logger::SetLogWarnings(false);
+		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
+		Print("%i renderer%s %s, Current renderer: %s\n", 
+			  m_RendererCount, (m_RendererCount > 1 ? "s" : ""), "enabled", m_RendererName.c_str());
 
 		DeselectCurrentlySelectedObject();
 	}
@@ -199,8 +196,6 @@ namespace flex
 		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
-
-		Logger::Destroy();
 	}
 
 	void FlexEngine::CreateWindowAndRenderer()
@@ -228,7 +223,7 @@ namespace flex
 #endif
 		if (m_GameContext.window == nullptr)
 		{
-			Logger::LogError("Failed to create a window! Are any compile flags set in stdafx.hpp?");
+			PrintError("Failed to create a window! Are any compile flags set in stdafx.hpp?\n");
 			return;
 		}
 
@@ -267,7 +262,7 @@ namespace flex
 #endif
 		if (m_GameContext.renderer == nullptr)
 		{
-			Logger::LogError("Failed to create a renderer!");
+			PrintError("Failed to create a renderer!\n");
 			return;
 		}
 	}
@@ -449,7 +444,7 @@ namespace flex
 #endif
 		}
 		m_RendererName = RenderIDToString(m_RendererIndex);
-		Logger::LogInfo("Current renderer: " + m_RendererName);
+		Print("Current renderer: %s\n", m_RendererName);
 
 		CreateWindowAndRenderer();
 		InitializeWindowAndRenderer();
@@ -907,6 +902,8 @@ namespace flex
 			static const char* renderNameStr = rendererNameStringStr.c_str();
 			ImGui::TextUnformatted(renderNameStr);
 
+			ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
+
 			static const char* rendererSettingsStr = "Renderer settings";
 			if (ImGui::TreeNode(rendererSettingsStr))
 			{
@@ -1151,37 +1148,6 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			static const char* loggingStr = "Logging";
-			if (ImGui::TreeNode(loggingStr))
-			{
-				bool suppressInfo = Logger::GetSuppressInfo();
-				i32 suppressedInfoCount = Logger::GetSuppressedInfoCount();
-				const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")###SUppressedInfo");
-				if (ImGui::Checkbox(infoStr.c_str(), &suppressInfo))
-				{
-					Logger::SetSuppressInfo(suppressInfo);
-				}
-
-				bool suppressWarnings = Logger::GetSuppressWarnings();
-				i32 suppressedWarningCount = Logger::GetSuppressedWarningCount();
-				const std::string warningStr("Suppress Warnings (" + std::to_string(suppressedWarningCount) + ")###SuppressedWarnings");
-				if (ImGui::Checkbox(warningStr.c_str(), &suppressWarnings))
-				{
-					Logger::SetSuppressWarnings(suppressWarnings);
-				}
-
-				// TODO: Why can't this be turned on again while errors are being spammed?
-				bool suppressErrors = Logger::GetSuppressErrors();
-				i32 suppressedErrorCount = Logger::GetSuppressedErrorCount();
-				const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")###SuppressedErrors");
-				if (ImGui::Checkbox(errorStr.c_str(), &suppressErrors))
-				{
-					Logger::SetSuppressErrors(suppressErrors);
-				}
-
-				ImGui::TreePop();
-			}
-
 			static const char* scenesStr = "Scenes";
 			if (ImGui::TreeNode(scenesStr))
 			{
@@ -1304,7 +1270,7 @@ namespace flex
 
 				if (ImGui::Button("Hard reload scene file (reloads all meshes)"))
 				{
-					Logger::LogInfo("Clearing all loaded meshes");
+					Print("Clearing all loaded meshes\n");
 					MeshComponent::DestroyAllLoadedMeshes();
 					m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
 				}
@@ -1372,13 +1338,13 @@ namespace flex
 	{
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
-			Logger::LogError("Failed to read common settings to disk: file path is not set!");
+			PrintError("Failed to read common settings to disk: file path is not set!\n");
 			return false;
 		}
 
 		if (FileExists(m_CommonSettingsAbsFilePath))
 		{
-			Logger::LogInfo("Loading common settings from " + m_CommonSettingsFileName);
+			Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
 
 			JSONObject rootObject{};
 
@@ -1410,7 +1376,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Failed to read common settings file, but it exists!");
+				PrintError("Failed to read common settings file, but it exists!\n");
 				return false;
 			}
 		}
@@ -1422,7 +1388,7 @@ namespace flex
 	{
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
-			Logger::LogError("Failed to save common settings to disk: file path is not set!");
+			PrintError("Failed to save common settings to disk: file path is not set!\n");
 			return;
 		}
 
@@ -1524,20 +1490,19 @@ namespace flex
 					}
 					else
 					{
-						Logger::LogError("Attempted name scene with invalid name: " + newSceneFileNameStr, false);
+						PrintError("Attempted name scene with invalid name: %s\n", newSceneFileNameStr.c_str());
 						if (bNameEmpty)
 						{
-							Logger::LogError(" (file name is empty!)");
+							PrintError("(file name is empty!)\n");
 						}
 						else if (!bCorrectFileType)
 						{
-							Logger::LogError(" (must end with \".json\"!)");
+							PrintError("(must end with \".json\"!)\n");
 						}
 						else if (bFileExists)
 						{
-							Logger::LogError(" (file already exists!)");
+							PrintError("(file already exists!)\n");
 						}
-						Logger::LogNewLine();
 					}
 				}
 			}
@@ -1688,7 +1653,7 @@ namespace flex
 
 					if (FileExists(filePathTo))
 					{
-						Logger::LogError("Attempting to duplicate scene onto already existing file name!");
+						PrintError("Attempting to duplicate scene onto already existing file name!\n");
 					}
 					else
 					{
@@ -1710,7 +1675,7 @@ namespace flex
 						}
 						else
 						{
-							Logger::LogError("Failed to copy scene's file to " + std::string(newSceneFileName));
+							PrintError("Failed to copy scene's file to %s\n", newSceneFileName);
 						}
 					}
 				}

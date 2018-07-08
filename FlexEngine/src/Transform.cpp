@@ -175,19 +175,19 @@ namespace flex
 #if _DEBUG
 		if (IsNanOrInf(pos))
 		{
-			Logger::LogError("Read garbage value from transform pos in serialized scene file! Using default value instead");
+			PrintError("Read garbage value from transform pos in serialized scene file! Using default value instead\n");
 			pos = glm::vec3(0.0f);
 		}
 
 		if (IsNanOrInf(rotEuler))
 		{
-			Logger::LogError("Read garbage value from transform rot in serialized scene file! Using default value instead");
+			PrintError("Read garbage value from transform rot in serialized scene file! Using default value instead\n");
 			rotEuler = glm::vec3(0.0f);
 		}
 
 		if (IsNanOrInf(scale))
 		{
-			Logger::LogError("Read garbage value from transform scale in serialized scene file! Using default value instead");
+			PrintError("Read garbage value from transform scale in serialized scene file! Using default value instead\n");
 			scale = glm::vec3(1.0f);
 		}
 #endif
@@ -206,19 +206,19 @@ namespace flex
 
 		if (IsNanOrInf(localPosition))
 		{
-			Logger::LogError("Attempted to serialize garbage value for " + m_GameObject->GetName() + "'s pos - writing default value instead");
+			PrintError("Attempted to serialize garbage value for %s's pos, writing default value\n", m_GameObject->GetName().c_str());
 			localPosition = glm::vec3(0.0f);
 		}
 
 		if (IsNanOrInf(localRotation))
 		{
-			Logger::LogError("Attempted to serialize garbage value for " + m_GameObject->GetName() + "'s rot - writing default value instead");
+			PrintError("Attempted to serialize garbage value for %s's rotation, writing default value\n", m_GameObject->GetName().c_str());
 			localRotation = glm::quat();
 		}
 
 		if (IsNanOrInf(localScale))
 		{
-			Logger::LogError("Attempted to serialize garbage value for " + m_GameObject->GetName() + "'s scale - writing default value instead");
+			PrintError("Attempted to serialize garbage value for %s's scale, writing default value\n", m_GameObject->GetName().c_str());
 			localScale = glm::vec3(1.0f);
 		}
 

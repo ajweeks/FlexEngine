@@ -7,7 +7,7 @@
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
-#include "Logger.hpp"
+
 
 namespace flex
 {
@@ -87,7 +87,7 @@ namespace flex
 
 		if (!glfwInit())
 		{
-			Logger::LogError("Failed to initialize glfw! Exiting...");
+			PrintError("Failed to initialize glfw! Exiting...\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -103,7 +103,7 @@ namespace flex
 
 		if (numJoysticksConnected > 0)
 		{
-			Logger::LogInfo(std::to_string(numJoysticksConnected) + " joysticks connected on bootup");
+			Print("%i joysticks connected on bootup\n", numJoysticksConnected);
 		}
 
 		// TODO: Look into supporting system-DPI awareness
@@ -135,14 +135,14 @@ namespace flex
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		if (!monitor)
 		{
-			Logger::LogError("Failed to find primary monitor!");
+			PrintError("Failed to find primary monitor!\n");
 			return;
 		}
 
 		const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
 		if (!vidMode)
 		{
-			Logger::LogError("Failed to get monitor's video mode!");
+			PrintError("Failed to get monitor's video mode!\n");
 			return;
 		}
 
@@ -166,7 +166,7 @@ namespace flex
 	{
 		if (!m_Window)
 		{
-			Logger::LogError("SetUpCallbacks was called before m_Window was set!");
+			PrintError("SetUpCallbacks was called before m_Window was set!\n");
 			return;
 		}
 
@@ -255,7 +255,7 @@ namespace flex
 		case Window::CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
 		case Window::CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
 		case Window::CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-		default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((i32)mode)); break;
+		default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
 		}
 
 		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
@@ -270,14 +270,14 @@ namespace flex
 			auto monitor = glfwGetPrimaryMonitor();
 			if (!monitor)
 			{
-				Logger::LogError("Failed to find primary monitor! Can't set fullscreen mode");
+				PrintError("Failed to find primary monitor! Can't set fullscreen mode\n");
 				return;
 			}
 
 			const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
 			if (!videoMode)
 			{
-				Logger::LogError("Failed to get monitor's video mode! Can't set fullscreen mode");
+				PrintError("Failed to get monitor's video mode! Can't set fullscreen mode\n");
 				return;
 			}
 
@@ -394,7 +394,7 @@ namespace flex
 
 	void GLFWErrorCallback(i32 error, const char* description)
 	{
-		Logger::LogError("GLFW Error: " + std::to_string(error) + ": " + std::string(description));
+		PrintError("GLFW Error: %i: %s\n", error, description);
 	}
 
 	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods)
@@ -434,12 +434,12 @@ namespace flex
 		//	if (focused)
 		//	{
 		//		glfwRestoreWindow(glfwWindow);
-		//		Logger::LogInfo("found");
+		//		Print("found\n");
 		//	}
 		//	else
 		//	{
 		//		glfwIconifyWindow(glfwWindow);
-		//		Logger::LogInfo("lost");
+		//		Print("lost\n");
 		//	}
 		//}
 
@@ -480,17 +480,17 @@ namespace flex
 	{
 		if (JID > MAX_JOYSTICK_COUNT)
 		{
-			Logger::LogWarning("Unhandled joystick connection event, JID out of range: " + std::to_string(JID));
+			PrintWarn("Unhandled joystick connection event, JID out of range: %i\n", JID);
 			return;
 		}
 
 		if (event == GLFW_CONNECTED)
 		{
-			Logger::LogInfo("Joystick " + std::to_string(JID) + " connected");
+			Print("Joystick %i connected\n", JID);
 		}
 		else if (event == GLFW_DISCONNECTED)
 		{
-			Logger::LogInfo("Joystick " + std::to_string(JID) + " disconnected");
+			Print("Joystick %i disconnected\n", JID);
 		}
 
 		g_JoysticksConnected[JID] = (event == GLFW_CONNECTED);
@@ -506,7 +506,8 @@ namespace flex
 		case GLFW_REPEAT: inputAction = InputManager::Action::REPEAT; break;
 		case GLFW_RELEASE: inputAction = InputManager::Action::RELEASE; break;
 		case -1: break; // We don't care about events GLFW can't handle
-		default: Logger::LogError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: " + std::to_string(glfwAction));
+		default: PrintError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: %i\n", 
+							glfwAction);
 		}
 
 		return inputAction;
@@ -640,7 +641,8 @@ namespace flex
 		case GLFW_KEY_MENU: inputKey = InputManager::KeyCode::KEY_MENU; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default:
-			Logger::LogError("Unhandled glfw key passed to GLFWKeyToInputManagerKey in GLFWWIndowWrapper: " + std::to_string(glfwKey));
+			PrintError("Unhandled glfw key passed to GLFWKeyToInputManagerKey in GLFWWIndowWrapper: %i\n",
+					   glfwKey);
 			break;
 		}
 
@@ -674,7 +676,8 @@ namespace flex
 		case GLFW_MOUSE_BUTTON_7: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_7; break;
 		case GLFW_MOUSE_BUTTON_8: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_8; break;
 		case -1: break; // We don't care about events GLFW can't handle
-		default: Logger::LogError("Unhandled glfw button passed to GLFWButtonToInputManagerMouseButton in GLFWWIndowWrapper: " + std::to_string(glfwButton)); break;
+		default: PrintError("Unhandled glfw button passed to GLFWButtonToInputManagerMouseButton in GLFWWIndowWrapper: %i\n",
+							glfwButton); break;
 		}
 
 		return inputMouseButton;

@@ -16,7 +16,6 @@
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
-#include "Logger.hpp"
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -43,7 +42,7 @@ namespace flex
 
 		if (m_PhysicsWorld)
 		{
-			Logger::LogWarning("Scene is being initialized more than once!");
+			PrintWarn("Scene is being initialized more than once!\n");
 		}
 
 		// Physics world
@@ -74,20 +73,20 @@ namespace flex
 
 		if (FileExists(filePath))
 		{
-			Logger::LogInfo("Loading scene from: " + shortFilePath);
+			Print("Loading scene from %s\n", shortFilePath.c_str());
 
 			JSONObject sceneRootObject;
 			if (!JSONParser::Parse(filePath, sceneRootObject))
 			{
-				Logger::LogError("Failed to parse scene file: " + shortFilePath);
+				PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
 				return;
 			}
 
 			const bool printSceneContentsToConsole = false;
 			if (printSceneContentsToConsole)
 			{
-				Logger::LogInfo("Parsed scene file:");
-				Logger::LogInfo(sceneRootObject.Print(0));
+				Print("Parsed scene file:\n");
+				Print(sceneRootObject.Print(0).c_str());
 			}
 
 			int sceneVersion = sceneRootObject.GetInt("version");
@@ -95,11 +94,11 @@ namespace flex
 			{
 				if (sceneRootObject.HasField("version"))
 				{
-					Logger::LogError("Unhandled scene version! Max handled version: 1, This version: " + std::to_string(sceneVersion));
+					PrintError("Unhandled scene version: %i! Max handled version: 1\n", sceneVersion);
 				}
 				else
 				{
-					Logger::LogError("Scene version missing from scene file. Assuming version 1");
+					PrintError("Scene version missing from scene file. Assuming version 1\n");
 				}
 			}
 
@@ -149,7 +148,7 @@ namespace flex
 		else
 		{
 			// File doesn't exist, create a new blank one
-			Logger::LogInfo("Creating new scene at: " + shortFilePath);
+			Print("Creating new scene at: %s\n", shortFilePath.c_str());
 
 			// Skybox
 			{
@@ -485,7 +484,7 @@ namespace flex
 			{
 				std::string fileName = foundFilePath;
 				StripLeadingDirectories(fileName);
-				Logger::LogInfo("Parsing prefab: " + fileName);
+				Print("Parsing prefab: %s\n", fileName.c_str());
 
 				JSONObject obj;
 				if (JSONParser::Parse(foundFilePath, obj))
@@ -494,13 +493,13 @@ namespace flex
 				}
 				else
 				{
-					Logger::LogError("Failed to parse prefab file: " + foundFilePath);
+					PrintError("Failed to parse prefab file: %s\n", foundFilePath.c_str());
 				}
 			}
 		}
 		else
 		{
-			Logger::LogError("Failed to find files in \"scenes/prefabs/\" !");
+			PrintError("Failed to find files in \"scenes/prefabs/\"!\n");
 		}
 	}
 
@@ -518,8 +517,8 @@ namespace flex
 			else
 			{
 				matID = InvalidMaterialID;
-				Logger::LogError("Invalid material index for object " + object.GetString("name") + ": " +
-								 std::to_string(materialArrayIndex));
+				PrintError("Invalid material index for object %s: %i\n",
+						   object.GetString("name").c_str(), materialArrayIndex);
 			}
 		}
 		return matID;
@@ -635,7 +634,7 @@ namespace flex
 		{
 			shortSavedFileName = savedShortSaveFilePath;
 		}
-		Logger::LogInfo("Serializing scene to " + shortSavedFileName);
+		Print("Serializing scene to %s\n", shortSavedFileName.c_str());
 		
 		if (bSaveOverDefault)
 		{
@@ -666,7 +665,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Failed to open file for writing: " + savedFilePathName + ", Can't serialize scene");
+			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", savedFilePathName.c_str());
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 	}
@@ -682,7 +681,7 @@ namespace flex
 		if (bSavedFileExists ||
 			bDefaultFileExists)
 		{
-			Logger::LogInfo("Deleting scene's save files (" + m_FileName + ')');
+			Print("Deleting scene's save files from %s\n", m_FileName.c_str());
 
 			if (bDefaultFileExists)
 			{
@@ -746,7 +745,7 @@ namespace flex
 		{
 			if (*iter == gameObject)
 			{
-				Logger::LogWarning("Attempted to add same root object to scene more than once");
+				PrintWarn("Attempted to add same root object (%s) to scene more than once\n", gameObject->m_Name.c_str());
 				return nullptr;
 			}
 		}
@@ -778,7 +777,7 @@ namespace flex
 			}
 		}
 
-		Logger::LogWarning("Attempting to remove non-existent child from scene");
+		PrintWarn("Attempting to remove non-existent child from scene %s\n", m_Name.c_str());
 	}
 
 	void BaseScene::RemoveAllRootObjects(bool deleteRootObjects)
@@ -826,7 +825,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Requested invalid player from BaseScene with index: " + std::to_string(index));
+			PrintError("Requested invalid player from BaseScene with index: %i\n", index);
 			return nullptr;
 		}
 	}

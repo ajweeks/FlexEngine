@@ -78,7 +78,7 @@ namespace flex
 
 			if (prefab == nullptr)
 			{
-				Logger::LogError("Invalid prefab type: " + prefabTypeStr);
+				PrintError("Invalid prefab type: %s\n", prefabTypeStr.c_str());
 
 				return nullptr;
 			}
@@ -117,7 +117,7 @@ namespace flex
 		switch (gameObjectType)
 		{
 		case GameObjectType::PLAYER:
-			Logger::LogError("Player was serialized to scene file!");
+			PrintError("Player was serialized to scene file!\n");
 			break;
 		case GameObjectType::SKYBOX:
 			newGameObject = new Skybox(objectName);
@@ -226,7 +226,7 @@ namespace flex
 			} break;
 			default:
 			{
-				Logger::LogError("Unhandled BroadphaseNativeType: " + shapeStr);
+				PrintError("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
 			} break;
 			}
 
@@ -239,7 +239,7 @@ namespace flex
 		{
 			if (GetCollisionShape() == nullptr)
 			{
-				Logger::LogError("Serialized object contains \"rigid body\" field but no collider: " + m_Name);
+				PrintError("Serialized object contains \"rigid body\" field but no collider: %s\n", m_Name.c_str());
 			}
 			else
 			{
@@ -298,7 +298,7 @@ namespace flex
 
 		if (!m_bSerializable)
 		{
-			Logger::LogError("Attempted to serialize non-serializable object! (" + m_Name + ')');
+			PrintError("Attempted to serialize non-serializable object with name \"%s\"\n", m_Name.c_str());
 			return object;
 		}
 
@@ -357,7 +357,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
+				PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
 			}
 
 			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
@@ -387,7 +387,7 @@ namespace flex
 				i32 materialArrayIndex = scene->GetMaterialArrayIndex(material, gameContext);
 				if (materialArrayIndex == -1)
 				{
-					//	Logger::LogError("Mesh object contains material not present in "
+					//	PrintError("Mesh object contains material not present in "
 					//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
 					//					 "Object name: " + objectName + 
 					//					 ", matID: " + std::to_string(matID));
@@ -447,7 +447,8 @@ namespace flex
 			} break;
 			default:
 			{
-				Logger::LogError("Unhandled BroadphaseNativeType: " + std::to_string(shapeType));
+				PrintError("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n", 
+						   shapeType, m_Name.c_str(), scene->GetName().c_str());
 			} break;
 			}
 
@@ -466,7 +467,7 @@ namespace flex
 
 			if (collisionShape == nullptr)
 			{
-				Logger::LogError("Can't serialize object which has a rigid body but no collider! (" + GetName() + ")");
+				PrintError("Attempted to serialize object (%s) which has a rigid body but no collider!\n", GetName().c_str());
 			}
 			else
 			{
@@ -520,7 +521,7 @@ namespace flex
 		{
 			if (!m_CollisionShape)
 			{
-				Logger::LogError("Game object contains rigid body but no collision shape! Must call SetCollisionShape before Initialize");
+				PrintError("Game object contains rigid body but no collision shape! Must call SetCollisionShape before Initialize\n");
 			}
 			else
 			{
@@ -695,7 +696,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled mesh component prefab type encountered while duplicating object");
+				PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
 			}
 		}
 
@@ -740,7 +741,7 @@ namespace flex
 	{
 		if (parent == this)
 		{
-			Logger::LogError("Attempted to set parent as self! (" + m_Name + ")");
+			PrintError("Attempted to set parent as self on %s\n", m_Name.c_str());
 			return;
 		}
 
@@ -760,7 +761,7 @@ namespace flex
 
 		if (child == this)
 		{
-			Logger::LogError("Attempted to add self as child! (" + m_Name + ")");
+			PrintError("Attempted to add self as child on %s\n", m_Name.c_str());
 			return nullptr;
 		}
 
@@ -1067,11 +1068,11 @@ namespace flex
 			maxRotation = valveRange.y;
 			if (glm::abs(maxRotation - minRotation) <= 0.0001f)
 			{
-				Logger::LogWarning("Valve's rotation range is 0, it will not be able to rotate!");
+				PrintWarn("Valve's rotation range is 0, it will not be able to rotate!\n");
 			}
 			if (minRotation > maxRotation)
 			{
-				Logger::LogWarning("Valve's minimum rotation range is greater than its maximum! Undefined behavior");
+				PrintWarn("Valve's minimum rotation range is greater than its maximum! Undefined behavior\n");
 			}
 
 			if (!m_MeshComponent)
@@ -1109,7 +1110,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogWarning("Valve's \"valve info\" field missing!");
+			PrintWarn("Valve's \"valve info\" field missing in scene %s\n", scene->GetName().c_str());
 		}
 	}
 
@@ -1202,7 +1203,7 @@ namespace flex
 			gain = glm::clamp(gain, 0.0f, 1.0f);
 			AudioManager::SetSourceGain(s_BunkSound, gain);
 			AudioManager::PlaySource(s_BunkSound, true);
-			//Logger::LogInfo(std::to_string(overshoot) + ", " + std::to_string(gain));
+			//Print(std::to_string(overshoot) + ", " + std::to_string(gain));
 			rotationSpeed = 0.0f;
 			pRotationSpeed = 0.0f;
 		}
@@ -1279,7 +1280,7 @@ namespace flex
 
 		if (valveName.empty())
 		{
-			Logger::LogWarning("Rising block's \"valve name\" field is empty! Can't find matching valve");
+			PrintWarn("Rising block's \"valve name\" field is empty! Can't find matching valve\n");
 		}
 		else
 		{
@@ -1295,7 +1296,7 @@ namespace flex
 
 		if (!valve)
 		{
-			Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
+			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName);
 		}
 
 		blockInfo.SetBoolChecked("affected by gravity", bAffectedByGravity);
@@ -1303,7 +1304,7 @@ namespace flex
 		blockInfo.SetVec3Checked("move axis", moveAxis);
 		if (moveAxis == glm::vec3(0.0f))
 		{
-			Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
+			PrintWarn("Rising block's move axis is not set! It won't be able to move\n");
 		}
 	}
 

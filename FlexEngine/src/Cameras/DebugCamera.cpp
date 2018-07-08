@@ -10,7 +10,6 @@
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Window/Window.hpp"
 
 namespace flex

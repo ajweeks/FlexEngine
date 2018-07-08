@@ -6,7 +6,6 @@
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #pragma warning(pop)
 
-#include "Logger.hpp"
 
 namespace flex
 {
@@ -28,7 +27,7 @@ namespace flex
 		case STATIC_PLANE_PROXYTYPE:				return "static plane";
 		case SOFTBODY_SHAPE_PROXYTYPE:				return "soft body";
 		default:
-			Logger::LogError("Unhandled btCollisionShape type: " + (i32)shapeType);
+			PrintError("Unhandled btCollisionShape type: %i\n", (i32)shapeType);
 			return "UNHANDLED BroadphsaeNativeTypes: " + shapeType;
 		}
 	}
@@ -89,7 +88,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Unhandled BroadphaseNativeTypes string: " + str);
+			PrintError("Unhandled BroadphaseNativeTypes string: %s\n", str.c_str());
 			return MAX_BROADPHASE_COLLISION_TYPES;
 		}
 	}

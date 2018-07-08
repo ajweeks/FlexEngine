@@ -33,7 +33,6 @@
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "JSONTypes.hpp"
-#include "Logger.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -152,7 +151,7 @@ namespace flex
 
 				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 				{
-					Logger::LogError("Capture frame buffer is incomplete!");
+					PrintError("Capture frame buffer is incomplete!\n");
 				}
 
 				CheckGLErrorMessages();
@@ -330,7 +329,7 @@ namespace flex
 
 			if (m_BRDFTextureHandle.id == 0)
 			{
-				Logger::LogInfo("Generating BRDF LUT");
+				Print("Generating BRDF LUT\n");
 				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, 
 										m_BRDFTextureSize, 
 										false,
@@ -379,7 +378,7 @@ namespace flex
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
-				Logger::LogError("Framebuffer not complete!");
+				PrintError("Framebuffer not complete!\n");
 			}
 
 			CheckGLErrorMessages();
@@ -405,7 +404,7 @@ namespace flex
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
 			if (castedWindow == nullptr)
 			{
-				Logger::LogError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!");
+				PrintError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!\n");
 				return;
 			}
 
@@ -415,7 +414,7 @@ namespace flex
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
 			m_PhysicsDebugDrawer->Initialize();
 
-			Logger::LogInfo("Renderer initialized!");
+			Print("Renderer initialized!\n");
 		}
 
 		void GLRenderer::Destroy()
@@ -465,19 +464,18 @@ namespace flex
 			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
 			if (activeRenderObjectCount > 0)
 			{
-				Logger::LogError("=====================================================");
-				Logger::LogError(std::to_string(activeRenderObjectCount) + " render objects were not destroyed before GL render:");
+				PrintError("=====================================================\n");
+				PrintError("%i render objects were not destroyed before GL render:\n", activeRenderObjectCount);
 
 				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 				{
 					if (m_RenderObjects[i])
 					{
-						Logger::LogError("render object with material name: " + m_RenderObjects[i]->materialName);
-						//Logger::LogError(m_RenderObjects[i]->gameObject->GetName());
+						PrintError("render object with material name: %s\n", m_RenderObjects[i]->materialName.c_str());
 						DestroyRenderObject(m_RenderObjects[i]->renderID);
 					}
 				}
-				Logger::LogError("=====================================================");
+				PrintError("=====================================================\n");
 			}
 			m_RenderObjects.clear();
 			CheckGLErrorMessages();
@@ -508,18 +506,18 @@ namespace flex
 
 			if (mat.material.name.empty())
 			{
-				Logger::LogWarning("Material doesn't have a name!");
+				PrintWarn("Material doesn't have a name!\n");
 			}
 
 			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
 			{
 				if (createInfo->shaderName.empty())
 				{
-					Logger::LogError("MaterialCreateInfo::shaderName must be filled in!");
+					PrintError("MaterialCreateInfo::shaderName must be filled in!\n");
 				}
 				else
 				{
-					Logger::LogError("Material's shader name couldn't be found! shader name: " + createInfo->shaderName);
+					PrintError("Material's shader name couldn't be found! shader name: %s\n", createInfo->shaderName.c_str());
 				}
 			}
 			
@@ -567,7 +565,8 @@ namespace flex
 					*uniformInfo[i].id = glGetUniformLocation(shader.program, uniformInfo[i].name);
 					if (*uniformInfo[i].id == -1)
 					{
-						Logger::LogWarning(std::string(uniformInfo[i].name) + " was not found for material " + createInfo->name + " (shader " + createInfo->shaderName + ")");
+						PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
+								  uniformInfo[i].name, createInfo->name.c_str(), createInfo->shaderName.c_str());
 					}
 				}
 			}
@@ -646,7 +645,7 @@ namespace flex
 			{
 				if (m_BRDFTextureHandle.id == 0)
 				{
-					Logger::LogInfo("BRDF LUT has not been generated before material which uses it!");
+					Print("BRDF LUT has not been generated before material which uses it!\n");
 				}
 				mat.brdfLUTSamplerID = m_BRDFTextureHandle.id;
 			}
@@ -710,7 +709,8 @@ namespace flex
 					{
 						if (samplerCreateInfo.filepath.empty())
 						{
-							Logger::LogError("Empty file path specified in SamplerCreateInfo for texture " + samplerCreateInfo.textureName + " in material " + mat.material.name);
+							PrintError("Empty file path specified in SamplerCreateInfo for texture %s in material %s\n", 
+									   samplerCreateInfo.textureName.c_str(), mat.material.name.c_str());
 						}
 						else
 						{
@@ -736,7 +736,8 @@ namespace flex
 							i32 uniformLocation = glGetUniformLocation(shader.program, samplerCreateInfo.textureName.c_str());
 							if (uniformLocation == -1)
 							{
-								Logger::LogWarning(samplerCreateInfo.textureName + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+								PrintWarn("texture uniform %s was not found in material %s (shader: %s)\n",
+										  samplerCreateInfo.textureName.c_str(), mat.material.name.c_str(), shader.shader.name.c_str());
 							}
 							else
 							{
@@ -755,7 +756,8 @@ namespace flex
 				i32 positionLocation = glGetUniformLocation(shader.program, frameBufferName);
 				if (positionLocation == -1)
 				{
-					Logger::LogWarning(frameBufferPair.first + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("%s was not found in material %s, (shader %s)\n",
+							  frameBufferPair.first.c_str(), mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
@@ -788,7 +790,8 @@ namespace flex
 					i32 uniformLocation = glGetUniformLocation(shader.program, "cubemapSampler");
 					if (uniformLocation == -1)
 					{
-						Logger::LogWarning("cubemapSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+						PrintWarn("uniform cubemapSampler was not found in material %s (shader %s)\n",
+								  mat.material.name.c_str(), shader.shader.name.c_str());
 					}
 					else
 					{
@@ -838,10 +841,12 @@ namespace flex
 			if (shader.shader.needCubemapSampler)
 			{
 				// TODO: Save location for binding later?
-				i32 uniformLocation = glGetUniformLocation(shader.program, "cubemapSampler");
+				const char* uniformName = "cubemapSampler";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("cubemapSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
@@ -852,10 +857,12 @@ namespace flex
 
 			if (shader.shader.needBRDFLUT)
 			{
-				i32 uniformLocation = glGetUniformLocation(shader.program, "brdfLUT");
+				const char* uniformName = "brdfLUT";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("brdfLUT was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
@@ -879,10 +886,12 @@ namespace flex
 
 			if (shader.shader.needIrradianceSampler)
 			{
-				i32 uniformLocation = glGetUniformLocation(shader.program, "irradianceSampler");
+				const char* uniformName = "irradianceSampler";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("irradianceSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
@@ -906,10 +915,12 @@ namespace flex
 
 			if (shader.shader.needPrefilteredMap)
 			{
-				i32 uniformLocation = glGetUniformLocation(shader.program, "prefilterMap");
+				const char* uniformName = "prefilterMap";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("prefilterMap was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n",
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
@@ -943,7 +954,7 @@ namespace flex
 
 			if (renderObject->materialID == InvalidMaterialID)
 			{
-				Logger::LogError("Render object's materialID has not been set in its createInfo!");
+				PrintError("Render object's materialID has not been set in its createInfo!\n");
 
 				// TODO: Use INVALID material here (Bright pink)
 				// Hopefully the first material works out okay! Should be better than crashing
@@ -960,23 +971,23 @@ namespace flex
 
 				if (renderObject->materialName.empty())
 				{
-					Logger::LogWarning("Render object created with empty material name!");
+					PrintWarn("Render object created with empty material name!\n");
 				}
 			}
 
 			if (renderObject->gameObject->GetName().empty())
 			{
-				Logger::LogWarning("Render object created with empty name!");
+				PrintWarn("Render object created with empty name!\n");
 			}
 
 			if (m_Materials.empty())
 			{
-				Logger::LogError("Render object is being created before any materials have been created!");
+				PrintError("Render object is being created before any materials have been created!\n");
 			}
 
 			if (m_Materials.find(renderObject->materialID) == m_Materials.end())
 			{
-				Logger::LogError("Uninitialized material with MaterialID " + std::to_string(renderObject->materialID));
+				PrintError("Uninitialized material with MaterialID %i\n", renderObject->materialID);
 				return renderID;
 			}
 
@@ -1362,7 +1373,7 @@ namespace flex
 
 				if (!m_1x1_NDC_Quad)
 				{
-					Logger::LogError("Failed to create 1x1 NDC quad!");
+					PrintError("Failed to create 1x1 NDC quad!\n");
 				}
 				else
 				{
@@ -1600,7 +1611,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
-				Logger::LogError("Invalid renderID passed to SetTopologyMode: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to SetTopologyMode: %i\n", renderID);
 				return;
 			}
 
@@ -1608,8 +1619,7 @@ namespace flex
 
 			if (glMode == GL_INVALID_ENUM)
 			{
-				Logger::LogError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: " + 
-					std::to_string((i32)topology));
+				PrintError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: %i\n", (i32)topology);
 				renderObject->topology = GL_TRIANGLES;
 			}
 			else
@@ -1671,7 +1681,7 @@ namespace flex
 
 			//			if (material.material.generateReflectionProbeMaps)
 			//			{
-			//				Logger::LogInfo("Capturing reflection probe");
+			//				Print("Capturing reflection probe\n");
 			//				CaptureSceneToCubemap(gameContext, renderObject->renderID);
 			//				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
 			//				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
@@ -1817,7 +1827,8 @@ namespace flex
 				ShaderID shaderID = iter->second.material.shaderID;
 				if (shaderID == InvalidShaderID)
 				{
-					Logger::LogWarning("GLRenderer::BatchRenderObjects > Material has invalid shaderID: " + iter->second.material.name);
+					PrintWarn("GLRenderer::BatchRenderObjects > Material has invalid shaderID: %s\n",
+							  iter->second.material.name.c_str());
 					continue;
 				}
 				GLShader* shader = &m_Shaders[shaderID];
@@ -1892,7 +1903,7 @@ namespace flex
 
 			if (visibleObjectCount != accountedForObjectCount)
 			{
-				Logger::LogError("BatchRenderObjects didn't account for every visible object!");
+				PrintError("BatchRenderObjects didn't account for every visible object!\n");
 			}
 #endif
 
@@ -1903,7 +1914,7 @@ namespace flex
 		{
 			if (!drawCallInfo.bDeferred)
 			{
-				Logger::LogError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferrred!");
+				PrintError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferred!\n");
 			}
 
 			if (drawCallInfo.bRenderToCubemap)
@@ -1987,7 +1998,7 @@ namespace flex
 		{
 			if (drawCallInfo.bDeferred)
 			{
-				Logger::LogError("DrawGBufferContents was called with a drawCallInfo set to deferred!");
+				PrintError("DrawGBufferContents was called with a drawCallInfo set to deferred!\n");
 			}
 
 			if (!m_gBufferQuadVertexBufferData.pDataStart)
@@ -2126,7 +2137,7 @@ namespace flex
 		{
 			if (drawCallInfo.bDeferred)
 			{
-				Logger::LogError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!");
+				PrintError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!\n");
 			}
 
 			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
@@ -2610,7 +2621,7 @@ namespace flex
 			error = FT_Init_FreeType(&ft);
 			if (error != FT_Err_Ok)
 			{
-				Logger::LogError("Could not init FreeType");
+				PrintError("Could not init FreeType\n");
 				return false;
 			}
 
@@ -2621,13 +2632,13 @@ namespace flex
 			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
 			if (error == FT_Err_Unknown_File_Format)
 			{
-				Logger::LogError("Unhandled font file format: " + filePath);
+				PrintError("Unhandled font file format: %s\n", filePath.c_str());
 				return false;
 			}
 			else if (error != FT_Err_Ok ||
 					 !face)
 			{
-				Logger::LogError("Failed to create new font face: " + filePath);
+				PrintError("Failed to create new font face: %s\n", filePath.c_str());
 				return false;
 			}
 
@@ -2640,7 +2651,7 @@ namespace flex
 
 			std::string fileName = filePath;
 			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Loaded font " + fileName);
+			Print("Loaded font %s\n", fileName.c_str());
 
 			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
 			*font = new BitmapFont(size, fontName, face->num_glyphs);
@@ -2702,7 +2713,7 @@ namespace flex
 
 				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 				{
-					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
+					PrintError("Failed to load glyph with index %i\n", glyphIndex);
 					continue;
 				}
 
@@ -2829,7 +2840,7 @@ namespace flex
 
 				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 				{
-					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
+					PrintError("Failed to load glyph with index %i\n", glyphIndex);
 					continue;
 				}
 
@@ -2837,7 +2848,7 @@ namespace flex
 				{
 					if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
 					{
-						Logger::LogError("Failed to render glyph with index " + std::to_string(glyphIndex));
+						PrintError("Failed to render glyph with index %i\n", glyphIndex);
 						continue;
 					}
 				}
@@ -2851,7 +2862,7 @@ namespace flex
 				FT_Bitmap alignedBitmap{};
 				if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
 				{
-					Logger::LogError("Couldn't align free type bitmap size");
+					PrintError("Couldn't align free type bitmap size\n");
 					continue;
 				}
 
@@ -2948,7 +2959,7 @@ namespace flex
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
 			}
 
-			Logger::LogInfo("Rendered font atlas for " + fileName);
+			Print("Rendered font atlas for %s\n", fileName.c_str());
 
 			return true;
 		}
@@ -3132,12 +3143,12 @@ namespace flex
 							}
 							else
 							{
-								Logger::LogWarning("Attempted to draw char with invalid metric: " + std::to_string(c) + " in font " + font->m_Name);
+								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->m_Name.c_str());
 							}
 						}
 						else
 						{
-							Logger::LogWarning("Attempted to draw invalid char: " + std::to_string(c) + " in font " + font->m_Name);
+							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->m_Name.c_str());
 						}
 
 						prevChar = c;
@@ -3181,7 +3192,7 @@ namespace flex
 
 				if (!renderObject->vertexBufferData)
 				{
-					Logger::LogError("Attempted to draw object which contains no vertex buffer data: " + renderObject->gameObject->GetName());
+					PrintError("Attempted to draw object which contains no vertex buffer data: %s\n", renderObject->gameObject->GetName().c_str());
 					return;
 				}
 
@@ -3244,8 +3255,8 @@ namespace flex
 
 					if (material->uniformIDs.projection == 0)
 					{
-						Logger::LogWarning("Attempted to draw object to cubemap but "
-										   "uniformIDs.projection is not set! " + renderObject->gameObject->GetName());
+						PrintWarn("Attempted to draw object to cubemap but uniformIDs.projection is not set on object: %s\n",
+								  renderObject->gameObject->GetName().c_str());
 						continue;
 					}
 
@@ -3367,7 +3378,8 @@ namespace flex
 					{
 						if (tex.textureID == InvalidID)
 						{
-							Logger::LogError("TextureID is invalid! material: " + glMaterial->material.name + " binding: " + std::to_string(binding));
+							PrintError("TextureID is invalid! material: %s, binding: %i\n", 
+									   glMaterial->material.name.c_str(), binding);
 						}
 						else
 						{
@@ -3397,7 +3409,7 @@ namespace flex
 
 			if (material->frameBuffers.empty())
 			{
-				Logger::LogWarning("Attempted to bind frame buffers on material that doesn't contain any framebuffers!");
+				PrintWarn("Attempted to bind frame buffers on material that doesn't contain any framebuffers!\n");
 				return startingBinding;
 			}
 
@@ -3425,7 +3437,7 @@ namespace flex
 
 			if (glMaterial->cubemapSamplerGBuffersIDs.empty())
 			{
-				Logger::LogWarning("Attempted to bind gbuffer samplers on material doesn't contain any gbuffer samplers!");
+				PrintWarn("Attempted to bind GBuffer samplers on material doesn't contain any GBuffer samplers!\n");
 				return startingBinding;
 			}
 
@@ -3464,7 +3476,7 @@ namespace flex
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
-				Logger::LogError("Offscreen frame buffer is incomplete!");
+				PrintError("Offscreen frame buffer is incomplete!\n");
 			}
 			CheckGLErrorMessages();
 		}
@@ -3560,7 +3572,7 @@ namespace flex
 						}
 						else
 						{
-							Logger::LogWarning("Failed to delete game object: " + gameObject->GetName());
+							PrintWarn("Failed to delete game object: %s\n", gameObject->GetName().c_str());
 						}
 					}
 					ImGui::PopStyleColor();
@@ -4065,7 +4077,7 @@ namespace flex
 					{
 						fileNames += " & " + m_Shaders[i].shader.geometryShaderFilePath;
 					}
-					Logger::LogError("Couldn't load/compile shaders: " + fileNames);
+					PrintError("Couldn't load/compile shaders: %s\n", fileNames.c_str());
 				}
 
 				LinkProgram(m_Shaders[i].program);
@@ -4218,7 +4230,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
-				Logger::LogError("Invalid renderID passed to UpdatePerObjectUniforms: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to UpdatePerObjectUniforms: %i\n", renderID);
 				return;
 			}
 
@@ -4434,7 +4446,7 @@ namespace flex
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Float " + std::string(valName) + " couldn't be found!");
+				PrintWarn("Float %s couldn't be found!\n", valName);
 			}
 			CheckGLErrorMessages();
 
@@ -4447,7 +4459,7 @@ namespace flex
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("i32 " + std::string(valName) + " couldn't be found!");
+				PrintWarn("i32 %s couldn't be found!\n", valName);
 			}
 			CheckGLErrorMessages();
 
@@ -4460,7 +4472,7 @@ namespace flex
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("u32 " + std::string(valName) + " couldn't be found!");
+				PrintWarn("u32 %s couldn't be found!\n", valName);
 			}
 			CheckGLErrorMessages();
 
@@ -4473,7 +4485,7 @@ namespace flex
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec2f " + std::string(vecName) + " couldn't be found!");
+				PrintWarn("Vec2f %s couldn't be found!\n", vecName);
 			}
 			CheckGLErrorMessages();
 
@@ -4486,7 +4498,7 @@ namespace flex
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec3f " + std::string(vecName) + " couldn't be found!");
+				PrintWarn("Vec3f %s couldn't be found!\n", vecName);
 			}
 			CheckGLErrorMessages();
 
@@ -4499,7 +4511,7 @@ namespace flex
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec4f " + std::string(vecName) + " couldn't be found!");
+				PrintWarn("Vec4f %s couldn't be found!\n", vecName);
 			}
 			CheckGLErrorMessages();
 
@@ -4512,7 +4524,7 @@ namespace flex
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Mat4f " + std::string(matName) + " couldn't be found!");
+				PrintWarn("Mat4f %s couldn't be found!\n", matName);
 			}
 			CheckGLErrorMessages();
 
@@ -4667,7 +4679,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
-				Logger::LogError("Invalid renderID passed to DescribeShaderVariable: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to DescribeShaderVariable: %i\n", renderID);
 				return;
 			}
 
@@ -4683,7 +4695,7 @@ namespace flex
 			GLint location = glGetAttribLocation(program, variableName.c_str());
 			if (location == -1)
 			{
-				//Logger::LogWarning("Invalid shader variable name: " + variableName);
+				//PrintWarn("Invalid shader variable name: " + variableName);
 				glBindVertexArray(0);
 				return;
 			}
@@ -4706,7 +4718,7 @@ namespace flex
 			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
 			if (skyboxMaterialID == InvalidMaterialID)
 			{
-				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
+				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
 				return;
 			}
 
@@ -4717,9 +4729,8 @@ namespace flex
 				{
 					if (m_Materials.find(renderObject->materialID) == m_Materials.end())
 					{
-						Logger::LogError("Render object contains invalid material ID: " + 
-										 std::to_string(renderObject->materialID) + 
-										 ", material name: " + renderObject->materialName);
+						PrintError("Render object contains invalid material ID: %i, material name: %s\n", 
+								   renderObject->materialID, renderObject->materialName.c_str());
 					}
 					else
 					{
@@ -4749,7 +4760,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
+				PrintError("SetRenderObjectMaterialID couldn't find render object with ID %i\n", renderID);
 			}
 		}
 
@@ -4820,7 +4831,7 @@ namespace flex
 
 				if (!FileExists(filePath))
 				{
-					Logger::LogError("Failed to find renderer settings files on disk!");
+					PrintError("Failed to find renderer settings files on disk!\n");
 					return;
 				}
 			}
@@ -4842,7 +4853,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Failed to read renderer settings file, but it exists!");
+				PrintError("Failed to read renderer settings file, but it exists!\n");
 			}
 		}
 		
@@ -4857,7 +4868,7 @@ namespace flex
 
 			if (filePath.empty())
 			{
-				Logger::LogError("Failed to save renderer settings to disk: file path is not set!");
+				PrintError("Failed to save renderer settings to disk: file path is not set!\n");
 				return;
 			}
 
@@ -5153,7 +5164,7 @@ namespace flex
 			if (renderID > m_RenderObjects.size() ||
 				renderID == InvalidRenderID)
 			{
-				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to GetRenderObject: %i\n", renderID);
 				return nullptr;
 			}
 #endif

@@ -4,7 +4,6 @@
 
 #include <algorithm>
 
-#include "Logger.hpp"
 #include "FlexEngine.hpp"
 #include "Cameras/CameraManager.hpp"
 
@@ -30,7 +29,7 @@ namespace flex
 	{
 		if (m_Scenes.empty())
 		{
-			Logger::LogError("No scenes added to SceneManager");
+			PrintError("No scenes ded to SceneManager\n");
 			return;
 		}
 
@@ -54,7 +53,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Attempt to add already existing scene to SceneManager: " + newScene->GetName());
+			PrintError("Attempt to add already existing scene to SceneManager: %s\n", newScene->GetName().c_str());
 		}
 	}
 
@@ -89,7 +88,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Attempt to remove non-existent scene from SceneManager: " + scene->GetName());
+			PrintError("Attempt to remove non-existent scene from SceneManager: %s\n", scene->GetName().c_str());
 		}
 	}
 
@@ -97,8 +96,8 @@ namespace flex
 	{
 		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
-			Logger::LogError("Attempt to set scene to index " + std::to_string(sceneIndex) +
-				" failed, it does not exist in the SceneManager");
+			PrintError("Attempt to set scene to index %i failed, it does not exist in the SceneManager\n",
+					   sceneIndex);
 			return false;
 		}
 
@@ -126,7 +125,7 @@ namespace flex
 
 		if (bPrintErrorOnFailure)
 		{
-			Logger::LogError("Attempt to set current scene to " + scene->GetName() + " failed because it was not found in the scene manager!");
+			PrintError("Attempt to set current scene failed because it was not found in the scene manager: %s\n", scene->GetName().c_str());
 		}
 
 		return false;
@@ -144,7 +143,7 @@ namespace flex
 
 		if (bPrintErrorOnFailure)
 		{
-			Logger::LogError("Attempt to set scene to " + sceneFileName + " failed, it does not exist in the SceneManager");
+			PrintError("Attempt to set scene failed, it does not exist in the SceneManager: %s\n", sceneFileName.c_str());
 		}
 
 		return false;
@@ -233,13 +232,13 @@ namespace flex
 
 		if (!addedSceneFileNames.empty())
 		{
-			Logger::LogInfo("Added " + IntToString(addedSceneFileNames.size()) + " scenes to list:");
+			Print("Added %i scenes to list:\n", addedSceneFileNames.size());
 			for (std::string& fileName : addedSceneFileNames)
 			{
-				Logger::LogInfo(fileName + " ", false);
+				Print("%s ", fileName.c_str());
 
 			}
-			Logger::LogNewLine();
+			Print("\n");
 		}
 	}
 
@@ -261,12 +260,12 @@ namespace flex
 				// Don't erase the current scene, warn the user the file is missing
 				if (m_CurrentSceneIndex == sceneIndex)
 				{
-					Logger::LogWarning("Current scene's JSON file is missing (" + fileName + ")! Save now to keep your changes");
+					PrintWarn("Current scene's JSON file is missing (%s)! Save now to keep your changes\n", fileName.c_str());
 					++sceneIter;
 				}
 				else
 				{
-					Logger::LogInfo("Removing scene from list due to JSON file missing: " + fileName);
+					Print("Removing scene from list due to JSON file missing: %s\n", fileName.c_str());
 
 					sceneIter = m_Scenes.erase(sceneIter);
 
@@ -291,13 +290,13 @@ namespace flex
 	{
 		if (m_Scenes.size() == 1)
 		{
-			Logger::LogWarning("Attempted to delete only remaining scene!");
+			PrintWarn("Attempted to delete only remaining scene!\n");
 			return;
 		}
 
 		if (!scene)
 		{
-			Logger::LogWarning("Attempted to delete invalid scene!");
+			PrintWarn("Attempted to delete invalid scene!\n");
 			return;
 		}
 
@@ -313,7 +312,7 @@ namespace flex
 
 		if (oldSceneIndex == -1)
 		{
-			Logger::LogError("Attempted to delete scene not present in scene manager! " + scene->GetName());
+			PrintError("Attempted to delete scene not present in scene manager: %s\n ", scene->GetName());
 			return;
 		}
 
@@ -338,7 +337,7 @@ namespace flex
 			}
 		}
 
-		Logger::LogInfo("Deleting scene " + scene->GetFileName());
+		Print("Deleting scene %s\n", scene->GetFileName().c_str());
 
 		scene->DeleteSaveFiles();
 		SafeDelete(scene);
@@ -361,7 +360,7 @@ namespace flex
 		BaseScene* newScene = new BaseScene(fileName);
 		newScene->SetName(name);
 
-		Logger::LogInfo("Created new scene " + name);
+		Print("Created new scene %s\n", name.c_str());
 
 		m_Scenes.push_back(newScene);
 

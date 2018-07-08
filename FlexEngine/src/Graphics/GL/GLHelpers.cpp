@@ -160,8 +160,8 @@ namespace flex
 				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0 ||
 					createInfo.textureSize.x >= Renderer::MAX_TEXTURE_DIM || createInfo.textureSize.y >= Renderer::MAX_TEXTURE_DIM)
 				{
-					Logger::LogError("Invalid cubemap dimensions: " + 
-						std::to_string(createInfo.textureSize.x) + "x" + std::to_string(createInfo.textureSize.y));
+					PrintError("Invalid cubemap dimensions: %.2fx%.2f\n", 
+						createInfo.textureSize.x, createInfo.textureSize.y);
 					success = false;
 				}
 				else
@@ -187,7 +187,7 @@ namespace flex
 					}
 					else
 					{
-						Logger::LogError("Could not load cube map at " + createInfo.filePaths[i]);
+						PrintError("Could not load cube map at %s\n", createInfo.filePaths[i].c_str());
 						success = false;
 					}
 				}
@@ -224,7 +224,7 @@ namespace flex
 					CheckGLErrorMessages();
 					if (uniformLocation == -1)
 					{
-						Logger::LogWarning(std::string(gbuffer.name) + " was not found!");
+						PrintWarn("%s was not found!\n", gbuffer.name);
 					}
 					else
 					{
@@ -448,22 +448,22 @@ namespace flex
 				geomFileName = shader.shader.geometryShaderFilePath;
 				StripLeadingDirectories(geomFileName);
 
-				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName + " & " + geomFileName);
+				Print("Loading shaders %s & %s & %s\n", vertFileName.c_str(), fragFileName.c_str(), geomFileName.c_str());
 			}
 			else
 			{
-				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+				Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
 			}
 
 			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode, false))
 			{
-				Logger::LogError("Could not find vertex shader: " + shader.shader.name);
+				PrintError("Could not find vertex shader: %s\n", shader.shader.name.c_str());
 			}
 			shader.shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
 
 			if (!ReadFile(shader.shader.fragmentShaderFilePath, shader.shader.fragmentShaderCode, false))
 			{
-				Logger::LogError("Could not find fragment shader: " + shader.shader.name);
+				PrintError("Could not find fragment shader: %s\n", shader.shader.name.c_str());
 			}
 			shader.shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
 
@@ -471,7 +471,7 @@ namespace flex
 			{
 				if (!ReadFile(shader.shader.geometryShaderFilePath, shader.shader.geometryShaderCode, false))
 				{
-					Logger::LogError("Could not find geometry shader: " + shader.shader.name);
+					PrintError("Could not find geometry shader: %s\n", shader.shader.name.c_str());
 				}
 				shader.shader.geometryShaderCode.push_back('\0'); // Signal end of string with terminator character
 			}
@@ -491,7 +491,7 @@ namespace flex
 				std::string vertexShaderErrorMessage;
 				vertexShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(vertexShaderID, infoLogLength, NULL, (GLchar*)vertexShaderErrorMessage.data());
-				Logger::LogError(vertexShaderErrorMessage);
+				PrintError("%s\n", vertexShaderErrorMessage.c_str());
 				bSuccess = false;
 			}
 
@@ -507,7 +507,7 @@ namespace flex
 				std::string fragmentShaderErrorMessage;
 				fragmentShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(fragmentShaderID, infoLogLength, NULL, (GLchar*)fragmentShaderErrorMessage.data());
-				Logger::LogError(fragmentShaderErrorMessage);
+				PrintError("%s\n", fragmentShaderErrorMessage.c_str());
 				bSuccess = false;
 			}
 			
@@ -526,7 +526,7 @@ namespace flex
 					geometryShaderErrorMessage.resize((size_t)infoLogLength);
 					glGetShaderInfoLog(geometryShaderID, infoLogLength, NULL, 
 						(GLchar*)geometryShaderErrorMessage.data());
-					Logger::LogError(geometryShaderErrorMessage);
+					PrintError("%s\n", geometryShaderErrorMessage.c_str());
 					bSuccess = false;
 				}
 			}
@@ -556,7 +556,7 @@ namespace flex
 				std::string programErrorMessage;
 				programErrorMessage.resize((size_t)infoLogLength);
 				glGetProgramInfoLog(program, infoLogLength, NULL, (GLchar*)programErrorMessage.data());
-				Logger::LogError(programErrorMessage);
+				PrintError("%s\n", programErrorMessage.c_str());
 
 				return false;
 			}
@@ -584,7 +584,7 @@ namespace flex
 			case BufferTarget::ARRAY_BUFFER:			return GL_ARRAY_BUFFER;
 			case BufferTarget::ELEMENT_ARRAY_BUFFER:	return GL_ELEMENT_ARRAY_BUFFER;
 			default:
-				Logger::LogError("Unhandled BufferTarget passed to BufferTargetToGLTarget: " + std::to_string((i32)bufferTarget));
+				PrintError("Unhandled BufferTarget passed to BufferTargetToGLTarget: %i\n", (i32)bufferTarget);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -602,7 +602,7 @@ namespace flex
 			case DataType::FLOAT:			return GL_FLOAT;
 			case DataType::DOUBLE:			return GL_DOUBLE;
 			default:
-				Logger::LogError("Unhandled DataType passed to DataTypeToGLType: " + std::to_string((i32)dataType));
+				PrintError("Unhandled DataType passed to DataTypeToGLType: %i\n", (i32)dataType);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -614,7 +614,7 @@ namespace flex
 			case UsageFlag::STATIC_DRAW:	return GL_STATIC_DRAW;
 			case UsageFlag::DYNAMIC_DRAW:	return GL_DYNAMIC_DRAW;
 			default:
-				Logger::LogError("Unhandled usage flag passed to UsageFlagToGLUsageFlag: " + std::to_string((i32)usage));
+				PrintError("Unhandled usage flag passed to UsageFlagToGLUsageFlag: %i\n", (i32)usage);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -631,7 +631,7 @@ namespace flex
 			case TopologyMode::TRIANGLE_STRIP:	return GL_TRIANGLE_STRIP;
 			case TopologyMode::TRIANGLE_FAN:	return GL_TRIANGLE_FAN;
 			default:
-				Logger::LogError("Unhandled topology mode passed to TopologyModeToGLMode: " + std::to_string((i32)topology));
+				PrintError("Unhandled topology mode passed to TopologyModeToGLMode: %i\n", (i32)topology);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -644,7 +644,7 @@ namespace flex
 			case CullFace::FRONT:			return GL_FRONT;
 			case CullFace::FRONT_AND_BACK:	return GL_FRONT_AND_BACK;
 			default:
-				Logger::LogError("Unhandled cull face passed to CullFaceToGLCullFace: " + std::to_string((i32)cullFace));
+				PrintError("Unhandled cull face passed to CullFaceToGLCullFace: %i\n", (i32)cullFace);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -662,7 +662,7 @@ namespace flex
 			case DepthTestFunc::EQUAL:		return GL_EQUAL;
 			case DepthTestFunc::NOTEQUAL:	return GL_NOTEQUAL;
 			default:
-				Logger::LogError("Unhandled depth test func face passed to DepthTestFuncToGlenum: " + std::to_string((i32)func));
+				PrintError("Unhandled depth test func face passed to DepthTestFuncToGlenum: %i\n", (i32)func);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -684,7 +684,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GLTarget passed to GLTargetToBufferTarget: " + std::to_string((i32)target));
+				PrintError("Unhandled GLTarget passed to GLTargetToBufferTarget: %i\n", (i32)target);
 				return BufferTarget::NONE;
 			}
 		}
@@ -725,7 +725,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GLType passed to GLTypeToDataType: " + std::to_string(type));
+				PrintError("Unhandled GLType passed to GLTypeToDataType: %i\n", type);
 				return DataType::NONE;
 			}
 		}
@@ -742,7 +742,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL usage flag passed to GLUsageFlagToUsageFlag: " + std::to_string(usage));
+				PrintError("Unhandled GL usage flag passed to GLUsageFlagToUsageFlag: %i\n", usage);
 				return UsageFlag::NONE;
 			}
 		}
@@ -779,7 +779,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL mode passed to GLModeToTopologyMode: " + std::to_string(mode));
+				PrintError("Unhandled GL mode passed to GLModeToTopologyMode: %i\n", mode);
 				return TopologyMode::NONE;
 			}
 		}
@@ -800,7 +800,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL cull face passed to GLCullFaceToCullFace: " + std::to_string(cullFace));
+				PrintError("Unhandled GL cull face passed to GLCullFaceToCullFace: %i\n", cullFace);
 				return CullFace::NONE;
 			}
 		}
@@ -841,7 +841,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL enum passed to GlenumToDepthTestFunc: " + std::to_string(depthTestFunc));
+				PrintError("Unhandled GL enum passed to GlenumToDepthTestFunc: %i\n", depthTestFunc);
 				return DepthTestFunc::NONE;
 			}
 		}

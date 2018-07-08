@@ -8,7 +8,6 @@
 #include "imgui.h"
 #pragma warning(pop)
 
-#include "Logger.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -66,24 +65,24 @@ namespace flex
 		}
 
 #if 0 // Log mouse states
-		Logger::LogInfo("states:   ", false);
+		Print("states:   ", false);
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Logger::LogInfo(std::string((m_MouseButtonStates & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+			Print(std::string((m_MouseButtonStates & (1 << i)) != 0 ? "1" : "0") + ", ", false);
 		}
 		Logger::LogNewLine();
 
-		Logger::LogInfo("pressed:  ", false);
+		Print("pressed:  ", false);
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Logger::LogInfo(std::string((m_MouseButtonsPressed & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+			Print(std::string((m_MouseButtonsPressed & (1 << i)) != 0 ? "1" : "0") + ", ", false);
 		}
 		Logger::LogNewLine();
 
-		Logger::LogInfo("released: ", false);
+		Print("released: ", false);
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Logger::LogInfo(std::string((m_MouseButtonsReleased & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+			Print(std::string((m_MouseButtonsReleased & (1 << i)) != 0 ? "1" : "0") + ", ", false);
 		}
 		Logger::LogNewLine();
 		Logger::LogNewLine();

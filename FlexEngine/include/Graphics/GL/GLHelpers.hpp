@@ -10,7 +10,6 @@
 #pragma warning(pop)
 
 #include "Graphics/RendererTypes.hpp"
-#include "Logger.hpp"
 #include "Types.hpp"
 
 namespace flex

@@ -2,7 +2,6 @@
 #if COMPILE_VULKAN
 
 #include "Window/Vulkan/VulkanWindowWrapper.hpp"
-#include "Logger.hpp"
 
 namespace flex
 {
@@ -28,7 +27,7 @@ namespace flex
 
 			if (glfwVulkanSupported() != GLFW_TRUE)
 			{
-				Logger::LogError("This device does not support Vulkan! Aborting");
+				PrintError("This device does not support Vulkan! Aborting");
 				exit(EXIT_FAILURE);
 			}
 
@@ -41,7 +40,7 @@ namespace flex
 			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), NULL, NULL);
 			if (!m_Window)
 			{
-				Logger::LogError("Failed to create glfw Window! Exiting");
+				PrintError("Failed to create glfw Window! Exiting");
 				glfwTerminate();
 				// TODO: Try creating a window manually here
 				exit(EXIT_FAILURE);

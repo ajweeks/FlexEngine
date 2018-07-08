@@ -7,7 +7,6 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 
 namespace flex
 {
@@ -46,7 +45,7 @@ namespace flex
 			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), NULL, NULL);
 			if (!m_Window)
 			{
-				Logger::LogError("Failed to create glfw Window! Exiting");
+				PrintError("Failed to create glfw Window! Exiting...\n");
 				glfwTerminate();
 				// TODO: Try creating a window manually here
 				exit(EXIT_FAILURE);
@@ -81,10 +80,10 @@ namespace flex
 			}
 #endif // _DEBUG
 
-			Logger::LogInfo("OpenGL loaded");
-			Logger::LogInfo("Vendor:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
-			Logger::LogInfo("Renderer:\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
-			Logger::LogInfo("Version:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))) + "\n");
+			Print("OpenGL loaded\n");
+			Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+			Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+			Print("Version:  %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 			CheckGLErrorMessages();
 
 			if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
@@ -105,45 +104,42 @@ namespace flex
 				return;
 			}
 
-			std::stringstream ss;
-			ss << "---------------" << std::endl << "\t";
-			ss << "GL Debug message (" << id << "): " << message;
+			PrintError("---------------\n\t");
+			PrintError("GL Debug message (%i): %s\n", id, message);
 
 			switch (source)
 			{
-			case GL_DEBUG_SOURCE_API:             ss << "Source: API"; break;
-			case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   ss << "Source: Window System"; break;
-			case GL_DEBUG_SOURCE_SHADER_COMPILER: ss << "Source: Shader Compiler"; break;
-			case GL_DEBUG_SOURCE_THIRD_PARTY:     ss << "Source: Third Party"; break;
-			case GL_DEBUG_SOURCE_APPLICATION:     ss << "Source: Application"; break;
-			case GL_DEBUG_SOURCE_OTHER:           ss << "Source: Other"; break;
+			case GL_DEBUG_SOURCE_API:             PrintError("Source: API"); break;
+			case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   PrintError("Source: Window System"); break;
+			case GL_DEBUG_SOURCE_SHADER_COMPILER: PrintError("Source: Shader Compiler"); break;
+			case GL_DEBUG_SOURCE_THIRD_PARTY:     PrintError("Source: Third Party"); break;
+			case GL_DEBUG_SOURCE_APPLICATION:     PrintError("Source: Application"); break;
+			case GL_DEBUG_SOURCE_OTHER:           PrintError("Source: Other"); break;
 			}
-			ss << std::endl << "\t";
+			PrintError("\n\t");
 
 			switch (type)
 			{
-			case GL_DEBUG_TYPE_ERROR:               ss << "Type: Error"; break;
-			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: ss << "Type: Deprecated Behaviour"; break;
-			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  ss << "Type: Undefined Behaviour"; break;
-			case GL_DEBUG_TYPE_PORTABILITY:         ss << "Type: Portability"; break;
-			case GL_DEBUG_TYPE_PERFORMANCE:         ss << "Type: Performance"; break;
-			case GL_DEBUG_TYPE_MARKER:              ss << "Type: Marker"; break;
-			case GL_DEBUG_TYPE_PUSH_GROUP:          ss << "Type: Push Group"; break;
-			case GL_DEBUG_TYPE_POP_GROUP:           ss << "Type: Pop Group"; break;
-			case GL_DEBUG_TYPE_OTHER:               ss << "Type: Other"; break;
+			case GL_DEBUG_TYPE_ERROR:               PrintError("Type: Error"); break;
+			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: PrintError("Type: Deprecated Behaviour"); break;
+			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  PrintError("Type: Undefined Behaviour"); break;
+			case GL_DEBUG_TYPE_PORTABILITY:         PrintError("Type: Portability"); break;
+			case GL_DEBUG_TYPE_PERFORMANCE:         PrintError("Type: Performance"); break;
+			case GL_DEBUG_TYPE_MARKER:              PrintError("Type: Marker"); break;
+			case GL_DEBUG_TYPE_PUSH_GROUP:          PrintError("Type: Push Group"); break;
+			case GL_DEBUG_TYPE_POP_GROUP:           PrintError("Type: Pop Group"); break;
+			case GL_DEBUG_TYPE_OTHER:               PrintError("Type: Other"); break;
 			}
-			ss << std::endl << "\t";
+			PrintError("\n\t");
 
 			switch (severity)
 			{
-			case GL_DEBUG_SEVERITY_HIGH:         ss << "Severity: high"; break;
-			case GL_DEBUG_SEVERITY_MEDIUM:       ss << "Severity: medium"; break;
-			case GL_DEBUG_SEVERITY_LOW:          ss << "Severity: low"; break;
-			case GL_DEBUG_SEVERITY_NOTIFICATION: ss << "Severity: notification"; break;
+			case GL_DEBUG_SEVERITY_HIGH:         PrintError("Severity: high"); break;
+			case GL_DEBUG_SEVERITY_MEDIUM:       PrintError("Severity: medium"); break;
+			case GL_DEBUG_SEVERITY_LOW:          PrintError("Severity: low"); break;
+			case GL_DEBUG_SEVERITY_NOTIFICATION: PrintError("Severity: notification"); break;
 			}
-
-			Logger::LogError(ss.str());
-			Logger::LogError("---------------");
+			PrintError("\n---------------\n");
 		}
 	} // namespace gl
 } // namespace flex

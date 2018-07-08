@@ -8,7 +8,6 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Window/Window.hpp"
 
 namespace flex

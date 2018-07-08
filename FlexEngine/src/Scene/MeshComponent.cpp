@@ -17,7 +17,6 @@
 #include "Colors.hpp"
 #include "GameContext.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Scene/GameObject.hpp"
 
 namespace flex
@@ -78,7 +77,7 @@ namespace flex
 
 		if (materialID == InvalidMaterialID)
 		{
-			Logger::LogError("Mesh object requires material index: " + owner->GetName());
+			PrintError("Mesh component requires material index to be parsed: %s\n", owner->GetName().c_str());
 		}
 		else
 		{
@@ -115,7 +114,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled mesh field on object: " + owner->GetName());
+				PrintError("Unhandled mesh field on object: %s\n", owner->GetName().c_str());
 			}
 		}
 
@@ -171,12 +170,12 @@ namespace flex
 		const aiScene* scene = nullptr;
 		if (GetLoadedMesh(filePath, &scene))
 		{
-			Logger::LogInfo("Reusing loaded mesh from " + meshFileName);
+			Print("Reusing loaded mesh from %s\n", meshFileName.c_str());
 		}
 		else
 		{
 			// Mesh hasn't been loaded before, load it now
-			Logger::LogInfo("Loading mesh " + meshFileName);
+			Print("Loading mesh %s\n", meshFileName.c_str());
 
 			auto meshObj = m_LoadedMeshes.emplace(filePath, new LoadedMesh());
 			LoadedMesh* loadedMesh = meshObj.first->second;
@@ -191,21 +190,21 @@ namespace flex
 
 			if (!scene)
 			{
-				Logger::LogError(loadedMesh->importer.GetErrorString());
+				PrintError("%s\n", loadedMesh->importer.GetErrorString());
 				return false;
 			}
 		}
 
 		if (!scene)
 		{
-			Logger::LogError("Failed to load mesh " + filePath);
+			PrintError("Failed to load mesh %s\n", filePath.c_str());
 			return false;
 		}
 
 
 		if (!scene->HasMeshes())
 		{
-			Logger::LogWarning("Loaded mesh file has no meshes! " + filePath);
+			PrintWarn("Loaded mesh file has no meshes! %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -366,11 +365,11 @@ namespace flex
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
+				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
+				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
 			}
 		}
 
@@ -418,11 +417,11 @@ namespace flex
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+				PrintError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data\n");
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				Logger::LogError("Can not override indices in LoadPrefabShape! Ignoring passed in data");
+				PrintError("Can not override indices in LoadPrefabShape! Ignoring passed in data\n");
 			}
 		}
 
@@ -1023,7 +1022,7 @@ namespace flex
 		} break;
 		default:
 		{
-			Logger::LogWarning("Unhandled prefab shape passed to MeshComponent::LoadPrefabShape: " + std::to_string((i32)shape));
+			PrintWarn("Unhandled prefab shape passed to MeshComponent::LoadPrefabShape: %i\n", (i32)shape);
 			return false;
 		} break;
 		}
@@ -1105,7 +1104,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Unhandled prefab shape string: " + prefabName);
+			PrintError("Unhandled prefab shape string: %s\n", prefabName.c_str());
 			return PrefabShape::NONE;
 		}
 

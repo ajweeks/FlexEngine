@@ -16,7 +16,7 @@
 #pragma warning(pop)
 
 #include "FlexEngine.hpp"
-#include "Logger.hpp"
+
 
 namespace flex
 {
@@ -31,7 +31,7 @@ namespace flex
 
 		std::string fileName = filePath;
 		StripLeadingDirectories(fileName);
-		Logger::LogInfo("Loading texture " + fileName);
+		Print("Loading texture %s\n", fileName.c_str());
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
@@ -41,7 +41,7 @@ namespace flex
 		if (data == 0)
 		{
 			const char* failureReasonStr = stbi_failure_reason();
-			Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
+			PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, filePath.c_str());
 			return result;
 		}
 		else
@@ -67,7 +67,7 @@ namespace flex
 
 		std::string fileName = hdrFilePath;
 		StripLeadingDirectories(fileName);
-		Logger::LogInfo("Loading HDR texture " + fileName);
+		Print("Loading HDR texture %s\n", fileName.c_str());
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
@@ -77,7 +77,7 @@ namespace flex
 
 		if (!pixels)
 		{
-			Logger::LogError("Failed to load HDR image at " + filePath);
+			PrintError("Failed to load HDR image at %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -158,7 +158,7 @@ namespace flex
 
 		if (!file)
 		{
-			Logger::LogError("Unable to read file: " + filePath);
+			PrintError("Unable to read file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -193,7 +193,7 @@ namespace flex
 
 		if (!file)
 		{
-			Logger::LogError("Unable to read file: " + filePath);
+			PrintError("Unable to read file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -244,7 +244,7 @@ namespace flex
 		{
 			if (bPrintErrorOnFailure)
 			{
-				Logger::LogError("Failed to delete file " + filePath);
+				PrintError("Failed to delete file %s\n", filePath.c_str());
 			}
 			return false;
 		}
@@ -258,7 +258,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Failed to copy file from \"" + filePathFrom + "\" to \"" + filePathTo + '\"');
+			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
 			return false;
 		}
 	}
@@ -267,7 +267,7 @@ namespace flex
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
 		{
-			Logger::LogError("Attempted to create directory using relative path! Must specify absolute path!");
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
 			return false;
 		}
 
@@ -307,7 +307,7 @@ namespace flex
 		
 		if (hFind == INVALID_HANDLE_VALUE)
 		{
-			Logger::LogError("Failed to find any file in directory " + cleanedDirPath);
+			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
 			return false;
 		}
 
@@ -316,7 +316,7 @@ namespace flex
 			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
 				// Skip over directories
-				//Logger::LogInfo(findData.cFileName);
+				//Print(findData.cFileName);
 			}
 			else
 			{
@@ -355,7 +355,7 @@ namespace flex
 		DWORD dwError = GetLastError();
 		if (dwError != ERROR_NO_MORE_FILES)
 		{
-			Logger::LogError("Error encountered while finding files in directory " + cleanedDirPath);
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
 			return false;
 		}
 
@@ -416,7 +416,7 @@ namespace flex
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
 		{
-			Logger::LogError("Attempted to create directory using relative path! Must specify absolute path!");
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
 			return;
 		}
 
@@ -440,13 +440,13 @@ namespace flex
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))
 		{
-			Logger::LogError("Failed to parse WAV file: " + filePath);
+			PrintError("Failed to parse WAV file: %s\n", filePath.c_str());
 			return false;
 		}
 
 		if (dataArray.size() < 12)
 		{
-			Logger::LogError("Invalid WAV file: " + filePath);
+			PrintError("Invalid WAV file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -461,7 +461,7 @@ namespace flex
 			waveID.compare("WAVE") != 0 ||
 			subChunk1ID.compare("fmt ") != 0)
 		{
-			Logger::LogError("Invalid WAVE file header: " + filePath);
+			PrintError("Invalid WAVE file header: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -469,14 +469,14 @@ namespace flex
 		u32 subChunk1Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
 		if (subChunk1Size != 16)
 		{
-			Logger::LogError("Non-16 bit chunk size in WAVE files in unsupported: " + filePath);
+			PrintError("Non-16 bit chunk size in WAVE files in unsupported: %s\n", filePath.c_str());
 			return false;
 		}
 
 		u16 audioFormat = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
 		if (audioFormat != 1) // WAVE_FORMAT_PCM
 		{
-			Logger::LogError("WAVE file uses unsupported format (only PCM is allowed): " + filePath);
+			PrintError("WAVE file uses unsupported format (only PCM is allowed): %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -489,7 +489,7 @@ namespace flex
 		std::string subChunk2ID(&dataArray[dataIndex], 4); dataIndex += 4;
 		if (subChunk2ID.compare("data") != 0)
 		{
-			Logger::LogError("Invalid WAVE file: " + filePath);
+			PrintError("Invalid WAVE file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -506,15 +506,17 @@ namespace flex
 		{
 			std::string fileName = filePath;
 			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Stats about WAV file:" + fileName +
-							":\nchannel count: " + std::to_string(channelCount) +
-							", samples/s: " + std::to_string(samplesPerSec) +
-							", average bytes/s: " + std::to_string(avgBytesPerSec) +
-							", block align: " + std::to_string(blockAlign) +
-							", bits/sample: " + std::to_string(bitsPerSample) +
-							", chunk size: " + std::to_string(chunkSize) +
-							", sub chunk2 ID: " + subChunk2ID +
-							", sub chunk 2 size: " + std::to_string(subChunk2Size));
+			Print("Stats about WAV file: %s:\n\tchannel count: %i, samples/s: %i, average bytes/s: %i"
+				  ", block align: %i, bits/sample: %i, chunk size: %i, sub chunk2 ID: \"%s\", sub chunk 2 size: %i\n",
+				  fileName.c_str(),
+				  channelCount,
+				  samplesPerSec,
+				  avgBytesPerSec,
+				  blockAlign,
+				  bitsPerSample,
+				  chunkSize,
+				  subChunk2ID.c_str(),
+				  subChunk2Size);
 		}
 
 		switch (channelCount)
@@ -530,7 +532,7 @@ namespace flex
 				*format = AL_FORMAT_MONO16;
 				break;
 			default:
-				Logger::LogError("WAVE file contains invalid bitsPerSample (must be 8 or 16): " + std::to_string(bitsPerSample));
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
 				break;
 			}
 		} break;
@@ -545,13 +547,13 @@ namespace flex
 				*format = AL_FORMAT_STEREO16;
 				break;
 			default:
-				Logger::LogError("WAVE file contains invalid bitsPerSample (must be 8 or 16): " + std::to_string(bitsPerSample));
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
 				break;
 			}
 		} break;
 		default:
 		{
-			Logger::LogError("WAVE file contains invalid channel count (must be 1 or 2): " + std::to_string(channelCount));
+			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %i\n", channelCount);
 		} break;
 		}
 
@@ -633,7 +635,7 @@ namespace flex
 	{
 		if (floatStr.empty())
 		{
-			Logger::LogError("Invalid float string (empty)");
+			PrintError("Invalid float string (empty)\n");
 			return -1.0f;
 		}
 
@@ -646,7 +648,7 @@ namespace flex
 
 		if (parts.size() != 2)
 		{
-			Logger::LogError("Invalid vec2 field: " + vecStr);
+			PrintError("Invalid vec2 field: %s\n", vecStr.c_str());
 			return glm::vec2(-1);
 		}
 		else
@@ -665,7 +667,7 @@ namespace flex
 
 		if (parts.size() != 3 && parts.size() != 4)
 		{
-			Logger::LogError("Invalid vec3 field: " + vecStr);
+			PrintError("Invalid vec3 field: %s\n", vecStr.c_str());
 			return glm::vec3(-1);
 		}
 		else
@@ -685,7 +687,7 @@ namespace flex
 
 		if ((parts.size() != 4 && parts.size() != 3) || (defaultW < 0 && parts.size() != 4))
 		{
-			Logger::LogError("Invalid vec4 field: " + vecStr);
+			PrintError("Invalid vec4 field: %s\n", vecStr.c_str());
 			return glm::vec4(-1);
 		}
 		else
@@ -827,7 +829,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Unhandled cull face str: " + str);
+			PrintError("Unhandled cull face str: %s\n", str.c_str());
 			return CullFace::NONE;
 		}
 	}
@@ -952,7 +954,7 @@ namespace flex
 			size_t lastSlash = workingDirectory.find_last_of("\\/");
 			if (lastSlash == std::string::npos)
 			{
-				Logger::LogWarning("Invalidly formed relative path! " + relativePath);
+				PrintWarn("Invalidly formed relative path! %s\n", relativePath.c_str());
 				nextDoubleDot = std::string::npos;
 			}
 			else
