@@ -23,8 +23,10 @@ namespace flex
 		// If parent == nullptr then new object will have same parent as this object
 		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren);
 
-		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
-		virtual void SerializeUniqueFields(JSONObject& parentObject);
+		static GameObject* CreateObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
+
+		JSONObject SerializeToJSON(const GameContext& gameContext, BaseScene* scene);
+		void ParseJSON(const GameContext& gameContext, const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
 		virtual void Initialize(const GameContext& gameContext);
 		virtual void PostInitialize(const GameContext& gameContext);
@@ -99,6 +101,9 @@ namespace flex
 
 		void CopyGenericFields(const GameContext& gameContext, GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
+		virtual void SerializeUniqueFields(JSONObject& parentObject);
+
 		std::string m_Name;
 
 		std::vector<std::string> m_Tags;
@@ -164,6 +169,7 @@ namespace flex
 
 		static AudioSourceID s_BunkSound;
 		static RandomizedAudioSource s_SqueakySounds;
+
 	};
 
 	// Child classes
@@ -174,9 +180,6 @@ namespace flex
 		Valve(const std::string& name);
 
 		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
-
-		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
 
 		virtual void PostInitialize(const GameContext& gameContext) override;
 		virtual void Update(const GameContext& gameContext) override;
@@ -197,6 +200,11 @@ namespace flex
 
 		real rotation = 0.0f;
 		real pRotation = 0.0f;
+
+	protected:
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
 	};
 
 	class RisingBlock : public GameObject
@@ -205,9 +213,6 @@ namespace flex
 		RisingBlock(const std::string& name);
 
 		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
-
-		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
 
 		virtual void Initialize(const GameContext& gameContext) override;
 		virtual void PostInitialize(const GameContext& gameContext) override;
@@ -225,6 +230,11 @@ namespace flex
 		glm::vec3 startingPos;
 
 		real pdDistBlockMoved = 0.0f;
+
+	protected:
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
 	};
 
 	class GlassPane : public GameObject
@@ -234,10 +244,12 @@ namespace flex
 
 		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
 
+		bool bBroken = false;
+
+	protected:
 		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
 
-		bool bBroken = false;
 	};
 
 	class ReflectionProbe : public GameObject
@@ -247,12 +259,14 @@ namespace flex
 
 		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
 
-		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
-
 		virtual void PostInitialize(const GameContext& gameContext) override;
 
 		MaterialID captureMatID = 0;
+
+	protected:
+		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
 	};
 
 	class Skybox : public GameObject
@@ -262,8 +276,10 @@ namespace flex
 
 		virtual GameObject* CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
 
+	protected:
 		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+
 	};
 
 } // namespace flex

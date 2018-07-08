@@ -8,12 +8,6 @@
 #include <glm/vec3.hpp>
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <BulletCollision/CollisionShapes/btBoxShape.h>
-#include <BulletCollision/CollisionShapes/btSphereShape.h>
-#include <BulletCollision/CollisionShapes/btConeShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
-#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
@@ -46,6 +40,11 @@ namespace flex
 	void BaseScene::Initialize(const GameContext& gameContext)
 	{
 		ParseFoundPrefabFiles();
+
+		if (m_PhysicsWorld)
+		{
+			Logger::LogWarning("Scene is being initialized more than once!");
+		}
 
 		// Physics world
 		m_PhysicsWorld = new PhysicsWorld();
@@ -110,7 +109,7 @@ namespace flex
 			for (u32 i = 0; i < materialsArray.size(); ++i)
 			{
 				MaterialCreateInfo matCreateInfo = {};
-				ParseMaterialJSONObject(materialsArray[i], matCreateInfo);
+				Material::ParseJSONObject(materialsArray[i], matCreateInfo);
 
 				MaterialID matID = gameContext.renderer->InitializeMaterial(&matCreateInfo);
 				m_LoadedMaterials.push_back(matID);
@@ -121,7 +120,7 @@ namespace flex
 			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
 			for (const JSONObject& rootObject : rootObjects)
 			{
-				AddRootObject(CreateGameObjectFromJSON(gameContext, rootObject));
+				AddRootObject(GameObject::CreateObjectFromJSON(gameContext, rootObject, this, InvalidMaterialID));
 			}
 
 			if (sceneRootObject.HasField("point lights"))
@@ -173,7 +172,7 @@ namespace flex
 				Skybox* skybox = new Skybox("Skybox");
 				
 				JSONObject emptyObj = {};
-				skybox->ParseUniqueFields(gameContext, emptyObj, this, skyboxMatID);
+				skybox->ParseJSON(gameContext, emptyObj, this, skyboxMatID);
 
 				AddRootObject(skybox);
 			}
@@ -194,7 +193,7 @@ namespace flex
 				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 				
 				JSONObject emptyObj = {};
-				reflectionProbe->ParseUniqueFields(gameContext, emptyObj, this, sphereMatID);
+				reflectionProbe->ParseJSON(gameContext, emptyObj, this, sphereMatID);
 
 				AddRootObject(reflectionProbe);
 			}
@@ -460,358 +459,6 @@ namespace flex
 		return false;
 	}
 
-	GameObject* BaseScene::CreateGameObjectFromJSON(const GameContext& gameContext,
-													const JSONObject& obj,
-													MaterialID overriddenMatID /* = InvalidMaterialID */)
-	{
-		GameObject* newGameObject = nullptr;
-
-		std::string gameObjectTypeStr = obj.GetString("type");
-
-		if (gameObjectTypeStr.compare("prefab") == 0)
-		{
-			std::string prefabTypeStr = obj.GetString("prefab type");
-			JSONObject* prefab = nullptr;
-
-			for (JSONObject& parsedPrefab : m_ParsedPrefabs)
-			{
-				if (parsedPrefab.GetString("name").compare(prefabTypeStr) == 0)
-				{
-					prefab = &parsedPrefab;
-				}
-			}
-
-			if (prefab == nullptr)
-			{
-				Logger::LogError("Invalid prefab type: " + prefabTypeStr);
-
-				return nullptr;
-			}
-			else
-			{
-				std::string name = obj.GetString("name");
-
-				MaterialID matID = ParseMatID(obj);
-
-				GameObject* prefabInstance = CreateGameObjectFromJSON(gameContext, *prefab, matID);
-				prefabInstance->m_bLoadedFromPrefab = true;
-				prefabInstance->m_PrefabName = prefabInstance->m_Name;
-
-				prefabInstance->m_Name = name;
-
-				bool bVisible = true;
-				obj.SetBoolChecked("visible", bVisible);
-				prefabInstance->SetVisible(bVisible, false);
-
-				JSONObject transformObj;
-				if (obj.SetObjectChecked("transform", transformObj))
-				{
-					prefabInstance->m_Transform = JSONParser::ParseTransform(transformObj);
-				}
-
-				prefabInstance->ParseUniqueFields(gameContext, obj, this, matID);
-
-				return prefabInstance;
-			}
-		}
-
-		GameObjectType gameObjectType = StringToGameObjectType(gameObjectTypeStr);
-
-		std::string objectName = obj.GetString("name");
-
-		bool bVisible = true;
-		obj.SetBoolChecked("visible", bVisible);
-		bool bVisibleInSceneGraph = true;
-		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
-
-		MaterialID matID = InvalidMaterialID;
-		if (overriddenMatID != InvalidMaterialID)
-		{
-			matID = overriddenMatID;
-		}
-		else
-		{
-			matID = ParseMatID(obj);
-		}
-
-		switch (gameObjectType)
-		{
-		case GameObjectType::PLAYER:
-			Logger::LogError("Player was serialized to scene file!");
-			break;
-		case GameObjectType::SKYBOX:
-			newGameObject = new Skybox(objectName);
-			break;
-		case GameObjectType::REFLECTION_PROBE:
-			newGameObject = new ReflectionProbe(objectName);
-			break;
-		case GameObjectType::VALVE:
-			newGameObject = new Valve(objectName);
-			break;
-		case GameObjectType::RISING_BLOCK:
-			newGameObject = new RisingBlock(objectName);
-			break;
-		case GameObjectType::GLASS_PANE:
-			newGameObject = new GlassPane(objectName);
-			break;
-		case GameObjectType::OBJECT: // Fall through
-		case GameObjectType::NONE:
-			newGameObject = new GameObject(objectName, gameObjectType);
-			break;
-		}
-
-
-		JSONObject transformObj;
-		if (obj.SetObjectChecked("transform", transformObj))
-		{
-			newGameObject->m_Transform = JSONParser::ParseTransform(transformObj);
-		}
-
-		JSONObject meshObj;
-		if (obj.SetObjectChecked("mesh", meshObj))
-		{
-			ParseMeshObject(gameContext, meshObj, newGameObject, matID);
-		}
-
-		JSONObject colliderObj;
-		if (obj.SetObjectChecked("collider", colliderObj))
-		{
-			std::string shapeStr = colliderObj.GetString("shape");
-			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
-
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents;
-				colliderObj.SetVec3Checked("half extents", halfExtents);
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-				newGameObject->SetCollisionShape(boxShape);
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				btSphereShape* sphereShape = new btSphereShape(radius);
-
-				newGameObject->SetCollisionShape(sphereShape);
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
-
-				newGameObject->SetCollisionShape(capsuleShape);
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btConeShape* coneShape = new btConeShape(radius, height);
-
-				newGameObject->SetCollisionShape(coneShape);
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents;
-				colliderObj.SetVec3Checked("half extents", halfExtents);
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-				newGameObject->SetCollisionShape(cylinderShape);
-			} break;
-			default:
-			{
-				Logger::LogError("Unhandled BroadphaseNativeType: " + shapeStr);
-			} break;
-			}
-
-			//bool bIsTrigger = colliderObj.GetBool("trigger");
-			// TODO: Create btGhostObject to use for trigger
-		}
-
-		JSONObject rigidBodyObj;
-		if (obj.SetObjectChecked("rigid body", rigidBodyObj))
-		{
-			if (newGameObject->GetCollisionShape() == nullptr)
-			{
-				Logger::LogError("Serialized object contains \"rigid body\" field but no collider: " + objectName);
-			}
-			else
-			{
-				real mass = rigidBodyObj.GetFloat("mass");
-				bool bKinematic = rigidBodyObj.GetBool("kinematic");
-
-				RigidBody* rigidBody = newGameObject->SetRigidBody(new RigidBody());
-				rigidBody->SetMass(mass);
-				rigidBody->SetKinematic(bKinematic);
-				rigidBody->SetStatic(newGameObject->IsStatic());
-			}
-		}
-
-		VertexAttributes requiredVertexAttributes = 0;
-		if (matID != InvalidMaterialID)
-		{
-			Material& material = gameContext.renderer->GetMaterial(matID);
-			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-			requiredVertexAttributes = shader.vertexAttributes;
-		}
-
-		newGameObject->ParseUniqueFields(gameContext, obj, this, matID);
-
-		if (newGameObject)
-		{
-			newGameObject->SetVisible(bVisible, false);
-			newGameObject->SetVisibleInSceneExplorer(bVisibleInSceneGraph);
-
-			bool bStatic = false;
-			if (obj.SetBoolChecked("static", bStatic))
-			{
-				newGameObject->SetStatic(bStatic);
-			}
-
-			if (obj.HasField("children"))
-			{
-				std::vector<JSONObject> children = obj.GetObjectArray("children");
-				for (const auto& child : children)
-				{
-					newGameObject->AddChild(CreateGameObjectFromJSON(gameContext, child));
-				}
-			}
-		}
-
-		return newGameObject;
-	}
-
-	void BaseScene::ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
-	{
-		material.SetStringChecked("name", createInfoOut.name);
-		material.SetStringChecked("shader", createInfoOut.shaderName);
-
-		struct FilePathMaterialParam
-		{
-			std::string* member;
-			std::string name;
-		};
-
-		std::vector<FilePathMaterialParam> filePathParams =
-		{
-			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
-			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
-			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
-			{ &createInfoOut.aoTexturePath, "ao texture filepath" },
-			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
-			{ &createInfoOut.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
-			{ &createInfoOut.environmentMapPath, "environment map path" },
-		};
-
-		for (u32 i = 0; i < filePathParams.size(); ++i)
-		{
-			if (material.HasField(filePathParams[i].name))
-			{
-				*filePathParams[i].member = RESOURCE_LOCATION +
-					material.GetString(filePathParams[i].name);
-			}
-		}
-
-		material.SetBoolChecked("generate albedo sampler", createInfoOut.generateAlbedoSampler);
-		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
-		material.SetBoolChecked("generate metallic sampler", createInfoOut.generateMetallicSampler);
-		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
-		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
-		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("generate ao sampler", createInfoOut.generateAOSampler);
-		material.SetBoolChecked("enable ao sampler", createInfoOut.enableAOSampler);
-		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
-		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
-		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
-		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
-		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
-		material.SetBoolChecked("enable irradiance sampler", createInfoOut.enableIrradianceSampler);
-		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
-		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
-		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
-		material.SetBoolChecked("enable cubemap sampler", createInfoOut.enableCubemapSampler);
-		material.SetBoolChecked("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
-		material.SetBoolChecked("generate cubemap sampler", createInfoOut.generateCubemapSampler);
-		material.SetBoolChecked("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
-		material.SetBoolChecked("generate prefiltered map", createInfoOut.generatePrefilteredMap);
-		material.SetBoolChecked("enable prefiltered map", createInfoOut.enablePrefilteredMap);
-		material.SetBoolChecked("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
-
-		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
-		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
-		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
-		material.SetVec4Checked("color multiplier", createInfoOut.colorMultiplier);
-		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
-		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
-		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
-		material.SetFloatChecked("const ao", createInfoOut.constAO);
-	}
-
-	MeshComponent* BaseScene::ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newGameObject, MaterialID matID)
-	{
-		MeshComponent* result = nullptr;
-
-		std::string meshFilePath = meshObject.GetString("file");
-		if (!meshFilePath.empty())
-		{
-			meshFilePath = RESOURCE_LOCATION + meshFilePath;
-		}
-		std::string meshPrefabName = meshObject.GetString("prefab");
-		bool swapNormalYZ = meshObject.GetBool("swapNormalYZ");
-		bool flipNormalZ = meshObject.GetBool("flipNormalZ");
-		bool flipU = meshObject.GetBool("flipU");
-		bool flipV = meshObject.GetBool("flipV");
-
-		if (matID == InvalidMaterialID)
-		{
-			Logger::LogError("Mesh object requires material index: " + newGameObject->GetName());
-		}
-		else
-		{
-			Material& material = gameContext.renderer->GetMaterial(matID);
-			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
-			if (!meshFilePath.empty())
-			{
-				result = new MeshComponent(matID, newGameObject);
-				result->SetRequiredAttributes(requiredVertexAttributes);
-
-				MeshComponent::ImportSettings importSettings = {};
-				importSettings.flipU = flipU;
-				importSettings.flipV = flipV;
-				importSettings.flipNormalZ = flipNormalZ;
-				importSettings.swapNormalYZ = swapNormalYZ;
-
-				result->LoadFromFile(gameContext,
-								   meshFilePath,
-								   &importSettings);
-
-				newGameObject->SetMeshComponent(result);
-			}
-			else if (!meshPrefabName.empty())
-			{
-				result = new MeshComponent(matID, newGameObject);
-				result->SetRequiredAttributes(requiredVertexAttributes);
-
-				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
-				result->LoadPrefabShape(gameContext, prefabShape);
-
-				newGameObject->SetMeshComponent(result);
-			}
-			else
-			{
-				Logger::LogError("Unhandled mesh field on object: " + newGameObject->GetName());
-			}
-		}
-
-		return result;
-	}
-
 	i32 BaseScene::GetMaterialArrayIndex(const Material& material, const GameContext& gameContext)
 	{
 		i32 materialArrayIndex = -1;
@@ -1056,220 +703,7 @@ namespace flex
 			return{};
 		}
 
-		// Non-basic objects shouldn't serialize certain fields which are constant across all instances
-		// TODO: Save out overridden prefab fields
-		bool bIsBasicObject = (gameObject->m_Type == GameObjectType::OBJECT &&
-							   gameObject->m_Type == GameObjectType::NONE);
-
-		JSONObject object;
-		std::string objectName = gameObject->m_Name;
-
-		object.fields.push_back(JSONField("name", JSONValue(objectName)));
-
-		if (gameObject->m_bLoadedFromPrefab)
-		{
-			object.fields.push_back(JSONField("type", JSONValue(std::string("prefab"))));
-			object.fields.push_back(JSONField("prefab type", JSONValue(gameObject->m_PrefabName)));
-		}
-		else
-		{
-			object.fields.push_back(JSONField("type", JSONValue(GameObjectTypeToString(gameObject->m_Type))));
-		}
-
-		object.fields.push_back(JSONField("visible", JSONValue(gameObject->IsVisible())));
-		// TODO: Only save/read this value when editor is included in build
-		if (!gameObject->IsVisibleInSceneExplorer())
-		{
-			object.fields.push_back(JSONField("visible in scene graph", 
-				JSONValue(gameObject->IsVisibleInSceneExplorer())));
-		}
-
-		if (gameObject->IsStatic())
-		{
-			object.fields.push_back(JSONField("static", JSONValue(true)));
-		}
-		
-		JSONField transformField;
-		if (JSONParser::SerializeTransform(gameObject->GetTransform(), transformField))
-		{
-			object.fields.push_back(transformField);
-		}
-
-		MeshComponent* meshComponent = gameObject->GetMeshComponent();
-		if (meshComponent && 
-			bIsBasicObject &&
-			!gameObject->m_bLoadedFromPrefab)
-		{
-			JSONField meshField = {};
-			meshField.label = "mesh";
-
-			JSONObject meshValue = {};
-
-			MeshComponent::Type meshType = meshComponent->GetType();
-			if (meshType == MeshComponent::Type::FILE)
-			{
-				std::string meshFilepath = meshComponent->GetFilepath().substr(RESOURCE_LOCATION.length());
-				meshValue.fields.push_back(JSONField("file", JSONValue(meshFilepath)));
-			}
-			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
-			else if (meshType == MeshComponent::Type::PREFAB)
-			{
-				std::string prefabShapeStr = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
-				meshValue.fields.push_back(JSONField("prefab", JSONValue(prefabShapeStr)));
-			}
-			else
-			{
-				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
-			}
-
-			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
-			meshValue.fields.push_back(JSONField("swapNormalYZ", JSONValue(importSettings.swapNormalYZ)));
-			meshValue.fields.push_back(JSONField("flipNormalZ", JSONValue(importSettings.flipNormalZ)));
-			meshValue.fields.push_back(JSONField("flipU", JSONValue(importSettings.flipU)));
-			meshValue.fields.push_back(JSONField("flipV", JSONValue(importSettings.flipV)));
-
-			meshField.value = JSONValue(meshValue);
-			object.fields.push_back(meshField);
-		}
-
-		{
-			MaterialID matID = InvalidMaterialID;
-			RenderObjectCreateInfo renderObjectCreateInfo;
-			if (meshComponent)
-			{
-				matID = meshComponent->GetMaterialID();
-			}
-			else if (gameContext.renderer->GetRenderObjectCreateInfo(gameObject->GetRenderID(), renderObjectCreateInfo))
-			{
-				matID = renderObjectCreateInfo.materialID;
-			}
-
-			if (matID != InvalidMaterialID)
-			{
-				const Material& material = gameContext.renderer->GetMaterial(matID);
-				i32 materialArrayIndex = GetMaterialArrayIndex(material, gameContext);
-				if (materialArrayIndex == -1)
-				{
-				//	Logger::LogError("Mesh object contains material not present in "
-				//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
-				//					 "Object name: " + objectName + 
-				//					 ", matID: " + std::to_string(matID));
-				}
-				else
-				{
-					object.fields.push_back(JSONField("material array index", JSONValue(materialArrayIndex)));
-				}
-			}
-		}
-
-		btCollisionShape* collisionShape = gameObject->GetCollisionShape();
-		if (collisionShape &&
-			!gameObject->m_bLoadedFromPrefab)
-		{
-			JSONObject colliderObj;
-
-			int shapeType = collisionShape->getShapeType();
-			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
-
-			colliderObj.fields.push_back(JSONField("shape", JSONValue(shapeTypeStr)));
-
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
-				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = ((btSphereShape*)collisionShape)->getRadius();
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = ((btCapsuleShape*)collisionShape)->getRadius();
-				real height = ((btCapsuleShape*)collisionShape)->getHalfHeight(); // TODO: Double?
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = ((btConeShape*)collisionShape)->getRadius();
-				real height = ((btConeShape*)collisionShape)->getHeight();
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
-				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
-			} break;
-			default:
-			{
-				Logger::LogError("Unhandled BroadphaseNativeType: " + std::to_string(shapeType));
-			} break;
-			}
-
-			//bool bTrigger = false;
-			//colliderObj.fields.push_back(JSONField("trigger", JSONValue(bTrigger)));
-			// TODO: Handle triggers
-
-			object.fields.push_back(JSONField("collider", JSONValue(colliderObj)));
-		}
-
-		RigidBody* rigidBody = gameObject->GetRigidBody();
-		if (rigidBody &&
-			!gameObject->m_bLoadedFromPrefab)
-		{
-			JSONObject rigidBodyObj;
-
-			if (collisionShape == nullptr)
-			{
-				Logger::LogError("Can't serialize object which has a rigid body but no collider! (" + gameObject->GetName() + ")");
-			}
-			else
-			{
-				real mass = rigidBody->GetMass();
-				bool bKinematic = rigidBody->IsKinematic();
-				bool bStatic = rigidBody->IsStatic();
-
-				rigidBodyObj.fields.push_back(JSONField("mass", JSONValue(mass)));
-				rigidBodyObj.fields.push_back(JSONField("kinematic", JSONValue(bKinematic)));
-				rigidBodyObj.fields.push_back(JSONField("static", JSONValue(bStatic)));
-			}
-
-			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
-		}
-
-		gameObject->SerializeUniqueFields(object);
-
-		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
-		if (!gameObjectChildren.empty())
-		{
-			JSONField childrenField = {};
-			childrenField.label = "children";
-
-			std::vector<JSONObject> children;
-
-			for (GameObject* child : gameObjectChildren)
-			{
-				if (child->IsSerializable())
-				{
-					children.push_back(SerializeObject(child, gameContext));
-				}
-			}
-
-			// It's possible that all children are non-serializable
-			if (!children.empty())
-			{
-				childrenField.value = JSONValue(children);
-				object.fields.push_back(childrenField);
-			}
-		}
+		JSONObject object = gameObject->SerializeToJSON(gameContext, this);
 
 		return object;
 	}

@@ -61,6 +61,67 @@ namespace flex
 		m_LoadedMeshes.clear();
 	}
 
+	MeshComponent* MeshComponent::ParseJSON(const GameContext& gameContext, const JSONObject& object, GameObject* owner, MaterialID materialID)
+	{
+		MeshComponent* newMeshComponent = nullptr;
+
+		std::string meshFilePath = object.GetString("file");
+		if (!meshFilePath.empty())
+		{
+			meshFilePath = RESOURCE_LOCATION + meshFilePath;
+		}
+		std::string meshPrefabName = object.GetString("prefab");
+		bool swapNormalYZ = object.GetBool("swapNormalYZ");
+		bool flipNormalZ = object.GetBool("flipNormalZ");
+		bool flipU = object.GetBool("flipU");
+		bool flipV = object.GetBool("flipV");
+
+		if (materialID == InvalidMaterialID)
+		{
+			Logger::LogError("Mesh object requires material index: " + owner->GetName());
+		}
+		else
+		{
+			Material& material = gameContext.renderer->GetMaterial(materialID);
+			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+
+			if (!meshFilePath.empty())
+			{
+				newMeshComponent = new MeshComponent(materialID, owner);
+				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
+
+				MeshComponent::ImportSettings importSettings = {};
+				importSettings.flipU = flipU;
+				importSettings.flipV = flipV;
+				importSettings.flipNormalZ = flipNormalZ;
+				importSettings.swapNormalYZ = swapNormalYZ;
+
+				newMeshComponent->LoadFromFile(gameContext,
+									 meshFilePath,
+									 &importSettings);
+
+				owner->SetMeshComponent(newMeshComponent);
+			}
+			else if (!meshPrefabName.empty())
+			{
+				newMeshComponent = new MeshComponent(materialID, owner);
+				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
+
+				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
+				newMeshComponent->LoadPrefabShape(gameContext, prefabShape);
+
+				owner->SetMeshComponent(newMeshComponent);
+			}
+			else
+			{
+				Logger::LogError("Unhandled mesh field on object: " + owner->GetName());
+			}
+		}
+
+		return newMeshComponent;
+	}
+
 	void MeshComponent::Destroy()
 	{
 		m_VertexBufferData.Destroy();

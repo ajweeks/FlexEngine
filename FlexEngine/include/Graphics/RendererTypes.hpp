@@ -11,6 +11,7 @@
 #pragma warning(pop)
 
 #include "Functors.hpp"
+#include "JSONTypes.hpp"
 
 namespace flex
 {
@@ -181,6 +182,8 @@ namespace flex
 	struct Material
 	{
 		bool Equals(const Material& other);
+
+		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
 
 		std::string name = "";
 

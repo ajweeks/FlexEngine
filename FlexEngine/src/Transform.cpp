@@ -147,6 +147,96 @@ namespace flex
 	{
 	}
 
+	Transform Transform::ParseJSON(const JSONObject& object)
+	{
+		std::string posStr = object.GetString("position");
+		std::string rotStr = object.GetString("rotation");
+		std::string scaleStr = object.GetString("scale");
+
+		glm::vec3 pos(0.0f);
+		if (!posStr.empty())
+		{
+			pos = ParseVec3(posStr);
+		}
+
+		glm::vec3 rotEuler(0.0f);
+		if (!rotStr.empty())
+		{
+			rotEuler = ParseVec3(rotStr);
+		}
+
+		glm::vec3 scale(1.0f);
+		if (!scaleStr.empty())
+		{
+			scale = ParseVec3(scaleStr);
+		}
+
+		// Check we aren't getting garbage data in
+#if _DEBUG
+		if (IsNanOrInf(pos))
+		{
+			Logger::LogError("Read garbage value from transform pos in serialized scene file! Using default value instead");
+			pos = glm::vec3(0.0f);
+		}
+
+		if (IsNanOrInf(rotEuler))
+		{
+			Logger::LogError("Read garbage value from transform rot in serialized scene file! Using default value instead");
+			rotEuler = glm::vec3(0.0f);
+		}
+
+		if (IsNanOrInf(scale))
+		{
+			Logger::LogError("Read garbage value from transform scale in serialized scene file! Using default value instead");
+			scale = glm::vec3(1.0f);
+		}
+#endif
+
+		glm::quat rotQuat = glm::quat(rotEuler);
+
+		return Transform(pos, rotQuat, scale);
+	}
+
+	bool Transform::SerializeToJSON(JSONField& transformField)
+	{
+		transformField = {};
+		transformField.label = "transform";
+
+		JSONObject transformObject = {};
+
+		if (IsNanOrInf(localPosition))
+		{
+			Logger::LogError("Attempted to serialize garbage value for " + m_GameObject->GetName() + "'s pos - writing default value instead");
+			localPosition = glm::vec3(0.0f);
+		}
+
+		if (IsNanOrInf(localRotation))
+		{
+			Logger::LogError("Attempted to serialize garbage value for " + m_GameObject->GetName() + "'s rot - writing default value instead");
+			localRotation = glm::quat();
+		}
+
+		if (IsNanOrInf(localScale))
+		{
+			Logger::LogError("Attempted to serialize garbage value for " + m_GameObject->GetName() + "'s scale - writing default value instead");
+			localScale = glm::vec3(1.0f);
+		}
+
+		glm::vec3 localRotEuler = glm::eulerAngles(localRotation);
+
+		std::string posStr = Vec3ToString(localPosition);
+		std::string rotStr = Vec3ToString(localRotEuler);
+		std::string scaleStr = Vec3ToString(localScale);
+
+		transformObject.fields.push_back(JSONField("position", JSONValue(posStr)));
+		transformObject.fields.push_back(JSONField("rotation", JSONValue(rotStr)));
+		transformObject.fields.push_back(JSONField("scale", JSONValue(scaleStr)));
+
+		transformField.value = JSONValue(transformObject);
+
+		return true;
+	}
+
 	void Transform::Translate(const glm::vec3& deltaPosition)
 	{
 		localPosition += deltaPosition;

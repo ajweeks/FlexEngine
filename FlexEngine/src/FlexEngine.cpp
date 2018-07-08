@@ -1228,10 +1228,13 @@ namespace flex
 						std::string sceneFileName = scene->GetFileName();
 						if (ImGui::Selectable(sceneFileName.c_str(), &bSceneSelected, 0, ImVec2((real)sceneItemWidth, 0)))
 						{
-							if (m_GameContext.sceneManager->SetCurrentScene(i, m_GameContext))
+							if (i != currentSceneIndex)
 							{
-								m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
-								m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
+								if (m_GameContext.sceneManager->SetCurrentScene(i, m_GameContext))
+								{
+									m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+									m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
+								}
 							}
 						}
 

@@ -6,6 +6,8 @@
 #include <glm/gtc/quaternion.hpp>
 #pragma warning(pop)
 
+#include "JSONTypes.hpp"
+
 namespace flex
 {
 	class RigidBody;
@@ -25,7 +27,10 @@ namespace flex
 		Transform& operator=(const Transform&& other);
 
 		~Transform();
-		
+
+		static Transform ParseJSON(const JSONObject& object);
+		bool SerializeToJSON(JSONField& transformField);
+
 		void SetAsIdentity();
 
 		glm::vec3 GetLocalPosition() const;

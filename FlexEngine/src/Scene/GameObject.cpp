@@ -4,16 +4,20 @@
 #include <LinearMath/btTransform.h>
 #include <LinearMath/btIDebugDraw.h>
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
-#include <BulletCollision/CollisionShapes/btCollisionShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
-#include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
+#include <BulletCollision/CollisionShapes/btCollisionShape.h>
+#include <BulletCollision/CollisionShapes/btConeShape.h>
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
 #include "GameContext.hpp"
+#include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
 #include "Scene/GameObject.hpp"
@@ -53,6 +57,231 @@ namespace flex
 		return newGameObject;
 	}
 
+	GameObject* GameObject::CreateObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	{
+		GameObject* newGameObject = nullptr;
+
+		std::string gameObjectTypeStr = obj.GetString("type");
+
+		if (gameObjectTypeStr.compare("prefab") == 0)
+		{
+			std::string prefabTypeStr = obj.GetString("prefab type");
+			JSONObject* prefab = nullptr;
+
+			for (JSONObject& parsedPrefab : scene->m_ParsedPrefabs)
+			{
+				if (parsedPrefab.GetString("name").compare(prefabTypeStr) == 0)
+				{
+					prefab = &parsedPrefab;
+				}
+			}
+
+			if (prefab == nullptr)
+			{
+				Logger::LogError("Invalid prefab type: " + prefabTypeStr);
+
+				return nullptr;
+			}
+			else
+			{
+				std::string name = obj.GetString("name");
+
+				MaterialID matID = scene->ParseMatID(obj);
+
+				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(gameContext, *prefab, scene, matID);
+				prefabInstance->m_bLoadedFromPrefab = true;
+				prefabInstance->m_PrefabName = prefabInstance->m_Name;
+
+				prefabInstance->m_Name = name;
+
+				bool bVisible = true;
+				obj.SetBoolChecked("visible", bVisible);
+				prefabInstance->SetVisible(bVisible, false);
+
+				JSONObject transformObj;
+				if (obj.SetObjectChecked("transform", transformObj))
+				{
+					prefabInstance->m_Transform = Transform::ParseJSON(transformObj);
+				}
+
+				prefabInstance->ParseUniqueFields(gameContext, obj, scene, matID);
+
+				return prefabInstance;
+			}
+		}
+
+		GameObjectType gameObjectType = StringToGameObjectType(gameObjectTypeStr);
+
+		std::string objectName = obj.GetString("name");
+
+		switch (gameObjectType)
+		{
+		case GameObjectType::PLAYER:
+			Logger::LogError("Player was serialized to scene file!");
+			break;
+		case GameObjectType::SKYBOX:
+			newGameObject = new Skybox(objectName);
+			break;
+		case GameObjectType::REFLECTION_PROBE:
+			newGameObject = new ReflectionProbe(objectName);
+			break;
+		case GameObjectType::VALVE:
+			newGameObject = new Valve(objectName);
+			break;
+		case GameObjectType::RISING_BLOCK:
+			newGameObject = new RisingBlock(objectName);
+			break;
+		case GameObjectType::GLASS_PANE:
+			newGameObject = new GlassPane(objectName);
+			break;
+		case GameObjectType::OBJECT: // Fall through
+		case GameObjectType::NONE:
+			newGameObject = new GameObject(objectName, gameObjectType);
+			break;
+		}
+
+		newGameObject->ParseJSON(gameContext, obj, scene, overriddenMatID);
+
+		return newGameObject;
+	}
+
+	void GameObject::ParseJSON(const GameContext& gameContext, const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	{
+		bool bVisible = true;
+		obj.SetBoolChecked("visible", bVisible);
+		bool bVisibleInSceneGraph = true;
+		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
+
+		MaterialID matID = InvalidMaterialID;
+		if (overriddenMatID != InvalidMaterialID)
+		{
+			matID = overriddenMatID;
+		}
+		else
+		{
+			matID = scene->ParseMatID(obj);
+		}
+
+
+		JSONObject transformObj;
+		if (obj.SetObjectChecked("transform", transformObj))
+		{
+			m_Transform = Transform::ParseJSON(transformObj);
+		}
+
+		JSONObject meshObj;
+		if (obj.SetObjectChecked("mesh", meshObj))
+		{
+			MeshComponent::ParseJSON(gameContext, meshObj, this, matID);
+		}
+
+		JSONObject colliderObj;
+		if (obj.SetObjectChecked("collider", colliderObj))
+		{
+			std::string shapeStr = colliderObj.GetString("shape");
+			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
+
+			switch (shapeType)
+			{
+			case BOX_SHAPE_PROXYTYPE:
+			{
+				glm::vec3 halfExtents;
+				colliderObj.SetVec3Checked("half extents", halfExtents);
+				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+
+				SetCollisionShape(boxShape);
+			} break;
+			case SPHERE_SHAPE_PROXYTYPE:
+			{
+				real radius = colliderObj.GetFloat("radius");
+				btSphereShape* sphereShape = new btSphereShape(radius);
+
+				SetCollisionShape(sphereShape);
+			} break;
+			case CAPSULE_SHAPE_PROXYTYPE:
+			{
+				real radius = colliderObj.GetFloat("radius");
+				real height = colliderObj.GetFloat("height");
+				btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
+
+				SetCollisionShape(capsuleShape);
+			} break;
+			case CONE_SHAPE_PROXYTYPE:
+			{
+				real radius = colliderObj.GetFloat("radius");
+				real height = colliderObj.GetFloat("height");
+				btConeShape* coneShape = new btConeShape(radius, height);
+
+				SetCollisionShape(coneShape);
+			} break;
+			case CYLINDER_SHAPE_PROXYTYPE:
+			{
+				glm::vec3 halfExtents;
+				colliderObj.SetVec3Checked("half extents", halfExtents);
+				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
+
+				SetCollisionShape(cylinderShape);
+			} break;
+			default:
+			{
+				Logger::LogError("Unhandled BroadphaseNativeType: " + shapeStr);
+			} break;
+			}
+
+			//bool bIsTrigger = colliderObj.GetBool("trigger");
+			// TODO: Create btGhostObject to use for trigger
+		}
+
+		JSONObject rigidBodyObj;
+		if (obj.SetObjectChecked("rigid body", rigidBodyObj))
+		{
+			if (GetCollisionShape() == nullptr)
+			{
+				Logger::LogError("Serialized object contains \"rigid body\" field but no collider: " + m_Name);
+			}
+			else
+			{
+				real mass = rigidBodyObj.GetFloat("mass");
+				bool bKinematic = rigidBodyObj.GetBool("kinematic");
+
+				RigidBody* rigidBody = SetRigidBody(new RigidBody());
+				rigidBody->SetMass(mass);
+				rigidBody->SetKinematic(bKinematic);
+				rigidBody->SetStatic(IsStatic());
+			}
+		}
+
+		VertexAttributes requiredVertexAttributes = 0;
+		if (matID != InvalidMaterialID)
+		{
+			Material& material = gameContext.renderer->GetMaterial(matID);
+			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+			requiredVertexAttributes = shader.vertexAttributes;
+		}
+
+		ParseUniqueFields(gameContext, obj, scene, matID);
+
+		SetVisible(bVisible, false);
+		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
+
+		bool bStatic = false;
+		if (obj.SetBoolChecked("static", bStatic))
+		{
+			SetStatic(bStatic);
+		}
+
+		if (obj.HasField("children"))
+		{
+			std::vector<JSONObject> children = obj.GetObjectArray("children");
+			for (const auto& child : children)
+			{
+				AddChild(GameObject::CreateObjectFromJSON(gameContext, child, scene));
+			}
+		}
+	}
+
 	void GameObject::ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
 		UNREFERENCED_PARAMETER(gameContext);
@@ -61,6 +290,225 @@ namespace flex
 		UNREFERENCED_PARAMETER(matID);
 
 		// Generic game objects have no unique fields
+	}
+
+	JSONObject GameObject::SerializeToJSON(const GameContext& gameContext, BaseScene* scene)
+	{
+		JSONObject object = {};
+
+		if (!m_bSerializable)
+		{
+			Logger::LogError("Attempted to serialize non-serializable object! (" + m_Name + ')');
+			return object;
+		}
+
+
+		// Non-basic objects shouldn't serialize certain fields which are constant across all instances
+		// TODO: Save out overridden prefab fields
+		bool bIsBasicObject = (m_Type == GameObjectType::OBJECT ||
+							   m_Type == GameObjectType::NONE);
+
+
+		object.fields.push_back(JSONField("name", JSONValue(m_Name)));
+
+		if (m_bLoadedFromPrefab)
+		{
+			object.fields.push_back(JSONField("type", JSONValue(std::string("prefab"))));
+			object.fields.push_back(JSONField("prefab type", JSONValue(m_PrefabName)));
+		}
+		else
+		{
+			object.fields.push_back(JSONField("type", JSONValue(GameObjectTypeToString(m_Type))));
+		}
+
+		object.fields.push_back(JSONField("visible", JSONValue(IsVisible())));
+		// TODO: Only save/read this value when editor is included in build
+		if (!IsVisibleInSceneExplorer())
+		{
+			object.fields.push_back(JSONField("visible in scene graph",
+									JSONValue(IsVisibleInSceneExplorer())));
+		}
+
+		if (IsStatic())
+		{
+			object.fields.push_back(JSONField("static", JSONValue(true)));
+		}
+
+		JSONField transformField;
+		if (GetTransform()->SerializeToJSON(transformField))
+		{
+			object.fields.push_back(transformField);
+		}
+
+		MeshComponent* meshComponent = GetMeshComponent();
+		if (meshComponent &&
+			bIsBasicObject &&
+			!m_bLoadedFromPrefab)
+		{
+			JSONObject meshObject = {};
+
+			MeshComponent::Type meshType = meshComponent->GetType();
+			if (meshType == MeshComponent::Type::FILE)
+			{
+				std::string meshFilepath = meshComponent->GetFilepath().substr(RESOURCE_LOCATION.length());
+				meshObject.fields.push_back(JSONField("file", JSONValue(meshFilepath)));
+			}
+			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
+			else if (meshType == MeshComponent::Type::PREFAB)
+			{
+				std::string prefabShapeStr = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
+				meshObject.fields.push_back(JSONField("prefab", JSONValue(prefabShapeStr)));
+			}
+			else
+			{
+				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
+			}
+
+			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
+			meshObject.fields.push_back(JSONField("swapNormalYZ", JSONValue(importSettings.swapNormalYZ)));
+			meshObject.fields.push_back(JSONField("flipNormalZ", JSONValue(importSettings.flipNormalZ)));
+			meshObject.fields.push_back(JSONField("flipU", JSONValue(importSettings.flipU)));
+			meshObject.fields.push_back(JSONField("flipV", JSONValue(importSettings.flipV)));
+
+			object.fields.push_back(JSONField("mesh", JSONValue(meshObject)));
+		}
+
+		{
+			MaterialID matID = InvalidMaterialID;
+			RenderObjectCreateInfo renderObjectCreateInfo;
+			if (meshComponent)
+			{
+				matID = meshComponent->GetMaterialID();
+			}
+			else if (gameContext.renderer->GetRenderObjectCreateInfo(GetRenderID(), renderObjectCreateInfo))
+			{
+				matID = renderObjectCreateInfo.materialID;
+			}
+
+			if (matID != InvalidMaterialID)
+			{
+				const Material& material = gameContext.renderer->GetMaterial(matID);
+				i32 materialArrayIndex = scene->GetMaterialArrayIndex(material, gameContext);
+				if (materialArrayIndex == -1)
+				{
+					//	Logger::LogError("Mesh object contains material not present in "
+					//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
+					//					 "Object name: " + objectName + 
+					//					 ", matID: " + std::to_string(matID));
+				}
+				else
+				{
+					object.fields.push_back(JSONField("material array index", JSONValue(materialArrayIndex)));
+				}
+			}
+		}
+
+		btCollisionShape* collisionShape = GetCollisionShape();
+		if (collisionShape &&
+			!m_bLoadedFromPrefab)
+		{
+			JSONObject colliderObj;
+
+			int shapeType = collisionShape->getShapeType();
+			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
+
+			colliderObj.fields.push_back(JSONField("shape", JSONValue(shapeTypeStr)));
+
+			switch (shapeType)
+			{
+			case BOX_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
+				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
+			} break;
+			case SPHERE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btSphereShape*)collisionShape)->getRadius();
+				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
+			} break;
+			case CAPSULE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btCapsuleShape*)collisionShape)->getRadius();
+				real height = ((btCapsuleShape*)collisionShape)->getHalfHeight(); // TODO: Double?
+				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
+				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
+			} break;
+			case CONE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btConeShape*)collisionShape)->getRadius();
+				real height = ((btConeShape*)collisionShape)->getHeight();
+				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
+				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
+			} break;
+			case CYLINDER_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
+				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
+			} break;
+			default:
+			{
+				Logger::LogError("Unhandled BroadphaseNativeType: " + std::to_string(shapeType));
+			} break;
+			}
+
+			//bool bTrigger = false;
+			//colliderObj.fields.push_back(JSONField("trigger", JSONValue(bTrigger)));
+			// TODO: Handle triggers
+
+			object.fields.push_back(JSONField("collider", JSONValue(colliderObj)));
+		}
+
+		RigidBody* rigidBody = GetRigidBody();
+		if (rigidBody &&
+			!m_bLoadedFromPrefab)
+		{
+			JSONObject rigidBodyObj = {};
+
+			if (collisionShape == nullptr)
+			{
+				Logger::LogError("Can't serialize object which has a rigid body but no collider! (" + GetName() + ")");
+			}
+			else
+			{
+				real mass = rigidBody->GetMass();
+				bool bKinematic = rigidBody->IsKinematic();
+				bool bStatic = rigidBody->IsStatic();
+
+				rigidBodyObj.fields.push_back(JSONField("mass", JSONValue(mass)));
+				rigidBodyObj.fields.push_back(JSONField("kinematic", JSONValue(bKinematic)));
+				rigidBodyObj.fields.push_back(JSONField("static", JSONValue(bStatic)));
+			}
+
+			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
+		}
+
+		SerializeUniqueFields(object);
+
+		const std::vector<GameObject*>& gameObjectChildren = GetChildren();
+		if (!gameObjectChildren.empty())
+		{
+			std::vector<JSONObject> children;
+
+			for (GameObject* child : gameObjectChildren)
+			{
+				if (child->IsSerializable())
+				{
+					children.push_back(child->SerializeToJSON(gameContext, scene));
+				}
+			}
+
+			// It's possible that all children are non-serializable
+			if (!children.empty())
+			{
+				object.fields.push_back(JSONField("children", JSONValue(children)));
+			}
+		}
+
+		return object;
 	}
 
 	void GameObject::SerializeUniqueFields(JSONObject& parentObject)

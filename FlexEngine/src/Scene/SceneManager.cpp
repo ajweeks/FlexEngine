@@ -102,11 +102,6 @@ namespace flex
 			return false;
 		}
 
-		if (m_CurrentSceneIndex == sceneIndex)
-		{
-			return false;
-		}
-
 		gameContext.engineInstance->PreSceneChange();
 
 		if (m_CurrentSceneIndex != u32_max)

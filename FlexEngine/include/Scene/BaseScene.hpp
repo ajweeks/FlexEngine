@@ -70,11 +70,12 @@ namespace flex
 		bool IsLoaded() const;
 
 	protected:
+		friend class GameObject;
+
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
 		bool DestroyGameObjectRecursive(const GameContext& gameContext, GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
 
-		GameObject* CreateGameObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, MaterialID overriddenMatID = InvalidMaterialID);
 		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
 		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
 
@@ -82,9 +83,6 @@ namespace flex
 		JSONObject SerializeMaterial(const Material& material, const GameContext& gameContext);
 		JSONObject SerializePointLight(PointLight& pointLight);
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight);
-
-		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
-		MeshComponent* ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newGameObject, MaterialID matID);
 
 		i32 GetMaterialArrayIndex(const Material& material, const GameContext& gameContext);
 

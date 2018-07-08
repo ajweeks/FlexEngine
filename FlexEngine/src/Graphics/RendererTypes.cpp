@@ -128,4 +128,70 @@ namespace flex
 
 		return equal;
 	}
+
+	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
+	{
+		material.SetStringChecked("name", createInfoOut.name);
+		material.SetStringChecked("shader", createInfoOut.shaderName);
+
+		struct FilePathMaterialParam
+		{
+			std::string* member;
+			std::string name;
+		};
+
+		std::vector<FilePathMaterialParam> filePathParams =
+		{
+			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
+			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
+			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
+			{ &createInfoOut.aoTexturePath, "ao texture filepath" },
+			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
+			{ &createInfoOut.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
+			{ &createInfoOut.environmentMapPath, "environment map path" },
+		};
+
+		for (u32 i = 0; i < filePathParams.size(); ++i)
+		{
+			if (material.HasField(filePathParams[i].name))
+			{
+				*filePathParams[i].member = RESOURCE_LOCATION +
+					material.GetString(filePathParams[i].name);
+			}
+		}
+
+		material.SetBoolChecked("generate albedo sampler", createInfoOut.generateAlbedoSampler);
+		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
+		material.SetBoolChecked("generate metallic sampler", createInfoOut.generateMetallicSampler);
+		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
+		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
+		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
+		material.SetBoolChecked("generate ao sampler", createInfoOut.generateAOSampler);
+		material.SetBoolChecked("enable ao sampler", createInfoOut.enableAOSampler);
+		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
+		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
+		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
+		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
+		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
+		material.SetBoolChecked("enable irradiance sampler", createInfoOut.enableIrradianceSampler);
+		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
+		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
+		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
+		material.SetBoolChecked("enable cubemap sampler", createInfoOut.enableCubemapSampler);
+		material.SetBoolChecked("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
+		material.SetBoolChecked("generate cubemap sampler", createInfoOut.generateCubemapSampler);
+		material.SetBoolChecked("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
+		material.SetBoolChecked("generate prefiltered map", createInfoOut.generatePrefilteredMap);
+		material.SetBoolChecked("enable prefiltered map", createInfoOut.enablePrefilteredMap);
+		material.SetBoolChecked("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
+
+		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
+		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
+		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
+		material.SetVec4Checked("color multiplier", createInfoOut.colorMultiplier);
+		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
+		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
+		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
+		material.SetFloatChecked("const ao", createInfoOut.constAO);
+	}
 } // namespace flex

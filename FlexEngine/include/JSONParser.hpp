@@ -30,11 +30,6 @@ namespace flex
 		*/
 		static bool Parse(const std::string& filePath, JSONObject& rootObject);
 
-		static Transform ParseTransform(const JSONObject& transformObject);
-
-		/* Returns true if serialization succeeded */
-		static bool SerializeTransform(Transform* transform, JSONField& outTransformField);
-
 	private:
 		/*
 		* Parses an object starting at offset

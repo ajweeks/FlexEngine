@@ -13,6 +13,7 @@
 
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
+#include "JSONTypes.hpp"
 
 namespace flex
 {
@@ -26,6 +27,8 @@ namespace flex
 		~MeshComponent();
 
 		static void DestroyAllLoadedMeshes();
+
+		static MeshComponent* ParseJSON(const GameContext& gameContext, const JSONObject& object, GameObject* owner, MaterialID materialID);
 
 		void Update(const GameContext& gameContext);
 		void Destroy();
