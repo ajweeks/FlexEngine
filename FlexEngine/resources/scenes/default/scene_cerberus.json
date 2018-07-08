@@ -100,7 +100,7 @@
 			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
 		}
 	],
-	"entities" : 
+	"objects" : 
 	[
 		{
 			"name" : "Cerberus",

@@ -117,11 +117,11 @@ namespace flex
 			}
 
 
-			// This holds all the entities in the scene which do not have a parent
-			const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
-			for (const JSONObject& rootEntity : rootEntities)
+			// This holds all the objects in the scene which do not have a parent
+			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
+			for (const JSONObject& rootObject : rootObjects)
 			{
-				AddRootObject(CreateGameObjectFromJSON(gameContext, rootEntity));
+				AddRootObject(CreateGameObjectFromJSON(gameContext, rootObject));
 			}
 
 			if (sceneRootObject.HasField("point lights"))
@@ -466,9 +466,9 @@ namespace flex
 	{
 		GameObject* newGameObject = nullptr;
 
-		std::string entityTypeStr = obj.GetString("type");
+		std::string gameObjectTypeStr = obj.GetString("type");
 
-		if (entityTypeStr.compare("prefab") == 0)
+		if (gameObjectTypeStr.compare("prefab") == 0)
 		{
 			std::string prefabTypeStr = obj.GetString("prefab type");
 			JSONObject* prefab = nullptr;
@@ -515,7 +515,7 @@ namespace flex
 			}
 		}
 
-		GameObjectType gameObjectType = StringToGameObjectType(entityTypeStr);
+		GameObjectType gameObjectType = StringToGameObjectType(gameObjectTypeStr);
 
 		std::string objectName = obj.GetString("name");
 
@@ -871,7 +871,7 @@ namespace flex
 			else
 			{
 				matID = InvalidMaterialID;
-				Logger::LogError("Invalid material index for entity " + object.GetString("name") + ": " +
+				Logger::LogError("Invalid material index for object " + object.GetString("name") + ": " +
 								 std::to_string(materialArrayIndex));
 			}
 		}
@@ -945,18 +945,15 @@ namespace flex
 		rootSceneObject.fields.push_back(materialsField);
 
 
-		JSONField entitiesField = {};
-		entitiesField.label = "entities";
-		std::vector<JSONObject> entitiesArray;
+		std::vector<JSONObject> objectsArray;
 		for (GameObject* rootObject : m_RootObjects)
 		{
 			if (rootObject->IsSerializable())
 			{
-				entitiesArray.push_back(SerializeObject(rootObject, gameContext));
+				objectsArray.push_back(SerializeObject(rootObject, gameContext));
 			}
 		}
-		entitiesField.value = JSONValue(entitiesArray);
-		rootSceneObject.fields.push_back(entitiesField);
+		rootSceneObject.fields.push_back(JSONField("objects", JSONValue(objectsArray)));
 
 
 		JSONField pointLightsField = {};
@@ -1060,8 +1057,9 @@ namespace flex
 		}
 
 		// Non-basic objects shouldn't serialize certain fields which are constant across all instances
-		bool bIsBasicObject = (gameObject->m_Type != GameObjectType::OBJECT &&
-						  gameObject->m_Type != GameObjectType::NONE);
+		// TODO: Save out overridden prefab fields
+		bool bIsBasicObject = (gameObject->m_Type == GameObjectType::OBJECT &&
+							   gameObject->m_Type == GameObjectType::NONE);
 
 		JSONObject object;
 		std::string objectName = gameObject->m_Name;
@@ -1099,7 +1097,7 @@ namespace flex
 
 		MeshComponent* meshComponent = gameObject->GetMeshComponent();
 		if (meshComponent && 
-			!bIsBasicObject &&
+			bIsBasicObject &&
 			!gameObject->m_bLoadedFromPrefab)
 		{
 			JSONField meshField = {};

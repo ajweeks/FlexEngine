@@ -48,7 +48,7 @@ namespace flex
 	{
 		GameObject* newGameObject = new GameObject(newObjectName, m_Type);
 
-		CopyGenericFields(gameContext, parent, newGameObject, bCopyChildren);
+		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
 	}

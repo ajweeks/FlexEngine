@@ -265,4 +265,5 @@ namespace flex
 		virtual void ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
 	};
+
 } // namespace flex
