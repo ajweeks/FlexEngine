@@ -929,7 +929,7 @@ namespace flex
 			{
 				for (GameObject* child : m_Children)
 				{
-					if (child->m_bVisibleInSceneExplorer)
+					if (child->m_RenderID != InvalidRenderID)
 					{
 						child->SetVisible(bVisible, effectChildren);
 					}

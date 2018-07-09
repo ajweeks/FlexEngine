@@ -1844,7 +1844,8 @@ namespace flex
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject)
+							!renderObject->editorObject &&
+							renderObject->vertexBufferData)
 						{
 							m_DeferredRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1859,20 +1860,22 @@ namespace flex
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject)
+							!renderObject->editorObject &&
+							renderObject->vertexBufferData)
 						{
 							m_ForwardRenderObjectBatches.back().push_back(renderObject);
 						}
 					}
 				}
 			}
-
+			
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				GLRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					renderObject->editorObject)
+					renderObject->editorObject &&
+					renderObject->vertexBufferData)
 				{
 					m_EditorRenderObjectBatch.push_back(renderObject);
 				}
@@ -1884,7 +1887,8 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					!renderObject->editorObject)
+					!renderObject->editorObject &&
+					renderObject->vertexBufferData)
 				{
 					++visibleObjectCount;
 				}
