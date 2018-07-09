@@ -282,7 +282,7 @@ namespace flex
 		if (g_InputManager->IsAnyMouseButtonDown(true))
 		{
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			if (m_MousePosition.x >= (real)frameBufferSize.x)
+			if (m_MousePosition.x >= (real)(frameBufferSize.x - 1))
 			{
 				m_MousePosition.x -= (frameBufferSize.x - 1);
 				m_PrevMousePosition.x = m_MousePosition.x;
@@ -297,7 +297,7 @@ namespace flex
 				g_Window->SetCursorPos(m_MousePosition);
 			}
 
-			if (m_MousePosition.y >= (real)frameBufferSize.y)
+			if (m_MousePosition.y >= (real)(frameBufferSize.y - 1))
 			{
 				m_MousePosition.y -= (frameBufferSize.y - 1);
 				m_PrevMousePosition.y = m_MousePosition.y;
