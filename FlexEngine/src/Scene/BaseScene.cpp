@@ -652,6 +652,7 @@ namespace flex
 		if (success)
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
+			g_Renderer->AddEditorString("Saved " + m_Name);
 
 			if (!bSaveOverDefault)
 			{

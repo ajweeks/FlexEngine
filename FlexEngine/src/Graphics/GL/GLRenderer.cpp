@@ -1668,6 +1668,15 @@ namespace flex
 
 		void GLRenderer::Update()
 		{
+			if (m_EditorStrSecRemaining > 0.0f)
+			{
+				m_EditorStrSecRemaining -= g_DeltaTime;
+				if (m_EditorStrSecRemaining <= 0.0f)
+				{
+					m_EditorStrSecRemaining = 0.0f;
+				}
+			}
+
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
 			// This fixes the weird artifacts in refl probes, but obviously isn't ideal...
@@ -1762,29 +1771,37 @@ namespace flex
 			
 			SetFont(m_FntSourceCodePro);
 			//std::string str("abcdefghijklmnopqrstuvwxyz");
-			//DrawString(str, glm::vec4(0.95f), glm::vec2(0.0f), 15, letterYOffsets1);
+			//DrawString(str, glm::vec4(0.95f), glm::vec2(0.0f), 15, &letterYOffsets1);
 			//str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			//DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), glm::vec2(0.0f, -1.0f), 3, letterYOffsets2);
+			//DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), glm::vec2(0.0f, -1.0f), 3, &letterYOffsets2);
 			//str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			//DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-1.0f, 1.0f), 5, letterYOffsets3);
+			//DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-1.0f, 1.0f), 5, &letterYOffsets3);
 
 			//std::string str = std::string("XYZ");
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f), 3, letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
-			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, letterYOffsetsEmpty);
+			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
 			//glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			//std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
-			//DrawString(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, letterYOffsetsEmpty);
+			//DrawString(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, &letterYOffsetsEmpty);
 #endif
+
+			if (m_EditorStrSecRemaining > 0.0f)
+			{
+				SetFont(m_FntUbuntuCondensed);
+				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
+										0.0f, 1.0f);
+				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3);
+			}
 
 			DrawScreenSpaceSprites();
 
@@ -2971,16 +2988,28 @@ namespace flex
 			m_CurrentFont = font;
 		}
 
+		void GLRenderer::AddEditorString(const std::string& str)
+		{
+			m_EditorMessage = str;
+			if (str.empty())
+			{
+				m_EditorStrSecRemaining = 0.0f;
+			}
+			else
+			{
+				m_EditorStrSecRemaining = m_EditorStrSecDuration;
+			}
+		}
+
 		void GLRenderer::DrawString(const std::string& str,
 									const glm::vec4& color,
 									AnchorPoint anchor,
 									const glm::vec2& pos,
-									real spacing,
-									const std::vector<real>& letterYOffsets)
+									real spacing)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.push_back(TextCache(str, anchor, pos, color, spacing, letterYOffsets));
+			m_CurrentFont->m_TextCaches.push_back(TextCache(str, anchor, pos, color, spacing));
 		}
 
 		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
@@ -4859,7 +4888,7 @@ namespace flex
 			}
 		}
 		
-		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */)
+		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
 		{
 			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
 
@@ -4883,7 +4912,20 @@ namespace flex
 			rootObject.fields.push_back(JSONField("saturation", JSONValue(m_PostProcessSettings.saturation)));
 			std::string fileContents = rootObject.Print(0);
 
-			WriteFile(filePath, fileContents, false);
+			if (WriteFile(filePath, fileContents, false))
+			{
+				if (bAddEditorStr)
+				{
+					if (bSaveOverDefaults)
+					{
+						AddEditorString("Saved default renderer settings");
+					}
+					else
+					{
+						AddEditorString("Saved renderer settings");
+					}
+				}
+			}
 		}
 
 		void GLRenderer::DrawImGuiItems()

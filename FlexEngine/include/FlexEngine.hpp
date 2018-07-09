@@ -76,7 +76,7 @@ namespace flex
 
 		// Returns true if the common settings file existed and was valid
 		bool LoadCommonSettingsFromDisk();
-		void SaveCommonSettingsToDisk();
+		void SaveCommonSettingsToDisk(bool bAddEditorStr);
 
 		void DoSceneContextMenu(BaseScene* scene);
 

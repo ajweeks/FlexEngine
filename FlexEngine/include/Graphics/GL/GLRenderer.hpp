@@ -79,17 +79,19 @@ namespace flex
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
 			virtual void SetFont(BitmapFont* font) override;
+			// Draws the given string in the center of the screen for a short period of time
+			// Passing an empty string will immediately clear the current string
+			virtual void AddEditorString(const std::string& str) override;
 			virtual void DrawString(const std::string& str,
 									const glm::vec4& color,
 									AnchorPoint anchor, 
 									const glm::vec2& pos, // Positional offset from anchor
-									real spacing, // Horizontal per-char spacing
-									const std::vector<real>& letterYOffsets) override;
+									real spacing) override; // Horizontal per-char spacing
 
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
-			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false) override;
+			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
 
 		private:
@@ -268,6 +270,11 @@ namespace flex
 			u32 m_TextQuadVBO = 0;
 			u32 m_TextQuadVAO = 0;
 			VertexBufferData m_TextQuadsVertexBufferData;
+
+			sec m_EditorStrSecRemaining = 0.0f;
+			sec m_EditorStrSecDuration = 1.15f;
+			real m_EditorStrFadeDurationPercent = 0.25f;
+			std::string m_EditorMessage;
 
 			MaterialID m_SpriteMatID = InvalidMaterialID;
 			MaterialID m_FontMatID = InvalidMaterialID;

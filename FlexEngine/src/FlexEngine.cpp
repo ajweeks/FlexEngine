@@ -180,7 +180,7 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
-		SaveCommonSettingsToDisk();
+		SaveCommonSettingsToDisk(false);
 
 		DeselectCurrentlySelectedObject();
 
@@ -333,7 +333,7 @@ namespace flex
 
 	void FlexEngine::OnSceneChanged()
 	{
-		SaveCommonSettingsToDisk();
+		SaveCommonSettingsToDisk(false);
 
 		Material& transformGizmoMaterial = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 		Shader& transformGizmoShader = g_Renderer->GetShader(transformGizmoMaterial.shaderID);
@@ -639,6 +639,10 @@ namespace flex
 					{
 						if (m_bDraggingGizmo)
 						{
+							if (m_CurrentlySelectedObject)
+							{
+								m_SelectedObjectDragStartPos = m_CurrentlySelectedObject->GetTransform()->GetLocalPosition();
+							}
 							m_bDraggingGizmo = false;
 							m_DraggingAxisIndex = -1;
 						}
@@ -715,6 +719,14 @@ namespace flex
 								glm::vec3 deltaPos = (-dragDist.x * selectedObjectScale.z * scale * forward);
 								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
 							}
+						}
+
+						if (m_bDraggingGizmo)
+						{
+							g_Renderer->GetDebugDrawer()->drawLine(
+								Vec3ToBtVec3(m_SelectedObjectDragStartPos),
+								Vec3ToBtVec3(selectedObjectTransform->GetLocalPosition()),
+								(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.0f, 0.0f, 1.0f)));
 						}
 					}
 				}
@@ -834,7 +846,7 @@ namespace flex
 			if (m_SecondsSinceLastCommonSettingsFileSave > m_SecondsBetweenCommonSettingsFileSave)
 			{
 				m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
-				SaveCommonSettingsToDisk();
+				SaveCommonSettingsToDisk(false);
 			}
 
 			bool bLogProfilerResults = (m_FrameCount > 3);
@@ -936,7 +948,7 @@ namespace flex
 			{
 				if (ImGui::Button("  Save  "))
 				{
-					g_Renderer->SaveSettingsToDisk(false);
+					g_Renderer->SaveSettingsToDisk(false, true);
 				}
 
 				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
@@ -946,7 +958,7 @@ namespace flex
 					ImGui::SameLine();
 					if (ImGui::Button("Save over defaults"))
 					{
-						g_Renderer->SaveSettingsToDisk(true);
+						g_Renderer->SaveSettingsToDisk(true, true);
 					}
 
 					ImGui::SameLine();
@@ -1411,7 +1423,7 @@ namespace flex
 		return false;
 	}
 
-	void FlexEngine::SaveCommonSettingsToDisk()
+	void FlexEngine::SaveCommonSettingsToDisk(bool bAddEditorStr)
 	{
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
@@ -1440,6 +1452,11 @@ namespace flex
 		std::string fileContents = rootObject.Print(0);
 
 		WriteFile(m_CommonSettingsAbsFilePath, fileContents, false);
+
+		if (bAddEditorStr)
+		{
+			g_Renderer->AddEditorString("Saved common settings");
+		}
 	}
 
 	void FlexEngine::DoSceneContextMenu(BaseScene* scene)
