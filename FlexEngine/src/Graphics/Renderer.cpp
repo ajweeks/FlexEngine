@@ -56,65 +56,74 @@ namespace flex
 		Transform* transform = gameObject->GetTransform();
 		static int transformSpace = 0;
 
-		//if (bStatic)
-		//{
-		//	ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-		//	ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-		//}
+		static glm::vec3 sRot = glm::degrees((glm::eulerAngles(transform->GetLocalRotation())));
 
-		//static const char* localStr = "local";
-		//static const char* globalStr = "global";
-		//
-		//ImGui::RadioButton(localStr, &transformSpace, 0); ImGui::SameLine();
-		//ImGui::RadioButton(globalStr, &transformSpace, 1);
-		//
-		//const bool local = (transformSpace == 0);
-
-		//glm::vec3 translation = local ? transform->GetLocalPosition() : transform->GetWorldPosition();
-		//glm::vec3 rotation = glm::degrees((glm::eulerAngles(local ? transform->GetLocalRotation() : transform->GetWorldRotation())));
-		//glm::vec3 scale = local ? transform->GetLocalScale() : transform->GetWorldScale();
+		if (!ImGui::IsMouseDown(0))
+		{
+			sRot = glm::degrees((glm::eulerAngles(transform->GetLocalRotation())));
+		}
 
 		glm::vec3 translation = transform->GetLocalPosition();
-		glm::vec3 rotation = glm::degrees((glm::eulerAngles(transform->GetLocalRotation())));
+		glm::vec3 rotation = sRot;
 		glm::vec3 scale = transform->GetLocalScale();
+
+		glm::vec3 pRot = rotation;
 
 		bool valueChanged = false;
 
 		valueChanged = ImGui::DragFloat3("T", &translation[0], 0.1f) || valueChanged;
+		if (ImGui::IsItemClicked(1))
+		{
+			translation = glm::vec3(0.0f);
+			valueChanged = true;
+		}
 		valueChanged = ImGui::DragFloat3("R", &rotation[0], 0.1f) || valueChanged;
+		if (ImGui::IsItemClicked(1))
+		{
+			rotation = glm::vec3(0.0f);
+			valueChanged = true;
+		}
 		valueChanged = ImGui::DragFloat3("S", &scale[0], 0.01f) || valueChanged;
+		if (ImGui::IsItemClicked(1))
+		{
+			scale = glm::vec3(1.0f);
+			valueChanged = true;
+		}
 
 		if (valueChanged)
 		{
-			//if (local)
+			transform->SetLocalPosition(translation, false);
+
+			glm::vec3 cleanedRot = rotation;
+
+			if ((rotation.y >= 90.0f && pRot.y < 90.0f) ||
+				(rotation.y <= -90.0f && pRot.y > 90.0f))
 			{
-				transform->SetLocalPosition(translation, false);
-				transform->SetLocalRotation(glm::quat(glm::radians(rotation)), false);
-				transform->SetLocalScale(scale, true);
-
-				if (gameObject->GetRigidBody())
-				{
-					gameObject->GetRigidBody()->MatchParentTransform();
-				}
+				cleanedRot.y = 180.0f - rotation.y;
+				rotation.x += 180.0f;
+				rotation.z += 180.0f;
 			}
-			//else
-			//{
-			//	transform->SetWorldPosition(translation, false);
-			//	transform->SetWorldRotation(glm::quat(glm::radians(rotation)), false);
-			//	transform->SetWorldScale(scale, true);
-			//
-			//	if (gameObject->GetRigidBody())
-			//	{
-			//		gameObject->GetRigidBody()->MatchParentTransform();
-			//	}
-			//}
-		}
 
-		//if (bStatic)
-		//{
-		//	ImGui::PopItemFlag();
-		//	ImGui::PopStyleVar();
-		//}
+			if (rotation.y > 90.0f)
+			{
+				cleanedRot.y = 180.0f - rotation.y;
+			}
+
+			cleanedRot.x = rotation.x;
+			cleanedRot.z = rotation.z;
+
+			sRot = rotation;
+
+			glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
+
+			transform->SetLocalRotation(rotQuat, false);
+			transform->SetLocalScale(scale, true);
+
+			if (gameObject->GetRigidBody())
+			{
+				gameObject->GetRigidBody()->MatchParentTransform();
+			}
+		}
 	}
 
 	void Renderer::DrawImGuiLights()

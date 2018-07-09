@@ -120,30 +120,7 @@
 				"flipU" : false,
 				"flipV" : true
 			},
-			"material array index" : 0,
-			"children" : 
-			[
-				{
-					"name" : "New Object",
-					"type" : "object",
-					"visible" : true,
-					"transform" : 
-					{
-						"position" : "0.000000, -0.333000, 0.295000",
-						"rotation" : "0.000000, -0.000000, 0.000000",
-						"scale" : "0.005000, 0.005000, 0.005000"
-					},
-					"mesh" : 
-					{
-						"prefab" : "cube",
-						"swapNormalYZ" : false,
-						"flipNormalZ" : false,
-						"flipU" : false,
-						"flipV" : false
-					},
-					"material array index" : 0
-				}
-			]
+			"material array index" : 0
 		},
 		{
 			"name" : "Skybox",
@@ -155,19 +132,11 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 2
-		},
-		{
-			"name" : "Reflection Probe 01",
-			"type" : "reflection probe",
-			"visible" : true,
-			"transform" : 
+			"material array index" : 2,
+			"skybox info" : 
 			{
-				"position" : "3.100000, 1.000000, 0.000000",
-				"rotation" : "0.036652, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material array index" : 1
+				"rotation" : "0.000000, -0.000000, 0.000000"
+			}
 		},
 		{
 			"name" : "Cerberus",
@@ -175,8 +144,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 7.800000, -5.900000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
+				"position" : "-7.560185, 15.799998, 0.891671",
+				"rotation" : "-3.141593, 0.525344, 3.141593",
 				"scale" : "20.000000, 20.000000, 20.000000"
 			},
 			"mesh" : 
@@ -187,30 +156,7 @@
 				"flipU" : false,
 				"flipV" : true
 			},
-			"material array index" : 0,
-			"children" : 
-			[
-				{
-					"name" : "New Object",
-					"type" : "object",
-					"visible" : true,
-					"transform" : 
-					{
-						"position" : "0.000000, -0.333000, 0.295000",
-						"rotation" : "0.000000, -0.000000, 0.000000",
-						"scale" : "0.005000, 0.005000, 0.005000"
-					},
-					"mesh" : 
-					{
-						"prefab" : "cube",
-						"swapNormalYZ" : false,
-						"flipNormalZ" : false,
-						"flipU" : false,
-						"flipV" : false
-					},
-					"material array index" : 0
-				}
-			]
+			"material array index" : 0
 		},
 		{
 			"name" : "Skybox",
@@ -222,7 +168,11 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 2
+			"material array index" : 2,
+			"skybox info" : 
+			{
+				"rotation" : "0.000000, -0.000000, 0.000000"
+			}
 		},
 		{
 			"name" : "Reflection Probe 01",
@@ -230,7 +180,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "3.100000, 1.000000, 0.000000",
+				"position" : "3.100000, 13.932905, 1.795116",
 				"rotation" : "0.036652, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
@@ -241,28 +191,28 @@
 	[
 		{
 			"name" : "",
-			"position" : "4.700000, 13.300000, 15.900000",
+			"position" : "12.200000, 19.400000, 8.700000",
 			"color" : "0.523781, 0.546497, 1.000000",
 			"enabled" : true,
 			"brightness" : 206.572998
 		},
 		{
 			"name" : "",
-			"position" : "-4.400000, 9.800000, -13.200000",
+			"position" : "-4.400000, 9.600000, -13.200000",
 			"color" : "0.886507, 0.853158, 0.471757",
 			"enabled" : true,
 			"brightness" : 370.891998
 		},
 		{
 			"name" : "",
-			"position" : "13.900001, 7.500000, 9.800000",
+			"position" : "13.600000, 7.000000, 13.400000",
 			"color" : "0.523781, 0.546497, 1.000000",
 			"enabled" : true,
 			"brightness" : 356.807007
 		},
 		{
 			"name" : "",
-			"position" : "7.900001, 4.200000, -6.900000",
+			"position" : "13.700000, 14.400000, -13.600000",
 			"color" : "0.934571, 0.659195, 0.327762",
 			"enabled" : true,
 			"brightness" : 323.944000
@@ -271,9 +221,9 @@
 	"directional light" : 
 	{
 		"direction" : "0.380000, 0.750000, -0.160000",
-		"position" : "0.700000, 20.000000, -1.000000",
+		"position" : "0.700000, 23.299999, -1.000000",
 		"color" : "0.870165, 0.826675, 0.589158",
 		"enabled" : true,
-		"brightness" : 1.127000
+		"brightness" : 2.394000
 	}
 }

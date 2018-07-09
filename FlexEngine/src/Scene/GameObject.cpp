@@ -929,7 +929,10 @@ namespace flex
 			{
 				for (GameObject* child : m_Children)
 				{
-					child->SetVisible(bVisible, effectChildren);
+					if (child->m_bVisibleInSceneExplorer)
+					{
+						child->SetVisible(bVisible, effectChildren);
+					}
 				}
 			}
 		}
@@ -1479,7 +1482,7 @@ namespace flex
 	GameObject* ReflectionProbe::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
 	{
 		ReflectionProbe* newGameObject = new ReflectionProbe(newObjectName);
-
+		
 		newGameObject->captureMatID = captureMatID;
 
 		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
