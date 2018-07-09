@@ -63,6 +63,7 @@ namespace flex
 
 		std::string GetTitle() const;
 
+		virtual void SetCursorPos(const glm::vec2& newCursorPos) = 0;
 		virtual void SetCursorMode(CursorMode mode);
 
 		/* 

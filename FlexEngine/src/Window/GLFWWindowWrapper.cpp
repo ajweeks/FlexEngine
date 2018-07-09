@@ -245,6 +245,11 @@ namespace flex
 		glfwPollEvents();
 	}
 
+	void GLFWWindowWrapper::SetCursorPos(const glm::vec2& newCursorPos)
+	{
+		glfwSetCursorPos(m_Window, newCursorPos.x, newCursorPos.y);
+	}
+
 	void GLFWWindowWrapper::SetCursorMode(CursorMode mode)
 	{
 		Window::SetCursorMode(mode);

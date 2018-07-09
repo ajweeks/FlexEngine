@@ -76,7 +76,7 @@ namespace flex
 		{
 			glm::vec2 look(0.0f);
 			if (!g_EngineInstance->IsDraggingGizmo() &&
-				g_InputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
+				g_InputManager->IsMouseButtonDown(InputManager::MouseButton::LEFT))
 			{
 				look = g_InputManager->GetMouseMovement();
 				look.y = -look.y;
@@ -128,11 +128,11 @@ namespace flex
 				translation -= m_Up;
 			}
 
-			if (g_InputManager->GetMouseButtonPressed(InputManager::MouseButton::MIDDLE))
+			if (g_InputManager->IsMouseButtonPressed(InputManager::MouseButton::MIDDLE))
 			{
 				m_DragStartPosition = m_Position;
 			}
-			else if (g_InputManager->GetMouseButtonDown(InputManager::MouseButton::MIDDLE))
+			else if (g_InputManager->IsMouseButtonDown(InputManager::MouseButton::MIDDLE))
 			{
 				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(InputManager::MouseButton::MIDDLE);
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
@@ -146,7 +146,7 @@ namespace flex
 				translation += m_Forward * scrollDistance * m_ScrollDollySpeed;
 			}
 
-			if (g_InputManager->GetMouseButtonDown(InputManager::MouseButton::RIGHT))
+			if (g_InputManager->IsMouseButtonDown(InputManager::MouseButton::RIGHT))
 			{
 				glm::vec2 zoom = g_InputManager->GetMouseMovement();
 				translation += m_Forward * -zoom.y * m_DragDollySpeed;

@@ -571,9 +571,9 @@ namespace flex
 
 				// TODO: Bring keybindings out to external file (or at least variables)
 				InputManager::MouseButton dragButton = InputManager::MouseButton::LEFT;
-				bool bMouseDown = g_InputManager->GetMouseButtonDown(dragButton);
-				bool bMousePressed = g_InputManager->GetMouseButtonPressed(dragButton);
-				bool bMouseReleased = g_InputManager->GetMouseButtonReleased(dragButton);
+				bool bMouseDown = g_InputManager->IsMouseButtonDown(dragButton);
+				bool bMousePressed = g_InputManager->IsMouseButtonPressed(dragButton);
+				bool bMouseReleased = g_InputManager->IsMouseButtonReleased(dragButton);
 
 				if (!m_bDraggingGizmo && pickedBody)
 				{

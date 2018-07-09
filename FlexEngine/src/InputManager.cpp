@@ -220,9 +220,9 @@ namespace flex
 		}
 	}
 
-	i32 InputManager::GetKeyDown(KeyCode keyCode, bool ignoreImGui) const
+	i32 InputManager::GetKeyDown(KeyCode keyCode, bool bIgnoreImGui) const
 	{
-		if (!ignoreImGui && ImGui::GetIO().WantCaptureKeyboard)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureKeyboard)
 		{
 			return 0;
 		}
@@ -236,9 +236,9 @@ namespace flex
 		return 0;
 	}
 
-	bool InputManager::GetKeyPressed(KeyCode keyCode, bool ignoreImGui) const
+	bool InputManager::GetKeyPressed(KeyCode keyCode, bool bIgnoreImGui) const
 	{
-		return GetKeyDown(keyCode, ignoreImGui) == 1;
+		return GetKeyDown(keyCode, bIgnoreImGui) == 1;
 	}
 
 	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button)
@@ -278,6 +278,41 @@ namespace flex
 		m_MousePosition = glm::vec2((real)x, (real)y);
 
 		ImGuiIO& io = ImGui::GetIO();
+
+		if (g_InputManager->IsAnyMouseButtonDown(true))
+		{
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			if (m_MousePosition.x >= (real)frameBufferSize.x)
+			{
+				m_MousePosition.x -= (frameBufferSize.x - 1);
+				m_PrevMousePosition.x = m_MousePosition.x;
+				io.MousePosPrev.x = m_MousePosition.x;
+				g_Window->SetCursorPos(m_MousePosition);
+			}
+			else if (m_MousePosition.x <= 0)
+			{
+				m_MousePosition.x += (frameBufferSize.x - 1);
+				m_PrevMousePosition.x = m_MousePosition.x;
+				io.MousePosPrev.x = m_MousePosition.x;
+				g_Window->SetCursorPos(m_MousePosition);
+			}
+
+			if (m_MousePosition.y >= (real)frameBufferSize.y)
+			{
+				m_MousePosition.y -= (frameBufferSize.y - 1);
+				m_PrevMousePosition.y = m_MousePosition.y;
+				io.MousePosPrev.y = m_MousePosition.y;
+				g_Window->SetCursorPos(m_MousePosition);
+			}
+			else if (m_MousePosition.y <= 0)
+			{
+				m_MousePosition.y += (frameBufferSize.y - 1);
+				m_PrevMousePosition.y = m_MousePosition.y;
+				io.MousePosPrev.y = m_MousePosition.y;
+				g_Window->SetCursorPos(m_MousePosition);
+			}
+		}
+
 		io.MousePos = m_MousePosition;
 	}
 
@@ -375,11 +410,29 @@ namespace flex
 		return m_MousePosition - m_PrevMousePosition;
 	}
 
-	bool InputManager::GetMouseButtonDown(MouseButton mouseButton) const
+	bool InputManager::IsAnyMouseButtonDown(bool bbIgnoreImGui) const
+	{
+		if (!bbIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
+		{
+			return false;
+		}
+
+		for (i32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+		{
+			if ((m_MouseButtonStates & (1 << i)) != 0)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool InputManager::IsMouseButtonDown(MouseButton mouseButton) const
 	{
 		if (ImGui::GetIO().WantCaptureMouse)
 		{
-			return 0;
+			return false;
 		}
 
 		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
@@ -387,11 +440,11 @@ namespace flex
 		return (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
 
-	bool InputManager::GetMouseButtonPressed(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonPressed(MouseButton mouseButton) const
 	{
 		if (ImGui::GetIO().WantCaptureMouse)
 		{
-			return 0;
+			return false;
 		}
 
 		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
@@ -399,11 +452,11 @@ namespace flex
 		return (m_MouseButtonsPressed & (1 << (i32)mouseButton)) != 0;
 	}
 
-	bool InputManager::GetMouseButtonReleased(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonReleased(MouseButton mouseButton) const
 	{
 		if (ImGui::GetIO().WantCaptureMouse)
 		{
-			return 0;
+			return false;
 		}
 
 		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);

@@ -30,6 +30,8 @@ namespace flex
 
 		virtual void Update() override;
 		virtual void PollEvents() override;
+
+		virtual void SetCursorPos(const glm::vec2& newCursorPos) override;
 		virtual void SetCursorMode(CursorMode mode) override;
 
 		virtual void SetFullscreenMode(FullscreenMode mode, bool force = false) override;

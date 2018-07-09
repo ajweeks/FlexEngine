@@ -247,8 +247,8 @@ namespace flex
 		void UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15]);
 		GamepadState& GetGamepadState(i32 gamepadIndex);
 
-		i32 GetKeyDown(KeyCode keyCode, bool ignoreImGui = false) const;
-		bool GetKeyPressed(KeyCode keyCode, bool ignoreImGui = false) const;
+		i32 GetKeyDown(KeyCode keyCode, bool bIgnoreImGui = false) const;
+		bool GetKeyPressed(KeyCode keyCode, bool bIgnoreImGui = false) const;
 
 		bool IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button);
 		bool IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button);
@@ -265,9 +265,10 @@ namespace flex
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		glm::vec2 GetMouseMovement() const;
-		bool GetMouseButtonDown(MouseButton mouseButton) const;
-		bool GetMouseButtonPressed(MouseButton mouseButton) const;
-		bool GetMouseButtonReleased(MouseButton mouseButton) const;
+		bool IsAnyMouseButtonDown(bool bIgnoreImGui = false) const;
+		bool IsMouseButtonDown(MouseButton mouseButton) const;
+		bool IsMouseButtonPressed(MouseButton mouseButton) const;
+		bool IsMouseButtonReleased(MouseButton mouseButton) const;
 		real GetVerticalScrollDistance() const;
 
 		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
