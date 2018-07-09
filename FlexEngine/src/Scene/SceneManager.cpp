@@ -190,6 +190,8 @@ namespace flex
 
 	void SceneManager::AddFoundScenes()
 	{
+		bool bFirstTimeThrough = m_Scenes.empty();
+
 		std::vector<std::string> addedSceneFileNames;
 
 		// Find and load all saved scene files
@@ -237,11 +239,20 @@ namespace flex
 
 			}
 			Print("\n");
+
+			if (!bFirstTimeThrough)
+			{
+				i32 sceneCount = (i32)addedSceneFileNames.size();
+				std::string messageStr = "Added " + IntToString(sceneCount) + " scene" + (sceneCount > 1 ? "s" : "");
+				g_Renderer->AddEditorString(messageStr);
+			}
 		}
 	}
 
 	void SceneManager::RemoveDeletedScenes()
 	{
+		std::vector<std::string> removedSceneNames;
+
 		auto sceneIter = m_Scenes.begin();
 		u32 newSceneIndex = m_CurrentSceneIndex;
 		u32 sceneIndex = 0;
@@ -265,6 +276,8 @@ namespace flex
 				{
 					Print("Removing scene from list due to JSON file missing: %s\n", fileName.c_str());
 
+					removedSceneNames.push_back((*sceneIter)->GetName());
+					SafeDelete(*sceneIter);
 					sceneIter = m_Scenes.erase(sceneIter);
 
 					if (m_CurrentSceneIndex > sceneIndex)
@@ -281,6 +294,13 @@ namespace flex
 		{
 			// Scene isn't actually changing, just the index since the array shrunk
 			m_CurrentSceneIndex = newSceneIndex;
+		}
+
+		if (!removedSceneNames.empty())
+		{
+			i32 sceneCount = (i32)removedSceneNames.size();
+			std::string messageStr = "Removed " + IntToString(sceneCount) + " scene" + (sceneCount > 1 ? "s" : "");
+			g_Renderer->AddEditorString(messageStr);
 		}
 	}
 
