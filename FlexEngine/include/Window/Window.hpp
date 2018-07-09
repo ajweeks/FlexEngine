@@ -2,7 +2,6 @@
 
 #include <string>
 
-#include "GameContext.hpp"
 #include "InputManager.hpp"
 
 struct GLFWwindow;
@@ -26,7 +25,7 @@ namespace flex
 			FULLSCREEN
 		};
 
-		Window(const std::string& title, GameContext& gameContext);
+		Window(const std::string& title);
 		virtual ~Window();
 		
 		virtual void Initialize() = 0;
@@ -34,11 +33,11 @@ namespace flex
 		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
-		virtual void RetrieveMonitorInfo(GameContext& gameContext) = 0;
+		virtual void RetrieveMonitorInfo() = 0;
 
 		virtual void Create(glm::vec2i size, glm::vec2i pos) = 0;
 
-		virtual void Update(const GameContext& gameContext);
+		virtual void Update();
 		virtual void PollEvents() = 0;
 
 		glm::vec2i GetSize() const;
@@ -112,10 +111,6 @@ namespace flex
 		// Called when we want to manually position the cursor
 		virtual void SetMousePosition(glm::vec2 mousePosition) = 0;
 
-		// Store this privately so we can access it in callbacks
-		// Should be updated with every call to Update()
-		GameContext& m_GameContextRef;
-
 		std::string m_TitleString = "";
 		glm::vec2i m_Size = { 0, 0 };
 		glm::vec2i m_StartingPosition = { 0, 0 };
@@ -139,7 +134,7 @@ namespace flex
 		CursorMode m_CursorMode = CursorMode::NORMAL;
 
 	private:
-		std::string GenerateWindowTitle(const GameContext& gameContext);
+		std::string GenerateWindowTitle();
 
 		Window(const Window&) = delete;
 		Window& operator=(const Window&) = delete;

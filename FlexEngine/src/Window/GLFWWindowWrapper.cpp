@@ -7,14 +7,14 @@
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
-
+#include "Window/Monitor.hpp"
 
 namespace flex
 {
 	std::array<bool, MAX_JOYSTICK_COUNT> g_JoysticksConnected;
 
-	GLFWWindowWrapper::GLFWWindowWrapper(std::string title, GameContext& gameContext) :
-		Window(title, gameContext)
+	GLFWWindowWrapper::GLFWWindowWrapper(std::string title) :
+		Window(title)
 	{
 		const bool moveConsoleToExtraMonitor = true;
 
@@ -130,7 +130,7 @@ namespace flex
 		}
 	}
 
-	void GLFWWindowWrapper::RetrieveMonitorInfo(GameContext& gameContext)
+	void GLFWWindowWrapper::RetrieveMonitorInfo()
 	{
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		if (!monitor)
@@ -146,20 +146,21 @@ namespace flex
 			return;
 		}
 
-		gameContext.monitor.width = vidMode->width;
-		gameContext.monitor.height = vidMode->height;
-		gameContext.monitor.redBits = vidMode->redBits;
-		gameContext.monitor.greenBits = vidMode->greenBits;
-		gameContext.monitor.blueBits = vidMode->blueBits;
-		gameContext.monitor.refreshRate = vidMode->refreshRate;
+		assert(g_Monitor); // Monitor must be created before calling RetrieveMonitorInfo!
+		g_Monitor->width = vidMode->width;
+		g_Monitor->height = vidMode->height;
+		g_Monitor->redBits = vidMode->redBits;
+		g_Monitor->greenBits = vidMode->greenBits;
+		g_Monitor->blueBits = vidMode->blueBits;
+		g_Monitor->refreshRate = vidMode->refreshRate;
 		
 		// 25.4mm = 1 inch
 		i32 widthMM, heightMM;
 		glfwGetMonitorPhysicalSize(monitor, &widthMM, &heightMM);
-		gameContext.monitor.DPI = glm::vec2(vidMode->width / (widthMM / 25.4f),
+		g_Monitor->DPI = glm::vec2(vidMode->width / (widthMM / 25.4f),
 											vidMode->height / (heightMM / 25.4f));
 
-		glfwGetMonitorContentScale(monitor, &gameContext.monitor.contentScaleX, &gameContext.monitor.contentScaleY);
+		glfwGetMonitorContentScale(monitor, &g_Monitor->contentScaleX, &g_Monitor->contentScaleY);
 	}
 
 	void GLFWWindowWrapper::SetUpCallbacks()
@@ -187,9 +188,9 @@ namespace flex
 		m_FrameBufferSize = glm::vec2i(width, height);
 		m_Size = m_FrameBufferSize;
 		
-		if (m_GameContextRef.renderer)
+		if (g_Renderer)
 		{
-			m_GameContextRef.renderer->OnWindowSizeChanged(width, height);
+			g_Renderer->OnWindowSizeChanged(width, height);
 		}
 	}
 
@@ -209,9 +210,9 @@ namespace flex
 			m_LastWindowedSize = m_Size;
 		}
 
-		if (m_GameContextRef.renderer)
+		if (g_Renderer)
 		{
-			m_GameContextRef.renderer->OnWindowSizeChanged(width, height);
+			g_Renderer->OnWindowSizeChanged(width, height);
 		}
 	}
 
@@ -317,13 +318,13 @@ namespace flex
 		}
 	}
 
-	void GLFWWindowWrapper::Update(const GameContext& gameContext)
+	void GLFWWindowWrapper::Update()
 	{
-		Window::Update(gameContext);
+		Window::Update();
 
 		if (glfwWindowShouldClose(m_Window))
 		{
-			gameContext.engineInstance->Stop();
+			g_EngineInstance->Stop();
 			return;
 		}
 
@@ -331,14 +332,14 @@ namespace flex
 		static bool prevP0JoystickPresent = false;
 		if (glfwGetGamepadState(0, &gamepad0State) == GLFW_TRUE)
 		{
-			gameContext.inputManager->UpdateGamepadState(0, gamepad0State.axes, gamepad0State.buttons);
+			g_InputManager->UpdateGamepadState(0, gamepad0State.axes, gamepad0State.buttons);
 			prevP0JoystickPresent = true;
 		}
 		else
 		{
 			if (prevP0JoystickPresent)
 			{
-				gameContext.inputManager->ClearGampadInput(0);
+				g_InputManager->ClearGampadInput(0);
 				prevP0JoystickPresent = false;
 			}
 		}
@@ -347,14 +348,14 @@ namespace flex
 		static bool prevP1JoystickPresent = false;
 		if (glfwGetGamepadState(1, &gamepad1State) == GLFW_TRUE)
 		{
-			gameContext.inputManager->UpdateGamepadState(1, gamepad1State.axes, gamepad1State.buttons);
+			g_InputManager->UpdateGamepadState(1, gamepad1State.axes, gamepad1State.buttons);
 			prevP1JoystickPresent = true;
 		}
 		else
 		{
 			if (prevP1JoystickPresent)
 			{
-				gameContext.inputManager->ClearGampadInput(1);
+				g_InputManager->ClearGampadInput(1);
 				prevP1JoystickPresent = false;
 			}
 		}

@@ -4,7 +4,6 @@
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 
 #include "Cameras/BaseCamera.hpp"
-#include "GameContext.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
@@ -15,8 +14,7 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw(const GameContext& gameContext) :
-			m_GameContext(gameContext)
+		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw()
 		{
 		}
 
@@ -26,14 +24,14 @@ namespace flex
 
 			if (m_GameObject)
 			{
-				m_GameObject->Destroy(m_GameContext);
+				m_GameObject->Destroy();
 				SafeDelete(m_GameObject);
 			}
 		}
 
 		void VulkanPhysicsDebugDraw::Initialize()
 		{
-			m_Renderer = (VulkanRenderer*)(m_GameContext.renderer);
+			m_Renderer = (VulkanRenderer*)(g_Renderer);
 			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
 			{
 				PrintError("Failed to retrieve shader for Vulkan physics debug draw!");
@@ -54,12 +52,12 @@ namespace flex
 			renderObjectCreateInfo.materialID = m_MaterialID;
 			renderObjectCreateInfo.visibleInSceneExplorer = false;
 
-			m_GameObject->SetRenderID(m_GameContext.renderer->InitializeRenderObject(m_GameContext, &renderObjectCreateInfo));
+			m_GameObject->SetRenderID(g_Renderer->InitializeRenderObject(&renderObjectCreateInfo));
 		}
 
 		void VulkanPhysicsDebugDraw::UpdateDebugMode()
 		{
-			const PhysicsDebuggingSettings& settings = m_GameContext.renderer->GetPhysicsDebuggingSettings();
+			const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 
 			m_DebugMode =
 				(settings.DisableAll ? DBG_NoDebug : 0) |
@@ -152,7 +150,7 @@ namespace flex
 
 			m_VertexBufferData.Initialize(&createInfo);
 
-			m_GameContext.renderer->UpdateRenderObjectVertexData(m_GameObject->GetRenderID());
+			g_Renderer->UpdateRenderObjectVertexData(m_GameObject->GetRenderID());
 
 			//glUseProgram(glShader->program);
 			//CheckGLErrorMessages();
@@ -197,8 +195,8 @@ namespace flex
 
 
 			//glm::mat4 model = glm::mat4(1.0f);
-			//glm::mat4 proj = m_GameContext.camera->GetProjection();
-			//glm::mat4 view = m_GameContext.camera->GetView();
+			//glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			//glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			//glm::mat4 MVP = proj * view * model;
 			//glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
 

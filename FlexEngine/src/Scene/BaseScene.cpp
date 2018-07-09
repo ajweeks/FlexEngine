@@ -36,7 +36,7 @@ namespace flex
 	{
 	}
 
-	void BaseScene::Initialize(const GameContext& gameContext)
+	void BaseScene::Initialize()
 	{
 		ParseFoundPrefabFiles();
 
@@ -47,7 +47,7 @@ namespace flex
 
 		// Physics world
 		m_PhysicsWorld = new PhysicsWorld();
-		m_PhysicsWorld->Initialize(gameContext);
+		m_PhysicsWorld->Initialize();
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
@@ -110,7 +110,7 @@ namespace flex
 				MaterialCreateInfo matCreateInfo = {};
 				Material::ParseJSONObject(materialsArray[i], matCreateInfo);
 
-				MaterialID matID = gameContext.renderer->InitializeMaterial(&matCreateInfo);
+				MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 				m_LoadedMaterials.push_back(matID);
 			}
 
@@ -119,7 +119,7 @@ namespace flex
 			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
 			for (const JSONObject& rootObject : rootObjects)
 			{
-				AddRootObject(GameObject::CreateObjectFromJSON(gameContext, rootObject, this, InvalidMaterialID));
+				AddRootObject(GameObject::CreateObjectFromJSON(rootObject, this, InvalidMaterialID));
 			}
 
 			if (sceneRootObject.HasField("point lights"))
@@ -131,7 +131,7 @@ namespace flex
 					PointLight pointLight = {};
 					CreatePointLightFromJSON(pointLightObj, pointLight);
 
-					gameContext.renderer->InitializePointLight(pointLight);
+					g_Renderer->InitializePointLight(pointLight);
 				}
 			}
 
@@ -142,7 +142,7 @@ namespace flex
 				DirectionalLight dirLight = {};
 				CreateDirectionalLightFromJSON(directionalLightObj, dirLight);
 
-				gameContext.renderer->InitializeDirectionalLight(dirLight);
+				g_Renderer->InitializeDirectionalLight(dirLight);
 			}
 		}
 		else
@@ -164,14 +164,14 @@ namespace flex
 				skyboxMatCreateInfo.generatePrefilteredMap = true;
 				skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
 				skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
-				MaterialID skyboxMatID = gameContext.renderer->InitializeMaterial(&skyboxMatCreateInfo);
+				MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
 				m_LoadedMaterials.push_back(skyboxMatID);
 
 				Skybox* skybox = new Skybox("Skybox");
 				
 				JSONObject emptyObj = {};
-				skybox->ParseJSON(gameContext, emptyObj, this, skyboxMatID);
+				skybox->ParseJSON(emptyObj, this, skyboxMatID);
 
 				AddRootObject(skybox);
 			}
@@ -185,14 +185,14 @@ namespace flex
 				reflectionProbeMatCreateInfo.constMetallic = 1.0f;
 				reflectionProbeMatCreateInfo.constRoughness = 0.0f;
 				reflectionProbeMatCreateInfo.constAO = 1.0f;
-				MaterialID sphereMatID = gameContext.renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
+				MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
 
 				m_LoadedMaterials.push_back(sphereMatID);
 
 				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 				
 				JSONObject emptyObj = {};
-				reflectionProbe->ParseJSON(gameContext, emptyObj, this, sphereMatID);
+				reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
 
 				AddRootObject(reflectionProbe);
 			}
@@ -201,19 +201,19 @@ namespace flex
 
 		{
 			const std::string gridMatName = "Grid";
-			if (!gameContext.renderer->GetMaterialID(gridMatName, m_GridMaterialID))
+			if (!g_Renderer->GetMaterialID(gridMatName, m_GridMaterialID))
 			{
 				MaterialCreateInfo gridMatInfo = {};
 				gridMatInfo.shaderName = "color";
 				gridMatInfo.name = gridMatName;
-				m_GridMaterialID = gameContext.renderer->InitializeMaterial(&gridMatInfo);
+				m_GridMaterialID = g_Renderer->InitializeMaterial(&gridMatInfo);
 			}
 
 			m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
 			MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.editorObject = true;
-			gridMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::GRID, &createInfo);
+			gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
 			m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 			m_Grid->SetSerializable(false);
 			m_Grid->SetStatic(true);
@@ -223,19 +223,19 @@ namespace flex
 
 		{
 			const std::string worldOriginMatName = "World origin";
-			if (!gameContext.renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+			if (!g_Renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
 			{
 				MaterialCreateInfo worldAxisMatInfo = {};
 				worldAxisMatInfo.shaderName = "color";
 				worldAxisMatInfo.name = worldOriginMatName;
-				m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(&worldAxisMatInfo);
+				m_WorldAxisMaterialID = g_Renderer->InitializeMaterial(&worldAxisMatInfo);
 			}
 
 			m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
 			MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.editorObject = true;
-			orignMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
+			orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
 			m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 			m_WorldOrigin->SetSerializable(false);
 			m_WorldOrigin->SetStatic(true);
@@ -250,25 +250,25 @@ namespace flex
 
 		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
 		{
-			(*iter)->Initialize(gameContext);
+			(*iter)->Initialize();
 		}
 
 		m_bLoaded = true;
 	}
 
-	void BaseScene::PostInitialize(const GameContext& gameContext)
+	void BaseScene::PostInitialize()
 	{
 		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
 		{
 			GameObject* gameObject = *iter;
 
-			gameObject->PostInitialize(gameContext);
+			gameObject->PostInitialize();
 		}
 
-		m_PhysicsWorld->GetWorld()->setDebugDrawer(gameContext.renderer->GetDebugDrawer());
+		m_PhysicsWorld->GetWorld()->setDebugDrawer(g_Renderer->GetDebugDrawer());
 	}
 
-	void BaseScene::Destroy(const GameContext& gameContext)
+	void BaseScene::Destroy()
 	{
 		m_bLoaded = false;
 
@@ -276,7 +276,7 @@ namespace flex
 		{
 			if (rootObject)
 			{
-				rootObject->Destroy(gameContext);
+				rootObject->Destroy();
 				SafeDelete(rootObject);
 			}
 		}
@@ -284,10 +284,10 @@ namespace flex
 
 		m_LoadedMaterials.clear();
 
-		gameContext.renderer->ClearMaterials();
-		gameContext.renderer->SetSkyboxMesh(nullptr);
-		gameContext.renderer->ClearDirectionalLight();
-		gameContext.renderer->ClearPointLights();
+		g_Renderer->ClearMaterials();
+		g_Renderer->SetSkyboxMesh(nullptr);
+		g_Renderer->ClearDirectionalLight();
+		g_Renderer->ClearPointLights();
 
 		if (m_PhysicsWorld)
 		{
@@ -296,59 +296,59 @@ namespace flex
 		}
 	}
 
-	void BaseScene::Update(const GameContext& gameContext)
+	void BaseScene::Update()
 	{
 		if (m_PhysicsWorld)
 		{
-			m_PhysicsWorld->Update(gameContext.deltaTime);
+			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
 		{
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 		{
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
 		{
 			AudioManager::StopSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
 		}
 
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
+		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
 		{
 			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										   0.5f * gameContext.deltaTime);
+										   0.5f * g_DeltaTime);
 		}
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
+		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
 		{
 			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										   -0.5f * gameContext.deltaTime);
+										   -0.5f * g_DeltaTime);
 		}
 
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
+		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
 		{
 			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
 										  1.1f);
 		}
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
+		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
 		{
 			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
 										  1.0f / 1.1f);
 		}
 
 
-		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
 
 		// Fade grid out when far away
 		{
@@ -359,26 +359,25 @@ namespace flex
 
 			glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
 			glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
-			gameContext.renderer->GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
-			gameContext.renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
+			g_Renderer->GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
+			g_Renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
 		}
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
 			if (rootObject)
 			{
-				rootObject->Update(gameContext);
+				rootObject->Update();
 			}
 		}
 	}
 
-	bool BaseScene::DestroyGameObject(const GameContext& gameContext,
-									 GameObject* targetObject,
+	bool BaseScene::DestroyGameObject(GameObject* targetObject,
 									 bool bDeleteChildren)
 	{
 		for (GameObject* gameObject : m_RootObjects)
 		{
-			if (DestroyGameObjectRecursive(gameContext, gameObject, targetObject, bDeleteChildren))
+			if (DestroyGameObjectRecursive(gameObject, targetObject, bDeleteChildren))
 			{
 				return true;
 			}
@@ -391,8 +390,7 @@ namespace flex
 		return m_bLoaded;
 	}
 
-	bool BaseScene::DestroyGameObjectRecursive(const GameContext& gameContext,
-											  GameObject* currentObject,
+	bool BaseScene::DestroyGameObjectRecursive(GameObject* currentObject,
 											  GameObject* targetObject,
 											  bool bDeleteChildren)
 	{
@@ -429,9 +427,9 @@ namespace flex
 				}
 			}
 
-			if (targetObject == gameContext.engineInstance->GetSelectedObject())
+			if (targetObject == g_EngineInstance->GetSelectedObject())
 			{
-				gameContext.engineInstance->SetSelectedObject(nullptr);
+				g_EngineInstance->SetSelectedObject(nullptr);
 			}
 
 			// If children are still in m_Children array when
@@ -441,7 +439,7 @@ namespace flex
 				targetObject->m_Children.clear();
 			}
 
-			targetObject->Destroy(gameContext);
+			targetObject->Destroy();
 
 			SafeDelete(targetObject);
 			return true;
@@ -449,7 +447,7 @@ namespace flex
 
 		for (GameObject* childObject : currentObject->m_Children)
 		{
-			if (DestroyGameObjectRecursive(gameContext, childObject, targetObject, bDeleteChildren))
+			if (DestroyGameObjectRecursive(childObject, targetObject, bDeleteChildren))
 			{
 				return true;
 			}
@@ -458,12 +456,12 @@ namespace flex
 		return false;
 	}
 
-	i32 BaseScene::GetMaterialArrayIndex(const Material& material, const GameContext& gameContext)
+	i32 BaseScene::GetMaterialArrayIndex(const Material& material)
 	{
 		i32 materialArrayIndex = -1;
 		for (u32 j = 0; j < m_LoadedMaterials.size(); ++j)
 		{
-			Material& loadedMat = gameContext.renderer->GetMaterial(m_LoadedMaterials[j]);
+			Material& loadedMat = g_Renderer->GetMaterial(m_LoadedMaterials[j]);
 			if (loadedMat.Equals(material))
 			{
 				materialArrayIndex = (i32)j;
@@ -564,7 +562,7 @@ namespace flex
 		}
 	}
 
-	void BaseScene::SerializeToFile(const GameContext& gameContext, bool bSaveOverDefault /* = false */)
+	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */)
 	{
 		bool success = false;
 
@@ -584,8 +582,8 @@ namespace flex
 		std::vector<JSONObject> materialsArray;
 		for (MaterialID matID : m_LoadedMaterials)
 		{
-			Material& material = gameContext.renderer->GetMaterial(matID);
-			materialsArray.push_back(material.SerializeToJSON(gameContext));
+			Material& material = g_Renderer->GetMaterial(matID);
+			materialsArray.push_back(material.SerializeToJSON());
 		}
 		materialsField.value = JSONValue(materialsArray);
 		rootSceneObject.fields.push_back(materialsField);
@@ -598,7 +596,7 @@ namespace flex
 			{
 				if (rootObject->IsSerializable())
 				{
-					objectsArray.push_back(rootObject->SerializeToJSON(gameContext, this));
+					objectsArray.push_back(rootObject->SerializeToJSON(this));
 				}
 			}
 		}
@@ -608,15 +606,15 @@ namespace flex
 		JSONField pointLightsField = {};
 		pointLightsField.label = "point lights";
 		std::vector<JSONObject> pointLightsArray;
-		for (i32 i = 0; i < gameContext.renderer->GetNumPointLights(); ++i)
+		for (i32 i = 0; i < g_Renderer->GetNumPointLights(); ++i)
 		{
-			PointLight& pointLight = gameContext.renderer->GetPointLight(i);
+			PointLight& pointLight = g_Renderer->GetPointLight(i);
 			pointLightsArray.push_back(SerializePointLight(pointLight));
 		}
 		pointLightsField.value = JSONValue(pointLightsArray);
 		rootSceneObject.fields.push_back(pointLightsField);
 
-		DirectionalLight& dirLight = gameContext.renderer->GetDirectionalLight();
+		DirectionalLight& dirLight = g_Renderer->GetDirectionalLight();
 		JSONField directionalLightsField("directional light",
 			JSONValue(SerializeDirectionalLight(dirLight)));
 		rootSceneObject.fields.push_back(directionalLightsField);

@@ -15,32 +15,32 @@
 
 namespace flex
 {
-	OverheadCamera::OverheadCamera(GameContext& gameContext, real FOV, real zNear, real zFar) :
-		BaseCamera("Overhead Camera", gameContext, FOV, zNear, zFar)
+	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
+		BaseCamera("Overhead Camera",FOV, zNear, zFar)
 	{
 		ResetOrientation();
-		RecalculateViewProjection(gameContext);
+		RecalculateViewProjection();
 	}
 
 	OverheadCamera::~OverheadCamera()
 	{
 	}
 
-	void OverheadCamera::Initialize(const GameContext& gameContext)
+	void OverheadCamera::Initialize()
 	{
-		FindPlayers(gameContext);
-		Update(gameContext);
+		FindPlayers();
+		Update();
 
-		BaseCamera::Initialize(gameContext);
+		BaseCamera::Initialize();
 	}
 
-	void OverheadCamera::OnSceneChanged(const GameContext& gameContext)
+	void OverheadCamera::OnSceneChanged()
 	{
-		FindPlayers(gameContext);
-		Update(gameContext);
+		FindPlayers();
+		Update();
 	}
 
-	void OverheadCamera::Update(const GameContext& gameContext)
+	void OverheadCamera::Update()
 	{
 		if (!player0 ||
 			!player1)
@@ -79,18 +79,18 @@ namespace flex
 		real dPosMag = glm::length(dPos);
 		if (dPosMag > glm::epsilon<real>())
 		{
-			real maxDist = glm::clamp(dPosMag * 1000.0f * gameContext.deltaTime, 0.0f, 10.0f);
+			real maxDist = glm::clamp(dPosMag * 1000.0f * g_DeltaTime, 0.0f, 10.0f);
 			m_Position = targetPos - maxDist * glm::normalize(dPos);
 		}
 
 		CalculateYawAndPitchFromForward();
-		RecalculateViewProjection(gameContext);
+		RecalculateViewProjection();
 	}
 
-	void OverheadCamera::FindPlayers(const GameContext& gameContext)
+	void OverheadCamera::FindPlayers()
 	{
-		player0 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player0");
-		player1 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player1");
+		player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		player1 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player1");
 	}
 
 } // namespace flex

@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "GameContext.hpp"
-
 namespace flex
 {
 	class PhysicsWorld;
@@ -21,10 +19,10 @@ namespace flex
 		BaseScene(const std::string& fileName);
 		virtual ~BaseScene();
 
-		virtual void Initialize(const GameContext& gameContext);
-		virtual void PostInitialize(const GameContext& gameContext);
-		virtual void Destroy(const GameContext& gameContext);
-		virtual void Update(const GameContext& gameContext);
+		virtual void Initialize();
+		virtual void PostInitialize();
+		virtual void Destroy();
+		virtual void Update();
 
 		void SetName(const std::string& name);
 		std::string GetName() const;
@@ -45,7 +43,7 @@ namespace flex
 		* Only writes data that has non-default values (e.g. an identity 
 		* transform is not saved)
 		*/
-		void SerializeToFile(const GameContext& gameContext, bool bSaveOverDefault = false);
+		void SerializeToFile(bool bSaveOverDefault = false);
 
 		void DeleteSaveFiles();
 
@@ -65,7 +63,7 @@ namespace flex
 
 		// Deletes and removes targetObject if exists in scene
 		// Returns true if targetObject was found
-		bool DestroyGameObject(const GameContext& gameContext, GameObject* targetObject, bool bDeleteChildren);
+		bool DestroyGameObject(GameObject* targetObject, bool bDeleteChildren);
 
 		bool IsLoaded() const;
 
@@ -74,7 +72,7 @@ namespace flex
 
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
-		bool DestroyGameObjectRecursive(const GameContext& gameContext, GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
+		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
 
 		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
 		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
@@ -82,7 +80,7 @@ namespace flex
 		JSONObject SerializePointLight(PointLight& pointLight);
 		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight);
 
-		i32 GetMaterialArrayIndex(const Material& material, const GameContext& gameContext);
+		i32 GetMaterialArrayIndex(const Material& material);
 
 		void ParseFoundPrefabFiles();
 

@@ -12,8 +12,8 @@ namespace flex
 {
 	namespace gl
 	{
-		GLWindowWrapper::GLWindowWrapper(std::string title, GameContext& gameContext) :
-			GLFWWindowWrapper(title, gameContext)
+		GLWindowWrapper::GLWindowWrapper(std::string title) :
+			GLFWWindowWrapper(title)
 		{
 		}
 

@@ -22,7 +22,7 @@ namespace flex
 	{
 	}
 
-	void InputManager::Initialize(const GameContext& gameContext)
+	void InputManager::Initialize()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeyMap[ImGuiKey_Tab] = (i32)KeyCode::KEY_TAB;
@@ -50,10 +50,10 @@ namespace flex
 		m_ImGuiIniFilepathStr = RESOURCE_LOCATION + "config/imgui.ini";
 		io.IniFilename  = m_ImGuiIniFilepathStr.c_str();
 
-		ClearAllInputs(gameContext);
+		ClearAllInputs();
 	}
 
-	void InputManager::Update(const GameContext& gameContext)
+	void InputManager::Update()
 	{
 		// Keyboard keys
 		for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
@@ -130,7 +130,7 @@ namespace flex
 						}
 					}
 
-					real stickRotationSpeed = (currentAngle - previousAngle) / gameContext.deltaTime;
+					real stickRotationSpeed = (currentAngle - previousAngle) / g_DeltaTime;
 					stickRotationSpeed = glm::clamp(stickRotationSpeed,
 													-MAX_JOYSTICK_ROTATION_SPEED,
 													MAX_JOYSTICK_ROTATION_SPEED);
@@ -428,15 +428,15 @@ namespace flex
 		return (m_MouseButtonDrags[(i32)mouseButton].endLocation - m_MouseButtonDrags[(i32)mouseButton].startLocation);
 	}
 
-	void InputManager::ClearAllInputs(const GameContext& gameContext)
+	void InputManager::ClearAllInputs()
 	{
-		ClearMouseInput(gameContext);
+		ClearMouseInput();
 		ClearKeyboadInput();
 		ClearGampadInput(0);
 		ClearGampadInput(1);
 	}
 
-	void InputManager::ClearMouseInput(const GameContext& gameContext)
+	void InputManager::ClearMouseInput()
 	{
 		m_PrevMousePosition = m_MousePosition = glm::vec2(-1.0f);
 		m_ScrollXOffset = 0.0f;
@@ -451,7 +451,7 @@ namespace flex
 			m_MouseButtonDrags[i].startLocation = glm::vec2(0.0f);
 			m_MouseButtonDrags[i].endLocation = glm::vec2(0.0f);
 		}
-		gameContext.window->SetCursorMode(Window::CursorMode::NORMAL);
+		g_Window->SetCursorMode(Window::CursorMode::NORMAL);
 
 
 		ImGuiIO& io = ImGui::GetIO();

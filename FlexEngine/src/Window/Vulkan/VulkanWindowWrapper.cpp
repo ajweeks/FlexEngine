@@ -7,8 +7,8 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanWindowWrapper::VulkanWindowWrapper(std::string title, GameContext& gameContext) :
-			GLFWWindowWrapper(title, gameContext)
+		VulkanWindowWrapper::VulkanWindowWrapper(std::string title) :
+			GLFWWindowWrapper(title)
 		{
 		}
 

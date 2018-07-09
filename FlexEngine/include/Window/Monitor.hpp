@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Types.hpp"
+
 namespace flex
 {
 	struct Monitor

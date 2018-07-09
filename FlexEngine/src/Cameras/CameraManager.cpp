@@ -4,7 +4,6 @@
 #include "Cameras/CameraManager.hpp"
 
 #include "Cameras/BaseCamera.hpp"
-#include "GameContext.hpp"
 
 namespace flex
 {
@@ -17,19 +16,19 @@ namespace flex
 		DestroyCameras();
 	}
 
-	void CameraManager::Initialize(const GameContext& gameContext)
+	void CameraManager::Initialize()
 	{
-		m_Cameras[m_ActiveCameraIndex]->Initialize(gameContext);
+		m_Cameras[m_ActiveCameraIndex]->Initialize();
 	}
 
-	void CameraManager::Update(const GameContext& gameContext)
+	void CameraManager::Update()
 	{
-		m_Cameras[m_ActiveCameraIndex]->Update(gameContext);
+		m_Cameras[m_ActiveCameraIndex]->Update();
 	}
 
-	void CameraManager::OnSceneChanged(const GameContext& gameContext)
+	void CameraManager::OnSceneChanged()
 	{
-		m_Cameras[m_ActiveCameraIndex]->OnSceneChanged(gameContext);
+		m_Cameras[m_ActiveCameraIndex]->OnSceneChanged();
 	}
 
 	void CameraManager::DestroyCameras()
@@ -68,7 +67,7 @@ namespace flex
 		}
 	}
 
-	void CameraManager::SwtichTo(const GameContext& gameContext, BaseCamera* camera, bool bAlign)
+	void CameraManager::SwtichTo(BaseCamera* camera, bool bAlign)
 	{
 		assert(camera);
 
@@ -80,11 +79,11 @@ namespace flex
 		}
 		else
 		{
-			SwtichToIndex(gameContext, newCameraIndex, bAlign);
+			SwtichToIndex(newCameraIndex, bAlign);
 		}
 	}
 
-	void CameraManager::SwtichToIndex(const GameContext& gameContext, i32 index, bool bAlign)
+	void CameraManager::SwtichToIndex(i32 index, bool bAlign)
 	{
 		if (index >= 0 && index < (i32)m_Cameras.size())
 		{
@@ -95,11 +94,11 @@ namespace flex
 
 			m_ActiveCameraIndex = index;
 
-			m_Cameras[m_ActiveCameraIndex]->Initialize(gameContext);
+			m_Cameras[m_ActiveCameraIndex]->Initialize();
 		}
 	}
 
-	void CameraManager::SetActiveIndexRelative(const GameContext& gameContext, i32 delta, bool bAlign)
+	void CameraManager::SetActiveIndexRelative(i32 delta, bool bAlign)
 	{
 		i32 newIndex = m_ActiveCameraIndex + delta;
 		i32 numCameras = (i32)m_Cameras.size();
@@ -112,7 +111,7 @@ namespace flex
 			newIndex -= numCameras;
 		}
 
-		SwtichToIndex(gameContext, newIndex, bAlign);
+		SwtichToIndex(newIndex, bAlign);
 	}
 
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)

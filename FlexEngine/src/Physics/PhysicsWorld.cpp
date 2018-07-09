@@ -16,7 +16,6 @@
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Scene/GameObject.hpp"
-#include "GameContext.hpp"
 #include "Helpers.hpp"
 
 namespace flex
@@ -29,11 +28,11 @@ namespace flex
 	{
 	}
 
-	void PhysicsWorld::Initialize(const GameContext& gameContext)
+	void PhysicsWorld::Initialize()
 	{
 		if (!m_World)
 		{
-			m_World = gameContext.physicsManager->CreateWorld();
+			m_World = g_PhysicsManager->CreateWorld();
 			
 			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
 
@@ -75,13 +74,13 @@ namespace flex
 		return m_World;
 	}
 
-	btVector3 PhysicsWorld::GenerateDirectionRayFromScreenPos(const GameContext& gameContext, i32 x, i32 y)
+	btVector3 PhysicsWorld::GenerateDirectionRayFromScreenPos(i32 x, i32 y)
 	{
-		real frameBufferWidth = (real)gameContext.window->GetFrameBufferSize().x;
-		real frameBufferHeight = (real)gameContext.window->GetFrameBufferSize().y;
+		real frameBufferWidth = (real)g_Window->GetFrameBufferSize().x;
+		real frameBufferHeight = (real)g_Window->GetFrameBufferSize().y;
 		btScalar aspectRatio = frameBufferWidth / frameBufferHeight;
 
-		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
 		real fov = camera->GetFOV();
 		real tanFov = tanf(0.5f * fov);
 

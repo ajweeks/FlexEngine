@@ -12,10 +12,10 @@ namespace flex
 		Player(i32 index);
 		~Player();
 
-		virtual void Initialize(const GameContext& gameContext) override;
-		virtual void PostInitialize(const GameContext& gameContext) override;
-		virtual void Update(const GameContext& gameContext) override;
-		virtual void Destroy(const GameContext& gameContext) override;
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
+		virtual void Update() override;
+		virtual void Destroy() override;
 
 		i32 GetIndex() const;
 		real GetHeight() const;

@@ -9,7 +9,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #pragma warning(pop)
 
-#include "GameContext.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Scene/SceneManager.hpp"
@@ -44,7 +43,7 @@ namespace flex
 	{
 	}
 
-	void RigidBody::Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, Transform* parentTransform)
+	void RigidBody::Initialize(btCollisionShape* collisionShape, Transform* parentTransform)
 	{
 		m_ParentTransform = parentTransform;
 
@@ -79,12 +78,12 @@ namespace flex
 		m_RigidBody->setDamping(0.0f, 0.0f);
 		m_RigidBody->setFriction(m_Friction);
 
-		gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
 
 		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(parentTransform->GetWorldScale()));
 	}
 
-	void RigidBody::Destroy(const GameContext& gameContext)
+	void RigidBody::Destroy()
 	{
 		if (m_RigidBody)
 		{
@@ -94,7 +93,7 @@ namespace flex
 				SafeDelete(constraint);
 			}
 
-			gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->removeRigidBody(m_RigidBody);
+			g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->removeRigidBody(m_RigidBody);
 			SafeDelete(m_RigidBody);
 		}
 

@@ -2,7 +2,6 @@
 
 #include "BaseCamera.hpp"
 
-#include "GameContext.hpp"
 #include "InputManager.hpp"
 
 namespace flex
@@ -10,10 +9,10 @@ namespace flex
 	class DebugCamera final : public BaseCamera
 	{
 	public:
-		DebugCamera(GameContext& gameContext, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
+		DebugCamera(real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
 		~DebugCamera();
 
-		virtual void Update(const GameContext& gameContext) override;
+		virtual void Update() override;
 
 		void LoadDefaultKeybindings();
 

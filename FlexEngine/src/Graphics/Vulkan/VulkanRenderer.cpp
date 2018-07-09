@@ -25,7 +25,6 @@
 #include "Helpers.hpp"
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
-#include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/BaseScene.hpp"
@@ -38,7 +37,7 @@ namespace flex
 	{
 		std::array<glm::mat4, 6> VulkanRenderer::m_CaptureViews;
 
-		VulkanRenderer::VulkanRenderer(const GameContext& gameContext)
+		VulkanRenderer::VulkanRenderer()
 		{
 			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
 			m_BRDFSize = { 512, 512 };
@@ -46,9 +45,9 @@ namespace flex
 
 			m_Materials.reserve(MAT_CAPACITY);
 
-			CreateInstance(gameContext);
+			CreateInstance();
 			SetupDebugCallback();
-			CreateSurface(gameContext.window);
+			CreateSurface(g_Window);
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			CreateLogicalDevice(physicalDevice);
 
@@ -187,7 +186,7 @@ namespace flex
 			glfwTerminate();
 		}
 
-		void VulkanRenderer::Initialize(const GameContext& gameContext)
+		void VulkanRenderer::Initialize()
 		{
 			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
 
@@ -235,7 +234,7 @@ namespace flex
 			m_CubemapFrameBuffer->width = 512;
 			m_CubemapFrameBuffer->height = 512;
 
-			CreateSwapChain(gameContext.window);
+			CreateSwapChain(g_Window);
 			CreateSwapChainImageViews();
 			CreateRenderPass();
 
@@ -243,7 +242,7 @@ namespace flex
 			CreateDepthResources();
 			CreateFramebuffers();
 
-			PrepareOffscreenFrameBuffer(gameContext.window);
+			PrepareOffscreenFrameBuffer(g_Window);
 			PrepareCubemapFrameBuffer();
 
 			LoadDefaultShaderCode();
@@ -261,21 +260,21 @@ namespace flex
 			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
 			m_BlankTexture->CreateFromTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, false);
 
-			//CreateInstance(gameContext);
+			//CreateInstance();
 			//SetupDebugCallback();
-			//CreateSurface(gameContext.window);
+			//CreateSurface(g_Window);
 			//VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			//CreateLogicalDevice(physicalDevice);
 
 			ImGui::CreateContext();
 		}
 
-		void VulkanRenderer::PostInitialize(const GameContext& gameContext)
+		void VulkanRenderer::PostInitialize()
 		{
-			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
+			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
 			if (castedWindow == nullptr)
 			{
-				PrintError("VulkanRenderer::PostInitialize expected gameContext.window to be of type GLFWWindowWrapper!");
+				PrintError("VulkanRenderer::PostInitialize expected g_Window to be of type GLFWWindowWrapper!");
 				return;
 			}
 
@@ -308,7 +307,7 @@ namespace flex
 					});
 				}
 
-				MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
+				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
 				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
@@ -343,7 +342,7 @@ namespace flex
 				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
 				gBufferQuadCreateInfo.indices = &m_gBufferQuadIndices;
 
-				m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
+				m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
 
 				m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
@@ -369,14 +368,14 @@ namespace flex
 					});
 				}
 
-				m_CubemapGBufferMaterialID = InitializeMaterial(gameContext,&gBufferCubemapMaterialCreateInfo);
+				m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
 
 				// TODO: Find out why a pointer to this variable gets set to null when passing in to LoadPrefabShape
 				RenderObjectCreateInfo gBufferCubemapCreateInfoOverrides = {};
 				gBufferCubemapCreateInfoOverrides.visibleInSceneExplorer = false;
 
 				m_gBufferCubemapMesh = new MeshComponent(m_CubemapGBufferMaterialID, "GBuffer cubemap");
-				if (!m_gBufferCubemapMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX))
+				if (!m_gBufferCubemapMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX))
 				{
 					PrintError("Failed to create GBuffer cubemap mesh prefab!");
 				}
@@ -392,10 +391,10 @@ namespace flex
 
 
 				assert(m_PhysicsDebugDrawer == nullptr);
-				m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw(gameContext);
+				m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw();
 				m_PhysicsDebugDrawer->Initialize();
 
-				btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+				btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 				world->setDebugDrawer(m_PhysicsDebugDrawer);
 			}
 
@@ -461,16 +460,16 @@ namespace flex
 				if (renderObjectMat.material.generateReflectionProbeMaps)
 				{
 					Print("Capturing reflection probe");
-					CaptureSceneToCubemap(gameContext, i);
-					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+					CaptureSceneToCubemap(i);
+					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 					Print("Done");
 
 					// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
 					Print("Capturing reflection probe");
-					CaptureSceneToCubemap(gameContext, i);
-					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+					CaptureSceneToCubemap(i);
+					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 					Print("Done");
 
 					// Display captured cubemap as skybox (GL code)
@@ -479,9 +478,9 @@ namespace flex
 				}
 				else if (renderObjectMat.material.generateIrradianceSampler)
 				{
-					GenerateCubemapFromHDR(gameContext, renderObject);
-					GenerateIrradianceSampler(gameContext, renderObject);
-					GeneratePrefilteredCube(gameContext, renderObject);
+					GenerateCubemapFromHDR(renderObject);
+					GenerateIrradianceSampler(renderObject);
+					GeneratePrefilteredCube(renderObject);
 				}
 			}
 
@@ -498,7 +497,7 @@ namespace flex
 			Print("Ready!\n");
 		}
 
-		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject)
+		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject)
 		{
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			Material& skyboxMat = m_Materials[renderObject->materialID].material;
@@ -515,7 +514,7 @@ namespace flex
 				RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
-			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
+			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const u32 dim = (u32)renderObjectMat.material.cubemapSamplerSize.x;
@@ -954,10 +953,8 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject)
+		void VulkanRenderer::GenerateIrradianceSampler(VulkanRenderObject* renderObject)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			Material& skyboxMat = m_Materials[skyboxRenderObject->materialID].material;
 			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
@@ -1413,10 +1410,8 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject)
+		void VulkanRenderer::GeneratePrefilteredCube(VulkanRenderObject* renderObject)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			Material& skyboxMat = m_Materials[skyboxRenderObject->materialID].material;
 			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
@@ -1835,10 +1830,8 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, VulkanTexture* brdfTexture)
+		void VulkanRenderer::GenerateBRDFLUT(VulkanTexture* brdfTexture)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
 			const u32 dim = (u32)m_BRDFSize.x;
 			assert(dim <= Renderer::MAX_TEXTURE_DIM);
@@ -2095,10 +2088,8 @@ namespace flex
 			vkDestroyDescriptorPool(m_VulkanDevice->m_LogicalDevice, descriptorPool, nullptr);
 		}
 
-		MaterialID VulkanRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
+		MaterialID VulkanRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			VulkanMaterial mat = {};
 			mat.material = {};
 
@@ -2182,7 +2173,7 @@ namespace flex
 					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, m_BRDFSize.x, m_BRDFSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
-					GenerateBRDFLUT(gameContext, m_BRDFTexture);
+					GenerateBRDFLUT(m_BRDFTexture);
 				}
 				mat.brdfLUT = m_BRDFTexture;
 			}
@@ -2375,10 +2366,8 @@ namespace flex
 			return m_Materials.size() - 1;
 		}
 
-		u32 VulkanRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+		u32 VulkanRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			RenderID renderID = GetFirstAvailableRenderID();
 			VulkanRenderObject* renderObject = new VulkanRenderObject(m_VulkanDevice->m_LogicalDevice, renderID);
 
@@ -2475,11 +2464,11 @@ namespace flex
 			m_ClearColor = { r, g, b, 1.0f };
 		}
 
-		void VulkanRenderer::Update(const GameContext& gameContext)
+		void VulkanRenderer::Update()
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
@@ -2487,59 +2476,57 @@ namespace flex
 					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
 						Print("Capturing reflection probe");
-						CaptureSceneToCubemap(gameContext, renderObject->renderID);
-						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+						CaptureSceneToCubemap(renderObject->renderID);
+						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 						Print("Done");
 					}
 				}
 			}
 
 			// Update uniform buffer
-			UpdateConstantUniformBuffers(gameContext);
+			UpdateConstantUniformBuffers();
 
 			// TODO: Only update when things have changed
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				UpdateDynamicUniformBuffer(gameContext, i);
+				UpdateDynamicUniformBuffer(i);
 			}
 
 			// Update g-buffer uniforms
-			UpdateDynamicUniformBuffer(gameContext, m_GBufferQuadRenderID);
+			UpdateDynamicUniformBuffer(m_GBufferQuadRenderID);
 		}
 
-		void VulkanRenderer::Draw(const GameContext& gameContext)
+		void VulkanRenderer::Draw()
 		{
 			DrawCallInfo drawCallInfo = {};
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
-				PhysicsDebugRender(gameContext);
+				PhysicsDebugRender();
 			}
 
-			BuildDeferredCommandBuffer(gameContext, drawCallInfo); // TODO: Only call this when objects change
-			BuildCommandBuffers(gameContext, drawCallInfo); // TODO: Only call this when objects change
+			BuildDeferredCommandBuffer(drawCallInfo); // TODO: Only call this when objects change
+			BuildCommandBuffers(drawCallInfo); // TODO: Only call this when objects change
 
 			if (m_SwapChainNeedsRebuilding)
 			{
 				m_SwapChainNeedsRebuilding = false;
-				RecreateSwapChain(gameContext.window);
+				RecreateSwapChain(g_Window);
 			}
 			else
 			{
-				DrawFrame(gameContext.window);
+				DrawFrame(g_Window);
 			}
 		}
 
-		void VulkanRenderer::DrawImGuiItems(const GameContext& gameContext)
+		void VulkanRenderer::DrawImGuiItems()
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
 				if (ImGui::TreeNode("Render Objects"))
 				{
-					std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
+					std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 					for (size_t i = 0; i < rootObjects.size(); ++i)
 					{
 						DrawImGuiForRenderObjectAndChildren(rootObjects[i]);
@@ -2619,10 +2606,9 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::ReloadShaders(GameContext& gameContext)
+		void VulkanRenderer::ReloadShaders()
 		{
 			// TODO: Implement
-			UNREFERENCED_PARAMETER(gameContext);
 		}
 
 		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
@@ -2792,9 +2778,8 @@ namespace flex
 			return m_PhysicsDebugDrawer;
 		}
 
-		void VulkanRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)
+		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(renderID);
 		}
 
@@ -2863,7 +2848,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateInstance(const GameContext& gameContext)
+		void VulkanRenderer::CreateInstance()
 		{
 			if (m_EnableValidationLayers && !CheckValidationLayerSupport())
 			{
@@ -2872,7 +2857,7 @@ namespace flex
 
 			VkApplicationInfo appInfo = {};
 			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-			std::string applicationName = gameContext.window->GetTitle();
+			std::string applicationName = g_Window->GetTitle();
 			appInfo.pApplicationName = applicationName.c_str();
 			appInfo.applicationVersion = VK_API_VERSION_1_0;
 			appInfo.pEngineName = "Flex Engine";
@@ -4185,13 +4170,13 @@ namespace flex
 			//VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, m_ColorSampler.replace()));
 		}
 
-		void VulkanRenderer::PhysicsDebugRender(const GameContext& gameContext)
+		void VulkanRenderer::PhysicsDebugRender()
 		{
-			btDiscreteDynamicsWorld* physicsWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
 		}
 
-		void VulkanRenderer::BuildCommandBuffers(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void VulkanRenderer::BuildCommandBuffers(const DrawCallInfo& drawCallInfo)
 		{
 			if (drawCallInfo.renderToCubemap)
 			{
@@ -4297,8 +4282,8 @@ namespace flex
 					if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 					{
 						// Truncate translation component to center cubemap around viewer
-						glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView()));
-						glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+						glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView()));
+						glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 						renderObjectMat.material.pushConstantBlock.mvp =
 							projection * view * renderObject->gameObject->GetTransform()->GetModelMatrix();
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -4408,8 +4393,8 @@ namespace flex
 						// Push constants
 						if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 						{
-							glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
-							glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+							glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
+							glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 							renderObjectMat.material.pushConstantBlock.mvp =
 								projection * view * renderObject->gameObject->GetTransform()->GetModelMatrix();
 							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -4436,7 +4421,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::BuildDeferredCommandBuffer(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void VulkanRenderer::BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo)
 		{
 			// TODO: Remove unused param
 			UNREFERENCED_PARAMETER(drawCallInfo);
@@ -4517,8 +4502,8 @@ namespace flex
 				// Push constants
 				if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 				{
-					glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
-					glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+					glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
+					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 					renderObjectMat.material.pushConstantBlock.mvp =
 						projection * view * glm::mat4(1.0f); // renderObject->model; TODO
 					vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -5042,15 +5027,15 @@ namespace flex
 			return true;
 		}
 
-		void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext, UniformOverrides const* overridenUniforms)
+		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
 		{
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
-				UpdateConstantUniformBuffer(gameContext, overridenUniforms, i);
+				UpdateConstantUniformBuffer(overridenUniforms, i);
 			}
 		}
 
-		void VulkanRenderer::UpdateConstantUniformBuffer(const GameContext& gameContext, UniformOverrides const* overridenUniforms, size_t bufferIndex)
+		void VulkanRenderer::UpdateConstantUniformBuffer(UniformOverrides const* overridenUniforms, size_t bufferIndex)
 		{
 			VulkanMaterial& material = m_Materials[bufferIndex];
 			VulkanShader& shader = m_Shaders[material.material.shaderID];
@@ -5063,11 +5048,11 @@ namespace flex
 				return; // There is no constant data
 			}
 
-			glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
-			glm::vec4 camPos = glm::vec4(gameContext.cameraManager->CurrentCamera()->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 			if (overridenUniforms)
 			{
@@ -5150,7 +5135,7 @@ namespace flex
 			memcpy(shader.uniformBuffer.constantBuffer.m_Mapped, constantData.data, size);
 		}
 			
-		void VulkanRenderer::UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const* uniformOverrides)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
@@ -5173,8 +5158,8 @@ namespace flex
 
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetModelMatrix();
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
-			glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 modelViewProjection = projection * view * model;
 			glm::vec4 colorMultiplier = material.material.colorMultiplier;
 			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;
@@ -5583,7 +5568,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
+		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
 			// TODO: Finish implementing this function
 			return;
@@ -5633,34 +5618,30 @@ namespace flex
 
 
 			//drawCallInfo.deferred = true;
-			//BuildDeferredCommandBuffer(gameContext, drawCallInfo);
+			//BuildDeferredCommandBuffer(drawCallInfo);
 			drawCallInfo.deferred = false;
-			//DrawGBufferQuad(gameContext, drawCallInfo);
-			BuildCommandBuffers(gameContext, drawCallInfo);
+			//DrawGBufferQuad(drawCallInfo);
+			BuildCommandBuffers(drawCallInfo);
 		}
 
-		//void VulkanRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath)
+		//void VulkanRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath)
 		//{
-		//	UNREFERENCED_PARAMETER(gameContext);
 		//	UNREFERENCED_PARAMETER(cubemapMaterialID);
 		//	UNREFERENCED_PARAMETER(environmentMapPath);
 		//}
 
-		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(cubemapMaterialID);
 		}
 
-		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(cubemapMaterialID);
 		}
 
-		//void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
+		//void VulkanRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
 		//{
-		//	UNREFERENCED_PARAMETER(gameContext);
 		//	UNREFERENCED_PARAMETER(brdfLUTTextureID);
 		//	UNREFERENCED_PARAMETER(BRDFLUTSize);
 		//}

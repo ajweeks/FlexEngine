@@ -1,6 +1,5 @@
 #pragma once
 
-#include "GameContext.hpp"
 #include "InputManager.hpp"
 
 #pragma warning(push, 0)
@@ -14,13 +13,13 @@ namespace flex
 	class BaseCamera
 	{
 	public:
-		BaseCamera(const std::string& cameraName, GameContext& gameContext, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
+		BaseCamera(const std::string& cameraName, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
 		~BaseCamera();
 
-		virtual void Initialize(const GameContext& gameContext);
-		virtual void Update(const GameContext& gameContext) = 0;
+		virtual void Initialize();
+		virtual void Update() = 0;
 
-		virtual void OnSceneChanged(const GameContext& gameContext);
+		virtual void OnSceneChanged();
 
 		void SetFOV(real FOV);
 		real GetFOV() const;
@@ -64,7 +63,7 @@ namespace flex
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
 		void CalculateAxisVectors();
 		void CalculateYawAndPitchFromForward();
-		void RecalculateViewProjection(const GameContext& gameContext);
+		void RecalculateViewProjection();
 
 		void ClampPitch();
 

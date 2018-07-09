@@ -8,42 +8,38 @@
 
 #include "Helpers.hpp"
 #include "Time.hpp"
-#include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
 {
-	Window::Window(const std::string& title, GameContext& gameContext) :
+	Window::Window(const std::string& title) :
 		m_TitleString(title),
 		m_ShowFPSInWindowTitle(true),
 		m_ShowMSInWindowTitle(true),
-		m_GameContextRef(gameContext),
 		m_UpdateWindowTitleFrequency(0.0f),
 		m_SecondsSinceTitleUpdate(0.0f),
 		m_CurrentFullscreenMode(FullscreenMode::WINDOWED)
 	{
-		gameContext.window = this;
+		g_Window = this;
 	}
 
 	Window::~Window()
 	{
 	}
 
-	void Window::Update(const GameContext& gameContext)
+	void Window::Update()
 	{
-		m_GameContextRef = gameContext;
-
-		m_SecondsSinceTitleUpdate += gameContext.deltaTime;
+		m_SecondsSinceTitleUpdate += g_DeltaTime;
 		if (m_SecondsSinceTitleUpdate >= m_UpdateWindowTitleFrequency)
 		{
 			m_SecondsSinceTitleUpdate = 0.0f;
-			SetWindowTitle(GenerateWindowTitle(gameContext));
+			SetWindowTitle(GenerateWindowTitle());
 		}
 
 		if (m_CursorMode == CursorMode::HIDDEN)
 		{
-			const glm::vec2i windowSize = gameContext.window->GetSize();
-			const glm::vec2 oldMousePos = gameContext.inputManager->GetMousePosition();
+			const glm::vec2i windowSize = g_Window->GetSize();
+			const glm::vec2 oldMousePos = g_InputManager->GetMousePosition();
 			glm::vec2 newMousePos = oldMousePos;
 			if (oldMousePos.x < 0)
 			{
@@ -63,7 +59,7 @@ namespace flex
 				newMousePos.y = 0;
 			}
 
-			gameContext.inputManager->SetMousePosition(newMousePos);
+			g_InputManager->SetMousePosition(newMousePos);
 			SetMousePosition(newMousePos);
 		}
 	}
@@ -89,14 +85,14 @@ namespace flex
 		return m_HasFocus;
 	}
 
-	std::string Window::GenerateWindowTitle(const GameContext& gameContext)
+	std::string Window::GenerateWindowTitle()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
-		result += " | " + gameContext.sceneManager->CurrentScene()->GetName();
+		result += " | " + g_SceneManager->CurrentScene()->GetName();
 		if (m_ShowMSInWindowTitle)
 		{
-			result += " | " + Time::MillisecondsToString(gameContext.deltaTime, 2);
+			result += " | " + Time::MillisecondsToString(g_DeltaTime, 2);
 		}
 		if (m_ShowFPSInWindowTitle)
 		{
@@ -130,17 +126,17 @@ namespace flex
 	// Callbacks
 	void Window::KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, i32 mods)
 	{
-		m_GameContextRef.inputManager->KeyCallback(keycode, action, mods);
+		g_InputManager->KeyCallback(keycode, action, mods);
 	}
 
 	void Window::CharCallback(u32 character)
 	{
-		m_GameContextRef.inputManager->CharCallback(character);
+		g_InputManager->CharCallback(character);
 	}
 
 	void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, i32 mods)
 	{
-		m_GameContextRef.inputManager->MouseButtonCallback(mouseButton, action, mods);
+		g_InputManager->MouseButtonCallback(mouseButton, action, mods);
 	}
 
 	void Window::WindowFocusCallback(i32 focused)
@@ -150,12 +146,12 @@ namespace flex
 
 	void Window::CursorPosCallback(double x, double y)
 	{
-		m_GameContextRef.inputManager->CursorPosCallback(x, y);
+		g_InputManager->CursorPosCallback(x, y);
 	}
 
 	void Window::ScrollCallback(double xoffset, double yoffset)
 	{
-		m_GameContextRef.inputManager->ScrollCallback(xoffset, yoffset);
+		g_InputManager->ScrollCallback(xoffset, yoffset);
 	}
 
 	void Window::WindowSizeCallback(i32 width, i32 height)

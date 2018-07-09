@@ -9,7 +9,6 @@
 #include "LinearMath\btIDebugDraw.h"
 #pragma warning(pop)
 
-#include "GameContext.hpp"
 #include "Types.hpp"
 
 namespace flex
@@ -21,7 +20,7 @@ namespace flex
 		class GLPhysicsDebugDraw : public btIDebugDraw
 		{
 		public:
-			GLPhysicsDebugDraw(const GameContext& gameContext);
+			GLPhysicsDebugDraw();
 			virtual ~GLPhysicsDebugDraw();
 
 			void Initialize();
@@ -56,7 +55,6 @@ namespace flex
 			int m_DebugMode = 0;
 
 			GLRenderer* m_Renderer = nullptr;
-			const GameContext& m_GameContext;
 
 			MaterialID m_MaterialID = InvalidMaterialID;
 

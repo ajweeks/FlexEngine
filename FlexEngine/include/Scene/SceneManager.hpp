@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "Scene/BaseScene.hpp"
-#include "GameContext.hpp"
 
 namespace flex
 {
@@ -13,32 +12,32 @@ namespace flex
 		SceneManager();
 		virtual ~SceneManager();
 
-		void UpdateAndRender(const GameContext& gameContext);
+		void UpdateAndRender();
 
 		void AddScene(BaseScene* newScene);
 
 		/* To be called after AddScene */
-		void InitializeCurrentScene(const GameContext& gameContext);
+		void InitializeCurrentScene();
 
 		/* To be called after InitializeCurrentScene */
-		void PostInitializeCurrentScene(const GameContext& gameContext);
+		void PostInitializeCurrentScene();
 
-		void RemoveScene(BaseScene* scene, const GameContext& gameContext);
+		void RemoveScene(BaseScene* scene);
 
 		/* Destroys previous scene if exists, then sets current index (NOTE: Does *not* initialize new scene! */
-		bool SetCurrentScene(u32 sceneIndex, const GameContext& gameContext, bool bPrintErrorOnFailure = true);
-		bool SetCurrentScene(BaseScene* scene, const GameContext& gameContext, bool bPrintErrorOnFailure = true);
-		bool SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext, bool bPrintErrorOnFailure = true);
-		void SetNextSceneActiveAndInit(const GameContext& gameContext);
-		void SetPreviousSceneActiveAndInit(const GameContext& gameContext);
-		void ReloadCurrentScene(const GameContext& gameContext);
+		bool SetCurrentScene(u32 sceneIndex, bool bPrintErrorOnFailure = true);
+		bool SetCurrentScene(BaseScene* scene, bool bPrintErrorOnFailure = true);
+		bool SetCurrentScene(const std::string& sceneFileName, bool bPrintErrorOnFailure = true);
+		void SetNextSceneActiveAndInit();
+		void SetPreviousSceneActiveAndInit();
+		void ReloadCurrentScene();
 
 		// Adds all scenes found in scenes directory
 		void AddFoundScenes();
 		void RemoveDeletedScenes();
 
-		void DeleteScene(const GameContext& gameContext, BaseScene* scene);
-		void CreateNewScene(const GameContext& gameContext, const std::string& name, bool bSwitchImmediately);
+		void DeleteScene(BaseScene* scene);
+		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
 
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
@@ -47,7 +46,7 @@ namespace flex
 		i32 GetCurrentSceneIndex() const;
 		BaseScene* GetSceneAtIndex(i32 index);
 
-		void DestroyAllScenes(const GameContext& gameContext);
+		void DestroyAllScenes();
 
 	private:
 		bool SceneExists(const std::string& fileName) const;

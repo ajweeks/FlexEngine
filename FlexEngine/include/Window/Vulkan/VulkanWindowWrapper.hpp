@@ -11,7 +11,7 @@ namespace flex
 		class VulkanWindowWrapper : public GLFWWindowWrapper
 		{
 		public:
-			VulkanWindowWrapper(std::string title, GameContext& gameContext);
+			VulkanWindowWrapper(std::string title);
 			virtual ~VulkanWindowWrapper();
 
 			virtual void Create(glm::vec2i size, glm::vec2i pos) override;

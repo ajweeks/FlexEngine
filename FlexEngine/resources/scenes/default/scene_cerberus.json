@@ -141,11 +141,11 @@
 		{
 			"name" : "Cerberus",
 			"type" : "object",
-			"visible" : true,
+			"visible" : false,
 			"transform" : 
 			{
 				"position" : "-7.560185, 15.799998, 0.891671",
-				"rotation" : "-3.141593, 0.525344, 3.141593",
+				"rotation" : "3.141592, 0.525344, -3.141592",
 				"scale" : "20.000000, 20.000000, 20.000000"
 			},
 			"mesh" : 
@@ -159,28 +159,12 @@
 			"material array index" : 0
 		},
 		{
-			"name" : "Skybox",
-			"type" : "skybox",
-			"visible" : true,
-			"transform" : 
-			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
-			},
-			"material array index" : 2,
-			"skybox info" : 
-			{
-				"rotation" : "0.000000, -0.000000, 0.000000"
-			}
-		},
-		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "3.100000, 13.932905, 1.795116",
+				"position" : "3.100000, 18.919554, 1.977968",
 				"rotation" : "0.036652, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},

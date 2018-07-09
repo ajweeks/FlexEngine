@@ -6,7 +6,6 @@
 #include <glm/vec2.hpp>
 #pragma warning(pop)
 
-#include "GameContext.hpp"
 #include "Helpers.hpp" // For RollingAverage
 
 namespace flex
@@ -240,9 +239,9 @@ namespace flex
 		InputManager();
 		~InputManager();
 
-		void Initialize(const GameContext& gameContext);
+		void Initialize();
 
-		void Update(const GameContext& gameContext);
+		void Update();
 		void PostUpdate();
 
 		void UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15]);
@@ -273,8 +272,8 @@ namespace flex
 
 		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
 
-		void ClearAllInputs(const GameContext& gameContext);
-		void ClearMouseInput(const GameContext& gameContext);
+		void ClearAllInputs();
+		void ClearMouseInput();
 		void ClearKeyboadInput();
 		void ClearGampadInput(i32 gamepadIndex);
 

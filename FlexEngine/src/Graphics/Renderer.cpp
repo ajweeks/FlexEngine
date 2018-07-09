@@ -106,6 +106,7 @@ namespace flex
 
 			if (rotation.y > 90.0f)
 			{
+				// Prevents "pop back" when dragging past the 90 deg mark
 				cleanedRot.y = 180.0f - rotation.y;
 			}
 

@@ -2,7 +2,6 @@
 
 #include <string>
 
-#include "GameContext.hpp"
 #include "InputManager.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
@@ -95,8 +94,6 @@ namespace flex
 		real m_ImGuiMainWindowWidthMin = 200;
 		real m_ImGuiMainWindowWidthMax = 0;
 		real m_ImGuiMainWindowWidth = 350;
-
-		GameContext m_GameContext = {};
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
 		std::string m_RendererName = "";

@@ -28,9 +28,9 @@ namespace flex
 
 		static void DestroyAllLoadedMeshes();
 
-		static MeshComponent* ParseJSON(const GameContext& gameContext, const JSONObject& object, GameObject* owner, MaterialID materialID);
+		static MeshComponent* ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID);
 
-		void Update(const GameContext& gameContext);
+		void Update();
 		void Destroy();
 
 		enum class Type
@@ -73,7 +73,7 @@ namespace flex
 		/*
 		* Loads a mesh from file
 		*/
-		bool LoadFromFile(const GameContext& gameContext, 
+		bool LoadFromFile(
 			const std::string& filePath,
 			ImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
@@ -83,11 +83,11 @@ namespace flex
 		* Optionally pass in createInfo values to be given to the renderer
 		* when initializing the render object
 		*/
-		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, 
+		bool LoadPrefabShape(PrefabShape shape, 
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		MaterialID GetMaterialID() const;
-		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
+		void SetMaterialID(MaterialID materialID);
 		void SetUVScale(real uScale, real vScale);
 
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);

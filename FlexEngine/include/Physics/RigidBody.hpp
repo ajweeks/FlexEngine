@@ -18,8 +18,8 @@ namespace flex
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();
 
-		void Initialize(btCollisionShape* collisionShape, const GameContext& gameContext, Transform* parentTransform);
-		void Destroy(const GameContext& gameContext);
+		void Initialize(btCollisionShape* collisionShape, Transform* parentTransform);
+		void Destroy();
 
 		void AddConstraint(btTypedConstraint* constraint);
 

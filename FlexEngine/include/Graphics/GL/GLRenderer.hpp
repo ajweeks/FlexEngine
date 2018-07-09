@@ -22,23 +22,23 @@ namespace flex
 		class GLRenderer : public Renderer
 		{
 		public:
-			GLRenderer(GameContext& gameContext);
+			GLRenderer();
 			virtual ~GLRenderer();
 
-			virtual void Initialize(const GameContext& gameContext) override;
-			virtual void PostInitialize(const GameContext& gameContext) override;
+			virtual void Initialize() override;
+			virtual void PostInitialize() override;
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
-			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
+			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
 			virtual void ClearRenderObjects() override;
 			virtual void ClearMaterials() override;
 
-			virtual void Update(const GameContext& gameContext) override;
-			virtual void Draw(const GameContext& gameContext) override;
-			virtual void DrawImGuiItems(const GameContext& gameContext) override;
+			virtual void Update() override;
+			virtual void Draw() override;
+			virtual void DrawImGuiItems() override;
 
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
@@ -74,7 +74,7 @@ namespace flex
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 			
-			virtual void NewFrame(const GameContext& gameContext) override;
+			virtual void NewFrame() override;
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
@@ -105,13 +105,13 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
-			void DrawGameObjectImGui(const GameContext& gameContext, GameObject* gameObject);
+			void DrawGameObjectImGui(GameObject* gameObject);
 			/*
 			* Returns true if the parent-child tree changed during this call
 			*/
-			bool DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject);
+			bool DrawGameObjectNameAndChildren(GameObject* gameObject);
 
-			void PhysicsDebugRender(const GameContext& gameContext);
+			void PhysicsDebugRender();
 
 
 			// TODO: Either use these functions or remove them
@@ -127,13 +127,13 @@ namespace flex
 			void GenerateGBuffer();
 
 			// Draw all static geometry to the given render object's cubemap texture
-			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
+			void CaptureSceneToCubemap(RenderID cubemapRenderID);
 			void GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
-			void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
+			void GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
-			void SwapBuffers(const GameContext& gameContext);
+			void SwapBuffers();
 
 			struct SpriteQuadDrawInfo
 			{
@@ -152,17 +152,16 @@ namespace flex
 				bool writeDepth = true;
 			};
 
-			void DrawSpriteQuad(const GameContext& gameContext,
-								const SpriteQuadDrawInfo& drawInfo);
-			void DrawScreenSpaceSprites(const GameContext& gameContext);
-			void DrawWorldSpaceSprites(const GameContext& gameContext);
-			void DrawText(const GameContext& gameContext);
+			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
+			void DrawScreenSpaceSprites();
+			void DrawWorldSpaceSprites();
+			void DrawText();
 
-			bool LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size);
+			bool LoadFont(BitmapFont** font, const std::string& filePath, i16 size);
 
-			void UpdateTextBuffer(const GameContext& gameContext);
+			void UpdateTextBuffer();
 
-			void DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
+			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
 			bool GetLoadedTexture(const std::string& filePath, u32& handle);
 
@@ -178,17 +177,17 @@ namespace flex
 			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
-			void UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID);
-			void UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext);
-			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model, const GameContext& gameContext);
+			void UpdateMaterialUniforms(MaterialID materialID);
+			void UpdatePerObjectUniforms(RenderID renderID);
+			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model);
 
-			void BatchRenderObjects(const GameContext& gameContext);
-			void DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
+			void BatchRenderObjects();
+			void DrawDeferredObjects(const DrawCallInfo& drawCallInfo);
 			// Draws the GBuffer quad, or the GBuffer cube if rendering to a cubemap
-			void DrawGBufferContents(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
-			void DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
-			void DrawEditorObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
-			void DrawOffscreenTexture(const GameContext& gameContext);
+			void DrawGBufferContents(const DrawCallInfo& drawCallInfo);
+			void DrawForwardObjects(const DrawCallInfo& drawCallInfo);
+			void DrawEditorObjects(const DrawCallInfo& drawCallInfo);
+			void DrawOffscreenTexture();
 
 			// Returns the next binding that would be used
 			u32 BindTextures(Shader* shader, GLMaterial* glMaterial, u32 startingBinding = 0);
@@ -202,10 +201,10 @@ namespace flex
 			void RemoveMaterial(MaterialID materialID);
 
 			// If the object gets deleted this frame *gameObjectRef gets set to nullptr
-			void DoGameObjectContextMenu(const GameContext& gameContext, GameObject** gameObjectRef);
-			void DoCreateGameObjectButton(const GameContext& gameContext, const char* buttonName, const char* popupName);
+			void DoGameObjectContextMenu(GameObject** gameObjectRef);
+			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
-			bool DoDuplicateGameObjectButton(const GameContext& gameContext, GameObject* objectToCopy, const char* buttonName, const char* popupName);
+			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName);
 
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;

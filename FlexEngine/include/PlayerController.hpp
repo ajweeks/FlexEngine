@@ -11,7 +11,7 @@ namespace flex
 		~PlayerController();
 
 		void Initialize(Player* player);
-		void Update(const GameContext& gameContext);
+		void Update();
 		void Destroy();
 
 		void ResetTransformAndVelocities();

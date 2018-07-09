@@ -25,7 +25,7 @@ namespace flex
 	{
 	}
 
-	void SceneManager::UpdateAndRender(const GameContext& gameContext)
+	void SceneManager::UpdateAndRender()
 	{
 		if (m_Scenes.empty())
 		{
@@ -33,7 +33,7 @@ namespace flex
 			return;
 		}
 
-		m_Scenes[m_CurrentSceneIndex]->Update(gameContext);
+		m_Scenes[m_CurrentSceneIndex]->Update();
 	}
 
 	void SceneManager::AddScene(BaseScene* newScene)
@@ -57,32 +57,32 @@ namespace flex
 		}
 	}
 
-	void SceneManager::InitializeCurrentScene(const GameContext& gameContext)
+	void SceneManager::InitializeCurrentScene()
 	{
 		assert(!m_Scenes.empty());
 
-		//gameContext.engineInstance->PreSceneChange();
+		//g_EngineInstance->PreSceneChange();
 
-		CurrentScene()->Initialize(gameContext);
+		CurrentScene()->Initialize();
 
-		gameContext.renderer->OnSceneChanged();
-		gameContext.engineInstance->OnSceneChanged();
-		gameContext.cameraManager->OnSceneChanged(gameContext);
+		g_Renderer->OnSceneChanged();
+		g_EngineInstance->OnSceneChanged();
+		g_CameraManager->OnSceneChanged();
 	}
 
-	void SceneManager::PostInitializeCurrentScene(const GameContext& gameContext)
+	void SceneManager::PostInitializeCurrentScene()
 	{
 		assert(!m_Scenes.empty());
 
-		CurrentScene()->PostInitialize(gameContext);
+		CurrentScene()->PostInitialize();
 	}
 
-	void SceneManager::RemoveScene(BaseScene* scene, const GameContext& gameContext)
+	void SceneManager::RemoveScene(BaseScene* scene)
 	{
 		auto iter = std::find(m_Scenes.begin(), m_Scenes.end(), scene);
 		if (iter != m_Scenes.end())
 		{
-			scene->Destroy(gameContext);
+			scene->Destroy();
 			SafeDelete(scene);
 			m_Scenes.erase(iter);
 		}
@@ -92,7 +92,7 @@ namespace flex
 		}
 	}
 
-	bool SceneManager::SetCurrentScene(u32 sceneIndex, const GameContext& gameContext, bool bPrintErrorOnFailure /* = true */)
+	bool SceneManager::SetCurrentScene(u32 sceneIndex, bool bPrintErrorOnFailure /* = true */)
 	{
 		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
@@ -101,11 +101,11 @@ namespace flex
 			return false;
 		}
 
-		gameContext.engineInstance->PreSceneChange();
+		g_EngineInstance->PreSceneChange();
 
 		if (m_CurrentSceneIndex != u32_max)
 		{
-			m_Scenes[m_CurrentSceneIndex]->Destroy(gameContext);
+			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}
 
 		m_CurrentSceneIndex = sceneIndex;
@@ -113,13 +113,13 @@ namespace flex
 		return true;
 	}
 
-	bool SceneManager::SetCurrentScene(BaseScene* scene, const GameContext& gameContext, bool bPrintErrorOnFailure /* = true */)
+	bool SceneManager::SetCurrentScene(BaseScene* scene, bool bPrintErrorOnFailure /* = true */)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
 			if (m_Scenes[i]->GetFileName().compare(scene->GetFileName()) == 0)
 			{
-				return SetCurrentScene(i, gameContext, bPrintErrorOnFailure);
+				return SetCurrentScene(i,bPrintErrorOnFailure);
 			}
 		}
 
@@ -131,13 +131,13 @@ namespace flex
 		return false;
 	}
 
-	bool SceneManager::SetCurrentScene(const std::string& sceneFileName, const GameContext& gameContext, bool bPrintErrorOnFailure /* = true */)
+	bool SceneManager::SetCurrentScene(const std::string& sceneFileName, bool bPrintErrorOnFailure /* = true */)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
-				return SetCurrentScene(i, gameContext, bPrintErrorOnFailure);
+				return SetCurrentScene(i,bPrintErrorOnFailure);
 			}
 		}
 
@@ -149,7 +149,7 @@ namespace flex
 		return false;
 	}
 
-	void SceneManager::SetNextSceneActiveAndInit(const GameContext& gameContext)
+	void SceneManager::SetNextSceneActiveAndInit()
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
@@ -158,13 +158,13 @@ namespace flex
 		}
 		
 		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
-		SetCurrentScene(newCurrentSceneIndex, gameContext);
+		SetCurrentScene(newCurrentSceneIndex);
 
-		InitializeCurrentScene(gameContext);
-		PostInitializeCurrentScene(gameContext);
+		InitializeCurrentScene();
+		PostInitializeCurrentScene();
 	}
 
-	void SceneManager::SetPreviousSceneActiveAndInit(const GameContext& gameContext)
+	void SceneManager::SetPreviousSceneActiveAndInit()
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
@@ -174,18 +174,18 @@ namespace flex
 
 		// Loop around to previous index but stay positive cause things are unsigned
 		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size();
-		SetCurrentScene(newCurrentSceneIndex, gameContext);
+		SetCurrentScene(newCurrentSceneIndex);
 
-		InitializeCurrentScene(gameContext);
-		PostInitializeCurrentScene(gameContext);
+		InitializeCurrentScene();
+		PostInitializeCurrentScene();
 	}
 
-	void SceneManager::ReloadCurrentScene(const GameContext& gameContext)
+	void SceneManager::ReloadCurrentScene()
 	{
-		SetCurrentScene(m_CurrentSceneIndex, gameContext);
+		SetCurrentScene(m_CurrentSceneIndex);
 
-		InitializeCurrentScene(gameContext);
-		PostInitializeCurrentScene(gameContext);
+		InitializeCurrentScene();
+		PostInitializeCurrentScene();
 	}
 
 	void SceneManager::AddFoundScenes()
@@ -286,7 +286,7 @@ namespace flex
 		}
 	}
 
-	void SceneManager::DeleteScene(const GameContext& gameContext, BaseScene* scene)
+	void SceneManager::DeleteScene(BaseScene* scene)
 	{
 		if (m_Scenes.size() == 1)
 		{
@@ -326,8 +326,8 @@ namespace flex
 				m_CurrentSceneIndex = 0;
 			}
 			
-			gameContext.engineInstance->PreSceneChange();
-			scene->Destroy(gameContext);
+			g_EngineInstance->PreSceneChange();
+			scene->Destroy();
 		}
 		else
 		{
@@ -346,12 +346,12 @@ namespace flex
 
 		if (bDeletingCurrentScene)
 		{
-			InitializeCurrentScene(gameContext);
-			PostInitializeCurrentScene(gameContext);
+			InitializeCurrentScene();
+			PostInitializeCurrentScene();
 		}
 	}
 
-	void SceneManager::CreateNewScene(const GameContext& gameContext, const std::string& name, bool bSwitchImmediately)
+	void SceneManager::CreateNewScene(const std::string& name, bool bSwitchImmediately)
 	{
 		const i32 newSceneIndex = m_Scenes.size();
 
@@ -366,12 +366,12 @@ namespace flex
 
 		if (bSwitchImmediately)
 		{
-			SetCurrentScene(newSceneIndex, gameContext);
-			InitializeCurrentScene(gameContext);
-			PostInitializeCurrentScene(gameContext);
+			SetCurrentScene(newSceneIndex);
+			InitializeCurrentScene();
+			PostInitializeCurrentScene();
 		}
 
-		newScene->SerializeToFile(gameContext, true);
+		newScene->SerializeToFile(true);
 	}
 
 	u32 SceneManager::CurrentSceneIndex() const
@@ -402,9 +402,9 @@ namespace flex
 		return m_Scenes[index];
 	}
 
-	void SceneManager::DestroyAllScenes(const GameContext& gameContext)
+	void SceneManager::DestroyAllScenes()
 	{
-		m_Scenes[m_CurrentSceneIndex]->Destroy(gameContext);
+		m_Scenes[m_CurrentSceneIndex]->Destroy();
 
 		auto iter = m_Scenes.begin();
 		while (iter != m_Scenes.end())

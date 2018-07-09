@@ -184,7 +184,7 @@ namespace flex
 		bool Equals(const Material& other);
 
 		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
-		JSONObject SerializeToJSON(const GameContext& gameContext) const;
+		JSONObject SerializeToJSON() const;
 
 		std::string name = "";
 

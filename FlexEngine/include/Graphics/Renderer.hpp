@@ -10,8 +10,6 @@
 #include <glm/mat4x4.hpp>
 #pragma warning(pop)
 
-#include "GameContext.hpp"
-
 #include "VertexBufferData.hpp"
 #include "Transform.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
@@ -30,13 +28,13 @@ namespace flex
 		Renderer();
 		virtual ~Renderer();
 
-		virtual void Initialize(const GameContext& gameContext) = 0;
-		virtual void PostInitialize(const GameContext& gameContext) = 0;
+		virtual void Initialize() = 0;
+		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
-		virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
+		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
 		virtual void ClearRenderObjects() = 0;
 		virtual void ClearMaterials() = 0;
@@ -44,9 +42,9 @@ namespace flex
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(real r, real g, real b) = 0;
 
-		virtual void Update(const GameContext& gameContext) = 0;
-		virtual void Draw(const GameContext& gameContext) = 0;
-		virtual void DrawImGuiItems(const GameContext& gameContext) = 0;
+		virtual void Update() = 0;
+		virtual void Draw() = 0;
+		virtual void DrawImGuiItems() = 0;
 
 		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
@@ -84,7 +82,7 @@ namespace flex
 
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 
-		virtual void NewFrame(const GameContext& gameContext) = 0;
+		virtual void NewFrame() = 0;
 
 		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 

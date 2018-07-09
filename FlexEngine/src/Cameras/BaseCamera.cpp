@@ -12,7 +12,7 @@
 
 namespace flex
 {
-	BaseCamera::BaseCamera(const std::string& cameraName, GameContext& gameContext, real FOV, real zNear, real zFar) :
+	BaseCamera::BaseCamera(const std::string& cameraName, real FOV, real zNear, real zFar) :
 		m_Name(cameraName),
 		m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
 		m_Position(glm::vec3(0.0f)),
@@ -34,21 +34,19 @@ namespace flex
 	{
 		ResetOrientation();
 		CalculateAxisVectors();
-		RecalculateViewProjection(gameContext);
+		RecalculateViewProjection();
 	}
 
 	BaseCamera::~BaseCamera()
 	{
 	}
 
-	void BaseCamera::Initialize(const GameContext& gameContext)
+	void BaseCamera::Initialize()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
 	}
 
-	void BaseCamera::OnSceneChanged(const GameContext& gameContext)
+	void BaseCamera::OnSceneChanged()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
 	}
 
 	void BaseCamera::SetFOV(real FOV)
@@ -182,9 +180,9 @@ namespace flex
 	}
 
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)
-	void BaseCamera::RecalculateViewProjection(const GameContext& gameContext)
+	void BaseCamera::RecalculateViewProjection()
 	{
-		const glm::vec2 windowSize = gameContext.window->GetSize();
+		const glm::vec2 windowSize = g_Window->GetSize();
 		if (windowSize.x == 0.0f || windowSize.y == 0.0f)
 		{
 			return;

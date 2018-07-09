@@ -100,4 +100,17 @@ inline void SafeDelete(T &pObjectToDelete)
 namespace flex
 {
 	static const std::string RESOURCE_LOCATION = "../../../FlexEngine/resources/";
+
+	// These fields are defined and initialized in FlexEngine.cpp
+	extern class Window* g_Window;
+	extern class CameraManager* g_CameraManager;
+	extern class InputManager* g_InputManager;
+	extern class Renderer* g_Renderer;
+	extern class FlexEngine* g_EngineInstance;
+	extern class SceneManager* g_SceneManager;
+	extern struct Monitor* g_Monitor;
+	extern class PhysicsManager* g_PhysicsManager;
+
+	extern sec g_SecElapsedSinceProgramStart;
+	extern sec g_DeltaTime;
 }

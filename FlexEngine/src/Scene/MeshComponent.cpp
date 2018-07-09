@@ -15,7 +15,6 @@
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Colors.hpp"
-#include "GameContext.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
 
@@ -60,7 +59,7 @@ namespace flex
 		m_LoadedMeshes.clear();
 	}
 
-	MeshComponent* MeshComponent::ParseJSON(const GameContext& gameContext, const JSONObject& object, GameObject* owner, MaterialID materialID)
+	MeshComponent* MeshComponent::ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID)
 	{
 		MeshComponent* newMeshComponent = nullptr;
 
@@ -81,8 +80,8 @@ namespace flex
 		}
 		else
 		{
-			Material& material = gameContext.renderer->GetMaterial(materialID);
-			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+			Material& material = g_Renderer->GetMaterial(materialID);
+			Shader& shader = g_Renderer->GetShader(material.shaderID);
 			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
 
 			if (!meshFilePath.empty())
@@ -96,9 +95,8 @@ namespace flex
 				importSettings.flipNormalZ = flipNormalZ;
 				importSettings.swapNormalYZ = swapNormalYZ;
 
-				newMeshComponent->LoadFromFile(gameContext,
-									 meshFilePath,
-									 &importSettings);
+				newMeshComponent->LoadFromFile(meshFilePath,
+											   &importSettings);
 
 				owner->SetMeshComponent(newMeshComponent);
 			}
@@ -108,7 +106,7 @@ namespace flex
 				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
 
 				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
-				newMeshComponent->LoadPrefabShape(gameContext, prefabShape);
+				newMeshComponent->LoadPrefabShape(prefabShape);
 
 				owner->SetMeshComponent(newMeshComponent);
 			}
@@ -147,7 +145,7 @@ namespace flex
 		}
 	}
 
-	bool MeshComponent::LoadFromFile(const GameContext& gameContext,
+	bool MeshComponent::LoadFromFile(
 		const std::string& filePath,
 		ImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
@@ -377,19 +375,19 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
-		RenderID renderID = gameContext.renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
 
-		gameContext.renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
+		g_Renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
 
-		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, renderID);
+		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
 		m_Initialized = true;
 
 		return true;
 	}
 
-	bool MeshComponent::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
+	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
 		m_Type = Type::PREFAB;
 		m_Shape = shape;
@@ -1032,23 +1030,23 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
 
-		RenderID renderID = gameContext.renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
 
-		gameContext.renderer->SetTopologyMode(renderID, topologyMode);
-		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, renderID);
+		g_Renderer->SetTopologyMode(renderID, topologyMode);
+		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
 		m_Initialized = true;
 
 		return true;
 	}
 
-	void MeshComponent::Update(const GameContext& gameContext)
+	void MeshComponent::Update()
 	{
 		if (m_Shape == PrefabShape::GRID)
 		{
 			Transform* transform = m_OwningGameObject->GetTransform();
-			glm::vec3 camPos = gameContext.cameraManager->CurrentCamera()->GetPosition();
+			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
 				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
 				transform->GetWorldPosition().y,
@@ -1062,12 +1060,12 @@ namespace flex
 		return m_MaterialID;
 	}
 
-	void MeshComponent::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
+	void MeshComponent::SetMaterialID(MaterialID materialID)
 	{
 		m_MaterialID = materialID;
 		if (m_Initialized && m_OwningGameObject)
 		{
-			gameContext.renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
+			g_Renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
 		}
 	}
 

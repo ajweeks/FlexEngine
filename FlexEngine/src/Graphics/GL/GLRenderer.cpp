@@ -16,6 +16,8 @@
 
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
+// TODO: Remove?
+#include "imgui_internal.h"
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
@@ -26,7 +28,6 @@
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "FlexEngine.hpp"
-#include "GameContext.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
@@ -34,27 +35,27 @@
 #include "JSONParser.hpp"
 #include "JSONTypes.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "VertexAttribute.hpp"
-#include "Window/Window.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
-#include "Physics/RigidBody.hpp"
-#include "Profiler.hpp"
-#include "imgui_internal.h"
+#include "Window/Monitor.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
 	namespace gl
 	{
-		GLRenderer::GLRenderer(GameContext& gameContext)
+		GLRenderer::GLRenderer()
 		{
 			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/default-renderer-settings.ini"));
 			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/renderer-settings.ini"));
 
-			gameContext.renderer = this;
+			g_Renderer = this;
 
 			LoadSettingsFromDisk();
 
@@ -66,7 +67,7 @@ namespace flex
 			
 		}
 
-		void GLRenderer::Initialize(const GameContext& gameContext)
+		void GLRenderer::Initialize()
 		{
 			CheckGLErrorMessages();
 
@@ -159,13 +160,13 @@ namespace flex
 
 			// Offscreen framebuffers
 			{
-				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				CreateOffscreenFrameBuffer(&m_Offscreen0FBO, &m_Offscreen0RBO, frameBufferSize, m_OffscreenTexture0Handle);
 				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, frameBufferSize, m_OffscreenTexture1Handle);
 			}
 
-			const real captureProjectionNearPlane = gameContext.cameraManager->CurrentCamera()->GetZNear();
-			const real captureProjectionFarPlane = gameContext.cameraManager->CurrentCamera()->GetZFar();
+			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZNear();
+			const real captureProjectionFarPlane = g_CameraManager->CurrentCamera()->GetZFar();
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
@@ -323,8 +324,8 @@ namespace flex
 				drawInfo.inputTextureHandle = m_LoadingTextureHandle.id;
 				drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
-				DrawSpriteQuad(gameContext, drawInfo);
-				SwapBuffers(gameContext);
+				DrawSpriteQuad(drawInfo);
+				SwapBuffers();
 			}
 
 			if (m_BRDFTextureHandle.id == 0)
@@ -336,7 +337,7 @@ namespace flex
 										m_BRDFTextureHandle.internalFormat, 
 										m_BRDFTextureHandle.format,
 										m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+				GenerateBRDFLUT(m_BRDFTextureHandle.id, m_BRDFTextureSize);
 			}
 
 			ImGui::CreateContext();
@@ -347,7 +348,7 @@ namespace flex
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
 									   0,
@@ -384,34 +385,34 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::PostInitialize(const GameContext& gameContext)
+		void GLRenderer::PostInitialize()
 		{
 			GenerateGBuffer();
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
 			PROFILE_BEGIN("load font UbuntuCondensed");
-			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 36);
+			LoadFont(&m_FntUbuntuCondensed, ubuntuFilePath, 36);
 			PROFILE_END("load font UbuntuCondensed");
 			Profiler::PrintBlockDuration("load font UbuntuCondensed");
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
 			PROFILE_BEGIN("load font SourceCodePro");
-			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 10);
+			LoadFont(&m_FntSourceCodePro, sourceCodeProFilePath, 10);
 			PROFILE_END("load font SourceCodePro");
 			Profiler::PrintBlockDuration("load font SourceCodePro");
 
 
-			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
+			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
 			if (castedWindow == nullptr)
 			{
-				PrintError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!\n");
+				PrintError("GLRenderer::PostInitialize expects g_Window to be of type GLFWWindowWrapper!\n");
 				return;
 			}
 
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
 			CheckGLErrorMessages();
 
-			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
+			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw();
 			m_PhysicsDebugDrawer->Initialize();
 
 			Print("Renderer initialized!\n");
@@ -1025,7 +1026,7 @@ namespace flex
 			return renderID;
 		}
 
-		void GLRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)
+		void GLRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			GLMaterial& material = m_Materials[renderObject->materialID];
@@ -1034,11 +1035,11 @@ namespace flex
 
 			if (material.material.generateReflectionProbeMaps)
 			{
-				BatchRenderObjects(gameContext);
+				BatchRenderObjects();
 
 				std::string profileBlockName = "capturing scene to cubemap " + renderObject->gameObject->GetName();
 				PROFILE_BEGIN(profileBlockName);
-				CaptureSceneToCubemap(gameContext, renderID);
+				CaptureSceneToCubemap(renderID);
 				PROFILE_END(profileBlockName);
 				Profiler::PrintBlockDuration(profileBlockName);
 				//glFlush();
@@ -1316,7 +1317,7 @@ namespace flex
 			//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
 		}
 
-		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
+		void GLRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
 		{
 			if (m_1x1_NDC_Quad)
 			{
@@ -1378,7 +1379,7 @@ namespace flex
 				else
 				{
 					SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-					m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(gameContext.renderer, quadRenderID);
+					m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(g_Renderer, quadRenderID);
 				}
 			}
 
@@ -1510,7 +1511,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
+		void GLRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
 			DrawCallInfo drawCallInfo = {};
 			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
@@ -1565,15 +1566,15 @@ namespace flex
 			}
 
 			drawCallInfo.bDeferred = true;
-			DrawDeferredObjects(gameContext, drawCallInfo);
+			DrawDeferredObjects(drawCallInfo);
 			drawCallInfo.bDeferred = false;
-			DrawGBufferContents(gameContext, drawCallInfo);
-			DrawForwardObjects(gameContext, drawCallInfo);
+			DrawGBufferContents(drawCallInfo);
+			DrawForwardObjects(drawCallInfo);
 		}
 
-		void GLRenderer::SwapBuffers(const GameContext& gameContext)
+		void GLRenderer::SwapBuffers()
 		{
-			glfwSwapBuffers(static_cast<GLWindowWrapper*>(gameContext.window)->GetWindow());
+			glfwSwapBuffers(static_cast<GLWindowWrapper*>(g_Window)->GetWindow());
 		}
 
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
@@ -1665,7 +1666,7 @@ namespace flex
 			glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, size.x, size.y);
 		}
 
-		void GLRenderer::Update(const GameContext& gameContext)
+		void GLRenderer::Update()
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
@@ -1682,7 +1683,7 @@ namespace flex
 			//			if (material.material.generateReflectionProbeMaps)
 			//			{
 			//				Print("Capturing reflection probe\n");
-			//				CaptureSceneToCubemap(gameContext, renderObject->renderID);
+			//				CaptureSceneToCubemap(renderObject->renderID);
 			//				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
 			//				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 			//			}
@@ -1690,7 +1691,7 @@ namespace flex
 			//	}
 			//}
 
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
@@ -1698,7 +1699,7 @@ namespace flex
 					if (renderObject && 
 						m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
-						CaptureSceneToCubemap(gameContext, renderObject->renderID);
+						CaptureSceneToCubemap(renderObject->renderID);
 						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
 						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 					}
@@ -1706,7 +1707,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::Draw(const GameContext& gameContext)
+		void GLRenderer::Draw()
 		{
 			CheckGLErrorMessages();
 
@@ -1716,25 +1717,25 @@ namespace flex
 			DrawCallInfo drawCallInfo = {};
 
 			// TODO: Don't sort render objects frame! Only when things are added/removed
-			BatchRenderObjects(gameContext);
+			BatchRenderObjects();
 
 			// World-space objects
 			drawCallInfo.bDeferred = true;
-			DrawDeferredObjects(gameContext, drawCallInfo);
+			DrawDeferredObjects(drawCallInfo);
 			drawCallInfo.bDeferred = false;
-			DrawGBufferContents(gameContext, drawCallInfo);
-			DrawForwardObjects(gameContext, drawCallInfo);
-			DrawWorldSpaceSprites(gameContext);
-			DrawOffscreenTexture(gameContext);
+			DrawGBufferContents(drawCallInfo);
+			DrawForwardObjects(drawCallInfo);
+			DrawWorldSpaceSprites();
+			DrawOffscreenTexture();
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
-				PhysicsDebugRender(gameContext);
+				PhysicsDebugRender();
 			}
 
-			if (gameContext.engineInstance->IsRenderingEditorObjects())
+			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
-				DrawEditorObjects(gameContext, drawCallInfo);
+				DrawEditorObjects(drawCallInfo);
 			}
 
 			// Screen-space objects
@@ -1744,19 +1745,19 @@ namespace flex
 			//letterYOffsets1.reserve(26);
 			//for (i32 i = 0; i < 26; ++i)
 			//{
-			//	letterYOffsets1.push_back(sin(i * 0.75f + gameContext.elapsedTime * 3.0f) * 5.0f);
+			//	letterYOffsets1.push_back(sin(i * 0.75f + g_SecElapsedSinceProgramStart * 3.0f) * 5.0f);
 			//}
 			//std::vector<real> letterYOffsets2;
 			//letterYOffsets2.reserve(26);
 			//for (i32 i = 0; i < 26; ++i)
 			//{
-			//	letterYOffsets2.push_back(cos(i + gameContext.elapsedTime * 10.0f) * 5.0f);
+			//	letterYOffsets2.push_back(cos(i + g_SecElapsedSinceProgramStart * 10.0f) * 5.0f);
 			//}
 			//std::vector<real> letterYOffsets3;
 			//letterYOffsets3.reserve(44);
 			//for (i32 i = 0; i < 44; ++i)
 			//{
-			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + gameContext.elapsedTime * 6.0f) * 4.0f);
+			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + g_SecElapsedSinceProgramStart * 6.0f) * 4.0f);
 			//}
 			
 			SetFont(m_FntSourceCodePro);
@@ -1780,26 +1781,26 @@ namespace flex
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
 			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, letterYOffsetsEmpty);
-			//glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			//glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			//std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
 			//DrawString(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, letterYOffsetsEmpty);
 #endif
 
-			DrawScreenSpaceSprites(gameContext);
+			DrawScreenSpaceSprites();
 
-			UpdateTextBuffer(gameContext);
-			DrawText(gameContext);
+			UpdateTextBuffer();
+			DrawText();
 
-			if (gameContext.engineInstance->IsRenderingImGui())
+			if (g_EngineInstance->IsRenderingImGui())
 			{
 				ImGui::Render();
 				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 			}
 
-			SwapBuffers(gameContext);
+			SwapBuffers();
 		}
 
-		void GLRenderer::BatchRenderObjects(const GameContext& gameContext)
+		void GLRenderer::BatchRenderObjects()
 		{
 			/*
 			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
@@ -1833,7 +1834,7 @@ namespace flex
 				}
 				GLShader* shader = &m_Shaders[shaderID];
 
-				UpdateMaterialUniforms(gameContext, matID);
+				UpdateMaterialUniforms(matID);
 
 				if (shader->shader.deferred)
 				{
@@ -1914,7 +1915,7 @@ namespace flex
 			PROFILE_END(profileBlockName);
 		}
 
-		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
 		{
 			if (!drawCallInfo.bDeferred)
 			{
@@ -1942,7 +1943,7 @@ namespace flex
 			}
 			else
 			{
-				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
@@ -1966,7 +1967,7 @@ namespace flex
 
 			for (size_t i = 0; i < m_DeferredRenderObjectBatches.size(); ++i)
 			{
-				DrawRenderObjectBatch(gameContext, m_DeferredRenderObjectBatches[i], drawCallInfo);
+				DrawRenderObjectBatch(m_DeferredRenderObjectBatches[i], drawCallInfo);
 			}
 
 			glUseProgram(0);
@@ -1987,7 +1988,7 @@ namespace flex
 			}
 			else
 			{
-				const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
@@ -1998,7 +1999,7 @@ namespace flex
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		}
 
-		void GLRenderer::DrawGBufferContents(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawGBufferContents(const DrawCallInfo& drawCallInfo)
 		{
 			if (drawCallInfo.bDeferred)
 			{
@@ -2036,9 +2037,9 @@ namespace flex
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 				CheckGLErrorMessages();
 
-				UpdateMaterialUniforms(gameContext, cubemapObject->materialID);
+				UpdateMaterialUniforms(cubemapObject->materialID);
 				UpdatePerObjectUniforms(cubemapObject->materialID, 
-					skybox->gameObject->GetTransform()->GetWorldTransform(), gameContext);
+					skybox->gameObject->GetTransform()->GetWorldTransform());
 
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
@@ -2108,8 +2109,8 @@ namespace flex
 				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
 				CheckGLErrorMessages();
 
-				UpdateMaterialUniforms(gameContext, gBufferQuad->materialID);
-				UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
+				UpdateMaterialUniforms(gBufferQuad->materialID);
+				UpdatePerObjectUniforms(gBufferQuad->renderID);
 
 				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
@@ -2137,7 +2138,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawForwardObjects(const DrawCallInfo& drawCallInfo)
 		{
 			if (drawCallInfo.bDeferred)
 			{
@@ -2146,16 +2147,16 @@ namespace flex
 
 			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
 			{
-				DrawRenderObjectBatch(gameContext, m_ForwardRenderObjectBatches[i], drawCallInfo);
+				DrawRenderObjectBatch(m_ForwardRenderObjectBatches[i], drawCallInfo);
 			}
 		}
 
-		void GLRenderer::DrawEditorObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
-			DrawRenderObjectBatch(gameContext, m_EditorRenderObjectBatch, drawCallInfo);
+			DrawRenderObjectBatch(m_EditorRenderObjectBatch, drawCallInfo);
 		}
 
-		void GLRenderer::DrawOffscreenTexture(const GameContext& gameContext)
+		void GLRenderer::DrawOffscreenTexture()
 		{
 			i32 FBO = m_Offscreen1FBO;
 			i32 RBO = m_Offscreen1RBO;
@@ -2188,7 +2189,7 @@ namespace flex
 			drawInfo.inputTextureHandle = m_OffscreenTexture0Handle.id;
 			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
 
-			DrawSpriteQuad(gameContext, drawInfo);
+			DrawSpriteQuad(drawInfo);
 
 			if (bFXAAEnabled)
 			{
@@ -2198,11 +2199,11 @@ namespace flex
 
 				drawInfo.inputTextureHandle = m_OffscreenTexture1Handle.id;
 				drawInfo.materialID = m_PostFXAAMatID;
-				DrawSpriteQuad(gameContext, drawInfo);
+				DrawSpriteQuad(drawInfo);
 			}
 
 			{
-				const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
 				CheckGLErrorMessages();
@@ -2216,27 +2217,25 @@ namespace flex
 
 		}
 
-		void GLRenderer::DrawScreenSpaceSprites(const GameContext& gameContext)
+		void GLRenderer::DrawScreenSpaceSprites()
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
 			{
-				pos.x += gameContext.deltaTime * 1.0f;
+				pos.x += g_DeltaTime * 1.0f;
 			}
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
 			{
-				pos.x -= gameContext.deltaTime * 1.0f;
+				pos.x -= g_DeltaTime * 1.0f;
 			}
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
 			{
-				pos.y += gameContext.deltaTime * 1.0f;
+				pos.y += g_DeltaTime * 1.0f;
 			}
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
 			{
-				pos.y -= gameContext.deltaTime * 1.0f;
+				pos.y -= g_DeltaTime * 1.0f;
 			}
 
 			glm::vec3 scale(0.25f, -0.25f, 1.0f);
@@ -2252,26 +2251,26 @@ namespace flex
 			drawInfo.inputTextureHandle = m_WorkTextureHandle.id;
 			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
-			//DrawSpriteQuad(gameContext, drawInfo);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(drawInfo);
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color, true);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot, scale, AnchorPoint::BOTTOM_LEFT, color, true);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::LEFT, color, true);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot, scale, AnchorPoint::TOP_LEFT, color, true);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::TOP, color, true);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot, scale, AnchorPoint::TOP_RIGHT, color, true);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot2, scale, AnchorPoint::RIGHT, color, true);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
+			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
 			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f), true);
 		}
 
-		void GLRenderer::DrawWorldSpaceSprites(const GameContext& gameContext)
+		void GLRenderer::DrawWorldSpaceSprites()
 		{
 			glm::vec3 scale(1.0f, -1.0f, 1.0f);
 
@@ -2285,7 +2284,7 @@ namespace flex
 			drawInfo.materialID = m_SpriteMatID;
 			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
-			BaseCamera* cam = gameContext.cameraManager->CurrentCamera();
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			glm::vec3 camPos = cam->GetPosition();
 			glm::vec3 camUp = cam->GetUp();
 			for (const PointLight& pointLight : m_PointLights)
@@ -2297,7 +2296,7 @@ namespace flex
 					drawInfo.inputTextureHandle = m_PointLightIconHandle.id;
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight.position, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-					DrawSpriteQuad(gameContext, drawInfo);
+					DrawSpriteQuad(drawInfo);
 				}
 			}
 			
@@ -2308,16 +2307,15 @@ namespace flex
 				drawInfo.inputTextureHandle = m_DirectionalLightIconHandle.id;
 				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight.position, camUp);
 				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-				DrawSpriteQuad(gameContext, drawInfo);
+				DrawSpriteQuad(drawInfo);
 			}
 		}
 
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, 
-										const SpriteQuadDrawInfo& drawInfo)
+		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
 		{
 			GLRenderObject* spriteRenderObject = GetRenderObject(drawInfo.spriteObjectRenderID);
 			if (!spriteRenderObject ||
-				(spriteRenderObject->editorObject && !gameContext.engineInstance->IsRenderingEditorObjects()))
+				(spriteRenderObject->editorObject && !g_EngineInstance->IsRenderingEditorObjects()))
 			{
 				return;
 			}
@@ -2330,7 +2328,7 @@ namespace flex
 			glUseProgram(spriteShader.program);
 			CheckGLErrorMessages();
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("model"))
@@ -2407,7 +2405,7 @@ namespace flex
 				}
 				else
 				{
-					glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+					glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
 					CheckGLErrorMessages();
@@ -2427,7 +2425,7 @@ namespace flex
 				}
 				else
 				{
-					glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
 					CheckGLErrorMessages();
@@ -2544,7 +2542,7 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::DrawText(const GameContext& gameContext)
+		void GLRenderer::DrawText()
 		{
 			GLMaterial& fontMaterial = m_Materials[m_FontMatID];
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
@@ -2554,7 +2552,7 @@ namespace flex
 
 			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("soften"))
 			//{
-			//	real soften = ((sin(gameContext.elapsedTime) * 0.5f + 0.5f) * 0.25f);
+			//	real soften = ((sin(g_SecElapsedSinceProgramStart) * 0.5f + 0.5f) * 0.25f);
 			//	glUniform1f(glGetUniformLocation(fontShader.program, "soften"), soften);
 			//	CheckGLErrorMessages();
 			//}
@@ -2566,7 +2564,7 @@ namespace flex
 			//	CheckGLErrorMessages();
 			//}
 
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
 			CheckGLErrorMessages();
@@ -2594,7 +2592,7 @@ namespace flex
 					glm::mat4 ortho = glm::ortho(-r, r, -t, t);
 
 					// TODO: Find out how font sizes actually work
-					//real scale = ((real)font->GetFontSize()) / 12.0f + sin(gameContext.elapsedTime) * 2.0f;
+					//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
 					glm::vec3 scaleVec(1.0f, -1.0f, 1.0f);
 
 					glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), scaleVec) * ortho;
@@ -2619,7 +2617,7 @@ namespace flex
 			}
 		}
 
-		bool GLRenderer::LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size)
+		bool GLRenderer::LoadFont(BitmapFont** font, const std::string& filePath, i16 size)
 		{
 			FT_Error error;
 			error = FT_Init_FreeType(&ft);
@@ -2648,8 +2646,8 @@ namespace flex
 
 			error = FT_Set_Char_Size(face,
 									 0, size * 64,
-									 (FT_UInt)gameContext.monitor.DPI.x, 
-									 (FT_UInt)gameContext.monitor.DPI.y);
+									 (FT_UInt)g_Monitor->DPI.x, 
+									 (FT_UInt)g_Monitor->DPI.y);
 
 			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
@@ -3030,9 +3028,9 @@ namespace flex
 			return strHeight;
 		}
 
-		void GLRenderer::UpdateTextBuffer(const GameContext& gameContext)
+		void GLRenderer::UpdateTextBuffer()
 		{
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 			real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
 
@@ -3173,7 +3171,7 @@ namespace flex
 			glBindVertexArray(0);
 		}
 
-		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
 			if (batchedRenderObjects.empty())
 			{
@@ -3234,7 +3232,7 @@ namespace flex
 				glDepthMask(renderObject->depthWriteEnable);
 				CheckGLErrorMessages();
 
-				UpdatePerObjectUniforms(renderObject->renderID, gameContext);
+				UpdatePerObjectUniforms(renderObject->renderID);
 
 				BindTextures(shader, material);
 
@@ -3320,7 +3318,7 @@ namespace flex
 				}
 				else
 				{
-					glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 					glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 					// TODO: Move to translucent pass?
@@ -3492,7 +3490,7 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
-		void GLRenderer::DoGameObjectContextMenu(const GameContext& gameContext, GameObject** gameObjectRef)
+		void GLRenderer::DoGameObjectContextMenu(GameObject** gameObjectRef)
 		{
 			static const char* renameObjectPopupLabel = "##rename-game-object";
 			static const char* renameObjectButtonStr = "Rename";
@@ -3539,7 +3537,7 @@ namespace flex
 					ImGui::CloseCurrentPopup();
 				}
 
-				if (DoDuplicateGameObjectButton(gameContext, gameObject, duplicateObjectButtonStr, duplicateObjectPopupLabel))
+				if (DoDuplicateGameObjectButton(gameObject, duplicateObjectButtonStr, duplicateObjectPopupLabel))
 				{
 					*gameObjectRef = nullptr;
 					ImGui::CloseCurrentPopup();
@@ -3569,7 +3567,7 @@ namespace flex
 					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
 					if (ImGui::Button(deleteButtonStr))
 					{
-						if (gameContext.sceneManager->CurrentScene()->DestroyGameObject(gameContext, gameObject, true))
+						if (g_SceneManager->CurrentScene()->DestroyGameObject(gameObject, true))
 						{
 							*gameObjectRef = nullptr;
 							ImGui::CloseCurrentPopup();
@@ -3597,7 +3595,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DoCreateGameObjectButton(const GameContext& gameContext, const char* buttonName, const char* popupName)
+		void GLRenderer::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 		{
 			static const char* defaultNewName = "New_Object_01";
 			static const char* newObjectNameInputLabel = "##new-object-name";
@@ -3637,13 +3635,13 @@ namespace flex
 
 					if (!newObjectName.empty())
 					{
-						MaterialID matID = gameContext.sceneManager->CurrentScene()->GetMaterialIDs()[0];
+						MaterialID matID = g_SceneManager->CurrentScene()->GetMaterialIDs()[0];
 
 						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 						MeshComponent* meshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						meshComponent->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::CUBE);
+						meshComponent->LoadPrefabShape(MeshComponent::PrefabShape::CUBE);
 
-						gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
+						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
 						ImGui::CloseCurrentPopup();
 					}
@@ -3660,7 +3658,7 @@ namespace flex
 			}
 		}
 
-		bool GLRenderer::DoDuplicateGameObjectButton(const GameContext& gameContext, GameObject* objectToCopy, const char* buttonName, const char* popupName)
+		bool GLRenderer::DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName)
 		{
 			static const char* newObjectNameInputLabel = "##new-object-name";
 			static const char* duplicateObjectButtonStr = "Duplicate";
@@ -3712,11 +3710,11 @@ namespace flex
 
 					if (!newObjectName.empty())
 					{
-						GameObject* newGameObject = objectToCopy->CopySelf(gameContext, nullptr, newObjectName, true);
+						GameObject* newGameObject = objectToCopy->CopySelf(nullptr, newObjectName, true);
 
 						bDuplicated = true;
 
-						gameContext.engineInstance->SetSelectedObject(newGameObject);
+						g_EngineInstance->SetSelectedObject(newGameObject);
 
 						ImGui::CloseCurrentPopup();
 					}
@@ -4098,18 +4096,18 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID)
+		void GLRenderer::UpdateMaterialUniforms(MaterialID materialID)
 		{
 			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 			
 			glUseProgram(shader->program);
 
-			glm::mat4 proj = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProj = proj * view;
-			glm::vec4 camPos = glm::vec4(gameContext.cameraManager->CurrentCamera()->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 
 			static const char* viewStr = "view";
@@ -4215,7 +4213,7 @@ namespace flex
 			static const char* texelStepStr = "texelStep";
 			if (shader->shader.constantBufferUniforms.HasUniform(texelStepStr))
 			{
-				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
 				SetVec2f(material->material.shaderID, texelStepStr, texelStep);
 			}
@@ -4229,7 +4227,7 @@ namespace flex
 			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
+		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
@@ -4239,10 +4237,10 @@ namespace flex
 			}
 
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
-			UpdatePerObjectUniforms(renderObject->materialID, model, gameContext);
+			UpdatePerObjectUniforms(renderObject->materialID, model);
 		}
 
-		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model, const GameContext& gameContext)
+		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model)
 		{
 			// TODO: OPTIMIZATION: Investigate performance impact of caching each uniform and preventing updates to data that hasn't changed
 
@@ -4250,8 +4248,8 @@ namespace flex
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
 			glm::mat4 modelInv = glm::inverse(model);
-			glm::mat4 proj = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 MVP = proj * view * model;
 			glm::vec4 colorMultiplier = material->material.colorMultiplier;
 
@@ -4801,14 +4799,14 @@ namespace flex
 			m_RenderObjects[renderID] = nullptr;
 		}
 
-		void GLRenderer::NewFrame(const GameContext& gameContext)
+		void GLRenderer::NewFrame()
 		{
 			if (m_PhysicsDebugDrawer)
 			{
 				m_PhysicsDebugDrawer->ClearLines();
 			}
 
-			if (gameContext.engineInstance->IsRenderingImGui())
+			if (g_EngineInstance->IsRenderingImGui())
 			{
 				ImGui_ImplGlfwGL3_NewFrame();
 			}
@@ -4819,9 +4817,9 @@ namespace flex
 			return m_PhysicsDebugDrawer;
 		}
 
-		void GLRenderer::PhysicsDebugRender(const GameContext& gameContext)
+		void GLRenderer::PhysicsDebugRender()
 		{
-			btDiscreteDynamicsWorld* physicsWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
 		}
 
@@ -4888,9 +4886,9 @@ namespace flex
 			WriteFile(filePath, fileContents, false);
 		}
 
-		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)
+		void GLRenderer::DrawImGuiItems()
 		{
-			GameObject* selectedObject = gameContext.engineInstance->GetSelectedObject();
+			GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
 
 			ImGui::NewLine();
 
@@ -4900,7 +4898,7 @@ namespace flex
 
 			if (selectedObject)
 			{
-				DrawGameObjectImGui(gameContext, selectedObject);
+				DrawGameObjectImGui(selectedObject);
 			}
 
 			ImGui::EndChild();
@@ -4924,28 +4922,28 @@ namespace flex
 						if (draggedGameObject->GetParent())
 						{
 							draggedGameObject->DetachFromParent();
-							gameContext.sceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
 						}
 					}
 				}
 				ImGui::EndDragDropTarget();
 			}
 
-			std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
+			std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 			for (size_t i = 0; i < rootObjects.size(); ++i)
 			{
-				if (DrawGameObjectNameAndChildren(gameContext, rootObjects[i]))
+				if (DrawGameObjectNameAndChildren(rootObjects[i]))
 				{
 					break;
 				}
 			}
 
-			DoCreateGameObjectButton(gameContext, "Add render object...", "Add render object");
+			DoCreateGameObjectButton("Add render object...", "Add render object");
 
 			DrawImGuiLights();
 		}
 
-		void GLRenderer::DrawGameObjectImGui(const GameContext& gameContext, GameObject* gameObject)
+		void GLRenderer::DrawGameObjectImGui(GameObject* gameObject)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
@@ -4963,7 +4961,7 @@ namespace flex
 
 			ImGui::Text(gameObject->GetName().c_str());
 
-			DoGameObjectContextMenu(gameContext, &gameObject);
+			DoGameObjectContextMenu(&gameObject);
 
 			if (!gameObject)
 			{
@@ -5003,7 +5001,7 @@ namespace flex
 			}
 		}
 
-		bool GLRenderer::DrawGameObjectNameAndChildren(const GameContext& gameContext, GameObject* gameObject)
+		bool GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
@@ -5040,7 +5038,7 @@ namespace flex
 					bHasChildren = false;
 				}
 			}
-			bool bSelected = (gameObject == gameContext.engineInstance->GetSelectedObject());
+			bool bSelected = (gameObject == g_EngineInstance->GetSelectedObject());
 
 			bool visible = gameObject->IsVisible();
 			const std::string objectVisibleLabel(objectID + "-visible");
@@ -5062,14 +5060,14 @@ namespace flex
 
 			bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
 
-			DoGameObjectContextMenu(gameContext, &gameObject);
+			DoGameObjectContextMenu(&gameObject);
 
 			bool bParentChildTreeChanged = (gameObject == nullptr);
 			if (gameObject)
 			{
 				if (ImGui::IsItemClicked())
 				{
-					gameContext.engineInstance->SetSelectedObject(gameObject);
+					g_EngineInstance->SetSelectedObject(gameObject);
 				}
 
 				if (ImGui::IsItemActive())
@@ -5110,13 +5108,13 @@ namespace flex
 								}
 								else
 								{
-									gameContext.sceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
+									g_SceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
 									bRemovedRootObj = true;
 								}
 
 								if (bRemovedRootObj && gameObject->GetParent() == draggedGameObject)
 								{
-									gameContext.sceneManager->CurrentScene()->AddRootObject(gameObject);
+									g_SceneManager->CurrentScene()->AddRootObject(gameObject);
 								}
 
 								gameObject->AddChild(draggedGameObject);
@@ -5137,7 +5135,7 @@ namespace flex
 					// Don't cache results since children can change during this recursive call
 					for (GameObject* child : gameObject->GetChildren())
 					{
-						if (DrawGameObjectNameAndChildren(gameContext, child))
+						if (DrawGameObjectNameAndChildren(child))
 						{
 							// If parent-child tree changed then early out
 

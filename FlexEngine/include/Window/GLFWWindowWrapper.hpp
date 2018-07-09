@@ -12,14 +12,14 @@ namespace flex
 	class GLFWWindowWrapper : public Window
 	{
 	public:
-		GLFWWindowWrapper(std::string title, GameContext& gameContext);
+		GLFWWindowWrapper(std::string title);
 		virtual ~GLFWWindowWrapper();
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Destroy() override;
 
-		virtual void RetrieveMonitorInfo(GameContext& gameContext) override;
+		virtual void RetrieveMonitorInfo() override;
 
 		virtual void SetSize(i32 width, i32 height) override;
 		virtual void OnSizeChanged(i32 width, i32 height) override;
@@ -28,7 +28,7 @@ namespace flex
 
 		virtual void SetFrameBufferSize(i32 width, i32 height) override;
 
-		virtual void Update(const GameContext& gameContext) override;
+		virtual void Update() override;
 		virtual void PollEvents() override;
 		virtual void SetCursorMode(CursorMode mode) override;
 

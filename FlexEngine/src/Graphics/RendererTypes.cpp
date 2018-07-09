@@ -193,13 +193,13 @@ namespace flex
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
 	}
 
-	JSONObject Material::SerializeToJSON(const GameContext& gameContext) const
+	JSONObject Material::SerializeToJSON() const
 	{
 		JSONObject materialObject = {};
 
 		materialObject.fields.push_back(JSONField("name", JSONValue(name)));
 
-		const Shader& shader = gameContext.renderer->GetShader(shaderID);
+		const Shader& shader = g_Renderer->GetShader(shaderID);
 		materialObject.fields.push_back(JSONField("shader", JSONValue(shader.name)));
 
 		// TODO: Find out way of determining if the following four  values

@@ -16,7 +16,6 @@
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
-#include "GameContext.hpp"
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
@@ -48,16 +47,16 @@ namespace flex
 	{
 	}
 
-	GameObject* GameObject::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* GameObject::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
 	{
 		GameObject* newGameObject = new GameObject(newObjectName, m_Type);
 
-		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromJSON(const GameContext& gameContext, const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
 	{
 		GameObject* newGameObject = nullptr;
 
@@ -88,7 +87,7 @@ namespace flex
 
 				MaterialID matID = scene->ParseMatID(obj);
 
-				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(gameContext, *prefab, scene, matID);
+				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, matID);
 				prefabInstance->m_bLoadedFromPrefab = true;
 				prefabInstance->m_PrefabName = prefabInstance->m_Name;
 
@@ -104,7 +103,7 @@ namespace flex
 					prefabInstance->m_Transform = Transform::ParseJSON(transformObj);
 				}
 
-				prefabInstance->ParseUniqueFields(gameContext, obj, scene, matID);
+				prefabInstance->ParseUniqueFields(obj, scene, matID);
 
 				return prefabInstance;
 			}
@@ -140,12 +139,12 @@ namespace flex
 			break;
 		}
 
-		newGameObject->ParseJSON(gameContext, obj, scene, overriddenMatID);
+		newGameObject->ParseJSON(obj, scene, overriddenMatID);
 
 		return newGameObject;
 	}
 
-	void GameObject::ParseJSON(const GameContext& gameContext, const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	void GameObject::ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
 	{
 		bool bVisible = true;
 		obj.SetBoolChecked("visible", bVisible);
@@ -172,7 +171,7 @@ namespace flex
 		JSONObject meshObj;
 		if (obj.SetObjectChecked("mesh", meshObj))
 		{
-			MeshComponent::ParseJSON(gameContext, meshObj, this, matID);
+			MeshComponent::ParseJSON(meshObj, this, matID);
 		}
 
 		JSONObject colliderObj;
@@ -256,12 +255,12 @@ namespace flex
 		VertexAttributes requiredVertexAttributes = 0;
 		if (matID != InvalidMaterialID)
 		{
-			Material& material = gameContext.renderer->GetMaterial(matID);
-			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+			Material& material = g_Renderer->GetMaterial(matID);
+			Shader& shader = g_Renderer->GetShader(material.shaderID);
 			requiredVertexAttributes = shader.vertexAttributes;
 		}
 
-		ParseUniqueFields(gameContext, obj, scene, matID);
+		ParseUniqueFields(obj, scene, matID);
 
 		SetVisible(bVisible, false);
 		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
@@ -277,14 +276,13 @@ namespace flex
 			std::vector<JSONObject> children = obj.GetObjectArray("children");
 			for (const auto& child : children)
 			{
-				AddChild(GameObject::CreateObjectFromJSON(gameContext, child, scene));
+				AddChild(GameObject::CreateObjectFromJSON(child, scene));
 			}
 		}
 	}
 
-	void GameObject::ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void GameObject::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
 		UNREFERENCED_PARAMETER(parentObj);
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matID);
@@ -292,7 +290,7 @@ namespace flex
 		// Generic game objects have no unique fields
 	}
 
-	JSONObject GameObject::SerializeToJSON(const GameContext& gameContext, BaseScene* scene)
+	JSONObject GameObject::SerializeToJSON(BaseScene* scene)
 	{
 		JSONObject object = {};
 
@@ -376,15 +374,15 @@ namespace flex
 			{
 				matID = meshComponent->GetMaterialID();
 			}
-			else if (gameContext.renderer->GetRenderObjectCreateInfo(GetRenderID(), renderObjectCreateInfo))
+			else if (g_Renderer->GetRenderObjectCreateInfo(GetRenderID(), renderObjectCreateInfo))
 			{
 				matID = renderObjectCreateInfo.materialID;
 			}
 
 			if (matID != InvalidMaterialID)
 			{
-				const Material& material = gameContext.renderer->GetMaterial(matID);
-				i32 materialArrayIndex = scene->GetMaterialArrayIndex(material, gameContext);
+				const Material& material = g_Renderer->GetMaterial(matID);
+				i32 materialArrayIndex = scene->GetMaterialArrayIndex(material);
 				if (materialArrayIndex == -1)
 				{
 					//	PrintError("Mesh object contains material not present in "
@@ -494,7 +492,7 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					children.push_back(child->SerializeToJSON(gameContext, scene));
+					children.push_back(child->SerializeToJSON(scene));
 				}
 			}
 
@@ -515,7 +513,7 @@ namespace flex
 		// Generic game objects have no unique fields
 	}
 
-	void GameObject::Initialize(const GameContext& gameContext)
+	void GameObject::Initialize()
 	{
 		if (m_RigidBody)
 		{
@@ -525,23 +523,23 @@ namespace flex
 			}
 			else
 			{
-				m_RigidBody->Initialize(m_CollisionShape, gameContext, &m_Transform);
+				m_RigidBody->Initialize(m_CollisionShape, &m_Transform);
 			}
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			(*iter)->Initialize(gameContext);
+			(*iter)->Initialize();
 		}
 	}
 
-	void GameObject::PostInitialize(const GameContext& gameContext)
+	void GameObject::PostInitialize()
 	{
 		RigidBody* rb = GetRigidBody();
 
 		if (m_RenderID != InvalidRenderID)
 		{
-			gameContext.renderer->PostInitializeRenderObject(gameContext, m_RenderID);
+			g_Renderer->PostInitializeRenderObject(m_RenderID);
 		}
 
 		if (rb)
@@ -551,15 +549,15 @@ namespace flex
 
 		for (auto child : m_Children)
 		{
-			child->PostInitialize(gameContext);
+			child->PostInitialize();
 		}
 	}
 
-	void GameObject::Destroy(const GameContext& gameContext)
+	void GameObject::Destroy()
 	{
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			(*iter)->Destroy(gameContext);
+			(*iter)->Destroy();
 			SafeDelete(*iter);
 		}
 		m_Children.clear();
@@ -572,13 +570,13 @@ namespace flex
 
 		if (m_RenderID != InvalidRenderID)
 		{
-			gameContext.renderer->DestroyRenderObject(m_RenderID);
+			g_Renderer->DestroyRenderObject(m_RenderID);
 			m_RenderID = InvalidRenderID;
 		}
 
 		if (m_RigidBody)
 		{
-			m_RigidBody->Destroy(gameContext);
+			m_RigidBody->Destroy();
 			SafeDelete(m_RigidBody);
 		}
 
@@ -590,19 +588,19 @@ namespace flex
 		}
 	}
 
-	void GameObject::Update(const GameContext& gameContext)
+	void GameObject::Update()
 	{
 		if (m_ObjectInteractingWith)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
-			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
+			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 			auto pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
-			btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
+			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 			auto pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
@@ -623,7 +621,7 @@ namespace flex
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			(*iter)->Update(gameContext);
+			(*iter)->Update();
 		}
 	}
 
@@ -646,10 +644,10 @@ namespace flex
 		return m_Type;
 	}
 
-	void GameObject::CopyGenericFields(const GameContext& gameContext, GameObject* newGameObject, GameObject* parent, bool bCopyChildren)
+	void GameObject::CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren)
 	{
 		RenderObjectCreateInfo createInfo = {};
-		gameContext.renderer->GetRenderObjectCreateInfo(m_RenderID, createInfo);
+		g_Renderer->GetRenderObjectCreateInfo(m_RenderID, createInfo);
 
 		// Make it clear we aren't copying vertex or index data directly
 		createInfo.vertexBufferData = nullptr;
@@ -670,7 +668,7 @@ namespace flex
 			}
 			else
 			{
-				gameContext.sceneManager->CurrentScene()->AddRootObject(newGameObject);
+				g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 			}
 		}
 
@@ -686,13 +684,13 @@ namespace flex
 			if (prefabType == MeshComponent::Type::PREFAB)
 			{
 				MeshComponent::PrefabShape shape = m_MeshComponent->GetShape();
-				newMeshComponent->LoadPrefabShape(gameContext, shape, &createInfo);
+				newMeshComponent->LoadPrefabShape(shape, &createInfo);
 			}
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
 				std::string filePath = m_MeshComponent->GetFilepath();
 				MeshComponent::ImportSettings importSettings = m_MeshComponent->GetImportSettings();
-				newMeshComponent->LoadFromFile(gameContext, filePath, &importSettings, &createInfo);
+				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
 			}
 			else
 			{
@@ -710,15 +708,15 @@ namespace flex
 			// TODO: Copy over constraints here
 		}
 
-		newGameObject->Initialize(gameContext);
-		newGameObject->PostInitialize(gameContext);
+		newGameObject->Initialize();
+		newGameObject->PostInitialize();
 
 		if (bCopyChildren)
 		{
 			for (GameObject* child : m_Children)
 			{
 				std::string newChildName = child->GetName();
-				GameObject* newChild = child->CopySelf(gameContext, newGameObject, newChildName, bCopyChildren);
+				GameObject* newChild = child->CopySelf(newGameObject, newChildName, bCopyChildren);
 				newGameObject->AddChild(newChild);
 			}
 		}
@@ -1042,7 +1040,7 @@ namespace flex
 	{
 	}
 
-	GameObject* Valve::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* Valve::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
 	{
 		Valve* newGameObject = new Valve(newObjectName);
 
@@ -1053,12 +1051,12 @@ namespace flex
 		newGameObject->rotationSpeed = rotationSpeed;
 		newGameObject->rotation = rotation;
 
-		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
 	}
 
-	void Valve::ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
 		UNREFERENCED_PARAMETER(scene);
 
@@ -1083,14 +1081,14 @@ namespace flex
 				VertexAttributes requiredVertexAttributes = 0;
 				if (matID != InvalidMaterialID)
 				{
-					Material& material = gameContext.renderer->GetMaterial(matID);
-					Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+					Material& material = g_Renderer->GetMaterial(matID);
+					Shader& shader = g_Renderer->GetShader(material.shaderID);
 					requiredVertexAttributes = shader.vertexAttributes;
 				}
 
 				MeshComponent* valveMesh = new MeshComponent(matID, this);
 				valveMesh->SetRequiredAttributes(requiredVertexAttributes);
-				valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
+				valveMesh->LoadFromFile(RESOURCE_LOCATION + "models/valve.gltf");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
 			}
@@ -1127,10 +1125,8 @@ namespace flex
 		parentObject.fields.push_back(JSONField("valve info", JSONValue(valveInfo)));
 	}
 
-	void Valve::PostInitialize(const GameContext& gameContext)
+	void Valve::PostInitialize()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		m_RigidBody->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
 		auto rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setAngularFactor(btVector3(0, 1, 0));
@@ -1139,7 +1135,7 @@ namespace flex
 		rbInternal->setGravity(btVector3(0, 0, 0));
 	}
 
-	void Valve::Update(const GameContext& gameContext)
+	void Valve::Update()
 	{
 		// True when our rotation is changed by another object (rising block)
 		bool bRotatedByOtherObject = false;
@@ -1148,13 +1144,13 @@ namespace flex
 		{
 			i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
 
-			const InputManager::GamepadState& gamepadState = gameContext.inputManager->GetGamepadState(playerIndex);
+			const InputManager::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * rotationSpeedScale;
 			currentAbsAvgRotationSpeed = glm::abs(gamepadState.averageRotationSpeeds.currentAverage);
 		}
 		else
 		{
-			rotationSpeed = (rotation - pRotation) / gameContext.deltaTime;
+			rotationSpeed = (rotation - pRotation) / g_DeltaTime;
 			// Not entirely true but needed to trigger sound
 			currentAbsAvgRotationSpeed = glm::abs(rotationSpeed);
 			bRotatedByOtherObject = (glm::abs(rotation - pRotation) > 0);
@@ -1182,7 +1178,7 @@ namespace flex
 
 		if (!bRotatedByOtherObject)
 		{
-			rotation += gameContext.deltaTime * pRotationSpeed;
+			rotation += g_DeltaTime * pRotationSpeed;
 		}
 
 		real overshoot = 0.0f;
@@ -1233,7 +1229,7 @@ namespace flex
 	{
 	}
 
-	GameObject* RisingBlock::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* RisingBlock::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
 	{
 		RisingBlock* newGameObject = new RisingBlock(newObjectName);
 
@@ -1242,26 +1238,26 @@ namespace flex
 		newGameObject->bAffectedByGravity = bAffectedByGravity;
 		newGameObject->startingPos = startingPos;
 
-		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
 	}
 
-	void RisingBlock::ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void RisingBlock::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
 		if (!m_MeshComponent)
 		{
 			VertexAttributes requiredVertexAttributes = 0;
 			if (matID != InvalidMaterialID)
 			{
-				Material& material = gameContext.renderer->GetMaterial(matID);
-				Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+				Material& material = g_Renderer->GetMaterial(matID);
+				Shader& shader = g_Renderer->GetShader(material.shaderID);
 				requiredVertexAttributes = shader.vertexAttributes;
 			}
 
 			MeshComponent* cubeMesh = new MeshComponent(matID, this);
 			cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
-			cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
+			cubeMesh->LoadFromFile(RESOURCE_LOCATION + "models/cube.gltf");
 			SetMeshComponent(cubeMesh);
 		}
 
@@ -1322,17 +1318,13 @@ namespace flex
 		parentObject.fields.push_back(JSONField("block info", JSONValue(blockInfo)));
 	}
 
-	void RisingBlock::Initialize(const GameContext& gameContext)
+	void RisingBlock::Initialize()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		startingPos = m_Transform.GetWorldPosition();
 	}
 
-	void RisingBlock::PostInitialize(const GameContext& gameContext)
+	void RisingBlock::PostInitialize()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		auto rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setGravity(btVector3(0, 0, 0));
 
@@ -1347,7 +1339,7 @@ namespace flex
 		//m_RigidBody->AddConstraint(constraint);
 	}
 
-	void RisingBlock::Update(const GameContext& gameContext)
+	void RisingBlock::Update()
 	{
 		real minDist = valve->minRotation;
 		real maxDist = valve->maxRotation;
@@ -1358,7 +1350,7 @@ namespace flex
 		if (valve->GetObjectInteractingWith())
 		{
 			i32 playerIndex = ((Player*)valve->GetObjectInteractingWith())->GetIndex();
-			const InputManager::GamepadState& gamepadState = gameContext.inputManager->GetGamepadState(playerIndex);
+			const InputManager::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
 				valve->rotationSpeedScale;
 		}
@@ -1370,7 +1362,7 @@ namespace flex
 			// Apply gravity by rotating valve
 			real fallSpeed = 6.0f;
 			real distMult = 1.0f - glm::clamp(playerControlledValveRotationSpeed / 2.0f, 0.0f, 1.0f);
-			real dDist = (fallSpeed * gameContext.deltaTime * distMult);
+			real dDist = (fallSpeed * g_DeltaTime * distMult);
 			dist -= Lerp(pdDistBlockMoved, dDist, 0.1f);
 			pdDistBlockMoved = dDist;
 
@@ -1395,19 +1387,19 @@ namespace flex
 		}
 
 		btVector3 startPos = Vec3ToBtVec3(startingPos);
-		gameContext.renderer->GetDebugDrawer()->drawLine(
+		g_Renderer->GetDebugDrawer()->drawLine(
 			startPos,
 			startPos + Vec3ToBtVec3(moveAxis * maxDist),
 			btVector3(1, 1, 1));
 		if (minDist < 0.0f)
 		{
-			gameContext.renderer->GetDebugDrawer()->drawLine(
+			g_Renderer->GetDebugDrawer()->drawLine(
 				startPos,
 				startPos + Vec3ToBtVec3(moveAxis * minDist),
 				btVector3(0.99f, 0.6f, 0.6f));
 		}
 
-		gameContext.renderer->GetDebugDrawer()->drawLine(
+		g_Renderer->GetDebugDrawer()->drawLine(
 			startPos,
 			startPos + Vec3ToBtVec3(moveAxis * dist),
 			btVector3(0.3f, 0.3f, 0.5f));
@@ -1423,18 +1415,18 @@ namespace flex
 	{
 	}
 
-	GameObject* GlassPane::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* GlassPane::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
 	{
 		GlassPane* newGameObject = new GlassPane(newObjectName);
 
 		newGameObject->bBroken = bBroken;
 
-		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
 	}
 
-	void GlassPane::ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void GlassPane::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
 		UNREFERENCED_PARAMETER(scene);
 
@@ -1448,14 +1440,14 @@ namespace flex
 				VertexAttributes requiredVertexAttributes = 0;
 				if (matID != InvalidMaterialID)
 				{
-					Material& material = gameContext.renderer->GetMaterial(matID);
-					Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+					Material& material = g_Renderer->GetMaterial(matID);
+					Shader& shader = g_Renderer->GetShader(material.shaderID);
 					requiredVertexAttributes = shader.vertexAttributes;
 				}
 
 				MeshComponent* windowMesh = new MeshComponent(matID, this);
 				windowMesh->SetRequiredAttributes(requiredVertexAttributes);
-				windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION +
+				windowMesh->LoadFromFile(RESOURCE_LOCATION +
 					(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
 				SetMeshComponent(windowMesh);
 			}
@@ -1479,24 +1471,24 @@ namespace flex
 		parentObject.fields.push_back(JSONField("window info", JSONValue(windowInfo)));
 	}
 
-	GameObject* ReflectionProbe::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* ReflectionProbe::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
 	{
 		ReflectionProbe* newGameObject = new ReflectionProbe(newObjectName);
 		
 		newGameObject->captureMatID = captureMatID;
 
-		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
 	}
 
-	void ReflectionProbe::ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void ReflectionProbe::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(parentObj);
 
-		Material& material = gameContext.renderer->GetMaterial(matID);
-		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+		Material& material = g_Renderer->GetMaterial(matID);
+		Shader& shader = g_Renderer->GetShader(material.shaderID);
 		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
 
 		// Probe capture material
@@ -1519,13 +1511,13 @@ namespace flex
 			{ "normalRoughnessFrameBufferSampler", nullptr },
 			{ "albedoAOFrameBufferSampler", nullptr },
 		};
-		captureMatID = gameContext.renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
+		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
 		MeshComponent* sphereMesh = new MeshComponent(matID, this);
 		sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
 
 		assert(m_MeshComponent == nullptr);
-		sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf");
+		sphereMesh->LoadFromFile(RESOURCE_LOCATION + "models/ico-sphere.gltf");
 		SetMeshComponent(sphereMesh);
 
 		std::string captureName = m_Name + "_capture";
@@ -1540,12 +1532,12 @@ namespace flex
 		captureObjectCreateInfo.gameObject = captureObject;
 		captureObjectCreateInfo.visibleInSceneExplorer = false;
 
-		RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(&captureObjectCreateInfo);
+		RenderID captureRenderID = g_Renderer->InitializeRenderObject(&captureObjectCreateInfo);
 		captureObject->SetRenderID(captureRenderID);
 
 		AddChild(captureObject);
 
-		gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
+		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
 	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject)
@@ -1555,9 +1547,9 @@ namespace flex
 		// Reflection probes have no unique fields currently
 	}
 
-	void ReflectionProbe::PostInitialize(const GameContext& gameContext)
+	void ReflectionProbe::PostInitialize()
 	{
-		gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
+		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
 	Skybox::Skybox(const std::string& name) :
@@ -1565,27 +1557,27 @@ namespace flex
 	{
 	}
 
-	GameObject* Skybox::CopySelf(const GameContext& gameContext, GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* Skybox::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
 	{
 		Skybox* newGameObject = new Skybox(newObjectName);
 
-		CopyGenericFields(gameContext, newGameObject, parent, bCopyChildren);
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
 	}
 
-	void Skybox::ParseUniqueFields(const GameContext& gameContext, const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
 		UNREFERENCED_PARAMETER(scene);
 
-		Material& material = gameContext.renderer->GetMaterial(matID);
-		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+		Material& material = g_Renderer->GetMaterial(matID);
+		Shader& shader = g_Renderer->GetShader(material.shaderID);
 		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
 
 		assert(m_MeshComponent == nullptr);
 		MeshComponent* skyboxMesh = new MeshComponent(matID, this);
 		skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
-		skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
+		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
 		SetMeshComponent(skyboxMesh);
 
 		JSONObject skyboxInfo;
@@ -1598,7 +1590,7 @@ namespace flex
 			}
 		}
 
-		gameContext.renderer->SetSkyboxMesh(this);
+		g_Renderer->SetSkyboxMesh(this);
 	}
 
 	void Skybox::SerializeUniqueFields(JSONObject& parentObject)
