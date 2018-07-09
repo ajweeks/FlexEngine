@@ -39,14 +39,14 @@ namespace flex
 			//Print("Profiler results:");
 			//Print("Whole frame: " + std::to_string(s_FrameEndTime - s_FrameStartTime) + "ms");
 			//Print("---");
-			for (auto element : s_Timings)
-			{
+			//for (auto& element : s_Timings)
+			//{
 				//s_PendingCSV.append(std::string(element.first) + "," +
 				//					std::to_string(element.second) + '\n');
 
 				//Print(std::string(element.first) + ": " + 
 				//				std::to_string(element.second) + "ms");
-			}
+			//}
 		}
 	}
 
@@ -75,9 +75,8 @@ namespace flex
 	{
 		u64 hash = Hash(blockName);
 
-		auto result = s_Timings.find(hash);
-
-		if (result == s_Timings.end())
+		auto iter = s_Timings.find(hash);
+		if (iter == s_Timings.end())
 		{
 			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n", 
 					   blockName, hash);
@@ -85,7 +84,7 @@ namespace flex
 		}
 
 		ms now = Time::CurrentMilliseconds();
-		ms start = result->second;
+		ms start = iter->second;
 		ms elapsed = now - start;
 		s_Timings.at(hash) = elapsed;
 
@@ -126,10 +125,10 @@ namespace flex
 	{
 		u64 hash = Hash(blockName);
 
-		auto result = s_Timings.find(hash);
-		if (result != s_Timings.end())
+		auto iter = s_Timings.find(hash);
+		if (iter != s_Timings.end())
 		{
-			Print("    Block duration \"%s\": %.2fms\n", blockName, result->second);
+			Print("    Block duration \"%s\": %.2fms\n", blockName, iter->second);
 		}
 	}
 

@@ -119,10 +119,11 @@ namespace flex
 
 	void GLFWWindowWrapper::Destroy()
 	{
-		for (size_t i = 0; i < m_WindowIcons.size(); ++i)
+		for (GLFWimage& icon : m_WindowIcons)
 		{
-			SafeDelete(m_WindowIcons[i].pixels);
+			SafeDelete(icon.pixels);
 		}
+		m_WindowIcons.clear();
 
 		if (m_Window)
 		{
@@ -273,7 +274,7 @@ namespace flex
 		{
 			m_CurrentFullscreenMode = mode;
 
-			auto monitor = glfwGetPrimaryMonitor();
+			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 			if (!monitor)
 			{
 				PrintError("Failed to find primary monitor! Can't set fullscreen mode\n");

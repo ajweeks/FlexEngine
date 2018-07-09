@@ -56,11 +56,11 @@ namespace flex
 	void InputManager::Update()
 	{
 		// Keyboard keys
-		for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
+		for (auto& keyPair : m_Keys)
 		{
-			if (iter->second.down > 0)
+			if (keyPair.second.down > 0)
 			{
-				++iter->second.down;
+				++keyPair.second.down;
 			}
 		}
 
@@ -102,6 +102,8 @@ namespace flex
 		// Gamepads
 		for (i32 i = 0; i < 2; ++i)
 		{
+			GamepadState& gamepadState = m_GamepadStates[i];
+
 			real joystickX = GetGamepadAxisValue(i, GamepadAxis::RIGHT_STICK_X);
 			real joystickY = GetGamepadAxisValue(i, GamepadAxis::RIGHT_STICK_Y);
 
@@ -111,19 +113,19 @@ namespace flex
 			real extensionLength = glm::length(glm::vec2(joystickX, joystickY));
 			if (extensionLength > minimumExtensionLength)
 			{
-				if (m_GamepadStates[i].previousQuadrant != -1)
+				if (gamepadState.previousQuadrant != -1)
 				{
 					real currentAngle = atan2(joystickY, joystickX) + PI;
-					real previousAngle = atan2(m_GamepadStates[i].pJoystickY, m_GamepadStates[i].pJoystickX) + PI;
+					real previousAngle = atan2(gamepadState.pJoystickY, gamepadState.pJoystickX) + PI;
 					// Asymptote occurs on left
 					if (joystickX < 0.0f)
 					{
-						if (m_GamepadStates[i].pJoystickY < 0.0f && joystickY >= 0.0f)
+						if (gamepadState.pJoystickY < 0.0f && joystickY >= 0.0f)
 						{
 							// CCW
 							currentAngle -= TWO_PI;
 						}
-						else if (m_GamepadStates[i].pJoystickY >= 0.0f && joystickY < 0.0f)
+						else if (gamepadState.pJoystickY >= 0.0f && joystickY < 0.0f)
 						{
 							// CW
 							currentAngle += TWO_PI;
@@ -135,7 +137,7 @@ namespace flex
 													-MAX_JOYSTICK_ROTATION_SPEED,
 													MAX_JOYSTICK_ROTATION_SPEED);
 
-					m_GamepadStates[i].averageRotationSpeeds.AddValue(stickRotationSpeed);
+					gamepadState.averageRotationSpeeds.AddValue(stickRotationSpeed);
 				}
 
 				if (joystickX > 0.0f)
@@ -149,13 +151,13 @@ namespace flex
 			}
 			else
 			{
-				m_GamepadStates[i].averageRotationSpeeds.Reset();
+				gamepadState.averageRotationSpeeds.Reset();
 			}
 
-			m_GamepadStates[i].previousQuadrant = currentQuadrant;
+			gamepadState.previousQuadrant = currentQuadrant;
 
-			m_GamepadStates[i].pJoystickX = joystickX;
-			m_GamepadStates[i].pJoystickY = joystickY;
+			gamepadState.pJoystickX = joystickX;
+			gamepadState.pJoystickY = joystickY;
 		}
 	}
 
@@ -227,8 +229,8 @@ namespace flex
 			return 0;
 		}
 
-		auto value = m_Keys.find(keyCode);
-		if (value != m_Keys.end())
+		auto iter = m_Keys.find(keyCode);
+		if (iter != m_Keys.end())
 		{
 			return m_Keys.at(keyCode).down;
 		}
@@ -499,10 +501,10 @@ namespace flex
 		m_MouseButtonsPressed = 0;
 		m_MouseButtonsReleased = 0;
 
-		for (i32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+		for (MouseDrag& mouseDrag : m_MouseButtonDrags)
 		{
-			m_MouseButtonDrags[i].startLocation = glm::vec2(0.0f);
-			m_MouseButtonDrags[i].endLocation = glm::vec2(0.0f);
+			mouseDrag.startLocation = glm::vec2(0.0f);
+			mouseDrag.endLocation = glm::vec2(0.0f);
 		}
 		g_Window->SetCursorMode(Window::CursorMode::NORMAL);
 
@@ -515,24 +517,25 @@ namespace flex
 
 	void InputManager::ClearKeyboadInput()
 	{
-		for (auto iter = m_Keys.begin(); iter != m_Keys.end(); ++iter)
+		for (auto& keyPair : m_Keys)
 		{
-			iter->second.down = 0;
+			keyPair.second.down = 0;
 		}
 	}
 
 	void InputManager::ClearGampadInput(i32 gamepadIndex)
 	{
-		for (i32 j = 0; j < 6; ++j)
+		GamepadState& gamepadState = m_GamepadStates[gamepadIndex];
+
+		for (real& axis : gamepadState.axes)
 		{
-			m_GamepadStates[gamepadIndex].axes[j] = 0;
+			axis = 0;
 		}
 
-		m_GamepadStates[gamepadIndex].buttonStates = 0;
-		m_GamepadStates[gamepadIndex].buttonsPressed = 0;
-		m_GamepadStates[gamepadIndex].buttonsReleased = 0;
+		gamepadState.buttonStates = 0;
+		gamepadState.buttonsPressed = 0;
+		gamepadState.buttonsReleased = 0;
 
-		m_GamepadStates[gamepadIndex].averageRotationSpeeds = 
-			RollingAverage<real>(m_GamepadStates[gamepadIndex].framesToAverageOver);
+		gamepadState.averageRotationSpeeds = RollingAverage<real>(gamepadState.framesToAverageOver);
 	}
 } // namespace flex

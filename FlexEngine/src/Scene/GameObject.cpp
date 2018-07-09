@@ -274,7 +274,7 @@ namespace flex
 		if (obj.HasField("children"))
 		{
 			std::vector<JSONObject> children = obj.GetObjectArray("children");
-			for (const auto& child : children)
+			for (JSONObject& child : children)
 			{
 				AddChild(GameObject::CreateObjectFromJSON(child, scene));
 			}
@@ -307,29 +307,29 @@ namespace flex
 							   m_Type == GameObjectType::NONE);
 
 
-		object.fields.push_back(JSONField("name", JSONValue(m_Name)));
+		object.fields.emplace_back("name", JSONValue(m_Name));
 
 		if (m_bLoadedFromPrefab)
 		{
-			object.fields.push_back(JSONField("type", JSONValue(std::string("prefab"))));
-			object.fields.push_back(JSONField("prefab type", JSONValue(m_PrefabName)));
+			object.fields.emplace_back("type", JSONValue(std::string("prefab")));
+			object.fields.emplace_back("prefab type", JSONValue(m_PrefabName));
 		}
 		else
 		{
-			object.fields.push_back(JSONField("type", JSONValue(GameObjectTypeToString(m_Type))));
+			object.fields.emplace_back("type", JSONValue(GameObjectTypeToString(m_Type)));
 		}
 
-		object.fields.push_back(JSONField("visible", JSONValue(IsVisible())));
+		object.fields.emplace_back("visible", JSONValue(IsVisible()));
 		// TODO: Only save/read this value when editor is included in build
 		if (!IsVisibleInSceneExplorer())
 		{
-			object.fields.push_back(JSONField("visible in scene graph",
-									JSONValue(IsVisibleInSceneExplorer())));
+			object.fields.emplace_back("visible in scene graph",
+									JSONValue(IsVisibleInSceneExplorer()));
 		}
 
 		if (IsStatic())
 		{
-			object.fields.push_back(JSONField("static", JSONValue(true)));
+			object.fields.emplace_back("static", JSONValue(true));
 		}
 
 		object.fields.push_back(GetTransform()->SerializeToJSON());
@@ -345,13 +345,13 @@ namespace flex
 			if (meshType == MeshComponent::Type::FILE)
 			{
 				std::string meshFilepath = meshComponent->GetFilepath().substr(RESOURCE_LOCATION.length());
-				meshObject.fields.push_back(JSONField("file", JSONValue(meshFilepath)));
+				meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
 			}
 			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
 			else if (meshType == MeshComponent::Type::PREFAB)
 			{
 				std::string prefabShapeStr = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
-				meshObject.fields.push_back(JSONField("prefab", JSONValue(prefabShapeStr)));
+				meshObject.fields.emplace_back("prefab", JSONValue(prefabShapeStr));
 			}
 			else
 			{
@@ -359,12 +359,12 @@ namespace flex
 			}
 
 			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
-			meshObject.fields.push_back(JSONField("swapNormalYZ", JSONValue(importSettings.swapNormalYZ)));
-			meshObject.fields.push_back(JSONField("flipNormalZ", JSONValue(importSettings.flipNormalZ)));
-			meshObject.fields.push_back(JSONField("flipU", JSONValue(importSettings.flipU)));
-			meshObject.fields.push_back(JSONField("flipV", JSONValue(importSettings.flipV)));
+			meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.swapNormalYZ));
+			meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.flipNormalZ));
+			meshObject.fields.emplace_back("flipU", JSONValue(importSettings.flipU));
+			meshObject.fields.emplace_back("flipV", JSONValue(importSettings.flipV));
 
-			object.fields.push_back(JSONField("mesh", JSONValue(meshObject)));
+			object.fields.emplace_back("mesh", JSONValue(meshObject));
 		}
 
 		{
@@ -392,7 +392,7 @@ namespace flex
 				}
 				else
 				{
-					object.fields.push_back(JSONField("material array index", JSONValue(materialArrayIndex)));
+					object.fields.emplace_back("material array index", JSONValue(materialArrayIndex));
 				}
 			}
 		}
@@ -406,7 +406,7 @@ namespace flex
 			int shapeType = collisionShape->getShapeType();
 			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
 
-			colliderObj.fields.push_back(JSONField("shape", JSONValue(shapeTypeStr)));
+			colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
 
 			switch (shapeType)
 			{
@@ -415,33 +415,33 @@ namespace flex
 				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
 				std::string halfExtentsStr = Vec3ToString(halfExtents);
-				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
+				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
 				real radius = ((btSphereShape*)collisionShape)->getRadius();
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
+				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 			} break;
 			case CAPSULE_SHAPE_PROXYTYPE:
 			{
 				real radius = ((btCapsuleShape*)collisionShape)->getRadius();
 				real height = ((btCapsuleShape*)collisionShape)->getHalfHeight(); // TODO: Double?
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
+				colliderObj.fields.emplace_back("radius", JSONValue(radius));
+				colliderObj.fields.emplace_back("height", JSONValue(height));
 			} break;
 			case CONE_SHAPE_PROXYTYPE:
 			{
 				real radius = ((btConeShape*)collisionShape)->getRadius();
 				real height = ((btConeShape*)collisionShape)->getHeight();
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
+				colliderObj.fields.emplace_back("radius", JSONValue(radius));
+				colliderObj.fields.emplace_back("height", JSONValue(height));
 			} break;
 			case CYLINDER_SHAPE_PROXYTYPE:
 			{
 				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
 				std::string halfExtentsStr = Vec3ToString(halfExtents);
-				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
+				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			default:
 			{
@@ -451,10 +451,10 @@ namespace flex
 			}
 
 			//bool bTrigger = false;
-			//colliderObj.fields.push_back(JSONField("trigger", JSONValue(bTrigger)));
+			//colliderObj.fields.emplace_back("trigger", JSONValue(bTrigger)));
 			// TODO: Handle triggers
 
-			object.fields.push_back(JSONField("collider", JSONValue(colliderObj)));
+			object.fields.emplace_back("collider", JSONValue(colliderObj));
 		}
 
 		RigidBody* rigidBody = GetRigidBody();
@@ -473,33 +473,32 @@ namespace flex
 				bool bKinematic = rigidBody->IsKinematic();
 				bool bStatic = rigidBody->IsStatic();
 
-				rigidBodyObj.fields.push_back(JSONField("mass", JSONValue(mass)));
-				rigidBodyObj.fields.push_back(JSONField("kinematic", JSONValue(bKinematic)));
-				rigidBodyObj.fields.push_back(JSONField("static", JSONValue(bStatic)));
+				rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
+				rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
+				rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
 			}
 
-			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
+			object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 		}
 
 		SerializeUniqueFields(object);
 
-		const std::vector<GameObject*>& gameObjectChildren = GetChildren();
-		if (!gameObjectChildren.empty())
+		if (!m_Children.empty())
 		{
-			std::vector<JSONObject> children;
+			std::vector<JSONObject> childrenToSerialize;
 
-			for (GameObject* child : gameObjectChildren)
+			for (GameObject* child : m_Children)
 			{
 				if (child->IsSerializable())
 				{
-					children.push_back(child->SerializeToJSON(scene));
+					childrenToSerialize.push_back(child->SerializeToJSON(scene));
 				}
 			}
 
 			// It's possible that all children are non-serializable
-			if (!children.empty())
+			if (!childrenToSerialize.empty())
 			{
-				object.fields.push_back(JSONField("children", JSONValue(children)));
+				object.fields.emplace_back("children", JSONValue(childrenToSerialize));
 			}
 		}
 
@@ -527,9 +526,9 @@ namespace flex
 			}
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* child : m_Children)
 		{
-			(*iter)->Initialize();
+			child->Initialize();
 		}
 	}
 
@@ -547,7 +546,7 @@ namespace flex
 			rb->GetRigidBodyInternal()->setUserPointer(this);
 		}
 
-		for (auto child : m_Children)
+		for (GameObject* child : m_Children)
 		{
 			child->PostInitialize();
 		}
@@ -555,10 +554,10 @@ namespace flex
 
 	void GameObject::Destroy()
 	{
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* child : m_Children)
 		{
-			(*iter)->Destroy();
-			SafeDelete(*iter);
+			child->Destroy();
+			SafeDelete(child);
 		}
 		m_Children.clear();
 
@@ -594,14 +593,14 @@ namespace flex
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			auto pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
+			btVector3 pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			auto pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
+			btVector3 pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}
@@ -619,9 +618,9 @@ namespace flex
 			}
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* child : m_Children)
 		{
-			(*iter)->Update();
+			child->Update();
 		}
 	}
 
@@ -672,7 +671,7 @@ namespace flex
 			}
 		}
 
-		for (auto tag : m_Tags)
+		for (const std::string& tag : m_Tags)
 		{
 			newGameObject->AddTag(tag);
 		}
@@ -771,9 +770,9 @@ namespace flex
 			DetachFromParent();
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* c : m_Children)
 		{
-			if (*iter == child)
+			if (c == child)
 			{
 				// Don't add the same child twice
 				return nullptr;
@@ -814,33 +813,22 @@ namespace flex
 		return false;
 	}
 
-	void GameObject::RemoveAllChildren()
-	{
-		auto iter = m_Children.begin();
-		while (iter != m_Children.end())
-		{
-			iter = m_Children.erase(iter);
-		}
-		m_Children.clear();
-	}
-
 	const std::vector<GameObject*>& GameObject::GetChildren() const
 	{
 		return m_Children;
 	}
 
-	bool GameObject::HasChild(GameObject* child, bool bRecurse)
+	bool GameObject::HasChild(GameObject* child, bool bCheckChildrensChildren)
 	{
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* c : m_Children)
 		{
-			if (*iter == child)
+			if (c == child)
 			{
 				return true;
 			}
 
-			if (bRecurse && 
-				*iter && 
-				(*iter)->HasChild(child, bRecurse))
+			if (bCheckChildrensChildren &&
+				c->HasChild(child, bCheckChildrensChildren))
 			{
 				return true;
 			}
@@ -863,8 +851,8 @@ namespace flex
 
 	bool GameObject::HasTag(const std::string& tag)
 	{
-		auto result = std::find(m_Tags.begin(), m_Tags.end(), tag);
-		return (result != m_Tags.end());
+		auto iter = std::find(m_Tags.begin(), m_Tags.end(), tag);
+		return (iter != m_Tags.end());
 	}
 
 	std::vector<std::string> GameObject::GetTags() const
@@ -1120,9 +1108,9 @@ namespace flex
 		JSONObject valveInfo = {};
 
 		glm::vec2 valveRange(minRotation, maxRotation);
-		valveInfo.fields.push_back(JSONField("range", JSONValue(Vec2ToString(valveRange))));
+		valveInfo.fields.emplace_back("range", JSONValue(Vec2ToString(valveRange)));
 
-		parentObject.fields.push_back(JSONField("valve info", JSONValue(valveInfo)));
+		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
 	}
 
 	void Valve::PostInitialize()
@@ -1130,7 +1118,7 @@ namespace flex
 		GameObject::PostInitialize();
 
 		m_RigidBody->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
-		auto rbInternal = m_RigidBody->GetRigidBodyInternal();
+		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setAngularFactor(btVector3(0, 1, 0));
 		// Mark as trigger
 		rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
@@ -1285,7 +1273,8 @@ namespace flex
 		}
 		else
 		{
-			for (GameObject* rootObject : scene->GetRootObjects())
+			const std::vector<GameObject*>& rootObjects = scene->GetRootObjects();
+			for (GameObject* rootObject : rootObjects)
 			{
 				if (rootObject->GetName().compare(valveName) == 0)
 				{
@@ -1313,11 +1302,11 @@ namespace flex
 	{
 		JSONObject blockInfo = {};
 
-		blockInfo.fields.push_back(JSONField("valve name", JSONValue(valve->GetName())));
-		blockInfo.fields.push_back(JSONField("move axis", JSONValue(Vec3ToString(moveAxis))));
-		blockInfo.fields.push_back(JSONField("affected by gravity", JSONValue(bAffectedByGravity)));
+		blockInfo.fields.emplace_back("valve name", JSONValue(valve->GetName()));
+		blockInfo.fields.emplace_back("move axis", JSONValue(Vec3ToString(moveAxis)));
+		blockInfo.fields.emplace_back("affected by gravity", JSONValue(bAffectedByGravity));
 
-		parentObject.fields.push_back(JSONField("block info", JSONValue(blockInfo)));
+		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
 	}
 
 	void RisingBlock::Initialize()
@@ -1329,7 +1318,7 @@ namespace flex
 	{
 		GameObject::PostInitialize();
 
-		auto rbInternal = m_RigidBody->GetRigidBodyInternal();
+		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setGravity(btVector3(0, 0, 0));
 
 		//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getWorldTransform();
@@ -1470,9 +1459,9 @@ namespace flex
 	{
 		JSONObject windowInfo = {};
 
-		windowInfo.fields.push_back(JSONField("broken", JSONValue(bBroken)));
+		windowInfo.fields.emplace_back("broken", JSONValue(bBroken));
 
-		parentObject.fields.push_back(JSONField("window info", JSONValue(windowInfo)));
+		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 	}
 
 	GameObject* ReflectionProbe::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
@@ -1605,9 +1594,9 @@ namespace flex
 
 		JSONObject skyboxInfo = {};
 		std::string eulerRotStr = Vec3ToString(glm::eulerAngles(m_Transform.GetWorldRotation()));
-		skyboxInfo.fields.push_back(JSONField("rotation", JSONValue(eulerRotStr)));
+		skyboxInfo.fields.emplace_back("rotation", JSONValue(eulerRotStr));
 
-		parentObject.fields.push_back(JSONField("skybox info", JSONValue(skyboxInfo)));
+		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
 	}
 
 } // namespace flex

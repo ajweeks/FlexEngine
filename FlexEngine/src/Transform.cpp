@@ -228,9 +228,9 @@ namespace flex
 		std::string rotStr = Vec3ToString(localRotEuler);
 		std::string scaleStr = Vec3ToString(localScale);
 
-		transformObject.fields.push_back(JSONField("position", JSONValue(posStr)));
-		transformObject.fields.push_back(JSONField("rotation", JSONValue(rotStr)));
-		transformObject.fields.push_back(JSONField("scale", JSONValue(scaleStr)));
+		transformObject.fields.emplace_back("position", JSONValue(posStr));
+		transformObject.fields.emplace_back("rotation", JSONValue(rotStr));
+		transformObject.fields.emplace_back("scale", JSONValue(scaleStr));
 
 		transformField.value = JSONValue(transformObject);
 
@@ -400,9 +400,9 @@ namespace flex
 		}
 
 		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
-		for (auto iter = children.begin(); iter != children.end(); ++iter)
+		for (GameObject* child : children)
 		{
-			(*iter)->GetTransform()->UpdateChildTransforms();
+			child->GetTransform()->UpdateChildTransforms();
 		}
 	}
 

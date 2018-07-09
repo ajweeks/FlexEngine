@@ -105,10 +105,10 @@ namespace flex
 			sceneRootObject.SetStringChecked("name", m_Name);
 
 			std::vector<JSONObject> materialsArray = sceneRootObject.GetObjectArray("materials");
-			for (u32 i = 0; i < materialsArray.size(); ++i)
+			for (JSONObject& materialObj : materialsArray)
 			{
 				MaterialCreateInfo matCreateInfo = {};
-				Material::ParseJSONObject(materialsArray[i], matCreateInfo);
+				Material::ParseJSONObject(materialObj, matCreateInfo);
 
 				MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 				m_LoadedMaterials.push_back(matID);
@@ -248,9 +248,9 @@ namespace flex
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);
 
-		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			(*iter)->Initialize();
+			rootObject->Initialize();
 		}
 
 		m_bLoaded = true;
@@ -258,11 +258,9 @@ namespace flex
 
 	void BaseScene::PostInitialize()
 	{
-		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			GameObject* gameObject = *iter;
-
-			gameObject->PostInitialize();
+			rootObject->PostInitialize();
 		}
 
 		m_PhysicsWorld->GetWorld()->setDebugDrawer(g_Renderer->GetDebugDrawer());
@@ -404,10 +402,10 @@ namespace flex
 			}
 			else
 			{
-				auto result = Contains(m_RootObjects, targetObject);
-				if (result != m_RootObjects.end())
+				auto iter = Contains(m_RootObjects, targetObject);
+				if (iter != m_RootObjects.end())
 				{
-					m_RootObjects.erase(result);
+					m_RootObjects.erase(iter);
 				}
 			}
 
@@ -573,8 +571,8 @@ namespace flex
 
 		i32 fileVersion = 1;
 
-		rootSceneObject.fields.push_back(JSONField("version", JSONValue(fileVersion)));
-		rootSceneObject.fields.push_back(JSONField("name", JSONValue(m_Name)));
+		rootSceneObject.fields.emplace_back("version", JSONValue(fileVersion));
+		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 
 
 		JSONField materialsField = {};
@@ -600,7 +598,7 @@ namespace flex
 				}
 			}
 		}
-		rootSceneObject.fields.push_back(JSONField("objects", JSONValue(objectsArray)));
+		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
 
 
 		JSONField pointLightsField = {};
@@ -700,16 +698,16 @@ namespace flex
 	{
 		JSONObject object;
 
-		object.fields.push_back(JSONField("name", JSONValue(pointLight.name)));
+		object.fields.emplace_back("name", JSONValue(pointLight.name));
 
 		std::string posStr = Vec3ToString(pointLight.position);
-		object.fields.push_back(JSONField("position", JSONValue(posStr)));
+		object.fields.emplace_back("position", JSONValue(posStr));
 
 		std::string colorStr = Vec3ToString(pointLight.color);
-		object.fields.push_back(JSONField("color", JSONValue(colorStr)));
+		object.fields.emplace_back("color", JSONValue(colorStr));
 
-		object.fields.push_back(JSONField("enabled", JSONValue(pointLight.enabled != 0)));
-		object.fields.push_back(JSONField("brightness", JSONValue(pointLight.brightness)));
+		object.fields.emplace_back("enabled", JSONValue(pointLight.enabled != 0));
+		object.fields.emplace_back("brightness", JSONValue(pointLight.brightness));
 
 		return object;
 	}
@@ -719,16 +717,16 @@ namespace flex
 		JSONObject object;
 
 		std::string dirStr = Vec3ToString(directionalLight.direction);
-		object.fields.push_back(JSONField("direction", JSONValue(dirStr)));
+		object.fields.emplace_back("direction", JSONValue(dirStr));
 
 		std::string posStr = Vec3ToString(directionalLight.position);
-		object.fields.push_back(JSONField("position", JSONValue(posStr)));
+		object.fields.emplace_back("position", JSONValue(posStr));
 
 		std::string colorStr = Vec3ToString(directionalLight.color);
-		object.fields.push_back(JSONField("color", JSONValue(colorStr)));
+		object.fields.emplace_back("color", JSONValue(colorStr));
 
-		object.fields.push_back(JSONField("enabled", JSONValue(directionalLight.enabled != 0)));
-		object.fields.push_back(JSONField("brightness", JSONValue(directionalLight.brightness)));
+		object.fields.emplace_back("enabled", JSONValue(directionalLight.enabled != 0));
+		object.fields.emplace_back("brightness", JSONValue(directionalLight.brightness));
 
 		return object;
 	}
@@ -740,11 +738,11 @@ namespace flex
 			return nullptr;
 		}
 
-		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (*iter == gameObject)
+			if (rootObject == gameObject)
 			{
-				PrintWarn("Attempted to add same root object (%s) to scene more than once\n", gameObject->m_Name.c_str());
+				PrintWarn("Attempted to add same root object (%s) to scene more than once\n", rootObject->m_Name.c_str());
 				return nullptr;
 			}
 		}
@@ -791,6 +789,7 @@ namespace flex
 
 			iter = m_RootObjects.erase(iter);
 		}
+		m_RootObjects.clear();
 	}
 
 	std::vector<MaterialID> BaseScene::GetMaterialIDs()
@@ -855,7 +854,7 @@ namespace flex
 
 	void BaseScene::GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects)
 	{
-		for (auto rootObject : m_RootObjects)
+		for (GameObject* rootObject : m_RootObjects)
 		{
 			if (rootObject->m_bInteractable)
 			{

@@ -202,7 +202,7 @@ namespace flex
 				i32 binding = 0;
 
 				// Generate GBuffers
-				for (auto& gbuffer : *createInfo.textureGBufferIDs)
+				for (gl::GLCubemapGBuffer& gbuffer : *createInfo.textureGBufferIDs)
 				{
 					glGenTextures(1, &gbuffer.id);
 					glBindTexture(GL_TEXTURE_CUBE_MAP, gbuffer.id);

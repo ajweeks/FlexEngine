@@ -1434,20 +1434,20 @@ namespace flex
 		JSONObject rootObject{};
 
 		std::string lastOpenedSceneName = g_SceneManager->CurrentScene()->GetFileName();
-		rootObject.fields.push_back(JSONField("last opened scene", JSONValue(lastOpenedSceneName)));
+		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		std::string posStr = Vec3ToString(cam->GetPosition());
 		real pitch = cam->GetPitch();
 		real yaw = cam->GetYaw();
 		JSONObject cameraTransform = {};
-		cameraTransform.fields.push_back(JSONField("position", JSONValue(posStr)));
-		cameraTransform.fields.push_back(JSONField("pitch", JSONValue(pitch)));
-		cameraTransform.fields.push_back(JSONField("yaw", JSONValue(yaw)));
-		rootObject.fields.push_back(JSONField("camera transform", JSONValue(cameraTransform)));
+		cameraTransform.fields.emplace_back("position", JSONValue(posStr));
+		cameraTransform.fields.emplace_back("pitch", JSONValue(pitch));
+		cameraTransform.fields.emplace_back("yaw", JSONValue(yaw));
+		rootObject.fields.emplace_back("camera transform", JSONValue(cameraTransform));
 
 		real masterGain = AudioManager::GetMasterGain();
-		rootObject.fields.push_back(JSONField("master gain", JSONValue(masterGain)));
+		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
 
 		std::string fileContents = rootObject.Print(0);
 

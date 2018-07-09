@@ -13,10 +13,10 @@ namespace flex
 		assert(charCount > 0);
 
 		// TODO: Is this needed? (double check in release config)
-		for (i32 i = 0; i < CHAR_COUNT; ++i)
-		{
-			m_CharTable[i].kerning = std::map<std::wstring, glm::vec2>();
-		}
+		//for (i32 i = 0; i < CHAR_COUNT; ++i)
+		//{
+		//	m_CharTable[i].kerning = std::map<std::wstring, glm::vec2>();
+		//}
 	}
 
 	BitmapFont::~BitmapFont()
@@ -45,10 +45,10 @@ namespace flex
 
 		std::wstring charKey(std::wstring(1, leftChar) + std::wstring(1, rightChar));
 
-		auto kerningIt = kerning.find(charKey);
-		if (kerningIt != kerning.end())
+		auto iter = kerning.find(charKey);
+		if (iter != kerning.end())
 		{
-			kerningVec = kerningIt->second;
+			kerningVec = iter->second;
 		}
 
 		return kerningVec;

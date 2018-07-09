@@ -195,7 +195,7 @@ namespace flex
 	template<class T>
 	inline typename std::vector<T>::const_iterator Contains(const std::vector<T>& vec, const T& t)
 	{
-		for (auto iter = vec.begin(); iter != vec.end(); ++iter)
+		for (std::vector<T>::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
 		{
 			if (*iter == t)
 			{

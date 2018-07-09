@@ -468,12 +468,12 @@ namespace flex
 				PrintError("=====================================================\n");
 				PrintError("%i render objects were not destroyed before GL render:\n", activeRenderObjectCount);
 
-				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+				for (GLRenderObject* renderObject : m_RenderObjects)
 				{
-					if (m_RenderObjects[i])
+					if (renderObject)
 					{
-						PrintError("render object with material name: %s\n", m_RenderObjects[i]->materialName.c_str());
-						DestroyRenderObject(m_RenderObjects[i]->renderID);
+						PrintError("render object with material name: %s\n", renderObject->materialName.c_str());
+						DestroyRenderObject(renderObject->renderID);
 					}
 				}
 				PrintError("=====================================================\n");
@@ -556,18 +556,16 @@ namespace flex
 				{ "texSize",						&mat.uniformIDs.texSize },
 			};
 
-			const u32 uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
-
-			for (size_t i = 0; i < uniformCount; ++i)
+			for (const UniformInfo& uniform : uniformInfo)
 			{
-				if (shader.shader.dynamicBufferUniforms.HasUniform(uniformInfo[i].name) ||
-					shader.shader.constantBufferUniforms.HasUniform(uniformInfo[i].name))
+				if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.name) ||
+					shader.shader.constantBufferUniforms.HasUniform(uniform.name))
 				{
-					*uniformInfo[i].id = glGetUniformLocation(shader.program, uniformInfo[i].name);
-					if (*uniformInfo[i].id == -1)
+					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
+					if (*uniform.id == -1)
 					{
 						PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
-								  uniformInfo[i].name, createInfo->name.c_str(), createInfo->shaderName.c_str());
+								  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
 					}
 				}
 			}
@@ -1057,7 +1055,6 @@ namespace flex
 				PROFILE_END(profileBlockName);
 				Profiler::PrintBlockDuration(profileBlockName);
 				//glFlush();
-
 
 
 				// Display captured cubemap as skybox
@@ -1595,11 +1592,11 @@ namespace flex
 		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
 		{
 			// TODO: Store shaders using sorted data structure?
-			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
+			for (auto& materialPair : m_Materials)
 			{
-				if (iter->second.material.name.compare(materialName) == 0)
+				if (materialPair.second.material.name.compare(materialName) == 0)
 				{
-					materialID = iter->first;
+					materialID = materialPair.first;
 					return true;
 				}
 			}
@@ -1702,9 +1699,8 @@ namespace flex
 
 			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
-				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
+				for (GLRenderObject* renderObject : m_RenderObjects)
 				{
-					GLRenderObject* renderObject = *iter;
 					if (renderObject && 
 						m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
@@ -1839,14 +1835,14 @@ namespace flex
 			m_EditorRenderObjectBatch.clear();
 			
 			// Sort render objects into deferred + forward buckets
-			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
+			for (auto& materialPair : m_Materials)
 			{
-				MaterialID matID = iter->first;
-				ShaderID shaderID = iter->second.material.shaderID;
+				MaterialID matID = materialPair.first;
+				ShaderID shaderID = materialPair.second.material.shaderID;
 				if (shaderID == InvalidShaderID)
 				{
 					PrintWarn("GLRenderer::BatchRenderObjects > Material has invalid shaderID: %s\n",
-							  iter->second.material.name.c_str());
+							  materialPair.second.material.name.c_str());
 					continue;
 				}
 				GLShader* shader = &m_Shaders[shaderID];
@@ -1855,10 +1851,9 @@ namespace flex
 
 				if (shader->shader.deferred)
 				{
-					m_DeferredRenderObjectBatches.push_back({});
-					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+					m_DeferredRenderObjectBatches.emplace_back();
+					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
-						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
@@ -1871,10 +1866,9 @@ namespace flex
 				}
 				else
 				{
-					m_ForwardRenderObjectBatches.push_back({});
-					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+					m_ForwardRenderObjectBatches.emplace_back();
+					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
-						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
@@ -1887,9 +1881,8 @@ namespace flex
 				}
 			}
 			
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
-				GLRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
 					renderObject->editorObject &&
@@ -1982,9 +1975,9 @@ namespace flex
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			CheckGLErrorMessages();
 
-			for (size_t i = 0; i < m_DeferredRenderObjectBatches.size(); ++i)
+			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
 			{
-				DrawRenderObjectBatch(m_DeferredRenderObjectBatches[i], drawCallInfo);
+				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
 
 			glUseProgram(0);
@@ -2162,9 +2155,9 @@ namespace flex
 				PrintError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!\n");
 			}
 
-			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
+			for (std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
 			{
-				DrawRenderObjectBatch(m_ForwardRenderObjectBatches[i], drawCallInfo);
+				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
 		}
 
@@ -2833,8 +2826,8 @@ namespace flex
 			glUseProgram(computeSDFShader.program);
 
 			glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
-			auto texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
-			auto charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
+			GLint texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
+			GLint charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
 			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
 			glUniform1f(glGetUniformLocation(computeSDFShader.program, "sampleDensity"), (real)sampleDensity);
 
@@ -2847,9 +2840,9 @@ namespace flex
 			//Render to Glyphs atlas
 			FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
-			for (auto& character : characters)
+			for (auto& charPair : characters)
 			{
-				auto metric = character.second;
+				FontMetric* metric = charPair.second;
 
 				u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
 				if (glyphIndex == 0)
@@ -3009,15 +3002,15 @@ namespace flex
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.push_back(TextCache(str, anchor, pos, color, spacing));
+			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing);
 		}
 
 		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
 		{
 			real strWidth = 0;
 
-			wchar_t prevChar = ' ';
-			for (wchar_t c : textCache.str)
+			char prevChar = ' ';
+			for (char c : textCache.str)
 			{
 				if (BitmapFont::IsCharValid(c))
 				{
@@ -3027,10 +3020,10 @@ namespace flex
 					{
 						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
-						auto kerningResult = metric->kerning.find(charKey);
-						if (kerningResult != metric->kerning.end())
+						auto iter = metric->kerning.find(charKey);
+						if (iter != metric->kerning.end())
 						{
-							strWidth += kerningResult->second.x;
+							strWidth += iter->second.x;
 						}
 					}
 
@@ -3064,29 +3057,28 @@ namespace flex
 			real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
 
 			std::vector<TextVertex> textVertices;
-			for (auto font : m_Fonts)
+			for (BitmapFont* font : m_Fonts)
 			{
 				font->m_BufferStart = (i32)(textVertices.size());
 				font->m_BufferSize = 0;
 
-				for (u32 i = 0; i < font->m_TextCaches.size(); ++i)
+				for (TextCache& textCache : font->m_TextCaches)
 				{
-					TextCache& currentCache = font->m_TextCaches[i];
-					std::string currentStr = currentCache.str;
+					std::string currentStr = textCache.str;
 
-					bool bUseLetterYOffsets = !currentCache.letterYOffsets.empty();
+					bool bUseLetterYOffsets = !textCache.letterYOffsets.empty();
 					if (bUseLetterYOffsets)
 					{
-						assert(currentCache.letterYOffsets.size() == currentStr.size());
+						assert(textCache.letterYOffsets.size() == currentStr.size());
 					}
 
 					real totalAdvanceX = 0;
 
 					glm::vec2 basePos(0.0f);
-					real strWidth = GetStringWidth(currentCache, font) * frameBufferScale;
-					real strHeight = GetStringHeight(currentCache, font) * frameBufferScale;
+					real strWidth = GetStringWidth(textCache, font) * frameBufferScale;
+					real strHeight = GetStringHeight(textCache, font) * frameBufferScale;
 
-					switch (currentCache.anchor)
+					switch (textCache.anchor)
 					{
 					case AnchorPoint::TOP_LEFT:
 						basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
@@ -3120,10 +3112,10 @@ namespace flex
 						break;
 					}
 
-					wchar_t prevChar = ' ';
+					char prevChar = ' ';
 					for (u32 j = 0; j < currentStr.length(); ++j)
 					{
-						wchar_t c = currentStr[j];
+						char c = currentStr[j];
 
 						if (BitmapFont::IsCharValid(c))
 						{
@@ -3132,14 +3124,14 @@ namespace flex
 							{
 								if (c == ' ')
 								{
-									totalAdvanceX += metric->advanceX + currentCache.xSpacing;
+									totalAdvanceX += metric->advanceX + textCache.xSpacing;
 									prevChar = c;
 									continue;
 								}
 								
-								real yOff = (bUseLetterYOffsets ? currentCache.letterYOffsets[j] : 0.0f);
+								real yOff = (bUseLetterYOffsets ? textCache.letterYOffsets[j] : 0.0f);
 
-								glm::vec2 pos = glm::vec2(currentCache.pos.x * aspectRatio, currentCache.pos.y) +
+								glm::vec2 pos = glm::vec2(textCache.pos.x * aspectRatio, textCache.pos.y) +
 									glm::vec2(totalAdvanceX + metric->offsetX - metric->width / 3.0f,
 											  metric->offsetY + metric->height / 3.0f + yOff)
 									* frameBufferScale;
@@ -3148,10 +3140,10 @@ namespace flex
 								{
 									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 								
-									auto kerningResult = metric->kerning.find(charKey);
-									if (kerningResult != metric->kerning.end())
+									auto iter = metric->kerning.find(charKey);
+									if (iter != metric->kerning.end())
 									{
-										pos += kerningResult->second * frameBufferScale;
+										pos += iter->second * frameBufferScale;
 									}
 								}
 
@@ -3164,13 +3156,13 @@ namespace flex
 								TextVertex vert{};
 								vert.pos = basePos + pos;
 								vert.uv = metric->texCoord;
-								vert.color = currentCache.color;
+								vert.color = textCache.color;
 								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 								vert.channel = texChannel;
 
 								textVertices.push_back(vert);
 
-								totalAdvanceX += metric->advanceX + currentCache.xSpacing;
+								totalAdvanceX += metric->advanceX + textCache.xSpacing;
 							}
 							else
 							{
@@ -3213,9 +3205,8 @@ namespace flex
 			glUseProgram(glShader->program);
 			CheckGLErrorMessages();
 
-			for (size_t i = 0; i < batchedRenderObjects.size(); ++i)
+			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
-				GLRenderObject* renderObject = batchedRenderObjects[i];
 				if (!renderObject->gameObject->IsVisible())
 				{
 					continue;
@@ -3445,11 +3436,11 @@ namespace flex
 			}
 
 			u32 binding = startingBinding;
-			for (auto& frameBuffer : material->frameBuffers)
+			for (auto& frameBufferPair : material->frameBuffers)
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
-				glBindTexture(GL_TEXTURE_2D, *((GLuint*)frameBuffer.second));
+				glBindTexture(GL_TEXTURE_2D, *((GLuint*)frameBufferPair.second));
 				CheckGLErrorMessages();
 				++binding;
 			}
@@ -3473,7 +3464,7 @@ namespace flex
 			}
 
 			u32 binding = startingBinding;
-			for (auto& cubemapGBuffer : glMaterial->cubemapSamplerGBuffersIDs)
+			for (gl::GLCubemapGBuffer& cubemapGBuffer : glMaterial->cubemapSamplerGBuffersIDs)
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
@@ -3764,14 +3755,14 @@ namespace flex
 
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
 		{
-			auto location = m_LoadedTextures.find(filePath);
-			if (location == m_LoadedTextures.end())
+			auto iter = m_LoadedTextures.find(filePath);
+			if (iter == m_LoadedTextures.end())
 			{
 				return false;
 			}
 			else
 			{
-				handle = location->second;
+				handle = iter->second;
 				return true;
 			}
 		}
@@ -3786,10 +3777,9 @@ namespace flex
 
 		void GLRenderer::UnloadShaders()
 		{
-			const size_t shaderCount = m_Shaders.size();
-			for (size_t i = 0; i < shaderCount; ++i)
+			for (GLShader& shader : m_Shaders)
 			{
-				glDeleteProgram(m_Shaders[i].program);
+				glDeleteProgram(shader.program);
 				CheckGLErrorMessages();
 			}
 			m_Shaders.clear();
@@ -4096,30 +4086,30 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("soften");
 			++shaderID;
 
-			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			for (GLShader& shader : m_Shaders)
 			{
-				m_Shaders[i].program = glCreateProgram();
+				shader.program = glCreateProgram();
 				CheckGLErrorMessages();
 
-				if (!LoadGLShaders(m_Shaders[i].program, m_Shaders[i]))
+				if (!LoadGLShaders(shader.program, shader))
 				{
-					std::string fileNames = m_Shaders[i].shader.vertexShaderFilePath + " & " + m_Shaders[i].shader.fragmentShaderFilePath;
-					if (!m_Shaders[i].shader.geometryShaderFilePath.empty())
+					std::string fileNames = shader.shader.vertexShaderFilePath + " & " + shader.shader.fragmentShaderFilePath;
+					if (!shader.shader.geometryShaderFilePath.empty())
 					{
-						fileNames += " & " + m_Shaders[i].shader.geometryShaderFilePath;
+						fileNames += " & " + shader.shader.geometryShaderFilePath;
 					}
 					PrintError("Couldn't load/compile shaders: %s\n", fileNames.c_str());
 				}
 
-				LinkProgram(m_Shaders[i].program);
+				LinkProgram(shader.program);
 
 				// No need to keep the code in memory
-				m_Shaders[i].shader.vertexShaderCode.clear();
-				m_Shaders[i].shader.vertexShaderCode.shrink_to_fit();
-				m_Shaders[i].shader.fragmentShaderCode.clear();
-				m_Shaders[i].shader.fragmentShaderCode.shrink_to_fit();
-				m_Shaders[i].shader.geometryShaderCode.clear();
-				m_Shaders[i].shader.geometryShaderCode.shrink_to_fit();
+				shader.shader.vertexShaderCode.clear();
+				shader.shader.vertexShaderCode.shrink_to_fit();
+				shader.shader.fragmentShaderCode.clear();
+				shader.shader.fragmentShaderCode.shrink_to_fit();
+				shader.shader.geometryShaderCode.clear();
+				shader.shader.geometryShaderCode.shrink_to_fit();
 			}
 
 			CheckGLErrorMessages();
@@ -4676,7 +4666,7 @@ namespace flex
 			// TODO: Replace function with m_RenderObjects.size()? (only if no nullptr objects exist)
 			u32 count = 0;
 
-			for (auto renderObject : m_RenderObjects)
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject)
 				{
@@ -4695,7 +4685,7 @@ namespace flex
 		u32 GLRenderer::GetActiveRenderObjectCount() const
 		{
 			u32 capacity = 0;
-			for (auto renderObject : m_RenderObjects)
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject)
 				{
@@ -4753,9 +4743,8 @@ namespace flex
 				return;
 			}
 
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
-				GLRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject)
 				{
 					if (m_Materials.find(renderObject->materialID) == m_Materials.end())
@@ -4904,12 +4893,12 @@ namespace flex
 			}
 
 			JSONObject rootObject{};
-			rootObject.fields.push_back(JSONField("enable post-processing", JSONValue(m_bPostProcessingEnabled)));
-			rootObject.fields.push_back(JSONField("enable v-sync", JSONValue(m_bVSyncEnabled)));
-			rootObject.fields.push_back(JSONField("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA)));
-			rootObject.fields.push_back(JSONField("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness))));
-			rootObject.fields.push_back(JSONField("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset))));
-			rootObject.fields.push_back(JSONField("saturation", JSONValue(m_PostProcessSettings.saturation)));
+			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
+			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
+			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
+			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness)));
+			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset)));
+			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 			std::string fileContents = rootObject.Print(0);
 
 			if (WriteFile(filePath, fileContents, false))
@@ -4972,9 +4961,9 @@ namespace flex
 			}
 
 			std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-			for (size_t i = 0; i < rootObjects.size(); ++i)
+			for (GameObject* rootObject : rootObjects)
 			{
-				if (DrawGameObjectNameAndChildren(rootObjects[i]))
+				if (DrawGameObjectNameAndChildren(rootObject))
 				{
 					break;
 				}
@@ -5066,9 +5055,9 @@ namespace flex
 			{
 				bool bChildVisibleInSceneExplorer = false;
 				// Make sure at least one child is visible in scene explorer
-				for (u32 i = 0; i < gameObjectChildren.size(); ++i)
+				for (GameObject* child : gameObjectChildren)
 				{
-					if (gameObjectChildren[i]->IsVisibleInSceneExplorer())
+					if (child->IsVisibleInSceneExplorer())
 					{
 						bChildVisibleInSceneExplorer = true;
 						break;

@@ -30,7 +30,7 @@ namespace flex
 				std::vector<VkExtensionProperties> extensions(extensionCount);
 				if (vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, &extensions.front()) == VK_SUCCESS)
 				{
-					for (auto ext : extensions)
+					for (VkExtensionProperties& ext : extensions)
 					{
 						m_SupportedExtensions.push_back(ext.extensionName);
 					}

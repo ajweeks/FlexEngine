@@ -196,9 +196,8 @@ namespace flex
 		std::vector<std::string> foundFileNames;
 		if (FindFilesInDirectory(m_SavedDirStr, foundFileNames, "json"))
 		{
-			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
+			for (std::string& fileName : foundFileNames)
 			{
-				std::string fileName = *iter;
 				StripLeadingDirectories(fileName);
 
 				if (!SceneExists(fileName))
@@ -215,9 +214,8 @@ namespace flex
 		foundFileNames.clear();
 		if (FindFilesInDirectory(m_DefaultDirStr, foundFileNames, "json"))
 		{
-			for (auto iter = foundFileNames.begin(); iter != foundFileNames.end(); ++iter)
+			for (std::string& fileName : foundFileNames)
 			{
-				std::string fileName = *iter;
 				StripLeadingDirectories(fileName);
 				
 				if (!SceneExists(fileName))
@@ -417,9 +415,9 @@ namespace flex
 
 	bool SceneManager::SceneExists(const std::string& fileName) const
 	{
-		for (auto sceneIter = m_Scenes.begin(); sceneIter != m_Scenes.end(); ++sceneIter)
+		for (BaseScene* scene : m_Scenes)
 		{
-			std::string existingSceneFileName = (*sceneIter)->GetFileName();
+			std::string existingSceneFileName = scene->GetFileName();
 
 			if (existingSceneFileName.compare(fileName) == 0)
 			{

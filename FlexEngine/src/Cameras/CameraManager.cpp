@@ -33,9 +33,9 @@ namespace flex
 
 	void CameraManager::DestroyCameras()
 	{
-		for (u32 i = 0; i < m_Cameras.size(); ++i)
+		for (BaseCamera* camera : m_Cameras)
 		{
-			SafeDelete(m_Cameras[i]);
+			SafeDelete(camera);
 		}
 		m_Cameras.clear();
 		m_ActiveCameraIndex = -1;

@@ -51,10 +51,9 @@ namespace flex
 
 	void MeshComponent::DestroyAllLoadedMeshes()
 	{
-		for (auto iter = m_LoadedMeshes.begin(); iter != m_LoadedMeshes.end(); /**/)
+		for (auto& loadedMeshPair : m_LoadedMeshes)
 		{
-			SafeDelete(iter->second);
-			iter = m_LoadedMeshes.erase(iter);
+			SafeDelete(loadedMeshPair.second);
 		}
 		m_LoadedMeshes.clear();
 	}
@@ -133,14 +132,14 @@ namespace flex
 
 	bool MeshComponent::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
 	{
-		auto location = m_LoadedMeshes.find(filePath);
-		if (location == m_LoadedMeshes.end())
+		auto iter = m_LoadedMeshes.find(filePath);
+		if (iter == m_LoadedMeshes.end())
 		{
 			return false;
 		}
 		else
 		{
-			*scene = location->second->scene;
+			*scene = iter->second->scene;
 			return true;
 		}
 	}
@@ -175,8 +174,8 @@ namespace flex
 			// Mesh hasn't been loaded before, load it now
 			Print("Loading mesh %s\n", meshFileName.c_str());
 
-			auto meshObj = m_LoadedMeshes.emplace(filePath, new LoadedMesh());
-			LoadedMesh* loadedMesh = meshObj.first->second;
+			LoadedMesh* loadedMesh = new LoadedMesh();
+			m_LoadedMeshes.emplace(filePath, loadedMesh);
 
 			loadedMesh->scene = loadedMesh->importer.ReadFile(filePath,
 				aiProcess_FindInvalidData |
@@ -690,10 +689,10 @@ namespace flex
 			// Horizontal lines
 			for (u32 i = 0; i < GRID_LINE_COUNT; ++i)
 			{
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, -halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth });
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, -halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth);
 
 				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
 				glm::vec4 colorCenter = lineColor;
@@ -709,10 +708,10 @@ namespace flex
 			// Vertical lines
 			for (u32 i = 0; i < GRID_LINE_COUNT; ++i)
 			{
-				vertexBufferDataCreateInfo.positions_3D.push_back({ -halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth });
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(-halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth);
 
 				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
 				glm::vec4 colorCenter = lineColor;
@@ -746,10 +745,10 @@ namespace flex
 
 			real halfWidth = (GRID_LINE_SPACING * (GRID_LINE_COUNT - 1)); // extend longer than normal grid lines
 
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, -halfWidth });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, halfWidth });
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, -halfWidth);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, halfWidth);
 
 			float opacityCenter = 1.0f;
 			glm::vec4 colorCenter = centerLineColorZ;
@@ -761,10 +760,10 @@ namespace flex
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
 
-			vertexBufferDataCreateInfo.positions_3D.push_back({ -halfWidth, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, 0.0f });
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(-halfWidth, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, 0.0f);
 
 			colorCenter = centerLineColorX;
 			colorCenter.a = opacityCenter;
@@ -864,8 +863,8 @@ namespace flex
 			glm::vec3 v1(0.0f, 1.0f, 0.0f); // Top vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(v1);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::RED);
-			vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.normals.push_back({ 0.0f, 1.0f, 0.0f });
+			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
+			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, 1.0f, 0.0f);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
@@ -892,16 +891,16 @@ namespace flex
 
 					vertexBufferDataCreateInfo.positions_3D.push_back(point);
 					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(color);
-					vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
-					vertexBufferDataCreateInfo.normals.push_back({ 1.0f, 0.0f, 0.0f });
+					vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
+					vertexBufferDataCreateInfo.normals.emplace_back(1.0f, 0.0f, 0.0f);
 				}
 			}
 
 			glm::vec3 vF(0.0f, -1.0f, 0.0f); // Bottom vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(vF);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::YELLOW);
-			vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.normals.push_back({ 0.0f, -1.0f, 0.0f });
+			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
+			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, -1.0f, 0.0f);
 
 			const u32 numVerts = vertexBufferDataCreateInfo.positions_3D.size();
 

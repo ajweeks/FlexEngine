@@ -103,7 +103,7 @@ namespace flex
 
 	bool JSONObject::HasField(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{
@@ -115,7 +115,7 @@ namespace flex
 
 	std::string JSONObject::GetString(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{
@@ -194,7 +194,7 @@ namespace flex
 
 	i32 JSONObject::GetInt(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{
@@ -220,7 +220,7 @@ namespace flex
 
 	real JSONObject::GetFloat(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{
@@ -247,7 +247,7 @@ namespace flex
 
 	bool JSONObject::GetBool(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{
@@ -269,7 +269,7 @@ namespace flex
 
 	const std::vector<JSONField>& JSONObject::GetFieldArray(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{
@@ -291,7 +291,7 @@ namespace flex
 
 	const std::vector<JSONObject>& JSONObject::GetObjectArray(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{
@@ -313,7 +313,7 @@ namespace flex
 
 	const JSONObject& JSONObject::GetObject(const std::string& label) const
 	{
-		for (auto& field : fields)
+		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
 			{

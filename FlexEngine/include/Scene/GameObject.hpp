@@ -39,10 +39,9 @@ namespace flex
 
 		GameObject* AddChild(GameObject* child);
 		bool RemoveChild(GameObject* child);
-		void RemoveAllChildren();
 		const std::vector<GameObject*>& GetChildren() const;
 
-		bool HasChild(GameObject* child, bool bRecurse);
+		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
 
 		virtual Transform* GetTransform();
 		

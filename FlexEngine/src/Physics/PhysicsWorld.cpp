@@ -153,6 +153,7 @@ namespace flex
 		return pickedBody;
 	}
 
+	// CLEANUP:
 	void PhysicsInternalTickCallback(btDynamicsWorld* world, btScalar timeStep)
 	{
 		UNREFERENCED_PARAMETER(timeStep);
@@ -161,7 +162,7 @@ namespace flex
 
 		std::set<std::pair<const btCollisionObject*, const btCollisionObject*>> collisionPairsFoundThisStep;
 
-		int numManifolds = world->getDispatcher()->getNumManifolds();
+		i32 numManifolds = world->getDispatcher()->getNumManifolds();
 		for (i32 i = 0; i < numManifolds; ++i)
 		{
 			btPersistentManifold* contactManifold = world->getDispatcher()->getManifoldByIndexInternal(i);
@@ -222,7 +223,7 @@ namespace flex
 							collisionPairsFoundThisStep.begin(), collisionPairsFoundThisStep.end(),
 							std::inserter(differentPairs, differentPairs.begin()));
 
-		for (auto pair : differentPairs)
+		for (const auto& pair : differentPairs)
 		{
 			GameObject* triggerGameObject = (GameObject*)pair.first->getUserPointer();
 			GameObject* otherGameObject = (GameObject*)pair.second->getUserPointer();
@@ -231,9 +232,8 @@ namespace flex
 			otherGameObject->OnOverlapEnd(triggerGameObject);
 		}
 
-
 		physWorld->m_CollisionPairs.clear();
-		for (auto pair : collisionPairsFoundThisStep)
+		for (const auto& pair : collisionPairsFoundThisStep)
 		{
 			physWorld->m_CollisionPairs.insert(pair);
 		}
