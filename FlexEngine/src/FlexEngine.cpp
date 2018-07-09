@@ -717,6 +717,14 @@ namespace flex
 				DeselectCurrentlySelectedObject();
 			}
 
+			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_DELETE))
+			{
+				if (m_CurrentlySelectedObject)
+				{
+					m_GameContext.sceneManager->CurrentScene()->DestroyGameObject(m_GameContext, m_CurrentlySelectedObject, true);
+				}
+			}
+
 			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
 			{
 				m_GameContext.renderer->SetVSyncEnabled(!m_GameContext.renderer->GetVSyncEnabled());
