@@ -1127,6 +1127,8 @@ namespace flex
 
 	void Valve::PostInitialize()
 	{
+		GameObject::PostInitialize();
+
 		m_RigidBody->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
 		auto rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setAngularFactor(btVector3(0, 1, 0));
@@ -1325,6 +1327,8 @@ namespace flex
 
 	void RisingBlock::PostInitialize()
 	{
+		GameObject::PostInitialize();
+
 		auto rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setGravity(btVector3(0, 0, 0));
 
@@ -1549,6 +1553,8 @@ namespace flex
 
 	void ReflectionProbe::PostInitialize()
 	{
+		GameObject::PostInitialize();
+
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
