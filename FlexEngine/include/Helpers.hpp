@@ -26,7 +26,7 @@ namespace flex
 	extern ImVec4 g_WarningButtonHoveredColor;
 	extern ImVec4 g_WarningButtonActiveColor;
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha = false, bool flipVertically = false);
+	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha = false, bool flipVertically = false, i32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
 	struct HDRImage

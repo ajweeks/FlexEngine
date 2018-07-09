@@ -143,12 +143,19 @@ namespace flex
 			glm::mat4 viewProj;
 		};
 
+		struct ImageInfo
+		{
+			i32 width;
+			i32 height;
+			i32 channelCount;
+		};
+
 		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type);
 		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
-		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps);
-		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps);
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
+		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
 
 		struct GLCubemapCreateInfo
 		{
@@ -186,7 +193,6 @@ namespace flex
 
 		struct GLTexture
 		{
-		public:
 			GLTexture(GLuint handle, i32 width, i32 height, i32 depth = 1);
 			GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type, i32 depth = 1);
 			~GLTexture();
@@ -206,7 +212,6 @@ namespace flex
 			// unless it is reattached to the framebuffer object
 			bool Resize(glm::vec2i newSize);
 
-		private:
 			GLuint m_Handle = 0;
 
 			i32 m_Width = 0;

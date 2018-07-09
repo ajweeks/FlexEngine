@@ -68,6 +68,12 @@ namespace flex
 	{
 		m_TextureWidth = texSize.x;
 		m_TextureHeight = texSize.y;
+
+		if (m_Texture)
+		{
+			m_Texture->m_Width = m_TextureWidth;
+			m_Texture->m_Height = m_TextureHeight;
+		}
 	}
 
 	gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)

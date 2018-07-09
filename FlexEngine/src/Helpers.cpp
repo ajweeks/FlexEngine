@@ -25,7 +25,7 @@ namespace flex
 	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
 	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha, bool flipVertically)
+	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha, bool flipVertically, i32* channelCountOut /* = nullptr */)
 	{
 		GLFWimage result = {};
 
@@ -37,6 +37,11 @@ namespace flex
 
 		i32 channels;
 		unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, alpha ? STBI_rgb_alpha : STBI_rgb);
+
+		if (channelCountOut)
+		{
+			*channelCountOut = channels;
+		}
 
 		if (data == 0)
 		{

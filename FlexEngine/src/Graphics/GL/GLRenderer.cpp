@@ -41,6 +41,7 @@
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Time.hpp"
 #include "VertexAttribute.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
@@ -390,14 +391,18 @@ namespace flex
 			GenerateGBuffer();
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
+			std::string ubuntuRenderedFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-32.png";
 			PROFILE_BEGIN("load font UbuntuCondensed");
-			LoadFont(&m_FntUbuntuCondensed, ubuntuFilePath, 36);
+			LoadFont(&m_FntUbuntuCondensed, 32, ubuntuFilePath, ubuntuRenderedFilePath);
 			PROFILE_END("load font UbuntuCondensed");
 			Profiler::PrintBlockDuration("load font UbuntuCondensed");
 
+
+
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
+			std::string sourceCodeProRenderedFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular-12.png";
 			PROFILE_BEGIN("load font SourceCodePro");
-			LoadFont(&m_FntSourceCodePro, sourceCodeProFilePath, 10);
+			LoadFont(&m_FntSourceCodePro, 12, sourceCodeProFilePath, sourceCodeProRenderedFilePath);
 			PROFILE_END("load font SourceCodePro");
 			Profiler::PrintBlockDuration("load font SourceCodePro");
 
@@ -677,7 +682,7 @@ namespace flex
 				bool flipVertically;
 				bool alpha;
 				bool generateMipMaps;
-				std::function<bool(u32&, const std::string&, bool, bool, bool)> createFunction;
+				std::function<bool(u32&, const std::string&, bool, bool, bool, ImageInfo*)> createFunction;
 			};
 
 			// Samplers that need to be loaded from file
@@ -719,17 +724,23 @@ namespace flex
 								StripLeadingDirectories(fileNameClean);
 								std::string textureProfileBlockName = "load texture " + fileNameClean;
 								PROFILE_BEGIN(textureProfileBlockName);
+								ImageInfo imageInfo = {};
 								// Texture hasn't been loaded yet, load it now
-								samplerCreateInfo.createFunction(*samplerCreateInfo.id, 
+								bool bSucceded = samplerCreateInfo.createFunction(*samplerCreateInfo.id, 
 																 samplerCreateInfo.filepath,
 																 samplerCreateInfo.alpha,
 																 samplerCreateInfo.flipVertically,
-																 samplerCreateInfo.generateMipMaps);
+																 samplerCreateInfo.generateMipMaps,
+																 &imageInfo);
 								PROFILE_END(textureProfileBlockName);
 
 								Profiler::PrintBlockDuration(textureProfileBlockName);
 
-								m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
+								if (bSucceded)
+								{
+									// TODO: Store size from imageInfo
+									m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
+								}
 							}
 
 							i32 uniformLocation = glGetUniformLocation(shader.program, samplerCreateInfo.textureName.c_str());
@@ -1119,6 +1130,12 @@ namespace flex
 		void GLRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, 
 															   const std::string& environmentMapPath)
 		{
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to generate cubemap before skybox object was created!\n");
+				return;
+			}
+
 			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
 			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID))
 			{
@@ -1222,6 +1239,12 @@ namespace flex
 
 		void GLRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to generate prefiltered map before skybox object was created!\n");
+				return;
+			}
+
 			MaterialID prefilterMatID = InvalidMaterialID;
 			if (!GetMaterialID("Prefilter", prefilterMatID))
 			{
@@ -1424,6 +1447,12 @@ namespace flex
 
 		void GLRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
 		{
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to generate irradiance sampler before skybox object was created!\n");
+				return;
+			}
+
 			MaterialID irrandianceMatID = InvalidMaterialID;
 			if (!GetMaterialID("Irradiance", irrandianceMatID))
 			{
@@ -1766,12 +1795,12 @@ namespace flex
 			//}
 			
 			SetFont(m_FntSourceCodePro);
-			//std::string str("abcdefghijklmnopqrstuvwxyz");
-			//DrawString(str, glm::vec4(0.95f), glm::vec2(0.0f), 15, &letterYOffsets1);
-			//str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			//DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), glm::vec2(0.0f, -1.0f), 3, &letterYOffsets2);
-			//str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			//DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), glm::vec2(-1.0f, 1.0f), 5, &letterYOffsets3);
+			std::string str("abcdefghijklmnopqrstuvwxyz");
+			DrawString(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.2f), 15);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 3);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.4f), 5);
 
 			//std::string str = std::string("XYZ");
 			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
@@ -2014,6 +2043,12 @@ namespace flex
 			if (drawCallInfo.bDeferred)
 			{
 				PrintError("DrawGBufferContents was called with a drawCallInfo set to deferred!\n");
+			}
+
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to draw GBUffer contents to cubemap before skybox object was created!\n");
+				return;
 			}
 
 			if (!m_gBufferQuadVertexBufferData.pDataStart)
@@ -2554,6 +2589,21 @@ namespace flex
 
 		void GLRenderer::DrawText()
 		{
+			bool bHasText = false;
+			for (BitmapFont* font : m_Fonts)
+			{
+				if (font->m_BufferSize > 0)
+				{
+					bHasText = true;
+					break;
+				}
+			}
+
+			if (!bHasText)
+			{
+				return;
+			}
+
 			GLMaterial& fontMaterial = m_Materials[m_FontMatID];
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
 
@@ -2627,7 +2677,10 @@ namespace flex
 			}
 		}
 
-		bool GLRenderer::LoadFont(BitmapFont** font, const std::string& filePath, i16 size)
+		bool GLRenderer::LoadFont(BitmapFont** font, 
+								  i16 size,
+								  const std::string& fontFilePath,
+								  const std::string& renderedFontFilePath)
 		{
 			FT_Error error;
 			error = FT_Init_FreeType(&ft);
@@ -2638,19 +2691,18 @@ namespace flex
 			}
 
 			std::vector<char> fileMemory;
-			ReadFile(filePath, fileMemory, true);
+			ReadFile(fontFilePath, fileMemory, true);
 
 			FT_Face face;
 			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
 			if (error == FT_Err_Unknown_File_Format)
 			{
-				PrintError("Unhandled font file format: %s\n", filePath.c_str());
+				PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
 				return false;
 			}
-			else if (error != FT_Err_Ok ||
-					 !face)
+			else if (error != FT_Err_Ok || !face)
 			{
-				PrintError("Failed to create new font face: %s\n", filePath.c_str());
+				PrintError("Failed to create new font face: %s\n", fontFilePath.c_str());
 				return false;
 			}
 
@@ -2661,9 +2713,9 @@ namespace flex
 
 			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
-			std::string fileName = filePath;
+			std::string fileName = fontFilePath;
 			StripLeadingDirectories(fileName);
-			Print("Loaded font %s\n", fileName.c_str());
+			Print("Loaded font file %s\n", fileName.c_str());
 
 			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
 			*font = new BitmapFont(size, fontName, face->num_glyphs);
@@ -2741,7 +2793,6 @@ namespace flex
 				metric->advanceX = (real)face->glyph->advance.x / 64.0f;
 
 				// Generate atlas coordinates
-				//metric->page = 0;
 				metric->channel = (u8)channel;
 				metric->texCoord = startPos[channel];
 				if (bHorizontal)
@@ -2788,156 +2839,194 @@ namespace flex
 				characters[c] = metric;
 			}
 
-			glm::vec2i textureSize(
-				std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
-				std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
-			newFont->SetTextureSize(textureSize);
-
-			//Setup rendering
-			TextureParameters params(false);
-			params.wrapS = GL_CLAMP_TO_EDGE;
-			params.wrapT = GL_CLAMP_TO_EDGE;
-
-			GLTexture* fontTex = newFont->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
-			fontTex->Build();
-			fontTex->SetParameters(params);
-
-			GLuint captureFBO;
-			GLuint captureRBO;
-
-			glGenFramebuffers(1, &captureFBO);
-			glGenRenderbuffers(1, &captureRBO);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-			glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-
-			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
-			// TODO: Don't use depth buffer
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
-
-			glViewport(0, 0, textureSize.x, textureSize.y);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			ShaderID computeSDFShaderID;
-			GetShaderID("compute_sdf", computeSDFShaderID);
-			GLShader& computeSDFShader = m_Shaders[computeSDFShaderID];
-
-			glUseProgram(computeSDFShader.program);
-
-			glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
-			GLint texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
-			GLint charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
-			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
-			glUniform1f(glGetUniformLocation(computeSDFShader.program, "sampleDensity"), (real)sampleDensity);
-
-			glEnable(GL_BLEND);
-			glBlendEquation(GL_FUNC_ADD);
-			glBlendFunc(GL_ONE, GL_ONE);
-
-			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-
-			//Render to Glyphs atlas
-			FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
-
-			for (auto& charPair : characters)
+			bool bUsingPreRenderedTexture = false;
+			if (FileExists(renderedFontFilePath))
 			{
-				FontMetric* metric = charPair.second;
+				TextureParameters params(false);
+				params.wrapS = GL_CLAMP_TO_EDGE;
+				params.wrapT = GL_CLAMP_TO_EDGE;
 
-				u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
-				if (glyphIndex == 0)
-				{
-					continue;
-				}
+				GLTexture* fontTex = newFont->SetTexture(new GLTexture(0, 0, 0));
 
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+				ImageInfo imageInfo = {};
+				if (GenerateGLTexture(fontTex->m_Handle, renderedFontFilePath, true, true, false, &imageInfo))
 				{
-					PrintError("Failed to load glyph with index %i\n", glyphIndex);
-					continue;
-				}
+					bUsingPreRenderedTexture = true;
 
-				if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
-				{
-					if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+					fontTex->m_Width = imageInfo.width;
+					fontTex->m_Height = imageInfo.height;
+
+					for (auto& charPair : characters)
 					{
-						PrintError("Failed to render glyph with index %i\n", glyphIndex);
-						continue;
+						FontMetric* metric = charPair.second;
+
+						u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+						if (glyphIndex == 0)
+						{
+							continue;
+						}
+
+						metric->texCoord = metric->texCoord / glm::vec2((real)imageInfo.width, (real)imageInfo.height);
 					}
 				}
-
-				if (face->glyph->bitmap.width == 0 ||
-					face->glyph->bitmap.rows == 0)
+				else
 				{
-					continue;
+					newFont->m_Texture = nullptr;
+					SafeDelete(fontTex);
 				}
-
-				FT_Bitmap alignedBitmap{};
-				if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
-				{
-					PrintError("Couldn't align free type bitmap size\n");
-					continue;
-				}
-
-				u32 width = alignedBitmap.width;
-				u32 height = alignedBitmap.rows;
-
-				if (width == 0 ||
-					height == 0)
-				{
-					continue;
-				}
-
-				GLuint texHandle;
-				glGenTextures(1, &texHandle);
-
-				glActiveTexture(GL_TEXTURE0);
-
-				glBindTexture(GL_TEXTURE_2D, texHandle);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
-
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glm::vec4 borderColor(0.0f);
-				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
-
-				if (metric->width > 0 && metric->height > 0)
-				{
-					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
-					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
-
-					glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, texHandle);
-
-					glUniform1i(texChannel, metric->channel);
-					glUniform2f(charResolution, (real)res.x, (real)res.y);
-					glActiveTexture(GL_TEXTURE0);
-					glBindVertexArray(gBufferRenderObject->VAO);
-					glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
-					glDrawArrays(gBufferRenderObject->topology, 0,
-						(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
-					glBindVertexArray(0);
-				}
-
-				glDeleteTextures(1, &texHandle);
-
-				metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
-
-				FT_Bitmap_Done(ft, &alignedBitmap);
 			}
 
+			if (!bUsingPreRenderedTexture)
+			{
+				glm::vec2i textureSize(
+					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
+					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
+				newFont->SetTextureSize(textureSize);
 
-			// Cleanup
-			glDisable(GL_BLEND);
+				//Setup rendering
+				TextureParameters params(false);
+				params.wrapS = GL_CLAMP_TO_EDGE;
+				params.wrapT = GL_CLAMP_TO_EDGE;
+
+				GLTexture* fontTex = newFont->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
+				fontTex->Build();
+				fontTex->SetParameters(params);
+
+				GLuint captureFBO;
+				GLuint captureRBO;
+
+				glGenFramebuffers(1, &captureFBO);
+				glGenRenderbuffers(1, &captureRBO);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
+				// TODO: Don't use depth buffer
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
+
+				glViewport(0, 0, textureSize.x, textureSize.y);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				ShaderID computeSDFShaderID;
+				GetShaderID("compute_sdf", computeSDFShaderID);
+				GLShader& computeSDFShader = m_Shaders[computeSDFShaderID];
+
+				glUseProgram(computeSDFShader.program);
+
+				glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
+				GLint texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
+				GLint charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
+				glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
+				glUniform1f(glGetUniformLocation(computeSDFShader.program, "sampleDensity"), (real)sampleDensity);
+
+				glEnable(GL_BLEND);
+				glBlendEquation(GL_FUNC_ADD);
+				glBlendFunc(GL_ONE, GL_ONE);
+
+				GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+
+				//Render to Glyphs atlas
+				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
+
+				for (auto& charPair : characters)
+				{
+					FontMetric* metric = charPair.second;
+
+					u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+					if (glyphIndex == 0)
+					{
+						continue;
+					}
+
+					if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+					{
+						PrintError("Failed to load glyph with index %i\n", glyphIndex);
+						continue;
+					}
+
+					if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
+					{
+						if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+						{
+							PrintError("Failed to render glyph with index %i\n", glyphIndex);
+							continue;
+						}
+					}
+
+					if (face->glyph->bitmap.width == 0 ||
+						face->glyph->bitmap.rows == 0)
+					{
+						continue;
+					}
+
+					FT_Bitmap alignedBitmap{};
+					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
+					{
+						PrintError("Couldn't align free type bitmap size\n");
+						continue;
+					}
+
+					u32 width = alignedBitmap.width;
+					u32 height = alignedBitmap.rows;
+
+					if (width == 0 || height == 0)
+					{
+						continue;
+					}
+
+					GLuint texHandle;
+					glGenTextures(1, &texHandle);
+
+					glActiveTexture(GL_TEXTURE0);
+
+					glBindTexture(GL_TEXTURE_2D, texHandle);
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
+
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glm::vec4 borderColor(0.0f);
+					glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
+
+					if (metric->width > 0 && metric->height > 0)
+					{
+						glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
+						glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
+
+						glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, texHandle);
+
+						glUniform1i(texChannel, metric->channel);
+						glUniform2f(charResolution, (real)res.x, (real)res.y);
+						glActiveTexture(GL_TEXTURE0);
+						glBindVertexArray(gBufferRenderObject->VAO);
+						glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
+						glDrawArrays(gBufferRenderObject->topology, 0,
+							(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
+						glBindVertexArray(0);
+					}
+
+					glDeleteTextures(1, &texHandle);
+
+					metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
+
+					FT_Bitmap_Done(ft, &alignedBitmap);
+				}
+
+
+				// Cleanup
+				glDisable(GL_BLEND);
+				glDeleteRenderbuffers(1, &captureRBO);
+				glDeleteFramebuffers(1, &captureFBO);
+			}
 
 			FT_Done_Face(face);
 			FT_Done_FreeType(ft);
-
-			glDeleteRenderbuffers(1, &captureRBO);
-			glDeleteFramebuffers(1, &captureFBO);
 
 
 			// Initialize font shader things
@@ -2971,7 +3060,16 @@ namespace flex
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
 			}
 
-			Print("Rendered font atlas for %s\n", fileName.c_str());
+			if (bUsingPreRenderedTexture)
+			{
+				std::string textureFilePath = renderedFontFilePath;
+				StripLeadingDirectories(textureFilePath);
+				Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
+			}
+			else
+			{
+				Print("Rendered font atlas for %s\n", fileName.c_str());
+			}
 
 			return true;
 		}

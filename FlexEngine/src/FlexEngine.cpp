@@ -112,6 +112,9 @@ namespace flex
 
 	void FlexEngine::Initialize()
 	{
+		const char* profileBlockStr = "Engine initialize";
+		PROFILE_BEGIN(profileBlockStr);
+
 		g_EngineInstance = this;
 
 		AudioManager::Initialize();
@@ -168,6 +171,9 @@ namespace flex
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav"));
 		}
+
+		PROFILE_END(profileBlockStr);
+		Profiler::PrintBlockDuration(profileBlockStr);
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -180,6 +186,8 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
+		// TODO: Time engine destruction using non-glfw timer
+
 		SaveCommonSettingsToDisk(false);
 
 		DeselectCurrentlySelectedObject();

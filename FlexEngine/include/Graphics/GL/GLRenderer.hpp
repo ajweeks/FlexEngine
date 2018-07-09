@@ -159,7 +159,12 @@ namespace flex
 			void DrawWorldSpaceSprites();
 			void DrawText();
 
-			bool LoadFont(BitmapFont** font, const std::string& filePath, i16 size);
+			// Will attempt to find pre-rendered font at renderedFontFilePath, and only if non-existent
+			// render a new file
+			bool LoadFont(BitmapFont** font,
+						  i16 size,
+						  const std::string& fontFilePath,
+						  const std::string& renderedFontFilePath);
 
 			void UpdateTextBuffer();
 
@@ -244,7 +249,6 @@ namespace flex
 			u32 m_Offscreen1RBO = 0;
 
 			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
-
 
 			TextureHandle m_LoadingTextureHandle;
 			TextureHandle m_WorkTextureHandle;

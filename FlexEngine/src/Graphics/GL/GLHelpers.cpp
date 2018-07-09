@@ -50,19 +50,27 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps)
+		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut /* = nullptr */)
 		{
-			return GenerateGLTextureWithParams(textureID, filePath, alpha, flipVertically, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+			return GenerateGLTextureWithParams(textureID, filePath, alpha, flipVertically, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR, infoOut);
 		}
 
-		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
 		{
 			// TODO: OPTIMIZATION: Cache loaded textures in the same manner as meshes to avoid loading textures multiple times
-			GLFWimage image = LoadGLFWimage(filePath, alpha, flipVertically);
+			i32 channelCount = 0;
+			GLFWimage image = LoadGLFWimage(filePath, alpha, flipVertically, &channelCount);
 
 			if (!image.pixels)
 			{
 				return false;
+			}
+
+			if (infoOut)
+			{
+				infoOut->width = image.width;
+				infoOut->height = image.height;
+				infoOut->channelCount = channelCount;
 			}
 
 			glGenTextures(1, &textureID);
@@ -96,17 +104,24 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps)
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut /* = nullptr */)
 		{
-			return GenerateHDRGLTextureWithParams(textureID, filePath, alpha, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+			return GenerateHDRGLTextureWithParams(textureID, filePath, alpha, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR, infoOut);
 		}
 
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
 		{
 			HDRImage image = {};
 			if (!image.Load(filePath, flipVertically, alpha))
 			{
 				return false;
+			}
+
+			if (infoOut)
+			{
+				infoOut->width = image.width;
+				infoOut->height = image.height;
+				infoOut->channelCount = image.channelCount;
 			}
 
 			glGenTextures(1, &textureID);
