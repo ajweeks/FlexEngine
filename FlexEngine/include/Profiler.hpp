@@ -11,7 +11,7 @@ namespace flex
 	public:
 
 		static void StartFrame();
-		static void EndFrame(bool bPrintTimings);
+		static void EndFrame(bool bUpdateDisplayedFrame);
 
 		static void Begin(const char* blockName);
 		static void Begin(const std::string& blockName);
@@ -23,17 +23,41 @@ namespace flex
 		static void PrintBlockDuration(const char* blockName);
 		static void PrintBlockDuration(const std::string& blockName);
 
+		static void DrawDisplayedFrame();
+
 	private:
 		static u64 Hash(const char* str);
 
-		// Second field holds start time of block until block is ended, then it contains block duration
-		static std::unordered_map<u64, ms> s_Timings;
+		struct Timing
+		{
+			static const u32 MAX_NAME_LEN = 128;
+
+			ms start = real_max;
+			ms end = real_min;
+			char blockName[MAX_NAME_LEN];
+		};
+
+		static std::unordered_map<u64, Timing> s_Timings;
 		static ms s_FrameStartTime;
 		static ms s_FrameEndTime;
 
 		static i32 s_UnendedTimings;
 
 		static std::string s_PendingCSV;
+
+		// Stores a single frame's timings to be displayed visually
+		static std::vector<Timing> s_DisplayedFrameTimings;
+
+		struct DisplayedFrameOptions
+		{
+			real screenWidthPercent = 0.8f;
+			real screenHeightPercent = 0.2f;
+			real xOffPercent = 0.0f;
+			real yOffPercent = 0.0f;
+			real opacity = 0.8f;
+		};
+
+		static DisplayedFrameOptions s_DisplayedFrameOptions;
 
 	};
 } // namespace flex

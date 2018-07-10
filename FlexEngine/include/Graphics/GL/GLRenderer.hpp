@@ -40,6 +40,9 @@ namespace flex
 			virtual void Draw() override;
 			virtual void DrawImGuiItems() override;
 
+			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
+			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
+
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
 			virtual void ReloadShaders() override;
@@ -86,13 +89,14 @@ namespace flex
 									const glm::vec4& color,
 									AnchorPoint anchor, 
 									const glm::vec2& pos, // Positional offset from anchor
-									real spacing) override; // Horizontal per-char spacing
-
-			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
-			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
+									real spacing,
+									bool bRaw) override; // Horizontal per-char spacing
 
 			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
+
+			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
+			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
 		private:
 			struct TextureHandle
@@ -149,9 +153,11 @@ namespace flex
 				glm::vec3 scale = glm::vec3(1.0f);
 				AnchorPoint anchor = AnchorPoint::TOP_LEFT;
 				glm::vec4 color = glm::vec4(1.0f);
-				bool screenSpace = true;
-				bool readDepth = true;
-				bool writeDepth = true;
+				bool bScreenSpace = true;
+				bool bReadDepth = true;
+				bool bWriteDepth = true;
+				bool bEnableAlbedoSampler = true;
+				bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
 			};
 
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);

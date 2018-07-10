@@ -271,6 +271,9 @@ namespace flex
 		bool IsMouseButtonReleased(MouseButton mouseButton) const;
 		real GetVerticalScrollDistance() const;
 
+		// Pos: [-1, 1] (y = +1 at top of screen), size: [0, 1]
+		bool IsMouseHoveringArea(const glm::vec2& areaPosNorm, const glm::vec2& areaSizeNorm);
+
 		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
 
 		void ClearAllInputs();

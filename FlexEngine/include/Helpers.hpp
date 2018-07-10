@@ -98,7 +98,7 @@ namespace flex
 	struct TextCache
 	{
 	public:
-		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing);
+		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw);
 
 		std::string str;
 		AnchorPoint anchor;
@@ -106,6 +106,7 @@ namespace flex
 		glm::vec4 color;
 		real xSpacing;
 		std::vector<real> letterYOffsets;
+		bool bRaw;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);

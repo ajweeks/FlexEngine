@@ -476,6 +476,34 @@ namespace flex
 		return m_ScrollYOffset;
 	}
 
+	bool InputManager::IsMouseHoveringArea(const glm::vec2& areaPosNorm, const glm::vec2& areaSizeNorm)
+	{
+		glm::vec2 frameBufferSize = g_Window->GetFrameBufferSize();
+		real aspectRatio = frameBufferSize.x / (real)frameBufferSize.y;
+
+		/*
+		Sprite space to pixel space:
+		- Divide x by aspect ratio
+		- + 1
+		- / 2
+		- y = 1 - y
+		- * frameBufferSize
+		*/
+		glm::vec2 posPixels = areaPosNorm;
+		posPixels.x /= aspectRatio;
+		posPixels += glm::vec2(1.0f);
+		posPixels /= 2.0f;
+		posPixels.y = 1.0f - posPixels.y;
+		posPixels *= frameBufferSize;
+
+		glm::vec2 sizePixels = glm::vec2(areaSizeNorm * frameBufferSize);
+
+		// TODO: minus w ?
+		bool bHoveringInArea = (m_MousePosition.x >= posPixels.x - sizePixels.x / 2.0f && m_MousePosition.x <= posPixels.x + sizePixels.x / 2.0f &&
+								m_MousePosition.y >= posPixels.y - sizePixels.y / 2.0f && m_MousePosition.y <= posPixels.y + sizePixels.y / 2.0f);
+		return bHoveringInArea;
+	}
+
 	glm::vec2 InputManager::GetMouseDragDistance(MouseButton mouseButton)
 	{
 		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);

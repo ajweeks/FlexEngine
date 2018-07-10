@@ -763,11 +763,6 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
-			{
-				g_Renderer->SetVSyncEnabled(!g_Renderer->GetVSyncEnabled());
-			}
-
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
 			{
 				g_SceneManager->SetNextSceneActiveAndInit();
@@ -805,7 +800,7 @@ namespace flex
 
 			g_CameraManager->Update();
 
-			PROFILE_BEGIN("Scene UpdateAndRender");
+			PROFILE_BEGIN("Scene Update");
 			if (m_CurrentlySelectedObject)
 			{
 				m_TransformGizmo->SetVisible(true);
@@ -816,8 +811,8 @@ namespace flex
 			{
 				m_TransformGizmo->SetVisible(false);
 			}
-			g_SceneManager->UpdateAndRender();
-			PROFILE_END("Scene UpdateAndRender");
+			g_SceneManager->UpdateCurrentScene();
+			PROFILE_END("Scene Update");
 
 			
 			g_Window->Update();
@@ -830,6 +825,8 @@ namespace flex
 
 			bool bWriteProfilingResultsToFile = 
 				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
+
+			bool bUpdateProfilerDisplayFrame = g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z);
 
 			g_Renderer->Update();
 
@@ -857,8 +854,11 @@ namespace flex
 				SaveCommonSettingsToDisk(false);
 			}
 
-			bool bLogProfilerResults = (m_FrameCount > 3);
-			Profiler::EndFrame(bLogProfilerResults);
+			const bool bProfileFrame = (m_FrameCount > 3);
+			if (bProfileFrame)
+			{
+				Profiler::EndFrame(bUpdateProfilerDisplayFrame);
+			}
 
 			if (bWriteProfilingResultsToFile)
 			{

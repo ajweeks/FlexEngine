@@ -12,7 +12,7 @@ namespace flex
 		SceneManager();
 		virtual ~SceneManager();
 
-		void UpdateAndRender();
+		void UpdateCurrentScene();
 
 		void AddScene(BaseScene* newScene);
 

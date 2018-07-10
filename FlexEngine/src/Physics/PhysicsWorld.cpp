@@ -15,6 +15,7 @@
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
 
@@ -65,7 +66,9 @@ namespace flex
 	{
 		if (m_World)
 		{
+			PROFILE_BEGIN("Physics tick");
 			m_World->stepSimulation(deltaSeconds, MAX_SUBSTEPS);
+			PROFILE_END("Physics tick");
 		}
 	}
 

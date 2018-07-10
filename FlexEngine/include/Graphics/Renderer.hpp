@@ -46,6 +46,10 @@ namespace flex
 		virtual void Draw() = 0;
 		virtual void DrawImGuiItems() = 0;
 
+		// Values should be specified relative to screen size, in [0, 1]
+		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
+		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
+
 		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
 		virtual void ReloadShaders() = 0;
@@ -94,10 +98,19 @@ namespace flex
 								const glm::vec4& color,
 								AnchorPoint anchor,
 								const glm::vec2& pos,
-								real spacing) = 0;
+								real spacing, 
+								bool bRaw) = 0;
 
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
 		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
+
+		// Inputs should lie in range [-1, 1]
+		// Output pos lies in range [0, 1], corrected for aspect ratio
+		void NormalizeSpritePos(const glm::vec2& pos,
+								AnchorPoint anchor,
+								const glm::vec2& scale,
+								glm::vec2& posOut,
+								glm::vec2& scaleOut);
 
 		void SetPostProcessingEnabled(bool bEnabled);
 		bool GetPostProcessingEnabled() const;

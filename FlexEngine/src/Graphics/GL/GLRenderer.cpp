@@ -317,9 +317,9 @@ namespace flex
 			{
 				SpriteQuadDrawInfo drawInfo = {};
 				drawInfo.scale = glm::vec3(1.0f, -1.0f, 1.0f);
-				drawInfo.screenSpace = true;
-				drawInfo.readDepth = false;
-				drawInfo.writeDepth = false;
+				drawInfo.bScreenSpace = true;
+				drawInfo.bReadDepth = false;
+				drawInfo.bWriteDepth = false;
 				drawInfo.materialID = m_SpriteMatID;
 				drawInfo.anchor = AnchorPoint::WHOLE;
 				drawInfo.inputTextureHandle = m_LoadingTextureHandle.id;
@@ -1751,25 +1751,41 @@ namespace flex
 			DrawCallInfo drawCallInfo = {};
 
 			// TODO: Don't sort render objects frame! Only when things are added/removed
+			PROFILE_BEGIN("Render > BatchRenderObjects");
 			BatchRenderObjects();
+			PROFILE_END("Render > BatchRenderObjects");
 
 			// World-space objects
 			drawCallInfo.bDeferred = true;
+			PROFILE_BEGIN("Render > DrawDeferredObjects");
 			DrawDeferredObjects(drawCallInfo);
 			drawCallInfo.bDeferred = false;
+			PROFILE_END("Render > DrawDeferredObjects");
+			PROFILE_BEGIN("Render > DrawGBufferContents");
 			DrawGBufferContents(drawCallInfo);
+			PROFILE_END("Render > DrawGBufferContents");
+			PROFILE_BEGIN("Render > DrawForwardObjects");
 			DrawForwardObjects(drawCallInfo);
+			PROFILE_END("Render > DrawForwardObjects");
+			PROFILE_BEGIN("Render > DrawWorldSpaceSprites");
 			DrawWorldSpaceSprites();
+			PROFILE_END("Render > DrawWorldSpaceSprites");
+			PROFILE_BEGIN("Render > DrawOffscreenTexture");
 			DrawOffscreenTexture();
+			PROFILE_END("Render > DrawOffscreenTexture");
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
+				PROFILE_BEGIN("Render > PhysicsDebugRender");
 				PhysicsDebugRender();
+				PROFILE_END("Render > PhysicsDebugRender");
 			}
 
 			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
+				PROFILE_BEGIN("Render > DrawEditorObjects");
 				DrawEditorObjects(drawCallInfo);
+				PROFILE_END("Render > DrawEditorObjects");
 			}
 
 			// Screen-space objects
@@ -1794,13 +1810,53 @@ namespace flex
 			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + g_SecElapsedSinceProgramStart * 6.0f) * 4.0f);
 			//}
 			
-			SetFont(m_FntSourceCodePro);
-			std::string str("abcdefghijklmnopqrstuvwxyz");
-			DrawString(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.2f), 15);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 3);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.4f), 5);
+			std::string str;
+
+			// Text stress test:
+			/*SetFont(m_FntSourceCodePro);
+			DrawString(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.65f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.6f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.55f), 3.5f);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.5f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.1f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.45f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.2f, 0.4f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.4f), 3.5f);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.1f, 0.2f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.35f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.3f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.3f, 0.3f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.25f), 3.5f);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.5f, 0.9f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.2f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.0f, 0.8f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.15f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.4f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.1f), 3.5f);
+
+			SetFont(m_FntUbuntuCondensed);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.0f), 6);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 6);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 6);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.55f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.3f), 6);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.25f, 0.0f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.4f), 6);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.2f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.5f), 6);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.95f, 0.8f, 0.6f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.6f), 6);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.6f, 0.4f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.7f), 6);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.9f, 0.9f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.8f), 6);*/
 
 			//std::string str = std::string("XYZ");
 			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
@@ -1825,21 +1881,29 @@ namespace flex
 				SetFont(m_FntUbuntuCondensed);
 				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
 										0.0f, 1.0f);
-				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3);
+				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3, false);
 			}
 
+			PROFILE_BEGIN("Render > DrawScreenSpaceSprites");
 			DrawScreenSpaceSprites();
+			PROFILE_END("Render > DrawScreenSpaceSprites");
 
+			PROFILE_BEGIN("Render > UpdateTextBuffer & DrawText");
 			UpdateTextBuffer();
 			DrawText();
+			PROFILE_END("Render > UpdateTextBuffer & DrawText");
 
 			if (g_EngineInstance->IsRenderingImGui())
 			{
+				PROFILE_BEGIN("Render > ImGuiRender");
 				ImGui::Render();
 				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+				PROFILE_END("Render > ImGuiRender");
 			}
 
+			PROFILE_BEGIN("Render > SwapBuffers");
 			SwapBuffers();
+			PROFILE_END("Render > SwapBuffers");
 		}
 
 		void GLRenderer::BatchRenderObjects()
@@ -1855,9 +1919,6 @@ namespace flex
 			no		 3
 			no		 5
 			*/
-
-			static const char* profileBlockName = "batch render objects";
-			PROFILE_BEGIN(profileBlockName);
 
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
@@ -1950,8 +2011,6 @@ namespace flex
 				PrintError("BatchRenderObjects didn't account for every visible object!\n");
 			}
 #endif
-
-			PROFILE_END(profileBlockName);
 		}
 
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
@@ -2220,9 +2279,9 @@ namespace flex
 			glm::vec4 color(1.0f);
 
 			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.screenSpace = true;
-			drawInfo.readDepth = false;
-			drawInfo.writeDepth = false;
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
 			drawInfo.FBO = FBO;
 			drawInfo.RBO = RBO;
 			drawInfo.pos = pos;
@@ -2264,37 +2323,39 @@ namespace flex
 
 		void GLRenderer::DrawScreenSpaceSprites()
 		{
-			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
+			Profiler::DrawDisplayedFrame();
 
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
-			{
-				pos.x += g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
-			{
-				pos.x -= g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
-			{
-				pos.y += g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
-			{
-				pos.y -= g_DeltaTime * 1.0f;
-			}
+			//static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
-			glm::vec3 scale(0.25f, -0.25f, 1.0f);
+			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
+			//{
+			//	pos.x += g_DeltaTime * 1.0f;
+			//}
+			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
+			//{
+			//	pos.x -= g_DeltaTime * 1.0f;
+			//}
+			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
+			//{
+			//	pos.y += g_DeltaTime * 1.0f;
+			//}
+			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
+			//{
+			//	pos.y -= g_DeltaTime * 1.0f;
+			//}
 
-			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.screenSpace = true;
-			drawInfo.readDepth = false;
-			drawInfo.writeDepth = false;
-			drawInfo.pos = pos;
-			drawInfo.scale = scale;
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.anchor = AnchorPoint::TOP_LEFT;
-			drawInfo.inputTextureHandle = m_WorkTextureHandle.id;
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			//glm::vec3 scale(0.25f, -0.25f, 1.0f);
+
+			//SpriteQuadDrawInfo drawInfo = {};
+			//drawInfo.screenSpace = true;
+			//drawInfo.readDepth = false;
+			//drawInfo.writeDepth = false;
+			//drawInfo.pos = pos;
+			//drawInfo.scale = scale;
+			//drawInfo.materialID = m_SpriteMatID;
+			//drawInfo.anchor = AnchorPoint::TOP_LEFT;
+			//drawInfo.inputTextureHandle = m_WorkTextureHandle.id;
+			//drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
 			//DrawSpriteQuad(drawInfo);
 			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
@@ -2322,9 +2383,9 @@ namespace flex
 			SpriteQuadDrawInfo drawInfo = {};
 			drawInfo.FBO = m_Offscreen0FBO;
 			drawInfo.RBO = m_Offscreen0RBO;
-			drawInfo.screenSpace = false;
-			drawInfo.readDepth = true;
-			drawInfo.writeDepth = true;
+			drawInfo.bScreenSpace = false;
+			drawInfo.bReadDepth = true;
+			drawInfo.bWriteDepth = true;
 			drawInfo.scale = scale;
 			drawInfo.materialID = m_SpriteMatID;
 			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
@@ -2379,58 +2440,26 @@ namespace flex
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("model"))
 			{
 				glm::vec3 translation = drawInfo.pos;
-				translation.x /= aspectRatio;
 				glm::quat rotation = drawInfo.rotation;
 				glm::vec3 scale = drawInfo.scale;
-				glm::vec3 absScale = glm::abs(scale);
-				absScale.x /= aspectRatio;
 
-				if (drawInfo.screenSpace)
+				if (!drawInfo.bRaw)
 				{
-					if (drawInfo.anchor == AnchorPoint::WHOLE)
+					if (drawInfo.bScreenSpace)
 					{
-						scale.x *= aspectRatio;
-					}
+						glm::vec2 normalizedTranslation;
+						glm::vec2 normalizedScale;
+						NormalizeSpritePos(translation, drawInfo.anchor, scale, normalizedTranslation, normalizedScale);
 
-					switch (drawInfo.anchor)
+						translation = glm::vec3(normalizedTranslation, 0.0f);
+						scale = glm::vec3(normalizedScale, 1.0f);
+					}
+					else
 					{
-					case AnchorPoint::CENTER:
-						// Already centered (zero)
-						break;
-					case AnchorPoint::TOP_LEFT:
-						translation += glm::vec3(-1.0f + (absScale.x), (1.0f - absScale.y), 0.0f);
-						break;
-					case AnchorPoint::TOP:
-						translation += glm::vec3(0.0f, (1.0f - absScale.y), 0.0f);
-						break;
-					case AnchorPoint::TOP_RIGHT:
-						translation += glm::vec3(1.0f - absScale.x, (1.0f - absScale.y), 0.0f);
-						break;
-					case AnchorPoint::RIGHT:
-						translation += glm::vec3(1.0f - absScale.x, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_RIGHT:
-						translation += glm::vec3(1.0f - absScale.x, (-1.0f + absScale.y), 0.0f);
-						break;
-					case AnchorPoint::BOTTOM:
-						translation += glm::vec3(0.0f, (-1.0f + absScale.y), 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_LEFT:
-						translation += glm::vec3(-1.0f + absScale.x, (-1.0f + absScale.y), 0.0f);
-						break;
-					case AnchorPoint::LEFT:
-						translation += glm::vec3(-1.0f + absScale.x, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::WHOLE:
-						// Already centered (zero)
-						break;
-					default:
-						break;
+						translation.x /= aspectRatio;
 					}
 				}
 
-				translation.x *= aspectRatio;
-				
 				glm::mat4 model = (glm::translate(glm::mat4(1.0f), translation) *
 								   glm::mat4(rotation) *
 								   glm::scale(glm::mat4(1.0f), scale));
@@ -2441,7 +2470,7 @@ namespace flex
 
 			if (spriteShader.shader.constantBufferUniforms.HasUniform("view"))
 			{
-				if (drawInfo.screenSpace)
+				if (drawInfo.bScreenSpace)
 				{
 					glm::mat4 view = glm::mat4(1.0f);
 
@@ -2459,28 +2488,32 @@ namespace flex
 
 			if (spriteShader.shader.constantBufferUniforms.HasUniform("projection"))
 			{
-				if (drawInfo.screenSpace)
+				if (drawInfo.bScreenSpace)
 				{
 					real r = aspectRatio;
 					real t = 1.0f;
 					glm::mat4 projection = glm::ortho(-r, r, -t, t);
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
-					CheckGLErrorMessages();
 				}
 				else
 				{
 					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
-					CheckGLErrorMessages();
 				}
 			}
 
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			{
 				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
-				CheckGLErrorMessages();
+			}
+
+			bool bEnableAlbedoSampler = (drawInfo.inputTextureHandle != 0 && drawInfo.bEnableAlbedoSampler);
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
+			{
+				// TODO: glUniform1ui vs glUniform1i ?
+				glUniform1ui(spriteMaterial.uniformIDs.enableAlbedoSampler, bEnableAlbedoSampler ? 1 : 0);
 			}
 
 			// http://www.graficaobscura.com/matrix/
@@ -2534,9 +2567,12 @@ namespace flex
 			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
 			CheckGLErrorMessages();
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, drawInfo.inputTextureHandle);
-			CheckGLErrorMessages();
+			if (bEnableAlbedoSampler)
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, drawInfo.inputTextureHandle);
+				CheckGLErrorMessages();
+			}
 
 			// TODO: Use member
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -2544,7 +2580,7 @@ namespace flex
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			CheckGLErrorMessages();
 
-			if (drawInfo.readDepth)
+			if (drawInfo.bReadDepth)
 			{
 				glDepthFunc(GL_LEQUAL);
 			}
@@ -2553,7 +2589,7 @@ namespace flex
 				glDepthFunc(GL_ALWAYS);
 			}
 
-			if (drawInfo.writeDepth)
+			if (drawInfo.bWriteDepth)
 			{
 				glDepthMask(GL_TRUE);
 			}
@@ -2757,23 +2793,23 @@ namespace flex
 					continue;
 				}
 
-				if (newFont->UseKerning() && glyphIndex)
-				{
-					for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
-					{
-						FT_Vector delta;
-
-						u32 prevIdx = FT_Get_Char_Index(face, previous);
-						FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
-
-						if (delta.x != 0 || delta.y != 0)
-						{
-							std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
-							metric->kerning[charKey] =
-								glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
-						}
-					}
-				}
+				//if (newFont->UseKerning() && glyphIndex)
+				//{
+				//	for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
+				//	{
+				//		FT_Vector delta;
+				//
+				//		u32 prevIdx = FT_Get_Char_Index(face, previous);
+				//		FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
+				//
+				//		if (delta.x != 0 || delta.y != 0)
+				//		{
+				//			std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
+				//			metric->kerning[charKey] =
+				//				glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
+				//		}
+				//	}
+				//}
 
 				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 				{
@@ -3096,11 +3132,12 @@ namespace flex
 									const glm::vec4& color,
 									AnchorPoint anchor,
 									const glm::vec2& pos,
-									real spacing)
+									real spacing,
+									bool bRaw)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing);
+			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw);
 		}
 
 		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
@@ -3173,41 +3210,45 @@ namespace flex
 					real totalAdvanceX = 0;
 
 					glm::vec2 basePos(0.0f);
-					real strWidth = GetStringWidth(textCache, font) * frameBufferScale;
-					real strHeight = GetStringHeight(textCache, font) * frameBufferScale;
 
-					switch (textCache.anchor)
+					if (!textCache.bRaw)
 					{
-					case AnchorPoint::TOP_LEFT:
-						basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::TOP:
-						basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::TOP_RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM:
-						basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_LEFT:
-						basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::LEFT:
-						basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::CENTER: // Fall through
-					case AnchorPoint::WHOLE:
-						basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
-						break;
-					default:
-						break;
+						real strWidth = GetStringWidth(textCache, font) * frameBufferScale;
+						real strHeight = GetStringHeight(textCache, font) * frameBufferScale;
+
+						switch (textCache.anchor)
+						{
+						case AnchorPoint::TOP_LEFT:
+							basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::TOP:
+							basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::TOP_RIGHT:
+							basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::RIGHT:
+							basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
+							break;
+						case AnchorPoint::BOTTOM_RIGHT:
+							basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::BOTTOM:
+							basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::BOTTOM_LEFT:
+							basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::LEFT:
+							basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
+							break;
+						case AnchorPoint::CENTER: // Fall through
+						case AnchorPoint::WHOLE:
+							basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
+							break;
+						default:
+							break;
+						}
 					}
 
 					char prevChar = ' ';
@@ -3230,8 +3271,8 @@ namespace flex
 								real yOff = (bUseLetterYOffsets ? textCache.letterYOffsets[j] : 0.0f);
 
 								glm::vec2 pos = glm::vec2(textCache.pos.x * aspectRatio, textCache.pos.y) +
-									glm::vec2(totalAdvanceX + metric->offsetX - metric->width / 3.0f,
-											  metric->offsetY + metric->height / 3.0f + yOff)
+									glm::vec2(totalAdvanceX + metric->offsetX, 
+											  metric->offsetY + yOff)
 									* frameBufferScale;
 
 								if (font->UseKerning())
@@ -4109,14 +4150,15 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler");
 			++shaderID;
 
 			// Post processing
@@ -5070,6 +5112,47 @@ namespace flex
 			DoCreateGameObjectButton("Add render object...", "Add render object");
 
 			DrawImGuiLights();
+		}
+
+		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos, 
+											AnchorPoint anchor, 
+											const glm::vec2& size, 
+											const glm::vec4& color)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.anchor = anchor;
+			drawInfo.color = color;
+			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+			drawInfo.bEnableAlbedoSampler = false;
+
+			DrawSpriteQuad(drawInfo);
+		}
+
+		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos, 
+											   const glm::vec2& size,
+											   const glm::vec4& color)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.bRaw = true;
+			drawInfo.color = color;
+			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+			drawInfo.bEnableAlbedoSampler = false;
+
+			DrawSpriteQuad(drawInfo);
 		}
 
 		void GLRenderer::DrawGameObjectImGui(GameObject* gameObject)

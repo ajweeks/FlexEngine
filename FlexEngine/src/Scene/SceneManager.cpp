@@ -25,11 +25,11 @@ namespace flex
 	{
 	}
 
-	void SceneManager::UpdateAndRender()
+	void SceneManager::UpdateCurrentScene()
 	{
 		if (m_Scenes.empty())
 		{
-			PrintError("No scenes ded to SceneManager\n");
+			PrintError("No scenes added to SceneManager\n");
 			return;
 		}
 

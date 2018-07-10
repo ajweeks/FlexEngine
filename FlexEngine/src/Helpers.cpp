@@ -133,12 +133,13 @@ namespace flex
 		return result;
 	}
 
-	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing) :
+	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, bool bRaw) :
 		str(str),
 		anchor(anchor),
 		pos(pos),
 		color(color),
-		xSpacing(xSpacing)
+		xSpacing(xSpacing),
+		bRaw(bRaw)
 	{
 	}
 

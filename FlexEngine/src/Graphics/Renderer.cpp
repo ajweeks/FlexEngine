@@ -25,6 +25,66 @@ namespace flex
 		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
 	}
 
+	void Renderer::NormalizeSpritePos(const glm::vec2& pos,
+										AnchorPoint anchor,
+										const glm::vec2& scale,
+										glm::vec2& posOut,
+										glm::vec2& scaleOut)
+	{
+		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
+		posOut = pos;
+		posOut.x /= aspectRatio;
+		scaleOut = scale;
+
+		glm::vec2 absScale = glm::abs(scale);
+		absScale.x /= aspectRatio;
+
+		if (anchor == AnchorPoint::WHOLE)
+		{
+			scaleOut.x *= aspectRatio;
+		}
+
+		switch (anchor)
+		{
+		case AnchorPoint::CENTER:
+			// Already centered (zero)
+			break;
+		case AnchorPoint::TOP_LEFT:
+			posOut += glm::vec2(-1.0f + (absScale.x), (1.0f - absScale.y));
+			break;
+		case AnchorPoint::TOP:
+			posOut += glm::vec2(0.0f, (1.0f - absScale.y));
+			break;
+		case AnchorPoint::TOP_RIGHT:
+			posOut += glm::vec2(1.0f - absScale.x, (1.0f - absScale.y));
+			break;
+		case AnchorPoint::RIGHT:
+			posOut += glm::vec2(1.0f - absScale.x, 0.0f);
+			break;
+		case AnchorPoint::BOTTOM_RIGHT:
+			posOut += glm::vec2(1.0f - absScale.x, (-1.0f + absScale.y));
+			break;
+		case AnchorPoint::BOTTOM:
+			posOut += glm::vec2(0.0f, (-1.0f + absScale.y));
+			break;
+		case AnchorPoint::BOTTOM_LEFT:
+			posOut += glm::vec2(-1.0f + absScale.x, (-1.0f + absScale.y));
+			break;
+		case AnchorPoint::LEFT:
+			posOut += glm::vec2(-1.0f + absScale.x, 0.0f);
+			break;
+		case AnchorPoint::WHOLE:
+			// Already centered (zero)
+			break;
+		default:
+			break;
+		}
+
+		posOut.x *= aspectRatio;
+	}
+
 	void Renderer::SetPostProcessingEnabled(bool bEnabled)
 	{
 		m_bPostProcessingEnabled = bEnabled;
