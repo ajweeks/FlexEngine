@@ -77,11 +77,17 @@ end
 --copy files that are specific for the platform being built for
 function windowsPlatformPostBuild()
 	local cfgs = configurations()
+	local cfg_lib_dirs = {
+		"Debug",
+		"Release",
+		"Release"
+	};
+
 	for i = 1, #cfgs do
 		--copy dlls and resources after build
 		configuration { "vs*", cfgs[i] }
 			postbuildcommands { 
-				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. cfgs[i] .. "\\assimp-vc140-mt.dll\" " ..
+				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. cfg_lib_dirs[i] .. "\\assimp-vc140-mt.dll\" " ..
 				"\"$(OutDir)assimp-vc140-mt.dll\""
 			}
 	end

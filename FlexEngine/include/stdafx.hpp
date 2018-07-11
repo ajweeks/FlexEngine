@@ -3,11 +3,13 @@
 #define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 0
 
+#define ENABLE_PROFILING 1
+
 #define NOMINMAX
 
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
 
-#pragma warning(disable : 4201) // nonstandard extension used: nanmeless struct/union
+//#pragma warning(disable : 4201) // nonstandard extension used: nanmeless struct/union
 //#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'
 //#pragma warning(disable : 4868) // compiler may not enforce left-to-right evaluation order in braced initializer list
 //#pragma warning(disable : 4710) // function not inlined
@@ -79,7 +81,7 @@ inline void SafeDelete(T &pObjectToDelete)
 #define PI_DIV_FOUR (glm::quarter_pi<real>())
 #define THREE_OVER_TWO_PI (glm::three_over_two_pi<real>())
 
-#if _DEBUG
+#if ENABLE_PROFILING
 #define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
 #define PROFILE_END(blockName) Profiler::End(blockName);
 #else

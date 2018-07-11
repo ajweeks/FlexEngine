@@ -251,6 +251,14 @@ namespace flex
 			{
 				assert(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
 
+				if (m_LastWindowedPos.y == 0)
+				{
+					// When in windowed mode a y position of 0 means the title bar isn't
+					// visible. This will occur if the app launched in fullscreen since
+					// the last y position to never have been set to a valid value.
+					m_LastWindowedPos.y = 40;
+				}
+
 				glfwSetWindowMonitor(m_Window, nullptr, m_LastWindowedPos.x, m_LastWindowedPos.y, m_LastWindowedSize.x, m_LastWindowedSize.y, videoMode->refreshRate);
 				m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
 			} break;
