@@ -17,8 +17,6 @@ out vec4 out_Color;
 
 void main()
 {
-	vec4 color;
-
 	float texValue = texture(in_Texture, inputs.texCoord)[inputs.channel];
 	if (texValue < threshold - soften)
 	{
@@ -27,9 +25,9 @@ void main()
 
 	float max = threshold + soften;
 	float min = threshold - soften;
-	float a = (texValue - min) / (max - min);
+	float a = clamp((texValue - min) / (max - min), 0, 1);
 
-	color = inputs.color;
+	vec4 color = inputs.color;
 	color.a = mix(0, inputs.color.a, a);
 	out_Color = color;
 }
