@@ -21,7 +21,11 @@ namespace flex
 
 	BitmapFont::~BitmapFont()
 	{
-		SafeDelete(m_Texture);
+		if (m_Texture)
+		{
+			m_Texture->Destroy();
+			SafeDelete(m_Texture);
+		}
 	}
 
 	bool BitmapFont::IsCharValid(wchar_t character)
@@ -71,8 +75,8 @@ namespace flex
 
 		if (m_Texture)
 		{
-			m_Texture->m_Width = m_TextureWidth;
-			m_Texture->m_Height = m_TextureHeight;
+			m_Texture->width = m_TextureWidth;
+			m_Texture->height = m_TextureHeight;
 		}
 	}
 

@@ -68,12 +68,6 @@ namespace flex
 
 		void GLRenderer::Initialize()
 		{
-			m_BRDFTextureSize = { 512, 512 };
-			m_BRDFTextureHandle = {};
-			m_BRDFTextureHandle.internalFormat = GL_RG16F;
-			m_BRDFTextureHandle.format = GL_RG;
-			m_BRDFTextureHandle.type = GL_FLOAT;
-
 			m_OffscreenTexture0Handle = {};
 			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
 			m_OffscreenTexture0Handle.format = GL_RGBA;
@@ -84,21 +78,21 @@ namespace flex
 			m_OffscreenTexture1Handle.format = GL_RGBA;
 			m_OffscreenTexture1Handle.type = GL_FLOAT;
 
-			m_LoadingTextureHandle = {};
-			m_LoadingTextureHandle.internalFormat = GL_RGBA;
-			m_LoadingTextureHandle.format = GL_RGBA;
-			m_LoadingTextureHandle.type = GL_FLOAT;
+			//m_LoadingTextureHandle = {};
+			//m_LoadingTextureHandle.internalFormat = GL_RGBA;
+			//m_LoadingTextureHandle.format = GL_RGBA;
+			//m_LoadingTextureHandle.type = GL_FLOAT;
 
 
-			m_PointLightIconHandle = {};
-			m_PointLightIconHandle.internalFormat = GL_RGBA;
-			m_PointLightIconHandle.format = GL_RGBA;
-			m_PointLightIconHandle.type = GL_FLOAT;
+			//m_PointLightIconHandle = {};
+			//m_PointLightIconHandle.internalFormat = GL_RGBA;
+			//m_PointLightIconHandle.format = GL_RGBA;
+			//m_PointLightIconHandle.type = GL_FLOAT;
 
-			m_DirectionalLightIconHandle = {};
-			m_DirectionalLightIconHandle.internalFormat = GL_RGBA;
-			m_DirectionalLightIconHandle.format = GL_RGBA;
-			m_DirectionalLightIconHandle.type = GL_FLOAT;
+			//m_DirectionalLightIconHandle = {};
+			//m_DirectionalLightIconHandle.internalFormat = GL_RGBA;
+			//m_DirectionalLightIconHandle.format = GL_RGBA;
+			//m_DirectionalLightIconHandle.type = GL_FLOAT;
 
 
 			m_gBuffer_PositionMetallicHandle = {};
@@ -163,11 +157,26 @@ namespace flex
 				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false, false);
-			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false, true);
-
-			GenerateGLTexture(m_PointLightIconHandle.id, RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", true, false, true);
-			GenerateGLTexture(m_DirectionalLightIconHandle.id, RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", true, false, true);
+			m_LoadingTexture = new GLTexture(RESOURCE_LOCATION + "textures/loading_1.png", 3, false, false, false);
+			if (m_LoadingTexture->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_LoadingTexture->filePath, m_LoadingTexture });
+			}
+			m_WorkTexture = new GLTexture(RESOURCE_LOCATION + "textures/work_d.jpg", 3, false, true, false);
+			if (m_WorkTexture->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_WorkTexture->filePath, m_WorkTexture });
+			}
+			m_PointLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			if (m_PointLightIcon->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_PointLightIcon->filePath, m_PointLightIcon });
+			}
+			m_DirectionalLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			if (m_DirectionalLightIcon->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_DirectionalLightIcon->filePath, m_DirectionalLightIcon });
+			}
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
@@ -306,23 +315,35 @@ namespace flex
 				drawInfo.bWriteDepth = false;
 				drawInfo.materialID = m_SpriteMatID;
 				drawInfo.anchor = AnchorPoint::WHOLE;
-				drawInfo.inputTextureHandle = m_LoadingTextureHandle.id;
+				drawInfo.inputTextureHandle = m_LoadingTexture->handle;
 				drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
 				DrawSpriteQuad(drawInfo);
 				SwapBuffers();
 			}
 
-			if (m_BRDFTextureHandle.id == 0)
+			if (!m_BRDFTexture)
 			{
-				Print("Generating BRDF LUT\n");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, 
-										m_BRDFTextureSize, 
-										false,
-										m_BRDFTextureHandle.internalFormat, 
-										m_BRDFTextureHandle.format,
-										m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(m_BRDFTextureHandle.id, m_BRDFTextureSize);
+				i32 brdfSize = 512;
+				i32 internalFormat = GL_RG16F;
+				GLenum format = GL_RG;
+				GLenum type = GL_FLOAT;
+
+				m_BRDFTexture = new GLTexture(brdfSize,
+											  brdfSize,
+											  internalFormat,
+											  format,
+											  type);
+				if (m_BRDFTexture->GenerateEmpty())
+				{
+					// TODO: Don't use file path as a key value since not all textures have file paths?
+					m_LoadedTextures.insert({ "BRDF", m_BRDFTexture });
+					GenerateBRDFLUT(m_BRDFTexture->handle, brdfSize);
+				}
+				else
+				{
+					PrintError("Failed to generate BRDF texture\n");
+				}
 			}
 
 			ImGui::CreateContext();
@@ -412,6 +433,16 @@ namespace flex
 				SafeDelete(font);
 			}
 			m_Fonts.clear();
+
+			for (auto& texturePair : m_LoadedTextures)
+			{
+				if (texturePair.second)
+				{
+					texturePair.second->Destroy();
+					SafeDelete(texturePair.second);
+				}
+			}
+			m_LoadedTextures.clear();
 
 			ImGui_ImplGlfwGL3_Shutdown();
 			ImGui::DestroyContext();
@@ -621,11 +652,11 @@ namespace flex
 
 			if (shader.shader.needBRDFLUT)
 			{
-				if (m_BRDFTextureHandle.id == 0)
+				if (!m_BRDFTexture)
 				{
 					Print("BRDF LUT has not been generated before material which uses it!\n");
 				}
-				mat.brdfLUTSamplerID = m_BRDFTextureHandle.id;
+				mat.brdfLUTSamplerID = m_BRDFTexture->handle;
 			}
 
 			if (shader.shader.needPrefilteredMap)
@@ -653,29 +684,29 @@ namespace flex
 				u32* id;
 				std::string filepath;
 				std::string textureName;
+				i32 channelCount;
 				bool flipVertically;
-				bool alpha;
 				bool generateMipMaps;
-				std::function<bool(u32&, const std::string&, bool, bool, bool, ImageInfo*)> createFunction;
+				bool hdr;
 			};
 
 			// Samplers that need to be loaded from file
 			SamplerCreateInfo samplerCreateInfos[] =
 			{
 				{ shader.shader.needAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID, 
-				createInfo->albedoTexturePath, "albedoSampler", false, false, true, GenerateGLTexture },
+				createInfo->albedoTexturePath, "albedoSampler", 3, false, true, false },
 				{ shader.shader.needMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID, 
-				createInfo->metallicTexturePath, "metallicSampler", false, false,true, GenerateGLTexture },
+				createInfo->metallicTexturePath, "metallicSampler", 3, false, true, false },
 				{ shader.shader.needRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID, 
-				createInfo->roughnessTexturePath, "roughnessSampler" ,false, false, true,GenerateGLTexture },
+				createInfo->roughnessTexturePath, "roughnessSampler", 3, false, true, false },
 				{ shader.shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID, 
-				createInfo->aoTexturePath, "aoSampler", false,false, true,GenerateGLTexture },
+				createInfo->aoTexturePath, "aoSampler", 3, false, true, false },
 				{ shader.shader.needDiffuseSampler, mat.material.generateDiffuseSampler, &mat.diffuseSamplerID, 
-				createInfo->diffuseTexturePath, "diffuseSampler", false,false, true,GenerateGLTexture },
+				createInfo->diffuseTexturePath, "diffuseSampler", 3, false, true, false },
 				{ shader.shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID, 
-				createInfo->normalTexturePath, "normalSampler",false, false, true,GenerateGLTexture },
+				createInfo->normalTexturePath, "normalSampler", 3, false, true, false },
 				{ shader.shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
-				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", true, true, false, GenerateHDRGLTexture },
+				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", 4, true, false, true },
 			};
 
 			i32 binding = 0;
@@ -692,28 +723,43 @@ namespace flex
 						}
 						else
 						{
-							if (!GetLoadedTexture(samplerCreateInfo.filepath, *samplerCreateInfo.id))
+							GLTexture* loadedTexture = nullptr;
+							if (GetLoadedTexture(samplerCreateInfo.filepath, &loadedTexture))
+							{
+								// TODO: not just this
+								*samplerCreateInfo.id = loadedTexture->handle;
+							}
+							else
 							{
 								std::string fileNameClean = samplerCreateInfo.filepath;
 								StripLeadingDirectories(fileNameClean);
 								std::string textureProfileBlockName = "load texture " + fileNameClean;
 								PROFILE_BEGIN(textureProfileBlockName);
-								ImageInfo imageInfo = {};
-								// Texture hasn't been loaded yet, load it now
-								bool bSucceded = samplerCreateInfo.createFunction(*samplerCreateInfo.id, 
-																 samplerCreateInfo.filepath,
-																 samplerCreateInfo.alpha,
-																 samplerCreateInfo.flipVertically,
-																 samplerCreateInfo.generateMipMaps,
-																 &imageInfo);
-								PROFILE_END(textureProfileBlockName);
 
+								GLTexture* newTexture = new GLTexture(samplerCreateInfo.filepath,
+																	  samplerCreateInfo.channelCount,
+																	  samplerCreateInfo.flipVertically,
+																	  samplerCreateInfo.generateMipMaps, 
+																	  samplerCreateInfo.hdr);
+
+								newTexture->LoadFromFile();
+
+								// Texture hasn't been loaded yet, load it now
+								//ImageInfo imageInfo = {};
+								//bool bSucceded = samplerCreateInfo.createFunction(*samplerCreateInfo.id, 
+								//								 samplerCreateInfo.filepath,
+								//								 samplerCreateInfo.alpha,
+								//								 samplerCreateInfo.flipVertically,
+								//								 samplerCreateInfo.generateMipMaps,
+								//								 &imageInfo);
+
+								PROFILE_END(textureProfileBlockName);
 								Profiler::PrintBlockDuration(textureProfileBlockName);
 
-								if (bSucceded)
+								if (newTexture->bLoaded)
 								{
-									// TODO: Store size from imageInfo
-									m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
+									*samplerCreateInfo.id = newTexture->handle;
+									m_LoadedTextures.insert({ samplerCreateInfo.filepath, newTexture });
 								}
 							}
 
@@ -1275,7 +1321,7 @@ namespace flex
 			//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
 		}
 
-		void GLRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
+		void GLRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, i32 brdfLUTSize)
 		{
 			if (m_1x1_NDC_Quad)
 			{
@@ -1289,7 +1335,7 @@ namespace flex
 			brdfMaterialCreateInfo.engineMaterial = true;
 			MaterialID brdfMatID = InitializeMaterial(&brdfMaterialCreateInfo);
 
-			if (m_1x1_NDC_Quad == nullptr)
+			// Generate 1x1 NDC quad
 			{
 				VertexBufferData::CreateInfo quadVertexBufferDataCreateInfo = {};
 				quadVertexBufferDataCreateInfo.positions_3D = {
@@ -1304,8 +1350,8 @@ namespace flex
 					{ 1.0f, 1.0f },
 					{ 1.0f, 0.0f },
 				};
-				quadVertexBufferDataCreateInfo.attributes = 
-					(u32)VertexAttribute::POSITION | 
+				quadVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION |
 					(u32)VertexAttribute::UV;
 
 				m_1x1_NDC_QuadVertexBufferData = {};
@@ -1351,7 +1397,7 @@ namespace flex
 			glBindVertexArray(m_1x1_NDC_Quad->VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
 
-			glViewport(0, 0, (GLsizei)BRDFLUTSize.x, (GLsizei)BRDFLUTSize.y);
+			glViewport(0, 0, brdfLUTSize, brdfLUTSize);
 
 			if (m_1x1_NDC_Quad->enableCulling)
 			{
@@ -1793,6 +1839,20 @@ namespace flex
 				PROFILE_END("Render > ImGuiRender");
 			}
 
+			/*real textureAspectRatio = m_LoadingTexture->m_Width / (real)m_LoadingTexture->m_Height;
+
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.scale = glm::vec3(textureAspectRatio, -1.0f, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.anchor = AnchorPoint::CENTER;
+			drawInfo.inputTextureHandle = m_LoadingTexture->m_Handle;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+			DrawSpriteQuad(drawInfo);*/
+
 			PROFILE_BEGIN("Render > SwapBuffers");
 			SwapBuffers();
 			PROFILE_END("Render > SwapBuffers");
@@ -2178,55 +2238,67 @@ namespace flex
 		{
 			Profiler::DrawDisplayedFrame();
 
-			//static glm::vec3 pos(0.01f, -0.01f, 0.0f);
+			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
-			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
-			//{
-			//	pos.x += g_DeltaTime * 1.0f;
-			//}
-			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
-			//{
-			//	pos.x -= g_DeltaTime * 1.0f;
-			//}
-			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
-			//{
-			//	pos.y += g_DeltaTime * 1.0f;
-			//}
-			//if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
-			//{
-			//	pos.y -= g_DeltaTime * 1.0f;
-			//}
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
+			{
+				pos.x += g_DeltaTime * 1.0f;
+			}
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
+			{
+				pos.x -= g_DeltaTime * 1.0f;
+			}
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
+			{
+				pos.y += g_DeltaTime * 1.0f;
+			}
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
+			{
+				pos.y -= g_DeltaTime * 1.0f;
+			}
 
-			//glm::vec3 scale(0.25f, -0.25f, 1.0f);
+			glm::vec4 color(1.0f);
 
-			//SpriteQuadDrawInfo drawInfo = {};
-			//drawInfo.screenSpace = true;
-			//drawInfo.readDepth = false;
-			//drawInfo.writeDepth = false;
-			//drawInfo.pos = pos;
-			//drawInfo.scale = scale;
-			//drawInfo.materialID = m_SpriteMatID;
-			//drawInfo.anchor = AnchorPoint::TOP_LEFT;
-			//drawInfo.inputTextureHandle = m_WorkTextureHandle.id;
-			//drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.pos = pos;
+			drawInfo.scale = glm::vec3(1.0, -1.0, 1.0f);
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.anchor = AnchorPoint::WHOLE;
+			drawInfo.inputTextureHandle = m_WorkTexture->handle;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 			//DrawSpriteQuad(drawInfo);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color, true);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::BOTTOM_LEFT, color, true);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::LEFT, color, true);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::TOP_LEFT, color, true);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::TOP, color, true);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::TOP_RIGHT, color, true);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::RIGHT, color, true);
-			//DrawSpriteQuad(m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f), true);
+
+			drawInfo.scale = glm::vec3(0.25f, -0.25f, 1.0f);
+			drawInfo.anchor = AnchorPoint::BOTTOM_LEFT;
+			DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::LEFT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::TOP_LEFT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::TOP;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.color = glm::vec4(1.0f, sin(g_SecElapsedSinceProgramStart) * 0.3f + 0.7f, 0.5f, 1.0f);
+			//drawInfo.anchor = AnchorPoint::TOP_RIGHT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::RIGHT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::BOTTOM;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::CENTER;
+			//DrawSpriteQuad(drawInfo);
 		}
 
 		void GLRenderer::DrawWorldSpaceSprites()
@@ -2252,7 +2324,7 @@ namespace flex
 				{
 					drawInfo.pos = pointLight.position;
 					drawInfo.color = pointLight.color * 1.5f;
-					drawInfo.inputTextureHandle = m_PointLightIconHandle.id;
+					drawInfo.inputTextureHandle = m_PointLightIcon->handle;
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight.position, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(drawInfo);
@@ -2263,7 +2335,7 @@ namespace flex
 			{
 				drawInfo.color = m_DirectionalLight.color * 1.5f;
 				drawInfo.pos = m_DirectionalLight.position;
-				drawInfo.inputTextureHandle = m_DirectionalLightIconHandle.id;
+				drawInfo.inputTextureHandle = m_DirectionalLightIcon->handle;
 				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight.position, camUp);
 				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 				DrawSpriteQuad(drawInfo);
@@ -2505,7 +2577,7 @@ namespace flex
 				if (font->m_BufferSize > 0)
 				{
 					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->GetHandle());
+					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
 
 					real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 					real r = aspectRatio;
@@ -2707,15 +2779,11 @@ namespace flex
 				params.wrapS = GL_CLAMP_TO_EDGE;
 				params.wrapT = GL_CLAMP_TO_EDGE;
 
-				GLTexture* fontTex = newFont->SetTexture(new GLTexture(0, 0, 0));
+				GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, true, false, false));
 
-				ImageInfo imageInfo = {};
-				if (GenerateGLTexture(fontTex->m_Handle, renderedFontFilePath, true, true, false, &imageInfo))
+				if (fontTex->LoadFromFile())
 				{
 					bUsingPreRenderedTexture = true;
-
-					fontTex->m_Width = imageInfo.width;
-					fontTex->m_Height = imageInfo.height;
 
 					for (auto& charPair : characters)
 					{
@@ -2727,7 +2795,7 @@ namespace flex
 							continue;
 						}
 
-						metric->texCoord = metric->texCoord / glm::vec2((real)imageInfo.width, (real)imageInfo.height);
+						metric->texCoord = metric->texCoord / glm::vec2((real)fontTex->width, (real)fontTex->height);
 					}
 				}
 				else
@@ -2750,6 +2818,7 @@ namespace flex
 				params.wrapT = GL_CLAMP_TO_EDGE;
 
 				GLTexture* fontTex = newFont->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
+				//fontTex->GenerateEmpty();
 				fontTex->Build();
 				fontTex->SetParameters(params);
 
@@ -2765,7 +2834,7 @@ namespace flex
 				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
 				// TODO: Don't use depth buffer
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->handle, 0);
 
 				glViewport(0, 0, textureSize.x, textureSize.y);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -3689,7 +3758,7 @@ namespace flex
 			return bDuplicated;
 		}
 
-		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
+		bool GLRenderer::GetLoadedTexture(const std::string& filePath, GLTexture** texture)
 		{
 			auto iter = m_LoadedTextures.find(filePath);
 			if (iter == m_LoadedTextures.end())
@@ -3698,7 +3767,7 @@ namespace flex
 			}
 			else
 			{
-				handle = iter->second;
+				*texture = iter->second;
 				return true;
 			}
 		}

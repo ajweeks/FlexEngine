@@ -25,8 +25,11 @@ namespace flex
 	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
 	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha, bool flipVertically, i32* channelCountOut /* = nullptr */)
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, i32* channelCountOut /* = nullptr */)
 	{
+		assert(requestedChannelCount == 3 ||
+			   requestedChannelCount == 4);
+
 		GLFWimage result = {};
 
 		std::string fileName = filePath;
@@ -36,7 +39,11 @@ namespace flex
 		stbi_set_flip_vertically_on_load(flipVertically);
 
 		i32 channels;
-		unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, alpha ? STBI_rgb_alpha : STBI_rgb);
+		unsigned char* data = stbi_load(filePath.c_str(),
+										&result.width,
+										&result.height,
+										&channels, 
+										(requestedChannelCount == 4  ? STBI_rgb_alpha : STBI_rgb));
 
 		if (channelCountOut)
 		{
@@ -66,8 +73,11 @@ namespace flex
 		image.pixels = nullptr;
 	}
 
-	bool HDRImage::Load(const std::string& hdrFilePath, bool alpha, bool flipVertically)
+	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically)
 	{
+		assert(requestedChannelCount == 3 ||
+			   requestedChannelCount == 4);
+
 		filePath = hdrFilePath;
 
 		std::string fileName = hdrFilePath;
@@ -76,7 +86,11 @@ namespace flex
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
-		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, alpha ? STBI_rgb_alpha : STBI_rgb);
+		pixels = stbi_loadf(filePath.c_str(),
+							&width,
+							&height, 
+							&channelCount, 
+							(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
 		channelCount = 4;
 

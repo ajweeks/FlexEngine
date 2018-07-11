@@ -48,16 +48,41 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut /* = nullptr */)
+		bool GenerateGLTexture(u32& textureID,
+							   const std::string& filePath,
+							   i32 requestedChannelCount, 
+							   bool flipVertically,
+							   bool generateMipMaps, 
+							   ImageInfo* infoOut /* = nullptr */)
 		{
-			return GenerateGLTextureWithParams(textureID, filePath, alpha, flipVertically, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR, infoOut);
+			return GenerateGLTextureWithParams(textureID,
+											   filePath,
+											   requestedChannelCount,
+											   flipVertically,
+											   generateMipMaps,
+											   GL_REPEAT, 
+											   GL_REPEAT, 
+											   GL_LINEAR,
+											   GL_LINEAR, 
+											   infoOut);
 		}
 
-		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
+		bool GenerateGLTextureWithParams(u32& textureID,
+										 const std::string& filePath,
+										 i32 requestedChannelCount,
+										 bool flipVertically,
+										 bool generateMipMaps,
+										 i32 sWrap,
+										 i32 tWrap,
+										 i32 minFilter,
+										 i32 magFilter,
+										 ImageInfo* infoOut /* = nullptr */)
 		{
-			// TODO: OPTIMIZATION: Cache loaded textures in the same manner as meshes to avoid loading textures multiple times
+			assert(requestedChannelCount == 3 ||
+				   requestedChannelCount == 4);
+
 			i32 channelCount = 0;
-			GLFWimage image = LoadGLFWimage(filePath, alpha, flipVertically, &channelCount);
+			GLFWimage image = LoadGLFWimage(filePath, requestedChannelCount, flipVertically, &channelCount);
 
 			if (!image.pixels)
 			{
@@ -74,7 +99,7 @@ namespace flex
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
 
-			if (alpha)
+			if (channelCount == 4)
 			{
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.pixels);
 			}
@@ -100,15 +125,18 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut /* = nullptr */)
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut /* = nullptr */)
 		{
-			return GenerateHDRGLTextureWithParams(textureID, filePath, alpha, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR, infoOut);
+			return GenerateHDRGLTextureWithParams(textureID, filePath, requestedChannelCount, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR, infoOut);
 		}
 
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool alpha, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
 		{
+			assert(requestedChannelCount == 3 ||
+				   requestedChannelCount == 4);
+
 			HDRImage image = {};
-			if (!image.Load(filePath, flipVertically, alpha))
+			if (!image.Load(filePath, requestedChannelCount, flipVertically))
 			{
 				return false;
 			}
@@ -123,7 +151,7 @@ namespace flex
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
 
-			if (alpha)
+			if (requestedChannelCount == 4)
 			{
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, image.width, image.height, 0, GL_RGBA, GL_FLOAT, image.pixels);
 			}
@@ -291,124 +319,157 @@ namespace flex
 			}
 		}
 
-		GLTexture::GLTexture(GLuint handle, i32 width, i32 height, i32 depth):
-			m_Handle(handle),
-			m_Width(width),
-			m_Height(height),
-			m_Depth(depth)
+		GLTexture::GLTexture()
 		{
 		}
 
-		GLTexture::GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type, i32 depth) :
-			m_Width(width),
-			m_Height(height),
-			m_InternalFormat(internalFormat),
-			m_Format(format),
-			m_Type(type),
-			m_Depth(depth)
+		GLTexture::GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type) :
+			width(width),
+			height(height),
+			internalFormat(internalFormat),
+			format(format),
+			type(type)
 		{
-			glGenTextures(1, &m_Handle);
-			m_Parameters = {};
+		}
+
+		GLTexture::GLTexture(const std::string& filePath,
+							 i32 channelCount,
+							 bool bFlipVertically,
+							 bool bGenerateMipMaps,
+							 bool bHDR) :
+			filePath(filePath),
+			channelCount(channelCount),
+			bFlipVerticallyOnLoad(bFlipVertically),
+			bHasMipMaps(bGenerateMipMaps),
+			bHDR(bHDR)
+		{
 		}
 
 		GLTexture::~GLTexture()
 		{
 		}
 
-		GLuint GLTexture::GetHandle()
+		bool GLTexture::GenerateEmpty()
 		{
-			return m_Handle;
+			assert(!bLoaded);
+
+			bool bSucceeded = GenerateGLTexture_Empty(handle,
+													  glm::vec2i(width, height),
+													  bHasMipMaps,
+													  internalFormat,
+													  format,
+													  type);
+
+			if (bSucceeded)
+			{
+				bLoaded = true;
+			}
+
+			return bSucceeded;
 		}
 
-		glm::vec2i GLTexture::GetResolution()
+		bool GLTexture::LoadFromFile()
 		{
-			return glm::vec2i(m_Width, m_Height);
+			assert(!bLoaded);
+
+			ImageInfo infoOut;
+			// TODO: Also pass along bit depth succeeded
+			bool bSucceeded = false;
+			if (bHDR)
+			{
+				bSucceeded = GenerateHDRGLTexture(handle, filePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
+			}
+			else
+			{
+				bSucceeded = GenerateGLTexture(handle, filePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
+			}
+
+			if (bSucceeded)
+			{
+				width = infoOut.width;
+				height = infoOut.height;
+				channelCount = infoOut.channelCount;
+				this->bHDR = bHDR;
+
+				bLoaded = true;
+			}
+			else
+			{
+				PrintError("Failed to load GL texture at filepath: %s\n", filePath.c_str());
+			}
+
+			return bSucceeded;
 		}
 
 		void GLTexture::Build(void* data)
 		{
-			if (m_Depth == 1)
-			{
-				glBindTexture(GL_TEXTURE_2D, m_Handle);
-				glTexImage2D(GL_TEXTURE_2D, 0, m_InternalFormat, m_Width, m_Height, 0, m_Format, m_Type, data);
-			}
-			else
-			{
-				glBindTexture(GL_TEXTURE_3D, m_Handle);
-				glTexImage3D(GL_TEXTURE_3D, 0, m_InternalFormat, m_Width, m_Height, m_Depth, 0, m_Format, m_Type, data);
-			}
+			glBindTexture(GL_TEXTURE_2D, handle);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
 		}
 
 		void GLTexture::Destroy()
 		{
-			if (m_Handle != 0)
+			if (handle != 0)
 			{
-				glDeleteTextures(1, &m_Handle);
+				glDeleteTextures(1, &handle);
 			}
+
+			bLoaded = false;
+		}
+
+		glm::vec2i GLTexture::GetResolution()
+		{
+			return glm::vec2i(width, height);
 		}
 
 		void GLTexture::SetParameters(TextureParameters params)
 		{
-			GLenum target = GetTarget();
-			glBindTexture(target, m_Handle);
+			glBindTexture(GL_TEXTURE_2D, handle);
 			if (m_Parameters.minFilter != params.minFilter)
 			{
-				glTexParameteri(target, GL_TEXTURE_MIN_FILTER, params.minFilter);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, params.minFilter);
 			}
 
 			if (m_Parameters.magFilter != params.magFilter)
 			{
-				glTexParameteri(target, GL_TEXTURE_MAG_FILTER, params.magFilter);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, params.magFilter);
 			}
 
 			if (m_Parameters.wrapS != params.wrapS)
 			{
-				glTexParameteri(target, GL_TEXTURE_WRAP_S, params.wrapS);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, params.wrapS);
 			}
 
 			if (m_Parameters.wrapT != params.wrapT)
 			{
-				glTexParameteri(target, GL_TEXTURE_WRAP_T, params.wrapT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, params.wrapT);
 			}
 
 			if (m_Parameters.borderColor != params.borderColor)
 			{
-				glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &params.borderColor.r);
+				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &params.borderColor.r);
 			}
 
 			if (m_Parameters.bGenMipMaps == false && params.bGenMipMaps == true)
 			{
-				glGenerateMipmap(target);
+				glGenerateMipmap(GL_TEXTURE_2D);
 			}
 
 			if (params.bIsDepthTex && m_Parameters.compareMode != params.compareMode)
 			{
-				glTexParameteri(target, GL_TEXTURE_COMPARE_MODE, params.compareMode);//shadow map comp mode
-			}
-
-			if (m_Depth > 1)
-			{
-				if (m_Parameters.wrapR != params.wrapR)
-				{
-					glTexParameteri(target, GL_TEXTURE_WRAP_R, params.wrapR);
-				}
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, params.compareMode);//shadow map comp mode
 			}
 
 			m_Parameters = params;
 		}
 
-		GLenum GLTexture::GetTarget()
-		{
-			return (m_Depth == 1 ? GL_TEXTURE_2D : GL_TEXTURE_3D);
-		}
-
 		bool GLTexture::Resize(glm::vec2i newSize)
 		{
-			if (newSize.x > m_Width || newSize.y > m_Height)
+			if (newSize.x > width || newSize.y > height)
 			{
-				m_Width = newSize.x; m_Height = newSize.y;
-				glDeleteTextures(1, &m_Handle);
-				glGenTextures(1, &m_Handle);
+				width = newSize.x; height = newSize.y;
+				glDeleteTextures(1, &handle);
+				glGenTextures(1, &handle);
 				Build();
 
 				TextureParameters tempParams = m_Parameters;
@@ -419,7 +480,7 @@ namespace flex
 			}
 			else
 			{
-				m_Width = newSize.x; m_Height = newSize.y;
+				width = newSize.x; height = newSize.y;
 				Build();
 
 				return false;

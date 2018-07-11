@@ -140,7 +140,7 @@ namespace flex
 			void GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
-			void GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
+			void GenerateBRDFLUT(u32 brdfLUTTextureID, i32 BRDFLUTSize);
 
 			void SwapBuffers();
 
@@ -179,7 +179,7 @@ namespace flex
 
 			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
-			bool GetLoadedTexture(const std::string& filePath, u32& handle);
+			bool GetLoadedTexture(const std::string& filePath, GLTexture** texture);
 
 			MaterialID GetNextAvailableMaterialID();
 
@@ -227,7 +227,7 @@ namespace flex
 
 			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
-			std::map<std::string, u32> m_LoadedTextures; // Key is filepath, value is texture id
+			std::map<std::string, GLTexture*> m_LoadedTextures; // Key is filepath
 
 			// TODO: Clean up (make more dynamic)
 			u32 viewProjectionUBO = 0;
@@ -244,8 +244,7 @@ namespace flex
 			TextureHandle m_gBuffer_NormalRoughnessHandle;
 			TextureHandle m_gBuffer_DiffuseAOHandle;
 
-			TextureHandle m_BRDFTextureHandle;
-			glm::vec2 m_BRDFTextureSize;
+			GLTexture* m_BRDFTexture = nullptr;
 
 			// Everything is drawn to this texture before being drawn to the default 
 			// frame buffer through some post-processing effects
@@ -259,11 +258,11 @@ namespace flex
 
 			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
 
-			TextureHandle m_LoadingTextureHandle;
-			TextureHandle m_WorkTextureHandle;
+			GLTexture* m_LoadingTexture = nullptr;
+			GLTexture* m_WorkTexture = nullptr;
 
-			TextureHandle m_PointLightIconHandle;
-			TextureHandle m_DirectionalLightIconHandle;
+			GLTexture* m_PointLightIcon = nullptr;
+			GLTexture* m_DirectionalLightIcon = nullptr;
 
 			// TODO: Use a mesh prefab here
 			VertexBufferData m_Quad3DVertexBufferData;
