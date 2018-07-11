@@ -151,17 +151,13 @@ namespace flex
 			m_VertexBufferData.Initialize(&createInfo);
 
 			glUseProgram(glShader->program);
-			CheckGLErrorMessages();
 
 			glGenVertexArrays(1, &m_VAO);
 			glBindVertexArray(m_VAO);
-			CheckGLErrorMessages();
 
 			glGenBuffers(1, &m_VBO);
 			glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STATIC_DRAW);
-			CheckGLErrorMessages();
-
 
 			// Describe shader variables
 			{
@@ -174,7 +170,6 @@ namespace flex
 
 
 					glVertexAttribPointer((GLuint)location, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-					CheckGLErrorMessages();
 
 					currentLocation += 3;
 				}
@@ -185,7 +180,6 @@ namespace flex
 					glEnableVertexAttribArray((GLuint)location);
 
 					glVertexAttribPointer((GLuint)location, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-					CheckGLErrorMessages();
 
 					currentLocation += 4;
 				}
@@ -199,25 +193,14 @@ namespace flex
 			glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
 
 			glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
-			CheckGLErrorMessages();
-
 			glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
-			CheckGLErrorMessages();
-
 			glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
-			CheckGLErrorMessages();
-
 			glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-			CheckGLErrorMessages();
-
 
 			glDepthMask(GL_FALSE);
-			CheckGLErrorMessages();
-
 			glDisable(GL_BLEND);
 
 			glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
-			CheckGLErrorMessages();
 		}
 	} // namespace gl
 } // namespace flex

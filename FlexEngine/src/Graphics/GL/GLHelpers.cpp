@@ -44,8 +44,6 @@ namespace flex
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindVertexArray(0);
-			
-			CheckGLErrorMessages();
 
 			return true;
 		}
@@ -99,8 +97,6 @@ namespace flex
 			glBindVertexArray(0);
 			DestroyGLFWimage(image);
 
-			CheckGLErrorMessages();
-
 			return true;
 		}
 
@@ -148,8 +144,6 @@ namespace flex
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 			image.Free();
-
-			CheckGLErrorMessages();
 
 			return true;
 		}
@@ -226,7 +220,6 @@ namespace flex
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, 
 									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
-						CheckGLErrorMessages();
 					}
 
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -236,7 +229,6 @@ namespace flex
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 					
 					i32 uniformLocation = glGetUniformLocation(createInfo.program, gbuffer.name);
-					CheckGLErrorMessages();
 					if (uniformLocation == -1)
 					{
 						PrintWarn("%s was not found!\n", gbuffer.name);
@@ -285,8 +277,6 @@ namespace flex
 
 			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
-			CheckGLErrorMessages();
-
 			return success;
 		}
 		
@@ -318,7 +308,6 @@ namespace flex
 			m_Depth(depth)
 		{
 			glGenTextures(1, &m_Handle);
-			CheckGLErrorMessages();
 			m_Parameters = {};
 		}
 
@@ -552,8 +541,6 @@ namespace flex
 			{
 				glAttachShader(program, geometryShaderID);
 			}
-
-			CheckGLErrorMessages();
 
 			return bSuccess;
 		}

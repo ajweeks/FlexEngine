@@ -115,7 +115,6 @@ namespace flex
 			glfwMakeContextCurrent(m_Window);
 
 			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-			CheckGLErrorMessages();
 
 #if _DEBUG
 			if (glDebugMessageCallback)
@@ -136,7 +135,6 @@ namespace flex
 			Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
 			Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 			Print("Version:  %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-			CheckGLErrorMessages();
 
 			if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
 			{

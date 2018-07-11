@@ -59,8 +59,6 @@ namespace flex
 			g_Renderer = this;
 
 			LoadSettingsFromDisk();
-
-			CheckGLErrorMessages();
 		}
 
 		GLRenderer::~GLRenderer()
@@ -70,8 +68,6 @@ namespace flex
 
 		void GLRenderer::Initialize()
 		{
-			CheckGLErrorMessages();
-
 			m_BRDFTextureSize = { 512, 512 };
 			m_BRDFTextureHandle = {};
 			m_BRDFTextureHandle.internalFormat = GL_RG16F;
@@ -120,43 +116,31 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
-
-			CheckGLErrorMessages();
-
 			LoadShaders();
-
-			CheckGLErrorMessages();
 
 			glEnable(GL_DEPTH_TEST);
 			//glDepthFunc(GL_LEQUAL);
-			CheckGLErrorMessages();
 
 			glFrontFace(GL_CCW);
-			CheckGLErrorMessages();
 
 			// Prevent seams from appearing on lower mip map levels of cubemaps
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
 
 			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
 			{
 				glGenFramebuffers(1, &m_CaptureFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
+				
 
 				glGenRenderbuffers(1, &m_CaptureRBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, 512, 512); // TODO: Remove 512
-				CheckGLErrorMessages();
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
 
 				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 				{
 					PrintError("Capture frame buffer is incomplete!\n");
 				}
-
-				CheckGLErrorMessages();
 			}
 
 			// Offscreen framebuffers
@@ -342,8 +326,6 @@ namespace flex
 			}
 
 			ImGui::CreateContext();
-			CheckGLErrorMessages();
-
 
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
@@ -382,8 +364,6 @@ namespace flex
 			{
 				PrintError("Framebuffer not complete!\n");
 			}
-
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::PostInitialize()
@@ -415,7 +395,6 @@ namespace flex
 			}
 
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
-			CheckGLErrorMessages();
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw();
 			m_PhysicsDebugDrawer->Initialize();
@@ -425,8 +404,6 @@ namespace flex
 
 		void GLRenderer::Destroy()
 		{
-			CheckGLErrorMessages();
-
 			glDeleteVertexArrays(1, &m_TextQuadVAO);
 			glDeleteBuffers(1, &m_TextQuadVBO);
 
@@ -438,8 +415,6 @@ namespace flex
 
 			ImGui_ImplGlfwGL3_Shutdown();
 			ImGui::DestroyContext();
-
-			CheckGLErrorMessages();
 
 			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
 			{
@@ -484,7 +459,6 @@ namespace flex
 				PrintError("=====================================================\n");
 			}
 			m_RenderObjects.clear();
-			CheckGLErrorMessages();
 
 			m_SkyBoxMesh = nullptr;
 
@@ -1005,18 +979,15 @@ namespace flex
 			GLShader& shader = m_Shaders[material.material.shaderID];
 
 			glUseProgram(shader.program);
-			CheckGLErrorMessages();
 
 			if (createInfo->vertexBufferData)
 			{
 				glGenVertexArrays(1, &renderObject->VAO);
 				glBindVertexArray(renderObject->VAO);
-				CheckGLErrorMessages();
 
 				glGenBuffers(1, &renderObject->VBO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)createInfo->vertexBufferData->BufferSize, createInfo->vertexBufferData->pDataStart, GL_STATIC_DRAW);
-				CheckGLErrorMessages();
 			}
 
 			if (createInfo->indices != nullptr &&
@@ -1161,41 +1132,30 @@ namespace flex
 			GLMaterial& skyboxGLMaterial = m_Materials[skyboxRenderObject->materialID];
 
 			glUseProgram(equirectangularToCubemapShader.program);
-			CheckGLErrorMessages();
 			
 			// TODO: Store what location this texture is at (might not be 0)
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
-			CheckGLErrorMessages();
 
 			// Update object's uniforms under this shader's program
 			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false,
 							   &m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, false, 
 				&m_CaptureProjection[0][0]);
-			CheckGLErrorMessages();
 
 			glm::vec2 cubemapSize = skyboxGLMaterial.material.cubemapSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
 			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(skyboxRenderObject->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
-			CheckGLErrorMessages();
 
 			glCullFace(skyboxRenderObject->cullFace);
-			CheckGLErrorMessages();
 
 			if (skyboxRenderObject->enableCulling)
 			{
@@ -1207,29 +1167,23 @@ namespace flex
 			}
 
 			glDepthFunc(skyboxRenderObject->depthTestReadFunc);
-			CheckGLErrorMessages();
 
 			for (u32 i = 0; i < 6; ++i)
 			{
 				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, false, 
 					&m_CaptureViews[i][0][0]);
-				CheckGLErrorMessages();
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
-				CheckGLErrorMessages();
 
 				glDepthMask(GL_TRUE);
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				CheckGLErrorMessages();
 
 				glDepthMask(skyboxRenderObject->depthWriteEnable);
-				CheckGLErrorMessages();
 
 				glDrawArrays(skyboxRenderObject->topology, 0, 
 					(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
-				CheckGLErrorMessages();
 			}
 
 			// Generate mip maps for generated cubemap
@@ -1260,26 +1214,19 @@ namespace flex
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			glUseProgram(prefilterShader.program);
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, false, 
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(skybox->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-			CheckGLErrorMessages();
 
 			if (skybox->enableCulling)
 			{
@@ -1291,13 +1238,10 @@ namespace flex
 			}
 
 			glCullFace(skybox->cullFace);
-			CheckGLErrorMessages();
 
 			glDepthFunc(skybox->depthTestReadFunc);
-			CheckGLErrorMessages();
 
 			glDepthMask(skybox->depthWriteEnable);
-			CheckGLErrorMessages();
 
 			u32 maxMipLevels = 5;
 			for (u32 mip = 0; mip < maxMipLevels; ++mip)
@@ -1309,26 +1253,20 @@ namespace flex
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, mipWidth, mipHeight);
-				CheckGLErrorMessages();
 
 				glViewport(0, 0, mipWidth, mipHeight);
-				CheckGLErrorMessages();
 
 				real roughness = (real)mip / (real(maxMipLevels - 1));
 				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
 				glUniform1f(roughnessUniformLocation, roughness);
-				CheckGLErrorMessages();
 				for (u32 i = 0; i < 6; ++i)
 				{
 					glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
-					CheckGLErrorMessages();
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].prefilteredMapSamplerID, mip);
-					CheckGLErrorMessages();
 					
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
 				}
 			}
 
@@ -1404,23 +1342,16 @@ namespace flex
 			}
 
 			glUseProgram(m_Shaders[m_Materials[brdfMatID].material.shaderID].program);
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
 
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTextureID, 0);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(m_1x1_NDC_Quad->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
-			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)BRDFLUTSize.x, (GLsizei)BRDFLUTSize.y);
-			CheckGLErrorMessages();
 
 			if (m_1x1_NDC_Quad->enableCulling)
 			{
@@ -1432,17 +1363,13 @@ namespace flex
 			}
 
 			glCullFace(m_1x1_NDC_Quad->cullFace);
-			CheckGLErrorMessages();
 
 			glDepthFunc(GL_ALWAYS);
-			CheckGLErrorMessages();
 
 			glDepthMask(GL_FALSE);
-			CheckGLErrorMessages();
 
 			// Render quad
 			glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
@@ -1474,30 +1401,22 @@ namespace flex
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			glUseProgram(shader.program);
-			CheckGLErrorMessages();
 			
 			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, false, 
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
-			CheckGLErrorMessages();
 
 			glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
 			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			if (skybox->enableCulling)
 			{
@@ -1509,31 +1428,23 @@ namespace flex
 			}
 
 			glCullFace(skybox->cullFace);
-			CheckGLErrorMessages();
 
 			glDepthFunc(skybox->depthTestReadFunc);
-			CheckGLErrorMessages();
 
 			glDepthMask(skybox->depthWriteEnable);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(skybox->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-			CheckGLErrorMessages();
 
 			for (u32 i = 0; i < 6; ++i)
 			{
 				glUniformMatrix4fv(irradianceMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
-				CheckGLErrorMessages();
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].irradianceSamplerID, 0);
-				CheckGLErrorMessages();
 
 				// Should be drawing cube here, not object (reflection probe's sphere is being drawn
 				glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
-				CheckGLErrorMessages();
 			}
 		}
 
@@ -1551,16 +1462,11 @@ namespace flex
 
 			// Must be enabled to clear depth buffer
 			glDepthMask(GL_TRUE);
-			CheckGLErrorMessages();
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
 			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			for (size_t face = 0; face < 6; ++face)
 			{
@@ -1572,23 +1478,18 @@ namespace flex
 					{
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, 
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
-						CheckGLErrorMessages();
 
 						glClear(GL_COLOR_BUFFER_BIT);
-						CheckGLErrorMessages();
 					}
 				}
 
 				// Clear base cubemap framebuffer + depth buffer
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-				CheckGLErrorMessages();
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 									   GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
-				CheckGLErrorMessages();
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				CheckGLErrorMessages();
 			}
 
 			drawCallInfo.bDeferred = true;
@@ -1659,31 +1560,23 @@ namespace flex
 		{
 			m_ClearColor = { r, g, b };
 			glClearColor(r, g, b, 1.0f);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glGenTextures(1, handle);
 			glBindTexture(GL_TEXTURE_2D, *handle);
-			CheckGLErrorMessages();
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			CheckGLErrorMessages();
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, *handle, 0);
-			CheckGLErrorMessages();
 			glBindTexture(GL_TEXTURE_2D, 0);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glBindTexture(GL_TEXTURE_2D, handle);
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat)
@@ -1743,10 +1636,7 @@ namespace flex
 
 		void GLRenderer::Draw()
 		{
-			CheckGLErrorMessages();
-
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
 
 			DrawCallInfo drawCallInfo = {};
 
@@ -2032,14 +1922,10 @@ namespace flex
 				glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
 				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-				CheckGLErrorMessages();
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-				CheckGLErrorMessages();
 			}
 			else
 			{
@@ -2047,9 +1933,7 @@ namespace flex
 				glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-				CheckGLErrorMessages();
 			}
 
 			{
@@ -2057,13 +1941,11 @@ namespace flex
 				constexpr i32 numBuffers = 3;
 				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 				glDrawBuffers(numBuffers, attachments);
-				CheckGLErrorMessages();
 			}
 
 			glDepthMask(GL_TRUE);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
 
 			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
 			{
@@ -2072,13 +1954,11 @@ namespace flex
 
 			glUseProgram(0);
 			glBindVertexArray(0);
-			CheckGLErrorMessages();
 
 			{
 				constexpr i32 numBuffers = 1;
 				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0 };
 				glDrawBuffers(numBuffers, attachments);
-				CheckGLErrorMessages();
 			}
 
 			// Copy depth from G-Buffer to default render target
@@ -2094,7 +1974,6 @@ namespace flex
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, 
 					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-				CheckGLErrorMessages();
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		}
@@ -2126,22 +2005,16 @@ namespace flex
 				GLMaterial* cubemapMaterial = &m_Materials[cubemapObject->materialID];
 				GLShader* cubemapShader = &m_Shaders[cubemapMaterial->material.shaderID];
 
-				CheckGLErrorMessages();
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
 				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat,
 					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.x, 
 					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.y);
-				CheckGLErrorMessages();
 
 				glUseProgram(cubemapShader->program);
 
 				glBindVertexArray(skybox->VAO);
-				CheckGLErrorMessages();
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-				CheckGLErrorMessages();
 
 				UpdateMaterialUniforms(cubemapObject->materialID);
 				UpdatePerObjectUniforms(cubemapObject->materialID, 
@@ -2160,49 +2033,35 @@ namespace flex
 				}
 
 				glCullFace(skybox->cullFace);
-				CheckGLErrorMessages();
-
 				glDepthFunc(GL_ALWAYS);
-				CheckGLErrorMessages();
-
 				glDepthMask(GL_FALSE);
-				CheckGLErrorMessages();
-				
 				glUniformMatrix4fv(cubemapMaterial->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-				CheckGLErrorMessages();
 
 				glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 				// Override cam pos with reflection probe pos
 				glm::vec3 reflectionProbePos(cubemapObject->gameObject->GetTransform()->GetWorldPosition());
 				glUniform4fv(cubemapMaterial->uniformIDs.camPos, 1, &reflectionProbePos.x);
-				CheckGLErrorMessages();
 
 				for (i32 face = 0; face < 6; ++face)
 				{
 					glUniformMatrix4fv(cubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[face][0][0]);
-					CheckGLErrorMessages();
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-					CheckGLErrorMessages();
 
 					// Draw cube (TODO: Use "cube" object to be less confusing)
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
 				}
 			}
 			else
 			{
 				glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_Offscreen0RBO);
-				CheckGLErrorMessages();
 
 				glDepthMask(GL_TRUE);
 
 				glClear(GL_COLOR_BUFFER_BIT); // Don't clear depth - we just copied it over from the GBuffer
-				CheckGLErrorMessages();
 
 				GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
 
@@ -2213,7 +2072,6 @@ namespace flex
 
 				glBindVertexArray(gBufferQuad->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
-				CheckGLErrorMessages();
 
 				UpdateMaterialUniforms(gBufferQuad->materialID);
 				UpdatePerObjectUniforms(gBufferQuad->renderID);
@@ -2231,16 +2089,12 @@ namespace flex
 				}
 
 				glCullFace(gBufferQuad->cullFace);
-				CheckGLErrorMessages();
 
 				glDepthFunc(gBufferQuad->depthTestReadFunc);
-				CheckGLErrorMessages();
 
 				glDepthMask(gBufferQuad->depthWriteEnable);
-				CheckGLErrorMessages();
 
 				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
-				CheckGLErrorMessages();
 			}
 		}
 
@@ -2312,13 +2166,10 @@ namespace flex
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
-				CheckGLErrorMessages();
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-				CheckGLErrorMessages();
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y,
 								  0, 0, frameBufferSize.x, frameBufferSize.y,
 								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-				CheckGLErrorMessages();
 			}
 
 		}
@@ -2434,7 +2285,6 @@ namespace flex
 			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
 
 			glUseProgram(spriteShader.program);
-			CheckGLErrorMessages();
 
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
@@ -2467,7 +2317,6 @@ namespace flex
 								   glm::scale(glm::mat4(1.0f), scale));
 
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, true, &model[0][0]);
-				CheckGLErrorMessages();
 			}
 
 			if (spriteShader.shader.constantBufferUniforms.HasUniform("view"))
@@ -2477,14 +2326,12 @@ namespace flex
 					glm::mat4 view = glm::mat4(1.0f);
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
-					CheckGLErrorMessages();
 				}
 				else
 				{
 					glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
-					CheckGLErrorMessages();
 				}
 			}
 
@@ -2553,34 +2400,25 @@ namespace flex
 				}
 
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.contrastBrightnessSaturation, 1, false, &contrastBrightnessSaturation[0][0]);
-				CheckGLErrorMessages();
 			}
 
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, drawInfo.FBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, drawInfo.RBO);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(spriteRenderObject->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
-			CheckGLErrorMessages();
 
 			if (bEnableAlbedoSampler)
 			{
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, drawInfo.inputTextureHandle);
-				CheckGLErrorMessages();
 			}
 
 			// TODO: Use member
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			CheckGLErrorMessages();
 
 			if (drawInfo.bReadDepth)
 			{
@@ -2613,16 +2451,9 @@ namespace flex
 			}
 
 			glCullFace(spriteRenderObject->cullFace);
-			CheckGLErrorMessages();
-
 			glDepthFunc(spriteRenderObject->depthTestReadFunc);
-			CheckGLErrorMessages();
-
 			glDepthMask(spriteRenderObject->depthWriteEnable);
-			CheckGLErrorMessages();
-
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::DrawText()
@@ -2646,36 +2477,28 @@ namespace flex
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
 
 			glUseProgram(fontShader.program);
-			CheckGLErrorMessages();
 
 			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("soften"))
 			//{
 			//	real soften = ((sin(g_SecElapsedSinceProgramStart) * 0.5f + 0.5f) * 0.25f);
 			//	glUniform1f(glGetUniformLocation(fontShader.program, "soften"), soften);
-			//	CheckGLErrorMessages();
 			//}
 			
 			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			//{
 			//	glm::vec4 color(1.0f);
 			//	glUniform4fv(fontMaterial.uniformIDs.colorMultiplier, 1, &color.r);
-			//	CheckGLErrorMessages();
 			//}
 
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(m_TextQuadVAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-			CheckGLErrorMessages();
 
 			for (BitmapFont* font : m_Fonts)
 			{
@@ -3344,7 +3167,6 @@ namespace flex
 			GLShader* glShader = &m_Shaders[material->material.shaderID];
 			Shader* shader = &glShader->shader;
 			glUseProgram(glShader->program);
-			CheckGLErrorMessages();
 
 			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
@@ -3360,16 +3182,13 @@ namespace flex
 				}
 
 				glBindVertexArray(renderObject->VAO);
-				CheckGLErrorMessages();
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-				CheckGLErrorMessages();
 
 				if (renderObject->enableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 
 					glCullFace(renderObject->cullFace);
-					CheckGLErrorMessages();
 				}
 				else
 				{
@@ -3388,10 +3207,7 @@ namespace flex
 				}
 
 				glDepthFunc(renderObject->depthTestReadFunc);
-				CheckGLErrorMessages();
-
 				glDepthMask(renderObject->depthWriteEnable);
-				CheckGLErrorMessages();
 
 				UpdatePerObjectUniforms(renderObject->renderID);
 
@@ -3407,14 +3223,9 @@ namespace flex
 					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 					
 					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-					CheckGLErrorMessages();
 					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-					CheckGLErrorMessages();
 					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-					CheckGLErrorMessages();
-					
 					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-					CheckGLErrorMessages();
 
 					if (material->uniformIDs.projection == 0)
 					{
@@ -3425,7 +3236,6 @@ namespace flex
 
 					// Use capture projection matrix
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-					CheckGLErrorMessages();
 					
 					// TODO: Test if this is actually correct
 					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
@@ -3438,7 +3248,6 @@ namespace flex
 						//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
 						
 						glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
-						CheckGLErrorMessages();
 
 						if (drawCallInfo.bDeferred)
 						{
@@ -3450,30 +3259,25 @@ namespace flex
 							{
 								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
 									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
-								CheckGLErrorMessages();
 							}
 						}
 						else
 						{
 							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
 								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-							CheckGLErrorMessages();
 						}
 
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
-						CheckGLErrorMessages();
 
 						if (renderObject->indexed)
 						{
 							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), 
 								GL_UNSIGNED_INT, (void*)renderObject->indices->data());
-							CheckGLErrorMessages();
 						}
 						else
 						{
 							glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
-							CheckGLErrorMessages();
 						}
 					}
 				}
@@ -3497,12 +3301,10 @@ namespace flex
 					{
 						glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(),
 							GL_UNSIGNED_INT, (void*)renderObject->indices->data());
-						CheckGLErrorMessages();
 					}
 					else
 					{
 						glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
-						CheckGLErrorMessages();
 					}
 				}
 			}
@@ -3549,7 +3351,6 @@ namespace flex
 							GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 							glActiveTexture(activeTexture);
 							glBindTexture(tex.target, (GLuint)tex.textureID);
-							CheckGLErrorMessages();
 						}
 					}
 					++binding;
@@ -3582,7 +3383,6 @@ namespace flex
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
 				glBindTexture(GL_TEXTURE_2D, *((GLuint*)frameBufferPair.second));
-				CheckGLErrorMessages();
 				++binding;
 			}
 
@@ -3610,7 +3410,6 @@ namespace flex
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapGBuffer.id);
-				CheckGLErrorMessages();
 				++binding;
 			}
 
@@ -3621,14 +3420,11 @@ namespace flex
 		{
 			glGenFramebuffers(1, FBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, *FBO);
-			CheckGLErrorMessages();
 
 			glGenRenderbuffers(1, RBO);
 			glBindRenderbuffer(GL_RENDERBUFFER, *RBO);
 			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, size.x, size.y);
-			CheckGLErrorMessages();
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *RBO);
-			CheckGLErrorMessages();
 
 			GenerateFrameBufferTexture(&handle.id,
 									   0,
@@ -3641,7 +3437,6 @@ namespace flex
 			{
 				PrintError("Offscreen frame buffer is incomplete!\n");
 			}
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::RemoveMaterial(MaterialID materialID)
@@ -4230,7 +4025,6 @@ namespace flex
 			for (GLShader& shader : m_Shaders)
 			{
 				shader.program = glCreateProgram();
-				CheckGLErrorMessages();
 
 				if (!LoadGLShaders(shader.program, shader))
 				{
@@ -4252,8 +4046,6 @@ namespace flex
 				shader.shader.geometryShaderCode.clear();
 				shader.shader.geometryShaderCode.shrink_to_fit();
 			}
-
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::UpdateMaterialUniforms(MaterialID materialID)
@@ -4383,8 +4175,6 @@ namespace flex
 			{
 				SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 			}
-
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID)
@@ -4417,93 +4207,78 @@ namespace flex
 			if (shader->shader.dynamicBufferUniforms.HasUniform("model"))
 			{
 				glUniformMatrix4fv(material->uniformIDs.model, 1, false, &model[0][0]);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("modelInvTranspose"))
 			{
 				// OpenGL will transpose for us if we set the third param to true
 				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, true, &modelInv[0][0]);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			{
 				// OpenGL will transpose for us if we set the third param to true
 				glUniform4fv(material->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableDiffuseSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableDiffuseTexture, material->material.enableDiffuseSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableNormalSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableNormalTexture, material->material.enableNormalSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableCubemapSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableCubemapTexture, material->material.enableCubemapSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableAlbedoSampler, material->material.enableAlbedoSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constAlbedo"))
 			{
 				glUniform4f(material->uniformIDs.constAlbedo, material->material.constAlbedo.x, material->material.constAlbedo.y, material->material.constAlbedo.z, 0);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableMetallicSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableMetallicSampler, material->material.enableMetallicSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constMetallic"))
 			{
 				glUniform1f(material->uniformIDs.constMetallic, material->material.constMetallic);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableRoughnessSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableRoughnessSampler, material->material.enableRoughnessSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constRoughness"))
 			{
 				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAOSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableAOSampler, material->material.enableAOSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constAO"))
 			{
 				glUniform1f(material->uniformIDs.constAO, material->material.constAO);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableIrradianceSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableIrradianceSampler, material->material.enableIrradianceSampler);
-				CheckGLErrorMessages();
 			}
 		}
 
@@ -4517,7 +4292,6 @@ namespace flex
 			const glm::vec2i newFrameBufferSize(width, height);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
-			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_OffscreenTexture0Handle.id,
 									 m_OffscreenTexture0Handle.internalFormat,
 									 m_OffscreenTexture0Handle.format,
@@ -4528,7 +4302,6 @@ namespace flex
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen1FBO);
-			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_OffscreenTexture1Handle.id,
 									 m_OffscreenTexture1Handle.internalFormat,
 									 m_OffscreenTexture1Handle.format,
@@ -4539,7 +4312,6 @@ namespace flex
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_gBuffer_PositionMetallicHandle.id,
 				m_gBuffer_PositionMetallicHandle.internalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
@@ -4595,7 +4367,6 @@ namespace flex
 		{
 			m_bVSyncEnabled = enableVSync;
 			glfwSwapInterval(enableVSync ? 1 : 0);
-			CheckGLErrorMessages();
 		}
 
 		bool GLRenderer::GetVSyncEnabled()
@@ -4610,10 +4381,8 @@ namespace flex
 			{
 				PrintWarn("Float %s couldn't be found!\n", valName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform1f(location, val);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetInt(ShaderID shaderID, const char* valName, i32 val)
@@ -4623,10 +4392,8 @@ namespace flex
 			{
 				PrintWarn("i32 %s couldn't be found!\n", valName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform1i(location, val);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetUInt(ShaderID shaderID, const char* valName, u32 val)
@@ -4636,10 +4403,8 @@ namespace flex
 			{
 				PrintWarn("u32 %s couldn't be found!\n", valName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform1ui(location, val);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetVec2f(ShaderID shaderID, const char* vecName, const glm::vec2& vec)
@@ -4649,10 +4414,8 @@ namespace flex
 			{
 				PrintWarn("Vec2f %s couldn't be found!\n", vecName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform2f(location, vec[0], vec[1]);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetVec3f(ShaderID shaderID, const char* vecName, const glm::vec3& vec)
@@ -4662,10 +4425,8 @@ namespace flex
 			{
 				PrintWarn("Vec3f %s couldn't be found!\n", vecName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform3f(location, vec[0], vec[1], vec[2]);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetVec4f(ShaderID shaderID, const char* vecName, const glm::vec4& vec)
@@ -4675,10 +4436,8 @@ namespace flex
 			{
 				PrintWarn("Vec4f %s couldn't be found!\n", vecName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform4f(location, vec[0], vec[1], vec[2], vec[3]);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat)
@@ -4688,10 +4447,8 @@ namespace flex
 			{
 				PrintWarn("Mat4f %s couldn't be found!\n", matName);
 			}
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(location, 1, false, &mat[0][0]);
-			CheckGLErrorMessages();
 		}
 
 
@@ -4852,7 +4609,6 @@ namespace flex
 			glUseProgram(program);
 
 			glBindVertexArray(renderObject->VAO);
-			CheckGLErrorMessages();
 
 			GLint location = glGetAttribLocation(program, variableName.c_str());
 			if (location == -1)
@@ -4865,7 +4621,6 @@ namespace flex
 
 			GLenum glRenderType = DataTypeToGLType(dataType);
 			glVertexAttribPointer((GLuint)location, size, glRenderType, (GLboolean)normalized, stride, pointer);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::SetSkyboxMesh(GameObject* skyboxMesh)
