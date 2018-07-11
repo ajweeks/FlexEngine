@@ -99,6 +99,7 @@ configuration "Debug"
 	defines { "_DEBUG" }
 	flags { "Symbols", "ExtraWarnings" }
 configuration "Development"
+	defines { "DEVELOPMENT" }
 	flags {"OptimizeSpeed", "Symbols", "ExtraWarnings" }
 configuration "Shipping"
 	defines { "SHIPPING" }
