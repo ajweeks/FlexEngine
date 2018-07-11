@@ -28,7 +28,10 @@ namespace flex
 				MoveConsole();
 			}
 
-			if (!InitFromConfig())
+			InitFromConfig();
+
+			// Only use parameters if values weren't set through config file
+			if (m_Size.x == 0)
 			{
 				m_Size = size;
 				m_Position = pos;
@@ -49,6 +52,11 @@ namespace flex
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
+			if (m_bMaximized)
+			{
+				glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
+			}
+			
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 			GLFWmonitor* monitor = NULL;
@@ -74,12 +82,12 @@ namespace flex
 			GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
 
 			// If previously the window was on an additional monitor that is no longer present,
-			// 
+			// move the window to the primary monitor
 			if (monitorCount == 1)
 			{
 				const GLFWvidmode* vidMode = glfwGetVideoMode(monitors[0]);
-				real monitorWidth = vidMode->width;
-				real monitorHeight = vidMode->height;
+				i32 monitorWidth = vidMode->width;
+				i32 monitorHeight = vidMode->height;
 
 				if (m_StartingPosition.x < 0)
 				{

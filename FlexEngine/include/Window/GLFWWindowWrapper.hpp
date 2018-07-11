@@ -37,6 +37,9 @@ namespace flex
 		virtual void SetWindowMode(WindowMode mode, bool force = false) override;
 		virtual void ToggleFullscreen(bool force = false) override;
 
+		virtual void Maximize() override;
+		virtual void Iconify() override;
+
 		GLFWwindow* GetWindow() const;
 
 		void SetUpCallbacks();

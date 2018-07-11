@@ -90,9 +90,17 @@ namespace flex
 		virtual void WindowFocusCallback(i32 focused);
 		virtual void CursorPosCallback(double x, double y);
 		virtual void ScrollCallback(double xoffset, double yoffset);
-		virtual void WindowSizeCallback(i32 width, i32 height);
+		virtual void WindowSizeCallback(i32 width, i32 height, bool bMaximized, bool bIconified);
 		virtual void WindowPosCallback(i32 newX, i32 newY);
 		virtual void FrameBufferSizeCallback(i32 width, i32 height);
+
+		bool GetAutoRestoreStateEnabled();
+		void SetAutoRestoreStateEnabled(bool bAutoRestoreState);
+
+		bool IsMaximized() const;
+		virtual void Maximize() = 0;
+		bool IsIconified() const;
+		virtual void Iconify() = 0;
 
 		bool InitFromConfig();
 		void SaveToConfig();
@@ -133,7 +141,10 @@ namespace flex
 
 		static std::string s_ConfigFilePath;
 
+		// Whether to move the console to an additional monitor when present
 		bool m_bMoveConsoleToOtherMonitor = true;
+		// Whether to restore the size and position from the previous session on bootup
+		bool m_bAutoRestoreStateOnBootup = true;
 
 		WindowMode m_CurrentWindowMode;
 
@@ -144,6 +155,8 @@ namespace flex
 
 		bool m_bShowFPSInWindowTitle = true;
 		bool m_bShowMSInWindowTitle = true;
+		bool m_bMaximized = false;
+		bool m_bIconified = false;
 
 		real m_UpdateWindowTitleFrequency = 0;
 		real m_SecondsSinceTitleUpdate = 0;

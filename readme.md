@@ -16,6 +16,7 @@ Flex Engine is my personal game engine which I began work on in February 2017 as
 - Scene editor
 - Physics simulation
 - Audio playback
+- Profiling tools
 
 ![](http://i.imgur.com/3XQGcDD.png)
 

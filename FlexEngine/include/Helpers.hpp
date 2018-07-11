@@ -253,8 +253,8 @@ namespace flex
 	// outNumNumericalChars will be set to the number of chars in the num (e.g. "001" => 3)
 	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars);
 
-	std::string GameObjectTypeToString(GameObjectType type);
-	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr);
+	const char* GameObjectTypeToString(GameObjectType type);
+	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
 
 	// Must be called at least once to set g_CurrentWorkingDirectory!
 	void RetrieveCurrentWorkingDirectory();

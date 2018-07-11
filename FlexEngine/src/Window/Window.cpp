@@ -10,6 +10,7 @@
 #include "Time.hpp"
 #include "Scene/SceneManager.hpp"
 #include "JSONParser.hpp"
+#include "Window/Monitor.hpp"
 
 namespace flex
 {
@@ -180,8 +181,11 @@ namespace flex
 		g_InputManager->ScrollCallback(xoffset, yoffset);
 	}
 
-	void Window::WindowSizeCallback(i32 width, i32 height)
+	void Window::WindowSizeCallback(i32 width, i32 height, bool bMaximized, bool bIconified)
 	{
+		m_bMaximized = bMaximized;
+		m_bIconified = bIconified;
+
 		OnSizeChanged(width, height);
 
 		if (m_CurrentWindowMode == WindowMode::WINDOWED)
@@ -205,6 +209,26 @@ namespace flex
 		SetFrameBufferSize(width, height);
 	}
 
+	bool Window::GetAutoRestoreStateEnabled()
+	{
+		return m_bAutoRestoreStateOnBootup;
+	}
+
+	void Window::SetAutoRestoreStateEnabled(bool bAutoRestoreState)
+	{
+		m_bAutoRestoreStateOnBootup = bAutoRestoreState;
+	}
+
+	bool Window::IsMaximized() const
+	{
+		return m_bMaximized;
+	}
+
+	bool Window::IsIconified() const
+	{
+		return m_bIconified;
+	}
+
 	bool Window::InitFromConfig()
 	{
 		if (FileExists(s_ConfigFilePath))
@@ -219,22 +243,37 @@ namespace flex
 					m_bMoveConsoleToOtherMonitor = bMoveConsole;
 				}
 
-				glm::vec2 initialWindowPos;
-				if (rootObject.SetVec2Checked("initial window position", initialWindowPos))
+				bool bAutoRestore;
+				if (rootObject.SetBoolChecked("auto restore state", bAutoRestore))
 				{
-					m_Position = (glm::vec2i)initialWindowPos;
+					m_bAutoRestoreStateOnBootup = bAutoRestore;
 				}
 
-				glm::vec2 initialWindowSize;
-				if (rootObject.SetVec2Checked("initial window size", initialWindowSize))
+				if (m_bAutoRestoreStateOnBootup)
 				{
-					m_Size = (glm::vec2i)initialWindowSize;
-				}
+					glm::vec2 initialWindowPos;
+					if (rootObject.SetVec2Checked("initial window position", initialWindowPos))
+					{
+						m_Position = (glm::vec2i)initialWindowPos;
+					}
 
-				std::string windowModeStr;
-				if (rootObject.SetStringChecked("window mode", windowModeStr))
-				{
-					m_CurrentWindowMode = StrToWindowMode(windowModeStr.c_str());
+					glm::vec2 initialWindowSize;
+					if (rootObject.SetVec2Checked("initial window size", initialWindowSize))
+					{
+						m_Size = (glm::vec2i)initialWindowSize;
+					}
+
+					bool bMaximized;
+					if (rootObject.SetBoolChecked("maximized", bMaximized))
+					{
+						m_bMaximized = bMaximized;
+					}
+
+					std::string windowModeStr;
+					if (rootObject.SetStringChecked("window mode", windowModeStr))
+					{
+						m_CurrentWindowMode = StrToWindowMode(windowModeStr.c_str());
+					}
 				}
 
 				return true;
@@ -253,8 +292,10 @@ namespace flex
 		JSONObject rootObject = {};
 
 		rootObject.fields.emplace_back("move console to other monitor on bootup", JSONValue(m_bMoveConsoleToOtherMonitor));
+		rootObject.fields.emplace_back("auto restore state", JSONValue(m_bAutoRestoreStateOnBootup));
 		rootObject.fields.emplace_back("initial window position", JSONValue(Vec2ToString((glm::vec2)m_Position)));
 		rootObject.fields.emplace_back("initial window size", JSONValue(Vec2ToString((glm::vec2)m_Size)));
+		rootObject.fields.emplace_back("maximized", JSONValue(m_bMaximized));
 		const char* windowModeStr = Window::WindowModeToStr(g_Window->GetWindowMode());
 		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));
 		std::string fileContents = rootObject.Print(0);

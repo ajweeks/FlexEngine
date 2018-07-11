@@ -918,16 +918,16 @@ namespace flex
 		return num;
 	}
 
-	std::string GameObjectTypeToString(GameObjectType type)
+	const char* GameObjectTypeToString(GameObjectType type)
 	{
 		return GameObjectTypeStrings[(i32)type];
 	}
-
-	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr)
+	
+	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
 	{
 		for (i32 i = 0; i < (i32)GameObjectType::NONE; ++i)
 		{
-			if (GameObjectTypeStrings[i].compare(gameObjectTypeStr) == 0)
+			if (strcmp(GameObjectTypeStrings[i], gameObjectTypeStr) == 0)
 			{
 				return (GameObjectType)i;
 			}

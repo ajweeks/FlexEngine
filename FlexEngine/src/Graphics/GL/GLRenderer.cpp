@@ -3913,7 +3913,7 @@ namespace flex
 			UnloadShaders();
 			LoadShaders();
 
-			CheckGLErrorMessages();
+			g_Renderer->AddEditorString("Reloaded shaders");
 		}
 
 		void GLRenderer::UnloadShaders()
@@ -3921,7 +3921,6 @@ namespace flex
 			for (GLShader& shader : m_Shaders)
 			{
 				glDeleteProgram(shader.program);
-				CheckGLErrorMessages();
 			}
 			m_Shaders.clear();
 		}

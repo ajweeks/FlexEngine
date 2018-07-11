@@ -1105,9 +1105,9 @@ namespace flex
 					ImGui::SliderFloat3(offsetStr, &postProcessSettings.offset.r, minOffset, maxOffset);
 					ImGui::SameLine();
 					ImGui::ColorButton("##2", ImVec4(
-						(postProcessSettings.offset.r-minOffset) / (maxOffset-minOffset),
-						(postProcessSettings.offset.g-minOffset) / (maxOffset-minOffset),
-						(postProcessSettings.offset.b-minOffset) / (maxOffset-minOffset), 1));
+						(postProcessSettings.offset.r - minOffset) / (maxOffset - minOffset),
+						(postProcessSettings.offset.g - minOffset) / (maxOffset - minOffset),
+						(postProcessSettings.offset.b - minOffset) / (maxOffset - minOffset), 1));
 
 					static const char* saturationStr = "Saturation";
 					const real maxSaturation = 2.0f;
@@ -1119,6 +1119,87 @@ namespace flex
 						postProcessSettings.saturation / maxSaturation, 1));
 
 					ImGui::TreePop();
+				}
+
+				ImGui::TreePop();
+			}
+
+			static const char* windowSettingsStr = "Window settings";
+			if (ImGui::TreeNode(windowSettingsStr))
+			{
+				bool bAutoRestoreWindow = g_Window->GetAutoRestoreStateEnabled();
+				if (ImGui::Checkbox("Auto restore state", &bAutoRestoreWindow))
+				{
+					g_Window->SetAutoRestoreStateEnabled(bAutoRestoreWindow);
+					g_Renderer->SaveSettingsToDisk(false, true);
+				}
+
+				glm::vec2i windowPos = g_Window->GetPosition();
+				if (ImGui::DragInt2("Position", &windowPos.x, 1.0f))
+				{
+					g_Window->SetPosition(windowPos.x, windowPos.y);
+				}
+
+				if (ImGui::Button("Center"))
+				{
+					glm::vec2i windowSize = g_Window->GetSize();
+					g_Window->SetPosition(g_Monitor->width / 2 - windowSize.x / 2,
+										  g_Monitor->height / 2 - windowSize.y / 2);
+				}
+
+				ImGui::NewLine();
+
+				glm::vec2i windowSize = g_Window->GetSize();
+				if (ImGui::DragInt2("Size", &windowSize.x, 1.0f, 100, 3840))
+				{
+					g_Window->SetSize(windowSize.x, windowSize.y);
+				}
+
+				bool bWindowWasMaximized = g_Window->IsMaximized();
+				if (bWindowWasMaximized)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+				if (ImGui::Button("Maximize"))
+				{
+					g_Window->Maximize();
+				}
+				if (bWindowWasMaximized)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Iconify"))
+				{
+					g_Window->Iconify();
+				}
+
+				if (ImGui::Button("1920x1080"))
+				{
+					g_Window->SetSize(1920, 1080);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("1600x900"))
+				{
+					g_Window->SetSize(1600, 900);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("1280x720"))
+				{
+					g_Window->SetSize(1280, 720);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("800x600"))
+				{
+					g_Window->SetSize(800, 600);
 				}
 
 				ImGui::TreePop();
@@ -1432,7 +1513,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to read common settings file, but it exists!\n");
+				PrintError("Failed to parse common settings config file\n");
 				return false;
 			}
 		}
@@ -1468,7 +1549,10 @@ namespace flex
 
 		std::string fileContents = rootObject.Print(0);
 
-		WriteFile(m_CommonSettingsAbsFilePath, fileContents, false);
+		if (!WriteFile(m_CommonSettingsAbsFilePath, fileContents, false))
+		{
+			PrintError("Failed to write common settings config file\n");
+		}
 
 		if (bAddEditorStr)
 		{

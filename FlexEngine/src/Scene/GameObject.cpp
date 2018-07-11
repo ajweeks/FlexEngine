@@ -109,7 +109,7 @@ namespace flex
 			}
 		}
 
-		GameObjectType gameObjectType = StringToGameObjectType(gameObjectTypeStr);
+		GameObjectType gameObjectType = StringToGameObjectType(gameObjectTypeStr.c_str());
 
 		std::string objectName = obj.GetString("name");
 

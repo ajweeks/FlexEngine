@@ -272,6 +272,16 @@ namespace flex
 		}
 	}
 
+	void GLFWWindowWrapper::Maximize()
+	{
+		glfwMaximizeWindow(m_Window);
+	}
+
+	void GLFWWindowWrapper::Iconify()
+	{
+		glfwIconifyWindow(m_Window);
+	}
+
 	void GLFWWindowWrapper::Update()
 	{
 		Window::Update();
@@ -472,7 +482,9 @@ namespace flex
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-		window->WindowSizeCallback(width, height);
+		bool bMaximized = (glfwGetWindowAttrib(glfwWindow, GLFW_MAXIMIZED) == GLFW_TRUE);
+		bool bIconified = (glfwGetWindowAttrib(glfwWindow, GLFW_ICONIFIED) == GLFW_TRUE);
+		window->WindowSizeCallback(width, height, bMaximized, bIconified);
 	}
 
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height)

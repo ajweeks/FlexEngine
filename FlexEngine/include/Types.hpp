@@ -78,7 +78,7 @@ namespace flex
 		NONE
 	};
 
-	static std::string GameObjectTypeStrings[] =
+	static const char* GameObjectTypeStrings[] =
 	{
 		"object",
 		"player",
