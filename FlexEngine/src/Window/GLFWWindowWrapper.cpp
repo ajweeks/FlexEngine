@@ -16,59 +16,7 @@ namespace flex
 	GLFWWindowWrapper::GLFWWindowWrapper(std::string title) :
 		Window(title)
 	{
-		const bool moveConsoleToExtraMonitor = true;
-
-		if (moveConsoleToExtraMonitor)
-		{
-			HWND hWnd = GetConsoleWindow();
-			// TODO: Set these based on display resolution
-			i32 consoleWidth = 800;
-			i32 consoleHeight = 800;
-
-			// The following four variables store the bounding rectangle of all monitors
-			i32 virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-			//i32 virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-			i32 virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-			//i32 virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-			i32 monitorWidth = GetSystemMetrics(SM_CXSCREEN);
-			//i32 monitorHeight = GetSystemMetrics(SM_CYSCREEN);
-
-			// If another monitor is present, move the console to it
-			if (virtualScreenWidth > monitorWidth)
-			{
-				i32 newX;
-				i32 newY = 10;
-				
-				if (virtualScreenLeft < 0) 
-				{
-					// The other monitor is to the left of the main one
-					newX = -(consoleWidth + 10);
-				}
-				else 
-				{
-					// The other monitor is to the right of the main one
-					newX = virtualScreenWidth - monitorWidth + 10;
-				}
-
-				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-				
-				// Call again to set size correctly (based on other monitor's DPI)
-				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-			}
-			else // There's only one monitor, move the console to the top left corner
-			{
-				RECT rect;
-				GetWindowRect(hWnd, &rect);
-				if (rect.top != 0)
-				{
-					// A negative value is needed to line the console up to the left side of my monitor
-					MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
-				}
-			}
-		}
-
-		m_LastNonFullscreenMode = FullscreenMode::WINDOWED;
+		m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
 
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_128.png", true));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_64.png", true));
@@ -206,7 +154,7 @@ namespace flex
 	{
 		m_Size = glm::vec2i(width, height);
 		m_FrameBufferSize = m_Size;
-		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		if (m_CurrentWindowMode == WindowMode::WINDOWED)
 		{
 			m_LastWindowedSize = m_Size;
 		}
@@ -235,7 +183,7 @@ namespace flex
 	{
 		m_Position = { newX, newY };
 
-		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		if (m_CurrentWindowMode == WindowMode::WINDOWED)
 		{
 			m_LastWindowedPos = m_Position;
 		}
@@ -259,52 +207,52 @@ namespace flex
 
 		switch (mode)
 		{
-		case Window::CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
-		case Window::CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
-		case Window::CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
+		case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
+		case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
+		case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
 		default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
 		}
 
 		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
 	}
 
-	void GLFWWindowWrapper::SetFullscreenMode(FullscreenMode mode, bool force)
+	void GLFWWindowWrapper::SetWindowMode(WindowMode mode, bool force)
 	{
-		if (force || m_CurrentFullscreenMode != mode)
+		if (force || m_CurrentWindowMode != mode)
 		{
-			m_CurrentFullscreenMode = mode;
+			m_CurrentWindowMode = mode;
 
 			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 			if (!monitor)
 			{
-				PrintError("Failed to find primary monitor! Can't set fullscreen mode\n");
+				PrintError("Failed to find primary monitor! Can't set window mode\n");
 				return;
 			}
 
 			const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
 			if (!videoMode)
 			{
-				PrintError("Failed to get monitor's video mode! Can't set fullscreen mode\n");
+				PrintError("Failed to get monitor's video mode! Can't set window mode\n");
 				return;
 			}
 
 			switch (mode)
 			{
-			case FullscreenMode::FULLSCREEN:
+			case WindowMode::FULLSCREEN:
 			{
 				glfwSetWindowMonitor(m_Window, monitor, 0, 0, videoMode->width, videoMode->height, videoMode->refreshRate);
 			} break;
-			case FullscreenMode::WINDOWED_FULLSCREEN:
+			case WindowMode::WINDOWED_FULLSCREEN:
 			{
 				glfwSetWindowMonitor(m_Window, monitor, 0, 0, videoMode->width, videoMode->height, videoMode->refreshRate);
-				m_LastNonFullscreenMode = FullscreenMode::WINDOWED_FULLSCREEN;
+				m_LastNonFullscreenWindowMode = WindowMode::WINDOWED_FULLSCREEN;
 			} break;
-			case FullscreenMode::WINDOWED:
+			case WindowMode::WINDOWED:
 			{
 				assert(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
 
 				glfwSetWindowMonitor(m_Window, nullptr, m_LastWindowedPos.x, m_LastWindowedPos.y, m_LastWindowedSize.x, m_LastWindowedSize.y, videoMode->refreshRate);
-				m_LastNonFullscreenMode = FullscreenMode::WINDOWED;
+				m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
 			} break;
 			}
 		}
@@ -312,15 +260,15 @@ namespace flex
 
 	void GLFWWindowWrapper::ToggleFullscreen(bool force)
 	{
-		if (m_CurrentFullscreenMode == FullscreenMode::FULLSCREEN)
+		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
 		{
-			assert(m_LastNonFullscreenMode == FullscreenMode::WINDOWED || m_LastNonFullscreenMode == FullscreenMode::WINDOWED_FULLSCREEN);
+			assert(m_LastNonFullscreenWindowMode == WindowMode::WINDOWED || m_LastNonFullscreenWindowMode == WindowMode::WINDOWED_FULLSCREEN);
 
-			SetFullscreenMode(m_LastNonFullscreenMode, force);
+			SetWindowMode(m_LastNonFullscreenWindowMode, force);
 		}
 		else
 		{
-			SetFullscreenMode(FullscreenMode::FULLSCREEN, force);
+			SetWindowMode(WindowMode::FULLSCREEN, force);
 		}
 	}
 
@@ -397,6 +345,56 @@ namespace flex
 	void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
 	{
 		glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
+	}
+
+	void GLFWWindowWrapper::MoveConsole()
+	{
+		HWND hWnd = GetConsoleWindow();
+		// TODO: Set these based on display resolution
+		i32 consoleWidth = 800;
+		i32 consoleHeight = 800;
+
+		// The following four variables store the bounding rectangle of all monitors
+		i32 virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
+		//i32 virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+		i32 virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		//i32 virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+		i32 monitorWidth = GetSystemMetrics(SM_CXSCREEN);
+		//i32 monitorHeight = GetSystemMetrics(SM_CYSCREEN);
+
+		// If another monitor is present, move the console to it
+		if (virtualScreenWidth > monitorWidth)
+		{
+			i32 newX;
+			i32 newY = 10;
+
+			if (virtualScreenLeft < 0)
+			{
+				// The other monitor is to the left of the main one
+				newX = -(consoleWidth + 10);
+			}
+			else
+			{
+				// The other monitor is to the right of the main one
+				newX = virtualScreenWidth - monitorWidth + 10;
+			}
+
+			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
+
+			// Call again to set size correctly (based on other monitor's DPI)
+			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
+		}
+		else // There's only one monitor, move the console to the top left corner
+		{
+			RECT rect;
+			GetWindowRect(hWnd, &rect);
+			if (rect.top != 0)
+			{
+				// A negative value is needed to line the console up to the left side of my monitor
+				MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
+			}
+		}
 	}
 
 	void GLFWErrorCallback(i32 error, const char* description)

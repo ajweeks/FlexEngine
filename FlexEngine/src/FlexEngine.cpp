@@ -189,6 +189,7 @@ namespace flex
 		// TODO: Time engine destruction using non-glfw timer
 
 		SaveCommonSettingsToDisk(false);
+		g_Window->SaveToConfig();
 
 		DeselectCurrentlySelectedObject();
 
@@ -860,6 +861,7 @@ namespace flex
 			{
 				m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 				SaveCommonSettingsToDisk(false);
+				g_Window->SaveToConfig();
 			}
 
 			const bool bProfileFrame = (m_FrameCount > 3);
@@ -1002,16 +1004,6 @@ namespace flex
 				{
 					g_Renderer->SetVSyncEnabled(bVSyncEnabled);
 				}
-
-				//static const char* windowModeStr = "##WindowMode";
-				//static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
-				//static const i32 windowModeCount = 2;
-				//i32 currentItemIndex = (i32)g_Window->GetFullscreenMode();
-				//if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
-				//{
-				//	Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
-				//	g_Window->SetFullscreenMode(newFullscreenMode);
-				//}
 
 				static const char* physicsDebuggingStr = "Physics debugging";
 				if (ImGui::TreeNode(physicsDebuggingStr))

@@ -21,14 +21,23 @@ namespace flex
 		{
 		}
 
-		void GLWindowWrapper::Create(glm::vec2i size, glm::vec2i pos)
+		void GLWindowWrapper::Create(const glm::vec2i& size, const glm::vec2i& pos)
 		{
-			m_Size = size;
-			m_FrameBufferSize = size;
-			m_LastWindowedSize = size;
-			m_Position = pos;
-			m_StartingPosition = pos;
-			m_LastWindowedPos = pos;
+			if (m_bMoveConsoleToOtherMonitor)
+			{
+				MoveConsole();
+			}
+
+			if (!InitFromConfig())
+			{
+				m_Size = size;
+				m_Position = pos;
+			}
+
+			m_FrameBufferSize = m_Size;
+			m_LastWindowedSize = m_Size;
+			m_StartingPosition = m_Position;
+			m_LastWindowedPos = m_Position;
 
 #if _DEBUG
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
@@ -42,7 +51,13 @@ namespace flex
 
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), NULL, NULL);
+			GLFWmonitor* monitor = NULL;
+			if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
+			{
+				monitor = glfwGetPrimaryMonitor();
+			}
+
+			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), monitor, NULL);
 			if (!m_Window)
 			{
 				PrintError("Failed to create glfw Window! Exiting...\n");
@@ -55,10 +70,39 @@ namespace flex
 
 			SetUpCallbacks();
 
+			i32 monitorCount;
+			GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+			// If previously the window was on an additional monitor that is no longer present,
+			// 
+			if (monitorCount == 1)
+			{
+				const GLFWvidmode* vidMode = glfwGetVideoMode(monitors[0]);
+				real monitorWidth = vidMode->width;
+				real monitorHeight = vidMode->height;
+
+				if (m_StartingPosition.x < 0)
+				{
+					m_StartingPosition.x = 100;
+				}
+				else if (m_StartingPosition.x > monitorWidth)
+				{
+					m_StartingPosition.x = 100;
+				}
+				if (m_StartingPosition.y < 0)
+				{
+					m_StartingPosition.y = 100;
+				}
+				else if (m_StartingPosition.y > monitorHeight)
+				{
+					m_StartingPosition.y = 100;
+				}
+			}
+
 			glfwSetWindowPos(m_Window, m_StartingPosition.x, m_StartingPosition.y);
 
 			glfwFocusWindow(m_Window);
-			m_HasFocus = true;
+			m_bHasFocus = true;
 
 			glfwMakeContextCurrent(m_Window);
 

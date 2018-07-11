@@ -34,7 +34,7 @@ namespace flex
 		virtual void SetCursorPos(const glm::vec2& newCursorPos) override;
 		virtual void SetCursorMode(CursorMode mode) override;
 
-		virtual void SetFullscreenMode(FullscreenMode mode, bool force = false) override;
+		virtual void SetWindowMode(WindowMode mode, bool force = false) override;
 		virtual void ToggleFullscreen(bool force = false) override;
 
 		GLFWwindow* GetWindow() const;
@@ -47,6 +47,8 @@ namespace flex
 	protected:
 		virtual void SetWindowTitle(const std::string& title) override;
 		virtual void SetMousePosition(glm::vec2 mousePosition) override;
+
+		void MoveConsole();
 
 		GLFWwindow* m_Window = nullptr;
 

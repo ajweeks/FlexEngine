@@ -65,6 +65,12 @@ namespace flex
 	{
 	}
 
+	JSONValue::JSONValue(const char* strValue) :
+		strValue(strValue),
+		type(Type::STRING)
+	{
+	}
+
 	JSONValue::JSONValue(i32 intValue) :
 		intValue(intValue),
 		type(Type::INT)

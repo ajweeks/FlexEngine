@@ -558,7 +558,7 @@ namespace flex
 			mouseDrag.startLocation = glm::vec2(0.0f);
 			mouseDrag.endLocation = glm::vec2(0.0f);
 		}
-		g_Window->SetCursorMode(Window::CursorMode::NORMAL);
+		g_Window->SetCursorMode(CursorMode::NORMAL);
 
 
 		ImGuiIO& io = ImGui::GetIO();

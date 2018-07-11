@@ -81,6 +81,7 @@ namespace flex
 
 		explicit JSONValue();
 		explicit JSONValue(const std::string& strValue);
+		explicit JSONValue(const char* strValue);
 		explicit JSONValue(i32 intValue);
 		explicit JSONValue(real floatValue);
 		explicit JSONValue(bool boolValue);
