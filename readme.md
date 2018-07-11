@@ -19,6 +19,9 @@ Flex Engine is my personal game engine which I began work on in February 2017 as
 
 ![](http://i.imgur.com/3XQGcDD.png)
 
+![](https://i.imgur.com/DYpYMhH.jpg)
+**Profiler overlay showing a breakdown the CPU-time of a single frame**
+
 ![](https://i.imgur.com/LbRIVav.jpg)
 **GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
 

@@ -289,6 +289,10 @@ namespace flex
 				m_MousePosition.x -= (frameBufferSize.x - 1);
 				m_PrevMousePosition.x = m_MousePosition.x;
 				io.MousePosPrev.x = m_MousePosition.x;
+				for (MouseDrag& drag : m_MouseButtonDrags)
+				{
+					drag.startLocation -= glm::vec2(frameBufferSize.x - 1, 0.0f);
+				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
 			else if (m_MousePosition.x <= 0)
@@ -296,6 +300,10 @@ namespace flex
 				m_MousePosition.x += (frameBufferSize.x - 1);
 				m_PrevMousePosition.x = m_MousePosition.x;
 				io.MousePosPrev.x = m_MousePosition.x;
+				for (MouseDrag& drag : m_MouseButtonDrags)
+				{
+					drag.startLocation += glm::vec2(frameBufferSize.x - 1, 0.0f);
+				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
 
@@ -304,6 +312,10 @@ namespace flex
 				m_MousePosition.y -= (frameBufferSize.y - 1);
 				m_PrevMousePosition.y = m_MousePosition.y;
 				io.MousePosPrev.y = m_MousePosition.y;
+				for (MouseDrag& drag : m_MouseButtonDrags)
+				{
+					drag.startLocation -= glm::vec2(0.0f, frameBufferSize.y - 1);
+				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
 			else if (m_MousePosition.y <= 0)
@@ -311,6 +323,10 @@ namespace flex
 				m_MousePosition.y += (frameBufferSize.y - 1);
 				m_PrevMousePosition.y = m_MousePosition.y;
 				io.MousePosPrev.y = m_MousePosition.y;
+				for (MouseDrag& drag : m_MouseButtonDrags)
+				{
+					drag.startLocation += glm::vec2(0.0f, frameBufferSize.y - 1);
+				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
 		}
@@ -392,6 +408,11 @@ namespace flex
 		return m_MousePosition;
 	}
 
+	void InputManager::ClearMouseMovement()
+	{
+		m_PrevMousePosition = m_MousePosition;
+	}
+
 	void InputManager::SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos)
 	{
 		m_MousePosition = mousePos;
@@ -410,6 +431,13 @@ namespace flex
 		}
 
 		return m_MousePosition - m_PrevMousePosition;
+	}
+
+	void InputManager::ClearMouseButton(MouseButton mouseButton)
+	{
+		m_MouseButtonStates &= ~(1 << ((i32)mouseButton));
+		m_MouseButtonsPressed &= ~(1 << ((i32)mouseButton));
+		m_MouseButtonsReleased &= ~(1 << ((i32)mouseButton));
 	}
 
 	bool InputManager::IsAnyMouseButtonDown(bool bbIgnoreImGui) const
@@ -476,31 +504,20 @@ namespace flex
 		return m_ScrollYOffset;
 	}
 
-	bool InputManager::IsMouseHoveringArea(const glm::vec2& areaPosNorm, const glm::vec2& areaSizeNorm)
+	void InputManager::ClearVerticalScrollDistance()
 	{
-		glm::vec2 frameBufferSize = g_Window->GetFrameBufferSize();
-		real aspectRatio = frameBufferSize.x / (real)frameBufferSize.y;
+		m_ScrollYOffset = 0;
+	}
 
-		/*
-		Sprite space to pixel space:
-		- Divide x by aspect ratio
-		- + 1
-		- / 2
-		- y = 1 - y
-		- * frameBufferSize
-		*/
-		glm::vec2 posPixels = areaPosNorm;
-		posPixels.x /= aspectRatio;
-		posPixels += glm::vec2(1.0f);
-		posPixels /= 2.0f;
-		posPixels.y = 1.0f - posPixels.y;
-		posPixels *= frameBufferSize;
+	bool InputManager::IsMouseHoveringRect(const glm::vec2& posNorm, const glm::vec2& sizeNorm)
+	{
+		glm::vec2 posPixels;
+		glm::vec2 sizePixels;
+		g_Renderer->TransformRectToScreenSpace(posNorm, sizeNorm, posPixels, sizePixels);
+		glm::vec2 halfSizePixels = sizePixels / 2.0f;
 
-		glm::vec2 sizePixels = glm::vec2(areaSizeNorm * frameBufferSize);
-
-		// TODO: minus w ?
-		bool bHoveringInArea = (m_MousePosition.x >= posPixels.x - sizePixels.x / 2.0f && m_MousePosition.x <= posPixels.x + sizePixels.x / 2.0f &&
-								m_MousePosition.y >= posPixels.y - sizePixels.y / 2.0f && m_MousePosition.y <= posPixels.y + sizePixels.y / 2.0f);
+		bool bHoveringInArea = (m_MousePosition.x >= posPixels.x - halfSizePixels.x && m_MousePosition.x < posPixels.x + halfSizePixels.x &&
+								m_MousePosition.y >= posPixels.y - halfSizePixels.y && m_MousePosition.y < posPixels.y + halfSizePixels.y);
 		return bHoveringInArea;
 	}
 
@@ -509,6 +526,13 @@ namespace flex
 		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonDrags[(i32)mouseButton].endLocation - m_MouseButtonDrags[(i32)mouseButton].startLocation);
+	}
+
+	void InputManager::ClearMouseDragDistance(MouseButton mouseButton)
+	{
+		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+
+		m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MouseButtonDrags[(i32)mouseButton].endLocation;
 	}
 
 	void InputManager::ClearAllInputs()

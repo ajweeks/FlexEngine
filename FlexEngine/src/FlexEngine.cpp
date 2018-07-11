@@ -503,6 +503,7 @@ namespace flex
 
 			Profiler::StartFrame();
 
+			PROFILE_BEGIN("Update");
 			g_Window->PollEvents();
 
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
@@ -533,7 +534,9 @@ namespace flex
 
 			if (m_bRenderImGui)
 			{
+				PROFILE_BEGIN("DrawImGuiObjects");
 				DrawImGuiObjects();
+				PROFILE_END("DrawImGuiObjects");
 			}
 
 			// Hovered object
@@ -798,9 +801,10 @@ namespace flex
 				g_Window->ToggleFullscreen();
 			}
 
+			Profiler::Update();
+
 			g_CameraManager->Update();
 
-			PROFILE_BEGIN("Scene Update");
 			if (m_CurrentlySelectedObject)
 			{
 				m_TransformGizmo->SetVisible(true);
@@ -812,7 +816,6 @@ namespace flex
 				m_TransformGizmo->SetVisible(false);
 			}
 			g_SceneManager->UpdateCurrentScene();
-			PROFILE_END("Scene Update");
 
 			
 			g_Window->Update();
@@ -826,13 +829,18 @@ namespace flex
 			bool bWriteProfilingResultsToFile = 
 				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
 
-			bool bUpdateProfilerDisplayFrame = g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z);
+			bool bZKeyPressed = g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z);
+			bool bLShiftPressed = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT) != 0;
+
+			bool bHideProfilerDisplayFrame = bLShiftPressed && bZKeyPressed;
+			bool bUpdateProfilerDisplayFrame = bZKeyPressed && !bLShiftPressed;
 
 			g_Renderer->Update();
 
 			// TODO: Consolidate functions?
 			g_InputManager->Update();
 			g_InputManager->PostUpdate();
+			PROFILE_END("Update");
 
 			PROFILE_BEGIN("Render");
 			g_Renderer->Draw();
@@ -857,7 +865,16 @@ namespace flex
 			const bool bProfileFrame = (m_FrameCount > 3);
 			if (bProfileFrame)
 			{
+				if (bUpdateProfilerDisplayFrame)
+				{
+					Profiler::s_bDisplayingFrame = true;
+				}
 				Profiler::EndFrame(bUpdateProfilerDisplayFrame);
+			}
+
+			if (bHideProfilerDisplayFrame)
+			{
+				Profiler::s_bDisplayingFrame = false;
 			}
 
 			if (bWriteProfilingResultsToFile)

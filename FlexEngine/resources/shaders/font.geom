@@ -34,13 +34,13 @@ void main()
 	vec2 normUV = vec2(charSizePixels.x, charSizePixels.y) / texSize;
 	
 	outputs.channel = inputs[0].channel;
-	gl_Position = transformMat * vec4(pos.x, pos.y + charSizeNorm.y, 0, 1);
+	gl_Position = transformMat * vec4(pos.x, pos.y - charSizeNorm.y, 0, 1);
 	outputs.color = inputs[0].color;
 	outputs.texCoord = uv + vec2(0, normUV.y);
 	EmitVertex();
 	
 	outputs.channel = inputs[0].channel;
-	gl_Position = transformMat * vec4(pos.x + charSizeNorm.x, pos.y + charSizeNorm.y, 0, 1);
+	gl_Position = transformMat * vec4(pos.x + charSizeNorm.x, pos.y - charSizeNorm.y, 0, 1);
 	outputs.color = inputs[0].color;
 	outputs.texCoord = uv + normUV;
 	EmitVertex();

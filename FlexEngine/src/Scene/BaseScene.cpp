@@ -310,42 +310,6 @@ namespace flex
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 
-		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
-		{
-			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
-		}
-		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
-		{
-			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
-		}
-		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
-		{
-			AudioManager::StopSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
-		}
-
-		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
-		{
-			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										   0.5f * g_DeltaTime);
-		}
-		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
-		{
-			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										   -0.5f * g_DeltaTime);
-		}
-
-		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
-		{
-			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										  1.1f);
-		}
-		if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
-		{
-			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										  1.0f / 1.1f);
-		}
-
-
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
 
 		// Fade grid out when far away

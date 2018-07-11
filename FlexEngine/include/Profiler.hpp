@@ -11,6 +11,7 @@ namespace flex
 	public:
 
 		static void StartFrame();
+		static void Update();
 		static void EndFrame(bool bUpdateDisplayedFrame);
 
 		static void Begin(const char* blockName);
@@ -24,6 +25,8 @@ namespace flex
 		static void PrintBlockDuration(const std::string& blockName);
 
 		static void DrawDisplayedFrame();
+
+		static bool s_bDisplayingFrame;
 
 	private:
 		static u64 Hash(const char* str);
@@ -55,9 +58,16 @@ namespace flex
 			real xOffPercent = 0.0f;
 			real yOffPercent = 0.0f;
 			real opacity = 0.8f;
+			real hZoom = 1.0f;
+			real hScroll = 0.0f;
+			real hO = 0.0f;
 		};
 
+		static const real s_ScrollSpeed;
+
 		static DisplayedFrameOptions s_DisplayedFrameOptions;
+
+		static glm::vec4 blockColors[];
 
 	};
 } // namespace flex

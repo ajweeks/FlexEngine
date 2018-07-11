@@ -1750,6 +1750,8 @@ namespace flex
 
 			DrawCallInfo drawCallInfo = {};
 
+			// TDDO: Find an alternative to so many PROFILE macros...
+
 			// TODO: Don't sort render objects frame! Only when things are added/removed
 			PROFILE_BEGIN("Render > BatchRenderObjects");
 			BatchRenderObjects();
@@ -2689,7 +2691,7 @@ namespace flex
 
 					// TODO: Find out how font sizes actually work
 					//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
-					glm::vec3 scaleVec(1.0f, -1.0f, 1.0f);
+					glm::vec3 scaleVec(1.0f);
 
 					glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), scaleVec) * ortho;
 					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
@@ -3189,11 +3191,13 @@ namespace flex
 		{
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
-			real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
 
 			std::vector<TextVertex> textVertices;
 			for (BitmapFont* font : m_Fonts)
 			{
+				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) * 
+					(font->GetFontSize() / 12.0f);
+
 				font->m_BufferStart = (i32)(textVertices.size());
 				font->m_BufferSize = 0;
 
@@ -3213,8 +3217,8 @@ namespace flex
 
 					if (!textCache.bRaw)
 					{
-						real strWidth = GetStringWidth(textCache, font) * frameBufferScale;
-						real strHeight = GetStringHeight(textCache, font) * frameBufferScale;
+						real strWidth = GetStringWidth(textCache, font) * textScale;
+						real strHeight = GetStringHeight(textCache, font) * textScale;
 
 						switch (textCache.anchor)
 						{
@@ -3270,10 +3274,9 @@ namespace flex
 								
 								real yOff = (bUseLetterYOffsets ? textCache.letterYOffsets[j] : 0.0f);
 
-								glm::vec2 pos = glm::vec2(textCache.pos.x * aspectRatio, textCache.pos.y) +
-									glm::vec2(totalAdvanceX + metric->offsetX, 
-											  metric->offsetY + yOff)
-									* frameBufferScale;
+								glm::vec2 pos = 
+									glm::vec2(textCache.pos.x * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
+									glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY + yOff) * textScale;
 
 								if (font->UseKerning())
 								{
@@ -3282,13 +3285,13 @@ namespace flex
 									auto iter = metric->kerning.find(charKey);
 									if (iter != metric->kerning.end())
 									{
-										pos += iter->second * frameBufferScale;
+										pos += iter->second * textScale;
 									}
 								}
 
 								glm::vec4 charSizePixelsCharSizeNorm(
 									metric->width, metric->height,
-									metric->width * frameBufferScale, metric->height * frameBufferScale);
+									metric->width * textScale, metric->height * textScale);
 
 								i32 texChannel = (i32)metric->channel;
 
@@ -3320,7 +3323,6 @@ namespace flex
 				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
 				font->m_TextCaches.clear();
 			}
-
 
 			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex));
 
@@ -5015,6 +5017,61 @@ namespace flex
 			{
 				PrintError("Failed to read renderer settings file, but it exists!\n");
 			}
+		}
+
+		real GLRenderer::GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const
+		{
+			real strWidth = 0;
+
+			char prevChar = ' ';
+			for (char c : str)
+			{
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+
+					if (font->UseKerning())
+					{
+						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
+
+						auto iter = metric->kerning.find(charKey);
+						if (iter != metric->kerning.end())
+						{
+							strWidth += iter->second.x;
+						}
+					}
+
+					strWidth += metric->advanceX + letterSpacing;
+				}
+			}
+
+			if (bNormalized)
+			{
+				strWidth /= (real)g_Window->GetFrameBufferSize().x;
+			}
+
+			return strWidth;
+		}
+
+		real GLRenderer::GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const
+		{
+			real strHeight = 0;
+
+			for (char c : str)
+			{
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+					strHeight = glm::max(strHeight, (real)(metric->height));
+				}
+			}
+
+			if (bNormalized)
+			{
+				strHeight /= (real)g_Window->GetFrameBufferSize().y;
+			}
+
+			return strHeight;
 		}
 		
 		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)

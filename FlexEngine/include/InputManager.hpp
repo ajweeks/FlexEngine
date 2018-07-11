@@ -264,17 +264,22 @@ namespace flex
 
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
+		void ClearMouseMovement();
 		glm::vec2 GetMouseMovement() const;
+		void ClearMouseButton(MouseButton mouseButton);
 		bool IsAnyMouseButtonDown(bool bIgnoreImGui = false) const;
 		bool IsMouseButtonDown(MouseButton mouseButton) const;
 		bool IsMouseButtonPressed(MouseButton mouseButton) const;
 		bool IsMouseButtonReleased(MouseButton mouseButton) const;
 		real GetVerticalScrollDistance() const;
+		void ClearVerticalScrollDistance();
 
-		// Pos: [-1, 1] (y = +1 at top of screen), size: [0, 1]
-		bool IsMouseHoveringArea(const glm::vec2& areaPosNorm, const glm::vec2& areaSizeNorm);
+		// posNorm: normalized position of center of the rect [-1, 1] (y = 1 at top of screen)
+		// sizeNorm: normalized size of the rect [0, 1]
+		bool IsMouseHoveringRect(const glm::vec2& posNorm, const glm::vec2& sizeNorm);
 
 		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
+		void ClearMouseDragDistance(MouseButton mouseButton);
 
 		void ClearAllInputs();
 		void ClearMouseInput();

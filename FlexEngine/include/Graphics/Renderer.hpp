@@ -104,13 +104,22 @@ namespace flex
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
 		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
 
-		// Inputs should lie in range [-1, 1]
-		// Output pos lies in range [0, 1], corrected for aspect ratio
-		void NormalizeSpritePos(const glm::vec2& pos,
-								AnchorPoint anchor,
+		virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const = 0;
+		virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const = 0;
+
+		// Pos should lie in range [-1, 1], with y increasing upward
+		// Output pos lies in range [0, 1], with y increasing downward,
+		// Output scale lies in range [0, 1] - both outputs corrected for aspect ratio
+		void TransformRectToScreenSpace(const glm::vec2& pos,
 								const glm::vec2& scale,
 								glm::vec2& posOut,
 								glm::vec2& scaleOut);
+
+		void NormalizeSpritePos(const glm::vec2& pos,
+										  AnchorPoint anchor,
+										  const glm::vec2& scale,
+										  glm::vec2& posOut,
+										  glm::vec2& scaleOut);
 
 		void SetPostProcessingEnabled(bool bEnabled);
 		bool GetPostProcessingEnabled() const;

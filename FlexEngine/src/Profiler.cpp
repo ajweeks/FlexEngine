@@ -14,6 +14,28 @@ namespace flex
 	std::string Profiler::s_PendingCSV;
 	Profiler::DisplayedFrameOptions Profiler::s_DisplayedFrameOptions;
 	std::vector<Profiler::Timing> Profiler::s_DisplayedFrameTimings;
+	const real Profiler::s_ScrollSpeed = 0.4f;
+	bool Profiler::s_bDisplayingFrame = false;
+
+	glm::vec4 Profiler::blockColors[] = {
+		glm::vec4(0.43f, 0.48f, 0.58f, 0.8f), // Pale dark blue
+		glm::vec4(0.50f, 0.58f, 0.31f, 0.8f), // Pale green
+		glm::vec4(0.45f, 0.33f, 0.82f, 0.8f), // Royal purple
+		glm::vec4(0.17f, 0.98f, 0.95f, 0.8f), // Cyan
+		glm::vec4(0.95f, 0.95f, 0.65f, 0.8f), // Light yellow
+		glm::vec4(0.85f, 0.68f, 0.95f, 0.8f), // Light purple
+		glm::vec4(0.95f, 0.18f, 0.55f, 0.8f), // Dark pink
+		glm::vec4(0.95f, 0.68f, 0.28f, 0.8f), // Orange
+		glm::vec4(0.60f, 0.95f, 0.33f, 0.8f), // Lime
+		glm::vec4(0.58f, 0.95f, 0.65f, 0.8f), // Light green
+		glm::vec4(0.95f, 0.13f, 0.13f, 0.8f), // Red
+		glm::vec4(0.44f, 0.92f, 0.95f, 0.8f), // Light cyan
+		glm::vec4(0.95f, 0.95f, 0.25f, 0.8f), // Yellow
+		glm::vec4(0.40f, 0.63f, 0.95f, 0.8f), // Light blue
+		glm::vec4(0.90f, 0.55f, 0.70f, 0.8f), // Pink
+		glm::vec4(0.25f, 0.26f, 0.97f, 0.8f), // Dark blue
+		glm::vec4(0.70f, 0.45f, 0.95f, 0.8f), // Purple
+	};
 
 	// Any frame time longer than this will be clipped to this value
 	const ms MAX_FRAME_TIME = 100;
@@ -23,6 +45,58 @@ namespace flex
 		s_Timings.clear();
 		s_UnendedTimings = 0;
 		s_FrameStartTime = Time::CurrentMilliseconds();
+	}
+
+	void Profiler::Update()
+	{
+		if (s_bDisplayingFrame)
+		{
+
+			const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom,
+										  s_DisplayedFrameOptions.screenHeightPercent);
+			const glm::vec2 frameCenter = glm::vec2(s_DisplayedFrameOptions.xOffPercent + s_DisplayedFrameOptions.hScroll + s_DisplayedFrameOptions.hO,
+													s_DisplayedFrameOptions.yOffPercent);
+
+			bool bMouseHovered = g_InputManager->IsMouseHoveringRect(frameCenter, frameSizeHalf);
+			if (bMouseHovered)
+			{
+				real scrollDist = g_InputManager->GetVerticalScrollDistance();
+				if (scrollDist != 0.0f)
+				{
+					s_DisplayedFrameOptions.hZoom += scrollDist * s_ScrollSpeed;
+					real minZoom = 0.5f;
+					real maxZoom = 4.0f;
+					s_DisplayedFrameOptions.hZoom = glm::clamp(s_DisplayedFrameOptions.hZoom, minZoom, maxZoom);
+					if (scrollDist < 0.0f)
+					{
+						real a = 1.0f - (s_DisplayedFrameOptions.hZoom - minZoom) / (maxZoom - minZoom);
+						s_DisplayedFrameOptions.hO = Lerp(s_DisplayedFrameOptions.hO, 0.0f, a);
+					}
+					else
+					{
+						real off = -(g_InputManager->GetMousePosition().x / (real)g_Window->GetFrameBufferSize().x - 0.5f) * 2.0f;
+						real a = (1.0f - (s_DisplayedFrameOptions.hZoom - minZoom) / (maxZoom - minZoom)) *  s_ScrollSpeed;
+						s_DisplayedFrameOptions.hO += Lerp(0.0f, off, a);
+					}
+					// TODO: HACK: Add proper input consumption code
+					g_InputManager->ClearVerticalScrollDistance();
+				}
+
+				real hDragDist = g_InputManager->GetMouseDragDistance(InputManager::MouseButton::LEFT).x;
+				if (g_InputManager->IsMouseButtonReleased(InputManager::MouseButton::LEFT))
+				{
+					s_DisplayedFrameOptions.hO += s_DisplayedFrameOptions.hScroll;
+					s_DisplayedFrameOptions.hScroll = 0;
+				}
+				if (g_InputManager->IsMouseButtonDown(InputManager::MouseButton::LEFT) &&
+					hDragDist != 0.0f)
+				{
+					s_DisplayedFrameOptions.hScroll = hDragDist * 0.001f;
+					// TODO: HACK: Add proper input consumption code
+					g_InputManager->ClearMouseMovement();
+				}
+			}
+		}
 	}
 
 	void Profiler::EndFrame(bool bUpdateVisualFrame)
@@ -57,17 +131,21 @@ namespace flex
 			Timing frameTiming = {};
 			frameTiming.start = s_FrameStartTime;
 			frameTiming.end = s_FrameEndTime;
+			strcpy_s(frameTiming.blockName, "Total frame time");
 			s_DisplayedFrameTimings.emplace_back(frameTiming);
 
 			for (auto timingPair : s_Timings)
 			{
-				if (timingPair.second.start >= s_FrameStartTime)
-				{
-					assert(timingPair.second.end <= s_FrameEndTime);
+				assert(timingPair.second.start >= s_FrameStartTime);
+				assert(timingPair.second.end <= s_FrameEndTime);
 
-					s_DisplayedFrameTimings.emplace_back(timingPair.second);
-				}
+				s_DisplayedFrameTimings.emplace_back(timingPair.second);
 			}
+
+			std::sort(s_DisplayedFrameTimings.begin(), s_DisplayedFrameTimings.end(), [](Timing& a, Timing& b)
+			{
+				return a.start < b.start;
+			});
 		}
 	}
 
@@ -167,35 +245,14 @@ namespace flex
 
 	void Profiler::DrawDisplayedFrame()
 	{
-		if (s_DisplayedFrameTimings.empty())
+		if (!s_bDisplayingFrame ||
+			s_DisplayedFrameTimings.empty())
 		{
 			return;
 		}
 
-		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-		real aspectRatio = frameBufferSize.x / (real)frameBufferSize.y;
-		{
-			//glm::vec2 pos = g_InputManager->GetMousePosition() / (glm::vec2)frameBufferSize;
-			//pos.y = 1.0f - pos.y;
-			//pos *= 2.0f;
-			//pos -= glm::vec2(1.0f);
-			//pos.x *= aspectRatio;
-			//g_Renderer->DrawUntexturedQuadRaw(pos,
-			//								  glm::vec2(0.01f),
-			//								  glm::vec4(1.0f));
-
-			
-			/*
-			Sprite space to pixel space:
-			- Divide x by aspect ratio
-			- + 1
-			- / 2
-			- y = 1 - y
-			- * frameBufferSize
-			*/
-		}
-
-		g_Renderer->SetFont(g_Renderer->m_FntSourceCodePro);
+		BitmapFont* font = g_Renderer->m_FntSourceCodePro;
+		g_Renderer->SetFont(font);
 
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
 		ms frameStart = s_DisplayedFrameTimings[0].start;
@@ -203,75 +260,79 @@ namespace flex
 
 		ms frameDuration = frameEnd - frameStart;
 
-		const glm::vec2 frameScale(s_DisplayedFrameOptions.screenWidthPercent,
-								  s_DisplayedFrameOptions.screenHeightPercent);
-		const glm::vec2 framePos(s_DisplayedFrameOptions.xOffPercent,
-								 s_DisplayedFrameOptions.yOffPercent);
-		real blockHeight = frameScale.y / (real)blockCount;
+		const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom, 
+									  s_DisplayedFrameOptions.screenHeightPercent );
+		const glm::vec2 frameCenter = glm::vec2(s_DisplayedFrameOptions.xOffPercent + s_DisplayedFrameOptions.hScroll + s_DisplayedFrameOptions.hO,
+												s_DisplayedFrameOptions.yOffPercent);
 
-		glm::vec4 frameColor(1.0f, 1.0f, 1.0f, s_DisplayedFrameOptions.opacity);
+		const glm::vec2 frameTL = frameCenter + glm::vec2(-frameSizeHalf.x, frameSizeHalf.y);
 
-		g_Renderer->DrawUntexturedQuad(framePos, AnchorPoint::CENTER, frameScale, frameColor);
+		g_Renderer->DrawUntexturedQuadRaw(frameCenter,
+										  frameSizeHalf,
+										  glm::vec4(0.175f, 0.175f, 0.175f, s_DisplayedFrameOptions.opacity));
+
+		bool bMouseHoveredOverMainFrame = g_InputManager->IsMouseHoveringRect(frameCenter, frameSizeHalf);
+		if (bMouseHoveredOverMainFrame)
+		{
+			// Highlight frame with translucent white quad when hovered
+			g_Renderer->DrawUntexturedQuadRaw(frameCenter,
+											  frameSizeHalf,
+											  glm::vec4(1.0f, 1.0f, 1.0f, 0.03f));
+		}
 		std::string frameDurationStr = FloatToString(frameDuration, 2) + "ms";
-		g_Renderer->DrawString(frameDurationStr, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-							   AnchorPoint::CENTER, glm::vec2(framePos.x, framePos.y - frameScale.y * 1.1f), 5,
-							   false);
+		real letterSpacing = 5;
+		real durationStrWidth = g_Renderer->GetStringWidth(frameDurationStr, font, letterSpacing, true);
+		g_Renderer->DrawString(frameDurationStr,
+							   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+							   AnchorPoint::CENTER,
+							   glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
+							   letterSpacing,
+							   true);
 
+		real blockHeight = (frameSizeHalf.y / ((real)blockCount + 2));
 
-		real a = s_DisplayedFrameOptions.opacity;
-		glm::vec4 blockColors[] = {
-			glm::vec4(0.43f, 0.48f, 0.58f, a), // Pale dark blue
-			glm::vec4(0.50f, 0.58f, 0.31f, a), // Pale green
-			glm::vec4(0.13f, 0.08f, 0.26f, a), // Royal purple
-			glm::vec4(0.17f, 0.98f, 0.95f, a), // Cyan
-			glm::vec4(0.95f, 0.95f, 0.65f, a), // Light yellow
-			glm::vec4(0.85f, 0.68f, 0.95f, a), // Light purple
-			glm::vec4(0.95f, 0.18f, 0.55f, a), // Dark pink
-			glm::vec4(0.95f, 0.68f, 0.28f, a), // Orange
-			glm::vec4(0.60f, 0.95f, 0.33f, a), // Lime
-			glm::vec4(0.58f, 0.95f, 0.65f, a), // Light green
-			glm::vec4(0.95f, 0.13f, 0.13f, a), // Red
-			glm::vec4(0.44f, 0.92f, 0.95f, a), // Light cyan
-			glm::vec4(0.95f, 0.95f, 0.25f, a), // Yellow
-			glm::vec4(0.40f, 0.63f, 0.95f, a), // Light blue
-			glm::vec4(0.90f, 0.55f, 0.70f, a), // Pink
-			glm::vec4(0.15f, 0.16f, 0.95f, a), // Dark blue
-			glm::vec4(0.70f, 0.45f, 0.95f, a), // Purple
-		};
 		i32 colorIndex = 0;
-		for (i32 i = 1; i < blockCount; ++i)
+		for (i32 i = 0; i < blockCount; ++i)
 		{
 			Timing& timing = s_DisplayedFrameTimings[i];
 
 			ms blockDuration = timing.end - timing.start;
-			real blockWidth = blockDuration / frameDuration;
-			real blockStartX = (framePos.x) + ((timing.start - frameStart) / frameDuration) * frameScale.x;
-			real blockStartY = framePos.y + frameScale.y - blockHeight / 2.0f;
-			glm::vec2 blockScale(frameScale.x * blockWidth,
-								blockHeight);
-			glm::vec2 blockPos(blockStartX - blockWidth/2.0f,
-							   blockStartY - (i / (real)blockCount) * frameScale.y * 2.0f);
-			blockPos.y *= -1;
+			real halfBlockWidth = (blockDuration / frameDuration) * frameSizeHalf.x;
+			real blockLeftX = (frameTL.x) + ((timing.start - frameStart) / frameDuration) * frameSizeHalf.x * 2.0f;
+			real blockCenterY = frameTL.y - blockHeight - ((i + 0.5f) / ((real)blockCount + 1.0f)) * frameSizeHalf.y * 2.0f;
+			glm::vec2 blockCenterNorm(blockLeftX + halfBlockWidth, blockCenterY);
+			glm::vec2 blockScaleNorm(halfBlockWidth, blockHeight);
 
-			//glm::vec2 normalizedBlockScale;
-			//g_Renderer->NormalizeSpritePos(glm::vec2(blockPos.x - 0.5f, blockPos.y * 0.5f - blockHeight),
-			//							   AnchorPoint::CENTER,
-			//							   glm::vec2(blockScale.x * 0.5f, blockScale.y * 1.0f),
-			//							   normalizedBlockPos, normalizedBlockScale);
-			bool bMouseHovered = g_InputManager->IsMouseHoveringArea(blockPos, blockScale / glm::vec2(aspectRatio, 1.0f));
+			g_Renderer->DrawUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, blockColors[colorIndex]);
 
-			g_Renderer->DrawUntexturedQuadRaw(blockPos, blockScale, blockColors[colorIndex]);
-
-			if (bMouseHovered)
+			bool bMouseHoveredOverBlock = g_InputManager->IsMouseHoveringRect(blockCenterNorm, blockScaleNorm);
+			if (bMouseHoveredOverBlock)
 			{
-				g_Renderer->DrawUntexturedQuadRaw(blockPos, blockScale, glm::vec4(1.0f, 1.0f, 1.0f, 0.3f));
+				// Highlight hovered block with translucent white quad
+				g_Renderer->DrawUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, glm::vec4(1.0f, 1.0f, 1.0f, 0.3f));
 
-				blockPos.y *= -1;
+
+				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
+				real aspectRatio = frameBufferSize.x / frameBufferSize.y;
+
+				std::string str = timing.blockName;
+				real strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
+				glm::vec2 pos(blockCenterNorm.x - strWidth * aspectRatio, frameCenter.y - frameSizeHalf.y * 1.2f);
 				g_Renderer->DrawString(timing.blockName,
 									   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
 									   AnchorPoint::CENTER,
-									   glm::vec2(frameScale.x*1.01f / aspectRatio, blockPos.y),
-									   5, 
+									   pos,
+									   letterSpacing,
+									   true);
+				str = FloatToString(blockDuration, 2) + "ms";
+				strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
+				pos.x = blockCenterNorm.x - strWidth * aspectRatio;
+				pos.y -= 0.05f;
+				g_Renderer->DrawString(str,
+									   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+									   AnchorPoint::CENTER,
+									   pos ,
+									   letterSpacing,
 									   true);
 			}
 

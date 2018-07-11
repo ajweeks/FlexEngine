@@ -25,11 +25,39 @@ namespace flex
 		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
 	}
 
+	void Renderer::TransformRectToScreenSpace(const glm::vec2& pos,
+											  const glm::vec2& scale,
+											  glm::vec2& posOut,
+											  glm::vec2& scaleOut)
+	{
+		const glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
+		const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
+		/*
+		Sprite space to pixel space:
+		- Divide x by aspect ratio
+		- + 1
+		- / 2
+		- y = 1 - y
+		- * frameBufferSize
+		*/
+
+		posOut = pos;
+		posOut.x /= aspectRatio;
+		posOut += glm::vec2(1.0f);
+		posOut /= 2.0f;
+		posOut.y = 1.0f - posOut.y;
+		posOut *= frameBufferSize;
+
+		scaleOut = glm::vec2(scale * frameBufferSize);
+		scaleOut.x /= aspectRatio;
+	}
+
 	void Renderer::NormalizeSpritePos(const glm::vec2& pos,
-										AnchorPoint anchor,
-										const glm::vec2& scale,
-										glm::vec2& posOut,
-										glm::vec2& scaleOut)
+									  AnchorPoint anchor,
+									  const glm::vec2& scale,
+									  glm::vec2& posOut,
+									  glm::vec2& scaleOut)
 	{
 		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
