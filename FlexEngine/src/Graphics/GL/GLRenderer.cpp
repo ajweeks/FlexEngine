@@ -2546,10 +2546,11 @@ namespace flex
 
 			glUseProgram(fontShader.program);
 
-			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("soften"))
+			// TODO: Allow per-string shadows? (currently only per-font is doable)
+			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("shadow"))
 			//{
-			//	real soften = ((sin(g_SecElapsedSinceProgramStart) * 0.5f + 0.5f) * 0.25f);
-			//	glUniform1f(glGetUniformLocation(fontShader.program, "soften"), soften);
+			//	static glm::vec2 shadow(0.01f, 0.1f);
+			//	glUniform2f(glGetUniformLocation(fontShader.program, "shadow"), shadow.x, shadow.y);
 			//}
 			
 			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
@@ -4083,7 +4084,7 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texSize");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("threshold");
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("outline");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("shadow");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("soften");
 			++shaderID;
 
