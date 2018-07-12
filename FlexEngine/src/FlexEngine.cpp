@@ -893,6 +893,9 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 
+		std::string fontFilePath(RESOURCE_LOCATION + "fonts/lucon.ttf");
+		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
+
 		io.FontGlobalScale = g_Monitor->contentScaleX;
 
 		ImGuiStyle& style = ImGui::GetStyle();
