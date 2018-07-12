@@ -258,6 +258,7 @@ namespace flex
 
 			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
 
+			GLTexture* m_AlphaBGTexture = nullptr;
 			GLTexture* m_LoadingTexture = nullptr;
 			GLTexture* m_WorkTexture = nullptr;
 

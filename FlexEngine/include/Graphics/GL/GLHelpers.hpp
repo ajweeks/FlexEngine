@@ -201,6 +201,8 @@ namespace flex
 			bool GenerateEmpty();
 			bool LoadFromFile();
 
+			void Reload();
+
 			void Build(void* data = nullptr);
 			void Destroy();
 			void SetParameters(TextureParameters params);

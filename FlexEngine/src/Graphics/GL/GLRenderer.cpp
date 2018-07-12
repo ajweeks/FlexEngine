@@ -157,6 +157,11 @@ namespace flex
 				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
+			m_AlphaBGTexture = new GLTexture(RESOURCE_LOCATION + "textures/alpha-bg.png", 3, false, false, false);
+			if (m_AlphaBGTexture->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_AlphaBGTexture->filePath, m_AlphaBGTexture });
+			}
 			m_LoadingTexture = new GLTexture(RESOURCE_LOCATION + "textures/loading_1.png", 3, false, false, false);
 			if (m_LoadingTexture->LoadFromFile())
 			{
@@ -743,15 +748,6 @@ namespace flex
 																	  samplerCreateInfo.hdr);
 
 								newTexture->LoadFromFile();
-
-								// Texture hasn't been loaded yet, load it now
-								//ImageInfo imageInfo = {};
-								//bool bSucceded = samplerCreateInfo.createFunction(*samplerCreateInfo.id, 
-								//								 samplerCreateInfo.filepath,
-								//								 samplerCreateInfo.alpha,
-								//								 samplerCreateInfo.flipVertically,
-								//								 samplerCreateInfo.generateMipMaps,
-								//								 &imageInfo);
 
 								PROFILE_END(textureProfileBlockName);
 								Profiler::PrintBlockDuration(textureProfileBlockName);
@@ -4939,6 +4935,83 @@ namespace flex
 
 		void GLRenderer::DrawImGuiItems()
 		{
+			ImGui::NewLine();
+
+			ImGui::Text("Textures");
+
+			static i32 selectedTextureIndex = 0;
+			if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
+			{
+				i32 i = 0;
+				for (const auto& texturePair : m_LoadedTextures)
+				{
+					bool bSelected = (i == selectedTextureIndex);
+					std::string cleanFileName = texturePair.second->filePath;
+					StripLeadingDirectories(cleanFileName);
+					if (ImGui::Selectable(cleanFileName.c_str(), &bSelected))
+					{
+						selectedTextureIndex = i;
+					}
+
+					if (ImGui::BeginPopupContextItem())
+					{
+						if (ImGui::Button("Reload"))
+						{
+							texturePair.second->Reload();
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::EndPopup();
+					}
+
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+
+						ImVec2 cursorPos = ImGui::GetCursorPos();
+
+						real textureAspectRatio = (real)texturePair.second->width / (real)texturePair.second->height;
+						real texSize = 128.0f;
+
+						if (texturePair.second->channelCount == 4)
+						{
+							real tiling = 3.0f;
+							ImVec2 uv0(0.0f, 0.0f);
+							ImVec2 uv1(tiling * textureAspectRatio, tiling);
+							ImGui::Image((void*)m_AlphaBGTexture->handle, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
+						}
+
+						ImGui::SetCursorPos(cursorPos);
+
+						ImGui::Image((void*)texturePair.second->handle, ImVec2(texSize * textureAspectRatio, texSize));
+
+						ImGui::EndTooltip();
+					}
+					++i;
+				}
+			}
+			ImGui::EndChild();
+
+			ImGui::NewLine();
+
+			ImGui::Text("Materials");
+
+			static i32 selectedMaterialIndex = 0;
+			if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
+			{
+				i32 i = 0;
+				for (const auto& materialPair : m_Materials)
+				{
+					bool bSelected = (i == selectedMaterialIndex);
+					if (ImGui::Selectable(materialPair.second.material.name.c_str(), &bSelected))
+					{
+						selectedMaterialIndex = i;
+					}
+					++i;
+				}
+			}
+			ImGui::EndChild();
+
 			GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
 
 			ImGui::NewLine();

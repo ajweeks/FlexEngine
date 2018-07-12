@@ -401,6 +401,16 @@ namespace flex
 			return bSucceeded;
 		}
 
+		void GLTexture::Reload()
+		{
+			Destroy();
+
+			if (!filePath.empty())
+			{
+				LoadFromFile();
+			}
+		}
+
 		void GLTexture::Build(void* data)
 		{
 			glBindTexture(GL_TEXTURE_2D, handle);
