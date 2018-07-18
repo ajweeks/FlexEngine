@@ -385,10 +385,9 @@ namespace flex
 				i32 materialArrayIndex = scene->GetMaterialArrayIndex(material);
 				if (materialArrayIndex == -1)
 				{
-					//	PrintError("Mesh object contains material not present in "
-					//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
-					//					 "Object name: " + objectName + 
-					//					 ", matID: " + std::to_string(matID));
+						PrintError("Mesh object contains material not present in "
+										 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
+										 "Object name: %s, matID: %i\n", m_Name.c_str(), matID);
 				}
 				else
 				{
@@ -1499,6 +1498,7 @@ namespace flex
 		probeCaptureMatCreateInfo.generatePrefilteredMap = true;
 		probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
 		probeCaptureMatCreateInfo.enableBRDFLUT = true;
+		probeCaptureMatCreateInfo.engineMaterial = true;
 		probeCaptureMatCreateInfo.frameBuffers = {
 			{ "positionMetallicFrameBufferSampler", nullptr },
 			{ "normalRoughnessFrameBufferSampler", nullptr },

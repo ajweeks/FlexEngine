@@ -206,6 +206,7 @@ namespace flex
 				MaterialCreateInfo gridMatInfo = {};
 				gridMatInfo.shaderName = "color";
 				gridMatInfo.name = gridMatName;
+				gridMatInfo.engineMaterial = true;
 				m_GridMaterialID = g_Renderer->InitializeMaterial(&gridMatInfo);
 			}
 
@@ -228,6 +229,7 @@ namespace flex
 				MaterialCreateInfo worldAxisMatInfo = {};
 				worldAxisMatInfo.shaderName = "color";
 				worldAxisMatInfo.name = worldOriginMatName;
+				worldAxisMatInfo.engineMaterial = true;
 				m_WorldAxisMaterialID = g_Renderer->InitializeMaterial(&worldAxisMatInfo);
 			}
 
@@ -761,6 +763,37 @@ namespace flex
 		return m_LoadedMaterials;
 	}
 
+	void BaseScene::AddMaterialID(MaterialID newMaterialID)
+	{
+		m_LoadedMaterials.push_back(newMaterialID);
+	}
+
+	void BaseScene::RemoveMaterialID(MaterialID materialID)
+	{
+		auto iter = m_LoadedMaterials.begin();
+		while (iter != m_LoadedMaterials.end())
+		{
+			Material& material = g_Renderer->GetMaterial(*iter);
+			MaterialID matID;
+			if (g_Renderer->GetMaterialID(material.name, matID))
+			{
+				if (matID == materialID)
+				{
+					// TODO: Find all objects which use this material and give them new mats
+					iter = m_LoadedMaterials.erase(iter);
+				}
+				else
+				{
+					++iter;
+				}
+			}
+			else
+			{
+				++iter;
+			}
+		}
+	}
+
 	GameObject* BaseScene::FirstObjectWithTag(const std::string& tag)
 	{
 		for (GameObject* gameObject : m_RootObjects)
@@ -934,5 +967,4 @@ namespace flex
 	{
 		return m_PhysicsWorld;
 	}
-
 } // namespace flex

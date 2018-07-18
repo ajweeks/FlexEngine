@@ -194,7 +194,7 @@ namespace flex
 		struct GLTexture
 		{
 			GLTexture();
-			GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type);
+			GLTexture(const std::string& name, i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type);
 			GLTexture(const std::string& filePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 			~GLTexture();
 
@@ -214,7 +214,14 @@ namespace flex
 			// unless it is reattached to the framebuffer object
 			bool Resize(glm::vec2i newSize);
 
-			std::string filePath;
+			std::string GetFilePath() const;
+			std::string GetName() const;
+
+		private:
+			std::string filePath; // Absolute file path
+			std::string name; // filePath but without the leading directories, or a custom name if not loaded from file
+
+		public:
 
 			GLuint handle = 0;
 

@@ -323,7 +323,8 @@ namespace flex
 		{
 		}
 
-		GLTexture::GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type) :
+		GLTexture::GLTexture(const std::string& name, i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type) :
+			name(name),
 			width(width),
 			height(height),
 			internalFormat(internalFormat),
@@ -343,6 +344,11 @@ namespace flex
 			bHasMipMaps(bGenerateMipMaps),
 			bHDR(bHDR)
 		{
+			if (name.empty())
+			{
+				name = filePath;
+				StripLeadingDirectories(name);
+			}
 		}
 
 		GLTexture::~GLTexture()
@@ -495,6 +501,16 @@ namespace flex
 
 				return false;
 			}
+		}
+
+		std::string GLTexture::GetFilePath() const
+		{
+			return filePath;
+		}
+
+		std::string GLTexture::GetName() const
+		{
+			return name;
 		}
 
 		bool LoadGLShaders(u32 program, GLShader& shader)

@@ -71,7 +71,7 @@ namespace flex
 
 		if (anchor == AnchorPoint::WHOLE)
 		{
-			scaleOut.x *= aspectRatio;
+			//scaleOut.x *= aspectRatio;
 		}
 
 		switch (anchor)

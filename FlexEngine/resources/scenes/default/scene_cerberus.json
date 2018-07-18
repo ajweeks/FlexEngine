@@ -4,12 +4,12 @@
 	"materials" : 
 	[
 		{
-			"name" : "cerberus",
+			"name" : "cerberus JPG",
 			"shader" : "pbr",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
+			"const albedo" : "0.710000, 0.650000, 0.090000",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
+			"const roughness" : 0.210000,
+			"const ao" : 0.880000,
 			"enable albedo sampler" : true,
 			"enable metallic sampler" : true,
 			"enable roughness sampler" : true,
@@ -20,11 +20,11 @@
 			"generate roughness sampler" : true,
 			"generate ao sampler" : true,
 			"generate normal sampler" : true,
-			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga",
-			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga",
-			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga",
-			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO.tga",
-			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga"
+			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.jpg",
+			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.jpg",
+			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.jpg",
+			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO.jpg",
+			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.jpg"
 		},
 		{
 			"name" : "pbr chrome",
@@ -52,7 +52,7 @@
 			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
 		},
 		{
-			"name" : "cerberus",
+			"name" : "cerberus TGA",
 			"shader" : "pbr",
 			"const albedo" : "0.000000, 0.000000, 0.000000",
 			"const metallic" : 0.000000,
@@ -74,31 +74,6 @@
 			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO.tga",
 			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga"
 		},
-		{
-			"name" : "pbr chrome",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "Skybox",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
-		}
 	],
 	"objects" : 
 	[

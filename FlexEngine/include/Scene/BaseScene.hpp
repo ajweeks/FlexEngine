@@ -55,6 +55,8 @@ namespace flex
 		void RemoveAllRootObjects(bool deleteRootObjects);
 
 		std::vector<MaterialID> GetMaterialIDs();
+		void AddMaterialID(MaterialID newMaterialID);
+		void RemoveMaterialID(MaterialID materialID);
 
 		/* Returns the first found game object with tag, or nullptr if none exist */
 		GameObject* FirstObjectWithTag(const std::string& tag);

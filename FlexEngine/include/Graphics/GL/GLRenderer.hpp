@@ -221,6 +221,18 @@ namespace flex
 			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
 			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName);
+			void DoMaterialEditor(bool* bShowMaterialEditor);
+			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex);
+			void UpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+											  const std::string& texturePath,
+											  std::string& matTexturePath,
+											  GLTexture* texture,
+											  i32 i,
+											  i32* textureIndex,
+											  u32* samplerID);
+			void DoTexturePreviewTooltip(GLTexture* texture);
+
+			void DrawLoadingTextureQuad();
 
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
@@ -327,6 +339,7 @@ namespace flex
 
 			// Must be 12 chars or less
 			const char* m_RenderObjectPayloadCStr = "renderobject";
+			const char* m_MaterialPayloadCStr = "material";
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

@@ -824,7 +824,7 @@ namespace flex
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
 				g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 			{
-				g_SceneManager->CurrentScene()->SerializeToFile();
+				g_SceneManager->CurrentScene()->SerializeToFile(true);
 			}
 
 			bool bWriteProfilingResultsToFile = 
