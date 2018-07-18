@@ -15,8 +15,11 @@ namespace flex
 			NANOSECOND =	1000000000
 		};
 
-		static sec Now();
-		static real Difference(real start, real end);
+		static sec CurrentSeconds();
+		static us CurrentMicoseconds();
+		static ms CurrentMilliseconds();
+		static ns CurrentNanoseconds();
+
 		static real ConvertFormats(real value, Format from, Format to);
 
 		static std::string SecondsToString(sec seconds, i32 precision = 1);

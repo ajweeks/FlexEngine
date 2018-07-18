@@ -16,27 +16,44 @@
 #pragma warning(pop)
 
 #include "FlexEngine.hpp"
-#include "Logger.hpp"
+
 
 namespace flex
 {
-	GLFWimage LoadGLFWimage(const std::string& filePath, bool alpha, bool flipVertically)
+	ImVec4 g_WarningTextColor(1.0f, 0.25f, 0.25f, 1.0f);
+	ImVec4 g_WarningButtonColor(0.65f, 0.12f, 0.09f, 1.0f);
+	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
+	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
+
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, i32* channelCountOut /* = nullptr */)
 	{
+		assert(requestedChannelCount == 3 ||
+			   requestedChannelCount == 4);
+
 		GLFWimage result = {};
 
 		std::string fileName = filePath;
 		StripLeadingDirectories(fileName);
-		Logger::LogInfo("Loading texture " + fileName);
+		Print("Loading texture %s\n", fileName.c_str());
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
 		i32 channels;
-		unsigned char* data = stbi_load(filePath.c_str(), &result.width, &result.height, &channels, alpha ? STBI_rgb_alpha : STBI_rgb);
+		unsigned char* data = stbi_load(filePath.c_str(),
+										&result.width,
+										&result.height,
+										&channels, 
+										(requestedChannelCount == 4  ? STBI_rgb_alpha : STBI_rgb));
+
+		if (channelCountOut)
+		{
+			*channelCountOut = channels;
+		}
 
 		if (data == 0)
 		{
 			const char* failureReasonStr = stbi_failure_reason();
-			Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
+			PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, filePath.c_str());
 			return result;
 		}
 		else
@@ -56,6 +73,45 @@ namespace flex
 		image.pixels = nullptr;
 	}
 
+	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically)
+	{
+		assert(requestedChannelCount == 3 ||
+			   requestedChannelCount == 4);
+
+		filePath = hdrFilePath;
+
+		std::string fileName = hdrFilePath;
+		StripLeadingDirectories(fileName);
+		Print("Loading HDR texture %s\n", fileName.c_str());
+
+		stbi_set_flip_vertically_on_load(flipVertically);
+
+		pixels = stbi_loadf(filePath.c_str(),
+							&width,
+							&height, 
+							&channelCount, 
+							(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+
+		channelCount = 4;
+
+		if (!pixels)
+		{
+			PrintError("Failed to load HDR image at %s\n", filePath.c_str());
+			return false;
+		}
+
+		assert(width <= Renderer::MAX_TEXTURE_DIM);
+		assert(height <= Renderer::MAX_TEXTURE_DIM);
+		assert(channelCount > 0);
+
+		return true;
+	}
+
+	void HDRImage::Free()
+	{
+		stbi_image_free(pixels);
+	}
+
 	std::string FloatToString(real f, i32 precision)
 	{
 		std::stringstream stream;
@@ -63,6 +119,42 @@ namespace flex
 		stream << std::fixed << std::setprecision(precision) << f;
 
 		return stream.str();
+	}
+
+	std::string IntToString(i32 i, u16 minChars)
+	{
+		std::string result = std::to_string(glm::abs(i));
+
+		if (i < 0)
+		{
+			if (result.length() < minChars)
+			{
+				result = '-' + std::string(minChars - result.length(), '0') + result;
+			}
+			else
+			{
+				result = '-' + result;
+			}
+		}
+		else
+		{
+			if (result.length() < minChars)
+			{
+				result = std::string(minChars - result.length(), '0') + result;
+			}
+		}
+
+		return result;
+	}
+
+	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, bool bRaw) :
+		str(str),
+		anchor(anchor),
+		pos(pos),
+		color(color),
+		xSpacing(xSpacing),
+		bRaw(bRaw)
+	{
 	}
 
 	bool FileExists(const std::string& filePath)
@@ -85,7 +177,7 @@ namespace flex
 
 		if (!file)
 		{
-			Logger::LogError("Unable to read file: " + filePath);
+			PrintError("Unable to read file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -120,7 +212,7 @@ namespace flex
 
 		if (!file)
 		{
-			Logger::LogError("Unable to read file: " + filePath);
+			PrintError("Unable to read file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -143,11 +235,6 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
-		std::string directoryStr = filePath;
-		ExtractDirectoryString(directoryStr);
-
-		CreateDirectoryRecursive(directoryStr);
-
 		i32 fileMode =std::ios::out | std::ios::trunc;
 		if (bBinaryFile)
 		{
@@ -166,11 +253,40 @@ namespace flex
 		return false;
 	}
 
+	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure)
+	{
+		if (::DeleteFile(filePath.c_str()))
+		{
+			return true;
+		}
+		else
+		{
+			if (bPrintErrorOnFailure)
+			{
+				PrintError("Failed to delete file %s\n", filePath.c_str());
+			}
+			return false;
+		}
+	}
+
+	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
+	{
+		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
+		{
+			return true;
+		}
+		else
+		{
+			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
+			return false;
+		}
+	}
+
 	bool DirectoryExists(const std::string& absoluteDirectoryPath)
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
 		{
-			Logger::LogError("Attempted to create directory using relative path! Must specify absolute path!");
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
 			return false;
 		}
 
@@ -178,6 +294,91 @@ namespace flex
 
 		return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
 			    dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+	}
+
+	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	{
+		std::string cleanedFileType = fileType;
+		{
+			size_t dotPos = cleanedFileType.find('.');
+			if (dotPos != std::string::npos)
+			{
+				cleanedFileType.erase(dotPos, 1);
+			}
+		}
+		
+		bool bPathContainsBackslash = (directoryPath.find('\\') != std::string::npos);
+		char slashChar = (bPathContainsBackslash ? '\\' : '/');
+
+		std::string cleanedDirPath = directoryPath;
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != slashChar)
+		{
+			cleanedDirPath += slashChar;
+		}
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+
+		HANDLE hFind;
+		WIN32_FIND_DATAA findData;
+
+		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+		
+		if (hFind == INVALID_HANDLE_VALUE)
+		{
+			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		do
+		{
+			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				// Skip over directories
+				//Print(findData.cFileName);
+			}
+			else
+			{
+				bool foundFileTypeMatches = false;
+				if (cleanedFileType == "*")
+				{
+					foundFileTypeMatches = true;
+				}
+				else
+				{
+					std::string fileNameStr(findData.cFileName);
+					size_t dotPos = fileNameStr.find('.');
+
+					if (dotPos != std::string::npos)
+					{
+						std::string foundFileType = Split(fileNameStr, '.')[1];
+						if (foundFileType == cleanedFileType)
+						{
+							foundFileTypeMatches = true;
+						}
+					}
+				}
+
+				if (foundFileTypeMatches)
+				{
+					// File size retrieval:
+					//LARGE_INTEGER filesize;
+					//filesize.LowPart = findData.nFileSizeLow;
+					//filesize.HighPart = findData.nFileSizeHigh;
+
+					filePaths.push_back(cleanedDirPath + findData.cFileName);
+				}
+			}
+		} while (FindNextFile(hFind, &findData) != 0);
+
+		DWORD dwError = GetLastError();
+		if (dwError != ERROR_NO_MORE_FILES)
+		{
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		return true;
 	}
 
 	void StripLeadingDirectories(std::string& filePath)
@@ -216,11 +417,25 @@ namespace flex
 		}
 	}
 
+	void StripFileType(std::string& filePath)
+	{
+		assert(filePath.find('.') != std::string::npos);
+
+		filePath = Split(filePath, '.')[0];
+	}
+
+	void ExtractFileType(std::string& filePathInTypeOut)
+	{
+		assert(filePathInTypeOut.find('.') != std::string::npos);
+
+		filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
+	}
+
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
 		{
-			Logger::LogError("Attempted to create directory using relative path! Must specify absolute path!");
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
 			return;
 		}
 
@@ -244,13 +459,13 @@ namespace flex
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))
 		{
-			Logger::LogError("Failed to parse WAV file: " + filePath);
+			PrintError("Failed to parse WAV file: %s\n", filePath.c_str());
 			return false;
 		}
 
 		if (dataArray.size() < 12)
 		{
-			Logger::LogError("Invalid WAV file: " + filePath);
+			PrintError("Invalid WAV file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -265,7 +480,7 @@ namespace flex
 			waveID.compare("WAVE") != 0 ||
 			subChunk1ID.compare("fmt ") != 0)
 		{
-			Logger::LogError("Invalid WAVE file header: " + filePath);
+			PrintError("Invalid WAVE file header: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -273,14 +488,14 @@ namespace flex
 		u32 subChunk1Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
 		if (subChunk1Size != 16)
 		{
-			Logger::LogError("Non-16 bit chunk size in WAVE files in unsupported: " + filePath);
+			PrintError("Non-16 bit chunk size in WAVE files in unsupported: %s\n", filePath.c_str());
 			return false;
 		}
 
 		u16 audioFormat = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
 		if (audioFormat != 1) // WAVE_FORMAT_PCM
 		{
-			Logger::LogError("WAVE file uses unsupported format (only PCM is allowed): " + filePath);
+			PrintError("WAVE file uses unsupported format (only PCM is allowed): %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -293,7 +508,7 @@ namespace flex
 		std::string subChunk2ID(&dataArray[dataIndex], 4); dataIndex += 4;
 		if (subChunk2ID.compare("data") != 0)
 		{
-			Logger::LogError("Invalid WAVE file: " + filePath);
+			PrintError("Invalid WAVE file: %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -310,15 +525,17 @@ namespace flex
 		{
 			std::string fileName = filePath;
 			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Stats about WAV file:" + fileName +
-							":\nchannel count: " + std::to_string(channelCount) +
-							", samples/s: " + std::to_string(samplesPerSec) +
-							", average bytes/s: " + std::to_string(avgBytesPerSec) +
-							", block align: " + std::to_string(blockAlign) +
-							", bits/sample: " + std::to_string(bitsPerSample) +
-							", chunk size: " + std::to_string(chunkSize) +
-							", sub chunk2 ID: " + subChunk2ID +
-							", sub chunk 2 size: " + std::to_string(subChunk2Size));
+			Print("Stats about WAV file: %s:\n\tchannel count: %i, samples/s: %i, average bytes/s: %i"
+				  ", block align: %i, bits/sample: %i, chunk size: %i, sub chunk2 ID: \"%s\", sub chunk 2 size: %i\n",
+				  fileName.c_str(),
+				  channelCount,
+				  samplesPerSec,
+				  avgBytesPerSec,
+				  blockAlign,
+				  bitsPerSample,
+				  chunkSize,
+				  subChunk2ID.c_str(),
+				  subChunk2Size);
 		}
 
 		switch (channelCount)
@@ -334,7 +551,7 @@ namespace flex
 				*format = AL_FORMAT_MONO16;
 				break;
 			default:
-				Logger::LogError("WAVE file contains invalid bitsPerSample (must be 8 or 16): " + std::to_string(bitsPerSample));
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
 				break;
 			}
 		} break;
@@ -349,13 +566,13 @@ namespace flex
 				*format = AL_FORMAT_STEREO16;
 				break;
 			default:
-				Logger::LogError("WAVE file contains invalid bitsPerSample (must be 8 or 16): " + std::to_string(bitsPerSample));
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
 				break;
 			}
 		} break;
 		default:
 		{
-			Logger::LogError("WAVE file contains invalid channel count (must be 1 or 2): " + std::to_string(channelCount));
+			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %i\n", channelCount);
 		} break;
 		}
 
@@ -437,7 +654,7 @@ namespace flex
 	{
 		if (floatStr.empty())
 		{
-			Logger::LogError("Invalid float string (empty)");
+			PrintError("Invalid float string (empty)\n");
 			return -1.0f;
 		}
 
@@ -450,7 +667,7 @@ namespace flex
 
 		if (parts.size() != 2)
 		{
-			Logger::LogError("Invalid vec2 field: " + vecStr);
+			PrintError("Invalid vec2 field: %s\n", vecStr.c_str());
 			return glm::vec2(-1);
 		}
 		else
@@ -469,7 +686,7 @@ namespace flex
 
 		if (parts.size() != 3 && parts.size() != 4)
 		{
-			Logger::LogError("Invalid vec3 field: " + vecStr);
+			PrintError("Invalid vec3 field: %s\n", vecStr.c_str());
 			return glm::vec3(-1);
 		}
 		else
@@ -489,7 +706,7 @@ namespace flex
 
 		if ((parts.size() != 4 && parts.size() != 3) || (defaultW < 0 && parts.size() != 4))
 		{
-			Logger::LogError("Invalid vec4 field: " + vecStr);
+			PrintError("Invalid vec4 field: %s\n", vecStr.c_str());
 			return glm::vec4(-1);
 		}
 		else
@@ -515,6 +732,30 @@ namespace flex
 
 			return result;
 		}
+	}
+
+	bool IsNanOrInf(const glm::vec2& vec)
+	{
+		return (isnan(vec.x) || isnan(vec.y) || 
+				isinf(vec.x) || isinf(vec.y));
+	}
+
+	bool IsNanOrInf(const glm::vec3& vec)
+	{
+		return (isnan(vec.x) || isnan(vec.y) || isnan(vec.z) ||
+				isinf(vec.x) || isinf(vec.y) || isinf(vec.z));
+	}
+
+	bool IsNanOrInf(const glm::vec4& vec)
+	{
+		return (isnan(vec.x) || isnan(vec.y) || isnan(vec.z) || isnan(vec.w) ||
+				isinf(vec.x) || isinf(vec.y) || isinf(vec.z) || isinf(vec.w));
+	}
+
+	bool IsNanOrInf(const glm::quat& quat)
+	{
+		return (isnan(quat.x) || isnan(quat.y) || isnan(quat.z) || isnan(quat.w) ||
+				isinf(quat.x) || isinf(quat.y) || isinf(quat.z) || isinf(quat.w));
 	}
 
 	std::string Vec2ToString(const glm::vec2& vec)
@@ -607,7 +848,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Unhandled cull face str: " + str);
+			PrintError("Unhandled cull face str: %s\n", str.c_str());
 			return CullFace::NONE;
 		}
 	}
@@ -651,56 +892,62 @@ namespace flex
 		return result;
 	}
 
-	std::string GameObjectTypeToString(GameObjectType type)
+	bool EndsWith(const std::string& str, const std::string& end)
 	{
-		switch (type)
+		if (str.length() < end.length())
 		{
-		case GameObjectType::OBJECT:				return "object";
-		case GameObjectType::PLAYER:				return "player";
-		case GameObjectType::SKYBOX:				return "skybox";
-		case GameObjectType::REFLECTION_PROBE:		return "reflection probe";
-		case GameObjectType::VALVE:					return "valve";
-		case GameObjectType::RISING_BLOCK:			return "rising block";
-		case GameObjectType::GLASS_WINDOW:			return "glass window";
-		case GameObjectType::NONE:					return "NONE";
-		default:									return "UNHANDLED GAME OBJECT TYPE";
+			return false;
 		}
+
+		bool result = (str.substr(str.length() - end.length()).compare(end) == 0);
+		return result;
 	}
 
-	GameObjectType StringToGameObjectType(const std::string& gameObjectTypeStr)
+	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars)
 	{
-		if (gameObjectTypeStr.compare("object") == 0)
+		if (str.empty())
 		{
-			return GameObjectType::OBJECT;
+			outNumNumericalChars = 0;
+			return -1;
 		}
-		if (gameObjectTypeStr.compare("player") == 0)
+
+		u16 strLen = (u16)str.size();
+
+		if (!isdigit(str[strLen - 1]))
 		{
-			return GameObjectType::PLAYER;
+			outNumNumericalChars = 0;
+			return -1;
 		}
-		else if (gameObjectTypeStr.compare("skybox") == 0)
+
+		i16 firstDigit = strLen - 1;
+		while (firstDigit >= 0 && isdigit(str[firstDigit]))
 		{
-			return GameObjectType::SKYBOX;
+			firstDigit--;
 		}
-		else if (gameObjectTypeStr.compare("reflection probe") == 0)
+		firstDigit++;
+
+		i32 num = (i32)atoi(str.substr(firstDigit).c_str());
+		outNumNumericalChars = (strLen - firstDigit);
+
+		return num;
+	}
+
+	const char* GameObjectTypeToString(GameObjectType type)
+	{
+		return GameObjectTypeStrings[(i32)type];
+	}
+	
+	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
+	{
+		for (i32 i = 0; i < (i32)GameObjectType::NONE; ++i)
 		{
-			return GameObjectType::REFLECTION_PROBE;
+			if (strcmp(GameObjectTypeStrings[i], gameObjectTypeStr) == 0)
+			{
+				return (GameObjectType)i;
+			}
 		}
-		else if (gameObjectTypeStr.compare("valve") == 0)
-		{
-			return GameObjectType::VALVE;
-		}
-		else if (gameObjectTypeStr.compare("rising block") == 0)
-		{
-			return GameObjectType::RISING_BLOCK;
-		}
-		else if (gameObjectTypeStr.compare("glass window") == 0)
-		{
-			return GameObjectType::GLASS_WINDOW;
-		}
-		else
-		{
-			return GameObjectType::NONE;
-		}
+
+		return GameObjectType::NONE;
 	}
 
 	void RetrieveCurrentWorkingDirectory()
@@ -726,7 +973,7 @@ namespace flex
 			size_t lastSlash = workingDirectory.find_last_of("\\/");
 			if (lastSlash == std::string::npos)
 			{
-				Logger::LogWarning("Invalidly formed relative path! " + relativePath);
+				PrintWarn("Invalidly formed relative path! %s\n", relativePath.c_str());
 				nextDoubleDot = std::string::npos;
 			}
 			else
@@ -749,71 +996,4 @@ namespace flex
 
 		return absolutePath;
 	}
-
-	bool HDRImage::Load(const std::string& hdrFilePath, bool flipVertically)
-	{
-		filePath = hdrFilePath;
-
-		std::string fileName = hdrFilePath;
-		StripLeadingDirectories(fileName);
-		Logger::LogInfo("Loading HDR texture " + fileName);
-
-		stbi_set_flip_vertically_on_load(flipVertically);
-
-		pixels = stbi_loadf(filePath.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
-
-		channelCount = 4;
-
-		if (!pixels)
-		{
-			Logger::LogError("Failed to load HDR image at " + filePath);
-			return false;
-		}
-		
-		assert(width <= Renderer::MAX_TEXTURE_DIM);
-		assert(height <= Renderer::MAX_TEXTURE_DIM);
-		assert(channelCount > 0);
-
-		return true;
-	}
-
-	void HDRImage::Free()
-	{
-		stbi_image_free(pixels);
-	}
-
-	RollingAverage::RollingAverage() :
-		RollingAverage(8)
-	{
-	}
-
-	RollingAverage::RollingAverage(i32 valueCount)
-	{
-		prevValues.resize(valueCount);
-	}
-
-	void RollingAverage::AddValue(real newValue)
-	{
-		prevValues[currentIndex++] = newValue;
-		currentIndex %= prevValues.size();
-
-		currentAverage = 0.0f;
-		std::for_each(prevValues.begin(), prevValues.end(), [this](real value)
-		{
-			currentAverage += value;
-		});
-
-		currentAverage /= prevValues.size();
-	}
-
-	void RollingAverage::Reset()
-	{
-		for (real& v : prevValues)
-		{
-			v = 0.0f;
-		}
-		currentIndex = 0;
-		currentAverage = 0.0f;
-	}
-
 } // namespace flex

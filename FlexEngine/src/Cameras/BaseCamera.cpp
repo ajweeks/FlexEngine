@@ -8,12 +8,11 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
-	BaseCamera::BaseCamera(const std::string& cameraName, GameContext& gameContext, real FOV, real zNear, real zFar) :
+	BaseCamera::BaseCamera(const std::string& cameraName, real FOV, real zNear, real zFar) :
 		m_Name(cameraName),
 		m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
 		m_Position(glm::vec3(0.0f)),
@@ -28,21 +27,26 @@ namespace flex
 		m_ScrollDollySpeed(2.0f),
 		m_MoveSpeedFastMultiplier(3.5f),
 		m_MoveSpeedSlowMultiplier(0.05f),
-		m_GamepadRotationSpeed(100.0f),
-		m_MouseRotationSpeed(0.001f)
+		m_TurnSpeedFastMultiplier(2.0f),
+		m_TurnSpeedSlowMultiplier(0.1f),
+		m_GamepadRotationSpeed(2.0f),
+		m_MouseRotationSpeed(0.0015f)
 	{
 		ResetOrientation();
 		CalculateAxisVectors();
-		RecalculateViewProjection(gameContext);
+		RecalculateViewProjection();
 	}
 
 	BaseCamera::~BaseCamera()
 	{
 	}
 
-	void BaseCamera::Initialize(const GameContext& gameContext)
+	void BaseCamera::Initialize()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+	}
+
+	void BaseCamera::OnSceneChanged()
+	{
 	}
 
 	void BaseCamera::SetFOV(real FOV)
@@ -176,18 +180,19 @@ namespace flex
 	}
 
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)
-	void BaseCamera::RecalculateViewProjection(const GameContext& gameContext)
+	void BaseCamera::RecalculateViewProjection()
 	{
-		const glm::vec2 windowSize = gameContext.window->GetSize();
+		const glm::vec2 windowSize = g_Window->GetSize();
 		if (windowSize.x == 0.0f || windowSize.y == 0.0f)
 		{
 			return;
 		}
 
+		m_View = glm::lookAt(m_Position, m_Position + m_Forward, m_Up);
+
 		real aspectRatio = windowSize.x / (real)windowSize.y;
 		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
 
-		m_View = lookAt(m_Position, m_Position + m_Forward, m_Up);
 		m_ViewProjection = m_Proj * m_View;
 
 	}

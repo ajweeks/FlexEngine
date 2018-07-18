@@ -8,7 +8,6 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Scene/BaseScene.hpp" 
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -16,35 +15,45 @@
 
 namespace flex
 {
-	OverheadCamera::OverheadCamera(GameContext& gameContext, real FOV, real zNear, real zFar) :
-		BaseCamera("Overhead Camera", gameContext, FOV, zNear, zFar)
+	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
+		BaseCamera("Overhead Camera",FOV, zNear, zFar)
 	{
 		ResetOrientation();
-		RecalculateViewProjection(gameContext);
+		RecalculateViewProjection();
 	}
 
 	OverheadCamera::~OverheadCamera()
 	{
 	}
 
-	void OverheadCamera::Initialize(const GameContext& gameContext)
+	void OverheadCamera::Initialize()
 	{
-		player0 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player0");
-		player1 = gameContext.sceneManager->CurrentScene()->FirstObjectWithTag("Player1");
+		FindPlayers();
+		Update();
 
-		Update(gameContext);
-
-		BaseCamera::Initialize(gameContext);
+		BaseCamera::Initialize();
 	}
 
-	void OverheadCamera::Update(const GameContext& gameContext)
+	void OverheadCamera::OnSceneChanged()
 	{
-		glm::vec3 dPlayerPos = player0->GetTransform()->GetWorldlPosition() -
-			player1->GetTransform()->GetWorldlPosition();
+		FindPlayers();
+		Update();
+	}
+
+	void OverheadCamera::Update()
+	{
+		if (!player0 ||
+			!player1)
+		{
+			return;
+		}
+
+		glm::vec3 dPlayerPos = player0->GetTransform()->GetWorldPosition() -
+			player1->GetTransform()->GetWorldPosition();
 		real dist = glm::length(dPlayerPos);
 
-		glm::vec3 targetSpot = (player0->GetTransform()->GetWorldlPosition() +
-								player1->GetTransform()->GetWorldlPosition()) / 2.0f;
+		glm::vec3 targetSpot = (player0->GetTransform()->GetWorldPosition() +
+								player1->GetTransform()->GetWorldPosition()) / 2.0f;
 
 		m_Forward = glm::normalize(targetSpot - m_Position);
 
@@ -70,11 +79,18 @@ namespace flex
 		real dPosMag = glm::length(dPos);
 		if (dPosMag > glm::epsilon<real>())
 		{
-			real maxDist = glm::clamp(dPosMag * 1000.0f * gameContext.deltaTime, 0.0f, 10.0f);
+			real maxDist = glm::clamp(dPosMag * 1000.0f * g_DeltaTime, 0.0f, 10.0f);
 			m_Position = targetPos - maxDist * glm::normalize(dPos);
 		}
 
 		CalculateYawAndPitchFromForward();
-		RecalculateViewProjection(gameContext);
+		RecalculateViewProjection();
 	}
+
+	void OverheadCamera::FindPlayers()
+	{
+		player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		player1 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player1");
+	}
+
 } // namespace flex

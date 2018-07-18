@@ -23,15 +23,15 @@ namespace flex
 		class VulkanRenderer : public Renderer
 		{
 		public:
-			VulkanRenderer(const GameContext& gameContext);
+			VulkanRenderer();
 			virtual ~VulkanRenderer();
 
-			virtual void Initialize(const GameContext& gameContext) override;
-			virtual void PostInitialize(const GameContext& gameContext) override;
+			virtual void Initialize() override;
+			virtual void PostInitialize() override;
 
-			virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) override;
-			virtual u32 InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) override;
-			virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) override;
+			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) override;
+			virtual u32 InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
+			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
 			virtual void ClearRenderObjects() override;
 			virtual void ClearMaterials() override;
@@ -39,13 +39,13 @@ namespace flex
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
 
-			virtual void Update(const GameContext& gameContext) override;
-			virtual void Draw(const GameContext& gameContext) override;
-			virtual void DrawImGuiItems(const GameContext& gameContext) override;
+			virtual void Update() override;
+			virtual void Draw() override;
+			virtual void DrawImGuiItems() override;
 
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
-			virtual void ReloadShaders(GameContext& gameContext) override;
+			virtual void ReloadShaders() override;
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 			
@@ -106,21 +106,21 @@ namespace flex
 				u32 enableIrradianceSampler;
 			};
 
-			void GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject);
-			void GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject);
-			void GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject);
-			void GenerateBRDFLUT(const GameContext& gameContext, VulkanTexture* brdfTexture);
+			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject);
+			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
+			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
+			void GenerateBRDFLUT(VulkanTexture* brdfTexture);
 
 			// Draw all static geometry to the given render object's cubemap texture
-			void CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID);
-			//void GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath);
-			void GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
-			void GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID);
-			//void GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
+			void CaptureSceneToCubemap(RenderID cubemapRenderID);
+			//void GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath);
+			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
+			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
+			//void GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
 			RenderID GetFirstAvailableRenderID() const;
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
-			void CreateInstance(const GameContext& gameContext);
+			void CreateInstance();
 			void SetupDebugCallback();
 			void CreateSurface(Window* window);
 			VkPhysicalDevice PickPhysicalDevice();
@@ -137,7 +137,7 @@ namespace flex
 			void CreateFramebuffers();
 			void PrepareOffscreenFrameBuffer(Window* window);
 			void PrepareCubemapFrameBuffer();
-			void PhysicsDebugRender(const GameContext& gameContext);
+			void PhysicsDebugRender();
 
 			void CreateUniformBuffers(VulkanShader* shader);
 
@@ -167,9 +167,9 @@ namespace flex
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
-			void BuildCommandBuffers(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
-			void BuildDeferredCommandBuffer(const GameContext& gameContext, const DrawCallInfo& drawCallInfo);
-			void RebuildCommandBuffers(const GameContext& gameContext);
+			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
+			void BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo);
+			void RebuildCommandBuffers();
 
 			void BindDescriptorSet(VulkanShader* shader, RenderID renderID, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void CreateSemaphores();
@@ -186,9 +186,9 @@ namespace flex
 			std::vector<const char*> GetRequiredExtensions() const;
 			bool CheckValidationLayerSupport() const;
 
-			void UpdateConstantUniformBuffers(const GameContext& gameContext, UniformOverrides const* overridenUniforms = nullptr);
-			void UpdateConstantUniformBuffer(const GameContext& gameContext, UniformOverrides const* overridenUniforms, size_t bufferIndex);
-			void UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
+			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
+			void UpdateConstantUniformBuffer(UniformOverrides const* overridenUniforms, size_t bufferIndex);
+			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
 			void LoadDefaultShaderCode();
 

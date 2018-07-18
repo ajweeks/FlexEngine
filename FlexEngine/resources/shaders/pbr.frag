@@ -8,6 +8,7 @@
 layout (location = 0) in vec3 ex_WorldPos;
 layout (location = 1) in mat3 ex_TBN;
 layout (location = 4) in vec2 ex_TexCoord;
+layout (location = 5) in vec4 ex_Color;
 
 layout (location = 0) out vec4 outPositionMetallic;
 layout (location = 1) out vec4 outNormalRoughness;
@@ -47,6 +48,6 @@ void main()
 	outNormalRoughness.rgb = normalize(Normal);
 	outNormalRoughness.a = roughness;
 	
-	outAlbedoAO.rgb = albedo;
+	outAlbedoAO.rgb = albedo * ex_Color.rgb;
 	outAlbedoAO.a = ao;
 }

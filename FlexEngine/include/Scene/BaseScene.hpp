@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "GameContext.hpp"
-
 namespace flex
 {
 	class PhysicsWorld;
@@ -17,16 +15,26 @@ namespace flex
 	class BaseScene
 	{
 	public:
-		BaseScene(const std::string& jsonFilePath);
+		// fileName e.g. "scene_01.json"
+		BaseScene(const std::string& fileName);
 		virtual ~BaseScene();
 
-		virtual void Initialize(const GameContext& gameContext);
-		virtual void PostInitialize(const GameContext& gameContext);
-		virtual void Destroy(const GameContext& gameContext);
-		virtual void Update(const GameContext& gameContext);
+		virtual void Initialize();
+		virtual void PostInitialize();
+		virtual void Destroy();
+		virtual void Update();
 
+		void SetName(const std::string& name);
 		std::string GetName() const;
-		std::string GetJSONFilePath() const;
+		std::string GetDefaultRelativeFilePath() const;
+		std::string GetRelativeFilePath() const;
+		std::string GetShortRelativeFilePath() const;
+		// Creates a new file at the specified location and copies this scene's data in to it
+		// Always copies saved file if exists, old files can optionally be deleted
+		bool SetFileName(const std::string& fileName, bool bDeletePreviousFiles);
+		std::string GetFileName() const;
+
+		bool IsUsingSaveFile() const;
 
 		PhysicsWorld* GetPhysicsWorld();
 
@@ -35,39 +43,61 @@ namespace flex
 		* Only writes data that has non-default values (e.g. an identity 
 		* transform is not saved)
 		*/
-		void SerializeToFile(const GameContext& gameContext);
+		void SerializeToFile(bool bSaveOverDefault = false);
+
+		void DeleteSaveFiles();
 
 		std::vector<GameObject*>& GetRootObjects();
 		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);
 
-		GameObject* AddChild(GameObject* gameObject);
-		void RemoveChild(GameObject* gameObject, bool deleteChild);
-		void RemoveAllChildren(bool deleteChildren);
+		GameObject* AddRootObject(GameObject* gameObject);
+		void RemoveRootObject(GameObject* gameObject, bool deleteRootObject);
+		void RemoveAllRootObjects(bool deleteRootObjects);
+
+		std::vector<MaterialID> GetMaterialIDs();
+		void AddMaterialID(MaterialID newMaterialID);
+		void RemoveMaterialID(MaterialID materialID);
 
 		/* Returns the first found game object with tag, or nullptr if none exist */
 		GameObject* FirstObjectWithTag(const std::string& tag);
 
+		Player* GetPlayer(i32 index);
+
+		// Deletes and removes targetObject if exists in scene
+		// Returns true if targetObject was found
+		bool DestroyGameObject(GameObject* targetObject, bool bDeleteChildren);
+
+		bool IsLoaded() const;
+
 	protected:
+		friend class GameObject;
+
+		// Recursively finds targetObject in currentObject's children
+		// Returns true if targetObject was found and deleted
+		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
+
+		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
+		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
+
+		JSONObject SerializePointLight(PointLight& pointLight);
+		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight);
+
+		i32 GetMaterialArrayIndex(const Material& material);
+
+		void ParseFoundPrefabFiles();
+
+		MaterialID ParseMatID(const JSONObject& object);
+
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
-		GameObject* CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj);
-		void CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight);
-		void CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight);
-
-		JSONObject SerializeObject(GameObject* gameObject, const GameContext& gameContext);
-		JSONObject SerializeMaterial(const Material& material, const GameContext& gameContext);
-		JSONObject SerializePointLight(PointLight& pointLight, const GameContext& gameContext);
-		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext);
-
-		void ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
-		MeshComponent* ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newEntity, MaterialID matID);
-
-		i32 GetMaterialArrayIndex(const Material& material, const GameContext& gameContext);
-
 		std::string m_Name;
-		std::string m_JSONFilePath;
+		std::string m_FileName;
 
-		std::vector<GameObject*> m_Children;
+		std::vector<GameObject*> m_RootObjects;
+
+		bool m_bUsingSaveFile = false;
+
+		bool m_bLoaded = false;
 
 		/*
 		* Stores all unique initialized materials we've created
@@ -86,8 +116,13 @@ namespace flex
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 
+		std::vector<JSONObject> m_ParsedPrefabs;
+
 	private:
-		/* Recursively searches through all game objects in search of one containing given tag */
+		/*
+		* Recursively searches through all game objects and returns first
+		* one containing given tag, or nullptr if none exist
+		*/
 		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
 
 		BaseScene(const BaseScene&) = delete;

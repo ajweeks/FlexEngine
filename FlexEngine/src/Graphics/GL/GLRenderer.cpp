@@ -12,48 +12,53 @@
 #pragma warning(push, 0)
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
+// TODO: Remove?
+#include "imgui_internal.h"
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 
 #include <freetype/ftbitmap.h>
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
-#include "GameContext.hpp"
+#include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "JSONTypes.hpp"
-#include "Logger.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Time.hpp"
 #include "VertexAttribute.hpp"
-#include "Window/Window.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
+#include "Window/Monitor.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
 	namespace gl
 	{
-
-		GLRenderer::GLRenderer(GameContext& gameContext)
+		GLRenderer::GLRenderer()
 		{
+			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/default-renderer-settings.ini"));
 			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/renderer-settings.ini"));
 
-			gameContext.renderer = this;
+			g_Renderer = this;
 
 			LoadSettingsFromDisk();
-
-			CheckGLErrorMessages();
 		}
 
 		GLRenderer::~GLRenderer()
@@ -61,16 +66,8 @@ namespace flex
 			
 		}
 
-		void GLRenderer::Initialize(const GameContext& gameContext)
+		void GLRenderer::Initialize()
 		{
-			CheckGLErrorMessages();
-
-			m_BRDFTextureSize = { 512, 512 };
-			m_BRDFTextureHandle = {};
-			m_BRDFTextureHandle.internalFormat = GL_RG16F;
-			m_BRDFTextureHandle.format = GL_RG;
-			m_BRDFTextureHandle.type = GL_FLOAT;
-
 			m_OffscreenTexture0Handle = {};
 			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
 			m_OffscreenTexture0Handle.format = GL_RGBA;
@@ -81,10 +78,21 @@ namespace flex
 			m_OffscreenTexture1Handle.format = GL_RGBA;
 			m_OffscreenTexture1Handle.type = GL_FLOAT;
 
-			m_LoadingTextureHandle = {};
-			m_LoadingTextureHandle.internalFormat = GL_RGBA;
-			m_LoadingTextureHandle.format = GL_RGBA;
-			m_LoadingTextureHandle.type = GL_FLOAT;
+			//m_LoadingTextureHandle = {};
+			//m_LoadingTextureHandle.internalFormat = GL_RGBA;
+			//m_LoadingTextureHandle.format = GL_RGBA;
+			//m_LoadingTextureHandle.type = GL_FLOAT;
+
+
+			//m_PointLightIconHandle = {};
+			//m_PointLightIconHandle.internalFormat = GL_RGBA;
+			//m_PointLightIconHandle.format = GL_RGBA;
+			//m_PointLightIconHandle.type = GL_FLOAT;
+
+			//m_DirectionalLightIconHandle = {};
+			//m_DirectionalLightIconHandle.internalFormat = GL_RGBA;
+			//m_DirectionalLightIconHandle.format = GL_RGBA;
+			//m_DirectionalLightIconHandle.type = GL_FLOAT;
 
 
 			m_gBuffer_PositionMetallicHandle = {};
@@ -102,56 +110,42 @@ namespace flex
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
-
-			CheckGLErrorMessages();
-
 			LoadShaders();
-
-			CheckGLErrorMessages();
 
 			glEnable(GL_DEPTH_TEST);
 			//glDepthFunc(GL_LEQUAL);
-			CheckGLErrorMessages();
 
 			glFrontFace(GL_CCW);
-			CheckGLErrorMessages();
 
 			// Prevent seams from appearing on lower mip map levels of cubemaps
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
 
 			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
 			{
 				glGenFramebuffers(1, &m_CaptureFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
+				
 
 				glGenRenderbuffers(1, &m_CaptureRBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512); // TODO: Remove 512
-				CheckGLErrorMessages();
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, 512, 512); // TODO: Remove 512
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
 
 				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 				{
-					Logger::LogError("Capture frame buffer is incomplete!");
+					PrintError("Capture frame buffer is incomplete!\n");
 				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				glBindRenderbuffer(GL_RENDERBUFFER, 0);
-				CheckGLErrorMessages();
 			}
 
 			// Offscreen framebuffers
 			{
-				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				CreateOffscreenFrameBuffer(&m_Offscreen0FBO, &m_Offscreen0RBO, frameBufferSize, m_OffscreenTexture0Handle);
 				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, frameBufferSize, m_OffscreenTexture1Handle);
 			}
 
-			const real captureProjectionNearPlane = gameContext.cameraManager->CurrentCamera()->GetZNear();
-			const real captureProjectionFarPlane = gameContext.cameraManager->CurrentCamera()->GetZFar();
+			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZNear();
+			const real captureProjectionFarPlane = g_CameraManager->CurrentCamera()->GetZFar();
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
@@ -163,52 +157,74 @@ namespace flex
 				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			GenerateGLTexture(m_LoadingTextureHandle.id, RESOURCE_LOCATION + "textures/loading_1.png", false, false);
-			GenerateGLTexture(m_WorkTextureHandle.id, RESOURCE_LOCATION + "textures/work_d.jpg", false, false);
+			m_AlphaBGTexture = new GLTexture(RESOURCE_LOCATION + "textures/alpha-bg.png", 3, false, false, false);
+			if (m_AlphaBGTexture->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_AlphaBGTexture->GetFilePath(), m_AlphaBGTexture });
+			}
+			m_LoadingTexture = new GLTexture(RESOURCE_LOCATION + "textures/loading_1.png", 3, false, false, false);
+			if (m_LoadingTexture->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_LoadingTexture->GetFilePath(), m_LoadingTexture });
+			}
+			m_WorkTexture = new GLTexture(RESOURCE_LOCATION + "textures/work_d.jpg", 3, false, true, false);
+			if (m_WorkTexture->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_WorkTexture->GetFilePath(), m_WorkTexture });
+			}
+			m_PointLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			if (m_PointLightIcon->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_PointLightIcon->GetFilePath(), m_PointLightIcon });
+			}
+			m_DirectionalLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			if (m_DirectionalLightIcon->LoadFromFile())
+			{
+				m_LoadedTextures.insert({ m_DirectionalLightIcon->GetFilePath(), m_DirectionalLightIcon });
+			}
 
-			// Sprite quad
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
 			spriteMatCreateInfo.engineMaterial = true;
-			m_SpriteMatID = InitializeMaterial(gameContext, &spriteMatCreateInfo);
+			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
 
 
 			MaterialCreateInfo fontMatCreateInfo = {};
 			fontMatCreateInfo.name = "Font material";
 			fontMatCreateInfo.shaderName = "font";
 			fontMatCreateInfo.engineMaterial = true;
-			m_FontMatID = InitializeMaterial(gameContext, &fontMatCreateInfo);
+			m_FontMatID = InitializeMaterial(&fontMatCreateInfo);
 
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
 			postProcessMatCreateInfo.engineMaterial = true;
-			m_PostProcessMatID = InitializeMaterial(gameContext, &postProcessMatCreateInfo);
+			m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
 			
 
 			MaterialCreateInfo postFXAAMatCreateInfo = {};
 			postFXAAMatCreateInfo.name = "FXAA";
 			postFXAAMatCreateInfo.shaderName = "post_fxaa";
 			postFXAAMatCreateInfo.engineMaterial = true;
-			m_PostFXAAMatID = InitializeMaterial(gameContext, &postFXAAMatCreateInfo);
+			m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 			
 
-			// Sprite quad
+			// 2D Quad
 			{
-				VertexBufferData::CreateInfo spriteQuadVertexBufferDataCreateInfo = {};
-				spriteQuadVertexBufferDataCreateInfo.positions_2D = {
+				VertexBufferData::CreateInfo quad2DVertexBufferDataCreateInfo = {};
+				quad2DVertexBufferDataCreateInfo.positions_2D = {
 					glm::vec2(-1.0f,  -1.0f),
 					glm::vec2(-1.0f, 1.0f),
 					glm::vec2(1.0f,  -1.0f),
-
+							
 					glm::vec2(1.0f,  -1.0f),
 					glm::vec2(-1.0f, 1.0f),
 					glm::vec2(1.0f, 1.0f),
 				};
 
-				spriteQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				quad2DVertexBufferDataCreateInfo.texCoords_UV = {
 					glm::vec2(0.0f, 0.0f),
 					glm::vec2(0.0f, 1.0f),
 					glm::vec2(1.0f, 0.0f),
@@ -218,71 +234,118 @@ namespace flex
 					glm::vec2(1.0f, 1.0f),
 				};
 
-				spriteQuadVertexBufferDataCreateInfo.colors_R32G32B32A32 = {
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
+				quad2DVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION_2D |
+					(u32)VertexAttribute::UV;
 
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
-					glm::vec4(1.0f),
+				m_Quad2DVertexBufferData = {};
+				m_Quad2DVertexBufferData.Initialize(&quad2DVertexBufferDataCreateInfo);
+
+
+				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::NONE);
+				m_PersistentObjects.push_back(quad2DGameObject);
+				quad2DGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo quad2DCreateInfo = {};
+				quad2DCreateInfo.vertexBufferData = &m_Quad2DVertexBufferData;
+				quad2DCreateInfo.materialID = m_PostProcessMatID;
+				quad2DCreateInfo.depthWriteEnable = false;
+				quad2DCreateInfo.gameObject = quad2DGameObject;
+				quad2DCreateInfo.enableCulling = false;
+				quad2DCreateInfo.visibleInSceneExplorer = false;
+				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				quad2DCreateInfo.depthWriteEnable = false;
+				m_Quad2DRenderID = InitializeRenderObject(&quad2DCreateInfo);
+
+				m_Quad2DVertexBufferData.DescribeShaderVariables(this, m_Quad2DRenderID);
+			}
+
+			// 3D Quad
+			{
+				VertexBufferData::CreateInfo quad3DVertexBufferDataCreateInfo = {};
+				quad3DVertexBufferDataCreateInfo.positions_3D = {
+					glm::vec3(-1.0f,  -1.0f, 0.0f),
+					glm::vec3(-1.0f, 1.0f, 0.0f),
+					glm::vec3(1.0f,  -1.0f, 0.0f),
+
+					glm::vec3(1.0f,  -1.0f, 0.0f),
+					glm::vec3(-1.0f, 1.0f, 0.0f),
+					glm::vec3(1.0f, 1.0f, 0.0f),
 				};
 
-				spriteQuadVertexBufferDataCreateInfo.attributes =
-					(u32)VertexAttribute::POSITION_2D |
-					(u32)VertexAttribute::UV |
-					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+				quad3DVertexBufferDataCreateInfo.texCoords_UV = {
+					glm::vec2(0.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 0.0f),
 
-				m_SpriteQuadVertexBufferData = {};
-				m_SpriteQuadVertexBufferData.Initialize(&spriteQuadVertexBufferDataCreateInfo);
+					glm::vec2(1.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 1.0f),
+				};
 
 
-				GameObject* spriteQuadGameObject = new GameObject("Sprite Quad", GameObjectType::NONE);
-				m_PersistentObjects.push_back(spriteQuadGameObject);
-				spriteQuadGameObject->SetVisible(false);
+				quad3DVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV;
 
-				RenderObjectCreateInfo spriteQuadCreateInfo = {};
-				spriteQuadCreateInfo.vertexBufferData = &m_SpriteQuadVertexBufferData;
-				spriteQuadCreateInfo.materialID = m_SpriteMatID;
-				spriteQuadCreateInfo.depthWriteEnable = false;
-				spriteQuadCreateInfo.gameObject = spriteQuadGameObject;
-				spriteQuadCreateInfo.enableCulling = false;
-				spriteQuadCreateInfo.visibleInSceneExplorer = false;
-				spriteQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				spriteQuadCreateInfo.depthWriteEnable = false;
-				m_SpriteQuadRenderID = InitializeRenderObject(gameContext, &spriteQuadCreateInfo);
+				m_Quad3DVertexBufferData = {};
+				m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
 
-				m_SpriteQuadVertexBufferData.DescribeShaderVariables(this, m_SpriteQuadRenderID);
+
+				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::NONE);
+				m_PersistentObjects.push_back(quad3DGameObject);
+				quad3DGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo quad3DCreateInfo = {};
+				quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
+				quad3DCreateInfo.materialID = m_SpriteMatID;
+				quad3DCreateInfo.depthWriteEnable = false;
+				quad3DCreateInfo.gameObject = quad3DGameObject;
+				quad3DCreateInfo.enableCulling = false;
+				quad3DCreateInfo.visibleInSceneExplorer = false;
+				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				quad3DCreateInfo.depthWriteEnable = false;
+				quad3DCreateInfo.editorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
+
+				m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
 			}
 
-			// Draw loading text
-			{
-				glm::vec3 pos(0.0f);
-				glm::quat rot = glm::quat();
-				glm::vec3 scale(1.0f, -1.0f, 1.0f);
-				glm::vec4 color(1.0f);
-				DrawSpriteQuad(gameContext, m_LoadingTextureHandle.id, 0, 0, m_SpriteMatID,
-							   pos, rot, scale, AnchorPoint::WHOLE, color);
-				SwapBuffers(gameContext);
-			}
+			DrawLoadingTextureQuad();
+			SwapBuffers();
 
-			if (m_BRDFTextureHandle.id == 0)
+			if (!m_BRDFTexture)
 			{
-				Logger::LogInfo("Generating BRDF LUT");
-				GenerateGLTexture_Empty(m_BRDFTextureHandle.id, m_BRDFTextureSize, false,
-										m_BRDFTextureHandle.internalFormat, m_BRDFTextureHandle.format, m_BRDFTextureHandle.type);
-				GenerateBRDFLUT(gameContext, m_BRDFTextureHandle.id, m_BRDFTextureSize);
+				i32 brdfSize = 512;
+				i32 internalFormat = GL_RG16F;
+				GLenum format = GL_RG;
+				GLenum type = GL_FLOAT;
+
+				m_BRDFTexture = new GLTexture("BRDF",
+											  brdfSize,
+											  brdfSize,
+											  internalFormat,
+											  format,
+											  type);
+				if (m_BRDFTexture->GenerateEmpty())
+				{
+					// TODO: Don't use file path as a key value since not all textures have file paths?
+					m_LoadedTextures.insert({ "BRDF", m_BRDFTexture });
+					GenerateBRDFLUT(m_BRDFTexture->handle, brdfSize);
+				}
+				else
+				{
+					PrintError("Failed to generate BRDF texture\n");
+				}
 			}
 
 			ImGui::CreateContext();
-			CheckGLErrorMessages();
-
 
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
 									   0,
@@ -308,52 +371,53 @@ namespace flex
 			// Create and attach depth buffer
 			glGenRenderbuffers(1, &m_gBufferDepthHandle);
 			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, frameBufferSize.x, frameBufferSize.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, frameBufferSize.x, frameBufferSize.y);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
-				Logger::LogError("Framebuffer not complete!");
+				PrintError("Framebuffer not complete!\n");
 			}
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::PostInitialize(const GameContext& gameContext)
+		void GLRenderer::PostInitialize()
 		{
-			GenerateGBuffer(gameContext);
-
-			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/SourceSansVariable-Roman.ttf";
-			//std::string fontFilePath = RESOURCE_LOCATION + "fonts/bahnschrift.ttf";
+			GenerateGBuffer();
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
-			LoadFont(gameContext, &m_FntUbuntuCondensed, ubuntuFilePath, 16);
+			std::string ubuntuRenderedFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-32.png";
+			PROFILE_BEGIN("load font UbuntuCondensed");
+			LoadFont(&m_FntUbuntuCondensed, 32, ubuntuFilePath, ubuntuRenderedFilePath);
+			PROFILE_END("load font UbuntuCondensed");
+			Profiler::PrintBlockDuration("load font UbuntuCondensed");
+
+
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
-			LoadFont(gameContext, &m_FntSourceCodePro, sourceCodeProFilePath, 10);
+			std::string sourceCodeProRenderedFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular-12.png";
+			PROFILE_BEGIN("load font SourceCodePro");
+			LoadFont(&m_FntSourceCodePro, 12, sourceCodeProFilePath, sourceCodeProRenderedFilePath);
+			PROFILE_END("load font SourceCodePro");
+			Profiler::PrintBlockDuration("load font SourceCodePro");
 
 
-			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
+			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
 			if (castedWindow == nullptr)
 			{
-				Logger::LogError("GLRenderer::PostInitialize expects gameContext.window to be of type GLFWWindowWrapper!");
+				PrintError("GLRenderer::PostInitialize expects g_Window to be of type GLFWWindowWrapper!\n");
 				return;
 			}
 
 			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
-			CheckGLErrorMessages();
 
-			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw(gameContext);
+			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw();
 			m_PhysicsDebugDrawer->Initialize();
+
+			Print("Renderer initialized!\n");
 		}
 
 		void GLRenderer::Destroy()
 		{
-			SaveSettingsToDisk();
-
-			CheckGLErrorMessages();
-
 			glDeleteVertexArrays(1, &m_TextQuadVAO);
 			glDeleteBuffers(1, &m_TextQuadVBO);
 
@@ -363,10 +427,18 @@ namespace flex
 			}
 			m_Fonts.clear();
 
+			for (auto& texturePair : m_LoadedTextures)
+			{
+				if (texturePair.second)
+				{
+					texturePair.second->Destroy();
+					SafeDelete(texturePair.second);
+				}
+			}
+			m_LoadedTextures.clear();
+
 			ImGui_ImplGlfwGL3_Shutdown();
 			ImGui::DestroyContext();
-
-			CheckGLErrorMessages();
 
 			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
 			{
@@ -389,29 +461,28 @@ namespace flex
 			}
 			m_PersistentObjects.clear();
 
-			DestroyRenderObject(m_SpriteQuadRenderID);
+			DestroyRenderObject(m_Quad3DRenderID);
+			DestroyRenderObject(m_Quad2DRenderID);
 			
 			DestroyRenderObject(m_GBufferQuadRenderID);
 
 			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
 			if (activeRenderObjectCount > 0)
 			{
-				Logger::LogError("=====================================================");
-				Logger::LogError(std::to_string(activeRenderObjectCount) + " render objects were not destroyed before GL render:");
+				PrintError("=====================================================\n");
+				PrintError("%i render objects were not destroyed before GL render:\n", activeRenderObjectCount);
 
-				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+				for (GLRenderObject* renderObject : m_RenderObjects)
 				{
-					if (m_RenderObjects[i])
+					if (renderObject)
 					{
-						Logger::LogError("render object with material name: " + m_RenderObjects[i]->materialName);
-						//Logger::LogError(m_RenderObjects[i]->gameObject->GetName());
-						DestroyRenderObject(m_RenderObjects[i]->renderID);
+						PrintError("render object with material name: %s\n", renderObject->materialName.c_str());
+						DestroyRenderObject(renderObject->renderID);
 					}
 				}
-				Logger::LogError("=====================================================");
+				PrintError("=====================================================\n");
 			}
 			m_RenderObjects.clear();
-			CheckGLErrorMessages();
 
 			m_SkyBoxMesh = nullptr;
 
@@ -422,18 +493,15 @@ namespace flex
 			}
 
 			m_gBufferQuadVertexBufferData.Destroy();
-			m_SpriteQuadVertexBufferData.Destroy();
+			m_Quad2DVertexBufferData.Destroy();
+			m_Quad3DVertexBufferData.Destroy();
 
 			// TODO: Is this wanted here?
 			glfwTerminate();
 		}
 
-		MaterialID GLRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
+		MaterialID GLRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
-			CheckGLErrorMessages();
-
 			MaterialID matID = GetNextAvailableMaterialID();
 			m_Materials.insert(std::pair<MaterialID, GLMaterial>(matID, {}));
 			GLMaterial& mat = m_Materials.at(matID);
@@ -442,25 +510,25 @@ namespace flex
 
 			if (mat.material.name.empty())
 			{
-				Logger::LogWarning("Material doesn't have a name!");
+				PrintWarn("Material doesn't have a name!\n");
 			}
 
 			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
 			{
 				if (createInfo->shaderName.empty())
 				{
-					Logger::LogError("MaterialCreateInfo::shaderName must be filled in!");
+					PrintError("MaterialCreateInfo::shaderName must be filled in!\n");
 				}
 				else
 				{
-					Logger::LogError("Material's shader name couldn't be found! shader name: " + createInfo->shaderName);
+					PrintError("Material's shader name couldn't be found! shader name: %s\n", createInfo->shaderName.c_str());
 				}
 			}
 			
 			GLShader& shader = m_Shaders[mat.material.shaderID];
 
 			glUseProgram(shader.program);
-			CheckGLErrorMessages();
+
 
 			// TODO: Is this really needed? (do things dynamically instead?)
 			UniformInfo uniformInfo[] = {
@@ -491,22 +559,19 @@ namespace flex
 				{ "texSize",						&mat.uniformIDs.texSize },
 			};
 
-			const u32 uniformCount = sizeof(uniformInfo) / sizeof(uniformInfo[0]);
-
-			for (size_t i = 0; i < uniformCount; ++i)
+			for (const UniformInfo& uniform : uniformInfo)
 			{
-				if (shader.shader.dynamicBufferUniforms.HasUniform(uniformInfo[i].name) ||
-					shader.shader.constantBufferUniforms.HasUniform(uniformInfo[i].name))
+				if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.name) ||
+					shader.shader.constantBufferUniforms.HasUniform(uniform.name))
 				{
-					*uniformInfo[i].id = glGetUniformLocation(shader.program, uniformInfo[i].name);
-					if (*uniformInfo[i].id == -1)
+					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
+					if (*uniform.id == -1)
 					{
-						Logger::LogWarning(std::string(uniformInfo[i].name) + " was not found for material " + createInfo->name + " (shader " + createInfo->shaderName + ")");
+						PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
+								  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
 					}
 				}
 			}
-
-			CheckGLErrorMessages();
 
 			mat.material.diffuseTexturePath = createInfo->diffuseTexturePath;
 			mat.material.generateDiffuseSampler = createInfo->generateDiffuseSampler;
@@ -558,26 +623,6 @@ namespace flex
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
 
-
-
-
-
-
-
-			// TODO: FIXME!!!
-			if (m_SkyBoxMesh &&
-				m_Shaders[mat.material.shaderID].shader.needPrefilteredMap)
-			{
-				MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
-
-				mat.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
-				mat.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
-			}
-
-
-
-
-
 			mat.material.environmentMapPath = createInfo->environmentMapPath;
 
 			mat.material.generateReflectionProbeMaps = createInfo->generateReflectionProbeMaps;
@@ -600,11 +645,11 @@ namespace flex
 
 			if (shader.shader.needBRDFLUT)
 			{
-				if (m_BRDFTextureHandle.id == 0)
+				if (!m_BRDFTexture)
 				{
-					Logger::LogInfo("BRDF LUT has not been generated before material which uses it!");
+					Print("BRDF LUT has not been generated before material which uses it!\n");
 				}
-				mat.brdfLUTSamplerID = m_BRDFTextureHandle.id;
+				mat.brdfLUTSamplerID = m_BRDFTexture->handle;
 			}
 
 			if (shader.shader.needPrefilteredMap)
@@ -632,27 +677,29 @@ namespace flex
 				u32* id;
 				std::string filepath;
 				std::string textureName;
+				i32 channelCount;
 				bool flipVertically;
-				std::function<bool(u32&, const std::string&, bool, bool)> createFunction;
+				bool generateMipMaps;
+				bool hdr;
 			};
 
 			// Samplers that need to be loaded from file
 			SamplerCreateInfo samplerCreateInfos[] =
 			{
 				{ shader.shader.needAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID, 
-				createInfo->albedoTexturePath, "albedoSampler", false, GenerateGLTexture },
+				createInfo->albedoTexturePath, "albedoSampler", 3, false, true, false },
 				{ shader.shader.needMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID, 
-				createInfo->metallicTexturePath, "metallicSampler", false,GenerateGLTexture },
+				createInfo->metallicTexturePath, "metallicSampler", 3, false, true, false },
 				{ shader.shader.needRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID, 
-				createInfo->roughnessTexturePath, "roughnessSampler" ,false, GenerateGLTexture },
+				createInfo->roughnessTexturePath, "roughnessSampler", 3, false, true, false },
 				{ shader.shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID, 
-				createInfo->aoTexturePath, "aoSampler", false,GenerateGLTexture },
+				createInfo->aoTexturePath, "aoSampler", 3, false, true, false },
 				{ shader.shader.needDiffuseSampler, mat.material.generateDiffuseSampler, &mat.diffuseSamplerID, 
-				createInfo->diffuseTexturePath, "diffuseSampler", false,GenerateGLTexture },
+				createInfo->diffuseTexturePath, "diffuseSampler", 3, false, true, false },
 				{ shader.shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID, 
-				createInfo->normalTexturePath, "normalSampler",false, GenerateGLTexture },
+				createInfo->normalTexturePath, "normalSampler", 3, false, true, false },
 				{ shader.shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
-				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", true, GenerateHDRGLTexture },
+				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", 4, true, false, true },
 			};
 
 			i32 binding = 0;
@@ -664,27 +711,51 @@ namespace flex
 					{
 						if (samplerCreateInfo.filepath.empty())
 						{
-							Logger::LogError("Empty file path specified in SamplerCreateInfo for texture " + samplerCreateInfo.textureName + " in material " + mat.material.name);
+							PrintError("Empty file path specified in SamplerCreateInfo for texture %s in material %s\n", 
+									   samplerCreateInfo.textureName.c_str(), mat.material.name.c_str());
 						}
 						else
 						{
-							if (!GetLoadedTexture(samplerCreateInfo.filepath, *samplerCreateInfo.id))
+							GLTexture* loadedTexture = nullptr;
+							if (GetLoadedTexture(samplerCreateInfo.filepath, &loadedTexture))
 							{
-								// Texture hasn't been loaded yet, load it now
-								samplerCreateInfo.createFunction(*samplerCreateInfo.id, samplerCreateInfo.filepath, samplerCreateInfo.flipVertically, false);
-								m_LoadedTextures.insert({ samplerCreateInfo.filepath, *samplerCreateInfo.id });
+								// TODO: not just this
+								*samplerCreateInfo.id = loadedTexture->handle;
+							}
+							else
+							{
+								std::string fileNameClean = samplerCreateInfo.filepath;
+								StripLeadingDirectories(fileNameClean);
+								std::string textureProfileBlockName = "load texture " + fileNameClean;
+								PROFILE_BEGIN(textureProfileBlockName);
+
+								GLTexture* newTexture = new GLTexture(samplerCreateInfo.filepath,
+																	  samplerCreateInfo.channelCount,
+																	  samplerCreateInfo.flipVertically,
+																	  samplerCreateInfo.generateMipMaps, 
+																	  samplerCreateInfo.hdr);
+
+								newTexture->LoadFromFile();
+
+								PROFILE_END(textureProfileBlockName);
+								Profiler::PrintBlockDuration(textureProfileBlockName);
+
+								if (newTexture->bLoaded)
+								{
+									*samplerCreateInfo.id = newTexture->handle;
+									m_LoadedTextures.insert({ samplerCreateInfo.filepath, newTexture });
+								}
 							}
 
 							i32 uniformLocation = glGetUniformLocation(shader.program, samplerCreateInfo.textureName.c_str());
-							CheckGLErrorMessages();
 							if (uniformLocation == -1)
 							{
-								Logger::LogWarning(samplerCreateInfo.textureName + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+								PrintWarn("texture uniform %s was not found in material %s (shader: %s)\n",
+										  samplerCreateInfo.textureName.c_str(), mat.material.name.c_str(), shader.shader.name.c_str());
 							}
 							else
 							{
 								glUniform1i(uniformLocation, binding);
-								CheckGLErrorMessages();
 							}
 						}
 					}
@@ -697,15 +768,14 @@ namespace flex
 			{
 				const char* frameBufferName = frameBufferPair.first.c_str();
 				i32 positionLocation = glGetUniformLocation(shader.program, frameBufferName);
-				CheckGLErrorMessages();
 				if (positionLocation == -1)
 				{
-					Logger::LogWarning(frameBufferPair.first + " was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("%s was not found in material %s, (shader %s)\n",
+							  frameBufferPair.first.c_str(), mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
 					glUniform1i(positionLocation, binding);
-					CheckGLErrorMessages();
 				}
 				++binding;
 			}
@@ -732,16 +802,15 @@ namespace flex
 					GenerateGLCubemap(cubemapCreateInfo);
 
 					i32 uniformLocation = glGetUniformLocation(shader.program, "cubemapSampler");
-					CheckGLErrorMessages();
 					if (uniformLocation == -1)
 					{
-						Logger::LogWarning("cubemapSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+						PrintWarn("uniform cubemapSampler was not found in material %s (shader %s)\n",
+								  mat.material.name.c_str(), shader.shader.name.c_str());
 					}
 					else
 					{
 						glUniform1i(uniformLocation, binding);
 					}
-					CheckGLErrorMessages();
 					++binding;
 				}
 			}
@@ -786,33 +855,33 @@ namespace flex
 			if (shader.shader.needCubemapSampler)
 			{
 				// TODO: Save location for binding later?
-				i32 uniformLocation = glGetUniformLocation(shader.program, "cubemapSampler");
-				CheckGLErrorMessages();
+				const char* uniformName = "cubemapSampler";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("cubemapSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
 
 			if (shader.shader.needBRDFLUT)
 			{
-				i32 uniformLocation = glGetUniformLocation(shader.program, "brdfLUT");
-				CheckGLErrorMessages();
+				const char* uniformName = "brdfLUT";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("brdfLUT was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
 
@@ -831,17 +900,17 @@ namespace flex
 
 			if (shader.shader.needIrradianceSampler)
 			{
-				i32 uniformLocation = glGetUniformLocation(shader.program, "irradianceSampler");
-				CheckGLErrorMessages();
+				const char* uniformName = "irradianceSampler";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("irradianceSampler was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
 
@@ -860,29 +929,25 @@ namespace flex
 
 			if (shader.shader.needPrefilteredMap)
 			{
-				i32 uniformLocation = glGetUniformLocation(shader.program, "prefilterMap");
-				CheckGLErrorMessages();
+				const char* uniformName = "prefilterMap";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					Logger::LogWarning("prefilterMap was not found in material " + mat.material.name + " (shader " + shader.shader.name + ")");
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n",
+							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
 				{
 					glUniform1i(uniformLocation, binding);
 				}
-				CheckGLErrorMessages();
 				++binding;
 			}
-
-			glUseProgram(0);
 
 			return matID;
 		}
 
-		u32 GLRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+		u32 GLRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			const RenderID renderID = GetNextAvailableRenderID();
 
 			assert(createInfo->materialID != InvalidMaterialID);
@@ -903,7 +968,7 @@ namespace flex
 
 			if (renderObject->materialID == InvalidMaterialID)
 			{
-				Logger::LogError("Render object's materialID has not been set in its createInfo!");
+				PrintError("Render object's materialID has not been set in its createInfo!\n");
 
 				// TODO: Use INVALID material here (Bright pink)
 				// Hopefully the first material works out okay! Should be better than crashing
@@ -920,23 +985,23 @@ namespace flex
 
 				if (renderObject->materialName.empty())
 				{
-					Logger::LogWarning("Render object created with empty material name!");
+					PrintWarn("Render object created with empty material name!\n");
 				}
 			}
 
 			if (renderObject->gameObject->GetName().empty())
 			{
-				Logger::LogWarning("Render object created with empty name!");
+				PrintWarn("Render object created with empty name!\n");
 			}
 
 			if (m_Materials.empty())
 			{
-				Logger::LogError("Render object is being created before any materials have been created!");
+				PrintError("Render object is being created before any materials have been created!\n");
 			}
 
 			if (m_Materials.find(renderObject->materialID) == m_Materials.end())
 			{
-				Logger::LogError("Uninitialized material with MaterialID " + std::to_string(renderObject->materialID));
+				PrintError("Uninitialized material with MaterialID %i\n", renderObject->materialID);
 				return renderID;
 			}
 
@@ -944,21 +1009,19 @@ namespace flex
 			GLShader& shader = m_Shaders[material.material.shaderID];
 
 			glUseProgram(shader.program);
-			CheckGLErrorMessages();
 
 			if (createInfo->vertexBufferData)
 			{
 				glGenVertexArrays(1, &renderObject->VAO);
 				glBindVertexArray(renderObject->VAO);
-				CheckGLErrorMessages();
 
 				glGenBuffers(1, &renderObject->VBO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)createInfo->vertexBufferData->BufferSize, createInfo->vertexBufferData->pDataStart, GL_STATIC_DRAW);
-				CheckGLErrorMessages();
 			}
 
-			if (createInfo->indices != nullptr)
+			if (createInfo->indices != nullptr &&
+				!createInfo->indices->empty())
 			{
 				renderObject->indexed = true;
 
@@ -973,25 +1036,38 @@ namespace flex
 			return renderID;
 		}
 
-		void GLRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)
+		void GLRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			GLMaterial& material = m_Materials[renderObject->materialID];
 
+			// glFlush calls help RenderDoc replay frames without crashing
+
 			if (material.material.generateReflectionProbeMaps)
 			{
-				Logger::LogInfo("Capturing reflection probe");
-				CaptureSceneToCubemap(gameContext, renderID);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-				Logger::LogInfo("Done");
+				BatchRenderObjects();
 
-				// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-				//Logger::LogInfo("Capturing reflection probe");
-				//CaptureSceneToCubemap(gameContext, renderID);
-				//GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-				//GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-				//Logger::LogInfo("Done");
+				std::string profileBlockName = "capturing scene to cubemap " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				CaptureSceneToCubemap(renderID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+
+				profileBlockName = "generating irradiance sampler for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+				
+				profileBlockName = "generating prefiltered map for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+
 
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
@@ -999,9 +1075,28 @@ namespace flex
 			}
 			else if (material.material.generateIrradianceSampler)
 			{
-				GenerateCubemapFromHDREquirectangular(gameContext, renderObject->materialID, material.material.environmentMapPath);
-				GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-				GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
+				std::string profileBlockName = "generating cubemap for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GenerateCubemapFromHDREquirectangular(renderObject->materialID, material.material.environmentMapPath);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+
+				
+				profileBlockName = "generating irradiance sampler for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
+
+
+				profileBlockName = "generating prefiltered map for " + renderObject->gameObject->GetName();
+				PROFILE_BEGIN(profileBlockName);
+				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+				//glFlush();
 			}
 		}
 
@@ -1033,21 +1128,31 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath)
+		void GLRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, 
+															   const std::string& environmentMapPath)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to generate cubemap before skybox object was created!\n");
+				return;
+			}
 
 			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
 			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID))
 			{
+				std::string profileBlockName = "generating equirectangular mat";
+				PROFILE_BEGIN(profileBlockName);
 				MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 				equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
 				equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
 				equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 				equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
+				equirectangularToCubeMatCreateInfo.engineMaterial = true;
 				// TODO: Make cyclable at runtime
 				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
-				equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
+				equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
 			}
 
 			GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
@@ -1058,41 +1163,30 @@ namespace flex
 			GLMaterial& skyboxGLMaterial = m_Materials[skyboxRenderObject->materialID];
 
 			glUseProgram(equirectangularToCubemapShader.program);
-			CheckGLErrorMessages();
-
+			
 			// TODO: Store what location this texture is at (might not be 0)
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
-			CheckGLErrorMessages();
 
 			// Update object's uniforms under this shader's program
-			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false, 
-				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-			CheckGLErrorMessages();
+			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false,
+							   &m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 
 			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, false, 
 				&m_CaptureProjection[0][0]);
-			CheckGLErrorMessages();
 
 			glm::vec2 cubemapSize = skyboxGLMaterial.material.cubemapSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
+			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(skyboxRenderObject->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
-			CheckGLErrorMessages();
 
 			glCullFace(skyboxRenderObject->cullFace);
-			CheckGLErrorMessages();
 
 			if (skyboxRenderObject->enableCulling)
 			{
@@ -1104,48 +1198,37 @@ namespace flex
 			}
 
 			glDepthFunc(skyboxRenderObject->depthTestReadFunc);
-			CheckGLErrorMessages();
 
 			for (u32 i = 0; i < 6; ++i)
 			{
 				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, false, 
 					&m_CaptureViews[i][0][0]);
-				CheckGLErrorMessages();
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
-				CheckGLErrorMessages();
 
 				glDepthMask(GL_TRUE);
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				CheckGLErrorMessages();
 
 				glDepthMask(skyboxRenderObject->depthWriteEnable);
-				CheckGLErrorMessages();
 
 				glDrawArrays(skyboxRenderObject->topology, 0, 
 					(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
-				CheckGLErrorMessages();
 			}
 
 			// Generate mip maps for generated cubemap
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-
-			glUseProgram(0);
-			glBindVertexArray(0);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void GLRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to generate prefiltered map before skybox object was created!\n");
+				return;
+			}
 
 			MaterialID prefilterMatID = InvalidMaterialID;
 			if (!GetMaterialID("Prefilter", prefilterMatID))
@@ -1153,7 +1236,8 @@ namespace flex
 				MaterialCreateInfo prefilterMaterialCreateInfo = {};
 				prefilterMaterialCreateInfo.name = "Prefilter";
 				prefilterMaterialCreateInfo.shaderName = "prefilter";
-				prefilterMatID = InitializeMaterial(gameContext, &prefilterMaterialCreateInfo);
+				prefilterMaterialCreateInfo.engineMaterial = true;
+				prefilterMatID = InitializeMaterial(&prefilterMaterialCreateInfo);
 			}
 
 			GLMaterial& prefilterMat = m_Materials[prefilterMatID];
@@ -1162,26 +1246,19 @@ namespace flex
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			glUseProgram(prefilterShader.program);
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, false, 
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(skybox->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-			CheckGLErrorMessages();
 
 			if (skybox->enableCulling)
 			{
@@ -1193,13 +1270,10 @@ namespace flex
 			}
 
 			glCullFace(skybox->cullFace);
-			CheckGLErrorMessages();
 
 			glDepthFunc(skybox->depthTestReadFunc);
-			CheckGLErrorMessages();
 
 			glDepthMask(skybox->depthWriteEnable);
-			CheckGLErrorMessages();
 
 			u32 maxMipLevels = 5;
 			for (u32 mip = 0; mip < maxMipLevels; ++mip)
@@ -1210,42 +1284,30 @@ namespace flex
 				assert(mipHeight <= Renderer::MAX_TEXTURE_DIM);
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
-				CheckGLErrorMessages();
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, mipWidth, mipHeight);
 
 				glViewport(0, 0, mipWidth, mipHeight);
-				CheckGLErrorMessages();
 
 				real roughness = (real)mip / (real(maxMipLevels - 1));
 				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
 				glUniform1f(roughnessUniformLocation, roughness);
-				CheckGLErrorMessages();
 				for (u32 i = 0; i < 6; ++i)
 				{
 					glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
-					CheckGLErrorMessages();
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].prefilteredMapSamplerID, mip);
-					CheckGLErrorMessages();
 					
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
 				}
 			}
 
 			// TODO: Make this a togglable bool param for the shader (or roughness param)
 			// Visualize prefiltered map as skybox:
 			//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
-
-			glUseProgram(0);
-			glBindVertexArray(0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
+		void GLRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, i32 brdfLUTSize)
 		{
 			if (m_1x1_NDC_Quad)
 			{
@@ -1253,16 +1315,13 @@ namespace flex
 				return;
 			}
 
-			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-
 			MaterialCreateInfo brdfMaterialCreateInfo = {};
 			brdfMaterialCreateInfo.name = "BRDF";
 			brdfMaterialCreateInfo.shaderName = "brdf";
 			brdfMaterialCreateInfo.engineMaterial = true;
-			MaterialID brdfMatID = InitializeMaterial(gameContext, &brdfMaterialCreateInfo);
+			MaterialID brdfMatID = InitializeMaterial(&brdfMaterialCreateInfo);
 
-			if (m_1x1_NDC_Quad == nullptr)
+			// Generate 1x1 NDC quad
 			{
 				VertexBufferData::CreateInfo quadVertexBufferDataCreateInfo = {};
 				quadVertexBufferDataCreateInfo.positions_3D = {
@@ -1277,8 +1336,8 @@ namespace flex
 					{ 1.0f, 1.0f },
 					{ 1.0f, 0.0f },
 				};
-				quadVertexBufferDataCreateInfo.attributes = 
-					(u32)VertexAttribute::POSITION | 
+				quadVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION |
 					(u32)VertexAttribute::UV;
 
 				m_1x1_NDC_QuadVertexBufferData = {};
@@ -1300,38 +1359,31 @@ namespace flex
 				quadCreateInfo.depthWriteEnable = false;
 				quadCreateInfo.visibleInSceneExplorer = false;
 
-				RenderID quadRenderID = InitializeRenderObject(gameContext, &quadCreateInfo);
+				RenderID quadRenderID = InitializeRenderObject(&quadCreateInfo);
 				m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
 
 				if (!m_1x1_NDC_Quad)
 				{
-					Logger::LogError("Failed to create 1x1 NDC quad!");
+					PrintError("Failed to create 1x1 NDC quad!\n");
 				}
 				else
 				{
 					SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-					m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(gameContext.renderer, quadRenderID);
+					m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(g_Renderer, quadRenderID);
 				}
 			}
 
 			glUseProgram(m_Shaders[m_Materials[brdfMatID].material.shaderID].program);
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
 
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTextureID, 0);
-			CheckGLErrorMessages();
 
 			glBindVertexArray(m_1x1_NDC_Quad->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
-			CheckGLErrorMessages();
 
-			glViewport(0, 0, (GLsizei)BRDFLUTSize.x, (GLsizei)BRDFLUTSize.y);
-			CheckGLErrorMessages();
+			glViewport(0, 0, brdfLUTSize, brdfLUTSize);
 
 			if (m_1x1_NDC_Quad->enableCulling)
 			{
@@ -1343,38 +1395,36 @@ namespace flex
 			}
 
 			glCullFace(m_1x1_NDC_Quad->cullFace);
-			CheckGLErrorMessages();
 
 			glDepthFunc(GL_ALWAYS);
-			CheckGLErrorMessages();
 
 			glDepthMask(GL_FALSE);
-			CheckGLErrorMessages();
 
 			// Render quad
 			glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
-			CheckGLErrorMessages();
-			
-			glBindVertexArray(0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glUseProgram(last_program);
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void GLRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to generate irradiance sampler before skybox object was created!\n");
+				return;
+			}
 
 			MaterialID irrandianceMatID = InvalidMaterialID;
 			if (!GetMaterialID("Irradiance", irrandianceMatID))
 			{
+				std::string profileBlockName = "generating irradiance mat";
+				PROFILE_BEGIN(profileBlockName);
 				MaterialCreateInfo irrandianceMatCreateInfo = {};
 				irrandianceMatCreateInfo.name = "Irradiance";
 				irrandianceMatCreateInfo.shaderName = "irradiance";
 				irrandianceMatCreateInfo.enableCubemapSampler = true;
 				irrandianceMatCreateInfo.engineMaterial = true;
-				irrandianceMatID = InitializeMaterial(gameContext, &irrandianceMatCreateInfo);
+				irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
+				PROFILE_END(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
 			}
 
 			GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
@@ -1383,30 +1433,22 @@ namespace flex
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			glUseProgram(shader.program);
-			CheckGLErrorMessages();
-
+			
 			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, false, 
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-			CheckGLErrorMessages();
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
-			CheckGLErrorMessages();
 
 			glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
+			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			if (skybox->enableCulling)
 			{
@@ -1418,49 +1460,31 @@ namespace flex
 			}
 
 			glCullFace(skybox->cullFace);
-			CheckGLErrorMessages();
 
 			glDepthFunc(skybox->depthTestReadFunc);
-			CheckGLErrorMessages();
 
 			glDepthMask(skybox->depthWriteEnable);
-			CheckGLErrorMessages();
+
+			glBindVertexArray(skybox->VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 
 			for (u32 i = 0; i < 6; ++i)
 			{
-				glBindVertexArray(skybox->VAO);
-				CheckGLErrorMessages();
-				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-				CheckGLErrorMessages();
-
 				glUniformMatrix4fv(irradianceMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
-				CheckGLErrorMessages();
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].irradianceSamplerID, 0);
-				CheckGLErrorMessages();
 
-				// Should be drawing cube here, not object (relfection probe's sphere is being drawn
+				// Should be drawing cube here, not object (reflection probe's sphere is being drawn
 				glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
-				CheckGLErrorMessages();
 			}
-
-			glUseProgram(0);
-			glBindVertexArray(0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
 		}
 
-		void GLRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
+		void GLRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
-			GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-
-			BatchRenderObjects(gameContext);
-
 			DrawCallInfo drawCallInfo = {};
-			drawCallInfo.renderToCubemap = true;
 			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
+			drawCallInfo.bRenderToCubemap = true;
 
 			// Clear cubemap faces
 			GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
@@ -1470,20 +1494,15 @@ namespace flex
 
 			// Must be enabled to clear depth buffer
 			glDepthMask(GL_TRUE);
-			CheckGLErrorMessages();
 			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			CheckGLErrorMessages();
 			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			CheckGLErrorMessages();
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
+			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
 			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			CheckGLErrorMessages();
 
 			for (size_t face = 0; face < 6; ++face)
 			{
-				// Clear all gbuffers
+				// Clear all G-Buffers
 				if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
 				{
 					// Skip first buffer, it'll be cleared below
@@ -1491,40 +1510,30 @@ namespace flex
 					{
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, 
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
-						CheckGLErrorMessages();
 
 						glClear(GL_COLOR_BUFFER_BIT);
-						CheckGLErrorMessages();
 					}
 				}
 
 				// Clear base cubemap framebuffer + depth buffer
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-				CheckGLErrorMessages();
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 									   GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
-				CheckGLErrorMessages();
 
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				CheckGLErrorMessages();
 			}
 
-			drawCallInfo.deferred = true;
-			DrawDeferredObjects(gameContext, drawCallInfo);
-			drawCallInfo.deferred = false;
-			DrawGBufferContents(gameContext, drawCallInfo);
-			DrawForwardObjects(gameContext, drawCallInfo);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
-			CheckGLErrorMessages();
+			drawCallInfo.bDeferred = true;
+			DrawDeferredObjects(drawCallInfo);
+			drawCallInfo.bDeferred = false;
+			DrawGBufferContents(drawCallInfo);
+			DrawForwardObjects(drawCallInfo);
 		}
 
-		void GLRenderer::SwapBuffers(const GameContext& gameContext)
+		void GLRenderer::SwapBuffers()
 		{
-			glfwSwapBuffers(static_cast<GLWindowWrapper*>(gameContext.window)->GetWindow());
+			glfwSwapBuffers(static_cast<GLWindowWrapper*>(g_Window)->GetWindow());
 		}
 
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
@@ -1545,11 +1554,11 @@ namespace flex
 		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
 		{
 			// TODO: Store shaders using sorted data structure?
-			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
+			for (auto& materialPair : m_Materials)
 			{
-				if (iter->second.material.name.compare(materialName) == 0)
+				if (materialPair.second.material.name.compare(materialName) == 0)
 				{
-					materialID = iter->first;
+					materialID = materialPair.first;
 					return true;
 				}
 			}
@@ -1562,7 +1571,7 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
-				Logger::LogError("Invalid renderID passed to SetTopologyMode: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to SetTopologyMode: %i\n", renderID);
 				return;
 			}
 
@@ -1570,8 +1579,7 @@ namespace flex
 
 			if (glMode == GL_INVALID_ENUM)
 			{
-				Logger::LogError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: " + 
-					std::to_string((i32)topology));
+				PrintError("Unhandled TopologyMode passed to GLRenderer::SetTopologyMode: %i\n", (i32)topology);
 				renderObject->topology = GL_TRIANGLES;
 			}
 			else
@@ -1584,106 +1592,245 @@ namespace flex
 		{
 			m_ClearColor = { r, g, b };
 			glClearColor(r, g, b, 1.0f);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glGenTextures(1, handle);
 			glBindTexture(GL_TEXTURE_2D, *handle);
-			CheckGLErrorMessages();
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			CheckGLErrorMessages();
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, *handle, 0);
-			CheckGLErrorMessages();
 			glBindTexture(GL_TEXTURE_2D, 0);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glBindTexture(GL_TEXTURE_2D, handle);
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size)
+		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat)
 		{
 			glBindRenderbuffer(GL_RENDERBUFFER, handle);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, size.x, size.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, size.x, size.y);
 		}
 
-		void GLRenderer::Update(const GameContext& gameContext)
+		void GLRenderer::Update()
 		{
+			if (m_EditorStrSecRemaining > 0.0f)
+			{
+				m_EditorStrSecRemaining -= g_DeltaTime;
+				if (m_EditorStrSecRemaining <= 0.0f)
+				{
+					m_EditorStrSecRemaining = 0.0f;
+				}
+			}
+
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
-			// TODO: Move keybind catches out to FlexEngine or Renderer base Update and
-			// call renderer-specific code
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
+			// This fixes the weird artifacts in refl probes, but obviously isn't ideal...
+			//static i32 count = 0;
+			//if (++count == 1)
+			//{
+			//	for (GLRenderObject* renderObject : m_RenderObjects)
+			//	{
+			//		if (renderObject)
+			//		{
+			//			GLMaterial& material = m_Materials[renderObject->materialID];
+
+			//			if (material.material.generateReflectionProbeMaps)
+			//			{
+			//				Print("Capturing reflection probe\n");
+			//				CaptureSceneToCubemap(renderObject->renderID);
+			//				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+			//				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+			//			}
+			//		}
+			//	}
+			//}
+
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
-				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
+				for (GLRenderObject* renderObject : m_RenderObjects)
 				{
-					GLRenderObject* renderObject = *iter;
-					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
+					if (renderObject && 
+						m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
-						Logger::LogInfo("Capturing reflection probe");
-						CaptureSceneToCubemap(gameContext, renderObject->renderID);
-						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-						Logger::LogInfo("Done");
+						CaptureSceneToCubemap(renderObject->renderID);
+						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 					}
 				}
 			}
 		}
 
-		void GLRenderer::Draw(const GameContext& gameContext)
+		void GLRenderer::Draw()
 		{
-			CheckGLErrorMessages();
-
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
 
 			DrawCallInfo drawCallInfo = {};
 
+			// TDDO: Find an alternative to so many PROFILE macros...
+
 			// TODO: Don't sort render objects frame! Only when things are added/removed
-			BatchRenderObjects(gameContext);
+			PROFILE_BEGIN("Render > BatchRenderObjects");
+			BatchRenderObjects();
+			PROFILE_END("Render > BatchRenderObjects");
 
 			// World-space objects
-			drawCallInfo.deferred = true;
-			DrawDeferredObjects(gameContext, drawCallInfo);
-			drawCallInfo.deferred = false;
-			DrawGBufferContents(gameContext, drawCallInfo);
-			DrawForwardObjects(gameContext, drawCallInfo);
-			DrawWorldSpaceSprites(gameContext);
-			DrawOffscreenTexture(gameContext);
+			drawCallInfo.bDeferred = true;
+			PROFILE_BEGIN("Render > DrawDeferredObjects");
+			DrawDeferredObjects(drawCallInfo);
+			drawCallInfo.bDeferred = false;
+			PROFILE_END("Render > DrawDeferredObjects");
+			PROFILE_BEGIN("Render > DrawGBufferContents");
+			DrawGBufferContents(drawCallInfo);
+			PROFILE_END("Render > DrawGBufferContents");
+			PROFILE_BEGIN("Render > DrawForwardObjects");
+			DrawForwardObjects(drawCallInfo);
+			PROFILE_END("Render > DrawForwardObjects");
+			PROFILE_BEGIN("Render > DrawWorldSpaceSprites");
+			DrawWorldSpaceSprites();
+			PROFILE_END("Render > DrawWorldSpaceSprites");
+			PROFILE_BEGIN("Render > DrawOffscreenTexture");
+			DrawOffscreenTexture();
+			PROFILE_END("Render > DrawOffscreenTexture");
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
-				PhysicsDebugRender(gameContext);
+				PROFILE_BEGIN("Render > PhysicsDebugRender");
+				PhysicsDebugRender();
+				PROFILE_END("Render > PhysicsDebugRender");
 			}
 
-			DrawEditorObjects(gameContext, drawCallInfo);
+			if (g_EngineInstance->IsRenderingEditorObjects())
+			{
+				PROFILE_BEGIN("Render > DrawEditorObjects");
+				DrawEditorObjects(drawCallInfo);
+				PROFILE_END("Render > DrawEditorObjects");
+			}
 
 			// Screen-space objects
-			std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
+#if 1
+			std::vector<real> letterYOffsetsEmpty;
+			//std::vector<real> letterYOffsets1;
+			//letterYOffsets1.reserve(26);
+			//for (i32 i = 0; i < 26; ++i)
+			//{
+			//	letterYOffsets1.push_back(sin(i * 0.75f + g_SecElapsedSinceProgramStart * 3.0f) * 5.0f);
+			//}
+			//std::vector<real> letterYOffsets2;
+			//letterYOffsets2.reserve(26);
+			//for (i32 i = 0; i < 26; ++i)
+			//{
+			//	letterYOffsets2.push_back(cos(i + g_SecElapsedSinceProgramStart * 10.0f) * 5.0f);
+			//}
+			//std::vector<real> letterYOffsets3;
+			//letterYOffsets3.reserve(44);
+			//for (i32 i = 0; i < 44; ++i)
+			//{
+			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + g_SecElapsedSinceProgramStart * 6.0f) * 4.0f);
+			//}
+			
+			std::string str;
+
+			// Text stress test:
+			/*SetFont(m_FntSourceCodePro);
+			DrawString(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.65f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.6f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.55f), 3.5f);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.5f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.1f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.45f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.2f, 0.4f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.4f), 3.5f);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.1f, 0.2f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.35f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.3f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.3f, 0.3f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.25f), 3.5f);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.5f, 0.9f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.2f), 3.5f);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.0f, 0.8f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.15f), 3.5f);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.4f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.1f), 3.5f);
+
 			SetFont(m_FntUbuntuCondensed);
-			DrawString(fxaaEnabledStr, glm::vec4(1.0f), glm::vec2(600.0f, 800.0f));
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.0f), 6);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 6);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 6);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.55f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.3f), 6);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.25f, 0.0f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.4f), 6);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.8f, 0.2f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.5f), 6);
+			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+			DrawString(str, glm::vec4(0.95f, 0.8f, 0.6f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.6f), 6);
+			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+			DrawString(str, glm::vec4(0.6f, 0.4f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.7f), 6);
+			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+			DrawString(str, glm::vec4(0.9f, 0.9f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.8f), 6);*/
 
+			//std::string str = std::string("XYZ");
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+
+			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
+			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
+			//glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			//std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
+			//DrawString(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, &letterYOffsetsEmpty);
+#endif
+
+			if (m_EditorStrSecRemaining > 0.0f)
+			{
+				SetFont(m_FntUbuntuCondensed);
+				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
+										0.0f, 1.0f);
+				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3, false);
+			}
+
+			PROFILE_BEGIN("Render > DrawScreenSpaceSprites");
+			DrawScreenSpaceSprites();
+			PROFILE_END("Render > DrawScreenSpaceSprites");
+
+			PROFILE_BEGIN("Render > UpdateTextBuffer & DrawText");
 			UpdateTextBuffer();
-			DrawText(gameContext);
+			DrawText();
+			PROFILE_END("Render > UpdateTextBuffer & DrawText");
 
-			DrawScreenSpaceSprites(gameContext);
+			if (g_EngineInstance->IsRenderingImGui())
+			{
+				PROFILE_BEGIN("Render > ImGuiRender");
+				ImGui::Render();
+				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+				PROFILE_END("Render > ImGuiRender");
+			}
 
-			ImGuiRender();
-
-			SwapBuffers(gameContext);
+			PROFILE_BEGIN("Render > SwapBuffers");
+			SwapBuffers();
+			PROFILE_END("Render > SwapBuffers");
 		}
 
-		void GLRenderer::BatchRenderObjects(const GameContext& gameContext)
+		void GLRenderer::BatchRenderObjects()
 		{
 			/*
 			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
@@ -1696,34 +1843,36 @@ namespace flex
 			no		 3
 			no		 5
 			*/
+
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
 			m_EditorRenderObjectBatch.clear();
 			
 			// Sort render objects into deferred + forward buckets
-			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
+			for (auto& materialPair : m_Materials)
 			{
-				MaterialID matID = iter->first;
-				ShaderID shaderID = iter->second.material.shaderID;
+				MaterialID matID = materialPair.first;
+				ShaderID shaderID = materialPair.second.material.shaderID;
 				if (shaderID == InvalidShaderID)
 				{
-					Logger::LogWarning("GLRenderer::BatchRenderObjects > Material has invalid shaderID: " + iter->second.material.name);
+					PrintWarn("GLRenderer::BatchRenderObjects > Material has invalid shaderID: %s\n",
+							  materialPair.second.material.name.c_str());
 					continue;
 				}
 				GLShader* shader = &m_Shaders[shaderID];
 
-				UpdateMaterialUniforms(gameContext, matID);
+				UpdateMaterialUniforms(matID);
 
 				if (shader->shader.deferred)
 				{
-					m_DeferredRenderObjectBatches.push_back({});
-					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+					m_DeferredRenderObjectBatches.emplace_back();
+					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
-						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject)
+							!renderObject->editorObject &&
+							renderObject->vertexBufferData)
 						{
 							m_DeferredRenderObjectBatches.back().push_back(renderObject);
 						}
@@ -1731,27 +1880,27 @@ namespace flex
 				}
 				else
 				{
-					m_ForwardRenderObjectBatches.push_back({});
-					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
+					m_ForwardRenderObjectBatches.emplace_back();
+					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
-						GLRenderObject* renderObject = GetRenderObject(j);
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject)
+							!renderObject->editorObject &&
+							renderObject->vertexBufferData)
 						{
 							m_ForwardRenderObjectBatches.back().push_back(renderObject);
 						}
 					}
 				}
 			}
-
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
-				GLRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					renderObject->editorObject)
+					renderObject->editorObject &&
+					renderObject->vertexBufferData)
 				{
 					m_EditorRenderObjectBatch.push_back(renderObject);
 				}
@@ -1763,7 +1912,8 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					!renderObject->editorObject)
+					!renderObject->editorObject &&
+					renderObject->vertexBufferData)
 				{
 					++visibleObjectCount;
 				}
@@ -1782,19 +1932,19 @@ namespace flex
 
 			if (visibleObjectCount != accountedForObjectCount)
 			{
-				Logger::LogError("BatchRenderObjects didn't account for every visible object!");
+				PrintError("BatchRenderObjects didn't account for every visible object!\n");
 			}
 #endif
 		}
 
-		void GLRenderer::DrawDeferredObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
 		{
-			if (!drawCallInfo.deferred)
+			if (!drawCallInfo.bDeferred)
 			{
-				Logger::LogError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferrred!");
+				PrintError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferred!\n");
 			}
 
-			if (drawCallInfo.renderToCubemap)
+			if (drawCallInfo.bRenderToCubemap)
 			{
 				// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
 
@@ -1804,21 +1954,18 @@ namespace flex
 				glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-				CheckGLErrorMessages();
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-				CheckGLErrorMessages();
 			}
 			else
 			{
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+				glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+
 				glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-				CheckGLErrorMessages();
 			}
 
 			{
@@ -1826,62 +1973,63 @@ namespace flex
 				constexpr i32 numBuffers = 3;
 				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 				glDrawBuffers(numBuffers, attachments);
-				CheckGLErrorMessages();
 			}
 
 			glDepthMask(GL_TRUE);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
 
-			for (size_t i = 0; i < m_DeferredRenderObjectBatches.size(); ++i)
+			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
 			{
-				DrawRenderObjectBatch(gameContext, m_DeferredRenderObjectBatches[i], drawCallInfo);
+				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
 
 			glUseProgram(0);
 			glBindVertexArray(0);
-			CheckGLErrorMessages();
 
 			{
 				constexpr i32 numBuffers = 1;
 				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0 };
 				glDrawBuffers(numBuffers, attachments);
-				CheckGLErrorMessages();
 			}
 
-			// Copy depth from gbuffer to default render target
-			if (drawCallInfo.renderToCubemap)
+			// Copy depth from G-Buffer to default render target
+			if (drawCallInfo.bRenderToCubemap)
 			{
 				// No blit is needed, right? We already drew to the cubemap depth?
 			}
 			else
 			{
-				const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, 
 					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-				CheckGLErrorMessages();
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		}
 
-		void GLRenderer::DrawGBufferContents(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawGBufferContents(const DrawCallInfo& drawCallInfo)
 		{
-			if (drawCallInfo.deferred)
+			if (drawCallInfo.bDeferred)
 			{
-				Logger::LogError("DrawGBufferQuad was called with a drawCallInfo set to deferred!");
+				PrintError("DrawGBufferContents was called with a drawCallInfo set to deferred!\n");
+			}
+
+			if (!m_SkyBoxMesh)
+			{
+				PrintError("Attempted to draw GBUffer contents to cubemap before skybox object was created!\n");
+				return;
 			}
 
 			if (!m_gBufferQuadVertexBufferData.pDataStart)
 			{
 				// Generate GBuffer if not already generated
-				GenerateGBuffer(gameContext);
+				GenerateGBuffer();
 			}
-
-			if (drawCallInfo.renderToCubemap)
+			
+			if (drawCallInfo.bRenderToCubemap)
 			{
 				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
@@ -1889,26 +2037,20 @@ namespace flex
 				GLMaterial* cubemapMaterial = &m_Materials[cubemapObject->materialID];
 				GLShader* cubemapShader = &m_Shaders[cubemapMaterial->material.shaderID];
 
-				CheckGLErrorMessages();
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				CheckGLErrorMessages();
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24,
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat,
 					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.x, 
 					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.y);
-				CheckGLErrorMessages();
 
 				glUseProgram(cubemapShader->program);
 
 				glBindVertexArray(skybox->VAO);
-				CheckGLErrorMessages();
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-				CheckGLErrorMessages();
 
-				UpdateMaterialUniforms(gameContext, cubemapObject->materialID);
+				UpdateMaterialUniforms(cubemapObject->materialID);
 				UpdatePerObjectUniforms(cubemapObject->materialID, 
-					skybox->gameObject->GetTransform()->GetWorldTransform(), gameContext);
+					skybox->gameObject->GetTransform()->GetWorldTransform());
 
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
@@ -1923,47 +2065,35 @@ namespace flex
 				}
 
 				glCullFace(skybox->cullFace);
-				CheckGLErrorMessages();
-
 				glDepthFunc(GL_ALWAYS);
-				CheckGLErrorMessages();
-
 				glDepthMask(GL_FALSE);
-				CheckGLErrorMessages();
-				
 				glUniformMatrix4fv(cubemapMaterial->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-				CheckGLErrorMessages();
 
 				glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+				// Override cam pos with reflection probe pos
+				glm::vec3 reflectionProbePos(cubemapObject->gameObject->GetTransform()->GetWorldPosition());
+				glUniform4fv(cubemapMaterial->uniformIDs.camPos, 1, &reflectionProbePos.x);
 
 				for (i32 face = 0; face < 6; ++face)
 				{
 					glUniformMatrix4fv(cubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[face][0][0]);
-					CheckGLErrorMessages();
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-					CheckGLErrorMessages();
 
 					// Draw cube (TODO: Use "cube" object to be less confusing)
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
 				}
-
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				CheckGLErrorMessages();
 			}
 			else
 			{
 				glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
-				CheckGLErrorMessages();
 				glBindRenderbuffer(GL_RENDERBUFFER, m_Offscreen0RBO);
-				CheckGLErrorMessages();
 
 				glDepthMask(GL_TRUE);
 
 				glClear(GL_COLOR_BUFFER_BIT); // Don't clear depth - we just copied it over from the GBuffer
-				CheckGLErrorMessages();
 
 				GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
 
@@ -1974,10 +2104,9 @@ namespace flex
 
 				glBindVertexArray(gBufferQuad->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
-				CheckGLErrorMessages();
 
-				UpdateMaterialUniforms(gameContext, gBufferQuad->materialID);
-				UpdatePerObjectUniforms(gBufferQuad->renderID, gameContext);
+				UpdateMaterialUniforms(gBufferQuad->materialID);
+				UpdatePerObjectUniforms(gBufferQuad->renderID);
 
 				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
@@ -1992,275 +2121,359 @@ namespace flex
 				}
 
 				glCullFace(gBufferQuad->cullFace);
-				CheckGLErrorMessages();
 
 				glDepthFunc(gBufferQuad->depthTestReadFunc);
-				CheckGLErrorMessages();
 
 				glDepthMask(gBufferQuad->depthWriteEnable);
-				CheckGLErrorMessages();
 
 				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
-				CheckGLErrorMessages();
 			}
 		}
 
-		void GLRenderer::DrawForwardObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawForwardObjects(const DrawCallInfo& drawCallInfo)
 		{
-			if (drawCallInfo.deferred)
+			if (drawCallInfo.bDeferred)
 			{
-				Logger::LogError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!");
+				PrintError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!\n");
 			}
 
-			for (size_t i = 0; i < m_ForwardRenderObjectBatches.size(); ++i)
+			for (std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
 			{
-				DrawRenderObjectBatch(gameContext, m_ForwardRenderObjectBatches[i], drawCallInfo);
+				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
 		}
 
-		void GLRenderer::DrawEditorObjects(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
-			DrawRenderObjectBatch(gameContext, m_EditorRenderObjectBatch, drawCallInfo);
+			DrawRenderObjectBatch(m_EditorRenderObjectBatch, drawCallInfo);
 		}
 
-		void GLRenderer::DrawOffscreenTexture(const GameContext& gameContext)
+		void GLRenderer::DrawOffscreenTexture()
 		{
 			i32 FBO = m_Offscreen1FBO;
 			i32 RBO = m_Offscreen1RBO;
 
-			if (!m_PostProcessSettings.bEnableFXAA)
+			bool bFXAAEnabled = (m_bPostProcessingEnabled && m_PostProcessSettings.bEnableFXAA);
+
+			if (!bFXAAEnabled)
 			{
 				FBO = 0;
 				RBO = 0;
 			}
 
 			glm::vec3 pos(0.0f);
-			glm::quat rot = glm::quat();
-			glm::vec3 scale(1.0f, 1.0f, 1.0f);
+			glm::quat rot = glm::quat(glm::vec3(0.0));
+			glm::vec3 scale(1.0f);
 			glm::vec4 color(1.0f);
-			DrawSpriteQuad(gameContext, m_OffscreenTexture0Handle.id, FBO, RBO,
-						   m_PostProcessMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
 
-			if (m_PostProcessSettings.bEnableFXAA)
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.FBO = FBO;
+			drawInfo.RBO = RBO;
+			drawInfo.pos = pos;
+			drawInfo.rotation = rot;
+			drawInfo.scale = scale;
+			drawInfo.materialID = m_PostProcessMatID;
+			drawInfo.color = color;
+			drawInfo.anchor = AnchorPoint::CENTER;
+			drawInfo.inputTextureHandle = m_OffscreenTexture0Handle.id;
+			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
+
+			DrawSpriteQuad(drawInfo);
+
+			if (bFXAAEnabled)
 			{
 				FBO = 0;
 				RBO = 0;
+				scale.y = -1.0f;
 
-				scale = glm::vec3(1.0f, 1.0f, 1.0f);
-				DrawSpriteQuad(gameContext, m_OffscreenTexture1Handle.id, FBO, RBO,
-							   m_PostFXAAMatID, pos, rot, scale, AnchorPoint::WHOLE, color, false);
+				drawInfo.inputTextureHandle = m_OffscreenTexture1Handle.id;
+				drawInfo.materialID = m_PostFXAAMatID;
+				DrawSpriteQuad(drawInfo);
 			}
 
 			{
-				const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
-				CheckGLErrorMessages();
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-				CheckGLErrorMessages();
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y,
 								  0, 0, frameBufferSize.x, frameBufferSize.y,
 								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-				CheckGLErrorMessages();
 			}
 
 		}
 
-		void GLRenderer::DrawScreenSpaceSprites(const GameContext& gameContext)
+		void GLRenderer::DrawScreenSpaceSprites()
 		{
-			glm::vec3 pos(0.0f);
-			glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
-			glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
-			glm::vec3 scale(100.0f);
+			Profiler::DrawDisplayedFrame();
+
+			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
+
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
+			{
+				pos.x += g_DeltaTime * 1.0f;
+			}
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
+			{
+				pos.x -= g_DeltaTime * 1.0f;
+			}
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
+			{
+				pos.y += g_DeltaTime * 1.0f;
+			}
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
+			{
+				pos.y -= g_DeltaTime * 1.0f;
+			}
+
 			glm::vec4 color(1.0f);
-			DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
-						   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::BOTTOM_RIGHT, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::BOTTOM_LEFT, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::LEFT, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::TOP_LEFT, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::TOP, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::TOP_RIGHT, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot2, scale, AnchorPoint::RIGHT, color);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, m_SpriteMatID,
-			//			   pos, rot, glm::vec3(200.0f), AnchorPoint::CENTER, glm::vec4(1.0f, 0.0f, 1.0f, 0.5f));
+
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.pos = pos;
+			drawInfo.scale = glm::vec3(1.0, -1.0, 1.0f);
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.anchor = AnchorPoint::WHOLE;
+			drawInfo.inputTextureHandle = m_WorkTexture->handle;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			//DrawSpriteQuad(drawInfo);
+
+			drawInfo.scale = glm::vec3(0.25f, -0.25f, 1.0f);
+			drawInfo.anchor = AnchorPoint::BOTTOM_LEFT;
+			DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::LEFT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::TOP_LEFT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::TOP;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.color = glm::vec4(1.0f, sin(g_SecElapsedSinceProgramStart) * 0.3f + 0.7f, 0.5f, 1.0f);
+			//drawInfo.anchor = AnchorPoint::TOP_RIGHT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::RIGHT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::BOTTOM;
+			//DrawSpriteQuad(drawInfo);
+
+			//drawInfo.anchor = AnchorPoint::CENTER;
+			//DrawSpriteQuad(drawInfo);
 		}
 
-		void GLRenderer::DrawWorldSpaceSprites(const GameContext& gameContext)
+		void GLRenderer::DrawWorldSpaceSprites()
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-			//glm::vec3 pos(0.0f);
-			//glm::quat rot = glm::quat(glm::vec3(.0f, 0.0f, sin(gameContext.elapsedTime * 0.2f)));
-			//glm::quat rot2 = glm::quat(glm::vec3(.0f, 0.0f, sin(-gameContext.elapsedTime * 0.2f)));
-			//glm::vec3 scale(100.0f);
-			//glm::vec4 color(1.0f);
-			//DrawSpriteQuad(gameContext, m_WorkTextureHandle.id, 0, 0, m_SpriteMatID,
-			//			   pos, rot, scale, AnchorPoint::BOTTOM_RIGHT, color);
+			glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.FBO = m_Offscreen0FBO;
+			drawInfo.RBO = m_Offscreen0RBO;
+			drawInfo.bScreenSpace = false;
+			drawInfo.bReadDepth = true;
+			drawInfo.bWriteDepth = true;
+			drawInfo.scale = scale;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			glm::vec3 camPos = cam->GetPosition();
+			glm::vec3 camUp = cam->GetUp();
+			for (const PointLight& pointLight : m_PointLights)
+			{
+				if (pointLight.enabled)
+				{
+					drawInfo.pos = pointLight.position;
+					drawInfo.color = pointLight.color * 1.5f;
+					drawInfo.inputTextureHandle = m_PointLightIcon->handle;
+					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight.position, camUp);
+					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+					DrawSpriteQuad(drawInfo);
+				}
+			}
+			
+			if (m_DirectionalLight.enabled)
+			{
+				drawInfo.color = m_DirectionalLight.color * 1.5f;
+				drawInfo.pos = m_DirectionalLight.position;
+				drawInfo.inputTextureHandle = m_DirectionalLightIcon->handle;
+				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight.position, camUp);
+				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+				DrawSpriteQuad(drawInfo);
+			}
 		}
 
-		void GLRenderer::DrawSpriteQuad(const GameContext& gameContext, 
-										u32 inputTextureHandle,
-										u32 FBO, 
-										u32 RBO,
-										MaterialID materialID,
-										const glm::vec3& posOff, 
-										const glm::quat& rotationOff, 
-										const glm::vec3& scaleOff,
-										AnchorPoint anchor,
-										const glm::vec4& color,
-										bool writeDepth)
+		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
 		{
-			GLRenderObject* spriteRenderObject = GetRenderObject(m_SpriteQuadRenderID);
-			if (!spriteRenderObject)
+			GLRenderObject* spriteRenderObject = GetRenderObject(drawInfo.spriteObjectRenderID);
+			if (!spriteRenderObject ||
+				(spriteRenderObject->editorObject && !g_EngineInstance->IsRenderingEditorObjects()))
 			{
 				return;
 			}
 
-			spriteRenderObject->materialID = materialID;
+			spriteRenderObject->materialID = drawInfo.materialID;
 
 			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
 			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
 
 			glUseProgram(spriteShader.program);
-			CheckGLErrorMessages();
 
-			const glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("model"))
 			{
-				glm::vec3 scale(1.0f);
-				
-				if (anchor != AnchorPoint::WHOLE)
-				{
-					scale = glm::vec3(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y, 1.0f);
-				}
-				////scale *= glm::min(frameBufferSize.x * 2.0f, frameBufferSize.y * 2.0f);
-				//scale *= 400.0f;
-				//const real minScale = 0.2f;
-				//const real maxScale = 0.5f;
-				//scale *= glm::vec3((sin(gameContext.elapsedTime * 0.4f) * 0.5f + 0.5f) * (maxScale - minScale) + minScale);
-				scale *= scaleOff;
+				glm::vec3 translation = drawInfo.pos;
+				glm::quat rotation = drawInfo.rotation;
+				glm::vec3 scale = drawInfo.scale;
 
-				glm::quat rotation = rotationOff;
-
-				glm::vec3 translation(0.0f);
-				switch (anchor)
+				if (!drawInfo.bRaw)
 				{
-				case AnchorPoint::CENTER:
-					// Already centered (zero)
-					break;
-				case AnchorPoint::TOP_LEFT:
-					translation = glm::vec3(-1.0f + (scale.x), (1.0f - scale.y), 0.0f);
-					break;
-				case AnchorPoint::TOP:
-					translation = glm::vec3(0.0f, (1.0f - scale.y), 0.0f);
-					break;
-				case AnchorPoint::TOP_RIGHT:
-					translation = glm::vec3(1.0f - (scale.x), (1.0f - scale.y), 0.0f);
-					break;
-				case AnchorPoint::RIGHT:
-					translation = glm::vec3(1.0f - (scale.x), 0.0f, 0.0f);
-					break;
-				case AnchorPoint::BOTTOM_RIGHT:
-					translation = glm::vec3(1.0f - (scale.x), (-1.0f + scale.y), 0.0f);
-					break;
-				case AnchorPoint::BOTTOM:
-					translation = glm::vec3(0.0f, (-1.0f + scale.y), 0.0f);
-					break;
-				case AnchorPoint::BOTTOM_LEFT:
-					translation = glm::vec3(-1.0f + (scale.x), (-1.0f + scale.y), 0.0f);
-					break;
-				case AnchorPoint::LEFT:
-					translation = glm::vec3(-1.0f + (scale.x), 0.0f, 0.0f);
-					break;
-				case AnchorPoint::WHOLE:
-					// Already centered (zero)
-					break;
-				default:
-					break;
+					if (drawInfo.bScreenSpace)
+					{
+						glm::vec2 normalizedTranslation;
+						glm::vec2 normalizedScale;
+						NormalizeSpritePos(translation, drawInfo.anchor, scale, normalizedTranslation, normalizedScale);
+
+						translation = glm::vec3(normalizedTranslation, 0.0f);
+						scale = glm::vec3(normalizedScale, 1.0f);
+					}
+					else
+					{
+						translation.x /= aspectRatio;
+					}
 				}
 
-				translation += posOff;
+				glm::mat4 model = (glm::translate(glm::mat4(1.0f), translation) *
+								   glm::mat4(rotation) *
+								   glm::scale(glm::mat4(1.0f), scale));
 
-				glm::mat4 matScale = glm::scale(glm::mat4(1.0f), scale);
-				glm::mat4 matRot = glm::mat4(rotation);
-				glm::mat4 matTrans = glm::translate(glm::mat4(1.0f), translation);
-				// What about SRT? :o
-				glm::mat4 transformMat = matTrans * matScale * matRot;
-				
-				glUniformMatrix4fv(spriteMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
-				CheckGLErrorMessages();
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, true, &model[0][0]);
+			}
+
+			if (spriteShader.shader.constantBufferUniforms.HasUniform("view"))
+			{
+				if (drawInfo.bScreenSpace)
+				{
+					glm::mat4 view = glm::mat4(1.0f);
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
+				}
+				else
+				{
+					glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
+				}
+			}
+
+			if (spriteShader.shader.constantBufferUniforms.HasUniform("projection"))
+			{
+				if (drawInfo.bScreenSpace)
+				{
+					real r = aspectRatio;
+					real t = 1.0f;
+					glm::mat4 projection = glm::ortho(-r, r, -t, t);
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
+				}
+				else
+				{
+					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
+
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
+				}
 			}
 
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			{
-				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &color.r);
-				CheckGLErrorMessages();
+				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
+			}
+
+			bool bEnableAlbedoSampler = (drawInfo.inputTextureHandle != 0 && drawInfo.bEnableAlbedoSampler);
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
+			{
+				// TODO: glUniform1ui vs glUniform1i ?
+				glUniform1ui(spriteMaterial.uniformIDs.enableAlbedoSampler, bEnableAlbedoSampler ? 1 : 0);
 			}
 
 			// http://www.graficaobscura.com/matrix/
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("contrastBrightnessSaturation"))
 			{
-				real sat = m_PostProcessSettings.saturation;
-				glm::vec3 brightness = m_PostProcessSettings.brightness;
-				glm::vec3 offset = m_PostProcessSettings.offset;
+				glm::mat4 contrastBrightnessSaturation;
+				if (m_bPostProcessingEnabled)
+				{
+					real sat = m_PostProcessSettings.saturation;
+					glm::vec3 brightness = m_PostProcessSettings.brightness;
+					glm::vec3 offset = m_PostProcessSettings.offset;
 
-				glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
-				real a = (1.0f - sat) * wgt.r + sat;
-				real b = (1.0f - sat) * wgt.r;
-				real c = (1.0f - sat) * wgt.r;
-				real d = (1.0f - sat) * wgt.g;
-				real e = (1.0f - sat) * wgt.g + sat;
-				real f = (1.0f - sat) * wgt.g;
-				real g = (1.0f - sat) * wgt.b;
-				real h = (1.0f - sat) * wgt.b;
-				real i = (1.0f - sat) * wgt.b + sat;
-				glm::mat4 satMat = {
-					a, b, c, 0,
-					d, e, f, 0,
-					g, h, i, 0,
-					0, 0, 0, 1
-				};
+					glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
+					real a = (1.0f - sat) * wgt.r + sat;
+					real b = (1.0f - sat) * wgt.r;
+					real c = (1.0f - sat) * wgt.r;
+					real d = (1.0f - sat) * wgt.g;
+					real e = (1.0f - sat) * wgt.g + sat;
+					real f = (1.0f - sat) * wgt.g;
+					real g = (1.0f - sat) * wgt.b;
+					real h = (1.0f - sat) * wgt.b;
+					real i = (1.0f - sat) * wgt.b + sat;
+					glm::mat4 satMat = {
+						a, b, c, 0,
+						d, e, f, 0,
+						g, h, i, 0,
+						0, 0, 0, 1
+					};
 
-				glm::mat4 contrastBrightnessSaturation = 
-					glm::translate(glm::scale(satMat, brightness), offset);
+					contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
+				}
+				else
+				{
+					contrastBrightnessSaturation = glm::mat4(1.0f);
+				}
 
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.contrastBrightnessSaturation, 1, false, &contrastBrightnessSaturation[0][0]);
-				CheckGLErrorMessages();
 			}
 
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-			CheckGLErrorMessages();
 
-			glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-			CheckGLErrorMessages();
+			glBindFramebuffer(GL_FRAMEBUFFER, drawInfo.FBO);
+			glBindRenderbuffer(GL_RENDERBUFFER, drawInfo.RBO);
 
 			glBindVertexArray(spriteRenderObject->VAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
-			CheckGLErrorMessages();
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, inputTextureHandle);
-			CheckGLErrorMessages();
+			if (bEnableAlbedoSampler)
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, drawInfo.inputTextureHandle);
+			}
 
 			// TODO: Use member
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			CheckGLErrorMessages();
 
-			// TODO: Is this necessary to clear the depth?
-			if (writeDepth)
+			if (drawInfo.bReadDepth)
+			{
+				glDepthFunc(GL_LEQUAL);
+			}
+			else
+			{
+				glDepthFunc(GL_ALWAYS);
+			}
+
+			if (drawInfo.bWriteDepth)
 			{
 				glDepthMask(GL_TRUE);
 			}
@@ -2282,147 +2495,133 @@ namespace flex
 			}
 
 			glCullFace(spriteRenderObject->cullFace);
-			CheckGLErrorMessages();
-
 			glDepthFunc(spriteRenderObject->depthTestReadFunc);
-			CheckGLErrorMessages();
-
 			glDepthMask(spriteRenderObject->depthWriteEnable);
-			CheckGLErrorMessages();
-
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::DrawText(const GameContext& gameContext)
+		void GLRenderer::DrawText()
 		{
+			bool bHasText = false;
+			for (BitmapFont* font : m_Fonts)
+			{
+				if (font->m_BufferSize > 0)
+				{
+					bHasText = true;
+					break;
+				}
+			}
+
+			if (!bHasText)
+			{
+				return;
+			}
+
 			GLMaterial& fontMaterial = m_Materials[m_FontMatID];
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
 
 			glUseProgram(fontShader.program);
-			CheckGLErrorMessages();
 
-			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("soften"))
+			// TODO: Allow per-string shadows? (currently only per-font is doable)
+			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("shadow"))
 			//{
-			//	real soften = ((sin(gameContext.elapsedTime) * 0.5f + 0.5f) * 0.25f);
-			//	glUniform1f(glGetUniformLocation(fontShader.program, "soften"), soften);
-			//	CheckGLErrorMessages();
+			//	static glm::vec2 shadow(0.01f, 0.1f);
+			//	glUniform2f(glGetUniformLocation(fontShader.program, "shadow"), shadow.x, shadow.y);
 			//}
 			
 			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			//{
 			//	glm::vec4 color(1.0f);
 			//	glUniform4fv(fontMaterial.uniformIDs.colorMultiplier, 1, &color.r);
-			//	CheckGLErrorMessages();
 			//}
 
-			glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
-			CheckGLErrorMessages();
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			CheckGLErrorMessages();
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 			glBindVertexArray(m_TextQuadVAO);
-			CheckGLErrorMessages();
 			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-			CheckGLErrorMessages();
 
 			for (BitmapFont* font : m_Fonts)
 			{
 				if (font->m_BufferSize > 0)
 				{
 					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->GetHandle());
-					CheckGLErrorMessages();
+					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
 
-					if (fontShader.shader.dynamicBufferUniforms.HasUniform("transformMat"))
-					{
-						// TODO: Find out how font sizes actually work
-						real scale = ((real)font->GetFontSize()) / 12.0f;
-						glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), glm::vec3(
-							(1.0f / frameBufferSize.x) * scale,
-							-(1.0f / frameBufferSize.y) * scale,
-							1.0f));
-						glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
-						CheckGLErrorMessages();
-					}
+					real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+					real r = aspectRatio;
+					real t = 1.0f;
+					glm::mat4 ortho = glm::ortho(-r, r, -t, t);
 
-					if (fontShader.shader.dynamicBufferUniforms.HasUniform("texSize"))
-					{
-						glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
-						glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
-						CheckGLErrorMessages();
-					}
+					// TODO: Find out how font sizes actually work
+					//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
+					glm::vec3 scaleVec(1.0f);
+
+					glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), scaleVec) * ortho;
+					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
+
+					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
+					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-					CheckGLErrorMessages();
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-					CheckGLErrorMessages();
 
 					glDisable(GL_CULL_FACE);
-					CheckGLErrorMessages();
 
 					glDepthFunc(GL_ALWAYS);
-					CheckGLErrorMessages();
-
 					glDepthMask(GL_FALSE);
-					CheckGLErrorMessages();
 
 					glEnable(GL_BLEND);
-					CheckGLErrorMessages();
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					CheckGLErrorMessages();
 
 					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
-					CheckGLErrorMessages();
 				}
 			}
-
-			glBindVertexArray(0);
-			glUseProgram(0);
 		}
 
-		bool GLRenderer::LoadFont(const GameContext& gameContext, BitmapFont** font, const std::string& filePath, i16 size)
+		bool GLRenderer::LoadFont(BitmapFont** font, 
+								  i16 size,
+								  const std::string& fontFilePath,
+								  const std::string& renderedFontFilePath)
 		{
-			// TODO: Determine via monitor struct
-			glm::vec2i monitorDPI(300, 300);
-
 			FT_Error error;
 			error = FT_Init_FreeType(&ft);
 			if (error != FT_Err_Ok)
 			{
-				Logger::LogError("Could not init FreeType");
+				PrintError("Could not init FreeType\n");
 				return false;
 			}
 
 			std::vector<char> fileMemory;
-			ReadFile(filePath, fileMemory, true);
+			ReadFile(fontFilePath, fileMemory, true);
 
 			FT_Face face;
 			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
 			if (error == FT_Err_Unknown_File_Format)
 			{
-				Logger::LogError("Unhandled font file format: " + filePath);
+				PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
 				return false;
 			}
-			else if (error != FT_Err_Ok ||
-					 !face)
+			else if (error != FT_Err_Ok || !face)
 			{
-				Logger::LogError("Failed to create new font face: " + filePath);
+				PrintError("Failed to create new font face: %s\n", fontFilePath.c_str());
 				return false;
 			}
 
 			error = FT_Set_Char_Size(face,
 									 0, size * 64,
-									 monitorDPI.x, monitorDPI.y);
+									 (FT_UInt)g_Monitor->DPI.x, 
+									 (FT_UInt)g_Monitor->DPI.y);
 
 			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
-			std::string fileName = filePath;
+			std::string fileName = fontFilePath;
 			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Loaded font " + fileName);
+			Print("Loaded font file %s\n", fileName.c_str());
 
 			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
 			*font = new BitmapFont(size, fontName, face->num_glyphs);
@@ -2430,7 +2629,7 @@ namespace flex
 
 			m_Fonts.push_back(newFont);
 
-			// font->m_UseKerning = FT_HAS_KERNING(face) != 0;
+			newFont->m_bUseKerning = FT_HAS_KERNING(face) != 0;
 
 			// Atlas helper variables
 			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
@@ -2464,26 +2663,27 @@ namespace flex
 					continue;
 				}
 
-				if (newFont->GetUseKerning() && glyphIndex)
-				{
-					for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
-					{
-						FT_Vector delta;
-
-						u32 prevIdx = FT_Get_Char_Index(face, previous);
-						FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
-
-						if (delta.x || delta.y)
-						{
-							metric->kerning[static_cast<char>(previous)] =
-								glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
-						}
-					}
-				}
+				//if (newFont->UseKerning() && glyphIndex)
+				//{
+				//	for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
+				//	{
+				//		FT_Vector delta;
+				//
+				//		u32 prevIdx = FT_Get_Char_Index(face, previous);
+				//		FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
+				//
+				//		if (delta.x != 0 || delta.y != 0)
+				//		{
+				//			std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
+				//			metric->kerning[charKey] =
+				//				glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
+				//		}
+				//	}
+				//}
 
 				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 				{
-					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
+					PrintError("Failed to load glyph with index %i\n", glyphIndex);
 					continue;
 				}
 
@@ -2499,7 +2699,6 @@ namespace flex
 				metric->advanceX = (real)face->glyph->advance.x / 64.0f;
 
 				// Generate atlas coordinates
-				//metric->page = 0;
 				metric->channel = (u8)channel;
 				metric->texCoord = startPos[channel];
 				if (bHorizontal)
@@ -2546,192 +2745,191 @@ namespace flex
 				characters[c] = metric;
 			}
 
-			glm::vec2i textureSize(
-				std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
-				std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
-			newFont->SetTextureSize(textureSize);
-
-			//Setup rendering
-			TextureParameters params(false);
-			params.wrapS = GL_CLAMP_TO_EDGE;
-			params.wrapT = GL_CLAMP_TO_EDGE;
-
-			GLTexture* fontTex = newFont->SetTexture(new GLTexture(textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
-			fontTex->Build();
-			fontTex->SetParameters(params);
-
-			GLuint captureFBO;
-			GLuint captureRBO;
-
-			glGenFramebuffers(1, &captureFBO);
-			CheckGLErrorMessages();
-			glGenRenderbuffers(1, &captureRBO);
-			CheckGLErrorMessages();
-
-			glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-			CheckGLErrorMessages();
-			glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-			CheckGLErrorMessages();
-
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, textureSize.x, textureSize.y);
-			CheckGLErrorMessages();
-			// TODO: Don't use depth buffer
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->GetHandle(), 0);
-			CheckGLErrorMessages();
-
-			glViewport(0, 0, textureSize.x, textureSize.y);
-			CheckGLErrorMessages();
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			CheckGLErrorMessages();
-
-			ShaderID computeSDFShaderID;
-			GetShaderID("compute_sdf", computeSDFShaderID);
-			GLShader& computeSDFShader = m_Shaders[computeSDFShaderID];
-
-			glUseProgram(computeSDFShader.program);
-
-			glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
-			auto texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
-			auto charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
-			glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
-			glUniform1f(glGetUniformLocation(computeSDFShader.program, "sampleDensity"), (real)sampleDensity);
-
-			glEnable(GL_BLEND);
-			glBlendEquation(GL_FUNC_ADD);
-			glBlendFunc(GL_ONE, GL_ONE);
-			CheckGLErrorMessages();
-
-			GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-
-			//Render to Glyphs atlas
-			FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
-
-			for (auto& character : characters)
+			bool bUsingPreRenderedTexture = false;
+			if (FileExists(renderedFontFilePath))
 			{
-				auto metric = character.second;
+				TextureParameters params(false);
+				params.wrapS = GL_CLAMP_TO_EDGE;
+				params.wrapT = GL_CLAMP_TO_EDGE;
 
-				u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
-				if (glyphIndex == 0)
-				{
-					continue;
-				}
+				GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, true, false, false));
 
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+				if (fontTex->LoadFromFile())
 				{
-					Logger::LogError("Failed to load glyph with index " + std::to_string(glyphIndex));
-					continue;
-				}
+					bUsingPreRenderedTexture = true;
 
-				if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
-				{
-					if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+					for (auto& charPair : characters)
 					{
-						Logger::LogError("Failed to render glyph with index " + std::to_string(glyphIndex));
-						continue;
+						FontMetric* metric = charPair.second;
+
+						u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+						if (glyphIndex == 0)
+						{
+							continue;
+						}
+
+						metric->texCoord = metric->texCoord / glm::vec2((real)fontTex->width, (real)fontTex->height);
 					}
 				}
-
-				if (face->glyph->bitmap.width == 0 ||
-					face->glyph->bitmap.rows == 0)
+				else
 				{
-					continue;
+					newFont->m_Texture = nullptr;
+					SafeDelete(fontTex);
 				}
-
-				FT_Bitmap alignedBitmap{};
-				if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
-				{
-					Logger::LogError("Couldn't align free type bitmap size");
-					continue;
-				}
-
-				u32 width = alignedBitmap.width;
-				u32 height = alignedBitmap.rows;
-
-				if (width == 0 ||
-					height == 0)
-				{
-					continue;
-				}
-
-				GLuint texHandle;
-				glGenTextures(1, &texHandle);
-				CheckGLErrorMessages();
-
-				glActiveTexture(GL_TEXTURE0);
-				CheckGLErrorMessages();
-
-				glBindTexture(GL_TEXTURE_2D, texHandle);
-				CheckGLErrorMessages();
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
-				CheckGLErrorMessages();
-
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				CheckGLErrorMessages();
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				CheckGLErrorMessages();
-				glm::vec4 borderColor(0.0f);
-				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
-				CheckGLErrorMessages();
-
-				if (metric->width > 0 && metric->height > 0)
-				{
-					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
-					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
-
-					glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
-					CheckGLErrorMessages();
-					glActiveTexture(GL_TEXTURE0);
-					CheckGLErrorMessages();
-					glBindTexture(GL_TEXTURE_2D, texHandle);
-					CheckGLErrorMessages();
-
-					glUniform1i(texChannel, metric->channel);
-					glUniform2f(charResolution, (real)res.x, (real)res.y);
-					CheckGLErrorMessages();
-					glActiveTexture(GL_TEXTURE0);
-					glBindVertexArray(gBufferRenderObject->VAO);
-					CheckGLErrorMessages();
-					glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
-					CheckGLErrorMessages();
-					glDrawArrays(gBufferRenderObject->topology, 0,
-						(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
-					CheckGLErrorMessages();
-					glBindVertexArray(0);
-					CheckGLErrorMessages();
-				}
-
-				glDeleteTextures(1, &texHandle);
-
-				metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
-
-				FT_Bitmap_Done(ft, &alignedBitmap);
 			}
 
+			if (!bUsingPreRenderedTexture)
+			{
+				glm::vec2i textureSize(
+					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
+					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
+				newFont->SetTextureSize(textureSize);
 
-			// Cleanup
-			glDisable(GL_BLEND);
+				//Setup rendering
+				TextureParameters params(false);
+				params.wrapS = GL_CLAMP_TO_EDGE;
+				params.wrapT = GL_CLAMP_TO_EDGE;
+
+				GLTexture* fontTex = newFont->SetTexture(new GLTexture(fileName, textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
+				//fontTex->GenerateEmpty();
+				fontTex->Build();
+				fontTex->SetParameters(params);
+
+				GLuint captureFBO;
+				GLuint captureRBO;
+
+				glGenFramebuffers(1, &captureFBO);
+				glGenRenderbuffers(1, &captureRBO);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
+				// TODO: Don't use depth buffer
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->handle, 0);
+
+				glViewport(0, 0, textureSize.x, textureSize.y);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				ShaderID computeSDFShaderID;
+				GetShaderID("compute_sdf", computeSDFShaderID);
+				GLShader& computeSDFShader = m_Shaders[computeSDFShaderID];
+
+				glUseProgram(computeSDFShader.program);
+
+				glUniform1i(glGetUniformLocation(computeSDFShader.program, "highResTex"), 0);
+				GLint texChannel = glGetUniformLocation(computeSDFShader.program, "texChannel");
+				GLint charResolution = glGetUniformLocation(computeSDFShader.program, "charResolution");
+				glUniform1f(glGetUniformLocation(computeSDFShader.program, "spread"), (real)spread);
+				glUniform1f(glGetUniformLocation(computeSDFShader.program, "sampleDensity"), (real)sampleDensity);
+
+				glEnable(GL_BLEND);
+				glBlendEquation(GL_FUNC_ADD);
+				glBlendFunc(GL_ONE, GL_ONE);
+
+				GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+
+				//Render to Glyphs atlas
+				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
+
+				for (auto& charPair : characters)
+				{
+					FontMetric* metric = charPair.second;
+
+					u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+					if (glyphIndex == 0)
+					{
+						continue;
+					}
+
+					if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+					{
+						PrintError("Failed to load glyph with index %i\n", glyphIndex);
+						continue;
+					}
+
+					if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
+					{
+						if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+						{
+							PrintError("Failed to render glyph with index %i\n", glyphIndex);
+							continue;
+						}
+					}
+
+					if (face->glyph->bitmap.width == 0 ||
+						face->glyph->bitmap.rows == 0)
+					{
+						continue;
+					}
+
+					FT_Bitmap alignedBitmap{};
+					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
+					{
+						PrintError("Couldn't align free type bitmap size\n");
+						continue;
+					}
+
+					u32 width = alignedBitmap.width;
+					u32 height = alignedBitmap.rows;
+
+					if (width == 0 || height == 0)
+					{
+						continue;
+					}
+
+					GLuint texHandle;
+					glGenTextures(1, &texHandle);
+
+					glActiveTexture(GL_TEXTURE0);
+
+					glBindTexture(GL_TEXTURE_2D, texHandle);
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
+
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glm::vec4 borderColor(0.0f);
+					glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.r);
+
+					if (metric->width > 0 && metric->height > 0)
+					{
+						glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
+						glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
+
+						glViewport(viewportTL.x, viewportTL.y, res.x, res.y);
+						glActiveTexture(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, texHandle);
+
+						glUniform1i(texChannel, metric->channel);
+						glUniform2f(charResolution, (real)res.x, (real)res.y);
+						glActiveTexture(GL_TEXTURE0);
+						glBindVertexArray(gBufferRenderObject->VAO);
+						glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
+						glDrawArrays(gBufferRenderObject->topology, 0,
+							(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
+						glBindVertexArray(0);
+					}
+
+					glDeleteTextures(1, &texHandle);
+
+					metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
+
+					FT_Bitmap_Done(ft, &alignedBitmap);
+				}
+
+
+				// Cleanup
+				glDisable(GL_BLEND);
+				glDeleteRenderbuffers(1, &captureRBO);
+				glDeleteFramebuffers(1, &captureFBO);
+			}
 
 			FT_Done_Face(face);
 			FT_Done_FreeType(ft);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			glViewport(0, 0,
-					   gameContext.window->GetFrameBufferSize().x,
-					   gameContext.window->GetFrameBufferSize().y);
-
-			glDeleteRenderbuffers(1, &captureRBO);
-			glDeleteFramebuffers(1, &captureFBO);
-
-			CheckGLErrorMessages();
-
 
 
 			// Initialize font shader things
@@ -2739,46 +2937,42 @@ namespace flex
 				GLMaterial& mat = m_Materials[m_FontMatID];
 				GLShader& shader = m_Shaders[mat.material.shaderID];
 				glUseProgram(shader.program);
-				//m_uTransform = glGetUniformLocation(m_pTextShader->GetProgram(), "transform");
-				//m_uTexSize = glGetUniformLocation(m_pTextShader->GetProgram(), "texSize");
-
-				//u32 texLoc = glGetUniformLocation(shader.program, "in_Texture");
-				//glUniform1i(texLoc, 0);
 
 				glGenVertexArrays(1, &m_TextQuadVAO);
 				glGenBuffers(1, &m_TextQuadVBO);
-				CheckGLErrorMessages();
 
 
 				glBindVertexArray(m_TextQuadVAO);
 				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-				CheckGLErrorMessages();
 
 				//set data and attributes
 				// TODO: ?
 				i32 bufferSize = 50;
 				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
-				CheckGLErrorMessages();
 
 				glEnableVertexAttribArray(0);
 				glEnableVertexAttribArray(1);
 				glEnableVertexAttribArray(2);
 				glEnableVertexAttribArray(3);
 				glEnableVertexAttribArray(4);
-				CheckGLErrorMessages();
 
 				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
 				glVertexAttribPointer(1, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
 				glVertexAttribPointer(2, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
-				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, RGCharSize));
+				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSizePixelsCharSizeNorm));
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
-				CheckGLErrorMessages();
-
-				glBindBuffer(GL_ARRAY_BUFFER, 0);
-				glBindVertexArray(0);
 			}
 
-			Logger::LogInfo("Rendered font atlas for " + fileName);
+			if (bUsingPreRenderedTexture)
+			{
+				std::string textureFilePath = renderedFontFilePath;
+				StripLeadingDirectories(textureFilePath);
+				Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
+			}
+			else
+			{
+				Print("Rendered font atlas for %s\n", fileName.c_str());
+			}
 
 			return true;
 		}
@@ -2788,31 +2982,145 @@ namespace flex
 			m_CurrentFont = font;
 		}
 
-		void GLRenderer::DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos)
+		void GLRenderer::AddEditorString(const std::string& str)
+		{
+			m_EditorMessage = str;
+			if (str.empty())
+			{
+				m_EditorStrSecRemaining = 0.0f;
+			}
+			else
+			{
+				m_EditorStrSecRemaining = m_EditorStrSecDuration;
+			}
+		}
+
+		void GLRenderer::DrawString(const std::string& str,
+									const glm::vec4& color,
+									AnchorPoint anchor,
+									const glm::vec2& pos,
+									real spacing,
+									bool bRaw)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			//real scale = ((real)size) / m_CurrentFont->GetFontSize();
-			m_CurrentFont->m_TextCache.push_back(TextCache(str, pos, color, 1.0f));
+			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw);
+		}
+
+		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
+		{
+			real strWidth = 0;
+
+			char prevChar = ' ';
+			for (char c : textCache.str)
+			{
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+
+					if (font->UseKerning())
+					{
+						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
+
+						auto iter = metric->kerning.find(charKey);
+						if (iter != metric->kerning.end())
+						{
+							strWidth += iter->second.x;
+						}
+					}
+
+					strWidth += metric->advanceX + textCache.xSpacing;
+				}
+			}
+
+			return strWidth;
+		}
+
+		real GLRenderer::GetStringHeight(const TextCache& textCache, BitmapFont* font) const
+		{
+			real strHeight = 0;
+
+			for (char c : textCache.str)
+			{
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+					strHeight = glm::max(strHeight, (real)(metric->height));
+				}
+			}
+
+			return strHeight;
 		}
 
 		void GLRenderer::UpdateTextBuffer()
 		{
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
 			std::vector<TextVertex> textVertices;
-			for (auto font : m_Fonts)
+			for (BitmapFont* font : m_Fonts)
 			{
+				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) * 
+					(font->GetFontSize() / 12.0f);
+
 				font->m_BufferStart = (i32)(textVertices.size());
 				font->m_BufferSize = 0;
 
-				for (u32 i = 0; i < font->m_TextCache.size(); ++i)
+				for (TextCache& textCache : font->m_TextCaches)
 				{
-					TextCache& currentCache = font->m_TextCache[i];
-					std::string currentStr = currentCache.str;
+					std::string currentStr = textCache.str;
 
-					// TODO: Use kerning values
-					//i32 fontSize = font->GetFontSize();
+					bool bUseLetterYOffsets = !textCache.letterYOffsets.empty();
+					if (bUseLetterYOffsets)
+					{
+						assert(textCache.letterYOffsets.size() == currentStr.size());
+					}
+
 					real totalAdvanceX = 0;
 
+					glm::vec2 basePos(0.0f);
+
+					if (!textCache.bRaw)
+					{
+						real strWidth = GetStringWidth(textCache, font) * textScale;
+						real strHeight = GetStringHeight(textCache, font) * textScale;
+
+						switch (textCache.anchor)
+						{
+						case AnchorPoint::TOP_LEFT:
+							basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::TOP:
+							basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::TOP_RIGHT:
+							basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::RIGHT:
+							basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
+							break;
+						case AnchorPoint::BOTTOM_RIGHT:
+							basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::BOTTOM:
+							basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::BOTTOM_LEFT:
+							basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
+							break;
+						case AnchorPoint::LEFT:
+							basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
+							break;
+						case AnchorPoint::CENTER: // Fall through
+						case AnchorPoint::WHOLE:
+							basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
+							break;
+						default:
+							break;
+						}
+					}
+
+					char prevChar = ' ';
 					for (u32 j = 0; j < currentStr.length(); ++j)
 					{
 						char c = currentStr[j];
@@ -2824,57 +3132,73 @@ namespace flex
 							{
 								if (c == ' ')
 								{
-									totalAdvanceX += metric->advanceX;
+									totalAdvanceX += metric->advanceX + textCache.xSpacing;
+									prevChar = c;
 									continue;
 								}
+								
+								real yOff = (bUseLetterYOffsets ? textCache.letterYOffsets[j] : 0.0f);
 
-								glm::vec2 pos(currentCache.pos.x + (totalAdvanceX + metric->offsetX),
-											  currentCache.pos.y + (metric->offsetY));
+								glm::vec2 pos = 
+									glm::vec2(textCache.pos.x * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
+									glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY + yOff) * textScale;
 
-								glm::vec4 extraVec4(metric->width, metric->height, 0, 0);
+								if (font->UseKerning())
+								{
+									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
+								
+									auto iter = metric->kerning.find(charKey);
+									if (iter != metric->kerning.end())
+									{
+										pos += iter->second * textScale;
+									}
+								}
+
+								glm::vec4 charSizePixelsCharSizeNorm(
+									metric->width, metric->height,
+									metric->width * textScale, metric->height * textScale);
 
 								i32 texChannel = (i32)metric->channel;
 
 								TextVertex vert{};
-								vert.pos = pos;
+								vert.pos = basePos + pos;
 								vert.uv = metric->texCoord;
-								vert.color = currentCache.color;
-								vert.RGCharSize = extraVec4;
+								vert.color = textCache.color;
+								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 								vert.channel = texChannel;
 
 								textVertices.push_back(vert);
 
-								totalAdvanceX += metric->advanceX;
+								totalAdvanceX += metric->advanceX + textCache.xSpacing;
 							}
 							else
 							{
-								Logger::LogWarning("Attempted to draw char with invalid metric: " + std::to_string(c) + " in font " + font->m_Name);
+								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->m_Name.c_str());
 							}
 						}
 						else
 						{
-							Logger::LogWarning("Attempted to draw invalid char: " + std::to_string(c) + " in font " + font->m_Name);
+							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->m_Name.c_str());
 						}
+
+						prevChar = c;
 					}
 				}
 
 				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
-				font->m_TextCache.clear();
+				font->m_TextCaches.clear();
 			}
-
 
 			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex));
 
 			glBindVertexArray(m_TextQuadVAO);
 			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-			CheckGLErrorMessages();
 			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::DrawRenderObjectBatch(const GameContext& gameContext, const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
 			if (batchedRenderObjects.empty())
 			{
@@ -2885,11 +3209,9 @@ namespace flex
 			GLShader* glShader = &m_Shaders[material->material.shaderID];
 			Shader* shader = &glShader->shader;
 			glUseProgram(glShader->program);
-			CheckGLErrorMessages();
 
-			for (size_t i = 0; i < batchedRenderObjects.size(); ++i)
+			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
-				GLRenderObject* renderObject = batchedRenderObjects[i];
 				if (!renderObject->gameObject->IsVisible())
 				{
 					continue;
@@ -2897,21 +3219,18 @@ namespace flex
 
 				if (!renderObject->vertexBufferData)
 				{
-					Logger::LogError("Attempted to draw object which contains no vertex buffer data: " + renderObject->gameObject->GetName());
+					PrintError("Attempted to draw object which contains no vertex buffer data: %s\n", renderObject->gameObject->GetName().c_str());
 					return;
 				}
 
 				glBindVertexArray(renderObject->VAO);
-				CheckGLErrorMessages();
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-				CheckGLErrorMessages();
 
 				if (renderObject->enableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 
 					glCullFace(renderObject->cullFace);
-					CheckGLErrorMessages();
 				}
 				else
 				{
@@ -2930,17 +3249,13 @@ namespace flex
 				}
 
 				glDepthFunc(renderObject->depthTestReadFunc);
-				CheckGLErrorMessages();
-
 				glDepthMask(renderObject->depthWriteEnable);
-				CheckGLErrorMessages();
 
-				UpdatePerObjectUniforms(renderObject->renderID, gameContext);
+				UpdatePerObjectUniforms(renderObject->renderID);
 
 				BindTextures(shader, material);
 
-				// TODO: OPTIMIZATION: Create DrawRenderObjectBatchToCubemap rather than check bool
-				if (drawCallInfo.renderToCubemap)
+				if (drawCallInfo.bRenderToCubemap)
 				{
 					// renderObject->gameObject->IsStatic()
 
@@ -2950,28 +3265,22 @@ namespace flex
 					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
 					
 					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-					CheckGLErrorMessages();
 					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-					CheckGLErrorMessages();
-					glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-					CheckGLErrorMessages();
-					
+					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-					CheckGLErrorMessages();
 
 					if (material->uniformIDs.projection == 0)
 					{
-						Logger::LogWarning("Attempted to draw object to cubemap but "
-										   "uniformIDs.projection is not set! " + renderObject->gameObject->GetName());
+						PrintWarn("Attempted to draw object to cubemap but uniformIDs.projection is not set on object: %s\n",
+								  renderObject->gameObject->GetName().c_str());
 						continue;
 					}
 
 					// Use capture projection matrix
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
-					CheckGLErrorMessages();
 					
 					// TODO: Test if this is actually correct
-					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldlPosition();
+					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
 					for (size_t face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
@@ -2981,9 +3290,8 @@ namespace flex
 						//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
 						
 						glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
-						CheckGLErrorMessages();
 
-						if (drawCallInfo.deferred)
+						if (drawCallInfo.bDeferred)
 						{
 							//constexpr i32 numBuffers = 3;
 							//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
@@ -2993,36 +3301,32 @@ namespace flex
 							{
 								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
 									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
-								CheckGLErrorMessages();
 							}
 						}
 						else
 						{
 							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
 								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-							CheckGLErrorMessages();
 						}
 
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
-						CheckGLErrorMessages();
 
 						if (renderObject->indexed)
 						{
 							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), 
 								GL_UNSIGNED_INT, (void*)renderObject->indices->data());
-							CheckGLErrorMessages();
 						}
 						else
 						{
 							glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
-							CheckGLErrorMessages();
 						}
 					}
 				}
 				else
 				{
-					// renderToCubemap is false, just render normally
+					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+					glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 					// TODO: Move to translucent pass?
 					if (shader->translucent)
@@ -3039,15 +3343,12 @@ namespace flex
 					{
 						glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(),
 							GL_UNSIGNED_INT, (void*)renderObject->indices->data());
-						CheckGLErrorMessages();
 					}
 					else
 					{
 						glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
-						CheckGLErrorMessages();
 					}
 				}
-
 			}
 		}
 
@@ -3082,11 +3383,17 @@ namespace flex
 				{
 					if (tex.enabled)
 					{
-
-						GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
-						glActiveTexture(activeTexture);
-						glBindTexture(tex.target, (GLuint)tex.textureID);
-						CheckGLErrorMessages();
+						if (tex.textureID == InvalidID)
+						{
+							PrintError("TextureID is invalid! material: %s, binding: %i\n", 
+									   glMaterial->material.name.c_str(), binding);
+						}
+						else
+						{
+							GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
+							glActiveTexture(activeTexture);
+							glBindTexture(tex.target, (GLuint)tex.textureID);
+						}
 					}
 					++binding;
 				}
@@ -3108,17 +3415,16 @@ namespace flex
 
 			if (material->frameBuffers.empty())
 			{
-				Logger::LogWarning("Attempted to bind frame buffers on material that doesn't contain any framebuffers!");
+				PrintWarn("Attempted to bind frame buffers on material that doesn't contain any framebuffers!\n");
 				return startingBinding;
 			}
 
 			u32 binding = startingBinding;
-			for (auto& frameBuffer : material->frameBuffers)
+			for (auto& frameBufferPair : material->frameBuffers)
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
-				glBindTexture(GL_TEXTURE_2D, *((GLuint*)frameBuffer.second));
-				CheckGLErrorMessages();
+				glBindTexture(GL_TEXTURE_2D, *((GLuint*)frameBufferPair.second));
 				++binding;
 			}
 
@@ -3136,35 +3442,31 @@ namespace flex
 
 			if (glMaterial->cubemapSamplerGBuffersIDs.empty())
 			{
-				Logger::LogWarning("Attempted to bind gbuffer samplers on material doesn't contain any gbuffer samplers!");
+				PrintWarn("Attempted to bind GBuffer samplers on material doesn't contain any GBuffer samplers!\n");
 				return startingBinding;
 			}
 
 			u32 binding = startingBinding;
-			for (auto& cubemapGBuffer : glMaterial->cubemapSamplerGBuffersIDs)
+			for (gl::GLCubemapGBuffer& cubemapGBuffer : glMaterial->cubemapSamplerGBuffersIDs)
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapGBuffer.id);
-				CheckGLErrorMessages();
 				++binding;
 			}
 
 			return binding;
 		}
 
-		void GLRenderer::CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, FrameBufferHandle& handle)
+		void GLRenderer::CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, TextureHandle& handle)
 		{
 			glGenFramebuffers(1, FBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, *FBO);
-			CheckGLErrorMessages();
 
 			glGenRenderbuffers(1, RBO);
 			glBindRenderbuffer(GL_RENDERBUFFER, *RBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size.x, size.y);
-			CheckGLErrorMessages();
+			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, size.x, size.y);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *RBO);
-			CheckGLErrorMessages();
 
 			GenerateFrameBufferTexture(&handle.id,
 									   0,
@@ -3175,32 +3477,720 @@ namespace flex
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
-				Logger::LogError("Offscreen frame buffer is incomplete!");
+				PrintError("Offscreen frame buffer is incomplete!\n");
 			}
-
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			CheckGLErrorMessages();
 		}
 
 		void GLRenderer::RemoveMaterial(MaterialID materialID)
 		{
 			assert(materialID != InvalidMaterialID);
-			assert(materialID < m_Materials.size());
 
 			m_Materials.erase(materialID);
 		}
 
-		bool GLRenderer::GetLoadedTexture(const std::string& filePath, u32& handle)
+		void GLRenderer::DoGameObjectContextMenu(GameObject** gameObjectRef)
 		{
-			auto location = m_LoadedTextures.find(filePath);
-			if (location == m_LoadedTextures.end())
+			static const char* renameObjectPopupLabel = "##rename-game-object";
+			static const char* renameObjectButtonStr = "Rename";
+			static const char* duplicateObjectButtonStr = "Duplicate...";
+			static const char* duplicateObjectPopupLabel = "Duplicate object";
+			static const char* deletePopupStr = "Delete object";
+			static const char* deleteButtonStr = "Delete";
+			static const char* deleteCancelButtonStr = "Cancel";
+
+			GameObject* gameObject = *gameObjectRef;
+
+			std::string contextMenuIDStr = "context window game object " + gameObject->GetName() + std::to_string(gameObject->GetRenderID());
+			static std::string newObjectName = gameObject->GetName();
+			const size_t maxStrLen = 256;
+
+			bool bItemClicked = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && 
+								ImGui::IsMouseClicked(1);
+			if (bItemClicked)
+			{
+				newObjectName = gameObject->GetName();
+				newObjectName.resize(maxStrLen);
+			}
+
+			if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
+			{
+				bool bRename = ImGui::InputText(renameObjectPopupLabel,
+												(char*)newObjectName.data(), 
+												maxStrLen, 
+												ImGuiInputTextFlags_EnterReturnsTrue);
+
+				ImGui::SameLine();
+
+				bRename |= ImGui::Button(renameObjectButtonStr);
+
+				bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+				if (bRename && !bInvalidName)
+				{
+					// Remove excess trailing \0 chars
+					newObjectName = std::string(newObjectName.c_str());
+
+					gameObject->SetName(newObjectName);
+
+					ImGui::CloseCurrentPopup();
+				}
+
+				if (DoDuplicateGameObjectButton(gameObject, duplicateObjectButtonStr, duplicateObjectPopupLabel))
+				{
+					*gameObjectRef = nullptr;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(deleteButtonStr))
+				{
+					ImGui::OpenPopup(deletePopupStr);
+				}
+
+				if (ImGui::BeginPopupModal(deletePopupStr, NULL,
+					ImGuiWindowFlags_AlwaysAutoResize |
+					ImGuiWindowFlags_NoSavedSettings |
+					ImGuiWindowFlags_NoNavInputs))
+				{
+					static std::string objectName = gameObject->GetName();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+					std::string textStr = "Are you sure you want to permanently delete " + objectName + "?";
+					ImGui::Text(textStr.c_str());
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+					if (ImGui::Button(deleteButtonStr))
+					{
+						if (g_SceneManager->CurrentScene()->DestroyGameObject(gameObject, true))
+						{
+							*gameObjectRef = nullptr;
+							ImGui::CloseCurrentPopup();
+						}
+						else
+						{
+							PrintWarn("Failed to delete game object: %s\n", gameObject->GetName().c_str());
+						}
+					}
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+
+					ImGui::SameLine();
+
+					if (ImGui::Button(deleteCancelButtonStr))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+		}
+
+		void GLRenderer::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
+		{
+			static const char* defaultNewName = "New_Object_01";
+			static const char* newObjectNameInputLabel = "##new-object-name";
+			static const char* createButtonStr = "Create";
+			static const char* cancelStr = "Cancel";
+
+			static std::string newObjectName = defaultNewName;
+
+			if (ImGui::Button(buttonName))
+			{
+				ImGui::OpenPopup(popupName);
+				newObjectName = defaultNewName;
+			}
+
+			if (ImGui::BeginPopupModal(popupName, NULL,
+				ImGuiWindowFlags_AlwaysAutoResize |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoNavInputs))
+			{
+				const size_t maxStrLen = 256;
+				newObjectName.resize(maxStrLen);
+
+
+				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
+												(char*)newObjectName.data(),
+												maxStrLen,
+												ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bCreate |= ImGui::Button(createButtonStr);
+
+				bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+				if (bCreate && !bInvalidName)
+				{
+					// Remove excess trailing \0 chars
+					newObjectName = std::string(newObjectName.c_str());
+
+					if (!newObjectName.empty())
+					{
+						MaterialID matID = g_SceneManager->CurrentScene()->GetMaterialIDs()[0];
+
+						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
+						MeshComponent* meshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+						meshComponent->LoadPrefabShape(MeshComponent::PrefabShape::CUBE);
+
+						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(cancelStr))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+		}
+
+		bool GLRenderer::DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName)
+		{
+			static const char* newObjectNameInputLabel = "##new-object-name";
+			static const char* duplicateObjectButtonStr = "Duplicate";
+			static const char* cancelButtonStr = "Cancel";
+
+			bool bDuplicated = false;
+
+			static std::string newObjectName = "";
+
+			const size_t maxStrLen = 256;
+
+			if (ImGui::Button(buttonName))
+			{
+				ImGui::OpenPopup(popupName);
+				newObjectName = objectToCopy->GetName();
+				i16 numNumericalChars;
+				int numEndingWith = GetNumberEndingWith(newObjectName, numNumericalChars);
+				if (numEndingWith == -1)
+				{
+					newObjectName += "_01";
+				}
+				else
+				{
+					newObjectName = newObjectName.substr(0, newObjectName.length() - numNumericalChars) +
+						IntToString(numEndingWith + 1, (u16)numNumericalChars);
+				}
+				newObjectName.resize(maxStrLen);
+			}
+
+			if (ImGui::BeginPopupModal(popupName, NULL,
+				ImGuiWindowFlags_AlwaysAutoResize |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoNavInputs))
+			{
+
+				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
+												(char*)newObjectName.data(),
+												maxStrLen,
+												ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bCreate |= ImGui::Button(duplicateObjectButtonStr);
+
+				bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+				if (bCreate && !bInvalidName)
+				{
+					// Remove excess trailing \0 chars
+					newObjectName = std::string(newObjectName.c_str());
+
+					if (!newObjectName.empty())
+					{
+						GameObject* newGameObject = objectToCopy->CopySelf(nullptr, newObjectName, true);
+
+						bDuplicated = true;
+
+						g_EngineInstance->SetSelectedObject(newGameObject);
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(cancelButtonStr))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			return bDuplicated;
+		}
+
+		void GLRenderer::DoMaterialEditor(bool* bShowMaterialEditor)
+		{
+			if (ImGui::Begin("Material Editor##popup", bShowMaterialEditor))
+			{
+				static bool bUpdateFields = true;
+				const i32 MAX_NAME_LEN = 128;
+				static i32 selectedMaterialIndexShort = 0; // Index into shortened array
+				static MaterialID selectedMaterialID = 0;
+				while (m_Materials[selectedMaterialID].material.engineMaterial && 
+					   selectedMaterialID < m_Materials.size() - 1)
+				{
+					++selectedMaterialID;
+				}
+				static std::string matName = "";
+				static i32 selectedShaderIndex = 0;
+				// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
+				static i32 albedoTextureIndex = 0;
+				static bool bUpdateAlbedoTextureMaterial = false;
+				static i32 metallicTextureIndex = 0;
+				static bool bUpdateMetallicTextureMaterial = false;
+				static i32 roughnessTextureIndex = 0;
+				static bool bUpdateRoughessTextureMaterial = false;
+				static i32 normalTextureIndex = 0;
+				static bool bUpdateNormalTextureMaterial = false;
+				static i32 aoTextureIndex = 0;
+				static bool bUpdateAOTextureMaterial = false;
+				GLMaterial& mat = m_Materials[selectedMaterialID];
+
+				if (bUpdateFields)
+				{
+					bUpdateFields = false;
+
+					matName = mat.material.name;
+					matName.resize(MAX_NAME_LEN);
+
+					i32 i = 0;
+					for (const auto& texturePair : m_LoadedTextures)
+					{
+						std::string texturePath = texturePair.second->GetFilePath();
+						GLTexture* texture = nullptr;
+						GetLoadedTexture(texturePath, &texture);
+
+						UpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
+													 texturePath,
+													 mat.material.albedoTexturePath,
+													 texture,
+													 i,
+													 &albedoTextureIndex,
+													 &mat.albedoSamplerID);
+
+						UpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
+													 texturePath,
+													 mat.material.metallicTexturePath,
+													 texture,
+													 i,
+													 &metallicTextureIndex,
+													 &mat.metallicSamplerID);
+
+						UpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
+													 texturePath,
+													 mat.material.roughnessTexturePath,
+													 texture,
+													 i,
+													 &roughnessTextureIndex,
+													 &mat.roughnessSamplerID);
+
+						UpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
+													 texturePath,
+													 mat.material.normalTexturePath,
+													 texture,
+													 i,
+													 &normalTextureIndex,
+													 &mat.normalSamplerID);
+
+						UpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
+													 texturePath,
+													 mat.material.aoTexturePath,
+													 texture,
+													 i,
+													 &aoTextureIndex,
+													 &mat.aoSamplerID);
+
+						++i;
+					}
+
+					mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
+					mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
+					mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
+					mat.material.enableNormalSampler = (normalTextureIndex > 0);
+					mat.material.enableAOSampler = (aoTextureIndex > 0);
+
+					selectedShaderIndex = mat.material.shaderID;
+				}
+
+				ImGui::PushItemWidth(180.0f);
+				if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					// Remove trailing \0 characters
+					matName = std::string(matName.c_str());
+					mat.material.name = matName;
+				}
+				ImGui::PopItemWidth();
+
+				ImGui::SameLine();
+
+				struct ShaderFunctor
+				{
+					static bool GetShaderName(void* data, int idx, const char** out_str)
+					{
+						*out_str = ((GLShader*)data)[idx].shader.name.c_str();
+						return true;
+					}
+				};
+				ImGui::PushItemWidth(240.0f);
+				if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
+					(void*)m_Shaders.data(), m_Shaders.size()))
+				{
+					mat = m_Materials[selectedMaterialID];
+					mat.material.shaderID = selectedShaderIndex;
+
+					bUpdateFields = true;
+				}
+				ImGui::PopItemWidth();
+
+				ImGui::NewLine();
+
+				ImGui::Columns(2);
+				ImGui::SetColumnWidth(0, 220.0f);
+
+				if (mat.material.enableAlbedoSampler)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+				ImGui::SliderFloat3("Albedo", &mat.material.constAlbedo.x, 0.0f, 1.0f, "%.2f");
+				if (mat.material.enableAlbedoSampler)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				if (mat.material.enableMetallicSampler)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+				ImGui::SliderFloat("Metallic", &mat.material.constMetallic, 0.0f, 1.0f, "%.2f");
+				if (mat.material.enableMetallicSampler)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				if (mat.material.enableRoughnessSampler)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+				ImGui::SliderFloat("Roughness", &mat.material.constRoughness, 0.0f, 1.0f, "%.2f");
+				if (mat.material.enableRoughnessSampler)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				if (mat.material.enableAOSampler)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+				ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
+				if (mat.material.enableAOSampler)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				ImGui::NextColumn();
+
+				struct TextureFunctor
+				{
+					static bool GetTextureFileName(void* data, i32 idx, const char** out_str)
+					{
+						if (idx == 0)
+						{
+							*out_str = "NONE";
+						}
+						else
+						{
+							*out_str = ((GLTexture**)data)[idx - 1]->GetName().c_str();
+						}
+						return true;
+					}
+				};
+
+				std::vector<GLTexture*> textures;
+				textures.reserve(m_LoadedTextures.size());
+				for (const auto& texturePair : m_LoadedTextures)
+				{
+					textures.push_back(texturePair.second);
+				}
+
+				bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures, &albedoTextureIndex);
+				bUpdateFields |= bUpdateAlbedoTextureMaterial;
+				bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures, &metallicTextureIndex);
+				bUpdateFields |= bUpdateMetallicTextureMaterial;
+				bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures, &roughnessTextureIndex);
+				bUpdateFields |= bUpdateRoughessTextureMaterial;
+				bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures, &normalTextureIndex);
+				bUpdateFields |= bUpdateNormalTextureMaterial;
+				bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex);
+				bUpdateFields |= bUpdateAOTextureMaterial;
+
+				ImGui::NewLine();
+
+				ImGui::Text("Materials");
+
+				if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
+				{
+					i32 matShortIndex = 0;
+					for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+					{
+						if (m_Materials[i].material.engineMaterial)
+						{
+							continue;
+						}
+
+						bool bSelected = (matShortIndex == selectedMaterialIndexShort);
+						if (ImGui::Selectable(m_Materials[i].material.name.c_str(), &bSelected))
+						{
+							if (selectedMaterialIndexShort != matShortIndex)
+							{
+								selectedMaterialIndexShort = matShortIndex;
+								selectedMaterialID = i;
+								bUpdateFields = true;
+							}
+						}
+
+						if (ImGui::IsItemActive())
+						{
+							if (ImGui::BeginDragDropSource())
+							{
+								MaterialID draggedMaterialID = i;
+								const void* data = (void*)(&draggedMaterialID);
+								size_t size = sizeof(MaterialID);
+
+								ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
+
+								ImGui::Text(m_Materials[i].material.name.c_str());
+
+								ImGui::EndDragDropSource();
+							}
+						}
+
+						++matShortIndex;
+					}
+				}
+				ImGui::EndChild(); // Material list
+
+				const i32 MAX_MAT_NAME_LEN = 128;
+				static std::string newMaterialName = "";
+
+				const char* createMaterialPopupStr = "Create material##popup";
+				if (ImGui::Button("Create material"))
+				{
+					ImGui::OpenPopup(createMaterialPopupStr);
+					newMaterialName = "New Material 01";
+					newMaterialName.resize(MAX_MAT_NAME_LEN);
+				}
+
+				if (ImGui::BeginPopupModal(createMaterialPopupStr, NULL, ImGuiWindowFlags_NoResize))
+				{
+					ImGui::Text("Name:");
+					ImGui::InputText("##NameText", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
+
+					ImGui::Text("Shader:");
+					static i32 newMatShaderIndex = 0;
+					if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
+					{
+						i32 i = 0;
+						for (GLShader& shader : m_Shaders)
+						{
+							bool bSelectedShader = (i == newMatShaderIndex);
+							if (ImGui::Selectable(shader.shader.name.c_str(), &bSelectedShader))
+							{
+								newMatShaderIndex = i;
+							}
+
+							++i;
+						}
+					}
+					ImGui::EndChild(); // Shader list
+
+					if (ImGui::Button("Create new material"))
+					{
+						// Remove trailing /0 characters
+						newMaterialName = std::string(newMaterialName.c_str());
+
+						MaterialCreateInfo createInfo = {};
+						createInfo.name = newMaterialName;
+						createInfo.shaderName = m_Shaders[newMatShaderIndex].shader.name;
+
+						MaterialID newMaterialID = InitializeMaterial(&createInfo);
+
+						g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Cancel"))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
+				ImGui::SameLine();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				if (ImGui::Button("Delete material"))
+				{
+					g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
+					RemoveMaterial(selectedMaterialID);
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+			}
+
+			ImGui::End(); // Material editor popup
+		}
+
+		bool GLRenderer::DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex)
+		{
+			bool bValueChanged = false;
+
+			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : textures[*selectedIndex - 1]->GetName().c_str());
+			if (ImGui::BeginCombo(label, currentTexName.c_str()))
+			{
+				for (i32 i = 0; i < (i32)textures.size() + 1; i++)
+				{
+					bool bTextureSelected = (*selectedIndex == i);
+
+					if (i == 0)
+					{
+						if (ImGui::Selectable("NONE", bTextureSelected))
+						{
+							*selectedIndex = i;
+							bValueChanged = true;
+						}
+					}
+					else
+					{
+						std::string textureName = textures[i - 1]->GetName();
+						if (ImGui::Selectable(textureName.c_str(), bTextureSelected))
+						{
+							*selectedIndex = i;
+							bValueChanged = true;
+						}
+
+						if (ImGui::IsItemHovered())
+						{
+							DoTexturePreviewTooltip(textures[i - 1]);
+						}
+					}
+					if (bTextureSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			return bValueChanged;
+		}
+
+		void GLRenderer::UpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+													  const std::string& texturePath,
+													  std::string& matTexturePath,
+													  GLTexture* texture, i32 i, 
+													  i32* textureIndex, 
+													  u32* samplerID)
+		{
+			if (bUpdateTextureMaterial)
+			{
+				if (*textureIndex == 0)
+				{
+					matTexturePath = "";
+					*samplerID = 0;
+				}
+				else if (i == *textureIndex - 1)
+				{
+					matTexturePath = texturePath;
+					if (texture)
+					{
+						*samplerID = texture->handle;
+					}
+				}
+			}
+			else
+			{
+				if (matTexturePath.empty())
+				{
+					*textureIndex = 0;
+				}
+				else if (texturePath.compare(matTexturePath) == 0)
+				{
+					*textureIndex = i + 1;
+				}
+			}
+
+		}
+
+		void GLRenderer::DoTexturePreviewTooltip(GLTexture* texture)
+		{
+			ImGui::BeginTooltip();
+
+			ImVec2 cursorPos = ImGui::GetCursorPos();
+
+			real textureAspectRatio = (real)texture->width / (real)texture->height;
+			real texSize = 128.0f;
+
+			if (texture->channelCount == 4)
+			{
+				real tiling = 3.0f;
+				ImVec2 uv0(0.0f, 0.0f);
+				ImVec2 uv1(tiling * textureAspectRatio, tiling);
+				ImGui::Image((void*)m_AlphaBGTexture->handle, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
+			}
+
+			ImGui::SetCursorPos(cursorPos);
+
+			ImGui::Image((void*)texture->handle, ImVec2(texSize * textureAspectRatio, texSize));
+
+			ImGui::EndTooltip();
+		}
+
+		void GLRenderer::DrawLoadingTextureQuad()
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+			real textureAspectRatio = m_LoadingTexture->width / (real)m_LoadingTexture->height;
+			drawInfo.scale = glm::vec3(textureAspectRatio, -1.0f, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.anchor = AnchorPoint::WHOLE;
+			drawInfo.inputTextureHandle = m_LoadingTexture->handle;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+			DrawSpriteQuad(drawInfo);
+		}
+
+		bool GLRenderer::GetLoadedTexture(const std::string& filePath, GLTexture** texture)
+		{
+			auto iter = m_LoadedTextures.find(filePath);
+			if (iter == m_LoadedTextures.end())
 			{
 				return false;
 			}
 			else
 			{
-				handle = location->second;
+				*texture = iter->second;
 				return true;
 			}
 		}
@@ -3210,16 +4200,14 @@ namespace flex
 			UnloadShaders();
 			LoadShaders();
 
-			CheckGLErrorMessages();
+			g_Renderer->AddEditorString("Reloaded shaders");
 		}
 
 		void GLRenderer::UnloadShaders()
 		{
-			const size_t shaderCount = m_Shaders.size();
-			for (size_t i = 0; i < shaderCount; ++i)
+			for (GLShader& shader : m_Shaders)
 			{
-				glDeleteProgram(m_Shaders[i].program);
-				CheckGLErrorMessages();
+				glDeleteProgram(shader.program);
 			}
 			m_Shaders.clear();
 		}
@@ -3344,6 +4332,7 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
@@ -3447,13 +4436,17 @@ namespace flex
 			// Sprite
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+
 			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler");
 			++shaderID;
 
 			// Post processing
@@ -3464,7 +4457,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("contrastBrightnessSaturation");
 			++shaderID;
@@ -3517,164 +4510,179 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texSize");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("threshold");
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("outline");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("shadow");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("soften");
 			++shaderID;
 
-			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			for (GLShader& shader : m_Shaders)
 			{
-				m_Shaders[i].program = glCreateProgram();
-				CheckGLErrorMessages();
+				shader.program = glCreateProgram();
 
-				if (!LoadGLShaders(m_Shaders[i].program, m_Shaders[i]))
+				if (!LoadGLShaders(shader.program, shader))
 				{
-					std::string fileNames = m_Shaders[i].shader.vertexShaderFilePath + " & " + m_Shaders[i].shader.fragmentShaderFilePath;
-					if (!m_Shaders[i].shader.geometryShaderFilePath.empty())
+					std::string fileNames = shader.shader.vertexShaderFilePath + " & " + shader.shader.fragmentShaderFilePath;
+					if (!shader.shader.geometryShaderFilePath.empty())
 					{
-						fileNames += " & " + m_Shaders[i].shader.geometryShaderFilePath;
+						fileNames += " & " + shader.shader.geometryShaderFilePath;
 					}
-					Logger::LogError("Couldn't load/compile shaders: " + fileNames);
+					PrintError("Couldn't load/compile shaders: %s\n", fileNames.c_str());
 				}
 
-				LinkProgram(m_Shaders[i].program);
+				LinkProgram(shader.program);
 
 				// No need to keep the code in memory
-				m_Shaders[i].shader.vertexShaderCode.clear();
-				m_Shaders[i].shader.vertexShaderCode.shrink_to_fit();
-				m_Shaders[i].shader.fragmentShaderCode.clear();
-				m_Shaders[i].shader.fragmentShaderCode.shrink_to_fit();
-				m_Shaders[i].shader.geometryShaderCode.clear();
-				m_Shaders[i].shader.geometryShaderCode.shrink_to_fit();
+				shader.shader.vertexShaderCode.clear();
+				shader.shader.vertexShaderCode.shrink_to_fit();
+				shader.shader.fragmentShaderCode.clear();
+				shader.shader.fragmentShaderCode.shrink_to_fit();
+				shader.shader.geometryShaderCode.clear();
+				shader.shader.geometryShaderCode.shrink_to_fit();
 			}
-
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::UpdateMaterialUniforms(const GameContext& gameContext, MaterialID materialID)
+		void GLRenderer::UpdateMaterialUniforms(MaterialID materialID)
 		{
-			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-
 			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 			
 			glUseProgram(shader->program);
 
-			glm::mat4 proj = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProj = proj * view;
-			glm::vec4 camPos = glm::vec4(gameContext.cameraManager->CurrentCamera()->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 
-			if (shader->shader.constantBufferUniforms.HasUniform("view"))
+			static const char* viewStr = "view";
+			if (shader->shader.constantBufferUniforms.HasUniform(viewStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("viewInv"))
+			static const char* viewInvStr = "viewInv";
+			if (shader->shader.constantBufferUniforms.HasUniform(viewInvStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.viewInv, 1, false, &viewInv[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("projection"))
+			static const char* projectionStr = "projection";
+			if (shader->shader.constantBufferUniforms.HasUniform(projectionStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &proj[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("viewProjection"))
+			static const char* viewProjectionStr = "viewProjection";
+			if (shader->shader.constantBufferUniforms.HasUniform(viewProjectionStr))
 			{
 				glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, false, &viewProj[0][0]);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("camPos"))
+			static const char* camPosStr = "camPos";
+			if (shader->shader.constantBufferUniforms.HasUniform(camPosStr))
 			{
 				glUniform4f(material->uniformIDs.camPos,
 					camPos.x,
 					camPos.y,
 					camPos.z,
 					camPos.w);
-				CheckGLErrorMessages();
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("dirLight"))
+			static const char* dirLightStr = "dirLight";
+			if (shader->shader.constantBufferUniforms.HasUniform(dirLightStr))
 			{
+				static const char* dirLightEnabledStr = "dirLight.enabled";
 				if (m_DirectionalLight.enabled)
 				{
-					SetUInt(material->material.shaderID, "dirLight.enabled", 1);
-					CheckGLErrorMessages();
-					SetVec4f(material->material.shaderID, "dirLight.direction", m_DirectionalLight.direction);
-					CheckGLErrorMessages();
-					SetVec4f(material->material.shaderID, "dirLight.color", m_DirectionalLight.color * m_DirectionalLight.brightness);
-					CheckGLErrorMessages();
+					SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
+					static const char* dirLightDirectionStr = "dirLight.direction";
+					SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight.direction);
+					static const char* dirLightColorStr = "dirLight.color";
+					SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight.color * m_DirectionalLight.brightness);
 				}
 				else
 				{
-					SetUInt(material->material.shaderID, "dirLight.enabled", 0);
-					CheckGLErrorMessages();
+					SetUInt(material->material.shaderID, dirLightEnabledStr, 0);
 				}
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("pointLights"))
+			static const char* pointLightsStr = "pointLights";
+			if (shader->shader.constantBufferUniforms.HasUniform(pointLightsStr))
 			{
-				for (size_t i = 0; i < m_PointLights.size(); ++i)
+				for (size_t i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 				{
-					const std::string numberStr = std::to_string(i);
+					const std::string numberStr(std::to_string(i));
+					const char* numberCStr = numberStr.c_str();
+					static const i32 strStartLen = 16;
+					char pointLightStrStart[strStartLen]; // Handles up to 99 numbers
+					strcpy_s(pointLightStrStart, "pointLights[");
+					strcat_s(pointLightStrStart, numberCStr);
+					strcat_s(pointLightStrStart, "]");
+					strcat_s(pointLightStrStart, "\0");
 
-					if (m_PointLights[i].enabled)
+					char enabledStr[strStartLen + 8];
+					strcpy_s(enabledStr, pointLightStrStart);
+					static const char* dotEnabledStr = ".enabled";
+					strcat_s(enabledStr, dotEnabledStr);
+					if (i < m_PointLights.size())
 					{
-						SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 1);
-						CheckGLErrorMessages();
+						if (m_PointLights[i].enabled)
+						{
+							SetUInt(material->material.shaderID, enabledStr, 1);
 
-						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].position", m_PointLights[i].position);
-						CheckGLErrorMessages();
+							char positionStr[strStartLen + 9];
+							strcpy_s(positionStr, pointLightStrStart);
+							static const char* dotPositionStr = ".position";
+							strcat_s(positionStr, dotPositionStr);
+							SetVec4f(material->material.shaderID, positionStr, m_PointLights[i].position);
 
-						SetVec4f(material->material.shaderID, "pointLights[" + numberStr + "].color", m_PointLights[i].color * m_PointLights[i].brightness);
-						CheckGLErrorMessages();
+							char colorStr[strStartLen + 6];
+							strcpy_s(colorStr, pointLightStrStart);
+							static const char* dotColorStr = ".color";
+							strcat_s(colorStr, dotColorStr);
+							SetVec4f(material->material.shaderID, colorStr, m_PointLights[i].color * m_PointLights[i].brightness);
+						}
+						else
+						{
+							SetUInt(material->material.shaderID, enabledStr, 0);
+						}
 					}
 					else
 					{
-						SetUInt(material->material.shaderID, "pointLights[" + numberStr + "].enabled", 0);
-						CheckGLErrorMessages();
+						SetUInt(material->material.shaderID, enabledStr, 0);
 					}
 				}
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("texelStep"))
+			static const char* texelStepStr = "texelStep";
+			if (shader->shader.constantBufferUniforms.HasUniform(texelStepStr))
 			{
-				glm::vec2i frameBufferSize = gameContext.window->GetFrameBufferSize();
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
-				SetVec2f(material->material.shaderID, "texelStep", texelStep);
-				CheckGLErrorMessages();
+				SetVec2f(material->material.shaderID, texelStepStr, texelStep);
 			}
 
-			if (shader->shader.constantBufferUniforms.HasUniform("bDEBUGShowEdges"))
+			static const char* bDEBUGShowEdgesStr = "bDEBUGShowEdges";
+			if (shader->shader.constantBufferUniforms.HasUniform(bDEBUGShowEdgesStr))
 			{
-				SetInt(material->material.shaderID, "bDEBUGShowEdges", m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
-				CheckGLErrorMessages();
+				SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 			}
-
-			glUseProgram(last_program);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, const GameContext& gameContext)
+		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
-				Logger::LogError("Invalid renderID passed to UpdatePerObjectUniforms: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to UpdatePerObjectUniforms: %i\n", renderID);
 				return;
 			}
 
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
-			UpdatePerObjectUniforms(renderObject->materialID, model, gameContext);
+			UpdatePerObjectUniforms(renderObject->materialID, model);
 		}
 
-		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model, const GameContext& gameContext)
+		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model)
 		{
 			// TODO: OPTIMIZATION: Investigate performance impact of caching each uniform and preventing updates to data that hasn't changed
 
@@ -3682,8 +4690,8 @@ namespace flex
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
 			glm::mat4 modelInv = glm::inverse(model);
-			glm::mat4 proj = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 MVP = proj * view * model;
 			glm::vec4 colorMultiplier = material->material.colorMultiplier;
 
@@ -3691,93 +4699,78 @@ namespace flex
 			if (shader->shader.dynamicBufferUniforms.HasUniform("model"))
 			{
 				glUniformMatrix4fv(material->uniformIDs.model, 1, false, &model[0][0]);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("modelInvTranspose"))
 			{
 				// OpenGL will transpose for us if we set the third param to true
 				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, true, &modelInv[0][0]);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			{
 				// OpenGL will transpose for us if we set the third param to true
 				glUniform4fv(material->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableDiffuseSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableDiffuseTexture, material->material.enableDiffuseSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableNormalSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableNormalTexture, material->material.enableNormalSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableCubemapSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableCubemapTexture, material->material.enableCubemapSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableAlbedoSampler, material->material.enableAlbedoSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constAlbedo"))
 			{
 				glUniform4f(material->uniformIDs.constAlbedo, material->material.constAlbedo.x, material->material.constAlbedo.y, material->material.constAlbedo.z, 0);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableMetallicSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableMetallicSampler, material->material.enableMetallicSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constMetallic"))
 			{
 				glUniform1f(material->uniformIDs.constMetallic, material->material.constMetallic);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableRoughnessSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableRoughnessSampler, material->material.enableRoughnessSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constRoughness"))
 			{
 				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAOSampler"))
 			{
 				glUniform1ui(material->uniformIDs.enableAOSampler, material->material.enableAOSampler);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constAO"))
 			{
 				glUniform1f(material->uniformIDs.constAO, material->material.constAO);
-				CheckGLErrorMessages();
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableIrradianceSampler"))
 			{
 				glUniform1i(material->uniformIDs.enableIrradianceSampler, material->material.enableIrradianceSampler);
-				CheckGLErrorMessages();
 			}
 		}
 
@@ -3788,35 +4781,29 @@ namespace flex
 				return;
 			}
 
-			glViewport(0, 0, width, height);
-			CheckGLErrorMessages();
-
 			const glm::vec2i newFrameBufferSize(width, height);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
-			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_OffscreenTexture0Handle.id,
 									 m_OffscreenTexture0Handle.internalFormat,
 									 m_OffscreenTexture0Handle.format,
 									 m_OffscreenTexture0Handle.type,
 									 newFrameBufferSize);
 
-			ResizeRenderBuffer(m_Offscreen0RBO, newFrameBufferSize);
+			ResizeRenderBuffer(m_Offscreen0RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen1FBO);
-			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_OffscreenTexture1Handle.id,
 									 m_OffscreenTexture1Handle.internalFormat,
 									 m_OffscreenTexture1Handle.format,
 									 m_OffscreenTexture1Handle.type,
 									 newFrameBufferSize);
 
-			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize);
+			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-			CheckGLErrorMessages();
 			ResizeFrameBufferTexture(m_gBuffer_PositionMetallicHandle.id,
 				m_gBuffer_PositionMetallicHandle.internalFormat,
 				m_gBuffer_PositionMetallicHandle.format,
@@ -3835,12 +4822,13 @@ namespace flex
 				m_gBuffer_DiffuseAOHandle.type,
 				newFrameBufferSize);
 
-			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize);
+			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 		}
 
-		void GLRenderer::OnSceneChanged(const GameContext& gameContext)
+		void GLRenderer::OnSceneChanged()
 		{
-			GenerateGBuffer(gameContext);
+			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
+			GenerateGBuffer();
 		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -3869,105 +4857,90 @@ namespace flex
 
 		void GLRenderer::SetVSyncEnabled(bool enableVSync)
 		{
-			m_VSyncEnabled = enableVSync;
+			m_bVSyncEnabled = enableVSync;
 			glfwSwapInterval(enableVSync ? 1 : 0);
-			CheckGLErrorMessages();
 		}
 
 		bool GLRenderer::GetVSyncEnabled()
 		{
-			return m_VSyncEnabled;
+			return m_bVSyncEnabled;
 		}
 
-		void GLRenderer::SetFloat(ShaderID shaderID, const std::string& valName, real val)
+		void GLRenderer::SetFloat(ShaderID shaderID, const char* valName, real val)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Float " + valName + " couldn't be found!");
+				PrintWarn("Float %s couldn't be found!\n", valName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform1f(location, val);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetInt(ShaderID shaderID, const std::string & valName, i32 val)
+		void GLRenderer::SetInt(ShaderID shaderID, const char* valName, i32 val)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("i32 " + valName + " couldn't be found!");
+				PrintWarn("i32 %s couldn't be found!\n", valName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform1i(location, val);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetUInt(ShaderID shaderID, const std::string& valName, u32 val)
+		void GLRenderer::SetUInt(ShaderID shaderID, const char* valName, u32 val)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
 			if (location == -1)
 			{
-				Logger::LogWarning("u32 " + valName + " couldn't be found!");
+				PrintWarn("u32 %s couldn't be found!\n", valName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform1ui(location, val);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetVec2f(ShaderID shaderID, const std::string& vecName, const glm::vec2& vec)
+		void GLRenderer::SetVec2f(ShaderID shaderID, const char* vecName, const glm::vec2& vec)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec2f " + vecName + " couldn't be found!");
+				PrintWarn("Vec2f %s couldn't be found!\n", vecName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform2f(location, vec[0], vec[1]);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetVec3f(ShaderID shaderID, const std::string& vecName, const glm::vec3& vec)
+		void GLRenderer::SetVec3f(ShaderID shaderID, const char* vecName, const glm::vec3& vec)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec3f " + vecName + " couldn't be found!");
+				PrintWarn("Vec3f %s couldn't be found!\n", vecName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform3f(location, vec[0], vec[1], vec[2]);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetVec4f(ShaderID shaderID, const std::string& vecName, const glm::vec4& vec)
+		void GLRenderer::SetVec4f(ShaderID shaderID, const char* vecName, const glm::vec4& vec)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Vec4f " + vecName + " couldn't be found!");
+				PrintWarn("Vec4f %s couldn't be found!\n", vecName);
 			}
-			CheckGLErrorMessages();
 
 			glUniform4f(location, vec[0], vec[1], vec[2], vec[3]);
-			CheckGLErrorMessages();
 		}
 
-		void GLRenderer::SetMat4f(ShaderID shaderID, const std::string& matName, const glm::mat4& mat)
+		void GLRenderer::SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat)
 		{
-			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName.c_str());
+			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName);
 			if (location == -1)
 			{
-				Logger::LogWarning("Mat4f " + matName + " couldn't be found!");
+				PrintWarn("Mat4f %s couldn't be found!\n", matName);
 			}
-			CheckGLErrorMessages();
 
 			glUniformMatrix4fv(location, 1, false, &mat[0][0]);
-			CheckGLErrorMessages();
 		}
 
 
@@ -4003,7 +4976,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::GenerateGBuffer(const GameContext& gameContext)
+		void GLRenderer::GenerateGBuffer()
 		{
 			if (!m_gBufferQuadVertexBufferData.pDataStart)
 			{
@@ -4055,7 +5028,7 @@ namespace flex
 				{ "albedoAOFrameBufferSampler",  &m_gBuffer_DiffuseAOHandle.id },
 			};
 
-			MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
+			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
 
 			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::NONE);
@@ -4071,7 +5044,7 @@ namespace flex
 			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
 			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
-			m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
+			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
 
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
@@ -4083,7 +5056,7 @@ namespace flex
 			// TODO: Replace function with m_RenderObjects.size()? (only if no nullptr objects exist)
 			u32 count = 0;
 
-			for (auto renderObject : m_RenderObjects)
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject)
 				{
@@ -4102,7 +5075,7 @@ namespace flex
 		u32 GLRenderer::GetActiveRenderObjectCount() const
 		{
 			u32 capacity = 0;
-			for (auto renderObject : m_RenderObjects)
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject)
 				{
@@ -4114,12 +5087,10 @@ namespace flex
 
 		void GLRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
-			GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
 			{
-				Logger::LogError("Invalid renderID passed to DescribeShaderVariable: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to DescribeShaderVariable: %i\n", renderID);
 				return;
 			}
 
@@ -4130,12 +5101,11 @@ namespace flex
 			glUseProgram(program);
 
 			glBindVertexArray(renderObject->VAO);
-			CheckGLErrorMessages();
 
 			GLint location = glGetAttribLocation(program, variableName.c_str());
 			if (location == -1)
 			{
-				//Logger::LogWarning("Invalid shader variable name: " + variableName);
+				//PrintWarn("Invalid shader variable name: " + variableName);
 				glBindVertexArray(0);
 				return;
 			}
@@ -4143,11 +5113,6 @@ namespace flex
 
 			GLenum glRenderType = DataTypeToGLType(dataType);
 			glVertexAttribPointer((GLuint)location, size, glRenderType, (GLboolean)normalized, stride, pointer);
-			CheckGLErrorMessages();
-
-			glBindVertexArray(0);
-
-			glUseProgram(last_program);
 		}
 
 		void GLRenderer::SetSkyboxMesh(GameObject* skyboxMesh)
@@ -4162,20 +5127,18 @@ namespace flex
 			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
 			if (skyboxMaterialID == InvalidMaterialID)
 			{
-				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
+				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
 				return;
 			}
 
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
-				GLRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject)
 				{
 					if (m_Materials.find(renderObject->materialID) == m_Materials.end())
 					{
-						Logger::LogError("Render object contains invalid material ID: " + 
-										 std::to_string(renderObject->materialID) + 
-										 ", material name: " + renderObject->materialName);
+						PrintError("Render object contains invalid material ID: %i, material name: %s\n", 
+								   renderObject->materialID, renderObject->materialName.c_str());
 					}
 					else
 					{
@@ -4205,7 +5168,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
+				PrintError("SetRenderObjectMaterialID couldn't find render object with ID %i\n", renderID);
 			}
 		}
 
@@ -4248,7 +5211,11 @@ namespace flex
 			{
 				m_PhysicsDebugDrawer->ClearLines();
 			}
-			ImGui_ImplGlfwGL3_NewFrame();
+
+			if (g_EngineInstance->IsRenderingImGui())
+			{
+				ImGui_ImplGlfwGL3_NewFrame();
+			}
 		}
 
 		btIDebugDraw* GLRenderer::GetDebugDrawer()
@@ -4256,152 +5223,539 @@ namespace flex
 			return m_PhysicsDebugDrawer;
 		}
 
-		void GLRenderer::ImGuiRender()
+		void GLRenderer::PhysicsDebugRender()
 		{
-			ImGui::Render();
-			ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
-		}
-
-		void GLRenderer::PhysicsDebugRender(const GameContext& gameContext)
-		{
-			btDiscreteDynamicsWorld* physicsWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
 		}
 
-		void GLRenderer::LoadSettingsFromDisk()
+		void GLRenderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
 		{
-			if (m_SettingsFilePathAbs.empty())
+			std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
+
+			if (!bLoadDefaults && !FileExists(m_SettingsFilePathAbs))
 			{
-				Logger::LogError("Failed to read renderer settings to disk: file path is not set!");
-				return;
+				filePath = m_DefaultSettingsFilePathAbs;
+
+				if (!FileExists(filePath))
+				{
+					PrintError("Failed to find renderer settings files on disk!\n");
+					return;
+				}
 			}
 
-			if (FileExists(m_SettingsFilePathAbs))
+			if (bLoadDefaults && FileExists(m_SettingsFilePathAbs))
 			{
-				JSONObject rootObject{};
+				DeleteFile(m_SettingsFilePathAbs);
+			}
 
-				if (JSONParser::Parse(m_SettingsFilePathAbs, rootObject))
-				{
-					m_VSyncEnabled = rootObject.GetBool("enable v-sync");
-					m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
-					m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
-					m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
-					m_PostProcessSettings.saturation = rootObject.GetFloat(	"saturation");
-				}
-				else
-				{
-					Logger::LogError("Failed to read renderer settings file, but it exists!");
-				}
+			JSONObject rootObject;
+			if (JSONParser::Parse(filePath, rootObject))
+			{
+				m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
+				SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
+				m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
+				m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
+				m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
+				m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
+			}
+			else
+			{
+				PrintError("Failed to read renderer settings file, but it exists!\n");
 			}
 		}
 
-		void GLRenderer::SaveSettingsToDisk()
+		real GLRenderer::GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const
 		{
-			if (m_SettingsFilePathAbs.empty())
+			real strWidth = 0;
+
+			char prevChar = ' ';
+			for (char c : str)
 			{
-				Logger::LogError("Failed to save renderer settings to disk: file path is not set!");
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+
+					if (font->UseKerning())
+					{
+						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
+
+						auto iter = metric->kerning.find(charKey);
+						if (iter != metric->kerning.end())
+						{
+							strWidth += iter->second.x;
+						}
+					}
+
+					strWidth += metric->advanceX + letterSpacing;
+				}
+			}
+
+			if (bNormalized)
+			{
+				strWidth /= (real)g_Window->GetFrameBufferSize().x;
+			}
+
+			return strWidth;
+		}
+
+		real GLRenderer::GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const
+		{
+			real strHeight = 0;
+
+			for (char c : str)
+			{
+				if (BitmapFont::IsCharValid(c))
+				{
+					FontMetric* metric = font->GetMetric(c);
+					strHeight = glm::max(strHeight, (real)(metric->height));
+				}
+			}
+
+			if (bNormalized)
+			{
+				strHeight /= (real)g_Window->GetFrameBufferSize().y;
+			}
+
+			return strHeight;
+		}
+		
+		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
+		{
+			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
+
+			if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
+			{
+				DeleteFile(m_SettingsFilePathAbs);
+			}
+
+			if (filePath.empty())
+			{
+				PrintError("Failed to save renderer settings to disk: file path is not set!\n");
 				return;
 			}
 
 			JSONObject rootObject{};
-
-			rootObject.fields.push_back(JSONField("enable v-sync", JSONValue(m_VSyncEnabled)));
-			rootObject.fields.push_back(JSONField("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA)));
-			rootObject.fields.push_back(JSONField("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness))));
-			rootObject.fields.push_back(JSONField("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset))));
-			rootObject.fields.push_back(JSONField("saturation", JSONValue(m_PostProcessSettings.saturation)));
-
+			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
+			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
+			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
+			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness)));
+			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset)));
+			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 			std::string fileContents = rootObject.Print(0);
 
-			WriteFile(m_SettingsFilePathAbs, fileContents, false);
-		}
-
-		void GLRenderer::DrawImGuiItems(const GameContext& gameContext)
-		{
-			UNREFERENCED_PARAMETER(gameContext);
-
-			if (ImGui::CollapsingHeader("Scene info"))
+			if (WriteFile(filePath, fileContents, false))
 			{
-				if (ImGui::TreeNode("Render Objects"))
+				if (bAddEditorStr)
 				{
-					std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
-					for (size_t i = 0; i < rootObjects.size(); ++i)
+					if (bSaveOverDefaults)
 					{
-						DrawImGuiForGameObjectAndChildren(rootObjects[i]);
+						AddEditorString("Saved default renderer settings");
 					}
-
-					ImGui::TreePop();
+					else
+					{
+						AddEditorString("Saved renderer settings");
+					}
 				}
-
-				DrawImGuiLights();
 			}
 		}
 
-		void GLRenderer::DrawImGuiForGameObjectAndChildren(GameObject* gameObject)
+		void GLRenderer::DrawImGuiItems()
+		{
+			ImGui::NewLine();
+
+			ImGui::Text("Textures");
+
+			static i32 selectedTextureIndex = 0;
+			if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
+			{
+				i32 i = 0;
+				for (const auto& texturePair : m_LoadedTextures)
+				{
+					bool bSelected = (i == selectedTextureIndex);
+					std::string textureFileName = texturePair.second->GetName();
+					if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
+					{
+						selectedTextureIndex = i;
+					}
+
+					if (ImGui::BeginPopupContextItem())
+					{
+						if (ImGui::Button("Reload"))
+						{
+							texturePair.second->Reload();
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::EndPopup();
+					}
+
+					if (ImGui::IsItemHovered())
+					{
+						DoTexturePreviewTooltip(texturePair.second);
+					}
+					++i;
+				}
+			}
+			ImGui::EndChild();
+
+			ImGui::NewLine();
+
+
+			static bool bShowMaterialEditor = false;
+			if (ImGui::Button("Material Editor"))
+			{
+				bShowMaterialEditor = !bShowMaterialEditor;
+			}
+
+			if (bShowMaterialEditor)
+			{
+				DoMaterialEditor(&bShowMaterialEditor);
+			}
+
+			GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
+
+			ImGui::NewLine();
+
+			ImGui::BeginChild("SelectedObject",
+							  ImVec2(0.0f, 220.0f),
+							  true);
+
+			if (selectedObject)
+			{
+				DrawGameObjectImGui(selectedObject);
+			}
+
+			ImGui::EndChild();
+
+			ImGui::Text("Render Objects");
+
+			// Dropping objects onto this text makes them root objects
+			if (ImGui::BeginDragDropTarget())
+			{
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
+
+				if (payload && payload->Data)
+				{
+					std::string dataType(payload->DataType);
+					RenderID* draggedRenderID = (RenderID*)payload->Data;
+					GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
+					GameObject* draggedGameObject = draggedRenderObject->gameObject;
+					if (draggedGameObject)
+					{
+						// If we're a child of the dragged object then don't allow (causes infinite recursion)
+						if (draggedGameObject->GetParent())
+						{
+							draggedGameObject->DetachFromParent();
+							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+						}
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+			for (GameObject* rootObject : rootObjects)
+			{
+				if (DrawGameObjectNameAndChildren(rootObject))
+				{
+					break;
+				}
+			}
+
+			DoCreateGameObjectButton("Add object...", "Add object");
+
+			DrawImGuiLights();
+		}
+
+		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos, 
+											AnchorPoint anchor, 
+											const glm::vec2& size, 
+											const glm::vec4& color)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.anchor = anchor;
+			drawInfo.color = color;
+			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+			drawInfo.bEnableAlbedoSampler = false;
+
+			DrawSpriteQuad(drawInfo);
+		}
+
+		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos, 
+											   const glm::vec2& size,
+											   const glm::vec4& color)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.bRaw = true;
+			drawInfo.color = color;
+			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+			drawInfo.bEnableAlbedoSampler = false;
+
+			DrawSpriteQuad(drawInfo);
+		}
+
+		void GLRenderer::DrawGameObjectImGui(GameObject* gameObject)
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
-			std::string objectName;
+			std::string objectID;
 			if (renderID != InvalidRenderID)
 			{
 				renderObject = GetRenderObject(renderID);
-				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
+				objectID = "##" + std::to_string(renderObject->renderID);
 
 				if (!gameObject->IsVisibleInSceneExplorer())
 				{
 					return;
 				}
 			}
-			else
+
+			ImGui::Text(gameObject->GetName().c_str());
+
+			DoGameObjectContextMenu(&gameObject);
+
+			if (!gameObject)
 			{
-				// TODO: FIXME: This will fail if multiple objects share the same name
-				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
-				objectName = std::string(gameObject->GetName());
+				// Early return if object was just deleted
+				return;
 			}
 
-			const std::string objectID("##" + objectName + "-visible");
 			bool visible = gameObject->IsVisible();
-			if (ImGui::Checkbox(objectID.c_str(), &visible))
+			const std::string objectVisibleLabel("Visible" + objectID + gameObject->GetName());
+			if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
+			{
+				gameObject->SetVisible(visible);
+			}
+
+			if (renderObject)
+			{
+				const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
+				ImGui::TextUnformatted(renderIDStr.c_str());
+			}
+
+			DrawImGuiForRenderObjectCommon(gameObject);
+
+			if (renderObject)
+			{
+				GLMaterial& material = m_Materials[renderObject->materialID];
+				GLShader& shader = m_Shaders[material.material.shaderID];
+
+				std::string matNameStr = "Material: " + material.material.name;
+				std::string shaderNameStr = "Shader: " + shader.shader.name;
+				ImGui::TextUnformatted(matNameStr.c_str());
+
+				if (ImGui::BeginDragDropTarget())
+				{
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
+
+					if (payload && payload->Data)
+					{
+						MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
+						if (draggedMaterialID)
+						{
+							if (gameObject->GetMeshComponent())
+							{
+								gameObject->GetMeshComponent()->SetMaterialID(*draggedMaterialID);
+							}
+						}
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+
+				ImGui::TextUnformatted(shaderNameStr.c_str());
+
+				if (material.uniformIDs.enableIrradianceSampler)
+				{
+					ImGui::Checkbox("Enable Irradiance Sampler", &material.material.enableIrradianceSampler);
+				}
+			}
+		}
+
+		bool GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject)
+		{
+			RenderID renderID = gameObject->GetRenderID();
+			GLRenderObject* renderObject = nullptr;
+			std::string objectName = gameObject->GetName();
+			std::string objectID;
+			if (renderID != InvalidRenderID)
+			{
+				renderObject = GetRenderObject(renderID);
+				objectID = "##" + std::to_string(renderObject->renderID);
+
+				if (!gameObject->IsVisibleInSceneExplorer())
+				{
+					return false;
+				}
+			}
+
+			const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
+			bool bHasChildren = !gameObjectChildren.empty();
+			if (bHasChildren)
+			{
+				bool bChildVisibleInSceneExplorer = false;
+				// Make sure at least one child is visible in scene explorer
+				for (GameObject* child : gameObjectChildren)
+				{
+					if (child->IsVisibleInSceneExplorer())
+					{
+						bChildVisibleInSceneExplorer = true;
+						break;
+					}
+				}
+	
+				if (!bChildVisibleInSceneExplorer)
+				{
+					bHasChildren = false;
+				}
+			}
+			bool bSelected = (gameObject == g_EngineInstance->GetSelectedObject());
+
+			bool visible = gameObject->IsVisible();
+			const std::string objectVisibleLabel(objectID + "-visible");
+			if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
 			{
 				gameObject->SetVisible(visible);
 			}
 			ImGui::SameLine();
-			if (ImGui::TreeNode(objectName.c_str()))
+
+			ImGuiTreeNodeFlags node_flags = 
+				ImGuiTreeNodeFlags_OpenOnArrow |
+				ImGuiTreeNodeFlags_OpenOnDoubleClick | 
+				(bSelected ? ImGuiTreeNodeFlags_Selected : 0);
+
+			if (!bHasChildren)
 			{
-				if (renderObject)
+				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+			}
+
+			bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
+
+				if (payload && payload->Data)
 				{
-					const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
-					ImGui::TextUnformatted(renderIDStr.c_str());
-				}
-
-				DrawImGuiForRenderObjectCommon(gameObject);
-
-				if (renderObject)
-				{
-					GLMaterial& material = m_Materials[renderObject->materialID];
-					GLShader& shader = m_Shaders[material.material.shaderID];
-
-					std::string matNameStr = "Material: " + material.material.name;
-					std::string shaderNameStr = "Shader: " + shader.shader.name;
-					ImGui::TextUnformatted(matNameStr.c_str());
-					ImGui::TextUnformatted(shaderNameStr.c_str());
-
-					if (material.uniformIDs.enableIrradianceSampler)
+					MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
+					if (draggedMaterialID)
 					{
-						ImGui::Checkbox("Enable Irradiance Sampler", &material.material.enableIrradianceSampler);
+						if (gameObject->GetMeshComponent())
+						{
+							gameObject->GetMeshComponent()->SetMaterialID(*draggedMaterialID);
+						}
 					}
 				}
 
-				ImGui::Indent();
-				const std::vector<GameObject*>& children = gameObject->GetChildren();
-				for (GameObject* child : children)
+				ImGui::EndDragDropTarget();
+			}
+
+			DoGameObjectContextMenu(&gameObject);
+
+			bool bParentChildTreeChanged = (gameObject == nullptr);
+			if (gameObject)
+			{
+				if (ImGui::IsItemClicked())
 				{
-					DrawImGuiForGameObjectAndChildren(child);
+					g_EngineInstance->SetSelectedObject(gameObject);
 				}
-				ImGui::Unindent();
+
+				if (ImGui::IsItemActive())
+				{
+					if (ImGui::BeginDragDropSource())
+					{
+						RenderID draggedRenderID = gameObject->GetRenderID();
+						const void* data = (void*)(&draggedRenderID);
+						size_t size = sizeof(RenderID);
+
+						ImGui::SetDragDropPayload(m_RenderObjectPayloadCStr, data, size);
+
+						ImGui::Text(gameObject->GetName().c_str());
+
+						ImGui::EndDragDropSource();
+					}
+				}
+
+				if (ImGui::BeginDragDropTarget())
+				{
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
+
+					if (payload && payload->Data)
+					{
+						RenderID* draggedRenderID = (RenderID*)payload->Data;
+						GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
+						GameObject* draggedGameObject = draggedRenderObject->gameObject;
+						if (draggedGameObject)
+						{
+							// If we're a child of the dragged object then don't allow (causes infinite recursion)
+							if (!draggedGameObject->HasChild(gameObject, true))
+							{
+								bool bRemovedRootObj = false;
+								if (draggedGameObject->GetParent())
+								{
+									draggedGameObject->DetachFromParent();
+								}
+								else
+								{
+									g_SceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
+									bRemovedRootObj = true;
+								}
+
+								if (bRemovedRootObj && gameObject->GetParent() == draggedGameObject)
+								{
+									g_SceneManager->CurrentScene()->AddRootObject(gameObject);
+								}
+
+								gameObject->AddChild(draggedGameObject);
+								bParentChildTreeChanged = true;
+							}
+						}
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+			}
+
+			if (node_open && bHasChildren)
+			{
+				if (!bParentChildTreeChanged && gameObject)
+				{
+					ImGui::Indent();
+					// Don't cache results since children can change during this recursive call
+					for (GameObject* child : gameObject->GetChildren())
+					{
+						if (DrawGameObjectNameAndChildren(child))
+						{
+							// If parent-child tree changed then early out
+
+							ImGui::Unindent();
+							ImGui::TreePop();
+
+							return true;
+						}
+					}
+					ImGui::Unindent();
+				}
 
 				ImGui::TreePop();
 			}
+
+			return bParentChildTreeChanged;
 		}
 
 		void GLRenderer::UpdateRenderObjectVertexData(RenderID renderID)
@@ -4416,7 +5770,7 @@ namespace flex
 			if (renderID > m_RenderObjects.size() ||
 				renderID == InvalidRenderID)
 			{
-				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to GetRenderObject: %i\n", renderID);
 				return nullptr;
 			}
 #endif

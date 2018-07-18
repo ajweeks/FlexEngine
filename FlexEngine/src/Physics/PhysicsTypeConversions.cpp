@@ -34,7 +34,7 @@ glm::quat BtQuaternionToQuaternion(const btQuaternion& rhs)
 
 btTransform TransformToBtTransform(const flex::Transform& transform)
 {
-	btTransform result(QuaternionToBtQuaternion(transform.GetWorldlRotation()), Vec3ToBtVec3(transform.GetWorldlPosition()));
+	btTransform result(QuaternionToBtQuaternion(transform.GetWorldRotation()), Vec3ToBtVec3(transform.GetWorldPosition()));
 	return result;
 }
 

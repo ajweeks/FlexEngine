@@ -15,15 +15,13 @@
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Colors.hpp"
-#include "GameContext.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Scene/GameObject.hpp"
 
 namespace flex
 {
 	const real MeshComponent::GRID_LINE_SPACING = 1.0f;
-	const u32 MeshComponent::GRID_LINE_COUNT = 150;
+	const u32 MeshComponent::GRID_LINE_COUNT = 151; // Keep odd to align with origin
 
 	std::map<std::string, MeshComponent::LoadedMesh*> MeshComponent::m_LoadedMeshes;
 
@@ -53,17 +51,75 @@ namespace flex
 
 	void MeshComponent::DestroyAllLoadedMeshes()
 	{
-		for (auto iter = m_LoadedMeshes.begin(); iter != m_LoadedMeshes.end(); /**/)
+		for (auto& loadedMeshPair : m_LoadedMeshes)
 		{
-			SafeDelete(iter->second);
-			iter = m_LoadedMeshes.erase(iter);
+			SafeDelete(loadedMeshPair.second);
 		}
+		m_LoadedMeshes.clear();
 	}
 
-	void MeshComponent::Destroy(const GameContext& gameContext)
+	MeshComponent* MeshComponent::ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		MeshComponent* newMeshComponent = nullptr;
 
+		std::string meshFilePath = object.GetString("file");
+		if (!meshFilePath.empty())
+		{
+			meshFilePath = RESOURCE_LOCATION + meshFilePath;
+		}
+		std::string meshPrefabName = object.GetString("prefab");
+		bool swapNormalYZ = object.GetBool("swapNormalYZ");
+		bool flipNormalZ = object.GetBool("flipNormalZ");
+		bool flipU = object.GetBool("flipU");
+		bool flipV = object.GetBool("flipV");
+
+		if (materialID == InvalidMaterialID)
+		{
+			PrintError("Mesh component requires material index to be parsed: %s\n", owner->GetName().c_str());
+		}
+		else
+		{
+			Material& material = g_Renderer->GetMaterial(materialID);
+			Shader& shader = g_Renderer->GetShader(material.shaderID);
+			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
+
+			if (!meshFilePath.empty())
+			{
+				newMeshComponent = new MeshComponent(materialID, owner);
+				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
+
+				MeshComponent::ImportSettings importSettings = {};
+				importSettings.flipU = flipU;
+				importSettings.flipV = flipV;
+				importSettings.flipNormalZ = flipNormalZ;
+				importSettings.swapNormalYZ = swapNormalYZ;
+
+				newMeshComponent->LoadFromFile(meshFilePath,
+											   &importSettings);
+
+				owner->SetMeshComponent(newMeshComponent);
+			}
+			else if (!meshPrefabName.empty())
+			{
+				newMeshComponent = new MeshComponent(materialID, owner);
+				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
+
+				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
+				newMeshComponent->LoadPrefabShape(prefabShape);
+
+				owner->SetMeshComponent(newMeshComponent);
+			}
+			else
+			{
+				PrintError("Unhandled mesh field on object: %s\n", owner->GetName().c_str());
+			}
+		}
+
+		return newMeshComponent;
+	}
+
+	void MeshComponent::Destroy()
+	{
 		m_VertexBufferData.Destroy();
 		m_OwningGameObject = nullptr;
 		m_Initialized = false;
@@ -71,31 +127,31 @@ namespace flex
 
 	void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
 	{
-		m_RequiredAttributes |= requiredAttributes;
+		m_RequiredAttributes = requiredAttributes;
 	}
 
 	bool MeshComponent::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
 	{
-		auto location = m_LoadedMeshes.find(filePath);
-		if (location == m_LoadedMeshes.end())
+		auto iter = m_LoadedMeshes.find(filePath);
+		if (iter == m_LoadedMeshes.end())
 		{
 			return false;
 		}
 		else
 		{
-			*scene = location->second->scene;
+			*scene = iter->second->scene;
 			return true;
 		}
 	}
 
-	bool MeshComponent::LoadFromFile(const GameContext& gameContext,
-		const std::string& filepath,
+	bool MeshComponent::LoadFromFile(
+		const std::string& filePath,
 		ImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		m_Type = Type::FILE;
 		m_Shape = PrefabShape::NONE;
-		m_Filepath = filepath;
+		m_FilePath = filePath;
 		if (importSettings)
 		{
 			m_ImportSettings = *importSettings;
@@ -103,24 +159,25 @@ namespace flex
 
 		m_VertexBufferData.Destroy();
 
-		// TODO: Move to game object?
-		m_OwningGameObject->GetTransform()->SetGameObject(m_OwningGameObject);
-
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
+		std::string meshFileName = filePath;
+		StripLeadingDirectories(meshFileName);
+
 		const aiScene* scene = nullptr;
-		if (!GetLoadedMesh(filepath, &scene))
+		if (GetLoadedMesh(filePath, &scene))
+		{
+			Print("Reusing loaded mesh from %s\n", meshFileName.c_str());
+		}
+		else
 		{
 			// Mesh hasn't been loaded before, load it now
+			Print("Loading mesh %s\n", meshFileName.c_str());
 
-			std::string fileName = filepath;
-			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Loading mesh " + fileName);
+			LoadedMesh* loadedMesh = new LoadedMesh();
+			m_LoadedMeshes.emplace(filePath, loadedMesh);
 
-			auto meshObj = m_LoadedMeshes.emplace(filepath, new LoadedMesh());
-			LoadedMesh* loadedMesh = meshObj.first->second;
-
-			loadedMesh->scene = loadedMesh->importer.ReadFile(filepath,
+			loadedMesh->scene = loadedMesh->importer.ReadFile(filePath,
 				aiProcess_FindInvalidData |
 				aiProcess_GenNormals |
 				aiProcess_CalcTangentSpace
@@ -130,21 +187,21 @@ namespace flex
 
 			if (!scene)
 			{
-				Logger::LogError(loadedMesh->importer.GetErrorString());
+				PrintError("%s\n", loadedMesh->importer.GetErrorString());
 				return false;
 			}
 		}
 
 		if (!scene)
 		{
-			Logger::LogError("Failed to load mesh " + filepath);
+			PrintError("Failed to load mesh %s\n", filePath.c_str());
 			return false;
 		}
 
 
 		if (!scene->HasMeshes())
 		{
-			Logger::LogWarning("Loaded mesh file has no meshes! " + filepath);
+			PrintWarn("Loaded mesh file has no meshes! %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -154,20 +211,6 @@ namespace flex
 			meshes[i] = scene->mMeshes[i];
 		}
 
-		//if (m_Name.empty())
-		//{
-		//	m_Name = meshes[0]->mName.C_Str();
-
-		//	if (m_Name.empty())
-		//	{
-		//		auto filePathParts = Split(filepath, '.');
-		//		std::string friendlyFileName = filePathParts[filePathParts.size() - 1];
-		//		StripLeadingDirectories(friendlyFileName);
-
-		//		m_Name = "Mesh prefab - " + friendlyFileName;
-		//	}
-		//}
-
 		size_t totalVertCount = 0;
 
 		for (aiMesh* mesh : meshes)
@@ -175,15 +218,13 @@ namespace flex
 			const size_t numMeshVerts = mesh->mNumVertices;
 			totalVertCount += numMeshVerts;
 
-			// Cached bools per-mesh
 			const bool meshHasVertexColors0 = mesh->HasVertexColors(0);
 			const bool meshHasTangentsAndBitangents = mesh->HasTangentsAndBitangents();
 			const bool meshHasNormals = mesh->HasNormals();
 			const bool meshHasTexCoord0 = mesh->HasTextureCoords(0);
-
-			// All meshes need positions
+			
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-
+			
 			for (size_t i = 0; i < numMeshVerts; ++i)
 			{
 				// Position
@@ -317,14 +358,15 @@ namespace flex
 			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
 			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
 			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+			renderObjectCreateInfo.editorObject = optionalCreateInfo->editorObject;
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
+				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data");
+				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
 			}
 		}
 
@@ -332,19 +374,19 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
-		RenderID renderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
 
-		gameContext.renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
+		g_Renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
 
-		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, renderID);
+		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
 		m_Initialized = true;
 
 		return true;
 	}
 
-	bool MeshComponent::LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
+	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
 		m_Type = Type::PREFAB;
 		m_Shape = shape;
@@ -372,11 +414,11 @@ namespace flex
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+				PrintError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data\n");
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				Logger::LogError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data");
+				PrintError("Can not override indices in LoadPrefabShape! Ignoring passed in data\n");
 			}
 		}
 
@@ -647,10 +689,10 @@ namespace flex
 			// Horizontal lines
 			for (u32 i = 0; i < GRID_LINE_COUNT; ++i)
 			{
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, -halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth });
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, -halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth);
 
 				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
 				glm::vec4 colorCenter = lineColor;
@@ -666,10 +708,10 @@ namespace flex
 			// Vertical lines
 			for (u32 i = 0; i < GRID_LINE_COUNT; ++i)
 			{
-				vertexBufferDataCreateInfo.positions_3D.push_back({ -halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth });
-				vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth });
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(-halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth);
+				vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth);
 
 				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
 				glm::vec4 colorCenter = lineColor;
@@ -692,7 +734,7 @@ namespace flex
 		case MeshComponent::PrefabShape::WORLD_AXIS_GROUND:
 		{
 			glm::vec4 centerLineColorX = Color::RED;
-			glm::vec4 centerLineColorY = Color::GREEN;
+			glm::vec4 centerLineColorZ = Color::BLUE;
 
 			const size_t vertexCount = 4 * 2; // 4 verts per line (to allow for fading) *------**------*
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
@@ -703,13 +745,13 @@ namespace flex
 
 			real halfWidth = (GRID_LINE_SPACING * (GRID_LINE_COUNT - 1)); // extend longer than normal grid lines
 
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, -halfWidth });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, halfWidth });
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, -halfWidth);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, halfWidth);
 
 			float opacityCenter = 1.0f;
-			glm::vec4 colorCenter = centerLineColorX;
+			glm::vec4 colorCenter = centerLineColorZ;
 			colorCenter.a = opacityCenter;
 			glm::vec4 colorEnds = colorCenter;
 			colorEnds.a = 0.0f;
@@ -718,12 +760,12 @@ namespace flex
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
 
-			vertexBufferDataCreateInfo.positions_3D.push_back({ -halfWidth, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ 0.0f, 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.positions_3D.push_back({ halfWidth, 0.0f, 0.0f });
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(-halfWidth, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
+			vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, 0.0f);
 
-			colorCenter = centerLineColorY;
+			colorCenter = centerLineColorX;
 			colorCenter.a = opacityCenter;
 			colorEnds = colorCenter;
 			colorEnds.a = 0.0f;
@@ -821,8 +863,8 @@ namespace flex
 			glm::vec3 v1(0.0f, 1.0f, 0.0f); // Top vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(v1);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::RED);
-			vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.normals.push_back({ 0.0f, 1.0f, 0.0f });
+			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
+			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, 1.0f, 0.0f);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
@@ -849,16 +891,16 @@ namespace flex
 
 					vertexBufferDataCreateInfo.positions_3D.push_back(point);
 					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(color);
-					vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
-					vertexBufferDataCreateInfo.normals.push_back({ 1.0f, 0.0f, 0.0f });
+					vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
+					vertexBufferDataCreateInfo.normals.emplace_back(1.0f, 0.0f, 0.0f);
 				}
 			}
 
 			glm::vec3 vF(0.0f, -1.0f, 0.0f); // Bottom vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(vF);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::YELLOW);
-			vertexBufferDataCreateInfo.texCoords_UV.push_back({ 0.0f, 0.0f });
-			vertexBufferDataCreateInfo.normals.push_back({ 0.0f, -1.0f, 0.0f });
+			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
+			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, -1.0f, 0.0f);
 
 			const u32 numVerts = vertexBufferDataCreateInfo.positions_3D.size();
 
@@ -977,7 +1019,7 @@ namespace flex
 		} break;
 		default:
 		{
-			Logger::LogWarning("Unhandled prefab shape passed to MeshComponent::LoadPrefabShape: " + std::to_string((i32)shape));
+			PrintWarn("Unhandled prefab shape passed to MeshComponent::LoadPrefabShape: %i\n", (i32)shape);
 			return false;
 		} break;
 		}
@@ -985,34 +1027,30 @@ namespace flex
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
+		renderObjectCreateInfo.indices = &m_Indices;
 
-		//if (m_Name.empty() || defaultName.empty())
-		//{
-		//	m_Name = defaultName;
-		//}
-
-		RenderID renderID = gameContext.renderer->InitializeRenderObject(gameContext, &renderObjectCreateInfo);
+		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
 
-		gameContext.renderer->SetTopologyMode(renderID, topologyMode);
-		m_VertexBufferData.DescribeShaderVariables(gameContext.renderer, renderID);
+		g_Renderer->SetTopologyMode(renderID, topologyMode);
+		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
 		m_Initialized = true;
 
 		return true;
 	}
 
-	void MeshComponent::Update(const GameContext& gameContext)
+	void MeshComponent::Update()
 	{
 		if (m_Shape == PrefabShape::GRID)
 		{
 			Transform* transform = m_OwningGameObject->GetTransform();
-			glm::vec3 camPos = gameContext.cameraManager->CurrentCamera()->GetPosition();
+			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
 				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
-				transform->GetWorldlPosition().y,
+				transform->GetWorldPosition().y,
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
-			transform->SetWorldlPosition(newGridPos);
+			transform->SetWorldPosition(newGridPos);
 		}
 	}
 
@@ -1021,12 +1059,12 @@ namespace flex
 		return m_MaterialID;
 	}
 
-	void MeshComponent::SetMaterialID(MaterialID materialID, const GameContext& gameContext)
+	void MeshComponent::SetMaterialID(MaterialID materialID)
 	{
 		m_MaterialID = materialID;
 		if (m_Initialized && m_OwningGameObject)
 		{
-			gameContext.renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
+			g_Renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
 		}
 	}
 
@@ -1063,7 +1101,7 @@ namespace flex
 		}
 		else
 		{
-			Logger::LogError("Unhandled prefab shape string: " + prefabName);
+			PrintError("Unhandled prefab shape string: %s\n", prefabName.c_str());
 			return PrefabShape::NONE;
 		}
 
@@ -1101,6 +1139,6 @@ namespace flex
 
 	std::string MeshComponent::GetFilepath() const
 	{
-		return m_Filepath;
+		return m_FilePath;
 	}
 } // namespace flex

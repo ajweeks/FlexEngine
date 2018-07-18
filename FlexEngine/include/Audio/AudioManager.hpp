@@ -19,6 +19,11 @@ namespace flex
 		static AudioSourceID AddAudioSource(const std::string& filePath);
 		static void ClearAllAudioSources();
 
+
+		/* [0.0, 1.0] logarithmic */
+		static void SetMasterGain(real masterGain);
+		static real GetMasterGain();
+
 		static void PlaySource(AudioSourceID sourceID, bool forceRestart = true);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);

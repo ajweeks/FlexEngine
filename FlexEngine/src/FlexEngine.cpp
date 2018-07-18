@@ -11,20 +11,31 @@
 #include <imgui_internal.h>
 
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
+#include <LinearMath/btIDebugDraw.h>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
+#include "JSONTypes.hpp"
+#include "JSONParser.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
-#include "Scene/SceneManager.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Profiler.hpp"
+#include "Player.hpp"
+#include "PlayerController.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Time.hpp"
+#include "Window/Monitor.hpp"
 
 namespace flex
 {
@@ -35,12 +46,33 @@ namespace flex
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
 
+
+	// Globals declared in stdafx.hpp
+	class Window* g_Window = nullptr;
+	class CameraManager* g_CameraManager = nullptr;
+	class InputManager* g_InputManager = nullptr;
+	class Renderer* g_Renderer = nullptr;
+	class FlexEngine* g_EngineInstance = nullptr;
+	class SceneManager* g_SceneManager = nullptr;
+	struct Monitor* g_Monitor = nullptr;
+	class PhysicsManager* g_PhysicsManager = nullptr;
+
+	sec g_SecElapsedSinceProgramStart = 0;
+	sec g_DeltaTime = 0;
+
+
 	FlexEngine::FlexEngine()
 	{
 		// TODO: Add custom seeding for different random systems
 		std::srand((u32)time(NULL));
 
 		RetrieveCurrentWorkingDirectory();
+
+		std::string configDirAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/"));
+		m_CommonSettingsFileName = "common.ini";
+		m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
+
+		CreateDirectoryRecursive(configDirAbs);
 
 		RendererID preferredInitialRenderer = RendererID::GL;
 
@@ -64,13 +96,13 @@ namespace flex
 
 		m_RendererName = RenderIDToString(m_RendererIndex);
 
-		Logger::Initialize();
+		GetConsoleHandle();
 
-		Logger::LogInfo(std::to_string(m_RendererCount) + " renderer" + (m_RendererCount > 1 ? "s" : "") + " enabled");
-		Logger::LogInfo("Current renderer: " + m_RendererName);
-		assert(m_RendererCount != 0); // At least one renderer must be enabled! (see stdafx.h)
+		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
+		Print("%i renderer%s %s, Current renderer: %s\n", 
+			  m_RendererCount, (m_RendererCount > 1 ? "s" : ""), "enabled", m_RendererName.c_str());
 
-		//Logger::SetLogWarnings(false);
+		DeselectCurrentlySelectedObject();
 	}
 
 	FlexEngine::~FlexEngine()
@@ -80,45 +112,58 @@ namespace flex
 
 	void FlexEngine::Initialize()
 	{
-		m_GameContext = {};
-		m_GameContext.engineInstance = this;
+		const char* profileBlockStr = "Engine initialize";
+		PROFILE_BEGIN(profileBlockStr);
+
+		g_EngineInstance = this;
 
 		AudioManager::Initialize();
 
 		CreateWindowAndRenderer();
 
-		m_GameContext.inputManager = new InputManager();
+		g_InputManager = new InputManager();
 
-		m_GameContext.cameraManager = new CameraManager();
+		g_CameraManager = new CameraManager();
 
-		DebugCamera* debugCamera = new DebugCamera(m_GameContext);
+		DebugCamera* debugCamera = new DebugCamera();
 		debugCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		debugCamera->SetYaw(glm::radians(130.0f));
 		debugCamera->SetPitch(glm::radians(-10.0f));
-		m_GameContext.cameraManager->AddCamera(debugCamera, true);
+		g_CameraManager->AddCamera(debugCamera, true);
 
-		OverheadCamera* overheadCamera = new OverheadCamera(m_GameContext);
-		m_GameContext.cameraManager->AddCamera(overheadCamera, false);
+		OverheadCamera* overheadCamera = new OverheadCamera();
+		g_CameraManager->AddCamera(overheadCamera, false);
 
 		InitializeWindowAndRenderer();
-		m_GameContext.inputManager->Initialize(m_GameContext);
+		g_InputManager->Initialize();
 
-		m_GameContext.physicsManager = new PhysicsManager();
-		m_GameContext.physicsManager->Initialize();
+		g_PhysicsManager = new PhysicsManager();
+		g_PhysicsManager->Initialize();
 
-		m_GameContext.sceneManager = new SceneManager();
-		LoadDefaultScenes();
+		// Transform gizmo materials
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Transform";
+			matCreateInfo.shaderName = "color";
+			matCreateInfo.constAlbedo = glm::vec3(1.0f);
+			matCreateInfo.engineMaterial = true;
+			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
 
-		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
+		g_SceneManager = new SceneManager();
+		g_SceneManager->AddFoundScenes();
 
-		m_GameContext.renderer->PostInitialize(m_GameContext);
+		LoadCommonSettingsFromDisk();
 
-		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
+		g_SceneManager->InitializeCurrentScene();		
+		g_Renderer->PostInitialize();
+		g_SceneManager->PostInitializeCurrentScene();
 
 		SetupImGuiStyles();
 
-		m_GameContext.cameraManager->Initialize(m_GameContext);
-
+		g_CameraManager->Initialize();
 
 		if (s_AudioSourceIDs.empty())
 		{
@@ -126,6 +171,9 @@ namespace flex
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav"));
 		}
+
+		PROFILE_END(profileBlockStr);
+		Profiler::PrintBlockDuration(profileBlockStr);
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -138,29 +186,42 @@ namespace flex
 
 	void FlexEngine::Destroy()
 	{
-		if (m_GameContext.sceneManager)
+		// TODO: Time engine destruction using non-glfw timer
+
+		SaveCommonSettingsToDisk(false);
+		g_Window->SaveToConfig();
+
+		DeselectCurrentlySelectedObject();
+
+		if (m_TransformGizmo)
 		{
-			m_GameContext.sceneManager->DestroyAllScenes(m_GameContext);
-			SafeDelete(m_GameContext.sceneManager);
+			m_TransformGizmo->Destroy();
+			SafeDelete(m_TransformGizmo);
 		}
 
-		SafeDelete(m_GameContext.inputManager);
-
-		if (m_GameContext.physicsManager)
+		if (g_SceneManager)
 		{
-			m_GameContext.physicsManager->Destroy();
-			SafeDelete(m_GameContext.physicsManager);
+			g_SceneManager->DestroyAllScenes();
+			SafeDelete(g_SceneManager);
 		}
 
-		SafeDelete(m_GameContext.cameraManager);
+		SafeDelete(g_InputManager);
+
+		if (g_PhysicsManager)
+		{
+			g_PhysicsManager->Destroy();
+			SafeDelete(g_PhysicsManager);
+		}
+
+		SafeDelete(g_CameraManager);
 
 		DestroyWindowAndRenderer();
 		
+		SafeDelete(g_Monitor);
+
 		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
-
-		Logger::Destroy();
 	}
 
 	void FlexEngine::CreateWindowAndRenderer()
@@ -169,102 +230,91 @@ namespace flex
 		//glm::vec2i desiredWindowSize(500, 300);
 		//glm::vec2i desiredWindowPos(300, 300);
 
-		assert(m_GameContext.window == nullptr);
-		assert(m_GameContext.renderer == nullptr);
+		assert(g_Window == nullptr);
+		assert(g_Renderer == nullptr);
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			m_GameContext.window = new vk::VulkanWindowWrapper(titleString + " - Vulkan", m_GameContext);
+			g_Window = new vk::VulkanWindowWrapper(titleString);
 		}
 #endif
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			m_GameContext.window = new gl::GLWindowWrapper(titleString + " - OpenGL", m_GameContext);
+			g_Window = new gl::GLWindowWrapper(titleString);
 		}
 #endif
-		if (m_GameContext.window == nullptr)
+		if (g_Window == nullptr)
 		{
-			Logger::LogError("Failed to create a window! Are any compile flags set in stdafx.hpp?");
+			PrintError("Failed to create a window! Are any compile flags set in stdafx.hpp?\n");
 			return;
 		}
 
-		m_GameContext.window->Initialize();
-		m_GameContext.window->RetrieveMonitorInfo(m_GameContext);
+		g_Window->Initialize();
+		g_Monitor = new Monitor();
+		g_Window->RetrieveMonitorInfo();
 
 		float desiredAspectRatio = 16.0f / 9.0f;
-		float desiredWindowSizeScreenPercetange = 0.6f;
+		float desiredWindowSizeScreenPercetange = 0.85f;
 
 		// What kind of monitor has different scales along each axis?
-		assert(m_GameContext.monitor.contentScaleX == m_GameContext.monitor.contentScaleY);
+		assert(g_Monitor->contentScaleX == g_Monitor->contentScaleY);
 
-		i32 newWindowSizeY = i32(m_GameContext.monitor.height * desiredWindowSizeScreenPercetange * m_GameContext.monitor.contentScaleY);
+		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercetange * g_Monitor->contentScaleY);
 		i32 newWindowSizeX = i32(newWindowSizeY * desiredAspectRatio);
 		// TODO:
-		//m_GameContext.window->SetSize(newWindowSizeX, newWindowSizeY);
+		//g_Window->SetSize(newWindowSizeX, newWindowSizeY);
 
 		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
 		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
-		//m_GameContext.window->SetPosition(newWindowPosX, newWindowPosY);
+		//g_Window->SetPosition(newWindowPosX, newWindowPosY);
 
-		m_GameContext.window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
+		g_Window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
 
 
 #if COMPILE_VULKAN
 		if (m_RendererIndex == RendererID::VULKAN)
 		{
-			m_GameContext.renderer = new vk::VulkanRenderer(m_GameContext);
+			g_Renderer = new vk::VulkanRenderer();
 		}
 #endif
 #if COMPILE_OPEN_GL
 		if (m_RendererIndex == RendererID::GL)
 		{
-			m_GameContext.renderer = new gl::GLRenderer(m_GameContext);
+			g_Renderer = new gl::GLRenderer();
 		}
 #endif
-		if (m_GameContext.renderer == nullptr)
+		if (g_Renderer == nullptr)
 		{
-			Logger::LogError("Failed to create a renderer!");
+			PrintError("Failed to create a renderer!\n");
 			return;
 		}
 	}
 
 	void FlexEngine::InitializeWindowAndRenderer()
 	{
-		m_GameContext.window->SetUpdateWindowTitleFrequency(0.4f);
-		m_GameContext.window->PostInitialize();
+		g_Window->SetUpdateWindowTitleFrequency(0.5f);
+		g_Window->PostInitialize();
 
-		m_GameContext.renderer->Initialize(m_GameContext);
+		g_Renderer->Initialize();
 	}
 
 	void FlexEngine::DestroyWindowAndRenderer()
 	{
-		if (m_GameContext.renderer)
+		if (g_Renderer)
 		{
-			m_GameContext.renderer->Destroy();
-			SafeDelete(m_GameContext.renderer);
+			g_Renderer->Destroy();
+			SafeDelete(g_Renderer);
 		}
 
-		if (m_GameContext.window)
+		if (g_Window)
 		{
-			m_GameContext.window->Destroy();
-			SafeDelete(m_GameContext.window);
+			g_Window->Destroy();
+			SafeDelete(g_Window);
 		}
-	}
-
-	void FlexEngine::LoadDefaultScenes()
-	{
-		BaseScene* scene01 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_01.json");
-		m_GameContext.sceneManager->AddScene(scene01);
-
-		BaseScene* scene02 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_02.json");
-		m_GameContext.sceneManager->AddScene(scene02);
-
-		BaseScene* scene03 = new BaseScene(RESOURCE_LOCATION + "scenes/scene_03.json");
-		m_GameContext.sceneManager->AddScene(scene03);
 	}
 
 	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
@@ -279,12 +329,128 @@ namespace flex
 		}
 	}
 
+	void FlexEngine::PreSceneChange()
+	{
+		if (m_TransformGizmo)
+		{
+			m_TransformGizmo->Destroy();
+			SafeDelete(m_TransformGizmo);
+		}
+
+		DeselectCurrentlySelectedObject();
+	}
+
+	void FlexEngine::OnSceneChanged()
+	{
+		SaveCommonSettingsToDisk(false);
+
+		Material& transformGizmoMaterial = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
+		Shader& transformGizmoShader = g_Renderer->GetShader(transformGizmoMaterial.shaderID);
+		VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
+
+		RenderObjectCreateInfo gizmoAxisCreateInfo = {};
+		gizmoAxisCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+		gizmoAxisCreateInfo.depthWriteEnable = true;
+		gizmoAxisCreateInfo.editorObject = true;
+
+		real cylinderRadius = 0.2f;
+		real cylinderHeight = 1.6f;
+
+		u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
+		u32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
+		u32 rbMask = 1;
+
+		// X Axis
+		GameObject* transformXAxis = new GameObject("Transform gizmo x axis", GameObjectType::NONE);
+		transformXAxis->AddTag("transform gizmo");
+		transformXAxis->SetVisibleInSceneExplorer(false);
+		MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
+
+		btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+		transformXAxis->SetCollisionShape(xAxisShape);
+
+		RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+		gizmoXAxisRB->SetMass(0.0f);
+		gizmoXAxisRB->SetKinematic(true);
+		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
+
+		xAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-x-axis.fbx", nullptr, &gizmoAxisCreateInfo);
+
+		// Y Axis
+		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
+		transformYAxis->AddTag("transform gizmo");
+		transformYAxis->SetVisibleInSceneExplorer(false);
+		MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
+
+		btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+		transformYAxis->SetCollisionShape(yAxisShape);
+
+		RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+		gizmoYAxisRB->SetMass(0.0f);
+		gizmoYAxisRB->SetKinematic(true);
+		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
+
+		yAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-y-axis.fbx", nullptr, &gizmoAxisCreateInfo);
+
+		// Z Axis
+		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
+		transformZAxis->AddTag("transform gizmo");
+		transformZAxis->SetVisibleInSceneExplorer(false);
+
+		MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
+
+		btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+		transformZAxis->SetCollisionShape(zAxisShape);
+
+		RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+		gizmoZAxisRB->SetMass(0.0f);
+		gizmoZAxisRB->SetKinematic(true);
+		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
+
+		zAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-z-axis.fbx", nullptr, &gizmoAxisCreateInfo);
+
+
+		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
+		m_TransformGizmo->SetVisibleInSceneExplorer(false);
+
+		m_TransformGizmo->AddChild(transformXAxis);
+		m_TransformGizmo->AddChild(transformYAxis);
+		m_TransformGizmo->AddChild(transformZAxis);
+		m_TransformGizmo->Initialize();
+
+
+		gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+		gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+		gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+		gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+		gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+		m_TransformGizmo->PostInitialize();
+	}
+
+	bool FlexEngine::IsRenderingImGui() const
+	{
+		return m_bRenderImGui;
+	}
+
+	bool FlexEngine::IsRenderingEditorObjects() const
+	{
+		return m_bRenderEditorObjects;
+	}
+
 	void FlexEngine::CycleRenderer()
 	{
 		// TODO? ??
-		//m_GameContext.renderer->InvalidateFontObjects();
+		//g_Renderer->InvalidateFontObjects();
 
-		m_GameContext.sceneManager->RemoveScene(m_GameContext.sceneManager->CurrentScene(), m_GameContext);
+		DeselectCurrentlySelectedObject();
+		PreSceneChange();
+		g_SceneManager->DestroyAllScenes();
 		DestroyWindowAndRenderer();
 
 		while (true)
@@ -305,138 +471,407 @@ namespace flex
 #endif
 		}
 		m_RendererName = RenderIDToString(m_RendererIndex);
-		Logger::LogInfo("Current renderer: " + m_RendererName);
+		Print("Current renderer: %s\n", m_RendererName);
 
 		CreateWindowAndRenderer();
 		InitializeWindowAndRenderer();
 
 		SetupImGuiStyles();
 
-		LoadDefaultScenes();
+		g_SceneManager->AddFoundScenes();
+		
+		LoadCommonSettingsFromDisk();
 
-		m_GameContext.sceneManager->InitializeCurrentScene(m_GameContext);
-
-		m_GameContext.renderer->PostInitialize(m_GameContext);
-
-		m_GameContext.sceneManager->PostInitializeCurrentScene(m_GameContext);
+		g_SceneManager->InitializeCurrentScene();
+		g_Renderer->PostInitialize();
+		g_SceneManager->PostInitializeCurrentScene();
 	}
 
 	void FlexEngine::UpdateAndRender()
 	{
 		m_Running = true;
-		sec frameStartTime = Time::Now();
+		sec frameStartTime = Time::CurrentSeconds();
 		while (m_Running)
 		{
-			sec frameEndTime = Time::Now();
+			sec frameEndTime = Time::CurrentSeconds();
 			sec dt = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-			if (dt < 0.0f) dt = 0.0f;
+			dt = glm::clamp(dt, m_MinDT, m_MaxDT);
 
-			m_GameContext.deltaTime = dt;
-			m_GameContext.elapsedTime = frameEndTime;
+			g_DeltaTime = dt;
+			g_SecElapsedSinceProgramStart = frameEndTime;
 
-			m_GameContext.window->PollEvents();
+			Profiler::StartFrame();
 
-			const glm::vec2i frameBufferSize = m_GameContext.window->GetFrameBufferSize();
+			PROFILE_BEGIN("Update");
+			g_Window->PollEvents();
+
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
 			{
-				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
+				g_InputManager->ClearAllInputs();
 			}
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
+			// Disabled for now since we only support Open GL
+#if 0
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
 			{
-				m_GameContext.inputManager->Update(m_GameContext);
-				m_GameContext.inputManager->PostUpdate();
-				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
+				g_InputManager->Update();
+				g_InputManager->PostUpdate();
+				g_InputManager->ClearAllInputs();
 				CycleRenderer();
 				continue;
 			}
+#endif
+
+			// This variable should be the one changed during this frame so we always
+			// end frames that we start, next frame we will begin using the new value
+			bool renderImGuiNextFrame = m_bRenderImGui;
 
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
-			m_GameContext.renderer->NewFrame();
-
-			DrawImGuiObjects();
-
-			// TODO: Bring keybindings out to external file (or at least variables)
-			if (m_GameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::LEFT) &&
-				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+			g_Renderer->NewFrame();
+			 
+			if (m_bRenderImGui)
 			{
-				glm::vec2 mousePos = m_GameContext.inputManager->GetMousePosition();
+				PROFILE_BEGIN("DrawImGuiObjects");
+				DrawImGuiObjects();
+				PROFILE_END("DrawImGuiObjects");
+			}
 
-				PhysicsWorld* physicsWorld = m_GameContext.sceneManager->CurrentScene()->GetPhysicsWorld();
+			// Hovered object
+			{
+				GameObject* hoveredOverGameObject = nullptr;
 
-				btVector3 cameraPos = Vec3ToBtVec3(m_GameContext.cameraManager->CurrentCamera()->GetPosition());
+				glm::vec2 mousePos = g_InputManager->GetMousePosition();
+				PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+				btVector3 cameraPos = Vec3ToBtVec3(g_CameraManager->CurrentCamera()->GetPosition());
+
+				real maxDist = 1000.0f;
+
 				btVector3 rayStart(cameraPos);
-				btVector3 rayEnd = physicsWorld->GenerateRayFromScreenPos(m_GameContext, (i32)mousePos.x, (i32)mousePos.y);
+				btVector3 rayDir = physicsWorld->GenerateDirectionRayFromScreenPos((i32)mousePos.x, (i32)mousePos.y);
+				btVector3 rayEnd = rayStart + rayDir * maxDist;
 
-				if (physicsWorld->PickBody(rayStart, rayEnd) != nullptr)
+				btRigidBody* pickedBody = physicsWorld->PickBody(rayStart, rayEnd);
+
+				Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
+				Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
+				Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+				glm::vec4 white(1.0f);
+				if (m_DraggingAxisIndex != 0)
 				{
-					m_GameContext.inputManager->ClearMouseInput(m_GameContext);
+					xMat.colorMultiplier = white;
+				}
+				if (m_DraggingAxisIndex != 1)
+				{
+					yMat.colorMultiplier = white;
+				}
+				if (m_DraggingAxisIndex != 2)
+				{
+					zMat.colorMultiplier = white;
+				}
+
+				std::vector<GameObject*> transformAxes = m_TransformGizmo->GetChildren();
+
+				real gizmoHoverMultiplier = 3.0f;
+				real gizmoSelectedMultiplier = 8.0f;
+
+				glm::vec4 selectedColor(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
+				glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
+
+				// TODO: Bring keybindings out to external file (or at least variables)
+				InputManager::MouseButton dragButton = InputManager::MouseButton::LEFT;
+				bool bMouseDown = g_InputManager->IsMouseButtonDown(dragButton);
+				bool bMousePressed = g_InputManager->IsMouseButtonPressed(dragButton);
+				bool bMouseReleased = g_InputManager->IsMouseButtonReleased(dragButton);
+
+				if (!m_bDraggingGizmo && pickedBody)
+				{
+					hoveredOverGameObject = (GameObject*)(pickedBody->getUserPointer());
+
+					if (hoveredOverGameObject)
+					{
+						btRigidBody* pickedTransform = physicsWorld->PickBody(rayStart, rayEnd);
+						if (pickedTransform)
+						{
+							GameObject* pickedTransformGameObject = (GameObject*)(pickedTransform->getUserPointer());
+
+							if (pickedTransformGameObject)
+							{
+
+								if (hoveredOverGameObject == transformAxes[0]) // X Axis
+								{
+									if (bMousePressed)
+									{
+										m_DraggingAxisIndex = 0;
+										xMat.colorMultiplier = selectedColor;
+									}
+									else
+									{
+										xMat.colorMultiplier = hoverColor;
+									}
+								}
+								else if (hoveredOverGameObject == transformAxes[1]) // Y Axis
+								{
+									if (bMousePressed)
+									{
+										m_DraggingAxisIndex = 1;
+										yMat.colorMultiplier = selectedColor;
+									}
+									else
+									{
+										yMat.colorMultiplier = hoverColor;
+									}
+								}
+								else if (hoveredOverGameObject == transformAxes[2]) // Z Axis
+								{
+									if (bMousePressed)
+									{
+										m_DraggingAxisIndex = 2;
+										zMat.colorMultiplier = selectedColor;
+									}
+									else
+									{
+										zMat.colorMultiplier = hoverColor;
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (bMouseDown || bMouseReleased)
+				{
+					glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(dragButton);
+					real maxMoveDist = 1.0f;
+
+					if (bMouseReleased)
+					{
+						if (m_bDraggingGizmo)
+						{
+							if (m_CurrentlySelectedObject)
+							{
+								m_SelectedObjectDragStartPos = m_CurrentlySelectedObject->GetTransform()->GetLocalPosition();
+							}
+							m_bDraggingGizmo = false;
+							m_DraggingAxisIndex = -1;
+						}
+						else
+						{
+							// If the mouse hasn't moved then the user clicked on something - select it
+							if (glm::length(dragDist) < maxMoveDist)
+							{
+								if (hoveredOverGameObject)
+								{
+									RigidBody* rb = hoveredOverGameObject->GetRigidBody();
+									if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
+									{
+										m_CurrentlySelectedObject = hoveredOverGameObject;
+										g_InputManager->ClearMouseInput();
+									}
+									else
+									{
+										DeselectCurrentlySelectedObject();
+									}
+								}
+								else
+								{
+									DeselectCurrentlySelectedObject();
+								}
+							}
+						}
+					}
+
+					// Handle dragging transform gizmo
+					if (m_CurrentlySelectedObject)
+					{
+						Transform* selectedObjectTransform = m_CurrentlySelectedObject->GetTransform();
+						glm::vec3 selectedObjectScale = selectedObjectTransform->GetWorldScale();
+						real scale = 0.01f;
+						if (m_DraggingAxisIndex == 0) // X Axis
+						{
+							if (bMousePressed)
+							{
+								m_bDraggingGizmo = true;
+								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
+							}
+							else if (bMouseDown)
+							{
+								glm::vec3 right = selectedObjectTransform->GetLocalRotation() * glm::vec3(1, 0, 0);
+								glm::vec3 deltaPos = (dragDist.x * scale * selectedObjectScale.x * right);
+								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
+							}
+						}
+						else if (m_DraggingAxisIndex == 1) // Y Axis
+						{
+							if (bMousePressed)
+							{
+								m_bDraggingGizmo = true;
+								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
+							}
+							else if (bMouseDown)
+							{
+								glm::vec3 up = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 1, 0);
+								glm::vec3 deltaPos = (-dragDist.y * selectedObjectScale.y * scale * up);
+								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
+							}
+						}
+						else if (m_DraggingAxisIndex == 2) // Z Axis
+						{
+							if (bMousePressed)
+							{
+								m_bDraggingGizmo = true;
+								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
+							}
+							else if (bMouseDown)
+							{
+								glm::vec3 forward = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 0, 1);
+								glm::vec3 deltaPos = (-dragDist.x * selectedObjectScale.z * scale * forward);
+								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
+							}
+						}
+
+						if (m_bDraggingGizmo)
+						{
+							g_Renderer->GetDebugDrawer()->drawLine(
+								Vec3ToBtVec3(m_SelectedObjectDragStartPos),
+								Vec3ToBtVec3(selectedObjectTransform->GetLocalPosition()),
+								(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.0f, 0.0f, 1.0f)));
+						}
+					}
 				}
 			}
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
 			{
-				m_GameContext.renderer->SetVSyncEnabled(!m_GameContext.renderer->GetVSyncEnabled());
+				m_bRenderEditorObjects = !m_bRenderEditorObjects;
 			}
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
 			{
-				m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
-				m_GameContext.cameraManager->Initialize(m_GameContext);
-			}
-			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
-			{
-				m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
-				m_GameContext.cameraManager->Initialize(m_GameContext);
+				renderImGuiNextFrame = !renderImGuiNextFrame;
 			}
 
-			if (m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL) &&
-				m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_ESCAPE))
 			{
-				m_GameContext.renderer->ReloadShaders();
-			}
-			else if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
-			{
-				m_GameContext.inputManager->ClearAllInputs(m_GameContext);
-
-				m_GameContext.sceneManager->ReloadCurrentScene(m_GameContext);
-				m_GameContext.cameraManager->Initialize(m_GameContext);
+				DeselectCurrentlySelectedObject();
 			}
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_DELETE))
 			{
-				PhysicsDebuggingSettings& settings = m_GameContext.renderer->GetPhysicsDebuggingSettings();
+				if (m_CurrentlySelectedObject)
+				{
+					g_SceneManager->CurrentScene()->DestroyGameObject(m_CurrentlySelectedObject, true);
+				}
+			}
+
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
+			{
+				g_SceneManager->SetNextSceneActiveAndInit();
+			}
+			else if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
+			{
+				g_SceneManager->SetPreviousSceneActiveAndInit();
+			}
+
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL) &&
+				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
+			{
+				g_Renderer->ReloadShaders();
+			}
+			else if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
+			{
+				g_InputManager->ClearAllInputs();
+
+				g_SceneManager->ReloadCurrentScene();
+			}
+
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
+			{
+				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 				settings.DrawWireframe = !settings.DrawWireframe;
 			}
 
-			bool altDown = m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_ALT) ||
-				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT_ALT);
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F11) ||
-				(altDown && m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_ENTER)))
+			bool altDown = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_ALT) ||
+				g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT_ALT);
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F11) ||
+				(altDown && g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_ENTER)))
 			{
-				m_GameContext.window->ToggleFullscreen();
+				g_Window->ToggleFullscreen();
 			}
 
-			m_GameContext.cameraManager->Update(m_GameContext);
-			m_GameContext.sceneManager->UpdateAndRender(m_GameContext);
-			m_GameContext.window->Update(m_GameContext);
+			Profiler::Update();
 
-			if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
-				m_GameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+			g_CameraManager->Update();
+
+			if (m_CurrentlySelectedObject)
 			{
-				m_GameContext.sceneManager->CurrentScene()->SerializeToFile(m_GameContext);
+				m_TransformGizmo->SetVisible(true);
+				m_TransformGizmo->GetTransform()->SetWorldPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
+				m_TransformGizmo->GetTransform()->SetWorldRotation(m_CurrentlySelectedObject->GetTransform()->GetWorldRotation());
 			}
+			else
+			{
+				m_TransformGizmo->SetVisible(false);
+			}
+			g_SceneManager->UpdateCurrentScene();
+
+			
+			g_Window->Update();
+
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
+				g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+			{
+				g_SceneManager->CurrentScene()->SerializeToFile(true);
+			}
+
+			bool bWriteProfilingResultsToFile = 
+				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
+
+			g_Renderer->Update();
 
 			// TODO: Consolidate functions?
-			m_GameContext.inputManager->Update(m_GameContext);
-			m_GameContext.inputManager->PostUpdate();
+			g_InputManager->Update();
+			g_InputManager->PostUpdate();
+			PROFILE_END("Update");
 
-			m_GameContext.renderer->Update(m_GameContext);
+			PROFILE_BEGIN("Render");
+			g_Renderer->Draw();
+			PROFILE_END("Render");
 
-			m_GameContext.renderer->Draw(m_GameContext);
+			// We can update this now that the renderer has had a chance to end the frame
+			m_bRenderImGui = renderImGuiNextFrame;
+
+			if (!m_bRenderImGui)
+			{
+				// Prevent mouse from being ignored while hovering over invisible ImGui elements
+				ImGui::GetIO().WantCaptureMouse = false;
+			}
+
+			m_SecondsSinceLastCommonSettingsFileSave += g_DeltaTime;
+			if (m_SecondsSinceLastCommonSettingsFileSave > m_SecondsBetweenCommonSettingsFileSave)
+			{
+				m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
+				SaveCommonSettingsToDisk(false);
+				g_Window->SaveToConfig();
+			}
+
+			const bool bProfileFrame = (m_FrameCount > 3);
+			if (bProfileFrame)
+			{
+				Profiler::EndFrame(m_bUpdateProfilerFrame);
+			}
+
+			m_bUpdateProfilerFrame = false;
+
+			if (bWriteProfilingResultsToFile)
+			{
+				Profiler::PrintResultsToFile();
+			}
+
+			++m_FrameCount;
 		}
 	}
 
@@ -445,13 +880,16 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 
-		io.FontGlobalScale = m_GameContext.monitor.contentScaleX;
+		std::string fontFilePath(RESOURCE_LOCATION + "fonts/lucon.ttf");
+		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
+
+		io.FontGlobalScale = g_Monitor->contentScaleX;
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
 		style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
-		style.Colors[ImGuiCol_ChildWindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.85f);
+		style.Colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 		style.Colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
 		style.Colors[ImGuiCol_Border] = ImVec4(0.70f, 0.70f, 0.70f, 0.40f);
 		style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
@@ -459,8 +897,8 @@ namespace flex
 		style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
 		style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
 		style.Colors[ImGuiCol_TitleBg] = ImVec4(0.74f, 0.33f, 0.09f, 0.94f);
-		style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.74f, 0.33f, 0.09f, 0.20f);
 		style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.87f, 0.15f, 0.02f, 0.94f);
+		style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.74f, 0.33f, 0.09f, 0.20f);
 		style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.83f, 0.25f, 0.07f, 0.55f);
 		style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.20f, 0.25f, 0.30f, 0.60f);
 		style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.75f, 0.40f, 0.40f);
@@ -481,61 +919,104 @@ namespace flex
 		style.Colors[ImGuiCol_ResizeGrip] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
 		style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
 		style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
-		style.Colors[ImGuiCol_CloseButton] = ImVec4(0.47f, 0.00f, 0.00f, 0.63f);
-		style.Colors[ImGuiCol_CloseButtonHovered] = ImVec4(0.90f, 0.17f, 0.17f, 0.60f);
-		style.Colors[ImGuiCol_CloseButtonActive] = ImVec4(0.70f, 0.70f, 0.70f, 1.00f);
 		style.Colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 		style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 		style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 		style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(1.00f, 0.57f, 0.31f, 0.35f);
-		style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+		style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+		style.Colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
+		style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+		style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
 	}
 
 	void FlexEngine::DrawImGuiObjects()
 	{
 		ImGui::ShowDemoWindow();
 
-		static bool windowOpen = true;
-		if (m_GameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1))
-		{
-			windowOpen = !windowOpen;
-		}
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
-		if (ImGui::Begin(titleCharStr, &windowOpen))
+		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_ResizeFromAnySide;
+		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
+		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300), 
+											ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
+											[](ImGuiSizeCallbackData* data)
 		{
-			static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
-			static const char* renderNameStr = rendererNameStringStr.c_str();
-			ImGui::TextUnformatted(renderNameStr);
+			FlexEngine* engine = (FlexEngine*)data->UserData;
+			engine->m_ImGuiMainWindowWidth = data->DesiredSize.x;
+			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
+													  glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
+		}, this);
+		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Once);
+		real frameBufferHeight = (real)frameBufferSize.y;
+		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight),
+								 ImGuiCond_Always);
+		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))
+		{
+			if (ImGui::TreeNode("Stats"))
+			{
+				static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
+				static const char* renderNameStr = rendererNameStringStr.c_str();
+				ImGui::TextUnformatted(renderNameStr);
+
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Misc settings"))
+			{
+				ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
+
+				ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
+
+				if (ImGui::Button("Display latest frame"))
+				{
+					m_bUpdateProfilerFrame = true;
+					Profiler::s_bDisplayingFrame = true;
+				}
+
+				ImGui::TreePop();
+			}
 
 			static const char* rendererSettingsStr = "Renderer settings";
 			if (ImGui::TreeNode(rendererSettingsStr))
 			{
-				bool bVSyncEnabled = m_GameContext.renderer->GetVSyncEnabled();
+				if (ImGui::Button("  Save  "))
+				{
+					g_Renderer->SaveSettingsToDisk(false, true);
+				}
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				{
+					ImGui::SameLine();
+					if (ImGui::Button("Save over defaults"))
+					{
+						g_Renderer->SaveSettingsToDisk(true, true);
+					}
+
+					ImGui::SameLine();
+					if (ImGui::Button("Reload defaults"))
+					{
+						g_Renderer->LoadSettingsFromDisk(true);
+					}
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
+				bool bVSyncEnabled = g_Renderer->GetVSyncEnabled();
 				static const char* vSyncEnabledStr = "VSync";
 				if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
 				{
-					m_GameContext.renderer->SetVSyncEnabled(bVSyncEnabled);
-				}
-
-				static const char* uiScaleStr = "UI Scale";
-				ImGui::SliderFloat(uiScaleStr, &ImGui::GetIO().FontGlobalScale, 0.25f, 3.0f);
-
-				static const char* windowModeStr = "##WindowMode";
-				static const char* windowModesStr[] = { "Windowed", "Borderless Windowed" };
-				static const i32 windowModeCount = 2;
-				i32 currentItemIndex = (i32)m_GameContext.window->GetFullscreenMode();
-				if (ImGui::ListBox(windowModeStr, &currentItemIndex, windowModesStr, windowModeCount))
-				{
-					Window::FullscreenMode newFullscreenMode = Window::FullscreenMode(currentItemIndex);
-					m_GameContext.window->SetFullscreenMode(newFullscreenMode);
+					g_Renderer->SetVSyncEnabled(bVSyncEnabled);
 				}
 
 				static const char* physicsDebuggingStr = "Physics debugging";
 				if (ImGui::TreeNode(physicsDebuggingStr))
 				{
-					PhysicsDebuggingSettings& physicsDebuggingSettings = m_GameContext.renderer->GetPhysicsDebuggingSettings();
+					PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 
 					static const char* disableAllStr = "Disable All";
 					ImGui::Checkbox(disableAllStr, &physicsDebuggingSettings.DisableAll);
@@ -598,7 +1079,13 @@ namespace flex
 				static const char* postProcessStr = "Post processing";
 				if (ImGui::TreeNode(postProcessStr))
 				{
-					Renderer::PostProcessSettings& postProcessSettings = m_GameContext.renderer->GetPostProcessSettings();
+					Renderer::PostProcessSettings& postProcessSettings = g_Renderer->GetPostProcessSettings();
+
+					bool bPostProcessingEnabled = g_Renderer->GetPostProcessingEnabled();
+					if (ImGui::Checkbox("Enabled", &bPostProcessingEnabled))
+					{
+						g_Renderer->SetPostProcessingEnabled(bPostProcessingEnabled);
+					}
 
 					static const char* fxaaEnabledStr = "FXAA";
 					ImGui::Checkbox(fxaaEnabledStr, &postProcessSettings.bEnableFXAA);
@@ -612,15 +1099,115 @@ namespace flex
 					}
 
 					static const char* brightnessStr = "Brightness (RGB)";
-					ImGui::SliderFloat3(brightnessStr, &postProcessSettings.brightness.r, 0.0f, 2.5f);
+					real maxBrightness = 2.5f;
+					ImGui::SliderFloat3(brightnessStr, &postProcessSettings.brightness.r, 0.0f, maxBrightness);
+					ImGui::SameLine();
+					ImGui::ColorButton("##1", ImVec4(
+						postProcessSettings.brightness.r / maxBrightness,
+						postProcessSettings.brightness.g / maxBrightness,
+						postProcessSettings.brightness.b / maxBrightness, 1));
 
-					static const char* offsetStr = "Offset";
-					ImGui::SliderFloat3(offsetStr, &postProcessSettings.offset.r, -0.35f, 0.35f);
+					static const char* offsetStr = "Offset (RGB)";
+					real minOffset = -0.35f;
+					real maxOffset = 0.35f;
+					ImGui::SliderFloat3(offsetStr, &postProcessSettings.offset.r, minOffset, maxOffset);
+					ImGui::SameLine();
+					ImGui::ColorButton("##2", ImVec4(
+						(postProcessSettings.offset.r - minOffset) / (maxOffset - minOffset),
+						(postProcessSettings.offset.g - minOffset) / (maxOffset - minOffset),
+						(postProcessSettings.offset.b - minOffset) / (maxOffset - minOffset), 1));
 
 					static const char* saturationStr = "Saturation";
-					ImGui::SliderFloat(saturationStr, &postProcessSettings.saturation, 0.0f, 2.0f);
+					const real maxSaturation = 2.0f;
+					ImGui::SliderFloat(saturationStr, &postProcessSettings.saturation, 0.0f, maxSaturation);
+					ImGui::SameLine();
+					ImGui::ColorButton("##3", ImVec4(
+						postProcessSettings.saturation / maxSaturation,
+						postProcessSettings.saturation / maxSaturation,
+						postProcessSettings.saturation / maxSaturation, 1));
 
 					ImGui::TreePop();
+				}
+
+				ImGui::TreePop();
+			}
+
+			static const char* windowSettingsStr = "Window settings";
+			if (ImGui::TreeNode(windowSettingsStr))
+			{
+				bool bAutoRestoreWindow = g_Window->GetAutoRestoreStateEnabled();
+				if (ImGui::Checkbox("Auto restore state", &bAutoRestoreWindow))
+				{
+					g_Window->SetAutoRestoreStateEnabled(bAutoRestoreWindow);
+					g_Renderer->SaveSettingsToDisk(false, true);
+				}
+
+				glm::vec2i windowPos = g_Window->GetPosition();
+				if (ImGui::DragInt2("Position", &windowPos.x, 1.0f))
+				{
+					g_Window->SetPosition(windowPos.x, windowPos.y);
+				}
+
+				if (ImGui::Button("Center"))
+				{
+					glm::vec2i windowSize = g_Window->GetSize();
+					g_Window->SetPosition(g_Monitor->width / 2 - windowSize.x / 2,
+										  g_Monitor->height / 2 - windowSize.y / 2);
+				}
+
+				ImGui::NewLine();
+
+				glm::vec2i windowSize = g_Window->GetSize();
+				if (ImGui::DragInt2("Size", &windowSize.x, 1.0f, 100, 3840))
+				{
+					g_Window->SetSize(windowSize.x, windowSize.y);
+				}
+
+				bool bWindowWasMaximized = g_Window->IsMaximized();
+				if (bWindowWasMaximized)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+				if (ImGui::Button("Maximize"))
+				{
+					g_Window->Maximize();
+				}
+				if (bWindowWasMaximized)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Iconify"))
+				{
+					g_Window->Iconify();
+				}
+
+				if (ImGui::Button("1920x1080"))
+				{
+					g_Window->SetSize(1920, 1080);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("1600x900"))
+				{
+					g_Window->SetSize(1600, 900);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("1280x720"))
+				{
+					g_Window->SetSize(1280, 720);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("800x600"))
+				{
+					g_Window->SetSize(800, 600);
 				}
 
 				ImGui::TreePop();
@@ -630,9 +1217,9 @@ namespace flex
 			const char* cameraStr = "Camera";
 			if (ImGui::TreeNode(cameraStr))
 			{
-				BaseCamera* currentCamera = m_GameContext.cameraManager->CurrentCamera();
+				BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
 
-				const i32 cameraCount = m_GameContext.cameraManager->CameraCount();
+				const i32 cameraCount = g_CameraManager->CameraCount();
 
 				if (cameraCount > 1) // Only show arrows if other cameras exist
 				{
@@ -641,7 +1228,7 @@ namespace flex
 
 					if (ImGui::Button(arrowPrevStr))
 					{
-						m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, -1, false);
+						g_CameraManager->SetActiveIndexRelative(-1, false);
 					}
 
 					ImGui::SameLine();
@@ -651,12 +1238,10 @@ namespace flex
 
 					ImGui::SameLine();
 
-					ImGui::PushItemWidth(-1.0f);
 					if (ImGui::Button(arrowNextStr))
 					{
-						m_GameContext.cameraManager->SwtichToIndexRelative(m_GameContext, 1, false);
+						g_CameraManager->SetActiveIndexRelative(1, false);
 					}
-					ImGui::PopItemWidth();
 				}
 
 				static const char* moveSpeedStr = "Move speed";
@@ -708,37 +1293,6 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			static const char* loggingStr = "Logging";
-			if (ImGui::TreeNode(loggingStr))
-			{
-				bool suppressInfo = Logger::GetSuppressInfo();
-				i32 suppressedInfoCount = Logger::GetSuppressedInfoCount();
-				const std::string infoStr("Suppress Info (" + std::to_string(suppressedInfoCount) + ")###SUppressedInfo");
-				if (ImGui::Checkbox(infoStr.c_str(), &suppressInfo))
-				{
-					Logger::SetSuppressInfo(suppressInfo);
-				}
-
-				bool suppressWarnings = Logger::GetSuppressWarnings();
-				i32 suppressedWarningCount = Logger::GetSuppressedWarningCount();
-				const std::string warningStr("Suppress Warnings (" + std::to_string(suppressedWarningCount) + ")###SuppressedWarnings");
-				if (ImGui::Checkbox(warningStr.c_str(), &suppressWarnings))
-				{
-					Logger::SetSuppressWarnings(suppressWarnings);
-				}
-
-				// TODO: Why can't this be turned on again while errors are being spammed?
-				bool suppressErrors = Logger::GetSuppressErrors();
-				i32 suppressedErrorCount = Logger::GetSuppressedErrorCount();
-				const std::string errorStr("Suppress Errors (" + std::to_string(suppressedErrorCount) + ")###SuppressedErrors");
-				if (ImGui::Checkbox(errorStr.c_str(), &suppressErrors))
-				{
-					Logger::SetSuppressErrors(suppressErrors);
-				}
-
-				ImGui::TreePop();
-			}
-
 			static const char* scenesStr = "Scenes";
 			if (ImGui::TreeNode(scenesStr))
 			{
@@ -747,49 +1301,612 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
-					m_GameContext.sceneManager->SetPreviousSceneActive(m_GameContext);
+					g_SceneManager->SetPreviousSceneActiveAndInit();
 				}
+				
+				ImGui::SameLine();
+
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+				const std::string currentSceneNameStr(currentScene->GetName() + (currentScene->IsUsingSaveFile() ? " (saved)" : " (default)"));
+				ImGui::Text(currentSceneNameStr.c_str());
+				
+				DoSceneContextMenu(currentScene);
 
 				if (ImGui::IsItemHovered())
 				{
+					std::string fileName = currentScene->GetShortRelativeFilePath();
 					ImGui::BeginTooltip();
-					ImGui::TextUnformatted("Previous scene");
+					ImGui::TextUnformatted(fileName.c_str());
 					ImGui::EndTooltip();
 				}
 
 				ImGui::SameLine();
 
-				const u32 currentSceneIndex = m_GameContext.sceneManager->CurrentSceneIndex() + 1;
-				const u32 sceneCount = m_GameContext.sceneManager->GetSceneCount();
-				const std::string currentSceneStr(m_GameContext.sceneManager->CurrentScene()->GetName() +
-					" (" + std::to_string(currentSceneIndex) + "/" + std::to_string(sceneCount) + ")");
-				ImGui::TextUnformatted(currentSceneStr.c_str());
-
-				ImGui::SameLine();
 				if (ImGui::Button(arrowNextStr))
 				{
-					m_GameContext.sceneManager->SetNextSceneActive(m_GameContext);
+					g_SceneManager->SetNextSceneActiveAndInit();
 				}
-				if (ImGui::IsItemHovered())
+
+				i32 sceneItemWidth = 240;
+				if (ImGui::BeginChild("Scenes", ImVec2((real)sceneItemWidth, 120), true, ImGuiWindowFlags_NoResize))
 				{
-					ImGui::BeginTooltip();
-					static const char* nextSceneStr = "Next scene";
-					ImGui::TextUnformatted(nextSceneStr);
-					ImGui::EndTooltip();
+					i32 currentSceneIndex = g_SceneManager->GetCurrentSceneIndex();
+					for (i32 i = 0; i < (i32)g_SceneManager->GetSceneCount(); ++i)
+					{
+						bool bSceneSelected = (i == currentSceneIndex);
+						BaseScene* scene = g_SceneManager->GetSceneAtIndex(i);
+						std::string sceneFileName = scene->GetFileName();
+						if (ImGui::Selectable(sceneFileName.c_str(), &bSceneSelected, 0, ImVec2((real)sceneItemWidth, 0)))
+						{
+							if (i != currentSceneIndex)
+							{
+								if (g_SceneManager->SetCurrentScene(i))
+								{
+									g_SceneManager->InitializeCurrentScene();
+									g_SceneManager->PostInitializeCurrentScene();
+								}
+							}
+						}
+
+						DoSceneContextMenu(scene);
+					}
+				}
+				ImGui::EndChild();
+
+				static const char* addSceneStr = "Add scene...";
+				std::string addScenePopupID = "Add scene";
+				if (ImGui::Button(addSceneStr))
+				{
+					ImGui::OpenPopup(addScenePopupID.c_str());
+				}
+
+				if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+				{
+					static std::string newSceneName = "Scene_" + IntToString(g_SceneManager->GetSceneCount(), 2);
+
+					const size_t maxStrLen = 256;
+					newSceneName.resize(maxStrLen);
+					bool bCreate = ImGui::InputText("Scene name", 
+													(char*)newSceneName.data(), 
+													maxStrLen,
+													ImGuiInputTextFlags_EnterReturnsTrue);
+
+					bCreate |= ImGui::Button("Create");
+
+					if (bCreate)
+					{
+						// Remove trailing '\0' characters
+						newSceneName = std::string(newSceneName.c_str());
+
+						g_SceneManager->CreateNewScene(newSceneName, true);
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Cancel"))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Refresh scenes"))
+				{
+					g_SceneManager->AddFoundScenes();
+					g_SceneManager->RemoveDeletedScenes();
+				}
+
+				ImGui::TreePop();
+			}
+			
+			const char* reloadStr = "Reloading";
+			if (ImGui::TreeNode(reloadStr))
+			{
+				if (ImGui::Button("Reload scene file"))
+				{
+					g_SceneManager->ReloadCurrentScene();
+				}
+
+				if (ImGui::Button("Hard reload scene file (reloads all meshes)"))
+				{
+					Print("Clearing all loaded meshes\n");
+					MeshComponent::DestroyAllLoadedMeshes();
+					g_SceneManager->ReloadCurrentScene();
+				}
+
+				if (ImGui::Button("Reload all shaders"))
+				{
+					g_Renderer->ReloadShaders();
+				}
+
+				if (ImGui::Button("Reload player positions"))
+				{
+					g_SceneManager->CurrentScene()->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
+					g_SceneManager->CurrentScene()->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
 				}
 
 				ImGui::TreePop();
 			}
 
-			m_GameContext.renderer->DrawImGuiItems(m_GameContext);
-		}
-		ImGui::End();
+			const char* audioStr = "Audio";
+			if (ImGui::TreeNode(audioStr))
+			{
+				real gain = AudioManager::GetMasterGain();
+				if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
+				{
+					AudioManager::SetMasterGain(gain);
+				}
 
+				ImGui::TreePop();
+			}
+
+			g_Renderer->DrawImGuiItems();
+		}
+
+		ImGui::End();
 	}
 
 	void FlexEngine::Stop()
 	{
 		m_Running = false;
+	}
+
+	GameObject* FlexEngine::GetSelectedObject()
+	{
+		return m_CurrentlySelectedObject;
+	}
+
+	void FlexEngine::SetSelectedObject(GameObject* gameObject)
+	{
+		m_CurrentlySelectedObject = gameObject;
+
+		if (gameObject == nullptr)
+		{
+			DeselectCurrentlySelectedObject();
+		}
+	}
+
+	void FlexEngine::DeselectCurrentlySelectedObject()
+	{
+		m_CurrentlySelectedObject = nullptr;
+		m_DraggingAxisIndex = -1;
+		m_bDraggingGizmo = false;
+	}
+
+	bool FlexEngine::LoadCommonSettingsFromDisk()
+	{
+		if (m_CommonSettingsAbsFilePath.empty())
+		{
+			PrintError("Failed to read common settings to disk: file path is not set!\n");
+			return false;
+		}
+
+		if (FileExists(m_CommonSettingsAbsFilePath))
+		{
+			Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
+
+			JSONObject rootObject{};
+
+			if (JSONParser::Parse(m_CommonSettingsAbsFilePath, rootObject))
+			{
+				std::string lastOpenedSceneName = rootObject.GetString("last opened scene");
+				if (!lastOpenedSceneName.empty())
+				{
+					// Don't print errors if not found, file might have been deleted since last session
+					g_SceneManager->SetCurrentScene(lastOpenedSceneName, false);
+				}
+
+				JSONObject cameraTransform;
+				if (rootObject.SetObjectChecked("camera transform", cameraTransform))
+				{
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
+					cam->SetPosition(ParseVec3(cameraTransform.GetString("position")));
+					cam->SetPitch(cameraTransform.GetFloat("pitch"));
+					cam->SetYaw(cameraTransform.GetFloat("yaw"));
+				}
+
+				real masterGain;
+				if (rootObject.SetFloatChecked("master gain", masterGain))
+				{
+					AudioManager::SetMasterGain(masterGain);
+				}
+
+				return true;
+			}
+			else
+			{
+				PrintError("Failed to parse common settings config file\n");
+				return false;
+			}
+		}
+
+		return false;
+	}
+
+	void FlexEngine::SaveCommonSettingsToDisk(bool bAddEditorStr)
+	{
+		if (m_CommonSettingsAbsFilePath.empty())
+		{
+			PrintError("Failed to save common settings to disk: file path is not set!\n");
+			return;
+		}
+
+		JSONObject rootObject{};
+
+		std::string lastOpenedSceneName = g_SceneManager->CurrentScene()->GetFileName();
+		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
+
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		std::string posStr = Vec3ToString(cam->GetPosition());
+		real pitch = cam->GetPitch();
+		real yaw = cam->GetYaw();
+		JSONObject cameraTransform = {};
+		cameraTransform.fields.emplace_back("position", JSONValue(posStr));
+		cameraTransform.fields.emplace_back("pitch", JSONValue(pitch));
+		cameraTransform.fields.emplace_back("yaw", JSONValue(yaw));
+		rootObject.fields.emplace_back("camera transform", JSONValue(cameraTransform));
+
+		real masterGain = AudioManager::GetMasterGain();
+		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
+
+		std::string fileContents = rootObject.Print(0);
+
+		if (!WriteFile(m_CommonSettingsAbsFilePath, fileContents, false))
+		{
+			PrintError("Failed to write common settings config file\n");
+		}
+
+		if (bAddEditorStr)
+		{
+			g_Renderer->AddEditorString("Saved common settings");
+		}
+	}
+
+	void FlexEngine::DoSceneContextMenu(BaseScene* scene)
+	{
+		bool bClicked = ImGui::IsMouseReleased(1) && 
+						ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+		std::string contextMenuID = "scene context menu " + scene->GetFileName();
+		if (ImGui::BeginPopupContextItem(contextMenuID.c_str()))
+		{
+			{
+				const i32 sceneNameMaxCharCount = 256;
+
+				// We don't know the names of scene's that haven't been loaded
+				if (scene->IsLoaded())
+				{
+					static char newSceneName[sceneNameMaxCharCount];
+					if (bClicked)
+					{
+						strcpy_s(newSceneName, scene->GetName().c_str());
+					}
+
+					bool bRenameScene = ImGui::InputText("##rename-scene",
+														 newSceneName,
+														 sceneNameMaxCharCount,
+														 ImGuiInputTextFlags_EnterReturnsTrue);
+
+					ImGui::SameLine();
+
+					bRenameScene |= ImGui::Button("Rename scene");
+
+					if (bRenameScene)
+					{
+						scene->SetName(newSceneName);
+						// Don't close popup here since we will likely want to save that change
+					}
+				}
+
+				static char newSceneFileName[sceneNameMaxCharCount];
+				if (bClicked)
+				{
+					strcpy_s(newSceneFileName, scene->GetFileName().c_str());
+				}
+
+				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
+															 newSceneFileName,
+															 sceneNameMaxCharCount,
+															 ImGuiInputTextFlags_EnterReturnsTrue);
+
+				ImGui::SameLine();
+
+				bRenameSceneFileName |= ImGui::Button("Rename file");
+
+				if (bRenameSceneFileName)
+				{
+					std::string newSceneFileNameStr(newSceneFileName);
+					std::string fileDir = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
+					ExtractDirectoryString(fileDir);
+					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
+					bool bNameEmpty = newSceneFileNameStr.empty();
+					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
+					bool bFileExists = FileExists(newSceneFilePath);
+					bool bSceneNameValid = (!bNameEmpty &&
+											bCorrectFileType &&
+											!bFileExists);
+
+					if (bSceneNameValid)
+					{
+						if (scene->SetFileName(newSceneFileNameStr, true))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+					}
+					else
+					{
+						PrintError("Attempted name scene with invalid name: %s\n", newSceneFileNameStr.c_str());
+						if (bNameEmpty)
+						{
+							PrintError("(file name is empty!)\n");
+						}
+						else if (!bCorrectFileType)
+						{
+							PrintError("(must end with \".json\"!)\n");
+						}
+						else if (bFileExists)
+						{
+							PrintError("(file already exists!)\n");
+						}
+					}
+				}
+			}
+
+			// Only allow current scene to be saved
+			if (currentScene == scene)
+			{
+				if (scene->IsUsingSaveFile())
+				{
+					if (ImGui::Button("Save"))
+					{
+						scene->SerializeToFile(false);
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+					if (ImGui::Button("Save over default"))
+					{
+						scene->SerializeToFile(true);
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Hard reload (deletes save file!)"))
+					{
+						DeleteFile(scene->GetRelativeFilePath());
+						g_SceneManager->ReloadCurrentScene();
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+				}
+				else
+				{
+					if (ImGui::Button("Save"))
+					{
+						scene->SerializeToFile(false);
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+					if (ImGui::Button("Save over default"))
+					{
+						scene->SerializeToFile(true);
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+				}
+			}
+
+			static const char* duplicateScenePopupLabel = "Duplicate scene";
+			const i32 sceneNameMaxCharCount = 256;
+			static char newSceneName[sceneNameMaxCharCount];
+			static char newSceneFileName[sceneNameMaxCharCount];
+			if (ImGui::Button("Duplicate..."))
+			{
+				ImGui::OpenPopup(duplicateScenePopupLabel);
+
+				std::string newSceneNameStr = scene->GetName();
+				newSceneNameStr += " Copy";
+				strcpy_s(newSceneName, newSceneNameStr.c_str());
+
+				std::string newSceneFileNameStr = scene->GetFileName();
+				StripFileType(newSceneFileNameStr);
+
+				bool bValidName = false;
+				do 
+				{
+					i16 numNumericalChars = 0;
+					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
+					if (numNumericalChars > 0)
+					{
+						u32 charsBeforeNum = (newSceneFileNameStr.length() - numNumericalChars);
+						newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
+							IntToString(numEndingWith + 1, numNumericalChars);
+					}
+					else
+					{
+						newSceneFileNameStr += "_01";
+					}
+
+					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
+					std::string fullNewFilePath = filePathFrom;
+					ExtractDirectoryString(fullNewFilePath);
+					fullNewFilePath += newSceneFileNameStr + ".json";
+					bValidName = !FileExists(fullNewFilePath);
+				} while (!bValidName);
+
+				newSceneFileNameStr += ".json";
+
+				strcpy_s(newSceneFileName, newSceneFileNameStr.c_str());
+			}
+
+			bool bCloseContextMenu = false;
+			if (ImGui::BeginPopupModal(duplicateScenePopupLabel,
+				NULL,
+				ImGuiWindowFlags_AlwaysAutoResize))
+			{
+
+				bool bDuplicateScene = ImGui::InputText("Name##duplicate-scene-name",
+														newSceneName,
+														sceneNameMaxCharCount,
+														ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bDuplicateScene |= ImGui::InputText("File name##duplicate-scene-file-path",
+													newSceneFileName,
+													sceneNameMaxCharCount,
+													ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bDuplicateScene |= ImGui::Button("Duplicate");
+
+				bool bValidInput = true;
+
+				if (strlen(newSceneName) == 0 ||
+					strlen(newSceneFileName) == 0 ||
+					!EndsWith(newSceneFileName, ".json"))
+				{
+					bValidInput = false;
+				}
+
+				if (bDuplicateScene && bValidInput)
+				{
+					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
+					std::string sceneFileDir = filePathFrom;
+					ExtractDirectoryString(sceneFileDir);
+					std::string filePathTo = sceneFileDir + newSceneFileName;
+
+					if (FileExists(filePathTo))
+					{
+						PrintError("Attempting to duplicate scene onto already existing file name!\n");
+					}
+					else
+					{
+						if (CopyFile(filePathFrom, filePathTo))
+						{
+							BaseScene* newScene = new BaseScene(newSceneFileName);
+							g_SceneManager->AddScene(newScene);
+							g_SceneManager->SetCurrentScene(newScene);
+
+							g_SceneManager->InitializeCurrentScene();
+							g_SceneManager->PostInitializeCurrentScene();
+							newScene->SetName(newSceneName);
+
+							g_SceneManager->CurrentScene()->SerializeToFile(true);
+
+							bCloseContextMenu = true;
+
+							ImGui::CloseCurrentPopup();
+						}
+						else
+						{
+							PrintError("Failed to copy scene's file to %s\n", newSceneFileName);
+						}
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			ImGui::SameLine();
+
+			static const char* deleteSceneStr = "Delete scene...";
+			const std::string deleteScenePopupID = "Delete scene";
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+			if (ImGui::Button(deleteSceneStr))
+			{
+				ImGui::OpenPopup(deleteScenePopupID.c_str());
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			if (ImGui::BeginPopupModal(deleteScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				static std::string sceneName = g_SceneManager->CurrentScene()->GetName();
+
+				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+				std::string textStr = "Are you sure you want to permanently delete " + sceneName + "? (both the default & saved files)";
+				ImGui::Text(textStr.c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				if (ImGui::Button("Delete"))
+				{
+					g_SceneManager->DeleteScene(scene);
+
+					ImGui::CloseCurrentPopup();
+
+					bCloseContextMenu = true;
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			if (bCloseContextMenu)
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+	bool FlexEngine::IsDraggingGizmo() const
+	{
+		return m_bDraggingGizmo;
 	}
 	
 	std::string FlexEngine::EngineVersionString()

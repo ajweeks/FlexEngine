@@ -3,20 +3,29 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/vae2k07y8a802odn?svg=true)](https://ci.appveyor.com/project/ajweeks/flexengine) -->
 
-Flex Engine is my personal rendering engine which currently supports Vulkan and OpenGL. It was started in February 2017 as a way for me to better understand how graphics engines work.
+Flex Engine is my personal game engine which I began work on in February 2017 as a playground for learning about real-time technology. During the first year of development I focused on the renderer, after which I began adding support for the plethora of other necessary systems that a game engine requires.
 
 #### Notable Features
 - Support for both Vulkan and OpenGL, switchable at runtime
+- Signed-distance field font generation & rendering
 - Physically Based Rendering (PBR)
 - Image Based lighting (IBL)
-- Irradiance map generation
 - Reflection probes
 - Post-processing stage
+- Custom scene file format
+- Scene editor
+- Scene serialization
+- Physics simulation
+- Audio playback
+- Profiling tools
 
-#### Planned Features
- - Mesh animation
- - Cascading shadow maps
- - ...
+![](http://i.imgur.com/3XQGcDD.png)
+
+![](https://i.imgur.com/DYpYMhH.jpg)
+**Profiler overlay showing a breakdown the CPU-time of a single frame**
+
+![](https://i.imgur.com/LbRIVav.jpg)
+**GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
 
 ![](http://i.imgur.com/qtP8Mmm.png)
 
@@ -30,9 +39,6 @@ Flex Engine is my personal rendering engine which currently supports Vulkan and 
 </div>
 
 ![](http://i.imgur.com/mqszTPr.gif)
-
-![](https://i.imgur.com/LbRIVav.jpg)
-**GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
 
 ## Building Flex (Windows-only)
 If you want to build Flex Engine on your own system, follow these steps. You an always download the latest release binaries [here](https://github.com/ajweeks/flexengine/releases) if that's what you're after.
@@ -68,6 +74,7 @@ A huge thanks to the following people/organizations for their incredibly useful 
  - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
  - Andrew Maximov for the pistol model and textures [artisaverb.info/PBT.html ](http://artisaverb.info/PBT.html)
  - [FreePBR.com](http://FreePBR.com) for the wonderful PBR textures
+ - All of the library authors/contributors for their awesome OSS!
 
 ## Blog
  Stay (somewhat) up to date about this project on my blog at [ajweeks.wordpress.com/tag/flex-engine/](https://ajweeks.wordpress.com/tag/flex-engine/).

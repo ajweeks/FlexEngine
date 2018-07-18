@@ -10,8 +10,6 @@
 #include <glm/mat4x4.hpp>
 #pragma warning(pop)
 
-#include "GameContext.hpp"
-
 #include "VertexBufferData.hpp"
 #include "Transform.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
@@ -30,13 +28,13 @@ namespace flex
 		Renderer();
 		virtual ~Renderer();
 
-		virtual void Initialize(const GameContext& gameContext) = 0;
-		virtual void PostInitialize(const GameContext& gameContext) = 0;
+		virtual void Initialize() = 0;
+		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
-		virtual MaterialID InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo) = 0;
-		virtual RenderID InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo) = 0;
-		virtual void PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
+		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) = 0;
+		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
+		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
 		virtual void ClearRenderObjects() = 0;
 		virtual void ClearMaterials() = 0;
@@ -44,9 +42,13 @@ namespace flex
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(real r, real g, real b) = 0;
 
-		virtual void Update(const GameContext& gameContext) = 0;
-		virtual void Draw(const GameContext& gameContext) = 0;
-		virtual void DrawImGuiItems(const GameContext& gameContext) = 0;
+		virtual void Update() = 0;
+		virtual void Draw() = 0;
+		virtual void DrawImGuiItems() = 0;
+
+		// Values should be specified relative to screen size, in [0, 1]
+		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
+		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
 
 		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
@@ -54,7 +56,7 @@ namespace flex
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		virtual void OnSceneChanged(const GameContext& gameContext) = 0;
+		virtual void OnSceneChanged() = 0;
 
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info
@@ -91,7 +93,36 @@ namespace flex
 		virtual btIDebugDraw* GetDebugDrawer() = 0;
 
 		virtual void SetFont(BitmapFont* font) = 0;
-		virtual void DrawString(const std::string& str, const glm::vec4& color, const glm::vec2& pos) = 0;
+		virtual void AddEditorString(const std::string& str) = 0;
+		virtual void DrawString(const std::string& str,
+								const glm::vec4& color,
+								AnchorPoint anchor,
+								const glm::vec2& pos,
+								real spacing, 
+								bool bRaw) = 0;
+
+		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
+		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
+
+		virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const = 0;
+		virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const = 0;
+
+		// Pos should lie in range [-1, 1], with y increasing upward
+		// Output pos lies in range [0, 1], with y increasing downward,
+		// Output scale lies in range [0, 1] - both outputs corrected for aspect ratio
+		void TransformRectToScreenSpace(const glm::vec2& pos,
+								const glm::vec2& scale,
+								glm::vec2& posOut,
+								glm::vec2& scaleOut);
+
+		void NormalizeSpritePos(const glm::vec2& pos,
+										  AnchorPoint anchor,
+										  const glm::vec2& scale,
+										  glm::vec2& posOut,
+										  glm::vec2& scaleOut);
+
+		void SetPostProcessingEnabled(bool bEnabled);
+		bool GetPostProcessingEnabled() const;
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
@@ -119,6 +150,7 @@ namespace flex
 		PostProcessSettings& GetPostProcessSettings();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
+		static const u32 MAX_POINT_LIGHT_COUNT = 4;
 
 		BitmapFont* m_FntUbuntuCondensed = nullptr;
 		BitmapFont* m_FntSourceCodePro = nullptr;
@@ -137,13 +169,13 @@ namespace flex
 		struct DrawCallInfo
 		{
 			RenderID cubemapObjectRenderID = InvalidRenderID;
-			bool renderToCubemap = false;
-			bool deferred = false;
+			bool bRenderToCubemap = false;
+			bool bDeferred = false;
 		};
 		
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
-		bool m_VSyncEnabled = true;
+		bool m_bVSyncEnabled = true;
 		PhysicsDebuggingSettings m_PhysicsDebuggingSettings;
 
 		/* Objects that are created at bootup and stay active until shutdown, regardless of scene */
@@ -153,6 +185,8 @@ namespace flex
 		std::vector<BitmapFont*> m_Fonts;
 
 		PostProcessSettings m_PostProcessSettings;
+
+		bool m_bPostProcessingEnabled = true;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

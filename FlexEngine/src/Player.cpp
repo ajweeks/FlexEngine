@@ -27,7 +27,7 @@ namespace flex
 	{
 	}
 
-	void Player::Initialize(const GameContext& gameContext)
+	void Player::Initialize()
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
@@ -36,15 +36,15 @@ namespace flex
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.constRoughness = 0.98f;
 		matCreateInfo.constAO = 1.0f;
-		MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
+		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
 		rigidBody->SetFriction(m_MoveFriction);
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 		
-		Material& material = gameContext.renderer->GetMaterial(matID);
-		Shader& shader = gameContext.renderer->GetShader(material.shaderID);
+		Material& material = g_Renderer->GetMaterial(matID);
+		Shader& shader = g_Renderer->GetShader(material.shaderID);
 		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
 
 		m_MeshComponent = new MeshComponent(matID, this);
@@ -54,8 +54,8 @@ namespace flex
 		SetStatic(false);
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
-		m_MeshComponent->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/capsule.gltf");
-		m_Transform.SetWorldlPosition(glm::vec3(-5.0f + 5.0f * m_Index, 5.0f, 0.0f));
+		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION + "models/capsule.gltf");
+		m_Transform.SetWorldPosition(glm::vec3(-5.0f + 5.0f * m_Index, 5.0f, 0.0f));
 
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
@@ -68,36 +68,36 @@ namespace flex
 		slingshotMatCreateInfo.constMetallic = 0.0f;
 		slingshotMatCreateInfo.constRoughness = 1.0f;
 		slingshotMatCreateInfo.constAO = 1.0f;
-		MaterialID slingshotMatID = gameContext.renderer->InitializeMaterial(gameContext, &slingshotMatCreateInfo);
+		MaterialID slingshotMatID = g_Renderer->InitializeMaterial(&slingshotMatCreateInfo);
 
 		m_Slingshot = new GameObject("Slingshot", GameObjectType::NONE);
 		MeshComponent* slingshotMesh = m_Slingshot->SetMeshComponent(new MeshComponent(slingshotMatID, m_Slingshot));
 
-		Material& slingshotMaterial = gameContext.renderer->GetMaterial(slingshotMatID);
-		Shader& slingshotShader = gameContext.renderer->GetShader(slingshotMaterial.shaderID);
+		Material& slingshotMaterial = g_Renderer->GetMaterial(slingshotMatID);
+		Shader& slingshotShader = g_Renderer->GetShader(slingshotMaterial.shaderID);
 		VertexAttributes slingshotRequiredVertexAttributes = slingshotShader.vertexAttributes;
 		slingshotMesh->SetRequiredAttributes(slingshotRequiredVertexAttributes);
 
-		slingshotMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/slingshot.gltf");
+		slingshotMesh->LoadFromFile(RESOURCE_LOCATION + "models/slingshot.gltf");
 
 		AddChild(m_Slingshot);
 
 		m_Slingshot->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 1.0f));
 
-		GameObject::Initialize(gameContext);
+		GameObject::Initialize();
 	}
 
-	void Player::PostInitialize(const GameContext& gameContext)
+	void Player::PostInitialize()
 	{
 		m_RigidBody->GetRigidBodyInternal()->setAngularFactor(btVector3(0, 1, 0));
 		m_RigidBody->GetRigidBodyInternal()->setSleepingThresholds(0.0f, 0.0f);
 
-		GameObject::PostInitialize(gameContext);
+		GameObject::PostInitialize();
 	}
 
-	void Player::Update(const GameContext& gameContext)
+	void Player::Update()
 	{
-		if (gameContext.inputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::X))
+		if (g_InputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::X))
 		{
 			Player* p = (Player*)this;
 
@@ -110,7 +110,7 @@ namespace flex
 			else
 			{
 				std::vector<GameObject*> interactibleObjects;
-				gameContext.sceneManager->CurrentScene()->GetInteractibleObjects(interactibleObjects);
+				g_SceneManager->CurrentScene()->GetInteractibleObjects(interactibleObjects);
 
 				if (interactibleObjects.empty())
 				{
@@ -141,15 +141,12 @@ namespace flex
 			}
 		}
 
-		if (!m_ObjectInteractingWith)
-		{
-			m_Controller->Update(gameContext);
-		}
+		m_Controller->Update();
 
-		GameObject::Update(gameContext);
+		GameObject::Update();
 	}
 
-	void Player::Destroy(const GameContext& gameContext)
+	void Player::Destroy()
 	{
 		if (m_Controller)
 		{
@@ -157,7 +154,7 @@ namespace flex
 			SafeDelete(m_Controller);
 		}
 
-		GameObject::Destroy(gameContext);
+		GameObject::Destroy();
 	}
 
 	i32 Player::GetIndex() const
@@ -168,5 +165,10 @@ namespace flex
 	real Player::GetHeight() const
 	{
 		return m_Height;
+	}
+
+	PlayerController* Player::GetController()
+	{
+		return m_Controller;
 	}
 } // namespace flex

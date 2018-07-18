@@ -5,19 +5,16 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
-#include "GameContext.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLRenderer.hpp"
 #include "Graphics/Renderer.hpp"
-#include "Logger.hpp"
 #include "VertexAttribute.hpp"
 
 namespace flex
 {
 	namespace gl
 	{
-		GLPhysicsDebugDraw::GLPhysicsDebugDraw(const GameContext& gameContext) :
-			m_GameContext(gameContext)
+		GLPhysicsDebugDraw::GLPhysicsDebugDraw()
 		{
 		}
 
@@ -27,7 +24,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::Initialize()
 		{
-			m_Renderer = (GLRenderer*)(m_GameContext.renderer);
+			m_Renderer = (GLRenderer*)(g_Renderer);
 			const std::string debugMatName = "Debug";
 			if (!m_Renderer->GetMaterialID(debugMatName, m_MaterialID))
 			{
@@ -35,7 +32,7 @@ namespace flex
 				debugMatCreateInfo.shaderName = "color";
 				debugMatCreateInfo.name = debugMatName;
 				debugMatCreateInfo.engineMaterial = true;
-				m_MaterialID = m_GameContext.renderer->InitializeMaterial(m_GameContext, &debugMatCreateInfo);
+				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
 			m_VertexBufferData = {};
@@ -48,7 +45,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::UpdateDebugMode()
 		{
-			const PhysicsDebuggingSettings& settings = m_GameContext.renderer->GetPhysicsDebuggingSettings();
+			const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 
 			m_DebugMode =
 				(settings.DisableAll ? DBG_NoDebug : 0) |
@@ -72,7 +69,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::reportErrorWarning(const char* warningString)
 		{
-			Logger::LogError("GLPhysicsDebugDraw > " + std::string(warningString));
+			PrintError("DebugDraw error: %s\n", warningString);
 		}
 
 		void GLPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
@@ -128,7 +125,7 @@ namespace flex
 
 			if (m_MaterialID == InvalidMaterialID)
 			{
-				Logger::LogError("Attempted to draw GLPhysicsDebug objects before material has been set");
+				PrintError("Attempted to draw GLPhysicsDebug objects before material has been set\n");
 				return;
 			}
 
@@ -154,17 +151,13 @@ namespace flex
 			m_VertexBufferData.Initialize(&createInfo);
 
 			glUseProgram(glShader->program);
-			CheckGLErrorMessages();
 
 			glGenVertexArrays(1, &m_VAO);
 			glBindVertexArray(m_VAO);
-			CheckGLErrorMessages();
 
 			glGenBuffers(1, &m_VBO);
 			glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STATIC_DRAW);
-			CheckGLErrorMessages();
-
 
 			// Describe shader variables
 			{
@@ -177,7 +170,6 @@ namespace flex
 
 
 					glVertexAttribPointer((GLuint)location, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-					CheckGLErrorMessages();
 
 					currentLocation += 3;
 				}
@@ -188,7 +180,6 @@ namespace flex
 					glEnableVertexAttribArray((GLuint)location);
 
 					glVertexAttribPointer((GLuint)location, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-					CheckGLErrorMessages();
 
 					currentLocation += 4;
 				}
@@ -196,31 +187,20 @@ namespace flex
 
 
 			glm::mat4 model = glm::mat4(1.0f);
-			glm::mat4 proj = m_GameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = m_GameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 MVP = proj * view * model;
 			glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
 
 			glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
-			CheckGLErrorMessages();
-
 			glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
-			CheckGLErrorMessages();
-
 			glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
-			CheckGLErrorMessages();
-
 			glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-			CheckGLErrorMessages();
-
 
 			glDepthMask(GL_FALSE);
-			CheckGLErrorMessages();
-
 			glDisable(GL_BLEND);
 
 			glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
-			CheckGLErrorMessages();
 		}
 	} // namespace gl
 } // namespace flex

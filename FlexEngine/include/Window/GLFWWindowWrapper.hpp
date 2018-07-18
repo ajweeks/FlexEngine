@@ -12,14 +12,14 @@ namespace flex
 	class GLFWWindowWrapper : public Window
 	{
 	public:
-		GLFWWindowWrapper(std::string title, GameContext& gameContext);
+		GLFWWindowWrapper(std::string title);
 		virtual ~GLFWWindowWrapper();
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Destroy() override;
 
-		virtual void RetrieveMonitorInfo(GameContext& gameContext) override;
+		virtual void RetrieveMonitorInfo() override;
 
 		virtual void SetSize(i32 width, i32 height) override;
 		virtual void OnSizeChanged(i32 width, i32 height) override;
@@ -28,12 +28,17 @@ namespace flex
 
 		virtual void SetFrameBufferSize(i32 width, i32 height) override;
 
-		virtual void Update(const GameContext& gameContext) override;
+		virtual void Update() override;
 		virtual void PollEvents() override;
+
+		virtual void SetCursorPos(const glm::vec2& newCursorPos) override;
 		virtual void SetCursorMode(CursorMode mode) override;
 
-		virtual void SetFullscreenMode(FullscreenMode mode, bool force = false) override;
+		virtual void SetWindowMode(WindowMode mode, bool force = false) override;
 		virtual void ToggleFullscreen(bool force = false) override;
+
+		virtual void Maximize() override;
+		virtual void Iconify() override;
 
 		GLFWwindow* GetWindow() const;
 
@@ -45,6 +50,8 @@ namespace flex
 	protected:
 		virtual void SetWindowTitle(const std::string& title) override;
 		virtual void SetMousePosition(glm::vec2 mousePosition) override;
+
+		void MoveConsole();
 
 		GLFWwindow* m_Window = nullptr;
 
@@ -72,6 +79,11 @@ namespace flex
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
+	void GLFWJoystickCallback(i32 JID, i32 event);
+
+	// Stores whether a controller is connected or not
+	const i32 MAX_JOYSTICK_COUNT = 4;
+	extern std::array<bool, MAX_JOYSTICK_COUNT> g_JoysticksConnected;
 
 } // namespace flex
 

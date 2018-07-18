@@ -4,8 +4,6 @@
 #include "Cameras/CameraManager.hpp"
 
 #include "Cameras/BaseCamera.hpp"
-#include "GameContext.hpp"
-#include "Logger.hpp"
 
 namespace flex
 {
@@ -18,21 +16,26 @@ namespace flex
 		DestroyCameras();
 	}
 
-	void CameraManager::Initialize(const GameContext& gameContext)
+	void CameraManager::Initialize()
 	{
-		m_Cameras[m_ActiveCameraIndex]->Initialize(gameContext);
+		m_Cameras[m_ActiveCameraIndex]->Initialize();
 	}
 
-	void CameraManager::Update(const GameContext& gameContext)
+	void CameraManager::Update()
 	{
-		m_Cameras[m_ActiveCameraIndex]->Update(gameContext);
+		m_Cameras[m_ActiveCameraIndex]->Update();
+	}
+
+	void CameraManager::OnSceneChanged()
+	{
+		m_Cameras[m_ActiveCameraIndex]->OnSceneChanged();
 	}
 
 	void CameraManager::DestroyCameras()
 	{
-		for (u32 i = 0; i < m_Cameras.size(); ++i)
+		for (BaseCamera* camera : m_Cameras)
 		{
-			SafeDelete(m_Cameras[i]);
+			SafeDelete(camera);
 		}
 		m_Cameras.clear();
 		m_ActiveCameraIndex = -1;
@@ -48,7 +51,7 @@ namespace flex
 		return (i32)m_Cameras.size();
 	}
 
-	void CameraManager::AddCamera(BaseCamera* camera, bool switchTo)
+	void CameraManager::AddCamera(BaseCamera* camera, bool bSwitchTo)
 	{
 		assert(camera);
 
@@ -57,14 +60,14 @@ namespace flex
 		{
 			m_Cameras.push_back(camera);
 
-			if (switchTo || m_ActiveCameraIndex == -1)
+			if (bSwitchTo || m_ActiveCameraIndex == -1)
 			{
 				m_ActiveCameraIndex = (m_Cameras.size() - 1);
 			}
 		}
 	}
 
-	void CameraManager::SwtichTo(const GameContext& gameContext, BaseCamera* camera, bool align)
+	void CameraManager::SwtichTo(BaseCamera* camera, bool bAlign)
 	{
 		assert(camera);
 
@@ -72,30 +75,30 @@ namespace flex
 
 		if (newCameraIndex == -1)
 		{
-			Logger::LogError("Attempted to switch to camera which doesn't exist! " + camera->GetName());
+			PrintError("Attempted to switch to camera which doesn't exist! %s\n", camera->GetName().c_str());
 		}
 		else
 		{
-			SwtichToIndex(gameContext, newCameraIndex, align);
+			SwtichToIndex(newCameraIndex, bAlign);
 		}
 	}
 
-	void CameraManager::SwtichToIndex(const GameContext& gameContext, i32 index, bool align)
+	void CameraManager::SwtichToIndex(i32 index, bool bAlign)
 	{
 		if (index >= 0 && index < (i32)m_Cameras.size())
 		{
-			if (align)
+			if (bAlign)
 			{
 				AlignCameras(m_Cameras[m_ActiveCameraIndex], m_Cameras[index]);
 			}
 
 			m_ActiveCameraIndex = index;
 
-			m_Cameras[m_ActiveCameraIndex]->Initialize(gameContext);
+			m_Cameras[m_ActiveCameraIndex]->Initialize();
 		}
 	}
 
-	void CameraManager::SwtichToIndexRelative(const GameContext& gameContext, i32 delta, bool align)
+	void CameraManager::SetActiveIndexRelative(i32 delta, bool bAlign)
 	{
 		i32 newIndex = m_ActiveCameraIndex + delta;
 		i32 numCameras = (i32)m_Cameras.size();
@@ -108,7 +111,7 @@ namespace flex
 			newIndex -= numCameras;
 		}
 
-		SwtichToIndex(gameContext, newIndex, align);
+		SwtichToIndex(newIndex, bAlign);
 	}
 
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)

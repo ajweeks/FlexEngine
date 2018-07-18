@@ -13,6 +13,7 @@
 
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
+#include "JSONTypes.hpp"
 
 namespace flex
 {
@@ -27,8 +28,10 @@ namespace flex
 
 		static void DestroyAllLoadedMeshes();
 
-		void Update(const GameContext& gameContext);
-		void Destroy(const GameContext& gameContext);
+		static MeshComponent* ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID);
+
+		void Update();
+		void Destroy();
 
 		enum class Type
 		{
@@ -70,8 +73,8 @@ namespace flex
 		/*
 		* Loads a mesh from file
 		*/
-		bool LoadFromFile(const GameContext& gameContext, 
-			const std::string& filepath,
+		bool LoadFromFile(
+			const std::string& filePath,
 			ImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
@@ -80,11 +83,11 @@ namespace flex
 		* Optionally pass in createInfo values to be given to the renderer
 		* when initializing the render object
 		*/
-		bool LoadPrefabShape(const GameContext& gameContext, PrefabShape shape, 
+		bool LoadPrefabShape(PrefabShape shape, 
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		MaterialID GetMaterialID() const;
-		void SetMaterialID(MaterialID materialID, const GameContext& gameContext);
+		void SetMaterialID(MaterialID materialID);
 		void SetUVScale(real uScale, real vScale);
 
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);
@@ -117,7 +120,7 @@ namespace flex
 		static const u32 GRID_LINE_COUNT;
 
 		Type m_Type = Type::NONE;
-		std::string m_Filepath;
+		std::string m_FilePath;
 
 		glm::vec2 m_UVScale = { 1,1 };
 

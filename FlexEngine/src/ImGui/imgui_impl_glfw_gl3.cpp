@@ -362,7 +362,7 @@ bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window)
 	//io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
 	//io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
 	//io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
-	io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
+	//io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
 
 	io.SetClipboardTextFn = ImGui_ImplGlfwGL3_SetClipboardText;
 	io.GetClipboardTextFn = ImGui_ImplGlfwGL3_GetClipboardText;
@@ -422,7 +422,7 @@ void ImGui_ImplGlfwGL3_NewFrame()
 	// (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
 	if (glfwGetWindowAttrib(g_Window, GLFW_FOCUSED))
 	{
-		if (io.WantMoveMouse)
+		if (io.WantSetMousePos)
 		{
 			glfwSetCursorPos(g_Window, (double)io.MousePos.x, (double)io.MousePos.y);   // Set mouse position if requested by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
 		}

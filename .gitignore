@@ -1,5 +1,10 @@
+FlexEngine/resources/scenes/saved/*
+FlexEngine/resources/profiles/*
+
 # User settings files
+common.ini
 renderer-settings.ini
+window-settings.ini
 
 *.blend1
 *.bfxrsound
@@ -15,7 +20,8 @@ sh.exe.stackdump
 
 *.orig
 
-AdditionalFiles/
+AdditionalFiles/*.cap
+AdditionalFiles/*.nsight-gfxproj
 
 *.spv
 imgui.ini

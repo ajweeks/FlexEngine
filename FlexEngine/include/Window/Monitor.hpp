@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Types.hpp"
+
 namespace flex
 {
 	struct Monitor
@@ -10,7 +12,8 @@ namespace flex
 		i32 greenBits = 0;
 		i32 blueBits = 0;
 		i32 refreshRate = 0;
-		float contentScaleX = 1.0f;
-		float contentScaleY = 1.0f;
+		glm::vec2 DPI;
+		real contentScaleX = 1.0f;
+		real contentScaleY = 1.0f;
 	};
 }

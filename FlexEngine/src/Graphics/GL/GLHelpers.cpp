@@ -29,116 +29,149 @@ namespace flex
 
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
-			CheckGLErrorMessages();
 
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, dimensions.x, dimensions.y, 0, format, type, 0);
-			CheckGLErrorMessages();
+
 			if (generateMipMaps)
 			{
 				glGenerateMipmap(GL_TEXTURE_2D);
-				CheckGLErrorMessages();
 			}
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-			CheckGLErrorMessages();
 
 			glBindTexture(GL_TEXTURE_2D, 0);
-
 			glBindVertexArray(0);
-
-			CheckGLErrorMessages();
 
 			return true;
 		}
 
-		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
+		bool GenerateGLTexture(u32& textureID,
+							   const std::string& filePath,
+							   i32 requestedChannelCount, 
+							   bool flipVertically,
+							   bool generateMipMaps, 
+							   ImageInfo* infoOut /* = nullptr */)
 		{
-			return GenerateGLTextureWithParams(textureID, filePath, flipVertically, generateMipMaps, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+			return GenerateGLTextureWithParams(textureID,
+											   filePath,
+											   requestedChannelCount,
+											   flipVertically,
+											   generateMipMaps,
+											   GL_REPEAT, 
+											   GL_REPEAT, 
+											   GL_LINEAR,
+											   GL_LINEAR, 
+											   infoOut);
 		}
 
-		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateGLTextureWithParams(u32& textureID,
+										 const std::string& filePath,
+										 i32 requestedChannelCount,
+										 bool flipVertically,
+										 bool generateMipMaps,
+										 i32 sWrap,
+										 i32 tWrap,
+										 i32 minFilter,
+										 i32 magFilter,
+										 ImageInfo* infoOut /* = nullptr */)
 		{
-			GLFWimage image = LoadGLFWimage(filePath, false, flipVertically);
+			assert(requestedChannelCount == 3 ||
+				   requestedChannelCount == 4);
+
+			i32 channelCount = 0;
+			GLFWimage image = LoadGLFWimage(filePath, requestedChannelCount, flipVertically, &channelCount);
 
 			if (!image.pixels)
 			{
 				return false;
 			}
 
+			if (infoOut)
+			{
+				infoOut->width = image.width;
+				infoOut->height = image.height;
+				infoOut->channelCount = channelCount;
+			}
+
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
-			CheckGLErrorMessages();
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
-			CheckGLErrorMessages();
+			if (channelCount == 4)
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.pixels);
+			}
+			else
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
+			}
+
 			if (generateMipMaps)
 			{
 				glGenerateMipmap(GL_TEXTURE_2D);
-				CheckGLErrorMessages();
 			}
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-			CheckGLErrorMessages();
 
 			glBindTexture(GL_TEXTURE_2D, 0);
-
 			glBindVertexArray(0);
-
 			DestroyGLFWimage(image);
-
-			CheckGLErrorMessages();
 
 			return true;
 		}
 
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps)
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut /* = nullptr */)
 		{
-			return GenerateHDRGLTextureWithParams(textureID, filePath, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+			return GenerateHDRGLTextureWithParams(textureID, filePath, requestedChannelCount, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR, infoOut);
 		}
 
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
 		{
+			assert(requestedChannelCount == 3 ||
+				   requestedChannelCount == 4);
+
 			HDRImage image = {};
-			if (!image.Load(filePath, flipVertically))
+			if (!image.Load(filePath, requestedChannelCount, flipVertically))
 			{
 				return false;
 			}
 
+			if (infoOut)
+			{
+				infoOut->width = image.width;
+				infoOut->height = image.height;
+				infoOut->channelCount = image.channelCount;
+			}
+
 			glGenTextures(1, &textureID);
 			glBindTexture(GL_TEXTURE_2D, textureID);
-			CheckGLErrorMessages();
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, image.width, image.height, 0, GL_RGBA, GL_FLOAT, image.pixels);
-			CheckGLErrorMessages();
+			if (requestedChannelCount == 4)
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, image.width, image.height, 0, GL_RGBA, GL_FLOAT, image.pixels);
+			}
+			else
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, image.width, image.height, 0, GL_RGB, GL_FLOAT, image.pixels);
+			}
+
 			if (generateMipMaps)
 			{
 				glGenerateMipmap(GL_TEXTURE_2D);
-				CheckGLErrorMessages();
 			}
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-			CheckGLErrorMessages();
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-			CheckGLErrorMessages();
 
 			glBindTexture(GL_TEXTURE_2D, 0);
-
 			image.Free();
-
-			CheckGLErrorMessages();
 
 			return true;
 		}
@@ -154,7 +187,6 @@ namespace flex
 
 			glGenTextures(1, createInfo.textureID);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.textureID);
-			CheckGLErrorMessages();
 
 			const GLint internalFormat = createInfo.HDR ? GL_RGB16F : GL_RGB;
 			const GLenum format = GL_RGB;
@@ -165,8 +197,8 @@ namespace flex
 				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0 ||
 					createInfo.textureSize.x >= Renderer::MAX_TEXTURE_DIM || createInfo.textureSize.y >= Renderer::MAX_TEXTURE_DIM)
 				{
-					Logger::LogError("Invalid cubemap dimensions: " + 
-						std::to_string(createInfo.textureSize.x) + "x" + std::to_string(createInfo.textureSize.y));
+					PrintError("Invalid cubemap dimensions: %.2fx%.2f\n", 
+						createInfo.textureSize.x, createInfo.textureSize.y);
 					success = false;
 				}
 				else
@@ -175,7 +207,6 @@ namespace flex
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat,
 							(GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, format, type, nullptr);
-						CheckGLErrorMessages();
 					}
 				}
 			}
@@ -188,13 +219,12 @@ namespace flex
 					if (image.pixels)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, image.width, image.height, 0, format, type, image.pixels);
-						CheckGLErrorMessages();
 
 						DestroyGLFWimage(image);
 					}
 					else
 					{
-						Logger::LogError("Could not load cube map at " + createInfo.filePaths[i]);
+						PrintError("Could not load cube map at %s\n", createInfo.filePaths[i].c_str());
 						success = false;
 					}
 				}
@@ -209,16 +239,15 @@ namespace flex
 				i32 binding = 0;
 
 				// Generate GBuffers
-				for (auto& gbuffer : *createInfo.textureGBufferIDs)
+				for (gl::GLCubemapGBuffer& gbuffer : *createInfo.textureGBufferIDs)
 				{
 					glGenTextures(1, &gbuffer.id);
 					glBindTexture(GL_TEXTURE_CUBE_MAP, gbuffer.id);
-					CheckGLErrorMessages();
+
 					for (i32 i = 0; i < 6; i++)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, 
 									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
-						CheckGLErrorMessages();
 					}
 
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -226,20 +255,17 @@ namespace flex
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // This parameter is *absolutely* necessary for sampling to work
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-					CheckGLErrorMessages();
-
 					
 					i32 uniformLocation = glGetUniformLocation(createInfo.program, gbuffer.name);
-					CheckGLErrorMessages();
 					if (uniformLocation == -1)
 					{
-						Logger::LogWarning(std::string(gbuffer.name) + " was not found!");
+						PrintWarn("%s was not found!\n", gbuffer.name);
 					}
 					else
 					{
 						glUniform1i(uniformLocation, binding);
 					}
-					CheckGLErrorMessages();
+
 					++binding;
 				}
 
@@ -254,26 +280,22 @@ namespace flex
 				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
 					(createInfo.generateMipmaps || createInfo.enableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				CheckGLErrorMessages();
 
 				if (createInfo.generateMipmaps)
 				{
 					glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-					CheckGLErrorMessages();
 				}
 
 				if (createInfo.generateDepthBuffers && createInfo.depthTextureID)
 				{
 					glGenTextures(1, createInfo.depthTextureID);
 					glBindTexture(GL_TEXTURE_CUBE_MAP, *createInfo.depthTextureID);
-					CheckGLErrorMessages();
 
 					for (size_t i = 0; i < 6; ++i)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24,
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT16,
 							(GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 
 							0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-						CheckGLErrorMessages();
 					}
 
 					// Set this parameter when wanting to sample from this cubemap
@@ -297,139 +319,173 @@ namespace flex
 			}
 		}
 
-		GLTexture::GLTexture(GLuint handle, i32 width, i32 height, i32 depth):
-			m_Handle(handle),
-			m_Width(width),
-			m_Height(height),
-			m_Depth(depth)
+		GLTexture::GLTexture()
 		{
 		}
 
-		GLTexture::GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type, i32 depth) :
-			m_Width(width),
-			m_Height(height),
-			m_InternalFormat(internalFormat),
-			m_Format(format),
-			m_Type(type),
-			m_Depth(depth)
+		GLTexture::GLTexture(const std::string& name, i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type) :
+			name(name),
+			width(width),
+			height(height),
+			internalFormat(internalFormat),
+			format(format),
+			type(type)
 		{
-			glGenTextures(1, &m_Handle);
-			CheckGLErrorMessages();
-			m_Parameters = {};
+		}
+
+		GLTexture::GLTexture(const std::string& filePath,
+							 i32 channelCount,
+							 bool bFlipVertically,
+							 bool bGenerateMipMaps,
+							 bool bHDR) :
+			filePath(filePath),
+			channelCount(channelCount),
+			bFlipVerticallyOnLoad(bFlipVertically),
+			bHasMipMaps(bGenerateMipMaps),
+			bHDR(bHDR)
+		{
+			if (name.empty())
+			{
+				name = filePath;
+				StripLeadingDirectories(name);
+			}
 		}
 
 		GLTexture::~GLTexture()
 		{
 		}
 
-		GLuint GLTexture::GetHandle()
+		bool GLTexture::GenerateEmpty()
 		{
-			return m_Handle;
+			assert(!bLoaded);
+
+			bool bSucceeded = GenerateGLTexture_Empty(handle,
+													  glm::vec2i(width, height),
+													  bHasMipMaps,
+													  internalFormat,
+													  format,
+													  type);
+
+			if (bSucceeded)
+			{
+				bLoaded = true;
+			}
+
+			return bSucceeded;
 		}
 
-		glm::vec2i GLTexture::GetResolution()
+		bool GLTexture::LoadFromFile()
 		{
-			return glm::vec2i(m_Width, m_Height);
+			assert(!bLoaded);
+
+			ImageInfo infoOut;
+			// TODO: Also pass along bit depth succeeded
+			bool bSucceeded = false;
+			if (bHDR)
+			{
+				bSucceeded = GenerateHDRGLTexture(handle, filePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
+			}
+			else
+			{
+				bSucceeded = GenerateGLTexture(handle, filePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
+			}
+
+			if (bSucceeded)
+			{
+				width = infoOut.width;
+				height = infoOut.height;
+				channelCount = infoOut.channelCount;
+				this->bHDR = bHDR;
+
+				bLoaded = true;
+			}
+			else
+			{
+				PrintError("Failed to load GL texture at filepath: %s\n", filePath.c_str());
+			}
+
+			return bSucceeded;
+		}
+
+		void GLTexture::Reload()
+		{
+			Destroy();
+
+			if (!filePath.empty())
+			{
+				LoadFromFile();
+			}
 		}
 
 		void GLTexture::Build(void* data)
 		{
-			if (m_Depth == 1)
-			{
-				glBindTexture(GL_TEXTURE_2D, m_Handle);
-				CheckGLErrorMessages();
-				glTexImage2D(GL_TEXTURE_2D, 0, m_InternalFormat, m_Width, m_Height, 0, m_Format, m_Type, data);
-				CheckGLErrorMessages();
-			}
-			else
-			{
-				glBindTexture(GL_TEXTURE_3D, m_Handle);
-				CheckGLErrorMessages();
-				glTexImage3D(GL_TEXTURE_3D, 0, m_InternalFormat, m_Width, m_Height, m_Depth, 0, m_Format, m_Type, data);
-				CheckGLErrorMessages();
-			}
+			glBindTexture(GL_TEXTURE_2D, handle);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
 		}
 
 		void GLTexture::Destroy()
 		{
-			if (m_Handle != 0)
+			if (handle != 0)
 			{
-				glDeleteTextures(1, &m_Handle);
-				CheckGLErrorMessages();
+				glDeleteTextures(1, &handle);
 			}
+
+			bLoaded = false;
+		}
+
+		glm::vec2i GLTexture::GetResolution()
+		{
+			return glm::vec2i(width, height);
 		}
 
 		void GLTexture::SetParameters(TextureParameters params)
 		{
-			GLenum target = GetTarget();
-			glBindTexture(target, m_Handle);
+			glBindTexture(GL_TEXTURE_2D, handle);
 			if (m_Parameters.minFilter != params.minFilter)
 			{
-				glTexParameteri(target, GL_TEXTURE_MIN_FILTER, params.minFilter);
-				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, params.minFilter);
 			}
 
 			if (m_Parameters.magFilter != params.magFilter)
 			{
-				glTexParameteri(target, GL_TEXTURE_MAG_FILTER, params.magFilter);
-				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, params.magFilter);
 			}
 
 			if (m_Parameters.wrapS != params.wrapS)
 			{
-				glTexParameteri(target, GL_TEXTURE_WRAP_S, params.wrapS);
-				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, params.wrapS);
 			}
 
 			if (m_Parameters.wrapT != params.wrapT)
 			{
-				glTexParameteri(target, GL_TEXTURE_WRAP_T, params.wrapT);
-				CheckGLErrorMessages();
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, params.wrapT);
 			}
 
 			if (m_Parameters.borderColor != params.borderColor)
 			{
-				glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &params.borderColor.r);
-				CheckGLErrorMessages();
+				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &params.borderColor.r);
 			}
 
 			if (m_Parameters.bGenMipMaps == false && params.bGenMipMaps == true)
 			{
-				glGenerateMipmap(target);
-				CheckGLErrorMessages();
+				glGenerateMipmap(GL_TEXTURE_2D);
 			}
 
 			if (params.bIsDepthTex && m_Parameters.compareMode != params.compareMode)
 			{
-				glTexParameteri(target, GL_TEXTURE_COMPARE_MODE, params.compareMode);//shadow map comp mode
-				CheckGLErrorMessages();
-			}
-
-			if (m_Depth > 1)
-			{
-				if (m_Parameters.wrapR != params.wrapR)
-				{
-					glTexParameteri(target, GL_TEXTURE_WRAP_R, params.wrapR);
-					CheckGLErrorMessages();
-				}
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, params.compareMode);//shadow map comp mode
 			}
 
 			m_Parameters = params;
 		}
 
-		GLenum GLTexture::GetTarget()
-		{
-			return (m_Depth == 1 ? GL_TEXTURE_2D : GL_TEXTURE_3D);
-		}
-
 		bool GLTexture::Resize(glm::vec2i newSize)
 		{
-			if (newSize.x > m_Width || newSize.y > m_Height)
+			if (newSize.x > width || newSize.y > height)
 			{
-				m_Width = newSize.x; m_Height = newSize.y;
-				glDeleteTextures(1, &m_Handle);
-				glGenTextures(1, &m_Handle);
-				CheckGLErrorMessages();
+				width = newSize.x; height = newSize.y;
+				glDeleteTextures(1, &handle);
+				glGenTextures(1, &handle);
 				Build();
 
 				TextureParameters tempParams = m_Parameters;
@@ -440,32 +496,37 @@ namespace flex
 			}
 			else
 			{
-				m_Width = newSize.x; m_Height = newSize.y;
+				width = newSize.x; height = newSize.y;
 				Build();
 
 				return false;
 			}
 		}
 
+		std::string GLTexture::GetFilePath() const
+		{
+			return filePath;
+		}
+
+		std::string GLTexture::GetName() const
+		{
+			return name;
+		}
+
 		bool LoadGLShaders(u32 program, GLShader& shader)
 		{
-			CheckGLErrorMessages();
-
 			bool bSuccess = true;
 
 			bool bLoadGeometryShader = (!shader.shader.geometryShaderFilePath.empty());
 
 			GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-			CheckGLErrorMessages();
 
 			GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-			CheckGLErrorMessages();
 
 			GLuint geometryShaderID = 0;
 			if (bLoadGeometryShader)
 			{
 				geometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
-				CheckGLErrorMessages();
 			}
 
 			std::string vertFileName = shader.shader.vertexShaderFilePath;
@@ -478,22 +539,22 @@ namespace flex
 				geomFileName = shader.shader.geometryShaderFilePath;
 				StripLeadingDirectories(geomFileName);
 
-				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName + " & " + geomFileName);
+				Print("Loading shaders %s & %s & %s\n", vertFileName.c_str(), fragFileName.c_str(), geomFileName.c_str());
 			}
 			else
 			{
-				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+				Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
 			}
 
 			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode, false))
 			{
-				Logger::LogError("Could not find vertex shader: " + shader.shader.name);
+				PrintError("Could not find vertex shader: %s\n", shader.shader.name.c_str());
 			}
 			shader.shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
 
 			if (!ReadFile(shader.shader.fragmentShaderFilePath, shader.shader.fragmentShaderCode, false))
 			{
-				Logger::LogError("Could not find fragment shader: " + shader.shader.name);
+				PrintError("Could not find fragment shader: %s\n", shader.shader.name.c_str());
 			}
 			shader.shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
 
@@ -501,7 +562,7 @@ namespace flex
 			{
 				if (!ReadFile(shader.shader.geometryShaderFilePath, shader.shader.geometryShaderCode, false))
 				{
-					Logger::LogError("Could not find geometry shader: " + shader.shader.name);
+					PrintError("Could not find geometry shader: %s\n", shader.shader.name.c_str());
 				}
 				shader.shader.geometryShaderCode.push_back('\0'); // Signal end of string with terminator character
 			}
@@ -521,7 +582,7 @@ namespace flex
 				std::string vertexShaderErrorMessage;
 				vertexShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(vertexShaderID, infoLogLength, NULL, (GLchar*)vertexShaderErrorMessage.data());
-				Logger::LogError(vertexShaderErrorMessage);
+				PrintError("%s\n", vertexShaderErrorMessage.c_str());
 				bSuccess = false;
 			}
 
@@ -537,7 +598,7 @@ namespace flex
 				std::string fragmentShaderErrorMessage;
 				fragmentShaderErrorMessage.resize((size_t)infoLogLength);
 				glGetShaderInfoLog(fragmentShaderID, infoLogLength, NULL, (GLchar*)fragmentShaderErrorMessage.data());
-				Logger::LogError(fragmentShaderErrorMessage);
+				PrintError("%s\n", fragmentShaderErrorMessage.c_str());
 				bSuccess = false;
 			}
 			
@@ -556,7 +617,7 @@ namespace flex
 					geometryShaderErrorMessage.resize((size_t)infoLogLength);
 					glGetShaderInfoLog(geometryShaderID, infoLogLength, NULL, 
 						(GLchar*)geometryShaderErrorMessage.data());
-					Logger::LogError(geometryShaderErrorMessage);
+					PrintError("%s\n", geometryShaderErrorMessage.c_str());
 					bSuccess = false;
 				}
 			}
@@ -567,7 +628,6 @@ namespace flex
 			{
 				glAttachShader(program, geometryShaderID);
 			}
-			CheckGLErrorMessages();
 
 			return bSuccess;
 		}
@@ -585,7 +645,7 @@ namespace flex
 				std::string programErrorMessage;
 				programErrorMessage.resize((size_t)infoLogLength);
 				glGetProgramInfoLog(program, infoLogLength, NULL, (GLchar*)programErrorMessage.data());
-				Logger::LogError(programErrorMessage);
+				PrintError("%s\n", programErrorMessage.c_str());
 
 				return false;
 			}
@@ -613,7 +673,7 @@ namespace flex
 			case BufferTarget::ARRAY_BUFFER:			return GL_ARRAY_BUFFER;
 			case BufferTarget::ELEMENT_ARRAY_BUFFER:	return GL_ELEMENT_ARRAY_BUFFER;
 			default:
-				Logger::LogError("Unhandled BufferTarget passed to BufferTargetToGLTarget: " + std::to_string((i32)bufferTarget));
+				PrintError("Unhandled BufferTarget passed to BufferTargetToGLTarget: %i\n", (i32)bufferTarget);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -631,7 +691,7 @@ namespace flex
 			case DataType::FLOAT:			return GL_FLOAT;
 			case DataType::DOUBLE:			return GL_DOUBLE;
 			default:
-				Logger::LogError("Unhandled DataType passed to DataTypeToGLType: " + std::to_string((i32)dataType));
+				PrintError("Unhandled DataType passed to DataTypeToGLType: %i\n", (i32)dataType);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -643,7 +703,7 @@ namespace flex
 			case UsageFlag::STATIC_DRAW:	return GL_STATIC_DRAW;
 			case UsageFlag::DYNAMIC_DRAW:	return GL_DYNAMIC_DRAW;
 			default:
-				Logger::LogError("Unhandled usage flag passed to UsageFlagToGLUsageFlag: " + std::to_string((i32)usage));
+				PrintError("Unhandled usage flag passed to UsageFlagToGLUsageFlag: %i\n", (i32)usage);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -660,7 +720,7 @@ namespace flex
 			case TopologyMode::TRIANGLE_STRIP:	return GL_TRIANGLE_STRIP;
 			case TopologyMode::TRIANGLE_FAN:	return GL_TRIANGLE_FAN;
 			default:
-				Logger::LogError("Unhandled topology mode passed to TopologyModeToGLMode: " + std::to_string((i32)topology));
+				PrintError("Unhandled topology mode passed to TopologyModeToGLMode: %i\n", (i32)topology);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -673,7 +733,7 @@ namespace flex
 			case CullFace::FRONT:			return GL_FRONT;
 			case CullFace::FRONT_AND_BACK:	return GL_FRONT_AND_BACK;
 			default:
-				Logger::LogError("Unhandled cull face passed to CullFaceToGLCullFace: " + std::to_string((i32)cullFace));
+				PrintError("Unhandled cull face passed to CullFaceToGLCullFace: %i\n", (i32)cullFace);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -691,7 +751,7 @@ namespace flex
 			case DepthTestFunc::EQUAL:		return GL_EQUAL;
 			case DepthTestFunc::NOTEQUAL:	return GL_NOTEQUAL;
 			default:
-				Logger::LogError("Unhandled depth test func face passed to DepthTestFuncToGlenum: " + std::to_string((i32)func));
+				PrintError("Unhandled depth test func face passed to DepthTestFuncToGlenum: %i\n", (i32)func);
 				return GL_INVALID_ENUM;
 			}
 		}
@@ -713,7 +773,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GLTarget passed to GLTargetToBufferTarget: " + std::to_string((i32)target));
+				PrintError("Unhandled GLTarget passed to GLTargetToBufferTarget: %i\n", (i32)target);
 				return BufferTarget::NONE;
 			}
 		}
@@ -754,7 +814,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GLType passed to GLTypeToDataType: " + std::to_string(type));
+				PrintError("Unhandled GLType passed to GLTypeToDataType: %i\n", type);
 				return DataType::NONE;
 			}
 		}
@@ -771,7 +831,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL usage flag passed to GLUsageFlagToUsageFlag: " + std::to_string(usage));
+				PrintError("Unhandled GL usage flag passed to GLUsageFlagToUsageFlag: %i\n", usage);
 				return UsageFlag::NONE;
 			}
 		}
@@ -808,7 +868,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL mode passed to GLModeToTopologyMode: " + std::to_string(mode));
+				PrintError("Unhandled GL mode passed to GLModeToTopologyMode: %i\n", mode);
 				return TopologyMode::NONE;
 			}
 		}
@@ -829,7 +889,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL cull face passed to GLCullFaceToCullFace: " + std::to_string(cullFace));
+				PrintError("Unhandled GL cull face passed to GLCullFaceToCullFace: %i\n", cullFace);
 				return CullFace::NONE;
 			}
 		}
@@ -870,7 +930,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled GL enum passed to GlenumToDepthTestFunc: " + std::to_string(depthTestFunc));
+				PrintError("Unhandled GL enum passed to GlenumToDepthTestFunc: %i\n", depthTestFunc);
 				return DepthTestFunc::NONE;
 			}
 		}

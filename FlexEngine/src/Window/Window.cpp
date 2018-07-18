@@ -7,42 +7,43 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Time.hpp"
+#include "Scene/SceneManager.hpp"
+#include "JSONParser.hpp"
+#include "Window/Monitor.hpp"
 
 namespace flex
 {
-	Window::Window(const std::string& title, GameContext& gameContext) :
+	std::string Window::s_ConfigFilePath = RESOURCE_LOCATION + "config/window-settings.ini";
+
+	Window::Window(const std::string& title) :
 		m_TitleString(title),
-		m_ShowFPSInWindowTitle(true),
-		m_ShowMSInWindowTitle(true),
-		m_GameContextRef(gameContext),
+		m_bShowFPSInWindowTitle(true),
+		m_bShowMSInWindowTitle(true),
 		m_UpdateWindowTitleFrequency(0.0f),
 		m_SecondsSinceTitleUpdate(0.0f),
-		m_CurrentFullscreenMode(FullscreenMode::WINDOWED)
+		m_CurrentWindowMode(WindowMode::WINDOWED)
 	{
-		gameContext.window = this;
+		g_Window = this;
 	}
 
 	Window::~Window()
 	{
 	}
 
-	void Window::Update(const GameContext& gameContext)
+	void Window::Update()
 	{
-		m_GameContextRef = gameContext;
-
-		m_SecondsSinceTitleUpdate += gameContext.deltaTime;
+		m_SecondsSinceTitleUpdate += g_DeltaTime;
 		if (m_SecondsSinceTitleUpdate >= m_UpdateWindowTitleFrequency)
 		{
 			m_SecondsSinceTitleUpdate = 0.0f;
-			SetWindowTitle(GenerateWindowTitle(gameContext.deltaTime));
+			SetWindowTitle(GenerateWindowTitle());
 		}
 
 		if (m_CursorMode == CursorMode::HIDDEN)
 		{
-			const glm::vec2i windowSize = gameContext.window->GetSize();
-			const glm::vec2 oldMousePos = gameContext.inputManager->GetMousePosition();
+			const glm::vec2i windowSize = g_Window->GetSize();
+			const glm::vec2 oldMousePos = g_InputManager->GetMousePosition();
 			glm::vec2 newMousePos = oldMousePos;
 			if (oldMousePos.x < 0)
 			{
@@ -62,7 +63,7 @@ namespace flex
 				newMousePos.y = 0;
 			}
 
-			gameContext.inputManager->SetMousePosition(newMousePos);
+			g_InputManager->SetMousePosition(newMousePos);
 			SetMousePosition(newMousePos);
 		}
 	}
@@ -85,37 +86,25 @@ namespace flex
 
 	bool Window::HasFocus() const
 	{
-		return m_HasFocus;
+		return m_bHasFocus;
 	}
 
-	std::string Window::GenerateWindowTitle(real dt)
+	std::string Window::GenerateWindowTitle()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
-		if (m_ShowMSInWindowTitle)
+		result += " | " + g_SceneManager->CurrentScene()->GetName();
+		if (m_bShowMSInWindowTitle)
 		{
-			result += "   " + Time::MillisecondsToString(dt, 2);
+			result += " | " + Time::MillisecondsToString(g_DeltaTime, 2);
 		}
-		if (m_ShowFPSInWindowTitle)
+		if (m_bShowFPSInWindowTitle)
 		{
-			result += +" | " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
+			result += +" : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
 		}
-		//if (m_ShowFPSInWindowTitle)
-		//{
-		//	result += +" | " + FloatToString(1.0f / dt, 0) + " FPS ";
-		//}
+		
 
 		return result;
-	}
-
-	void Window::SetShowFPSInTitleBar(bool showFPS)
-	{
-		m_ShowFPSInWindowTitle = showFPS;
-	}
-
-	void Window::SetShowMSInTitleBar(bool showMS)
-	{
-		m_ShowMSInWindowTitle = showMS;
 	}
 
 	void Window::SetUpdateWindowTitleFrequency(real updateFrequencyinSeconds)
@@ -133,47 +122,73 @@ namespace flex
 		m_CursorMode = mode;
 	}
 
-	Window::FullscreenMode Window::GetFullscreenMode()
+	WindowMode Window::GetWindowMode()
 	{
-		return m_CurrentFullscreenMode;
+		return m_CurrentWindowMode;
+	}
+
+	const char* Window::WindowModeToStr(WindowMode mode)
+	{
+		assert(((i32)mode) >= 0);
+		assert(((i32)mode) < ARRAY_SIZE(WindowModeStrs));
+
+		return WindowModeStrs[(i32)mode];
+	}
+
+	WindowMode Window::StrToWindowMode(const char* modeStr)
+	{
+		for (i32 i = 0; i < ARRAY_SIZE(WindowModeStrs); ++i)
+		{
+			if (strcmp(WindowModeStrs[i], modeStr) == 0)
+			{
+				return (WindowMode)i;
+			}
+		}
+
+		PrintError("Unhandled window mode passed to StrToWindowMode: %s, returning WindowMode::WINDOWED\n", modeStr);
+
+		return WindowMode::WINDOWED;
 	}
 
 	// Callbacks
 	void Window::KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, i32 mods)
 	{
-		m_GameContextRef.inputManager->KeyCallback(keycode, action, mods);
+		g_InputManager->KeyCallback(keycode, action, mods);
 	}
 
 	void Window::CharCallback(u32 character)
 	{
-		m_GameContextRef.inputManager->CharCallback(character);
+		g_InputManager->CharCallback(character);
 	}
 
 	void Window::MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, i32 mods)
 	{
-		m_GameContextRef.inputManager->MouseButtonCallback(m_GameContextRef, mouseButton, action, mods);
+		g_InputManager->MouseButtonCallback(mouseButton, action, mods);
 	}
 
 	void Window::WindowFocusCallback(i32 focused)
 	{
-		m_HasFocus = focused != 0;
+		m_bHasFocus = (focused != 0);
 	}
 
 	void Window::CursorPosCallback(double x, double y)
 	{
-		m_GameContextRef.inputManager->CursorPosCallback(x, y);
+		g_InputManager->CursorPosCallback(x, y);
 	}
 
 	void Window::ScrollCallback(double xoffset, double yoffset)
 	{
-		m_GameContextRef.inputManager->ScrollCallback(xoffset, yoffset);
+		g_InputManager->ScrollCallback(xoffset, yoffset);
 	}
 
-	void Window::WindowSizeCallback(i32 width, i32 height)
+	void Window::WindowSizeCallback(i32 width, i32 height, bool bMaximized, bool bIconified)
 	{
+		m_bMaximized = bMaximized;
+		m_bIconified = bIconified;
+
 		OnSizeChanged(width, height);
 
-		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		if (m_CurrentWindowMode == WindowMode::WINDOWED)
 		{
 			m_LastWindowedSize = glm::vec2i(width, height);
 		}
@@ -183,7 +198,7 @@ namespace flex
 	{
 		OnPositionChanged(newX, newY);
 
-		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		if (m_CurrentWindowMode == WindowMode::WINDOWED)
 		{
 			m_LastWindowedPos = m_Position;
 		}
@@ -192,5 +207,102 @@ namespace flex
 	void Window::FrameBufferSizeCallback(i32 width, i32 height)
 	{
 		SetFrameBufferSize(width, height);
+	}
+
+	bool Window::GetAutoRestoreStateEnabled()
+	{
+		return m_bAutoRestoreStateOnBootup;
+	}
+
+	void Window::SetAutoRestoreStateEnabled(bool bAutoRestoreState)
+	{
+		m_bAutoRestoreStateOnBootup = bAutoRestoreState;
+	}
+
+	bool Window::IsMaximized() const
+	{
+		return m_bMaximized;
+	}
+
+	bool Window::IsIconified() const
+	{
+		return m_bIconified;
+	}
+
+	bool Window::InitFromConfig()
+	{
+		if (FileExists(s_ConfigFilePath))
+		{
+			JSONObject rootObject = {};
+
+			if (JSONParser::Parse(s_ConfigFilePath, rootObject))
+			{
+				bool bMoveConsole;
+				if (rootObject.SetBoolChecked("move console to other monitor on bootup", bMoveConsole))
+				{
+					m_bMoveConsoleToOtherMonitor = bMoveConsole;
+				}
+
+				bool bAutoRestore;
+				if (rootObject.SetBoolChecked("auto restore state", bAutoRestore))
+				{
+					m_bAutoRestoreStateOnBootup = bAutoRestore;
+				}
+
+				if (m_bAutoRestoreStateOnBootup)
+				{
+					glm::vec2 initialWindowPos;
+					if (rootObject.SetVec2Checked("initial window position", initialWindowPos))
+					{
+						m_Position = (glm::vec2i)initialWindowPos;
+					}
+
+					glm::vec2 initialWindowSize;
+					if (rootObject.SetVec2Checked("initial window size", initialWindowSize))
+					{
+						m_Size = (glm::vec2i)initialWindowSize;
+					}
+
+					bool bMaximized;
+					if (rootObject.SetBoolChecked("maximized", bMaximized))
+					{
+						m_bMaximized = bMaximized;
+					}
+
+					std::string windowModeStr;
+					if (rootObject.SetStringChecked("window mode", windowModeStr))
+					{
+						m_CurrentWindowMode = StrToWindowMode(windowModeStr.c_str());
+					}
+				}
+
+				return true;
+			}
+			else
+			{
+				PrintError("Failed to parse window settings config file\n");
+			}
+		}
+
+		return false;
+	}
+
+	void Window::SaveToConfig()
+	{
+		JSONObject rootObject = {};
+
+		rootObject.fields.emplace_back("move console to other monitor on bootup", JSONValue(m_bMoveConsoleToOtherMonitor));
+		rootObject.fields.emplace_back("auto restore state", JSONValue(m_bAutoRestoreStateOnBootup));
+		rootObject.fields.emplace_back("initial window position", JSONValue(Vec2ToString((glm::vec2)m_Position)));
+		rootObject.fields.emplace_back("initial window size", JSONValue(Vec2ToString((glm::vec2)m_Size)));
+		rootObject.fields.emplace_back("maximized", JSONValue(m_bMaximized));
+		const char* windowModeStr = Window::WindowModeToStr(g_Window->GetWindowMode());
+		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));
+		std::string fileContents = rootObject.Print(0);
+
+		if (!WriteFile(s_ConfigFilePath, fileContents, false))
+		{
+			PrintError("Failed to write window settings config file\n");
+		}
 	}
 } // namespace flex

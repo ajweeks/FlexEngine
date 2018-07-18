@@ -9,7 +9,7 @@
 #include <GLFW/glfw3.h>
 #pragma warning(pop)
 
-#include "Logger.hpp"
+#include "Graphics/RendererTypes.hpp"
 #include "Types.hpp"
 
 namespace flex
@@ -143,12 +143,19 @@ namespace flex
 			glm::mat4 viewProj;
 		};
 
-		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type);
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum i32ernalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
-		bool GenerateGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
-		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps);
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		struct ImageInfo
+		{
+			i32 width;
+			i32 height;
+			i32 channelCount;
+		};
+
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
+		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
 
 		struct GLCubemapCreateInfo
 		{
@@ -186,37 +193,51 @@ namespace flex
 
 		struct GLTexture
 		{
-		public:
-			GLTexture(GLuint handle, i32 width, i32 height, i32 depth = 1);
-			GLTexture(i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type, i32 depth = 1);
+			GLTexture();
+			GLTexture(const std::string& name, i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type);
+			GLTexture(const std::string& filePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 			~GLTexture();
 
-			GLuint GetHandle();
+			bool GenerateEmpty();
+			bool LoadFromFile();
 
-			glm::vec2i GetResolution();
+			void Reload();
 
 			void Build(void* data = nullptr);
 			void Destroy();
 			void SetParameters(TextureParameters params);
 
-			GLenum GetTarget();
+			glm::vec2i GetResolution();
 
 			// Returns true if regenerated 
 			// If this is a framebuffer texture, upscaling won't work properly
 			// unless it is reattached to the framebuffer object
 			bool Resize(glm::vec2i newSize);
 
+			std::string GetFilePath() const;
+			std::string GetName() const;
+
 		private:
-			GLuint m_Handle = 0;
+			std::string filePath; // Absolute file path
+			std::string name; // filePath but without the leading directories, or a custom name if not loaded from file
 
-			i32 m_Width = 0;
-			i32 m_Height = 0;
+		public:
 
-			i32 m_Depth = 1; // A value of 1 implies a 2D texture
+			GLuint handle = 0;
 
-			i32 m_InternalFormat = GL_RGB;
-			GLenum m_Format = GL_RGB;
-			GLenum m_Type = GL_FLOAT;
+			i32 width = 0;
+			i32 height = 0;
+
+			bool bHasMipMaps = false;
+			bool bFlipVerticallyOnLoad = false;
+			bool bHDR = false;
+			i32 channelCount = 0;
+
+			bool bLoaded = false;
+
+			i32 internalFormat = GL_RGB;
+			GLenum format = GL_RGB;
+			GLenum type = GL_FLOAT;
 
 			TextureParameters m_Parameters;
 		};

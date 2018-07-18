@@ -8,12 +8,6 @@
 #include <glm/vec3.hpp>
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <BulletCollision/CollisionShapes/btBoxShape.h>
-#include <BulletCollision/CollisionShapes/btSphereShape.h>
-#include <BulletCollision/CollisionShapes/btConeShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
-#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
@@ -22,19 +16,19 @@
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
-#include "Logger.hpp"
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
+#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 
 namespace flex
 {
-	BaseScene::BaseScene(const std::string& jsonFilePath) :
-		m_JSONFilePath(jsonFilePath)
+	BaseScene::BaseScene(const std::string& fileName) :
+		m_FileName(fileName)
 	{
 	}
 
@@ -42,204 +36,258 @@ namespace flex
 	{
 	}
 
-	void BaseScene::Initialize(const GameContext& gameContext)
+	void BaseScene::Initialize()
 	{
+		ParseFoundPrefabFiles();
+
+		if (m_PhysicsWorld)
+		{
+			PrintWarn("Scene is being initialized more than once!\n");
+		}
+
 		// Physics world
 		m_PhysicsWorld = new PhysicsWorld();
-		m_PhysicsWorld->Initialize(gameContext);
+		m_PhysicsWorld->Initialize();
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
-		std::string friendlySceneFilepath = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
-		Logger::LogInfo("Loading scene from JSON file: " + friendlySceneFilepath);
+		// Use save file if exists, otherwise use default
+		const std::string savedShortPath = "scenes/saved/" + m_FileName;
+		const std::string defaultShortPath = "scenes/default/" + m_FileName;
+		const std::string savedPath = RESOURCE_LOCATION + savedShortPath;
+		const std::string defaultPath = RESOURCE_LOCATION + defaultShortPath;
+		m_bUsingSaveFile = FileExists(savedPath);
 
-		JSONObject sceneRootObject;
-		if (!JSONParser::Parse(m_JSONFilePath, sceneRootObject))
+		std::string shortFilePath;
+		std::string filePath;
+		if (m_bUsingSaveFile)
 		{
-			Logger::LogError("Failed to parse scene JSON file \"" + m_JSONFilePath + "\"");
-			return;
+			shortFilePath = savedShortPath;
+			filePath = savedPath;
+		}
+		else
+		{
+			shortFilePath = defaultShortPath;
+			filePath = defaultPath;
 		}
 
-		const bool printSceneContentsToConsole = false;
-		if (printSceneContentsToConsole)
+		if (FileExists(filePath))
 		{
-			Logger::LogInfo("Parsed scene file:");
-			Logger::LogInfo(sceneRootObject.Print(0));
-		}
+			Print("Loading scene from %s\n", shortFilePath.c_str());
 
-		int sceneVersion = sceneRootObject.GetInt("version");
-		if (sceneVersion != 1)
-		{
-			if (sceneRootObject.HasField("version"))
+			JSONObject sceneRootObject;
+			if (!JSONParser::Parse(filePath, sceneRootObject))
 			{
-				Logger::LogError("Unhandled scene version! Max handled version: 1, This version: " + std::to_string(sceneVersion));
+				PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
+				return;
 			}
-			else
+
+			const bool printSceneContentsToConsole = false;
+			if (printSceneContentsToConsole)
 			{
-				Logger::LogError("Scene version missing from scene file. Assuming version 1");
+				Print("Parsed scene file:\n");
+				Print(sceneRootObject.Print(0).c_str());
 			}
-		}
 
-		sceneRootObject.SetStringChecked("name", m_Name);
-
-		std::vector<JSONObject> materialsArray = sceneRootObject.GetObjectArray("materials");
-		for (u32 i = 0; i < materialsArray.size(); ++i)
-		{
-			MaterialCreateInfo matCreateInfo = {};
-			ParseMaterialJSONObject(materialsArray[i], matCreateInfo);
-
-			MaterialID matID = gameContext.renderer->InitializeMaterial(gameContext, &matCreateInfo);
-			m_LoadedMaterials.push_back(matID);
-		}
-
-
-		// This holds all the entities in the scene which do not have a parent
-		const std::vector<JSONObject>& rootEntities = sceneRootObject.GetObjectArray("entities");
-		for (const JSONObject& rootEntity : rootEntities)
-		{
-			AddChild(CreateEntityFromJSON(gameContext, rootEntity));
-		}
-
-		if (sceneRootObject.HasField("point lights"))
-		{
-			const std::vector<JSONObject>& pointLightsArray = sceneRootObject.GetObjectArray("point lights");
-
-			for (const JSONObject& pointLightObj : pointLightsArray)
+			int sceneVersion = sceneRootObject.GetInt("version");
+			if (sceneVersion != 1)
 			{
-				PointLight pointLight = {};
-				CreatePointLightFromJSON(gameContext, pointLightObj, pointLight);
+				if (sceneRootObject.HasField("version"))
+				{
+					PrintError("Unhandled scene version: %i! Max handled version: 1\n", sceneVersion);
+				}
+				else
+				{
+					PrintError("Scene version missing from scene file. Assuming version 1\n");
+				}
+			}
 
-				gameContext.renderer->InitializePointLight(pointLight);
+			sceneRootObject.SetStringChecked("name", m_Name);
+
+			std::vector<JSONObject> materialsArray = sceneRootObject.GetObjectArray("materials");
+			for (JSONObject& materialObj : materialsArray)
+			{
+				MaterialCreateInfo matCreateInfo = {};
+				Material::ParseJSONObject(materialObj, matCreateInfo);
+
+				MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
+				m_LoadedMaterials.push_back(matID);
+			}
+
+
+			// This holds all the objects in the scene which do not have a parent
+			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
+			for (const JSONObject& rootObject : rootObjects)
+			{
+				AddRootObject(GameObject::CreateObjectFromJSON(rootObject, this, InvalidMaterialID));
+			}
+
+			if (sceneRootObject.HasField("point lights"))
+			{
+				const std::vector<JSONObject>& pointLightsArray = sceneRootObject.GetObjectArray("point lights");
+
+				for (const JSONObject& pointLightObj : pointLightsArray)
+				{
+					PointLight pointLight = {};
+					CreatePointLightFromJSON(pointLightObj, pointLight);
+
+					g_Renderer->InitializePointLight(pointLight);
+				}
+			}
+
+			if (sceneRootObject.HasField("directional light"))
+			{
+				const JSONObject& directionalLightObj = sceneRootObject.GetObject("directional light");
+
+				DirectionalLight dirLight = {};
+				CreateDirectionalLightFromJSON(directionalLightObj, dirLight);
+
+				g_Renderer->InitializeDirectionalLight(dirLight);
 			}
 		}
-
-		if (sceneRootObject.HasField("directional light"))
+		else
 		{
-			const JSONObject& directionalLightObj = sceneRootObject.GetObject("directional light");
+			// File doesn't exist, create a new blank one
+			Print("Creating new scene at: %s\n", shortFilePath.c_str());
 
-			DirectionalLight dirLight = {};
-			CreateDirectionalLightFromJSON(gameContext, directionalLightObj, dirLight);
-			
-			gameContext.renderer->InitializeDirectionalLight(dirLight);
+			// Skybox
+			{
+				MaterialCreateInfo skyboxMatCreateInfo = {};
+				skyboxMatCreateInfo.name = "Skybox";
+				skyboxMatCreateInfo.shaderName = "skybox";
+				skyboxMatCreateInfo.generateHDRCubemapSampler = true;
+				skyboxMatCreateInfo.enableCubemapSampler = true;
+				skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
+				skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
+				skyboxMatCreateInfo.generateIrradianceSampler = true;
+				skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
+				skyboxMatCreateInfo.generatePrefilteredMap = true;
+				skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
+				skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
+				MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
+
+				m_LoadedMaterials.push_back(skyboxMatID);
+
+				Skybox* skybox = new Skybox("Skybox");
+				
+				JSONObject emptyObj = {};
+				skybox->ParseJSON(emptyObj, this, skyboxMatID);
+
+				AddRootObject(skybox);
+			}
+
+			// Reflection probe
+			{
+				MaterialCreateInfo reflectionProbeMatCreateInfo = {};
+				reflectionProbeMatCreateInfo.name = "Reflection Probe";
+				reflectionProbeMatCreateInfo.shaderName = "pbr";
+				reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+				reflectionProbeMatCreateInfo.constMetallic = 1.0f;
+				reflectionProbeMatCreateInfo.constRoughness = 0.0f;
+				reflectionProbeMatCreateInfo.constAO = 1.0f;
+				MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
+
+				m_LoadedMaterials.push_back(sphereMatID);
+
+				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
+				
+				JSONObject emptyObj = {};
+				reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
+
+				AddRootObject(reflectionProbe);
+			}
 		}
 
 
 		{
 			const std::string gridMatName = "Grid";
-			if (!gameContext.renderer->GetMaterialID(gridMatName, m_GridMaterialID))
+			if (!g_Renderer->GetMaterialID(gridMatName, m_GridMaterialID))
 			{
 				MaterialCreateInfo gridMatInfo = {};
 				gridMatInfo.shaderName = "color";
 				gridMatInfo.name = gridMatName;
-				m_GridMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &gridMatInfo);
+				gridMatInfo.engineMaterial = true;
+				m_GridMaterialID = g_Renderer->InitializeMaterial(&gridMatInfo);
 			}
 
 			m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
 			MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.editorObject = true;
-			gridMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::GRID, &createInfo);
+			gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
 			m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 			m_Grid->SetSerializable(false);
 			m_Grid->SetStatic(true);
-			AddChild(m_Grid);
+			AddRootObject(m_Grid);
 		}
 
 
 		{
 			const std::string worldOriginMatName = "World origin";
-			if (!gameContext.renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+			if (!g_Renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
 			{
 				MaterialCreateInfo worldAxisMatInfo = {};
 				worldAxisMatInfo.shaderName = "color";
 				worldAxisMatInfo.name = worldOriginMatName;
-				m_WorldAxisMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &worldAxisMatInfo);
+				worldAxisMatInfo.engineMaterial = true;
+				m_WorldAxisMaterialID = g_Renderer->InitializeMaterial(&worldAxisMatInfo);
 			}
 
 			m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
 			MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.editorObject = true;
-			orignMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
+			orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
 			m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 			m_WorldOrigin->SetSerializable(false);
 			m_WorldOrigin->SetStatic(true);
-			AddChild(m_WorldOrigin);
+			AddRootObject(m_WorldOrigin);
 		}
 
-		// Players
-		m_Player0 = new Player(0);
-		AddChild(m_Player0);
+		//m_Player0 = new Player(0);
+		//AddRootObject(m_Player0);
+		//
+		//m_Player1 = new Player(1);
+		//AddRootObject(m_Player1);
 
-		m_Player1 = new Player(1);
-		AddChild(m_Player1);
-
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			(*iter)->Initialize(gameContext);
+			rootObject->Initialize();
 		}
+
+		m_bLoaded = true;
 	}
 
-	void BaseScene::PostInitialize(const GameContext& gameContext)
+	void BaseScene::PostInitialize()
 	{
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			GameObject* gameObject = *iter;
-
-			gameObject->PostInitialize(gameContext);
-
-			RigidBody* rb = gameObject->GetRigidBody();
-
-			if (rb)
-			{
-				rb->GetRigidBodyInternal()->setUserPointer(gameObject);
-			}
-
-			switch (gameObject->m_Type)
-			{
-			case GameObjectType::REFLECTION_PROBE:
-			{
-				gameContext.renderer->SetReflectionProbeMaterial(gameObject->m_ReflectionProbeMembers.captureMatID);
-			} break;
-			case GameObjectType::VALVE:
-			{
-				rb->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
-				auto rbInternal = rb->GetRigidBodyInternal();
-				rbInternal->setAngularFactor(btVector3(0, 1, 0));
-				// Mark as trigger
-				rbInternal->setCollisionFlags(
-					rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
-				rbInternal->setGravity(btVector3(0, 0, 0));
-			} break;
-			case GameObjectType::RISING_BLOCK:
-			{
-				auto rbInternal = rb->GetRigidBodyInternal();
-				rbInternal->setGravity(btVector3(0, 0, 0));
-			} break;
-			}
+			rootObject->PostInitialize();
 		}
 
-		m_PhysicsWorld->GetWorld()->setDebugDrawer(gameContext.renderer->GetDebugDrawer());
+		m_PhysicsWorld->GetWorld()->setDebugDrawer(g_Renderer->GetDebugDrawer());
 	}
 
-	void BaseScene::Destroy(const GameContext& gameContext)
+	void BaseScene::Destroy()
 	{
-		for (GameObject* child : m_Children)
+		m_bLoaded = false;
+
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (child)
+			if (rootObject)
 			{
-				child->Destroy(gameContext);
-				SafeDelete(child);
+				rootObject->Destroy();
+				SafeDelete(rootObject);
 			}
 		}
-		m_Children.clear();
+		m_RootObjects.clear();
 
 		m_LoadedMaterials.clear();
 
-		gameContext.renderer->ClearMaterials();
-		gameContext.renderer->SetSkyboxMesh(nullptr);
-		gameContext.renderer->ClearDirectionalLight();
-		gameContext.renderer->ClearPointLights();
+		g_Renderer->ClearMaterials();
+		g_Renderer->SetSkyboxMesh(nullptr);
+		g_Renderer->ClearDirectionalLight();
+		g_Renderer->ClearPointLights();
 
 		if (m_PhysicsWorld)
 		{
@@ -248,65 +296,23 @@ namespace flex
 		}
 	}
 
-	void BaseScene::Update(const GameContext& gameContext)
+	void BaseScene::Update()
 	{
 		if (m_PhysicsWorld)
 		{
-			m_PhysicsWorld->Update(gameContext.deltaTime);
+			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
-		{
-			m_Grid->SetVisible(!m_Grid->IsVisible());
-			m_WorldOrigin->SetVisible(!m_WorldOrigin->IsVisible());
-		}
-
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
 		{
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_C))
-		{
-			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
-		}
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_V))
-		{
-			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
-		}
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_B))
-		{
-			AudioManager::StopSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::drmapan));
-		}
-
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_L))
-		{
-			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										   0.5f * gameContext.deltaTime);
-		}
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_K))
-		{
-			AudioManager::AddToSourcePitch(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										   -0.5f * gameContext.deltaTime);
-		}
-
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_P))
-		{
-			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										  1.1f);
-		}
-		if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_O))
-		{
-			AudioManager::ScaleSourceGain(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud),
-										  1.0f / 1.1f);
-		}
-
-
-		BaseCamera* camera = gameContext.cameraManager->CurrentCamera();
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
 
 		// Fade grid out when far away
 		{
@@ -317,529 +323,109 @@ namespace flex
 
 			glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
 			glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
-			gameContext.renderer->GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
-			gameContext.renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
+			g_Renderer->GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
+			g_Renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
 		}
 
-		for (GameObject* child : m_Children)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (child)
+			if (rootObject)
 			{
-				child->Update(gameContext);
+				rootObject->Update();
 			}
 		}
 	}
 
-	GameObject* BaseScene::CreateEntityFromJSON(const GameContext& gameContext, const JSONObject& obj)
+	bool BaseScene::DestroyGameObject(GameObject* targetObject,
+									 bool bDeleteChildren)
 	{
-		GameObject* newEntity = nullptr;
-
-		std::string entityTypeStr = obj.GetString("type");
-		GameObjectType entityType = StringToGameObjectType(entityTypeStr);
-
-		std::string objectName = obj.GetString("name");
-
-		bool bVisible = true;
-		obj.SetBoolChecked("visible", bVisible);
-		bool bVisibleInSceneGraph = true;
-		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
-
-		MaterialID matID = InvalidMaterialID;
-		i32 materialArrayIndex = -1;
-		if (obj.SetIntChecked("material array index", materialArrayIndex))
+		for (GameObject* gameObject : m_RootObjects)
 		{
-			if (materialArrayIndex >= 0 &&
-				materialArrayIndex < (i32)m_LoadedMaterials.size())
+			if (DestroyGameObjectRecursive(gameObject, targetObject, bDeleteChildren))
 			{
-				matID = m_LoadedMaterials[materialArrayIndex];
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool BaseScene::IsLoaded() const
+	{
+		return m_bLoaded;
+	}
+
+	bool BaseScene::DestroyGameObjectRecursive(GameObject* currentObject,
+											  GameObject* targetObject,
+											  bool bDeleteChildren)
+	{
+		if (currentObject == targetObject)
+		{
+			// Target's parent pointer will be cleared upon removing from parent, cache it before that happens
+			GameObject* targetParent = targetObject->m_Parent;
+			if (targetObject->m_Parent)
+			{
+				targetParent->RemoveChild(targetObject);
 			}
 			else
 			{
-				matID = InvalidMaterialID;
-				Logger::LogError("Invalid material index for entity " + objectName + ": " +
-					std::to_string(materialArrayIndex));
-			}
-		}
-
-		newEntity = new GameObject(objectName, entityType);
-
-
-		Transform transform = Transform::Identity();
-		JSONObject transformObj;
-		if (obj.SetObjectChecked("transform", transformObj))
-		{
-			transform = JSONParser::ParseTransform(transformObj);
-		}
-		newEntity->m_Transform = transform;
-
-		JSONObject meshObj;
-		if (obj.SetObjectChecked("mesh", meshObj))
-		{
-			ParseMeshObject(gameContext, meshObj, newEntity, matID);
-		}
-
-		JSONObject colliderObj;
-		if (obj.SetObjectChecked("collider", colliderObj))
-		{
-			std::string shapeStr = colliderObj.GetString("shape");
-			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
-
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents;
-				colliderObj.SetVec3Checked("half extents", halfExtents);
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-				newEntity->SetCollisionShape(boxShape);
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				btSphereShape* sphereShape = new btSphereShape(radius);
-
-				newEntity->SetCollisionShape(sphereShape);
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
-
-				newEntity->SetCollisionShape(capsuleShape);
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btConeShape* coneShape = new btConeShape(radius, height);
-
-				newEntity->SetCollisionShape(coneShape);
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents;
-				colliderObj.SetVec3Checked("half extents", halfExtents);
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-				newEntity->SetCollisionShape(cylinderShape);
-			} break;
-			default:
-			{
-				Logger::LogError("Unhandled BroadphaseNativeType: " + shapeStr);
-			} break;
-			}
-
-			//bool bIsTrigger = colliderObj.GetBool("trigger");
-			// TODO: Create btGhostObject to use for trigger
-		}
-
-		JSONObject rigidBodyObj;
-		if (obj.SetObjectChecked("rigid body", rigidBodyObj))
-		{
-			if (newEntity->GetCollisionShape() == nullptr)
-			{
-				Logger::LogError("Serialized object contains \"rigid body\" field but no collider: " + objectName);
-			}
-			else
-			{
-				real mass = rigidBodyObj.GetFloat("mass");
-				bool bKinematic = rigidBodyObj.GetBool("kinematic");
-
-				RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-				rigidBody->SetMass(mass);
-				rigidBody->SetKinematic(bKinematic);
-				rigidBody->SetStatic(newEntity->IsStatic());
-			}
-		}
-
-		VertexAttributes requiredVertexAttributes = 0;
-		if (matID != InvalidMaterialID)
-		{
-			Material& material = gameContext.renderer->GetMaterial(matID);
-			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-			requiredVertexAttributes = shader.vertexAttributes;
-		}
-
-		switch (entityType)
-		{
-		case GameObjectType::OBJECT:
-		{
-			// Nothing special to do
-		} break;
-		case GameObjectType::SKYBOX:
-		{
-			if (matID == InvalidMaterialID)
-			{
-				Logger::LogError("Failed to create skybox material from serialized values! Can't create skybox.");
-			}
-			else
-			{
-				Material& material = gameContext.renderer->GetMaterial(matID);
-				if (!material.generateHDRCubemapSampler &&
-					!material.generateCubemapSampler)
+				auto iter = Contains(m_RootObjects, targetObject);
+				if (iter != m_RootObjects.end())
 				{
-					Logger::LogWarning("Invalid skybox material! Material must be set to generate cubemap sampler");
-				}
-
-				MeshComponent* skyboxMesh = new MeshComponent(matID, newEntity);
-				skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
-				skyboxMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX);
-				assert(newEntity->GetMeshComponent() == nullptr);
-				newEntity->SetMeshComponent(skyboxMesh);
-
-				gameContext.renderer->SetSkyboxMesh(newEntity);
-
-				glm::vec3 skyboxRotEuler;
-				if (obj.SetVec3Checked("rotation", skyboxRotEuler))
-				{
-					glm::quat skyboxRotation = glm::quat(skyboxRotEuler);
-					newEntity->GetTransform()->SetWorldRotation(skyboxRotation);
+					m_RootObjects.erase(iter);
 				}
 			}
-		} break;
-		case GameObjectType::REFLECTION_PROBE:
-		{
-			// Chrome ball material
-			//MaterialCreateInfo reflectionProbeMaterialCreateInfo = {};
-			//reflectionProbeMaterialCreateInfo.name = "Reflection probe sphere";
-			//reflectionProbeMaterialCreateInfo.shaderName = "pbr";
-			//reflectionProbeMaterialCreateInfo.constAlbedo = glm::vec3(0.75f, 0.75f, 0.75f);
-			//reflectionProbeMaterialCreateInfo.constMetallic = 1.0f;
-			//reflectionProbeMaterialCreateInfo.constRoughness = 0.0f;
-			//reflectionProbeMaterialCreateInfo.constAO = 1.0f;
-			//MaterialID reflectionProbeMaterialID = gameContext.renderer->InitializeMaterial(gameContext, &reflectionProbeMaterialCreateInfo);
 
-			// Probe capture material
-			MaterialCreateInfo probeCaptureMatCreateInfo = {};
-			probeCaptureMatCreateInfo.name = "Reflection probe capture";
-			probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-			probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-			probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-			probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-			probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-			probeCaptureMatCreateInfo.enableIrradianceSampler = true;
-			probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-			probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-			probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-			probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-			probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-			probeCaptureMatCreateInfo.enableBRDFLUT = true;
-			probeCaptureMatCreateInfo.frameBuffers = {
-				{ "positionMetallicFrameBufferSampler", nullptr },
-				{ "normalRoughnessFrameBufferSampler", nullptr },
-				{ "albedoAOFrameBufferSampler", nullptr },
-			};
-			MaterialID captureMatID = gameContext.renderer->InitializeMaterial(gameContext, &probeCaptureMatCreateInfo);
-
-			MeshComponent* sphereMesh = new MeshComponent(matID, newEntity);
-			sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
-
-			MeshComponent::ImportSettings importSettings = {};
-			importSettings.swapNormalYZ = true;
-			importSettings.flipNormalZ = true;
-			assert(newEntity->GetMeshComponent() == nullptr);
-			sphereMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/ico-sphere.gltf", &importSettings);
-			newEntity->SetMeshComponent(sphereMesh);
-			
-			std::string captureName = objectName + "_capture";
-			GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
-			captureObject->SetSerializable(false);
-			captureObject->SetVisible(false);
-
-			RenderObjectCreateInfo captureObjectCreateInfo = {};
-			captureObjectCreateInfo.vertexBufferData = nullptr;
-			captureObjectCreateInfo.materialID = captureMatID;
-			captureObjectCreateInfo.gameObject = captureObject;
-			captureObjectCreateInfo.visibleInSceneExplorer = false;
-
-			RenderID captureRenderID = gameContext.renderer->InitializeRenderObject(gameContext, &captureObjectCreateInfo);
-			captureObject->SetRenderID(captureRenderID);
-
-			newEntity->AddChild(captureObject);
-
-			newEntity->m_ReflectionProbeMembers.captureMatID = captureMatID;
-
-			gameContext.renderer->SetReflectionProbeMaterial(captureMatID);
-		} break;
-		case GameObjectType::VALVE:
-		{
-			JSONObject valveInfo = obj.GetObject("valve info");
-			glm::vec2 valveRange;
-			valveInfo.SetVec2Checked("range", valveRange);
-			newEntity->m_ValveMembers.minRotation = valveRange.x;
-			newEntity->m_ValveMembers.maxRotation = valveRange.y;
-			if (glm::abs(newEntity->m_ValveMembers.maxRotation - newEntity->m_ValveMembers.minRotation) == 0.0f)
+			// Set children's parents
+			if (!bDeleteChildren)
 			{
-				Logger::LogWarning("Valve's rotation range is 0, it will not be able to rotate!");
-			}
-			if (newEntity->m_ValveMembers.minRotation > newEntity->m_ValveMembers.maxRotation)
-			{
-				Logger::LogWarning("Valve's minimum rotation range is greater than its maximum! Undefined behavior");
-			}
-
-			MeshComponent* valveMesh = new MeshComponent(matID, newEntity);
-			valveMesh->SetRequiredAttributes(requiredVertexAttributes);
-			valveMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/valve.gltf");
-			assert(newEntity->GetMeshComponent() == nullptr);
-			newEntity->SetMeshComponent(valveMesh);
-
-			btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
-			btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-			newEntity->SetCollisionShape(cylinderShape);
-
-			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(false);
-			rigidBody->SetStatic(false);
-		} break;
-		case GameObjectType::RISING_BLOCK:
-		{
-			MeshComponent* cubeMesh = new MeshComponent(matID, newEntity);
-			cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
-			cubeMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + "models/cube.gltf");
-			assert(newEntity->GetMeshComponent() == nullptr);
-			newEntity->SetMeshComponent(cubeMesh);
-
-			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(true);
-			rigidBody->SetStatic(false);
-
-			JSONObject blockInfo = obj.GetObject("block info");
-
-			std::string valveName;
-			if (blockInfo.SetStringChecked("valve name", valveName))
-			{
-				if (valveName.empty())
+				for (GameObject* childObject : targetObject->m_Children)
 				{
-					Logger::LogWarning("Rising block field's valve name is empty!");
-				}
-				else
-				{
-					for (GameObject* child : m_Children)
+					if (targetParent)
 					{
-						if (child->m_Name.compare(valveName) == 0)
-						{
-							newEntity->m_RisingBlockMembers.valve = child;
-							break;
-						}
+						targetParent->AddChild(childObject);
+					}
+					else
+					{
+						AddRootObject(childObject);
 					}
 				}
 			}
-			else
+
+			if (targetObject == g_EngineInstance->GetSelectedObject())
 			{
-				Logger::LogWarning("Rising block info field doesn't contain a valve name!");
+				g_EngineInstance->SetSelectedObject(nullptr);
 			}
 
-			blockInfo.SetBoolChecked("affected by gravity", newEntity->m_RisingBlockMembers.bAffectedByGravity);
-
-			if (!newEntity->m_RisingBlockMembers.valve)
+			// If children are still in m_Children array when
+			// targetObject is destroyed they will also be destroyed
+			if (!bDeleteChildren)
 			{
-				Logger::LogError("Rising block contains invalid valve name! Has it been created yet? " + valveName);
+				targetObject->m_Children.clear();
 			}
 
-			blockInfo.SetVec3Checked("move axis", newEntity->m_RisingBlockMembers.moveAxis);
+			targetObject->Destroy();
 
-			if (newEntity->m_RisingBlockMembers.moveAxis == glm::vec3(0.0f))
-			{
-				Logger::LogWarning("Rising block's move axis is not set! It won't be able to move");
-			}
-		} break;
-		case GameObjectType::GLASS_WINDOW:
-		{
-			JSONObject windowInfo = obj.GetObject("window info");
-
-			bool bBroken = false;
-			windowInfo.SetBoolChecked("broken", bBroken);
-
-			MeshComponent* windowMesh = new MeshComponent(matID, newEntity);
-			windowMesh->SetRequiredAttributes(requiredVertexAttributes);
-			windowMesh->LoadFromFile(gameContext, RESOURCE_LOCATION + 
-				(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
-			assert(newEntity->GetMeshComponent() == nullptr);
-			newEntity->SetMeshComponent(windowMesh);
-
-			RigidBody* rigidBody = newEntity->SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(true);
-			rigidBody->SetStatic(false);
-		} break;
-		case GameObjectType::NONE:
-		{
-			// Assume this object is an empty parent object which holds no data itself but a transform
-		} break;
-		default:
-		{
-			//Logger::LogError("Unhandled entity type encountered when parsing scene file: " + entityTypeStr);
-		} break;
+			SafeDelete(targetObject);
+			return true;
 		}
 
-		if (newEntity)
+		for (GameObject* childObject : currentObject->m_Children)
 		{
-			newEntity->SetVisible(bVisible, false);
-			newEntity->SetVisibleInSceneExplorer(bVisibleInSceneGraph);
-			newEntity->m_Transform = transform;
-
-			bool bStatic = false;
-			if (obj.SetBoolChecked("static", bStatic))
+			if (DestroyGameObjectRecursive(childObject, targetObject, bDeleteChildren))
 			{
-				newEntity->SetStatic(bStatic);
-			}
-
-			if (obj.HasField("children"))
-			{
-				std::vector<JSONObject> children = obj.GetObjectArray("children");
-				for (const auto& child : children)
-				{
-					newEntity->AddChild(CreateEntityFromJSON(gameContext, child));
-				}
+				return true;
 			}
 		}
 
-		return newEntity;
+		return false;
 	}
 
-	void BaseScene::ParseMaterialJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
-	{
-		material.SetStringChecked("name", createInfoOut.name);
-		material.SetStringChecked("shader", createInfoOut.shaderName);
-
-		struct FilePathMaterialParam
-		{
-			std::string* member;
-			std::string name;
-		};
-
-		std::vector<FilePathMaterialParam> filePathParams =
-		{
-			{ &createInfoOut.diffuseTexturePath, "diffuse texture filepath" },
-			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
-			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
-			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
-			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
-			{ &createInfoOut.aoTexturePath, "ao texture filepath" },
-			{ &createInfoOut.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
-			{ &createInfoOut.environmentMapPath, "environment map path" },
-		};
-
-		for (u32 i = 0; i < filePathParams.size(); ++i)
-		{
-			if (material.HasField(filePathParams[i].name))
-			{
-				*filePathParams[i].member = RESOURCE_LOCATION +
-					material.GetString(filePathParams[i].name);
-			}
-		}
-
-		material.SetBoolChecked("generate diffuse sampler", createInfoOut.generateDiffuseSampler);
-		material.SetBoolChecked("enable diffuse sampler", createInfoOut.enableDiffuseSampler);
-		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
-		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
-		material.SetBoolChecked("generate albedo sampler", createInfoOut.generateAlbedoSampler);
-		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
-		material.SetBoolChecked("generate metallic sampler", createInfoOut.generateMetallicSampler);
-		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
-		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
-		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("generate ao sampler", createInfoOut.generateAOSampler);
-		material.SetBoolChecked("enable ao sampler", createInfoOut.enableAOSampler);
-		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
-		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
-		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
-		material.SetBoolChecked("enable irradiance sampler", createInfoOut.enableIrradianceSampler);
-		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
-		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
-		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
-		material.SetBoolChecked("enable cubemap sampler", createInfoOut.enableCubemapSampler);
-		material.SetBoolChecked("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
-		material.SetBoolChecked("generate cubemap sampler", createInfoOut.generateCubemapSampler);
-		material.SetBoolChecked("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
-		material.SetBoolChecked("generate prefiltered map", createInfoOut.generatePrefilteredMap);
-		material.SetBoolChecked("enable prefiltered map", createInfoOut.enablePrefilteredMap);
-		material.SetBoolChecked("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
-
-		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
-		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
-		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
-		material.SetVec4Checked("color multiplier", createInfoOut.colorMultiplier);
-		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
-		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
-		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
-		material.SetFloatChecked("const ao", createInfoOut.constAO);
-	}
-
-	MeshComponent* BaseScene::ParseMeshObject(const GameContext& gameContext, const JSONObject& meshObject, GameObject* newEntity, MaterialID matID)
-	{
-		MeshComponent* result = nullptr;
-
-		std::string meshFilePath = meshObject.GetString("file");
-		if (!meshFilePath.empty())
-		{
-			meshFilePath = RESOURCE_LOCATION + meshFilePath;
-		}
-		std::string meshPrefabName = meshObject.GetString("prefab");
-		bool swapNormalYZ = meshObject.GetBool("swapNormalYZ");
-		bool flipNormalZ = meshObject.GetBool("flipNormalZ");
-		bool flipU = meshObject.GetBool("flipU");
-		bool flipV = meshObject.GetBool("flipV");
-
-		if (matID == InvalidMaterialID)
-		{
-			Logger::LogError("Mesh entity requires material index: " + newEntity->GetName());
-		}
-		else
-		{
-			Material& material = gameContext.renderer->GetMaterial(matID);
-			Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
-			if (!meshFilePath.empty())
-			{
-				result = new MeshComponent(matID, newEntity);
-				result->SetRequiredAttributes(requiredVertexAttributes);
-
-				MeshComponent::ImportSettings importSettings = {};
-				importSettings.flipU = flipU;
-				importSettings.flipV = flipV;
-				importSettings.flipNormalZ = flipNormalZ;
-				importSettings.swapNormalYZ = swapNormalYZ;
-
-				result->LoadFromFile(gameContext,
-								   meshFilePath,
-								   &importSettings);
-
-				newEntity->SetMeshComponent(result);
-			}
-			else if (!meshPrefabName.empty())
-			{
-				result = new MeshComponent(matID, newEntity);
-				result->SetRequiredAttributes(requiredVertexAttributes);
-
-				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
-				result->LoadPrefabShape(gameContext, prefabShape);
-
-				newEntity->SetMeshComponent(result);
-			}
-			else
-			{
-				Logger::LogError("Unhandled mesh field on object: " + newEntity->GetName());
-			}
-		}
-
-		return result;
-	}
-
-	i32 BaseScene::GetMaterialArrayIndex(const Material& material, const GameContext& gameContext)
+	i32 BaseScene::GetMaterialArrayIndex(const Material& material)
 	{
 		i32 materialArrayIndex = -1;
 		for (u32 j = 0; j < m_LoadedMaterials.size(); ++j)
 		{
-			Material& loadedMat = gameContext.renderer->GetMaterial(m_LoadedMaterials[j]);
+			Material& loadedMat = g_Renderer->GetMaterial(m_LoadedMaterials[j]);
 			if (loadedMat.Equals(material))
 			{
 				materialArrayIndex = (i32)j;
@@ -849,10 +435,59 @@ namespace flex
 		return materialArrayIndex;
 	}
 
-	void BaseScene::CreatePointLightFromJSON(const GameContext& gameContext, const JSONObject& obj, PointLight& pointLight)
+	void BaseScene::ParseFoundPrefabFiles()
 	{
-		UNREFERENCED_PARAMETER(gameContext);
+		m_ParsedPrefabs.clear();
 
+		std::vector<std::string> foundFiles;
+		if (FindFilesInDirectory(RESOURCE_LOCATION + "scenes/prefabs/", foundFiles, ".json"))
+		{
+			for (const std::string& foundFilePath : foundFiles)
+			{
+				std::string fileName = foundFilePath;
+				StripLeadingDirectories(fileName);
+				Print("Parsing prefab: %s\n", fileName.c_str());
+
+				JSONObject obj;
+				if (JSONParser::Parse(foundFilePath, obj))
+				{
+					m_ParsedPrefabs.push_back(obj);
+				}
+				else
+				{
+					PrintError("Failed to parse prefab file: %s\n", foundFilePath.c_str());
+				}
+			}
+		}
+		else
+		{
+			PrintError("Failed to find files in \"scenes/prefabs/\"!\n");
+		}
+	}
+
+	MaterialID BaseScene::ParseMatID(const JSONObject& object)
+	{
+		MaterialID matID = InvalidMaterialID;
+		i32 materialArrayIndex = -1;
+		if (object.SetIntChecked("material array index", materialArrayIndex))
+		{
+			if (materialArrayIndex >= 0 &&
+				materialArrayIndex < (i32)m_LoadedMaterials.size())
+			{
+				matID = m_LoadedMaterials[materialArrayIndex];
+			}
+			else
+			{
+				matID = InvalidMaterialID;
+				PrintError("Invalid material index for object %s: %i\n",
+						   object.GetString("name").c_str(), materialArrayIndex);
+			}
+		}
+		return matID;
+	}
+
+	void BaseScene::CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight)
+	{
 		std::string posStr = obj.GetString("position");
 		pointLight.position = glm::vec4(ParseVec3(posStr), 0);
 
@@ -870,12 +505,16 @@ namespace flex
 		obj.SetStringChecked("name", pointLight.name);
 	}
 
-	void BaseScene::CreateDirectionalLightFromJSON(const GameContext& gameContext, const JSONObject& obj, DirectionalLight& directionalLight)
+	void BaseScene::CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		std::string dirStr = obj.GetString("direction");
 		directionalLight.direction = glm::vec4(ParseVec3(dirStr), 0);
+
+		std::string posStr = obj.GetString("position");
+		if (!posStr.empty())
+		{
+			directionalLight.position = ParseVec3(posStr);
+		}
 
 		obj.SetVec4Checked("color", directionalLight.color);
 
@@ -887,16 +526,19 @@ namespace flex
 		}
 	}
 
-	void BaseScene::SerializeToFile(const GameContext& gameContext)
+	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */)
 	{
 		bool success = false;
+
+		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
+		PROFILE_BEGIN(profileBlockName);
 
 		JSONObject rootSceneObject = {};
 
 		i32 fileVersion = 1;
 
-		rootSceneObject.fields.push_back(JSONField("version", JSONValue(fileVersion)));
-		rootSceneObject.fields.push_back(JSONField("name", JSONValue(m_Name)));
+		rootSceneObject.fields.emplace_back("version", JSONValue(fileVersion));
+		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 
 
 		JSONField materialsField = {};
@@ -904,506 +546,192 @@ namespace flex
 		std::vector<JSONObject> materialsArray;
 		for (MaterialID matID : m_LoadedMaterials)
 		{
-			Material& material = gameContext.renderer->GetMaterial(matID);
-			materialsArray.push_back(SerializeMaterial(material, gameContext));
+			Material& material = g_Renderer->GetMaterial(matID);
+			materialsArray.push_back(material.SerializeToJSON());
 		}
 		materialsField.value = JSONValue(materialsArray);
 		rootSceneObject.fields.push_back(materialsField);
 
 
-		JSONField entitiesField = {};
-		entitiesField.label = "entities";
-		std::vector<JSONObject> entitiesArray;
-		for (GameObject* child : m_Children)
+		std::vector<JSONObject> objectsArray;
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (child->IsSerializable())
+			if (rootObject->IsSerializable())
 			{
-				entitiesArray.push_back(SerializeObject(child, gameContext));
+				if (rootObject->IsSerializable())
+				{
+					objectsArray.push_back(rootObject->SerializeToJSON(this));
+				}
 			}
 		}
-		entitiesField.value = JSONValue(entitiesArray);
-		rootSceneObject.fields.push_back(entitiesField);
+		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
 
 
 		JSONField pointLightsField = {};
 		pointLightsField.label = "point lights";
 		std::vector<JSONObject> pointLightsArray;
-		for (i32 i = 0; i < gameContext.renderer->GetNumPointLights(); ++i)
+		for (i32 i = 0; i < g_Renderer->GetNumPointLights(); ++i)
 		{
-			PointLight& pointLight = gameContext.renderer->GetPointLight(i);
-			pointLightsArray.push_back(SerializePointLight(pointLight, gameContext));
+			PointLight& pointLight = g_Renderer->GetPointLight(i);
+			pointLightsArray.push_back(SerializePointLight(pointLight));
 		}
 		pointLightsField.value = JSONValue(pointLightsArray);
 		rootSceneObject.fields.push_back(pointLightsField);
 
-		DirectionalLight& dirLight = gameContext.renderer->GetDirectionalLight();
+		DirectionalLight& dirLight = g_Renderer->GetDirectionalLight();
 		JSONField directionalLightsField("directional light",
-			JSONValue(SerializeDirectionalLight(dirLight, gameContext)));
+			JSONValue(SerializeDirectionalLight(dirLight)));
 		rootSceneObject.fields.push_back(directionalLightsField);
-
 
 		std::string fileContents = rootSceneObject.Print(0);
 
-		std::string cleanFileName = m_JSONFilePath.substr(RESOURCE_LOCATION.length());
-		Logger::LogInfo("Serializing scene to " + cleanFileName);
-
-		success = WriteFile(m_JSONFilePath, fileContents, false);
-
-		if (success)
+		std::string defaultShortSaveFilePath = "scenes/default/" + m_FileName;
+		std::string savedShortSaveFilePath = "scenes/saved/" + m_FileName;
+		std::string shortSavedFileName;
+		if (bSaveOverDefault)
 		{
-			Logger::LogInfo("Done serializing scene");
-			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
+			shortSavedFileName = defaultShortSaveFilePath;
 		}
 		else
 		{
-			Logger::LogError("Failed to open file for writing: " + m_JSONFilePath + ", Can't serialize scene");
+			shortSavedFileName = savedShortSaveFilePath;
+		}
+		Print("Serializing scene to %s\n", shortSavedFileName.c_str());
+		
+		if (bSaveOverDefault)
+		{
+			m_bUsingSaveFile = false;
+
+			if (FileExists(RESOURCE_LOCATION + savedShortSaveFilePath))
+			{
+				DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
+			}
+		}
+
+
+		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
+		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
+		success = WriteFile(savedFilePathName, fileContents, false);
+
+		if (success)
+		{
+			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::blip));
+			g_Renderer->AddEditorString("Saved " + m_Name);
+
+			if (!bSaveOverDefault)
+			{
+				m_bUsingSaveFile = true;
+			}
+
+			PROFILE_END(profileBlockName);
+			Profiler::PrintBlockDuration(profileBlockName);
+		}
+		else
+		{
+			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", savedFilePathName.c_str());
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 	}
 
-	JSONObject BaseScene::SerializeObject(GameObject* gameObject, const GameContext& gameContext)
+	void BaseScene::DeleteSaveFiles()
 	{
-		if (!gameObject->IsSerializable())
+		std::string defaultShortSaveFilePath = "scenes/default/" + m_FileName;
+		std::string savedShortSaveFilePath = "scenes/saved/" + m_FileName;
+
+		bool bDefaultFileExists = FileExists(RESOURCE_LOCATION + defaultShortSaveFilePath);
+		bool bSavedFileExists = FileExists(RESOURCE_LOCATION + savedShortSaveFilePath);
+
+		if (bSavedFileExists ||
+			bDefaultFileExists)
 		{
-			Logger::LogError("Attempted to serialize non-serializable object");
-			return{};
-		}
+			Print("Deleting scene's save files from %s\n", m_FileName.c_str());
 
-		// Prefab types shouldn't serialize certain fields, such as meshes
-		bool bIsPrefab = (gameObject->m_Type != GameObjectType::OBJECT &&
-						  gameObject->m_Type != GameObjectType::NONE);
-
-		JSONObject object;
-		std::string childName = gameObject->m_Name;
-
-		object.fields.push_back(JSONField("name", JSONValue(childName)));
-		object.fields.push_back(JSONField("type", JSONValue(GameObjectTypeToString(gameObject->m_Type))));
-		object.fields.push_back(JSONField("visible", JSONValue(gameObject->IsVisible())));
-		// TODO: Only save/read this value when editor is included in build
-		if (!gameObject->IsVisibleInSceneExplorer())
-		{
-			object.fields.push_back(JSONField("visible in scene graph", 
-				JSONValue(gameObject->IsVisibleInSceneExplorer())));
-		}
-
-		if (gameObject->IsStatic())
-		{
-			object.fields.push_back(JSONField("static", JSONValue(true)));
-		}
-		
-		JSONField transformField;
-		if (JSONParser::SerializeTransform(gameObject->GetTransform(), transformField))
-		{
-			object.fields.push_back(transformField);
-		}
-
-		MeshComponent* meshComponent = gameObject->GetMeshComponent();
-		if (meshComponent && !bIsPrefab)
-		{
-			JSONField meshField = {};
-			meshField.label = "mesh";
-
-			JSONObject meshValue = {};
-
-			MeshComponent::Type meshType = meshComponent->GetType();
-			if (meshType == MeshComponent::Type::FILE)
+			if (bDefaultFileExists)
 			{
-				std::string meshFilepath = meshComponent->GetFilepath().substr(RESOURCE_LOCATION.length());
-				meshValue.fields.push_back(JSONField("file", JSONValue(meshFilepath)));
-			}
-			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
-			else if (meshType == MeshComponent::Type::PREFAB)
-			{
-				std::string prefabShapeStr = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
-				meshValue.fields.push_back(JSONField("prefab", JSONValue(prefabShapeStr)));
-			}
-			else
-			{
-				Logger::LogError("Unhandled mesh prefab type when attempting to serialize scene!");
+				DeleteFile(RESOURCE_LOCATION + defaultShortSaveFilePath);
 			}
 
-			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
-			meshValue.fields.push_back(JSONField("swapNormalYZ", JSONValue(importSettings.swapNormalYZ)));
-			meshValue.fields.push_back(JSONField("flipNormalZ", JSONValue(importSettings.flipNormalZ)));
-			meshValue.fields.push_back(JSONField("flipU", JSONValue(importSettings.flipU)));
-			meshValue.fields.push_back(JSONField("flipV", JSONValue(importSettings.flipV)));
-
-			meshField.value = JSONValue(meshValue);
-			object.fields.push_back(meshField);
-		}
-
-		{
-			MaterialID matID = InvalidMaterialID;
-			RenderObjectCreateInfo renderObjectCreateInfo;
-			if (meshComponent)
+			if (bSavedFileExists)
 			{
-				matID = meshComponent->GetMaterialID();
-			}
-			else if (gameContext.renderer->GetRenderObjectCreateInfo(gameObject->GetRenderID(), renderObjectCreateInfo))
-			{
-				matID = renderObjectCreateInfo.materialID;
-			}
-
-			if (matID != InvalidMaterialID)
-			{
-				const Material& material = gameContext.renderer->GetMaterial(matID);
-				i32 materialArrayIndex = GetMaterialArrayIndex(material, gameContext);
-				if (materialArrayIndex == -1)
-				{
-				//	Logger::LogError("Mesh object contains material not present in "
-				//					 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
-				//					 "Child name: " + childName + 
-				//					 ", matID: " + std::to_string(matID));
-				}
-				else
-				{
-					object.fields.push_back(JSONField("material array index", JSONValue(materialArrayIndex)));
-				}
+				DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
 			}
 		}
 
-		btCollisionShape* collisionShape = gameObject->GetCollisionShape();
-		if (collisionShape)
-		{
-			JSONObject colliderObj;
-
-			int shapeType = collisionShape->getShapeType();
-			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
-
-			colliderObj.fields.push_back(JSONField("shape", JSONValue(shapeTypeStr)));
-
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
-				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = ((btSphereShape*)collisionShape)->getRadius();
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = ((btCapsuleShape*)collisionShape)->getRadius();
-				real height = ((btCapsuleShape*)collisionShape)->getHalfHeight(); // TODO: Double?
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = ((btConeShape*)collisionShape)->getRadius();
-				real height = ((btConeShape*)collisionShape)->getHeight();
-				colliderObj.fields.push_back(JSONField("radius", JSONValue(radius)));
-				colliderObj.fields.push_back(JSONField("height", JSONValue(height)));
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
-				colliderObj.fields.push_back(JSONField("half extents", JSONValue(halfExtentsStr)));
-			} break;
-			default:
-			{
-				Logger::LogError("Unhandled BroadphaseNativeType: " + std::to_string(shapeType));
-			} break;
-			}
-
-			//bool bTrigger = false;
-			//colliderObj.fields.push_back(JSONField("trigger", JSONValue(bTrigger)));
-			// TODO: Handle triggers
-
-			object.fields.push_back(JSONField("collider", JSONValue(colliderObj)));
-		}
-
-		RigidBody* rigidBody = gameObject->GetRigidBody();
-		if (rigidBody)
-		{
-			JSONObject rigidBodyObj;
-
-			if (collisionShape == nullptr)
-			{
-				Logger::LogError("Can't serialize object which has a rigid body but no collider! (" + gameObject->GetName() + ")");
-			}
-			else
-			{
-				real mass = rigidBody->GetMass();
-				bool bKinematic = rigidBody->IsKinematic();
-				bool bStatic = rigidBody->IsStatic();
-
-				rigidBodyObj.fields.push_back(JSONField("mass", JSONValue(mass)));
-				rigidBodyObj.fields.push_back(JSONField("kinematic", JSONValue(bKinematic)));
-				rigidBodyObj.fields.push_back(JSONField("static", JSONValue(bStatic)));
-			}
-
-			object.fields.push_back(JSONField("rigid body", JSONValue(rigidBodyObj)));
-		}
-
-		// Type-specific data
-		switch (gameObject->m_Type)
-		{
-		case GameObjectType::VALVE:
-		{
-			JSONObject blockInfo;
-
-			glm::vec2 valveRange(gameObject->m_ValveMembers.minRotation,
-								 gameObject->m_ValveMembers.maxRotation);
-			blockInfo.fields.push_back(JSONField("range", JSONValue(Vec2ToString(valveRange))));
-
-			object.fields.push_back(JSONField("valve info", JSONValue(blockInfo)));
-		} break;
-		case GameObjectType::RISING_BLOCK:
-		{
-			JSONObject blockInfo;
-
-			blockInfo.fields.push_back(JSONField("valve name", JSONValue(gameObject->m_RisingBlockMembers.valve->GetName())));
-			blockInfo.fields.push_back(JSONField("move axis", JSONValue(Vec3ToString(gameObject->m_RisingBlockMembers.moveAxis))));
-			blockInfo.fields.push_back(JSONField("affected by gravity", JSONValue(gameObject->m_RisingBlockMembers.bAffectedByGravity)));
-
-			object.fields.push_back(JSONField("block info", JSONValue(blockInfo)));
-		} break;
-		case GameObjectType::GLASS_WINDOW:
-		{
-			JSONObject windowInfo;
-
-			windowInfo.fields.push_back(JSONField("broken", JSONValue(gameObject->m_GlassWindowMembers.bBroken)));
-
-			object.fields.push_back(JSONField("window info", JSONValue(windowInfo)));
-		} break;
-		}
-
-
-		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
-		if (!gameObjectChildren.empty())
-		{
-			JSONField childrenField = {};
-			childrenField.label = "children";
-
-			std::vector<JSONObject> children;
-
-			for (GameObject* child : gameObjectChildren)
-			{
-				if (child->IsSerializable())
-				{
-					children.push_back(SerializeObject(child, gameContext));
-				}
-			}
-
-			// It's possible that all children are non-serializable
-			if (!children.empty())
-			{
-				childrenField.value = JSONValue(children);
-				object.fields.push_back(childrenField);
-			}
-		}
-
-		return object;
+		m_bUsingSaveFile = false;
 	}
 
-	JSONObject BaseScene::SerializeMaterial(const Material& material, const GameContext& gameContext)
+	JSONObject BaseScene::SerializePointLight(PointLight& pointLight)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
-		JSONObject materialObject = {};
-
-		materialObject.fields.push_back(JSONField("name", JSONValue(material.name)));
-
-		const Shader& shader = gameContext.renderer->GetShader(material.shaderID);
-		materialObject.fields.push_back(JSONField("shader", JSONValue(shader.name)));
-
-		// TODO: Find out way of determining if the following four  values
-		// are used by the shader (only currently used by PBR I think)
-		std::string constAlbedoStr = Vec3ToString(material.constAlbedo);
-		materialObject.fields.push_back(JSONField("const albedo",
-			JSONValue(constAlbedoStr)));
-		materialObject.fields.push_back(JSONField("const metallic",
-			JSONValue(material.constMetallic)));
-		materialObject.fields.push_back(JSONField("const roughness",
-			JSONValue(material.constRoughness)));
-		materialObject.fields.push_back(JSONField("const ao",
-			JSONValue(material.constAO)));
-
-		static const bool defaultEnableAlbedo = true;
-		if (shader.needAlbedoSampler && material.enableAlbedoSampler != defaultEnableAlbedo)
-		{
-			materialObject.fields.push_back(JSONField("enable albedo sampler",
-				JSONValue(material.enableAlbedoSampler)));
-		}
-
-		static const bool defaultEnableMetallicSampler = true;
-		if (shader.needMetallicSampler && material.enableMetallicSampler != defaultEnableMetallicSampler)
-		{
-			materialObject.fields.push_back(JSONField("enable metallic sampler",
-				JSONValue(material.enableMetallicSampler)));
-		}
-
-		static const bool defaultEnableRoughness = true;
-		if (shader.needRoughnessSampler && material.enableRoughnessSampler != defaultEnableRoughness)
-		{
-			materialObject.fields.push_back(JSONField("enable roughness sampler",
-				JSONValue(material.enableRoughnessSampler)));
-		}
-
-		static const bool defaultEnableAO = true;
-		if (shader.needAOSampler && material.enableAOSampler != defaultEnableAO)
-		{
-			materialObject.fields.push_back(JSONField("enable ao sampler",
-				JSONValue(material.enableAOSampler)));
-		}
-
-		if (shader.needAlbedoSampler && !material.albedoTexturePath.empty())
-		{
-			std::string albedoTexturePath = material.albedoTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("albedo texture filepath",
-				JSONValue(albedoTexturePath)));
-		}
-
-		if (shader.needMetallicSampler && !material.metallicTexturePath.empty())
-		{
-			std::string metallicTexturePath = material.metallicTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("metallic texture filepath",
-				JSONValue(metallicTexturePath)));
-		}
-
-		if (shader.needRoughnessSampler && !material.roughnessTexturePath.empty())
-		{
-			std::string roughnessTexturePath = material.roughnessTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("roughness texture filepath",
-				JSONValue(roughnessTexturePath)));
-		}
-
-		if (shader.needAOSampler && !material.aoTexturePath.empty())
-		{
-			std::string aoTexturePath = material.aoTexturePath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("ao texture filepath",
-				JSONValue(aoTexturePath)));
-		}
-
-		if (material.generateHDRCubemapSampler)
-		{
-			materialObject.fields.push_back(JSONField("generate hdr cubemap sampler",
-				JSONValue(material.generateHDRCubemapSampler)));
-		}
-
-		if (shader.needCubemapSampler)
-		{
-			materialObject.fields.push_back(JSONField("enable cubemap sampler",
-				JSONValue(material.enableCubemapSampler)));
-
-			materialObject.fields.push_back(JSONField("enable cubemap trilinear filtering",
-				JSONValue(material.enableCubemapTrilinearFiltering)));
-
-			std::string cubemapSamplerSizeStr = Vec2ToString(material.cubemapSamplerSize);
-			materialObject.fields.push_back(JSONField("generated cubemap size",
-				JSONValue(cubemapSamplerSizeStr)));
-		}
-
-		if (shader.needIrradianceSampler || material.irradianceSamplerSize.x > 0)
-		{
-			materialObject.fields.push_back(JSONField("generate irradiance sampler",
-				JSONValue(material.generateIrradianceSampler)));
-
-			std::string irradianceSamplerSizeStr = Vec2ToString(material.irradianceSamplerSize);
-			materialObject.fields.push_back(JSONField("generated irradiance cubemap size",
-				JSONValue(irradianceSamplerSizeStr)));
-		}
-
-		if (shader.needPrefilteredMap || material.prefilteredMapSize.x > 0)
-		{
-			materialObject.fields.push_back(JSONField("generate prefiltered map",
-				JSONValue(material.generatePrefilteredMap)));
-
-			std::string prefilteredMapSizeStr = Vec2ToString(material.prefilteredMapSize);
-			materialObject.fields.push_back(JSONField("generated prefiltered map size",
-				JSONValue(prefilteredMapSizeStr)));
-		}
-
-		if (!material.environmentMapPath.empty())
-		{
-			std::string cleanedEnvMapPath = material.environmentMapPath.substr(RESOURCE_LOCATION.length());
-			materialObject.fields.push_back(JSONField("environment map path",
-				JSONValue(cleanedEnvMapPath)));
-		}
-
-		return materialObject;
-	}
-
-	JSONObject BaseScene::SerializePointLight(PointLight& pointLight, const GameContext& gameContext)
-	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		JSONObject object;
 
-		object.fields.push_back(JSONField("name", JSONValue(pointLight.name)));
+		object.fields.emplace_back("name", JSONValue(pointLight.name));
 
 		std::string posStr = Vec3ToString(pointLight.position);
-		object.fields.push_back(JSONField("position", JSONValue(posStr)));
+		object.fields.emplace_back("position", JSONValue(posStr));
 
 		std::string colorStr = Vec3ToString(pointLight.color);
-		object.fields.push_back(JSONField("color", JSONValue(colorStr)));
+		object.fields.emplace_back("color", JSONValue(colorStr));
 
-		object.fields.push_back(JSONField("enabled", JSONValue(pointLight.enabled != 0)));
-		object.fields.push_back(JSONField("brightness", JSONValue(pointLight.brightness)));
+		object.fields.emplace_back("enabled", JSONValue(pointLight.enabled != 0));
+		object.fields.emplace_back("brightness", JSONValue(pointLight.brightness));
 
 		return object;
 	}
 
-	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight, const GameContext& gameContext)
+	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight)
 	{
-		UNREFERENCED_PARAMETER(gameContext);
-
 		JSONObject object;
 
 		std::string dirStr = Vec3ToString(directionalLight.direction);
-		object.fields.push_back(JSONField("direction", JSONValue(dirStr)));
+		object.fields.emplace_back("direction", JSONValue(dirStr));
+
+		std::string posStr = Vec3ToString(directionalLight.position);
+		object.fields.emplace_back("position", JSONValue(posStr));
 
 		std::string colorStr = Vec3ToString(directionalLight.color);
-		object.fields.push_back(JSONField("color", JSONValue(colorStr)));
+		object.fields.emplace_back("color", JSONValue(colorStr));
 
-		object.fields.push_back(JSONField("enabled", JSONValue(directionalLight.enabled != 0)));
-		object.fields.push_back(JSONField("brightness", JSONValue(directionalLight.brightness)));
+		object.fields.emplace_back("enabled", JSONValue(directionalLight.enabled != 0));
+		object.fields.emplace_back("brightness", JSONValue(directionalLight.brightness));
 
 		return object;
 	}
 
-	GameObject* BaseScene::AddChild(GameObject* gameObject)
+	GameObject* BaseScene::AddRootObject(GameObject* gameObject)
 	{
 		if (!gameObject)
 		{
 			return nullptr;
 		}
 
-		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (*iter == gameObject)
+			if (rootObject == gameObject)
 			{
-				Logger::LogWarning("Attempting to add child to scene again");
+				PrintWarn("Attempted to add same root object (%s) to scene more than once\n", rootObject->m_Name.c_str());
 				return nullptr;
 			}
 		}
 
-		m_Children.push_back(gameObject);
+		gameObject->SetParent(nullptr);
+		m_RootObjects.push_back(gameObject);
 
 		return gameObject;
 	}
 
-	void BaseScene::RemoveChild(GameObject* gameObject, bool deleteChild)
+	void BaseScene::RemoveRootObject(GameObject* gameObject, bool deleteRootObject)
 	{
-		auto iter = m_Children.begin();
-		while (iter != m_Children.end())
+		auto iter = m_RootObjects.begin();
+		while (iter != m_RootObjects.end())
 		{
 			if (*iter == gameObject)
 			{
-				if (deleteChild)
+				if (deleteRootObject)
 				{
 					SafeDelete(*iter);
 				}
 
-				iter = m_Children.erase(iter);
+				iter = m_RootObjects.erase(iter);
 				return;
 			}
 			else
@@ -1412,26 +740,63 @@ namespace flex
 			}
 		}
 
-		Logger::LogWarning("Attempting to remove non-existent child from scene");
+		PrintWarn("Attempting to remove non-existent child from scene %s\n", m_Name.c_str());
 	}
 
-	void BaseScene::RemoveAllChildren(bool deleteChildren)
+	void BaseScene::RemoveAllRootObjects(bool deleteRootObjects)
 	{
-		auto iter = m_Children.begin();
-		while (iter != m_Children.end())
+		auto iter = m_RootObjects.begin();
+		while (iter != m_RootObjects.end())
 		{
-			if (deleteChildren)
+			if (deleteRootObjects)
 			{
 				delete *iter;
 			}
 
-			iter = m_Children.erase(iter);
+			iter = m_RootObjects.erase(iter);
+		}
+		m_RootObjects.clear();
+	}
+
+	std::vector<MaterialID> BaseScene::GetMaterialIDs()
+	{
+		return m_LoadedMaterials;
+	}
+
+	void BaseScene::AddMaterialID(MaterialID newMaterialID)
+	{
+		m_LoadedMaterials.push_back(newMaterialID);
+	}
+
+	void BaseScene::RemoveMaterialID(MaterialID materialID)
+	{
+		auto iter = m_LoadedMaterials.begin();
+		while (iter != m_LoadedMaterials.end())
+		{
+			Material& material = g_Renderer->GetMaterial(*iter);
+			MaterialID matID;
+			if (g_Renderer->GetMaterialID(material.name, matID))
+			{
+				if (matID == materialID)
+				{
+					// TODO: Find all objects which use this material and give them new mats
+					iter = m_LoadedMaterials.erase(iter);
+				}
+				else
+				{
+					++iter;
+				}
+			}
+			else
+			{
+				++iter;
+			}
 		}
 	}
 
 	GameObject* BaseScene::FirstObjectWithTag(const std::string& tag)
 	{
-		for (GameObject* gameObject : m_Children)
+		for (GameObject* gameObject : m_RootObjects)
 		{
 			GameObject* result = FindObjectWithTag(tag, gameObject);
 			if (result)
@@ -1441,6 +806,23 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	Player* BaseScene::GetPlayer(i32 index)
+	{
+		if (index == 0)
+		{
+			return m_Player0;
+		}
+		else if (index == 1)
+		{
+			return m_Player1;
+		}
+		else
+		{
+			PrintError("Requested invalid player from BaseScene with index: %i\n", index);
+			return nullptr;
+		}
 	}
 
 	GameObject* BaseScene::FindObjectWithTag(const std::string& tag, GameObject* gameObject)
@@ -1464,18 +846,24 @@ namespace flex
 
 	std::vector<GameObject*>& BaseScene::GetRootObjects()
 	{
-		return m_Children;
+		return m_RootObjects;
 	}
 
 	void BaseScene::GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects)
 	{
-		for (auto child : m_Children)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (child->m_bInteractable)
+			if (rootObject->m_bInteractable)
 			{
-				interactibleObjects.push_back(child);
+				interactibleObjects.push_back(rootObject);
 			}
 		}
+	}
+
+	void BaseScene::SetName(const std::string& name)
+	{
+		assert(!name.empty());
+		m_Name = name;
 	}
 
 	std::string BaseScene::GetName() const
@@ -1483,14 +871,100 @@ namespace flex
 		return m_Name;
 	}
 
-	std::string BaseScene::GetJSONFilePath() const
+	std::string BaseScene::GetDefaultRelativeFilePath() const
 	{
-		return m_JSONFilePath;
+		return RESOURCE_LOCATION + "scenes/default/" + m_FileName;
+	}
+
+	std::string BaseScene::GetRelativeFilePath() const
+	{
+		if (m_bUsingSaveFile)
+		{
+			return RESOURCE_LOCATION + "scenes/saved/" + m_FileName;
+		}
+		else
+		{
+			return RESOURCE_LOCATION + "scenes/default/" + m_FileName;
+		}
+	}
+
+	std::string BaseScene::GetShortRelativeFilePath() const
+	{
+		if (m_bUsingSaveFile)
+		{
+			return "scenes/saved/" + m_FileName;
+		}
+		else
+		{
+			return "scenes/default/" + m_FileName;
+		}
+	}
+
+	bool BaseScene::SetFileName(const std::string& fileName, bool bDeletePreviousFiles)
+	{
+		bool success = false;
+
+		if (fileName == m_FileName)
+		{
+			return true;
+		}
+
+		std::string absDefaultFilePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
+		std::string defaultAbsFileDir = absDefaultFilePathFrom;
+		ExtractDirectoryString(defaultAbsFileDir);
+		std::string absDefaultFilePathTo = defaultAbsFileDir + fileName;
+		if (CopyFile(absDefaultFilePathFrom, absDefaultFilePathTo))
+		{
+			if (m_bUsingSaveFile)
+			{
+				std::string absSavedFilePathFrom = RelativePathToAbsolute(GetRelativeFilePath());
+				std::string savedAbsFileDir = absSavedFilePathFrom;
+				ExtractDirectoryString(savedAbsFileDir);
+				std::string absSavedFilePathTo = savedAbsFileDir + fileName;
+				if (CopyFile(absSavedFilePathFrom, absSavedFilePathTo))
+				{
+					success = true;
+				}
+			}
+			else
+			{
+				success = true;
+			}
+
+			// Don't delete files unless copies worked
+			if (success)
+			{
+				if (bDeletePreviousFiles)
+				{
+					std::string pAbsDefaultFilePath = RelativePathToAbsolute(GetDefaultRelativeFilePath());
+					DeleteFile(pAbsDefaultFilePath, false);
+
+					if (m_bUsingSaveFile)
+					{
+						std::string pAbsSavedFilePath = RelativePathToAbsolute(GetRelativeFilePath());
+						DeleteFile(pAbsSavedFilePath, false);
+					}
+				}
+
+				m_FileName = fileName;
+			}
+		}
+
+		return success;
+	}
+
+	std::string BaseScene::GetFileName() const
+	{
+		return m_FileName;
+	}
+
+	bool BaseScene::IsUsingSaveFile() const
+	{
+		return m_bUsingSaveFile;
 	}
 
 	PhysicsWorld* BaseScene::GetPhysicsWorld()
 	{
 		return m_PhysicsWorld;
 	}
-
 } // namespace flex

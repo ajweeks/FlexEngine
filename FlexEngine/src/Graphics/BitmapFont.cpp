@@ -13,15 +13,19 @@ namespace flex
 		assert(charCount > 0);
 
 		// TODO: Is this needed? (double check in release config)
-		for (i32 i = 0; i < CHAR_COUNT; ++i)
-		{
-			m_CharTable[i].kerning = std::map<wchar_t, glm::vec2>();
-		}
+		//for (i32 i = 0; i < CHAR_COUNT; ++i)
+		//{
+		//	m_CharTable[i].kerning = std::map<std::wstring, glm::vec2>();
+		//}
 	}
 
 	BitmapFont::~BitmapFont()
 	{
-		SafeDelete(m_Texture);
+		if (m_Texture)
+		{
+			m_Texture->Destroy();
+			SafeDelete(m_Texture);
+		}
 	}
 
 	bool BitmapFont::IsCharValid(wchar_t character)
@@ -39,25 +43,19 @@ namespace flex
 		return &m_CharTable[character];
 	}
 
-	glm::vec2 FontMetric::GetKerningOffset(wchar_t previous)
+	glm::vec2 FontMetric::GetKerningOffset(wchar_t leftChar, wchar_t rightChar)
 	{
 		glm::vec2 kerningVec(0.0f);
 
-		auto kerningIt = kerning.find(previous);
-		if (kerningIt != kerning.end())
+		std::wstring charKey(std::wstring(1, leftChar) + std::wstring(1, rightChar));
+
+		auto iter = kerning.find(charKey);
+		if (iter != kerning.end())
 		{
-			kerningVec = kerningIt->second;
+			kerningVec = iter->second;
 		}
 
 		return kerningVec;
-	}
-
-	TextCache::TextCache(const std::string& str, glm::vec2 pos, glm::vec4 color, real scale) :
-		str(str),
-		pos(pos),
-		color(color),
-		scale(scale)
-	{
 	}
 
 	i16 BitmapFont::GetFontSize() const
@@ -65,7 +63,7 @@ namespace flex
 		return m_FontSize;
 	}
 
-	bool BitmapFont::GetUseKerning() const
+	bool BitmapFont::UseKerning() const
 	{
 		return m_bUseKerning;
 	}
@@ -74,6 +72,12 @@ namespace flex
 	{
 		m_TextureWidth = texSize.x;
 		m_TextureHeight = texSize.y;
+
+		if (m_Texture)
+		{
+			m_Texture->width = m_TextureWidth;
+			m_Texture->height = m_TextureHeight;
+		}
 	}
 
 	gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)

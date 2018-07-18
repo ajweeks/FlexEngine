@@ -10,7 +10,6 @@
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
-#include "GameContext.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -39,32 +38,30 @@ namespace flex
 			   m_PlayerIndex == 1);
 	}
 
-	void PlayerController::Update(const GameContext& gameContext)
+	void PlayerController::Destroy()
 	{
-		if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
-			gameContext.inputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::RIGHT_BUMPER))
-		{
-			gameContext.cameraManager->SwtichToIndexRelative(gameContext, 1, false);
-		}
-		else if (gameContext.inputManager->GetKeyPressed(InputManager::KeyCode::KEY_MINUS) ||
-				 gameContext.inputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::LEFT_BUMPER))
-		{
-			gameContext.cameraManager->SwtichToIndexRelative(gameContext, -1, false);
-		}
+	}
 
+	void PlayerController::Update()
+	{
+		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
+			g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::RIGHT_BUMPER))
+		{
+			g_CameraManager->SetActiveIndexRelative(1, false);
+		}
+		else if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_MINUS) ||
+				 g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::LEFT_BUMPER))
+		{
+			g_CameraManager->SetActiveIndexRelative(-1, false);
+		}
 		// TODO: Make frame-rate-independent!
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 		btVector3 pos = rb->getWorldTransform().getOrigin();
 
-		if (gameContext.inputManager->IsGamepadButtonDown(m_PlayerIndex, InputManager::GamepadButton::BACK))
+		if (g_InputManager->IsGamepadButtonDown(m_PlayerIndex, InputManager::GamepadButton::BACK))
 		{
-			rb->clearForces();
-			rb->setLinearVelocity(btVector3(0, 0, 0));
-			rb->setAngularVelocity(btVector3(0, 0, 0));
-			btTransform identity = btTransform::getIdentity();
-			identity.setOrigin(btVector3(0, 5, 0));
-			rb->setWorldTransform(identity);
+			ResetTransformAndVelocities();
 			return;
 		}
 
@@ -72,28 +69,27 @@ namespace flex
 
 		// Grounded check
 		{
-			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldlPosition());
+			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldPosition());
 			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);
 
-			//gameContext.renderer->GetDebugDrawer()->drawLine(rayStart, rayEnd, btVector3(0, 0, 1));
-
 			btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
-			btDiscreteDynamicsWorld* physWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			btDiscreteDynamicsWorld* physWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			// TODO: Do several raytests to allow jumping off an edge
 			physWorld->rayTest(rayStart, rayEnd, rayCallback);
 			m_bGrounded = rayCallback.hasHit();
-			
 		}
 
+		if (!m_Player->GetObjectInteractingWith())
+		{
+			real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
+			force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier *
+				-g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
 
-		real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
-		force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier *
-			-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+			force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration * inAirMovementMultiplier *
+				-g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+		}
 
-		force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration *inAirMovementMultiplier *
-			-gameContext.inputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
-
-		btIDebugDraw* debugDrawer = gameContext.renderer->GetDebugDrawer();
+		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
 		btVector3 up, right, forward;
 		m_Player->GetRigidBody()->GetUpRightForward(up, right, forward);
@@ -141,13 +137,21 @@ namespace flex
 			real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
 			btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
 			real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
-			real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown;
+			real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown * g_DeltaTime;
 			btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
 			transform.setRotation(newRotation);
 		}
 	}
 
-	void PlayerController::Destroy()
+	void PlayerController::ResetTransformAndVelocities()
 	{
+		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
+
+		rb->clearForces();
+		rb->setLinearVelocity(btVector3(0, 0, 0));
+		rb->setAngularVelocity(btVector3(0, 0, 0));
+		btTransform identity = btTransform::getIdentity();
+		identity.setOrigin(btVector3(0, 5, 0));
+		rb->setWorldTransform(identity);
 	}
 } // namespace flex

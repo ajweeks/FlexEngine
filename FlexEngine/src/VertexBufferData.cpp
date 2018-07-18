@@ -3,7 +3,6 @@
 
 #include "VertexBufferData.hpp"
 
-#include "Logger.hpp"
 #include "VertexAttribute.hpp"
 
 namespace flex
@@ -30,7 +29,7 @@ namespace flex
 		void *pDataLocation = malloc(BufferSize);
 		if (pDataLocation == nullptr)
 		{
-			Logger::LogWarning("Vertex Buffer Data failed to allocate memory required for vertex buffer data");
+			PrintWarn("Failed to allocate memory required for vertex buffer data\n");
 			return;
 		}
 

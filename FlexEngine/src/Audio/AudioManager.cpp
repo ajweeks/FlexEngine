@@ -2,7 +2,6 @@
 
 #include "Audio/AudioManager.hpp"
 
-#include "Logger.hpp"
 #include "Helpers.hpp"
 
 namespace flex
@@ -21,7 +20,7 @@ namespace flex
 
 		if (!s_Device)
 		{
-			Logger::LogError("Failed to create an openAL device!");
+			PrintError("Failed to create an openAL device!\n");
 			return;
 		}
 
@@ -32,7 +31,7 @@ namespace flex
 		}
 
 		const ALchar* deviceName = alcGetString(s_Device, ALC_DEVICE_SPECIFIER);
-		Logger::LogInfo("Chosen audio device name: \"" + std::string(deviceName) + "\"");
+		Print("Chosen audio device name: \"%s\"\n", deviceName);
 
 		s_Context = alcCreateContext(s_Device, NULL);
 		alcMakeContextCurrent(s_Context);
@@ -64,7 +63,7 @@ namespace flex
 
 		std::string friendlyName = filePath;
 		StripLeadingDirectories(friendlyName);
-		Logger::LogInfo("Loading audio source " + friendlyName);
+		Print("Loading audio source %s\n", friendlyName.c_str());
 
 		// WAVE file
 		i32 format;
@@ -73,7 +72,7 @@ namespace flex
 		i32 freq;
 		if (!ParseWAVFile(filePath, &format, &data, &size, &freq))
 		{
-			Logger::LogError("Failed to open or parse WAVE file");
+			PrintError("Failed to open or parse WAVE file\n");
 			return InvalidAudioSourceID;
 		}
 
@@ -122,6 +121,18 @@ namespace flex
 			alDeleteSources(1, &source.source);
 		}
 		s_Sources.clear();
+	}
+
+	void AudioManager::SetMasterGain(real masterGain)
+	{
+		alListenerf(AL_GAIN, masterGain);
+	}
+
+	real AudioManager::GetMasterGain()
+	{
+		real gain;
+		alGetListenerf(AL_GAIN, &gain);
+		return gain;
 	}
 
 	void AudioManager::PlaySource(AudioSourceID sourceID, bool forceRestart)
@@ -195,7 +206,7 @@ namespace flex
 		if (s_Sources[sourceID].gain != gain)
 		{
 			s_Sources[sourceID].gain = gain;
-			//Logger::LogInfo("gain: " + std::to_string(gain));
+			//Print("gain: %.2f\n", gain);
 			alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
 
 			DisplayALError("SetSourceGain: ", alGetError());
@@ -254,7 +265,7 @@ namespace flex
 		if (s_Sources[sourceID].pitch != pitch)
 		{
 			s_Sources[sourceID].pitch = pitch;
-			//Logger::LogInfo("pitch: " + std::to_string(pitch));
+			//Print("pitch: %.2f\n", pitch);
 			alSourcef(s_Sources[sourceID].source, AL_PITCH, pitch);
 
 			DisplayALError("SetSourcePitch: ", alGetError());
@@ -270,15 +281,16 @@ namespace flex
 
 	void AudioManager::DisplayALError(const std::string& str, ALenum error)
 	{
+		const char* cStr = str.c_str();
 		switch (error)
 		{
 		case AL_NO_ERROR:			return;
-		case AL_INVALID_NAME:		Logger::LogError(str + "Invalid name"); break;
-		case AL_ILLEGAL_ENUM:		Logger::LogError(str + "Invalid enum"); break;
-		case AL_INVALID_VALUE:		Logger::LogError(str + "Invalid value"); break;
-		case AL_INVALID_OPERATION:	Logger::LogError(str + "Invalid operation"); break;
-		case AL_OUT_OF_MEMORY:		Logger::LogError(str + "Out of memory"); break;
-		default:					Logger::LogError(str + "Unknown error"); break;
+		case AL_INVALID_NAME:		PrintError("ALError: Invalid name - %s\n", cStr); break;
+		case AL_ILLEGAL_ENUM:		PrintError("ALError: Invalid enum - %s\n", cStr); break;
+		case AL_INVALID_VALUE:		PrintError("ALError: Invalid value - %s\n", cStr); break;
+		case AL_INVALID_OPERATION:	PrintError("ALError: Invalid operation - %s\n", cStr); break;
+		case AL_OUT_OF_MEMORY:		PrintError("ALError: Out of memory - %s\n", cStr); break;
+		default:					PrintError("ALError: Unknown error - %s\n", cStr); break;
 		}
 	}
 
@@ -287,11 +299,11 @@ namespace flex
 		const ALCchar* device = devices;
 		const ALCchar* next = devices + 1;
 
-		Logger::LogInfo("Available OpenAL devices:");
+		Print("Available OpenAL devices:\n");
 		while (device && *device != '\0' && 
 			   next && *next != '\0')
 		{
-			Logger::LogInfo("\t\t" + std::string(device));
+			Print("\t\t%s\n", device);
 			size_t len = strlen(device);
 			device += (len + 1);
 			next += (len + 2);

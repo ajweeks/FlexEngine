@@ -4,11 +4,9 @@
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 
 #include "Cameras/BaseCamera.hpp"
-#include "GameContext.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
-#include "Logger.hpp"
 #include "Scene/GameObject.hpp"
 #include "VertexAttribute.hpp"
 
@@ -16,8 +14,7 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw(const GameContext& gameContext) :
-			m_GameContext(gameContext)
+		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw()
 		{
 		}
 
@@ -27,17 +24,17 @@ namespace flex
 
 			if (m_GameObject)
 			{
-				m_GameObject->Destroy(m_GameContext);
+				m_GameObject->Destroy();
 				SafeDelete(m_GameObject);
 			}
 		}
 
 		void VulkanPhysicsDebugDraw::Initialize()
 		{
-			m_Renderer = (VulkanRenderer*)(m_GameContext.renderer);
+			m_Renderer = (VulkanRenderer*)(g_Renderer);
 			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
 			{
-				Logger::LogError("Failed to retrieve shader for Vulkan physics debug draw!");
+				PrintError("Failed to retrieve shader for Vulkan physics debug draw!");
 			}
 
 			m_VertexBufferData = {};
@@ -55,12 +52,12 @@ namespace flex
 			renderObjectCreateInfo.materialID = m_MaterialID;
 			renderObjectCreateInfo.visibleInSceneExplorer = false;
 
-			m_GameObject->SetRenderID(m_GameContext.renderer->InitializeRenderObject(m_GameContext, &renderObjectCreateInfo));
+			m_GameObject->SetRenderID(g_Renderer->InitializeRenderObject(&renderObjectCreateInfo));
 		}
 
 		void VulkanPhysicsDebugDraw::UpdateDebugMode()
 		{
-			const PhysicsDebuggingSettings& settings = m_GameContext.renderer->GetPhysicsDebuggingSettings();
+			const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 
 			m_DebugMode =
 				(settings.DisableAll ? DBG_NoDebug : 0) |
@@ -84,7 +81,7 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::reportErrorWarning(const char* warningString)
 		{
-			Logger::LogError("VulkanPhysicsDebugDraw > " + std::string(warningString));
+			PrintError("VulkanPhysicsDebugDraw > " + std::string(warningString));
 		}
 
 		void VulkanPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
@@ -153,19 +150,16 @@ namespace flex
 
 			m_VertexBufferData.Initialize(&createInfo);
 
-			m_GameContext.renderer->UpdateRenderObjectVertexData(m_GameObject->GetRenderID());
+			g_Renderer->UpdateRenderObjectVertexData(m_GameObject->GetRenderID());
 
 			//glUseProgram(glShader->program);
-			//CheckGLErrorMessages();
 
 			//glGenVertexArrays(1, &m_VAO);
 			//glBindVertexArray(m_VAO);
-			//CheckGLErrorMessages();
 
 			//glGenBuffers(1, &m_VBO);
 			//glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 			//glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STATIC_DRAW);
-			//CheckGLErrorMessages();
 
 
 			// Describe shader variables
@@ -179,7 +173,6 @@ namespace flex
 
 
 			//		glVertexAttribPointer((GLuint)location, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-			//		CheckGLErrorMessages();
 
 			//		currentLocation += 3;
 			//	}
@@ -190,7 +183,6 @@ namespace flex
 			//		glEnableVertexAttribArray((GLuint)location);
 
 			//		glVertexAttribPointer((GLuint)location, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-			//		CheckGLErrorMessages();
 
 			//		currentLocation += 4;
 			//	}
@@ -198,31 +190,22 @@ namespace flex
 
 
 			//glm::mat4 model = glm::mat4(1.0f);
-			//glm::mat4 proj = m_GameContext.camera->GetProjection();
-			//glm::mat4 view = m_GameContext.camera->GetView();
+			//glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			//glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			//glm::mat4 MVP = proj * view * model;
 			//glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
 
 			//glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
-			//CheckGLErrorMessages();
-
 			//glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
-			//CheckGLErrorMessages();
-
 			//glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
-			//CheckGLErrorMessages();
-
 			//glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-			//CheckGLErrorMessages();
 
 
 			//glDepthMask(GL_FALSE);
-			//CheckGLErrorMessages();
 
 			//glDisable(GL_BLEND);
 
 			//glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
-			//CheckGLErrorMessages();
 		}
 	} // namespace vk
 } // namespace flex

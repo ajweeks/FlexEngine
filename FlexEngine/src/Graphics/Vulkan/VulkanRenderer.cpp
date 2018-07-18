@@ -23,10 +23,8 @@
 #include "Cameras/BaseCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
-#include "GameContext.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/BaseScene.hpp"
@@ -39,7 +37,7 @@ namespace flex
 	{
 		std::array<glm::mat4, 6> VulkanRenderer::m_CaptureViews;
 
-		VulkanRenderer::VulkanRenderer(const GameContext& gameContext)
+		VulkanRenderer::VulkanRenderer()
 		{
 			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
 			m_BRDFSize = { 512, 512 };
@@ -47,9 +45,9 @@ namespace flex
 
 			m_Materials.reserve(MAT_CAPACITY);
 
-			CreateInstance(gameContext);
+			CreateInstance();
 			SetupDebugCallback();
-			CreateSurface(gameContext.window);
+			CreateSurface(g_Window);
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			CreateLogicalDevice(physicalDevice);
 
@@ -133,13 +131,13 @@ namespace flex
 
 			if (activeRenderObjectCount)
 			{
-				Logger::LogError("Not all render objects were destroyed!");
+				PrintError("Not all render objects were destroyed!");
 
 				for (RenderObjectIter iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
 					if (*iter)
 					{
-						Logger::LogError("Render object " + (*iter)->gameObject->GetName() + " was not destroyed");
+						PrintError("Render object " + (*iter)->gameObject->GetName() + " was not destroyed");
 						DestroyRenderObject((*iter)->renderID, *iter);
 					}
 				}
@@ -188,7 +186,7 @@ namespace flex
 			glfwTerminate();
 		}
 
-		void VulkanRenderer::Initialize(const GameContext& gameContext)
+		void VulkanRenderer::Initialize()
 		{
 			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
 
@@ -236,7 +234,7 @@ namespace flex
 			m_CubemapFrameBuffer->width = 512;
 			m_CubemapFrameBuffer->height = 512;
 
-			CreateSwapChain(gameContext.window);
+			CreateSwapChain(g_Window);
 			CreateSwapChainImageViews();
 			CreateRenderPass();
 
@@ -244,7 +242,7 @@ namespace flex
 			CreateDepthResources();
 			CreateFramebuffers();
 
-			PrepareOffscreenFrameBuffer(gameContext.window);
+			PrepareOffscreenFrameBuffer(g_Window);
 			PrepareCubemapFrameBuffer();
 
 			LoadDefaultShaderCode();
@@ -262,21 +260,21 @@ namespace flex
 			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
 			m_BlankTexture->CreateFromTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, false);
 
-			//CreateInstance(gameContext);
+			//CreateInstance();
 			//SetupDebugCallback();
-			//CreateSurface(gameContext.window);
+			//CreateSurface(g_Window);
 			//VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			//CreateLogicalDevice(physicalDevice);
 
 			ImGui::CreateContext();
 		}
 
-		void VulkanRenderer::PostInitialize(const GameContext& gameContext)
+		void VulkanRenderer::PostInitialize()
 		{
-			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(gameContext.window);
+			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
 			if (castedWindow == nullptr)
 			{
-				Logger::LogError("VulkanRenderer::PostInitialize expected gameContext.window to be of type GLFWWindowWrapper!");
+				PrintError("VulkanRenderer::PostInitialize expected g_Window to be of type GLFWWindowWrapper!");
 				return;
 			}
 
@@ -285,7 +283,7 @@ namespace flex
 			ShaderID deferredCombineShaderID;
 			if (!GetShaderID("deferred_combine", deferredCombineShaderID))
 			{
-				Logger::LogError("Failed to find deferred_combine shader!");
+				PrintError("Failed to find deferred_combine shader!");
 			}
 
 			assert(m_SkyBoxMesh);
@@ -309,7 +307,7 @@ namespace flex
 					});
 				}
 
-				MaterialID gBufferMatID = InitializeMaterial(gameContext, &gBufferMaterialCreateInfo);
+				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
 				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
@@ -344,7 +342,7 @@ namespace flex
 				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
 				gBufferQuadCreateInfo.indices = &m_gBufferQuadIndices;
 
-				m_GBufferQuadRenderID = InitializeRenderObject(gameContext, &gBufferQuadCreateInfo);
+				m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
 
 				m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 
@@ -370,16 +368,16 @@ namespace flex
 					});
 				}
 
-				m_CubemapGBufferMaterialID = InitializeMaterial(gameContext,&gBufferCubemapMaterialCreateInfo);
+				m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
 
 				// TODO: Find out why a pointer to this variable gets set to null when passing in to LoadPrefabShape
 				RenderObjectCreateInfo gBufferCubemapCreateInfoOverrides = {};
 				gBufferCubemapCreateInfoOverrides.visibleInSceneExplorer = false;
 
 				m_gBufferCubemapMesh = new MeshComponent(m_CubemapGBufferMaterialID, "GBuffer cubemap");
-				if (!m_gBufferCubemapMesh->LoadPrefabShape(gameContext, MeshComponent::PrefabShape::SKYBOX))
+				if (!m_gBufferCubemapMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX))
 				{
-					Logger::LogError("Failed to create GBuffer cubemap mesh prefab!");
+					PrintError("Failed to create GBuffer cubemap mesh prefab!");
 				}
 				else
 				{
@@ -393,10 +391,10 @@ namespace flex
 
 
 				assert(m_PhysicsDebugDrawer == nullptr);
-				m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw(gameContext);
+				m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw();
 				m_PhysicsDebugDrawer->Initialize();
 
-				btDiscreteDynamicsWorld* world = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+				btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 				world->setDebugDrawer(m_PhysicsDebugDrawer);
 			}
 
@@ -461,18 +459,18 @@ namespace flex
 
 				if (renderObjectMat.material.generateReflectionProbeMaps)
 				{
-					Logger::LogInfo("Capturing reflection probe");
-					CaptureSceneToCubemap(gameContext, i);
-					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-					Logger::LogInfo("Done");
+					Print("Capturing reflection probe");
+					CaptureSceneToCubemap(i);
+					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+					Print("Done");
 
 					// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-					Logger::LogInfo("Capturing reflection probe");
-					CaptureSceneToCubemap(gameContext, i);
-					GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-					Logger::LogInfo("Done");
+					Print("Capturing reflection probe");
+					CaptureSceneToCubemap(i);
+					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+					Print("Done");
 
 					// Display captured cubemap as skybox (GL code)
 					//m_LoadedMaterials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
@@ -480,9 +478,9 @@ namespace flex
 				}
 				else if (renderObjectMat.material.generateIrradianceSampler)
 				{
-					GenerateCubemapFromHDR(gameContext, renderObject);
-					GenerateIrradianceSampler(gameContext, renderObject);
-					GeneratePrefilteredCube(gameContext, renderObject);
+					GenerateCubemapFromHDR(renderObject);
+					GenerateIrradianceSampler(renderObject);
+					GeneratePrefilteredCube(renderObject);
 				}
 			}
 
@@ -496,10 +494,10 @@ namespace flex
 
 
 			m_PostInitialized = true;
-			Logger::LogInfo("Ready!\n");
+			Print("Ready!\n");
 		}
 
-		void VulkanRenderer::GenerateCubemapFromHDR(const GameContext& gameContext, VulkanRenderObject* renderObject)
+		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject)
 		{
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			Material& skyboxMat = m_Materials[renderObject->materialID].material;
@@ -516,7 +514,7 @@ namespace flex
 				RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
 				//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
-			MaterialID equirectangularToCubeMatID = InitializeMaterial(gameContext, &equirectangularToCubeMatCreateInfo);
+			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const u32 dim = (u32)renderObjectMat.material.cubemapSamplerSize.x;
@@ -658,7 +656,7 @@ namespace flex
 			ShaderID equirectangularToCubeShaderID;
 			if (!GetShaderID(equirectangularToCubeMatCreateInfo.shaderName, equirectangularToCubeShaderID))
 			{
-				Logger::LogError("Failed to find equirectangular_to_cube shader ID!");
+				PrintError("Failed to find equirectangular_to_cube shader ID!");
 				return;
 			}
 			VulkanShader& equirectangularToCubeShader = m_Shaders[equirectangularToCubeShaderID];
@@ -775,13 +773,13 @@ namespace flex
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(equirectangularToCubeShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + equirectangularToCubeShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + equirectangularToCubeShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(equirectangularToCubeShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + equirectangularToCubeShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + equirectangularToCubeShader.shader.fragmentShaderFilePath);
 			}
 
 			shaderStages[0] = {};
@@ -848,12 +846,12 @@ namespace flex
 
 			if (vertexIndexBufferPair.vertexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
-				Logger::LogError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader " + skyboxMat.name + ")");
+				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader " + skyboxMat.name + ")");
 			}
 			if (skyboxRenderObject->indexed && 
 				vertexIndexBufferPair.indexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
-				Logger::LogError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader " + skyboxMat.name + ")");
+				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader " + skyboxMat.name + ")");
 			}
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
@@ -955,10 +953,8 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GenerateIrradianceSampler(const GameContext& gameContext, VulkanRenderObject* renderObject)
+		void VulkanRenderer::GenerateIrradianceSampler(VulkanRenderObject* renderObject)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			Material& skyboxMat = m_Materials[skyboxRenderObject->materialID].material;
 			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
@@ -1236,7 +1232,7 @@ namespace flex
 			ShaderID irradianceShaderID;
 			if (!GetShaderID("irradiance", irradianceShaderID))
 			{
-				Logger::LogError("Failed to find irradiance shader!");
+				PrintError("Failed to find irradiance shader!");
 				return;
 			}
 			VulkanShader& irradianceShader = m_Shaders[irradianceShaderID];
@@ -1244,13 +1240,13 @@ namespace flex
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(irradianceShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + irradianceShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + irradianceShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(irradianceShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + irradianceShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + irradianceShader.shader.fragmentShaderFilePath);
 			}
 
 			shaderStages[0] = {};
@@ -1414,10 +1410,8 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GeneratePrefilteredCube(const GameContext& gameContext, VulkanRenderObject* renderObject)
+		void VulkanRenderer::GeneratePrefilteredCube(VulkanRenderObject* renderObject)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 			Material& skyboxMat = m_Materials[skyboxRenderObject->materialID].material;
 			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
@@ -1545,20 +1539,20 @@ namespace flex
 			ShaderID prefilterShaderID;
 			if (!GetShaderID("prefilter", prefilterShaderID))
 			{
-				Logger::LogError("Failed to find prefilter shader!");
+				PrintError("Failed to find prefilter shader!");
 			}
 			VulkanShader& prefilterShader = m_Shaders[prefilterShaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(prefilterShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + prefilterShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + prefilterShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(prefilterShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + prefilterShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + prefilterShader.shader.fragmentShaderFilePath);
 			}
 
 			CreateUniformBuffers(&prefilterShader);
@@ -1836,10 +1830,8 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, VulkanTexture* brdfTexture)
+		void VulkanRenderer::GenerateBRDFLUT(VulkanTexture* brdfTexture)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
 			const u32 dim = (u32)m_BRDFSize.x;
 			assert(dim <= Renderer::MAX_TEXTURE_DIM);
@@ -2021,20 +2013,20 @@ namespace flex
 			ShaderID brdfShaderID;
 			if (!GetShaderID("brdf", brdfShaderID))
 			{
-				Logger::LogError("Failed to find brdf shader!");
+				PrintError("Failed to find brdf shader!");
 			}
 			VulkanShader& brdfShader = m_Shaders[brdfShaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(brdfShader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + brdfShader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + brdfShader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(brdfShader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + brdfShader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + brdfShader.shader.fragmentShaderFilePath);
 			}
 
 			shaderStages[0] = {};
@@ -2096,10 +2088,8 @@ namespace flex
 			vkDestroyDescriptorPool(m_VulkanDevice->m_LogicalDevice, descriptorPool, nullptr);
 		}
 
-		MaterialID VulkanRenderer::InitializeMaterial(const GameContext& gameContext, const MaterialCreateInfo* createInfo)
+		MaterialID VulkanRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			VulkanMaterial mat = {};
 			mat.material = {};
 
@@ -2107,11 +2097,11 @@ namespace flex
 			{
 				if (createInfo->shaderName.empty())
 				{
-					Logger::LogError("Material's shader not set! MaterialCreateInfo::shaderName must be filled in");
+					PrintError("Material's shader not set! MaterialCreateInfo::shaderName must be filled in");
 				}
 				else
 				{
-					Logger::LogError("Material's shader not set! Shader name " + createInfo->shaderName + " not found");
+					PrintError("Material's shader not set! Shader name " + createInfo->shaderName + " not found");
 				}
 
 				// TODO: Handle more gracefully (use placeholder shader)
@@ -2179,11 +2169,11 @@ namespace flex
 			{
 				if (!m_BRDFTexture)
 				{
-					Logger::LogInfo("Generating BRDF LUT");
+					Print("Generating BRDF LUT");
 					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, m_BRDFSize.x, m_BRDFSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
-					GenerateBRDFLUT(gameContext, m_BRDFTexture);
+					GenerateBRDFLUT(m_BRDFTexture);
 				}
 				mat.brdfLUT = m_BRDFTexture;
 			}
@@ -2369,17 +2359,15 @@ namespace flex
 
 			if (prevMatCapacity != newMatCapacity)
 			{
-				Logger::LogError("VulkanRenderer::m_LoadedMaterials was reallocated! Local references will become invalid! New high water line: " + std::to_string(newMatCapacity) + " (previous was " + std::to_string(prevMatCapacity) + ")");
+				PrintError("VulkanRenderer::m_LoadedMaterials was reallocated! Local references will become invalid! New high water line: " + std::to_string(newMatCapacity) + " (previous was " + std::to_string(prevMatCapacity) + ")");
 			}
 
 
 			return m_Materials.size() - 1;
 		}
 
-		u32 VulkanRenderer::InitializeRenderObject(const GameContext& gameContext, const RenderObjectCreateInfo* createInfo)
+		u32 VulkanRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			RenderID renderID = GetFirstAvailableRenderID();
 			VulkanRenderObject* renderObject = new VulkanRenderObject(m_VulkanDevice->m_LogicalDevice, renderID);
 
@@ -2390,12 +2378,12 @@ namespace flex
 			{
 				if (m_Materials.empty())
 				{
-					Logger::LogError("Render object created before any materials have been created! Returning...");
+					PrintError("Render object created before any materials have been created! Returning...");
 					return InvalidRenderID;
 				}
 				else
 				{
-					Logger::LogError("Render object doesn't have its material ID set! Using first available material");
+					PrintError("Render object doesn't have its material ID set! Using first available material");
 					renderObject->materialID = 0;
 				}
 			}
@@ -2463,7 +2451,7 @@ namespace flex
 
 			if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
 			{
-				Logger::LogError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: " + (i32)topology);
+				PrintError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: " + (i32)topology);
 			}
 			else
 			{
@@ -2476,71 +2464,69 @@ namespace flex
 			m_ClearColor = { r, g, b, 1.0f };
 		}
 
-		void VulkanRenderer::Update(const GameContext& gameContext)
+		void VulkanRenderer::Update()
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
-			if (gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{
 					VulkanRenderObject* renderObject = *iter;
 					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
 					{
-						Logger::LogInfo("Capturing reflection probe");
-						CaptureSceneToCubemap(gameContext, renderObject->renderID);
-						GenerateIrradianceSamplerFromCubemap(gameContext, renderObject->materialID);
-						GeneratePrefilteredMapFromCubemap(gameContext, renderObject->materialID);
-						Logger::LogInfo("Done");
+						Print("Capturing reflection probe");
+						CaptureSceneToCubemap(renderObject->renderID);
+						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+						Print("Done");
 					}
 				}
 			}
 
 			// Update uniform buffer
-			UpdateConstantUniformBuffers(gameContext);
+			UpdateConstantUniformBuffers();
 
 			// TODO: Only update when things have changed
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				UpdateDynamicUniformBuffer(gameContext, i);
+				UpdateDynamicUniformBuffer(i);
 			}
 
 			// Update g-buffer uniforms
-			UpdateDynamicUniformBuffer(gameContext, m_GBufferQuadRenderID);
+			UpdateDynamicUniformBuffer(m_GBufferQuadRenderID);
 		}
 
-		void VulkanRenderer::Draw(const GameContext& gameContext)
+		void VulkanRenderer::Draw()
 		{
 			DrawCallInfo drawCallInfo = {};
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
-				PhysicsDebugRender(gameContext);
+				PhysicsDebugRender();
 			}
 
-			BuildDeferredCommandBuffer(gameContext, drawCallInfo); // TODO: Only call this when objects change
-			BuildCommandBuffers(gameContext, drawCallInfo); // TODO: Only call this when objects change
+			BuildDeferredCommandBuffer(drawCallInfo); // TODO: Only call this when objects change
+			BuildCommandBuffers(drawCallInfo); // TODO: Only call this when objects change
 
 			if (m_SwapChainNeedsRebuilding)
 			{
 				m_SwapChainNeedsRebuilding = false;
-				RecreateSwapChain(gameContext.window);
+				RecreateSwapChain(g_Window);
 			}
 			else
 			{
-				DrawFrame(gameContext.window);
+				DrawFrame(g_Window);
 			}
 		}
 
-		void VulkanRenderer::DrawImGuiItems(const GameContext& gameContext)
+		void VulkanRenderer::DrawImGuiItems()
 		{
-			UNREFERENCED_PARAMETER(gameContext);
-
 			if (ImGui::CollapsingHeader("Scene info"))
 			{
 				if (ImGui::TreeNode("Render Objects"))
 				{
-					std::vector<GameObject*>& rootObjects = gameContext.sceneManager->CurrentScene()->GetRootObjects();
+					std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 					for (size_t i = 0; i < rootObjects.size(); ++i)
 					{
 						DrawImGuiForRenderObjectAndChildren(rootObjects[i]);
@@ -2620,10 +2606,9 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::ReloadShaders(GameContext& gameContext)
+		void VulkanRenderer::ReloadShaders()
 		{
 			// TODO: Implement
-			UNREFERENCED_PARAMETER(gameContext);
 		}
 
 		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
@@ -2712,7 +2697,7 @@ namespace flex
 			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetMaterialID();
 			if (skyboxMatierialID == InvalidMaterialID)
 			{
-				Logger::LogError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
+				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated");
 				return;
 			}
 
@@ -2743,7 +2728,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
+				PrintError("SetRenderObjectMaterialID couldn't find render object with ID " + std::to_string(renderID));
 			}
 		}
 
@@ -2793,9 +2778,8 @@ namespace flex
 			return m_PhysicsDebugDrawer;
 		}
 
-		void VulkanRenderer::PostInitializeRenderObject(const GameContext& gameContext, RenderID renderID)
+		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(renderID);
 		}
 
@@ -2822,7 +2806,7 @@ namespace flex
 			if (renderID > m_RenderObjects.size() ||
 				renderID == InvalidRenderID)
 			{
-				Logger::LogError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
+				PrintError("Invalid renderID passed to GetRenderObject: " + std::to_string(renderID));
 				return nullptr;
 			}
 #endif 
@@ -2864,7 +2848,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateInstance(const GameContext& gameContext)
+		void VulkanRenderer::CreateInstance()
 		{
 			if (m_EnableValidationLayers && !CheckValidationLayerSupport())
 			{
@@ -2873,14 +2857,14 @@ namespace flex
 
 			VkApplicationInfo appInfo = {};
 			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-			std::string applicationName = gameContext.window->GetTitle();
+			std::string applicationName = g_Window->GetTitle();
 			appInfo.pApplicationName = applicationName.c_str();
 			appInfo.applicationVersion = VK_API_VERSION_1_0;
 			appInfo.pEngineName = "Flex Engine";
 			appInfo.engineVersion = VK_MAKE_VERSION(FlexEngine::EngineVersionMajor, FlexEngine::EngineVersionMinor, FlexEngine::EngineVersionPatch);
 			appInfo.apiVersion = VK_API_VERSION_1_0;
 
-			Logger::LogInfo("Vulkan Version: 1.1.70.0");
+			Print("Vulkan Version: 1.1.70.0");
 
 			VkInstanceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -3632,13 +3616,13 @@ namespace flex
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(shader.shader.vertexShaderCode, vertShaderModule))
 			{
-				Logger::LogError("Failed to compile vertex shader located at: " + shader.shader.vertexShaderFilePath);
+				PrintError("Failed to compile vertex shader located at: " + shader.shader.vertexShaderFilePath);
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(shader.shader.fragmentShaderCode, fragShaderModule))
 			{
-				Logger::LogError("Failed to compile fragment shader located at: " + shader.shader.fragmentShaderFilePath);
+				PrintError("Failed to compile fragment shader located at: " + shader.shader.fragmentShaderFilePath);
 			}
 
 			VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
@@ -4186,13 +4170,13 @@ namespace flex
 			//VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, m_ColorSampler.replace()));
 		}
 
-		void VulkanRenderer::PhysicsDebugRender(const GameContext& gameContext)
+		void VulkanRenderer::PhysicsDebugRender()
 		{
-			btDiscreteDynamicsWorld* physicsWorld = gameContext.sceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
 		}
 
-		void VulkanRenderer::BuildCommandBuffers(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void VulkanRenderer::BuildCommandBuffers(const DrawCallInfo& drawCallInfo)
 		{
 			if (drawCallInfo.renderToCubemap)
 			{
@@ -4298,8 +4282,8 @@ namespace flex
 					if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 					{
 						// Truncate translation component to center cubemap around viewer
-						glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView()));
-						glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+						glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView()));
+						glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 						renderObjectMat.material.pushConstantBlock.mvp =
 							projection * view * renderObject->gameObject->GetTransform()->GetModelMatrix();
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -4409,8 +4393,8 @@ namespace flex
 						// Push constants
 						if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 						{
-							glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
-							glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+							glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
+							glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 							renderObjectMat.material.pushConstantBlock.mvp =
 								projection * view * renderObject->gameObject->GetTransform()->GetModelMatrix();
 							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -4437,7 +4421,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::BuildDeferredCommandBuffer(const GameContext& gameContext, const DrawCallInfo& drawCallInfo)
+		void VulkanRenderer::BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo)
 		{
 			// TODO: Remove unused param
 			UNREFERENCED_PARAMETER(drawCallInfo);
@@ -4518,8 +4502,8 @@ namespace flex
 				// Push constants
 				if (m_Shaders[renderObjectMat.material.shaderID].shader.needPushConstantBlock)
 				{
-					glm::mat4 view = glm::mat4(glm::mat3(gameContext.cameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
-					glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
+					glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
+					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 					renderObjectMat.material.pushConstantBlock.mvp =
 						projection * view * glm::mat4(1.0f); // renderObject->model; TODO
 					vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
@@ -4591,7 +4575,7 @@ namespace flex
 			void* vertexDataStart = malloc(size);
 			if (!vertexDataStart)
 			{
-				Logger::LogError("Failed to allocate memory for vertex buffer " + std::to_string(shaderID) + "! Attempted to allocate " + std::to_string(size) + " bytes");
+				PrintError("Failed to allocate memory for vertex buffer " + std::to_string(shaderID) + "! Attempted to allocate " + std::to_string(size) + " bytes");
 				return 0;
 			}
 
@@ -4616,7 +4600,7 @@ namespace flex
 
 			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
-				Logger::LogError("Failed to create static vertex buffer (no verts use shader index " + std::to_string(shaderID) + "!)");
+				PrintError("Failed to create static vertex buffer (no verts use shader index " + std::to_string(shaderID) + "!)");
 				return 0;
 			}
 
@@ -5043,15 +5027,15 @@ namespace flex
 			return true;
 		}
 
-		void VulkanRenderer::UpdateConstantUniformBuffers(const GameContext& gameContext, UniformOverrides const* overridenUniforms)
+		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
 		{
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
-				UpdateConstantUniformBuffer(gameContext, overridenUniforms, i);
+				UpdateConstantUniformBuffer(overridenUniforms, i);
 			}
 		}
 
-		void VulkanRenderer::UpdateConstantUniformBuffer(const GameContext& gameContext, UniformOverrides const* overridenUniforms, size_t bufferIndex)
+		void VulkanRenderer::UpdateConstantUniformBuffer(UniformOverrides const* overridenUniforms, size_t bufferIndex)
 		{
 			VulkanMaterial& material = m_Materials[bufferIndex];
 			VulkanShader& shader = m_Shaders[material.material.shaderID];
@@ -5064,11 +5048,11 @@ namespace flex
 				return; // There is no constant data
 			}
 
-			glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
-			glm::vec4 camPos = glm::vec4(gameContext.cameraManager->CurrentCamera()->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 			if (overridenUniforms)
 			{
@@ -5151,7 +5135,7 @@ namespace flex
 			memcpy(shader.uniformBuffer.constantBuffer.m_Mapped, constantData.data, size);
 		}
 			
-		void VulkanRenderer::UpdateDynamicUniformBuffer(const GameContext& gameContext, RenderID renderID, UniformOverrides const* uniformOverrides)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
@@ -5174,8 +5158,8 @@ namespace flex
 
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetModelMatrix();
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
-			glm::mat4 projection = gameContext.cameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = gameContext.cameraManager->CurrentCamera()->GetView();
+			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
+			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 modelViewProjection = projection * view * model;
 			glm::vec4 colorMultiplier = material.material.colorMultiplier;
 			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;
@@ -5571,20 +5555,20 @@ namespace flex
 				StripLeadingDirectories(vertFileName);
 				std::string fragFileName = m_Shaders[i].shader.fragmentShaderFilePath;
 				StripLeadingDirectories(fragFileName);
-				Logger::LogInfo("Loading shaders " + vertFileName + " & " + fragFileName);
+				Print("Loading shaders " + vertFileName + " & " + fragFileName);
 
 				if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode))
 				{
-					Logger::LogError("Could not find vertex shader " + shader.name);
+					PrintError("Could not find vertex shader " + shader.name);
 				}
 				if (!ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode))
 				{
-					Logger::LogError("Could not find fragment shader " + shader.name);
+					PrintError("Could not find fragment shader " + shader.name);
 				}
 			}
 		}
 
-		void VulkanRenderer::CaptureSceneToCubemap(const GameContext& gameContext, RenderID cubemapRenderID)
+		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
 			// TODO: Finish implementing this function
 			return;
@@ -5634,34 +5618,30 @@ namespace flex
 
 
 			//drawCallInfo.deferred = true;
-			//BuildDeferredCommandBuffer(gameContext, drawCallInfo);
+			//BuildDeferredCommandBuffer(drawCallInfo);
 			drawCallInfo.deferred = false;
-			//DrawGBufferQuad(gameContext, drawCallInfo);
-			BuildCommandBuffers(gameContext, drawCallInfo);
+			//DrawGBufferQuad(drawCallInfo);
+			BuildCommandBuffers(drawCallInfo);
 		}
 
-		//void VulkanRenderer::GenerateCubemapFromHDREquirectangular(const GameContext& gameContext, MaterialID cubemapMaterialID, const std::string& environmentMapPath)
+		//void VulkanRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath)
 		//{
-		//	UNREFERENCED_PARAMETER(gameContext);
 		//	UNREFERENCED_PARAMETER(cubemapMaterialID);
 		//	UNREFERENCED_PARAMETER(environmentMapPath);
 		//}
 
-		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(cubemapMaterialID);
 		}
 
-		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(const GameContext& gameContext, MaterialID cubemapMaterialID)
+		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
 		{
-			UNREFERENCED_PARAMETER(gameContext);
 			UNREFERENCED_PARAMETER(cubemapMaterialID);
 		}
 
-		//void VulkanRenderer::GenerateBRDFLUT(const GameContext& gameContext, u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
+		//void VulkanRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
 		//{
-		//	UNREFERENCED_PARAMETER(gameContext);
 		//	UNREFERENCED_PARAMETER(brdfLUTTextureID);
 		//	UNREFERENCED_PARAMETER(BRDFLUTSize);
 		//}
@@ -5679,21 +5659,21 @@ namespace flex
 			switch (flags)
 			{
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
-				Logger::LogInfo(msg);
+				Print(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_WARNING_BIT_EXT:
-				Logger::LogWarning(msg);
+				PrintWarn(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
-				Logger::LogWarning(msg);
+				PrintWarn(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_ERROR_BIT_EXT:
-				Logger::LogError(msg);
+				PrintError(msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_DEBUG_BIT_EXT:
 				// Fall through
 			default:
-				Logger::LogError(msg);
+				PrintError(msg);
 				break;
 			}
 

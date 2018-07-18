@@ -7,72 +7,22 @@
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
-#include "Logger.hpp"
+#include "Window/Monitor.hpp"
 
 namespace flex
 {
-	GLFWWindowWrapper::GLFWWindowWrapper(std::string title, GameContext& gameContext) :
-		Window(title, gameContext)
+	std::array<bool, MAX_JOYSTICK_COUNT> g_JoysticksConnected;
+
+	GLFWWindowWrapper::GLFWWindowWrapper(std::string title) :
+		Window(title)
 	{
-		const bool moveConsoleToExtraMonitor = true;
+		m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
 
-		if (moveConsoleToExtraMonitor)
-		{
-			HWND hWnd = GetConsoleWindow();
-			// TODO: Set these based on display resolution
-			i32 consoleWidth = 700;
-			i32 consoleHeight = 800;
-
-			// The following four variables store the bounding rectangle of all monitors
-			i32 virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-			//i32 virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-			i32 virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-			//i32 virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-			i32 monitorWidth = GetSystemMetrics(SM_CXSCREEN);
-			//i32 monitorHeight = GetSystemMetrics(SM_CYSCREEN);
-
-			// If another monitor is present, move the console to it
-			if (virtualScreenWidth > monitorWidth)
-			{
-				i32 newX;
-				i32 newY = 10;
-				
-				if (virtualScreenLeft < 0) 
-				{
-					// The other monitor is to the left of the main one
-					newX = -(consoleWidth + 10);
-				}
-				else 
-				{
-					// The other monitor is to the right of the main one
-					newX = virtualScreenWidth - monitorWidth + 10;
-				}
-
-				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-				
-				// Call again to set size correctly (based on other monitor's DPI)
-				MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-			}
-			else // There's only one monitor, move the console to the top left corner
-			{
-				RECT rect;
-				GetWindowRect(hWnd, &rect);
-				if (rect.top != 0)
-				{
-					// A negative value is needed to line the console up to the left side of my monitor
-					MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
-				}
-			}
-		}
-
-		m_LastNonFullscreenMode = FullscreenMode::WINDOWED;
-
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_128.png", true));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_64.png", true));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_48.png", true));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_32.png", true));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_16.png", true));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_128.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_64.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_48.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_32.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_16.png", 4));
 	}
 
 	GLFWWindowWrapper::~GLFWWindowWrapper()
@@ -85,8 +35,23 @@ namespace flex
 
 		if (!glfwInit())
 		{
-			Logger::LogError("Failed to initialize glfw! Exiting...");
+			PrintError("Failed to initialize glfw! Exiting...\n");
 			exit(EXIT_FAILURE);
+		}
+
+		i32 numJoysticksConnected = 0;
+		for (i32 i = 0; i < MAX_JOYSTICK_COUNT; ++i)
+		{
+			g_JoysticksConnected[i] = (glfwJoystickPresent(i) == GLFW_TRUE);
+			if (g_JoysticksConnected[i])
+			{
+				++numJoysticksConnected;
+			}
+		}
+
+		if (numJoysticksConnected > 0)
+		{
+			Print("%i joysticks connected on bootup\n", numJoysticksConnected);
 		}
 
 		// TODO: Look into supporting system-DPI awareness
@@ -102,10 +67,11 @@ namespace flex
 
 	void GLFWWindowWrapper::Destroy()
 	{
-		for (size_t i = 0; i < m_WindowIcons.size(); ++i)
+		for (GLFWimage& icon : m_WindowIcons)
 		{
-			SafeDelete(m_WindowIcons[i].pixels);
+			SafeDelete(icon.pixels);
 		}
+		m_WindowIcons.clear();
 
 		if (m_Window)
 		{
@@ -113,37 +79,44 @@ namespace flex
 		}
 	}
 
-	void GLFWWindowWrapper::RetrieveMonitorInfo(GameContext& gameContext)
+	void GLFWWindowWrapper::RetrieveMonitorInfo()
 	{
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		if (!monitor)
 		{
-			Logger::LogError("Failed to find primary monitor!");
+			PrintError("Failed to find primary monitor!\n");
 			return;
 		}
 
 		const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
 		if (!vidMode)
 		{
-			Logger::LogError("Failed to get monitor's video mode!");
+			PrintError("Failed to get monitor's video mode!\n");
 			return;
 		}
 
-		gameContext.monitor.width = vidMode->width;
-		gameContext.monitor.height = vidMode->height;
-		gameContext.monitor.redBits = vidMode->redBits;
-		gameContext.monitor.greenBits = vidMode->greenBits;
-		gameContext.monitor.blueBits = vidMode->blueBits;
-		gameContext.monitor.refreshRate = vidMode->refreshRate;
+		assert(g_Monitor); // Monitor must be created before calling RetrieveMonitorInfo!
+		g_Monitor->width = vidMode->width;
+		g_Monitor->height = vidMode->height;
+		g_Monitor->redBits = vidMode->redBits;
+		g_Monitor->greenBits = vidMode->greenBits;
+		g_Monitor->blueBits = vidMode->blueBits;
+		g_Monitor->refreshRate = vidMode->refreshRate;
+		
+		// 25.4mm = 1 inch
+		i32 widthMM, heightMM;
+		glfwGetMonitorPhysicalSize(monitor, &widthMM, &heightMM);
+		g_Monitor->DPI = glm::vec2(vidMode->width / (widthMM / 25.4f),
+											vidMode->height / (heightMM / 25.4f));
 
-		glfwGetMonitorContentScale(monitor, &gameContext.monitor.contentScaleX, &gameContext.monitor.contentScaleY);
+		glfwGetMonitorContentScale(monitor, &g_Monitor->contentScaleX, &g_Monitor->contentScaleY);
 	}
 
 	void GLFWWindowWrapper::SetUpCallbacks()
 	{
 		if (!m_Window)
 		{
-			Logger::LogError("SetUpCallbacks was called before m_Window was set!");
+			PrintError("SetUpCallbacks was called before m_Window was set!\n");
 			return;
 		}
 
@@ -156,20 +129,17 @@ namespace flex
 		glfwSetFramebufferSizeCallback(m_Window, GLFWFramebufferSizeCallback);
 		glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
+		glfwSetJoystickCallback(GLFWJoystickCallback);
 	}
 
 	void GLFWWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
 	{
 		m_FrameBufferSize = glm::vec2i(width, height);
 		m_Size = m_FrameBufferSize;
-		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		
+		if (g_Renderer)
 		{
-			m_LastWindowedSize = m_FrameBufferSize;
-		}
-		// TODO: Call OnFrameBufferSize here?
-		if (m_GameContextRef.renderer)
-		{
-			m_GameContextRef.renderer->OnWindowSizeChanged(width, height);
+			g_Renderer->OnWindowSizeChanged(width, height);
 		}
 	}
 
@@ -184,11 +154,14 @@ namespace flex
 	{
 		m_Size = glm::vec2i(width, height);
 		m_FrameBufferSize = m_Size;
-		m_LastWindowedSize = m_Size;
-
-		if (m_GameContextRef.renderer)
+		if (m_CurrentWindowMode == WindowMode::WINDOWED)
 		{
-			m_GameContextRef.renderer->OnWindowSizeChanged(width, height);
+			m_LastWindowedSize = m_Size;
+		}
+
+		if (g_Renderer)
+		{
+			g_Renderer->OnWindowSizeChanged(width, height);
 		}
 	}
 
@@ -210,7 +183,7 @@ namespace flex
 	{
 		m_Position = { newX, newY };
 
-		if (m_CurrentFullscreenMode == FullscreenMode::WINDOWED)
+		if (m_CurrentWindowMode == WindowMode::WINDOWED)
 		{
 			m_LastWindowedPos = m_Position;
 		}
@@ -221,6 +194,11 @@ namespace flex
 		glfwPollEvents();
 	}
 
+	void GLFWWindowWrapper::SetCursorPos(const glm::vec2& newCursorPos)
+	{
+		glfwSetCursorPos(m_Window, newCursorPos.x, newCursorPos.y);
+	}
+
 	void GLFWWindowWrapper::SetCursorMode(CursorMode mode)
 	{
 		Window::SetCursorMode(mode);
@@ -229,52 +207,60 @@ namespace flex
 
 		switch (mode)
 		{
-		case Window::CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
-		case Window::CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
-		case Window::CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-		default: Logger::LogError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: " + std::to_string((i32)mode)); break;
+		case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
+		case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
+		case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
+		default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
 		}
 
 		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
 	}
 
-	void GLFWWindowWrapper::SetFullscreenMode(FullscreenMode mode, bool force)
+	void GLFWWindowWrapper::SetWindowMode(WindowMode mode, bool force)
 	{
-		if (force || m_CurrentFullscreenMode != mode)
+		if (force || m_CurrentWindowMode != mode)
 		{
-			m_CurrentFullscreenMode = mode;
+			m_CurrentWindowMode = mode;
 
-			auto monitor = glfwGetPrimaryMonitor();
+			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 			if (!monitor)
 			{
-				Logger::LogError("Failed to find primary monitor! Can't set fullscreen mode");
+				PrintError("Failed to find primary monitor! Can't set window mode\n");
 				return;
 			}
 
 			const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
 			if (!videoMode)
 			{
-				Logger::LogError("Failed to get monitor's video mode! Can't set fullscreen mode");
+				PrintError("Failed to get monitor's video mode! Can't set window mode\n");
 				return;
 			}
 
 			switch (mode)
 			{
-			case FullscreenMode::FULLSCREEN:
+			case WindowMode::FULLSCREEN:
 			{
 				glfwSetWindowMonitor(m_Window, monitor, 0, 0, videoMode->width, videoMode->height, videoMode->refreshRate);
 			} break;
-			case FullscreenMode::WINDOWED_FULLSCREEN:
+			case WindowMode::WINDOWED_FULLSCREEN:
 			{
 				glfwSetWindowMonitor(m_Window, monitor, 0, 0, videoMode->width, videoMode->height, videoMode->refreshRate);
-				m_LastNonFullscreenMode = FullscreenMode::WINDOWED_FULLSCREEN;
+				m_LastNonFullscreenWindowMode = WindowMode::WINDOWED_FULLSCREEN;
 			} break;
-			case FullscreenMode::WINDOWED:
+			case WindowMode::WINDOWED:
 			{
 				assert(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
 
+				if (m_LastWindowedPos.y == 0)
+				{
+					// When in windowed mode a y position of 0 means the title bar isn't
+					// visible. This will occur if the app launched in fullscreen since
+					// the last y position to never have been set to a valid value.
+					m_LastWindowedPos.y = 40;
+				}
+
 				glfwSetWindowMonitor(m_Window, nullptr, m_LastWindowedPos.x, m_LastWindowedPos.y, m_LastWindowedSize.x, m_LastWindowedSize.y, videoMode->refreshRate);
-				m_LastNonFullscreenMode = FullscreenMode::WINDOWED;
+				m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
 			} break;
 			}
 		}
@@ -282,25 +268,35 @@ namespace flex
 
 	void GLFWWindowWrapper::ToggleFullscreen(bool force)
 	{
-		if (m_CurrentFullscreenMode == FullscreenMode::FULLSCREEN)
+		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
 		{
-			assert(m_LastNonFullscreenMode == FullscreenMode::WINDOWED || m_LastNonFullscreenMode == FullscreenMode::WINDOWED_FULLSCREEN);
+			assert(m_LastNonFullscreenWindowMode == WindowMode::WINDOWED || m_LastNonFullscreenWindowMode == WindowMode::WINDOWED_FULLSCREEN);
 
-			SetFullscreenMode(m_LastNonFullscreenMode, force);
+			SetWindowMode(m_LastNonFullscreenWindowMode, force);
 		}
 		else
 		{
-			SetFullscreenMode(FullscreenMode::FULLSCREEN, force);
+			SetWindowMode(WindowMode::FULLSCREEN, force);
 		}
 	}
 
-	void GLFWWindowWrapper::Update(const GameContext& gameContext)
+	void GLFWWindowWrapper::Maximize()
 	{
-		Window::Update(gameContext);
+		glfwMaximizeWindow(m_Window);
+	}
+
+	void GLFWWindowWrapper::Iconify()
+	{
+		glfwIconifyWindow(m_Window);
+	}
+
+	void GLFWWindowWrapper::Update()
+	{
+		Window::Update();
 
 		if (glfwWindowShouldClose(m_Window))
 		{
-			gameContext.engineInstance->Stop();
+			g_EngineInstance->Stop();
 			return;
 		}
 
@@ -308,14 +304,14 @@ namespace flex
 		static bool prevP0JoystickPresent = false;
 		if (glfwGetGamepadState(0, &gamepad0State) == GLFW_TRUE)
 		{
-			gameContext.inputManager->UpdateGamepadState(0, gamepad0State.axes, gamepad0State.buttons);
+			g_InputManager->UpdateGamepadState(0, gamepad0State.axes, gamepad0State.buttons);
 			prevP0JoystickPresent = true;
 		}
 		else
 		{
 			if (prevP0JoystickPresent)
 			{
-				gameContext.inputManager->ClearGampadInput(0);
+				g_InputManager->ClearGampadInput(0);
 				prevP0JoystickPresent = false;
 			}
 		}
@@ -324,14 +320,14 @@ namespace flex
 		static bool prevP1JoystickPresent = false;
 		if (glfwGetGamepadState(1, &gamepad1State) == GLFW_TRUE)
 		{
-			gameContext.inputManager->UpdateGamepadState(1, gamepad1State.axes, gamepad1State.buttons);
+			g_InputManager->UpdateGamepadState(1, gamepad1State.axes, gamepad1State.buttons);
 			prevP1JoystickPresent = true;
 		}
 		else
 		{
 			if (prevP1JoystickPresent)
 			{
-				gameContext.inputManager->ClearGampadInput(1);
+				g_InputManager->ClearGampadInput(1);
 				prevP1JoystickPresent = false;
 			}
 		}
@@ -369,9 +365,59 @@ namespace flex
 		glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
 	}
 
+	void GLFWWindowWrapper::MoveConsole()
+	{
+		HWND hWnd = GetConsoleWindow();
+		// TODO: Set these based on display resolution
+		i32 consoleWidth = 800;
+		i32 consoleHeight = 800;
+
+		// The following four variables store the bounding rectangle of all monitors
+		i32 virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
+		//i32 virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+		i32 virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		//i32 virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+		i32 monitorWidth = GetSystemMetrics(SM_CXSCREEN);
+		//i32 monitorHeight = GetSystemMetrics(SM_CYSCREEN);
+
+		// If another monitor is present, move the console to it
+		if (virtualScreenWidth > monitorWidth)
+		{
+			i32 newX;
+			i32 newY = 10;
+
+			if (virtualScreenLeft < 0)
+			{
+				// The other monitor is to the left of the main one
+				newX = -(consoleWidth + 10);
+			}
+			else
+			{
+				// The other monitor is to the right of the main one
+				newX = virtualScreenWidth - monitorWidth + 10;
+			}
+
+			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
+
+			// Call again to set size correctly (based on other monitor's DPI)
+			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
+		}
+		else // There's only one monitor, move the console to the top left corner
+		{
+			RECT rect;
+			GetWindowRect(hWnd, &rect);
+			if (rect.top != 0)
+			{
+				// A negative value is needed to line the console up to the left side of my monitor
+				MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
+			}
+		}
+	}
+
 	void GLFWErrorCallback(i32 error, const char* description)
 	{
-		Logger::LogError("GLFW Error: " + std::to_string(error) + ": " + std::string(description));
+		PrintError("GLFW Error: %i: %s\n", error, description);
 	}
 
 	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods)
@@ -405,6 +451,21 @@ namespace flex
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+
+		//if (window->GetFullscreenMode() != Window::FullscreenMode::WINDOWED)
+		//{
+		//	if (focused)
+		//	{
+		//		glfwRestoreWindow(glfwWindow);
+		//		Print("found\n");
+		//	}
+		//	else
+		//	{
+		//		glfwIconifyWindow(glfwWindow);
+		//		Print("lost\n");
+		//	}
+		//}
+
 		window->WindowFocusCallback(focused);
 	}
 
@@ -429,13 +490,35 @@ namespace flex
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-		window->WindowSizeCallback(width, height);
+		bool bMaximized = (glfwGetWindowAttrib(glfwWindow, GLFW_MAXIMIZED) == GLFW_TRUE);
+		bool bIconified = (glfwGetWindowAttrib(glfwWindow, GLFW_ICONIFIED) == GLFW_TRUE);
+		window->WindowSizeCallback(width, height, bMaximized, bIconified);
 	}
 
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->FrameBufferSizeCallback(width, height);
+	}
+
+	void GLFWJoystickCallback(i32 JID, i32 event)
+	{
+		if (JID > MAX_JOYSTICK_COUNT)
+		{
+			PrintWarn("Unhandled joystick connection event, JID out of range: %i\n", JID);
+			return;
+		}
+
+		if (event == GLFW_CONNECTED)
+		{
+			Print("Joystick %i connected\n", JID);
+		}
+		else if (event == GLFW_DISCONNECTED)
+		{
+			Print("Joystick %i disconnected\n", JID);
+		}
+
+		g_JoysticksConnected[JID] = (event == GLFW_CONNECTED);
 	}
 
 	InputManager::Action GLFWActionToInputManagerAction(i32 glfwAction)
@@ -448,7 +531,8 @@ namespace flex
 		case GLFW_REPEAT: inputAction = InputManager::Action::REPEAT; break;
 		case GLFW_RELEASE: inputAction = InputManager::Action::RELEASE; break;
 		case -1: break; // We don't care about events GLFW can't handle
-		default: Logger::LogError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: " + std::to_string(glfwAction));
+		default: PrintError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: %i\n", 
+							glfwAction);
 		}
 
 		return inputAction;
@@ -582,7 +666,8 @@ namespace flex
 		case GLFW_KEY_MENU: inputKey = InputManager::KeyCode::KEY_MENU; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default:
-			Logger::LogError("Unhandled glfw key passed to GLFWKeyToInputManagerKey in GLFWWIndowWrapper: " + std::to_string(glfwKey));
+			PrintError("Unhandled glfw key passed to GLFWKeyToInputManagerKey in GLFWWIndowWrapper: %i\n",
+					   glfwKey);
 			break;
 		}
 
@@ -616,7 +701,8 @@ namespace flex
 		case GLFW_MOUSE_BUTTON_7: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_7; break;
 		case GLFW_MOUSE_BUTTON_8: inputMouseButton = InputManager::MouseButton::MOUSE_BUTTON_8; break;
 		case -1: break; // We don't care about events GLFW can't handle
-		default: Logger::LogError("Unhandled glfw button passed to GLFWButtonToInputManagerMouseButton in GLFWWIndowWrapper: " + std::to_string(glfwButton)); break;
+		default: PrintError("Unhandled glfw button passed to GLFWButtonToInputManagerMouseButton in GLFWWIndowWrapper: %i\n",
+							glfwButton); break;
 		}
 
 		return inputMouseButton;

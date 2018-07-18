@@ -6,7 +6,6 @@
 #include <glm/vec2.hpp>
 #pragma warning(pop)
 
-#include "GameContext.hpp"
 #include "Helpers.hpp" // For RollingAverage
 
 namespace flex
@@ -194,7 +193,9 @@ namespace flex
 			D_PAD_UP			= 11,
 			D_PAD_RIGHT			= 12,
 			D_PAD_DOWN			= 13,
-			D_PAD_LEFT			= 14
+			D_PAD_LEFT			= 14,
+
+			_COUNT				= 15
 		};
 
 		enum class GamepadAxis
@@ -228,7 +229,7 @@ namespace flex
 
 			// LEFT_STICK_X, LEFT_STICK_Y, RIGHT_STICK_X, RIGHT_STICK_Y, LEFT_TRIGGER, RIGHT_TRIGGER
 			real axes[6];
-			RollingAverage averageRotationSpeeds;
+			RollingAverage<real> averageRotationSpeeds;
 			i32 framesToAverageOver = 10;
 			real pJoystickX = 0.0f;
 			real pJoystickY = 0.0f;
@@ -238,16 +239,16 @@ namespace flex
 		InputManager();
 		~InputManager();
 
-		void Initialize(const GameContext& gameContext);
+		void Initialize();
 
-		void Update(const GameContext& gameContext);
+		void Update();
 		void PostUpdate();
 
 		void UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15]);
 		GamepadState& GetGamepadState(i32 gamepadIndex);
 
-		i32 GetKeyDown(KeyCode keyCode, bool ignoreImGui = false) const;
-		bool GetKeyPressed(KeyCode keyCode) const;
+		i32 GetKeyDown(KeyCode keyCode, bool bIgnoreImGui = false) const;
+		bool GetKeyPressed(KeyCode keyCode, bool bIgnoreImGui = false) const;
 
 		bool IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button);
 		bool IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button);
@@ -256,23 +257,33 @@ namespace flex
 		real GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis);
 
 		void CursorPosCallback(double x, double y);
-		void MouseButtonCallback(const GameContext& gameContext, MouseButton mouseButton, Action action, i32 mods);
+		void MouseButtonCallback(MouseButton mouseButton, Action action, i32 mods);
 		void ScrollCallback(double xOffset, double yOffset);
 		void KeyCallback(KeyCode keycode, Action action, i32 mods);
 		void CharCallback(u32 character);
 
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
+		void ClearMouseMovement();
 		glm::vec2 GetMouseMovement() const;
-		i32 GetMouseButtonDown(MouseButton mouseButton) const;
-		bool GetMouseButtonClicked(MouseButton mouseButton) const;
+		void ClearMouseButton(MouseButton mouseButton);
+		bool IsAnyMouseButtonDown(bool bIgnoreImGui = false) const;
+		bool IsMouseButtonDown(MouseButton mouseButton) const;
+		bool IsMouseButtonPressed(MouseButton mouseButton) const;
+		bool IsMouseButtonReleased(MouseButton mouseButton) const;
 		real GetVerticalScrollDistance() const;
+		void ClearVerticalScrollDistance();
+
+		// posNorm: normalized position of center of the rect [-1, 1] (y = 1 at top of screen)
+		// sizeNorm: normalized size of the rect [0, 1]
+		bool IsMouseHoveringRect(const glm::vec2& posNorm, const glm::vec2& sizeNorm);
 
 		glm::vec2 GetMouseDragDistance(MouseButton mouseButton);
+		void ClearMouseDragDistance(MouseButton mouseButton);
 
-		void ClearAllInputs(const GameContext& gameContext);
-		void ClearMouseInput(const GameContext& gameContext);
-		void ClearKeyboadInput(const GameContext& gameContext);
+		void ClearAllInputs();
+		void ClearMouseInput();
+		void ClearKeyboadInput();
 		void ClearGampadInput(i32 gamepadIndex);
 
 		static i32 s_JoystickDisconnected;
@@ -282,8 +293,11 @@ namespace flex
 
 		std::map<KeyCode, Key> m_Keys;
 
+		static const i32 GAMEPAD_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
-		Key m_MouseButtons[MOUSE_BUTTON_COUNT];
+		u32 m_MouseButtonStates;
+		u32 m_MouseButtonsPressed;
+		u32 m_MouseButtonsReleased;
 		MouseDrag m_MouseButtonDrags[MOUSE_BUTTON_COUNT];
 		glm::vec2 m_MousePosition = { 0, 0 };
 		glm::vec2 m_PrevMousePosition = { 0, 0 };

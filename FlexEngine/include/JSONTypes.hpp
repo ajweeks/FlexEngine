@@ -14,9 +14,6 @@ namespace flex
 
 	struct JSONObject
 	{
-		std::vector<JSONField> fields;
-
-
 		bool HasField(const std::string& label) const;
 
 		std::string GetString(const std::string& label) const;
@@ -28,6 +25,10 @@ namespace flex
 		bool SetVec3Checked(const std::string& label, glm::vec3& value) const;
 		/* Sets value to the result of ParseVec4(GetString(label)) if that field is present */
 		bool SetVec4Checked(const std::string& label, glm::vec4& value) const;
+
+		glm::vec2 GetVec2(const std::string& label) const;
+		glm::vec3 GetVec3(const std::string& label) const;
+		glm::vec4 GetVec4(const std::string& label) const;
 
 		i32 GetInt(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
@@ -58,6 +59,8 @@ namespace flex
 		static JSONObject s_EmptyObject;
 		static std::vector<JSONObject> s_EmptyObjectArray;
 		static std::vector<JSONField> s_EmptyFieldArray;
+
+		std::vector<JSONField> fields;
 	};
 
 	struct JSONValue
@@ -78,6 +81,7 @@ namespace flex
 
 		explicit JSONValue();
 		explicit JSONValue(const std::string& strValue);
+		explicit JSONValue(const char* strValue);
 		explicit JSONValue(i32 intValue);
 		explicit JSONValue(real floatValue);
 		explicit JSONValue(bool boolValue);

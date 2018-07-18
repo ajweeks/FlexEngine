@@ -7,14 +7,13 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 
 namespace flex
 {
 	namespace gl
 	{
-		GLWindowWrapper::GLWindowWrapper(std::string title, GameContext& gameContext) :
-			GLFWWindowWrapper(title, gameContext)
+		GLWindowWrapper::GLWindowWrapper(std::string title) :
+			GLFWWindowWrapper(title)
 		{
 		}
 
@@ -22,31 +21,54 @@ namespace flex
 		{
 		}
 
-		void GLWindowWrapper::Create(glm::vec2i size, glm::vec2i pos)
+		void GLWindowWrapper::Create(const glm::vec2i& size, const glm::vec2i& pos)
 		{
-			m_Size = size;
-			m_FrameBufferSize = size;
-			m_LastWindowedSize = size;
-			m_Position = pos;
-			m_StartingPosition = pos;
-			m_LastWindowedPos = pos;
+			if (m_bMoveConsoleToOtherMonitor)
+			{
+				MoveConsole();
+			}
+
+			InitFromConfig();
+
+			// Only use parameters if values weren't set through config file
+			if (m_Size.x == 0)
+			{
+				m_Size = size;
+				m_Position = pos;
+			}
+
+			m_FrameBufferSize = m_Size;
+			m_LastWindowedSize = m_Size;
+			m_StartingPosition = m_Position;
+			m_LastWindowedPos = m_Position;
 
 #if _DEBUG
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-#endif
+#endif // _DEBUG
 
 			// Don't hide window when losing focus in Windowed Fullscreen
 			glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
 
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
+			if (m_bMaximized)
+			{
+				glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
+			}
+			
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), NULL, NULL);
+			GLFWmonitor* monitor = NULL;
+			if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
+			{
+				monitor = glfwGetPrimaryMonitor();
+			}
+
+			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), monitor, NULL);
 			if (!m_Window)
 			{
-				Logger::LogError("Failed to create glfw Window! Exiting");
+				PrintError("Failed to create glfw Window! Exiting...\n");
 				glfwTerminate();
 				// TODO: Try creating a window manually here
 				exit(EXIT_FAILURE);
@@ -56,21 +78,63 @@ namespace flex
 
 			SetUpCallbacks();
 
+			i32 monitorCount;
+			GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+			// If previously the window was on an additional monitor that is no longer present,
+			// move the window to the primary monitor
+			if (monitorCount == 1)
+			{
+				const GLFWvidmode* vidMode = glfwGetVideoMode(monitors[0]);
+				i32 monitorWidth = vidMode->width;
+				i32 monitorHeight = vidMode->height;
+
+				if (m_StartingPosition.x < 0)
+				{
+					m_StartingPosition.x = 100;
+				}
+				else if (m_StartingPosition.x > monitorWidth)
+				{
+					m_StartingPosition.x = 100;
+				}
+				if (m_StartingPosition.y < 0)
+				{
+					m_StartingPosition.y = 100;
+				}
+				else if (m_StartingPosition.y > monitorHeight)
+				{
+					m_StartingPosition.y = 100;
+				}
+			}
+
 			glfwSetWindowPos(m_Window, m_StartingPosition.x, m_StartingPosition.y);
 
 			glfwFocusWindow(m_Window);
-			m_HasFocus = true;
+			m_bHasFocus = true;
 
 			glfwMakeContextCurrent(m_Window);
 
 			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-			CheckGLErrorMessages();
 
-			Logger::LogInfo("OpenGL loaded");
-			Logger::LogInfo("Vendor:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR))));
-			Logger::LogInfo("Renderer:\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))));
-			Logger::LogInfo("Version:\t\t" + std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION))) + "\n");
-			CheckGLErrorMessages();
+#if _DEBUG
+			if (glDebugMessageCallback)
+			{
+				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+				glDebugMessageCallback(glDebugOutput, nullptr);
+				GLuint unusedIds = 0;
+				glDebugMessageControl(GL_DONT_CARE,
+									  GL_DONT_CARE,
+									  GL_DONT_CARE,
+									  0,
+									  &unusedIds,
+									  true);
+			}
+#endif // _DEBUG
+
+			Print("OpenGL loaded\n");
+			Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+			Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+			Print("Version:  %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
 			if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
 			{
@@ -90,45 +154,42 @@ namespace flex
 				return;
 			}
 
-			Logger::LogInfo("---------------");
-			Logger::LogInfo("Debug message (" + std::to_string(id) + "): " + message);
+			PrintError("---------------\n\t");
+			PrintError("GL Debug message (%i): %s\n", id, message);
 
-			std::stringstream ss;
 			switch (source)
 			{
-			case GL_DEBUG_SOURCE_API:             ss << "Source: API"; break;
-			case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   ss << "Source: Window System"; break;
-			case GL_DEBUG_SOURCE_SHADER_COMPILER: ss << "Source: Shader Compiler"; break;
-			case GL_DEBUG_SOURCE_THIRD_PARTY:     ss << "Source: Third Party"; break;
-			case GL_DEBUG_SOURCE_APPLICATION:     ss << "Source: Application"; break;
-			case GL_DEBUG_SOURCE_OTHER:           ss << "Source: Other"; break;
+			case GL_DEBUG_SOURCE_API:             PrintError("Source: API"); break;
+			case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   PrintError("Source: Window System"); break;
+			case GL_DEBUG_SOURCE_SHADER_COMPILER: PrintError("Source: Shader Compiler"); break;
+			case GL_DEBUG_SOURCE_THIRD_PARTY:     PrintError("Source: Third Party"); break;
+			case GL_DEBUG_SOURCE_APPLICATION:     PrintError("Source: Application"); break;
+			case GL_DEBUG_SOURCE_OTHER:           PrintError("Source: Other"); break;
 			}
-			ss << std::endl;
+			PrintError("\n\t");
 
 			switch (type)
 			{
-			case GL_DEBUG_TYPE_ERROR:               ss << "Type: Error"; break;
-			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: ss << "Type: Deprecated Behaviour"; break;
-			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  ss << "Type: Undefined Behaviour"; break;
-			case GL_DEBUG_TYPE_PORTABILITY:         ss << "Type: Portability"; break;
-			case GL_DEBUG_TYPE_PERFORMANCE:         ss << "Type: Performance"; break;
-			case GL_DEBUG_TYPE_MARKER:              ss << "Type: Marker"; break;
-			case GL_DEBUG_TYPE_PUSH_GROUP:          ss << "Type: Push Group"; break;
-			case GL_DEBUG_TYPE_POP_GROUP:           ss << "Type: Pop Group"; break;
-			case GL_DEBUG_TYPE_OTHER:               ss << "Type: Other"; break;
+			case GL_DEBUG_TYPE_ERROR:               PrintError("Type: Error"); break;
+			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: PrintError("Type: Deprecated Behaviour"); break;
+			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  PrintError("Type: Undefined Behaviour"); break;
+			case GL_DEBUG_TYPE_PORTABILITY:         PrintError("Type: Portability"); break;
+			case GL_DEBUG_TYPE_PERFORMANCE:         PrintError("Type: Performance"); break;
+			case GL_DEBUG_TYPE_MARKER:              PrintError("Type: Marker"); break;
+			case GL_DEBUG_TYPE_PUSH_GROUP:          PrintError("Type: Push Group"); break;
+			case GL_DEBUG_TYPE_POP_GROUP:           PrintError("Type: Pop Group"); break;
+			case GL_DEBUG_TYPE_OTHER:               PrintError("Type: Other"); break;
 			}
-			ss << std::endl;
+			PrintError("\n\t");
 
 			switch (severity)
 			{
-			case GL_DEBUG_SEVERITY_HIGH:         ss << "Severity: high"; break;
-			case GL_DEBUG_SEVERITY_MEDIUM:       ss << "Severity: medium"; break;
-			case GL_DEBUG_SEVERITY_LOW:          ss << "Severity: low"; break;
-			case GL_DEBUG_SEVERITY_NOTIFICATION: ss << "Severity: notification"; break;
+			case GL_DEBUG_SEVERITY_HIGH:         PrintError("Severity: high"); break;
+			case GL_DEBUG_SEVERITY_MEDIUM:       PrintError("Severity: medium"); break;
+			case GL_DEBUG_SEVERITY_LOW:          PrintError("Severity: low"); break;
+			case GL_DEBUG_SEVERITY_NOTIFICATION: PrintError("Severity: notification"); break;
 			}
-			ss << std::endl;
-
-			Logger::LogInfo(ss.str());
+			PrintError("\n---------------\n");
 		}
 	} // namespace gl
 } // namespace flex

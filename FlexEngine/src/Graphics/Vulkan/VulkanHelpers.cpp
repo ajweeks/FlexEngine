@@ -10,7 +10,6 @@
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
 
@@ -23,7 +22,7 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				VkErrorSS << "Vulkan fatal error: VkResult is \"" << VulkanErrorString(result) << std::endl;
-				Logger::LogError(VkErrorSS.str());
+				PrintError(VkErrorSS.str());
 				VkErrorSS.clear();
 				assert(result == VK_SUCCESS);
 			}
@@ -249,7 +248,7 @@ namespace flex
 				createInfo.channels == 0 ||
 				createInfo.mipLevels == 0)
 			{
-				Logger::LogError("Cubemap create info missing required size data");
+				PrintError("Cubemap create info missing required size data");
 				return 0;
 			}
 
@@ -367,12 +366,12 @@ namespace flex
 			std::string fileName = filePaths[0];
 			if (fileName.empty())
 			{
-				Logger::LogError("CreateCubemapFromTextures was given an empty filepath!");
+				PrintError("CreateCubemapFromTextures was given an empty filepath!");
 				return 0;
 			}
 
 			StripLeadingDirectories(fileName);
-			Logger::LogInfo("Loading cubemap textures " + filePaths[0] + " , " + filePaths[1] + " , " + filePaths[2] + " , " + filePaths[3] + " , " + filePaths[4] + " , " + filePaths[5]);
+			Print("Loading cubemap textures " + filePaths[0] + " , " + filePaths[1] + " , " + filePaths[2] + " , " + filePaths[3] + " , " + filePaths[4] + " , " + filePaths[5]);
 
 			// TODO: Handle hdr textures!!! FIXME
 			images.reserve(filePaths.size());
@@ -383,7 +382,7 @@ namespace flex
 				if (!pixels)
 				{
 					const char* failureReasonStr = stbi_failure_reason();
-					Logger::LogError("CreateCubemapFromTextures failed to load image" + filePath + ", failure reason: " + std::string(failureReasonStr));
+					PrintError("CreateCubemapFromTextures failed to load image" + filePath + ", failure reason: " + std::string(failureReasonStr));
 					return 0;
 				}
 				width = (u32)w;
@@ -401,14 +400,14 @@ namespace flex
 
 			if (totalSize == 0)
 			{
-				Logger::LogError("CreateCubemapFromTextures failed to load cubemap textures (" + fileName + ")");
+				PrintError("CreateCubemapFromTextures failed to load cubemap textures (" + fileName + ")");
 				return 0;
 			}
 
 			unsigned char* pixels = (unsigned char*)malloc(totalSize);
 			if (pixels == nullptr)
 			{
-				Logger::LogError("CreateCubemapFromTextures Failed to allocate " + std::to_string(totalSize) + " bytes");
+				PrintError("CreateCubemapFromTextures Failed to allocate " + std::to_string(totalSize) + " bytes");
 				return 0;
 			}
 
@@ -541,7 +540,7 @@ namespace flex
 				createInfo.width == 0 ||
 				createInfo.height == 0)
 			{
-				Logger::LogError("Invalid dimensions passed into CreateImage: " + std::to_string(createInfo.width) + "x" + std::to_string(createInfo.height));
+				PrintError("Invalid dimensions passed into CreateImage: " + std::to_string(createInfo.width) + "x" + std::to_string(createInfo.height));
 				return 0;
 			}
 
@@ -568,7 +567,7 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				// TODO: Handle error gracefully
-				Logger::LogError("Invalid image format!");
+				PrintError("Invalid image format!");
 			}
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageInfo, nullptr, createInfo.image));
@@ -600,7 +599,7 @@ namespace flex
 				if (!hdrImage.Load(filePath, false))
 				{
 					const char* failureReasonStr = stbi_failure_reason();
-					Logger::LogError("Couldn't load HDR image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
+					PrintError("Couldn't load HDR image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
 					return 0;
 				}
 
@@ -624,7 +623,7 @@ namespace flex
 			{
 				std::string fileName = filePath;
 				StripLeadingDirectories(fileName);
-				Logger::LogInfo("Loading texture " + fileName);
+				Print("Loading texture " + fileName);
 
 				int w, h, c;
 				unsigned char* pixels = stbi_load(filePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
@@ -635,7 +634,7 @@ namespace flex
 				if (!pixels)
 				{
 					const char* failureReasonStr = stbi_failure_reason();
-					Logger::LogError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
+					PrintError("Couldn't load image, failure reason: " + std::string(failureReasonStr) + " filepath: " + filePath);
 					return 0;
 				}
 
@@ -659,7 +658,7 @@ namespace flex
 				channelCount == 0 ||
 				textureSize == 0)
 			{
-				Logger::LogError("Failed to load in texture data from " + filePath);
+				PrintError("Failed to load in texture data from " + filePath);
 				return 0;
 			}
 
@@ -1327,12 +1326,12 @@ namespace flex
 			case TopologyMode::TRIANGLE_FAN:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
 			case TopologyMode::LINE_LOOP:
 			{
-				Logger::LogError("LINE_LOOP is an unsupported TopologyMode passed to TopologyModeToVkPrimitiveTopology");
+				PrintError("LINE_LOOP is an unsupported TopologyMode passed to TopologyModeToVkPrimitiveTopology");
 				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 			}
 			default:
 			{
-				Logger::LogError("Unhandled TopologyMode passed to TopologyModeToVkPrimitiveTopology: " + std::to_string((i32)mode));
+				PrintError("Unhandled TopologyMode passed to TopologyModeToVkPrimitiveTopology: " + std::to_string((i32)mode));
 				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 			}
 			}
@@ -1347,7 +1346,7 @@ namespace flex
 			case CullFace::FRONT_AND_BACK:	return VK_CULL_MODE_FRONT_AND_BACK;
 			default:
 			{
-				Logger::LogError("Unhandled CullFace passed to CullFaceToVkCullMode: " + std::to_string((i32)cullFace));
+				PrintError("Unhandled CullFace passed to CullFaceToVkCullMode: " + std::to_string((i32)cullFace));
 				return VK_CULL_MODE_NONE;
 			}
 			}
@@ -1381,7 +1380,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: " + std::to_string((i32)primitiveTopology));
+				PrintError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: " + std::to_string((i32)primitiveTopology));
 				return TopologyMode::NONE;
 			}
 		}
@@ -1402,7 +1401,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: " + std::to_string((i32)cullMode));
+				PrintError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: " + std::to_string((i32)cullMode));
 				return CullFace::NONE;
 			}
 		}

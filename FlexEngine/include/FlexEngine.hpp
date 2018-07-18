@@ -2,13 +2,14 @@
 
 #include <string>
 
-#include "GameContext.hpp"
 #include "InputManager.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
+	class GameObject;
+
 	class FlexEngine final
 	{
 	public:
@@ -19,6 +20,18 @@ namespace flex
 		void UpdateAndRender();
 		void Stop();
 		
+		GameObject* GetSelectedObject();
+		void SetSelectedObject(GameObject* gameObject);
+
+		bool IsDraggingGizmo() const;
+
+		void PreSceneChange();
+		void OnSceneChanged();
+
+		bool IsRenderingImGui() const;
+
+		bool IsRenderingEditorObjects() const;
+
 		static std::string EngineVersionString();
 
 		static const u32 EngineVersionMajor;
@@ -54,15 +67,35 @@ namespace flex
 		void CreateWindowAndRenderer();
 		void InitializeWindowAndRenderer();
 		void DestroyWindowAndRenderer();
-		void LoadDefaultScenes();
 		void SetupImGuiStyles();
 		void DrawImGuiObjects();
 
 		std::string RenderIDToString(RendererID rendererID) const;
 
-		u32 m_RendererCount = 0;
+		void DeselectCurrentlySelectedObject();
 
-		GameContext m_GameContext = {};
+		// Returns true if the common settings file existed and was valid
+		bool LoadCommonSettingsFromDisk();
+		void SaveCommonSettingsToDisk(bool bAddEditorStr);
+
+		void DoSceneContextMenu(BaseScene* scene);
+
+		u32 m_RendererCount = 0;
+		bool m_Running = false;
+
+		bool m_bRenderImGui = true;
+		u32 m_FrameCount = 0;
+
+		bool m_bRenderEditorObjects = true;
+
+		bool m_bUpdateProfilerFrame = false;
+
+		sec m_MinDT = 0.0001f;
+		sec m_MaxDT = 1.0f;
+
+		real m_ImGuiMainWindowWidthMin = 200;
+		real m_ImGuiMainWindowWidthMax = 0;
+		real m_ImGuiMainWindowWidth = 350;
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
 		std::string m_RendererName = "";
@@ -70,7 +103,22 @@ namespace flex
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
-		bool m_Running = false;
+		GameObject* m_CurrentlySelectedObject = nullptr;
+
+		GameObject* m_TransformGizmo = nullptr;
+		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;
+
+		glm::vec3 m_SelectedObjectDragStartPos;
+		bool m_bDraggingGizmo = false;
+		i32 m_DraggingAxisIndex = -1;
+
+		std::string m_CommonSettingsFileName;
+		std::string m_CommonSettingsAbsFilePath;
+
+		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
+		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

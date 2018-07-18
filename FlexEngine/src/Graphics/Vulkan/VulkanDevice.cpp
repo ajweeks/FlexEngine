@@ -3,8 +3,6 @@
 
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 
-#include "Logger.hpp"
-
 namespace flex
 {
 	namespace vk
@@ -32,7 +30,7 @@ namespace flex
 				std::vector<VkExtensionProperties> extensions(extensionCount);
 				if (vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, &extensions.front()) == VK_SUCCESS)
 				{
-					for (auto ext : extensions)
+					for (VkExtensionProperties& ext : extensions)
 					{
 						m_SupportedExtensions.push_back(ext.extensionName);
 					}
@@ -70,7 +68,7 @@ namespace flex
 			}
 			else
 			{
-				Logger::LogError("GetMemoryType could not find specified memory type");
+				PrintError("GetMemoryType could not find specified memory type\n");
 				return 0;
 			}
 		}

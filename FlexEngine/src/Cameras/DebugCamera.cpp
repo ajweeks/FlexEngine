@@ -8,17 +8,19 @@
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
+#include "FlexEngine.hpp"
 #include "Helpers.hpp"
-#include "Logger.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
-	DebugCamera::DebugCamera(GameContext& gameContext, real FOV, real zNear, real zFar) :
-		BaseCamera("Debug Camera", gameContext, FOV, zNear, zFar)
+	DebugCamera::DebugCamera(real FOV, real zNear, real zFar) :
+		BaseCamera("Debug Camera",FOV, zNear, zFar),
+		m_MoveVel(0.0f),
+		m_TurnVel(0.0f)
 	{
 		ResetOrientation();
-		RecalculateViewProjection(gameContext);
+		RecalculateViewProjection();
 
 		LoadDefaultKeybindings();
 	}
@@ -27,33 +29,44 @@ namespace flex
 	{
 	}
 
-	void DebugCamera::Update(const GameContext& gameContext)
+	void DebugCamera::Update()
 	{
+		glm::vec3 targetDPos(0.0f);
+
 		if (m_EnableGamepadMovement)
 		{
-			real yawO = gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X) *
-				m_GamepadRotationSpeed * gameContext.deltaTime;
-			real pitchO = -gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y) *
-				m_GamepadRotationSpeed * gameContext.deltaTime;
-			m_Yaw += yawO * gameContext.deltaTime;
-			m_Pitch += pitchO * gameContext.deltaTime;
+			bool turnFast = g_InputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::RIGHT_BUMPER);
+			bool turnSlow = g_InputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::LEFT_BUMPER);
+			real turnSpeedMultiplier = turnFast ? m_TurnSpeedFastMultiplier : turnSlow ? m_TurnSpeedSlowMultiplier : 1.0f;
+
+			real yawO = g_InputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_X) *
+				m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
+			real pitchO = -g_InputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y) *
+				m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
+
+			m_TurnVel += glm::vec2(yawO, pitchO);
+
+			m_Yaw += m_TurnVel.x;
+			m_Pitch += m_TurnVel.y;
 			ClampPitch();
 			m_Pitch = glm::clamp(m_Pitch, -glm::pi<real>(), glm::pi<real>());
 
 			CalculateAxisVectors();
 
-			real posYO = -gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_TRIGGER) *
-				m_MoveSpeed * 0.5f * gameContext.deltaTime;
-			posYO += gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_TRIGGER) *
-				m_MoveSpeed * 0.5f * gameContext.deltaTime;
-			real posXO = -gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_STICK_X) *
-				m_MoveSpeed * gameContext.deltaTime;
-			real posZO = -gameContext.inputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_STICK_Y) *
-				m_MoveSpeed * gameContext.deltaTime;
+			bool moveFast = g_InputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::RIGHT_BUMPER);
+			bool moveSlow = g_InputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::LEFT_BUMPER);
+			real moveSpeedMultiplier = moveFast ? m_MoveSpeedFastMultiplier : moveSlow ? m_MoveSpeedSlowMultiplier : 1.0f;
 
-			bool moveFast = gameContext.inputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::RIGHT_BUMPER);
-			real moveSpeedMultiplier = moveFast ? m_MoveSpeedFastMultiplier : 1.0f;
-			m_Position +=
+			real posYO = -g_InputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_TRIGGER) *
+				m_MoveSpeed * 0.5f * g_DeltaTime;
+			posYO += g_InputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_TRIGGER) *
+				m_MoveSpeed * 0.5f * g_DeltaTime;
+			real posXO = -g_InputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_STICK_X) *
+				m_MoveSpeed * g_DeltaTime;
+			real posZO = -g_InputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::LEFT_STICK_Y) *
+				m_MoveSpeed * g_DeltaTime;
+
+			targetDPos +=
 				m_Right * posXO * moveSpeedMultiplier +
 				m_Up * posYO * moveSpeedMultiplier +
 				m_Forward * posZO * moveSpeedMultiplier;
@@ -62,13 +75,27 @@ namespace flex
 		if (m_EnableKeyboardMovement)
 		{
 			glm::vec2 look(0.0f);
-			if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::LEFT))
+			if (!g_EngineInstance->IsDraggingGizmo() &&
+				g_InputManager->IsMouseButtonDown(InputManager::MouseButton::LEFT))
 			{
-				look = gameContext.inputManager->GetMouseMovement();
+				look = g_InputManager->GetMouseMovement();
 				look.y = -look.y;
 
-				m_Yaw += look.x * m_MouseRotationSpeed;
-				m_Pitch += look.y * m_MouseRotationSpeed;
+				real turnSpeedMultiplier = 1.0f;
+				if (g_InputManager->GetKeyDown(m_MoveFasterKey))
+				{
+					turnSpeedMultiplier = m_TurnSpeedFastMultiplier;
+				}
+				else if (g_InputManager->GetKeyDown(m_MoveSlowerKey))
+				{
+					turnSpeedMultiplier = m_TurnSpeedSlowMultiplier;
+				}
+
+				m_TurnVel += glm::vec2(look.x * m_MouseRotationSpeed * turnSpeedMultiplier,
+									   look.y * m_MouseRotationSpeed * turnSpeedMultiplier);
+				
+				m_Yaw += m_TurnVel.x;
+				m_Pitch += m_TurnVel.y;
 
 				ClampPitch();
 			}
@@ -76,74 +103,78 @@ namespace flex
 			CalculateAxisVectors();
 
 			glm::vec3 translation(0.0f);
-			if (!gameContext.inputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+			if (g_InputManager->GetKeyDown(m_MoveForwardKey))
 			{
-				if (gameContext.inputManager->GetKeyDown(m_MoveForwardKey))
-				{
-					translation += m_Forward;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveBackwardKey))
-				{
-					translation -= m_Forward;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveLeftKey))
-				{
-					translation += m_Right;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveRightKey))
-				{
-					translation -= m_Right;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveUpKey))
-				{
-					translation += m_Up;
-				}
-				if (gameContext.inputManager->GetKeyDown(m_MoveDownKey))
-				{
-					translation -= m_Up;
-				}
+				translation += m_Forward;
+			}
+			if (g_InputManager->GetKeyDown(m_MoveBackwardKey))
+			{
+				translation -= m_Forward;
+			}
+			if (g_InputManager->GetKeyDown(m_MoveLeftKey))
+			{
+				translation += m_Right;
+			}
+			if (g_InputManager->GetKeyDown(m_MoveRightKey))
+			{
+				translation -= m_Right;
+			}
+			if (g_InputManager->GetKeyDown(m_MoveUpKey))
+			{
+				translation += m_Up;
+			}
+			if (g_InputManager->GetKeyDown(m_MoveDownKey))
+			{
+				translation -= m_Up;
 			}
 
-			if (gameContext.inputManager->GetMouseButtonClicked(InputManager::MouseButton::MIDDLE))
+			if (g_InputManager->IsMouseButtonPressed(InputManager::MouseButton::MIDDLE))
 			{
 				m_DragStartPosition = m_Position;
 			}
-			else if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::MIDDLE))
+			else if (g_InputManager->IsMouseButtonDown(InputManager::MouseButton::MIDDLE))
 			{
-				glm::vec2 dragDist = gameContext.inputManager->GetMouseDragDistance(InputManager::MouseButton::MIDDLE);
-				glm::vec2 frameBufferSize = (glm::vec2)gameContext.window->GetFrameBufferSize();
+				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(InputManager::MouseButton::MIDDLE);
+				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
 				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
 			}
 
-			real scrollDistance = gameContext.inputManager->GetVerticalScrollDistance();
+			real scrollDistance = g_InputManager->GetVerticalScrollDistance();
 			if (scrollDistance != 0.0f)
 			{
 				translation += m_Forward * scrollDistance * m_ScrollDollySpeed;
 			}
 
-			if (gameContext.inputManager->GetMouseButtonDown(InputManager::MouseButton::RIGHT))
+			if (g_InputManager->IsMouseButtonDown(InputManager::MouseButton::RIGHT))
 			{
-				glm::vec2 zoom = gameContext.inputManager->GetMouseMovement();
+				glm::vec2 zoom = g_InputManager->GetMouseMovement();
 				translation += m_Forward * -zoom.y * m_DragDollySpeed;
 			}
 
-			real speedMultiplier = 1.0f;
-			if (gameContext.inputManager->GetKeyDown(m_MoveFasterKey))
+			real moveSpeedMultiplier = 1.0f;
+			if (g_InputManager->GetKeyDown(m_MoveFasterKey))
 			{
-				speedMultiplier = m_MoveSpeedFastMultiplier;
+				moveSpeedMultiplier = m_MoveSpeedFastMultiplier;
 			}
-			else if (gameContext.inputManager->GetKeyDown(m_MoveSlowerKey))
+			else if (g_InputManager->GetKeyDown(m_MoveSlowerKey))
 			{
-				speedMultiplier = m_MoveSpeedSlowMultiplier;
+				moveSpeedMultiplier = m_MoveSpeedSlowMultiplier;
 			}
 
-			glm::vec3 finalTranslation = translation * m_MoveSpeed * speedMultiplier * gameContext.deltaTime;
-			Translate(finalTranslation);
-			m_DragStartPosition += finalTranslation;
+
+			targetDPos += translation * m_MoveSpeed * moveSpeedMultiplier * g_DeltaTime;
 		}
 
-		RecalculateViewProjection(gameContext);
+		m_MoveVel += targetDPos;
+
+		Translate(m_MoveVel);
+		m_DragStartPosition += m_MoveVel;
+
+		m_MoveVel *= m_MoveLag;
+		m_TurnVel *= m_TurnLag;
+
+		RecalculateViewProjection();
 	}
 
 	void DebugCamera::LoadDefaultKeybindings()

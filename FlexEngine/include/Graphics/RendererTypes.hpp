@@ -10,13 +10,13 @@
 #include <glm/mat4x4.hpp>
 #pragma warning(pop)
 
-#include "GameContext.hpp"
-#include "Physics/PhysicsDebuggingSettings.hpp"
-#include "Transform.hpp"
-#include "VertexBufferData.hpp"
+#include "Functors.hpp"
+#include "JSONTypes.hpp"
 
 namespace flex
 {
+	class VertexBufferData;
+
 	enum class ClearFlag
 	{
 		COLOR =   (1 << 0),
@@ -90,6 +90,9 @@ namespace flex
 		// TODO: Add brightness multiplier here
 		glm::vec4 direction = { 0, 0, 1, 0 };
 
+		// Not used for rendering but allows users to position in the world
+		glm::vec3 position = glm::vec3(0.0f);
+
 		glm::vec4 color = glm::vec4(1.0f);
 
 		u32 enabled = 1;
@@ -105,7 +108,7 @@ namespace flex
 
 		u32 enabled = 1;
 
-		real brightness = 1.0f;
+		real brightness = 500.0f;
 		std::string name;
 	};
 
@@ -179,6 +182,9 @@ namespace flex
 	struct Material
 	{
 		bool Equals(const Material& other);
+
+		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
+		JSONObject SerializeToJSON() const;
 
 		std::string name = "";
 
@@ -281,11 +287,11 @@ namespace flex
 
 	struct Uniforms
 	{
-		std::map<std::string, bool> types;
+		std::map<const char*, bool, strCmp> types;
 
-		bool HasUniform(const std::string& name) const;
-		void AddUniform(const std::string& name);
-		void RemoveUniform(const std::string& name);
+		bool HasUniform(const char* name) const;
+		void AddUniform(const char* name);
+		void RemoveUniform(const char* name);
 		u32 CalculateSize(i32 PointLightCount);
 	};
 

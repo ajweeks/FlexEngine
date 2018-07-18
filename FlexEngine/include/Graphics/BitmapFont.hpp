@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Helpers.hpp"
+
 namespace flex
 {
 	namespace gl
@@ -9,7 +11,7 @@ namespace flex
 
 	struct FontMetric
 	{
-		glm::vec2 GetKerningOffset(wchar_t previous);
+		glm::vec2 GetKerningOffset(wchar_t leftChar, wchar_t rightChar);
 
 		bool bIsValid = false;
 		wchar_t character = 0;
@@ -20,28 +22,11 @@ namespace flex
 		i16 offsetY = 0;
 
 		real advanceX = 0;
-		std::map<wchar_t, glm::vec2> kerning;
+		std::map<std::wstring, glm::vec2> kerning;
 
 		//u8 page = 0;
 		u8 channel = 0;
 		glm::vec2 texCoord;
-	};
-
-	// Stores text render commands issued during the 
-	// frame to later be converted to "TextVertex"s
-	struct TextCache
-	{
-	public:
-		TextCache(const std::string& text, glm::vec2 position, glm::vec4 col, real scale);
-
-		std::string str;
-		glm::vec2 pos;
-		glm::vec4 color;
-		real scale;
-
-	private:
-		//TextCache& operator=(const TextCache &tmp);
-
 	};
 
 	class BitmapFont
@@ -56,7 +41,7 @@ namespace flex
 		void SetMetric(const FontMetric& metric, wchar_t character);
 
 		i16 GetFontSize() const;
-		bool GetUseKerning() const;
+		bool UseKerning() const;
 
 		void SetTextureSize(const glm::vec2i& texSize);
 
@@ -71,7 +56,7 @@ namespace flex
 		friend class flex::gl::GLRenderer;
 
 		FontMetric m_CharTable[CHAR_COUNT];
-		std::vector<TextCache> m_TextCache;
+		std::vector<TextCache> m_TextCaches;
 
 		i16 m_FontSize = 0;
 		std::string m_Name;

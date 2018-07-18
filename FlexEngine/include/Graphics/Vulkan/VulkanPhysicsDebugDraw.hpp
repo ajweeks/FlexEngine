@@ -7,7 +7,6 @@
 
 #include <vector>
 
-#include "GameContext.hpp"
 #include "Transform.hpp"
 
 namespace flex
@@ -19,7 +18,7 @@ namespace flex
 		class VulkanPhysicsDebugDraw : public btIDebugDraw
 		{
 		public:
-			VulkanPhysicsDebugDraw(const GameContext& gameContext);
+			VulkanPhysicsDebugDraw();
 			virtual ~VulkanPhysicsDebugDraw();
 
 			void Initialize();
@@ -53,7 +52,6 @@ namespace flex
 			int m_DebugMode = 0;
 
 			VulkanRenderer* m_Renderer = nullptr;
-			const GameContext& m_GameContext;
 
 			MaterialID m_MaterialID = InvalidMaterialID;
 
