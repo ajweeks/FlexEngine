@@ -20,7 +20,8 @@ sh.exe.stackdump
 
 *.orig
 
-AdditionalFiles/
+AdditionalFiles/*.cap
+AdditionalFiles/*.nsight-gfxproj
 
 *.spv
 imgui.ini
