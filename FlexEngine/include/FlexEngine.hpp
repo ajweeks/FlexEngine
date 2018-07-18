@@ -88,6 +88,8 @@ namespace flex
 
 		bool m_bRenderEditorObjects = true;
 
+		bool m_bUpdateProfilerFrame = false;
+
 		sec m_MinDT = 0.0001f;
 		sec m_MaxDT = 1.0f;
 

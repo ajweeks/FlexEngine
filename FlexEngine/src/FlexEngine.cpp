@@ -532,7 +532,7 @@ namespace flex
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
 			g_Renderer->NewFrame();
-
+			 
 			if (m_bRenderImGui)
 			{
 				PROFILE_BEGIN("DrawImGuiObjects");
@@ -830,12 +830,6 @@ namespace flex
 			bool bWriteProfilingResultsToFile = 
 				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
 
-			bool bZKeyPressed = g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z);
-			bool bLShiftPressed = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT) != 0;
-
-			bool bHideProfilerDisplayFrame = bLShiftPressed && bZKeyPressed;
-			bool bUpdateProfilerDisplayFrame = bZKeyPressed && !bLShiftPressed;
-
 			g_Renderer->Update();
 
 			// TODO: Consolidate functions?
@@ -867,17 +861,10 @@ namespace flex
 			const bool bProfileFrame = (m_FrameCount > 3);
 			if (bProfileFrame)
 			{
-				if (bUpdateProfilerDisplayFrame)
-				{
-					Profiler::s_bDisplayingFrame = true;
-				}
-				Profiler::EndFrame(bUpdateProfilerDisplayFrame);
+				Profiler::EndFrame(m_bUpdateProfilerFrame);
 			}
 
-			if (bHideProfilerDisplayFrame)
-			{
-				Profiler::s_bDisplayingFrame = false;
-			}
+			m_bUpdateProfilerFrame = false;
 
 			if (bWriteProfilingResultsToFile)
 			{
@@ -967,11 +954,29 @@ namespace flex
 								 ImGuiCond_Always);
 		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))
 		{
-			static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
-			static const char* renderNameStr = rendererNameStringStr.c_str();
-			ImGui::TextUnformatted(renderNameStr);
+			if (ImGui::TreeNode("Stats"))
+			{
+				static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
+				static const char* renderNameStr = rendererNameStringStr.c_str();
+				ImGui::TextUnformatted(renderNameStr);
 
-			ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Misc settings"))
+			{
+				ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
+
+				ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
+
+				if (ImGui::Button("Display latest frame"))
+				{
+					m_bUpdateProfilerFrame = true;
+					Profiler::s_bDisplayingFrame = true;
+				}
+
+				ImGui::TreePop();
+			}
 
 			static const char* rendererSettingsStr = "Renderer settings";
 			if (ImGui::TreeNode(rendererSettingsStr))

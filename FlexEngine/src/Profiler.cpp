@@ -51,7 +51,6 @@ namespace flex
 	{
 		if (s_bDisplayingFrame)
 		{
-
 			const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom,
 										  s_DisplayedFrameOptions.screenHeightPercent);
 			const glm::vec2 frameCenter = glm::vec2(s_DisplayedFrameOptions.xOffPercent + s_DisplayedFrameOptions.hScroll + s_DisplayedFrameOptions.hO,
