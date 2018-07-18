@@ -73,7 +73,7 @@
 			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga",
 			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO.tga",
 			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga"
-		},
+		}
 	],
 	"objects" : 
 	[
@@ -116,7 +116,7 @@
 		{
 			"name" : "Cerberus",
 			"type" : "object",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
 				"position" : "-7.560185, 15.799998, 0.891671",
