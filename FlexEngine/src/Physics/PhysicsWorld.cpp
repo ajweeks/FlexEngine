@@ -18,6 +18,7 @@
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Helpers.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

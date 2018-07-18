@@ -36,6 +36,7 @@
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
 #include "Window/Monitor.hpp"
+#include "Window/GLFWWindowWrapper.hpp"
 
 namespace flex
 {
@@ -235,18 +236,10 @@ namespace flex
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
-#if COMPILE_VULKAN
-		if (m_RendererIndex == RendererID::VULKAN)
+		if (g_Window == nullptr)
 		{
-			g_Window = new vk::VulkanWindowWrapper(titleString);
+			g_Window = new GLFWWindowWrapper(titleString);
 		}
-#endif
-#if COMPILE_OPEN_GL
-		if (m_RendererIndex == RendererID::GL)
-		{
-			g_Window = new gl::GLWindowWrapper(titleString);
-		}
-#endif
 		if (g_Window == nullptr)
 		{
 			PrintError("Failed to create a window! Are any compile flags set in stdafx.hpp?\n");

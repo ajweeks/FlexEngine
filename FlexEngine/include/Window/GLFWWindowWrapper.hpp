@@ -12,12 +12,13 @@ namespace flex
 	class GLFWWindowWrapper : public Window
 	{
 	public:
-		GLFWWindowWrapper(std::string title);
+		GLFWWindowWrapper(const std::string& title);
 		virtual ~GLFWWindowWrapper();
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Destroy() override;
+		virtual void Create(const glm::vec2i& size, const glm::vec2i& pos) override;
 
 		virtual void RetrieveMonitorInfo() override;
 
@@ -80,6 +81,9 @@ namespace flex
 	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 	void GLFWJoystickCallback(i32 JID, i32 event);
+
+	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
+							  GLsizei length, const GLchar *message, const void *userParam);
 
 	// Stores whether a controller is connected or not
 	const i32 MAX_JOYSTICK_COUNT = 4;

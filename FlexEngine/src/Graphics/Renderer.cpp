@@ -9,6 +9,7 @@
 
 #include "Scene/GameObject.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

@@ -1533,7 +1533,7 @@ namespace flex
 
 		void GLRenderer::SwapBuffers()
 		{
-			glfwSwapBuffers(static_cast<GLWindowWrapper*>(g_Window)->GetWindow());
+			glfwSwapBuffers(static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow());
 		}
 
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)

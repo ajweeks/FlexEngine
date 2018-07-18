@@ -22,6 +22,7 @@
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

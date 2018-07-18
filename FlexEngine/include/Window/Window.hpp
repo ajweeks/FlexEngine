@@ -40,10 +40,10 @@ namespace flex
 		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
-		virtual void RetrieveMonitorInfo() = 0;
-
 		// Size and pos are only used if "window-settings" config file does not exist
 		virtual void Create(const glm::vec2i& size, const glm::vec2i& pos) = 0;
+
+		virtual void RetrieveMonitorInfo() = 0;
 
 		virtual void Update();
 		virtual void PollEvents() = 0;

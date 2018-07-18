@@ -31,7 +31,6 @@
 #pragma warning(pop)
 
 	#include "Graphics/Vulkan/VulkanRenderer.hpp"
-	#include "Window/Vulkan/VulkanWindowWrapper.hpp"
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
@@ -44,7 +43,6 @@
 #pragma warning(pop)
 
 	#include "Graphics/GL/GLRenderer.hpp"
-	#include "Window/GL/GLWindowWrapper.hpp"
 
 #endif // COMPILE_OPEN_GL
 

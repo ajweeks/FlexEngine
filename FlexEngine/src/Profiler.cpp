@@ -4,6 +4,8 @@
 
 #include "Time.hpp"
 #include "Graphics/Renderer.hpp"
+#include "InputManager.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
