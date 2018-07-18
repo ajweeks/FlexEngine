@@ -3739,19 +3739,24 @@ namespace flex
 				const i32 MAX_NAME_LEN = 128;
 				static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 				static MaterialID selectedMaterialID = 0;
+				while (m_Materials[selectedMaterialID].material.engineMaterial && 
+					   selectedMaterialID < m_Materials.size() - 1)
+				{
+					++selectedMaterialID;
+				}
 				static std::string matName = "";
 				static i32 selectedShaderIndex = 0;
 				// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
 				static i32 albedoTextureIndex = 0;
-				static bool bUpdateAlbedoTextureMaterial = true;
+				static bool bUpdateAlbedoTextureMaterial = false;
 				static i32 metallicTextureIndex = 0;
-				static bool bUpdateMetallicTextureMaterial = true;
+				static bool bUpdateMetallicTextureMaterial = false;
 				static i32 roughnessTextureIndex = 0;
-				static bool bUpdateRoughessTextureMaterial = true;
+				static bool bUpdateRoughessTextureMaterial = false;
 				static i32 normalTextureIndex = 0;
-				static bool bUpdateNormalTextureMaterial = true;
+				static bool bUpdateNormalTextureMaterial = false;
 				static i32 aoTextureIndex = 0;
-				static bool bUpdateAOTextureMaterial = true;
+				static bool bUpdateAOTextureMaterial = false;
 				GLMaterial& mat = m_Materials[selectedMaterialID];
 
 				if (bUpdateFields)
@@ -3769,44 +3774,44 @@ namespace flex
 						GetLoadedTexture(texturePath, &texture);
 
 						UpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
-														texturePath,
-														mat.material.albedoTexturePath,
-														texture,
-														i,
-														&albedoTextureIndex,
-														&mat.albedoSamplerID);
+													 texturePath,
+													 mat.material.albedoTexturePath,
+													 texture,
+													 i,
+													 &albedoTextureIndex,
+													 &mat.albedoSamplerID);
 
 						UpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
-														texturePath,
-														mat.material.metallicTexturePath,
-														texture,
-														i,
-														&metallicTextureIndex,
-														&mat.metallicSamplerID);
+													 texturePath,
+													 mat.material.metallicTexturePath,
+													 texture,
+													 i,
+													 &metallicTextureIndex,
+													 &mat.metallicSamplerID);
 
 						UpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
-														texturePath,
-														mat.material.roughnessTexturePath,
-														texture,
-														i,
-														&roughnessTextureIndex,
-														&mat.roughnessSamplerID);
+													 texturePath,
+													 mat.material.roughnessTexturePath,
+													 texture,
+													 i,
+													 &roughnessTextureIndex,
+													 &mat.roughnessSamplerID);
 
 						UpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
-														texturePath,
-														mat.material.normalTexturePath,
-														texture,
-														i,
-														&normalTextureIndex,
-														&mat.normalSamplerID);
+													 texturePath,
+													 mat.material.normalTexturePath,
+													 texture,
+													 i,
+													 &normalTextureIndex,
+													 &mat.normalSamplerID);
 
 						UpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
-														texturePath,
-														mat.material.aoTexturePath,
-														texture,
-														i,
-														&aoTextureIndex,
-														&mat.aoSamplerID);
+													 texturePath,
+													 mat.material.aoTexturePath,
+													 texture,
+													 i,
+													 &aoTextureIndex,
+													 &mat.aoSamplerID);
 
 						++i;
 					}
