@@ -3825,12 +3825,14 @@ namespace flex
 					selectedShaderIndex = mat.material.shaderID;
 				}
 
+				ImGui::PushItemWidth(180.0f);
 				if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
 				{
 					// Remove trailing \0 characters
 					matName = std::string(matName.c_str());
 					mat.material.name = matName;
 				}
+				ImGui::PopItemWidth();
 
 				ImGui::SameLine();
 
@@ -3842,6 +3844,7 @@ namespace flex
 						return true;
 					}
 				};
+				ImGui::PushItemWidth(240.0f);
 				if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
 					(void*)m_Shaders.data(), m_Shaders.size()))
 				{
@@ -3850,6 +3853,7 @@ namespace flex
 
 					bUpdateFields = true;
 				}
+				ImGui::PopItemWidth();
 
 				ImGui::NewLine();
 
@@ -3989,15 +3993,15 @@ namespace flex
 					newMaterialName.resize(MAX_MAT_NAME_LEN);
 				}
 
-				if (ImGui::BeginPopupModal(createMaterialPopupStr))
+				if (ImGui::BeginPopupModal(createMaterialPopupStr, NULL, ImGuiWindowFlags_NoResize))
 				{
-					ImGui::PushItemWidth(0.5f);
-					ImGui::InputText("Name", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
+					ImGui::Text("Name:");
+					ImGui::InputText("##NameText", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
 
+					ImGui::Text("Shader:");
 					static i32 newMatShaderIndex = 0;
 					if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
 					{
-						ImGui::PopItemWidth();
 						i32 i = 0;
 						for (GLShader& shader : m_Shaders)
 						{
@@ -4009,10 +4013,6 @@ namespace flex
 
 							++i;
 						}
-					}
-					else
-					{
-						ImGui::PopItemWidth();
 					}
 					ImGui::EndChild(); // Shader list
 
@@ -5645,6 +5645,25 @@ namespace flex
 			}
 
 			bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
+
+				if (payload && payload->Data)
+				{
+					MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
+					if (draggedMaterialID)
+					{
+						if (gameObject->GetMeshComponent())
+						{
+							gameObject->GetMeshComponent()->SetMaterialID(*draggedMaterialID);
+						}
+					}
+				}
+
+				ImGui::EndDragDropTarget();
+			}
 
 			DoGameObjectContextMenu(&gameObject);
 
