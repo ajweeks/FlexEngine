@@ -119,10 +119,6 @@ namespace flex
 		friend void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN
 
-#if COMPILE_D3D
-		friend LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-#endif // COMPILE_D3D
-
 		//void UpdateWindowSize(i32 width, i32 height);
 		//void UpdateWindowSize(glm::vec2i windowSize);
 		//void UpdateWindowFocused(i32 focused);
