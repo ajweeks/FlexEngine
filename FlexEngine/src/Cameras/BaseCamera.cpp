@@ -29,6 +29,7 @@ namespace flex
 		m_MoveSpeedSlowMultiplier(0.05f),
 		m_TurnSpeedFastMultiplier(2.0f),
 		m_TurnSpeedSlowMultiplier(0.1f),
+		m_OrbitingSpeed(0.1f),
 		m_GamepadRotationSpeed(2.0f),
 		m_MouseRotationSpeed(0.0015f)
 	{

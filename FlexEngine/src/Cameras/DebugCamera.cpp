@@ -10,6 +10,8 @@
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
+#include "Scene/GameObject.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -32,6 +34,9 @@ namespace flex
 	void DebugCamera::Update()
 	{
 		glm::vec3 targetDPos(0.0f);
+
+		bool bOrbiting = false;
+		glm::vec3 orbitingCenter(0.0f);
 
 		if (m_EnableGamepadMovement)
 		{
@@ -74,12 +79,13 @@ namespace flex
 
 		if (m_EnableKeyboardMovement)
 		{
+			bool bAltDown = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_ALT) > 0;
+
 			glm::vec2 look(0.0f);
 			if (!g_EngineInstance->IsDraggingGizmo() &&
 				g_InputManager->IsMouseButtonDown(InputManager::MouseButton::LEFT))
 			{
 				look = g_InputManager->GetMouseMovement();
-				look.y = -look.y;
 
 				real turnSpeedMultiplier = 1.0f;
 				if (g_InputManager->GetKeyDown(m_MoveFasterKey))
@@ -91,13 +97,32 @@ namespace flex
 					turnSpeedMultiplier = m_TurnSpeedSlowMultiplier;
 				}
 
-				m_TurnVel += glm::vec2(look.x * m_MouseRotationSpeed * turnSpeedMultiplier,
-									   look.y * m_MouseRotationSpeed * turnSpeedMultiplier);
-				
-				m_Yaw += m_TurnVel.x;
-				m_Pitch += m_TurnVel.y;
+				GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
+				if (bAltDown && selectedObject)
+				{
+					bOrbiting = true;
+					if (selectedObject->GetMeshComponent())
+					{
+						orbitingCenter = selectedObject->GetMeshComponent()->GetBoundingSphereCenterPointWS();
+					}
+					else
+					{
+						orbitingCenter = selectedObject->GetTransform()->GetWorldPosition();
+					}
+					targetDPos += m_Right * look.x * m_OrbitingSpeed * turnSpeedMultiplier +
+								  m_Up * look.y * m_OrbitingSpeed * turnSpeedMultiplier;
+				}
+				else
+				{
+					look.y = -look.y;
 
-				ClampPitch();
+					m_TurnVel += glm::vec2(look.x * m_MouseRotationSpeed * turnSpeedMultiplier,
+										   look.y * m_MouseRotationSpeed * turnSpeedMultiplier);
+				
+					m_Yaw += m_TurnVel.x;
+					m_Pitch += m_TurnVel.y;
+					ClampPitch();
+				}
 			}
 
 			CalculateAxisVectorsFromPitchAndYaw();
@@ -166,10 +191,21 @@ namespace flex
 			targetDPos += translation * m_MoveSpeed * moveSpeedMultiplier * g_DeltaTime;
 		}
 
+		real distFromCenter = glm::length(m_Position - orbitingCenter);
+
 		m_MoveVel += targetDPos;
 
-		Translate(m_MoveVel);
+		// TODO: * deltaTime?
+		m_Position += m_MoveVel;
 		m_DragStartPosition += m_MoveVel;
+
+		if (bOrbiting)
+		{
+			glm::vec3 orientationFromCenter = glm::normalize(m_Position - orbitingCenter);
+			m_Position = orbitingCenter + orientationFromCenter * distFromCenter;
+
+			LookAt(orbitingCenter);
+		}
 
 		m_MoveVel *= m_MoveLag;
 		m_TurnVel *= m_TurnLag;

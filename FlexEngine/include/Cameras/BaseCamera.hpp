@@ -85,6 +85,7 @@ namespace flex
 		real m_MoveSpeedSlowMultiplier = 0;
 		real m_TurnSpeedFastMultiplier = 0;
 		real m_TurnSpeedSlowMultiplier = 0;
+		real m_OrbitingSpeed = 0;			// Alt-LMB drag
 		real m_MouseRotationSpeed = 0;		// LMB drag
 		real m_GamepadRotationSpeed = 0;	// Gamepad right stick
 
