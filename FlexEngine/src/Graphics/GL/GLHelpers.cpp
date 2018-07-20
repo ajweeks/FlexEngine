@@ -333,12 +333,12 @@ namespace flex
 		{
 		}
 
-		GLTexture::GLTexture(const std::string& filePath,
+		GLTexture::GLTexture(const std::string& relativeFilePath,
 							 i32 channelCount,
 							 bool bFlipVertically,
 							 bool bGenerateMipMaps,
 							 bool bHDR) :
-			filePath(filePath),
+			relativeFilePath(relativeFilePath),
 			channelCount(channelCount),
 			bFlipVerticallyOnLoad(bFlipVertically),
 			bHasMipMaps(bGenerateMipMaps),
@@ -346,7 +346,7 @@ namespace flex
 		{
 			if (name.empty())
 			{
-				name = filePath;
+				name = relativeFilePath;
 				StripLeadingDirectories(name);
 			}
 		}
@@ -383,11 +383,11 @@ namespace flex
 			bool bSucceeded = false;
 			if (bHDR)
 			{
-				bSucceeded = GenerateHDRGLTexture(handle, filePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
+				bSucceeded = GenerateHDRGLTexture(handle, relativeFilePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
 			}
 			else
 			{
-				bSucceeded = GenerateGLTexture(handle, filePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
+				bSucceeded = GenerateGLTexture(handle, relativeFilePath, channelCount, bFlipVerticallyOnLoad, bHasMipMaps, &infoOut);
 			}
 
 			if (bSucceeded)
@@ -401,7 +401,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to load GL texture at filepath: %s\n", filePath.c_str());
+				PrintError("Failed to load GL texture at filepath: %s\n", relativeFilePath.c_str());
 			}
 
 			return bSucceeded;
@@ -411,7 +411,7 @@ namespace flex
 		{
 			Destroy();
 
-			if (!filePath.empty())
+			if (!relativeFilePath.empty())
 			{
 				LoadFromFile();
 			}
@@ -503,9 +503,9 @@ namespace flex
 			}
 		}
 
-		std::string GLTexture::GetFilePath() const
+		std::string GLTexture::GetRelativeFilePath() const
 		{
-			return filePath;
+			return relativeFilePath;
 		}
 
 		std::string GLTexture::GetName() const

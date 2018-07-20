@@ -160,27 +160,27 @@ namespace flex
 			m_AlphaBGTexture = new GLTexture(RESOURCE_LOCATION + "textures/alpha-bg.png", 3, false, false, false);
 			if (m_AlphaBGTexture->LoadFromFile())
 			{
-				m_LoadedTextures.insert({ m_AlphaBGTexture->GetFilePath(), m_AlphaBGTexture });
+				m_LoadedTextures.insert({ m_AlphaBGTexture->GetRelativeFilePath(), m_AlphaBGTexture });
 			}
 			m_LoadingTexture = new GLTexture(RESOURCE_LOCATION + "textures/loading_1.png", 3, false, false, false);
 			if (m_LoadingTexture->LoadFromFile())
 			{
-				m_LoadedTextures.insert({ m_LoadingTexture->GetFilePath(), m_LoadingTexture });
+				m_LoadedTextures.insert({ m_LoadingTexture->GetRelativeFilePath(), m_LoadingTexture });
 			}
 			m_WorkTexture = new GLTexture(RESOURCE_LOCATION + "textures/work_d.jpg", 3, false, true, false);
 			if (m_WorkTexture->LoadFromFile())
 			{
-				m_LoadedTextures.insert({ m_WorkTexture->GetFilePath(), m_WorkTexture });
+				m_LoadedTextures.insert({ m_WorkTexture->GetRelativeFilePath(), m_WorkTexture });
 			}
 			m_PointLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			if (m_PointLightIcon->LoadFromFile())
 			{
-				m_LoadedTextures.insert({ m_PointLightIcon->GetFilePath(), m_PointLightIcon });
+				m_LoadedTextures.insert({ m_PointLightIcon->GetRelativeFilePath(), m_PointLightIcon });
 			}
 			m_DirectionalLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 			if (m_DirectionalLightIcon->LoadFromFile())
 			{
-				m_LoadedTextures.insert({ m_DirectionalLightIcon->GetFilePath(), m_DirectionalLightIcon });
+				m_LoadedTextures.insert({ m_DirectionalLightIcon->GetRelativeFilePath(), m_DirectionalLightIcon });
 			}
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
@@ -3759,7 +3759,10 @@ namespace flex
 			return bDuplicated;
 		}
 
-		bool GLRenderer::DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex)
+		bool GLRenderer::DoTextureSelector(const char* label,
+										   const std::vector<GLTexture*>& textures,
+										   i32* selectedIndex, 
+										   bool* bGenerateSampler)
 		{
 			bool bValueChanged = false;
 
@@ -3774,6 +3777,8 @@ namespace flex
 					{
 						if (ImGui::Selectable("NONE", bTextureSelected))
 						{
+							*bGenerateSampler = false;
+
 							*selectedIndex = i;
 							bValueChanged = true;
 						}
@@ -3783,6 +3788,11 @@ namespace flex
 						std::string textureName = textures[i - 1]->GetName();
 						if (ImGui::Selectable(textureName.c_str(), bTextureSelected))
 						{
+							if (*selectedIndex == 0)
+							{
+								*bGenerateSampler = true;
+							}
+
 							*selectedIndex = i;
 							bValueChanged = true;
 						}
@@ -5061,7 +5071,7 @@ namespace flex
 						i32 i = 0;
 						for (const auto& texturePair : m_LoadedTextures)
 						{
-							std::string texturePath = texturePair.second->GetFilePath();
+							std::string texturePath = texturePair.second->GetRelativeFilePath();
 							GLTexture* texture = nullptr;
 							GetLoadedTexture(texturePath, &texture);
 
@@ -5217,15 +5227,20 @@ namespace flex
 						textures.push_back(texturePair.second);
 					}
 
-					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures, &albedoTextureIndex);
+					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
+						&albedoTextureIndex, &mat.material.generateAlbedoSampler);
 					bUpdateFields |= bUpdateAlbedoTextureMaterial;
-					bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures, &metallicTextureIndex);
+					bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures,
+						&metallicTextureIndex, &mat.material.generateMetallicSampler);
 					bUpdateFields |= bUpdateMetallicTextureMaterial;
-					bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures, &roughnessTextureIndex);
+					bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures,
+						&roughnessTextureIndex, &mat.material.generateRoughnessSampler);
 					bUpdateFields |= bUpdateRoughessTextureMaterial;
-					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures, &normalTextureIndex);
+					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
+						&normalTextureIndex, &mat.material.generateNormalSampler);
 					bUpdateFields |= bUpdateNormalTextureMaterial;
-					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex);
+					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex,
+						&mat.material.generateAOSampler);
 					bUpdateFields |= bUpdateAOTextureMaterial;
 
 					ImGui::NewLine();
@@ -5388,16 +5403,22 @@ namespace flex
 
 					if (ImGui::Button("Import Texture"))
 					{
-						std::string absoluteDirectoryStr = RelativePathToAbsolute(RESOURCE_LOCATION + "textures/");
+						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
+						std::string relativeDirPath = RESOURCE_LOCATION + "textures/";
+						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
 						{
-							Print("Importing texture: %s\n", selectedAbsFilePath.c_str());
+							std::string fileNameAndExtension = selectedAbsFilePath;
+							StripLeadingDirectories(fileNameAndExtension);
+							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
-							GLTexture* newTexture = new GLTexture(selectedAbsFilePath, 4, false, false, false);
+							Print("Importing texture: %s\n", relativeFilePath.c_str());
+
+							GLTexture* newTexture = new GLTexture(relativeFilePath, 3, false, false, false);
 							if (newTexture->LoadFromFile())
 							{
-								m_LoadedTextures.insert({ newTexture->GetFilePath(), newTexture });
+								m_LoadedTextures.insert({ newTexture->GetRelativeFilePath(), newTexture });
 							}
 
 							ImGui::CloseCurrentPopup();
@@ -5439,6 +5460,7 @@ namespace flex
 
 					if (ImGui::Button("Import Mesh"))
 					{
+						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
 						std::string relativeDirPath = RESOURCE_LOCATION + "models/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
@@ -5720,7 +5742,7 @@ namespace flex
 							StripLeadingDirectories(meshFileName);
 							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 							{
-								std::string relativeFilePath = RESOURCE_LOCATION + "modes/" + (*iter).first;
+								std::string relativeFilePath = (*iter).first;
 								selectedMeshIndex = i + 1;
 								MaterialID matID = mesh->GetMaterialID();
 								DestroyRenderObject(gameObject->GetRenderID());

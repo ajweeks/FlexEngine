@@ -422,7 +422,7 @@ namespace flex
 	}
 
 	bool MeshComponent::LoadFromFile(
-		const std::string& filePath,
+		const std::string& relativeFilePath,
 		ImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
@@ -434,8 +434,8 @@ namespace flex
 
 		m_Type = Type::FILE;
 		m_Shape = PrefabShape::NONE;
-		m_FilePath = filePath;
-		m_FileName = m_FilePath;
+		m_RelativeFilePath = relativeFilePath;
+		m_FileName = m_RelativeFilePath;
 		StripLeadingDirectories(m_FileName);
 		if (importSettings)
 		{
@@ -446,12 +446,12 @@ namespace flex
 		m_BoundingSphereCenterPoint = glm::vec3(0.0f);
 		m_VertexBufferData.Destroy();
 
-		std::string meshFileName = filePath;
+		std::string meshFileName = relativeFilePath;
 		StripLeadingDirectories(meshFileName);
 
 		const aiScene* scene = nullptr;
 		LoadedMesh* loadedMesh = nullptr;
-		if (GetLoadedMesh(filePath, &loadedMesh))
+		if (GetLoadedMesh(relativeFilePath, &loadedMesh))
 		{
 			Print("Reusing loaded mesh from %s\n", meshFileName.c_str());
 			scene = loadedMesh->scene;
@@ -467,7 +467,7 @@ namespace flex
 			// Mesh hasn't been loaded before, load it now
 			Print("Loading mesh %s\n", meshFileName.c_str());
 
-			LoadedMesh* newLoadedMesh = LoadMesh(filePath, importSettings);
+			LoadedMesh* newLoadedMesh = LoadMesh(relativeFilePath, importSettings);
 
 			if (newLoadedMesh)
 			{
@@ -483,7 +483,7 @@ namespace flex
 
 		if (!scene)
 		{
-			PrintError("Failed to load mesh %s\n", filePath.c_str());
+			PrintError("Failed to load mesh %s\n", relativeFilePath.c_str());
 			return false;
 		}
 
@@ -1300,7 +1300,7 @@ namespace flex
 
 	std::string MeshComponent::GetFilePath() const
 	{
-		return m_FilePath;
+		return m_RelativeFilePath;
 	}
 
 	std::string MeshComponent::GetFileName() const

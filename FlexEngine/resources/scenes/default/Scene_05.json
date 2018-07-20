@@ -1,0 +1,118 @@
+{
+	"version" : 1,
+	"name" : "Scene_05",
+	"materials" : 
+	[
+		{
+			"name" : "Skybox",
+			"shader" : "skybox",
+			"const albedo" : "0.000000, 0.000000, 0.000000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000,
+			"generate hdr cubemap sampler" : true,
+			"enable cubemap sampler" : true,
+			"enable cubemap trilinear filtering" : true,
+			"generated cubemap size" : "512.000000, 512.000000",
+			"generate irradiance sampler" : true,
+			"generated irradiance cubemap size" : "32.000000, 32.000000",
+			"generate prefiltered map" : true,
+			"generated prefiltered map size" : "128.000000, 128.000000",
+			"environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
+		},
+		{
+			"name" : "Reflection Probe",
+			"shader" : "pbr",
+			"const albedo" : "0.800000, 0.800000, 0.800000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "New Mat",
+			"shader" : "pbr",
+			"const albedo" : "0.650000, 0.000000, 0.000000",
+			"const metallic" : 0.220000,
+			"const roughness" : 0.190000,
+			"const ao" : 0.360000,
+			"enable albedo sampler" : true,
+			"enable metallic sampler" : true,
+			"enable roughness sampler" : true,
+			"generate albedo sampler" : true,
+			"generate metallic sampler" : true,
+			"generate roughness sampler" : true,
+			"albedo texture filepath" : "textures/2k_earth_daymap.jpg",
+			"metallic texture filepath" : "textures/2k_earth_clouds.jpg",
+			"roughness texture filepath" : "textures/2k_earth_nightmap.jpg"
+		}
+	],
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 0,
+			"skybox info" : 
+			{
+				"rotation" : "0.000000, -0.000000, 0.000000"
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material array index" : 1
+		},
+		{
+			"name" : "New_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"mesh" : 
+			{
+				"file" : "models/capsule.FBX",
+				"swapNormalYZ" : false,
+				"flipNormalZ" : false,
+				"flipU" : false,
+				"flipV" : false
+			},
+			"material array index" : 2
+		}
+	],
+	"point lights" : 
+	[
+		{
+			"name" : "",
+			"position" : "0.000000, 13.400000, 0.000000",
+			"color" : "1.000000, 1.000000, 1.000000",
+			"enabled" : true,
+			"brightness" : 500.000000
+		}
+	],
+	"directional light" : 
+	{
+		"direction" : "0.000000, 0.000000, 1.000000",
+		"position" : "0.000000, 0.000000, 0.000000",
+		"color" : "1.000000, 1.000000, 1.000000",
+		"enabled" : true,
+		"brightness" : 1.000000
+	}
+}

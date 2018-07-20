@@ -223,7 +223,7 @@ namespace flex
 			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
 			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName);
-			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex);
+			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
 			void UpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 											  const std::string& texturePath,
 											  std::string& matTexturePath,
