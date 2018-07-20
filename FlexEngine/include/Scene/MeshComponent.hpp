@@ -121,9 +121,11 @@ namespace flex
 		};
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
-	private:
 		static bool GetLoadedMesh(const std::string& filePath, LoadedMesh** loadedMesh);
 
+		static LoadedMesh* LoadMesh(const std::string& filePath, ImportSettings* importSettings = nullptr);
+
+	private:
 		real CalculateBoundingSphereScale() const;
 
 		bool LoadFromAiScene(const aiScene* scene,

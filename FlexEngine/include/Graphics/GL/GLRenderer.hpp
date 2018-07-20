@@ -98,6 +98,8 @@ namespace flex
 			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
 			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
+			virtual void DrawAssetBrowserImGui() override;
+
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
@@ -221,7 +223,6 @@ namespace flex
 			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
 			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName);
-			void DoMaterialEditor(bool* bShowMaterialEditor);
 			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex);
 			void UpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 											  const std::string& texturePath,
@@ -340,6 +341,8 @@ namespace flex
 			// Must be 12 chars or less
 			const char* m_RenderObjectPayloadCStr = "renderobject";
 			const char* m_MaterialPayloadCStr = "material";
+
+			bool m_bShowingAssetBrowser = false;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

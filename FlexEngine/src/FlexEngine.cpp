@@ -471,9 +471,9 @@ namespace flex
 
 	void FlexEngine::UpdateAndRender()
 	{
-		m_Running = true;
+		m_bRunning = true;
 		sec frameStartTime = Time::CurrentSeconds();
-		while (m_Running)
+		while (m_bRunning)
 		{
 			sec frameEndTime = Time::CurrentSeconds();
 			sec dt = frameEndTime - frameStartTime;
@@ -1457,11 +1457,13 @@ namespace flex
 		}
 
 		ImGui::End();
+
+		g_Renderer->DrawAssetBrowserImGui();
 	}
 
 	void FlexEngine::Stop()
 	{
-		m_Running = false;
+		m_bRunning = false;
 	}
 
 	GameObject* FlexEngine::GetSelectedObject()

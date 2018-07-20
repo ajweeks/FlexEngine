@@ -152,6 +152,30 @@ namespace flex
 		}
 	}
 
+	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& filePath, ImportSettings* importSettings /* = nullptr */)
+	{
+		// Mesh hasn't been loaded before, load it now
+		std::string fileName = filePath;
+		StripLeadingDirectories(fileName);
+		Print("Loading mesh %s\n", fileName.c_str());
+
+		LoadedMesh* newLoadedMesh = new LoadedMesh();
+		m_LoadedMeshes.emplace(fileName, newLoadedMesh);
+
+		if (importSettings)
+		{
+			newLoadedMesh->importSettings = *importSettings;
+		}
+
+		newLoadedMesh->scene = newLoadedMesh->importer.ReadFile(filePath,
+																aiProcess_FindInvalidData |
+																aiProcess_GenNormals |
+																aiProcess_CalcTangentSpace
+		);
+
+		return newLoadedMesh;
+	}
+
 	real MeshComponent::CalculateBoundingSphereScale() const
 	{
 		Transform* transform = m_OwningGameObject->GetTransform();
@@ -438,27 +462,17 @@ namespace flex
 			// Mesh hasn't been loaded before, load it now
 			Print("Loading mesh %s\n", meshFileName.c_str());
 
-			LoadedMesh* newLoadedMesh = new LoadedMesh();
-			m_LoadedMeshes.emplace(filePath, newLoadedMesh);
+			LoadedMesh* newLoadedMesh = LoadMesh(meshFileName, importSettings);
 
-			if (importSettings)
+			if (newLoadedMesh)
 			{
-				newLoadedMesh->importSettings = *importSettings;
-			}
+				scene = newLoadedMesh->scene;
 
-			newLoadedMesh->scene = newLoadedMesh->importer.ReadFile(filePath,
-				aiProcess_FindInvalidData |
-				aiProcess_GenNormals |
-				aiProcess_CalcTangentSpace
-			);
-
-			scene = newLoadedMesh->scene;
-
-
-			if (!scene)
-			{
-				PrintError("%s\n", newLoadedMesh->importer.GetErrorString());
-				return false;
+				if (!scene)
+				{
+					PrintError("%s\n", newLoadedMesh->importer.GetErrorString());
+					return false;
+				}
 			}
 		}
 

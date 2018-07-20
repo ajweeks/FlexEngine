@@ -81,13 +81,12 @@ namespace flex
 		void DoSceneContextMenu(BaseScene* scene);
 
 		u32 m_RendererCount = 0;
-		bool m_Running = false;
+		bool m_bRunning = false;
 
 		bool m_bRenderImGui = true;
 		u32 m_FrameCount = 0;
 
 		bool m_bRenderEditorObjects = true;
-
 		bool m_bUpdateProfilerFrame = false;
 
 		sec m_MinDT = 0.0001f;

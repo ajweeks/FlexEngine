@@ -9,6 +9,10 @@
 #pragma warning(push, 0)
 #include <glm/gtx/matrix_decompose.hpp>
 
+// Fucking windows headers man...
+#include "Shobjidl.h"
+#include "commctrl.h"
+
 #include "AL/al.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -296,12 +300,51 @@ namespace flex
 			    dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
 	}
 
-	void OpenExplorer(const std::string& absoluteFilePath)
+	void OpenExplorer(const std::string& absoluteDirectory)
 	{
-		ShellExecute(NULL, "open", absoluteFilePath.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
 
 		// OR
 		// system("explorer C:\\");
+	}
+
+	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath)
+	{
+		char filter[] = "JSON files\0*.json\0\0";
+		return OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
+	}
+
+	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
+	{
+		//TaskDialog(NULL, NULL, L"Open somethin", L"D:\\", NULL, TDCBF_OK_BUTTON, TD_INFORMATION_ICON, NULL);
+		//return false;
+
+		OPENFILENAME ofna = {};
+		ofna.lStructSize = sizeof(OPENFILENAME);
+		ofna.lpstrInitialDir = absoluteDirectory.c_str();
+		ofna.nMaxFile = ARRAY_SIZE(filter);
+		if (ofna.nMaxFile && filter)
+		{
+			ofna.lpstrFilter = filter;
+		}
+		ofna.nFilterIndex = 0;
+		const i32 MAX_FILE_PATH_LEN = 512;
+		char fileBuf[MAX_FILE_PATH_LEN];
+		memset(fileBuf, '\0', MAX_FILE_PATH_LEN);
+		ofna.lpstrFile = fileBuf;
+		ofna.nMaxFile = MAX_FILE_PATH_LEN;
+		ofna.lpstrTitle = windowTitle.c_str();
+		ofna.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+		bool bSuccess = GetOpenFileName(&ofna) == 1;
+
+		if (ofna.lpstrFile)
+		{
+			//ofna.nFileOffset;
+			//ofna.nFileExtension;
+			outSelectedAbsFilePath = ofna.lpstrFile;
+		}
+		
+		return bSuccess;
 	}
 
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)

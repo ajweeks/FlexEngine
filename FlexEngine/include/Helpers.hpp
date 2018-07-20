@@ -127,7 +127,9 @@ namespace flex
 
 	bool DirectoryExists(const std::string& absoluteDirectoryPath);
 
-	void OpenExplorer(const std::string& absoluteFilePath);
+	void OpenExplorer(const std::string& absoluteDirectory);
+	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
+	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
 
 	// Returns true if any files were found
 	// Set fileType to "*" to retrieve all files

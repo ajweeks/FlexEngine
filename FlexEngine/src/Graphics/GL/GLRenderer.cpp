@@ -2208,7 +2208,9 @@ namespace flex
 
 		void GLRenderer::DrawScreenSpaceSprites()
 		{
+			PROFILE_BEGIN("Render > DrawScreenSpaceSprites > Display profiler frame");
 			Profiler::DrawDisplayedFrame();
+			PROFILE_END("Render > DrawScreenSpaceSprites > Display profiler frame");
 
 			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
@@ -3757,335 +3759,6 @@ namespace flex
 			return bDuplicated;
 		}
 
-		void GLRenderer::DoMaterialEditor(bool* bShowMaterialEditor)
-		{
-			if (ImGui::Begin("Material Editor##popup", bShowMaterialEditor))
-			{
-				static bool bUpdateFields = true;
-				const i32 MAX_NAME_LEN = 128;
-				static i32 selectedMaterialIndexShort = 0; // Index into shortened array
-				static MaterialID selectedMaterialID = 0;
-				while (m_Materials[selectedMaterialID].material.engineMaterial && 
-					   selectedMaterialID < m_Materials.size() - 1)
-				{
-					++selectedMaterialID;
-				}
-				static std::string matName = "";
-				static i32 selectedShaderIndex = 0;
-				// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
-				static i32 albedoTextureIndex = 0;
-				static bool bUpdateAlbedoTextureMaterial = false;
-				static i32 metallicTextureIndex = 0;
-				static bool bUpdateMetallicTextureMaterial = false;
-				static i32 roughnessTextureIndex = 0;
-				static bool bUpdateRoughessTextureMaterial = false;
-				static i32 normalTextureIndex = 0;
-				static bool bUpdateNormalTextureMaterial = false;
-				static i32 aoTextureIndex = 0;
-				static bool bUpdateAOTextureMaterial = false;
-				GLMaterial& mat = m_Materials[selectedMaterialID];
-
-				if (bUpdateFields)
-				{
-					bUpdateFields = false;
-
-					matName = mat.material.name;
-					matName.resize(MAX_NAME_LEN);
-
-					i32 i = 0;
-					for (const auto& texturePair : m_LoadedTextures)
-					{
-						std::string texturePath = texturePair.second->GetFilePath();
-						GLTexture* texture = nullptr;
-						GetLoadedTexture(texturePath, &texture);
-
-						UpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
-													 texturePath,
-													 mat.material.albedoTexturePath,
-													 texture,
-													 i,
-													 &albedoTextureIndex,
-													 &mat.albedoSamplerID);
-
-						UpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
-													 texturePath,
-													 mat.material.metallicTexturePath,
-													 texture,
-													 i,
-													 &metallicTextureIndex,
-													 &mat.metallicSamplerID);
-
-						UpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
-													 texturePath,
-													 mat.material.roughnessTexturePath,
-													 texture,
-													 i,
-													 &roughnessTextureIndex,
-													 &mat.roughnessSamplerID);
-
-						UpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
-													 texturePath,
-													 mat.material.normalTexturePath,
-													 texture,
-													 i,
-													 &normalTextureIndex,
-													 &mat.normalSamplerID);
-
-						UpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
-													 texturePath,
-													 mat.material.aoTexturePath,
-													 texture,
-													 i,
-													 &aoTextureIndex,
-													 &mat.aoSamplerID);
-
-						++i;
-					}
-
-					mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
-					mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
-					mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
-					mat.material.enableNormalSampler = (normalTextureIndex > 0);
-					mat.material.enableAOSampler = (aoTextureIndex > 0);
-
-					selectedShaderIndex = mat.material.shaderID;
-				}
-
-				ImGui::PushItemWidth(180.0f);
-				if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
-				{
-					// Remove trailing \0 characters
-					matName = std::string(matName.c_str());
-					mat.material.name = matName;
-				}
-				ImGui::PopItemWidth();
-
-				ImGui::SameLine();
-
-				struct ShaderFunctor
-				{
-					static bool GetShaderName(void* data, int idx, const char** out_str)
-					{
-						*out_str = ((GLShader*)data)[idx].shader.name.c_str();
-						return true;
-					}
-				};
-				ImGui::PushItemWidth(240.0f);
-				if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
-					(void*)m_Shaders.data(), m_Shaders.size()))
-				{
-					mat = m_Materials[selectedMaterialID];
-					mat.material.shaderID = selectedShaderIndex;
-
-					bUpdateFields = true;
-				}
-				ImGui::PopItemWidth();
-
-				ImGui::NewLine();
-
-				ImGui::Columns(2);
-				ImGui::SetColumnWidth(0, 220.0f);
-
-				if (mat.material.enableAlbedoSampler)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-				}
-				ImGui::SliderFloat3("Albedo", &mat.material.constAlbedo.x, 0.0f, 1.0f, "%.2f");
-				if (mat.material.enableAlbedoSampler)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				if (mat.material.enableMetallicSampler)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-				}
-				ImGui::SliderFloat("Metallic", &mat.material.constMetallic, 0.0f, 1.0f, "%.2f");
-				if (mat.material.enableMetallicSampler)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				if (mat.material.enableRoughnessSampler)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-				}
-				ImGui::SliderFloat("Roughness", &mat.material.constRoughness, 0.0f, 1.0f, "%.2f");
-				if (mat.material.enableRoughnessSampler)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				if (mat.material.enableAOSampler)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-				}
-				ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
-				if (mat.material.enableAOSampler)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				ImGui::NextColumn();
-
-				struct TextureFunctor
-				{
-					static bool GetTextureFileName(void* data, i32 idx, const char** out_str)
-					{
-						if (idx == 0)
-						{
-							*out_str = "NONE";
-						}
-						else
-						{
-							*out_str = ((GLTexture**)data)[idx - 1]->GetName().c_str();
-						}
-						return true;
-					}
-				};
-
-				std::vector<GLTexture*> textures;
-				textures.reserve(m_LoadedTextures.size());
-				for (const auto& texturePair : m_LoadedTextures)
-				{
-					textures.push_back(texturePair.second);
-				}
-
-				bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures, &albedoTextureIndex);
-				bUpdateFields |= bUpdateAlbedoTextureMaterial;
-				bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures, &metallicTextureIndex);
-				bUpdateFields |= bUpdateMetallicTextureMaterial;
-				bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures, &roughnessTextureIndex);
-				bUpdateFields |= bUpdateRoughessTextureMaterial;
-				bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures, &normalTextureIndex);
-				bUpdateFields |= bUpdateNormalTextureMaterial;
-				bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex);
-				bUpdateFields |= bUpdateAOTextureMaterial;
-
-				ImGui::NewLine();
-
-				ImGui::Text("Materials");
-
-				if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
-				{
-					i32 matShortIndex = 0;
-					for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
-					{
-						if (m_Materials[i].material.engineMaterial)
-						{
-							continue;
-						}
-
-						bool bSelected = (matShortIndex == selectedMaterialIndexShort);
-						if (ImGui::Selectable(m_Materials[i].material.name.c_str(), &bSelected))
-						{
-							if (selectedMaterialIndexShort != matShortIndex)
-							{
-								selectedMaterialIndexShort = matShortIndex;
-								selectedMaterialID = i;
-								bUpdateFields = true;
-							}
-						}
-
-						if (ImGui::IsItemActive())
-						{
-							if (ImGui::BeginDragDropSource())
-							{
-								MaterialID draggedMaterialID = i;
-								const void* data = (void*)(&draggedMaterialID);
-								size_t size = sizeof(MaterialID);
-
-								ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
-
-								ImGui::Text(m_Materials[i].material.name.c_str());
-
-								ImGui::EndDragDropSource();
-							}
-						}
-
-						++matShortIndex;
-					}
-				}
-				ImGui::EndChild(); // Material list
-
-				const i32 MAX_MAT_NAME_LEN = 128;
-				static std::string newMaterialName = "";
-
-				const char* createMaterialPopupStr = "Create material##popup";
-				if (ImGui::Button("Create material"))
-				{
-					ImGui::OpenPopup(createMaterialPopupStr);
-					newMaterialName = "New Material 01";
-					newMaterialName.resize(MAX_MAT_NAME_LEN);
-				}
-
-				if (ImGui::BeginPopupModal(createMaterialPopupStr, NULL, ImGuiWindowFlags_NoResize))
-				{
-					ImGui::Text("Name:");
-					ImGui::InputText("##NameText", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
-
-					ImGui::Text("Shader:");
-					static i32 newMatShaderIndex = 0;
-					if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
-					{
-						i32 i = 0;
-						for (GLShader& shader : m_Shaders)
-						{
-							bool bSelectedShader = (i == newMatShaderIndex);
-							if (ImGui::Selectable(shader.shader.name.c_str(), &bSelectedShader))
-							{
-								newMatShaderIndex = i;
-							}
-
-							++i;
-						}
-					}
-					ImGui::EndChild(); // Shader list
-
-					if (ImGui::Button("Create new material"))
-					{
-						// Remove trailing /0 characters
-						newMaterialName = std::string(newMaterialName.c_str());
-
-						MaterialCreateInfo createInfo = {};
-						createInfo.name = newMaterialName;
-						createInfo.shaderName = m_Shaders[newMatShaderIndex].shader.name;
-
-						MaterialID newMaterialID = InitializeMaterial(&createInfo);
-
-						g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("Cancel"))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::EndPopup();
-				}
-
-				ImGui::SameLine();
-
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-				if (ImGui::Button("Delete material"))
-				{
-					g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
-					RemoveMaterial(selectedMaterialID);
-				}
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-			}
-
-			ImGui::End(); // Material editor popup
-		}
-
 		bool GLRenderer::DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex)
 		{
 			bool bValueChanged = false;
@@ -5345,6 +5018,448 @@ namespace flex
 
 			return strHeight;
 		}
+
+		void GLRenderer::DrawAssetBrowserImGui()
+		{
+			static i32 MAX_CHAR_COUNT = 128;
+
+			if (ImGui::Begin("Asset browser", &m_bShowingAssetBrowser))
+			{
+				if (ImGui::CollapsingHeader("Materials"))
+				{
+					static bool bUpdateFields = true;
+					const i32 MAX_NAME_LEN = 128;
+					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
+					static MaterialID selectedMaterialID = 0;
+					while (m_Materials[selectedMaterialID].material.engineMaterial &&
+						   selectedMaterialID < m_Materials.size() - 1)
+					{
+						++selectedMaterialID;
+					}
+					static std::string matName = "";
+					static i32 selectedShaderIndex = 0;
+					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
+					static i32 albedoTextureIndex = 0;
+					static bool bUpdateAlbedoTextureMaterial = false;
+					static i32 metallicTextureIndex = 0;
+					static bool bUpdateMetallicTextureMaterial = false;
+					static i32 roughnessTextureIndex = 0;
+					static bool bUpdateRoughessTextureMaterial = false;
+					static i32 normalTextureIndex = 0;
+					static bool bUpdateNormalTextureMaterial = false;
+					static i32 aoTextureIndex = 0;
+					static bool bUpdateAOTextureMaterial = false;
+					GLMaterial& mat = m_Materials[selectedMaterialID];
+
+					if (bUpdateFields)
+					{
+						bUpdateFields = false;
+
+						matName = mat.material.name;
+						matName.resize(MAX_NAME_LEN);
+
+						i32 i = 0;
+						for (const auto& texturePair : m_LoadedTextures)
+						{
+							std::string texturePath = texturePair.second->GetFilePath();
+							GLTexture* texture = nullptr;
+							GetLoadedTexture(texturePath, &texture);
+
+							UpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
+														 texturePath,
+														 mat.material.albedoTexturePath,
+														 texture,
+														 i,
+														 &albedoTextureIndex,
+														 &mat.albedoSamplerID);
+
+							UpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
+														 texturePath,
+														 mat.material.metallicTexturePath,
+														 texture,
+														 i,
+														 &metallicTextureIndex,
+														 &mat.metallicSamplerID);
+
+							UpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
+														 texturePath,
+														 mat.material.roughnessTexturePath,
+														 texture,
+														 i,
+														 &roughnessTextureIndex,
+														 &mat.roughnessSamplerID);
+
+							UpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
+														 texturePath,
+														 mat.material.normalTexturePath,
+														 texture,
+														 i,
+														 &normalTextureIndex,
+														 &mat.normalSamplerID);
+
+							UpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
+														 texturePath,
+														 mat.material.aoTexturePath,
+														 texture,
+														 i,
+														 &aoTextureIndex,
+														 &mat.aoSamplerID);
+
+							++i;
+						}
+
+						mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
+						mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
+						mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
+						mat.material.enableNormalSampler = (normalTextureIndex > 0);
+						mat.material.enableAOSampler = (aoTextureIndex > 0);
+
+						selectedShaderIndex = mat.material.shaderID;
+					}
+
+					ImGui::PushItemWidth(180.0f);
+					if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
+					{
+						// Remove trailing \0 characters
+						matName = std::string(matName.c_str());
+						mat.material.name = matName;
+					}
+					ImGui::PopItemWidth();
+
+					ImGui::SameLine();
+
+					struct ShaderFunctor
+					{
+						static bool GetShaderName(void* data, int idx, const char** out_str)
+						{
+							*out_str = ((GLShader*)data)[idx].shader.name.c_str();
+							return true;
+						}
+					};
+					ImGui::PushItemWidth(240.0f);
+					if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
+						(void*)m_Shaders.data(), m_Shaders.size()))
+					{
+						mat = m_Materials[selectedMaterialID];
+						mat.material.shaderID = selectedShaderIndex;
+
+						bUpdateFields = true;
+					}
+					ImGui::PopItemWidth();
+
+					ImGui::NewLine();
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 220.0f);
+
+					if (mat.material.enableAlbedoSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat3("Albedo", &mat.material.constAlbedo.x, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableAlbedoSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					if (mat.material.enableMetallicSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("Metallic", &mat.material.constMetallic, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableMetallicSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					if (mat.material.enableRoughnessSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("Roughness", &mat.material.constRoughness, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableRoughnessSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					if (mat.material.enableAOSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableAOSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					ImGui::NextColumn();
+
+					struct TextureFunctor
+					{
+						static bool GetTextureFileName(void* data, i32 idx, const char** out_str)
+						{
+							if (idx == 0)
+							{
+								*out_str = "NONE";
+							}
+							else
+							{
+								*out_str = ((GLTexture**)data)[idx - 1]->GetName().c_str();
+							}
+							return true;
+						}
+					};
+
+					std::vector<GLTexture*> textures;
+					textures.reserve(m_LoadedTextures.size());
+					for (const auto& texturePair : m_LoadedTextures)
+					{
+						textures.push_back(texturePair.second);
+					}
+
+					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures, &albedoTextureIndex);
+					bUpdateFields |= bUpdateAlbedoTextureMaterial;
+					bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures, &metallicTextureIndex);
+					bUpdateFields |= bUpdateMetallicTextureMaterial;
+					bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures, &roughnessTextureIndex);
+					bUpdateFields |= bUpdateRoughessTextureMaterial;
+					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures, &normalTextureIndex);
+					bUpdateFields |= bUpdateNormalTextureMaterial;
+					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex);
+					bUpdateFields |= bUpdateAOTextureMaterial;
+
+					ImGui::NewLine();
+
+					ImGui::Text("Materials");
+
+					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 matShortIndex = 0;
+						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+						{
+							if (m_Materials[i].material.engineMaterial)
+							{
+								continue;
+							}
+
+							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
+							if (ImGui::Selectable(m_Materials[i].material.name.c_str(), &bSelected))
+							{
+								if (selectedMaterialIndexShort != matShortIndex)
+								{
+									selectedMaterialIndexShort = matShortIndex;
+									selectedMaterialID = i;
+									bUpdateFields = true;
+								}
+							}
+
+							if (ImGui::IsItemActive())
+							{
+								if (ImGui::BeginDragDropSource())
+								{
+									MaterialID draggedMaterialID = i;
+									const void* data = (void*)(&draggedMaterialID);
+									size_t size = sizeof(MaterialID);
+
+									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
+
+									ImGui::Text(m_Materials[i].material.name.c_str());
+
+									ImGui::EndDragDropSource();
+								}
+							}
+
+							++matShortIndex;
+						}
+					}
+					ImGui::EndChild(); // Material list
+
+					const i32 MAX_MAT_NAME_LEN = 128;
+					static std::string newMaterialName = "";
+
+					const char* createMaterialPopupStr = "Create material##popup";
+					if (ImGui::Button("Create material"))
+					{
+						ImGui::OpenPopup(createMaterialPopupStr);
+						newMaterialName = "New Material 01";
+						newMaterialName.resize(MAX_MAT_NAME_LEN);
+					}
+
+					if (ImGui::BeginPopupModal(createMaterialPopupStr, NULL, ImGuiWindowFlags_NoResize))
+					{
+						ImGui::Text("Name:");
+						ImGui::InputText("##NameText", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
+
+						ImGui::Text("Shader:");
+						static i32 newMatShaderIndex = 0;
+						if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
+						{
+							i32 i = 0;
+							for (GLShader& shader : m_Shaders)
+							{
+								bool bSelectedShader = (i == newMatShaderIndex);
+								if (ImGui::Selectable(shader.shader.name.c_str(), &bSelectedShader))
+								{
+									newMatShaderIndex = i;
+								}
+
+								++i;
+							}
+						}
+						ImGui::EndChild(); // Shader list
+
+						if (ImGui::Button("Create new material"))
+						{
+							// Remove trailing /0 characters
+							newMaterialName = std::string(newMaterialName.c_str());
+
+							MaterialCreateInfo createInfo = {};
+							createInfo.name = newMaterialName;
+							createInfo.shaderName = m_Shaders[newMatShaderIndex].shader.name;
+
+							MaterialID newMaterialID = InitializeMaterial(&createInfo);
+
+							g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
+
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Cancel"))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::EndPopup();
+					}
+
+					ImGui::EndColumns();
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+					if (ImGui::Button("Delete material"))
+					{
+						g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
+						RemoveMaterial(selectedMaterialID);
+					}
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+				}
+
+				if (ImGui::CollapsingHeader("Textures"))
+				{
+					static i32 selectedTextureIndex = 0;
+					if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 i = 0;
+						for (const auto& texturePair : m_LoadedTextures)
+						{
+							bool bSelected = (i == selectedTextureIndex);
+							std::string textureFileName = texturePair.second->GetName();
+							if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
+							{
+								selectedTextureIndex = i;
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Reload"))
+								{
+									texturePair.second->Reload();
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+
+							if (ImGui::IsItemHovered())
+							{
+								DoTexturePreviewTooltip(texturePair.second);
+							}
+							++i;
+						}
+					}
+					ImGui::EndChild();
+
+					if (ImGui::Button("Import Texture"))
+					{
+						std::string absoluteDirectoryStr = RelativePathToAbsolute(RESOURCE_LOCATION + "textures/");
+						std::string selectedAbsFilePath;
+						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
+						{
+							Print("Importing texture: %s\n", selectedAbsFilePath.c_str());
+
+							GLTexture* newTexture = new GLTexture(selectedAbsFilePath, 4, false, false, false);
+							if (newTexture->LoadFromFile())
+							{
+								m_LoadedTextures.insert({ newTexture->GetFilePath(), newTexture });
+							}
+
+							ImGui::CloseCurrentPopup();
+						}
+					}
+				}
+
+				if (ImGui::CollapsingHeader("Meshes"))
+				{
+					static i32 selectedMeshIndex = 0;
+					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 i = 0;
+						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
+						{
+							bool bSelected = (i == selectedMeshIndex);
+							std::string meshFileName = meshIter.first;
+							StripLeadingDirectories(meshFileName);
+							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+							{
+								selectedMeshIndex = i;
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Reload"))
+								{
+									// TODO: Reload
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+
+							++i;
+						}
+					}
+					ImGui::EndChild();
+
+					if (ImGui::Button("Import Mesh"))
+					{
+						std::string absoluteDirectoryStr = RelativePathToAbsolute(RESOURCE_LOCATION + "models/");
+						std::string selectedAbsFilePath;
+						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
+						{
+							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
+
+							MeshComponent::LoadedMesh* existingMesh = nullptr;
+							if (!MeshComponent::GetLoadedMesh(selectedAbsFilePath, &existingMesh))
+							{
+								// Add the new mesh to the cache
+								MeshComponent::LoadMesh(selectedAbsFilePath);
+							}
+
+							ImGui::CloseCurrentPopup();
+						}
+					}
+				}
+			}
+
+			ImGui::End();
+		}
 		
 		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
 		{
@@ -5390,69 +5505,19 @@ namespace flex
 		{
 			ImGui::NewLine();
 
-			ImGui::Text("Textures");
-
-			static i32 selectedTextureIndex = 0;
-			if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
-			{
-				i32 i = 0;
-				for (const auto& texturePair : m_LoadedTextures)
-				{
-					bool bSelected = (i == selectedTextureIndex);
-					std::string textureFileName = texturePair.second->GetName();
-					if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
-					{
-						selectedTextureIndex = i;
-					}
-
-					if (ImGui::BeginPopupContextItem())
-					{
-						if (ImGui::Button("Reload"))
-						{
-							texturePair.second->Reload();
-							ImGui::CloseCurrentPopup();
-						}
-
-						ImGui::EndPopup();
-					}
-
-					if (ImGui::IsItemHovered())
-					{
-						DoTexturePreviewTooltip(texturePair.second);
-					}
-					++i;
-				}
-			}
-			ImGui::EndChild();
-
-			ImGui::NewLine();
-
-
-			static bool bShowMaterialEditor = false;
-			if (ImGui::Button("Material Editor"))
-			{
-				bShowMaterialEditor = !bShowMaterialEditor;
-			}
-
-			if (bShowMaterialEditor)
-			{
-				DoMaterialEditor(&bShowMaterialEditor);
-			}
-
-			GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
-
-			ImGui::NewLine();
-
 			ImGui::BeginChild("SelectedObject",
 							  ImVec2(0.0f, 220.0f),
 							  true);
 
+			GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
 			if (selectedObject)
 			{
 				DrawGameObjectImGui(selectedObject);
 			}
 
 			ImGui::EndChild();
+
+			ImGui::NewLine();
 
 			ImGui::Text("Game Objects");
 
@@ -5641,6 +5706,8 @@ namespace flex
 								mesh->Destroy();
 								mesh->SetOwner(gameObject);
 								mesh->SetRequiredAttributesFromMaterialID(matID);
+								// TODO: FIXME: This should be passing in a file _path_, but at this point we only
+								// have access to the file _name_ which is stored in iter.first
 								mesh->LoadFromFile(iter.first);
 							}
 
