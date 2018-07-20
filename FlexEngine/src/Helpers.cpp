@@ -790,18 +790,66 @@ namespace flex
 		return result;
 	}
 
+	void CopyVec3ToClipboard(const glm::vec3& vec)
+	{
+		CopyColorToClipboard(glm::vec4(vec, 1.0f));
+	}
+
+	void CopyVec4ToClipboard(const glm::vec4& vec)
+	{
+		// TODO: Don't use ImGui for clipboard management since we might want to disable ImGui but still use the clipboard
+		ImGui::LogToClipboard();
+
+		ImGui::LogText("%.2ff,%.2ff,%.2ff,%.2ff", vec.x, vec.y, vec.z, vec.w);
+
+		ImGui::LogFinish();
+	}
+
 	void CopyColorToClipboard(const glm::vec3& col)
 	{
-		CopyColorToClipboard({ col.x, col.y, col.z, 1.0f });
+		CopyVec4ToClipboard(glm::vec4(col, 1.0f));
 	}
 
 	void CopyColorToClipboard(const glm::vec4& col)
 	{
+		CopyVec4ToClipboard(col);
+	}
+
+	void CopyTransformToClipboard(Transform* transform)
+	{
 		ImGui::LogToClipboard();
 
-		ImGui::LogText("%.2ff,%.2ff,%.2ff,%.2ff", col.x, col.y, col.z, col.w);
+		glm::vec3 pos = transform->GetWorldPosition();
+		glm::vec3 rot = glm::eulerAngles(transform->GetWorldRotation());
+		glm::vec3 scale = transform->GetWorldScale();
+		ImGui::LogText("%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff",
+					   pos.x, pos.y, pos.z, rot.x, rot.y, rot.z, scale.x, scale.y, scale.z);
 
 		ImGui::LogFinish();
+	}
+
+	bool PasteTransformFromClipboard(Transform* transform)
+	{
+		std::string clipboardText = ImGui::GetClipboardText();
+
+		if (clipboardText.empty())
+		{
+			PrintError("Attempted to paste transform from empty clipboard!\n");
+			return false;
+		}
+
+		std::vector<std::string> clipboardParts = Split(clipboardText, ',');
+		if (clipboardParts.size() != 9)
+		{
+			PrintError("Attempted to paste transform from clipboard but it doesn't contain a valid transform object! Contents: %s\n", clipboardText.c_str());
+			return false;
+		}
+
+		transform->SetWorldPosition(glm::vec3(stof(clipboardParts[0]), stof(clipboardParts[1]), stof(clipboardParts[2])), false);
+		transform->SetWorldRotation(glm::vec3(stof(clipboardParts[3]), stof(clipboardParts[4]), stof(clipboardParts[5])), false);
+		transform->SetWorldScale(glm::vec3(stof(clipboardParts[6]), stof(clipboardParts[7]), stof(clipboardParts[8])), true);
+
+		return true;
 	}
 
 	glm::vec3 PasteColor3FromClipboard()

@@ -236,8 +236,14 @@ namespace flex
 	std::string Vec3ToString(const glm::vec3& vec);
 	std::string Vec4ToString(const glm::vec4& vec);
 
-	void CopyColorToClipboard(const glm::vec4& col);
+	void CopyVec3ToClipboard(const glm::vec3& vec);
+	void CopyVec4ToClipboard(const glm::vec4& vec);
+
 	void CopyColorToClipboard(const glm::vec3& col);
+	void CopyColorToClipboard(const glm::vec4& col);
+
+	void CopyTransformToClipboard(Transform* transform);
+	bool PasteTransformFromClipboard(Transform* transform);
 
 	glm::vec3 PasteColor3FromClipboard();
 	glm::vec4 PasteColor4FromClipboard();

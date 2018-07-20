@@ -152,7 +152,28 @@ namespace flex
 			gameObject->SetStatic(bStatic);
 		}
 
+		ImGui::Text("Transform");
+
 		Transform* transform = gameObject->GetTransform();
+		if (ImGui::BeginPopupContextItem("transform context menu"))
+		{
+			if (ImGui::Button("Copy"))
+			{
+				CopyTransformToClipboard(transform);
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Paste"))
+			{
+				PasteTransformFromClipboard(transform);
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
 		static int transformSpace = 0;
 
 		static glm::vec3 sRot = glm::degrees((glm::eulerAngles(transform->GetLocalRotation())));
@@ -170,19 +191,19 @@ namespace flex
 
 		bool valueChanged = false;
 
-		valueChanged = ImGui::DragFloat3("T", &translation[0], 0.1f) || valueChanged;
+		valueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || valueChanged;
 		if (ImGui::IsItemClicked(1))
 		{
 			translation = glm::vec3(0.0f);
 			valueChanged = true;
 		}
-		valueChanged = ImGui::DragFloat3("R", &rotation[0], 0.1f) || valueChanged;
+		valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.1f) || valueChanged;
 		if (ImGui::IsItemClicked(1))
 		{
 			rotation = glm::vec3(0.0f);
 			valueChanged = true;
 		}
-		valueChanged = ImGui::DragFloat3("S", &scale[0], 0.01f) || valueChanged;
+		valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
 		if (ImGui::IsItemClicked(1))
 		{
 			scale = glm::vec3(1.0f);
@@ -281,7 +302,7 @@ namespace flex
 
 			if (!bRemovedPointLight && bTreeOpen)
 			{
-				ImGui::DragFloat3("Translation", &m_PointLights[i].position.x, 0.1f);
+				ImGui::DragFloat3("Position", &m_PointLights[i].position.x, 0.1f);
 				ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
 				ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
 			}
