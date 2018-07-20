@@ -742,6 +742,11 @@ namespace flex
 		}
 	}
 
+	bool IsNanOrInf(real val)
+	{
+		return isnan(val) || isinf(val);
+	}
+
 	bool IsNanOrInf(const glm::vec2& vec)
 	{
 		return (isnan(vec.x) || isnan(vec.y) || 

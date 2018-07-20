@@ -1498,7 +1498,7 @@ namespace flex
 		{
 			Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
 
-			JSONObject rootObject{};
+			JSONObject rootObject = {};
 
 			if (JSONParser::Parse(m_CommonSettingsAbsFilePath, rootObject))
 			{
@@ -1513,9 +1513,29 @@ namespace flex
 				if (rootObject.SetObjectChecked("camera transform", cameraTransform))
 				{
 					BaseCamera* cam = g_CameraManager->CurrentCamera();
-					cam->SetPosition(ParseVec3(cameraTransform.GetString("position")));
-					cam->SetPitch(cameraTransform.GetFloat("pitch"));
-					cam->SetYaw(cameraTransform.GetFloat("yaw"));
+					glm::vec3 camPos = ParseVec3(cameraTransform.GetString("position"));
+					if (IsNanOrInf(camPos))
+					{
+						PrintError("Camera pos was saved out as nan or inf, resetting to 0\n");
+						camPos = glm::vec3(0.0f);
+					}
+					cam->SetPosition(camPos);
+					
+					real camPitch = cameraTransform.GetFloat("pitch");
+					if (IsNanOrInf(camPitch))
+					{
+						PrintError("Camera pitch was saved out as nan or inf, resetting to 0\n");
+						camPitch = 0.0f;
+					}
+					cam->SetPitch(camPitch);
+
+					real camYaw = cameraTransform.GetFloat("yaw");
+					if (IsNanOrInf(camYaw))
+					{
+						PrintError("Camera yaw was saved out as nan or inf, resetting to 0\n");
+						camYaw = 0.0f;
+					}
+					cam->SetYaw(camYaw);
 				}
 
 				real masterGain;

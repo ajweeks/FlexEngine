@@ -190,6 +190,7 @@ namespace flex
 	*/
 	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
 
+	bool IsNanOrInf(real val);
 	bool IsNanOrInf(const glm::vec2& vec);
 	bool IsNanOrInf(const glm::vec3& vec);
 	bool IsNanOrInf(const glm::vec4& vec);
