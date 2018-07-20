@@ -20,11 +20,11 @@
 			"generate roughness sampler" : true,
 			"generate ao sampler" : true,
 			"generate normal sampler" : true,
-			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.jpg",
-			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.jpg",
-			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.jpg",
-			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO.jpg",
-			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.jpg"
+			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A_1024.jpg",
+			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M_1024.jpg",
+			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R_1024.jpg",
+			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO_1024.jpg",
+			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N_1024.jpg"
 		},
 		{
 			"name" : "pbr chrome",
