@@ -154,13 +154,18 @@ namespace flex
 
 	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& filePath, ImportSettings* importSettings /* = nullptr */)
 	{
+		if (filePath.find(':') != std::string::npos)
+		{
+			PrintError("Called LoadMesh with an absolute file path! Must be relative!\n");
+		}
+
 		// Mesh hasn't been loaded before, load it now
 		std::string fileName = filePath;
 		StripLeadingDirectories(fileName);
 		Print("Loading mesh %s\n", fileName.c_str());
 
 		LoadedMesh* newLoadedMesh = new LoadedMesh();
-		m_LoadedMeshes.emplace(fileName, newLoadedMesh);
+		m_LoadedMeshes.emplace(filePath, newLoadedMesh);
 
 		if (importSettings)
 		{
@@ -462,7 +467,7 @@ namespace flex
 			// Mesh hasn't been loaded before, load it now
 			Print("Loading mesh %s\n", meshFileName.c_str());
 
-			LoadedMesh* newLoadedMesh = LoadMesh(meshFileName, importSettings);
+			LoadedMesh* newLoadedMesh = LoadMesh(filePath, importSettings);
 
 			if (newLoadedMesh)
 			{

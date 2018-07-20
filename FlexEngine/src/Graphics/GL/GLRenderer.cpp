@@ -5439,17 +5439,36 @@ namespace flex
 
 					if (ImGui::Button("Import Mesh"))
 					{
-						std::string absoluteDirectoryStr = RelativePathToAbsolute(RESOURCE_LOCATION + "models/");
+						std::string relativeDirPath = RESOURCE_LOCATION + "models/";
+						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
 						{
 							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
 
+							std::string fileNameAndExtension = selectedAbsFilePath;
+							StripLeadingDirectories(fileNameAndExtension);
+							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
+
 							MeshComponent::LoadedMesh* existingMesh = nullptr;
-							if (!MeshComponent::GetLoadedMesh(selectedAbsFilePath, &existingMesh))
+							if (MeshComponent::GetLoadedMesh(relativeFilePath, &existingMesh))
+							{
+								i32 j = 0;
+								for (auto meshPair : MeshComponent::m_LoadedMeshes)
+								{
+									if (meshPair.first.compare(relativeFilePath) == 0)
+									{
+										selectedMeshIndex = j;
+										break;
+									}
+
+									++j;
+								}
+							}
+							else
 							{
 								// Add the new mesh to the cache
-								MeshComponent::LoadMesh(selectedAbsFilePath);
+								MeshComponent::LoadMesh(relativeFilePath);
 							}
 
 							ImGui::CloseCurrentPopup();
@@ -5692,13 +5711,16 @@ namespace flex
 							}
 						}
 
-						for (const auto& iter : MeshComponent::m_LoadedMeshes)
+						for (auto iter = MeshComponent::m_LoadedMeshes.begin();
+							 iter != MeshComponent::m_LoadedMeshes.end();
+							 ++iter)
 						{
 							bool bSelected = (i == selectedMeshIndex - 1);
-							std::string meshFileName = iter.first;
+							std::string meshFileName = (*iter).first;
 							StripLeadingDirectories(meshFileName);
 							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 							{
+								std::string relativeFilePath = RESOURCE_LOCATION + "modes/" + (*iter).first;
 								selectedMeshIndex = i + 1;
 								MaterialID matID = mesh->GetMaterialID();
 								DestroyRenderObject(gameObject->GetRenderID());
@@ -5708,7 +5730,7 @@ namespace flex
 								mesh->SetRequiredAttributesFromMaterialID(matID);
 								// TODO: FIXME: This should be passing in a file _path_, but at this point we only
 								// have access to the file _name_ which is stored in iter.first
-								mesh->LoadFromFile(iter.first);
+								mesh->LoadFromFile(relativeFilePath);
 							}
 
 							++i;
