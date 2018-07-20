@@ -296,6 +296,14 @@ namespace flex
 			    dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
 	}
 
+	void OpenExplorer(const std::string& absoluteFilePath)
+	{
+		ShellExecute(NULL, "open", absoluteFilePath.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+
+		// OR
+		// system("explorer C:\\");
+	}
+
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
 	{
 		std::string cleanedFileType = fileType;

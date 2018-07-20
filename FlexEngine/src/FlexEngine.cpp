@@ -1670,28 +1670,28 @@ namespace flex
 			// Only allow current scene to be saved
 			if (currentScene == scene)
 			{
+				if (ImGui::Button("Save"))
+				{
+					scene->SerializeToFile(false);
+
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+				if (ImGui::Button("Save over default"))
+				{
+					scene->SerializeToFile(true);
+
+					ImGui::CloseCurrentPopup();
+				}
+
 				if (scene->IsUsingSaveFile())
 				{
-					if (ImGui::Button("Save"))
-					{
-						scene->SerializeToFile(false);
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-
-					if (ImGui::Button("Save over default"))
-					{
-						scene->SerializeToFile(true);
-
-						ImGui::CloseCurrentPopup();
-					}
-
 					ImGui::SameLine();
 
 					if (ImGui::Button("Hard reload (deletes save file!)"))
@@ -1701,37 +1701,11 @@ namespace flex
 
 						ImGui::CloseCurrentPopup();
 					}
-
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
 				}
-				else
-				{
-					if (ImGui::Button("Save"))
-					{
-						scene->SerializeToFile(false);
 
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-
-					if (ImGui::Button("Save over default"))
-					{
-						scene->SerializeToFile(true);
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
 			}
 
 			static const char* duplicateScenePopupLabel = "Duplicate scene";
@@ -1848,6 +1822,16 @@ namespace flex
 				}
 
 				ImGui::EndPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Open in explorer"))
+			{
+				std::string directory = currentScene->GetRelativeFilePath();
+				ExtractDirectoryString(directory);
+				directory = RelativePathToAbsolute(directory);
+				OpenExplorer(directory);
 			}
 
 			ImGui::SameLine();

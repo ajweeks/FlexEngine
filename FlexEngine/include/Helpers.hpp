@@ -127,6 +127,8 @@ namespace flex
 
 	bool DirectoryExists(const std::string& absoluteDirectoryPath);
 
+	void OpenExplorer(const std::string& absoluteFilePath);
+
 	// Returns true if any files were found
 	// Set fileType to "*" to retrieve all files
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
