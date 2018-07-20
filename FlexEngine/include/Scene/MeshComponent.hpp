@@ -99,6 +99,15 @@ namespace flex
 		PrefabShape GetShape() const;
 		ImportSettings GetImportSettings() const;
 
+		real GetScaledBoundingSphereRadius() const;
+		glm::vec3 GetBoundingSphereCenterPointWS() const;
+
+		glm::vec3 m_MinPoint;
+		glm::vec3 m_MaxPoint;
+
+		real m_BoundingSphereRadius = 0.0f;
+		glm::vec3 m_BoundingSphereCenterPoint;
+
 	private:
 		struct LoadedMesh
 		{
@@ -107,6 +116,8 @@ namespace flex
 		};
 		static bool GetLoadedMesh(const std::string& filePath, const aiScene** scene);
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
+
+		real CalculateBoundingSphereScale() const;
 
 		GameObject* m_OwningGameObject = nullptr;
 

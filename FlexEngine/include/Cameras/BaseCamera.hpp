@@ -61,7 +61,7 @@ namespace flex
 
 	protected:
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
-		void CalculateAxisVectors();
+		void CalculateAxisVectorsFromPitchAndYaw();
 		void CalculateYawAndPitchFromForward();
 		void RecalculateViewProjection();
 

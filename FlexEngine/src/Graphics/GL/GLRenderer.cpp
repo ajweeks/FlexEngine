@@ -3349,6 +3349,32 @@ namespace flex
 						glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 					}
 				}
+
+				if (m_bDisplayBoundingVolumes && renderObject->gameObject)
+				{
+					MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+					if (mesh)
+					{
+						btVector3 centerWS = Vec3ToBtVec3(mesh->GetBoundingSphereCenterPointWS());
+						m_PhysicsDebugDrawer->drawSphere(centerWS, 0.1f, btVector3(0.8f, 0.2f, 0.1f));
+						m_PhysicsDebugDrawer->drawSphere(centerWS, mesh->GetScaledBoundingSphereRadius(), btVector3(0.2f, 0.8f, 0.1f));
+
+						Transform* transform = renderObject->gameObject->GetTransform();
+
+						//glm::vec3 transformedMin = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f));
+						//glm::vec3 transformedMax = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f));
+						//btVector3 minPos = Vec3ToBtVec3(transformedMin);
+						//btVector3 maxPos = Vec3ToBtVec3(transformedMax);
+						//m_PhysicsDebugDrawer->drawSphere(minPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
+						//m_PhysicsDebugDrawer->drawSphere(maxPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
+
+						btVector3 scaledMin = Vec3ToBtVec3(transform->GetWorldScale() * mesh->m_MinPoint);
+						btVector3 scaledMax = Vec3ToBtVec3(transform->GetWorldScale() * mesh->m_MaxPoint);
+
+						btTransform transformBT = TransformToBtTransform(*transform);
+						m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
+					}
+				}
 			}
 		}
 

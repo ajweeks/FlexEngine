@@ -33,7 +33,7 @@ namespace flex
 		m_MouseRotationSpeed(0.0015f)
 	{
 		ResetOrientation();
-		CalculateAxisVectors();
+		CalculateAxisVectorsFromPitchAndYaw();
 		RecalculateViewProjection();
 	}
 
@@ -96,20 +96,13 @@ namespace flex
 
 	void BaseCamera::LookAt(glm::vec3 point, real speed)
 	{
-		glm::vec3 dPos = glm::normalize(point - m_Position);
-		glm::vec3 dDir = glm::normalize(dPos);
+		speed = glm::clamp(speed, 0.0f, 1.0f);
 
-		glm::vec3 targetRight = glm::cross(dPos, m_Up);
-		glm::vec3 targetForward = glm::cross(targetRight, m_Up);
+		glm::vec3 targetForward = glm::normalize(point - m_Position);
+		m_Forward = glm::normalize(Lerp(m_Forward, targetForward, speed));
 
-		//real dYaw = glm::acos(glm::dot(glm::vec2(dPos.x, dPos.z), glm::vec2(m_Forward.x, m_Forward.z)));
-		//real dPitch = glm::dot(glm::vec2(dPos.y, dPos.x), glm::vec2(m_Forward.y, m_Forward.x));
-
-		const real targetYaw = glm::atan(dDir.z, dDir.x);
-		const real targetPitch = glm::atan(dDir.y, dDir.z);
-
-		m_Yaw = Lerp(m_Yaw, targetYaw, glm::clamp(speed, 0.0f, 1.0f));
-		m_Pitch = Lerp(m_Pitch, targetPitch, glm::clamp(speed, 0.0f, 1.0f));
+		CalculateYawAndPitchFromForward();
+		RecalculateViewProjection();
 	}
 
 	void BaseCamera::Translate(glm::vec3 translation)
@@ -159,7 +152,7 @@ namespace flex
 		m_Yaw = PI;
 	}
 
-	void BaseCamera::CalculateAxisVectors()
+	void BaseCamera::CalculateAxisVectorsFromPitchAndYaw()
 	{
 		m_Forward = {};
 		m_Forward.x = cos(m_Pitch) * cos(m_Yaw);
@@ -176,7 +169,8 @@ namespace flex
 	void BaseCamera::CalculateYawAndPitchFromForward()
 	{
 		m_Pitch = asin(m_Forward.y);
-		m_Yaw = atan2(m_Forward.x, m_Forward.z);
+		ClampPitch();
+		m_Yaw = atan2(m_Forward.z, m_Forward.x);
 	}
 
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)

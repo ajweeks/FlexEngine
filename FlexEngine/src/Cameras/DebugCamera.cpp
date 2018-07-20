@@ -51,7 +51,7 @@ namespace flex
 			ClampPitch();
 			m_Pitch = glm::clamp(m_Pitch, -glm::pi<real>(), glm::pi<real>());
 
-			CalculateAxisVectors();
+			CalculateAxisVectorsFromPitchAndYaw();
 
 			bool moveFast = g_InputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::RIGHT_BUMPER);
 			bool moveSlow = g_InputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::LEFT_BUMPER);
@@ -100,7 +100,7 @@ namespace flex
 				ClampPitch();
 			}
 
-			CalculateAxisVectors();
+			CalculateAxisVectorsFromPitchAndYaw();
 
 			glm::vec3 translation(0.0f);
 			if (g_InputManager->GetKeyDown(m_MoveForwardKey))

@@ -119,9 +119,19 @@ namespace flex
 		m_bPostProcessingEnabled = bEnabled;
 	}
 
-	bool Renderer::GetPostProcessingEnabled() const
+	bool Renderer::IsPostProcessingEnabled() const
 	{
 		return m_bPostProcessingEnabled;
+	}
+
+	void Renderer::SetDisplayBoundingVolumesEnabled(bool bEnabled)
+	{
+		m_bDisplayBoundingVolumes = bEnabled;
+	}
+
+	bool Renderer::IsDisplayBoundingVolumesEnabled() const
+	{
+		return m_bDisplayBoundingVolumes;
 	}
 
 	PhysicsDebuggingSettings& Renderer::GetPhysicsDebuggingSettings()

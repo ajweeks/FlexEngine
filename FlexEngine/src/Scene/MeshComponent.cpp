@@ -144,6 +144,19 @@ namespace flex
 		}
 	}
 
+	real MeshComponent::CalculateBoundingSphereScale() const
+	{
+		Transform* transform = m_OwningGameObject->GetTransform();
+		glm::vec3 scale = transform->GetWorldScale();
+		glm::vec3 scaledMin = scale * m_MinPoint;
+		glm::vec3 scaledMax = scale * m_MaxPoint;
+
+		real sphereScale = (glm::max(glm::max(glm::abs(scaledMax.x), glm::abs(scaledMin.x)),
+							glm::max(glm::max(glm::abs(scaledMax.y), glm::abs(scaledMin.y)),
+									 glm::max(glm::abs(scaledMax.z), glm::abs(scaledMin.z)))));
+		return sphereScale;
+	}
+
 	bool MeshComponent::LoadFromFile(
 		const std::string& filePath,
 		ImportSettings* importSettings /* = nullptr */,
@@ -157,6 +170,8 @@ namespace flex
 			m_ImportSettings = *importSettings;
 		}
 
+		m_BoundingSphereRadius = 0;
+		m_BoundingSphereCenterPoint = glm::vec3(0.0f);
 		m_VertexBufferData.Destroy();
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
@@ -212,6 +227,9 @@ namespace flex
 		}
 
 		size_t totalVertCount = 0;
+		m_MinPoint = glm::vec3(FLT_MAX);
+		m_MaxPoint = glm::vec3(FLT_MIN);
+
 
 		for (aiMesh* mesh : meshes)
 		{
@@ -230,6 +248,9 @@ namespace flex
 				// Position
 				glm::vec3 pos = ToVec3(mesh->mVertices[i]);
 				vertexBufferDataCreateInfo.positions_3D.push_back(pos);
+
+				m_MinPoint = glm::min(m_MinPoint, pos);
+				m_MaxPoint = glm::max(m_MaxPoint, pos);
 
 				// Color
 				if ((m_RequiredAttributes && 
@@ -341,7 +362,25 @@ namespace flex
 				}
 			}
 		}
-		
+
+		if (!vertexBufferDataCreateInfo.positions_3D.empty())
+		{
+			m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
+
+			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
+			{
+				real posMagnitude = glm::length(pos - m_BoundingSphereCenterPoint);
+				if (posMagnitude > m_BoundingSphereRadius)
+				{
+					m_BoundingSphereRadius = posMagnitude;
+				}
+			}
+			if (m_BoundingSphereRadius == 0.0f)
+			{
+				PrintWarn("Mesh's bounding sphere's radius is 0, do any valid vertices exist?\n");
+			}
+		}
+
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
@@ -1024,6 +1063,33 @@ namespace flex
 		} break;
 		}
 
+		if (!vertexBufferDataCreateInfo.positions_3D.empty())
+		{
+			m_MinPoint = glm::vec3(FLT_MAX);
+			m_MaxPoint = glm::vec3(FLT_MIN);
+
+			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
+			{
+				m_MinPoint = glm::min(m_MinPoint, pos);
+				m_MaxPoint = glm::max(m_MaxPoint, pos);
+			}
+
+			m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
+
+			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
+			{
+				real posMagnitude = glm::length(pos - m_BoundingSphereCenterPoint);
+				if (posMagnitude > m_BoundingSphereRadius)
+				{
+					m_BoundingSphereRadius = posMagnitude;
+				}
+			}
+			if (m_BoundingSphereRadius == 0.0f)
+			{
+				PrintWarn("Mesh's bounding sphere's radius is 0, do any valid vertices exist?\n");
+			}
+		}
+
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
@@ -1135,6 +1201,30 @@ namespace flex
 	MeshComponent::ImportSettings MeshComponent::GetImportSettings() const
 	{
 		return m_ImportSettings;
+	}
+
+	real MeshComponent::GetScaledBoundingSphereRadius() const
+	{
+		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
+		{
+			PrintError("Attempted to get bounding sphere radius of mesh component which contains no 3D vertices!"
+					   "Radius will always be 0\n");
+		}
+		real sphereScale = CalculateBoundingSphereScale();
+		return m_BoundingSphereRadius * sphereScale;
+	}
+
+	glm::vec3 MeshComponent::GetBoundingSphereCenterPointWS() const
+	{
+		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
+		{
+			PrintError("Attempted to get bounding sphere center point of mesh component which contains no 3D vertices!"
+					   "Center point will always be 0\n");
+		}
+		
+		Transform* transform = m_OwningGameObject->GetTransform();
+		glm::vec3 transformedCenter = transform->GetWorldTransform() * glm::vec4(m_BoundingSphereCenterPoint, 1.0f);
+		return transformedCenter;
 	}
 
 	std::string MeshComponent::GetFilepath() const

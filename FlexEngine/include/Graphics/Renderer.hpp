@@ -122,7 +122,10 @@ namespace flex
 										  glm::vec2& scaleOut);
 
 		void SetPostProcessingEnabled(bool bEnabled);
-		bool GetPostProcessingEnabled() const;
+		bool IsPostProcessingEnabled() const;
+
+		void SetDisplayBoundingVolumesEnabled(bool bEnabled);
+		bool IsDisplayBoundingVolumesEnabled()const;
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
@@ -187,6 +190,7 @@ namespace flex
 		PostProcessSettings m_PostProcessSettings;
 
 		bool m_bPostProcessingEnabled = true;
+		bool m_bDisplayBoundingVolumes = false;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

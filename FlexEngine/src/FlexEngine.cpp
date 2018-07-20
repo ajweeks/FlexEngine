@@ -227,10 +227,6 @@ namespace flex
 
 	void FlexEngine::CreateWindowAndRenderer()
 	{
-		// TODO: Determine user's display size before creating a window
-		//glm::vec2i desiredWindowSize(500, 300);
-		//glm::vec2i desiredWindowPos(300, 300);
-
 		assert(g_Window == nullptr);
 		assert(g_Renderer == nullptr);
 
@@ -258,12 +254,9 @@ namespace flex
 
 		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercetange * g_Monitor->contentScaleY);
 		i32 newWindowSizeX = i32(newWindowSizeY * desiredAspectRatio);
-		// TODO:
-		//g_Window->SetSize(newWindowSizeX, newWindowSizeY);
 
 		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
 		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
-		//g_Window->SetPosition(newWindowPosX, newWindowPosY);
 
 		g_Window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
 
@@ -795,6 +788,24 @@ namespace flex
 				g_Window->ToggleFullscreen();
 			}
 
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F) &&
+				m_CurrentlySelectedObject)
+			{
+				MeshComponent* selectedMesh = m_CurrentlySelectedObject->GetMeshComponent();
+				if (selectedMesh)
+				{
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+					glm::vec3 sphereCenterWS = selectedMesh->GetBoundingSphereCenterPointWS();
+					real sphereRadius = selectedMesh->GetScaledBoundingSphereRadius();
+					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
+					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
+
+					cam->SetPosition(sphereCenterWS + newOffset);
+					cam->LookAt(sphereCenterWS);
+				}
+			}
+
 			Profiler::Update();
 
 			g_CameraManager->Update();
@@ -1006,6 +1017,13 @@ namespace flex
 					g_Renderer->SetVSyncEnabled(bVSyncEnabled);
 				}
 
+				static const char* displayBoundingVolumesStr = "Display bounding volumes";
+				bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
+				if (ImGui::Checkbox(displayBoundingVolumesStr, &bDisplayBoundingVolumes))
+				{
+					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
+				}
+
 				static const char* physicsDebuggingStr = "Physics debugging";
 				if (ImGui::TreeNode(physicsDebuggingStr))
 				{
@@ -1074,7 +1092,7 @@ namespace flex
 				{
 					Renderer::PostProcessSettings& postProcessSettings = g_Renderer->GetPostProcessSettings();
 
-					bool bPostProcessingEnabled = g_Renderer->GetPostProcessingEnabled();
+					bool bPostProcessingEnabled = g_Renderer->IsPostProcessingEnabled();
 					if (ImGui::Checkbox("Enabled", &bPostProcessingEnabled))
 					{
 						g_Renderer->SetPostProcessingEnabled(bPostProcessingEnabled);
