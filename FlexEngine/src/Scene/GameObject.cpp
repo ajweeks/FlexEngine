@@ -345,7 +345,7 @@ namespace flex
 			MeshComponent::Type meshType = meshComponent->GetType();
 			if (meshType == MeshComponent::Type::FILE)
 			{
-				std::string meshFilepath = meshComponent->GetFilepath().substr(RESOURCE_LOCATION.length());
+				std::string meshFilepath = meshComponent->GetFilePath().substr(RESOURCE_LOCATION.length());
 				meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
 			}
 			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
@@ -687,7 +687,7 @@ namespace flex
 			}
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
-				std::string filePath = m_MeshComponent->GetFilepath();
+				std::string filePath = m_MeshComponent->GetFilePath();
 				MeshComponent::ImportSettings importSettings = m_MeshComponent->GetImportSettings();
 				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
 			}
@@ -1066,16 +1066,8 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				VertexAttributes requiredVertexAttributes = 0;
-				if (matID != InvalidMaterialID)
-				{
-					Material& material = g_Renderer->GetMaterial(matID);
-					Shader& shader = g_Renderer->GetShader(material.shaderID);
-					requiredVertexAttributes = shader.vertexAttributes;
-				}
-
 				MeshComponent* valveMesh = new MeshComponent(matID, this);
-				valveMesh->SetRequiredAttributes(requiredVertexAttributes);
+				valveMesh->SetRequiredAttributesFromMaterialID(matID);
 				valveMesh->LoadFromFile(RESOURCE_LOCATION + "models/valve.gltf");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
@@ -1237,16 +1229,8 @@ namespace flex
 	{
 		if (!m_MeshComponent)
 		{
-			VertexAttributes requiredVertexAttributes = 0;
-			if (matID != InvalidMaterialID)
-			{
-				Material& material = g_Renderer->GetMaterial(matID);
-				Shader& shader = g_Renderer->GetShader(material.shaderID);
-				requiredVertexAttributes = shader.vertexAttributes;
-			}
-
 			MeshComponent* cubeMesh = new MeshComponent(matID, this);
-			cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
+			cubeMesh->SetRequiredAttributesFromMaterialID(matID);
 			cubeMesh->LoadFromFile(RESOURCE_LOCATION + "models/cube.gltf");
 			SetMeshComponent(cubeMesh);
 		}
@@ -1430,16 +1414,8 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				VertexAttributes requiredVertexAttributes = 0;
-				if (matID != InvalidMaterialID)
-				{
-					Material& material = g_Renderer->GetMaterial(matID);
-					Shader& shader = g_Renderer->GetShader(material.shaderID);
-					requiredVertexAttributes = shader.vertexAttributes;
-				}
-
 				MeshComponent* windowMesh = new MeshComponent(matID, this);
-				windowMesh->SetRequiredAttributes(requiredVertexAttributes);
+				windowMesh->SetRequiredAttributesFromMaterialID(matID);
 				windowMesh->LoadFromFile(RESOURCE_LOCATION +
 					(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
 				SetMeshComponent(windowMesh);
@@ -1480,10 +1456,6 @@ namespace flex
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(parentObj);
 
-		Material& material = g_Renderer->GetMaterial(matID);
-		Shader& shader = g_Renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
 		// Probe capture material
 		MaterialCreateInfo probeCaptureMatCreateInfo = {};
 		probeCaptureMatCreateInfo.name = "Reflection probe capture";
@@ -1508,7 +1480,7 @@ namespace flex
 		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
 		MeshComponent* sphereMesh = new MeshComponent(matID, this);
-		sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
+		sphereMesh->SetRequiredAttributesFromMaterialID(matID);
 
 		assert(m_MeshComponent == nullptr);
 		sphereMesh->LoadFromFile(RESOURCE_LOCATION + "models/ico-sphere.gltf");
@@ -1566,13 +1538,9 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(scene);
 
-		Material& material = g_Renderer->GetMaterial(matID);
-		Shader& shader = g_Renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
 		assert(m_MeshComponent == nullptr);
 		MeshComponent* skyboxMesh = new MeshComponent(matID, this);
-		skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
+		skyboxMesh->SetRequiredAttributesFromMaterialID(matID);
 		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
 		SetMeshComponent(skyboxMesh);
 

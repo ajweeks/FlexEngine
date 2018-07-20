@@ -5454,7 +5454,7 @@ namespace flex
 
 			ImGui::EndChild();
 
-			ImGui::Text("Render Objects");
+			ImGui::Text("Game Objects");
 
 			// Dropping objects onto this text makes them root objects
 			if (ImGui::BeginDragDropTarget())
@@ -5568,21 +5568,13 @@ namespace flex
 				gameObject->SetVisible(visible);
 			}
 
-			if (renderObject)
-			{
-				const std::string renderIDStr = "renderID: " + std::to_string(renderObject->renderID);
-				ImGui::TextUnformatted(renderIDStr.c_str());
-			}
-
 			DrawImGuiForRenderObjectCommon(gameObject);
 
 			if (renderObject)
 			{
 				GLMaterial& material = m_Materials[renderObject->materialID];
-				GLShader& shader = m_Shaders[material.material.shaderID];
 
 				std::string matNameStr = "Material: " + material.material.name;
-				std::string shaderNameStr = "Shader: " + shader.shader.name;
 				ImGui::TextUnformatted(matNameStr.c_str());
 
 				if (ImGui::BeginDragDropTarget())
@@ -5604,11 +5596,59 @@ namespace flex
 					ImGui::EndDragDropTarget();
 				}
 
-				ImGui::TextUnformatted(shaderNameStr.c_str());
-
-				if (material.uniformIDs.enableIrradianceSampler)
+				MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+				if (mesh)
 				{
-					ImGui::Checkbox("Enable Irradiance Sampler", &material.material.enableIrradianceSampler);
+					i32 selectedMeshIndex = 0;
+					std::string currentMeshName = "NONE";
+					i32 i = 0;
+					for (const auto& iter : MeshComponent::m_LoadedMeshes)
+					{
+						std::string meshFileName = iter.first;
+						StripLeadingDirectories(meshFileName);
+						if (mesh->GetFileName().compare(meshFileName) == 0)
+						{
+							selectedMeshIndex = i + 1;
+							currentMeshName = meshFileName;
+							break;
+						}
+
+						++i;
+					}
+					if (ImGui::BeginCombo("Mesh", currentMeshName.c_str()))
+					{
+						i = 0;
+
+						{
+							bool bSelected = (selectedMeshIndex == 0);
+							if (ImGui::Selectable("NONE", &bSelected))
+							{
+								selectedMeshIndex = 0;
+							}
+						}
+
+						for (const auto& iter : MeshComponent::m_LoadedMeshes)
+						{
+							bool bSelected = (i == selectedMeshIndex - 1);
+							std::string meshFileName = iter.first;
+							StripLeadingDirectories(meshFileName);
+							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+							{
+								selectedMeshIndex = i + 1;
+								MaterialID matID = mesh->GetMaterialID();
+								DestroyRenderObject(gameObject->GetRenderID());
+								gameObject->SetRenderID(InvalidRenderID);
+								mesh->Destroy();
+								mesh->SetOwner(gameObject);
+								mesh->SetRequiredAttributesFromMaterialID(matID);
+								mesh->LoadFromFile(iter.first);
+							}
+
+							++i;
+						}
+
+						ImGui::EndCombo();
+					}
 				}
 			}
 		}

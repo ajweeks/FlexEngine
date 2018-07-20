@@ -330,10 +330,6 @@ namespace flex
 	{
 		SaveCommonSettingsToDisk(false);
 
-		Material& transformGizmoMaterial = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
-		Shader& transformGizmoShader = g_Renderer->GetShader(transformGizmoMaterial.shaderID);
-		VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
-
 		RenderObjectCreateInfo gizmoAxisCreateInfo = {};
 		gizmoAxisCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 		gizmoAxisCreateInfo.depthWriteEnable = true;
@@ -360,7 +356,7 @@ namespace flex
 		gizmoXAxisRB->SetKinematic(true);
 		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
 
-		xAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
 		xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-x-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 		// Y Axis
@@ -377,7 +373,7 @@ namespace flex
 		gizmoYAxisRB->SetKinematic(true);
 		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
 
-		yAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
 		yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-y-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 		// Z Axis
@@ -395,7 +391,7 @@ namespace flex
 		gizmoZAxisRB->SetKinematic(true);
 		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
 
-		zAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
+		zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
 		zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-z-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 

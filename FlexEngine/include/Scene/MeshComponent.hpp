@@ -33,6 +33,8 @@ namespace flex
 		void Update();
 		void Destroy();
 
+		void SetOwner(GameObject* owner);
+
 		enum class Type
 		{
 			PREFAB,
@@ -68,7 +70,9 @@ namespace flex
 		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
 		 * be enforced (filled with default value if not present in mesh)
 		*/
-		void SetRequiredAttributes(VertexAttributes requiredAttributes);
+		//void SetRequiredAttributes(VertexAttributes requiredAttributes);
+
+		void SetRequiredAttributesFromMaterialID(MaterialID matID);
 
 		/*
 		* Loads a mesh from file
@@ -95,7 +99,8 @@ namespace flex
 
 		Type GetType() const;
 
-		std::string GetFilepath() const;
+		std::string GetFilePath() const;
+		std::string GetFileName() const;
 		PrefabShape GetShape() const;
 		ImportSettings GetImportSettings() const;
 
@@ -108,16 +113,22 @@ namespace flex
 		real m_BoundingSphereRadius = 0.0f;
 		glm::vec3 m_BoundingSphereCenterPoint;
 
-	private:
 		struct LoadedMesh
 		{
+			ImportSettings importSettings;
 			Assimp::Importer importer = {};
 			const aiScene* scene = nullptr;
 		};
-		static bool GetLoadedMesh(const std::string& filePath, const aiScene** scene);
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
+	private:
+		static bool GetLoadedMesh(const std::string& filePath, LoadedMesh** loadedMesh);
+
 		real CalculateBoundingSphereScale() const;
+
+		bool LoadFromAiScene(const aiScene* scene,
+							 ImportSettings* importSettings = nullptr,
+							 RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		GameObject* m_OwningGameObject = nullptr;
 
@@ -132,6 +143,7 @@ namespace flex
 
 		Type m_Type = Type::NONE;
 		std::string m_FilePath;
+		std::string m_FileName;
 
 		glm::vec2 m_UVScale = { 1,1 };
 

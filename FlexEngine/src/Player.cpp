@@ -43,12 +43,8 @@ namespace flex
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 		
-		Material& material = g_Renderer->GetMaterial(matID);
-		Shader& shader = g_Renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
 		m_MeshComponent = new MeshComponent(matID, this);
-		m_MeshComponent->SetRequiredAttributes(requiredVertexAttributes);
+		m_MeshComponent->SetRequiredAttributesFromMaterialID(matID);
 		AddTag("Player" + std::to_string(m_Index));
 		SetRigidBody(rigidBody);
 		SetStatic(false);
@@ -73,10 +69,7 @@ namespace flex
 		m_Slingshot = new GameObject("Slingshot", GameObjectType::NONE);
 		MeshComponent* slingshotMesh = m_Slingshot->SetMeshComponent(new MeshComponent(slingshotMatID, m_Slingshot));
 
-		Material& slingshotMaterial = g_Renderer->GetMaterial(slingshotMatID);
-		Shader& slingshotShader = g_Renderer->GetShader(slingshotMaterial.shaderID);
-		VertexAttributes slingshotRequiredVertexAttributes = slingshotShader.vertexAttributes;
-		slingshotMesh->SetRequiredAttributes(slingshotRequiredVertexAttributes);
+		slingshotMesh->SetRequiredAttributesFromMaterialID(slingshotMatID);
 
 		slingshotMesh->LoadFromFile(RESOURCE_LOCATION + "models/slingshot.gltf");
 

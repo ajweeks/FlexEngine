@@ -79,14 +79,10 @@ namespace flex
 		}
 		else
 		{
-			Material& material = g_Renderer->GetMaterial(materialID);
-			Shader& shader = g_Renderer->GetShader(material.shaderID);
-			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
 			if (!meshFilePath.empty())
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
-				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
+				newMeshComponent->SetRequiredAttributesFromMaterialID(materialID);
 
 				MeshComponent::ImportSettings importSettings = {};
 				importSettings.flipU = flipU;
@@ -102,7 +98,7 @@ namespace flex
 			else if (!meshPrefabName.empty())
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
-				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
+				newMeshComponent->SetRequiredAttributesFromMaterialID(materialID);
 
 				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
 				newMeshComponent->LoadPrefabShape(prefabShape);
@@ -125,12 +121,24 @@ namespace flex
 		m_Initialized = false;
 	}
 
-	void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
+	void MeshComponent::SetOwner(GameObject* owner)
 	{
-		m_RequiredAttributes = requiredAttributes;
+		m_OwningGameObject = owner;
 	}
 
-	bool MeshComponent::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
+	//void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
+	//{
+	//	m_RequiredAttributes = requiredAttributes;
+	//}
+
+	void MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)
+	{
+		Material& mat = g_Renderer->GetMaterial(matID);
+		Shader& shader = g_Renderer->GetShader(mat.shaderID);
+		m_RequiredAttributes = shader.vertexAttributes;
+	}
+
+	bool MeshComponent::GetLoadedMesh(const std::string& filePath, LoadedMesh** loadedMesh)
 	{
 		auto iter = m_LoadedMeshes.find(filePath);
 		if (iter == m_LoadedMeshes.end())
@@ -139,7 +147,7 @@ namespace flex
 		}
 		else
 		{
-			*scene = iter->second->scene;
+			*loadedMesh = iter->second;
 			return true;
 		}
 	}
@@ -157,68 +165,23 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::LoadFromFile(
-		const std::string& filePath,
-		ImportSettings* importSettings /* = nullptr */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	bool MeshComponent::LoadFromAiScene(const aiScene* scene,
+										ImportSettings* importSettings /* = nullptr */,
+										RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
-		m_Type = Type::FILE;
-		m_Shape = PrefabShape::NONE;
-		m_FilePath = filePath;
-		if (importSettings)
+		if (m_Initialized)
 		{
-			m_ImportSettings = *importSettings;
-		}
-
-		m_BoundingSphereRadius = 0;
-		m_BoundingSphereCenterPoint = glm::vec3(0.0f);
-		m_VertexBufferData.Destroy();
-
-		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
-
-		std::string meshFileName = filePath;
-		StripLeadingDirectories(meshFileName);
-
-		const aiScene* scene = nullptr;
-		if (GetLoadedMesh(filePath, &scene))
-		{
-			Print("Reusing loaded mesh from %s\n", meshFileName.c_str());
-		}
-		else
-		{
-			// Mesh hasn't been loaded before, load it now
-			Print("Loading mesh %s\n", meshFileName.c_str());
-
-			LoadedMesh* loadedMesh = new LoadedMesh();
-			m_LoadedMeshes.emplace(filePath, loadedMesh);
-
-			loadedMesh->scene = loadedMesh->importer.ReadFile(filePath,
-				aiProcess_FindInvalidData |
-				aiProcess_GenNormals |
-				aiProcess_CalcTangentSpace
-			);
-
-			scene = loadedMesh->scene;
-
-			if (!scene)
-			{
-				PrintError("%s\n", loadedMesh->importer.GetErrorString());
-				return false;
-			}
-		}
-
-		if (!scene)
-		{
-			PrintError("Failed to load mesh %s\n", filePath.c_str());
+			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
 			return false;
 		}
-
 
 		if (!scene->HasMeshes())
 		{
-			PrintWarn("Loaded mesh file has no meshes! %s\n", filePath.c_str());
+			PrintWarn("Loaded mesh file has no meshes!\n");
 			return false;
 		}
+
+		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
 		std::vector<aiMesh*> meshes(scene->mNumMeshes);
 		for (size_t i = 0; i < scene->mNumMeshes; ++i)
@@ -240,9 +203,9 @@ namespace flex
 			const bool meshHasTangentsAndBitangents = mesh->HasTangentsAndBitangents();
 			const bool meshHasNormals = mesh->HasNormals();
 			const bool meshHasTexCoord0 = mesh->HasTextureCoords(0);
-			
+
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			
+
 			for (size_t i = 0; i < numMeshVerts; ++i)
 			{
 				// Position
@@ -253,7 +216,7 @@ namespace flex
 				m_MaxPoint = glm::max(m_MaxPoint, pos);
 
 				// Color
-				if ((m_RequiredAttributes && 
+				if ((m_RequiredAttributes &&
 					(m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)) ||
 					(!m_RequiredAttributes && meshHasVertexColors0))
 				{
@@ -414,6 +377,10 @@ namespace flex
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
 		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
+		{
+			PrintError("Overriding game object's render ID! (%s) Memory leak may occur\n", m_OwningGameObject->GetName().c_str());
+		}
 		m_OwningGameObject->SetRenderID(renderID);
 
 		g_Renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
@@ -425,8 +392,93 @@ namespace flex
 		return true;
 	}
 
+	bool MeshComponent::LoadFromFile(
+		const std::string& filePath,
+		ImportSettings* importSettings /* = nullptr */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		if (m_Initialized)
+		{
+			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
+			return false;
+		}
+
+		m_Type = Type::FILE;
+		m_Shape = PrefabShape::NONE;
+		m_FilePath = filePath;
+		m_FileName = m_FilePath;
+		StripLeadingDirectories(m_FileName);
+		if (importSettings)
+		{
+			m_ImportSettings = *importSettings;
+		}
+
+		m_BoundingSphereRadius = 0;
+		m_BoundingSphereCenterPoint = glm::vec3(0.0f);
+		m_VertexBufferData.Destroy();
+
+		std::string meshFileName = filePath;
+		StripLeadingDirectories(meshFileName);
+
+		const aiScene* scene = nullptr;
+		LoadedMesh* loadedMesh = nullptr;
+		if (GetLoadedMesh(filePath, &loadedMesh))
+		{
+			Print("Reusing loaded mesh from %s\n", meshFileName.c_str());
+			scene = loadedMesh->scene;
+
+			if (importSettings == nullptr)
+			{
+				importSettings = &loadedMesh->importSettings;
+				m_ImportSettings = loadedMesh->importSettings;
+			}
+		}
+		else
+		{
+			// Mesh hasn't been loaded before, load it now
+			Print("Loading mesh %s\n", meshFileName.c_str());
+
+			LoadedMesh* newLoadedMesh = new LoadedMesh();
+			m_LoadedMeshes.emplace(filePath, newLoadedMesh);
+
+			if (importSettings)
+			{
+				newLoadedMesh->importSettings = *importSettings;
+			}
+
+			newLoadedMesh->scene = newLoadedMesh->importer.ReadFile(filePath,
+				aiProcess_FindInvalidData |
+				aiProcess_GenNormals |
+				aiProcess_CalcTangentSpace
+			);
+
+			scene = newLoadedMesh->scene;
+
+
+			if (!scene)
+			{
+				PrintError("%s\n", newLoadedMesh->importer.GetErrorString());
+				return false;
+			}
+		}
+
+		if (!scene)
+		{
+			PrintError("Failed to load mesh %s\n", filePath.c_str());
+			return false;
+		}
+
+		return LoadFromAiScene(scene, importSettings, optionalCreateInfo);
+	}
+
 	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
+		if (m_Initialized)
+		{
+			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
+			return false;
+		}
+
 		m_Type = Type::PREFAB;
 		m_Shape = shape;
 
@@ -1227,8 +1279,13 @@ namespace flex
 		return transformedCenter;
 	}
 
-	std::string MeshComponent::GetFilepath() const
+	std::string MeshComponent::GetFilePath() const
 	{
 		return m_FilePath;
+	}
+
+	std::string MeshComponent::GetFileName() const
+	{
+		return m_FileName;
 	}
 } // namespace flex
