@@ -1298,7 +1298,7 @@ namespace flex
 		return transformedCenter;
 	}
 
-	std::string MeshComponent::GetFilePath() const
+	std::string MeshComponent::GetRelativeFilePath() const
 	{
 		return m_RelativeFilePath;
 	}

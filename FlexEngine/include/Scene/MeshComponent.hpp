@@ -99,7 +99,7 @@ namespace flex
 
 		Type GetType() const;
 
-		std::string GetFilePath() const;
+		std::string GetRelativeFilePath() const;
 		std::string GetFileName() const;
 		PrefabShape GetShape() const;
 		ImportSettings GetImportSettings() const;

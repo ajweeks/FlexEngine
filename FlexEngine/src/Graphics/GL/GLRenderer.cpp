@@ -5451,6 +5451,23 @@ namespace flex
 
 								ImGui::EndPopup();
 							}
+							else
+							{
+								if (ImGui::IsItemActive())
+								{
+									if (ImGui::BeginDragDropSource())
+									{
+										const void* data = (void*)(meshIter.first.c_str());
+										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+
+										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
+
+										ImGui::Text(meshFileName.c_str());
+
+										ImGui::EndDragDropSource();
+									}
+								}
+							}
 
 							++i;
 						}
@@ -5749,8 +5766,6 @@ namespace flex
 								mesh->Destroy();
 								mesh->SetOwner(gameObject);
 								mesh->SetRequiredAttributesFromMaterialID(matID);
-								// TODO: FIXME: This should be passing in a file _path_, but at this point we only
-								// have access to the file _name_ which is stored in iter.first
 								mesh->LoadFromFile(relativeFilePath);
 							}
 
@@ -5758,6 +5773,35 @@ namespace flex
 						}
 
 						ImGui::EndCombo();
+					}
+
+					if (ImGui::BeginDragDropTarget())
+					{
+						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MeshPayloadCStr);
+
+						if (payload && payload->Data)
+						{
+							std::string dataType(payload->DataType);
+							i32* draggedMeshIndex = (i32*)payload->Data;
+							std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
+							auto meshIter = MeshComponent::m_LoadedMeshes.find(draggedMeshFileName);
+							if (meshIter != MeshComponent::m_LoadedMeshes.end())
+							{
+								std::string newMeshFilePath = meshIter->first;
+
+								if (mesh->GetRelativeFilePath().compare(newMeshFilePath) != 0)
+								{
+									MaterialID matID = mesh->GetMaterialID();
+									DestroyRenderObject(gameObject->GetRenderID());
+									gameObject->SetRenderID(InvalidRenderID);
+									mesh->Destroy();
+									mesh->SetOwner(gameObject);
+									mesh->SetRequiredAttributesFromMaterialID(matID);
+									mesh->LoadFromFile(newMeshFilePath);
+								}
+							}
+						}
+						ImGui::EndDragDropTarget();
 					}
 				}
 			}

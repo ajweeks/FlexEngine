@@ -341,6 +341,7 @@ namespace flex
 			// Must be 12 chars or less
 			const char* m_RenderObjectPayloadCStr = "renderobject";
 			const char* m_MaterialPayloadCStr = "material";
+			const char* m_MeshPayloadCStr = "mesh";
 
 			bool m_bShowingAssetBrowser = false;
 

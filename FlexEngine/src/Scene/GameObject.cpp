@@ -345,7 +345,7 @@ namespace flex
 			MeshComponent::Type meshType = meshComponent->GetType();
 			if (meshType == MeshComponent::Type::FILE)
 			{
-				std::string meshFilepath = meshComponent->GetFilePath().substr(RESOURCE_LOCATION.length());
+				std::string meshFilepath = meshComponent->GetRelativeFilePath().substr(RESOURCE_LOCATION.length());
 				meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
 			}
 			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
@@ -687,7 +687,7 @@ namespace flex
 			}
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
-				std::string filePath = m_MeshComponent->GetFilePath();
+				std::string filePath = m_MeshComponent->GetRelativeFilePath();
 				MeshComponent::ImportSettings importSettings = m_MeshComponent->GetImportSettings();
 				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
 			}
