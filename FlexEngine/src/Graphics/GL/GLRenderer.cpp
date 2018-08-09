@@ -106,7 +106,7 @@ namespace flex
 			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
 
 			m_gBuffer_DiffuseAOHandle = {};
-			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA;
+			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA16F;
 			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
 			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
 
@@ -1969,10 +1969,9 @@ namespace flex
 			}
 
 			{
-				// TODO: Make more dynamic (based on framebuffer count)
-				constexpr i32 numBuffers = 3;
-				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-				glDrawBuffers(numBuffers, attachments);
+				const i32 FRAMEBUFFER_COUNT = 3;
+				GLenum attachments[FRAMEBUFFER_COUNT] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+				glDrawBuffers(FRAMEBUFFER_COUNT, attachments);
 			}
 
 			glDepthMask(GL_TRUE);
@@ -1988,15 +1987,15 @@ namespace flex
 			glBindVertexArray(0);
 
 			{
-				constexpr i32 numBuffers = 1;
-				u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0 };
-				glDrawBuffers(numBuffers, attachments);
+				const i32 FRAMEBUFFER_COUNT = 1;
+				u32 attachments[FRAMEBUFFER_COUNT] = { GL_COLOR_ATTACHMENT0 };
+				glDrawBuffers(FRAMEBUFFER_COUNT, attachments);
 			}
 
 			// Copy depth from G-Buffer to default render target
 			if (drawCallInfo.bRenderToCubemap)
 			{
-				// No blit is needed, right? We already drew to the cubemap depth?
+				// No blit is needed, since we already drew to the cubemap depth
 			}
 			else
 			{

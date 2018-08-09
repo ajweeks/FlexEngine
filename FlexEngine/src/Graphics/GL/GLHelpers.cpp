@@ -640,13 +640,6 @@ namespace flex
 			glGetProgramiv(program, GL_LINK_STATUS, &result);
 			if (result == GL_FALSE)
 			{
-				i32 infoLogLength;
-				glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-				std::string programErrorMessage;
-				programErrorMessage.resize((size_t)infoLogLength);
-				glGetProgramInfoLog(program, infoLogLength, NULL, (GLchar*)programErrorMessage.data());
-				PrintError("%s\n", programErrorMessage.c_str());
-
 				return false;
 			}
 

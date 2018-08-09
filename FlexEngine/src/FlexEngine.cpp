@@ -223,6 +223,9 @@ namespace flex
 		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
+
+		// Reset console color to default
+		Print("\n");
 	}
 
 	void FlexEngine::CreateWindowAndRenderer()
