@@ -36,7 +36,7 @@ layout (binding = 4) uniform sampler2D normalSampler;
 
 void main() 
 {
-	vec3 albedo = enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(constAlbedo);
+	vec3 albedo = enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb * constAlbedo.rgb : constAlbedo.rgb;
 	float metallic = enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : constMetallic;
 	float roughness = enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : constRoughness;
 	float ao = enableAOSampler ? texture(aoSampler, ex_TexCoord).r : constAO;

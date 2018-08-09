@@ -5161,15 +5161,7 @@ namespace flex
 					ImGui::Columns(2);
 					ImGui::SetColumnWidth(0, 220.0f);
 
-					if (mat.material.enableAlbedoSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
 					ImGui::SliderFloat3("Albedo", &mat.material.constAlbedo.x, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableAlbedoSampler)
-					{
-						ImGui::PopStyleColor();
-					}
 
 					if (mat.material.enableMetallicSampler)
 					{
@@ -5243,8 +5235,8 @@ namespace flex
 					bUpdateFields |= bUpdateAOTextureMaterial;
 
 					ImGui::NewLine();
-
-					ImGui::Text("Materials");
+					
+					ImGui::EndColumns();
 
 					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
 					{
@@ -5347,8 +5339,6 @@ namespace flex
 
 						ImGui::EndPopup();
 					}
-
-					ImGui::EndColumns();
 
 					ImGui::SameLine();
 
