@@ -5,10 +5,10 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 ex_WorldPos;
-layout (location = 1) in mat3 ex_TBN;
-layout (location = 4) in vec2 ex_TexCoord;
-layout (location = 5) in vec4 ex_Color;
+in vec3 ex_WorldPos;
+in mat3 ex_TBN;
+in vec2 ex_TexCoord;
+in vec4 ex_Color;
 
 layout (location = 0) out vec4 outPositionMetallic;
 layout (location = 1) out vec4 outNormalRoughness;
