@@ -5418,6 +5418,66 @@ namespace flex
 				if (ImGui::CollapsingHeader("Meshes"))
 				{
 					static i32 selectedMeshIndex = 0;
+					std::string selectedMeshRelativeFilePath;
+					MeshComponent::LoadedMesh* selectedMesh = nullptr;
+					i32 meshIdx = 0;
+					for (auto iter = MeshComponent::m_LoadedMeshes.begin();
+						iter != MeshComponent::m_LoadedMeshes.end();
+						++iter)
+					{
+						if (meshIdx == selectedMeshIndex)
+						{
+							selectedMesh = (iter->second);
+							selectedMeshRelativeFilePath = iter->first;
+							break;
+						}
+						++meshIdx;
+					}
+
+					ImGui::Text("Import settings");
+
+					ImGui::Columns(2, "import settings columns", false);
+					ImGui::Separator();
+					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.flipU); ImGui::NextColumn();
+					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.flipV); ImGui::NextColumn();
+					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.swapNormalYZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.flipNormalZ); ImGui::NextColumn();
+					ImGui::Columns(1);
+
+					if (ImGui::Button("Re-import"))
+					{
+						std::string relativeFilePath = selectedMeshRelativeFilePath;
+						for (GLRenderObject* renderObject : m_RenderObjects)
+						{
+							if (renderObject->gameObject)
+							{
+								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
+								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(relativeFilePath) == 0)
+								{
+									MeshComponent::ImportSettings importSettings = selectedMesh->importSettings;
+
+									MaterialID matID = renderObject->materialID;
+									GameObject* gameObject = renderObject->gameObject;
+
+									DestroyRenderObject(gameObject->GetRenderID());
+									gameObject->SetRenderID(InvalidRenderID);
+
+									gameObjectMesh->Destroy();
+									gameObjectMesh->SetOwner(gameObject);
+									gameObjectMesh->SetRequiredAttributesFromMaterialID(matID);
+									gameObjectMesh->LoadFromFile(relativeFilePath, &importSettings);
+								}
+							}
+						}
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Save"))
+					{
+						g_SceneManager->CurrentScene()->SerializeToFile(true);
+					}
+
 					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
@@ -5575,7 +5635,6 @@ namespace flex
 
 				if (payload && payload->Data)
 				{
-					std::string dataType(payload->DataType);
 					RenderID* draggedRenderID = (RenderID*)payload->Data;
 					GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
 					GameObject* draggedGameObject = draggedRenderObject->gameObject;
@@ -5771,8 +5830,6 @@ namespace flex
 
 						if (payload && payload->Data)
 						{
-							std::string dataType(payload->DataType);
-							i32* draggedMeshIndex = (i32*)payload->Data;
 							std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
 							auto meshIter = MeshComponent::m_LoadedMeshes.find(draggedMeshFileName);
 							if (meshIter != MeshComponent::m_LoadedMeshes.end())
