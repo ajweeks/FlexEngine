@@ -381,6 +381,11 @@ namespace flex
 
 		if (bDeletingCurrentScene)
 		{
+			if (m_CurrentSceneIndex == m_Scenes.size())
+			{
+				m_CurrentSceneIndex--;
+			}
+
 			InitializeCurrentScene();
 			PostInitializeCurrentScene();
 		}
