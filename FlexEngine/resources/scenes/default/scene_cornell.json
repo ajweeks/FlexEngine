@@ -12,7 +12,39 @@
 			"const ao" : 1.000000
 		},
 		{
-			"name" : "Skybox",
+			"name" : "pbr grey",
+			"shader" : "pbr",
+			"const albedo" : "0.780000, 0.120000, 0.110000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.250000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "pbr light grey",
+			"shader" : "pbr",
+			"const albedo" : "0.230000, 0.250000, 0.290000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "pbr white",
+			"shader" : "pbr",
+			"const albedo" : "0.990000, 0.990000, 0.990000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.900000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "pbr red",
+			"shader" : "pbr",
+			"const albedo" : "0.740000, 0.060000, 0.030000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.520000,
+			"const ao" : 0.000000
+		},
+		{
+			"name" : "skybox 01",
 			"shader" : "skybox",
 			"const albedo" : "0.000000, 0.000000, 0.000000",
 			"const metallic" : 0.000000,
@@ -26,7 +58,30 @@
 			"generated irradiance cubemap size" : "32.000000, 32.000000",
 			"generate prefiltered map" : true,
 			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
+			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
+		},
+		{
+			"name" : "cerberus",
+			"shader" : "pbr",
+			"const albedo" : "1.000000, 1.000000, 1.000000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000,
+			"enable albedo sampler" : true,
+			"enable metallic sampler" : true,
+			"enable roughness sampler" : true,
+			"enable ao sampler" : true,
+			"enable normal sampler" : true,
+			"generate albedo sampler" : true,
+			"generate metallic sampler" : true,
+			"generate roughness sampler" : true,
+			"generate ao sampler" : true,
+			"generate normal sampler" : true,
+			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A_1024.jpg",
+			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M_1024.jpg",
+			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R_1024.jpg",
+			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO_1024.jpg",
+			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N_1024.jpg"
 		},
 		{
 			"name" : "cornell",
@@ -34,14 +89,6 @@
 			"const albedo" : "1.000000, 1.000000, 1.000000",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr white",
-			"shader" : "pbr",
-			"const albedo" : "0.990000, 0.990000, 0.990000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.900000,
 			"const ao" : 1.000000
 		}
 	],
@@ -57,7 +104,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 1,
+			"material" : "skybox 01",
 			"skybox info" : 
 			{
 				"rotation" : "0.000000, -0.000000, 0.000000"
@@ -73,7 +120,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "0.999999, 1.000000, 0.999999"
 			},
-			"material array index" : 0
+			"material" : "pbr chrome"
 		},
 		{
 			"name" : "Cornell Box",
@@ -82,18 +129,11 @@
 			"transform" : 
 			{
 				"position" : "-28.690001, 0.000062, -0.000905",
-				"rotation" : "-1.566237, 1.568696, 0.004567",
-				"scale" : "19.999269, 19.999750, 19.999008"
+				"rotation" : "-1.566306, 1.568696, 0.004512",
+				"scale" : "19.999250, 19.999731, 19.998993"
 			},
-			"mesh" : 
-			{
-				"file" : "models/CornellBox/cornell-box.fbx",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 2
+			"mesh" : "cornell box",
+			"material" : "cornell"
 		},
 		{
 			"name" : "Sphere 01",
@@ -105,15 +145,8 @@
 				"rotation" : "-0.000414, 0.000000, 0.000263",
 				"scale" : "3.000000, 3.000000, 3.000000"
 			},
-			"mesh" : 
-			{
-				"file" : "models/ico-sphere.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 3
+			"mesh" : "ico sphere",
+			"material" : "pbr red"
 		},
 		{
 			"name" : "Sphere 02",
@@ -125,15 +158,8 @@
 				"rotation" : "-0.000414, 0.000000, 0.000263",
 				"scale" : "5.000000, 5.000000, 5.000000"
 			},
-			"mesh" : 
-			{
-				"file" : "models/ico-sphere.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 3
+			"mesh" : "ico sphere",
+			"material" : "pbr white"
 		},
 		{
 			"name" : "mori knob",
@@ -145,15 +171,21 @@
 				"rotation" : "0.000000, -1.434660, 0.000000",
 				"scale" : "5.000000, 5.000000, 5.000000"
 			},
-			"mesh" : 
+			"mesh" : "mori knob",
+			"material" : "pbr light grey"
+		},
+		{
+			"name" : "New_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
 			{
-				"file" : "models/mori-knob.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
+				"position" : "6.000000, 5.120000, 0.000000",
+				"rotation" : "0.000000, -0.321141, 0.000000",
+				"scale" : "20.000000, 20.000000, 20.000000"
 			},
-			"material array index" : 3
+			"mesh" : "cerberus",
+			"material" : "cerberus"
 		}
 	],
 	"point lights" : 
@@ -169,21 +201,21 @@
 			"name" : "Point light 02",
 			"position" : "9.500000, -2.100000, 12.600000",
 			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : false,
+			"enabled" : true,
 			"brightness" : 394.030029
 		},
 		{
 			"name" : "Point light 03",
 			"position" : "5.500000, 4.100000, -6.000000",
 			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : false,
+			"enabled" : true,
 			"brightness" : 274.627014
 		},
 		{
 			"name" : "Point light 04",
 			"position" : "5.400000, 14.300001, 5.800000",
 			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : false,
+			"enabled" : true,
 			"brightness" : 382.090027
 		}
 	],
@@ -192,7 +224,7 @@
 		"direction" : "0.380000, 0.750000, -0.160000",
 		"position" : "0.000000, 0.000000, 0.000000",
 		"color" : "1.000000, 1.000000, 1.000000",
-		"enabled" : false,
+		"enabled" : true,
 		"brightness" : 2.355000
 	}
 }

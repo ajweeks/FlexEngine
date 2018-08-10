@@ -102,6 +102,8 @@ namespace flex
 
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
 		virtual void SerializeUniqueFields(JSONObject& parentObject);
+		
+		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 
 		std::string m_Name;
 

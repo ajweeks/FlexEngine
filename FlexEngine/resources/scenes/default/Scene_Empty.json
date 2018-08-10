@@ -1,58 +1,6 @@
 {
 	"version" : 1,
 	"name" : "Scene Empty",
-	"materials" : 
-	[
-		{
-			"name" : "Reflection Probe",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "Skybox",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
-		},
-		{
-			"name" : "PBR 1",
-			"shader" : "pbr",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000
-		},
-		{
-			"name" : "PBR 2.5",
-			"shader" : "pbr",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000
-		},
-		{
-			"name" : "this is a test",
-			"shader" : "sprite",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000
-		}
-	],
 	"objects" : 
 	[
 		{
@@ -65,7 +13,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 0
+			"material" : "pbr chrome"
 		},
 		{
 			"name" : "Skybox",
@@ -77,7 +25,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 1,
+			"material" : "skybox 01",
 			"skybox info" : 
 			{
 				"rotation" : "0.000000, -0.000000, 0.000000"
@@ -93,15 +41,8 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "10.000000, 0.100000, 10.000000"
 			},
-			"mesh" : 
-			{
-				"prefab" : "cube",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 3
+			"mesh" : "cube",
+			"material" : "pbr grey"
 		}
 	],
 	"point lights" : 

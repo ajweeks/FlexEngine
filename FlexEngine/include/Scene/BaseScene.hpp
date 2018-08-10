@@ -69,6 +69,20 @@ namespace flex
 
 		bool IsLoaded() const;
 
+		static void ParseFoundMeshFiles();
+		static void ParseFoundMaterialFiles();
+		static void ParseFoundPrefabFiles();
+
+		static bool SerializeMeshFile();
+		static bool SerializeMaterialFile();
+		static bool SerializePrefabFile();
+
+		static std::vector<JSONObject> s_ParsedMaterials;
+		static std::vector<JSONObject> s_ParsedMeshes;
+		static std::vector<JSONObject> s_ParsedPrefabs;
+
+		std::vector<GameObject*> GetAllObjects();
+
 	protected:
 		friend class GameObject;
 
@@ -84,14 +98,15 @@ namespace flex
 
 		i32 GetMaterialArrayIndex(const Material& material);
 
-		void ParseFoundPrefabFiles();
-
-		MaterialID ParseMatID(const JSONObject& object);
+		MaterialID FindMaterialIDByName(const JSONObject& object);
+		
+		static const i32 m_FileVersion = 1;
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		std::string m_Name;
 		std::string m_FileName;
+
 
 		std::vector<GameObject*> m_RootObjects;
 
@@ -115,8 +130,6 @@ namespace flex
 
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
-
-		std::vector<JSONObject> m_ParsedPrefabs;
 
 	private:
 		/*

@@ -78,22 +78,6 @@ namespace flex
 			m_OffscreenTexture1Handle.format = GL_RGBA;
 			m_OffscreenTexture1Handle.type = GL_FLOAT;
 
-			//m_LoadingTextureHandle = {};
-			//m_LoadingTextureHandle.internalFormat = GL_RGBA;
-			//m_LoadingTextureHandle.format = GL_RGBA;
-			//m_LoadingTextureHandle.type = GL_FLOAT;
-
-
-			//m_PointLightIconHandle = {};
-			//m_PointLightIconHandle.internalFormat = GL_RGBA;
-			//m_PointLightIconHandle.format = GL_RGBA;
-			//m_PointLightIconHandle.type = GL_FLOAT;
-
-			//m_DirectionalLightIconHandle = {};
-			//m_DirectionalLightIconHandle.internalFormat = GL_RGBA;
-			//m_DirectionalLightIconHandle.format = GL_RGBA;
-			//m_DirectionalLightIconHandle.type = GL_FLOAT;
-
 
 			m_gBuffer_PositionMetallicHandle = {};
 			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
@@ -5418,6 +5402,10 @@ namespace flex
 				if (ImGui::CollapsingHeader("Meshes"))
 				{
 					static i32 selectedMeshIndex = 0;
+					const i32 MAX_NAME_LEN = 128;
+					static std::string selectedMeshName = "";
+					static bool bUpdateName = true;
+
 					std::string selectedMeshRelativeFilePath;
 					MeshComponent::LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
@@ -5432,6 +5420,31 @@ namespace flex
 							break;
 						}
 						++meshIdx;
+					}
+
+					if (bUpdateName)
+					{
+						selectedMeshName = selectedMesh->name;
+						selectedMeshName.resize(MAX_NAME_LEN);
+						bUpdateName = false;
+					}
+
+					bool bRename = ImGui::InputText("##Name", (char*)selectedMeshName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue);
+
+					ImGui::SameLine();
+
+					bRename |= ImGui::Button("Rename");
+
+					if (bRename)
+					{
+						// Strip leading \0 chars
+						selectedMeshName = std::string(selectedMeshName.c_str());
+
+						if (selectedMesh->name.compare(selectedMeshName) != 0)
+						{
+							// TODO: Rename mesh & fix-up all save files
+							PrintWarn("@@@TODO: Rename mesh to %s@@@\n", selectedMeshName.c_str());
+						}
 					}
 
 					ImGui::Text("Import settings");
@@ -5449,7 +5462,7 @@ namespace flex
 						std::string relativeFilePath = selectedMeshRelativeFilePath;
 						for (GLRenderObject* renderObject : m_RenderObjects)
 						{
-							if (renderObject->gameObject)
+							if (renderObject && renderObject->gameObject)
 							{
 								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
 								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(relativeFilePath) == 0)
@@ -5489,6 +5502,7 @@ namespace flex
 							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 							{
 								selectedMeshIndex = i;
+								bUpdateName = true;
 							}
 
 							if (ImGui::BeginPopupContextItem())
@@ -5556,7 +5570,9 @@ namespace flex
 							else
 							{
 								// Add the new mesh to the cache
-								MeshComponent::LoadMesh(relativeFilePath);
+								std::string meshName = fileNameAndExtension;
+								StripFileType(meshName);
+								MeshComponent::LoadMesh(relativeFilePath, meshName);
 							}
 
 							ImGui::CloseCurrentPopup();

@@ -153,6 +153,10 @@ namespace flex
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
 
+		BaseScene::ParseFoundMeshFiles();
+		BaseScene::ParseFoundMaterialFiles();
+		BaseScene::ParseFoundPrefabFiles();
+
 		g_SceneManager = new SceneManager();
 		g_SceneManager->AddFoundScenes();
 

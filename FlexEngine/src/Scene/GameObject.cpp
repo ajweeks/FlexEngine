@@ -68,7 +68,7 @@ namespace flex
 			std::string prefabTypeStr = obj.GetString("prefab type");
 			JSONObject* prefab = nullptr;
 
-			for (JSONObject& parsedPrefab : scene->m_ParsedPrefabs)
+			for (JSONObject& parsedPrefab : scene->s_ParsedPrefabs)
 			{
 				if (parsedPrefab.GetString("name").compare(prefabTypeStr) == 0)
 				{
@@ -86,7 +86,7 @@ namespace flex
 			{
 				std::string name = obj.GetString("name");
 
-				MaterialID matID = scene->ParseMatID(obj);
+				MaterialID matID = scene->FindMaterialIDByName(obj);
 
 				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, matID);
 				prefabInstance->m_bLoadedFromPrefab = true;
@@ -159,7 +159,7 @@ namespace flex
 		}
 		else
 		{
-			matID = scene->ParseMatID(obj);
+			matID = scene->FindMaterialIDByName(obj);
 		}
 
 
@@ -169,10 +169,24 @@ namespace flex
 			m_Transform = Transform::ParseJSON(transformObj);
 		}
 
-		JSONObject meshObj;
-		if (obj.SetObjectChecked("mesh", meshObj))
+		std::string meshName;
+		if (obj.SetStringChecked("mesh", meshName))
 		{
-			MeshComponent::ParseJSON(meshObj, this, matID);
+			bool bFound = false;
+			for (auto parsedMeshObj : BaseScene::s_ParsedMeshes)
+			{
+				if (parsedMeshObj.GetString("name").compare(meshName) == 0)
+				{
+					MeshComponent::ParseJSON(parsedMeshObj, this, matID);
+					bFound = true;
+					break;
+				}
+			}
+
+			if (!bFound)
+			{
+				PrintWarn("Failed to find mesh with name %s in BaseScene::s_ParsedMeshes\n", meshName.c_str());
+			}
 		}
 
 		JSONObject colliderObj;
@@ -340,32 +354,7 @@ namespace flex
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			JSONObject meshObject = {};
-
-			MeshComponent::Type meshType = meshComponent->GetType();
-			if (meshType == MeshComponent::Type::FILE)
-			{
-				std::string meshFilepath = meshComponent->GetRelativeFilePath().substr(RESOURCE_LOCATION.length());
-				meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
-			}
-			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
-			else if (meshType == MeshComponent::Type::PREFAB)
-			{
-				std::string prefabShapeStr = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
-				meshObject.fields.emplace_back("prefab", JSONValue(prefabShapeStr));
-			}
-			else
-			{
-				PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
-			}
-
-			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
-			meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.swapNormalYZ));
-			meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.flipNormalZ));
-			meshObject.fields.emplace_back("flipU", JSONValue(importSettings.flipU));
-			meshObject.fields.emplace_back("flipV", JSONValue(importSettings.flipV));
-
-			object.fields.emplace_back("mesh", JSONValue(meshObject));
+			object.fields.emplace_back("mesh", JSONValue(meshComponent->GetName()));
 		}
 
 		{
@@ -383,16 +372,14 @@ namespace flex
 			if (matID != InvalidMaterialID)
 			{
 				const Material& material = g_Renderer->GetMaterial(matID);
-				i32 materialArrayIndex = scene->GetMaterialArrayIndex(material);
-				if (materialArrayIndex == -1)
+				std::string materialName = material.name;
+				if (materialName.empty())
 				{
-						PrintError("Mesh object contains material not present in "
-										 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
-										 "Object name: %s, matID: %i\n", m_Name.c_str(), matID);
+					PrintWarn("Game object contains material with empty material name!\n");
 				}
 				else
 				{
-					object.fields.emplace_back("material array index", JSONValue(materialArrayIndex));
+					object.fields.emplace_back("material", JSONValue(materialName));
 				}
 			}
 		}
@@ -510,6 +497,18 @@ namespace flex
 		UNREFERENCED_PARAMETER(parentObject);
 
 		// Generic game objects have no unique fields
+	}
+
+	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	{
+		vec.push_back(this);
+
+		for (GameObject* child : m_Children)
+		{
+			vec.push_back(child);
+
+			child->AddSelfAndChildrenToVec(vec);
+		}
 	}
 
 	void GameObject::Initialize()

@@ -72,6 +72,7 @@ namespace flex
 		bool flipNormalZ = object.GetBool("flipNormalZ");
 		bool flipU = object.GetBool("flipU");
 		bool flipV = object.GetBool("flipV");
+		std::string meshName = object.GetString("name");
 
 		if (materialID == InvalidMaterialID)
 		{
@@ -83,6 +84,7 @@ namespace flex
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
 				newMeshComponent->SetRequiredAttributesFromMaterialID(materialID);
+				newMeshComponent->SetName(meshName);
 
 				MeshComponent::ImportSettings importSettings = {};
 				importSettings.flipU = flipU;
@@ -114,6 +116,37 @@ namespace flex
 		return newMeshComponent;
 	}
 
+	JSONObject MeshComponent::SerializeToJSON()
+	{
+		JSONObject meshObject = {};
+		
+		meshObject.fields.emplace_back("name", JSONValue(m_Name));
+
+		if (m_Type == MeshComponent::Type::FILE)
+		{
+			std::string meshFilepath = GetRelativeFilePath().substr(RESOURCE_LOCATION.length());
+			meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
+		}
+		// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
+		else if (m_Type == MeshComponent::Type::PREFAB)
+		{
+			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(m_Shape);
+			meshObject.fields.emplace_back("prefab", JSONValue(prefabShapeStr));
+		}
+		else
+		{
+			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
+		}
+
+		MeshComponent::ImportSettings importSettings = m_ImportSettings;
+		meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.swapNormalYZ));
+		meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.flipNormalZ));
+		meshObject.fields.emplace_back("flipU", JSONValue(importSettings.flipU));
+		meshObject.fields.emplace_back("flipV", JSONValue(importSettings.flipV));
+
+		return meshObject;
+	}
+
 	void MeshComponent::Destroy()
 	{
 		m_VertexBufferData.Destroy();
@@ -124,6 +157,16 @@ namespace flex
 	void MeshComponent::SetOwner(GameObject* owner)
 	{
 		m_OwningGameObject = owner;
+	}
+
+	void MeshComponent::SetName(const std::string& name)
+	{
+		m_Name = name;
+	}
+
+	std::string MeshComponent::GetName() const
+	{
+		return m_Name;
 	}
 
 	//void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
@@ -152,7 +195,7 @@ namespace flex
 		}
 	}
 
-	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& filePath, ImportSettings* importSettings /* = nullptr */)
+	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& filePath, const std::string& name, ImportSettings* importSettings /* = nullptr */)
 	{
 		if (filePath.find(':') != std::string::npos)
 		{
@@ -165,6 +208,7 @@ namespace flex
 		Print("Loading mesh %s\n", fileName.c_str());
 
 		LoadedMesh* newLoadedMesh = new LoadedMesh();
+		newLoadedMesh->name = name;
 		m_LoadedMeshes.emplace(filePath, newLoadedMesh);
 
 		if (importSettings)
@@ -467,7 +511,9 @@ namespace flex
 			// Mesh hasn't been loaded before, load it now
 			Print("Loading mesh %s\n", meshFileName.c_str());
 
-			LoadedMesh* newLoadedMesh = LoadMesh(relativeFilePath, importSettings);
+			std::string meshName = meshFileName;
+			StripFileType(meshName);
+			LoadedMesh* newLoadedMesh = LoadMesh(relativeFilePath, meshName, importSettings);
 
 			if (newLoadedMesh)
 			{

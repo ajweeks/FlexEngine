@@ -58,7 +58,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 0,
+			"material" : "skybox 01",
 			"skybox info" : 
 			{
 				"rotation" : "0.000000, -0.000000, 0.000000"
@@ -74,7 +74,7 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 1
+			"material" : "pbr chrome"
 		},
 		{
 			"name" : "New_Object_01",
@@ -86,15 +86,8 @@
 				"rotation" : "0.000000, -0.000000, 0.000000",
 				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"mesh" : 
-			{
-				"file" : "models/capsule.FBX",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 2
+			"mesh" : "capsule",
+			"material" : "pbr white"
 		}
 	],
 	"point lights" : 

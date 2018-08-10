@@ -1,0 +1,93 @@
+{
+	"version" : 1,
+	"meshes" : 
+	[
+		{
+			"name" : "cube",
+			"file" : "models/cube.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "capsule",
+			"file" : "models/capsule.FBX",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "cone",
+			"file" : "models/cone.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "ico sphere",
+			"file" : "models/ico-sphere.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "unit plane",
+			"file" : "models/unit-plane.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "cornell box",
+			"file" : "models/CornellBox/cornell-box.fbx",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "mori knob",
+			"file" : "models/mori-knob.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"prefab" : "world axis ground",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "street 02",
+			"file" : "models/street-02.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "sponza",
+			"file" : "models/sponza/sponza.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"name" : "cerberus",
+			"file" : "Cerberus_by_Andrew_Maximov/cerberus.glb",
+			"swapNormalYZ" : true,
+			"flipNormalZ" : true,
+			"flipU" : false,
+			"flipV" : true
+		}
+	]
+}
