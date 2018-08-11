@@ -103,7 +103,7 @@ namespace flex
 		Print("%i renderer%s %s, Current renderer: %s\n", 
 			  m_RendererCount, (m_RendererCount > 1 ? "s" : ""), "enabled", m_RendererName.c_str());
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 	}
 
 	FlexEngine::~FlexEngine()
@@ -196,7 +196,7 @@ namespace flex
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 
 		if (m_TransformGizmo)
 		{
@@ -330,7 +330,7 @@ namespace flex
 			SafeDelete(m_TransformGizmo);
 		}
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 	}
 
 	void FlexEngine::OnSceneChanged()
@@ -437,7 +437,7 @@ namespace flex
 		// TODO? ??
 		//g_Renderer->InvalidateFontObjects();
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 		PreSceneChange();
 		g_SceneManager->DestroyAllScenes();
 		DestroyWindowAndRenderer();
@@ -669,7 +669,7 @@ namespace flex
 
 												if (m_CurrentlySelectedObjects.empty())
 												{
-													DeselectCurrentlySelectedObject();
+													DeselectCurrentlySelectedObjects();
 												}
 											}
 											else
@@ -679,19 +679,19 @@ namespace flex
 										}
 										else
 										{
-											DeselectCurrentlySelectedObject();
+											DeselectCurrentlySelectedObjects();
 											m_CurrentlySelectedObjects.push_back(hoveredOverGameObject);
 										}
 										g_InputManager->ClearMouseInput();
 									}
 									else
 									{
-										DeselectCurrentlySelectedObject();
+										DeselectCurrentlySelectedObjects();
 									}
 								}
 								else
 								{
-									DeselectCurrentlySelectedObject();
+									DeselectCurrentlySelectedObjects();
 								}
 							}
 						}
@@ -780,7 +780,7 @@ namespace flex
 
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_ESCAPE))
 			{
-				DeselectCurrentlySelectedObject();
+				DeselectCurrentlySelectedObjects();
 			}
 
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_DELETE))
@@ -792,7 +792,7 @@ namespace flex
 						g_SceneManager->CurrentScene()->DestroyGameObject(gameObject, true);
 					}
 
-					DeselectCurrentlySelectedObject();
+					DeselectCurrentlySelectedObjects();
 				}
 			}
 
@@ -882,6 +882,27 @@ namespace flex
 				g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 			{
 				g_SceneManager->CurrentScene()->SerializeToFile(true);
+			}
+
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_D) &&
+				g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+			{
+				if (!m_CurrentlySelectedObjects.empty())
+				{
+					std::vector<GameObject*> newSelectedGameObjects;
+
+					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					{
+						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
+
+						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+					}
+
+					DeselectCurrentlySelectedObjects();
+
+					m_CurrentlySelectedObjects = newSelectedGameObjects;
+					CalculateSelectedObjectsCenter();
+				}
 			}
 
 			bool bWriteProfilingResultsToFile = 
@@ -1545,7 +1566,7 @@ namespace flex
 
 	void FlexEngine::SetSelectedObject(GameObject* gameObject)
 	{
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 
 		if (gameObject != nullptr)
 		{
@@ -1575,7 +1596,7 @@ namespace flex
 		return m_SelectedObjectsCenterPos;
 	}
 
-	void FlexEngine::DeselectCurrentlySelectedObject()
+	void FlexEngine::DeselectCurrentlySelectedObjects()
 	{
 		m_CurrentlySelectedObjects.clear();
 		m_SelectedObjectRotation = glm::quat(glm::vec3(0.0f));

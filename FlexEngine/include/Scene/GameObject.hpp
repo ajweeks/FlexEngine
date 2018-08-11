@@ -21,7 +21,7 @@ namespace flex
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren);
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren);
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
@@ -94,6 +94,8 @@ namespace flex
 
 		GameObjectType GetType() const;
 
+		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
@@ -103,7 +105,8 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
 		virtual void SerializeUniqueFields(JSONObject& parentObject);
 		
-		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
+		std::string GetNameOfDuplicate() const;
 
 		std::string m_Name;
 
@@ -180,7 +183,7 @@ namespace flex
 	public:
 		Valve(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void PostInitialize() override;
 		virtual void Update() override;
@@ -213,7 +216,7 @@ namespace flex
 	public:
 		RisingBlock(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -243,7 +246,7 @@ namespace flex
 	public:
 		GlassPane(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		bool bBroken = false;
 
@@ -258,7 +261,7 @@ namespace flex
 	public:
 		ReflectionProbe(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void PostInitialize() override;
 
@@ -275,7 +278,7 @@ namespace flex
 	public:
 		Skybox(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;

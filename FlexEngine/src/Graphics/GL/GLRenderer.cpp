@@ -3519,7 +3519,6 @@ namespace flex
 			static const char* renameObjectPopupLabel = "##rename-game-object";
 			static const char* renameObjectButtonStr = "Rename";
 			static const char* duplicateObjectButtonStr = "Duplicate...";
-			static const char* duplicateObjectPopupLabel = "Duplicate object";
 			static const char* deletePopupStr = "Delete object";
 			static const char* deleteButtonStr = "Delete";
 			static const char* deleteCancelButtonStr = "Cancel";
@@ -3561,7 +3560,7 @@ namespace flex
 					ImGui::CloseCurrentPopup();
 				}
 
-				if (DoDuplicateGameObjectButton(gameObject, duplicateObjectButtonStr, duplicateObjectPopupLabel))
+				if (DoDuplicateGameObjectButton(gameObject, duplicateObjectButtonStr))
 				{
 					*gameObjectRef = nullptr;
 					ImGui::CloseCurrentPopup();
@@ -3682,79 +3681,20 @@ namespace flex
 			}
 		}
 
-		bool GLRenderer::DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName)
+		bool GLRenderer::DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName)
 		{
-			static const char* newObjectNameInputLabel = "##new-object-name";
 			static const char* duplicateObjectButtonStr = "Duplicate";
-			static const char* cancelButtonStr = "Cancel";
-
-			bool bDuplicated = false;
-
-			static std::string newObjectName = "";
-
-			const size_t maxStrLen = 256;
 
 			if (ImGui::Button(buttonName))
 			{
-				ImGui::OpenPopup(popupName);
-				newObjectName = objectToCopy->GetName();
-				i16 numNumericalChars;
-				int numEndingWith = GetNumberEndingWith(newObjectName, numNumericalChars);
-				if (numEndingWith == -1)
-				{
-					newObjectName += "_01";
-				}
-				else
-				{
-					newObjectName = newObjectName.substr(0, newObjectName.length() - numNumericalChars) +
-						IntToString(numEndingWith + 1, (u16)numNumericalChars);
-				}
-				newObjectName.resize(maxStrLen);
+				GameObject* newGameObject = objectToCopy->CopySelfAndAddToScene(nullptr, true);
+
+				g_EngineInstance->SetSelectedObject(newGameObject);
+
+				return true;
 			}
 
-			if (ImGui::BeginPopupModal(popupName, NULL,
-				ImGuiWindowFlags_AlwaysAutoResize |
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoNavInputs))
-			{
-
-				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
-												(char*)newObjectName.data(),
-												maxStrLen,
-												ImGuiInputTextFlags_EnterReturnsTrue);
-
-				bCreate |= ImGui::Button(duplicateObjectButtonStr);
-
-				bool bInvalidName = std::string(newObjectName.c_str()).empty();
-
-				if (bCreate && !bInvalidName)
-				{
-					// Remove excess trailing \0 chars
-					newObjectName = std::string(newObjectName.c_str());
-
-					if (!newObjectName.empty())
-					{
-						GameObject* newGameObject = objectToCopy->CopySelf(nullptr, newObjectName, true);
-
-						bDuplicated = true;
-
-						g_EngineInstance->SetSelectedObject(newGameObject);
-
-						ImGui::CloseCurrentPopup();
-					}
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button(cancelButtonStr))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-
-			return bDuplicated;
+			return false;
 		}
 
 		bool GLRenderer::DoTextureSelector(const char* label,

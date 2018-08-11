@@ -75,7 +75,7 @@ namespace flex
 
 		std::string RenderIDToString(RendererID rendererID) const;
 
-		void DeselectCurrentlySelectedObject();
+		void DeselectCurrentlySelectedObjects();
 
 		// Returns true if the common settings file existed and was valid
 		bool LoadCommonSettingsFromDisk();

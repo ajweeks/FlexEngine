@@ -48,9 +48,9 @@ namespace flex
 	{
 	}
 
-	GameObject* GameObject::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* GameObject::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		GameObject* newGameObject = new GameObject(newObjectName, m_Type);
+		GameObject* newGameObject = new GameObject(GetNameOfDuplicate(), m_Type);
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
@@ -516,6 +516,28 @@ namespace flex
 		}
 	}
 
+	std::string GameObject::GetNameOfDuplicate() const
+	{
+		if (m_Name.empty())
+		{
+			return "New Game Object_00";
+		}
+
+		if (isdigit(m_Name[m_Name.size() - 1]) && isdigit(m_Name[m_Name.size() - 2]))
+		{
+			i32 digit = atoi(m_Name.substr(m_Name.size() - 2).c_str());
+			std::string nextDigitStr = IntToString(digit + 1, 2);
+			std::string result = m_Name.substr(0, m_Name.size() - 3) + '_' + nextDigitStr;
+			return result;
+		}
+		else
+		{
+			std::string nextDigitStr = IntToString(0);
+			std::string result = m_Name.substr(0, m_Name.size() - 3) + '_' + nextDigitStr;
+			return result;
+		}
+	}
+
 	void GameObject::Initialize()
 	{
 		if (m_RigidBody)
@@ -699,6 +721,8 @@ namespace flex
 			{
 				PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
 			}
+
+			newMeshComponent->SetName(m_MeshComponent->GetName());
 		}
 
 		if (m_RigidBody)
@@ -719,7 +743,7 @@ namespace flex
 			for (GameObject* child : m_Children)
 			{
 				std::string newChildName = child->GetName();
-				GameObject* newChild = child->CopySelf(newGameObject, newChildName, bCopyChildren);
+				GameObject* newChild = child->CopySelfAndAddToScene(newGameObject, bCopyChildren);
 				newGameObject->AddChild(newChild);
 			}
 		}
@@ -1032,9 +1056,9 @@ namespace flex
 	{
 	}
 
-	GameObject* Valve::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* Valve::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		Valve* newGameObject = new Valve(newObjectName);
+		Valve* newGameObject = new Valve(GetNameOfDuplicate());
 
 		newGameObject->minRotation = minRotation;
 		newGameObject->maxRotation = maxRotation;
@@ -1215,9 +1239,9 @@ namespace flex
 	{
 	}
 
-	GameObject* RisingBlock::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* RisingBlock::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		RisingBlock* newGameObject = new RisingBlock(newObjectName);
+		RisingBlock* newGameObject = new RisingBlock(GetNameOfDuplicate());
 
 		newGameObject->valve = valve;
 		newGameObject->moveAxis = moveAxis;
@@ -1396,9 +1420,9 @@ namespace flex
 	{
 	}
 
-	GameObject* GlassPane::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* GlassPane::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		GlassPane* newGameObject = new GlassPane(newObjectName);
+		GlassPane* newGameObject = new GlassPane(GetNameOfDuplicate());
 
 		newGameObject->bBroken = bBroken;
 
@@ -1444,9 +1468,9 @@ namespace flex
 		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 	}
 
-	GameObject* ReflectionProbe::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		ReflectionProbe* newGameObject = new ReflectionProbe(newObjectName);
+		ReflectionProbe* newGameObject = new ReflectionProbe(GetNameOfDuplicate());
 		
 		newGameObject->captureMatID = captureMatID;
 
@@ -1529,9 +1553,9 @@ namespace flex
 	{
 	}
 
-	GameObject* Skybox::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		Skybox* newGameObject = new Skybox(newObjectName);
+		Skybox* newGameObject = new Skybox(GetNameOfDuplicate());
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
