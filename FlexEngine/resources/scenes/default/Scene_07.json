@@ -1,0 +1,83 @@
+{
+	"version" : 1,
+	"name" : "Scene_07",
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+				"rotation" : "0.000000, -0.000000, 0.000000"
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 0.000000, 0.000000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "New_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 3.140000, 4.999999",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"mesh" : "cube",
+			"material" : "pbr grey"
+		},
+		{
+			"name" : "New_Object_02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 3.140000, -4.380000",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			}
+		},
+		{
+			"name" : "New_Object_03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"position" : "0.000000, 6.399998, 1.219999",
+				"rotation" : "0.000000, -0.000000, 0.000000",
+				"scale" : "1.000000, 1.000000, 1.000000"
+			},
+			"mesh" : "cube",
+			"material" : "pbr grey"
+		}
+	],
+	"point lights" : 
+	[
+	],
+	"directional light" : 
+	{
+		"direction" : "0.000000, 0.000000, 1.000000",
+		"position" : "0.000000, 0.000000, 0.000000",
+		"color" : "1.000000, 1.000000, 1.000000",
+		"enabled" : true,
+		"brightness" : 1.000000
+	}
+}

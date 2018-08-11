@@ -51,47 +51,39 @@ vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-	float a = roughness * roughness;
-	float a2 = a * a;
-	float NdotH = max(dot(N, H), 0.0);
-	float NdotH2 = NdotH * NdotH;
-
-	float nom = a2;
-	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-	denom = PI * denom * denom;
-
-	return nom / denom;
+	float a2 = roughness * roughness;
+	float NoH = max(dot(N, H), 0.0);
+	float f = (NoH * a2 - NoH) * NoH + 1.0;
+	return a2 / (PI * f * f);
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness)
+float GeometrySchlickGGX(float NoV, float roughness)
 {
 	float r = (roughness + 1.0);
 	float k = (r * r) / 8.0;
 
-	float nom = NdotV;
-	float denom = NdotV * (1.0 - k) + k;
+	float nom = NoV;
+	float denom = NoV * (1.0 - k) + k;
 
 	return nom / denom;
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+float GeometrySmith(float NoV, float NoL, float roughness)
 {
-	float NdotV = max(dot(N, V), 0.0);
-	float NdotL = max(dot(N, L), 0.0);
-	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+	float ggx2 = GeometrySchlickGGX(NoV, roughness);
+	float ggx1 = GeometrySchlickGGX(NoL, roughness);
 
 	return ggx1 * ggx2;
 }
 
-vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, 
+vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 	float roughness, float metallic, vec3 F0, vec3 albedo)
 {
 	vec3 H = normalize(V + L);
 
 	// Cook-Torrance BRDF
 	float NDF = DistributionGGX(N, H, roughness);
-	float G = GeometrySmith(N, V, L, roughness);
+	float G = GeometrySmith(NoV, NoL, roughness);
 	vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
 
 	vec3 kS = F;
@@ -99,12 +91,10 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L,
 	kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
 
 	vec3 nominator = NDF * G * F;
-	float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
+	float denominator = 4 * NoV * NoL + 0.001; // Add epsilon to prevent divide by zero
 	vec3 specular = nominator / denominator;
 
-	float NdotL = max(dot(N, L), 0.0);
-
-	return (kD * albedo / PI + specular) * radiance * NdotL;
+	return (kD * albedo / PI + specular) * radiance * NoL;
 }
 
 void main()
@@ -121,6 +111,8 @@ void main()
 
 	vec3 V = normalize(camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
+
+	float NoV = max(dot(N, V), 0.0);
 
 	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
 	vec3 F0 = vec3(0.04);
@@ -147,19 +139,21 @@ void main()
 		float attenuation = 1.0 / (distance * distance);
 		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
 		vec3 radiance = pointLights[i].color.rgb * attenuation;
+		float NoL = max(dot(N, L), 0.0);
 	
-		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
 	if (dirLight.enabled)
 	{
 		vec3 L = normalize(dirLight.direction.xyz);
 		vec3 radiance = dirLight.color.rgb;
+		float NoL = max(dot(N, L), 0.0);
 		
-		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
-	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+	vec3 F = FresnelSchlickRoughness(NoV, F0, roughness);
 
 	vec3 ambient;
 	if (enableIrradianceSampler)
@@ -174,7 +168,7 @@ void main()
 		// Specular ambient term (IBL)
 		const float MAX_REFLECTION_LOAD = 5.0;
 		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
-		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec2 brdf = texture(brdfLUT, vec2(NoV, roughness)).rg;
 		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
 	    ambient = (kD * diffuse + specular) * ao;

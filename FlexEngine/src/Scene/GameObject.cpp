@@ -354,7 +354,12 @@ namespace flex
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			object.fields.emplace_back("mesh", JSONValue(meshComponent->GetName()));
+			std::string meshName = meshComponent->GetName();
+			if (meshName.empty())
+			{
+				PrintWarn("Mesh component contains empty name! Parsing will fail!\n");
+			}
+			object.fields.emplace_back("mesh", JSONValue(meshName));
 		}
 
 		{
@@ -1538,6 +1543,7 @@ namespace flex
 		UNREFERENCED_PARAMETER(scene);
 
 		assert(m_MeshComponent == nullptr);
+		assert(matID != InvalidMaterialID);
 		MeshComponent* skyboxMesh = new MeshComponent(matID, this);
 		skyboxMesh->SetRequiredAttributesFromMaterialID(matID);
 		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);

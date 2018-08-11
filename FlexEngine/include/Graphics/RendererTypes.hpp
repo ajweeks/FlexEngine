@@ -171,7 +171,7 @@ namespace flex
 		bool generateReflectionProbeMaps = false;
 
 		// PBR Constant values
-		glm::vec3 constAlbedo = { 0, 0, 0 };
+		glm::vec3 constAlbedo = { 1, 1, 1 };
 		real constMetallic = 0;
 		real constRoughness = 0;
 		real constAO = 0;
@@ -207,7 +207,7 @@ namespace flex
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 		// PBR constants
-		glm::vec4 constAlbedo = { 0, 0, 0, 0 };
+		glm::vec4 constAlbedo = { 1, 1, 1, 1 };
 		real constMetallic = 0;
 		real constRoughness = 0;
 		real constAO = 0;

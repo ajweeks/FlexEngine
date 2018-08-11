@@ -1274,7 +1274,7 @@ namespace flex
 
 				real roughness = (real)mip / (real(maxMipLevels - 1));
 				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
-				glUniform1f(roughnessUniformLocation, roughness);
+				glUniform1f(roughnessUniformLocation, roughness * roughness);
 				for (u32 i = 0; i < 6; ++i)
 				{
 					glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
@@ -1543,6 +1543,21 @@ namespace flex
 				if (materialPair.second.material.name.compare(materialName) == 0)
 				{
 					materialID = materialPair.first;
+					return true;
+				}
+			}
+
+			for (auto& materialObj : BaseScene::s_ParsedMaterials)
+			{
+				if (materialObj.GetString("name").compare(materialName) == 0)
+				{
+					// Material exists in library, but hasn't been initialized yet
+					MaterialCreateInfo matCreateInfo = {};
+					Material::ParseJSONObject(materialObj, matCreateInfo);
+
+					materialID = g_Renderer->InitializeMaterial(&matCreateInfo);
+					g_SceneManager->CurrentScene()->AddMaterialID(materialID);
+
 					return true;
 				}
 			}
@@ -2214,23 +2229,23 @@ namespace flex
 				pos.y -= g_DeltaTime * 1.0f;
 			}
 
-			glm::vec4 color(1.0f);
-
-			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.bScreenSpace = true;
-			drawInfo.bReadDepth = false;
-			drawInfo.bWriteDepth = false;
-			drawInfo.pos = pos;
-			drawInfo.scale = glm::vec3(1.0, -1.0, 1.0f);
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.anchor = AnchorPoint::WHOLE;
-			drawInfo.inputTextureHandle = m_WorkTexture->handle;
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			//glm::vec4 color(1.0f);
+			//
+			//SpriteQuadDrawInfo drawInfo = {};
+			//drawInfo.bScreenSpace = true;
+			//drawInfo.bReadDepth = false;
+			//drawInfo.bWriteDepth = false;
+			//drawInfo.pos = pos;
+			//drawInfo.scale = glm::vec3(1.0, -1.0, 1.0f);
+			//drawInfo.materialID = m_SpriteMatID;
+			//drawInfo.anchor = AnchorPoint::WHOLE;
+			//drawInfo.inputTextureHandle = m_WorkTexture->handle;
+			//drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 			//DrawSpriteQuad(drawInfo);
 
-			drawInfo.scale = glm::vec3(0.25f, -0.25f, 1.0f);
-			drawInfo.anchor = AnchorPoint::BOTTOM_LEFT;
-			DrawSpriteQuad(drawInfo);
+			//drawInfo.scale = glm::vec3(0.25f, -0.25f, 1.0f);
+			//drawInfo.anchor = AnchorPoint::BOTTOM_LEFT;
+			//DrawSpriteQuad(drawInfo);
 
 			//drawInfo.anchor = AnchorPoint::LEFT;
 			//DrawSpriteQuad(drawInfo);
@@ -4447,7 +4462,7 @@ namespace flex
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constRoughness"))
 			{
-				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness);
+				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness * material->material.constRoughness);
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAOSampler"))
@@ -4866,11 +4881,15 @@ namespace flex
 
 		Material& GLRenderer::GetMaterial(MaterialID matID)
 		{
+			assert(matID != InvalidMaterialID);
+
 			return m_Materials[matID].material;
 		}
 
 		Shader& GLRenderer::GetShader(ShaderID shaderID)
 		{
+			assert(shaderID != InvalidShaderID);
+
 			return m_Shaders[shaderID].shader;
 		}
 
@@ -5792,22 +5811,22 @@ namespace flex
 				if (mesh)
 				{
 					i32 selectedMeshIndex = 0;
-					std::string currentMeshName = "NONE";
+					std::string currentMeshFileName = "NONE";
 					i32 i = 0;
-					for (const auto& iter : MeshComponent::m_LoadedMeshes)
+					for (auto iter : MeshComponent::m_LoadedMeshes)
 					{
 						std::string meshFileName = iter.first;
 						StripLeadingDirectories(meshFileName);
 						if (mesh->GetFileName().compare(meshFileName) == 0)
 						{
 							selectedMeshIndex = i + 1;
-							currentMeshName = meshFileName;
+							currentMeshFileName = meshFileName;
 							break;
 						}
 
 						++i;
 					}
-					if (ImGui::BeginCombo("Mesh", currentMeshName.c_str()))
+					if (ImGui::BeginCombo("Mesh", currentMeshFileName.c_str()))
 					{
 						i = 0;
 
@@ -5837,6 +5856,7 @@ namespace flex
 								mesh->SetOwner(gameObject);
 								mesh->SetRequiredAttributesFromMaterialID(matID);
 								mesh->LoadFromFile(relativeFilePath);
+								mesh->SetName(iter->second->name);
 							}
 
 							++i;
@@ -5866,6 +5886,7 @@ namespace flex
 									mesh->SetOwner(gameObject);
 									mesh->SetRequiredAttributesFromMaterialID(matID);
 									mesh->LoadFromFile(newMeshFilePath);
+									mesh->SetName(meshIter->second->name);
 								}
 							}
 						}

@@ -176,6 +176,8 @@ namespace flex
 
 	void MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)
 	{
+		assert(matID != InvalidMaterialID);
+
 		Material& mat = g_Renderer->GetMaterial(matID);
 		Shader& shader = g_Renderer->GetShader(mat.shaderID);
 		m_RequiredAttributes = shader.vertexAttributes;

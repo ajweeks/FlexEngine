@@ -154,21 +154,26 @@ namespace flex
 
 			// Skybox
 			{
-				MaterialCreateInfo skyboxMatCreateInfo = {};
-				skyboxMatCreateInfo.name = "Skybox";
-				skyboxMatCreateInfo.shaderName = "skybox";
-				skyboxMatCreateInfo.generateHDRCubemapSampler = true;
-				skyboxMatCreateInfo.enableCubemapSampler = true;
-				skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
-				skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
-				skyboxMatCreateInfo.generateIrradianceSampler = true;
-				skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
-				skyboxMatCreateInfo.generatePrefilteredMap = true;
-				skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-				skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
-				MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
+				//MaterialCreateInfo skyboxMatCreateInfo = {};
+				//skyboxMatCreateInfo.name = "Skybox";
+				//skyboxMatCreateInfo.shaderName = "skybox";
+				//skyboxMatCreateInfo.generateHDRCubemapSampler = true;
+				//skyboxMatCreateInfo.enableCubemapSampler = true;
+				//skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
+				//skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
+				//skyboxMatCreateInfo.generateIrradianceSampler = true;
+				//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
+				//skyboxMatCreateInfo.generatePrefilteredMap = true;
+				//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
+				//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
+				//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
-				m_LoadedMaterials.push_back(skyboxMatID);
+				//m_LoadedMaterials.push_back(skyboxMatID);
+
+				MaterialID skyboxMatID = InvalidMaterialID;
+				g_Renderer->GetMaterialID("skybox 01", skyboxMatID);
+
+				assert(skyboxMatID != InvalidMaterialID);
 
 				Skybox* skybox = new Skybox("Skybox");
 				
@@ -180,16 +185,21 @@ namespace flex
 
 			// Reflection probe
 			{
-				MaterialCreateInfo reflectionProbeMatCreateInfo = {};
-				reflectionProbeMatCreateInfo.name = "Reflection Probe";
-				reflectionProbeMatCreateInfo.shaderName = "pbr";
-				reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
-				reflectionProbeMatCreateInfo.constMetallic = 1.0f;
-				reflectionProbeMatCreateInfo.constRoughness = 0.0f;
-				reflectionProbeMatCreateInfo.constAO = 1.0f;
-				MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
+				//MaterialCreateInfo reflectionProbeMatCreateInfo = {};
+				//reflectionProbeMatCreateInfo.name = "Reflection Probe";
+				//reflectionProbeMatCreateInfo.shaderName = "pbr";
+				//reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+				//reflectionProbeMatCreateInfo.constMetallic = 1.0f;
+				//reflectionProbeMatCreateInfo.constRoughness = 0.0f;
+				//reflectionProbeMatCreateInfo.constAO = 1.0f;
+				//MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
 
-				m_LoadedMaterials.push_back(sphereMatID);
+				//m_LoadedMaterials.push_back(sphereMatID);
+
+				MaterialID sphereMatID = InvalidMaterialID;
+				g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
+
+				assert(sphereMatID != InvalidMaterialID);
 
 				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 				
@@ -602,14 +612,21 @@ namespace flex
 		std::vector<MaterialID> currentSceneMatIDs = g_SceneManager->CurrentScene()->GetMaterialIDs();
 		for (MaterialID matID : currentSceneMatIDs)
 		{
+			bool bExistsInFile = false;
 			Material& mat = g_Renderer->GetMaterial(matID);
 			for (JSONObject& parsedMatObj : s_ParsedMaterials)
 			{
 				if (parsedMatObj.GetString("name").compare(mat.name) == 0)
 				{
 					parsedMatObj = mat.SerializeToJSON();
+					bExistsInFile = true;
 					break;
 				}
+			}
+
+			if (!bExistsInFile)
+			{
+				s_ParsedMaterials.push_back(mat.SerializeToJSON());
 			}
 		}
 
@@ -733,19 +750,6 @@ namespace flex
 
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_FileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
-
-
-		JSONField materialsField = {};
-		materialsField.label = "materials";
-		std::vector<JSONObject> materialsArray;
-		for (MaterialID matID : m_LoadedMaterials)
-		{
-			Material& material = g_Renderer->GetMaterial(matID);
-			materialsArray.push_back(material.SerializeToJSON());
-		}
-		materialsField.value = JSONValue(materialsArray);
-		rootSceneObject.fields.push_back(materialsField);
-
 
 		std::vector<JSONObject> objectsArray;
 		for (GameObject* rootObject : m_RootObjects)
