@@ -787,9 +787,15 @@ namespace flex
 			{
 				if (!m_CurrentlySelectedObjects.empty())
 				{
-					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					i32 i = 0;
+					while (i < m_CurrentlySelectedObjects.size())
 					{
-						g_SceneManager->CurrentScene()->DestroyGameObject(gameObject, true);
+						if (!g_SceneManager->CurrentScene()->DestroyGameObject(m_CurrentlySelectedObjects[i], true))
+						{
+							// This path should never execute, but if it does in a shipping build at least prevent an infinite loop
+							assert(false);
+							++i;
+						}
 					}
 
 					DeselectCurrentlySelectedObjects();
