@@ -814,6 +814,43 @@ namespace flex
 				isinf(quat.x) || isinf(quat.y) || isinf(quat.z) || isinf(quat.w));
 	}
 
+	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName)
+	{
+		if (namePrefix.empty())
+		{
+			return defaultName;
+		}
+
+		std::string name = namePrefix;
+		
+		char delimiter = '_';
+		size_t finalDelimiter = namePrefix.find(delimiter);
+		if (finalDelimiter == std::string::npos)
+		{
+			delimiter = ' ';
+			finalDelimiter = namePrefix.find(delimiter);
+		}
+		if (finalDelimiter == namePrefix.size() - 3)
+		{
+			name = namePrefix.substr(0, finalDelimiter);
+		}
+
+		const size_t nameLen = name.size();
+		if (isdigit(namePrefix[namePrefix.size() - 1]) && isdigit(namePrefix[namePrefix.size() - 2]))
+		{
+			i32 digit = atoi(namePrefix.substr(namePrefix.size() - 2).c_str());
+			std::string nextDigitStr = IntToString(digit + 1, 2);
+			std::string result = name + delimiter + nextDigitStr;
+			return result;
+		}
+		else
+		{
+			std::string nextDigitStr = IntToString(0, 2);
+			std::string result = name + delimiter + nextDigitStr;
+			return result;
+		}
+	}
+
 	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
 	{
 		std::string result(FloatToString(vec.x, precision) + ", " +

@@ -1274,7 +1274,7 @@ namespace flex
 
 				real roughness = (real)mip / (real(maxMipLevels - 1));
 				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
-				glUniform1f(roughnessUniformLocation, roughness * roughness);
+				glUniform1f(roughnessUniformLocation, roughness);
 				for (u32 i = 0; i < 6; ++i)
 				{
 					glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
@@ -3642,6 +3642,7 @@ namespace flex
 				newObjectName.resize(maxStrLen);
 
 
+				ImGui::SetKeyboardFocusHere();
 				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
 												(char*)newObjectName.data(),
 												maxStrLen,
@@ -3661,8 +3662,6 @@ namespace flex
 						MaterialID matID = g_SceneManager->CurrentScene()->GetMaterialIDs()[0];
 
 						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
-						MeshComponent* meshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						meshComponent->LoadPrefabShape(MeshComponent::PrefabShape::CUBE);
 
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
@@ -4402,7 +4401,7 @@ namespace flex
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("constRoughness"))
 			{
-				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness * material->material.constRoughness);
+				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness);
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAOSampler"))
@@ -4975,6 +4974,7 @@ namespace flex
 		{
 			static i32 MAX_CHAR_COUNT = 128;
 
+			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
 			if (ImGui::Begin("Asset browser", &m_bShowingAssetBrowser))
 			{
 				if (ImGui::CollapsingHeader("Materials"))
@@ -5069,7 +5069,7 @@ namespace flex
 						selectedShaderIndex = mat.material.shaderID;
 					}
 
-					ImGui::PushItemWidth(180.0f);
+					ImGui::PushItemWidth(160.0f);
 					if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
 					{
 						// Remove trailing \0 characters
@@ -5102,9 +5102,9 @@ namespace flex
 					ImGui::NewLine();
 
 					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 220.0f);
+					ImGui::SetColumnWidth(0, 240.0f);
 
-					ImGui::SliderFloat3("Albedo", &mat.material.constAlbedo.x, 0.0f, 1.0f, "%.2f");
+					ImGui::ColorEdit3("Albedo", &mat.material.constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
 					if (mat.material.enableMetallicSampler)
 					{
@@ -5202,6 +5202,31 @@ namespace flex
 								}
 							}
 
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Duplicate"))
+								{
+									const Material& mat = m_Materials[i].material;
+
+									MaterialCreateInfo createInfo = {};
+									createInfo.name = GetIncrementedPostFixedStr(mat.name, "new material 00");
+									createInfo.shaderName = m_Shaders[mat.shaderID].shader.name;
+									createInfo.constAlbedo = mat.constAlbedo;
+									createInfo.constRoughness = mat.constRoughness;
+									createInfo.constMetallic = mat.constMetallic;
+									createInfo.constAO = mat.constAO;
+									createInfo.colorMultiplier = mat.colorMultiplier;
+									// TODO: Copy other fields
+									MaterialID newMaterialID = InitializeMaterial(&createInfo);
+
+									g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
+
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+
 							if (ImGui::IsItemActive())
 							{
 								if (ImGui::BeginDragDropSource())
@@ -5265,7 +5290,6 @@ namespace flex
 							MaterialCreateInfo createInfo = {};
 							createInfo.name = newMaterialName;
 							createInfo.shaderName = m_Shaders[newMatShaderIndex].shader.name;
-
 							MaterialID newMaterialID = InitializeMaterial(&createInfo);
 
 							g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
@@ -5542,7 +5566,7 @@ namespace flex
 
 			ImGui::End();
 		}
-		
+
 		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
 		{
 			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
@@ -5558,7 +5582,7 @@ namespace flex
 				return;
 			}
 
-			JSONObject rootObject{};
+			JSONObject rootObject = {};
 			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
 			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
 			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
@@ -5611,19 +5635,25 @@ namespace flex
 			// Dropping objects onto this text makes them root objects
 			if (ImGui::BeginDragDropTarget())
 			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
 
 				if (payload && payload->Data)
 				{
-					RenderID* draggedRenderID = (RenderID*)payload->Data;
-					GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
-					GameObject* draggedGameObject = draggedRenderObject->gameObject;
-					if (draggedGameObject)
+					GameObject* draggedGameObjects = (GameObject*)payload->Data;
+					i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
+
+					std::vector<GameObject*> draggedGameObjectsVec;
+					draggedGameObjectsVec.reserve(draggedObjectCount);
+					for (i32 i = 0; i < draggedObjectCount; ++i)
+					{
+						draggedGameObjectsVec.push_back(draggedGameObjects + i);
+					}
+
+					for (GameObject* draggedGameObject : draggedGameObjectsVec)
 					{
 						// If we're a child of the dragged object then don't allow (causes infinite recursion)
 						if (draggedGameObject->GetParent())
 						{
-							draggedGameObject->DetachFromParent();
 							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
 						}
 					}
@@ -5873,8 +5903,7 @@ namespace flex
 					bHasChildren = false;
 				}
 			}
-			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-			bool bSelected = (Contains(selectedObjects, gameObject) != selectedObjects.end());
+			bool bSelected = g_EngineInstance->IsObjectSelected(gameObject);
 
 			bool visible = gameObject->IsVisible();
 			const std::string objectVisibleLabel(objectID + "-visible");
@@ -5920,9 +5949,9 @@ namespace flex
 			bool bParentChildTreeChanged = (gameObject == nullptr);
 			if (gameObject)
 			{
-				if (ImGui::IsItemClicked())
+				if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
 				{
-					if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+					if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 					{
 						g_EngineInstance->ToggleSelectedObject(gameObject);
 					}
@@ -5936,11 +5965,40 @@ namespace flex
 				{
 					if (ImGui::BeginDragDropSource())
 					{
-						RenderID draggedRenderID = gameObject->GetRenderID();
-						const void* data = (void*)(&draggedRenderID);
-						size_t size = sizeof(RenderID);
+						const void* data = nullptr;
+						size_t size = 0;
 
-						ImGui::SetDragDropPayload(m_RenderObjectPayloadCStr, data, size);
+						const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+						auto iter = Find(selectedObjects, gameObject);
+						bool bItemInSelection = iter != selectedObjects.end();
+
+						std::vector<GameObject*> draggedGameObjects;
+						if (bItemInSelection)
+						{
+							for (GameObject* selectedObject : selectedObjects)
+							{
+								// Don't allow children to not be part of dragged selection
+								selectedObject->AddSelfAndChildrenToVec(draggedGameObjects);
+							}
+
+							// Ensure any children which weren't selected are now in selection
+							for (GameObject* draggedGameObject : draggedGameObjects)
+							{
+								g_EngineInstance->AddSelectedObject(draggedGameObject);
+							}
+
+							data = draggedGameObjects.data();
+							size = draggedGameObjects.size() * sizeof(GameObject*);
+						}
+						else
+						{
+							g_EngineInstance->SetSelectedObject(gameObject);
+
+							data = (void*)(&gameObject);
+							size = sizeof(GameObject*);
+						}
+
+						ImGui::SetDragDropPayload(m_GameObjectPayloadCStr, data, size);
 
 						ImGui::Text(gameObject->GetName().c_str());
 
@@ -5950,36 +6008,54 @@ namespace flex
 
 				if (ImGui::BeginDragDropTarget())
 				{
-					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_RenderObjectPayloadCStr);
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
 
 					if (payload && payload->Data)
 					{
-						RenderID* draggedRenderID = (RenderID*)payload->Data;
-						GLRenderObject* draggedRenderObject = GetRenderObject(*draggedRenderID);
-						GameObject* draggedGameObject = draggedRenderObject->gameObject;
-						if (draggedGameObject)
+						GameObject* draggedGameObjects = *((GameObject**)payload->Data);
+						i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
+
+						std::vector<GameObject*> draggedGameObjectsVec;
+						draggedGameObjectsVec.reserve(draggedObjectCount);
+						for (i32 i = 0; i < draggedObjectCount; ++i)
 						{
-							// If we're a child of the dragged object then don't allow (causes infinite recursion)
-							if (!draggedGameObject->HasChild(gameObject, true))
+							draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
+						}
+
+						if (!draggedGameObjectsVec.empty())
+						{
+							bool bContainsChild = false;
+
+							for (GameObject* draggedGameObject : draggedGameObjectsVec)
 							{
-								bool bRemovedRootObj = false;
-								if (draggedGameObject->GetParent())
+								if (draggedGameObject->HasChild(gameObject, true))
 								{
-									draggedGameObject->DetachFromParent();
+									bContainsChild = true;
+									break;
 								}
-								else
-								{
-									g_SceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
-									bRemovedRootObj = true;
-								}
+							}
 
-								if (bRemovedRootObj && gameObject->GetParent() == draggedGameObject)
+							// If we're a child of the dragged object then don't allow (causes infinite recursion)
+							if (!bContainsChild)
+							{
+								for (GameObject* draggedGameObject : draggedGameObjectsVec)
 								{
-									g_SceneManager->CurrentScene()->AddRootObject(gameObject);
+									if (draggedGameObject->GetParent())
+									{
+										if (Find(draggedGameObjectsVec, draggedGameObject->GetParent()) == draggedGameObjectsVec.end())
+										{
+											draggedGameObject->DetachFromParent();
+											gameObject->AddChild(draggedGameObject);
+											bParentChildTreeChanged = true;
+										}
+									}
+									else
+									{
+										g_SceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
+										gameObject->AddChild(draggedGameObject);
+										bParentChildTreeChanged = true;
+									}
 								}
-
-								gameObject->AddChild(draggedGameObject);
-								bParentChildTreeChanged = true;
 							}
 						}
 					}

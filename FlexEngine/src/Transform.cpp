@@ -28,48 +28,42 @@ namespace flex
 		localPosition(position),
 		localRotation(rotation),
 		localScale(scale),
-		worldPosition(position),
-		worldRotation(rotation),
-		worldScale(scale),
+		worldPosition(0.0f),
+		worldRotation(glm::vec3(0.0f)),
+		worldScale(1.0f),
 		localTransform(glm::translate(glm::mat4(1.0f), position) *
-					   // Cast away constness
-					   glm::mat4((glm::quat)rotation) *
-					   glm::scale(glm::mat4(1.0f), scale)),
-		worldTransform(glm::translate(glm::mat4(1.0f), position) *
-					   glm::mat4((glm::quat)rotation) *
-					   glm::scale(glm::mat4(1.0f), scale))
+			// Cast away constness
+			glm::mat4((glm::quat)rotation) *
+			glm::scale(glm::mat4(1.0f), scale)),
+		worldTransform(1.0f)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(glm::vec3(1.0f)),
-		worldPosition(position),
-		worldRotation(rotation),
-		worldScale(glm::vec3(1.0f)),
+		localScale(1.0f),
+		worldPosition(0.0f),
+		worldRotation(glm::vec3(0.0f)),
+		worldScale(1.0f),
 		localTransform(glm::translate(glm::mat4(1.0f), position) *
-					   glm::mat4((glm::quat)rotation) *
-					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f))),
-		worldTransform(glm::translate(glm::mat4(1.0f), position) *
-					   glm::mat4((glm::quat)rotation) *
-					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)))
+			glm::mat4((glm::quat)rotation) *
+			glm::scale(glm::mat4(1.0f), glm::vec3(1.0f))),
+		worldTransform(1.0f)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position) :
 		localPosition(position),
-		localRotation(glm::quat(glm::vec3(0.0f))),
-		localScale(glm::vec3(1.0f)),
-		worldPosition(position),
-		worldRotation(glm::quat(glm::vec3(0.0f))),
-		worldScale(glm::vec3(1.0f)),
+		localRotation(glm::vec3(0.0f)),
+		localScale(1.0f),
+		worldPosition(0.0f),
+		worldRotation(glm::vec3(0.0f)),
+		worldScale(1.0f),
 		localTransform(glm::translate(glm::mat4(1.0f), position) *
-					   glm::mat4(glm::quat(glm::vec3(0.0f))) *
-					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f))),
-		worldTransform(glm::translate(glm::mat4(1.0f), position) *
-					   glm::mat4(glm::quat(glm::vec3(0.0f))) *
-					   glm::scale(glm::mat4(1.0f), glm::vec3(1.0f)))
+			glm::mat4(glm::quat(glm::vec3(0.0f))) *
+			glm::scale(glm::mat4(1.0f), glm::vec3(1.0f))),
+		worldTransform(1.0f)
 	{
 	}
 
@@ -77,9 +71,9 @@ namespace flex
 		localPosition(other.localPosition),
 		localRotation(other.localRotation),
 		localScale(other.localScale),
-		worldPosition(other.worldPosition),
-		worldRotation(other.worldRotation),
-		worldScale(other.worldScale)
+		worldPosition(0.0f),
+		worldRotation(glm::vec3(0.0f)),
+		worldScale(1.0f)
 	{
 		localTransform = (glm::translate(glm::mat4(1.0f), other.localPosition) *
 						  glm::mat4((glm::quat)other.localRotation) *

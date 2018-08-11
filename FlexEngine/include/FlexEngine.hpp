@@ -21,10 +21,13 @@ namespace flex
 		void Stop();
 		
 		std::vector<GameObject*> GetSelectedObjects();
-		void ToggleSelectedObject(GameObject* gameObject);
 		void SetSelectedObject(GameObject* gameObject);
+		void ToggleSelectedObject(GameObject* gameObject);
+		void AddSelectedObject(GameObject* gameObject);
 		void DeselectObject(GameObject* gameObject);
+		bool IsObjectSelected(GameObject* gameObject);
 		glm::vec3 GetSelectedObjectsCenter();
+		void CalculateSelectedObjectsCenter();
 
 		bool IsDraggingGizmo() const;
 
@@ -82,8 +85,6 @@ namespace flex
 		void SaveCommonSettingsToDisk(bool bAddEditorStr);
 
 		void DoSceneContextMenu(BaseScene* scene);
-
-		void CalculateSelectedObjectsCenter();
 
 		u32 m_RendererCount = 0;
 		bool m_bRunning = false;

@@ -662,20 +662,7 @@ namespace flex
 									{
 										if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
 										{
-											auto iter = Contains(m_CurrentlySelectedObjects, hoveredOverGameObject);
-											if (iter != m_CurrentlySelectedObjects.end())
-											{
-												m_CurrentlySelectedObjects.erase(iter);
-
-												if (m_CurrentlySelectedObjects.empty())
-												{
-													DeselectCurrentlySelectedObjects();
-												}
-											}
-											else
-											{
-												m_CurrentlySelectedObjects.push_back(hoveredOverGameObject);
-											}
+											ToggleSelectedObject(hoveredOverGameObject);
 										}
 										else
 										{
@@ -788,7 +775,7 @@ namespace flex
 				if (!m_CurrentlySelectedObjects.empty())
 				{
 					i32 i = 0;
-					while (i < m_CurrentlySelectedObjects.size())
+					while (i < (i32)m_CurrentlySelectedObjects.size())
 					{
 						if (!g_SceneManager->CurrentScene()->DestroyGameObject(m_CurrentlySelectedObjects[i], true))
 						{
@@ -1555,21 +1542,6 @@ namespace flex
 		return m_CurrentlySelectedObjects;
 	}
 
-	void FlexEngine::ToggleSelectedObject(GameObject* gameObject)
-	{
-		auto iter = Contains(m_CurrentlySelectedObjects, gameObject);
-		if (iter == m_CurrentlySelectedObjects.end())
-		{
-			m_CurrentlySelectedObjects.push_back(gameObject);
-		}
-		else
-		{
-			m_CurrentlySelectedObjects.erase(iter);
-		}
-
-		CalculateSelectedObjectsCenter();
-	}
-
 	void FlexEngine::SetSelectedObject(GameObject* gameObject)
 	{
 		DeselectCurrentlySelectedObjects();
@@ -1580,6 +1552,37 @@ namespace flex
 		}
 
 		CalculateSelectedObjectsCenter();
+	}
+
+	void FlexEngine::ToggleSelectedObject(GameObject* gameObject)
+	{
+		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
+		if (iter == m_CurrentlySelectedObjects.end())
+		{
+			m_CurrentlySelectedObjects.push_back(gameObject);
+		}
+		else
+		{
+			m_CurrentlySelectedObjects.erase(iter);
+
+			if (m_CurrentlySelectedObjects.empty())
+			{
+				DeselectCurrentlySelectedObjects();
+			}
+		}
+
+		CalculateSelectedObjectsCenter();
+	}
+
+	void FlexEngine::AddSelectedObject(GameObject* gameObject)
+	{
+		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
+		if (iter == m_CurrentlySelectedObjects.end())
+		{
+			m_CurrentlySelectedObjects.push_back(gameObject);
+
+			CalculateSelectedObjectsCenter();
+		}
 	}
 
 	void FlexEngine::DeselectObject(GameObject* gameObject)
@@ -1597,6 +1600,12 @@ namespace flex
 		PrintWarn("Attempted to deselect object which wasn't selected!\n");
 	}
 
+	bool FlexEngine::IsObjectSelected(GameObject* gameObject)
+	{
+		bool bSelected = (Find(m_CurrentlySelectedObjects, gameObject) != m_CurrentlySelectedObjects.end());
+		return bSelected;
+	}
+
 	glm::vec3 FlexEngine::GetSelectedObjectsCenter()
 	{
 		return m_SelectedObjectsCenterPos;
@@ -1610,6 +1619,8 @@ namespace flex
 		m_SelectedObjectDragStartPos = glm::vec3(0.0f);
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
+
+		Print("deselect\n");
 	}
 
 	bool FlexEngine::LoadCommonSettingsFromDisk()

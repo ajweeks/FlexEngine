@@ -29,90 +29,6 @@ namespace flex
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, i32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
-	struct HDRImage
-	{
-		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically);
-		void Free();
-
-		i32 width;
-		i32 height;
-		i32 channelCount;
-		std::string filePath;
-		real* pixels;
-	};
-
-	template <class T>
-	struct RollingAverage
-	{
-		RollingAverage();
-		RollingAverage(i32 valueCount);
-
-		void AddValue(T newValue);
-		void Reset();
-
-		T currentAverage;
-		std::vector<T> prevValues;
-
-		i32 currentIndex = 0;
-	};
-
-	template<class T>
-	inline RollingAverage<T>::RollingAverage()
-	{
-	}
-
-	template <class T>
-	RollingAverage<T>::RollingAverage(i32 valueCount)
-	{
-		prevValues.resize(valueCount);
-	}
-
-	template <class T>
-	void RollingAverage<T>::AddValue(T newValue)
-	{
-		prevValues[currentIndex++] = newValue;
-		currentIndex %= prevValues.size();
-
-		currentAverage = T();
-		std::for_each(prevValues.begin(), prevValues.end(), [&](T value)
-		{
-			currentAverage += value;
-		});
-
-		currentAverage /= prevValues.size();
-	}
-
-	template <class T>
-	void RollingAverage<T>::Reset()
-	{
-		for (T& v : prevValues)
-		{
-			v = T();
-		}
-		currentIndex = 0;
-		currentAverage = T();
-	}
-	
-	// Stores text render commands issued during the 
-	// frame to later be converted to "TextVertex"s
-	struct TextCache
-	{
-	public:
-		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw);
-
-		std::string str;
-		AnchorPoint anchor;
-		glm::vec2 pos;
-		glm::vec4 color;
-		real xSpacing;
-		std::vector<real> letterYOffsets;
-		bool bRaw;
-
-	private:
-		//TextCache& operator=(const TextCache &tmp);
-
-	};
-
 	bool FileExists(const std::string& filePath);
 
 	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile);
@@ -198,37 +114,7 @@ namespace flex
 	bool IsNanOrInf(const glm::vec4& vec);
 	bool IsNanOrInf(const glm::quat& quat);
 
-	template<class T>
-	inline typename std::vector<T>::const_iterator Contains(const std::vector<T>& vec, const T& t)
-	{
-		for (std::vector<T>::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
-		{
-			if (*iter == t)
-			{
-				return iter;
-			}
-		}
-
-		return vec.end();
-	}
-
-	template<class TReal>
-	glm::vec2 ToVec2(const aiVector2t<TReal>& vec)
-	{
-		return glm::vec2(vec.x, vec.y);
-	}
-
-	template<class TReal>
-	glm::vec3 ToVec3(const aiVector3t<TReal>& vec)
-	{
-		return glm::vec3(vec.x, vec.y, vec.z);
-	}
-
-	template<class TReal>
-	glm::vec4 ToVec4(const aiColor4t<TReal>& color)
-	{
-		return glm::vec4(color.r, color.g, color.b, color.a);
-	}
+	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
 	std::string FloatToString(real f, i32 precision);
 
@@ -270,4 +156,121 @@ namespace flex
 	// Must be called at least once to set g_CurrentWorkingDirectory!
 	void RetrieveCurrentWorkingDirectory();
 	std::string RelativePathToAbsolute(const std::string& relativePath);
+
+	template<class T>
+	inline typename std::vector<T>::const_iterator Find(const std::vector<T>& vec, const T& t)
+	{
+		for (std::vector<T>::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
+		{
+			if (*iter == t)
+			{
+				return iter;
+			}
+		}
+
+		return vec.end();
+	}
+
+	template<class TReal>
+	glm::vec2 ToVec2(const aiVector2t<TReal>& vec)
+	{
+		return glm::vec2(vec.x, vec.y);
+	}
+
+	template<class TReal>
+	glm::vec3 ToVec3(const aiVector3t<TReal>& vec)
+	{
+		return glm::vec3(vec.x, vec.y, vec.z);
+	}
+
+	template<class TReal>
+	glm::vec4 ToVec4(const aiColor4t<TReal>& color)
+	{
+		return glm::vec4(color.r, color.g, color.b, color.a);
+	}
+
+	struct HDRImage
+	{
+		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically);
+		void Free();
+
+		i32 width;
+		i32 height;
+		i32 channelCount;
+		std::string filePath;
+		real* pixels;
+	};
+
+	template <class T>
+	struct RollingAverage
+	{
+		RollingAverage();
+		RollingAverage(i32 valueCount);
+
+		void AddValue(T newValue);
+		void Reset();
+
+		T currentAverage;
+		std::vector<T> prevValues;
+
+		i32 currentIndex = 0;
+	};
+
+	template<class T>
+	inline RollingAverage<T>::RollingAverage()
+	{
+	}
+
+	template <class T>
+	RollingAverage<T>::RollingAverage(i32 valueCount)
+	{
+		prevValues.resize(valueCount);
+	}
+
+	template <class T>
+	void RollingAverage<T>::AddValue(T newValue)
+	{
+		prevValues[currentIndex++] = newValue;
+		currentIndex %= prevValues.size();
+
+		currentAverage = T();
+		std::for_each(prevValues.begin(), prevValues.end(), [&](T value)
+		{
+			currentAverage += value;
+		});
+
+		currentAverage /= prevValues.size();
+	}
+
+	template <class T>
+	void RollingAverage<T>::Reset()
+	{
+		for (T& v : prevValues)
+		{
+			v = T();
+		}
+		currentIndex = 0;
+		currentAverage = T();
+	}
+
+	// Stores text render commands issued during the 
+	// frame to later be converted to "TextVertex"s
+	struct TextCache
+	{
+	public:
+		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw);
+
+		std::string str;
+		AnchorPoint anchor;
+		glm::vec2 pos;
+		glm::vec4 color;
+		real xSpacing;
+		std::vector<real> letterYOffsets;
+		bool bRaw;
+
+	private:
+		//TextCache& operator=(const TextCache &tmp);
+
+	};
+
 } // namespace flex

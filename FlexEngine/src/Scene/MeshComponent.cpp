@@ -499,7 +499,6 @@ namespace flex
 		LoadedMesh* loadedMesh = nullptr;
 		if (GetLoadedMesh(relativeFilePath, &loadedMesh))
 		{
-			Print("Reusing loaded mesh from %s\n", meshFileName.c_str());
 			scene = loadedMesh->scene;
 
 			if (importSettings == nullptr)

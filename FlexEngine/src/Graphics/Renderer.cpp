@@ -10,6 +10,7 @@
 #include "Scene/GameObject.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Window/Window.hpp"
+#include "FlexEngine.hpp"
 
 namespace flex
 {
@@ -243,6 +244,11 @@ namespace flex
 			if (gameObject->GetRigidBody())
 			{
 				gameObject->GetRigidBody()->MatchParentTransform();
+			}
+
+			if (g_EngineInstance->IsObjectSelected(gameObject))
+			{
+				g_EngineInstance->CalculateSelectedObjectsCenter();
 			}
 		}
 	}

@@ -64,7 +64,6 @@
 	"point lights" : 
 	[
 		{
-			"name" : "Point light 01",
 			"pos" : "-1.000, -1.000, -1.000",
 			"color" : "0.93, 0.93, 0.89",
 			"enabled" : false,

@@ -18,169 +18,316 @@
 		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
+			"visible" : false,
+			"transform" : 
+			{
+				"pos" : "9.280, 8.440, 0.000"
+			},
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "Top spheres",
+			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 16.800, 0.000"
 			},
-			"material" : "pbr chrome"
+			"children" : 
+			[
+				{
+					"name" : "Sphere 10",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -35.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 10"
+				},
+				{
+					"name" : "Sphere 09",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -28.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 09"
+				},
+				{
+					"name" : "Sphere 08",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -21.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 08"
+				},
+				{
+					"name" : "Sphere 00",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 35.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 00"
+				},
+				{
+					"name" : "Sphere 07",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -14.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 07"
+				},
+				{
+					"name" : "Sphere 05",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 05"
+				},
+				{
+					"name" : "Sphere 06",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -7.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 06"
+				},
+				{
+					"name" : "Sphere 04",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 7.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 04"
+				},
+				{
+					"name" : "Sphere 03",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 14.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 03"
+				},
+				{
+					"name" : "Sphere 02",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 21.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 02"
+				},
+				{
+					"name" : "Sphere 01",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 28.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 01"
+				}
+			]
 		},
 		{
-			"name" : "Sphere 01",
+			"name" : "Bottom spheres",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 6.440, 31.000",
-				"scale" : "3.000, 3.000, 3.000"
+				"pos" : "0.000, 7.000, 0.000"
 			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 01"
-		},
-		{
-			"name" : "Sphere 02",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, 24.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 02"
-		},
-		{
-			"name" : "Sphere 03",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, 17.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 03"
-		},
-		{
-			"name" : "Sphere 04",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, 10.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 04"
-		},
-		{
-			"name" : "Sphere 05",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, 3.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 05"
-		},
-		{
-			"name" : "Sphere 06",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, -4.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 06"
-		},
-		{
-			"name" : "Sphere 07",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, -11.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 07"
-		},
-		{
-			"name" : "Sphere 00",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, 38.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 00"
-		},
-		{
-			"name" : "Sphere 08",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, -18.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 08"
-		},
-		{
-			"name" : "Sphere 09",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, -25.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 09"
-		},
-		{
-			"name" : "Sphere 10",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 6.440, -32.000",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "sphere 10"
-		},
-		{
-			"name" : "Sphere plox",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 13.480, 0.000"
-			},
-			"mesh" : "ico sphere",
-			"material" : "pbr chrome"
+			"children" : 
+			[
+				{
+					"name" : "Sphere 11",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -35.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 11"
+				},
+				{
+					"name" : "Sphere 12",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -28.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 12"
+				},
+				{
+					"name" : "Sphere 13",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -21.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 13"
+				},
+				{
+					"name" : "Sphere 14",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -14.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 14"
+				},
+				{
+					"name" : "Sphere 15",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, -7.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 15"
+				},
+				{
+					"name" : "Sphere 16",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 16"
+				},
+				{
+					"name" : "Sphere 17",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 7.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 17"
+				},
+				{
+					"name" : "Sphere 18",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 14.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 18"
+				},
+				{
+					"name" : "Sphere 19",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 21.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 19"
+				},
+				{
+					"name" : "Sphere 20",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 28.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 20"
+				},
+				{
+					"name" : "Sphere 21",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.000, 35.000",
+						"scale" : "3.000, 3.000, 3.000"
+					},
+					"mesh" : "ico sphere",
+					"material" : "sphere 21"
+				}
+			]
 		}
 	],
 	"point lights" : 
 	[
 		{
-			"name" : "",
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "15.000, 12.000, -32.000",
 			"color" : "1.00, 1.00, 1.00",
 			"enabled" : true,
 			"brightness" : 500.000000
 		},
 		{
-			"name" : "",
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "15.000, 12.000, 32.000",
+			"color" : "1.00, 1.00, 1.00",
+			"enabled" : true,
+			"brightness" : 500.000000
+		},
+		{
+			"pos" : "15.000, 12.000, 0.000",
 			"color" : "1.00, 1.00, 1.00",
 			"enabled" : true,
 			"brightness" : 500.000000
@@ -191,7 +338,7 @@
 		"direction" : "0.000, 0.000, 1.000",
 		"pos" : "0.000, 0.000, 0.000",
 		"color" : "1.00, 1.00, 1.00",
-		"enabled" : true,
+		"enabled" : false,
 		"brightness" : 1.000000
 	}
 }

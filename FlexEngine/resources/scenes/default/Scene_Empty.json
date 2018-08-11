@@ -40,7 +40,6 @@
 	"point lights" : 
 	[
 		{
-			"name" : "",
 			"pos" : "-1.000, -1.000, -1.000",
 			"color" : "1.00, 1.00, 1.00",
 			"enabled" : true,

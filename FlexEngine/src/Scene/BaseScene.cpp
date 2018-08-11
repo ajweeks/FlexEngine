@@ -119,9 +119,11 @@ namespace flex
 
 			// This holds all the objects in the scene which do not have a parent
 			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
-			for (const JSONObject& rootObject : rootObjects)
+			for (const JSONObject& rootObjectJSON : rootObjects)
 			{
-				AddRootObject(GameObject::CreateObjectFromJSON(rootObject, this, InvalidMaterialID));
+				GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, InvalidMaterialID);
+				rootObj->GetTransform()->UpdateParentTransform();
+				AddRootObject(rootObj);
 			}
 
 			if (sceneRootObject.HasField("point lights"))
@@ -380,7 +382,7 @@ namespace flex
 			}
 			else
 			{
-				auto iter = Contains(m_RootObjects, targetObject);
+				auto iter = Find(m_RootObjects, targetObject);
 				if (iter != m_RootObjects.end())
 				{
 					m_RootObjects.erase(iter);
@@ -403,8 +405,7 @@ namespace flex
 				}
 			}
 
-			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-			if (Contains(selectedObjects, targetObject) != selectedObjects.end())
+			if (g_EngineInstance->IsObjectSelected(targetObject))
 			{
 				g_EngineInstance->DeselectObject(targetObject);
 			}
@@ -708,10 +709,6 @@ namespace flex
 		{
 			pointLight.enabled = obj.GetBool("enabled") ? 1 : 0;
 		}
-
-		obj.SetStringChecked("brightness", pointLight.name);
-
-		obj.SetStringChecked("name", pointLight.name);
 	}
 
 	void BaseScene::CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight)
@@ -861,8 +858,6 @@ namespace flex
 	JSONObject BaseScene::SerializePointLight(PointLight& pointLight)
 	{
 		JSONObject object;
-
-		object.fields.emplace_back("name", JSONValue(pointLight.name));
 
 		std::string posStr = Vec3ToString(pointLight.position, 3);
 		object.fields.emplace_back("pos", JSONValue(posStr));

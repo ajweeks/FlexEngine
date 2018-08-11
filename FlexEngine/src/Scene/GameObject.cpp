@@ -26,6 +26,8 @@
 
 namespace flex
 {
+	const char* GameObject::s_DefaultNewGameObjectName = "New_Game_Object_00";
+
 	RandomizedAudioSource GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
@@ -50,7 +52,7 @@ namespace flex
 
 	GameObject* GameObject::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		GameObject* newGameObject = new GameObject(GetNameOfDuplicate(), m_Type);
+		GameObject* newGameObject = new GameObject(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName), m_Type);
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
@@ -506,35 +508,16 @@ namespace flex
 
 	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec)
 	{
-		vec.push_back(this);
+		if (Find(vec, this) == vec.end())
+		{
+			vec.push_back(this);
+		}
 
 		for (GameObject* child : m_Children)
 		{
 			vec.push_back(child);
 
 			child->AddSelfAndChildrenToVec(vec);
-		}
-	}
-
-	std::string GameObject::GetNameOfDuplicate() const
-	{
-		if (m_Name.empty())
-		{
-			return "New Game Object_00";
-		}
-
-		if (isdigit(m_Name[m_Name.size() - 1]) && isdigit(m_Name[m_Name.size() - 2]))
-		{
-			i32 digit = atoi(m_Name.substr(m_Name.size() - 2).c_str());
-			std::string nextDigitStr = IntToString(digit + 1, 2);
-			std::string result = m_Name.substr(0, m_Name.size() - 3) + '_' + nextDigitStr;
-			return result;
-		}
-		else
-		{
-			std::string nextDigitStr = IntToString(0);
-			std::string result = m_Name.substr(0, m_Name.size() - 3) + '_' + nextDigitStr;
-			return result;
 		}
 	}
 
@@ -770,11 +753,7 @@ namespace flex
 			return;
 		}
 
-		glm::mat4 worldTransform = m_Transform.GetWorldTransform();
-
 		m_Parent = parent;
-
-		m_Transform.SetWorldTransform(worldTransform);
 	}
 
 	GameObject* GameObject::AddChild(GameObject* child)
@@ -791,6 +770,7 @@ namespace flex
 		}
 
 		Transform* childTransform = child->GetTransform();
+		GameObject* childPParent = child->GetParent();
 		glm::mat4 childWorldTransform = childTransform->GetWorldTransform();
 
 		if (child == m_Parent)
@@ -811,7 +791,10 @@ namespace flex
 
 		child->SetParent(this);
 
-		childTransform->SetWorldTransform(childWorldTransform);
+		if (childPParent)
+		{
+			childTransform->SetWorldTransform(childWorldTransform);
+		}
 
 		return child;
 	}
@@ -1058,7 +1041,7 @@ namespace flex
 
 	GameObject* Valve::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		Valve* newGameObject = new Valve(GetNameOfDuplicate());
+		Valve* newGameObject = new Valve(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		newGameObject->minRotation = minRotation;
 		newGameObject->maxRotation = maxRotation;
@@ -1241,7 +1224,7 @@ namespace flex
 
 	GameObject* RisingBlock::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		RisingBlock* newGameObject = new RisingBlock(GetNameOfDuplicate());
+		RisingBlock* newGameObject = new RisingBlock(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		newGameObject->valve = valve;
 		newGameObject->moveAxis = moveAxis;
@@ -1422,7 +1405,7 @@ namespace flex
 
 	GameObject* GlassPane::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		GlassPane* newGameObject = new GlassPane(GetNameOfDuplicate());
+		GlassPane* newGameObject = new GlassPane(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		newGameObject->bBroken = bBroken;
 
@@ -1470,7 +1453,7 @@ namespace flex
 
 	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		ReflectionProbe* newGameObject = new ReflectionProbe(GetNameOfDuplicate());
+		ReflectionProbe* newGameObject = new ReflectionProbe(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 		
 		newGameObject->captureMatID = captureMatID;
 
@@ -1555,7 +1538,7 @@ namespace flex
 
 	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		Skybox* newGameObject = new Skybox(GetNameOfDuplicate());
+		Skybox* newGameObject = new Skybox(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
 

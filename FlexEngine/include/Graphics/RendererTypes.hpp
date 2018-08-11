@@ -109,7 +109,6 @@ namespace flex
 		u32 enabled = 1;
 
 		real brightness = 500.0f;
-		std::string name;
 	};
 
 	// TODO: Is setting all the members to false necessary?
@@ -210,7 +209,7 @@ namespace flex
 		glm::vec4 constAlbedo = { 1, 1, 1, 1 };
 		real constMetallic = 0;
 		real constRoughness = 0;
-		real constAO = 0;
+		real constAO = 1;
 
 		// PBR samplers
 		bool generateAlbedoSampler = false;

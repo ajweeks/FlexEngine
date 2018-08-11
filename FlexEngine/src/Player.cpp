@@ -115,7 +115,7 @@ namespace flex
 					
 					for (GameObject* obj : interactibleObjects)
 					{
-						if (Contains(overlappingObjects, obj) != overlappingObjects.end())
+						if (Find(overlappingObjects, obj) != overlappingObjects.end())
 						{
 							interactibleObj = obj;
 						}

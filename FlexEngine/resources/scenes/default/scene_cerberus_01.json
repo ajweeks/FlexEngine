@@ -42,28 +42,24 @@
 	"point lights" : 
 	[
 		{
-			"name" : "",
 			"pos" : "-1.000, -1.000, -1.000",
 			"color" : "0.52, 0.55, 1.00",
 			"enabled" : true,
 			"brightness" : 206.572998
 		},
 		{
-			"name" : "",
 			"pos" : "-1.000, -1.000, -1.000",
 			"color" : "0.89, 0.85, 0.47",
 			"enabled" : true,
 			"brightness" : 370.891998
 		},
 		{
-			"name" : "",
 			"pos" : "-1.000, -1.000, -1.000",
 			"color" : "0.52, 0.55, 1.00",
 			"enabled" : true,
 			"brightness" : 356.807007
 		},
 		{
-			"name" : "",
 			"pos" : "-1.000, -1.000, -1.000",
 			"color" : "0.93, 0.66, 0.33",
 			"enabled" : true,
