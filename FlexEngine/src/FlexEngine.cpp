@@ -1690,7 +1690,7 @@ namespace flex
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		std::string posStr = Vec3ToString(cam->GetPosition());
+		std::string posStr = Vec3ToString(cam->GetPosition(), 3);
 		real pitch = cam->GetPitch();
 		real yaw = cam->GetYaw();
 		JSONObject cameraTransform = {};

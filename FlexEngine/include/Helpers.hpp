@@ -235,9 +235,9 @@ namespace flex
 	// String will be padded with '0's to be at least minChars long (excluding a leading '-' for negative numbers)
 	std::string IntToString(i32 i, u16 minChars = 0);
 
-	std::string Vec2ToString(const glm::vec2& vec);
-	std::string Vec3ToString(const glm::vec3& vec);
-	std::string Vec4ToString(const glm::vec4& vec);
+	std::string Vec2ToString(const glm::vec2& vec, i32 precision);
+	std::string Vec3ToString(const glm::vec3& vec, i32 precision);
+	std::string Vec4ToString(const glm::vec4& vec, i32 precision);
 
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);

@@ -9,9 +9,6 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"mesh" : "sponza",
 			"material" : "pbr grey"
@@ -23,16 +20,15 @@
 			"static" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, -1.100000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "100.000000, 1.000000, 100.000000"
+				"pos" : "0.000, -1.100, 0.000",
+				"scale" : "100.000, 1.000, 100.000"
 			},
 			"mesh" : "cube",
 			"material" : "pbr light grey",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1000000.000000, 1.000000, 1000000.000000"
+				"half extents" : "100000000.000, 1.000, 100000000.000"
 			},
 			"rigid body" : 
 			{
@@ -47,11 +43,11 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material" : "skybox 01"
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
 		},
 		{
 			"name" : "Reflection Probe 01",
@@ -59,9 +55,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "3.100000, 1.000000, 0.000000",
-				"rotation" : "0.036652, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
+				"pos" : "3.100, 1.000, 0.000",
+				"rot" : "0.037, -0.000, 0.000"
 			},
 			"material" : "pbr chrome"
 		}
@@ -70,17 +65,17 @@
 	[
 		{
 			"name" : "Point light 01",
-			"position" : "0.000000, 10.900001, 0.000000",
-			"color" : "0.926747, 0.926159, 0.892008",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.93, 0.93, 0.89",
 			"enabled" : false,
 			"brightness" : 793.388062
 		}
 	],
 	"directional light" : 
 	{
-		"direction" : "0.380000, 0.750000, -0.160000",
-		"position" : "0.000000, 0.000000, 0.000000",
-		"color" : "1.000000, 1.000000, 1.000000",
+		"direction" : "0.380, 0.750, -0.160",
+		"pos" : "0.000, 0.000, 0.000",
+		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
 		"brightness" : 2.355000
 	}

@@ -203,7 +203,7 @@ namespace flex
 
 		// TODO: Find out way of determining if the following four  values
 		// are used by the shader (only currently used by PBR I think)
-		std::string constAlbedoStr = Vec3ToString(constAlbedo);
+		std::string constAlbedoStr = Vec3ToString(constAlbedo, 3);
 		materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
 		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
 		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
@@ -310,7 +310,7 @@ namespace flex
 
 			materialObject.fields.emplace_back("enable cubemap trilinear filtering", JSONValue(enableCubemapTrilinearFiltering));
 
-			std::string cubemapSamplerSizeStr = Vec2ToString(cubemapSamplerSize);
+			std::string cubemapSamplerSizeStr = Vec2ToString(cubemapSamplerSize, 0);
 			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
 		}
 
@@ -318,7 +318,7 @@ namespace flex
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
 
-			std::string irradianceSamplerSizeStr = Vec2ToString(irradianceSamplerSize);
+			std::string irradianceSamplerSizeStr = Vec2ToString(irradianceSamplerSize, 0);
 			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
 		}
 
@@ -326,7 +326,7 @@ namespace flex
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
 
-			std::string prefilteredMapSizeStr = Vec2ToString(prefilteredMapSize);
+			std::string prefilteredMapSizeStr = Vec2ToString(prefilteredMapSize, 0);
 			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSizeStr));
 		}
 

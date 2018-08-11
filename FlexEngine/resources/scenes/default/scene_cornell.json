@@ -1,97 +1,6 @@
 {
 	"version" : 1,
 	"name" : "Cornell Scene",
-	"materials" : 
-	[
-		{
-			"name" : "pbr chrome",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr grey",
-			"shader" : "pbr",
-			"const albedo" : "0.780000, 0.120000, 0.110000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.250000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr light grey",
-			"shader" : "pbr",
-			"const albedo" : "0.230000, 0.250000, 0.290000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.200000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr white",
-			"shader" : "pbr",
-			"const albedo" : "0.990000, 0.990000, 0.990000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.900000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr red",
-			"shader" : "pbr",
-			"const albedo" : "0.740000, 0.060000, 0.030000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.520000,
-			"const ao" : 0.000000
-		},
-		{
-			"name" : "skybox 01",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
-		},
-		{
-			"name" : "cerberus",
-			"shader" : "pbr",
-			"const albedo" : "1.000000, 1.000000, 1.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"enable albedo sampler" : true,
-			"enable metallic sampler" : true,
-			"enable roughness sampler" : true,
-			"enable ao sampler" : true,
-			"enable normal sampler" : true,
-			"generate albedo sampler" : true,
-			"generate metallic sampler" : true,
-			"generate roughness sampler" : true,
-			"generate ao sampler" : true,
-			"generate normal sampler" : true,
-			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A_1024.jpg",
-			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M_1024.jpg",
-			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R_1024.jpg",
-			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO_1024.jpg",
-			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N_1024.jpg"
-		},
-		{
-			"name" : "cornell",
-			"shader" : "pbr",
-			"const albedo" : "1.000000, 1.000000, 1.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 1.000000,
-			"const ao" : 1.000000
-		}
-	],
 	"objects" : 
 	[
 		{
@@ -100,14 +9,10 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
 			"material" : "skybox 01",
 			"skybox info" : 
 			{
-				"rotation" : "0.000000, -0.000000, 0.000000"
 			}
 		},
 		{
@@ -116,9 +21,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 18.600000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "0.999999, 1.000000, 0.999999"
+				"pos" : "0.000, 18.600, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
 			},
 			"material" : "pbr chrome"
 		},
@@ -128,9 +32,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-28.690001, 0.000062, -0.000905",
-				"rotation" : "-1.566306, 1.568696, 0.004512",
-				"scale" : "19.999247, 19.999727, 19.998991"
+				"pos" : "-28.690, 0.000, -0.001",
+				"rot" : "-1.566, 1.569, 0.005",
+				"scale" : "19.999, 20.000, 19.999"
 			},
 			"mesh" : "cornell box",
 			"material" : "cornell"
@@ -141,9 +45,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "6.848998, 5.205111, -12.373000",
-				"rotation" : "-0.000414, 0.000000, 0.000263",
-				"scale" : "3.000000, 3.000000, 3.000000"
+				"pos" : "6.849, 5.205, -12.373",
+				"rot" : "-0.000, 0.000, 0.000",
+				"scale" : "3.000, 3.000, 3.000"
 			},
 			"mesh" : "ico sphere",
 			"material" : "pbr red"
@@ -154,9 +58,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-0.269232, 8.073162, -9.520214",
-				"rotation" : "-0.000414, 0.000000, 0.000263",
-				"scale" : "5.000000, 5.000000, 5.000000"
+				"pos" : "-0.269, 8.073, -9.520",
+				"rot" : "-0.000, 0.000, 0.000",
+				"scale" : "5.000, 5.000, 5.000"
 			},
 			"mesh" : "ico sphere",
 			"material" : "pbr white"
@@ -167,9 +71,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-12.514131, 0.000000, 7.708018",
-				"rotation" : "0.000000, -1.434660, 0.000000",
-				"scale" : "5.000000, 5.000000, 5.000000"
+				"pos" : "-12.514, 0.000, 7.708",
+				"rot" : "0.000, -1.435, 0.000",
+				"scale" : "5.000, 5.000, 5.000"
 			},
 			"mesh" : "mori knob",
 			"material" : "pbr light grey"
@@ -180,9 +84,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "6.000000, 5.120000, 0.000000",
-				"rotation" : "0.000000, -0.321141, 0.000000",
-				"scale" : "20.000000, 20.000000, 20.000000"
+				"pos" : "6.000, 5.120, 0.000",
+				"rot" : "0.000, -0.321, 0.000",
+				"scale" : "20.000, 20.000, 20.000"
 			},
 			"mesh" : "cerberus",
 			"material" : "cerberus"
@@ -192,38 +96,38 @@
 	[
 		{
 			"name" : "Point light 01",
-			"position" : "0.000000, 31.300001, 0.000000",
-			"color" : "0.926747, 0.926159, 0.892008",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.93, 0.93, 0.89",
 			"enabled" : false,
 			"brightness" : 1000.000061
 		},
 		{
 			"name" : "Point light 02",
-			"position" : "9.500000, -2.100000, 12.600000",
-			"color" : "0.926747, 0.926159, 0.892008",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.93, 0.93, 0.89",
 			"enabled" : true,
 			"brightness" : 394.030029
 		},
 		{
 			"name" : "Point light 03",
-			"position" : "5.500000, 4.100000, -6.000000",
-			"color" : "0.926747, 0.926159, 0.892008",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.93, 0.93, 0.89",
 			"enabled" : false,
 			"brightness" : 274.627014
 		},
 		{
 			"name" : "Point light 04",
-			"position" : "5.400000, 14.300001, 5.800000",
-			"color" : "0.926747, 0.926159, 0.892008",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.93, 0.93, 0.89",
 			"enabled" : false,
 			"brightness" : 382.090027
 		}
 	],
 	"directional light" : 
 	{
-		"direction" : "0.380000, 0.750000, -0.160000",
-		"position" : "0.000000, 0.000000, 0.000000",
-		"color" : "1.000000, 1.000000, 1.000000",
+		"direction" : "0.380, 0.750, -0.160",
+		"pos" : "0.000, 0.000, 0.000",
+		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
 		"brightness" : 2.355000
 	}

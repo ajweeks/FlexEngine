@@ -5,7 +5,7 @@
 		{
 			"name" : "pbr chrome",
 			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
+			"const albedo" : "0.800, 0.800, 0.800",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.000000,
 			"const ao" : 1.000000
@@ -13,7 +13,7 @@
 		{
 			"name" : "pbr grey",
 			"shader" : "pbr",
-			"const albedo" : "0.780000, 0.120000, 0.110000",
+			"const albedo" : "0.780, 0.120, 0.110",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.250000,
 			"const ao" : 1.000000
@@ -21,7 +21,7 @@
 		{
 			"name" : "pbr light grey",
 			"shader" : "pbr",
-			"const albedo" : "0.230000, 0.250000, 0.290000",
+			"const albedo" : "0.230, 0.250, 0.290",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
 			"const ao" : 1.000000
@@ -29,7 +29,7 @@
 		{
 			"name" : "pbr white",
 			"shader" : "pbr",
-			"const albedo" : "0.990000, 0.990000, 0.990000",
+			"const albedo" : "0.990, 0.990, 0.990",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.900000,
 			"const ao" : 1.000000
@@ -37,7 +37,7 @@
 		{
 			"name" : "pbr red",
 			"shader" : "pbr",
-			"const albedo" : "0.740000, 0.060000, 0.030000",
+			"const albedo" : "0.740, 0.060, 0.030",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.520000,
 			"const ao" : 0.000000
@@ -45,24 +45,24 @@
 		{
 			"name" : "skybox 01",
 			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
+			"const albedo" : "0.000, 0.000, 0.000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"const ao" : 0.000000,
 			"generate hdr cubemap sampler" : true,
 			"enable cubemap sampler" : true,
 			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
+			"generated cubemap size" : "512, 512",
 			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
+			"generated irradiance cubemap size" : "32, 32",
 			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
+			"generated prefiltered map size" : "128, 128",
 			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
 		},
 		{
 			"name" : "cerberus",
 			"shader" : "pbr",
-			"const albedo" : "1.000000, 1.000000, 1.000000",
+			"const albedo" : "1.000, 1.000, 1.000",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"const ao" : 0.000000,
@@ -85,7 +85,7 @@
 		{
 			"name" : "cornell",
 			"shader" : "pbr",
-			"const albedo" : "1.000000, 1.000000, 1.000000",
+			"const albedo" : "1.000, 1.000, 1.000",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,
 			"const ao" : 1.000000
@@ -93,7 +93,7 @@
 		{
 			"name" : "sphere 01",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.100000,
 			"const ao" : 1.000000
@@ -101,7 +101,7 @@
 		{
 			"name" : "sphere 02",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.200000,
 			"const ao" : 1.000000
@@ -109,7 +109,7 @@
 		{
 			"name" : "sphere 00",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"const ao" : 1.000000
@@ -117,7 +117,7 @@
 		{
 			"name" : "sphere 03",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.300000,
 			"const ao" : 1.000000
@@ -125,7 +125,7 @@
 		{
 			"name" : "sphere 04",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.400000,
 			"const ao" : 1.000000
@@ -133,7 +133,7 @@
 		{
 			"name" : "sphere 05",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.500000,
 			"const ao" : 1.000000
@@ -141,7 +141,7 @@
 		{
 			"name" : "sphere 06",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.600000,
 			"const ao" : 1.000000
@@ -149,7 +149,7 @@
 		{
 			"name" : "sphere 07",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.700000,
 			"const ao" : 1.000000
@@ -157,7 +157,7 @@
 		{
 			"name" : "sphere 08",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.800000,
 			"const ao" : 1.000000
@@ -165,7 +165,7 @@
 		{
 			"name" : "sphere 09",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.900000,
 			"const ao" : 1.000000
@@ -173,7 +173,7 @@
 		{
 			"name" : "sphere 10",
 			"shader" : "pbr",
-			"const albedo" : "0.390000, 0.350000, 0.320000",
+			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,
 			"const ao" : 1.000000

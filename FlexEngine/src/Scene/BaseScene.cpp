@@ -697,7 +697,7 @@ namespace flex
 
 	void BaseScene::CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight)
 	{
-		std::string posStr = obj.GetString("position");
+		std::string posStr = obj.GetString("pos");
 		pointLight.position = glm::vec4(ParseVec3(posStr), 0);
 
 		obj.SetVec4Checked("color", pointLight.color);
@@ -719,7 +719,7 @@ namespace flex
 		std::string dirStr = obj.GetString("direction");
 		directionalLight.direction = glm::vec4(ParseVec3(dirStr), 0);
 
-		std::string posStr = obj.GetString("position");
+		std::string posStr = obj.GetString("pos");
 		if (!posStr.empty())
 		{
 			directionalLight.position = ParseVec3(posStr);
@@ -864,10 +864,10 @@ namespace flex
 
 		object.fields.emplace_back("name", JSONValue(pointLight.name));
 
-		std::string posStr = Vec3ToString(pointLight.position);
-		object.fields.emplace_back("position", JSONValue(posStr));
+		std::string posStr = Vec3ToString(pointLight.position, 3);
+		object.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(pointLight.color);
+		std::string colorStr = Vec3ToString(pointLight.color, 2);
 		object.fields.emplace_back("color", JSONValue(colorStr));
 
 		object.fields.emplace_back("enabled", JSONValue(pointLight.enabled != 0));
@@ -880,13 +880,13 @@ namespace flex
 	{
 		JSONObject object;
 
-		std::string dirStr = Vec3ToString(directionalLight.direction);
+		std::string dirStr = Vec3ToString(directionalLight.direction, 3);
 		object.fields.emplace_back("direction", JSONValue(dirStr));
 
-		std::string posStr = Vec3ToString(directionalLight.position);
-		object.fields.emplace_back("position", JSONValue(posStr));
+		std::string posStr = Vec3ToString(directionalLight.position, 3);
+		object.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(directionalLight.color);
+		std::string colorStr = Vec3ToString(directionalLight.color, 2);
 		object.fields.emplace_back("color", JSONValue(colorStr));
 
 		object.fields.emplace_back("enabled", JSONValue(directionalLight.enabled != 0));

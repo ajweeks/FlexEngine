@@ -406,7 +406,7 @@ namespace flex
 			{
 				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
@@ -432,7 +432,7 @@ namespace flex
 			{
 				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			default:
@@ -1128,7 +1128,7 @@ namespace flex
 		JSONObject valveInfo = {};
 
 		glm::vec2 valveRange(minRotation, maxRotation);
-		valveInfo.fields.emplace_back("range", JSONValue(Vec2ToString(valveRange)));
+		valveInfo.fields.emplace_back("range", JSONValue(Vec2ToString(valveRange, 2)));
 
 		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
 	}
@@ -1315,7 +1315,7 @@ namespace flex
 		JSONObject blockInfo = {};
 
 		blockInfo.fields.emplace_back("valve name", JSONValue(valve->GetName()));
-		blockInfo.fields.emplace_back("move axis", JSONValue(Vec3ToString(moveAxis)));
+		blockInfo.fields.emplace_back("move axis", JSONValue(Vec3ToString(moveAxis, 3)));
 		blockInfo.fields.emplace_back("affected by gravity", JSONValue(bAffectedByGravity));
 
 		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
@@ -1577,7 +1577,7 @@ namespace flex
 		if (parentObj.SetObjectChecked("skybox info", skyboxInfo))
 		{
 			glm::vec3 rotEuler;
-			if (skyboxInfo.SetVec3Checked("rotation", rotEuler))
+			if (skyboxInfo.SetVec3Checked("rot", rotEuler))
 			{
 				m_Transform.SetWorldRotation(glm::quat(rotEuler));
 			}
@@ -1591,8 +1591,12 @@ namespace flex
 		UNREFERENCED_PARAMETER(parentObject);
 
 		JSONObject skyboxInfo = {};
-		std::string eulerRotStr = Vec3ToString(glm::eulerAngles(m_Transform.GetWorldRotation()));
-		skyboxInfo.fields.emplace_back("rotation", JSONValue(eulerRotStr));
+		glm::quat worldRot = m_Transform.GetWorldRotation();
+		if (worldRot != glm::quat(glm::vec3(0.0f)))
+		{
+			std::string eulerRotStr = Vec3ToString(glm::eulerAngles(worldRot), 2);
+			skyboxInfo.fields.emplace_back("rot", JSONValue(eulerRotStr));
+		}
 
 		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
 	}

@@ -5562,8 +5562,8 @@ namespace flex
 			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
 			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
 			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness)));
-			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset)));
+			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
+			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
 			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 			std::string fileContents = rootObject.Print(0);
 

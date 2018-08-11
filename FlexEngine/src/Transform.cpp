@@ -149,8 +149,8 @@ namespace flex
 
 	Transform Transform::ParseJSON(const JSONObject& object)
 	{
-		std::string posStr = object.GetString("position");
-		std::string rotStr = object.GetString("rotation");
+		std::string posStr = object.GetString("pos");
+		std::string rotStr = object.GetString("rot");
 		std::string scaleStr = object.GetString("scale");
 
 		glm::vec3 pos(0.0f);
@@ -199,6 +199,8 @@ namespace flex
 
 	JSONField Transform::SerializeToJSON()
 	{
+		const i32 floatPrecision = 3;
+
 		JSONField transformField = {};
 		transformField.label = "transform";
 
@@ -224,13 +226,23 @@ namespace flex
 
 		glm::vec3 localRotEuler = glm::eulerAngles(localRotation);
 
-		std::string posStr = Vec3ToString(localPosition);
-		std::string rotStr = Vec3ToString(localRotEuler);
-		std::string scaleStr = Vec3ToString(localScale);
+		if (localPosition != glm::vec3(0.0f))
+		{
+			std::string posStr = Vec3ToString(localPosition, floatPrecision);
+			transformObject.fields.emplace_back("pos", JSONValue(posStr));
+		}
 
-		transformObject.fields.emplace_back("position", JSONValue(posStr));
-		transformObject.fields.emplace_back("rotation", JSONValue(rotStr));
-		transformObject.fields.emplace_back("scale", JSONValue(scaleStr));
+		if (localRotation != glm::quat(glm::vec3(0.0f)))
+		{
+			std::string rotStr = Vec3ToString(localRotEuler, floatPrecision);
+			transformObject.fields.emplace_back("rot", JSONValue(rotStr));
+		}
+
+		if (localScale != glm::vec3(1.0f))
+		{
+			std::string scaleStr = Vec3ToString(localScale, floatPrecision);
+			transformObject.fields.emplace_back("scale", JSONValue(scaleStr));
+		}
 
 		transformField.value = JSONValue(transformObject);
 

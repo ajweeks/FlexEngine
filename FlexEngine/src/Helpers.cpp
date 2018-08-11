@@ -814,27 +814,27 @@ namespace flex
 				isinf(quat.x) || isinf(quat.y) || isinf(quat.z) || isinf(quat.w));
 	}
 
-	std::string Vec2ToString(const glm::vec2& vec)
+	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
 	{
-		std::string result(std::to_string(vec.x) + ", " +
-			std::to_string(vec.y));
+		std::string result(FloatToString(vec.x, precision) + ", " +
+			FloatToString(vec.y, precision));
 		return result;
 	}
 
-	std::string Vec3ToString(const glm::vec3& vec)
+	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
 	{
-		std::string result(std::to_string(vec.x) + ", " + 
-			std::to_string(vec.y) + ", " + 
-			std::to_string(vec.z));
+		std::string result(FloatToString(vec.x, precision) + ", " +
+			FloatToString(vec.y, precision) + ", " + 
+			FloatToString(vec.z, precision));
 		return result;
 	}
 
-	std::string Vec4ToString(const glm::vec4& vec)
+	std::string Vec4ToString(const glm::vec4& vec, i32 precision)
 	{
-		std::string result(std::to_string(vec.x) + ", " +
-			std::to_string(vec.y) + ", " + 
-			std::to_string(vec.z) + ", " + 
-			std::to_string(vec.w));
+		std::string result(FloatToString(vec.x, precision) + ", " +
+			FloatToString(vec.y, precision) + ", " +
+			FloatToString(vec.z, precision) + ", " +
+			FloatToString(vec.w, precision));
 		return result;
 	}
 
