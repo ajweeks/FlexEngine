@@ -5632,10 +5632,15 @@ namespace flex
 							  ImVec2(0.0f, 220.0f),
 							  true);
 
-			GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
-			if (selectedObject)
+			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+			if (selectedObjects.size() == 1)
 			{
-				DrawGameObjectImGui(selectedObject);
+				// TODO: Draw common fields for all selected objects?
+				GameObject* selectedObject = selectedObjects[0];
+				if (selectedObject)
+				{
+					DrawGameObjectImGui(selectedObject);
+				}
 			}
 
 			ImGui::EndChild();
@@ -5907,7 +5912,8 @@ namespace flex
 					bHasChildren = false;
 				}
 			}
-			bool bSelected = (gameObject == g_EngineInstance->GetSelectedObject());
+			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+			bool bSelected = (Contains(selectedObjects, gameObject) != selectedObjects.end());
 
 			bool visible = gameObject->IsVisible();
 			const std::string objectVisibleLabel(objectID + "-visible");
@@ -5955,7 +5961,14 @@ namespace flex
 			{
 				if (ImGui::IsItemClicked())
 				{
-					g_EngineInstance->SetSelectedObject(gameObject);
+					if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+					{
+						g_EngineInstance->ToggleSelectedObject(gameObject);
+					}
+					else
+					{
+						g_EngineInstance->SetSelectedObject(gameObject);
+					}
 				}
 
 				if (ImGui::IsItemActive())

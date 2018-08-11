@@ -20,8 +20,11 @@ namespace flex
 		void UpdateAndRender();
 		void Stop();
 		
-		GameObject* GetSelectedObject();
+		std::vector<GameObject*> GetSelectedObjects();
+		void ToggleSelectedObject(GameObject* gameObject);
 		void SetSelectedObject(GameObject* gameObject);
+		void DeselectObject(GameObject* gameObject);
+		glm::vec3 GetSelectedObjectsCenter();
 
 		bool IsDraggingGizmo() const;
 
@@ -80,6 +83,8 @@ namespace flex
 
 		void DoSceneContextMenu(BaseScene* scene);
 
+		void CalculateSelectedObjectsCenter();
+
 		u32 m_RendererCount = 0;
 		bool m_bRunning = false;
 
@@ -102,7 +107,10 @@ namespace flex
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
-		GameObject* m_CurrentlySelectedObject = nullptr;
+		std::vector<GameObject*> m_CurrentlySelectedObjects;
+		
+		glm::vec3 m_SelectedObjectsCenterPos;
+		glm::quat m_SelectedObjectRotation;
 
 		GameObject* m_TransformGizmo = nullptr;
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;

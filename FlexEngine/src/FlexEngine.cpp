@@ -633,16 +633,19 @@ namespace flex
 
 				if (bMouseDown || bMouseReleased)
 				{
+					static glm::vec2 pDragDist(0.0f);
 					glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(dragButton);
+					glm::vec2 dDragDist = dragDist - pDragDist;
 					real maxMoveDist = 1.0f;
 
 					if (bMouseReleased)
 					{
 						if (m_bDraggingGizmo)
 						{
-							if (m_CurrentlySelectedObject)
+							if (!m_CurrentlySelectedObjects.empty())
 							{
-								m_SelectedObjectDragStartPos = m_CurrentlySelectedObject->GetTransform()->GetLocalPosition();
+								CalculateSelectedObjectsCenter();
+								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 							}
 							m_bDraggingGizmo = false;
 							m_DraggingAxisIndex = -1;
@@ -657,7 +660,28 @@ namespace flex
 									RigidBody* rb = hoveredOverGameObject->GetRigidBody();
 									if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
 									{
-										m_CurrentlySelectedObject = hoveredOverGameObject;
+										if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+										{
+											auto iter = Contains(m_CurrentlySelectedObjects, hoveredOverGameObject);
+											if (iter != m_CurrentlySelectedObjects.end())
+											{
+												m_CurrentlySelectedObjects.erase(iter);
+
+												if (m_CurrentlySelectedObjects.empty())
+												{
+													DeselectCurrentlySelectedObject();
+												}
+											}
+											else
+											{
+												m_CurrentlySelectedObjects.push_back(hoveredOverGameObject);
+											}
+										}
+										else
+										{
+											DeselectCurrentlySelectedObject();
+											m_CurrentlySelectedObjects.push_back(hoveredOverGameObject);
+										}
 										g_InputManager->ClearMouseInput();
 									}
 									else
@@ -674,23 +698,25 @@ namespace flex
 					}
 
 					// Handle dragging transform gizmo
-					if (m_CurrentlySelectedObject)
+					if (!m_CurrentlySelectedObjects.empty())
 					{
-						Transform* selectedObjectTransform = m_CurrentlySelectedObject->GetTransform();
-						glm::vec3 selectedObjectScale = selectedObjectTransform->GetWorldScale();
+						glm::vec3 dPos(0.0f);
+						Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
+						glm::quat selectedObjectRotation = selectedObjectTransform->GetLocalRotation();
+						glm::vec3 selectedObjectScale = selectedObjectTransform->GetLocalScale();
 						real scale = 0.01f;
 						if (m_DraggingAxisIndex == 0) // X Axis
 						{
 							if (bMousePressed)
 							{
 								m_bDraggingGizmo = true;
-								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
+								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 right = selectedObjectTransform->GetLocalRotation() * glm::vec3(1, 0, 0);
-								glm::vec3 deltaPos = (dragDist.x * scale * selectedObjectScale.x * right);
-								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
+								glm::vec3 right = selectedObjectRotation * glm::vec3(1, 0, 0);
+								glm::vec3 deltaPos = (dDragDist.x * scale * selectedObjectScale.x * right);
+								dPos = deltaPos;
 							}
 						}
 						else if (m_DraggingAxisIndex == 1) // Y Axis
@@ -698,13 +724,13 @@ namespace flex
 							if (bMousePressed)
 							{
 								m_bDraggingGizmo = true;
-								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
+								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 up = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 1, 0);
-								glm::vec3 deltaPos = (-dragDist.y * selectedObjectScale.y * scale * up);
-								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
+								glm::vec3 up = selectedObjectRotation * glm::vec3(0, 1, 0);
+								glm::vec3 deltaPos = (-dDragDist.y * selectedObjectScale.y * scale * up);
+								dPos = deltaPos;
 							}
 						}
 						else if (m_DraggingAxisIndex == 2) // Z Axis
@@ -712,13 +738,13 @@ namespace flex
 							if (bMousePressed)
 							{
 								m_bDraggingGizmo = true;
-								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
+								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 							}
 							else if (bMouseDown)
 							{
-								glm::vec3 forward = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 0, 1);
-								glm::vec3 deltaPos = (-dragDist.x * selectedObjectScale.z * scale * forward);
-								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
+								glm::vec3 forward = selectedObjectRotation * glm::vec3(0, 0, 1);
+								glm::vec3 deltaPos = (-dDragDist.x * selectedObjectScale.z * scale * forward);
+								dPos = deltaPos;
 							}
 						}
 
@@ -728,8 +754,17 @@ namespace flex
 								Vec3ToBtVec3(m_SelectedObjectDragStartPos),
 								Vec3ToBtVec3(selectedObjectTransform->GetLocalPosition()),
 								(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.0f, 0.0f, 1.0f)));
+
+							for (GameObject* gameObject : m_CurrentlySelectedObjects)
+							{
+								gameObject->GetTransform()->Translate(dPos);
+							}
+
+							CalculateSelectedObjectsCenter();
 						}
 					}
+
+					pDragDist = dragDist;
 				}
 			}
 
@@ -750,9 +785,14 @@ namespace flex
 
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_DELETE))
 			{
-				if (m_CurrentlySelectedObject)
+				if (!m_CurrentlySelectedObjects.empty())
 				{
-					g_SceneManager->CurrentScene()->DestroyGameObject(m_CurrentlySelectedObject, true);
+					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					{
+						g_SceneManager->CurrentScene()->DestroyGameObject(gameObject, true);
+					}
+
+					DeselectCurrentlySelectedObject();
 				}
 			}
 
@@ -791,33 +831,43 @@ namespace flex
 				g_Window->ToggleFullscreen();
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F) &&
-				m_CurrentlySelectedObject)
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F) && !m_CurrentlySelectedObjects.empty())
 			{
-				MeshComponent* selectedMesh = m_CurrentlySelectedObject->GetMeshComponent();
-				if (selectedMesh)
+				glm::vec3 minPos(FLT_MAX);
+				glm::vec3 maxPos(FLT_MIN);
+				for (GameObject* gameObject : m_CurrentlySelectedObjects)
 				{
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-					glm::vec3 sphereCenterWS = selectedMesh->GetBoundingSphereCenterPointWS();
-					real sphereRadius = selectedMesh->GetScaledBoundingSphereRadius();
-					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
-					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
-
-					cam->SetPosition(sphereCenterWS + newOffset);
-					cam->LookAt(sphereCenterWS);
+					MeshComponent* mesh = gameObject->GetMeshComponent();
+					if (mesh)
+					{
+						Transform* transform = gameObject->GetTransform();
+						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
+						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
+						minPos = glm::min(minPos, min);
+						maxPos = glm::max(maxPos, max);
+					}
 				}
+				glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+				real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+				glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
+				glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
+
+				cam->SetPosition(sphereCenterWS + newOffset);
+				cam->LookAt(sphereCenterWS);
 			}
 
 			Profiler::Update();
 
 			g_CameraManager->Update();
 
-			if (m_CurrentlySelectedObject)
+			if (!m_CurrentlySelectedObjects.empty())
 			{
 				m_TransformGizmo->SetVisible(true);
-				m_TransformGizmo->GetTransform()->SetWorldPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
-				m_TransformGizmo->GetTransform()->SetWorldRotation(m_CurrentlySelectedObject->GetTransform()->GetWorldRotation());
+				m_TransformGizmo->GetTransform()->SetWorldPosition(m_SelectedObjectsCenterPos);
+				m_TransformGizmo->GetTransform()->SetWorldRotation(m_SelectedObjectRotation);
 			}
 			else
 			{
@@ -1473,24 +1523,64 @@ namespace flex
 		m_bRunning = false;
 	}
 
-	GameObject* FlexEngine::GetSelectedObject()
+	std::vector<GameObject*> FlexEngine::GetSelectedObjects()
 	{
-		return m_CurrentlySelectedObject;
+		return m_CurrentlySelectedObjects;
+	}
+
+	void FlexEngine::ToggleSelectedObject(GameObject* gameObject)
+	{
+		auto iter = Contains(m_CurrentlySelectedObjects, gameObject);
+		if (iter == m_CurrentlySelectedObjects.end())
+		{
+			m_CurrentlySelectedObjects.push_back(gameObject);
+		}
+		else
+		{
+			m_CurrentlySelectedObjects.erase(iter);
+		}
+
+		CalculateSelectedObjectsCenter();
 	}
 
 	void FlexEngine::SetSelectedObject(GameObject* gameObject)
 	{
-		m_CurrentlySelectedObject = gameObject;
+		DeselectCurrentlySelectedObject();
 
-		if (gameObject == nullptr)
+		if (gameObject != nullptr)
 		{
-			DeselectCurrentlySelectedObject();
+			m_CurrentlySelectedObjects.push_back(gameObject);
 		}
+
+		CalculateSelectedObjectsCenter();
+	}
+
+	void FlexEngine::DeselectObject(GameObject* gameObject)
+	{
+		for (auto iter = m_CurrentlySelectedObjects.begin(); iter != m_CurrentlySelectedObjects.end(); ++iter)
+		{
+			if ((*iter) == gameObject)
+			{
+				m_CurrentlySelectedObjects.erase(iter);
+				CalculateSelectedObjectsCenter();
+				return;
+			}
+		}
+
+		PrintWarn("Attempted to deselect object which wasn't selected!\n");
+	}
+
+	glm::vec3 FlexEngine::GetSelectedObjectsCenter()
+	{
+		return m_SelectedObjectsCenterPos;
 	}
 
 	void FlexEngine::DeselectCurrentlySelectedObject()
 	{
-		m_CurrentlySelectedObject = nullptr;
+		m_CurrentlySelectedObjects.clear();
+		m_SelectedObjectRotation = glm::quat(glm::vec3(0.0f));
+		m_SelectedObjectsCenterPos = glm::vec3(0.0f);
+		m_SelectedObjectDragStartPos = glm::vec3(0.0f);
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
 	}
@@ -1922,6 +2012,26 @@ namespace flex
 
 			ImGui::EndPopup();
 		}
+	}
+
+	void FlexEngine::CalculateSelectedObjectsCenter()
+	{
+		if (m_CurrentlySelectedObjects.empty())
+		{
+			m_SelectedObjectsCenterPos = glm::vec3(0.0f);
+			m_SelectedObjectRotation = glm::quat(glm::vec3(0.0f));
+			return;
+		}
+
+		glm::vec3 avgPos(0.0f);
+		for (GameObject* gameObject : m_CurrentlySelectedObjects)
+		{
+			avgPos += gameObject->GetTransform()->GetWorldPosition();
+		}
+		m_SelectedObjectsCenterPos = m_SelectedObjectDragStartPos;
+		m_SelectedObjectRotation = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform()->GetWorldRotation();
+
+		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjects.size());
 	}
 
 	bool FlexEngine::IsDraggingGizmo() const

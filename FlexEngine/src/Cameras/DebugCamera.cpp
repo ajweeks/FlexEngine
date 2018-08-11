@@ -97,18 +97,10 @@ namespace flex
 					turnSpeedMultiplier = m_TurnSpeedSlowMultiplier;
 				}
 
-				GameObject* selectedObject = g_EngineInstance->GetSelectedObject();
-				if (bAltDown && selectedObject)
+				if (bAltDown)
 				{
+					orbitingCenter = g_EngineInstance->GetSelectedObjectsCenter();
 					bOrbiting = true;
-					if (selectedObject->GetMeshComponent())
-					{
-						orbitingCenter = selectedObject->GetMeshComponent()->GetBoundingSphereCenterPointWS();
-					}
-					else
-					{
-						orbitingCenter = selectedObject->GetTransform()->GetWorldPosition();
-					}
 					targetDPos += m_Right * look.x * m_OrbitingSpeed * turnSpeedMultiplier +
 								  m_Up * look.y * m_OrbitingSpeed * turnSpeedMultiplier;
 				}

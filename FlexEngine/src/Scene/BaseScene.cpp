@@ -393,9 +393,10 @@ namespace flex
 				}
 			}
 
-			if (targetObject == g_EngineInstance->GetSelectedObject())
+			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+			if (Contains(selectedObjects, targetObject) != selectedObjects.end())
 			{
-				g_EngineInstance->SetSelectedObject(nullptr);
+				g_EngineInstance->DeselectObject(targetObject);
 			}
 
 			// If children are still in m_Children array when
