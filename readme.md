@@ -77,4 +77,4 @@ A huge thanks to the following people/organizations for their incredibly useful 
  - All of the library authors/contributors for their awesome OSS!
 
 ## Blog
- Stay (somewhat) up to date about this project on my blog at [ajweeks.wordpress.com/tag/flex-engine/](https://ajweeks.wordpress.com/tag/flex-engine/).
+ Stay (somewhat) up to date about this project on my blog at [ajweeks.com/blog](http://ajweeks.com/blog/).
