@@ -5646,17 +5646,27 @@ namespace flex
 					draggedGameObjectsVec.reserve(draggedObjectCount);
 					for (i32 i = 0; i < draggedObjectCount; ++i)
 					{
-						draggedGameObjectsVec.push_back(draggedGameObjects + i);
+						draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
 					}
 
-					for (GameObject* draggedGameObject : draggedGameObjectsVec)
+					if (!draggedGameObjectsVec.empty())
 					{
-						// If we're a child of the dragged object then don't allow (causes infinite recursion)
-						if (draggedGameObject->GetParent())
+						std::vector<GameObject*> siblings = draggedGameObjectsVec[0]->GetLaterSiblings();
+
+						for (GameObject* draggedGameObject : draggedGameObjectsVec)
 						{
-							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+							bool bRootObject = draggedGameObject == draggedGameObjectsVec[0];
+							bool bRootSibling = Find(siblings, draggedGameObject) != siblings.end();
+							// Only re-parent root-most object (leave sub-hierarchy as-is)
+							if ((bRootObject || bRootSibling) &&
+								draggedGameObject->GetParent())
+							{
+								draggedGameObject->GetParent()->RemoveChild(draggedGameObject);
+								g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+							}
 						}
 					}
+
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -5949,11 +5959,54 @@ namespace flex
 			bool bParentChildTreeChanged = (gameObject == nullptr);
 			if (gameObject)
 			{
+				// TODO: Remove from renderer class
 				if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
 				{
 					if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
 					{
 						g_EngineInstance->ToggleSelectedObject(gameObject);
+					}
+					else if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+					{
+						const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+						if (selectedObjects.empty() ||
+							(selectedObjects.size() == 1 && selectedObjects[0] == gameObject))
+						{
+							g_EngineInstance->ToggleSelectedObject(gameObject);
+						}
+						else
+						{
+							std::vector<GameObject*> objectsToSelect;
+
+							GameObject* objectA = selectedObjects[selectedObjects.size() - 1];
+							GameObject* objectB = gameObject;
+
+							objectA->AddSelfAndChildrenToVec(objectsToSelect);
+							objectB->AddSelfAndChildrenToVec(objectsToSelect);
+
+							if (objectA->GetParent() == objectB->GetParent() &&
+								objectA != objectB)
+							{
+								// Ensure A comes before B
+								if (objectA->GetSiblingIndex() > objectB->GetSiblingIndex())
+								{
+									std::swap(objectA, objectB);
+								}
+
+								const std::vector<GameObject*>& objectALaterSiblings = objectA->GetLaterSiblings();
+								auto objectBIter = Find(objectALaterSiblings, objectB);
+								assert(objectBIter != objectALaterSiblings.end());
+								for (auto iter = objectALaterSiblings.begin(); iter != objectBIter; ++iter)
+								{
+									(*iter)->AddSelfAndChildrenToVec(objectsToSelect);
+								}
+							}
+
+							for (GameObject* objectToSelect : objectsToSelect)
+							{
+								g_EngineInstance->AddSelectedObject(objectToSelect);
+							}
+						}
 					}
 					else
 					{
@@ -5971,6 +6024,7 @@ namespace flex
 						const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
 						auto iter = Find(selectedObjects, gameObject);
 						bool bItemInSelection = iter != selectedObjects.end();
+						std::string dragDropText;
 
 						std::vector<GameObject*> draggedGameObjects;
 						if (bItemInSelection)
@@ -5989,6 +6043,15 @@ namespace flex
 
 							data = draggedGameObjects.data();
 							size = draggedGameObjects.size() * sizeof(GameObject*);
+
+							if (draggedGameObjects.size() == 1)
+							{
+								dragDropText = draggedGameObjects[0]->GetName();
+							}
+							else
+							{
+								dragDropText = IntToString(draggedGameObjects.size()) + " objects";
+							}
 						}
 						else
 						{
@@ -5996,11 +6059,12 @@ namespace flex
 
 							data = (void*)(&gameObject);
 							size = sizeof(GameObject*);
+							dragDropText = gameObject->GetName();
 						}
 
 						ImGui::SetDragDropPayload(m_GameObjectPayloadCStr, data, size);
 
-						ImGui::Text(gameObject->GetName().c_str());
+						ImGui::Text(dragDropText.c_str());
 
 						ImGui::EndDragDropSource();
 					}
@@ -6028,6 +6092,12 @@ namespace flex
 
 							for (GameObject* draggedGameObject : draggedGameObjectsVec)
 							{
+								if (draggedGameObject == gameObject)
+								{
+									bContainsChild = true;
+									break;
+								}
+
 								if (draggedGameObject->HasChild(gameObject, true))
 								{
 									bContainsChild = true;

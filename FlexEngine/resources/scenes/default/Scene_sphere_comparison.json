@@ -21,7 +21,7 @@
 			"visible" : false,
 			"transform" : 
 			{
-				"pos" : "9.280, 8.440, 0.000"
+				"pos" : "0.000, 13.780, 0.000"
 			},
 			"material" : "pbr chrome"
 		},
@@ -31,7 +31,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 16.800, 0.000"
+				"pos" : "0.000, 17.680, 0.000"
 			},
 			"children" : 
 			[
@@ -41,7 +41,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -35.000",
+						"pos" : "0.000, 0.880, -35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -53,7 +53,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -28.000",
+						"pos" : "0.000, 0.880, -28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -65,7 +65,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -21.000",
+						"pos" : "0.000, 0.880, -21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -77,7 +77,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 35.000",
+						"pos" : "0.000, 0.880, 35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -89,7 +89,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -14.000",
+						"pos" : "0.000, 0.880, -14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -101,6 +101,7 @@
 					"visible" : true,
 					"transform" : 
 					{
+						"pos" : "0.000, 0.880, 0.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -112,7 +113,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -7.000",
+						"pos" : "0.000, 0.880, -7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -124,7 +125,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 7.000",
+						"pos" : "0.000, 0.880, 7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -136,7 +137,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 14.000",
+						"pos" : "0.000, 0.880, 14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -148,7 +149,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 21.000",
+						"pos" : "0.000, 0.880, 21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -160,7 +161,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 28.000",
+						"pos" : "0.000, 0.880, 28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -174,7 +175,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 7.000, 0.000"
+				"pos" : "0.000, 7.880, 0.000"
 			},
 			"children" : 
 			[
@@ -184,7 +185,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -35.000",
+						"pos" : "0.000, 0.880, -35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -196,7 +197,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -28.000",
+						"pos" : "0.000, 0.880, -28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -208,7 +209,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -21.000",
+						"pos" : "0.000, 0.880, -21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -220,7 +221,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -14.000",
+						"pos" : "0.000, 0.880, -14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -232,7 +233,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, -7.000",
+						"pos" : "0.000, 0.880, -7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -244,6 +245,7 @@
 					"visible" : true,
 					"transform" : 
 					{
+						"pos" : "0.000, 0.880, 0.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -255,7 +257,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 7.000",
+						"pos" : "0.000, 0.880, 7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -267,7 +269,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 14.000",
+						"pos" : "0.000, 0.880, 14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -279,7 +281,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 21.000",
+						"pos" : "0.000, 0.880, 21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -291,7 +293,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 28.000",
+						"pos" : "0.000, 0.880, 28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",
@@ -303,7 +305,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.000, 35.000",
+						"pos" : "0.000, 0.880, 35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "ico sphere",

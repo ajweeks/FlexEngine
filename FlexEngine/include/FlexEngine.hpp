@@ -28,6 +28,7 @@ namespace flex
 		bool IsObjectSelected(GameObject* gameObject);
 		glm::vec3 GetSelectedObjectsCenter();
 		void CalculateSelectedObjectsCenter();
+		void SelectAll();
 
 		bool IsDraggingGizmo() const;
 

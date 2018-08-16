@@ -37,11 +37,27 @@ namespace flex
 		GameObject* GetParent();
 		void DetachFromParent();
 
+		// Returns a list of objects, starting with the root, going up to this object
+		std::vector<GameObject*> GetParentChain();
+
+		// Walks up the tree to the highest parent
+		GameObject* GetRootParent();
+
 		GameObject* AddChild(GameObject* child);
 		bool RemoveChild(GameObject* child);
 		const std::vector<GameObject*>& GetChildren() const;
 
 		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
+
+		void UpdateSiblingIndices(i32 myIndex);
+		i32 GetSiblingIndex() const;
+
+		// Returns all objects who share our parent
+		std::vector<GameObject*> GetAllSiblings();
+		// Returns all objects who share our parent and have a larger sibling index
+		std::vector<GameObject*> GetEarlierSiblings();
+		// Returns all objects who share our parent and have a smaller sibling index
+		std::vector<GameObject*> GetLaterSiblings();
 
 		virtual Transform* GetTransform();
 		
@@ -161,6 +177,8 @@ namespace flex
 		* Will point at the player we're interacting with, or the object if we're the player
 		*/
 		GameObject* m_ObjectInteractingWith = nullptr;
+
+		i32 m_SiblingIndex = 0;
 
 		btCollisionShape* m_CollisionShape = nullptr;
 		RigidBody* m_RigidBody = nullptr;

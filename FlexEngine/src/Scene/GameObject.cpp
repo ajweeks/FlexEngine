@@ -515,7 +515,10 @@ namespace flex
 
 		for (GameObject* child : m_Children)
 		{
-			vec.push_back(child);
+			if (Find(vec, child) == vec.end())
+			{
+				vec.push_back(child);
+			}
 
 			child->AddSelfAndChildrenToVec(vec);
 		}
@@ -745,6 +748,27 @@ namespace flex
 		}
 	}
 
+	std::vector<GameObject*> GameObject::GetParentChain()
+	{
+		std::vector<GameObject*> result;
+
+		result.push_back(this);
+
+		if (m_Parent)
+		{
+			GameObject* parent = m_Parent;
+			while (parent)
+			{
+				result.push_back(parent);
+				parent = parent->m_Parent;
+			}
+		}
+
+		std::reverse(result.begin(), result.end());
+
+		return result;
+	}
+
 	void GameObject::SetParent(GameObject* parent)
 	{
 		if (parent == this)
@@ -754,6 +778,22 @@ namespace flex
 		}
 
 		m_Parent = parent;
+	}
+
+	GameObject* GameObject::GetRootParent()
+	{
+		if (m_Parent == nullptr)
+		{
+			return this;
+		}
+
+		GameObject* parent = m_Parent;
+		while (parent->m_Parent)
+		{
+			parent = parent->m_Parent;
+		}
+
+		return parent;
 	}
 
 	GameObject* GameObject::AddChild(GameObject* child)
@@ -845,6 +885,117 @@ namespace flex
 			}
 		}
 		return false;
+	}
+
+	void GameObject::UpdateSiblingIndices(i32 myIndex)
+	{
+		m_SiblingIndex = myIndex;
+
+		for (i32 i = 0; i < m_Children.size(); ++i)
+		{
+			m_Children[i]->UpdateSiblingIndices(i);
+		}
+	}
+
+	i32 GameObject::GetSiblingIndex() const
+	{
+		return m_SiblingIndex;
+	}
+
+	std::vector<GameObject*> GameObject::GetAllSiblings()
+	{
+		std::vector<GameObject*> result;
+
+		if (m_Parent)
+		{
+			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
+
+			for (auto iter = siblings.begin(); iter != siblings.end(); ++iter)
+			{
+				if (*iter != this)
+				{
+					result.push_back(*iter);
+				}
+			}
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+
+			for (auto iter = rootObjects.begin(); iter != rootObjects.end(); ++iter)
+			{
+				if (*iter != this)
+				{
+					result.push_back(*iter);
+				}
+			}
+		}
+
+		return result;
+	}
+
+	std::vector<GameObject*> GameObject::GetEarlierSiblings()
+	{
+		std::vector<GameObject*> result;
+
+		if (m_Parent)
+		{
+			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
+
+			auto thisIter = Find(siblings, this);
+			assert(thisIter != siblings.end());
+
+			for (auto iter = siblings.begin(); iter != thisIter; ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+
+			auto thisIter = Find(rootObjects, this);
+			assert(thisIter != rootObjects.end());
+
+			for (auto iter = rootObjects.begin(); iter != thisIter; ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+
+		return result;
+	}
+
+	std::vector<GameObject*> GameObject::GetLaterSiblings()
+	{
+		std::vector<GameObject*> result;
+
+		if (m_Parent)
+		{
+			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
+
+			auto thisIter = Find(siblings, this);
+			assert(thisIter != siblings.end());
+
+			for (auto iter = thisIter + 1; iter != siblings.end(); ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+
+			auto thisIter = Find(rootObjects, this);
+			assert(thisIter != rootObjects.end());
+
+			for (auto iter = thisIter + 1; iter != rootObjects.end(); ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+
+		return result;
 	}
 
 	Transform* GameObject::GetTransform()

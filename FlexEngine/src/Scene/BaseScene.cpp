@@ -268,6 +268,7 @@ namespace flex
 		{
 			rootObject->Initialize();
 		}
+		UpdateRootObjectSiblingIndices();
 
 		m_bLoaded = true;
 	}
@@ -357,6 +358,7 @@ namespace flex
 		{
 			if (DestroyGameObjectRecursive(gameObject, targetObject, bDeleteChildren))
 			{
+				UpdateRootObjectSiblingIndices();
 				return true;
 			}
 		}
@@ -696,6 +698,14 @@ namespace flex
 		return matID;
 	}
 
+	void BaseScene::UpdateRootObjectSiblingIndices()
+	{
+		for (i32 i = 0; i < m_RootObjects.size(); ++i)
+		{
+			m_RootObjects[i]->UpdateSiblingIndices(i);
+		}
+	}
+
 	void BaseScene::CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight)
 	{
 		std::string posStr = obj.GetString("pos");
@@ -908,6 +918,7 @@ namespace flex
 
 		gameObject->SetParent(nullptr);
 		m_RootObjects.push_back(gameObject);
+		UpdateRootObjectSiblingIndices();
 
 		return gameObject;
 	}
@@ -925,6 +936,7 @@ namespace flex
 				}
 
 				iter = m_RootObjects.erase(iter);
+				UpdateRootObjectSiblingIndices();
 				return;
 			}
 			else

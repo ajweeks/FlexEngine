@@ -852,6 +852,12 @@ namespace flex
 				cam->LookAt(sphereCenterWS);
 			}
 
+			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL) &&
+				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_A))
+			{
+				SelectAll();
+			}
+
 			Profiler::Update();
 
 			g_CameraManager->Update();
@@ -1619,8 +1625,6 @@ namespace flex
 		m_SelectedObjectDragStartPos = glm::vec3(0.0f);
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
-
-		Print("deselect\n");
 	}
 
 	bool FlexEngine::LoadCommonSettingsFromDisk()
@@ -2070,6 +2074,15 @@ namespace flex
 		m_SelectedObjectRotation = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform()->GetWorldRotation();
 
 		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjects.size());
+	}
+
+	void FlexEngine::SelectAll()
+	{
+		for (GameObject* gameObject : g_SceneManager->CurrentScene()->GetAllObjects())
+		{
+			m_CurrentlySelectedObjects.push_back(gameObject);
+		}
+		CalculateSelectedObjectsCenter();
 	}
 
 	bool FlexEngine::IsDraggingGizmo() const

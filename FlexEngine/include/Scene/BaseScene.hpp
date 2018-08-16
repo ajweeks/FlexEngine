@@ -100,6 +100,8 @@ namespace flex
 
 		MaterialID FindMaterialIDByName(const JSONObject& object);
 		
+		void UpdateRootObjectSiblingIndices();
+
 		static const i32 m_FileVersion = 1;
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;

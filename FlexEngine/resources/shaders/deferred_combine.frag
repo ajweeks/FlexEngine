@@ -97,6 +97,13 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 	return (kD * albedo / PI + specular) * radiance * NoL;
 }
 
+// "UDN normal map blending": [Hill12]
+// vec3 t = texture(baseMap,   uv).xyz * 2.0 - 1.0;
+// vec3 u = texture(detailMap, uv).xyz * 2.0 - 1.0;
+// vec3 r = normalize(t.xy + u.xy, t.z);
+// return r;
+//
+
 void main()
 {
     // Retrieve data from gbuffer
@@ -105,6 +112,10 @@ void main()
 
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
+    // If using half floats: (prevent division by zero)
+    //roughness = max(roughness, 0.089);
+    // If using fp32:
+    roughness = max(roughness, 0.045);
 
     vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;
     float ao = texture(albedoAOFrameBufferSampler, ex_TexCoord).a;
@@ -136,7 +147,8 @@ void main()
 			continue;
 		}
 
-		float attenuation = 1.0 / (distance * distance);
+		// Pretend point lights have a radius of 1cm to avoid division by 0
+		float attenuation = 1.0 / max((distance * distance), 0.001);
 		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
 		vec3 radiance = pointLights[i].color.rgb * attenuation;
 		float NoL = max(dot(N, L), 0.0);
@@ -170,6 +182,10 @@ void main()
 		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
 		vec2 brdf = texture(brdfLUT, vec2(NoV, roughness)).rg;
 		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+		// Prevent specular light leaking [Russell15]
+		float horizon = min(1.0 + dot(R, N), 1.0);
+		specular *= horizon * horizon;
 
 	    ambient = (kD * diffuse + specular) * ao;
 	}

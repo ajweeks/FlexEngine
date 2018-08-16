@@ -183,7 +183,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.130000,
+			"const roughness" : 1.000000,
 			"const ao" : 1.000000
 		},
 		{
@@ -191,7 +191,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.100000,
+			"const roughness" : 0.900000,
 			"const ao" : 1.000000
 		},
 		{
@@ -199,7 +199,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.200000,
+			"const roughness" : 0.800000,
 			"const ao" : 1.000000
 		},
 		{
@@ -207,7 +207,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.300000,
+			"const roughness" : 0.700000,
 			"const ao" : 1.000000
 		},
 		{
@@ -215,7 +215,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.400000,
+			"const roughness" : 0.600000,
 			"const ao" : 1.000000
 		},
 		{
@@ -231,7 +231,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.600000,
+			"const roughness" : 0.400000,
 			"const ao" : 1.000000
 		},
 		{
@@ -239,7 +239,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.700000,
+			"const roughness" : 0.300000,
 			"const ao" : 1.000000
 		},
 		{
@@ -247,7 +247,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.800000,
+			"const roughness" : 0.200000,
 			"const ao" : 1.000000
 		},
 		{
@@ -255,7 +255,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.900000,
+			"const roughness" : 0.100000,
 			"const ao" : 1.000000
 		},
 		{
@@ -263,8 +263,19 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 1.000000,
+			"const roughness" : 0.000000,
 			"const ao" : 1.000000
+		},
+		{
+			"name" : "New Material 01",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 1.000000,
+			"enable normal sampler" : true,
+			"generate normal sampler" : true,
+			"normal texture filepath" : "textures/work_n.jpg"
 		}
 	]
 }
