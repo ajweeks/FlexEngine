@@ -109,6 +109,8 @@ namespace flex
 
 		virtual void DrawAssetBrowserImGui() = 0;
 
+		virtual void RecaptureReflectionProbe() = 0;
+
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
 		// Output scale lies in range [0, 1] - both outputs corrected for aspect ratio

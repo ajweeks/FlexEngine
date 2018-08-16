@@ -87,40 +87,6 @@
 			},
 			"mesh" : "cerberus",
 			"material" : "cerberus"
-		},
-		{
-			"name" : "New_Object_00",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "-27.660, 14.544, 0.021",
-				"rot" : "1.572, 1.570, -3.141",
-				"scale" : "3.000, 3.000, 3.000"
-			},
-			"mesh" : "cube",
-			"material" : "pbr chrome"
-		},
-		{
-			"name" : "New_Object_01",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 19.420, 4.720"
-			},
-			"mesh" : "ico-sphere",
-			"material" : "pbr chrome"
-		},
-		{
-			"name" : "New_Object_02",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-			},
-			"mesh" : "ico-sphere",
-			"material" : "pbr red"
 		}
 	],
 	"point lights" : 

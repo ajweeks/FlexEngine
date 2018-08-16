@@ -99,6 +99,8 @@ namespace flex
 			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
 			virtual void DrawAssetBrowserImGui() override;
+			
+			virtual void RecaptureReflectionProbe() override;
 
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;

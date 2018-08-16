@@ -1527,6 +1527,22 @@ namespace flex
 			glfwSwapBuffers(static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow());
 		}
 
+		void GLRenderer::RecaptureReflectionProbe()
+		{
+			for (GLRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
+				{
+					CaptureSceneToCubemap(renderObject->renderID);
+					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+				}
+			}
+
+			AddEditorString("Captured reflection probe");
+		}
+
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
@@ -1640,35 +1656,12 @@ namespace flex
 			//static i32 count = 0;
 			//if (++count == 1)
 			//{
-			//	for (GLRenderObject* renderObject : m_RenderObjects)
-			//	{
-			//		if (renderObject)
-			//		{
-			//			GLMaterial& material = m_Materials[renderObject->materialID];
-
-			//			if (material.material.generateReflectionProbeMaps)
-			//			{
-			//				Print("Capturing reflection probe\n");
-			//				CaptureSceneToCubemap(renderObject->renderID);
-			//				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-			//				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-			//			}
-			//		}
-			//	}
+			//	RecaptureReflectionProbe();
 			//}
 
 			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
-				for (GLRenderObject* renderObject : m_RenderObjects)
-				{
-					if (renderObject && 
-						m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
-					{
-						CaptureSceneToCubemap(renderObject->renderID);
-						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-					}
-				}
+				RecaptureReflectionProbe();
 			}
 		}
 
@@ -4950,6 +4943,46 @@ namespace flex
 			physicsWorld->debugDrawWorld();
 		}
 
+		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
+		{
+			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
+
+			if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
+			{
+				DeleteFile(m_SettingsFilePathAbs);
+			}
+
+			if (filePath.empty())
+			{
+				PrintError("Failed to save renderer settings to disk: file path is not set!\n");
+				return;
+			}
+
+			JSONObject rootObject = {};
+			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
+			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
+			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
+			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
+			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
+			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
+			std::string fileContents = rootObject.Print(0);
+
+			if (WriteFile(filePath, fileContents, false))
+			{
+				if (bAddEditorStr)
+				{
+					if (bSaveOverDefaults)
+					{
+						AddEditorString("Saved default renderer settings");
+					}
+					else
+					{
+						AddEditorString("Saved renderer settings");
+					}
+				}
+			}
+		}
+
 		void GLRenderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
 		{
 			std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
@@ -5608,46 +5641,6 @@ namespace flex
 			}
 
 			ImGui::End();
-		}
-
-		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
-		{
-			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-			if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
-			{
-				DeleteFile(m_SettingsFilePathAbs);
-			}
-
-			if (filePath.empty())
-			{
-				PrintError("Failed to save renderer settings to disk: file path is not set!\n");
-				return;
-			}
-
-			JSONObject rootObject = {};
-			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
-			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
-			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
-			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
-			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
-			std::string fileContents = rootObject.Print(0);
-
-			if (WriteFile(filePath, fileContents, false))
-			{
-				if (bAddEditorStr)
-				{
-					if (bSaveOverDefaults)
-					{
-						AddEditorString("Saved default renderer settings");
-					}
-					else
-					{
-						AddEditorString("Saved renderer settings");
-					}
-				}
-			}
 		}
 
 		void GLRenderer::DrawImGuiItems()

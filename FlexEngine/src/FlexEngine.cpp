@@ -1058,7 +1058,7 @@ namespace flex
 			static const char* rendererSettingsStr = "Renderer settings";
 			if (ImGui::TreeNode(rendererSettingsStr))
 			{
-				if (ImGui::Button("  Save  "))
+				if (ImGui::Button(" Save "))
 				{
 					g_Renderer->SaveSettingsToDisk(false, true);
 				}
@@ -1068,7 +1068,7 @@ namespace flex
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
 				{
 					ImGui::SameLine();
-					if (ImGui::Button("Save over defaults"))
+					if (ImGui::Button("Save defaults"))
 					{
 						g_Renderer->SaveSettingsToDisk(true, true);
 					}
@@ -1083,18 +1083,17 @@ namespace flex
 				ImGui::PopStyleColor();
 				ImGui::PopStyleColor();
 
+				static const char* recaptureReflectionProbeStr = "Recapture reflection probe";
+				if (ImGui::Button(recaptureReflectionProbeStr))
+				{
+					g_Renderer->RecaptureReflectionProbe();
+				}
+
 				bool bVSyncEnabled = g_Renderer->GetVSyncEnabled();
 				static const char* vSyncEnabledStr = "VSync";
 				if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
 				{
 					g_Renderer->SetVSyncEnabled(bVSyncEnabled);
-				}
-
-				static const char* displayBoundingVolumesStr = "Display bounding volumes";
-				bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
-				if (ImGui::Checkbox(displayBoundingVolumesStr, &bDisplayBoundingVolumes))
-				{
-					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
 				}
 
 				static const char* physicsDebuggingStr = "Physics debugging";
@@ -1108,6 +1107,13 @@ namespace flex
 					ImGui::Spacing();
 					ImGui::Spacing();
 					ImGui::Spacing();
+
+					static const char* displayBoundingVolumesStr = "Bounding volumes";
+					bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
+					if (ImGui::Checkbox(displayBoundingVolumesStr, &bDisplayBoundingVolumes))
+					{
+						g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
+					}
 
 					static const char* wireframeStr = "Wireframe";
 					ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
