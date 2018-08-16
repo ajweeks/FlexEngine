@@ -3673,17 +3673,33 @@ namespace flex
 
 		void GLRenderer::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 		{
-			static const char* defaultNewName = "New_Object_01";
+			static const char* defaultNewNameBase = "New_Object_";
 			static const char* newObjectNameInputLabel = "##new-object-name";
 			static const char* createButtonStr = "Create";
 			static const char* cancelStr = "Cancel";
 
-			static std::string newObjectName = defaultNewName;
+			static std::string newObjectName;
 
 			if (ImGui::Button(buttonName))
 			{
 				ImGui::OpenPopup(popupName);
-				newObjectName = defaultNewName;
+				i32 highestNoNameObj = -1;
+				i16 maxNumChars = 2;
+				const std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
+				for (GameObject* gameObject : allObjects)
+				{
+					if (StartsWith(gameObject->GetName(), defaultNewNameBase))
+					{
+						i16 numChars;
+						i32 num = GetNumberEndingWith(gameObject->GetName(), numChars);
+						if (num != -1)
+						{
+							highestNoNameObj = glm::max(highestNoNameObj, num);
+							maxNumChars = glm::max(maxNumChars, maxNumChars);
+						}
+					}
+				}
+				newObjectName = defaultNewNameBase + IntToString(highestNoNameObj + 1, maxNumChars);
 			}
 
 			if (ImGui::BeginPopupModal(popupName, NULL,
@@ -3695,7 +3711,6 @@ namespace flex
 				newObjectName.resize(maxStrLen);
 
 
-				ImGui::SetKeyboardFocusHere();
 				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
 												(char*)newObjectName.data(),
 												maxStrLen,
@@ -5940,7 +5955,11 @@ namespace flex
 			GLRenderObject* renderObject = nullptr;
 			std::string objectName = gameObject->GetName();
 			std::string objectID;
-			if (renderID != InvalidRenderID)
+			if (renderID == InvalidRenderID)
+			{
+				objectID = "##" + objectName;
+			}
+			else
 			{
 				renderObject = GetRenderObject(renderID);
 				objectID = "##" + std::to_string(renderObject->renderID);

@@ -827,31 +827,17 @@ namespace flex
 		}
 
 		std::string name = namePrefix;
-		
-		char delimiter = '_';
-		size_t finalDelimiter = namePrefix.find(delimiter);
-		if (finalDelimiter == std::string::npos)
-		{
-			delimiter = ' ';
-			finalDelimiter = namePrefix.find(delimiter);
-		}
-		if (finalDelimiter == namePrefix.size() - 3)
-		{
-			name = namePrefix.substr(0, finalDelimiter);
-		}
 
-		const size_t nameLen = name.size();
-		if (isdigit(namePrefix[namePrefix.size() - 1]) && isdigit(namePrefix[namePrefix.size() - 2]))
+		i16 numChars;
+		i32 numEndingWith = GetNumberEndingWith(namePrefix, numChars);
+		
+		if (numEndingWith == -1)
 		{
-			i32 digit = atoi(namePrefix.substr(namePrefix.size() - 2).c_str());
-			std::string nextDigitStr = IntToString(digit + 1, 2);
-			std::string result = name + delimiter + nextDigitStr;
-			return result;
+			return defaultName;
 		}
 		else
 		{
-			std::string nextDigitStr = IntToString(0, 2);
-			std::string result = name + delimiter + nextDigitStr;
+			std::string result = namePrefix.substr(0, namePrefix.size() - numChars) + IntToString(numEndingWith + 1, numChars);
 			return result;
 		}
 	}
