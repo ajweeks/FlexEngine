@@ -570,12 +570,12 @@ namespace flex
 			MeshComponent* mesh = obj->GetMeshComponent();
 			if (mesh)
 			{
-				std::string meshName = mesh->GetName();
-				if (!meshName.empty())
+				std::string meshFilePath = mesh->GetRelativeFilePath();
+				if (!meshFilePath.empty())
 				{
 					for (JSONObject& parsedMeshObj : s_ParsedMeshes)
 					{
-						if (parsedMeshObj.GetString("name").compare(meshName) == 0)
+						if (parsedMeshObj.GetString("file").compare(meshFilePath) == 0)
 						{
 							parsedMeshObj = mesh->SerializeToJSON();
 							break;

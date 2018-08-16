@@ -36,9 +36,6 @@ namespace flex
 
 		void SetOwner(GameObject* owner);
 
-		void SetName(const std::string& name);
-		std::string GetName() const;
-
 		enum class Type
 		{
 			PREFAB,
@@ -119,7 +116,6 @@ namespace flex
 
 		struct LoadedMesh
 		{
-			std::string name;
 			ImportSettings importSettings;
 			Assimp::Importer importer = {};
 			const aiScene* scene = nullptr;
@@ -128,7 +124,7 @@ namespace flex
 
 		static bool GetLoadedMesh(const std::string& filePath, LoadedMesh** loadedMesh);
 
-		static LoadedMesh* LoadMesh(const std::string& filePath, const std::string& name, ImportSettings* importSettings = nullptr);
+		static LoadedMesh* LoadMesh(const std::string& filePath, ImportSettings* importSettings = nullptr);
 
 	private:
 		real CalculateBoundingSphereScale() const;
@@ -149,7 +145,6 @@ namespace flex
 		static const u32 GRID_LINE_COUNT;
 
 		Type m_Type = Type::NONE;
-		std::string m_Name;
 		std::string m_RelativeFilePath;
 		std::string m_FileName;
 

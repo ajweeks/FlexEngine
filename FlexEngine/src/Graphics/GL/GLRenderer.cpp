@@ -3727,8 +3727,6 @@ namespace flex
 
 					if (!newObjectName.empty())
 					{
-						MaterialID matID = g_SceneManager->CurrentScene()->GetMaterialIDs()[0];
-
 						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
@@ -5279,16 +5277,16 @@ namespace flex
 							{
 								if (ImGui::Button("Duplicate"))
 								{
-									const Material& mat = m_Materials[i].material;
+									const Material& dupMat = m_Materials[i].material;
 
 									MaterialCreateInfo createInfo = {};
-									createInfo.name = GetIncrementedPostFixedStr(mat.name, "new material 00");
-									createInfo.shaderName = m_Shaders[mat.shaderID].shader.name;
-									createInfo.constAlbedo = mat.constAlbedo;
-									createInfo.constRoughness = mat.constRoughness;
-									createInfo.constMetallic = mat.constMetallic;
-									createInfo.constAO = mat.constAO;
-									createInfo.colorMultiplier = mat.colorMultiplier;
+									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material 00");
+									createInfo.shaderName = m_Shaders[dupMat.shaderID].shader.name;
+									createInfo.constAlbedo = dupMat.constAlbedo;
+									createInfo.constRoughness = dupMat.constRoughness;
+									createInfo.constMetallic = dupMat.constMetallic;
+									createInfo.constAO = dupMat.constAO;
+									createInfo.colorMultiplier = dupMat.colorMultiplier;
 									// TODO: Copy other fields
 									MaterialID newMaterialID = InitializeMaterial(&createInfo);
 
@@ -5478,31 +5476,6 @@ namespace flex
 						++meshIdx;
 					}
 
-					if (bUpdateName)
-					{
-						selectedMeshName = selectedMesh->name;
-						selectedMeshName.resize(MAX_NAME_LEN);
-						bUpdateName = false;
-					}
-
-					bool bRename = ImGui::InputText("##Name", (char*)selectedMeshName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue);
-
-					ImGui::SameLine();
-
-					bRename |= ImGui::Button("Rename");
-
-					if (bRename)
-					{
-						// Strip leading \0 chars
-						selectedMeshName = std::string(selectedMeshName.c_str());
-
-						if (selectedMesh->name.compare(selectedMeshName) != 0)
-						{
-							// TODO: Rename mesh & fix-up all save files
-							PrintWarn("@@@TODO: Rename mesh to %s@@@\n", selectedMeshName.c_str());
-						}
-					}
-
 					ImGui::Text("Import settings");
 
 					ImGui::Columns(2, "import settings columns", false);
@@ -5625,10 +5598,7 @@ namespace flex
 							}
 							else
 							{
-								// Add the new mesh to the cache
-								std::string meshName = fileNameAndExtension;
-								StripFileType(meshName);
-								MeshComponent::LoadMesh(relativeFilePath, meshName);
+								MeshComponent::LoadMesh(relativeFilePath);
 							}
 
 							ImGui::CloseCurrentPopup();
@@ -5712,7 +5682,6 @@ namespace flex
 
 				if (payload && payload->Data)
 				{
-					GameObject* draggedGameObjects = (GameObject*)payload->Data;
 					i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
 
 					std::vector<GameObject*> draggedGameObjectsVec;
@@ -5838,8 +5807,54 @@ namespace flex
 			{
 				GLMaterial& material = m_Materials[renderObject->materialID];
 
-				std::string matNameStr = "Material: " + material.material.name;
-				ImGui::TextUnformatted(matNameStr.c_str());
+				MaterialID selectedMaterialID = 0;
+				i32 selectedMaterialShortIndex = 0;
+				std::string currentMaterialName = "NONE";
+				i32 matShortIndex = 0;
+				for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+				{
+					if (m_Materials[i].material.engineMaterial)
+					{
+						continue;
+					}
+
+					if (i == (i32)renderObject->materialID)
+					{
+						selectedMaterialID = i;
+						selectedMaterialShortIndex = matShortIndex;
+						currentMaterialName = material.material.name;
+						break;
+					}
+
+					++matShortIndex;
+				}
+				if (ImGui::BeginCombo("Material", currentMaterialName.c_str()))
+				{
+					matShortIndex = 0;
+					for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+					{
+						if (m_Materials[i].material.engineMaterial)
+						{
+							continue;
+						}
+
+						bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+						std::string materialName = m_Materials[i].material.name;
+						if (ImGui::Selectable(materialName.c_str(), &bSelected))
+						{
+							MeshComponent* mesh = gameObject->GetMeshComponent();
+							if (mesh)
+							{
+								mesh->SetMaterialID(i);
+							}
+							selectedMaterialShortIndex = matShortIndex;
+						}
+
+						++matShortIndex;
+					}
+
+					ImGui::EndCombo();
+				}
 
 				if (ImGui::BeginDragDropTarget())
 				{
@@ -5850,9 +5865,10 @@ namespace flex
 						MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
 						if (draggedMaterialID)
 						{
-							if (gameObject->GetMeshComponent())
+							MeshComponent* mesh = gameObject->GetMeshComponent();
+							if (mesh)
 							{
-								gameObject->GetMeshComponent()->SetMaterialID(*draggedMaterialID);
+								mesh->SetMaterialID(*draggedMaterialID);
 							}
 						}
 					}
@@ -5860,7 +5876,7 @@ namespace flex
 					ImGui::EndDragDropTarget();
 				}
 
-				MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+				MeshComponent* mesh = gameObject->GetMeshComponent();
 				if (mesh)
 				{
 					i32 selectedMeshIndex = 0;
@@ -5909,7 +5925,6 @@ namespace flex
 								mesh->SetOwner(gameObject);
 								mesh->SetRequiredAttributesFromMaterialID(matID);
 								mesh->LoadFromFile(relativeFilePath);
-								mesh->SetName(iter->second->name);
 							}
 
 							++i;
@@ -5939,12 +5954,23 @@ namespace flex
 									mesh->SetOwner(gameObject);
 									mesh->SetRequiredAttributesFromMaterialID(matID);
 									mesh->LoadFromFile(newMeshFilePath);
-									mesh->SetName(meshIter->second->name);
 								}
 							}
 						}
 						ImGui::EndDragDropTarget();
 					}
+				}
+			}
+			else
+			{
+				if (ImGui::Button("Add mesh component"))
+				{
+					MaterialID matID = InvalidMaterialID;
+					g_Renderer->GetMaterialID("pbr chrome", matID);
+
+					MeshComponent* mesh = gameObject->SetMeshComponent(new MeshComponent(matID, gameObject));
+					mesh->SetRequiredAttributesFromMaterialID(matID);
+					mesh->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
 				}
 			}
 		}
@@ -6153,7 +6179,6 @@ namespace flex
 
 					if (payload && payload->Data)
 					{
-						GameObject* draggedGameObjects = *((GameObject**)payload->Data);
 						i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
 
 						std::vector<GameObject*> draggedGameObjectsVec;

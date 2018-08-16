@@ -470,16 +470,18 @@ namespace flex
 
 	void StripFileType(std::string& filePath)
 	{
-		assert(filePath.find('.') != std::string::npos);
-
-		filePath = Split(filePath, '.')[0];
+		if (filePath.find('.') != std::string::npos)
+		{
+			filePath = Split(filePath, '.')[0];
+		}
 	}
 
 	void ExtractFileType(std::string& filePathInTypeOut)
 	{
-		assert(filePathInTypeOut.find('.') != std::string::npos);
-
-		filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
+		if (filePathInTypeOut.find('.') != std::string::npos)
+		{
+			filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
+		}
 	}
 
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)

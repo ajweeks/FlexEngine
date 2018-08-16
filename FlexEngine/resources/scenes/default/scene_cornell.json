@@ -35,7 +35,7 @@
 				"rot" : "-1.566, 1.569, 0.005",
 				"scale" : "19.999, 20.000, 19.999"
 			},
-			"mesh" : "cornell box",
+			"mesh" : "cornell-box",
 			"material" : "cornell"
 		},
 		{
@@ -47,7 +47,7 @@
 				"pos" : "6.849, 5.205, -12.373",
 				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : "ico sphere",
+			"mesh" : "ico-sphere",
 			"material" : "pbr red"
 		},
 		{
@@ -59,7 +59,7 @@
 				"pos" : "-0.269, 8.073, -9.520",
 				"scale" : "5.000, 5.000, 5.000"
 			},
-			"mesh" : "ico sphere",
+			"mesh" : "ico-sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -72,7 +72,7 @@
 				"rot" : "0.000, -1.435, 0.000",
 				"scale" : "5.000, 5.000, 5.000"
 			},
-			"mesh" : "mori knob",
+			"mesh" : "mori-knob",
 			"material" : "pbr light grey"
 		},
 		{
@@ -87,6 +87,40 @@
 			},
 			"mesh" : "cerberus",
 			"material" : "cerberus"
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-27.660, 14.544, 0.021",
+				"rot" : "1.572, 1.570, -3.141",
+				"scale" : "3.000, 3.000, 3.000"
+			},
+			"mesh" : "cube",
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "New_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 19.420, 4.720"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "New_Object_02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr red"
 		}
 	],
 	"point lights" : 

@@ -177,7 +177,11 @@ namespace flex
 			bool bFound = false;
 			for (auto parsedMeshObj : BaseScene::s_ParsedMeshes)
 			{
-				if (parsedMeshObj.GetString("name").compare(meshName) == 0)
+				std::string fileName = parsedMeshObj.GetString("file");
+				StripLeadingDirectories(fileName);
+				StripFileType(fileName);
+
+				if (fileName.compare(meshName) == 0)
 				{
 					MeshComponent::ParseJSON(parsedMeshObj, this, matID);
 					bFound = true;
@@ -356,22 +360,22 @@ namespace flex
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			std::string meshName = meshComponent->GetName();
-			if (meshName.empty())
-			{
-				PrintWarn("Mesh component contains empty name! Parsing will fail!\n");
-			}
+			std::string meshName = meshComponent->GetRelativeFilePath();
+			StripLeadingDirectories(meshName);
+			StripFileType(meshName);
+
 			object.fields.emplace_back("mesh", JSONValue(meshName));
 		}
 
 		{
 			MaterialID matID = InvalidMaterialID;
 			RenderObjectCreateInfo renderObjectCreateInfo;
+			RenderID renderID = GetRenderID();
 			if (meshComponent)
 			{
 				matID = meshComponent->GetMaterialID();
 			}
-			else if (g_Renderer->GetRenderObjectCreateInfo(GetRenderID(), renderObjectCreateInfo))
+			else if (renderID != InvalidRenderID && g_Renderer->GetRenderObjectCreateInfo(renderID, renderObjectCreateInfo))
 			{
 				matID = renderObjectCreateInfo.materialID;
 			}
@@ -727,8 +731,6 @@ namespace flex
 			{
 				PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
 			}
-
-			newMeshComponent->SetName(m_MeshComponent->GetName());
 		}
 
 		if (m_RigidBody)

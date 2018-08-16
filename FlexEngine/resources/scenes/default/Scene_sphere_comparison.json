@@ -44,7 +44,7 @@
 						"pos" : "0.000, 0.880, -35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 10"
 				},
 				{
@@ -56,7 +56,7 @@
 						"pos" : "0.000, 0.880, -28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 09"
 				},
 				{
@@ -68,7 +68,7 @@
 						"pos" : "0.000, 0.880, -21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 08"
 				},
 				{
@@ -80,7 +80,7 @@
 						"pos" : "0.000, 0.880, 35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 00"
 				},
 				{
@@ -92,7 +92,7 @@
 						"pos" : "0.000, 0.880, -14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 07"
 				},
 				{
@@ -104,7 +104,7 @@
 						"pos" : "0.000, 0.880, 0.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 05"
 				},
 				{
@@ -116,7 +116,7 @@
 						"pos" : "0.000, 0.880, -7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 06"
 				},
 				{
@@ -128,7 +128,7 @@
 						"pos" : "0.000, 0.880, 7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 04"
 				},
 				{
@@ -140,7 +140,7 @@
 						"pos" : "0.000, 0.880, 14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 03"
 				},
 				{
@@ -152,7 +152,7 @@
 						"pos" : "0.000, 0.880, 21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 02"
 				},
 				{
@@ -164,7 +164,7 @@
 						"pos" : "0.000, 0.880, 28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 01"
 				}
 			]
@@ -188,7 +188,7 @@
 						"pos" : "0.000, 0.880, -35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 11"
 				},
 				{
@@ -200,7 +200,7 @@
 						"pos" : "0.000, 0.880, -28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 12"
 				},
 				{
@@ -212,7 +212,7 @@
 						"pos" : "0.000, 0.880, -21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 13"
 				},
 				{
@@ -224,7 +224,7 @@
 						"pos" : "0.000, 0.880, -14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 14"
 				},
 				{
@@ -236,7 +236,7 @@
 						"pos" : "0.000, 0.880, -7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 15"
 				},
 				{
@@ -248,7 +248,7 @@
 						"pos" : "0.000, 0.880, 0.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 16"
 				},
 				{
@@ -260,7 +260,7 @@
 						"pos" : "0.000, 0.880, 7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 17"
 				},
 				{
@@ -272,7 +272,7 @@
 						"pos" : "0.000, 0.880, 14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 18"
 				},
 				{
@@ -284,7 +284,7 @@
 						"pos" : "0.000, 0.880, 21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 19"
 				},
 				{
@@ -296,7 +296,7 @@
 						"pos" : "0.000, 0.880, 28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 20"
 				},
 				{
@@ -308,7 +308,7 @@
 						"pos" : "0.000, 0.880, 35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "ico sphere",
+					"mesh" : "ico-sphere",
 					"material" : "sphere 21"
 				}
 			]

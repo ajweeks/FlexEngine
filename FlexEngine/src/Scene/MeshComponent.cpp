@@ -72,7 +72,6 @@ namespace flex
 		bool flipNormalZ = object.GetBool("flipNormalZ");
 		bool flipU = object.GetBool("flipU");
 		bool flipV = object.GetBool("flipV");
-		std::string meshName = object.GetString("name");
 
 		if (materialID == InvalidMaterialID)
 		{
@@ -84,7 +83,6 @@ namespace flex
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
 				newMeshComponent->SetRequiredAttributesFromMaterialID(materialID);
-				newMeshComponent->SetName(meshName);
 
 				MeshComponent::ImportSettings importSettings = {};
 				importSettings.flipU = flipU;
@@ -119,8 +117,6 @@ namespace flex
 	JSONObject MeshComponent::SerializeToJSON()
 	{
 		JSONObject meshObject = {};
-		
-		meshObject.fields.emplace_back("name", JSONValue(m_Name));
 
 		if (m_Type == MeshComponent::Type::FILE)
 		{
@@ -159,16 +155,6 @@ namespace flex
 		m_OwningGameObject = owner;
 	}
 
-	void MeshComponent::SetName(const std::string& name)
-	{
-		m_Name = name;
-	}
-
-	std::string MeshComponent::GetName() const
-	{
-		return m_Name;
-	}
-
 	//void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
 	//{
 	//	m_RequiredAttributes = requiredAttributes;
@@ -197,7 +183,7 @@ namespace flex
 		}
 	}
 
-	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& filePath, const std::string& name, ImportSettings* importSettings /* = nullptr */)
+	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& filePath, ImportSettings* importSettings /* = nullptr */)
 	{
 		if (filePath.find(':') != std::string::npos)
 		{
@@ -210,7 +196,6 @@ namespace flex
 		Print("Loading mesh %s\n", fileName.c_str());
 
 		LoadedMesh* newLoadedMesh = new LoadedMesh();
-		newLoadedMesh->name = name;
 		m_LoadedMeshes.emplace(filePath, newLoadedMesh);
 
 		if (importSettings)
@@ -512,9 +497,7 @@ namespace flex
 			// Mesh hasn't been loaded before, load it now
 			Print("Loading mesh %s\n", meshFileName.c_str());
 
-			std::string meshName = meshFileName;
-			StripFileType(meshName);
-			LoadedMesh* newLoadedMesh = LoadMesh(relativeFilePath, meshName, importSettings);
+			LoadedMesh* newLoadedMesh = LoadMesh(relativeFilePath, importSettings);
 
 			if (newLoadedMesh)
 			{
