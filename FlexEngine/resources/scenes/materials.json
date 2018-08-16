@@ -57,7 +57,7 @@
 			"generated irradiance cubemap size" : "32, 32",
 			"generate prefiltered map" : true,
 			"generated prefiltered map size" : "128, 128",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
+			"environment map path" : "hdri/Protospace_B/Protospace_B_Env.hdr"
 		},
 		{
 			"name" : "cerberus",
@@ -76,11 +76,11 @@
 			"generate roughness sampler" : true,
 			"generate ao sampler" : true,
 			"generate normal sampler" : true,
-			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A_1024.jpg",
-			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M_1024.jpg",
-			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R_1024.jpg",
-			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO_1024.jpg",
-			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N_1024.jpg"
+			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_A_1024.jpg",
+			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_M_1024.jpg",
+			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_R_1024.jpg",
+			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_AO_1024.jpg",
+			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_N_1024.jpg"
 		},
 		{
 			"name" : "cornell",
@@ -275,7 +275,7 @@
 			"const ao" : 1.000000,
 			"enable normal sampler" : true,
 			"generate normal sampler" : true,
-			"normal texture filepath" : "textures/work_n.jpg"
+			"normal texture filepath" : "work_n.jpg"
 		}
 	]
 }

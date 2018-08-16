@@ -32,7 +32,7 @@
 			"transform" : 
 			{
 				"pos" : "-28.690, 0.000, -0.001",
-				"rot" : "-1.566, 1.569, 0.005",
+				"rot" : "1.570, 1.570, 3.141",
 				"scale" : "19.999, 20.000, 19.999"
 			},
 			"mesh" : "cornell-box",
@@ -87,20 +87,58 @@
 			},
 			"mesh" : "cerberus",
 			"material" : "cerberus"
+		},
+		{
+			"name" : "Baby cornell",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-27.380, 20.111, 0.025",
+				"rot" : "1.571, 1.570, -3.141",
+				"scale" : "3.000, 3.000, 3.000"
+			},
+			"mesh" : "cornell-box",
+			"material" : "cornell"
+		},
+		{
+			"name" : "Teapot",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-28.435, -0.220, 0.000",
+				"rot" : "-1.571, 0.559, -0.000",
+				"scale" : "0.200, 0.200, 0.200"
+			},
+			"mesh" : "teapot_smooth",
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "Valve",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "13.800, 0.000, 9.100",
+				"scale" : "5.000, 5.000, 5.000"
+			},
+			"mesh" : "valve",
+			"material" : "cerberus"
 		}
 	],
 	"point lights" : 
 	[
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "16.800, 18.600, 2.200",
 			"color" : "0.93, 0.93, 0.89",
-			"enabled" : false,
+			"enabled" : true,
 			"brightness" : 1000.000061
 		},
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "-1.000, 11.600, -1.000",
 			"color" : "0.93, 0.93, 0.89",
-			"enabled" : true,
+			"enabled" : false,
 			"brightness" : 394.030029
 		},
 		{

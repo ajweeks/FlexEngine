@@ -65,7 +65,7 @@ namespace flex
 		std::string meshFilePath = object.GetString("file");
 		if (!meshFilePath.empty())
 		{
-			meshFilePath = RESOURCE_LOCATION + meshFilePath;
+			meshFilePath = RESOURCE_LOCATION + "meshes/" + meshFilePath;
 		}
 		std::string meshPrefabName = object.GetString("prefab");
 		bool swapNormalYZ = object.GetBool("swapNormalYZ");
@@ -120,7 +120,8 @@ namespace flex
 
 		if (m_Type == MeshComponent::Type::FILE)
 		{
-			std::string meshFilepath = GetRelativeFilePath().substr(RESOURCE_LOCATION.length());
+			std::string prefixStr = RESOURCE_LOCATION + "meshes/";
+			std::string meshFilepath = GetRelativeFilePath().substr(prefixStr.length());
 			meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
 		}
 		// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
@@ -1278,13 +1279,13 @@ namespace flex
 	{
 		switch (shape)
 		{
-		case MeshComponent::PrefabShape::CUBE:					return "cube";
-		case MeshComponent::PrefabShape::GRID:					return "grid";
+		case MeshComponent::PrefabShape::CUBE:				return "cube";
+		case MeshComponent::PrefabShape::GRID:				return "grid";
 		case MeshComponent::PrefabShape::WORLD_AXIS_GROUND:	return "world axis ground";
 		case MeshComponent::PrefabShape::PLANE:				return "plane";
 		case MeshComponent::PrefabShape::UV_SPHERE:			return "uv sphere";
-		case MeshComponent::PrefabShape::SKYBOX:				return "skybox";
-		case MeshComponent::PrefabShape::NONE:					return "NONE";
+		case MeshComponent::PrefabShape::SKYBOX:			return "skybox";
+		case MeshComponent::PrefabShape::NONE:				return "NONE";
 		default:											return "UNHANDLED PREFAB SHAPE";
 		}
 	}

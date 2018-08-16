@@ -3,49 +3,42 @@
 	"meshes" : 
 	[
 		{
-			"file" : "meshes/cube.gltf",
+			"file" : "cube.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "meshes/capsule.FBX",
+			"file" : "capsule.FBX",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "meshes/cone.gltf",
+			"file" : "cone.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "meshes/ico-sphere.gltf",
+			"file" : "ico-sphere.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "meshes/unit-plane.gltf",
+			"file" : "unit-plane.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "meshes/CornellBox/cornell-box.fbx",
-			"swapNormalYZ" : false,
-			"flipNormalZ" : false,
-			"flipU" : false,
-			"flipV" : false
-		},
-		{
-			"file" : "meshes/mori-knob.gltf",
+			"file" : "CornellBox/cornell-box.fbx",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -59,28 +52,46 @@
 			"flipV" : false
 		},
 		{
-			"name" : "street 02",
-			"file" : "meshes/street-02.gltf",
+			"file" : "street-02.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"name" : "sponza",
-			"file" : "meshes/sponza/sponza.glb",
+			"file" : "sponza/sponza.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"name" : "cerberus",
+			"file" : "teapot_smooth.FBX",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "mori-knob.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
 			"file" : "Cerberus_by_Andrew_Maximov/cerberus.glb",
 			"swapNormalYZ" : true,
 			"flipNormalZ" : true,
 			"flipU" : false,
 			"flipV" : true
+		},
+		{
+			"file" : "valve.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
 		}
 	]
 }

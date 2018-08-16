@@ -153,7 +153,7 @@ namespace flex
 		{
 			if (material.HasField(param.name))
 			{
-				*param.path = RESOURCE_LOCATION + material.GetString(param.name);
+				*param.path = RESOURCE_LOCATION + "textures/" + material.GetString(param.name);
 			}
 		}
 
@@ -269,33 +269,35 @@ namespace flex
 			materialObject.fields.emplace_back("generate normal sampler", JSONValue(generateNormalSampler));
 		}
 
+		static const std::string texturePrefixStr = RESOURCE_LOCATION + "textures/";
+
 		if (shader.needAlbedoSampler && !albedoTexturePath.empty())
 		{
-			std::string shortAlbedoTexturePath = albedoTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortAlbedoTexturePath = albedoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("albedo texture filepath", JSONValue(shortAlbedoTexturePath));
 		}
 
 		if (shader.needMetallicSampler && !metallicTexturePath.empty())
 		{
-			std::string shortMetallicTexturePath = metallicTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortMetallicTexturePath = metallicTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("metallic texture filepath", JSONValue(shortMetallicTexturePath));
 		}
 
 		if (shader.needRoughnessSampler && !roughnessTexturePath.empty())
 		{
-			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
 		}
 
 		if (shader.needAOSampler && !aoTexturePath.empty())
 		{
-			std::string shortAOTexturePath = aoTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortAOTexturePath = aoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("ao texture filepath", JSONValue(shortAOTexturePath));
 		}
 
 		if (shader.needNormalSampler && !normalTexturePath.empty())
 		{
-			std::string shortNormalTexturePath = normalTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortNormalTexturePath = normalTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("normal texture filepath", JSONValue(shortNormalTexturePath));
 		}
 
@@ -332,7 +334,7 @@ namespace flex
 
 		if (!environmentMapPath.empty())
 		{
-			std::string cleanedEnvMapPath = environmentMapPath.substr(RESOURCE_LOCATION.length());
+			std::string cleanedEnvMapPath = environmentMapPath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("environment map path", JSONValue(cleanedEnvMapPath));
 		}
 

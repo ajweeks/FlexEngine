@@ -232,6 +232,7 @@ namespace flex
 			m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 			m_Grid->SetSerializable(false);
 			m_Grid->SetStatic(true);
+			m_Grid->SetVisibleInSceneExplorer(false);
 			AddRootObject(m_Grid);
 		}
 
@@ -255,6 +256,7 @@ namespace flex
 			m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 			m_WorldOrigin->SetSerializable(false);
 			m_WorldOrigin->SetStatic(true);
+			m_WorldOrigin->SetVisibleInSceneExplorer(false);
 			AddRootObject(m_WorldOrigin);
 		}
 
@@ -563,6 +565,7 @@ namespace flex
 		
 		meshesObj.fields.emplace_back("version", JSONValue(m_FileVersion));
 
+		static const std::string meshPrefix = RESOURCE_LOCATION + "meshes/";
 		// Overwrite all meshes in current scene in case any values were tweaked
 		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
 		for (GameObject* obj : allObjects)
@@ -570,16 +573,25 @@ namespace flex
 			MeshComponent* mesh = obj->GetMeshComponent();
 			if (mesh)
 			{
-				std::string meshFilePath = mesh->GetRelativeFilePath();
-				if (!meshFilePath.empty())
+				std::string meshFileName = mesh->GetRelativeFilePath();
+				if (!meshFileName.empty())
 				{
+					meshFileName = meshFileName.substr(meshPrefix.length());
+					bool bFound = false;
 					for (JSONObject& parsedMeshObj : s_ParsedMeshes)
 					{
-						if (parsedMeshObj.GetString("file").compare(meshFilePath) == 0)
+						if (parsedMeshObj.GetString("file").compare(meshFileName) == 0)
 						{
 							parsedMeshObj = mesh->SerializeToJSON();
+							bFound = true;
 							break;
 						}
+					}
+
+					if (!bFound)
+					{
+						JSONObject serializedMeshObj = mesh->SerializeToJSON();
+						s_ParsedMeshes.push_back(serializedMeshObj);
 					}
 
 				}

@@ -5872,85 +5872,116 @@ namespace flex
 				MeshComponent* mesh = gameObject->GetMeshComponent();
 				if (mesh)
 				{
-					i32 selectedMeshIndex = 0;
-					std::string currentMeshFileName = "NONE";
-					i32 i = 0;
-					for (auto iter : MeshComponent::m_LoadedMeshes)
+					switch (mesh->GetType())
 					{
-						std::string meshFileName = iter.first;
-						StripLeadingDirectories(meshFileName);
-						if (mesh->GetFileName().compare(meshFileName) == 0)
-						{
-							selectedMeshIndex = i + 1;
-							currentMeshFileName = meshFileName;
-							break;
-						}
-
-						++i;
-					}
-					if (ImGui::BeginCombo("Mesh", currentMeshFileName.c_str()))
+					case MeshComponent::Type::FILE:
 					{
-						i = 0;
-
+						i32 selectedMeshIndex = 0;
+						std::string currentMeshFileName = "NONE";
+						i32 i = 0;
+						for (auto iter : MeshComponent::m_LoadedMeshes)
 						{
-							bool bSelected = (selectedMeshIndex == 0);
-							if (ImGui::Selectable("NONE", &bSelected))
-							{
-								selectedMeshIndex = 0;
-							}
-						}
-
-						for (auto iter = MeshComponent::m_LoadedMeshes.begin();
-							 iter != MeshComponent::m_LoadedMeshes.end();
-							 ++iter)
-						{
-							bool bSelected = (i == selectedMeshIndex - 1);
-							std::string meshFileName = (*iter).first;
+							std::string meshFileName = iter.first;
 							StripLeadingDirectories(meshFileName);
-							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+							if (mesh->GetFileName().compare(meshFileName) == 0)
 							{
-								std::string relativeFilePath = (*iter).first;
-								selectedMeshIndex = i + 1;
-								MaterialID matID = mesh->GetMaterialID();
-								DestroyRenderObject(gameObject->GetRenderID());
-								gameObject->SetRenderID(InvalidRenderID);
-								mesh->Destroy();
-								mesh->SetOwner(gameObject);
-								mesh->SetRequiredAttributesFromMaterialID(matID);
-								mesh->LoadFromFile(relativeFilePath);
+								selectedMeshIndex = i;
+								currentMeshFileName = meshFileName;
+								break;
 							}
 
 							++i;
 						}
-
-						ImGui::EndCombo();
-					}
-
-					if (ImGui::BeginDragDropTarget())
-					{
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MeshPayloadCStr);
-
-						if (payload && payload->Data)
+						if (ImGui::BeginCombo("Mesh", currentMeshFileName.c_str()))
 						{
-							std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
-							auto meshIter = MeshComponent::m_LoadedMeshes.find(draggedMeshFileName);
-							if (meshIter != MeshComponent::m_LoadedMeshes.end())
-							{
-								std::string newMeshFilePath = meshIter->first;
+							i = 0;
 
-								if (mesh->GetRelativeFilePath().compare(newMeshFilePath) != 0)
+							for (auto iter = MeshComponent::m_LoadedMeshes.begin();
+								iter != MeshComponent::m_LoadedMeshes.end();
+								++iter)
+							{
+								bool bSelected = (i == selectedMeshIndex);
+								std::string meshFileName = (*iter).first;
+								StripLeadingDirectories(meshFileName);
+								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 								{
-									MaterialID matID = mesh->GetMaterialID();
-									DestroyRenderObject(gameObject->GetRenderID());
-									gameObject->SetRenderID(InvalidRenderID);
-									mesh->Destroy();
-									mesh->SetOwner(gameObject);
-									mesh->SetRequiredAttributesFromMaterialID(matID);
-									mesh->LoadFromFile(newMeshFilePath);
+									if (selectedMeshIndex != i)
+									{
+										selectedMeshIndex = i;
+										std::string relativeFilePath = (*iter).first;
+										MaterialID matID = mesh->GetMaterialID();
+										DestroyRenderObject(gameObject->GetRenderID());
+										gameObject->SetRenderID(InvalidRenderID);
+										mesh->Destroy();
+										mesh->SetOwner(gameObject);
+										mesh->SetRequiredAttributesFromMaterialID(matID);
+										mesh->LoadFromFile(relativeFilePath);
+									}
+								}
+
+								++i;
+							}
+
+							ImGui::EndCombo();
+						}
+
+						if (ImGui::BeginDragDropTarget())
+						{
+							const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MeshPayloadCStr);
+
+							if (payload && payload->Data)
+							{
+								std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
+								auto meshIter = MeshComponent::m_LoadedMeshes.find(draggedMeshFileName);
+								if (meshIter != MeshComponent::m_LoadedMeshes.end())
+								{
+									std::string newMeshFilePath = meshIter->first;
+
+									if (mesh->GetRelativeFilePath().compare(newMeshFilePath) != 0)
+									{
+										MaterialID matID = mesh->GetMaterialID();
+										DestroyRenderObject(gameObject->GetRenderID());
+										gameObject->SetRenderID(InvalidRenderID);
+										mesh->Destroy();
+										mesh->SetOwner(gameObject);
+										mesh->SetRequiredAttributesFromMaterialID(matID);
+										mesh->LoadFromFile(newMeshFilePath);
+									}
 								}
 							}
+							ImGui::EndDragDropTarget();
 						}
-						ImGui::EndDragDropTarget();
+					} break;
+					case MeshComponent::Type::PREFAB:
+					{
+						i32 selectedMeshIndex = (i32)mesh->GetShape();
+						std::string currentMeshName = MeshComponent::PrefabShapeToString(mesh->GetShape());
+
+						if (ImGui::BeginCombo("Prefab", currentMeshName.c_str()))
+						{
+							for (i32 i = 0; i < (i32)MeshComponent::PrefabShape::NONE; ++i)
+							{
+								std::string shapeStr = MeshComponent::PrefabShapeToString((MeshComponent::PrefabShape)i);
+								bool bSelected = (selectedMeshIndex == i);
+								if (ImGui::Selectable(shapeStr.c_str(), &bSelected))
+								{
+									if (selectedMeshIndex != i)
+									{
+										selectedMeshIndex = i;
+										MaterialID matID = mesh->GetMaterialID();
+										DestroyRenderObject(gameObject->GetRenderID());
+										gameObject->SetRenderID(InvalidRenderID);
+										mesh->Destroy();
+										mesh->SetOwner(gameObject);
+										mesh->SetRequiredAttributesFromMaterialID(matID);
+										mesh->LoadPrefabShape((MeshComponent::PrefabShape)i);
+									}
+								}
+							}
+
+							ImGui::EndCombo();
+						}
+					} break;
 					}
 				}
 			}
