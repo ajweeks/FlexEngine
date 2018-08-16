@@ -364,7 +364,7 @@ namespace flex
 		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
 
 		xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-		xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-x-axis.fbx", nullptr, &gizmoAxisCreateInfo);
+		xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/transform-gizmo-x-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 		// Y Axis
 		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
@@ -381,7 +381,7 @@ namespace flex
 		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
 
 		yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-		yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-y-axis.fbx", nullptr, &gizmoAxisCreateInfo);
+		yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/transform-gizmo-y-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 		// Z Axis
 		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
@@ -399,7 +399,7 @@ namespace flex
 		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
 
 		zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-		zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-z-axis.fbx", nullptr, &gizmoAxisCreateInfo);
+		zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/transform-gizmo-z-axis.fbx", nullptr, &gizmoAxisCreateInfo);
 
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);

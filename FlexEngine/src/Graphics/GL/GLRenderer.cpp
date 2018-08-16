@@ -5597,7 +5597,7 @@ namespace flex
 					if (ImGui::Button("Import Mesh"))
 					{
 						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION + "models/";
+						std::string relativeDirPath = RESOURCE_LOCATION + "meshes/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))

@@ -4,7 +4,7 @@
 	[
 		{
 			"name" : "cube",
-			"file" : "models/cube.gltf",
+			"file" : "meshes/cube.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -12,7 +12,7 @@
 		},
 		{
 			"name" : "capsule",
-			"file" : "models/capsule.FBX",
+			"file" : "meshes/capsule.FBX",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -20,7 +20,7 @@
 		},
 		{
 			"name" : "cone",
-			"file" : "models/cone.gltf",
+			"file" : "meshes/cone.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -28,7 +28,7 @@
 		},
 		{
 			"name" : "ico sphere",
-			"file" : "models/ico-sphere.gltf",
+			"file" : "meshes/ico-sphere.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -36,7 +36,7 @@
 		},
 		{
 			"name" : "unit plane",
-			"file" : "models/unit-plane.gltf",
+			"file" : "meshes/unit-plane.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -44,7 +44,7 @@
 		},
 		{
 			"name" : "cornell box",
-			"file" : "models/CornellBox/cornell-box.fbx",
+			"file" : "meshes/CornellBox/cornell-box.fbx",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -52,7 +52,7 @@
 		},
 		{
 			"name" : "mori knob",
-			"file" : "models/mori-knob.gltf",
+			"file" : "meshes/mori-knob.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -67,7 +67,7 @@
 		},
 		{
 			"name" : "street 02",
-			"file" : "models/street-02.gltf",
+			"file" : "meshes/street-02.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -75,7 +75,7 @@
 		},
 		{
 			"name" : "sponza",
-			"file" : "models/sponza/sponza.glb",
+			"file" : "meshes/sponza/sponza.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,

@@ -50,7 +50,7 @@ namespace flex
 		SetStatic(false);
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
-		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION + "models/capsule.gltf");
+		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION + "meshes/capsule.gltf");
 		m_Transform.SetWorldPosition(glm::vec3(-5.0f + 5.0f * m_Index, 5.0f, 0.0f));
 
 		m_Controller = new PlayerController();
@@ -71,7 +71,7 @@ namespace flex
 
 		slingshotMesh->SetRequiredAttributesFromMaterialID(slingshotMatID);
 
-		slingshotMesh->LoadFromFile(RESOURCE_LOCATION + "models/slingshot.gltf");
+		slingshotMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/slingshot.gltf");
 
 		AddChild(m_Slingshot);
 

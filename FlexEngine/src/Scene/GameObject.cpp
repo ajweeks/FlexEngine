@@ -1250,7 +1250,7 @@ namespace flex
 			{
 				MeshComponent* valveMesh = new MeshComponent(matID, this);
 				valveMesh->SetRequiredAttributesFromMaterialID(matID);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION + "models/valve.gltf");
+				valveMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/valve.gltf");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
 			}
@@ -1413,7 +1413,7 @@ namespace flex
 		{
 			MeshComponent* cubeMesh = new MeshComponent(matID, this);
 			cubeMesh->SetRequiredAttributesFromMaterialID(matID);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION + "models/cube.gltf");
+			cubeMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
 			SetMeshComponent(cubeMesh);
 		}
 
@@ -1599,7 +1599,7 @@ namespace flex
 				MeshComponent* windowMesh = new MeshComponent(matID, this);
 				windowMesh->SetRequiredAttributesFromMaterialID(matID);
 				windowMesh->LoadFromFile(RESOURCE_LOCATION +
-					(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
+					(bBroken ? "meshes/glass-window-broken.gltf" : "meshes/glass-window-whole.gltf"));
 				SetMeshComponent(windowMesh);
 			}
 		}
@@ -1665,7 +1665,7 @@ namespace flex
 		sphereMesh->SetRequiredAttributesFromMaterialID(matID);
 
 		assert(m_MeshComponent == nullptr);
-		sphereMesh->LoadFromFile(RESOURCE_LOCATION + "models/ico-sphere.gltf");
+		sphereMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/ico-sphere.gltf");
 		SetMeshComponent(sphereMesh);
 
 		std::string captureName = m_Name + "_capture";
