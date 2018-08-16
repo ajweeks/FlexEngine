@@ -298,6 +298,13 @@ namespace flex
 			DrawLoadingTextureQuad();
 			SwapBuffers();
 
+			MaterialCreateInfo selectedObjectMatCreateInfo = {};
+			selectedObjectMatCreateInfo.name = "Selected Object";
+			selectedObjectMatCreateInfo.shaderName = "color";
+			selectedObjectMatCreateInfo.engineMaterial = true;
+			selectedObjectMatCreateInfo.colorMultiplier = glm::vec4(1.0f);
+			m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
+
 			if (!m_BRDFTexture)
 			{
 				i32 brdfSize = 512;
@@ -2144,6 +2151,35 @@ namespace flex
 		void GLRenderer::DrawEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
 			DrawRenderObjectBatch(m_EditorRenderObjectBatch, drawCallInfo);
+
+			const std::vector<GameObject*> selectedObjects = g_EngineInstance->GetSelectedObjects();
+			if (!selectedObjects.empty())
+			{
+				std::vector<GLRenderObject*> selectedObjectRenderBatch;
+				for (GameObject* selectedObject : selectedObjects)
+				{
+					RenderID renderID = selectedObject->GetRenderID();
+					if (renderID != InvalidRenderID)
+					{
+						GLRenderObject* renderObject = GetRenderObject(renderID);
+						if (renderObject)
+						{
+							selectedObjectRenderBatch.push_back(renderObject);
+						}
+					}
+				}
+
+
+				static const glm::vec4 color0 = { 0.95f, 0.95f, 0.95f, 0.4f };
+				static const glm::vec4 color1 = { 0.85f, 0.15f, 0.85f, 0.4f };
+				real pulseSpeed = 8.0f;
+				GetMaterial(m_SelectedObjectMatID).colorMultiplier = Lerp(color0, color1, sin(g_SecElapsedSinceProgramStart * pulseSpeed) * 0.5f + 0.5f);
+
+				DrawCallInfo selectedObjectsDrawInfo = {};
+				selectedObjectsDrawInfo.materialOverride = m_SelectedObjectMatID;
+				selectedObjectsDrawInfo.bWireframe = true;
+				DrawRenderObjectBatch(selectedObjectRenderBatch, selectedObjectsDrawInfo);
+			}
 		}
 
 		void GLRenderer::DrawOffscreenTexture()
@@ -2957,8 +2993,8 @@ namespace flex
 				glEnableVertexAttribArray(4);
 
 				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
-				glVertexAttribPointer(1, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
-				glVertexAttribPointer(2, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
+				glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
+				glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
 				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSizePixelsCharSizeNorm));
 				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
 			}
@@ -3205,10 +3241,21 @@ namespace flex
 				return;
 			}
 
-			GLMaterial* material = &m_Materials[batchedRenderObjects[0]->materialID];
+			MaterialID materialID = drawCallInfo.materialOverride;
+
+			if (materialID == InvalidMaterialID)
+			{
+				materialID = batchedRenderObjects[0]->materialID;
+			}
+			GLMaterial* material = &m_Materials[materialID];
 			GLShader* glShader = &m_Shaders[material->material.shaderID];
 			Shader* shader = &glShader->shader;
 			glUseProgram(glShader->program);
+
+			if (drawCallInfo.bWireframe)
+			{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			}
 
 			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
@@ -3251,7 +3298,7 @@ namespace flex
 				glDepthFunc(renderObject->depthTestReadFunc);
 				glDepthMask(renderObject->depthWriteEnable);
 
-				UpdatePerObjectUniforms(renderObject->renderID);
+				UpdatePerObjectUniforms(renderObject->renderID, materialID);
 
 				BindTextures(shader, material);
 
@@ -3321,6 +3368,7 @@ namespace flex
 						{
 							glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 						}
+
 					}
 				}
 				else
@@ -3375,6 +3423,11 @@ namespace flex
 						m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
 					}
 				}
+			}
+
+			if (drawCallInfo.bWireframe)
+			{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			}
 		}
 
@@ -3977,8 +4030,8 @@ namespace flex
 			m_Shaders[shaderID].shader.needNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
@@ -4147,8 +4200,8 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
-				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 
@@ -4315,7 +4368,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID)
+		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, MaterialID materialIDOverride /* = InvalidMaterialID */)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
@@ -4325,7 +4378,12 @@ namespace flex
 			}
 
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
-			UpdatePerObjectUniforms(renderObject->materialID, model);
+			MaterialID matID = materialIDOverride;
+			if (matID == InvalidMaterialID)
+			{
+				matID = renderObject->materialID;
+			}
+			UpdatePerObjectUniforms(matID, model);
 		}
 
 		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model)

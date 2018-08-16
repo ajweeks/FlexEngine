@@ -21,8 +21,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 18.600, 0.000",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "0.000, 18.600, 0.000"
 			},
 			"material" : "pbr chrome"
 		},
@@ -46,7 +45,6 @@
 			"transform" : 
 			{
 				"pos" : "6.849, 5.205, -12.373",
-				"rot" : "-0.000, 0.000, 0.000",
 				"scale" : "3.000, 3.000, 3.000"
 			},
 			"mesh" : "ico sphere",
@@ -59,7 +57,6 @@
 			"transform" : 
 			{
 				"pos" : "-0.269, 8.073, -9.520",
-				"rot" : "-0.000, 0.000, 0.000",
 				"scale" : "5.000, 5.000, 5.000"
 			},
 			"mesh" : "ico sphere",
@@ -79,7 +76,7 @@
 			"material" : "pbr light grey"
 		},
 		{
-			"name" : "New_Object_01",
+			"name" : "Cerberus",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 

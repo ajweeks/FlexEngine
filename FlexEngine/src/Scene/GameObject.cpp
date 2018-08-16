@@ -524,6 +524,26 @@ namespace flex
 		}
 	}
 
+	void GameObject::RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	{
+		auto iter = Find(vec, this);
+		if (iter != vec.end())
+		{
+			vec.erase(iter);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			auto childIter = Find(vec, child);
+			if (childIter != vec.end())
+			{
+				vec.erase(childIter);
+			}
+
+			child->RemoveSelfAndChildrenToVec(vec);
+		}
+	}
+
 	void GameObject::Initialize()
 	{
 		if (m_RigidBody)

@@ -176,6 +176,8 @@ namespace flex
 			RenderID cubemapObjectRenderID = InvalidRenderID;
 			bool bRenderToCubemap = false;
 			bool bDeferred = false;
+			bool bWireframe = false;
+			MaterialID materialOverride = InvalidMaterialID;
 		};
 		
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial

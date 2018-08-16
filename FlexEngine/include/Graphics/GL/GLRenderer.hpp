@@ -196,7 +196,7 @@ namespace flex
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
 			void UpdateMaterialUniforms(MaterialID materialID);
-			void UpdatePerObjectUniforms(RenderID renderID);
+			void UpdatePerObjectUniforms(RenderID renderID, MaterialID materialIDOverride = InvalidMaterialID);
 			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model);
 
 			void BatchRenderObjects();
@@ -306,6 +306,7 @@ namespace flex
 			MaterialID m_FontMatID = InvalidMaterialID;
 			MaterialID m_PostProcessMatID = InvalidMaterialID;
 			MaterialID m_PostFXAAMatID = InvalidMaterialID;
+			MaterialID m_SelectedObjectMatID = InvalidMaterialID;
 
 			u32 m_CaptureFBO = 0;
 			u32 m_CaptureRBO = 0;

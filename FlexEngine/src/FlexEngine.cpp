@@ -1554,7 +1554,7 @@ namespace flex
 
 		if (gameObject != nullptr)
 		{
-			m_CurrentlySelectedObjects.push_back(gameObject);
+			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
 		}
 
 		CalculateSelectedObjectsCenter();
@@ -1565,7 +1565,7 @@ namespace flex
 		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
 		if (iter == m_CurrentlySelectedObjects.end())
 		{
-			m_CurrentlySelectedObjects.push_back(gameObject);
+			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
 		}
 		else
 		{
@@ -1585,7 +1585,7 @@ namespace flex
 		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
 		if (iter == m_CurrentlySelectedObjects.end())
 		{
-			m_CurrentlySelectedObjects.push_back(gameObject);
+			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
 
 			CalculateSelectedObjectsCenter();
 		}
@@ -1597,7 +1597,7 @@ namespace flex
 		{
 			if ((*iter) == gameObject)
 			{
-				m_CurrentlySelectedObjects.erase(iter);
+				gameObject->RemoveSelfAndChildrenToVec(m_CurrentlySelectedObjects);
 				CalculateSelectedObjectsCenter();
 				return;
 			}

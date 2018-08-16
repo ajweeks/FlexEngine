@@ -111,6 +111,7 @@ namespace flex
 		GameObjectType GetType() const;
 
 		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 
 	protected:
 		friend class BaseClass;

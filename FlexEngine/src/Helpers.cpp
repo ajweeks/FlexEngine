@@ -701,6 +701,11 @@ namespace flex
 		return a * (1.0f - t) + b * t;
 	}
 
+	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t)
+	{
+		return a * (1.0f - t) + b * t;
+	}
+
 	real ParseFloat(const std::string& floatStr)
 	{
 		if (floatStr.empty())
