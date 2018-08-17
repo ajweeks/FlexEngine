@@ -59,6 +59,14 @@ namespace flex
 
 		std::string GetName() const;
 
+		void CalculateExposure();
+
+		// Exposure control
+		real aperture = 1.0f; // f-stops
+		real shutterSpeed = 1 / 8.0f; // seconds
+		real lightSensitivity = 800.0f; // ISO
+		real exposure = 0.0f;
+
 	protected:
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
 		void CalculateAxisVectorsFromPitchAndYaw();
@@ -66,6 +74,16 @@ namespace flex
 		void RecalculateViewProjection();
 
 		void ClampPitch();
+
+		// Exposure calculations taken from Google's Filament rendering engine
+		// Computes the camera's EV100
+		// aperture measured in f-stops
+		// shutterSpeed measured in seconds
+		// sensitivity measured in ISO
+		static float CalculateEV100(float aperture, float shutterSpeed, float sensitivity);
+
+		// Computes the exposure normalization factor from the camera's EV100
+		static float ComputeExposureNormFactor(float EV100);
 
 		std::string m_Name;
 

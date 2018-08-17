@@ -237,12 +237,12 @@ namespace flex
 
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::vec2 irradianceSamplerSize = { 0,0 };
+		glm::vec2 irradianceSamplerSize = { 0, 0 };
 		std::string environmentMapPath = "";
 
 		bool enablePrefilteredMap = false;
 		bool generatePrefilteredMap = false;
-		glm::vec2 prefilteredMapSize = { 0,0 };
+		glm::vec2 prefilteredMapSize = { 0, 0 };
 
 		bool enableBRDFLUT = false;
 		bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!

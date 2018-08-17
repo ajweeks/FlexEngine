@@ -913,7 +913,7 @@ namespace flex
 	{
 		m_SiblingIndex = myIndex;
 
-		for (i32 i = 0; i < m_Children.size(); ++i)
+		for (i32 i = 0; i < (i32)m_Children.size(); ++i)
 		{
 			m_Children[i]->UpdateSiblingIndices(i);
 		}
@@ -1130,6 +1130,12 @@ namespace flex
 		}
 
 		m_CollisionShape = collisionShape;
+
+		if (m_RigidBody && m_RigidBody->GetRigidBodyInternal())
+		{
+			m_RigidBody->GetRigidBodyInternal()->setCollisionShape(collisionShape);
+		}
+
 		return collisionShape;
 	}
 

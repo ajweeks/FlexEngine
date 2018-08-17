@@ -48,6 +48,8 @@ namespace flex
 				i32 modelInvTranspose;
 				i32 modelViewProjection;
 				i32 colorMultiplier;
+				i32 contrastBrightnessSaturation;
+				i32 exposure;
 				i32 viewProjection;
 				i32 view;
 				i32 viewInv;
@@ -69,7 +71,6 @@ namespace flex
 				i32 verticalScale;
 				i32 transformMat;
 				i32 texSize;
-				i32 contrastBrightnessSaturation;
 			};
 			UniformIDs uniformIDs;
 

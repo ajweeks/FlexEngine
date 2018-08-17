@@ -47,6 +47,10 @@
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
 
+#pragma warning(push, 0)
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#pragma warning(pop)
+
 namespace flex
 {
 	namespace gl
@@ -57,8 +61,6 @@ namespace flex
 			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/renderer-settings.ini"));
 
 			g_Renderer = this;
-
-			LoadSettingsFromDisk();
 		}
 
 		GLRenderer::~GLRenderer()
@@ -68,6 +70,8 @@ namespace flex
 
 		void GLRenderer::Initialize()
 		{
+			LoadSettingsFromDisk();
+
 			m_OffscreenTexture0Handle = {};
 			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
 			m_OffscreenTexture0Handle.format = GL_RGBA;
@@ -528,6 +532,7 @@ namespace flex
 				{ "modelViewProjection",			&mat.uniformIDs.modelViewProjection },
 				{ "colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
 				{ "contrastBrightnessSaturation", 	&mat.uniformIDs.contrastBrightnessSaturation },
+				{ "exposure",						&mat.uniformIDs.exposure },
 				{ "view", 							&mat.uniformIDs.view },
 				{ "viewInv", 						&mat.uniformIDs.viewInv },
 				{ "viewProjection", 				&mat.uniformIDs.viewProjection },
@@ -3976,6 +3981,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("exposure");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
@@ -4001,6 +4007,7 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("exposure");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
@@ -4070,6 +4077,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("exposure");
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableCubemapSampler");
@@ -4257,7 +4265,7 @@ namespace flex
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProj = proj * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
-
+			real exposure = g_CameraManager->CurrentCamera()->exposure;
 
 			static const char* viewStr = "view";
 			if (shader->shader.constantBufferUniforms.HasUniform(viewStr))
@@ -4291,6 +4299,12 @@ namespace flex
 					camPos.y,
 					camPos.z,
 					camPos.w);
+			}
+
+			static const char* exposureStr = "exposure";
+			if (shader->shader.constantBufferUniforms.HasUniform(exposureStr))
+			{
+				glUniform1f(material->uniformIDs.exposure, exposure);
 			}
 
 			static const char* dirLightStr = "dirLight";
@@ -4965,6 +4979,11 @@ namespace flex
 			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
 			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
 			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
+			rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
+			rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
 			std::string fileContents = rootObject.Print(0);
 
 			if (WriteFile(filePath, fileContents, false))
@@ -5012,6 +5031,16 @@ namespace flex
 				m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
 				m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
 				m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
+
+				if (rootObject.HasField("aperture"))
+				{
+					// Assume all exposure control fields are present if one is
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
+					cam->aperture = rootObject.GetFloat("aperture");
+					cam->shutterSpeed = rootObject.GetFloat("shutter speed");
+					cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
+					cam->CalculateExposure();
+				}
 			}
 			else
 			{
@@ -5995,6 +6024,116 @@ namespace flex
 					MeshComponent* mesh = gameObject->SetMeshComponent(new MeshComponent(matID, gameObject));
 					mesh->SetRequiredAttributesFromMaterialID(matID);
 					mesh->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
+				}
+			}
+
+			if (gameObject->GetRigidBody())
+			{
+				RigidBody* rb = gameObject->GetRigidBody();
+				ImGui::Text("Rigid body");
+
+				bool bStatic = rb->IsStatic();
+				if (ImGui::Checkbox("Static", &bStatic))
+				{
+					rb->SetStatic(bStatic);
+				}
+				
+				bool bKinematic = rb->IsKinematic();
+				if (ImGui::Checkbox("Kinematic", &bKinematic))
+				{
+					rb->SetKinematic(bKinematic);
+				}
+
+				i32 group = rb->GetGroup();
+				if (ImGui::SliderInt("Group", &group, 0, 16))
+				{
+					PrintWarn("UNIMPLEMENTED: Set group\n");
+				}
+
+				ImGui::SameLine();
+
+				i32 mask = rb->GetMask();
+				if (ImGui::SliderInt("Mask", &mask, 0, 16))
+				{
+					PrintWarn("UNIMPLEMENTED: Set mask\n");
+				}
+				
+				ImGui::SameLine();
+
+				// TODO: Array of buttons for each category
+				i32 flags = rb->GetPhysicsFlags();
+				if (ImGui::SliderInt("Flags", &flags, 0, 16))
+				{
+					rb->SetPhysicsFlags(flags);
+				}
+
+				real mass = rb->GetMass();
+				if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
+				{
+					rb->SetMass(mass);
+				}
+				
+				ImGui::SameLine();
+
+				real friction = rb->GetFriction();
+				if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
+				{
+					rb->SetFriction(friction);
+				}
+
+				ImGui::Text("Collider");
+
+				btCollisionShape* shape = rb->GetRigidBodyInternal()->getCollisionShape();
+				std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
+				ImGui::Text(shapeTypeStr.c_str());
+				switch (shape->getShapeType())
+				{
+				case BOX_SHAPE_PROXYTYPE:
+				{
+					btBoxShape* boxShape = (btBoxShape*)shape;
+					btVector3 halfExtents = boxShape->getHalfExtentsWithoutMargin();
+					glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
+					glm::vec3 scale = gameObject->GetTransform()->GetWorldScale();
+					//halfExtentsG *= scale;
+					halfExtentsG /= scale;
+
+					if (ImGui::SliderFloat3("Half extents", &halfExtentsG.x, 0.0f, 1.0f))
+					{
+						real maxExtent = 50.0f;
+						halfExtentsG.x = glm::clamp(halfExtentsG.x, 0.0f, maxExtent);
+						halfExtentsG.y = glm::clamp(halfExtentsG.y, 0.0f, maxExtent);
+						halfExtentsG.z = glm::clamp(halfExtentsG.z, 0.0f, maxExtent);
+						halfExtents = Vec3ToBtVec3(halfExtentsG);
+						btBoxShape* newBoxShape = new btBoxShape(halfExtents);
+						gameObject->SetCollisionShape(newBoxShape);
+					}
+				} break;
+				case SPHERE_SHAPE_PROXYTYPE:
+				{
+
+				} break;
+				case CAPSULE_SHAPE_PROXYTYPE:
+				{
+
+				} break;
+				case CYLINDER_SHAPE_PROXYTYPE:
+				{
+
+				} break;
+				}
+
+			}
+			else
+			{
+				if (ImGui::Button("Add rigid body"))
+				{
+					RigidBody* rb = gameObject->SetRigidBody(new RigidBody());
+					btVector3 btHalfExtents(0.5f, 0.5f, 0.5f);
+					btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+
+					gameObject->SetCollisionShape(boxShape);
+					rb->Initialize(boxShape, gameObject->GetTransform());
+					rb->GetRigidBodyInternal()->setUserPointer(gameObject);
 				}
 			}
 		}

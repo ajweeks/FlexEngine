@@ -1096,6 +1096,42 @@ namespace flex
 					g_Renderer->SetVSyncEnabled(bVSyncEnabled);
 				}
 
+				static const char* exposureControlStr = "Camera exposure";
+				if (ImGui::TreeNode(exposureControlStr))
+				{
+					BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
+
+					ImGui::Text("Exposure: %.2f", currentCamera->exposure);
+
+					ImGui::PushItemWidth(140.0f);
+					{
+						static const char* apertureStr = "Aperture (f-stops)";
+						if (ImGui::SliderFloat(apertureStr, &currentCamera->aperture, 1.0f, 64.0f))
+						{
+							currentCamera->CalculateExposure();
+						}
+
+						static const char* shutterSpeedStr = "Shutter speed (1/s)";
+						real shutterSpeedInv = 1.0f / currentCamera->shutterSpeed;
+						if (ImGui::SliderFloat(shutterSpeedStr, &shutterSpeedInv, 1.0f, 500.0f))
+						{
+							currentCamera->shutterSpeed = 1.0f / shutterSpeedInv;
+							currentCamera->CalculateExposure();
+						}
+
+						static const char* isoStr = "ISO";
+						if (ImGui::SliderFloat(isoStr, &currentCamera->lightSensitivity, 100.0f, 6400.0f))
+						{
+							// Round to nearest power of 2 * 100
+							currentCamera->lightSensitivity = pow(2.0f, ceil(log(currentCamera->lightSensitivity / 100.0f) / log(2.0f) - 0.5f)) * 100.0f;
+							currentCamera->CalculateExposure();
+						}
+					}
+					ImGui::PopItemWidth();
+
+					ImGui::TreePop();
+				}
+
 				static const char* physicsDebuggingStr = "Physics debugging";
 				if (ImGui::TreeNode(physicsDebuggingStr))
 				{

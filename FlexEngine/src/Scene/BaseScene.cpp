@@ -712,7 +712,7 @@ namespace flex
 
 	void BaseScene::UpdateRootObjectSiblingIndices()
 	{
-		for (i32 i = 0; i < m_RootObjects.size(); ++i)
+		for (i32 i = 0; i < (i32)m_RootObjects.size(); ++i)
 		{
 			m_RootObjects[i]->UpdateSiblingIndices(i);
 		}

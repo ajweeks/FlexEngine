@@ -30,6 +30,7 @@ uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 uniform vec4 camPos;
 uniform bool enableIrradianceSampler;
+uniform float exposure = 1.0;
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
@@ -193,8 +194,10 @@ void main()
 	{
 		ambient = vec3(0.03) * albedo * ao;
 	}
-
+	
 	vec3 color = ambient + Lo;
+
+	color *= exposure;
 
 	fragmentColor = vec4(color, 1.0);
 }
