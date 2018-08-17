@@ -3935,7 +3935,6 @@ namespace flex
 				{ "irradiance", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/irradiance.frag" },
 				{ "prefilter", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/prefilter.frag" },
 				{ "brdf", RESOURCE_LOCATION + "shaders/brdf.vert", RESOURCE_LOCATION + "shaders/brdf.frag" },
-				{ "background", RESOURCE_LOCATION + "shaders/background.vert", RESOURCE_LOCATION + "shaders/background.frag" },
 				{ "sprite", RESOURCE_LOCATION + "shaders/sprite.vert", RESOURCE_LOCATION + "shaders/sprite.frag" },
 				{ "post_process", RESOURCE_LOCATION + "shaders/post_process.vert", RESOURCE_LOCATION + "shaders/post_process.frag" },
 				{ "post_fxaa", RESOURCE_LOCATION + "shaders/post_fxaa.vert", RESOURCE_LOCATION + "shaders/post_fxaa.frag" },
@@ -4131,19 +4130,6 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			++shaderID;
-
-			// Background
-			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.needCubemapSampler = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
 			++shaderID;
 
 			// Sprite

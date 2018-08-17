@@ -5328,7 +5328,6 @@ namespace flex
 				{ "irradiance", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_irradiance_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "prefilter", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_prefilter_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "brdf", shaderDirectory + "vk_brdf_vert.spv", shaderDirectory + "vk_brdf_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "background", shaderDirectory + "vk_background_vert.spv", shaderDirectory + "vk_background_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "deferred_combine", shaderDirectory + "vk_deferred_combine_vert.spv", shaderDirectory + "vk_deferred_combine_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "deferred_combine_cubemap", shaderDirectory + "vk_deferred_combine_cubemap_vert.spv", shaderDirectory + "vk_deferred_combine_cubemap_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				//{ "post_process", shaderDirectory + "vk_post_process_vert.spv", shaderDirectory + "vk_post_process_frag.spv", m_VulkanDevice->m_LogicalDevice },
