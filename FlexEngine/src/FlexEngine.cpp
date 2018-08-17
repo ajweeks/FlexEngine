@@ -1037,6 +1037,16 @@ namespace flex
 				static const char* renderNameStr = rendererNameStringStr.c_str();
 				ImGui::TextUnformatted(renderNameStr);
 
+				ImGui::Text("Number of available renderers: %d", m_RendererCount);
+
+				ImGui::Text("Frames rendered: %d", m_FrameCount);
+
+				ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
+
+				ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());
+
+				ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
+
 				ImGui::TreePop();
 			}
 
@@ -1132,7 +1142,7 @@ namespace flex
 					ImGui::TreePop();
 				}
 
-				static const char* physicsDebuggingStr = "Physics debugging";
+				static const char* physicsDebuggingStr = "Debug objects";
 				if (ImGui::TreeNode(physicsDebuggingStr))
 				{
 					PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
@@ -1144,61 +1154,74 @@ namespace flex
 					ImGui::Spacing();
 					ImGui::Spacing();
 
+					ImGui::Checkbox("Editor objects", &m_bRenderEditorObjects);
+
+					if (physicsDebuggingSettings.DisableAll)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+
 					static const char* displayBoundingVolumesStr = "Bounding volumes";
 					bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
 					if (ImGui::Checkbox(displayBoundingVolumesStr, &bDisplayBoundingVolumes))
 					{
 						g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
 					}
-
+					
 					static const char* wireframeStr = "Wireframe";
 					ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
 
 					static const char* aabbStr = "AABB";
 					ImGui::Checkbox(aabbStr, &physicsDebuggingSettings.DrawAabb);
 
-					static const char* drawFeaturesTextStr = "Draw Features Text";
-					ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
+					// Unused (for now):
+					//static const char* drawFeaturesTextStr = "Draw Features Text";
+					//ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
 
-					static const char* drawContactPointsStr = "Draw Contact Points";
-					ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
+					//static const char* drawContactPointsStr = "Draw Contact Points";
+					//ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
 
-					static const char* noDeactivationStr = "No Deactivation";
-					ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
+					//static const char* noDeactivationStr = "No Deactivation";
+					//ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
 
-					static const char* noHelpTextStr = "No Help Text";
-					ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
+					//static const char* noHelpTextStr = "No Help Text";
+					//ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
 
-					static const char* drawTextStr = "Draw Text";
-					ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
+					//static const char* drawTextStr = "Draw Text";
+					//ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
 
-					static const char* profileTimingsStr = "Profile Timings";
-					ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
+					//static const char* profileTimingsStr = "Profile Timings";
+					//ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
 
-					static const char* satComparisonStr = "Sat Comparison";
-					ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
+					//static const char* satComparisonStr = "Sat Comparison";
+					//ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
 
-					static const char* disableBulletLCPStr = "Disable Bullet LCP";
-					ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
+					//static const char* disableBulletLCPStr = "Disable Bullet LCP";
+					//ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
 
-					static const char* ccdStr = "CCD";
-					ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
+					//static const char* ccdStr = "CCD";
+					//ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
 
-					static const char* drawConstraintsStr = "Draw Constraints";
-					ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
+					//static const char* drawConstraintsStr = "Draw Constraints";
+					//ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
 
-					static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
-					ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
+					//static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
+					//ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
 
-					static const char* fastWireframeStr = "Fast Wireframe";
-					ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
+					//static const char* fastWireframeStr = "Fast Wireframe";
+					//ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
 
-					static const char* drawNormalsStr = "Draw Normals";
-					ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
+					//static const char* drawNormalsStr = "Draw Normals";
+					//ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
 
-					static const char* drawFramesStr = "Draw Frames";
-					ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
+					//static const char* drawFramesStr = "Draw Frames";
+					//ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
 
+					if (physicsDebuggingSettings.DisableAll)
+					{
+						ImGui::PopStyleColor();
+					}
+					
 					ImGui::TreePop();
 				}
 

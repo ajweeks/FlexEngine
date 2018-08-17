@@ -96,8 +96,8 @@ namespace flex
 		bool m_bRenderEditorObjects = true;
 		bool m_bUpdateProfilerFrame = false;
 
-		sec m_MinDT = 0.0001f;
-		sec m_MaxDT = 1.0f;
+		const sec m_MinDT = 0.0001f;
+		const sec m_MaxDT = 1.0f;
 
 		real m_ImGuiMainWindowWidthMin = 200;
 		real m_ImGuiMainWindowWidthMax = 0;

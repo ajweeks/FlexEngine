@@ -5667,7 +5667,7 @@ namespace flex
 							  true);
 
 			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-			if (selectedObjects.size() == 1)
+			if (selectedObjects.size() >= 1)
 			{
 				// TODO: Draw common fields for all selected objects?
 				GameObject* selectedObject = selectedObjects[0];
@@ -6015,6 +6015,8 @@ namespace flex
 
 			if (gameObject->GetRigidBody())
 			{
+				ImGui::Spacing();
+
 				RigidBody* rb = gameObject->GetRigidBody();
 				ImGui::Text("Rigid body");
 
@@ -6067,32 +6069,57 @@ namespace flex
 					rb->SetFriction(friction);
 				}
 
-				ImGui::Text("Collider");
+				ImGui::Spacing();
+
+				ImGui::Text("Collider -");
 
 				btCollisionShape* shape = rb->GetRigidBodyInternal()->getCollisionShape();
 				std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
+
+				ImGui::SameLine();
+
 				ImGui::Text(shapeTypeStr.c_str());
 				switch (shape->getShapeType())
 				{
 				case BOX_SHAPE_PROXYTYPE:
 				{
 					btBoxShape* boxShape = (btBoxShape*)shape;
-					btVector3 halfExtents = boxShape->getHalfExtentsWithoutMargin();
+					btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
 					glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
 					glm::vec3 scale = gameObject->GetTransform()->GetWorldScale();
-					//halfExtentsG *= scale;
-					halfExtentsG /= scale;
 
-					if (ImGui::SliderFloat3("Half extents", &halfExtentsG.x, 0.0f, 1.0f))
+					real maxExtent = 50.0f;
+					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
 					{
-						real maxExtent = 50.0f;
-						halfExtentsG.x = glm::clamp(halfExtentsG.x, 0.0f, maxExtent);
-						halfExtentsG.y = glm::clamp(halfExtentsG.y, 0.0f, maxExtent);
-						halfExtentsG.z = glm::clamp(halfExtentsG.z, 0.0f, maxExtent);
+						halfExtentsG /= scale;
 						halfExtents = Vec3ToBtVec3(halfExtentsG);
 						btBoxShape* newBoxShape = new btBoxShape(halfExtents);
 						gameObject->SetCollisionShape(newBoxShape);
 					}
+
+					glm::vec3 localOffsetPos = rb->GetLocalPosition();
+					if (ImGui::DragFloat3("Position offset", &localOffsetPos.x, 0.05f))
+					{
+						rb->SetLocalPosition(localOffsetPos);
+					}
+
+					glm::vec3 localOffsetRotEuler = glm::eulerAngles(rb->GetLocalRotation()) * 90.0f;
+					if (ImGui::DragFloat3("Rotation offset", &localOffsetRotEuler.x, 0.1f))
+					{
+						rb->SetLocalRotation(glm::quat(localOffsetRotEuler / 90.0f));
+					}
+
+					//glm::vec3 localOffsetScale = rb->GetLocalScale();
+					//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
+					//{
+					//	real epsilon = 0.001f;
+					//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
+					//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
+					//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
+
+					//	rb->SetLocalScale(localOffsetScale);
+					//}
+
 				} break;
 				case SPHERE_SHAPE_PROXYTYPE:
 				{

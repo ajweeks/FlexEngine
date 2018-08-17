@@ -195,11 +195,19 @@ namespace flex
 			}
 		}
 
+		bool bColliderContainsOffset = false;
+
+		glm::vec3 localPos(0.0f);
+		glm::quat localRot(glm::vec3(0.0f));
+		glm::vec3 localScale(1.0f);
+
 		JSONObject colliderObj;
 		if (obj.SetObjectChecked("collider", colliderObj))
 		{
 			std::string shapeStr = colliderObj.GetString("shape");
 			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
+			
+			glm::vec3 scale = m_Transform.GetWorldScale();
 
 			switch (shapeType)
 			{
@@ -207,6 +215,7 @@ namespace flex
 			{
 				glm::vec3 halfExtents;
 				colliderObj.SetVec3Checked("half extents", halfExtents);
+				halfExtents /= scale;
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
 
@@ -215,6 +224,7 @@ namespace flex
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
 				real radius = colliderObj.GetFloat("radius");
+				// TODO: Scale by scale?
 				btSphereShape* sphereShape = new btSphereShape(radius);
 
 				SetCollisionShape(sphereShape);
@@ -239,6 +249,7 @@ namespace flex
 			{
 				glm::vec3 halfExtents;
 				colliderObj.SetVec3Checked("half extents", halfExtents);
+				halfExtents /= scale;
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
 
@@ -249,6 +260,24 @@ namespace flex
 				PrintError("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
 			} break;
 			}
+
+			if (colliderObj.SetVec3Checked("offset pos", localPos))
+			{
+				bColliderContainsOffset = true;
+			}
+
+			glm::vec3 localRotEuler;
+			if (colliderObj.SetVec3Checked("offset rot", localRotEuler))
+			{
+				localRot = glm::quat(localRotEuler);
+				bColliderContainsOffset = true;
+			}
+
+			// 
+			//if (colliderObj.SetVec3Checked("offset scale", localScale))
+			//{
+			//	bColliderContainsOffset = true;
+			//}
 
 			//bool bIsTrigger = colliderObj.GetBool("trigger");
 			// TODO: Create btGhostObject to use for trigger
@@ -271,6 +300,12 @@ namespace flex
 				rigidBody->SetKinematic(bKinematic);
 				rigidBody->SetStatic(IsStatic());
 			}
+		}
+
+		// Must happen after rigid body has been created
+		if (bColliderContainsOffset)
+		{
+			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
 		}
 
 		VertexAttributes requiredVertexAttributes = 0;
@@ -446,6 +481,22 @@ namespace flex
 				PrintError("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n", 
 						   shapeType, m_Name.c_str(), scene->GetName().c_str());
 			} break;
+			}
+
+			if (m_RigidBody->GetLocalPosition() != glm::vec3(0.0f))
+			{
+				colliderObj.fields.emplace_back("offset pos", JSONValue(Vec3ToString(m_RigidBody->GetLocalPosition(), 3)));
+			}
+
+			if (m_RigidBody->GetLocalRotation() != glm::quat(glm::vec3(0.0f)))
+			{
+				glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
+				colliderObj.fields.emplace_back("offset rot", JSONValue(Vec3ToString(localRotEuler, 3)));
+			}
+
+			if (m_RigidBody->GetLocalScale() != glm::vec3(1.0f))
+			{
+				colliderObj.fields.emplace_back("offset scale", JSONValue(Vec3ToString(m_RigidBody->GetLocalScale(), 3)));
 			}
 
 			//bool bTrigger = false;
