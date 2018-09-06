@@ -204,22 +204,14 @@ namespace flex
 				VertexBufferData::CreateInfo quad2DVertexBufferDataCreateInfo = {};
 				quad2DVertexBufferDataCreateInfo.positions_2D = {
 					glm::vec2(-1.0f,  -1.0f),
-					glm::vec2(-1.0f, 1.0f),
-					glm::vec2(1.0f,  -1.0f),
-							
-					glm::vec2(1.0f,  -1.0f),
-					glm::vec2(-1.0f, 1.0f),
-					glm::vec2(1.0f, 1.0f),
+					glm::vec2(-1.0f, 3.0f),
+					glm::vec2(3.0f,  -1.0f)
 				};
 
 				quad2DVertexBufferDataCreateInfo.texCoords_UV = {
 					glm::vec2(0.0f, 0.0f),
-					glm::vec2(0.0f, 1.0f),
-					glm::vec2(1.0f, 0.0f),
-
-					glm::vec2(1.0f, 0.0f),
-					glm::vec2(0.0f, 1.0f),
-					glm::vec2(1.0f, 1.0f),
+					glm::vec2(0.0f, 2.0f),
+					glm::vec2(2.0f, 0.0f)
 				};
 
 				quad2DVertexBufferDataCreateInfo.attributes =
@@ -270,7 +262,6 @@ namespace flex
 					glm::vec2(0.0f, 1.0f),
 					glm::vec2(1.0f, 1.0f),
 				};
-
 
 				quad3DVertexBufferDataCreateInfo.attributes =
 					(u32)VertexAttribute::POSITION |
@@ -4659,23 +4650,15 @@ namespace flex
 				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 
 				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
-					glm::vec3(-1.0f,  1.0f, 0.0f),
-					glm::vec3(-1.0f, -1.0f, 0.0f),
-					glm::vec3(1.0f,  1.0f, 0.0f),
-
-					glm::vec3(1.0f, -1.0f, 0.0f),
-					glm::vec3(1.0f,  1.0f, 0.0f),
-					glm::vec3(-1.0f, -1.0f, 0.0f),
+					glm::vec3(-1.0f,  -1.0f, 0.0f),
+					glm::vec3(3.0f,  -1.0f, 0.0f),
+					glm::vec3(-1.0f, 3.0f, 0.0f),
 				};
 
 				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-					glm::vec2(0.0f, 1.0f),
 					glm::vec2(0.0f, 0.0f),
-					glm::vec2(1.0f, 1.0f),
-
-					glm::vec2(1.0f, 0.0f),
-					glm::vec2(1.0f, 1.0f),
-					glm::vec2(0.0f, 0.0f),
+					glm::vec2(2.0f, 0.0f),
+					glm::vec2(0.0f, 2.0f),
 				};
 
 				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
