@@ -2182,15 +2182,17 @@ namespace flex
 
 		void GLRenderer::DrawOffscreenTexture()
 		{
-			i32 FBO = m_Offscreen1FBO;
-			i32 RBO = m_Offscreen1RBO;
+			SpriteQuadDrawInfo drawInfo = {};
+
+			drawInfo.FBO = m_Offscreen1FBO;
+			drawInfo.RBO = m_Offscreen1RBO;
 
 			bool bFXAAEnabled = (m_bPostProcessingEnabled && m_PostProcessSettings.bEnableFXAA);
 
 			if (!bFXAAEnabled)
 			{
-				FBO = 0;
-				RBO = 0;
+				drawInfo.FBO = 0;
+				drawInfo.RBO = 0;
 			}
 
 			glm::vec3 pos(0.0f);
@@ -2198,12 +2200,9 @@ namespace flex
 			glm::vec3 scale(1.0f);
 			glm::vec4 color(1.0f);
 
-			SpriteQuadDrawInfo drawInfo = {};
 			drawInfo.bScreenSpace = true;
 			drawInfo.bReadDepth = false;
 			drawInfo.bWriteDepth = false;
-			drawInfo.FBO = FBO;
-			drawInfo.RBO = RBO;
 			drawInfo.pos = pos;
 			drawInfo.rotation = rot;
 			drawInfo.scale = scale;
@@ -2217,8 +2216,8 @@ namespace flex
 
 			if (bFXAAEnabled)
 			{
-				FBO = 0;
-				RBO = 0;
+				drawInfo.FBO = 0;
+				drawInfo.RBO = 0;
 				scale.y = -1.0f;
 
 				drawInfo.inputTextureHandle = m_OffscreenTexture1Handle.id;
@@ -2228,7 +2227,6 @@ namespace flex
 
 			{
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y,
