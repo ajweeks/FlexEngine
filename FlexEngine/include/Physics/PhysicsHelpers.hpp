@@ -15,6 +15,42 @@ class btCollisionShape;
 
 namespace flex
 {
+	static const char* g_CollisionTypeStrs[] = {
+		"box",
+		"triangle",
+		"tetrahedral",
+		"convex triangle mesh",
+		"sphere",
+		"multi sphere",
+		"capsule",
+		"cone",
+		"cylinder",
+		"triangle mesh",
+		"terrain",
+		"static plane",
+		"soft body"
+
+		// NOTE: Any changes made to this array must also be made to the following array
+	};
+
+	static BroadphaseNativeTypes g_CollisionTypes[] = {
+		BOX_SHAPE_PROXYTYPE,
+		TRIANGLE_SHAPE_PROXYTYPE,
+		TETRAHEDRAL_SHAPE_PROXYTYPE,
+		CONVEX_TRIANGLEMESH_SHAPE_PROXYTYPE,
+		SPHERE_SHAPE_PROXYTYPE,
+		MULTI_SPHERE_SHAPE_PROXYTYPE,
+		CAPSULE_SHAPE_PROXYTYPE,
+		CONE_SHAPE_PROXYTYPE,
+		CYLINDER_SHAPE_PROXYTYPE,
+		TRIANGLE_MESH_SHAPE_PROXYTYPE,
+		TERRAIN_SHAPE_PROXYTYPE,
+		STATIC_PLANE_PROXYTYPE,
+		SOFTBODY_SHAPE_PROXYTYPE
+
+		// NOTE: Any changes made to this array must also be made to the previous array
+	};
+
 	std::string CollisionShapeTypeToString(int shapeType);
 	BroadphaseNativeTypes StringToCollisionShapeType(const std::string& str);
 

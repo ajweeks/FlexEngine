@@ -41,7 +41,7 @@ namespace flex
 		RigidBody* rigidBody = new RigidBody();
 		rigidBody->SetFriction(m_MoveFriction);
 
-		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
+		btCapsuleShapeZ* collisionShape = new btCapsuleShapeZ(1.0f, 2.0f);
 		
 		m_MeshComponent = new MeshComponent(matID, this);
 		m_MeshComponent->SetRequiredAttributesFromMaterialID(matID);
