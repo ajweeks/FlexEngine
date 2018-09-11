@@ -207,15 +207,12 @@ namespace flex
 			std::string shapeStr = colliderObj.GetString("shape");
 			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
 			
-			glm::vec3 scale = m_Transform.GetWorldScale();
-
 			switch (shapeType)
 			{
 			case BOX_SHAPE_PROXYTYPE:
 			{
 				glm::vec3 halfExtents;
 				colliderObj.SetVec3Checked("half extents", halfExtents);
-				halfExtents /= scale;
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
 
@@ -224,7 +221,6 @@ namespace flex
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
 				real radius = colliderObj.GetFloat("radius");
-				// TODO: Scale by scale?
 				btSphereShape* sphereShape = new btSphereShape(radius);
 
 				SetCollisionShape(sphereShape);
@@ -233,7 +229,7 @@ namespace flex
 			{
 				real radius = colliderObj.GetFloat("radius");
 				real height = colliderObj.GetFloat("height");
-				btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
+				btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius, height);
 
 				SetCollisionShape(capsuleShape);
 			} break;
@@ -249,7 +245,6 @@ namespace flex
 			{
 				glm::vec3 halfExtents;
 				colliderObj.SetVec3Checked("half extents", halfExtents);
-				halfExtents /= scale;
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
 
@@ -447,18 +442,22 @@ namespace flex
 			{
 				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				halfExtents /= m_Transform.GetWorldScale();
 				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
 				real radius = ((btSphereShape*)collisionShape)->getRadius();
+				radius /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 			} break;
 			case CAPSULE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btCapsuleShape*)collisionShape)->getRadius();
-				real height = ((btCapsuleShape*)collisionShape)->getHalfHeight(); // TODO: Double?
+				real radius = ((btCapsuleShapeZ*)collisionShape)->getRadius();
+				real height = ((btCapsuleShapeZ*)collisionShape)->getHalfHeight() * 2.0f;
+				radius /= m_Transform.GetWorldScale().x;
+				height /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 				colliderObj.fields.emplace_back("height", JSONValue(height));
 			} break;
@@ -466,6 +465,8 @@ namespace flex
 			{
 				real radius = ((btConeShape*)collisionShape)->getRadius();
 				real height = ((btConeShape*)collisionShape)->getHeight();
+				radius /= m_Transform.GetWorldScale().x;
+				height /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 				colliderObj.fields.emplace_back("height", JSONValue(height));
 			} break;
@@ -473,6 +474,7 @@ namespace flex
 			{
 				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				halfExtents /= m_Transform.GetWorldScale();
 				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
