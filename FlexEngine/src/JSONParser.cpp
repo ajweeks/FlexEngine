@@ -175,10 +175,14 @@ namespace flex
 		case JSONValue::Type::INT:
 		{
 			size_t intStart = quoteEnd + 2;
-			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart);
+			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart + 1);
 			size_t intCharCount = nextNonAlphaNumeric - intStart;
 			std::string intStr = fileContents.substr(intStart, intCharCount);
-			i32 intValue = stoi(intStr);
+			i32 intValue = 0;
+			if (!intStr.empty())
+			{
+				intValue = stoi(intStr);
+			}
 			field.value = JSONValue(intValue);
 
 			*offset = nextNonAlphaNumeric;
@@ -190,7 +194,11 @@ namespace flex
 			size_t floatEnd = NextNonAlphaNumeric(fileContents, decimalIndex + 1);
 			size_t floatCharCount = floatEnd - floatStart;
 			std::string floatStr = fileContents.substr(floatStart, floatCharCount);
-			real floatValue = stof(floatStr);
+			real floatValue = 0.0f;
+			if (!floatStr.empty())
+			{
+				floatValue = stof(floatStr);
+			}
 			field.value = JSONValue(floatValue);
 
 			*offset = floatEnd;
