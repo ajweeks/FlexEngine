@@ -3,9 +3,9 @@
 #include "Player.hpp"
 
 #pragma warning(push, 0)
-#include "BulletDynamics/Dynamics/btRigidBody.h"
-#include "BulletCollision/CollisionShapes/btCapsuleShape.h"
-#include "BulletDynamics/ConstraintSolver/btHingeConstraint.h"
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
+#include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
 #pragma warning(pop)
 
 #include "InputManager.hpp"
@@ -41,7 +41,7 @@ namespace flex
 		RigidBody* rigidBody = new RigidBody();
 		rigidBody->SetFriction(m_MoveFriction);
 
-		btCapsuleShapeZ* collisionShape = new btCapsuleShapeZ(1.0f, 2.0f);
+		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 		
 		m_MeshComponent = new MeshComponent(matID, this);
 		m_MeshComponent->SetRequiredAttributesFromMaterialID(matID);

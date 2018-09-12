@@ -27,6 +27,14 @@ namespace flex
 		// rotation speed will linearly decrease as their velocity approaches 0
 		real m_MaxSlowDownRotationSpeedVel = 10.0f;
 
+		enum class Mode
+		{
+			THIRD_PERSON,
+			FIRST_PERSON
+		};
+
+		Mode m_Mode = Mode::FIRST_PERSON;
+
 		i32 m_PlayerIndex = -1;
 
 		Player* m_Player = nullptr;

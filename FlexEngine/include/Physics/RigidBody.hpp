@@ -13,7 +13,7 @@ namespace flex
 	class RigidBody
 	{
 	public:
-		RigidBody(i32 group = 1, i32 mask = 1);
+		RigidBody(i32 group = -1, i32 mask = -1);
 		// NOTE: This copy constructor does not initialize data, it only copies POD fields
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();
@@ -41,7 +41,12 @@ namespace flex
 		void SetLocalScale(const glm::vec3& scale);
 
 		i32 GetGroup() const;
+		// NOTE: This function removes, then re-adds this object to the world!
+		void SetGroup(i32 group);
+
 		i32 GetMask() const;
+		// NOTE: This function removes, then re-adds this object to the world!
+		void SetMask(i32 mask);
 
 		glm::vec3 GetLocalPosition() const;
 		glm::quat GetLocalRotation() const;

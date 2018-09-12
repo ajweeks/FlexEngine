@@ -20,6 +20,7 @@
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
+#include "Cameras/FirstPersonCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "JSONTypes.hpp"
@@ -130,10 +131,13 @@ namespace flex
 		debugCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		debugCamera->SetYaw(glm::radians(130.0f));
 		debugCamera->SetPitch(glm::radians(-10.0f));
-		g_CameraManager->AddCamera(debugCamera, true);
+		g_CameraManager->AddCamera(debugCamera, false);
 
 		OverheadCamera* overheadCamera = new OverheadCamera();
 		g_CameraManager->AddCamera(overheadCamera, false);
+
+		FirstPersonCamera* fpCamera = new FirstPersonCamera();
+		g_CameraManager->AddCamera(fpCamera, true);
 
 		InitializeWindowAndRenderer();
 		g_InputManager->Initialize();
@@ -347,7 +351,7 @@ namespace flex
 
 		u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
 		u32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
-		u32 rbMask = 1;
+		u32 rbMask = 0;
 
 		// X Axis
 		GameObject* transformXAxis = new GameObject("Transform gizmo x axis", GameObjectType::NONE);
@@ -589,7 +593,6 @@ namespace flex
 
 							if (pickedTransformGameObject)
 							{
-
 								if (hoveredOverGameObject == transformAxes[0]) // X Axis
 								{
 									if (bMousePressed)
@@ -670,6 +673,7 @@ namespace flex
 											m_CurrentlySelectedObjects.push_back(hoveredOverGameObject);
 										}
 										g_InputManager->ClearMouseInput();
+										CalculateSelectedObjectsCenter();
 									}
 									else
 									{
@@ -1685,8 +1689,6 @@ namespace flex
 	void FlexEngine::DeselectCurrentlySelectedObjects()
 	{
 		m_CurrentlySelectedObjects.clear();
-		m_SelectedObjectRotation = glm::quat(glm::vec3(0.0f));
-		m_SelectedObjectsCenterPos = glm::vec3(0.0f);
 		m_SelectedObjectDragStartPos = glm::vec3(0.0f);
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
@@ -2125,8 +2127,6 @@ namespace flex
 	{
 		if (m_CurrentlySelectedObjects.empty())
 		{
-			m_SelectedObjectsCenterPos = glm::vec3(0.0f);
-			m_SelectedObjectRotation = glm::quat(glm::vec3(0.0f));
 			return;
 		}
 

@@ -276,6 +276,38 @@
 			"enable normal sampler" : true,
 			"generate normal sampler" : true,
 			"normal texture filepath" : "work_n.jpg"
+		},
+		{
+			"name" : "pbr green",
+			"shader" : "pbr",
+			"const albedo" : "0.126, 0.515, 0.051",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.110000,
+			"const ao" : 0.000000
+		},
+		{
+			"name" : "pbr blue",
+			"shader" : "pbr",
+			"const albedo" : "0.080, 0.214, 0.480",
+			"const metallic" : 0.090000,
+			"const roughness" : 0.200000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "pbr cyan",
+			"shader" : "pbr",
+			"const albedo" : "0.096, 0.476, 0.477",
+			"const metallic" : 0.770000,
+			"const roughness" : 0.250000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "pbr cyan 1",
+			"shader" : "pbr",
+			"const albedo" : "0.079, 0.894, 0.897",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.250000,
+			"const ao" : 1.000000
 		}
 	]
 }

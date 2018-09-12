@@ -29,12 +29,77 @@
 			"name" : "Ground plane",
 			"type" : "object",
 			"visible" : true,
+			"static" : false,
 			"transform" : 
 			{
-				"scale" : "10.000, 0.100, 10.000"
+				"pos" : "0.000, -1.600, 0.000",
+				"scale" : "18.850, 1.0, 22.420"
 			},
 			"mesh" : "cube",
-			"material" : "pbr grey"
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Sphere 02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 9.200, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "iso-sphere",
+			"material" : "pbr chrome",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : true,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "box",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 4.200, 0.000",
+				"scale" : "1.320, 1.020, 2.220"
+			},
+			"mesh" : "cube",
+			"material" : "pbr chrome",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
 		}
 	],
 	"point lights" : 

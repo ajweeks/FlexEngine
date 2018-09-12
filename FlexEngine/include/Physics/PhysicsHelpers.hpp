@@ -58,7 +58,8 @@ namespace flex
 	{
 		NOTHING = 0,
 		DEFAULT = 1 << 0,
-		EDITOR_OBJECT = 1 << 1
+		EDITOR_OBJECT = 1 << 1,
+		EVERYTHING = ~0
 	};
 
 	enum class PhysicsFlag : u32

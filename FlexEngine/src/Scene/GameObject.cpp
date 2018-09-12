@@ -289,11 +289,15 @@ namespace flex
 			{
 				real mass = rigidBodyObj.GetFloat("mass");
 				bool bKinematic = rigidBodyObj.GetBool("kinematic");
+				bool bStatic = rigidBodyObj.GetBool("static");
+				int mask = rigidBodyObj.GetInt("mask");
+				int group = rigidBodyObj.GetInt("group");
 
-				RigidBody* rigidBody = SetRigidBody(new RigidBody());
+				RigidBody* rigidBody = SetRigidBody(new RigidBody(group, mask));
 				rigidBody->SetMass(mass);
 				rigidBody->SetKinematic(bKinematic);
-				rigidBody->SetStatic(IsStatic());
+				// TODO: Use IsStatic() ?
+				rigidBody->SetStatic(bStatic);
 			}
 		}
 
@@ -433,9 +437,8 @@ namespace flex
 
 			int shapeType = collisionShape->getShapeType();
 			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
-
 			colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
-
+			
 			switch (shapeType)
 			{
 			case BOX_SHAPE_PROXYTYPE:
@@ -523,10 +526,14 @@ namespace flex
 				real mass = rigidBody->GetMass();
 				bool bKinematic = rigidBody->IsKinematic();
 				bool bStatic = rigidBody->IsStatic();
+				int mask = m_RigidBody->GetMask();
+				int group = m_RigidBody->GetMask();
 
 				rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
 				rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
 				rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
+				rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
+				rigidBodyObj.fields.emplace_back("group", JSONValue(group));
 			}
 
 			object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
@@ -1217,6 +1224,14 @@ namespace flex
 
 	MeshComponent* GameObject::SetMeshComponent(MeshComponent* meshComponent)
 	{
+		if (m_MeshComponent)
+		{
+			g_Renderer->DestroyRenderObject(m_RenderID);
+			m_RenderID = InvalidRenderID;
+			m_MeshComponent->Destroy();
+			SafeDelete(m_MeshComponent);
+		}
+
 		m_MeshComponent = meshComponent;
 		return meshComponent;
 	}

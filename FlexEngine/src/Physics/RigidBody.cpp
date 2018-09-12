@@ -78,7 +78,8 @@ namespace flex
 		m_RigidBody->setDamping(0.0f, 0.0f);
 		m_RigidBody->setFriction(m_Friction);
 
-		g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		world->addRigidBody(m_RigidBody, m_Group, m_Mask);
 
 		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(parentTransform->GetWorldScale()));
 	}
@@ -119,6 +120,13 @@ namespace flex
 	void RigidBody::SetKinematic(bool bKinematic)
 	{
 		m_bKinematic = bKinematic;
+
+		if (bKinematic && m_RigidBody)
+		{
+			m_RigidBody->clearForces();
+			m_RigidBody->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			m_RigidBody->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		}
 	}
 
 	bool RigidBody::IsKinematic() const
@@ -195,9 +203,33 @@ namespace flex
 		return m_Group;
 	}
 
+	void RigidBody::SetGroup(i32 group)
+	{
+		m_Group = group;
+
+		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		if (m_RigidBody)
+		{
+			world->removeRigidBody(m_RigidBody);
+			world->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		}
+	}
+
 	i32 RigidBody::GetMask() const
 	{
 		return m_Mask;
+	}
+
+	void RigidBody::SetMask(i32 mask)
+	{
+		m_Mask = mask;
+
+		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		if (m_RigidBody)
+		{
+			world->removeRigidBody(m_RigidBody);
+			world->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		}
 	}
 
 	glm::vec3 RigidBody::GetLocalPosition() const
@@ -266,9 +298,10 @@ namespace flex
 
 	void RigidBody::GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward)
 	{
-		const btVector3 worldUp(0.0f, 1.0f, 0.0f);
-		const btVector3 worldRight(1.0f, 0.0f, 0.0f);
-		const btVector3 worldForward(0.0f, 0.0f, 1.0f);
+		// TODO: Use transform members?
+		static const btVector3 worldUp(0.0f, 1.0f, 0.0f);
+		static const btVector3 worldRight(1.0f, 0.0f, 0.0f);
+		static const btVector3 worldForward(0.0f, 0.0f, 1.0f);
 		const btTransform& transform = m_RigidBody->getWorldTransform();
 		
 		btQuaternion rot = transform.getRotation();

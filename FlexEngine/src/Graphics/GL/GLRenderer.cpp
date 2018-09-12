@@ -5925,6 +5925,16 @@ namespace flex
 							ImGui::EndCombo();
 						}
 
+						if (ImGui::BeginPopupContextItem("mesh context menu"))
+						{
+							if (ImGui::Button("Remove mesh component"))
+							{
+								gameObject->SetMeshComponent(nullptr);
+							}
+
+							ImGui::EndPopup();
+						}
+
 						if (ImGui::BeginDragDropTarget())
 						{
 							const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MeshPayloadCStr);
@@ -6003,216 +6013,251 @@ namespace flex
 				ImGui::Spacing();
 
 				RigidBody* rb = gameObject->GetRigidBody();
+				btRigidBody* rbInternal = rb->GetRigidBodyInternal();
+
 				ImGui::Text("Rigid body");
 
-				bool bStatic = rb->IsStatic();
-				if (ImGui::Checkbox("Static", &bStatic))
+				if (ImGui::BeginPopupContextItem("rb context menu"))
 				{
-					rb->SetStatic(bStatic);
-				}
-				
-				bool bKinematic = rb->IsKinematic();
-				if (ImGui::Checkbox("Kinematic", &bKinematic))
-				{
-					rb->SetKinematic(bKinematic);
-				}
-
-				i32 group = rb->GetGroup();
-				if (ImGui::SliderInt("Group", &group, 0, 16))
-				{
-					PrintWarn("UNIMPLEMENTED: Set group\n");
-				}
-
-				ImGui::SameLine();
-
-				i32 mask = rb->GetMask();
-				if (ImGui::SliderInt("Mask", &mask, 0, 16))
-				{
-					PrintWarn("UNIMPLEMENTED: Set mask\n");
-				}
-				
-				ImGui::SameLine();
-
-				// TODO: Array of buttons for each category
-				i32 flags = rb->GetPhysicsFlags();
-				if (ImGui::SliderInt("Flags", &flags, 0, 16))
-				{
-					rb->SetPhysicsFlags(flags);
-				}
-
-				real mass = rb->GetMass();
-				if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
-				{
-					rb->SetMass(mass);
-				}
-				
-				ImGui::SameLine();
-
-				real friction = rb->GetFriction();
-				if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
-				{
-					rb->SetFriction(friction);
-				}
-
-				ImGui::Spacing();
-
-				btCollisionShape* shape = rb->GetRigidBodyInternal()->getCollisionShape();
-				std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
-
-				if (ImGui::BeginCombo("Collider shape", shapeTypeStr.c_str()))
-				{
-					i32 selectedColliderShape = -1;
-					for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+					if (ImGui::Button("Remove rigid body"))
 					{
-						if (g_CollisionTypes[i] == shape->getShapeType())
+						btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+						physicsWorld->removeRigidBody(rb->GetRigidBodyInternal());
+						gameObject->SetRigidBody(nullptr);
+						rb = nullptr;
+					}
+
+					ImGui::EndPopup();
+				}
+
+				if (rb != nullptr)
+				{
+					bool bStatic = rb->IsStatic();
+					if (ImGui::Checkbox("Static", &bStatic))
+					{
+						rb->SetStatic(bStatic);
+					}
+
+					bool bKinematic = rb->IsKinematic();
+					if (ImGui::Checkbox("Kinematic", &bKinematic))
+					{
+						rb->SetKinematic(bKinematic);
+					}
+
+					ImGui::PushItemWidth(80.0f);
+					{
+						i32 group = rb->GetGroup();
+						if (ImGui::InputInt("Group", &group, 1, 16))
 						{
-							selectedColliderShape = i;
-							break;
+							group = glm::clamp(group, -1, 16);
+							rb->SetGroup(group);
+						}
+
+						ImGui::SameLine();
+
+						i32 mask = rb->GetMask();
+						if (ImGui::InputInt("Mask", &mask, 1, 16))
+						{
+							mask = glm::clamp(mask, -1, 16);
+							rb->SetMask(mask);
 						}
 					}
+					ImGui::PopItemWidth();
 
-					if (selectedColliderShape == -1)
+					// TODO: Array of buttons for each category
+					i32 flags = rb->GetPhysicsFlags();
+					if (ImGui::SliderInt("Flags", &flags, 0, 16))
 					{
-						PrintError("Failed to find collider shape in array!\n");
+						rb->SetPhysicsFlags(flags);
 					}
-					else
+
+					real mass = rb->GetMass();
+					if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
 					{
+						rb->SetMass(mass);
+					}
+
+					real friction = rb->GetFriction();
+					if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
+					{
+						rb->SetFriction(friction);
+					}
+
+					ImGui::Spacing();
+
+					btCollisionShape* shape = rb->GetRigidBodyInternal()->getCollisionShape();
+					std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
+
+					if (ImGui::BeginCombo("Shape", shapeTypeStr.c_str()))
+					{
+						i32 selectedColliderShape = -1;
 						for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
 						{
-							bool bSelected = (i == selectedColliderShape);
-							const char* colliderShapeName = g_CollisionTypeStrs[i];
-							if (ImGui::Selectable(colliderShapeName, &bSelected))
+							if (g_CollisionTypes[i] == shape->getShapeType())
 							{
-								if (selectedColliderShape != i)
-								{
-									selectedColliderShape = i;
+								selectedColliderShape = i;
+								break;
+							}
+						}
 
-									switch (g_CollisionTypes[selectedColliderShape])
+						if (selectedColliderShape == -1)
+						{
+							PrintError("Failed to find collider shape in array!\n");
+						}
+						else
+						{
+							for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+							{
+								bool bSelected = (i == selectedColliderShape);
+								const char* colliderShapeName = g_CollisionTypeStrs[i];
+								if (ImGui::Selectable(colliderShapeName, &bSelected))
+								{
+									if (selectedColliderShape != i)
 									{
-									case BOX_SHAPE_PROXYTYPE:
-									{
-										btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
-										gameObject->SetCollisionShape(newShape);
-									} break;
-									case SPHERE_SHAPE_PROXYTYPE:
-									{
-										btSphereShape* newShape = new btSphereShape(1.0f);
-										gameObject->SetCollisionShape(newShape);
-									} break;
-									case CAPSULE_SHAPE_PROXYTYPE:
-									{
-										btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
-										gameObject->SetCollisionShape(newShape);
-									} break;
-									case CYLINDER_SHAPE_PROXYTYPE:
-									{
-										btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
-										gameObject->SetCollisionShape(newShape);
-									} break;
-									case CONE_SHAPE_PROXYTYPE:
-									{
-										btConeShape* newShape = new btConeShape(1.0f, 1.0f);
-										gameObject->SetCollisionShape(newShape);
-									} break;
+										selectedColliderShape = i;
+
+										switch (g_CollisionTypes[selectedColliderShape])
+										{
+										case BOX_SHAPE_PROXYTYPE:
+										{
+											btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
+											gameObject->SetCollisionShape(newShape);
+										} break;
+										case SPHERE_SHAPE_PROXYTYPE:
+										{
+											btSphereShape* newShape = new btSphereShape(1.0f);
+											gameObject->SetCollisionShape(newShape);
+										} break;
+										case CAPSULE_SHAPE_PROXYTYPE:
+										{
+											btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
+											gameObject->SetCollisionShape(newShape);
+										} break;
+										case CYLINDER_SHAPE_PROXYTYPE:
+										{
+											btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
+											gameObject->SetCollisionShape(newShape);
+										} break;
+										case CONE_SHAPE_PROXYTYPE:
+										{
+											btConeShape* newShape = new btConeShape(1.0f, 1.0f);
+											gameObject->SetCollisionShape(newShape);
+										} break;
+										}
 									}
 								}
 							}
 						}
+
+						ImGui::EndCombo();
 					}
 
-					ImGui::EndCombo();
-				}
-
-				glm::vec3 scale = gameObject->GetTransform()->GetWorldScale();
-				switch (shape->getShapeType())
-				{
-				case BOX_SHAPE_PROXYTYPE:
-				{
-					btBoxShape* boxShape = (btBoxShape*)shape;
-					btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
-					glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
-					halfExtentsG /= scale;
-
-					real maxExtent = 1000.0f;
-					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
-					{
-						halfExtents = Vec3ToBtVec3(halfExtentsG);
-						btBoxShape* newShape = new btBoxShape(halfExtents);
-						gameObject->SetCollisionShape(newShape);
-					}
-				} break;
-				case SPHERE_SHAPE_PROXYTYPE:
-				{
-					btSphereShape* sphereShape = (btSphereShape*)shape;
-					real radius = sphereShape->getRadius();
-					radius /= scale.x;
-
-					real maxExtent = 1000.0f;
-					if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
-					{
-						btSphereShape* newShape = new btSphereShape(radius);
-						gameObject->SetCollisionShape(newShape);
-					}
-				} break;
-				case CAPSULE_SHAPE_PROXYTYPE:
-				{
-					btCapsuleShapeZ* capsuleShape = (btCapsuleShapeZ*)shape;
-					real radius = capsuleShape->getRadius();
-					real halfHeight = capsuleShape->getHalfHeight();
-					radius /= scale.x;
-					halfHeight /= scale.x;
-
-					real maxExtent = 1000.0f;
-					bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
-					bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
-
-					if (bUpdateShape)
-					{
-						btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
-						gameObject->SetCollisionShape(newShape);
-					}
-				} break;
-				case CYLINDER_SHAPE_PROXYTYPE:
-				{
-					btCylinderShape* cylinderShape = (btCylinderShape*)shape;
-					btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
-					glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
 					glm::vec3 scale = gameObject->GetTransform()->GetWorldScale();
-					halfExtentsG /= scale;
-
-					real maxExtent = 1000.0f;
-					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+					switch (shape->getShapeType())
 					{
-						halfExtents = Vec3ToBtVec3(halfExtentsG);
-						btCylinderShape* newShape = new btCylinderShape(halfExtents);
-						gameObject->SetCollisionShape(newShape);
+					case BOX_SHAPE_PROXYTYPE:
+					{
+						btBoxShape* boxShape = (btBoxShape*)shape;
+						btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
+						glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
+						halfExtentsG /= scale;
+
+						real maxExtent = 1000.0f;
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						{
+							halfExtents = Vec3ToBtVec3(halfExtentsG);
+							btBoxShape* newShape = new btBoxShape(halfExtents);
+							gameObject->SetCollisionShape(newShape);
+						}
+					} break;
+					case SPHERE_SHAPE_PROXYTYPE:
+					{
+						btSphereShape* sphereShape = (btSphereShape*)shape;
+						real radius = sphereShape->getRadius();
+						radius /= scale.x;
+
+						real maxExtent = 1000.0f;
+						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
+						{
+							btSphereShape* newShape = new btSphereShape(radius);
+							gameObject->SetCollisionShape(newShape);
+						}
+					} break;
+					case CAPSULE_SHAPE_PROXYTYPE:
+					{
+						btCapsuleShapeZ* capsuleShape = (btCapsuleShapeZ*)shape;
+						real radius = capsuleShape->getRadius();
+						real halfHeight = capsuleShape->getHalfHeight();
+						radius /= scale.x;
+						halfHeight /= scale.x;
+
+						real maxExtent = 1000.0f;
+						bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
+						bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
+
+						if (bUpdateShape)
+						{
+							btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
+							gameObject->SetCollisionShape(newShape);
+						}
+					} break;
+					case CYLINDER_SHAPE_PROXYTYPE:
+					{
+						btCylinderShape* cylinderShape = (btCylinderShape*)shape;
+						btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
+						glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
+						glm::vec3 scale = gameObject->GetTransform()->GetWorldScale();
+						halfExtentsG /= scale;
+
+						real maxExtent = 1000.0f;
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						{
+							halfExtents = Vec3ToBtVec3(halfExtentsG);
+							btCylinderShape* newShape = new btCylinderShape(halfExtents);
+							gameObject->SetCollisionShape(newShape);
+						}
+					} break;
 					}
-				} break;
+
+					glm::vec3 localOffsetPos = rb->GetLocalPosition();
+					if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
+					{
+						rb->SetLocalPosition(localOffsetPos);
+					}
+
+					glm::vec3 localOffsetRotEuler = glm::eulerAngles(rb->GetLocalRotation()) * 90.0f;
+					if (ImGui::DragFloat3("Rot offset", &localOffsetRotEuler.x, 0.1f))
+					{
+						rb->SetLocalRotation(glm::quat(localOffsetRotEuler / 90.0f));
+					}
+
+					ImGui::Spacing();
+
+					glm::vec3 linearVel = BtVec3ToVec3(rb->GetRigidBodyInternal()->getLinearVelocity());
+					if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
+					{
+						rbInternal->setLinearVelocity(Vec3ToBtVec3(linearVel));
+					}
+
+					glm::vec3 angularVel = BtVec3ToVec3(rb->GetRigidBodyInternal()->getAngularVelocity());
+					if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
+					{
+						rbInternal->setAngularVelocity(Vec3ToBtVec3(angularVel));
+					}
+
+
+					//glm::vec3 localOffsetScale = rb->GetLocalScale();
+					//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
+					//{
+					//	real epsilon = 0.001f;
+					//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
+					//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
+					//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
+
+					//	rb->SetLocalScale(localOffsetScale);
+					//}
+
 				}
-
-				glm::vec3 localOffsetPos = rb->GetLocalPosition();
-				if (ImGui::DragFloat3("Position offset", &localOffsetPos.x, 0.05f))
-				{
-					rb->SetLocalPosition(localOffsetPos);
-				}
-
-				glm::vec3 localOffsetRotEuler = glm::eulerAngles(rb->GetLocalRotation()) * 90.0f;
-				if (ImGui::DragFloat3("Rotation offset", &localOffsetRotEuler.x, 0.1f))
-				{
-					rb->SetLocalRotation(glm::quat(localOffsetRotEuler / 90.0f));
-				}
-
-				//glm::vec3 localOffsetScale = rb->GetLocalScale();
-				//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
-				//{
-				//	real epsilon = 0.001f;
-				//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
-				//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
-				//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
-
-				//	rb->SetLocalScale(localOffsetScale);
-				//}
-
 			}
 			else
 			{

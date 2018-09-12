@@ -50,7 +50,7 @@ namespace flex
 			g_CameraManager->SetActiveIndexRelative(1, false);
 		}
 		else if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_MINUS) ||
-				 g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::LEFT_BUMPER))
+			g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::LEFT_BUMPER))
 		{
 			g_CameraManager->SetActiveIndexRelative(-1, false);
 		}
@@ -79,25 +79,40 @@ namespace flex
 			m_bGrounded = rayCallback.hasHit();
 		}
 
+
 		if (!m_Player->GetObjectInteractingWith())
 		{
-			real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
-			force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier *
-				-g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
-
-			force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration * inAirMovementMultiplier *
-				-g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+			switch (m_Mode)
+			{
+			case Mode::THIRD_PERSON:
+			{
+				real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
+				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+				force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveH;
+				force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveV;
+			} break;
+			case Mode::FIRST_PERSON:
+			{
+				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+				force += Vec3ToBtVec3(m_Player->GetTransform()->GetRight()) * m_MoveAcceleration * -moveH;
+				force += Vec3ToBtVec3(m_Player->GetTransform()->GetForward()) * m_MoveAcceleration * -moveV;
+			} break;
+			}
 		}
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		btVector3 up, right, forward;
-		m_Player->GetRigidBody()->GetUpRightForward(up, right, forward);
+		{
+			btVector3 up, right, forward;
+			m_Player->GetRigidBody()->GetUpRightForward(up, right, forward);
 
-		const real lineLength = 4.0f;
-		debugDrawer->drawLine(pos, pos + up * lineLength, btVector3(0, 1, 0));
-		debugDrawer->drawLine(pos, pos + forward * lineLength, btVector3(0, 0, 1));
-		debugDrawer->drawLine(pos, pos + right * lineLength, btVector3(1, 0, 0));
+			const real lineLength = 4.0f;
+			debugDrawer->drawLine(pos, pos + up * lineLength, btVector3(0, 1, 0));
+			debugDrawer->drawLine(pos, pos + forward * lineLength, btVector3(0, 0, 1));
+			debugDrawer->drawLine(pos, pos + right * lineLength, btVector3(1, 0, 0));
+		}
 
 		btQuaternion orientation = rb->getOrientation();
 		glm::vec3 euler = glm::eulerAngles(BtQuaternionToQuaternion(orientation));
@@ -129,17 +144,52 @@ namespace flex
 			debugDrawer->drawLine(start, end, bMaxVel ? btVector3(0.9f, 0.3f, 0.4f) : btVector3(0.1f, 0.85f, 0.98f));
 		}
 
-		// Look in direction of movement
-		if (xzVelMagnitude > 0.1f)
+		switch (m_Mode)
 		{
-			btTransform& transform = rb->getWorldTransform();
-			btQuaternion oldRotation = transform.getRotation();
-			real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
-			btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
-			real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
-			real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown * g_DeltaTime;
-			btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
-			transform.setRotation(newRotation);
+		case Mode::THIRD_PERSON:
+		{
+			// Look in direction of movement
+			if (xzVelMagnitude > 0.1f)
+			{
+				btTransform& transform = rb->getWorldTransform();
+				btQuaternion oldRotation = transform.getRotation();
+				real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
+				btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
+				real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
+				real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown * g_DeltaTime;
+				btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
+				transform.setRotation(newRotation);
+			}
+		} break;
+		case Mode::FIRST_PERSON:
+		{
+			float lookH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X);
+			float lookV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_Y);
+			btTransform& transformBT = rb->getWorldTransform();
+			Transform* transform = m_Player->GetTransform();
+			glm::vec3 up = transform->GetUp();
+			glm::vec3 right = transform->GetRight();
+			glm::vec3 forward = transform->GetForward();
+			
+			btQuaternion oldRotation = transformBT.getRotation();
+			glm::quat rot = BtQuaternionToQuaternion(oldRotation);
+			rot = glm::rotate(rot, -lookH * g_DeltaTime, up);
+			rot = glm::rotate(rot, lookV * g_DeltaTime, forward);
+
+			glm::vec3 dUp = (up - glm::vec3(0.0f, 1.0f, 0.0f));
+			float fallingOverAmount = glm::length(dUp);
+			glm::vec3 rotEuler = glm::eulerAngles(rot);
+			Print("Falling over amount: %.2f  euler: %.0f, %.0f, %.0f\n", fallingOverAmount, glm::degrees(rotEuler.x), glm::degrees(rotEuler.y), glm::degrees(rotEuler.z));
+
+			glm::vec3 newRotEuler = rotEuler;
+			newRotEuler.z *= 0.1f;
+			newRotEuler.x *= 0.1f;
+			glm::quat targetRot(newRotEuler);
+
+			rot = glm::lerp(rot, targetRot, glm::clamp(g_DeltaTime * 40.0f * fallingOverAmount, 0.0f, 1.0f));
+
+			transformBT.setRotation(QuaternionToBtQuaternion(rot));
+		} break;
 		}
 	}
 

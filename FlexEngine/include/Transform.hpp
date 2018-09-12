@@ -42,6 +42,10 @@ namespace flex
 		glm::vec3 GetLocalScale() const;
 		glm::vec3 GetWorldScale() const;
 
+		glm::vec3 GetRight() const;
+		glm::vec3 GetUp() const;
+		glm::vec3 GetForward() const;
+
 		void SetLocalPosition(const glm::vec3& position, bool bUpdateChain = true);
 		void SetWorldPosition(const glm::vec3& position, bool bUpdateChain = true);
 
@@ -79,10 +83,10 @@ namespace flex
 		glm::mat4 GetWorldTransform();
 		glm::mat4 GetLocalTransform();
 
-		void UpdateParentTransform(); // Used to go all the way to the base of the parent-child tree
+		void UpdateParentTransform(); // Climbs up the parent-child tree up to the root
 
 	private:
-		void UpdateChildTransforms(); // Used to go back down to the lowest node of the parent-child tree
+		void UpdateChildTransforms(); // Climbs down the parent-child trees to all leaves
 
 		glm::mat4 localTransform;
 		glm::mat4 worldTransform;
@@ -94,6 +98,10 @@ namespace flex
 		glm::vec3 worldPosition;
 		glm::quat worldRotation;
 		glm::vec3 worldScale;
+
+		glm::vec3 forward;
+		glm::vec3 up;
+		glm::vec3 right;
 
 		GameObject* m_GameObject = nullptr;
 
