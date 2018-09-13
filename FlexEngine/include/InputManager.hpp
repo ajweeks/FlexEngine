@@ -293,7 +293,7 @@ namespace flex
 
 		std::map<KeyCode, Key> m_Keys;
 
-		static const i32 GAMEPAD_BUTTON_COUNT = (i32)MouseButton::_NONE;
+		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_COUNT;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		u32 m_MouseButtonStates;
 		u32 m_MouseButtonsPressed;
