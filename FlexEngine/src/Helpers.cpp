@@ -645,6 +645,31 @@ namespace flex
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
 	}
 
+	std::string GetDateString_YMD()
+	{
+		std::stringstream result;
+
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+
+		result << time.wYear << '-' << std::setw(2) << std::setfill('0') << time.wMonth << '-' << time.wDay;
+
+		return result.str();
+	}
+
+	std::string GetDateString_YMDHMS()
+	{
+		std::stringstream result;
+
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+
+		result << time.wYear << '-' << std::setw(2) << std::setfill('0') << time.wMonth << '-' << time.wDay <<
+			'_' << time.wHour << '-' << time.wMinute << '-' << time.wSecond;
+
+		return result.str();
+	}
+
 	std::vector<std::string> Split(const std::string& str, char delim)
 	{
 		std::vector<std::string> result;

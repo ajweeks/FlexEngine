@@ -215,7 +215,8 @@ namespace flex
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
 		CreateDirectoryRecursive(absoluteDirectory);
 
-		std::string filePath = absoluteDirectory + "frame_times.csv";
+		std::string dateString = GetDateString_YMDHMS();
+		std::string filePath = absoluteDirectory + "frame_times_" + dateString + ".csv";
 
 		if (WriteFile(filePath, s_PendingCSV, false))
 		{

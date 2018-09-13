@@ -78,6 +78,10 @@ namespace flex
 	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
 	u16 Parse16u(char* ptr);
 
+	// Returns the current year, month, & day  (YYYY-MM-DD)
+	std::string GetDateString_YMD();
+	// Returns the current year, month, day, hour, minute, & second (YYYY-MM-DD_HH-MM-SS)
+	std::string GetDateString_YMDHMS();
 
 	std::vector<std::string> Split(const std::string& str, char delim);
 
