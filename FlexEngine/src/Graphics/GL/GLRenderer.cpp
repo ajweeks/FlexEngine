@@ -6239,10 +6239,20 @@ namespace flex
 						rbInternal->setLinearVelocity(Vec3ToBtVec3(linearVel));
 					}
 
+					if (ImGui::IsItemClicked(1))
+					{
+						rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+					}
+
 					glm::vec3 angularVel = BtVec3ToVec3(rb->GetRigidBodyInternal()->getAngularVelocity());
 					if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
 					{
 						rbInternal->setAngularVelocity(Vec3ToBtVec3(angularVel));
+					}
+
+					if (ImGui::IsItemClicked(1))
+					{
+						rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
 					}
 
 
