@@ -98,12 +98,13 @@ namespace flex
 
 		void GLPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
 		{
-			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
-			UNREFERENCED_PARAMETER(PointOnB);
 			UNREFERENCED_PARAMETER(normalOnB);
 			UNREFERENCED_PARAMETER(distance);
 			UNREFERENCED_PARAMETER(lifeTime);
-			UNREFERENCED_PARAMETER(color);
+
+			drawLine(PointOnB + btVector3(-1.0f, 0.0f, 0.0f), PointOnB + btVector3(1.0f, 0.0f, 0.0f), color);
+			drawLine(PointOnB + btVector3(0.0f, 0.0f, -1.0f), PointOnB + btVector3(0.0f, 0.0f, 1.0f), color);
+			drawLine(PointOnB + btVector3(0.0f, -1.0f, 0.0f), PointOnB + btVector3(0.0f, -1.0f, 0.0f), color);
 		}
 		
 		void GLPhysicsDebugDraw::flushLines()

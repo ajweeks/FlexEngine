@@ -51,8 +51,5 @@ namespace flex
 		std::vector<BaseCamera*> m_Cameras;
 		i32 m_ActiveCameraIndex = -1;
 
-		// TODO: Implement camera animation here
-		//bool animating = false;
-
 	};
 } // namespace flex
