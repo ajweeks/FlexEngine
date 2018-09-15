@@ -30,6 +30,7 @@ namespace flex
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) override;
+			virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
@@ -42,6 +43,7 @@ namespace flex
 
 			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
+			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
 
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
@@ -102,6 +104,8 @@ namespace flex
 			
 			virtual void RecaptureReflectionProbe() override;
 
+			virtual u32 GetTextureHandle(TextureID textureID) const override;
+
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
@@ -147,25 +151,6 @@ namespace flex
 			void GenerateBRDFLUT(u32 brdfLUTTextureID, i32 BRDFLUTSize);
 
 			void SwapBuffers();
-
-			struct SpriteQuadDrawInfo
-			{
-				RenderID spriteObjectRenderID;
-				u32 inputTextureHandle = 0;
-				u32 FBO = 0; // 0 for rendering to final RT
-				u32 RBO = 0; // 0 for rendering to final RT
-				MaterialID materialID = InvalidMaterialID;
-				glm::vec3 pos = glm::vec3(0.0f);
-				glm::quat rotation = glm::quat(glm::vec3(0.0f));
-				glm::vec3 scale = glm::vec3(1.0f);
-				AnchorPoint anchor = AnchorPoint::TOP_LEFT;
-				glm::vec4 color = glm::vec4(1.0f);
-				bool bScreenSpace = true;
-				bool bReadDepth = true;
-				bool bWriteDepth = true;
-				bool bEnableAlbedoSampler = true;
-				bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
-			};
 
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
 			void DrawScreenSpaceSprites();
@@ -226,7 +211,7 @@ namespace flex
 			// Returns true if object was duplicated
 			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName);
 			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
-			void UpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 											  const std::string& texturePath,
 											  std::string& matTexturePath,
 											  GLTexture* texture,
@@ -240,9 +225,12 @@ namespace flex
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
 
-			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
-			std::map<std::string, GLTexture*> m_LoadedTextures; // Key is filepath
+			std::vector<GLTexture*> m_LoadedTextures;
+
+			// Filled every frame
+			std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
+			std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;
 
 			// TODO: Clean up (make more dynamic)
 			u32 viewProjectionUBO = 0;
@@ -273,12 +261,12 @@ namespace flex
 
 			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
 
-			GLTexture* m_AlphaBGTexture = nullptr;
-			GLTexture* m_LoadingTexture = nullptr;
-			GLTexture* m_WorkTexture = nullptr;
-
-			GLTexture* m_PointLightIcon = nullptr;
-			GLTexture* m_DirectionalLightIcon = nullptr;
+			TextureID m_AlphaBGTextureID = InvalidTextureID;
+			TextureID m_LoadingTextureID = InvalidTextureID;
+			TextureID m_WorkTextureID = InvalidTextureID;
+			
+			TextureID m_PointLightIconID = InvalidTextureID;
+			TextureID m_DirectionalLightIconID = InvalidTextureID;
 
 			// TODO: Use a mesh prefab here
 			VertexBufferData m_Quad3DVertexBufferData;

@@ -149,31 +149,11 @@ namespace flex
 				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			m_AlphaBGTexture = new GLTexture(RESOURCE_LOCATION + "textures/alpha-bg.png", 3, false, false, false);
-			if (m_AlphaBGTexture->LoadFromFile())
-			{
-				m_LoadedTextures.insert({ m_AlphaBGTexture->GetRelativeFilePath(), m_AlphaBGTexture });
-			}
-			m_LoadingTexture = new GLTexture(RESOURCE_LOCATION + "textures/loading_1.png", 3, false, false, false);
-			if (m_LoadingTexture->LoadFromFile())
-			{
-				m_LoadedTextures.insert({ m_LoadingTexture->GetRelativeFilePath(), m_LoadingTexture });
-			}
-			m_WorkTexture = new GLTexture(RESOURCE_LOCATION + "textures/work_d.jpg", 3, false, true, false);
-			if (m_WorkTexture->LoadFromFile())
-			{
-				m_LoadedTextures.insert({ m_WorkTexture->GetRelativeFilePath(), m_WorkTexture });
-			}
-			m_PointLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			if (m_PointLightIcon->LoadFromFile())
-			{
-				m_LoadedTextures.insert({ m_PointLightIcon->GetRelativeFilePath(), m_PointLightIcon });
-			}
-			m_DirectionalLightIcon = new GLTexture(RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", 4, false, true, false);
-			if (m_DirectionalLightIcon->LoadFromFile())
-			{
-				m_LoadedTextures.insert({ m_DirectionalLightIcon->GetRelativeFilePath(), m_DirectionalLightIcon });
-			}
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION + "textures/alpha-bg.png", 3, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION + "textures/loading_1.png", 3, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION + "textures/work_d.jpg", 3, false, true, false);
+			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
@@ -181,20 +161,17 @@ namespace flex
 			spriteMatCreateInfo.engineMaterial = true;
 			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
 
-
 			MaterialCreateInfo fontMatCreateInfo = {};
 			fontMatCreateInfo.name = "Font material";
 			fontMatCreateInfo.shaderName = "font";
 			fontMatCreateInfo.engineMaterial = true;
 			m_FontMatID = InitializeMaterial(&fontMatCreateInfo);
 
-
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
 			postProcessMatCreateInfo.engineMaterial = true;
 			m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
-			
 
 			MaterialCreateInfo postFXAAMatCreateInfo = {};
 			postFXAAMatCreateInfo.name = "FXAA";
@@ -319,8 +296,7 @@ namespace flex
 											  type);
 				if (m_BRDFTexture->GenerateEmpty())
 				{
-					// TODO: Don't use file path as a key value since not all textures have file paths?
-					m_LoadedTextures.insert({ "BRDF", m_BRDFTexture });
+					m_LoadedTextures.push_back(m_BRDFTexture);
 					GenerateBRDFLUT(m_BRDFTexture->handle, brdfSize);
 				}
 				else
@@ -417,12 +393,12 @@ namespace flex
 			}
 			m_Fonts.clear();
 
-			for (auto& texturePair : m_LoadedTextures)
+			for (GLTexture* texture : m_LoadedTextures)
 			{
-				if (texturePair.second)
+				if (texture)
 				{
-					texturePair.second->Destroy();
-					SafeDelete(texturePair.second);
+					texture->Destroy();
+					SafeDelete(texture);
 				}
 			}
 			m_LoadedTextures.clear();
@@ -734,7 +710,7 @@ namespace flex
 								if (newTexture->bLoaded)
 								{
 									*samplerCreateInfo.id = newTexture->handle;
-									m_LoadedTextures.insert({ samplerCreateInfo.filepath, newTexture });
+									m_LoadedTextures.push_back(newTexture);
 								}
 							}
 
@@ -935,6 +911,18 @@ namespace flex
 			}
 
 			return matID;
+		}
+
+		TextureID GLRenderer::InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
+		{
+			GLTexture* newTexture = new GLTexture(relativeFilePath, channelCount, bFlipVertically, bGenerateMipMaps, bHDR);
+			if (newTexture->LoadFromFile())
+			{
+				m_LoadedTextures.push_back(newTexture);
+			}
+
+			TextureID id = m_LoadedTextures.size() - 1;
+			return id;
 		}
 
 		u32 GLRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
@@ -1541,6 +1529,13 @@ namespace flex
 			}
 
 			AddEditorString("Captured reflection probe");
+		}
+
+		u32 GLRenderer::GetTextureHandle(TextureID textureID) const
+		{
+			assert(textureID >= 0);
+			assert(textureID < m_LoadedTextures.size());
+			return m_LoadedTextures[textureID]->handle;
 		}
 
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
@@ -2204,7 +2199,7 @@ namespace flex
 			drawInfo.materialID = m_PostProcessMatID;
 			drawInfo.color = color;
 			drawInfo.anchor = AnchorPoint::CENTER;
-			drawInfo.inputTextureHandle = m_OffscreenTexture0Handle.id;
+			drawInfo.textureHandleID = m_OffscreenTexture0Handle.id;
 			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
 
 			DrawSpriteQuad(drawInfo);
@@ -2215,7 +2210,7 @@ namespace flex
 				drawInfo.RBO = 0;
 				scale.y = -1.0f;
 
-				drawInfo.inputTextureHandle = m_OffscreenTexture1Handle.id;
+				drawInfo.textureHandleID = m_OffscreenTexture1Handle.id;
 				drawInfo.materialID = m_PostFXAAMatID;
 				DrawSpriteQuad(drawInfo);
 			}
@@ -2236,6 +2231,12 @@ namespace flex
 			PROFILE_BEGIN("Render > DrawScreenSpaceSprites > Display profiler frame");
 			Profiler::DrawDisplayedFrame();
 			PROFILE_END("Render > DrawScreenSpaceSprites > Display profiler frame");
+
+			for (const SpriteQuadDrawInfo& drawInfo : m_QueuedSSSprites)
+			{
+				DrawSpriteQuad(drawInfo);
+			}
+			m_QueuedSSSprites.clear();
 
 			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
@@ -2302,6 +2303,14 @@ namespace flex
 
 		void GLRenderer::DrawWorldSpaceSprites()
 		{
+			for (SpriteQuadDrawInfo& drawInfo : m_QueuedWSSprites)
+			{
+				drawInfo.FBO = m_Offscreen0FBO;
+				drawInfo.RBO = m_Offscreen0RBO;
+				DrawSpriteQuad(drawInfo);
+			}
+			m_QueuedWSSprites.clear();
+
 			glm::vec3 scale(1.0f, -1.0f, 1.0f);
 
 			SpriteQuadDrawInfo drawInfo = {};
@@ -2323,7 +2332,7 @@ namespace flex
 				{
 					drawInfo.pos = pointLight.position;
 					drawInfo.color = pointLight.color * 1.5f;
-					drawInfo.inputTextureHandle = m_PointLightIcon->handle;
+					drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight.position, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(drawInfo);
@@ -2334,7 +2343,7 @@ namespace flex
 			{
 				drawInfo.color = m_DirectionalLight.color * 1.5f;
 				drawInfo.pos = m_DirectionalLight.position;
-				drawInfo.inputTextureHandle = m_DirectionalLightIcon->handle;
+				drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
 				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight.position, camUp);
 				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 				DrawSpriteQuad(drawInfo);
@@ -2343,7 +2352,19 @@ namespace flex
 
 		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
 		{
-			GLRenderObject* spriteRenderObject = GetRenderObject(drawInfo.spriteObjectRenderID);
+			RenderID spriteRenderID = drawInfo.spriteObjectRenderID;
+			if (spriteRenderID == InvalidRenderID)
+			{
+				if (drawInfo.bScreenSpace)
+				{
+					spriteRenderID = m_Quad2DRenderID;
+				}
+				else
+				{
+					spriteRenderID = m_Quad3DRenderID;
+				}
+			}
+			GLRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
 			if (!spriteRenderObject ||
 				(spriteRenderObject->editorObject && !g_EngineInstance->IsRenderingEditorObjects()))
 			{
@@ -2351,6 +2372,10 @@ namespace flex
 			}
 
 			spriteRenderObject->materialID = drawInfo.materialID;
+			if (spriteRenderObject->materialID == InvalidMaterialID)
+			{
+				spriteRenderObject->materialID = m_SpriteMatID;
+			}
 
 			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
 			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
@@ -2429,7 +2454,7 @@ namespace flex
 				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
 			}
 
-			bool bEnableAlbedoSampler = (drawInfo.inputTextureHandle != 0 && drawInfo.bEnableAlbedoSampler);
+			bool bEnableAlbedoSampler = (drawInfo.textureHandleID != 0 && drawInfo.bEnableAlbedoSampler);
 			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
 			{
 				// TODO: glUniform1ui vs glUniform1i ?
@@ -2484,7 +2509,7 @@ namespace flex
 			if (bEnableAlbedoSampler)
 			{
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, drawInfo.inputTextureHandle);
+				glBindTexture(GL_TEXTURE_2D, drawInfo.textureHandleID);
 			}
 
 			// TODO: Use member
@@ -3807,12 +3832,13 @@ namespace flex
 			return bValueChanged;
 		}
 
-		void GLRenderer::UpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
-													  const std::string& texturePath,
-													  std::string& matTexturePath,
-													  GLTexture* texture, i32 i, 
-													  i32* textureIndex, 
-													  u32* samplerID)
+		void GLRenderer::ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+			const std::string& texturePath,
+			std::string& matTexturePath,
+			GLTexture* texture,
+			i32 i, 
+			i32* textureIndex, 
+			u32* samplerID)
 		{
 			if (bUpdateTextureMaterial)
 			{
@@ -3841,7 +3867,6 @@ namespace flex
 					*textureIndex = i + 1;
 				}
 			}
-
 		}
 
 		void GLRenderer::DoTexturePreviewTooltip(GLTexture* texture)
@@ -3858,7 +3883,8 @@ namespace flex
 				real tiling = 3.0f;
 				ImVec2 uv0(0.0f, 0.0f);
 				ImVec2 uv1(tiling * textureAspectRatio, tiling);
-				ImGui::Image((void*)m_AlphaBGTexture->handle, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
+				GLTexture* alphaBGTexture = m_LoadedTextures[m_AlphaBGTextureID];
+				ImGui::Image((void*)alphaBGTexture->handle, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
 			}
 
 			ImGui::SetCursorPos(cursorPos);
@@ -3871,14 +3897,15 @@ namespace flex
 		void GLRenderer::DrawLoadingTextureQuad()
 		{
 			SpriteQuadDrawInfo drawInfo = {};
-			real textureAspectRatio = m_LoadingTexture->width / (real)m_LoadingTexture->height;
+			GLTexture* loadingTexture = m_LoadedTextures[m_LoadingTextureID];
+			real textureAspectRatio = loadingTexture->width / (real)loadingTexture->height;
 			drawInfo.scale = glm::vec3(textureAspectRatio, -1.0f, 1.0f);
 			drawInfo.bScreenSpace = true;
 			drawInfo.bReadDepth = false;
 			drawInfo.bWriteDepth = false;
 			drawInfo.materialID = m_SpriteMatID;
 			drawInfo.anchor = AnchorPoint::WHOLE;
-			drawInfo.inputTextureHandle = m_LoadingTexture->handle;
+			drawInfo.textureHandleID = m_LoadedTextures[m_LoadingTextureID]->handle;
 			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
 			DrawSpriteQuad(drawInfo);
@@ -3886,16 +3913,16 @@ namespace flex
 
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, GLTexture** texture)
 		{
-			auto iter = m_LoadedTextures.find(filePath);
-			if (iter == m_LoadedTextures.end())
+			for (auto iter = m_LoadedTextures.begin(); iter != m_LoadedTextures.end(); ++iter)
 			{
-				return false;
+				if ((*iter)->GetRelativeFilePath().compare(filePath) == 0)
+				{
+					*texture = *iter;
+					return true;
+				}
 			}
-			else
-			{
-				*texture = iter->second;
-				return true;
-			}
+
+			return false;
 		}
 
 		void GLRenderer::ReloadShaders()
@@ -5115,13 +5142,11 @@ namespace flex
 						matName.resize(MAX_NAME_LEN);
 
 						i32 i = 0;
-						for (const auto& texturePair : m_LoadedTextures)
+						for (GLTexture* texture : m_LoadedTextures)
 						{
-							std::string texturePath = texturePair.second->GetRelativeFilePath();
-							GLTexture* texture = nullptr;
-							GetLoadedTexture(texturePath, &texture);
+							std::string texturePath = texture->GetRelativeFilePath();
 
-							UpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
 														 texturePath,
 														 mat.material.albedoTexturePath,
 														 texture,
@@ -5129,7 +5154,7 @@ namespace flex
 														 &albedoTextureIndex,
 														 &mat.albedoSamplerID);
 
-							UpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
 														 texturePath,
 														 mat.material.metallicTexturePath,
 														 texture,
@@ -5137,7 +5162,7 @@ namespace flex
 														 &metallicTextureIndex,
 														 &mat.metallicSamplerID);
 
-							UpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
 														 texturePath,
 														 mat.material.roughnessTexturePath,
 														 texture,
@@ -5145,7 +5170,7 @@ namespace flex
 														 &roughnessTextureIndex,
 														 &mat.roughnessSamplerID);
 
-							UpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
 														 texturePath,
 														 mat.material.normalTexturePath,
 														 texture,
@@ -5153,7 +5178,7 @@ namespace flex
 														 &normalTextureIndex,
 														 &mat.normalSamplerID);
 
-							UpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
 														 texturePath,
 														 mat.material.aoTexturePath,
 														 texture,
@@ -5260,9 +5285,9 @@ namespace flex
 
 					std::vector<GLTexture*> textures;
 					textures.reserve(m_LoadedTextures.size());
-					for (const auto& texturePair : m_LoadedTextures)
+					for (GLTexture* texture : m_LoadedTextures)
 					{
-						textures.push_back(texturePair.second);
+						textures.push_back(texture);
 					}
 
 					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
@@ -5432,10 +5457,10 @@ namespace flex
 					if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
-						for (const auto& texturePair : m_LoadedTextures)
+						for (GLTexture* texture : m_LoadedTextures)
 						{
 							bool bSelected = (i == selectedTextureIndex);
-							std::string textureFileName = texturePair.second->GetName();
+							std::string textureFileName = texture->GetName();
 							if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
 							{
 								selectedTextureIndex = i;
@@ -5445,7 +5470,7 @@ namespace flex
 							{
 								if (ImGui::Button("Reload"))
 								{
-									texturePair.second->Reload();
+									texture->Reload();
 									ImGui::CloseCurrentPopup();
 								}
 
@@ -5454,7 +5479,7 @@ namespace flex
 
 							if (ImGui::IsItemHovered())
 							{
-								DoTexturePreviewTooltip(texturePair.second);
+								DoTexturePreviewTooltip(texture);
 							}
 							++i;
 						}
@@ -5478,7 +5503,7 @@ namespace flex
 							GLTexture* newTexture = new GLTexture(relativeFilePath, 3, false, false, false);
 							if (newTexture->LoadFromFile())
 							{
-								m_LoadedTextures.insert({ newTexture->GetRelativeFilePath(), newTexture });
+								m_LoadedTextures.push_back(newTexture);
 							}
 
 							ImGui::CloseCurrentPopup();
@@ -5720,10 +5745,10 @@ namespace flex
 			DrawImGuiLights();
 		}
 
-		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos, 
-											AnchorPoint anchor, 
-											const glm::vec2& size, 
-											const glm::vec4& color)
+		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos,
+			AnchorPoint anchor,
+			const glm::vec2& size,
+			const glm::vec4& color)
 		{
 			SpriteQuadDrawInfo drawInfo = {};
 
@@ -5741,9 +5766,9 @@ namespace flex
 			DrawSpriteQuad(drawInfo);
 		}
 
-		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos, 
-											   const glm::vec2& size,
-											   const glm::vec4& color)
+		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos,
+			const glm::vec2& size,
+			const glm::vec4& color)
 		{
 			SpriteQuadDrawInfo drawInfo = {};
 
@@ -5759,6 +5784,18 @@ namespace flex
 			drawInfo.bEnableAlbedoSampler = false;
 
 			DrawSpriteQuad(drawInfo);
+		}
+
+		void GLRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)
+		{
+			if (drawInfo.bScreenSpace)
+			{
+				m_QueuedSSSprites.push_back(drawInfo);
+			}
+			else
+			{
+				m_QueuedWSSprites.push_back(drawInfo);
+			}
 		}
 
 		void GLRenderer::DrawGameObjectImGui(GameObject* gameObject)

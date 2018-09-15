@@ -337,4 +337,23 @@ namespace flex
 		i32 numAttachments = 1; // How many output textures the fragment shader has
 	};
 
+	struct SpriteQuadDrawInfo
+	{
+		RenderID spriteObjectRenderID = InvalidRenderID;
+		u32 textureHandleID = 0; // Not a TextureID, but the GL id (TODO: Make API-agnostic)
+		u32 FBO = 0; // 0 for rendering to final RT
+		u32 RBO = 0; // 0 for rendering to final RT
+		MaterialID materialID = InvalidMaterialID;
+		glm::vec3 pos = glm::vec3(0.0f);
+		glm::quat rotation = glm::quat(glm::vec3(0.0f));
+		glm::vec3 scale = glm::vec3(1.0f);
+		AnchorPoint anchor = AnchorPoint::TOP_LEFT;
+		glm::vec4 color = glm::vec4(1.0f);
+		bool bScreenSpace = true;
+		bool bReadDepth = true;
+		bool bWriteDepth = true;
+		bool bEnableAlbedoSampler = true;
+		bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
+	};
+
 } // namespace flex

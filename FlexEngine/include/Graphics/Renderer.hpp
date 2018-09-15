@@ -33,6 +33,7 @@ namespace flex
 		virtual void Destroy() = 0;
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) = 0;
+		virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
@@ -46,9 +47,9 @@ namespace flex
 		virtual void Draw() = 0;
 		virtual void DrawImGuiItems() = 0;
 
-		// Values should be specified relative to screen size, in [0, 1]
 		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
 		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
+		virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) = 0;
 
 		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
@@ -110,6 +111,8 @@ namespace flex
 		virtual void DrawAssetBrowserImGui() = 0;
 
 		virtual void RecaptureReflectionProbe() = 0;
+
+		virtual u32 GetTextureHandle(TextureID textureID) const = 0;
 
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,

@@ -77,6 +77,8 @@ namespace flex
 
 		m_Slingshot->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 1.0f));
 
+		m_CrosshairTextureID = g_Renderer->InitializeTexture(RESOURCE_LOCATION + "textures/cross-hair-01.png", 4, false, false, false);
+
 		GameObject::Initialize();
 	}
 
@@ -135,6 +137,15 @@ namespace flex
 		}
 
 		m_Controller->Update();
+
+		SpriteQuadDrawInfo drawInfo = {};
+		drawInfo.anchor = AnchorPoint::CENTER;
+		drawInfo.bScreenSpace = true;
+		drawInfo.bWriteDepth = false;
+		drawInfo.bReadDepth = false;
+		drawInfo.scale = glm::vec3(0.02f);
+		drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
+		g_Renderer->DrawSprite(drawInfo);
 
 		GameObject::Update();
 	}
