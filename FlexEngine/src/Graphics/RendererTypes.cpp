@@ -19,8 +19,10 @@ namespace flex
 	//	uniforms = (Uniform)((u64)uniforms & ~(u64)uniform);
 	//}
 
-	u32 Uniforms::CalculateSize(i32 PointLightCount)
+	u32 Uniforms::CalculateSize(i32 pointLightCount)
 	{
+		UNREFERENCED_PARAMETER(pointLightCount);
+
 		// NOTE: This function is only needed for Vulkan buffer initialization calculations
 
 		u32 size = 0;
@@ -34,7 +36,7 @@ namespace flex
 		//if (HasUniform(Uniform::COLOR_MULTIPLIER)) size += sizeof(glm::vec4);
 		//if (HasUniform(Uniform::CAM_POS)) size += sizeof(glm::vec4);
 		//if (HasUniform(Uniform::DIR_LIGHT)) size += sizeof(DirectionalLight);
-		//if (HasUniform(Uniform::POINT_LIGHTS)) size += sizeof(PointLight) * PointLightCount;
+		//if (HasUniform(Uniform::POINT_LIGHTS)) size += sizeof(PointLight) * pointLightCount;
 		//if (HasUniform(Uniform::ALBEDO_SAMPLER)) size += sizeof(u32);
 		//if (HasUniform(Uniform::CONST_ALBEDO)) size += sizeof(glm::vec4);
 		//if (HasUniform(Uniform::METALLIC_SAMPLER)) size += sizeof(u32);

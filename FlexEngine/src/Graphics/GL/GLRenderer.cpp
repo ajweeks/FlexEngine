@@ -2223,17 +2223,16 @@ namespace flex
 								  0, 0, frameBufferSize.x, frameBufferSize.y,
 								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			}
-
 		}
 
 		void GLRenderer::DrawScreenSpaceSprites()
 		{
-			PROFILE_AUTO("DrawScreenSpaceSprites");
-
 			{
 				PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
 				Profiler::DrawDisplayedFrame();
 			}
+
+			PROFILE_AUTO("DrawScreenSpaceSprites");
 
 			for (const SpriteQuadDrawInfo& drawInfo : m_QueuedSSSprites)
 			{
