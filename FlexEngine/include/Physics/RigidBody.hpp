@@ -34,6 +34,12 @@ namespace flex
 
 		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
 		
+		// Vector passed in defines the axis (or axes) this body can rotate around
+		void SetOrientationConstraint(const btVector3& axis);
+
+		// Vector passed in defines the axis (or axes) this body can move along
+		void SetPositionalConstraint(const btVector3& axis);
+
 		// Set local transform (relative to parent transform)
 		void SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos);
 		void SetLocalPosition(const glm::vec3& pos);

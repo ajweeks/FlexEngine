@@ -6206,7 +6206,6 @@ namespace flex
 						btCylinderShape* cylinderShape = (btCylinderShape*)shape;
 						btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
 						glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
-						glm::vec3 scale = gameObject->GetTransform()->GetWorldScale();
 						halfExtentsG /= scale;
 
 						real maxExtent = 1000.0f;

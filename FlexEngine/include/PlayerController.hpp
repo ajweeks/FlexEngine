@@ -17,9 +17,9 @@ namespace flex
 		void ResetTransformAndVelocities();
 
 	private:
-		real m_MoveAcceleration = 50.0f;
-		real m_MaxMoveSpeed = 14.0f;
-		real m_RotateSpeed = 500.0f;
+		real m_MoveAcceleration = 140.0f;
+		real m_MaxMoveSpeed = 16.0f;
+		real m_RotateSpeed = 4.0f;
 		real m_RotateFriction = 0.05f;
 		// How quickly to turn towards direction of movement
 		real m_RotationSnappiness = 80.0f;

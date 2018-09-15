@@ -27,7 +27,7 @@ namespace flex
 
 		GameObject* m_Slingshot = nullptr;
 
-		real m_MoveFriction = 3.0f;
+		real m_MoveFriction = 6.0f;
 
 		real m_Height = 4.0f;
 	};

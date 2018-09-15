@@ -168,6 +168,16 @@ namespace flex
 		outRot = BtQuaternionToQuaternion(transform.getRotation());
 	}
 
+	void RigidBody::SetOrientationConstraint(const btVector3& axis)
+	{
+		m_RigidBody->setAngularFactor(axis);
+	}
+
+	void RigidBody::SetPositionalConstraint(const btVector3& axis)
+	{
+		m_RigidBody->setLinearFactor(axis);
+	}
+
 	void RigidBody::SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos)
 	{
 		m_LocalPosition = pos;
@@ -298,17 +308,12 @@ namespace flex
 
 	void RigidBody::GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward)
 	{
-		// TODO: Use transform members?
-		static const btVector3 worldUp(0.0f, 1.0f, 0.0f);
-		static const btVector3 worldRight(1.0f, 0.0f, 0.0f);
-		static const btVector3 worldForward(0.0f, 0.0f, 1.0f);
 		const btTransform& transform = m_RigidBody->getWorldTransform();
-		
 		btQuaternion rot = transform.getRotation();
-		btMatrix3x3 rotMat(rot);
-		up = rotMat * worldUp;
-		right = rotMat * worldRight;
-		forward = rotMat * worldForward;
+		btMatrix3x3 rotMat = btMatrix3x3(rot).transpose();
+		right = rotMat[0];
+		up = rotMat[1];
+		forward = rotMat[2];
 	}
 
 	btRigidBody* RigidBody::GetRigidBodyInternal()

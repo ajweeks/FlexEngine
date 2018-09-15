@@ -82,7 +82,7 @@ namespace flex
 
 	void Player::PostInitialize()
 	{
-		m_RigidBody->GetRigidBodyInternal()->setAngularFactor(btVector3(0, 1, 0));
+		m_RigidBody->SetOrientationConstraint(btVector3(0.0f, 1.0f, 0.0f));
 		m_RigidBody->GetRigidBodyInternal()->setSleepingThresholds(0.0f, 0.0f);
 
 		GameObject::PostInitialize();

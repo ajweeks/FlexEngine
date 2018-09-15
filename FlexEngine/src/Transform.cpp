@@ -640,6 +640,14 @@ namespace flex
 			SetWorldPosition(pos, false);
 			SetWorldRotation(rot, false);
 			SetWorldScale(scale, bUpdateChain);
+
+			if (!bUpdateChain)
+			{
+				glm::mat3 rotMat(worldRotation);
+				right = rotMat[0];
+				up = rotMat[1];
+				forward = rotMat[2];
+			}
 		}
 	}
 } // namespace flex

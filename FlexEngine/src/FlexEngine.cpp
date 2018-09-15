@@ -908,6 +908,8 @@ namespace flex
 				}
 			}
 
+			CalculateSelectedObjectsCenter();
+
 			bool bWriteProfilingResultsToFile = 
 				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
 
