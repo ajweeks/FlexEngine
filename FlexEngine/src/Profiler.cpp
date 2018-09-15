@@ -349,4 +349,15 @@ namespace flex
 		
 		return (u64)result;
 	}
+
+	AutoProfilerBlock::AutoProfilerBlock(const char* blockName)
+	{
+		Profiler::Begin(blockName);
+		m_BlockName = blockName;
+	}
+
+	AutoProfilerBlock::~AutoProfilerBlock()
+	{
+		Profiler::End(m_BlockName);
+	}
 } // namespace flex

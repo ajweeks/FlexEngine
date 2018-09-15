@@ -100,7 +100,6 @@ namespace flex
 				u32 enableMetallicSampler;
 				u32 enableRoughnessSampler;
 				u32 enableAOSampler;
-				u32 enableDiffuseSampler;
 				u32 enableNormalSampler;
 				u32 enableCubemapSampler;
 				u32 enableIrradianceSampler;

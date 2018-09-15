@@ -182,7 +182,7 @@ namespace flex
 			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
-			void UpdateMaterialUniforms(MaterialID materialID);
+			void UpdateAllMaterialUniforms();
 			void UpdatePerObjectUniforms(RenderID renderID, MaterialID materialIDOverride = InvalidMaterialID);
 			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model);
 

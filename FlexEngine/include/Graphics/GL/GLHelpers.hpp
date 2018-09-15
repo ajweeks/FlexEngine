@@ -46,7 +46,6 @@ namespace flex
 			{
 				i32 model;
 				i32 modelInvTranspose;
-				i32 modelViewProjection;
 				i32 colorMultiplier;
 				i32 contrastBrightnessSaturation;
 				i32 exposure;
@@ -55,7 +54,6 @@ namespace flex
 				i32 viewInv;
 				i32 projection;
 				i32 camPos;
-				i32 enableDiffuseTexture;
 				i32 enableNormalTexture;
 				i32 enableCubemapTexture;
 				i32 constAlbedo;
@@ -74,7 +72,6 @@ namespace flex
 			};
 			UniformIDs uniformIDs;
 
-			u32 diffuseSamplerID = InvalidID;
 			u32 normalSamplerID = InvalidID;
 
 			u32 cubemapSamplerID = InvalidID;
@@ -129,7 +126,8 @@ namespace flex
 
 		struct UniformInfo
 		{
-			const GLchar* name;
+			Uniform uniform;
+			const char* name;
 			i32* id;
 		};
 

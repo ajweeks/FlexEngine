@@ -80,8 +80,8 @@ namespace flex
 		void SetGameObject(GameObject* gameObject);
 		GameObject* GetGameObject() const;
 
-		glm::mat4 GetWorldTransform();
-		glm::mat4 GetLocalTransform();
+		const glm::mat4& GetWorldTransform();
+		const glm::mat4& GetLocalTransform();
 
 		void UpdateParentTransform(); // Climbs up the parent-child tree up to the root
 

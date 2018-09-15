@@ -4,57 +4,49 @@
 
 namespace flex
 {
-	bool Uniforms::HasUniform(const char* name) const
+	bool Uniforms::HasUniform(Uniform uniform) const
 	{
-		return (types.find(name) != types.end());
+		return ((u64)uniforms & (u64)uniform) != 0;
 	}
 
-	void Uniforms::AddUniform(const char* name)
+	void Uniforms::AddUniform(Uniform uniform)
 	{
-		types.insert({ name, true });
+		uniforms = (Uniform)((u64)uniforms | (u64)uniform);
 	}
 
-	void Uniforms::RemoveUniform(const char* name)
-	{
-		auto iter = types.find(name);
-		if (iter == types.end())
-		{
-			PrintWarn("Attempted to remove uniform that doesn't exist! %s\n", name);
-		}
-		else
-		{
-			types.erase(iter);
-		}
-	}
+	//void Uniforms::RemoveUniform(Uniform uniform)
+	//{
+	//	uniforms = (Uniform)((u64)uniforms & ~(u64)uniform);
+	//}
 
 	u32 Uniforms::CalculateSize(i32 PointLightCount)
 	{
+		// NOTE: This function is only needed for Vulkan buffer initialization calculations
+
 		u32 size = 0;
 
-		if (HasUniform("model")) size += sizeof(glm::mat4);
-		if (HasUniform("modelInvTranspose")) size += sizeof(glm::mat4);
-		if (HasUniform("modelViewProjection")) size += sizeof(glm::mat4);
-		if (HasUniform("view")) size += sizeof(glm::mat4);
-		if (HasUniform("viewInv")) size += sizeof(glm::mat4);
-		if (HasUniform("viewProjection")) size += sizeof(glm::mat4);
-		if (HasUniform("projection")) size += sizeof(glm::mat4);
-		if (HasUniform("colorMultiplier")) size += sizeof(glm::vec4);
-		if (HasUniform("camPos")) size += sizeof(glm::vec4);
-		if (HasUniform("dirLight")) size += sizeof(DirectionalLight);
-		if (HasUniform("pointLights")) size += sizeof(PointLight) * PointLightCount;
-		if (HasUniform("enableAlbedoSampler")) size += sizeof(u32);
-		if (HasUniform("constAlbedo")) size += sizeof(glm::vec4);
-		if (HasUniform("enableMetallicSampler")) size += sizeof(u32);
-		if (HasUniform("constMetallic")) size += sizeof(real);
-		if (HasUniform("enableRoughnessSampler")) size += sizeof(u32);
-		if (HasUniform("constRoughness")) size += sizeof(real);
-		if (HasUniform("roughness")) size += sizeof(real);
-		if (HasUniform("enableAOSampler")) size += sizeof(u32);
-		if (HasUniform("constAO")) size += sizeof(real);
-		if (HasUniform("enableNormalSampler")) size += sizeof(u32);
-		if (HasUniform("enableDiffuseSampler")) size += sizeof(u32);
-		if (HasUniform("enableCubemapSampler")) size += sizeof(u32);
-		if (HasUniform("enableIrradianceSampler")) size += sizeof(u32);
+		//if (HasUniform(Uniform::MODEL)) size += sizeof(glm::mat4);
+		//if (HasUniform(Uniform::MODEL_INV_TRANSPOSE)) size += sizeof(glm::mat4);
+		//if (HasUniform(Uniform::VIEW)) size += sizeof(glm::mat4);
+		//if (HasUniform(Uniform::VIEW_INV)) size += sizeof(glm::mat4);
+		//if (HasUniform(Uniform::VIEW_PROJECTION)) size += sizeof(glm::mat4);
+		//if (HasUniform(Uniform::PROJECTION)) size += sizeof(glm::mat4);
+		//if (HasUniform(Uniform::COLOR_MULTIPLIER)) size += sizeof(glm::vec4);
+		//if (HasUniform(Uniform::CAM_POS)) size += sizeof(glm::vec4);
+		//if (HasUniform(Uniform::DIR_LIGHT)) size += sizeof(DirectionalLight);
+		//if (HasUniform(Uniform::POINT_LIGHTS)) size += sizeof(PointLight) * PointLightCount;
+		//if (HasUniform(Uniform::ALBEDO_SAMPLER)) size += sizeof(u32);
+		//if (HasUniform(Uniform::CONST_ALBEDO)) size += sizeof(glm::vec4);
+		//if (HasUniform(Uniform::METALLIC_SAMPLER)) size += sizeof(u32);
+		//if (HasUniform(Uniform::CONST_METALLIC)) size += sizeof(real);
+		//if (HasUniform(Uniform::ROUGHNESS_SAMPLER)) size += sizeof(u32);
+		//if (HasUniform(Uniform::CONST_ROUGHNESS)) size += sizeof(real);
+		////if (HasUniform(Uniform::ROUGHNESS)) size += sizeof(real);
+		//if (HasUniform(Uniform::AO_SAMPLER)) size += sizeof(u32);
+		//if (HasUniform(Uniform::CONST_AO)) size += sizeof(real);
+		//if (HasUniform(Uniform::NORMAL_SAMPLER)) size += sizeof(u32);
+		//if (HasUniform(Uniform::ENABLE_CUBEMAP_SAMPLER)) size += sizeof(u32);
+		//if (HasUniform(Uniform::IRRADIANCE_SAMPLER)) size += sizeof(u32);
 
 		return size;
 	}
@@ -78,9 +70,6 @@ namespace flex
 		bool equal =
 			(name == other.name &&
 				shaderID == other.shaderID &&
-				generateDiffuseSampler == other.generateDiffuseSampler &&
-				enableDiffuseSampler == other.enableDiffuseSampler &&
-				diffuseTexturePath == other.diffuseTexturePath &&
 				generateNormalSampler == other.generateNormalSampler &&
 				enableNormalSampler == other.enableNormalSampler &&
 				normalTexturePath == other.normalTexturePath &&

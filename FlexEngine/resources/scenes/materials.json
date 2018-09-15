@@ -60,6 +60,23 @@
 			"environment map path" : "hdri/Protospace_B/Protospace_B_Env.hdr"
 		},
 		{
+			"name" : "skybox 02",
+			"shader" : "skybox",
+			"const albedo" : "0.000, 0.000, 0.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000,
+			"generate hdr cubemap sampler" : true,
+			"enable cubemap sampler" : true,
+			"enable cubemap trilinear filtering" : true,
+			"generated cubemap size" : "512, 512",
+			"generate irradiance sampler" : true,
+			"generated irradiance cubemap size" : "32, 32",
+			"generate prefiltered map" : true,
+			"generated prefiltered map size" : "128, 128",
+			"environment map path" : "hdri/WinterForest_Ref.hdr"
+		},
+		{
 			"name" : "cerberus",
 			"shader" : "pbr",
 			"const albedo" : "1.000, 1.000, 1.000",

@@ -13,15 +13,15 @@ namespace flex
 {
 	bool JSONParser::Parse(const std::string& filePath, JSONObject& rootObject)
 	{
-		std::string fileContents;
-		if (!ReadFile(filePath, fileContents, false))
+		std::string dirtyFileContents;
+		if (!ReadFile(filePath, dirtyFileContents, false))
 		{
 			PrintError("Couldn't find JSON file: %s\n", filePath.c_str());
 			return false;
 		}
 
-		size_t firstBracket = fileContents.find('{');
-		size_t lastBracket = fileContents.rfind('}');
+		size_t firstBracket = dirtyFileContents.find('{');
+		size_t lastBracket = dirtyFileContents.rfind('}');
 
 		if (firstBracket == std::string::npos ||
 			lastBracket == std::string::npos || 
@@ -30,38 +30,43 @@ namespace flex
 			PrintError("Failed to parse JSON file. No valid bracket pairs found!\n");
 		}
 
-		bool inQuote = false;
+		std::string cleanFileContents;
+		cleanFileContents.reserve(dirtyFileContents.size());
+		bool bInQuote = false;
 		i32 i = 0;
-		while (i < (i32)fileContents.size())
+		while (i < (i32)dirtyFileContents.size())
 		{
-			char currentChar = fileContents[i];
+			char currentChar = dirtyFileContents[i];
 			if (currentChar == '\"')
 			{
-				inQuote = !inQuote;
-				++i;
-				continue;
+				bInQuote = !bInQuote;
+				cleanFileContents.push_back(currentChar);
 			}
 			else
 			{
-				if (!inQuote)
+				if (bInQuote)
 				{
-					// Remove all single line comments
-					if (currentChar == '/' && fileContents[i + 1] == '/')
+					cleanFileContents.push_back(currentChar);
+				}
+				else
+				{
+					// Skip single line comments
+					if (currentChar == '/' && dirtyFileContents[i + 1] == '/')
 					{
-						size_t endLine = fileContents.find('\n', i + 2);
+						size_t endLine = dirtyFileContents.find('\n', i + 2);
 						if (endLine == std::string::npos)
 						{
-							endLine = fileContents.size();
+							endLine = dirtyFileContents.size();
 						}
 
-						fileContents.erase(i, endLine - i);
+						i += endLine - i;
+						//fileContents.erase(i, endLine - i);
 						continue;
 					}
-					// Remove all whitespace characters
-					else if (isspace(currentChar))
+					// Skip all whitespace characters
+					else if (!isspace(currentChar))
 					{
-						fileContents.erase(i, 1);
-						continue;
+						cleanFileContents.push_back(currentChar);
 					}
 				}
 			}
@@ -72,24 +77,24 @@ namespace flex
 		rootObject = {};
 
 		i32 fileContentOffset = 0;
-		bool parseSucceeded = true;
-		bool parsing = true;
-		while (parsing)
+		bool bParseSucceeded = true;
+		bool bParsing = true;
+		while (bParsing)
 		{
 			JSONField field;
-			parsing = ParseField(fileContents, &fileContentOffset, field);
+			bParsing = ParseField(cleanFileContents, &fileContentOffset, field);
 			rootObject.fields.push_back(field);
 
-			parseSucceeded |= parsing;
+			bParseSucceeded |= bParsing;
 
-			if (fileContentOffset == (i32)(fileContents.size() - 1))
+			if (fileContentOffset == (i32)(cleanFileContents.size() - 1))
 			{
 				// We've reached the end of the file!
-				parsing = false;
+				bParsing = false;
 			}
 		}
 
-		return parseSucceeded;
+		return bParseSucceeded;
 	}
 
 	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
@@ -101,11 +106,11 @@ namespace flex
 			return false;
 		}
 
-		bool parsing = true;
-		while (parsing && *offset < objectClosingBracket)
+		bool bParsing = true;
+		while (bParsing && *offset < objectClosingBracket)
 		{
 			JSONField field;
-			parsing = ParseField(fileContents, offset, field);
+			bParsing = ParseField(fileContents, offset, field);
 			outObject.fields.push_back(field);
 		}
 
@@ -292,17 +297,17 @@ namespace flex
 		i32 openCurlyBracketCount = 0;  // {
 		i32 openParenthesesCount = 0;   // (
 
-		bool inQuotes = false;
+		bool bInQuotes = false;
 		while (offset < (i32)fileContents.size())
 		{
 			char currentChar = fileContents[offset];
 
 			if (currentChar == '\"')
 			{
-				inQuotes = !inQuotes;
+				bInQuotes = !bInQuotes;
 			}
 			
-			if (!inQuotes)
+			if (!bInQuotes)
 			{
 				if (currentChar == '[')
 				{

@@ -82,9 +82,11 @@ inline void SafeDelete(T &pObjectToDelete)
 #if ENABLE_PROFILING
 #define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
 #define PROFILE_END(blockName) Profiler::End(blockName);
+#define PROFILE_AUTO(blockName) AutoProfilerBlock autoProfileBlock(blockName);
 #else
 #define PROFILE_BEGIN(blockName)
 #define PROFILE_END(blockName)
+#define PROFILE_AUTO(blockName)
 #endif
 
 namespace flex

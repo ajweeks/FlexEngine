@@ -167,6 +167,12 @@ namespace flex
 			fontMatCreateInfo.engineMaterial = true;
 			m_FontMatID = InitializeMaterial(&fontMatCreateInfo);
 
+			MaterialCreateInfo shadowMatCreateInfo = {};
+			shadowMatCreateInfo.name = "Shadow material";
+			shadowMatCreateInfo.shaderName = "shadow";
+			shadowMatCreateInfo.engineMaterial = true;
+			m_ShadowMatID = InitializeMaterial(&shadowMatCreateInfo);
+
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
@@ -498,38 +504,36 @@ namespace flex
 
 			// TODO: Is this really needed? (do things dynamically instead?)
 			UniformInfo uniformInfo[] = {
-				{ "model", 							&mat.uniformIDs.model },
-				{ "modelInvTranspose", 				&mat.uniformIDs.modelInvTranspose },
-				{ "modelViewProjection",			&mat.uniformIDs.modelViewProjection },
-				{ "colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
-				{ "contrastBrightnessSaturation", 	&mat.uniformIDs.contrastBrightnessSaturation },
-				{ "exposure",						&mat.uniformIDs.exposure },
-				{ "view", 							&mat.uniformIDs.view },
-				{ "viewInv", 						&mat.uniformIDs.viewInv },
-				{ "viewProjection", 				&mat.uniformIDs.viewProjection },
-				{ "projection", 					&mat.uniformIDs.projection },
-				{ "camPos", 						&mat.uniformIDs.camPos },
-				{ "enableDiffuseSampler", 			&mat.uniformIDs.enableDiffuseTexture },
-				{ "enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
-				{ "enableCubemapSampler", 			&mat.uniformIDs.enableCubemapTexture },
-				{ "enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
-				{ "constAlbedo", 					&mat.uniformIDs.constAlbedo },
-				{ "enableMetallicSampler", 			&mat.uniformIDs.enableMetallicSampler },
-				{ "constMetallic", 					&mat.uniformIDs.constMetallic },
-				{ "enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
-				{ "constRoughness", 				&mat.uniformIDs.constRoughness },
-				{ "enableAOSampler",				&mat.uniformIDs.enableAOSampler },
-				{ "constAO",						&mat.uniformIDs.constAO },
-				{ "hdrEquirectangularSampler",		&mat.uniformIDs.hdrEquirectangularSampler },
-				{ "enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
-				{ "transformMat",					&mat.uniformIDs.transformMat },
-				{ "texSize",						&mat.uniformIDs.texSize },
+				{ Uniform::MODEL,							"model", 						&mat.uniformIDs.model },
+				{ Uniform::MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
+				{ Uniform::COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
+				{ Uniform::CONTRAST_BRIGHTNESS_SATURATION, 	"contrastBrightnessSaturation", &mat.uniformIDs.contrastBrightnessSaturation },
+				{ Uniform::EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
+				{ Uniform::VIEW, 							"view", 						&mat.uniformIDs.view },
+				{ Uniform::VIEW_INV, 						"viewInv", 						&mat.uniformIDs.viewInv },
+				{ Uniform::VIEW_PROJECTION, 				"viewProjection", 				&mat.uniformIDs.viewProjection },
+				{ Uniform::PROJECTION, 						"projection", 					&mat.uniformIDs.projection },
+				{ Uniform::CAM_POS, 						"camPos", 						&mat.uniformIDs.camPos },
+				{ Uniform::NORMAL_SAMPLER, 					"enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
+				{ Uniform::CUBEMAP_SAMPLER, 				"enableCubemapSampler", 		&mat.uniformIDs.enableCubemapTexture },
+				{ Uniform::ALBEDO_SAMPLER,	 				"enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
+				{ Uniform::CONST_ALBEDO, 					"constAlbedo", 					&mat.uniformIDs.constAlbedo },
+				{ Uniform::METALLIC_SAMPLER,		 		"enableMetallicSampler", 		&mat.uniformIDs.enableMetallicSampler },
+				{ Uniform::CONST_METALLIC, 					"constMetallic", 				&mat.uniformIDs.constMetallic },
+				{ Uniform::ROUGHNESS_SAMPLER,	 			"enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
+				{ Uniform::CONST_ROUGHNESS, 				"constRoughness", 				&mat.uniformIDs.constRoughness },
+				{ Uniform::AO_SAMPLER,						"enableAOSampler",				&mat.uniformIDs.enableAOSampler },
+				{ Uniform::CONST_AO,						"constAO",						&mat.uniformIDs.constAO },
+				{ Uniform::HDR_EQUIRECTANGULAR_SAMPLER,		"hdrEquirectangularSampler",	&mat.uniformIDs.hdrEquirectangularSampler },
+				{ Uniform::IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
+				{ Uniform::TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
+				{ Uniform::TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
 			};
 
 			for (const UniformInfo& uniform : uniformInfo)
 			{
-				if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.name) ||
-					shader.shader.constantBufferUniforms.HasUniform(uniform.name))
+				if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.uniform) ||
+					shader.shader.constantBufferUniforms.HasUniform(uniform.uniform))
 				{
 					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
 					if (*uniform.id == -1)
@@ -539,10 +543,6 @@ namespace flex
 					}
 				}
 			}
-
-			mat.material.diffuseTexturePath = createInfo->diffuseTexturePath;
-			mat.material.generateDiffuseSampler = createInfo->generateDiffuseSampler;
-			mat.material.enableDiffuseSampler = createInfo->enableDiffuseSampler;
 
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
 			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
@@ -661,8 +661,6 @@ namespace flex
 				createInfo->roughnessTexturePath, "roughnessSampler", 3, false, true, false },
 				{ shader.shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID, 
 				createInfo->aoTexturePath, "aoSampler", 3, false, true, false },
-				{ shader.shader.needDiffuseSampler, mat.material.generateDiffuseSampler, &mat.diffuseSamplerID, 
-				createInfo->diffuseTexturePath, "diffuseSampler", 3, false, true, false },
 				{ shader.shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID, 
 				createInfo->normalTexturePath, "normalSampler", 3, false, true, false },
 				{ shader.shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
@@ -1512,6 +1510,8 @@ namespace flex
 
 		void GLRenderer::SwapBuffers()
 		{
+			PROFILE_AUTO("Renderer SwapBuffers");
+
 			glfwSwapBuffers(static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow());
 		}
 
@@ -1666,44 +1666,35 @@ namespace flex
 
 			DrawCallInfo drawCallInfo = {};
 
-			// TDDO: Find an alternative to so many PROFILE macros...
+			UpdateAllMaterialUniforms();
 
 			// TODO: Don't sort render objects frame! Only when things are added/removed
-			PROFILE_BEGIN("Render > BatchRenderObjects");
-			BatchRenderObjects();
-			PROFILE_END("Render > BatchRenderObjects");
+			static bool bBatch = true;
+			if (bBatch)
+			{
+				bBatch = false;
+				BatchRenderObjects();
+			}
+
+			DrawShadowDepthMaps();
 
 			// World-space objects
 			drawCallInfo.bDeferred = true;
-			PROFILE_BEGIN("Render > DrawDeferredObjects");
 			DrawDeferredObjects(drawCallInfo);
 			drawCallInfo.bDeferred = false;
-			PROFILE_END("Render > DrawDeferredObjects");
-			PROFILE_BEGIN("Render > DrawGBufferContents");
 			DrawGBufferContents(drawCallInfo);
-			PROFILE_END("Render > DrawGBufferContents");
-			PROFILE_BEGIN("Render > DrawForwardObjects");
 			DrawForwardObjects(drawCallInfo);
-			PROFILE_END("Render > DrawForwardObjects");
-			PROFILE_BEGIN("Render > DrawWorldSpaceSprites");
 			DrawWorldSpaceSprites();
-			PROFILE_END("Render > DrawWorldSpaceSprites");
-			PROFILE_BEGIN("Render > DrawOffscreenTexture");
 			DrawOffscreenTexture();
-			PROFILE_END("Render > DrawOffscreenTexture");
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
-				PROFILE_BEGIN("Render > PhysicsDebugRender");
 				PhysicsDebugRender();
-				PROFILE_END("Render > PhysicsDebugRender");
 			}
 
 			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
-				PROFILE_BEGIN("Render > DrawEditorObjects");
 				DrawEditorObjects(drawCallInfo);
-				PROFILE_END("Render > DrawEditorObjects");
 			}
 
 			// Screen-space objects
@@ -1802,9 +1793,7 @@ namespace flex
 				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3, false);
 			}
 
-			PROFILE_BEGIN("Render > DrawScreenSpaceSprites");
 			DrawScreenSpaceSprites();
-			PROFILE_END("Render > DrawScreenSpaceSprites");
 
 			PROFILE_BEGIN("Render > UpdateTextBuffer & DrawText");
 			UpdateTextBuffer();
@@ -1813,19 +1802,18 @@ namespace flex
 
 			if (g_EngineInstance->IsRenderingImGui())
 			{
-				PROFILE_BEGIN("Render > ImGuiRender");
+				PROFILE_AUTO("Render > ImGuiRender");
 				ImGui::Render();
 				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
-				PROFILE_END("Render > ImGuiRender");
 			}
 
-			PROFILE_BEGIN("Render > SwapBuffers");
 			SwapBuffers();
-			PROFILE_END("Render > SwapBuffers");
 		}
 
 		void GLRenderer::BatchRenderObjects()
 		{
+			PROFILE_AUTO("BatchRenderObjects");
+
 			/*
 			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
 			
@@ -1854,8 +1842,6 @@ namespace flex
 					continue;
 				}
 				GLShader* shader = &m_Shaders[shaderID];
-
-				UpdateMaterialUniforms(matID);
 
 				if (shader->shader.deferred)
 				{
@@ -1931,8 +1917,16 @@ namespace flex
 #endif
 		}
 
+		void GLRenderer::DrawShadowDepthMaps()
+		{
+			PROFILE_AUTO("DrawShadowDepthMaps");
+
+		}
+
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
 		{
+			PROFILE_AUTO("DrawDeferredObjects");
+
 			if (!drawCallInfo.bDeferred)
 			{
 				PrintError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferred!\n");
@@ -2005,6 +1999,8 @@ namespace flex
 
 		void GLRenderer::DrawGBufferContents(const DrawCallInfo& drawCallInfo)
 		{
+			PROFILE_AUTO("DrawGBufferContents");
+
 			if (drawCallInfo.bDeferred)
 			{
 				PrintError("DrawGBufferContents was called with a drawCallInfo set to deferred!\n");
@@ -2041,7 +2037,6 @@ namespace flex
 				glBindVertexArray(skybox->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 
-				UpdateMaterialUniforms(cubemapObject->materialID);
 				UpdatePerObjectUniforms(cubemapObject->materialID, 
 					skybox->gameObject->GetTransform()->GetWorldTransform());
 
@@ -2098,7 +2093,6 @@ namespace flex
 				glBindVertexArray(gBufferQuad->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
 
-				UpdateMaterialUniforms(gBufferQuad->materialID);
 				UpdatePerObjectUniforms(gBufferQuad->renderID);
 
 				u32 bindingOffset = BindFrameBufferTextures(material);
@@ -2125,6 +2119,8 @@ namespace flex
 
 		void GLRenderer::DrawForwardObjects(const DrawCallInfo& drawCallInfo)
 		{
+			PROFILE_AUTO("DrawForwardObjects");
+
 			if (drawCallInfo.bDeferred)
 			{
 				PrintError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!\n");
@@ -2138,6 +2134,8 @@ namespace flex
 
 		void GLRenderer::DrawEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
+			PROFILE_AUTO("DrawEditorObjects");
+
 			DrawRenderObjectBatch(m_EditorRenderObjectBatch, drawCallInfo);
 
 			const std::vector<GameObject*> selectedObjects = g_EngineInstance->GetSelectedObjects();
@@ -2172,6 +2170,8 @@ namespace flex
 
 		void GLRenderer::DrawOffscreenTexture()
 		{
+			PROFILE_AUTO("DrawOffscreenTexture");
+
 			SpriteQuadDrawInfo drawInfo = {};
 
 			drawInfo.FBO = m_Offscreen1FBO;
@@ -2228,9 +2228,12 @@ namespace flex
 
 		void GLRenderer::DrawScreenSpaceSprites()
 		{
-			PROFILE_BEGIN("Render > DrawScreenSpaceSprites > Display profiler frame");
-			Profiler::DrawDisplayedFrame();
-			PROFILE_END("Render > DrawScreenSpaceSprites > Display profiler frame");
+			PROFILE_AUTO("DrawScreenSpaceSprites");
+
+			{
+				PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
+				Profiler::DrawDisplayedFrame();
+			}
 
 			for (const SpriteQuadDrawInfo& drawInfo : m_QueuedSSSprites)
 			{
@@ -2303,6 +2306,8 @@ namespace flex
 
 		void GLRenderer::DrawWorldSpaceSprites()
 		{
+			PROFILE_AUTO("DrawWorldSpaceSprites");
+
 			for (SpriteQuadDrawInfo& drawInfo : m_QueuedWSSprites)
 			{
 				drawInfo.FBO = m_Offscreen0FBO;
@@ -2385,7 +2390,7 @@ namespace flex
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("model"))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL))
 			{
 				glm::vec3 translation = drawInfo.pos;
 				glm::quat rotation = drawInfo.rotation;
@@ -2415,7 +2420,7 @@ namespace flex
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, true, &model[0][0]);
 			}
 
-			if (spriteShader.shader.constantBufferUniforms.HasUniform("view"))
+			if (spriteShader.shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
 			{
 				if (drawInfo.bScreenSpace)
 				{
@@ -2431,7 +2436,7 @@ namespace flex
 				}
 			}
 
-			if (spriteShader.shader.constantBufferUniforms.HasUniform("projection"))
+			if (spriteShader.shader.constantBufferUniforms.HasUniform(Uniform::PROJECTION))
 			{
 				if (drawInfo.bScreenSpace)
 				{
@@ -2449,20 +2454,20 @@ namespace flex
 				}
 			}
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::COLOR_MULTIPLIER))
 			{
 				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
 			}
 
 			bool bEnableAlbedoSampler = (drawInfo.textureHandleID != 0 && drawInfo.bEnableAlbedoSampler);
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::ALBEDO_SAMPLER))
 			{
 				// TODO: glUniform1ui vs glUniform1i ?
 				glUniform1ui(spriteMaterial.uniformIDs.enableAlbedoSampler, bEnableAlbedoSampler ? 1 : 0);
 			}
 
 			// http://www.graficaobscura.com/matrix/
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform("contrastBrightnessSaturation"))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::CONTRAST_BRIGHTNESS_SATURATION))
 			{
 				glm::mat4 contrastBrightnessSaturation;
 				if (m_bPostProcessingEnabled)
@@ -3459,20 +3464,21 @@ namespace flex
 				GLenum target;
 			};
 
-			std::vector<Tex> textures;
-			textures.push_back({ shader->needAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needDiffuseSampler, material->enableDiffuseSampler, glMaterial->diffuseSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D });
-			textures.push_back({ shader->needIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP });
-			textures.push_back({ shader->needPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP });
-			textures.push_back({ shader->needCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP });
+			Tex textures[] = {
+				{ shader->needAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
+				{ shader->needMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
+				{ shader->needRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
+				{ shader->needAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D },
+				{ shader->needNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
+				{ shader->needBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
+				{ shader->needIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
+				{ shader->needPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
+				{ shader->needCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
+			};
+			// TODO: Update reserve count when adding more textures
 
 			u32 binding = startingBinding;
-			for (Tex& tex : textures)
+			for (const Tex& tex : textures)
 			{
 				if (tex.needed)
 				{
@@ -3945,7 +3951,6 @@ namespace flex
 		void GLRenderer::LoadShaders()
 		{
 			m_Shaders = {
-				{ "deferred_simple", RESOURCE_LOCATION + "shaders/deferred_simple.vert", RESOURCE_LOCATION + "shaders/deferred_simple.frag" },
 				{ "deferred_combine", RESOURCE_LOCATION + "shaders/deferred_combine.vert", RESOURCE_LOCATION + "shaders/deferred_combine.frag" },
 				{ "deferred_combine_cubemap", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.vert", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.frag" },
 				{ "color", RESOURCE_LOCATION + "shaders/color.vert", RESOURCE_LOCATION + "shaders/color.frag" },
@@ -3960,33 +3965,12 @@ namespace flex
 				{ "post_fxaa", RESOURCE_LOCATION + "shaders/post_fxaa.vert", RESOURCE_LOCATION + "shaders/post_fxaa.frag" },
 				{ "compute_sdf", RESOURCE_LOCATION + "shaders/ComputeSDF.vert", RESOURCE_LOCATION + "shaders/ComputeSDF.frag" },
 				{ "font", RESOURCE_LOCATION + "shaders/font.vert", RESOURCE_LOCATION + "shaders/font.frag",  RESOURCE_LOCATION + "shaders/font.geom" },
+				{ "shadow", RESOURCE_LOCATION + "shaders/shadow.vert", RESOURCE_LOCATION + "shaders/shadow.frag" },
 			};
 
 			ShaderID shaderID = 0;
 
 			// TOOD: Determine this info automatically when parsing shader code
-
-			// Deferred Simple
-			m_Shaders[shaderID].shader.deferred = true;
-			m_Shaders[shaderID].shader.needDiffuseSampler = true;
-			m_Shaders[shaderID].shader.needNormalSampler = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::BITANGENT |
-				(u32)VertexAttribute::NORMAL;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("modelInvTranspose");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableDiffuseSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
-			m_Shaders[shaderID].shader.vertexAttributes =
-			++shaderID;
 
 			// Deferred combine
 			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
@@ -3999,18 +3983,18 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("exposure");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("positionMetallicFrameBufferSampler");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("normalRoughnessFrameBufferSampler");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("albedoAOFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CAM_POS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::POINT_LIGHTS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::DIR_LIGHT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PREFILTER_MAP);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::BRDF_LUT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_0_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_1_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_2_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
 			++shaderID;
 
 			// Deferred combine cubemap
@@ -4023,34 +4007,35 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("camPos");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("exposure");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("pointLights");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("dirLight");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("irradianceSampler");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("prefilterMap");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("brdfLUT");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("positionMetallicFrameBufferSampler");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("normalRoughnessFrameBufferSampler");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("albedoAOFrameBufferSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CAM_POS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::POINT_LIGHTS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::DIR_LIGHT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PREFILTER_MAP);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::BRDF_LUT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_0_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_1_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_2_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableIrradianceSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
 			++shaderID;
 
 			// Color
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.translucent = true;
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::COLOR_MULTIPLIER);
 			++shaderID;
 
 			// PBR
@@ -4068,24 +4053,24 @@ namespace flex
 				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAlbedo");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("albedoSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constMetallic");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableMetallicSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("metallicSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constRoughness");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableRoughnessSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("roughnessSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAOSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("constAO");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("aoSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableNormalSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("normalSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ALBEDO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_METALLIC);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ROUGHNESS);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_AO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			++shaderID;
 
 			// Skybox
@@ -4094,13 +4079,13 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("exposure");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableCubemapSampler");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("cubemapSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ENABLE_CUBEMAP_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CUBEMAP_SAMPLER);
 			++shaderID;
 
 			// Equirectangular to Cube
@@ -4109,11 +4094,11 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("hdrEquirectangularSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::HDR_EQUIRECTANGULAR_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			++shaderID;
 
 			// Irradiance
@@ -4122,11 +4107,11 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CUBEMAP_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			++shaderID;
 
 			// Prefilter
@@ -4135,89 +4120,93 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("cubemapSampler");
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CUBEMAP_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			++shaderID;
 
 			// BRDF
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Sprite
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("view");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("projection");
 
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("enableAlbedoSampler");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::COLOR_MULTIPLIER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Post processing
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
 
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("model");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("colorMultiplier");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("contrastBrightnessSaturation");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::COLOR_MULTIPLIER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONTRAST_BRIGHTNESS_SATURATION);
 			++shaderID;
 
 			// Post FXAA (Fast approximate anti-aliasing)
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("lumaThresholdMin");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("lumaThresholdMax");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("mulReduce");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("minReduce");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("maxSpan");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("texelStep");
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform("bDEBUGShowEdges");
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LUMA_THRESHOLD_MIN);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LUMA_THRESHOLD_MAX);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::MUL_REDUCE);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::MIN_REDUCE);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::MAX_SPAN);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::TEXEL_STEP);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::SHOW_EDGES);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Compute SDF
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			// TODO: Move some of these to constant buffer
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("charResolution");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("spread");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("highResTex");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texChannel");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("sdfResolution");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("highRes");
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CHAR_RESOLUTION);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SPREAD);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::HIGH_RES_TEX);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEX_CHANNEL);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SDF_RESOLUTION);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::HIGH_RES);
 			++shaderID;
 
 			// Font
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4225,12 +4214,27 @@ namespace flex
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("transformMat");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("texSize");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("threshold");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("shadow");
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform("soften");
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TRANSFORM_MAT);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEX_SIZE);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::THRESHOLD);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SHADOW);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SOFTEN);
+			++shaderID;
+
+			// Shadow
+			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			++shaderID;
 
 			for (GLShader& shader : m_Shaders)
@@ -4259,12 +4263,9 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::UpdateMaterialUniforms(MaterialID materialID)
+		void GLRenderer::UpdateAllMaterialUniforms()
 		{
-			GLMaterial* material = &m_Materials[materialID];
-			GLShader* shader = &m_Shaders[material->material.shaderID];
-			
-			glUseProgram(shader->program);
+			PROFILE_AUTO("Update material uniforms");
 
 			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
@@ -4272,125 +4273,126 @@ namespace flex
 			glm::mat4 viewProj = proj * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 			real exposure = g_CameraManager->CurrentCamera()->exposure;
-
-			static const char* viewStr = "view";
-			if (shader->shader.constantBufferUniforms.HasUniform(viewStr))
+			
+			for (auto& materialPair : m_Materials)
 			{
-				glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
-			}
+				GLMaterial* material = &materialPair.second;
 
-			static const char* viewInvStr = "viewInv";
-			if (shader->shader.constantBufferUniforms.HasUniform(viewInvStr))
-			{
-				glUniformMatrix4fv(material->uniformIDs.viewInv, 1, false, &viewInv[0][0]);
-			}
+				GLShader* shader = &m_Shaders[material->material.shaderID];
 
-			static const char* projectionStr = "projection";
-			if (shader->shader.constantBufferUniforms.HasUniform(projectionStr))
-			{
-				glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &proj[0][0]);
-			}
+				glUseProgram(shader->program);
 
-			static const char* viewProjectionStr = "viewProjection";
-			if (shader->shader.constantBufferUniforms.HasUniform(viewProjectionStr))
-			{
-				glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, false, &viewProj[0][0]);
-			}
-
-			static const char* camPosStr = "camPos";
-			if (shader->shader.constantBufferUniforms.HasUniform(camPosStr))
-			{
-				glUniform4f(material->uniformIDs.camPos,
-					camPos.x,
-					camPos.y,
-					camPos.z,
-					camPos.w);
-			}
-
-			static const char* exposureStr = "exposure";
-			if (shader->shader.constantBufferUniforms.HasUniform(exposureStr))
-			{
-				glUniform1f(material->uniformIDs.exposure, exposure);
-			}
-
-			static const char* dirLightStr = "dirLight";
-			if (shader->shader.constantBufferUniforms.HasUniform(dirLightStr))
-			{
-				static const char* dirLightEnabledStr = "dirLight.enabled";
-				if (m_DirectionalLight.enabled)
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
 				{
-					SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
-					static const char* dirLightDirectionStr = "dirLight.direction";
-					SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight.direction);
-					static const char* dirLightColorStr = "dirLight.color";
-					SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight.color * m_DirectionalLight.brightness);
+					glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
 				}
-				else
+
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW_INV))
 				{
-					SetUInt(material->material.shaderID, dirLightEnabledStr, 0);
+					glUniformMatrix4fv(material->uniformIDs.viewInv, 1, false, &viewInv[0][0]);
 				}
-			}
 
-			static const char* pointLightsStr = "pointLights";
-			if (shader->shader.constantBufferUniforms.HasUniform(pointLightsStr))
-			{
-				for (size_t i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::PROJECTION))
 				{
-					const std::string numberStr(std::to_string(i));
-					const char* numberCStr = numberStr.c_str();
-					static const i32 strStartLen = 16;
-					char pointLightStrStart[strStartLen]; // Handles up to 99 numbers
-					strcpy_s(pointLightStrStart, "pointLights[");
-					strcat_s(pointLightStrStart, numberCStr);
-					strcat_s(pointLightStrStart, "]");
-					strcat_s(pointLightStrStart, "\0");
+					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &proj[0][0]);
+				}
 
-					char enabledStr[strStartLen + 8];
-					strcpy_s(enabledStr, pointLightStrStart);
-					static const char* dotEnabledStr = ".enabled";
-					strcat_s(enabledStr, dotEnabledStr);
-					if (i < m_PointLights.size())
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW_PROJECTION))
+				{
+					glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, false, &viewProj[0][0]);
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::CAM_POS))
+				{
+					glUniform4f(material->uniformIDs.camPos,
+						camPos.x,
+						camPos.y,
+						camPos.z,
+						camPos.w);
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::EXPOSURE))
+				{
+					glUniform1f(material->uniformIDs.exposure, exposure);
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::DIR_LIGHT))
+				{
+					static const char* dirLightEnabledStr = "dirLight.enabled";
+					if (m_DirectionalLight.enabled)
 					{
-						if (m_PointLights[i].enabled)
+						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
+						static const char* dirLightDirectionStr = "dirLight.direction";
+						SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight.direction);
+						static const char* dirLightColorStr = "dirLight.color";
+						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight.color * m_DirectionalLight.brightness);
+					}
+					else
+					{
+						SetUInt(material->material.shaderID, dirLightEnabledStr, 0);
+					}
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::POINT_LIGHTS))
+				{
+					for (size_t i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+					{
+						const std::string numberStr(std::to_string(i));
+						const char* numberCStr = numberStr.c_str();
+						static const i32 strStartLen = 16;
+						char pointLightStrStart[strStartLen]; // Handles up to 99 numbers
+						strcpy_s(pointLightStrStart, "pointLights[");
+						strcat_s(pointLightStrStart, numberCStr);
+						strcat_s(pointLightStrStart, "]");
+						strcat_s(pointLightStrStart, "\0");
+
+						char enabledStr[strStartLen + 8];
+						strcpy_s(enabledStr, pointLightStrStart);
+						static const char* dotEnabledStr = ".enabled";
+						strcat_s(enabledStr, dotEnabledStr);
+						if (i < m_PointLights.size())
 						{
-							SetUInt(material->material.shaderID, enabledStr, 1);
+							if (m_PointLights[i].enabled)
+							{
+								SetUInt(material->material.shaderID, enabledStr, 1);
 
-							char positionStr[strStartLen + 9];
-							strcpy_s(positionStr, pointLightStrStart);
-							static const char* dotPositionStr = ".position";
-							strcat_s(positionStr, dotPositionStr);
-							SetVec4f(material->material.shaderID, positionStr, m_PointLights[i].position);
+								char positionStr[strStartLen + 9];
+								strcpy_s(positionStr, pointLightStrStart);
+								static const char* dotPositionStr = ".position";
+								strcat_s(positionStr, dotPositionStr);
+								SetVec4f(material->material.shaderID, positionStr, m_PointLights[i].position);
 
-							char colorStr[strStartLen + 6];
-							strcpy_s(colorStr, pointLightStrStart);
-							static const char* dotColorStr = ".color";
-							strcat_s(colorStr, dotColorStr);
-							SetVec4f(material->material.shaderID, colorStr, m_PointLights[i].color * m_PointLights[i].brightness);
+								char colorStr[strStartLen + 6];
+								strcpy_s(colorStr, pointLightStrStart);
+								static const char* dotColorStr = ".color";
+								strcat_s(colorStr, dotColorStr);
+								SetVec4f(material->material.shaderID, colorStr, m_PointLights[i].color * m_PointLights[i].brightness);
+							}
+							else
+							{
+								SetUInt(material->material.shaderID, enabledStr, 0);
+							}
 						}
 						else
 						{
 							SetUInt(material->material.shaderID, enabledStr, 0);
 						}
 					}
-					else
-					{
-						SetUInt(material->material.shaderID, enabledStr, 0);
-					}
 				}
-			}
 
-			static const char* texelStepStr = "texelStep";
-			if (shader->shader.constantBufferUniforms.HasUniform(texelStepStr))
-			{
-				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-				glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
-				SetVec2f(material->material.shaderID, texelStepStr, texelStep);
-			}
+				static const char* texelStepStr = "texelStep";
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::TEXEL_STEP))
+				{
+					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+					glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
+					SetVec2f(material->material.shaderID, texelStepStr, texelStep);
+				}
 
-			static const char* bDEBUGShowEdgesStr = "bDEBUGShowEdges";
-			if (shader->shader.constantBufferUniforms.HasUniform(bDEBUGShowEdgesStr))
-			{
-				SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
+				static const char* bDEBUGShowEdgesStr = "bDEBUGShowEdges";
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::SHOW_EDGES))
+				{
+					SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
+				}
 			}
 		}
 
@@ -4403,7 +4405,7 @@ namespace flex
 				return;
 			}
 
-			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
+			const glm::mat4& model = renderObject->gameObject->GetTransform()->GetWorldTransform();
 			MaterialID matID = materialIDOverride;
 			if (matID == InvalidMaterialID)
 			{
@@ -4419,86 +4421,76 @@ namespace flex
 			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
-			glm::mat4 modelInv = glm::inverse(model);
-			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-			glm::mat4 MVP = proj * view * model;
-			glm::vec4 colorMultiplier = material->material.colorMultiplier;
-
 			// TODO: Use set functions here (SetFloat, SetMatrix, ...)
-			if (shader->shader.dynamicBufferUniforms.HasUniform("model"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL))
 			{
 				glUniformMatrix4fv(material->uniformIDs.model, 1, false, &model[0][0]);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("modelInvTranspose"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL_INV_TRANSPOSE))
 			{
+				glm::mat4 modelInv = glm::inverse(model);
 				// OpenGL will transpose for us if we set the third param to true
 				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, true, &modelInv[0][0]);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::COLOR_MULTIPLIER))
 			{
-				// OpenGL will transpose for us if we set the third param to true
+				glm::vec4 colorMultiplier = material->material.colorMultiplier;
 				glUniform4fv(material->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableDiffuseSampler"))
-			{
-				glUniform1i(material->uniformIDs.enableDiffuseTexture, material->material.enableDiffuseSampler);
-			}
-
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableNormalSampler"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::NORMAL_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableNormalTexture, material->material.enableNormalSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableCubemapSampler"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::ENABLE_CUBEMAP_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableCubemapTexture, material->material.enableCubemapSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAlbedoSampler"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::ALBEDO_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableAlbedoSampler, material->material.enableAlbedoSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("constAlbedo"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_ALBEDO))
 			{
 				glUniform4f(material->uniformIDs.constAlbedo, material->material.constAlbedo.x, material->material.constAlbedo.y, material->material.constAlbedo.z, 0);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableMetallicSampler"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::METALLIC_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableMetallicSampler, material->material.enableMetallicSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("constMetallic"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_METALLIC))
 			{
 				glUniform1f(material->uniformIDs.constMetallic, material->material.constMetallic);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableRoughnessSampler"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::ROUGHNESS_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableRoughnessSampler, material->material.enableRoughnessSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("constRoughness"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_ROUGHNESS))
 			{
 				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableAOSampler"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::AO_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableAOSampler, material->material.enableAOSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("constAO"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_AO))
 			{
 				glUniform1f(material->uniformIDs.constAO, material->material.constAO);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform("enableIrradianceSampler"))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::IRRADIANCE_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableIrradianceSampler, material->material.enableIrradianceSampler);
 			}
@@ -4951,6 +4943,8 @@ namespace flex
 
 		void GLRenderer::PhysicsDebugRender()
 		{
+			PROFILE_AUTO("PhysicsDebugRender");
+
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
 		}

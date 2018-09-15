@@ -6,6 +6,14 @@
 
 namespace flex
 {
+	struct AutoProfilerBlock
+	{
+		AutoProfilerBlock(const char* blockName);
+		~AutoProfilerBlock();
+
+		const char* m_BlockName;
+	};
+
 	class Profiler
 	{
 	public:

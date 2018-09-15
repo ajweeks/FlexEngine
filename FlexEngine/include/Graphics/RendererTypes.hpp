@@ -17,6 +17,44 @@ namespace flex
 {
 	class VertexBufferData;
 
+#define BIT(x) (1 << x)
+
+	enum class Uniform : i64
+	{
+		MODEL						= BIT(0),
+		MODEL_INV_TRANSPOSE			= BIT(1),
+		VIEW						= BIT(2),
+		VIEW_INV					= BIT(3),
+		VIEW_PROJECTION				= BIT(4),
+		PROJECTION					= BIT(5),
+		COLOR_MULTIPLIER			= BIT(6),
+		CAM_POS						= BIT(7),
+		DIR_LIGHT					= BIT(8),
+		POINT_LIGHTS				= BIT(9),
+		ALBEDO_SAMPLER				= BIT(10),
+		CONST_ALBEDO				= BIT(11),
+		METALLIC_SAMPLER			= BIT(12),
+		CONST_METALLIC				= BIT(13),
+		ROUGHNESS_SAMPLER			= BIT(14),
+		CONST_ROUGHNESS				= BIT(15),
+		AO_SAMPLER					= BIT(16),
+		CONST_AO					= BIT(17),
+		NORMAL_SAMPLER				= BIT(18),
+		ENABLE_CUBEMAP_SAMPLER		= BIT(19),
+		CUBEMAP_SAMPLER				= BIT(20),
+		IRRADIANCE_SAMPLER			= BIT(21),
+		FB_0_SAMPLER				= BIT(22),
+		FB_1_SAMPLER				= BIT(23),
+		FB_2_SAMPLER				= BIT(24),
+		TEXEL_STEP					= BIT(25),
+		SHOW_EDGES					= BIT(26),
+		CONTRAST_BRIGHTNESS_SATURATION = BIT(27),
+		HDR_EQUIRECTANGULAR_SAMPLER	= BIT(28),
+		EXPOSURE					= BIT(29),
+		TRANSFORM_MAT				= BIT(30),
+		TEX_SIZE					= BIT(31),
+	};
+
 	enum class ClearFlag
 	{
 		COLOR =   (1 << 0),
@@ -118,7 +156,6 @@ namespace flex
 		std::string shaderName = "";
 		std::string name = "";
 
-		std::string diffuseTexturePath = "";
 		std::string normalTexturePath = "";
 		std::string albedoTexturePath = "";
 		std::string metallicTexturePath = "";
@@ -126,8 +163,6 @@ namespace flex
 		std::string aoTexturePath = "";
 		std::string hdrEquirectangularTexturePath = "";
 
-		bool generateDiffuseSampler = false;
-		bool enableDiffuseSampler = false;
 		bool generateNormalSampler = false;
 		bool enableNormalSampler = false;
 		bool generateAlbedoSampler = false;
@@ -188,10 +223,6 @@ namespace flex
 		std::string name = "";
 
 		ShaderID shaderID = InvalidShaderID;
-
-		bool generateDiffuseSampler = false;
-		bool enableDiffuseSampler = false;
-		std::string diffuseTexturePath = "";
 
 		bool generateNormalSampler = false;
 		bool enableNormalSampler = false;
@@ -286,11 +317,12 @@ namespace flex
 
 	struct Uniforms
 	{
+		Uniform uniforms;
 		std::map<const char*, bool, strCmp> types;
 
-		bool HasUniform(const char* name) const;
-		void AddUniform(const char* name);
-		void RemoveUniform(const char* name);
+		bool HasUniform(Uniform uniform) const;
+		void AddUniform(Uniform uniform);
+		//void RemoveUniform(Uniform uniform);
 		u32 CalculateSize(i32 PointLightCount);
 	};
 
@@ -320,7 +352,6 @@ namespace flex
 		bool translucent = false;
 
 		// These variables should be set to true when the shader has these uniforms
-		bool needDiffuseSampler = false;
 		bool needNormalSampler = false;
 		bool needCubemapSampler = false;
 		bool needAlbedoSampler = false;
