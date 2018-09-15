@@ -187,6 +187,7 @@ namespace flex
 			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model);
 
 			void BatchRenderObjects();
+			void DrawShadowDepthMaps();
 			void DrawDeferredObjects(const DrawCallInfo& drawCallInfo);
 			// Draws the GBuffer quad, or the GBuffer cube if rendering to a cubemap
 			void DrawGBufferContents(const DrawCallInfo& drawCallInfo);
@@ -294,6 +295,7 @@ namespace flex
 
 			MaterialID m_SpriteMatID = InvalidMaterialID;
 			MaterialID m_FontMatID = InvalidMaterialID;
+			MaterialID m_ShadowMatID = InvalidMaterialID;
 			MaterialID m_PostProcessMatID = InvalidMaterialID;
 			MaterialID m_PostFXAAMatID = InvalidMaterialID;
 			MaterialID m_SelectedObjectMatID = InvalidMaterialID;
