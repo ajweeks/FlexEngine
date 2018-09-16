@@ -48,7 +48,7 @@ namespace flex
 		FB_2_SAMPLER				= BIT(24),
 		TEXEL_STEP					= BIT(25),
 		SHOW_EDGES					= BIT(26),
-		CONTRAST_BRIGHTNESS_SATURATION = BIT(27),
+		LIGHT_VIEW_PROJ				= BIT(27),
 		HDR_EQUIRECTANGULAR_SAMPLER	= BIT(28),
 		EXPOSURE					= BIT(29),
 		TRANSFORM_MAT				= BIT(30),
@@ -125,27 +125,20 @@ namespace flex
 
 	struct DirectionalLight
 	{
-		// TODO: Add brightness multiplier here
-		glm::vec4 direction = { 0, 0, 1, 0 };
+		glm::quat rotation = glm::quat(glm::vec3(0.0f)); // Applied to unit vec (1,0,0) before being sent to shader
+		glm::vec4 color = glm::vec4(1.0f);
+		u32 enabled = 1;
+		real brightness = 1.0f;
 
 		// Not used for rendering but allows users to position in the world
 		glm::vec3 position = glm::vec3(0.0f);
-
-		glm::vec4 color = glm::vec4(1.0f);
-
-		u32 enabled = 1;
-
-		real brightness = 1.0f;
 	};
 
 	struct PointLight
 	{
 		glm::vec4 position = glm::vec4(0.0f);
-
 		glm::vec4 color = glm::vec4(1.0f);
-
 		u32 enabled = 1;
-
 		real brightness = 500.0f;
 	};
 
@@ -362,6 +355,7 @@ namespace flex
 		bool needIrradianceSampler = false;
 		bool needPrefilteredMap = false;
 		bool needBRDFLUT = false;
+		bool needShadowMap = false;
 		bool needPushConstantBlock = false;
 
 		VertexAttributes vertexAttributes = 0;

@@ -109,12 +109,14 @@ namespace flex
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
+			void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
+
 		private:
 			struct TextureHandle
 			{
 				u32 id;
-				GLenum format;
 				GLenum internalFormat;
+				GLenum format;
 				GLenum type;
 			};
 
@@ -183,8 +185,8 @@ namespace flex
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
 			void UpdateAllMaterialUniforms();
-			void UpdatePerObjectUniforms(RenderID renderID, MaterialID materialIDOverride = InvalidMaterialID);
-			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model);
+			void UpdatePerObjectUniforms(RenderID renderID, GLMaterial* materialOverride = nullptr);
+			void UpdatePerObjectUniforms(GLMaterial* material, const glm::mat4& model);
 
 			void BatchRenderObjects();
 			void DrawShadowDepthMaps();
@@ -247,6 +249,10 @@ namespace flex
 			TextureHandle m_gBuffer_PositionMetallicHandle;
 			TextureHandle m_gBuffer_NormalRoughnessHandle;
 			TextureHandle m_gBuffer_DiffuseAOHandle;
+
+			TextureHandle m_ShadowMapTexture;
+			u32 m_ShadowMapFBO = 0;
+			MaterialID m_ShadowMaterialID = InvalidMaterialID;
 
 			GLTexture* m_BRDFTexture = nullptr;
 
@@ -337,6 +343,8 @@ namespace flex
 			const char* m_MeshPayloadCStr = "mesh";
 
 			bool m_bShowingAssetBrowser = false;
+
+			bool m_bRebatchRenderObjects = true;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

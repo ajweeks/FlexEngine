@@ -47,7 +47,7 @@ namespace flex
 				i32 model;
 				i32 modelInvTranspose;
 				i32 colorMultiplier;
-				i32 contrastBrightnessSaturation;
+				i32 lightViewProjection;
 				i32 exposure;
 				i32 viewProjection;
 				i32 view;

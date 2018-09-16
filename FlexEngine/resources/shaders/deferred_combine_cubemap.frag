@@ -31,14 +31,17 @@ uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 uniform vec4 camPos;
 uniform bool enableIrradianceSampler;
 uniform float exposure = 1.0;
+uniform mat4 lightViewProj;
+uniform bool bEnableShadows = true;
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform samplerCube positionMetallicFrameBufferSampler;
 layout (binding = 1) uniform samplerCube normalRoughnessFrameBufferSampler;
 layout (binding = 2) uniform samplerCube albedoAOFrameBufferSampler;
 layout (binding = 3) uniform sampler2D brdfLUT;
-layout (binding = 4) uniform samplerCube irradianceSampler;
-layout (binding = 5) uniform samplerCube prefilterMap;
+layout (binding = 4) uniform sampler2D shadowMap;
+layout (binding = 5) uniform samplerCube irradianceSampler;
+layout (binding = 6) uniform samplerCube prefilterMap;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -175,7 +178,19 @@ void main()
 		ambient = vec3(0.03) * albedo * ao;
 	}
 
-	vec3 color = ambient + Lo;
+	float shadow = 0.1;
+	if (bEnableShadows)
+	{	
+		vec3 transformedShadowPos = vec3(lightViewProj * vec4(worldPos, 1.0));
+
+		float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
+		if (shadowDepth > transformedShadowPos.z)
+		{
+			shadow = 1.0;
+		}
+	}
+
+	vec3 color = ambient + Lo * shadow;
 
 	color *= exposure;
 

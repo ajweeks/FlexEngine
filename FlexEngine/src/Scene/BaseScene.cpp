@@ -736,7 +736,7 @@ namespace flex
 	void BaseScene::CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight)
 	{
 		std::string dirStr = obj.GetString("direction");
-		directionalLight.direction = glm::vec4(ParseVec3(dirStr), 0);
+		directionalLight.rotation = glm::quat(ParseVec3(dirStr));
 
 		std::string posStr = obj.GetString("pos");
 		if (!posStr.empty())
@@ -897,7 +897,8 @@ namespace flex
 	{
 		JSONObject object;
 
-		std::string dirStr = Vec3ToString(directionalLight.direction, 3);
+		glm::vec4 dirLightDir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * directionalLight.rotation;
+		std::string dirStr = Vec3ToString(dirLightDir, 3);
 		object.fields.emplace_back("direction", JSONValue(dirStr));
 
 		std::string posStr = Vec3ToString(directionalLight.position, 3);

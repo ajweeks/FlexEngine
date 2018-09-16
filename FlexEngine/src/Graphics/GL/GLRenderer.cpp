@@ -87,6 +87,11 @@ namespace flex
 			m_OffscreenTexture1Handle.type = GL_FLOAT;
 
 
+			m_ShadowMapTexture = {};
+			m_ShadowMapTexture.internalFormat = GL_DEPTH_COMPONENT16;
+			m_ShadowMapTexture.format = GL_DEPTH_COMPONENT;
+			m_ShadowMapTexture.type = GL_FLOAT;
+
 			m_gBuffer_PositionMetallicHandle = {};
 			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
 			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
@@ -155,6 +160,38 @@ namespace flex
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
+			// Shadow map texture
+			{
+				// TODO: Add option to initialize empty texture using public virtual
+
+				i32 shadowMapSize = 1024;
+				glGenFramebuffers(1, &m_ShadowMapFBO);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
+
+				glGenTextures(1, &m_ShadowMapTexture.id);
+				glBindTexture(GL_TEXTURE_2D, m_ShadowMapTexture.id);
+				glTexImage2D(GL_TEXTURE_2D, 0, m_ShadowMapTexture.internalFormat, shadowMapSize, shadowMapSize, 0, m_ShadowMapTexture.format, m_ShadowMapTexture.type, NULL);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_ShadowMapTexture.id, 0);
+
+				// No color buffer is written to
+				glDrawBuffer(GL_NONE);
+
+				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				{
+					PrintError("Shadow depth buffer is incomplete!\n");
+				}
+			}
+
+			MaterialCreateInfo createInfo = {};
+			createInfo.shaderName = "shadow";
+			createInfo.name = "Shadow";
+			createInfo.engineMaterial = true;
+			m_ShadowMaterialID = InitializeMaterial(&createInfo);
+
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
@@ -166,12 +203,6 @@ namespace flex
 			fontMatCreateInfo.shaderName = "font";
 			fontMatCreateInfo.engineMaterial = true;
 			m_FontMatID = InitializeMaterial(&fontMatCreateInfo);
-
-			MaterialCreateInfo shadowMatCreateInfo = {};
-			shadowMatCreateInfo.name = "Shadow material";
-			shadowMatCreateInfo.shaderName = "shadow";
-			shadowMatCreateInfo.engineMaterial = true;
-			m_ShadowMatID = InitializeMaterial(&shadowMatCreateInfo);
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
@@ -507,7 +538,7 @@ namespace flex
 				{ Uniform::MODEL,							"model", 						&mat.uniformIDs.model },
 				{ Uniform::MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
 				{ Uniform::COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
-				{ Uniform::CONTRAST_BRIGHTNESS_SATURATION, 	"contrastBrightnessSaturation", &mat.uniformIDs.contrastBrightnessSaturation },
+				{ Uniform::LIGHT_VIEW_PROJ, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
 				{ Uniform::EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
 				{ Uniform::VIEW, 							"view", 						&mat.uniformIDs.view },
 				{ Uniform::VIEW_INV, 						"viewInv", 						&mat.uniformIDs.viewInv },
@@ -850,6 +881,22 @@ namespace flex
 				++binding;
 			}
 
+			if (shader.shader.needShadowMap)
+			{
+				const char* uniformName = "shadowMap";
+				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
+				if (uniformLocation == -1)
+				{
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n",
+						uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
+				}
+				else
+				{
+					glUniform1i(uniformLocation, binding);
+				}
+				++binding;
+			}
+
 			if (mat.material.generateIrradianceSampler)
 			{
 				GLCubemapCreateInfo cubemapCreateInfo = {};
@@ -928,6 +975,8 @@ namespace flex
 			const RenderID renderID = GetNextAvailableRenderID();
 
 			assert(createInfo->materialID != InvalidMaterialID);
+
+			m_bRebatchRenderObjects = true;
 
 			GLRenderObject* renderObject = new GLRenderObject();
 			renderObject->renderID = renderID;
@@ -1146,10 +1195,10 @@ namespace flex
 			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
 
 			// Update object's uniforms under this shader's program
-			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, false,
+			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, GL_FALSE,
 							   &m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 
-			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, false, 
+			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, GL_FALSE,
 				&m_CaptureProjection[0][0]);
 
 			glm::vec2 cubemapSize = skyboxGLMaterial.material.cubemapSamplerSize;
@@ -1178,7 +1227,7 @@ namespace flex
 
 			for (u32 i = 0; i < 6; ++i)
 			{
-				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, false, 
+				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, GL_FALSE,
 					&m_CaptureViews[i][0][0]);
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
@@ -1224,10 +1273,10 @@ namespace flex
 
 			glUseProgram(prefilterShader.program);
 
-			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, false, 
+			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, GL_FALSE,
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 
-			glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
+			glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
@@ -1270,7 +1319,7 @@ namespace flex
 				glUniform1f(roughnessUniformLocation, roughness);
 				for (u32 i = 0; i < 6; ++i)
 				{
-					glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
+					glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[i][0][0]);
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].prefilteredMapSamplerID, mip);
@@ -1411,10 +1460,10 @@ namespace flex
 
 			glUseProgram(shader.program);
 			
-			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, false, 
+			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, GL_FALSE,
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 
-			glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
+			glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
 			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
 			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
@@ -1447,7 +1496,7 @@ namespace flex
 
 			for (u32 i = 0; i < 6; ++i)
 			{
-				glUniformMatrix4fv(irradianceMat.uniformIDs.view, 1, false, &m_CaptureViews[i][0][0]);
+				glUniformMatrix4fv(irradianceMat.uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[i][0][0]);
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].irradianceSamplerID, 0);
@@ -1668,11 +1717,9 @@ namespace flex
 
 			UpdateAllMaterialUniforms();
 
-			// TODO: Don't sort render objects frame! Only when things are added/removed
-			static bool bBatch = true;
-			if (bBatch)
+			if (m_bRebatchRenderObjects)
 			{
-				bBatch = false;
+				m_bRebatchRenderObjects = false;
 				BatchRenderObjects();
 			}
 
@@ -1921,6 +1968,34 @@ namespace flex
 		{
 			PROFILE_AUTO("DrawShadowDepthMaps");
 
+			GLMaterial* material = &m_Materials[m_ShadowMaterialID];
+			GLShader* shader = &m_Shaders[material->material.shaderID];
+			glUseProgram(shader->program);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
+
+			glViewport(0, 0, 1024, 1024);
+
+			glDepthMask(GL_TRUE);
+			glDrawBuffer(GL_NONE);
+
+			glClear(GL_DEPTH_BUFFER_BIT);
+
+			DrawCallInfo drawCallInfo = {};
+			drawCallInfo.materialOverride = m_ShadowMaterialID;
+
+			glm::mat4 view, proj;
+			ComputeDirLightViewProj(view, proj);
+			
+			{
+				glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
+				glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &proj[0][0]);
+			}
+
+			for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			{
+				DrawRenderObjectBatch(batch, drawCallInfo);
+			}
 		}
 
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
@@ -2037,8 +2112,7 @@ namespace flex
 				glBindVertexArray(skybox->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 
-				UpdatePerObjectUniforms(cubemapObject->materialID, 
-					skybox->gameObject->GetTransform()->GetWorldTransform());
+				UpdatePerObjectUniforms(cubemapMaterial, skybox->gameObject->GetTransform()->GetWorldTransform());
 
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
@@ -2055,7 +2129,7 @@ namespace flex
 				glCullFace(skybox->cullFace);
 				glDepthFunc(GL_ALWAYS);
 				glDepthMask(GL_FALSE);
-				glUniformMatrix4fv(cubemapMaterial->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
+				glUniformMatrix4fv(cubemapMaterial->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
 				glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
@@ -2065,7 +2139,7 @@ namespace flex
 
 				for (i32 face = 0; face < 6; ++face)
 				{
-					glUniformMatrix4fv(cubemapMaterial->uniformIDs.view, 1, false, &m_CaptureViews[face][0][0]);
+					glUniformMatrix4fv(cubemapMaterial->uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[face][0][0]);
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
@@ -2093,7 +2167,7 @@ namespace flex
 				glBindVertexArray(gBufferQuad->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
 
-				UpdatePerObjectUniforms(gBufferQuad->renderID);
+				UpdatePerObjectUniforms(material, gBufferQuad->gameObject->GetTransform()->GetWorldTransform());
 
 				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
@@ -2351,6 +2425,12 @@ namespace flex
 				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight.position, camUp);
 				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 				DrawSpriteQuad(drawInfo);
+
+				glm::vec3 dirLightForward = glm::vec3(1.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
+				m_PhysicsDebugDrawer->drawLine(
+					Vec3ToBtVec3(m_DirectionalLight.position),
+					Vec3ToBtVec3(m_DirectionalLight.position - dirLightForward * 2.5f),
+					btVector3(0.0f, 0.0f, 1.0f));
 			}
 		}
 
@@ -2416,7 +2496,7 @@ namespace flex
 								   glm::mat4(rotation) *
 								   glm::scale(glm::mat4(1.0f), scale));
 
-				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, true, &model[0][0]);
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, GL_TRUE, &model[0][0]);
 			}
 
 			if (spriteShader.shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
@@ -2425,13 +2505,13 @@ namespace flex
 				{
 					glm::mat4 view = glm::mat4(1.0f);
 
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 				}
 				else
 				{
 					glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, false, &view[0][0]);
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 				}
 			}
 
@@ -2443,13 +2523,13 @@ namespace flex
 					real t = 1.0f;
 					glm::mat4 projection = glm::ortho(-r, r, -t, t);
 
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, GL_FALSE, &projection[0][0]);
 				}
 				else
 				{
 					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, false, &projection[0][0]);
+					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, GL_FALSE, &projection[0][0]);
 				}
 			}
 
@@ -2466,7 +2546,8 @@ namespace flex
 			}
 
 			// http://www.graficaobscura.com/matrix/
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::CONTRAST_BRIGHTNESS_SATURATION))
+			GLint cBSLocation = glGetUniformLocation(spriteShader.program, "contrastBrightnessSaturation");
+			if (cBSLocation != -1)
 			{
 				glm::mat4 contrastBrightnessSaturation;
 				if (m_bPostProcessingEnabled)
@@ -2499,7 +2580,7 @@ namespace flex
 					contrastBrightnessSaturation = glm::mat4(1.0f);
 				}
 
-				glUniformMatrix4fv(spriteMaterial.uniformIDs.contrastBrightnessSaturation, 1, false, &contrastBrightnessSaturation[0][0]);
+				glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
 			}
 
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
@@ -2618,7 +2699,7 @@ namespace flex
 					glm::vec3 scaleVec(1.0f);
 
 					glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), scaleVec) * ortho;
-					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, true, &transformMat[0][0]);
+					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, GL_TRUE, &transformMat[0][0]);
 
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
@@ -3108,6 +3189,16 @@ namespace flex
 			return strHeight;
 		}
 
+		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
+		{
+			glm::vec3 dirLightDir = glm::vec3(1.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
+			outView = glm::lookAt(dirLightDir, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			real zoom = 20.0f;
+			real nearPlane = 0.0f;
+			real farPlane = 1000.0f;
+			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, nearPlane, farPlane);
+		}
+
 		void GLRenderer::UpdateTextBuffer()
 		{
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
@@ -3318,7 +3409,7 @@ namespace flex
 				glDepthFunc(renderObject->depthTestReadFunc);
 				glDepthMask(renderObject->depthWriteEnable);
 
-				UpdatePerObjectUniforms(renderObject->renderID, materialID);
+				UpdatePerObjectUniforms(renderObject->renderID, material);
 
 				BindTextures(shader, material);
 
@@ -3344,7 +3435,7 @@ namespace flex
 					}
 
 					// Use capture projection matrix
-					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &m_CaptureProjection[0][0]);
+					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 					
 					// TODO: Test if this is actually correct
 					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
@@ -3356,7 +3447,7 @@ namespace flex
 						// Flip vertically to match cubemap, cubemap shouldn't even be captured here eventually?
 						//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
 						
-						glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
+						glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 
 						if (drawCallInfo.bDeferred)
 						{
@@ -3388,7 +3479,6 @@ namespace flex
 						{
 							glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 						}
-
 					}
 				}
 				else
@@ -3470,6 +3560,7 @@ namespace flex
 				{ shader->needAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D },
 				{ shader->needNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
 				{ shader->needBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
+				{ shader->needShadowMap, true, m_ShadowMapTexture.id, GL_TEXTURE_2D },
 				{ shader->needIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->needPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->needCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
@@ -3976,12 +4067,14 @@ namespace flex
 			// m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
+			m_Shaders[shaderID].shader.needShadowMap = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CAM_POS);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::POINT_LIGHTS);
@@ -4001,6 +4094,7 @@ namespace flex
 			// m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
+			m_Shaders[shaderID].shader.needShadowMap = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
@@ -4008,6 +4102,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CAM_POS);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::POINT_LIGHTS);
@@ -4165,7 +4260,7 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::COLOR_MULTIPLIER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONTRAST_BRIGHTNESS_SATURATION);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONTRAST_BRIGHTNESS_SATURATION);
 			++shaderID;
 
 			// Post FXAA (Fast approximate anti-aliasing)
@@ -4272,7 +4367,19 @@ namespace flex
 			glm::mat4 viewProj = proj * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 			real exposure = g_CameraManager->CurrentCamera()->exposure;
-			
+
+			glm::mat4 lightView, lightProj;
+			ComputeDirLightViewProj(lightView, lightProj);
+
+			glm::mat4 biasMat(
+				0.5f, 0.0f, 0.0f, 0.0f,
+				0.0f, 0.5f, 0.0f, 0.0f,
+				0.0f, 0.0f, 0.5f, 0.0f,
+				0.5f, 0.5f, 0.5f, 1.0f
+			);
+
+			glm::mat4 biasedLightViewProj = biasMat * lightProj * lightView;
+
 			for (auto& materialPair : m_Materials)
 			{
 				GLMaterial* material = &materialPair.second;
@@ -4283,22 +4390,27 @@ namespace flex
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
 				{
-					glUniformMatrix4fv(material->uniformIDs.view, 1, false, &view[0][0]);
+					glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW_INV))
 				{
-					glUniformMatrix4fv(material->uniformIDs.viewInv, 1, false, &viewInv[0][0]);
+					glUniformMatrix4fv(material->uniformIDs.viewInv, 1, GL_FALSE, &viewInv[0][0]);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::PROJECTION))
 				{
-					glUniformMatrix4fv(material->uniformIDs.projection, 1, false, &proj[0][0]);
+					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &proj[0][0]);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW_PROJECTION))
 				{
-					glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, false, &viewProj[0][0]);
+					glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, GL_FALSE, &viewProj[0][0]);
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::LIGHT_VIEW_PROJ))
+				{
+					glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &biasedLightViewProj[0][0]);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::CAM_POS))
@@ -4322,7 +4434,8 @@ namespace flex
 					{
 						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
 						static const char* dirLightDirectionStr = "dirLight.direction";
-						SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight.direction);
+						glm::vec4 dirLightDir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
+						SetVec4f(material->material.shaderID, dirLightDirectionStr, dirLightDir);
 						static const char* dirLightColorStr = "dirLight.color";
 						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight.color * m_DirectionalLight.brightness);
 					}
@@ -4395,7 +4508,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, MaterialID materialIDOverride /* = InvalidMaterialID */)
+		void GLRenderer::UpdatePerObjectUniforms(RenderID renderID, GLMaterial* materialOverride /* = nullptr */)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject)
@@ -4405,32 +4518,30 @@ namespace flex
 			}
 
 			const glm::mat4& model = renderObject->gameObject->GetTransform()->GetWorldTransform();
-			MaterialID matID = materialIDOverride;
-			if (matID == InvalidMaterialID)
+			if (materialOverride == nullptr)
 			{
-				matID = renderObject->materialID;
+				materialOverride = &m_Materials[renderObject->materialID];
 			}
-			UpdatePerObjectUniforms(matID, model);
+			UpdatePerObjectUniforms(materialOverride, model);
 		}
 
-		void GLRenderer::UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model)
+		void GLRenderer::UpdatePerObjectUniforms(GLMaterial* material, const glm::mat4& model)
 		{
 			// TODO: OPTIMIZATION: Investigate performance impact of caching each uniform and preventing updates to data that hasn't changed
 
-			GLMaterial* material = &m_Materials[materialID];
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
 			// TODO: Use set functions here (SetFloat, SetMatrix, ...)
 			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL))
 			{
-				glUniformMatrix4fv(material->uniformIDs.model, 1, false, &model[0][0]);
+				glUniformMatrix4fv(material->uniformIDs.model, 1, GL_FALSE, &model[0][0]);
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL_INV_TRANSPOSE))
 			{
 				glm::mat4 modelInv = glm::inverse(model);
 				// OpenGL will transpose for us if we set the third param to true
-				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, true, &modelInv[0][0]);
+				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, GL_TRUE, &modelInv[0][0]);
 			}
 
 			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::COLOR_MULTIPLIER))
@@ -4661,7 +4772,7 @@ namespace flex
 				PrintWarn("Mat4f %s couldn't be found!\n", matName);
 			}
 
-			glUniformMatrix4fv(location, 1, false, &mat[0][0]);
+			glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
 		}
 
 
@@ -4920,6 +5031,7 @@ namespace flex
 			}
 
 			m_RenderObjects[renderID] = nullptr;
+			m_bRebatchRenderObjects = true;
 		}
 
 		void GLRenderer::NewFrame()
@@ -5656,7 +5768,10 @@ namespace flex
 						}
 					}
 				}
+
+				ImGui::Image((void*)m_ShadowMapTexture.id, ImVec2(512, 512));
 			}
+
 
 			ImGui::End();
 		}
