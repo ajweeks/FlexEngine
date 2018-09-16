@@ -6063,7 +6063,7 @@ namespace flex
 				if (rb != nullptr)
 				{
 					bool bStatic = rb->IsStatic();
-					if (ImGui::Checkbox("Static", &bStatic))
+					if (ImGui::Checkbox("Static##rb", &bStatic))
 					{
 						rb->SetStatic(bStatic);
 					}
@@ -6253,11 +6253,16 @@ namespace flex
 					{
 						rb->SetLocalPosition(localOffsetPos);
 					}
-
-					glm::vec3 localOffsetRotEuler = glm::eulerAngles(rb->GetLocalRotation()) * 90.0f;
-					if (ImGui::DragFloat3("Rot offset", &localOffsetRotEuler.x, 0.1f))
+					if (ImGui::IsItemClicked(1))
 					{
-						rb->SetLocalRotation(glm::quat(localOffsetRotEuler / 90.0f));
+						rb->SetLocalPosition(glm::vec3(0.0f));
+					}
+
+					glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(rb->GetLocalRotation()));
+					glm::vec3 cleanedRot;
+					if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
+					{
+						rb->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
 					}
 
 					ImGui::Spacing();
@@ -6267,7 +6272,6 @@ namespace flex
 					{
 						rbInternal->setLinearVelocity(Vec3ToBtVec3(linearVel));
 					}
-
 					if (ImGui::IsItemClicked(1))
 					{
 						rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
@@ -6278,7 +6282,6 @@ namespace flex
 					{
 						rbInternal->setAngularVelocity(Vec3ToBtVec3(angularVel));
 					}
-
 					if (ImGui::IsItemClicked(1))
 					{
 						rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));

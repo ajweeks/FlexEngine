@@ -1155,4 +1155,37 @@ namespace flex
 
 		return absolutePath;
 	}
+
+	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation)
+	{
+		glm::vec3 pRot = rotation;
+
+		bool bValueChanged = ImGui::DragFloat3(label, &rotation[0], 0.1f);
+		if (ImGui::IsItemClicked(1))
+		{
+			rotation = glm::vec3(0.0f);
+			bValueChanged = true;
+		}
+
+		outCleanedRotation = rotation;
+
+		if ((rotation.y >= 90.0f && pRot.y < 90.0f) ||
+			(rotation.y <= -90.0f && pRot.y > 90.0f))
+		{
+			outCleanedRotation.y = 180.0f - rotation.y;
+			rotation.x += 180.0f;
+			rotation.z += 180.0f;
+		}
+
+		if (rotation.y > 90.0f)
+		{
+			// Prevents "pop back" when dragging past the 90 deg mark
+			outCleanedRotation.y = 180.0f - rotation.y;
+		}
+
+		outCleanedRotation.x = rotation.x;
+		outCleanedRotation.z = rotation.z;
+
+		return bValueChanged;
+	}
 } // namespace flex

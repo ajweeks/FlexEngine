@@ -188,8 +188,6 @@ namespace flex
 		glm::vec3 rotation = sRot;
 		glm::vec3 scale = transform->GetLocalScale();
 
-		glm::vec3 pRot = rotation;
-
 		bool valueChanged = false;
 
 		valueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || valueChanged;
@@ -198,12 +196,10 @@ namespace flex
 			translation = glm::vec3(0.0f);
 			valueChanged = true;
 		}
-		valueChanged = ImGui::DragFloat3("Rotation", &rotation[0], 0.1f) || valueChanged;
-		if (ImGui::IsItemClicked(1))
-		{
-			rotation = glm::vec3(0.0f);
-			valueChanged = true;
-		}
+
+		glm::vec3 cleanedRot;
+		valueChanged = DoImGuiRotationDragFloat3("Rotation", rotation, cleanedRot) || valueChanged;
+
 		valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
 		if (ImGui::IsItemClicked(1))
 		{
@@ -214,25 +210,6 @@ namespace flex
 		if (valueChanged)
 		{
 			transform->SetLocalPosition(translation, false);
-
-			glm::vec3 cleanedRot = rotation;
-
-			if ((rotation.y >= 90.0f && pRot.y < 90.0f) ||
-				(rotation.y <= -90.0f && pRot.y > 90.0f))
-			{
-				cleanedRot.y = 180.0f - rotation.y;
-				rotation.x += 180.0f;
-				rotation.z += 180.0f;
-			}
-
-			if (rotation.y > 90.0f)
-			{
-				// Prevents "pop back" when dragging past the 90 deg mark
-				cleanedRot.y = 180.0f - rotation.y;
-			}
-
-			cleanedRot.x = rotation.x;
-			cleanedRot.z = rotation.z;
 
 			sRot = rotation;
 
@@ -269,7 +246,12 @@ namespace flex
 		if (ImGui::TreeNode("Directional Light"))
 		{
 			ImGui::DragFloat3("Position", &m_DirectionalLight.position.x, 0.1f);
-			ImGui::DragFloat3("Rotation", &m_DirectionalLight.direction.x, 0.01f);
+			glm::vec3 dirtyRot = glm::degrees(glm::eulerAngles(m_DirectionalLight.rotation));
+			glm::vec3 cleanedRot;
+			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
+			{
+				m_DirectionalLight.rotation = glm::quat(glm::radians(cleanedRot));
+			}
 			ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
 			ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
 
