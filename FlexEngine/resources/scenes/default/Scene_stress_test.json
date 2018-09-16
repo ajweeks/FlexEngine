@@ -43998,21 +43998,52 @@
 					]
 				}
 			]
+		},
+		{
+			"name" : "ground plane",
+			"type" : "object",
+			"visible" : true,
+			"static" : true,
+			"transform" : 
+			{
+				"scale" : "300.000, 1.000, 300.000"
+			},
+			"mesh" : "cube",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
 		}
 	],
 	"point lights" : 
 	[
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "12.000, 10.100, -13.500",
 			"color" : "0.91, 0.43, 0.96",
 			"enabled" : true,
 			"brightness" : 500.000000
 		},
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "-38.400, 7.000, 11.500",
 			"color" : "0.90, 0.43, 0.43",
 			"enabled" : true,
-			"brightness" : 1000.000000
+			"brightness" : 690.140991
+		},
+		{
+			"pos" : "2.800, 5.900, 21.500",
+			"color" : "0.40, 0.67, 0.86",
+			"enabled" : true,
+			"brightness" : 500.000000
 		}
 	],
 	"directional light" : 

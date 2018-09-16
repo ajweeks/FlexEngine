@@ -17,25 +17,27 @@
 		{
 			"name" : "ground plane",
 			"type" : "object",
-			"visible" : false,
+			"visible" : true,
 			"static" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, -0.500, 0.000",
+				"pos" : "0.000, -1.200, 0.000",
 				"scale" : "40.000, 1.000, 40.000"
 			},
-			"mesh" : "unit-plane",
+			"mesh" : "cube",
 			"material" : "pbr white",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "32000.000, 0.500, 32000.000"
+				"half extents" : "1.000, 1.000, 1.000"
 			},
 			"rigid body" : 
 			{
 				"mass" : 0.000000,
-				"kinematic" : false,
-				"static" : false
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
 			}
 		},
 		{
@@ -64,34 +66,34 @@
 	"point lights" : 
 	[
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "8.500, 0.600, 4.800",
 			"color" : "1.00, 0.93, 0.48",
 			"enabled" : true,
 			"brightness" : 64.935005
 		},
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "-1.000, 3.600, 8.400",
 			"color" : "1.00, 0.93, 0.48",
 			"enabled" : true,
 			"brightness" : 43.290001
 		},
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "-11.300, 5.300, -0.600",
 			"color" : "1.00, 0.93, 0.48",
 			"enabled" : true,
 			"brightness" : 60.606003
 		},
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "-15.000, 4.400, 9.000",
 			"color" : "1.00, 0.93, 0.48",
 			"enabled" : true,
-			"brightness" : 69.264000
+			"brightness" : 117.371002
 		}
 	],
 	"directional light" : 
 	{
-		"direction" : "-0.540, 0.870, 0.480",
-		"pos" : "0.000, 0.000, 0.000",
+		"direction" : "0.012, 0.968, -0.251",
+		"pos" : "-0.400, 3.100, 6.800",
 		"color" : "0.35, 0.34, 0.39",
 		"enabled" : true,
 		"brightness" : 0.519000

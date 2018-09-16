@@ -51,37 +51,13 @@
 			}
 		},
 		{
-			"name" : "Sphere 02",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 9.200, 0.000"
-			},
-			"mesh" : "iso-sphere",
-			"material" : "pbr chrome",
-			"collider" : 
-			{
-				"shape" : "sphere",
-				"radius" : 1.000000
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : true,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
-			}
-		},
-		{
 			"name" : "box",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-2.643, 0.420, -13.210",
-				"rot" : "0.000, 0.315, 0.000",
+				"pos" : "-2.644, 0.420, -13.210",
+				"rot" : "0.000, 0.314, 0.000",
 				"scale" : "1.320, 1.020, 2.220"
 			},
 			"mesh" : "cube",
@@ -104,18 +80,18 @@
 	"point lights" : 
 	[
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "4.300, 10.300, 2.700",
 			"color" : "1.00, 1.00, 1.00",
 			"enabled" : true,
-			"brightness" : 286.385010
+			"brightness" : 248.826004
 		}
 	],
 	"directional light" : 
 	{
-		"direction" : "0.000, 0.000, 1.000",
+		"direction" : "0.540, 3.250, 1.650",
 		"pos" : "0.000, 0.000, 0.000",
 		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
-		"brightness" : 2.042000
+		"brightness" : 0.634000
 	}
 }

@@ -129,23 +129,25 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "292968.750, 296875.000, 292968.750",
+				"half extents" : "0.750, 0.750, 0.750",
 				"offset pos" : "0.000, 3.700, 0.000"
 			},
 			"rigid body" : 
 			{
 				"mass" : 1.000000,
 				"kinematic" : true,
-				"static" : false
+				"static" : false,
+				"mask" : 0,
+				"group" : 0
 			}
 		},
 		{
-			"name" : "plane",
+			"name" : "ground plane",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"scale" : "50.000, 0.260, 50.000"
+				"scale" : "50.000, 1.000, 50.000"
 			},
 			"mesh" : "cube",
 			"material" : "pbr chrome",
@@ -156,9 +158,11 @@
 			},
 			"rigid body" : 
 			{
-				"mass" : 1.000000,
+				"mass" : 0.000000,
 				"kinematic" : true,
-				"static" : false
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
 			}
 		},
 		{
@@ -181,7 +185,9 @@
 			{
 				"mass" : 1.000000,
 				"kinematic" : true,
-				"static" : false
+				"static" : false,
+				"mask" : 0,
+				"group" : 0
 			}
 		},
 		{
@@ -206,7 +212,9 @@
 			{
 				"mass" : 9.852000,
 				"kinematic" : true,
-				"static" : false
+				"static" : false,
+				"mask" : 0,
+				"group" : 0
 			}
 		}
 	],
@@ -216,33 +224,33 @@
 			"pos" : "16.800, 18.600, 2.200",
 			"color" : "0.93, 0.93, 0.89",
 			"enabled" : true,
-			"brightness" : 1000.000061
+			"brightness" : 549.296021
 		},
 		{
-			"pos" : "-1.000, 11.600, -1.000",
+			"pos" : "7.000, 18.000, -8.700",
 			"color" : "0.93, 0.93, 0.89",
-			"enabled" : false,
-			"brightness" : 394.030029
+			"enabled" : true,
+			"brightness" : 206.572998
 		},
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "30.300, 9.300, 10.400",
 			"color" : "0.93, 0.93, 0.89",
-			"enabled" : false,
-			"brightness" : 274.627014
+			"enabled" : true,
+			"brightness" : 140.845001
 		},
 		{
-			"pos" : "-1.000, -1.000, -1.000",
+			"pos" : "1.800, 32.900, 5.100",
 			"color" : "0.93, 0.93, 0.89",
-			"enabled" : false,
-			"brightness" : 382.090027
+			"enabled" : true,
+			"brightness" : 276.994995
 		}
 	],
 	"directional light" : 
 	{
-		"direction" : "0.380, 0.750, -0.160",
-		"pos" : "0.000, 0.000, 0.000",
+		"direction" : "0.722, 0.398, 0.566",
+		"pos" : "0.000, 24.400, 0.000",
 		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
-		"brightness" : 2.355000
+		"brightness" : 1.338000
 	}
 }

@@ -21,20 +21,22 @@
 			"transform" : 
 			{
 				"pos" : "0.000, -1.100, 0.000",
-				"scale" : "100.000, 1.000, 100.000"
+				"scale" : "152.290, 1.000, 100.000"
 			},
 			"mesh" : "cube",
 			"material" : "pbr light grey",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "100000000.000, 1.000, 100000000.000"
+				"half extents" : "1.000, 1.000, 1.000"
 			},
 			"rigid body" : 
 			{
 				"mass" : 0.000000,
 				"kinematic" : false,
-				"static" : false
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
 			}
 		},
 		{
@@ -59,23 +61,341 @@
 				"rot" : "0.037, -0.000, 0.000"
 			},
 			"material" : "pbr chrome"
+		},
+		{
+			"name" : "ball 01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "18.781, 0.900, 3.167",
+				"rot" : "-2.649, -0.403, 2.756",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "16.511, 0.900, 1.864",
+				"rot" : "2.046, 1.308, -0.445",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "11.592, 0.900, 1.481",
+				"rot" : "1.987, 0.294, 1.936",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 04",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "24.648, 0.900, 3.329",
+				"rot" : "-0.093, 0.322, 1.776",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 05",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "19.267, 0.900, 7.271",
+				"rot" : "-0.586, -0.816, 1.938",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 06",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "11.397, 0.900, 5.657",
+				"rot" : "0.167, 0.549, 0.383",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 07",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "8.245, 0.900, 5.665",
+				"rot" : "0.510, 0.678, 1.292",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 08",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "3.775, 0.900, 5.688",
+				"rot" : "0.511, 0.670, 2.372",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 09",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "1.752, 0.900, 5.679",
+				"rot" : "0.535, 0.664, 1.754",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 10",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-4.488, 0.900, 5.677",
+				"rot" : "0.529, 0.664, 2.815",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 11",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-8.678, 0.900, 5.685",
+				"rot" : "0.526, 0.662, 2.722",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 12",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-10.808, 0.900, 5.685",
+				"rot" : "0.528, 0.663, 2.888",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
 		}
 	],
 	"point lights" : 
 	[
 		{
-			"pos" : "-1.000, -1.000, -1.000",
-			"color" : "0.93, 0.93, 0.89",
-			"enabled" : false,
-			"brightness" : 793.388062
+			"pos" : "5.600, 10.000, -11.400",
+			"color" : "0.75, 0.25, 0.22",
+			"enabled" : true,
+			"brightness" : 272.299988
+		},
+		{
+			"pos" : "-24.400, 16.500, 1.200",
+			"color" : "0.81, 0.34, 0.34",
+			"enabled" : true,
+			"brightness" : 502.346985
 		}
 	],
 	"directional light" : 
 	{
-		"direction" : "0.380, 0.750, -0.160",
+		"direction" : "0.722, 0.398, 0.566",
 		"pos" : "0.000, 0.000, 0.000",
 		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
-		"brightness" : 2.355000
+		"brightness" : 2.324000
 	}
 }
