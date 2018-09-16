@@ -40,6 +40,8 @@ Flex Engine is my personal game engine which I began work on in February 2017 as
 
 ![](http://i.imgur.com/mqszTPr.gif)
 
+See more screenshots [here](https://github.com/ajweeks/FlexEngine/tree/development/FlexEngine/screenshots)
+
 ## Building Flex (Windows-only)
 If you want to build Flex Engine on your own system, follow these steps. You an always download the latest release binaries [here](https://github.com/ajweeks/flexengine/releases) if that's what you're after.
 
