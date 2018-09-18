@@ -106,6 +106,8 @@ namespace flex
 
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 
+			virtual void RenderObjectStateChanged() override;
+
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
@@ -252,6 +254,7 @@ namespace flex
 
 			TextureHandle m_ShadowMapTexture;
 			u32 m_ShadowMapFBO = 0;
+			i32 m_ShadowMapSize = 2048;
 			MaterialID m_ShadowMaterialID = InvalidMaterialID;
 
 			GLTexture* m_BRDFTexture = nullptr;

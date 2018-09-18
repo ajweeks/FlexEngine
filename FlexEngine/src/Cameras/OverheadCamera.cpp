@@ -16,7 +16,7 @@
 namespace flex
 {
 	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("Overhead Camera",FOV, zNear, zFar)
+		BaseCamera("overhead",FOV, zNear, zFar)
 	{
 		ResetOrientation();
 		RecalculateViewProjection();

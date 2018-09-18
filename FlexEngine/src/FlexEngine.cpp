@@ -350,12 +350,12 @@ namespace flex
 		real cylinderHeight = 1.6f;
 
 		u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-		u32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
-		u32 rbMask = 0;
+		i32 rbGroup = -1;// (u32)CollisionType::EDITOR_OBJECT;
+		i32 rbMask = -1;
 
 		// X Axis
 		GameObject* transformXAxis = new GameObject("Transform gizmo x axis", GameObjectType::NONE);
-		transformXAxis->AddTag("transform gizmo");
+		transformXAxis->AddTag(m_TransformGizmoTag);
 		transformXAxis->SetVisibleInSceneExplorer(false);
 		MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
 
@@ -372,7 +372,7 @@ namespace flex
 
 		// Y Axis
 		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
-		transformYAxis->AddTag("transform gizmo");
+		transformYAxis->AddTag(m_TransformGizmoTag);
 		transformYAxis->SetVisibleInSceneExplorer(false);
 		MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
 
@@ -389,7 +389,7 @@ namespace flex
 
 		// Z Axis
 		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
-		transformZAxis->AddTag("transform gizmo");
+		transformZAxis->AddTag(m_TransformGizmoTag);
 		transformZAxis->SetVisibleInSceneExplorer(false);
 
 		MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
@@ -535,8 +535,6 @@ namespace flex
 
 			// Hovered object
 			{
-				GameObject* hoveredOverGameObject = nullptr;
-
 				glm::vec2 mousePos = g_InputManager->GetMousePosition();
 				PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 				btVector3 cameraPos = Vec3ToBtVec3(g_CameraManager->CurrentCamera()->GetPosition());
@@ -546,8 +544,6 @@ namespace flex
 				btVector3 rayStart(cameraPos);
 				btVector3 rayDir = physicsWorld->GenerateDirectionRayFromScreenPos((i32)mousePos.x, (i32)mousePos.y);
 				btVector3 rayEnd = rayStart + rayDir * maxDist;
-
-				btRigidBody* pickedBody = physicsWorld->PickBody(rayStart, rayEnd);
 
 				Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 				Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
@@ -580,56 +576,43 @@ namespace flex
 				bool bMousePressed = g_InputManager->IsMouseButtonPressed(dragButton);
 				bool bMouseReleased = g_InputManager->IsMouseButtonReleased(dragButton);
 
-				if (!m_bDraggingGizmo && pickedBody)
+				GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, m_TransformGizmoTag);
+				if (!m_bDraggingGizmo && pickedTransformGizmo)
 				{
-					hoveredOverGameObject = (GameObject*)(pickedBody->getUserPointer());
-
-					if (hoveredOverGameObject)
+					if (pickedTransformGizmo == transformAxes[0]) // X Axis
 					{
-						btRigidBody* pickedTransform = physicsWorld->PickBody(rayStart, rayEnd);
-						if (pickedTransform)
+						if (bMousePressed)
 						{
-							GameObject* pickedTransformGameObject = (GameObject*)(pickedTransform->getUserPointer());
-
-							if (pickedTransformGameObject)
-							{
-								if (hoveredOverGameObject == transformAxes[0]) // X Axis
-								{
-									if (bMousePressed)
-									{
-										m_DraggingAxisIndex = 0;
-										xMat.colorMultiplier = selectedColor;
-									}
-									else
-									{
-										xMat.colorMultiplier = hoverColor;
-									}
-								}
-								else if (hoveredOverGameObject == transformAxes[1]) // Y Axis
-								{
-									if (bMousePressed)
-									{
-										m_DraggingAxisIndex = 1;
-										yMat.colorMultiplier = selectedColor;
-									}
-									else
-									{
-										yMat.colorMultiplier = hoverColor;
-									}
-								}
-								else if (hoveredOverGameObject == transformAxes[2]) // Z Axis
-								{
-									if (bMousePressed)
-									{
-										m_DraggingAxisIndex = 2;
-										zMat.colorMultiplier = selectedColor;
-									}
-									else
-									{
-										zMat.colorMultiplier = hoverColor;
-									}
-								}
-							}
+							m_DraggingAxisIndex = 0;
+							xMat.colorMultiplier = selectedColor;
+						}
+						else
+						{
+							xMat.colorMultiplier = hoverColor;
+						}
+					}
+					else if (pickedTransformGizmo == transformAxes[1]) // Y Axis
+					{
+						if (bMousePressed)
+						{
+							m_DraggingAxisIndex = 1;
+							yMat.colorMultiplier = selectedColor;
+						}
+						else
+						{
+							yMat.colorMultiplier = hoverColor;
+						}
+					}
+					else if (pickedTransformGizmo == transformAxes[2]) // Z Axis
+					{
+						if (bMousePressed)
+						{
+							m_DraggingAxisIndex = 2;
+							zMat.colorMultiplier = selectedColor;
+						}
+						else
+						{
+							zMat.colorMultiplier = hoverColor;
 						}
 					}
 				}
@@ -658,6 +641,9 @@ namespace flex
 							// If the mouse hasn't moved then the user clicked on something - select it
 							if (glm::length(dragDist) < maxMoveDist)
 							{
+								btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
+								GameObject* hoveredOverGameObject = pickedBody ? (GameObject*)pickedBody->getUserPointer() : nullptr;
+
 								if (hoveredOverGameObject)
 								{
 									RigidBody* rb = hoveredOverGameObject->GetRigidBody();
@@ -1719,6 +1705,12 @@ namespace flex
 					g_SceneManager->SetCurrentScene(lastOpenedSceneName, false);
 				}
 
+				std::string cameraType;
+				if (rootObject.SetStringChecked("last camera type", cameraType))
+				{
+					g_CameraManager->SetActiveCameraByType(cameraType);
+				}
+
 				JSONObject cameraTransform;
 				if (rootObject.SetObjectChecked("camera transform", cameraTransform))
 				{
@@ -1780,6 +1772,7 @@ namespace flex
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		rootObject.fields.emplace_back("last camera type", JSONValue(cam->GetName().c_str()));
 		std::string posStr = Vec3ToString(cam->GetPosition(), 3);
 		real pitch = cam->GetPitch();
 		real yaw = cam->GetYaw();
@@ -1788,7 +1781,7 @@ namespace flex
 		cameraTransform.fields.emplace_back("pitch", JSONValue(pitch));
 		cameraTransform.fields.emplace_back("yaw", JSONValue(yaw));
 		rootObject.fields.emplace_back("camera transform", JSONValue(cameraTransform));
-
+		
 		real masterGain = AudioManager::GetMasterGain();
 		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
 

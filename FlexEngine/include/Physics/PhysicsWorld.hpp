@@ -31,7 +31,8 @@ namespace flex
 
 		btVector3 GenerateDirectionRayFromScreenPos(i32 x, i32 y);
 
-		btRigidBody* PickBody(const btVector3& rayStart, const btVector3& rayEnd);
+		btRigidBody* PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd);
+		GameObject* PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag);
 
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);

@@ -1154,6 +1154,7 @@ namespace flex
 		if (m_bVisible != bVisible)
 		{
 			m_bVisible = bVisible;
+			g_Renderer->RenderObjectStateChanged();
 
 			if (effectChildren)
 			{
@@ -1209,6 +1210,12 @@ namespace flex
 		SafeDelete(m_RigidBody);
 
 		m_RigidBody = rigidBody;
+
+		if (rigidBody && rigidBody->GetRigidBodyInternal())
+		{
+			rigidBody->GetRigidBodyInternal()->setUserPointer(this);
+		}
+
 		return rigidBody;
 	}
 
@@ -1233,6 +1240,7 @@ namespace flex
 		}
 
 		m_MeshComponent = meshComponent;
+		g_Renderer->RenderObjectStateChanged();
 		return meshComponent;
 	}
 

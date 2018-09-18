@@ -107,13 +107,9 @@ namespace flex
 		return rayDirection;
 	}
 
-	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayStart, const btVector3& rayEnd)
+	GameObject* PhysicsWorld::PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag)
 	{
-		btRigidBody* pickedBody = nullptr;
-		//btVector3 hitPos(0.0f, 0.0f, 0.0f);
-		//real pickingDist = 0.0f;
-		//i32 savedState = 0;
-		//btTypedConstraint* pickedConstraint = nullptr;
+		GameObject* pickedGameObject = nullptr;
 
 		btCollisionWorld::AllHitsRayResultCallback rayCallback(rayStart, rayEnd);
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
@@ -125,30 +121,54 @@ namespace flex
 				btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
 				if (body)
 				{
-					GameObject* pickedGameObject = (GameObject*)body->getUserPointer();
+					GameObject* gameObject = (GameObject*)body->getUserPointer();
 
-					if (pickedGameObject)
+					if (gameObject && gameObject->HasTag(tag))
 					{
-						pickedBody = body;
+						pickedGameObject = gameObject;
 						break;
 					}
-
-					//pickedBody->activate(true);
-					//pickedBody->clearForces();
-					//
-					//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
-					//pickedBody->applyForce({ 0, 600, 0 }, localPivot);
-
-					//savedState = pickedBody->getActivationState();
-					//pickedBody->setActivationState(DISABLE_DEACTIVATION);
-
-					//btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body, localPivot);
-					//dynamicsWorld->addConstraint(p2p, true);
-					//pickedConstraint = p2p;
-					//btScalar mousePickClamping = 30.f;
-					//p2p->m_setting.m_impulseClamp = mousePickClamping;
-					//p2p->m_setting.m_tau = 0.001f;
 				}
+			}
+		}
+
+		return pickedGameObject;
+	}
+
+	btRigidBody* PhysicsWorld::PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd)
+	{
+		btRigidBody* pickedBody = nullptr;
+
+		btCollisionWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+		m_World->rayTest(rayStart, rayEnd, rayCallback);
+		if (rayCallback.hasHit())
+		{
+			btVector3 pickPos = rayCallback.m_hitPointWorld;
+			btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
+			if (body)
+			{
+				GameObject* pickedGameObject = (GameObject*)body->getUserPointer();
+
+				if (pickedGameObject)
+				{
+					pickedBody = body;
+				}
+
+				//pickedBody->activate(true);
+				//pickedBody->clearForces();
+				//
+				//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
+				//pickedBody->applyForce({ 0, 600, 0 }, localPivot);
+
+				//savedState = pickedBody->getActivationState();
+				//pickedBody->setActivationState(DISABLE_DEACTIVATION);
+
+				//btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body, localPivot);
+				//dynamicsWorld->addConstraint(p2p, true);
+				//pickedConstraint = p2p;
+				//btScalar mousePickClamping = 30.f;
+				//p2p->m_setting.m_impulseClamp = mousePickClamping;
+				//p2p->m_setting.m_tau = 0.001f;
 			}
 			//hitPos = pickPos;
 			//pickingDist = (pickPos - rayFromWorld).length();

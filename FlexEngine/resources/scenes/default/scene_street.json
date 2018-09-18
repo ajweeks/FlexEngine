@@ -92,10 +92,12 @@
 	],
 	"directional light" : 
 	{
-		"direction" : "0.742, 0.256, 0.619",
+		"rotation" : "0.982, 0.091, -0.163",
 		"pos" : "-0.400, 3.100, 6.800",
 		"color" : "0.35, 0.34, 0.39",
 		"enabled" : true,
-		"brightness" : 10.352000
+		"brightness" : 10.352000,
+		"cast shadows" : true,
+		"shadow darkness" : 0.146000
 	}
 }

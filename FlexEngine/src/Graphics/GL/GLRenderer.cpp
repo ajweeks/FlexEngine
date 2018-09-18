@@ -164,17 +164,20 @@ namespace flex
 			{
 				// TODO: Add option to initialize empty texture using public virtual
 
-				i32 shadowMapSize = 1024;
 				glGenFramebuffers(1, &m_ShadowMapFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
 
 				glGenTextures(1, &m_ShadowMapTexture.id);
 				glBindTexture(GL_TEXTURE_2D, m_ShadowMapTexture.id);
-				glTexImage2D(GL_TEXTURE_2D, 0, m_ShadowMapTexture.internalFormat, shadowMapSize, shadowMapSize, 0, m_ShadowMapTexture.format, m_ShadowMapTexture.type, NULL);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexImage2D(GL_TEXTURE_2D, 0, m_ShadowMapTexture.internalFormat, m_ShadowMapSize, m_ShadowMapSize, 0, m_ShadowMapTexture.format, m_ShadowMapTexture.type, NULL);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+				//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+				float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor); // Prevents areas not covered by map to be in shadow
 				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_ShadowMapTexture.id, 0);
 
 				// No color buffer is written to
@@ -184,6 +187,8 @@ namespace flex
 				{
 					PrintError("Shadow depth buffer is incomplete!\n");
 				}
+
+				m_DirectionalLight.shadowTextureID = m_ShadowMapTexture.id;
 			}
 
 			MaterialCreateInfo createInfo = {};
@@ -191,6 +196,7 @@ namespace flex
 			createInfo.name = "Shadow";
 			createInfo.engineMaterial = true;
 			m_ShadowMaterialID = InitializeMaterial(&createInfo);
+			//i32 program = m_Shaders[m_Materials[m_ShadowMaterialID].material.shaderID].program;
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
@@ -541,7 +547,6 @@ namespace flex
 				{ Uniform::LIGHT_VIEW_PROJ, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
 				{ Uniform::EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
 				{ Uniform::VIEW, 							"view", 						&mat.uniformIDs.view },
-				{ Uniform::VIEW_INV, 						"viewInv", 						&mat.uniformIDs.viewInv },
 				{ Uniform::VIEW_PROJECTION, 				"viewProjection", 				&mat.uniformIDs.viewProjection },
 				{ Uniform::PROJECTION, 						"projection", 					&mat.uniformIDs.projection },
 				{ Uniform::CAM_POS, 						"camPos", 						&mat.uniformIDs.camPos },
@@ -573,6 +578,12 @@ namespace flex
 								  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
 					}
 				}
+			}
+
+			if (shader.shader.needShadowMap)
+			{
+				mat.uniformIDs.castShadows = glGetUniformLocation(shader.program, "castShadows");
+				mat.uniformIDs.shadowDarkness = glGetUniformLocation(shader.program, "shadowDarkness");
 			}
 
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
@@ -1587,6 +1598,11 @@ namespace flex
 			return m_LoadedTextures[textureID]->handle;
 		}
 
+		void GLRenderer::RenderObjectStateChanged()
+		{
+			m_bRebatchRenderObjects = true;
+		}
+
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
@@ -1711,7 +1727,7 @@ namespace flex
 
 		void GLRenderer::Draw()
 		{
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 			DrawCallInfo drawCallInfo = {};
 
@@ -1974,7 +1990,7 @@ namespace flex
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
 
-			glViewport(0, 0, 1024, 1024);
+			glViewport(0, 0, m_ShadowMapSize, m_ShadowMapSize);
 
 			glDepthMask(GL_TRUE);
 			glDrawBuffer(GL_NONE);
@@ -1987,15 +2003,19 @@ namespace flex
 			glm::mat4 view, proj;
 			ComputeDirLightViewProj(view, proj);
 			
-			{
-				glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
-				glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &proj[0][0]);
-			}
+			glm::mat4 lightViewProj = proj * view;
+			glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
+
+			glCullFace(GL_FRONT);
 
 			for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
 			{
 				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
+
+			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			//glDrawBuffer(GL_BACK);
+			glCullFace(GL_BACK);
 		}
 
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
@@ -3192,10 +3212,11 @@ namespace flex
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
 			glm::vec3 dirLightDir = glm::vec3(1.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
-			outView = glm::lookAt(dirLightDir, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-			real zoom = 20.0f;
-			real nearPlane = 0.0f;
-			real farPlane = 1000.0f;
+			outView = glm::lookAt(glm::vec3(0.0f), -dirLightDir, glm::vec3(0.0f, 1.0f, 0.0f));
+			
+			real zoom = m_DirectionalLight.shadowMapZoom;
+			real nearPlane = m_DirectionalLight.shadowMapNearPlane;
+			real farPlane = m_DirectionalLight.shadowMapFarPlane;
 			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, nearPlane, farPlane);
 		}
 
@@ -3384,16 +3405,16 @@ namespace flex
 				glBindVertexArray(renderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
-				if (renderObject->enableCulling)
-				{
-					glEnable(GL_CULL_FACE);
+				//if (renderObject->enableCulling)
+				//{
+				//	glEnable(GL_CULL_FACE);
 
-					glCullFace(renderObject->cullFace);
-				}
-				else
-				{
-					glDisable(GL_CULL_FACE);
-				}
+				//	glCullFace(renderObject->cullFace);
+				//}
+				//else
+				//{
+				//	glDisable(GL_CULL_FACE);
+				//}
 
 				// TODO: Move to translucent pass?
 				if (shader->translucent)
@@ -3483,9 +3504,6 @@ namespace flex
 				}
 				else
 				{
-					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-					glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-
 					// TODO: Move to translucent pass?
 					if (shader->translucent)
 					{
@@ -4094,7 +4112,7 @@ namespace flex
 			// m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.needBRDFLUT = true;
-			m_Shaders[shaderID].shader.needShadowMap = true;
+			//m_Shaders[shaderID].shader.needShadowMap = true;
 			m_Shaders[shaderID].shader.needIrradianceSampler = true;
 			m_Shaders[shaderID].shader.needPrefilteredMap = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
@@ -4102,7 +4120,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CAM_POS);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::POINT_LIGHTS);
@@ -4324,8 +4342,7 @@ namespace flex
 				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
@@ -4363,7 +4380,6 @@ namespace flex
 
 			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProj = proj * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 			real exposure = g_CameraManager->CurrentCamera()->exposure;
@@ -4388,14 +4404,15 @@ namespace flex
 
 				glUseProgram(shader->program);
 
+				if (shader->shader.needShadowMap)
+				{
+					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight.bCastShadow);
+					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight.shadowDarkness);
+				}
+				
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
 				{
 					glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
-				}
-
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW_INV))
-				{
-					glUniformMatrix4fv(material->uniformIDs.viewInv, 1, GL_FALSE, &viewInv[0][0]);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::PROJECTION))
@@ -4661,6 +4678,7 @@ namespace flex
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer();
+			m_DirectionalLight.shadowTextureID = m_ShadowMapTexture.id;
 		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -5768,8 +5786,6 @@ namespace flex
 						}
 					}
 				}
-
-				ImGui::Image((void*)m_ShadowMapTexture.id, ImVec2(512, 512));
 			}
 
 
@@ -6421,7 +6437,7 @@ namespace flex
 				if (ImGui::Button("Add rigid body"))
 				{
 					RigidBody* rb = gameObject->SetRigidBody(new RigidBody());
-					btVector3 btHalfExtents(0.5f, 0.5f, 0.5f);
+					btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
 					btBoxShape* boxShape = new btBoxShape(btHalfExtents);
 
 					gameObject->SetCollisionShape(boxShape);

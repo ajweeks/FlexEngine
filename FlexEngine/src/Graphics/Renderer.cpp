@@ -252,8 +252,23 @@ namespace flex
 			{
 				m_DirectionalLight.rotation = glm::quat(glm::radians(cleanedRot));
 			}
-			ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
 			ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
+			ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
+			
+			ImGui::Spacing();
+			ImGui::Text("Shadow");
+
+			ImGui::Checkbox("Cast shadow", &m_DirectionalLight.bCastShadow);
+			ImGui::SliderFloat("Shadow darkness", &m_DirectionalLight.shadowDarkness, 0.0f, 1.0f);
+
+			ImGui::DragFloat("Near", &m_DirectionalLight.shadowMapNearPlane);
+			ImGui::DragFloat("Far", &m_DirectionalLight.shadowMapFarPlane);
+			ImGui::DragFloat("Zoom", &m_DirectionalLight.shadowMapZoom);
+
+			if (ImGui::CollapsingHeader("Preview"))
+			{
+				ImGui::Image((void*)m_DirectionalLight.shadowTextureID, ImVec2(256, 256));
+			}
 
 			ImGui::TreePop();
 		}

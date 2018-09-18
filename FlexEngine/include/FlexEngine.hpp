@@ -119,6 +119,8 @@ namespace flex
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;
 
+		std::string m_TransformGizmoTag = "transform-gizmo";
+
 		glm::vec3 m_SelectedObjectDragStartPos;
 		bool m_bDraggingGizmo = false;
 		i32 m_DraggingAxisIndex = -1;

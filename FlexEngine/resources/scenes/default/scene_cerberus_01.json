@@ -68,7 +68,7 @@
 	],
 	"directional light" : 
 	{
-		"direction" : "0.722, 0.398, 0.566",
+		"rotation" : "0.722, 0.398, 0.566",
 		"pos" : "0.000, 0.000, 0.000",
 		"color" : "0.87, 0.83, 0.59",
 		"enabled" : true,

@@ -40,7 +40,7 @@
 			"const albedo" : "0.740, 0.060, 0.030",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.520000,
-			"const ao" : 0.000000
+			"const ao" : 1.000000
 		},
 		{
 			"name" : "skybox 01",

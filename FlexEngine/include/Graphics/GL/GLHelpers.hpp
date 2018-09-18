@@ -69,6 +69,8 @@ namespace flex
 				i32 verticalScale;
 				i32 transformMat;
 				i32 texSize;
+				i32 castShadows;
+				i32 shadowDarkness;
 			};
 			UniformIDs uniformIDs;
 

@@ -24,35 +24,34 @@ namespace flex
 		MODEL						= BIT(0),
 		MODEL_INV_TRANSPOSE			= BIT(1),
 		VIEW						= BIT(2),
-		VIEW_INV					= BIT(3),
-		VIEW_PROJECTION				= BIT(4),
-		PROJECTION					= BIT(5),
-		COLOR_MULTIPLIER			= BIT(6),
-		CAM_POS						= BIT(7),
-		DIR_LIGHT					= BIT(8),
-		POINT_LIGHTS				= BIT(9),
-		ALBEDO_SAMPLER				= BIT(10),
-		CONST_ALBEDO				= BIT(11),
-		METALLIC_SAMPLER			= BIT(12),
-		CONST_METALLIC				= BIT(13),
-		ROUGHNESS_SAMPLER			= BIT(14),
-		CONST_ROUGHNESS				= BIT(15),
-		AO_SAMPLER					= BIT(16),
-		CONST_AO					= BIT(17),
-		NORMAL_SAMPLER				= BIT(18),
-		ENABLE_CUBEMAP_SAMPLER		= BIT(19),
-		CUBEMAP_SAMPLER				= BIT(20),
-		IRRADIANCE_SAMPLER			= BIT(21),
-		FB_0_SAMPLER				= BIT(22),
-		FB_1_SAMPLER				= BIT(23),
-		FB_2_SAMPLER				= BIT(24),
-		TEXEL_STEP					= BIT(25),
-		SHOW_EDGES					= BIT(26),
-		LIGHT_VIEW_PROJ				= BIT(27),
-		HDR_EQUIRECTANGULAR_SAMPLER	= BIT(28),
-		EXPOSURE					= BIT(29),
-		TRANSFORM_MAT				= BIT(30),
-		TEX_SIZE					= BIT(31),
+		VIEW_PROJECTION				= BIT(3),
+		PROJECTION					= BIT(4),
+		COLOR_MULTIPLIER			= BIT(5),
+		CAM_POS						= BIT(6),
+		DIR_LIGHT					= BIT(7),
+		POINT_LIGHTS				= BIT(8),
+		ALBEDO_SAMPLER				= BIT(9),
+		CONST_ALBEDO				= BIT(10),
+		METALLIC_SAMPLER			= BIT(11),
+		CONST_METALLIC				= BIT(12),
+		ROUGHNESS_SAMPLER			= BIT(13),
+		CONST_ROUGHNESS				= BIT(14),
+		AO_SAMPLER					= BIT(15),
+		CONST_AO					= BIT(16),
+		NORMAL_SAMPLER				= BIT(17),
+		ENABLE_CUBEMAP_SAMPLER		= BIT(18),
+		CUBEMAP_SAMPLER				= BIT(19),
+		IRRADIANCE_SAMPLER			= BIT(20),
+		FB_0_SAMPLER				= BIT(21),
+		FB_1_SAMPLER				= BIT(22),
+		FB_2_SAMPLER				= BIT(23),
+		TEXEL_STEP					= BIT(24),
+		SHOW_EDGES					= BIT(25),
+		LIGHT_VIEW_PROJ				= BIT(26),
+		HDR_EQUIRECTANGULAR_SAMPLER	= BIT(27),
+		EXPOSURE					= BIT(28),
+		TRANSFORM_MAT				= BIT(29),
+		TEX_SIZE					= BIT(30),
 	};
 
 	enum class ClearFlag
@@ -130,8 +129,17 @@ namespace flex
 		u32 enabled = 1;
 		real brightness = 1.0f;
 
+		real shadowDarkness = 0.0f;
+		bool bCastShadow = true;
+		real shadowMapNearPlane = -80.0f;
+		real shadowMapFarPlane = 100.0f;
+		real shadowMapZoom = 30.0f;
+
 		// Not used for rendering but allows users to position in the world
 		glm::vec3 position = glm::vec3(0.0f);
+
+		// DEBUG: (just for preview in ImGui)
+		u32 shadowTextureID = 0;
 	};
 
 	struct PointLight

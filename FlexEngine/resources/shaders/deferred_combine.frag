@@ -32,7 +32,8 @@ uniform vec4 camPos;
 uniform bool enableIrradianceSampler;
 uniform float exposure = 1.0;
 uniform mat4 lightViewProj;
-uniform bool bEnableShadows = true;
+uniform bool castShadows = true;
+uniform float shadowDarkness = 0.0;
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
@@ -166,7 +167,32 @@ void main()
 		vec3 radiance = dirLight.color.rgb;
 		float NoL = max(dot(N, L), 0.0);
 		
-		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
+		float dirLightShadow = 1.0;
+		if (castShadows)
+		{	
+			vec3 transformedShadowPos = vec3(lightViewProj * vec4(worldPos, 1.0));
+
+			if (transformedShadowPos.z > 1.0)
+			{
+				// Outside of light frustum
+				dirLightShadow = 1.0;
+			}
+			else
+			{
+				float baseBias = 0.005;
+				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
+
+				float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
+				//float shadowDepth = texture(shadowMap, transformedShadowPos.xyz, bias);
+
+				if (shadowDepth < transformedShadowPos.z - bias)
+				{
+					dirLightShadow = shadowDarkness;
+				}
+			}
+		}
+
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadow;
 	}
 
 	vec3 F = FresnelSchlickRoughness(NoV, F0, roughness);
@@ -198,20 +224,7 @@ void main()
 		ambient = vec3(0.03) * albedo * ao;
 	}
 
-
-	float shadow = 0.1;
-	if (bEnableShadows)
-	{	
-		vec3 transformedShadowPos = vec3(lightViewProj * vec4(worldPos, 1.0));
-
-		float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
-		if (shadowDepth > transformedShadowPos.z)
-		{
-			shadow = 1.0;
-		}
-	}
-
-	vec3 color = ambient + Lo * shadow;
+	vec3 color = ambient + Lo;
 
 	color *= exposure;
 

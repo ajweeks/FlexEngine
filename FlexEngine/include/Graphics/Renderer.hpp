@@ -114,6 +114,9 @@ namespace flex
 
 		virtual u32 GetTextureHandle(TextureID textureID) const = 0;
 
+		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
+		virtual void RenderObjectStateChanged() = 0;
+
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
 		// Output scale lies in range [0, 1] - both outputs corrected for aspect ratio

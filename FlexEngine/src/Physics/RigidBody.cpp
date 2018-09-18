@@ -137,6 +137,10 @@ namespace flex
 	void RigidBody::SetStatic(bool bStatic)
 	{
 		m_bStatic = bStatic;
+		if (bStatic)
+		{
+			m_Mass = 0.0f;
+		}
 	}
 
 	bool RigidBody::IsStatic() const

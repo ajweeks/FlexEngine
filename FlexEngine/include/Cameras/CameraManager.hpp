@@ -42,6 +42,8 @@ namespace flex
 		 */
 		void SetActiveIndexRelative(i32 delta, bool bAlign = true);
 
+		void SetActiveCameraByType(const std::string& typeStr);
+
 	private:
 		i32 GetCameraIndex(BaseCamera* camera);
 

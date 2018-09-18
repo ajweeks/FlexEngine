@@ -85,7 +85,7 @@ namespace flex
 
 	void CameraManager::SwtichToIndex(i32 index, bool bAlign)
 	{
-		if (index >= 0 && index < (i32)m_Cameras.size())
+		if (index >= 0 && index < (i32)m_Cameras.size() && index != m_ActiveCameraIndex)
 		{
 			if (bAlign)
 			{
@@ -112,6 +112,20 @@ namespace flex
 		}
 
 		SwtichToIndex(newIndex, bAlign);
+	}
+
+	void CameraManager::SetActiveCameraByType(const std::string& typeStr)
+	{
+		for (i32 i = 0; i < (i32)m_Cameras.size(); ++i)
+		{
+			if (m_Cameras[i]->GetName().compare(typeStr) == 0)
+			{
+				SwtichToIndex(i, false);
+				return;
+			}
+		}
+
+		PrintWarn("Attempted to set camera to unknown name: %s\n", typeStr.c_str());
 	}
 
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)

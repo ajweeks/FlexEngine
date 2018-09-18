@@ -735,7 +735,7 @@ namespace flex
 
 	void BaseScene::CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight)
 	{
-		std::string dirStr = obj.GetString("direction");
+		std::string dirStr = obj.GetString("rotation");
 		directionalLight.rotation = glm::quat(ParseVec3(dirStr));
 
 		std::string posStr = obj.GetString("pos");
@@ -751,6 +751,24 @@ namespace flex
 		if (obj.HasField("enabled"))
 		{
 			directionalLight.enabled = obj.GetBool("enabled") ? 1 : 0;
+		}
+
+		obj.SetBoolChecked("cast shadows", directionalLight.bCastShadow);
+		obj.SetFloatChecked("shadow darkness", directionalLight.shadowDarkness);
+
+		if (obj.HasField("shadow map near"))
+		{
+			obj.SetFloatChecked("shadow map near", directionalLight.shadowMapNearPlane);
+		}
+
+		if (obj.HasField("shadow map far"))
+		{
+			obj.SetFloatChecked("shadow map far", directionalLight.shadowMapFarPlane);
+		}
+
+		if (obj.HasField("shadow map zoom"))
+		{
+			obj.SetFloatChecked("shadow map zoom", directionalLight.shadowMapZoom);
 		}
 	}
 
@@ -897,9 +915,9 @@ namespace flex
 	{
 		JSONObject object;
 
-		glm::vec4 dirLightDir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * directionalLight.rotation;
+		glm::vec3 dirLightDir = glm::eulerAngles(directionalLight.rotation);
 		std::string dirStr = Vec3ToString(dirLightDir, 3);
-		object.fields.emplace_back("direction", JSONValue(dirStr));
+		object.fields.emplace_back("rotation", JSONValue(dirStr));
 
 		std::string posStr = Vec3ToString(directionalLight.position, 3);
 		object.fields.emplace_back("pos", JSONValue(posStr));
@@ -909,6 +927,12 @@ namespace flex
 
 		object.fields.emplace_back("enabled", JSONValue(directionalLight.enabled != 0));
 		object.fields.emplace_back("brightness", JSONValue(directionalLight.brightness));
+
+		object.fields.emplace_back("cast shadows", JSONValue(directionalLight.bCastShadow));
+		object.fields.emplace_back("shadow darkness", JSONValue(directionalLight.shadowDarkness));
+		object.fields.emplace_back("shadow map near", JSONValue(directionalLight.shadowMapNearPlane));
+		object.fields.emplace_back("shadow map far", JSONValue(directionalLight.shadowMapFarPlane));
+		object.fields.emplace_back("shadow map zoom", JSONValue(directionalLight.shadowMapZoom));
 
 		return object;
 	}
