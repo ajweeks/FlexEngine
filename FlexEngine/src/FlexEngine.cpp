@@ -635,6 +635,7 @@ namespace flex
 							{
 								CalculateSelectedObjectsCenter();
 								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+								m_DraggingGizmoOffset = -1.0f;
 							}
 							m_bDraggingGizmo = false;
 							m_DraggingAxisIndex = -1;
@@ -684,6 +685,7 @@ namespace flex
 						
 						Transform* gizmoTransform = m_TransformGizmo->GetTransform();
 						glm::vec3 rayEndG = ToVec3(rayEnd);
+						glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
 
 						if (m_DraggingAxisIndex == 0) // X Axis
 						{
@@ -697,6 +699,10 @@ namespace flex
 							{
 								glm::vec3 axis = gizmoTransform->GetRight();
 								glm::vec3 planeN = gizmoTransform->GetForward();
+								if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+								{
+									planeN = gizmoTransform->GetUp();
+								}
 								dPos = GetDragDistanceAlongAxis(axis, camPosG, rayEndG, planeN);
 							}
 						}
@@ -706,11 +712,16 @@ namespace flex
 							{
 								m_bDraggingGizmo = true;
 								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+								m_DraggingGizmoOffset = -1.0f;
 							}
 							else if (bMouseDown)
 							{
 								glm::vec3 axis = gizmoTransform->GetUp();
 								glm::vec3 planeN = gizmoTransform->GetRight();
+								if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+								{
+									planeN = gizmoTransform->GetForward();
+								}
 								dPos = GetDragDistanceAlongAxis(axis, camPosG, rayEndG, planeN);
 							}
 						}
@@ -720,11 +731,16 @@ namespace flex
 							{
 								m_bDraggingGizmo = true;
 								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+								m_DraggingGizmoOffset = -1.0f;
 							}
 							else if (bMouseDown)
 							{
 								glm::vec3 axis = gizmoTransform->GetForward();
 								glm::vec3 planeN = gizmoTransform->GetUp();
+								if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+								{
+									planeN = gizmoTransform->GetRight();
+								}
 								dPos = GetDragDistanceAlongAxis(axis, camPosG, rayEndG, planeN);
 							}
 						}
@@ -736,7 +752,7 @@ namespace flex
 							g_Renderer->GetDebugDrawer()->drawLine(
 								ToBtVec3(m_SelectedObjectDragStartPos),
 								ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-								(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.0f, 0.0f, 1.0f)));
+								(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
 
 							for (GameObject* gameObject : m_CurrentlySelectedObjects)
 							{
@@ -2147,7 +2163,7 @@ namespace flex
 			}
 			glm::vec3 constrainedPoint = planeOrigin + (glm::dot(intersectionPoint - planeOrigin, axis) - m_DraggingGizmoOffset) * axis;
 
-			glm::vec3 deltaPos = (constrainedPoint - (planeOrigin));
+			glm::vec3 deltaPos = (constrainedPoint - planeOrigin);
 			return deltaPos;
 		}
 

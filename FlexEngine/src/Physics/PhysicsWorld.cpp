@@ -113,20 +113,25 @@ namespace flex
 
 		btCollisionWorld::AllHitsRayResultCallback rayCallback(rayStart, rayEnd);
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
+		real closestGizmoDist2 = FLT_MAX;
 		if (rayCallback.hasHit())
 		{
 			for (i32 i = 0; i < rayCallback.m_hitPointWorld.size(); ++i)
 			{
 				btVector3 pickPos = rayCallback.m_hitPointWorld[i];
-				btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
+				const btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObjects[i]);
 				if (body)
 				{
 					GameObject* gameObject = (GameObject*)body->getUserPointer();
 
 					if (gameObject && gameObject->HasTag(tag))
 					{
-						pickedGameObject = gameObject;
-						break;
+						real dist2 = (pickPos - rayStart).length2();
+						if (dist2 < closestGizmoDist2)
+						{
+							closestGizmoDist2 = dist2;
+							pickedGameObject = gameObject;
+						}
 					}
 				}
 			}
