@@ -1708,6 +1708,12 @@ namespace flex
 				}
 			}
 
+#if 0 // Auto-rotate directional light
+			m_DirectionalLight.rotation = glm::rotate(m_DirectionalLight.rotation,
+				g_DeltaTime * 0.5f,
+				glm::vec3(0.0f, 0.5f, 0.5f));
+#endif
+
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
 			// This fixes the weird artifacts in refl probes, but obviously isn't ideal...
@@ -2446,8 +2452,8 @@ namespace flex
 
 				glm::vec3 dirLightForward = glm::vec3(1.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
 				m_PhysicsDebugDrawer->drawLine(
-					Vec3ToBtVec3(m_DirectionalLight.position),
-					Vec3ToBtVec3(m_DirectionalLight.position - dirLightForward * 2.5f),
+					ToBtVec3(m_DirectionalLight.position),
+					ToBtVec3(m_DirectionalLight.position - dirLightForward * 2.5f),
 					btVector3(0.0f, 0.0f, 1.0f));
 			}
 		}
@@ -3371,16 +3377,20 @@ namespace flex
 				return;
 			}
 
-			MaterialID materialID = drawCallInfo.materialOverride;
-
-			if (materialID == InvalidMaterialID)
+			MaterialID materialID = InvalidMaterialID;
+			if (drawCallInfo.materialOverride == InvalidMaterialID)
 			{
 				materialID = batchedRenderObjects[0]->materialID;
+			}
+			else
+			{
+				materialID = drawCallInfo.materialOverride;
 			}
 			GLMaterial* material = &m_Materials[materialID];
 			GLShader* glShader = &m_Shaders[material->material.shaderID];
 			Shader* shader = &glShader->shader;
-			glUseProgram(glShader->program);
+			u32 boundProgram = glShader->program;
+			glUseProgram(boundProgram);
 
 			if (drawCallInfo.bWireframe)
 			{
@@ -3399,6 +3409,16 @@ namespace flex
 					PrintError("Attempted to draw object which contains no vertex buffer data: %s\n", renderObject->gameObject->GetName().c_str());
 					return;
 				}
+
+				if (drawCallInfo.materialOverride == InvalidMaterialID)
+				{
+					materialID = renderObject->materialID;
+					material = &m_Materials[materialID];
+					glShader = &m_Shaders[material->material.shaderID];
+					shader = &glShader->shader;
+				}
+
+				assert(glShader->program == boundProgram);
 
 				glBindVertexArray(renderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
@@ -3529,7 +3549,7 @@ namespace flex
 					MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
 					if (mesh)
 					{
-						btVector3 centerWS = Vec3ToBtVec3(mesh->GetBoundingSphereCenterPointWS());
+						btVector3 centerWS = ToBtVec3(mesh->GetBoundingSphereCenterPointWS());
 						m_PhysicsDebugDrawer->drawSphere(centerWS, 0.1f, btVector3(0.8f, 0.2f, 0.1f));
 						m_PhysicsDebugDrawer->drawSphere(centerWS, mesh->GetScaledBoundingSphereRadius(), btVector3(0.2f, 0.8f, 0.1f));
 
@@ -3537,15 +3557,15 @@ namespace flex
 
 						//glm::vec3 transformedMin = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f));
 						//glm::vec3 transformedMax = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f));
-						//btVector3 minPos = Vec3ToBtVec3(transformedMin);
-						//btVector3 maxPos = Vec3ToBtVec3(transformedMax);
+						//btVector3 minPos = ToBtVec3(transformedMin);
+						//btVector3 maxPos = ToBtVec3(transformedMax);
 						//m_PhysicsDebugDrawer->drawSphere(minPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
 						//m_PhysicsDebugDrawer->drawSphere(maxPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
 
-						btVector3 scaledMin = Vec3ToBtVec3(transform->GetWorldScale() * mesh->m_MinPoint);
-						btVector3 scaledMax = Vec3ToBtVec3(transform->GetWorldScale() * mesh->m_MaxPoint);
+						btVector3 scaledMin = ToBtVec3(transform->GetWorldScale() * mesh->m_MinPoint);
+						btVector3 scaledMax = ToBtVec3(transform->GetWorldScale() * mesh->m_MaxPoint);
 
-						btTransform transformBT = TransformToBtTransform(*transform);
+						btTransform transformBT = ToBtTransform(*transform);
 						m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
 					}
 				}
@@ -6318,13 +6338,13 @@ namespace flex
 					{
 						btBoxShape* boxShape = (btBoxShape*)shape;
 						btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
-						glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
+						glm::vec3 halfExtentsG = ToVec3(halfExtents);
 						halfExtentsG /= scale;
 
 						real maxExtent = 1000.0f;
 						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
 						{
-							halfExtents = Vec3ToBtVec3(halfExtentsG);
+							halfExtents = ToBtVec3(halfExtentsG);
 							btBoxShape* newShape = new btBoxShape(halfExtents);
 							gameObject->SetCollisionShape(newShape);
 						}
@@ -6364,13 +6384,13 @@ namespace flex
 					{
 						btCylinderShape* cylinderShape = (btCylinderShape*)shape;
 						btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
-						glm::vec3 halfExtentsG = BtVec3ToVec3(halfExtents);
+						glm::vec3 halfExtentsG = ToVec3(halfExtents);
 						halfExtentsG /= scale;
 
 						real maxExtent = 1000.0f;
 						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
 						{
-							halfExtents = Vec3ToBtVec3(halfExtentsG);
+							halfExtents = ToBtVec3(halfExtentsG);
 							btCylinderShape* newShape = new btCylinderShape(halfExtents);
 							gameObject->SetCollisionShape(newShape);
 						}
@@ -6396,20 +6416,20 @@ namespace flex
 
 					ImGui::Spacing();
 
-					glm::vec3 linearVel = BtVec3ToVec3(rb->GetRigidBodyInternal()->getLinearVelocity());
+					glm::vec3 linearVel = ToVec3(rb->GetRigidBodyInternal()->getLinearVelocity());
 					if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
 					{
-						rbInternal->setLinearVelocity(Vec3ToBtVec3(linearVel));
+						rbInternal->setLinearVelocity(ToBtVec3(linearVel));
 					}
 					if (ImGui::IsItemClicked(1))
 					{
 						rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
 					}
 
-					glm::vec3 angularVel = BtVec3ToVec3(rb->GetRigidBodyInternal()->getAngularVelocity());
+					glm::vec3 angularVel = ToVec3(rb->GetRigidBodyInternal()->getAngularVelocity());
 					if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
 					{
-						rbInternal->setAngularVelocity(Vec3ToBtVec3(angularVel));
+						rbInternal->setAngularVelocity(ToBtVec3(angularVel));
 					}
 					if (ImGui::IsItemClicked(1))
 					{

@@ -259,7 +259,6 @@ namespace flex
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
 		ms frameStart = s_DisplayedFrameTimings[0].start;
 		ms frameEnd = s_DisplayedFrameTimings[0].end;
-
 		ms frameDuration = frameEnd - frameStart;
 
 		const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom, 
@@ -339,7 +338,7 @@ namespace flex
 			}
 
 			++colorIndex;
-			colorIndex %= ARRAY_SIZE(blockColors);
+			colorIndex %= ARRAY_LENGTH(blockColors);
 		}
 	}
 

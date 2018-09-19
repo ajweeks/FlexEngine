@@ -78,7 +78,7 @@ namespace flex
 
 		// Grounded check
 		{
-			btVector3 rayStart = Vec3ToBtVec3(m_Player->GetTransform()->GetWorldPosition());
+			btVector3 rayStart = ToBtVec3(m_Player->GetTransform()->GetWorldPosition());
 			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);
 
 			btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
@@ -105,8 +105,8 @@ namespace flex
 			{
 				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
 				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
-				force += Vec3ToBtVec3(m_Player->GetTransform()->GetRight()) * m_MoveAcceleration * -moveH;
-				force += Vec3ToBtVec3(m_Player->GetTransform()->GetForward()) * m_MoveAcceleration * -moveV;
+				force += ToBtVec3(m_Player->GetTransform()->GetRight()) * m_MoveAcceleration * -moveH;
+				force += ToBtVec3(m_Player->GetTransform()->GetForward()) * m_MoveAcceleration * -moveV;
 			} break;
 			}
 		}
@@ -115,13 +115,13 @@ namespace flex
 
 		{
 			const real lineLength = 4.0f;
-			debugDrawer->drawLine(rbPos, rbPos + Vec3ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
-			debugDrawer->drawLine(rbPos, rbPos + Vec3ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
-			debugDrawer->drawLine(rbPos, rbPos + Vec3ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
+			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
+			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
+			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
 		}
 
 		btQuaternion orientation = rb->getOrientation();
-		glm::vec3 euler = glm::eulerAngles(BtQuaternionToQuaternion(orientation));
+		glm::vec3 euler = glm::eulerAngles(ToQuaternion(orientation));
 
 		rb->applyCentralForce(force);
 
@@ -175,7 +175,7 @@ namespace flex
 			//Print("forward:  %.2f, %.2f, %.2f,  up:  %.2f, %.2f, %.2f,  right:  %.2f, %.2f, %.2f\n", forward.x, forward.y, forward.z, up.x, up.y, up.z, right.x, right.y, right.z);
 
 			btQuaternion oldRotation = transformBT.getRotation();
-			glm::quat rot = BtQuaternionToQuaternion(oldRotation);
+			glm::quat rot = ToQuaternion(oldRotation);
 
 			//glm::vec3 dUp = (up - glm::vec3(0.0f, 1.0f, 0.0f));
 			//real fallingOverAmount = (glm::dot(dUp, forward));
@@ -205,7 +205,7 @@ namespace flex
 			rot = glm::rotate(rot, -lookH * g_DeltaTime * m_RotateSpeed, up);
 			//rot = glm::rotate(rot, lookV * g_DeltaTime, right);
 
-			transformBT.setRotation(QuaternionToBtQuaternion(rot));
+			transformBT.setRotation(ToBtQuaternion(rot));
 		} break;
 		}
 	}

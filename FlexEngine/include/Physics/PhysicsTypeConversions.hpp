@@ -12,13 +12,13 @@
 
 #include "Transform.hpp"
 
-btVector3 Vec3ToBtVec3(const glm::vec3& rhs);
-btVector4 Vec4ToBtVec4(const glm::vec4& rhs);
-btQuaternion QuaternionToBtQuaternion(const glm::quat& rhs);
+btVector3 ToBtVec3(const glm::vec3& rhs);
+btVector4 ToBtVec4(const glm::vec4& rhs);
+btQuaternion ToBtQuaternion(const glm::quat& rhs);
 
-glm::vec3 BtVec3ToVec3(const btVector3& rhs);
-glm::vec4 BtVec4ToVec4(const btVector4& rhs);
-glm::quat BtQuaternionToQuaternion(const btQuaternion& rhs);
+glm::vec3 ToVec3(const btVector3& rhs);
+glm::vec4 ToVec4(const btVector4& rhs);
+glm::quat ToQuaternion(const btQuaternion& rhs);
 
-btTransform TransformToBtTransform(const flex::Transform& transform);
-flex::Transform BtTransformToTransform(const btTransform& transform);
+btTransform ToBtTransform(const flex::Transform& transform);
+flex::Transform ToTransform(const btTransform& transform);

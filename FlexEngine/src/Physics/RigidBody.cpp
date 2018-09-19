@@ -58,7 +58,7 @@ namespace flex
 			assert(m_Mass == 0); // Static objects must have a mass of 0!
 		}
 
-		btTransform startingTransform = TransformToBtTransform(*parentTransform);
+		btTransform startingTransform = ToBtTransform(*parentTransform);
 		m_MotionState = new btDefaultMotionState(startingTransform);
 		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
 
@@ -81,7 +81,7 @@ namespace flex
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 		world->addRigidBody(m_RigidBody, m_Group, m_Mask);
 
-		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(parentTransform->GetWorldScale()));
+		m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(parentTransform->GetWorldScale()));
 	}
 
 	void RigidBody::Destroy()
@@ -168,8 +168,8 @@ namespace flex
 		btTransform transform;
 		m_RigidBody->getMotionState()->getWorldTransform(transform);
 
-		outPos = BtVec3ToVec3(transform.getOrigin());
-		outRot = BtQuaternionToQuaternion(transform.getRotation());
+		outPos = ToVec3(transform.getOrigin());
+		outRot = ToQuaternion(transform.getRotation());
 	}
 
 	void RigidBody::SetOrientationConstraint(const btVector3& axis)
@@ -267,9 +267,9 @@ namespace flex
 
 		btTransform transform = m_RigidBody->getWorldTransform();
 
-		glm::mat4 worldTransformMat = glm::translate(glm::mat4(1.0f), BtVec3ToVec3(transform.getOrigin())) *
-			glm::mat4(BtQuaternionToQuaternion(transform.getRotation())) *
-			glm::scale(glm::mat4(1.0f), BtVec3ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
+		glm::mat4 worldTransformMat = glm::translate(glm::mat4(1.0f), ToVec3(transform.getOrigin())) *
+			glm::mat4(ToQuaternion(transform.getRotation())) *
+			glm::scale(glm::mat4(1.0f), ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
 
 		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
 			glm::mat4(m_LocalRotation) *
@@ -304,7 +304,7 @@ namespace flex
 
 		if (m_RigidBody->getCollisionShape())
 		{
-			m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldScale()));
+			m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldScale()));
 		}
 
 		m_RigidBody->activate();

@@ -444,7 +444,7 @@ namespace flex
 			case BOX_SHAPE_PROXYTYPE:
 			{
 				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
 				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
@@ -476,7 +476,7 @@ namespace flex
 			case CYLINDER_SHAPE_PROXYTYPE:
 			{
 				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
+				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
 				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
@@ -689,14 +689,14 @@ namespace flex
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			btVector3 pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
+			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			btVector3 pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
+			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}
@@ -1624,27 +1624,27 @@ namespace flex
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			btTransform transform;
 			m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
-			transform.setOrigin(Vec3ToBtVec3(newPos));
+			transform.setOrigin(ToBtVec3(newPos));
 			transform.setRotation(btQuaternion::getIdentity());
 			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
 		}
 
-		btVector3 startPos = Vec3ToBtVec3(startingPos);
+		btVector3 startPos = ToBtVec3(startingPos);
 		g_Renderer->GetDebugDrawer()->drawLine(
 			startPos,
-			startPos + Vec3ToBtVec3(moveAxis * maxDist),
+			startPos + ToBtVec3(moveAxis * maxDist),
 			btVector3(1, 1, 1));
 		if (minDist < 0.0f)
 		{
 			g_Renderer->GetDebugDrawer()->drawLine(
 				startPos,
-				startPos + Vec3ToBtVec3(moveAxis * minDist),
+				startPos + ToBtVec3(moveAxis * minDist),
 				btVector3(0.99f, 0.6f, 0.6f));
 		}
 
 		g_Renderer->GetDebugDrawer()->drawLine(
 			startPos,
-			startPos + Vec3ToBtVec3(moveAxis * dist),
+			startPos + ToBtVec3(moveAxis * dist),
 			btVector3(0.3f, 0.3f, 0.5f));
 	}
 

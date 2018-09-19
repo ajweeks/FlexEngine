@@ -87,6 +87,11 @@ namespace flex
 
 		void DoSceneContextMenu(BaseScene* scene);
 
+		glm::vec3 GetDragDistanceAlongAxis(const glm::vec3& axis,
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			const glm::vec3& planeNorm);
+
 		u32 m_RendererCount = 0;
 		bool m_bRunning = false;
 
@@ -122,6 +127,7 @@ namespace flex
 		std::string m_TransformGizmoTag = "transform-gizmo";
 
 		glm::vec3 m_SelectedObjectDragStartPos;
+		real m_DraggingGizmoOffset; // How far along the axis the cursor was when pressed
 		bool m_bDraggingGizmo = false;
 		i32 m_DraggingAxisIndex = -1;
 

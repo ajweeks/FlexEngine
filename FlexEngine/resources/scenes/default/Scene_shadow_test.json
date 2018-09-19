@@ -35,7 +35,7 @@
 				"scale" : "30.000, 0.600, 30.000"
 			},
 			"mesh" : "cube",
-			"material" : "pbr white",
+			"material" : "pbr grey",
 			"collider" : 
 			{
 				"shape" : "box",
@@ -209,7 +209,7 @@
 	],
 	"directional light" : 
 	{
-		"rotation" : "1.467, 0.696, 0.179",
+		"rotation" : "1.663, 0.369, 0.556",
 		"pos" : "0.000, 8.900, 1.200",
 		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,

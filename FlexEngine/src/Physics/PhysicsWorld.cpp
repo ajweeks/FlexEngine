@@ -101,7 +101,7 @@ namespace flex
 		glm::vec3 rayOriginWorld = cameraView * rayOrigin;
 
 		glm::vec3 rayPWorld = cameraView * glm::vec4(pixelCameraX, pixelCameraY, -1.0f, 1);
-		btVector3 rayDirection = Vec3ToBtVec3(rayPWorld - rayOriginWorld);
+		btVector3 rayDirection = ToBtVec3(rayPWorld - rayOriginWorld);
 		rayDirection.normalize();
 
 		return rayDirection;
