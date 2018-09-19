@@ -2,6 +2,9 @@
 
 // Deferred PBR combine
 
+// TODO: Move to common header
+#define QUALITY_LEVEL_HIGH 1
+
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
@@ -168,6 +171,7 @@ void main()
 		float NoL = max(dot(N, L), 0.0);
 		
 		float dirLightShadow = 1.0;
+		vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0);
 		if (castShadows)
 		{	
 			vec3 transformedShadowPos = vec3(lightViewProj * vec4(worldPos, 1.0));
@@ -182,13 +186,29 @@ void main()
 				float baseBias = 0.005;
 				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
 
-				float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
-				//float shadowDepth = texture(shadowMap, transformedShadowPos.xyz, bias);
+#if QUALITY_LEVEL_HIGH
+				for (int x = -1; x <= 1; ++x)
+				{
+					for (int y = -1; y <= 1; ++y)
+					{
+						float shadowDepth = texture(shadowMap, 
+							transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize).r;
 
+						if (shadowDepth > transformedShadowPos.z - bias)
+						{
+							dirLightShadow += (1.0-shadowDarkness);
+						}
+					}
+				}
+
+				dirLightShadow /= 9.0;
+#else
+				float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
 				if (shadowDepth < transformedShadowPos.z - bias)
 				{
 					dirLightShadow = shadowDarkness;
 				}
+#endif
 			}
 		}
 
