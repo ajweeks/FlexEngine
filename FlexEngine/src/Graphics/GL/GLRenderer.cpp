@@ -4719,6 +4719,7 @@ namespace flex
 			outInfo.enableCulling = (renderObject->enableCulling == GL_TRUE);
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
 			outInfo.depthWriteEnable = (renderObject->depthWriteEnable == GL_TRUE);
+			outInfo.editorObject = renderObject->editorObject;
 
 			return true;
 		}
@@ -5725,6 +5726,7 @@ namespace flex
 						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
 						{
 							bool bSelected = (i == selectedMeshIndex);
+							std::string meshFilePath = meshIter.first;
 							std::string meshFileName = meshIter.first;
 							StripLeadingDirectories(meshFileName);
 							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
@@ -5737,7 +5739,20 @@ namespace flex
 							{
 								if (ImGui::Button("Reload"))
 								{
-									// TODO: Reload
+									MeshComponent::LoadMesh(meshIter.second->relativeFilePath);
+
+									for (GLRenderObject* renderObject : m_RenderObjects)
+									{
+										if (renderObject)
+										{
+											MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+											if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+											{
+												mesh->Reload();
+											}
+										}
+									}
+
 									ImGui::CloseCurrentPopup();
 								}
 
@@ -5944,11 +5959,11 @@ namespace flex
 		{
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
-			std::string objectID;
+			std::string objectID = "##";
 			if (renderID != InvalidRenderID)
 			{
 				renderObject = GetRenderObject(renderID);
-				objectID = "##" + std::to_string(renderObject->renderID);
+				objectID += std::to_string(renderObject->renderID);
 
 				if (!gameObject->IsVisibleInSceneExplorer())
 				{
@@ -6494,7 +6509,7 @@ namespace flex
 				// Make sure at least one child is visible in scene explorer
 				for (GameObject* child : gameObjectChildren)
 				{
-					if (child->IsVisibleInSceneExplorer())
+					if (child->IsVisibleInSceneExplorer(true))
 					{
 						bChildVisibleInSceneExplorer = true;
 						break;

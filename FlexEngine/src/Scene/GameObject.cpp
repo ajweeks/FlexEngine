@@ -1169,9 +1169,25 @@ namespace flex
 		}
 	}
 
-	bool GameObject::IsVisibleInSceneExplorer() const
+	bool GameObject::IsVisibleInSceneExplorer(bool bIncludingChildren) const
 	{
-		return m_bVisibleInSceneExplorer;
+		if (m_bVisibleInSceneExplorer)
+		{
+			return true;
+		}
+
+		if (bIncludingChildren)
+		{
+			for (GameObject* child : m_Children)
+			{
+				if (child->IsVisibleInSceneExplorer(bIncludingChildren))
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	void GameObject::SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer)

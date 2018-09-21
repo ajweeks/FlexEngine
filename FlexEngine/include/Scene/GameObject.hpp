@@ -80,7 +80,8 @@ namespace flex
 		bool IsVisible() const;
 		void SetVisible(bool bVisible, bool effectChildren = true);
 
-		bool IsVisibleInSceneExplorer() const;
+		// If bIncludingChildren is true, true will be returned if this or any children are visible in scene explorer
+		bool IsVisibleInSceneExplorer(bool bIncludingChildren = false) const;
 		void SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer);
 
 		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);

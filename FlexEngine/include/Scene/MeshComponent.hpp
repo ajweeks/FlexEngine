@@ -91,6 +91,11 @@ namespace flex
 		bool LoadPrefabShape(PrefabShape shape, 
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
+		/*
+		* Destroys then loads this object
+		*/
+		void Reload();
+
 		MaterialID GetMaterialID() const;
 		void SetMaterialID(MaterialID materialID);
 		void SetUVScale(real uScale, real vScale);
@@ -116,15 +121,17 @@ namespace flex
 
 		struct LoadedMesh
 		{
+			std::string relativeFilePath;
 			ImportSettings importSettings;
 			Assimp::Importer importer = {};
 			const aiScene* scene = nullptr;
 		};
+		// First field is relative file path (e.g. RESOURCE_LOCATION + "meshes/cube.gltf")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
-		static bool GetLoadedMesh(const std::string& filePath, LoadedMesh** loadedMesh);
+		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 
-		static LoadedMesh* LoadMesh(const std::string& filePath, ImportSettings* importSettings = nullptr);
+		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, ImportSettings* importSettings = nullptr);
 
 	private:
 		real CalculateBoundingSphereScale() const;
@@ -157,6 +164,7 @@ namespace flex
 
 		// Saved so we can reload meshes and serialize contents to file
 		ImportSettings m_ImportSettings = {};
+		RenderObjectCreateInfo m_OptionalCreateInfo = {};
 
 		static glm::vec4 m_DefaultColor_4;
 		static glm::vec3 m_DefaultPosition;

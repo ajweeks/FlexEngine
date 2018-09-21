@@ -89,6 +89,8 @@ inline void SafeDelete(T &pObjectToDelete)
 #define PROFILE_AUTO(blockName)
 #endif
 
+#define ENSURE_NO_ENTRY PrintError("Execution entered no entry path!\n"); assert(false);
+
 namespace flex
 {
 	static const std::string RESOURCE_LOCATION = "../../../FlexEngine/resources/";

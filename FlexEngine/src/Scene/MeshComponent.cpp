@@ -170,9 +170,9 @@ namespace flex
 		m_RequiredAttributes = shader.vertexAttributes;
 	}
 
-	bool MeshComponent::GetLoadedMesh(const std::string& filePath, LoadedMesh** loadedMesh)
+	bool MeshComponent::GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
 	{
-		auto iter = m_LoadedMeshes.find(filePath);
+		auto iter = m_LoadedMeshes.find(relativeFilePath);
 		if (iter == m_LoadedMeshes.end())
 		{
 			return false;
@@ -184,31 +184,44 @@ namespace flex
 		}
 	}
 
-	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& filePath, ImportSettings* importSettings /* = nullptr */)
+	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, ImportSettings* importSettings /* = nullptr */)
 	{
-		if (filePath.find(':') != std::string::npos)
+		if (relativeFilePath.find(':') != std::string::npos)
 		{
 			PrintError("Called LoadMesh with an absolute file path! Must be relative!\n");
+			return nullptr;
 		}
 
 		// Mesh hasn't been loaded before, load it now
-		std::string fileName = filePath;
+		std::string fileName = relativeFilePath;
 		StripLeadingDirectories(fileName);
-		Print("Loading mesh %s\n", fileName.c_str());
-
-		LoadedMesh* newLoadedMesh = new LoadedMesh();
-		m_LoadedMeshes.emplace(filePath, newLoadedMesh);
+		
+		LoadedMesh* newLoadedMesh = nullptr;
+		{
+			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
+			if (existingIter == m_LoadedMeshes.end())
+			{
+				Print("Loading mesh %s\n", fileName.c_str());
+				newLoadedMesh = new LoadedMesh();
+				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
+			}
+			else
+			{
+				Print("Reloading mesh %s\n", fileName.c_str());
+				newLoadedMesh = existingIter->second;
+			}
+		}
 
 		if (importSettings)
 		{
 			newLoadedMesh->importSettings = *importSettings;
 		}
 
-		newLoadedMesh->scene = newLoadedMesh->importer.ReadFile(filePath,
+		newLoadedMesh->relativeFilePath = relativeFilePath;
+		newLoadedMesh->scene = newLoadedMesh->importer.ReadFile(relativeFilePath,
 																aiProcess_FindInvalidData |
 																aiProcess_GenNormals |
-																aiProcess_CalcTangentSpace
-		);
+																aiProcess_CalcTangentSpace);
 
 		return newLoadedMesh;
 	}
@@ -425,11 +438,11 @@ namespace flex
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
-				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
+				PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
+				PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
 			}
 		}
 
@@ -440,7 +453,7 @@ namespace flex
 		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
 		{
-			PrintError("Overriding game object's render ID! (%s) Memory leak may occur\n", m_OwningGameObject->GetName().c_str());
+			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
 		}
 		m_OwningGameObject->SetRenderID(renderID);
 
@@ -478,9 +491,6 @@ namespace flex
 		m_BoundingSphereCenterPoint = glm::vec3(0.0f);
 		m_VertexBufferData.Destroy();
 
-		std::string meshFileName = relativeFilePath;
-		StripLeadingDirectories(meshFileName);
-
 		const aiScene* scene = nullptr;
 		LoadedMesh* loadedMesh = nullptr;
 		if (GetLoadedMesh(relativeFilePath, &loadedMesh))
@@ -496,8 +506,6 @@ namespace flex
 		else
 		{
 			// Mesh hasn't been loaded before, load it now
-			Print("Loading mesh %s\n", meshFileName.c_str());
-
 			LoadedMesh* newLoadedMesh = LoadMesh(relativeFilePath, importSettings);
 
 			if (newLoadedMesh)
@@ -1198,6 +1206,10 @@ namespace flex
 		renderObjectCreateInfo.indices = &m_Indices;
 
 		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
+		{
+			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
+		}
 		m_OwningGameObject->SetRenderID(renderID);
 
 		g_Renderer->SetTopologyMode(renderID, topologyMode);
@@ -1219,6 +1231,33 @@ namespace flex
 				transform->GetWorldPosition().y,
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
 			transform->SetWorldPosition(newGridPos);
+		}
+	}
+
+	void MeshComponent::Reload()
+	{
+		if (m_Type != Type::FILE)
+		{
+			PrintWarn("Prefab reloading is unsupported\n");
+			return;
+		}
+
+		GameObject* owningGameObject = m_OwningGameObject;
+		
+		RenderObjectCreateInfo renderObjectCreateInfo;
+		g_Renderer->GetRenderObjectCreateInfo(m_OwningGameObject->GetRenderID(), renderObjectCreateInfo);
+
+		// These fields can't be passed in, make it clear we aren't trying to
+		renderObjectCreateInfo.vertexBufferData = nullptr;
+		renderObjectCreateInfo.indices = nullptr;
+
+		Destroy();
+
+		SetOwner(owningGameObject);
+
+		if (!LoadFromFile(m_RelativeFilePath, &m_ImportSettings, &renderObjectCreateInfo))
+		{
+			PrintError("Failed to reload mesh at %s\n", m_RelativeFilePath.c_str());
 		}
 	}
 
