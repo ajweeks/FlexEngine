@@ -117,6 +117,10 @@ namespace flex
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
 
+		void ToggleRenderGrid();
+		bool IsRenderingGrid() const;
+		virtual void SetRenderGrid(bool bRenderGrid);
+
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
 		// Output scale lies in range [0, 1] - both outputs corrected for aspect ratio
@@ -203,6 +207,8 @@ namespace flex
 
 		bool m_bPostProcessingEnabled = true;
 		bool m_bDisplayBoundingVolumes = false;
+
+		bool m_bRenderGrid = true;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

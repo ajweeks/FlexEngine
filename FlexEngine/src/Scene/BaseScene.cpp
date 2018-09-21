@@ -212,54 +212,6 @@ namespace flex
 			}
 		}
 
-
-		{
-			const std::string gridMatName = "Grid";
-			if (!g_Renderer->GetMaterialID(gridMatName, m_GridMaterialID))
-			{
-				MaterialCreateInfo gridMatInfo = {};
-				gridMatInfo.shaderName = "color";
-				gridMatInfo.name = gridMatName;
-				gridMatInfo.engineMaterial = true;
-				m_GridMaterialID = g_Renderer->InitializeMaterial(&gridMatInfo);
-			}
-
-			m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
-			MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
-			RenderObjectCreateInfo createInfo = {};
-			createInfo.editorObject = true;
-			gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
-			m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
-			m_Grid->SetSerializable(false);
-			m_Grid->SetStatic(true);
-			m_Grid->SetVisibleInSceneExplorer(false);
-			AddRootObject(m_Grid);
-		}
-
-
-		{
-			const std::string worldOriginMatName = "World origin";
-			if (!g_Renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
-			{
-				MaterialCreateInfo worldAxisMatInfo = {};
-				worldAxisMatInfo.shaderName = "color";
-				worldAxisMatInfo.name = worldOriginMatName;
-				worldAxisMatInfo.engineMaterial = true;
-				m_WorldAxisMaterialID = g_Renderer->InitializeMaterial(&worldAxisMatInfo);
-			}
-
-			m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
-			MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
-			RenderObjectCreateInfo createInfo = {};
-			createInfo.editorObject = true;
-			orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
-			m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
-			m_WorldOrigin->SetSerializable(false);
-			m_WorldOrigin->SetStatic(true);
-			m_WorldOrigin->SetVisibleInSceneExplorer(false);
-			AddRootObject(m_WorldOrigin);
-		}
-
 		m_Player0 = new Player(0);
 		AddRootObject(m_Player0);
 		
@@ -330,19 +282,6 @@ namespace flex
 		}
 
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
-
-		// Fade grid out when far away
-		{
-			float maxHeightVisible = 350.0f;
-			float distCamToGround = camera->GetPosition().y;
-			float maxDistVisible = 300.0f;
-			float distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
-
-			glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
-			glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
-			g_Renderer->GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
-			g_Renderer->GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
-		}
 
 		for (GameObject* rootObject : m_RootObjects)
 		{

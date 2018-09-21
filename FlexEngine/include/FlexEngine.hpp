@@ -68,6 +68,13 @@ namespace flex
 			_LAST_ELEMENT
 		};
 
+		enum class TransformState
+		{
+			TRANSLATE,
+			ROTATE,
+			SCALE
+		};
+
 		void Destroy();
 
 		void CycleRenderer();
@@ -91,6 +98,8 @@ namespace flex
 			const glm::vec3& rayOrigin,
 			const glm::vec3& rayEnd,
 			const glm::vec3& planeNorm);
+
+		void SetTransformState(TransformState state);
 
 		u32 m_RendererCount = 0;
 		bool m_bRunning = false;
@@ -119,16 +128,26 @@ namespace flex
 		glm::vec3 m_SelectedObjectsCenterPos;
 		glm::quat m_SelectedObjectRotation;
 
+		// Parent of translation, rotation, and scale gizmo objects 
 		GameObject* m_TransformGizmo = nullptr;
+		// Children of m_TransformGizmo
+		GameObject* m_TranslationGizmo = nullptr;
+		GameObject* m_RotationGizmo = nullptr;
+		GameObject* m_ScaleGizmo = nullptr;
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatAllID = InvalidMaterialID;
+
+		TransformState m_CurrentTransformGizmoState = TransformState::TRANSLATE;
 
 		std::string m_TransformGizmoTag = "transform-gizmo";
 
 		glm::vec3 m_SelectedObjectDragStartPos;
 		real m_DraggingGizmoOffset; // How far along the axis the cursor was when pressed
 		bool m_bDraggingGizmo = false;
+		// -1,   0, 1, 2, 3
+		// None, X, Y, Z, All Axes
 		i32 m_DraggingAxisIndex = -1;
 
 		std::string m_CommonSettingsFileName;

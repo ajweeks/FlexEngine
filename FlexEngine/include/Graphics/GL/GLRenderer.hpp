@@ -108,6 +108,8 @@ namespace flex
 
 			virtual void RenderObjectStateChanged() override;
 
+			virtual void SetRenderGrid(bool bRenderGrid) override;
+
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
@@ -331,6 +333,9 @@ namespace flex
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
 			// All render objects which have "editorObject" set to true
+
+			// Any editor objects which also require a game object wrapper
+			std::vector<GameObject*> m_EditorObjects;
 			std::vector<GLRenderObject*> m_EditorRenderObjectBatch;
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
@@ -346,8 +351,12 @@ namespace flex
 			const char* m_MeshPayloadCStr = "mesh";
 
 			bool m_bShowingAssetBrowser = false;
-
 			bool m_bRebatchRenderObjects = true;
+
+			GameObject* m_Grid = nullptr;
+			GameObject* m_WorldOrigin = nullptr;
+			MaterialID m_GridMaterialID = InvalidMaterialID;
+			MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

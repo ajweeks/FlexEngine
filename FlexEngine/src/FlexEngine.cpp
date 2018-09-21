@@ -157,6 +157,7 @@ namespace flex
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			m_TransformGizmoMatAllID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
 
 		BaseScene::ParseFoundMeshFiles();
@@ -343,87 +344,271 @@ namespace flex
 	{
 		SaveCommonSettingsToDisk(false);
 
-		RenderObjectCreateInfo gizmoAxisCreateInfo = {};
-		gizmoAxisCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-		gizmoAxisCreateInfo.depthWriteEnable = true;
-		gizmoAxisCreateInfo.editorObject = true;
-
-		real cylinderRadius = 0.3f;
-		real cylinderHeight = 1.8f;
-
-		u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-		i32 rbGroup = -1;// (u32)CollisionType::EDITOR_OBJECT;
-		i32 rbMask = -1;
-
-		// X Axis
-		GameObject* transformXAxis = new GameObject("Transform gizmo x axis", GameObjectType::NONE);
-		transformXAxis->AddTag(m_TransformGizmoTag);
-		transformXAxis->SetVisibleInSceneExplorer(false);
-		MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
-
-		btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-		transformXAxis->SetCollisionShape(xAxisShape);
-
-		RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
-		gizmoXAxisRB->SetMass(0.0f);
-		gizmoXAxisRB->SetKinematic(true);
-		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
-
-		xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-		xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/transform-gizmo-x-axis.fbx", nullptr, &gizmoAxisCreateInfo);
-
-		// Y Axis
-		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
-		transformYAxis->AddTag(m_TransformGizmoTag);
-		transformYAxis->SetVisibleInSceneExplorer(false);
-		MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
-
-		btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-		transformYAxis->SetCollisionShape(yAxisShape);
-
-		RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
-		gizmoYAxisRB->SetMass(0.0f);
-		gizmoYAxisRB->SetKinematic(true);
-		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
-
-		yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-		yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/transform-gizmo-y-axis.fbx", nullptr, &gizmoAxisCreateInfo);
-
-		// Z Axis
-		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
-		transformZAxis->AddTag(m_TransformGizmoTag);
-		transformZAxis->SetVisibleInSceneExplorer(false);
-
-		MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
-
-		btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-		transformZAxis->SetCollisionShape(zAxisShape);
-
-		RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
-		gizmoZAxisRB->SetMass(0.0f);
-		gizmoZAxisRB->SetKinematic(true);
-		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
-
-		zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-		zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/transform-gizmo-z-axis.fbx", nullptr, &gizmoAxisCreateInfo);
-
+		RenderObjectCreateInfo gizmoCreateInfo = {};
+		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::LEQUAL;
+		gizmoCreateInfo.depthWriteEnable = true;
+		gizmoCreateInfo.editorObject = true;
+		gizmoCreateInfo.cullFace = CullFace::BACK;
+		gizmoCreateInfo.enableCulling = true;
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
-		m_TransformGizmo->SetVisibleInSceneExplorer(false);
 
-		m_TransformGizmo->AddChild(transformXAxis);
-		m_TransformGizmo->AddChild(transformYAxis);
-		m_TransformGizmo->AddChild(transformZAxis);
+		// Scene explorer visibility doesn't need to be set because this object isn't a root object
+
+		// Translation gizmo
+		{
+			real cylinderRadius = 0.3f;
+			real cylinderHeight = 1.8f;
+
+			u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
+			i32 rbGroup = -1;// (u32)CollisionType::EDITOR_OBJECT;
+			i32 rbMask = (i32)CollisionType::NOTHING;
+
+			// X Axis
+			GameObject* transformXAxis = new GameObject("Translation gizmo x axis", GameObjectType::NONE);
+			transformXAxis->AddTag(m_TransformGizmoTag);
+			MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
+
+			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			transformXAxis->SetCollisionShape(xAxisShape);
+
+			RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoXAxisRB->SetMass(0.0f);
+			gizmoXAxisRB->SetKinematic(true);
+			gizmoXAxisRB->SetPhysicsFlags(rbFlags);
+
+			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
+			xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/translation-gizmo-x.fbx", nullptr, &gizmoCreateInfo);
+
+			// Y Axis
+			GameObject* transformYAxis = new GameObject("Translation gizmo y axis", GameObjectType::NONE);
+			transformYAxis->AddTag(m_TransformGizmoTag);
+			MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
+
+			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			transformYAxis->SetCollisionShape(yAxisShape);
+
+			RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoYAxisRB->SetMass(0.0f);
+			gizmoYAxisRB->SetKinematic(true);
+			gizmoYAxisRB->SetPhysicsFlags(rbFlags);
+
+			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
+			yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/translation-gizmo-y.fbx", nullptr, &gizmoCreateInfo);
+
+			// Z Axis
+			GameObject* transformZAxis = new GameObject("Translation gizmo z axis", GameObjectType::NONE);
+			transformZAxis->AddTag(m_TransformGizmoTag);
+
+			MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
+
+			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			transformZAxis->SetCollisionShape(zAxisShape);
+
+			RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoZAxisRB->SetMass(0.0f);
+			gizmoZAxisRB->SetKinematic(true);
+			gizmoZAxisRB->SetPhysicsFlags(rbFlags);
+
+			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
+			zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/translation-gizmo-z.fbx", nullptr, &gizmoCreateInfo);
+
+
+			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+
+			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::NONE);
+			
+			m_TranslationGizmo->AddChild(transformXAxis);
+			m_TranslationGizmo->AddChild(transformYAxis);
+			m_TranslationGizmo->AddChild(transformZAxis);
+
+			m_TransformGizmo->AddChild(m_TranslationGizmo);
+		}
+
+		// Rotation gizmo
+		{
+			real cylinderRadius = 0.3f;
+			real cylinderHeight = 1.8f;
+
+			u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
+			i32 rbGroup = -1;// (u32)CollisionType::EDITOR_OBJECT;
+			i32 rbMask = (i32)CollisionType::NOTHING;
+
+			// X Axis
+			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::NONE);
+			rotationXAxis->AddTag(m_TransformGizmoTag);
+			MeshComponent* xAxisMesh = rotationXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, rotationXAxis));
+
+			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			rotationXAxis->SetCollisionShape(xAxisShape);
+
+			RigidBody* gizmoXAxisRB = rotationXAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoXAxisRB->SetMass(0.0f);
+			gizmoXAxisRB->SetKinematic(true);
+			gizmoXAxisRB->SetPhysicsFlags(rbFlags);
+
+			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
+			xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/rotation-gizmo-flat-x.fbx", nullptr, &gizmoCreateInfo);
+
+			// Y Axis
+			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::NONE);
+			rotationYAxis->AddTag(m_TransformGizmoTag);
+			MeshComponent* yAxisMesh = rotationYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, rotationYAxis));
+
+			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			rotationYAxis->SetCollisionShape(yAxisShape);
+
+			RigidBody* gizmoYAxisRB = rotationYAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoYAxisRB->SetMass(0.0f);
+			gizmoYAxisRB->SetKinematic(true);
+			gizmoYAxisRB->SetPhysicsFlags(rbFlags);
+
+			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
+			yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/rotation-gizmo-flat-y.fbx", nullptr, &gizmoCreateInfo);
+
+			// Z Axis
+			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::NONE);
+			rotationZAxis->AddTag(m_TransformGizmoTag);
+
+			MeshComponent* zAxisMesh = rotationZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, rotationZAxis));
+
+			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			rotationZAxis->SetCollisionShape(zAxisShape);
+
+			RigidBody* gizmoZAxisRB = rotationZAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoZAxisRB->SetMass(0.0f);
+			gizmoZAxisRB->SetKinematic(true);
+			gizmoZAxisRB->SetPhysicsFlags(rbFlags);
+
+			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
+			zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/rotation-gizmo-flat-z.fbx", nullptr, &gizmoCreateInfo);
+
+			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+
+			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::NONE);
+
+			m_RotationGizmo->AddChild(rotationXAxis);
+			m_RotationGizmo->AddChild(rotationYAxis);
+			m_RotationGizmo->AddChild(rotationZAxis);
+
+			m_TransformGizmo->AddChild(m_RotationGizmo);
+
+			m_RotationGizmo->SetVisible(false);
+		}
+
+		// Scale gizmo
+		{
+			real boxScale = 1.0f;
+			real cylinderRadius = 0.3f;
+			real cylinderHeight = 1.8f;
+
+			u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
+			i32 rbGroup = (i32)CollisionType::EDITOR_OBJECT;
+			i32 rbMask = (i32)CollisionType::NOTHING;
+
+			// X Axis
+			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::NONE);
+			scaleXAxis->AddTag(m_TransformGizmoTag);
+			MeshComponent* xAxisMesh = scaleXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, scaleXAxis));
+
+			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			scaleXAxis->SetCollisionShape(xAxisShape);
+
+			RigidBody* gizmoXAxisRB = scaleXAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoXAxisRB->SetMass(0.0f);
+			gizmoXAxisRB->SetKinematic(true);
+			gizmoXAxisRB->SetPhysicsFlags(rbFlags);
+
+			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
+			xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-x.fbx", nullptr, &gizmoCreateInfo);
+
+			// Y Axis
+			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::NONE);
+			scaleYAxis->AddTag(m_TransformGizmoTag);
+			MeshComponent* yAxisMesh = scaleYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, scaleYAxis));
+
+			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			scaleYAxis->SetCollisionShape(yAxisShape);
+
+			RigidBody* gizmoYAxisRB = scaleYAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoYAxisRB->SetMass(0.0f);
+			gizmoYAxisRB->SetKinematic(true);
+			gizmoYAxisRB->SetPhysicsFlags(rbFlags);
+
+			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
+			yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-y.fbx", nullptr, &gizmoCreateInfo);
+
+			// Z Axis
+			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::NONE);
+			scaleZAxis->AddTag(m_TransformGizmoTag);
+
+			MeshComponent* zAxisMesh = scaleZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, scaleZAxis));
+
+			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			scaleZAxis->SetCollisionShape(zAxisShape);
+
+			RigidBody* gizmoZAxisRB = scaleZAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoZAxisRB->SetMass(0.0f);
+			gizmoZAxisRB->SetKinematic(true);
+			gizmoZAxisRB->SetPhysicsFlags(rbFlags);
+
+			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
+			zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-z.fbx", nullptr, &gizmoCreateInfo);
+
+			// Center (all axes)
+			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::NONE);
+			scaleAllAxes->AddTag(m_TransformGizmoTag);
+
+			MeshComponent* allAxesMesh = scaleAllAxes->SetMeshComponent(new MeshComponent(m_TransformGizmoMatAllID, scaleAllAxes));
+
+			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
+			scaleAllAxes->SetCollisionShape(allAxesShape);
+
+			RigidBody* gizmoAllAxesRB = scaleAllAxes->SetRigidBody(new RigidBody(rbGroup, rbMask));
+			gizmoAllAxesRB->SetMass(0.0f);
+			gizmoAllAxesRB->SetKinematic(true);
+			gizmoAllAxesRB->SetPhysicsFlags(rbFlags);
+
+			allAxesMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatAllID);
+			allAxesMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-all.fbx", nullptr, &gizmoCreateInfo);
+
+
+			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+
+			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::NONE);
+
+			m_ScaleGizmo->AddChild(scaleXAxis);
+			m_ScaleGizmo->AddChild(scaleYAxis);
+			m_ScaleGizmo->AddChild(scaleZAxis);
+			m_ScaleGizmo->AddChild(scaleAllAxes);
+
+			m_TransformGizmo->AddChild(m_ScaleGizmo);
+
+			m_ScaleGizmo->SetVisible(false);
+		}
+
 		m_TransformGizmo->Initialize();
-
-
-		gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-		gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
-
-		gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-		gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-		gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 		m_TransformGizmo->PostInitialize();
 	}
@@ -551,6 +736,7 @@ namespace flex
 				Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 				Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 				Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+				Material& allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
 				glm::vec4 white(1.0f);
 				if (m_DraggingAxisIndex != 0)
 				{
@@ -564,8 +750,12 @@ namespace flex
 				{
 					zMat.colorMultiplier = white;
 				}
+				if (m_DraggingAxisIndex != 3)
+				{
+					allMat.colorMultiplier = white;
+				}
 
-				std::vector<GameObject*> transformAxes = m_TransformGizmo->GetChildren();
+				std::vector<GameObject*> translationAxes = m_TranslationGizmo->GetChildren();
 
 				real gizmoHoverMultiplier = 0.6f;
 				real gizmoSelectedMultiplier = 0.4f;
@@ -582,7 +772,7 @@ namespace flex
 				GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, m_TransformGizmoTag);
 				if (!m_bDraggingGizmo && pickedTransformGizmo)
 				{
-					if (pickedTransformGizmo == transformAxes[0]) // X Axis
+					if (pickedTransformGizmo == translationAxes[0]) // X Axis
 					{
 						if (bMousePressed)
 						{
@@ -594,7 +784,7 @@ namespace flex
 							xMat.colorMultiplier = hoverColor;
 						}
 					}
-					else if (pickedTransformGizmo == transformAxes[1]) // Y Axis
+					else if (pickedTransformGizmo == translationAxes[1]) // Y Axis
 					{
 						if (bMousePressed)
 						{
@@ -606,7 +796,7 @@ namespace flex
 							yMat.colorMultiplier = hoverColor;
 						}
 					}
-					else if (pickedTransformGizmo == transformAxes[2]) // Z Axis
+					else if (pickedTransformGizmo == translationAxes[2]) // Z Axis
 					{
 						if (bMousePressed)
 						{
@@ -616,6 +806,18 @@ namespace flex
 						else
 						{
 							zMat.colorMultiplier = hoverColor;
+						}
+					}
+					else if (pickedTransformGizmo == translationAxes[3]) // All axes
+					{
+						if (bMousePressed)
+						{
+							m_DraggingAxisIndex = 3;
+							allMat.colorMultiplier = selectedColor;
+						}
+						else
+						{
+							allMat.colorMultiplier = hoverColor;
 						}
 					}
 				}
@@ -769,7 +971,7 @@ namespace flex
 
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
 			{
-				m_bRenderEditorObjects = !m_bRenderEditorObjects;
+				g_Renderer->ToggleRenderGrid();
 			}
 
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
@@ -868,6 +1070,19 @@ namespace flex
 				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_A))
 			{
 				SelectAll();
+			}
+
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_1))
+			{
+				SetTransformState(TransformState::TRANSLATE);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_2))
+			{
+				SetTransformState(TransformState::ROTATE);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_3))
+			{
+				SetTransformState(TransformState::SCALE);
 			}
 
 			Profiler::Update();
@@ -2168,6 +2383,18 @@ namespace flex
 		}
 
 		return glm::vec3(0.0f);
+	}
+
+	void FlexEngine::SetTransformState(TransformState state)
+	{
+		if (state != m_CurrentTransformGizmoState)
+		{
+			m_CurrentTransformGizmoState = state;
+
+			m_TranslationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::TRANSLATE);
+			m_RotationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::ROTATE);
+			m_ScaleGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::SCALE);
+		}
 	}
 
 	void FlexEngine::CalculateSelectedObjectsCenter()

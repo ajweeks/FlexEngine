@@ -27,6 +27,21 @@ namespace flex
 		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
 	}
 
+	void Renderer::ToggleRenderGrid()
+	{
+		SetRenderGrid(!m_bRenderGrid);
+	}
+
+	void Renderer::SetRenderGrid(bool bRenderGrid)
+	{
+		m_bRenderGrid = bRenderGrid;
+	}
+
+	bool Renderer::IsRenderingGrid() const
+	{
+		return m_bRenderGrid;
+	}
+
 	void Renderer::TransformRectToScreenSpace(const glm::vec2& pos,
 											  const glm::vec2& scale,
 											  glm::vec2& posOut,

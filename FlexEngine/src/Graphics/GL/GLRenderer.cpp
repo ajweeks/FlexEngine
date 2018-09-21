@@ -10,9 +10,16 @@
 #include <functional>
 
 #pragma warning(push, 0)
+#include <glm/vec3.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
+
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
+#include <BulletCollision/CollisionShapes/btConeShape.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
 
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
@@ -46,14 +53,6 @@
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
-
-#pragma warning(push, 0)
-#include <BulletCollision/CollisionShapes/btBoxShape.h>
-#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
-#include <BulletCollision/CollisionShapes/btConeShape.h>
-#include <BulletCollision/CollisionShapes/btSphereShape.h>
-#pragma warning(pop)
 
 namespace flex
 {
@@ -189,11 +188,11 @@ namespace flex
 				m_DirectionalLight.shadowTextureID = m_ShadowMapTexture.id;
 			}
 
-			MaterialCreateInfo createInfo = {};
-			createInfo.shaderName = "shadow";
-			createInfo.name = "Shadow";
-			createInfo.engineMaterial = true;
-			m_ShadowMaterialID = InitializeMaterial(&createInfo);
+			MaterialCreateInfo shadowMatCreateInfo = {};
+			shadowMatCreateInfo.shaderName = "shadow";
+			shadowMatCreateInfo.name = "Shadow";
+			shadowMatCreateInfo.engineMaterial = true;
+			m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
 			//i32 program = m_Shaders[m_Materials[m_ShadowMaterialID].material.shaderID].program;
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
@@ -220,6 +219,56 @@ namespace flex
 			postFXAAMatCreateInfo.engineMaterial = true;
 			m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 			
+
+			{
+				const std::string gridMatName = "Grid";
+				if (!g_Renderer->GetMaterialID(gridMatName, m_GridMaterialID))
+				{
+					MaterialCreateInfo gridMatInfo = {};
+					gridMatInfo.shaderName = "color";
+					gridMatInfo.name = gridMatName;
+					gridMatInfo.engineMaterial = true;
+					m_GridMaterialID = g_Renderer->InitializeMaterial(&gridMatInfo);
+				}
+
+				m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
+				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
+				RenderObjectCreateInfo createInfo = {};
+				createInfo.editorObject = true;
+				gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
+				m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
+				m_Grid->SetSerializable(false);
+				m_Grid->SetStatic(true);
+				m_Grid->SetVisibleInSceneExplorer(false);
+				m_Grid->Initialize();
+				m_EditorObjects.push_back(m_Grid);
+			}
+
+
+			{
+				const std::string worldOriginMatName = "World origin";
+				if (!g_Renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+				{
+					MaterialCreateInfo worldAxisMatInfo = {};
+					worldAxisMatInfo.shaderName = "color";
+					worldAxisMatInfo.name = worldOriginMatName;
+					worldAxisMatInfo.engineMaterial = true;
+					m_WorldAxisMaterialID = g_Renderer->InitializeMaterial(&worldAxisMatInfo);
+				}
+
+				m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
+				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
+				RenderObjectCreateInfo createInfo = {};
+				createInfo.editorObject = true;
+				orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
+				m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
+				m_WorldOrigin->SetSerializable(false);
+				m_WorldOrigin->SetStatic(true);
+				m_WorldOrigin->SetVisibleInSceneExplorer(false);
+				m_WorldOrigin->Initialize();
+				m_EditorObjects.push_back(m_WorldOrigin);
+			}
+
 
 			// 2D Quad
 			{
@@ -420,6 +469,11 @@ namespace flex
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw();
 			m_PhysicsDebugDrawer->Initialize();
 
+			for (GameObject* editorObject : m_EditorObjects)
+			{
+				editorObject->PostInitialize();
+			}
+
 			Print("Renderer initialized!\n");
 		}
 
@@ -427,6 +481,13 @@ namespace flex
 		{
 			glDeleteVertexArrays(1, &m_TextQuadVAO);
 			glDeleteBuffers(1, &m_TextQuadVBO);
+
+			for (GameObject* editorObject : m_EditorObjects)
+			{
+				editorObject->Destroy();
+				SafeDelete(editorObject);
+			}
+			m_EditorObjects.clear();
 
 			for (BitmapFont* font : m_Fonts)
 			{
@@ -467,6 +528,15 @@ namespace flex
 				SafeDelete(obj);
 			}
 			m_PersistentObjects.clear();
+
+			for (GameObject* editorObject : m_EditorObjects)
+			{
+				if (editorObject->GetRenderID() != InvalidRenderID)
+				{
+					DestroyRenderObject(editorObject->GetRenderID());
+				}
+				SafeDelete(editorObject);
+			}
 
 			DestroyRenderObject(m_Quad3DRenderID);
 			DestroyRenderObject(m_Quad2DRenderID);
@@ -1601,6 +1671,14 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
+		void GLRenderer::SetRenderGrid(bool bRenderGrid)
+		{
+			Renderer::SetRenderGrid(bRenderGrid);
+
+			m_Grid->SetVisible(bRenderGrid);
+			m_WorldOrigin->SetVisible(bRenderGrid);
+		}
+
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
@@ -1708,6 +1786,20 @@ namespace flex
 				}
 			}
 
+			// Fade grid out when far away
+			{
+				float maxHeightVisible = 350.0f;
+				BaseCamera* camera = g_CameraManager->CurrentCamera();
+				float distCamToGround = camera->GetPosition().y;
+				float maxDistVisible = 300.0f;
+				float distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
+
+				glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
+				glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
+				GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
+				GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
+			}
+
 #if 0 // Auto-rotate directional light
 			m_DirectionalLight.rotation = glm::rotate(m_DirectionalLight.rotation,
 				g_DeltaTime * 0.5f,
@@ -1758,6 +1850,8 @@ namespace flex
 			{
 				PhysicsDebugRender();
 			}
+
+			// TODO: Draw world space sprites/text here! depth buffer is cleared in DrawEditorObjects
 
 			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
@@ -2233,6 +2327,13 @@ namespace flex
 		void GLRenderer::DrawEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
 			PROFILE_AUTO("DrawEditorObjects");
+
+			glDepthMask(GL_TRUE);
+			glDepthFunc(GL_LEQUAL);
+			glClear(GL_DEPTH_BUFFER_BIT);
+
+			glCullFace(GL_BACK);
+			glEnable(GL_CULL_FACE);
 
 			DrawRenderObjectBatch(m_EditorRenderObjectBatch, drawCallInfo);
 
