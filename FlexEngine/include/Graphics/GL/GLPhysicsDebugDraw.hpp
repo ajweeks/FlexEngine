@@ -4,9 +4,9 @@
 #include <vector>
 
 #pragma warning(push, 0)
-#include <glad\glad.h>
+#include <glad/glad.h>
 
-#include "LinearMath\btIDebugDraw.h"
+#include "LinearMath/btIDebugDraw.h"
 #pragma warning(pop)
 
 #include "Types.hpp"
@@ -38,7 +38,7 @@ namespace flex
 
 			virtual void flushLines() override;
 			void ClearLines();
-			
+
 		private:
 			void Draw();
 

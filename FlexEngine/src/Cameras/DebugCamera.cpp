@@ -3,8 +3,8 @@
 #include "Cameras/DebugCamera.hpp"
 
 #pragma warning(push, 0)
-#include <glm/vec2.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/vec2.hpp>
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
@@ -116,7 +116,7 @@ namespace flex
 
 					m_TurnVel += glm::vec2(look.x * m_MouseRotationSpeed * turnSpeedMultiplier,
 										   look.y * m_MouseRotationSpeed * turnSpeedMultiplier);
-				
+
 					m_Yaw += m_TurnVel.x;
 					m_Pitch += m_TurnVel.y;
 					ClampPitch();

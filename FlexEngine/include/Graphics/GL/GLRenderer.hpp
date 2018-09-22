@@ -5,10 +5,10 @@
 
 #include <map>
 
-#include "Types.hpp"
-#include "Graphics/GL/GLHelpers.hpp"
-#include "VertexBufferData.hpp"
+#include "GLHelpers.hpp"
 #include "Helpers.hpp"
+#include "Types.hpp"
+#include "VertexBufferData.hpp"
 
 namespace flex
 {
@@ -66,7 +66,7 @@ namespace flex
 			u32 GetActiveRenderObjectCount() const;
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
-			
+
 			virtual void SetSkyboxMesh(GameObject* skyboxMesh) override;
 			virtual GameObject* GetSkyboxMesh() override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
@@ -78,7 +78,7 @@ namespace flex
 			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
-			
+
 			virtual void NewFrame() override;
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
@@ -89,7 +89,7 @@ namespace flex
 			virtual void AddEditorString(const std::string& str) override;
 			virtual void DrawString(const std::string& str,
 									const glm::vec4& color,
-									AnchorPoint anchor, 
+									AnchorPoint anchor,
 									const glm::vec2& pos, // Positional offset from anchor
 									real spacing,
 									bool bRaw) override; // Horizontal per-char spacing
@@ -101,7 +101,7 @@ namespace flex
 			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
 			virtual void DrawAssetBrowserImGui() override;
-			
+
 			virtual void RecaptureReflectionProbe() override;
 
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
@@ -261,9 +261,9 @@ namespace flex
 
 			GLTexture* m_BRDFTexture = nullptr;
 
-			// Everything is drawn to this texture before being drawn to the default 
+			// Everything is drawn to this texture before being drawn to the default
 			// frame buffer through some post-processing effects
-			TextureHandle m_OffscreenTexture0Handle; 
+			TextureHandle m_OffscreenTexture0Handle;
 			u32 m_Offscreen0FBO = 0;
 			u32 m_Offscreen0RBO = 0;
 
@@ -276,7 +276,7 @@ namespace flex
 			TextureID m_AlphaBGTextureID = InvalidTextureID;
 			TextureID m_LoadingTextureID = InvalidTextureID;
 			TextureID m_WorkTextureID = InvalidTextureID;
-			
+
 			TextureID m_PointLightIconID = InvalidTextureID;
 			TextureID m_DirectionalLightIconID = InvalidTextureID;
 
@@ -321,12 +321,12 @@ namespace flex
 			std::array<glm::mat4, 6> m_CaptureViews;
 
 			GameObject* m_SkyBoxMesh = nullptr;
-			
+
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
 
-			// The transform to be used for all objects who don't specify one in their 
+			// The transform to be used for all objects who don't specify one in their
 			// create info. Always set to identity.
 			//Transform m_DefaultTransform;
 

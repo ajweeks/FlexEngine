@@ -30,7 +30,7 @@ namespace flex
 
 		/*
 		* Multiplies the source by gainScale
-		* Optionally prevents gain from reaching zero so that it 
+		* Optionally prevents gain from reaching zero so that it
 		* can be scale up again later
 		*/
 		static void ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool preventZero = true);

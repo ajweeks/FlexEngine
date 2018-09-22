@@ -2,9 +2,9 @@
 
 #include "Profiler.hpp"
 
-#include "Time.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
+#include "Time.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -120,7 +120,7 @@ namespace flex
 			//s_PendingCSV.append(std::string(element.first) + "," +
 			//					std::to_string(element.second) + '\n');
 
-			//Print(std::string(element.first) + ": " + 
+			//Print(std::string(element.first) + ": " +
 			//				std::to_string(element.second) + "ms");
 		//}
 
@@ -184,7 +184,7 @@ namespace flex
 		auto iter = s_Timings.find(hash);
 		if (iter == s_Timings.end())
 		{
-			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n", 
+			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n",
 					   blockName, hash);
 			return;
 		}
@@ -261,7 +261,7 @@ namespace flex
 		ms frameEnd = s_DisplayedFrameTimings[0].end;
 		ms frameDuration = frameEnd - frameStart;
 
-		const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom, 
+		const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom,
 									  s_DisplayedFrameOptions.screenHeightPercent );
 		const glm::vec2 frameCenter = glm::vec2(s_DisplayedFrameOptions.xOffPercent + s_DisplayedFrameOptions.hScroll + s_DisplayedFrameOptions.hO,
 												s_DisplayedFrameOptions.yOffPercent);
@@ -345,7 +345,7 @@ namespace flex
 	u64 Profiler::Hash(const char* str)
 	{
 		size_t result = std::hash<std::string>{}(str);
-		
+
 		return (u64)result;
 	}
 

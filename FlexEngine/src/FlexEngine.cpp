@@ -7,39 +7,40 @@
 #include <time.h> // For time
 
 #pragma warning(push, 0)
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
+#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+
+#include <glm/gtx/intersect.hpp>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <LinearMath/btIDebugDraw.h>
-
-#include <glm/gtx/intersect.hpp>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
-#include "Cameras/OverheadCamera.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
+#include "Cameras/OverheadCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
-#include "JSONTypes.hpp"
 #include "JSONParser.hpp"
+#include "JSONTypes.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Profiler.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
+#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
-#include "Window/Monitor.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
+#include "Window/Monitor.hpp"
 
 namespace flex
 {
@@ -103,7 +104,7 @@ namespace flex
 		GetConsoleHandle();
 
 		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
-		Print("%i renderer%s %s, Current renderer: %s\n", 
+		Print("%i renderer%s %s, Current renderer: %s\n",
 			  m_RendererCount, (m_RendererCount > 1 ? "s" : ""), "enabled", m_RendererName.c_str());
 
 		DeselectCurrentlySelectedObjects();
@@ -169,7 +170,7 @@ namespace flex
 
 		LoadCommonSettingsFromDisk();
 
-		g_SceneManager->InitializeCurrentScene();		
+		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 		g_SceneManager->PostInitializeCurrentScene();
 
@@ -228,7 +229,7 @@ namespace flex
 		SafeDelete(g_CameraManager);
 
 		DestroyWindowAndRenderer();
-		
+
 		SafeDelete(g_Monitor);
 
 		MeshComponent::DestroyAllLoadedMeshes();
@@ -424,7 +425,7 @@ namespace flex
 
 
 			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::NONE);
-			
+
 			m_TranslationGizmo->AddChild(transformXAxis);
 			m_TranslationGizmo->AddChild(transformYAxis);
 			m_TranslationGizmo->AddChild(transformZAxis);
@@ -659,7 +660,7 @@ namespace flex
 		SetupImGuiStyles();
 
 		g_SceneManager->AddFoundScenes();
-		
+
 		LoadCommonSettingsFromDisk();
 
 		g_SceneManager->InitializeCurrentScene();
@@ -712,7 +713,7 @@ namespace flex
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
 			g_Renderer->NewFrame();
-			 
+
 			if (m_bRenderImGui)
 			{
 				PROFILE_BEGIN("DrawImGuiObjects");
@@ -884,7 +885,7 @@ namespace flex
 					if (!m_CurrentlySelectedObjects.empty())
 					{
 						glm::vec3 dPos(0.0f);
-						
+
 						Transform* gizmoTransform = m_TransformGizmo->GetTransform();
 						glm::vec3 rayEndG = ToVec3(rayEnd);
 						glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
@@ -1101,7 +1102,7 @@ namespace flex
 			}
 			g_SceneManager->UpdateCurrentScene();
 
-			
+
 			g_Window->Update();
 
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
@@ -1133,7 +1134,7 @@ namespace flex
 
 			CalculateSelectedObjectsCenter();
 
-			bool bWriteProfilingResultsToFile = 
+			bool bWriteProfilingResultsToFile =
 				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
 
 			g_Renderer->Update();
@@ -1245,7 +1246,7 @@ namespace flex
 		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_ResizeFromAnySide;
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
-		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300), 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),
 											ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
 											[](ImGuiSizeCallbackData* data)
 		{
@@ -1396,7 +1397,7 @@ namespace flex
 					{
 						g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
 					}
-					
+
 					static const char* wireframeStr = "Wireframe";
 					ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
 
@@ -1450,7 +1451,7 @@ namespace flex
 					{
 						ImGui::PopStyleColor();
 					}
-					
+
 					ImGui::TreePop();
 				}
 
@@ -1681,14 +1682,14 @@ namespace flex
 				{
 					g_SceneManager->SetPreviousSceneActiveAndInit();
 				}
-				
+
 				ImGui::SameLine();
 
 				BaseScene* currentScene = g_SceneManager->CurrentScene();
 
 				const std::string currentSceneNameStr(currentScene->GetName() + (currentScene->IsUsingSaveFile() ? " (saved)" : " (default)"));
 				ImGui::Text(currentSceneNameStr.c_str());
-				
+
 				DoSceneContextMenu(currentScene);
 
 				if (ImGui::IsItemHovered())
@@ -1745,8 +1746,8 @@ namespace flex
 
 					const size_t maxStrLen = 256;
 					newSceneName.resize(maxStrLen);
-					bool bCreate = ImGui::InputText("Scene name", 
-													(char*)newSceneName.data(), 
+					bool bCreate = ImGui::InputText("Scene name",
+													(char*)newSceneName.data(),
 													maxStrLen,
 													ImGuiInputTextFlags_EnterReturnsTrue);
 
@@ -1782,7 +1783,7 @@ namespace flex
 
 				ImGui::TreePop();
 			}
-			
+
 			const char* reloadStr = "Reloading";
 			if (ImGui::TreeNode(reloadStr))
 			{
@@ -1959,7 +1960,7 @@ namespace flex
 						camPos = glm::vec3(0.0f);
 					}
 					cam->SetPosition(camPos);
-					
+
 					real camPitch = cameraTransform.GetFloat("pitch");
 					if (IsNanOrInf(camPitch))
 					{
@@ -2018,7 +2019,7 @@ namespace flex
 		cameraTransform.fields.emplace_back("pitch", JSONValue(pitch));
 		cameraTransform.fields.emplace_back("yaw", JSONValue(yaw));
 		rootObject.fields.emplace_back("camera transform", JSONValue(cameraTransform));
-		
+
 		real masterGain = AudioManager::GetMasterGain();
 		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
 
@@ -2037,7 +2038,7 @@ namespace flex
 
 	void FlexEngine::DoSceneContextMenu(BaseScene* scene)
 	{
-		bool bClicked = ImGui::IsMouseReleased(1) && 
+		bool bClicked = ImGui::IsMouseReleased(1) &&
 						ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
 
 		BaseScene* currentScene = g_SceneManager->CurrentScene();
@@ -2184,7 +2185,7 @@ namespace flex
 				StripFileType(newSceneFileNameStr);
 
 				bool bValidName = false;
-				do 
+				do
 				{
 					i16 numNumericalChars = 0;
 					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
@@ -2428,7 +2429,7 @@ namespace flex
 	{
 		return m_bDraggingGizmo;
 	}
-	
+
 	std::string FlexEngine::EngineVersionString()
 	{
 		return std::to_string(EngineVersionMajor) + "." +

@@ -10,15 +10,15 @@
 
 namespace flex
 {
-	typedef int8_t i8;
-	typedef int16_t i16;
-	typedef int32_t i32;
-	typedef int64_t i64;
-	typedef uint8_t u8;
-	typedef uint16_t u16;
-	typedef uint32_t u32;
-	typedef uint64_t u64;
-	typedef float real;
+	using i8 = int8_t;
+	using i16 = int16_t;
+	using i32 = int32_t;
+	using i64 = int64_t;
+	using u8 = uint8_t;
+	using u16 = uint16_t;
+	using u32 = uint32_t;
+	using u64 = uint64_t;
+	using real = float;
 
 #define u8_min std::numeric_limits<u8>::min()
 #define u8_max std::numeric_limits<u8>::max()
@@ -41,18 +41,18 @@ namespace flex
 #define real_min std::numeric_limits<real>::min()
 #define real_max std::numeric_limits<real>::max()
 
-	typedef real sec;	// Seconds
-	typedef real ms;	// Milliseconds		1x10^-3 seconds
-	typedef real us;	// Microseconds		1x10^-6 seconds
-	typedef real ns;	// Nanoseconds		1x10^-9 seconds
+	using sec = real;	// Seconds
+	using ms = real;	// Milliseconds		1x10^-3 seconds
+	using us = real;	// Microseconds		1x10^-6 seconds
+	using ns = real;	// Nanoseconds		1x10^-9 seconds
 
-	typedef u32 VertexAttributes;
-	typedef u32 RenderID;
-	typedef u32 ShaderID;
-	typedef u32 MaterialID;
-	typedef u32 TextureID;
-	typedef u32 PointLightID;
-	typedef u32 AudioSourceID;
+	using VertexAttributes = u32;
+	using RenderID = u32;
+	using ShaderID = u32;
+	using MaterialID = u32;
+	using TextureID = u32;
+	using PointLightID = u32;
+	using AudioSourceID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
@@ -73,7 +73,7 @@ namespace flex
 		VALVE,
 		RISING_BLOCK,
 		GLASS_PANE,
-		
+
 
 		// NOTE: Add new types above this line
 		// NOTE: All additions *must* be also added to GameObjectTypeStrings in the same order!
@@ -118,5 +118,5 @@ namespace flex
 
 namespace glm
 {
-	typedef tvec2<flex::i32> vec2i;
+	using vec2i = tvec2<flex::i32>;
 }

@@ -14,8 +14,8 @@
 //#pragma warning(disable : 4868) // compiler may not enforce left-to-right evaluation order in braced initializer list
 //#pragma warning(disable : 4710) // function not inlined
 
-#include "Types.hpp"
 #include "Logger.hpp"
+#include "Types.hpp"
 
 #pragma warning(push, 0)
 #include <ft2build.h>
@@ -25,9 +25,9 @@
 #if COMPILE_VULKAN
 #pragma warning(push, 0)
 	#include <glad/glad.h>
-	#include <vulkan/vulkan.hpp>
 	#include <GLFW/glfw3.h>
 	#include <GLFW/glfw3native.h>
+	#include <vulkan/vulkan.hpp>
 #pragma warning(pop)
 
 	#include "Graphics/Vulkan/VulkanRenderer.hpp"

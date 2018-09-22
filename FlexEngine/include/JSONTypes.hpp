@@ -33,23 +33,23 @@ namespace flex
 		i32 GetInt(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetIntChecked(const std::string& label, int& value) const;
-		
+
 		real GetFloat(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetFloatChecked(const std::string& label, float& value) const;
-		
+
 		bool GetBool(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetBoolChecked(const std::string& label, bool& value) const;
-		
+
 		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const;
-		
+
 		const std::vector<JSONObject>& GetObjectArray(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const;
-		
+
 		const JSONObject& GetObject(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetObjectChecked(const std::string& label, JSONObject& value) const;

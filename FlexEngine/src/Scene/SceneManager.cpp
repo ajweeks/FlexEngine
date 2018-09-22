@@ -4,8 +4,8 @@
 
 #include <algorithm>
 
-#include "FlexEngine.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "FlexEngine.hpp"
 
 namespace flex
 {
@@ -173,7 +173,7 @@ namespace flex
 		{
 			return;
 		}
-		
+
 		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
 		SetCurrentScene(newCurrentSceneIndex);
 
@@ -236,7 +236,7 @@ namespace flex
 			for (std::string& fileName : foundFileNames)
 			{
 				StripLeadingDirectories(fileName);
-				
+
 				if (!SceneExists(fileName))
 				{
 					BaseScene* newScene = new BaseScene(fileName);
@@ -360,7 +360,7 @@ namespace flex
 			{
 				m_CurrentSceneIndex = 0;
 			}
-			
+
 			g_EngineInstance->PreSceneChange();
 			scene->Destroy();
 		}

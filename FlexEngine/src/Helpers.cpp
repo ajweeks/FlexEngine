@@ -2,19 +2,18 @@
 
 #include "Helpers.hpp"
 
-#include <sstream>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 
 #pragma warning(push, 0)
 #include <glm/gtx/matrix_decompose.hpp>
 
 // Fucking windows headers man...
-#include "Shobjidl.h"
-#include "commctrl.h"
-
 #include "AL/al.h"
+#include "CommCtrl.h"
 
+#include "ShObjIdl.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #pragma warning(pop)
@@ -46,7 +45,7 @@ namespace flex
 		unsigned char* data = stbi_load(filePath.c_str(),
 										&result.width,
 										&result.height,
-										&channels, 
+										&channels,
 										(requestedChannelCount == 4  ? STBI_rgb_alpha : STBI_rgb));
 
 		if (channelCountOut)
@@ -92,8 +91,8 @@ namespace flex
 
 		pixels = stbi_loadf(filePath.c_str(),
 							&width,
-							&height, 
-							&channelCount, 
+							&height,
+							&channelCount,
 							(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
 		channelCount = 4;
@@ -343,7 +342,7 @@ namespace flex
 			//ofna.nFileExtension;
 			outSelectedAbsFilePath = ofna.lpstrFile;
 		}
-		
+
 		return bSuccess;
 	}
 
@@ -357,7 +356,7 @@ namespace flex
 				cleanedFileType.erase(dotPos, 1);
 			}
 		}
-		
+
 		bool bPathContainsBackslash = (directoryPath.find('\\') != std::string::npos);
 		char slashChar = (bPathContainsBackslash ? '\\' : '/');
 
@@ -374,7 +373,7 @@ namespace flex
 		WIN32_FIND_DATAA findData;
 
 		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
-		
+
 		if (hFind == INVALID_HANDLE_VALUE)
 		{
 			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
@@ -499,7 +498,7 @@ namespace flex
 		}
 
 		u32 pos = 0;
-		do 
+		do
 		{
 			pos = absoluteDirectoryPath.find_first_of("\\/", pos + 1);
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
@@ -824,7 +823,7 @@ namespace flex
 
 	bool IsNanOrInf(const glm::vec2& vec)
 	{
-		return (isnan(vec.x) || isnan(vec.y) || 
+		return (isnan(vec.x) || isnan(vec.y) ||
 				isinf(vec.x) || isinf(vec.y));
 	}
 
@@ -857,7 +856,7 @@ namespace flex
 
 		i16 numChars;
 		i32 numEndingWith = GetNumberEndingWith(namePrefix, numChars);
-		
+
 		if (numEndingWith == -1)
 		{
 			return defaultName;
@@ -879,7 +878,7 @@ namespace flex
 	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
 	{
 		std::string result(FloatToString(vec.x, precision) + ", " +
-			FloatToString(vec.y, precision) + ", " + 
+			FloatToString(vec.y, precision) + ", " +
 			FloatToString(vec.z, precision));
 		return result;
 	}
@@ -1095,7 +1094,7 @@ namespace flex
 	{
 		return GameObjectTypeStrings[(i32)type];
 	}
-	
+
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
 	{
 		for (i32 i = 0; i < (i32)GameObjectType::NONE; ++i)
@@ -1143,7 +1142,7 @@ namespace flex
 			}
 		}
 
-		std::for_each(strippedFilePath.begin(), strippedFilePath.end(), [](char& c) 
+		std::for_each(strippedFilePath.begin(), strippedFilePath.end(), [](char& c)
 		{
 			if (c == '/')
 			{

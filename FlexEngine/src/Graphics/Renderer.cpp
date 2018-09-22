@@ -7,14 +7,14 @@
 #include <imgui_internal.h>
 #pragma warning(pop)
 
-#include "Scene/GameObject.hpp"
-#include "Physics/RigidBody.hpp"
-#include "Window/Window.hpp"
 #include "FlexEngine.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Scene/GameObject.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
-	Renderer::Renderer()		
+	Renderer::Renderer()
 	{
 	}
 
@@ -257,7 +257,7 @@ namespace flex
 		}
 
 		ImGui::SameLine();
-		
+
 		if (ImGui::TreeNode("Directional Light"))
 		{
 			ImGui::DragFloat3("Position", &m_DirectionalLight.position.x, 0.1f);
@@ -269,7 +269,7 @@ namespace flex
 			}
 			ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
 			ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
-			
+
 			ImGui::Spacing();
 			ImGui::Text("Shadow");
 
@@ -329,7 +329,7 @@ namespace flex
 			{
 				ImGui::TreePop();
 			}
-			
+
 			if (!bRemovedPointLight)
 			{
 				++i;

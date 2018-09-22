@@ -37,7 +37,7 @@ namespace flex
 
 			m_VertexBufferData = {};
 		}
-		
+
 		void GLPhysicsDebugDraw::Destroy()
 		{
 			m_VertexBufferData.Destroy();
@@ -106,7 +106,7 @@ namespace flex
 			drawLine(PointOnB + btVector3(0.0f, 0.0f, -1.0f), PointOnB + btVector3(0.0f, 0.0f, 1.0f), color);
 			drawLine(PointOnB + btVector3(0.0f, -1.0f, 0.0f), PointOnB + btVector3(0.0f, -1.0f, 0.0f), color);
 		}
-		
+
 		void GLPhysicsDebugDraw::flushLines()
 		{
 			Draw();

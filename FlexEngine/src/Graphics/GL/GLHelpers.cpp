@@ -3,8 +3,8 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 
-#include <sstream>
 #include <fstream>
+#include <sstream>
 
 #pragma warning(push, 0)
 #include "stb_image.h"
@@ -50,9 +50,9 @@ namespace flex
 
 		bool GenerateGLTexture(u32& textureID,
 							   const std::string& filePath,
-							   i32 requestedChannelCount, 
+							   i32 requestedChannelCount,
 							   bool flipVertically,
-							   bool generateMipMaps, 
+							   bool generateMipMaps,
 							   ImageInfo* infoOut /* = nullptr */)
 		{
 			return GenerateGLTextureWithParams(textureID,
@@ -60,10 +60,10 @@ namespace flex
 											   requestedChannelCount,
 											   flipVertically,
 											   generateMipMaps,
-											   GL_REPEAT, 
-											   GL_REPEAT, 
+											   GL_REPEAT,
+											   GL_REPEAT,
 											   GL_LINEAR,
-											   GL_LINEAR, 
+											   GL_LINEAR,
 											   infoOut);
 		}
 
@@ -197,7 +197,7 @@ namespace flex
 				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0 ||
 					createInfo.textureSize.x >= Renderer::MAX_TEXTURE_DIM || createInfo.textureSize.y >= Renderer::MAX_TEXTURE_DIM)
 				{
-					PrintError("Invalid cubemap dimensions: %.2fx%.2f\n", 
+					PrintError("Invalid cubemap dimensions: %.2fx%.2f\n",
 						createInfo.textureSize.x, createInfo.textureSize.y);
 					success = false;
 				}
@@ -246,7 +246,7 @@ namespace flex
 
 					for (i32 i = 0; i < 6; i++)
 					{
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat, 
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat,
 									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
 					}
 
@@ -255,7 +255,7 @@ namespace flex
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // This parameter is *absolutely* necessary for sampling to work
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-					
+
 					i32 uniformLocation = glGetUniformLocation(createInfo.program, gbuffer.name);
 					if (uniformLocation == -1)
 					{
@@ -294,7 +294,7 @@ namespace flex
 					for (size_t i = 0; i < 6; ++i)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT16,
-							(GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 
+							(GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y,
 							0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 					}
 
@@ -307,7 +307,7 @@ namespace flex
 
 			return success;
 		}
-		
+
 		TextureParameters::TextureParameters(bool bGenMipMaps, bool bIsDepthTex) :
 			bGenMipMaps(bGenMipMaps),
 			bIsDepthTex(bIsDepthTex),
@@ -601,7 +601,7 @@ namespace flex
 				PrintError("%s\n", fragmentShaderErrorMessage.c_str());
 				bSuccess = false;
 			}
-			
+
 			if (bLoadGeometryShader)
 			{
 				// Compile geometry shader
@@ -615,7 +615,7 @@ namespace flex
 					glGetShaderiv(geometryShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
 					std::string geometryShaderErrorMessage;
 					geometryShaderErrorMessage.resize((size_t)infoLogLength);
-					glGetShaderInfoLog(geometryShaderID, infoLogLength, NULL, 
+					glGetShaderInfoLog(geometryShaderID, infoLogLength, NULL,
 						(GLchar*)geometryShaderErrorMessage.data());
 					PrintError("%s\n", geometryShaderErrorMessage.c_str());
 					bSuccess = false;

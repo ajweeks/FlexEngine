@@ -3,12 +3,12 @@
 #include "Cameras/OverheadCamera.hpp"
 
 #pragma warning(push, 0)
-#include <glm/vec2.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/vec2.hpp>
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Scene/BaseScene.hpp" 
+#include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
@@ -65,14 +65,14 @@ namespace flex
 		real maxHeight = 50.0f;
 		real minDistBack = 20.0f;
 		real maxDistBack = 50.0f;
-		
+
 		real targetYO = glm::clamp(dist * 1.0f, minHeight, maxHeight);
 		real targetZO = glm::clamp(dist * 1.0f, minDistBack, maxDistBack);
 
 		glm::vec3 upVec = glm::vec3(0, 1, 0);
 		glm::vec3 backVec = glm::vec3(0, 0, -1);
 
-		glm::vec3 targetPos = targetSpot + 
+		glm::vec3 targetPos = targetSpot +
 			upVec * targetYO +
 			backVec * targetZO;
 		glm::vec3 dPos = targetPos - m_Position;

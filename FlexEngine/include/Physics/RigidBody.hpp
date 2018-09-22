@@ -33,7 +33,7 @@ namespace flex
 		real GetFriction() const;
 
 		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
-		
+
 		// Vector passed in defines the axis (or axes) this body can rotate around
 		void SetOrientationConstraint(const btVector3& axis);
 

@@ -1,19 +1,19 @@
 #pragma once
 
-#include <string>
-#include <vector>
 #include <array>
 #include <map>
+#include <string>
+#include <vector>
 
 #pragma warning(push, 0)
-#include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 #pragma warning(pop)
 
-#include "VertexBufferData.hpp"
-#include "Transform.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
+#include "Transform.hpp"
+#include "VertexBufferData.hpp"
 
 class btIDebugDraw;
 
@@ -99,7 +99,7 @@ namespace flex
 								const glm::vec4& color,
 								AnchorPoint anchor,
 								const glm::vec2& pos,
-								real spacing, 
+								real spacing,
 								bool bRaw) = 0;
 
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
@@ -163,7 +163,7 @@ namespace flex
 			bool bEnableFXAA = true;
 			bool bEnableFXAADEBUGShowEdges = false;
 		};
-			
+
 		PostProcessSettings& GetPostProcessSettings();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
@@ -179,7 +179,7 @@ namespace flex
 		void DrawImGuiForRenderObjectCommon(GameObject* gameObject);
 
 		void DrawImGuiLights();
-		
+
 		std::vector<PointLight> m_PointLights;
 		DirectionalLight m_DirectionalLight;
 
@@ -191,7 +191,7 @@ namespace flex
 			bool bWireframe = false;
 			MaterialID materialOverride = InvalidMaterialID;
 		};
-		
+
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 		bool m_bVSyncEnabled = true;
@@ -199,7 +199,7 @@ namespace flex
 
 		/* Objects that are created at bootup and stay active until shutdown, regardless of scene */
 		std::vector<GameObject*> m_PersistentObjects;
-		
+
 		BitmapFont* m_CurrentFont = nullptr;
 		std::vector<BitmapFont*> m_Fonts;
 

@@ -1,17 +1,17 @@
 #pragma once
 
+#include <direct.h> // For _getcwd
 #include <string>
 #include <vector>
-#include <direct.h> // For _getcwd
 
 #pragma warning(push, 0)
+#include <assimp/color4.h>
+#include <assimp/vector2.h>
+#include <assimp/vector3.h>
+
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-
-#include <assimp/vector2.h>
-#include <assimp/vector3.h>
-#include <assimp/color4.h>
 
 #include "imgui.h"
 #pragma warning(pop)
@@ -51,7 +51,7 @@ namespace flex
 	// Set fileType to "*" to retrieve all files
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
 
-	// Removes all content before final '/' or '\' 
+	// Removes all content before final '/' or '\'
 	void StripLeadingDirectories(std::string& filePath);
 
 	// Removes all content after final '/' or '\'
@@ -261,7 +261,7 @@ namespace flex
 		currentAverage = T();
 	}
 
-	// Stores text render commands issued during the 
+	// Stores text render commands issued during the
 	// frame to later be converted to "TextVertex"s
 	struct TextCache
 	{

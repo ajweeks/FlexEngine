@@ -5,15 +5,15 @@
 #include <string>
 
 #pragma warning(push, 0)
-#include <assimp/vector3.h>
-#include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <assimp/vector3.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #pragma warning(pop)
 
-#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "Colors.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
@@ -195,7 +195,7 @@ namespace flex
 		// Mesh hasn't been loaded before, load it now
 		std::string fileName = relativeFilePath;
 		StripLeadingDirectories(fileName);
-		
+
 		LoadedMesh* newLoadedMesh = nullptr;
 		{
 			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
@@ -1227,7 +1227,7 @@ namespace flex
 			Transform* transform = m_OwningGameObject->GetTransform();
 			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
-				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
+				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING),
 				transform->GetWorldPosition().y,
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
 			transform->SetWorldPosition(newGridPos);
@@ -1243,7 +1243,7 @@ namespace flex
 		}
 
 		GameObject* owningGameObject = m_OwningGameObject;
-		
+
 		RenderObjectCreateInfo renderObjectCreateInfo;
 		g_Renderer->GetRenderObjectCreateInfo(m_OwningGameObject->GetRenderID(), renderObjectCreateInfo);
 
@@ -1362,7 +1362,7 @@ namespace flex
 			PrintError("Attempted to get bounding sphere center point of mesh component which contains no 3D vertices!"
 					   "Center point will always be 0\n");
 		}
-		
+
 		Transform* transform = m_OwningGameObject->GetTransform();
 		glm::vec3 transformedCenter = transform->GetWorldTransform() * glm::vec4(m_BoundingSphereCenterPoint, 1.0f);
 		return transformedCenter;

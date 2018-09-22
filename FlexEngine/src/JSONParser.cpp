@@ -3,8 +3,8 @@
 
 #include "JSONParser.hpp"
 
-#include <fstream>
 #include <cwctype>
+#include <fstream>
 
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
@@ -24,7 +24,7 @@ namespace flex
 		size_t lastBracket = dirtyFileContents.rfind('}');
 
 		if (firstBracket == std::string::npos ||
-			lastBracket == std::string::npos || 
+			lastBracket == std::string::npos ||
 			firstBracket > lastBracket)
 		{
 			PrintError("Failed to parse JSON file. No valid bracket pairs found!\n");
@@ -306,7 +306,7 @@ namespace flex
 			{
 				bInQuotes = !bInQuotes;
 			}
-			
+
 			if (!bInQuotes)
 			{
 				if (currentChar == '[')

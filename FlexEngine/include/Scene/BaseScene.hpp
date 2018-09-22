@@ -38,9 +38,9 @@ namespace flex
 
 		PhysicsWorld* GetPhysicsWorld();
 
-		/* 
+		/*
 		* Serializes all data from scene into JSON scene file.
-		* Only writes data that has non-default values (e.g. an identity 
+		* Only writes data that has non-default values (e.g. an identity
 		* transform is not saved)
 		*/
 		void SerializeToFile(bool bSaveOverDefault = false);
@@ -99,7 +99,7 @@ namespace flex
 		i32 GetMaterialArrayIndex(const Material& material);
 
 		MaterialID FindMaterialIDByName(const JSONObject& object);
-		
+
 		void UpdateRootObjectSiblingIndices();
 
 		static const i32 m_FileVersion = 1;
@@ -123,7 +123,7 @@ namespace flex
 		std::vector<MaterialID> m_LoadedMaterials;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
-		
+
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 

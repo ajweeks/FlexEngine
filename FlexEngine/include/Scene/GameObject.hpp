@@ -4,8 +4,8 @@
 
 #include "Audio/RandomizedAudioSource.hpp"
 #include "Helpers.hpp"
-#include "Transform.hpp"
 #include "JSONTypes.hpp"
+#include "Transform.hpp"
 
 class btCollisionShape;
 
@@ -60,7 +60,7 @@ namespace flex
 		std::vector<GameObject*> GetLaterSiblings();
 
 		virtual Transform* GetTransform();
-		
+
 		void AddTag(const std::string& tag);
 		bool HasTag(const std::string& tag);
 		std::vector<std::string> GetTags() const;
@@ -117,16 +117,16 @@ namespace flex
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
-		
+
 		static const char* s_DefaultNewGameObjectName;
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
 		virtual void SerializeUniqueFields(JSONObject& parentObject);
-		
+
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
-		
+
 		std::string m_Name;
 
 		std::vector<std::string> m_Tags;
@@ -247,7 +247,7 @@ namespace flex
 		Valve* valve = nullptr; // (object name is serialized)
 		glm::vec3 moveAxis;
 
-		// If true this block will "fall" to its minimum 
+		// If true this block will "fall" to its minimum
 		// value when a player is not interacting with it
 		bool bAffectedByGravity = false;
 

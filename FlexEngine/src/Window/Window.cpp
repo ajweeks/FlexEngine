@@ -7,9 +7,9 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
-#include "Time.hpp"
-#include "Scene/SceneManager.hpp"
 #include "JSONParser.hpp"
+#include "Scene/SceneManager.hpp"
+#include "Time.hpp"
 #include "Window/Monitor.hpp"
 
 namespace flex
@@ -77,8 +77,8 @@ namespace flex
 	glm::vec2i Window::GetPosition() const
 	{
 		return m_Position;
-	}	
-	
+	}
+
 	glm::vec2i Window::GetFrameBufferSize() const
 	{
 		return m_FrameBufferSize;
@@ -102,7 +102,7 @@ namespace flex
 		{
 			result += +" : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
 		}
-		
+
 
 		return result;
 	}

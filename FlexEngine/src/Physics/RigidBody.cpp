@@ -3,14 +3,14 @@
 #include "Physics/RigidBody.hpp"
 
 #pragma warning(push, 0)
-#include <btBulletDynamicsCommon.h>
 #include <btBulletCollisionCommon.h>
+#include <btBulletDynamicsCommon.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #pragma warning(pop)
 
-#include "Physics/PhysicsWorld.hpp"
 #include "Physics/PhysicsManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -291,7 +291,7 @@ namespace flex
 
 		glm::mat4 parentTransformMat = glm::translate(glm::mat4(1.0f), m_ParentTransform->GetWorldPosition())
 			* glm::mat4(m_ParentTransform->GetWorldRotation());
-		
+
 		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
 			glm::mat4(m_LocalRotation);
 

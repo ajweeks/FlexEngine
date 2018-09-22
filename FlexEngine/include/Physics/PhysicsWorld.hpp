@@ -1,12 +1,12 @@
 #pragma once
 
-#include <utility>
 #include <set>
+#include <utility>
 
 #pragma warning(push, 0)
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
-#include <LinearMath/btVector3.h>
 #include <LinearMath/btScalar.h>
+#include <LinearMath/btVector3.h>
 #pragma warning(pop)
 
 class btDiscreteDynamicsWorld;

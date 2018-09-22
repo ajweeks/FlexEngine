@@ -1,13 +1,14 @@
 #pragma once
 
-#include <string>
-#include <vector>
 #include <array>
 #include <map>
+#include <string>
+#include <vector>
 
 #pragma warning(push, 0)
-#include <glm/vec4.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 #pragma warning(pop)
 
 #include "Functors.hpp"
@@ -16,6 +17,7 @@
 namespace flex
 {
 	class VertexBufferData;
+	class GameObject;
 
 #define BIT(x) (1 << x)
 

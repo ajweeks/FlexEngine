@@ -1,8 +1,8 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include <string>
 #include <array>
+#include <string>
 
 #pragma warning(push, 0)
 #include <glad/glad.h>
@@ -210,7 +210,7 @@ namespace flex
 
 			glm::vec2i GetResolution();
 
-			// Returns true if regenerated 
+			// Returns true if regenerated
 			// If this is a framebuffer texture, upscaling won't work properly
 			// unless it is reattached to the framebuffer object
 			bool Resize(glm::vec2i newSize);

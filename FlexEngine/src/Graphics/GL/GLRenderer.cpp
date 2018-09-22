@@ -3,37 +3,37 @@
 
 #include "Graphics/GL/GLRenderer.hpp"
 
-#include <array>
 #include <algorithm>
+#include <array>
+#include <functional>
 #include <string>
 #include <utility>
-#include <functional>
 
 #pragma warning(push, 0)
-#include <glm/vec3.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
-
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletCollision/CollisionShapes/btConeShape.h>
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
+
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <freetype/ftbitmap.h>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
+// TODO: Remove?
+#include <glm/vec3.hpp>
 
 #include "imgui.h"
 #include "ImGui/imgui_impl_glfw_gl3.h"
-// TODO: Remove?
+
 #include "imgui_internal.h"
-
-#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
-
-#include <freetype/ftbitmap.h>
 #pragma warning(pop)
 
-#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
@@ -68,7 +68,7 @@ namespace flex
 
 		GLRenderer::~GLRenderer()
 		{
-			
+
 		}
 
 		void GLRenderer::Initialize()
@@ -120,7 +120,7 @@ namespace flex
 			{
 				glGenFramebuffers(1, &m_CaptureFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				
+
 
 				glGenRenderbuffers(1, &m_CaptureRBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
@@ -218,7 +218,7 @@ namespace flex
 			postFXAAMatCreateInfo.shaderName = "post_fxaa";
 			postFXAAMatCreateInfo.engineMaterial = true;
 			m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
-			
+
 
 			{
 				const std::string gridMatName = "Grid";
@@ -540,7 +540,7 @@ namespace flex
 
 			DestroyRenderObject(m_Quad3DRenderID);
 			DestroyRenderObject(m_Quad2DRenderID);
-			
+
 			DestroyRenderObject(m_GBufferQuadRenderID);
 
 			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
@@ -601,7 +601,7 @@ namespace flex
 					PrintError("Material's shader name couldn't be found! shader name: %s\n", createInfo->shaderName.c_str());
 				}
 			}
-			
+
 			GLShader& shader = m_Shaders[mat.material.shaderID];
 
 			glUseProgram(shader.program);
@@ -763,17 +763,17 @@ namespace flex
 			// Samplers that need to be loaded from file
 			SamplerCreateInfo samplerCreateInfos[] =
 			{
-				{ shader.shader.needAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID, 
+				{ shader.shader.needAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID,
 				createInfo->albedoTexturePath, "albedoSampler", 3, false, true, false },
-				{ shader.shader.needMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID, 
+				{ shader.shader.needMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID,
 				createInfo->metallicTexturePath, "metallicSampler", 3, false, true, false },
-				{ shader.shader.needRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID, 
+				{ shader.shader.needRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID,
 				createInfo->roughnessTexturePath, "roughnessSampler", 3, false, true, false },
-				{ shader.shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID, 
+				{ shader.shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID,
 				createInfo->aoTexturePath, "aoSampler", 3, false, true, false },
-				{ shader.shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID, 
+				{ shader.shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID,
 				createInfo->normalTexturePath, "normalSampler", 3, false, true, false },
-				{ shader.shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID, 
+				{ shader.shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID,
 				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", 4, true, false, true },
 			};
 
@@ -786,7 +786,7 @@ namespace flex
 					{
 						if (samplerCreateInfo.filepath.empty())
 						{
-							PrintError("Empty file path specified in SamplerCreateInfo for texture %s in material %s\n", 
+							PrintError("Empty file path specified in SamplerCreateInfo for texture %s in material %s\n",
 									   samplerCreateInfo.textureName.c_str(), mat.material.name.c_str());
 						}
 						else
@@ -807,7 +807,7 @@ namespace flex
 								GLTexture* newTexture = new GLTexture(samplerCreateInfo.filepath,
 																	  samplerCreateInfo.channelCount,
 																	  samplerCreateInfo.flipVertically,
-																	  samplerCreateInfo.generateMipMaps, 
+																	  samplerCreateInfo.generateMipMaps,
 																	  samplerCreateInfo.hdr);
 
 								newTexture->LoadFromFile();
@@ -908,7 +908,7 @@ namespace flex
 				cubemapCreateInfo.generateMipmaps = false;
 				cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
 				cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
-			
+
 				GenerateGLCubemap(cubemapCreateInfo);
 			}
 			else if (createInfo->generateHDRCubemapSampler)
@@ -934,7 +934,7 @@ namespace flex
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n",
 							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
@@ -950,7 +950,7 @@ namespace flex
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n",
 							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
@@ -995,7 +995,7 @@ namespace flex
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
-					PrintWarn("uniform %s was not found in material %s (shader %s)\n", 
+					PrintWarn("uniform %s was not found in material %s (shader %s)\n",
 							  uniformName, mat.material.name.c_str(), shader.shader.name.c_str());
 				}
 				else
@@ -1165,7 +1165,7 @@ namespace flex
 				PROFILE_END(profileBlockName);
 				Profiler::PrintBlockDuration(profileBlockName);
 				//glFlush();
-				
+
 				profileBlockName = "generating prefiltered map for " + renderObject->gameObject->GetName();
 				PROFILE_BEGIN(profileBlockName);
 				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
@@ -1187,7 +1187,7 @@ namespace flex
 				Profiler::PrintBlockDuration(profileBlockName);
 				//glFlush();
 
-				
+
 				profileBlockName = "generating irradiance sampler for " + renderObject->gameObject->GetName();
 				PROFILE_BEGIN(profileBlockName);
 				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
@@ -1233,7 +1233,7 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, 
+		void GLRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID,
 															   const std::string& environmentMapPath)
 		{
 			if (!m_SkyBoxMesh)
@@ -1268,7 +1268,7 @@ namespace flex
 			GLMaterial& skyboxGLMaterial = m_Materials[skyboxRenderObject->materialID];
 
 			glUseProgram(equirectangularToCubemapShader.program);
-			
+
 			// TODO: Store what location this texture is at (might not be 0)
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
@@ -1309,7 +1309,7 @@ namespace flex
 				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, GL_FALSE,
 					&m_CaptureViews[i][0][0]);
 
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
 
 				glDepthMask(GL_TRUE);
@@ -1318,7 +1318,7 @@ namespace flex
 
 				glDepthMask(skyboxRenderObject->depthWriteEnable);
 
-				glDrawArrays(skyboxRenderObject->topology, 0, 
+				glDrawArrays(skyboxRenderObject->topology, 0,
 					(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
 			}
 
@@ -1402,7 +1402,7 @@ namespace flex
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].prefilteredMapSamplerID, mip);
-					
+
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
 				}
 			}
@@ -1538,7 +1538,7 @@ namespace flex
 			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 
 			glUseProgram(shader.program);
-			
+
 			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, GL_FALSE,
 				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
 
@@ -1613,7 +1613,7 @@ namespace flex
 					// Skip first buffer, it'll be cleared below
 					for (size_t i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
 					{
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, 
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i,
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
 
 						glClear(GL_COLOR_BUFFER_BIT);
@@ -1879,7 +1879,7 @@ namespace flex
 			//{
 			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + g_SecElapsedSinceProgramStart * 6.0f) * 4.0f);
 			//}
-			
+
 			std::string str;
 
 			// Text stress test:
@@ -1977,7 +1977,7 @@ namespace flex
 
 			/*
 			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
-			
+
 
 			Eg. deferred | matID
 			yes		 0
@@ -1990,7 +1990,7 @@ namespace flex
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
 			m_EditorRenderObjectBatch.clear();
-			
+
 			// Sort render objects into deferred + forward buckets
 			for (auto& materialPair : m_Materials)
 			{
@@ -2035,7 +2035,7 @@ namespace flex
 					}
 				}
 			}
-			
+
 			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
@@ -2100,7 +2100,7 @@ namespace flex
 
 			glm::mat4 view, proj;
 			ComputeDirLightViewProj(view, proj);
-			
+
 			glm::mat4 lightViewProj = proj * view;
 			glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 
@@ -2184,7 +2184,7 @@ namespace flex
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
-				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, 
+				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x,
 					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -2210,7 +2210,7 @@ namespace flex
 				// Generate GBuffer if not already generated
 				GenerateGBuffer();
 			}
-			
+
 			if (drawCallInfo.bRenderToCubemap)
 			{
 				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
@@ -2222,7 +2222,7 @@ namespace flex
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat,
-					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.x, 
+					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.x,
 					(GLsizei)cubemapMaterial->material.cubemapSamplerSize.y);
 
 				glUseProgram(cubemapShader->program);
@@ -2541,7 +2541,7 @@ namespace flex
 					DrawSpriteQuad(drawInfo);
 				}
 			}
-			
+
 			if (m_DirectionalLight.enabled)
 			{
 				drawInfo.color = m_DirectionalLight.color * 1.5f;
@@ -2790,7 +2790,7 @@ namespace flex
 			//	static glm::vec2 shadow(0.01f, 0.1f);
 			//	glUniform2f(glGetUniformLocation(fontShader.program, "shadow"), shadow.x, shadow.y);
 			//}
-			
+
 			//if (fontShader.shader.dynamicBufferUniforms.HasUniform("colorMultiplier"))
 			//{
 			//	glm::vec4 color(1.0f);
@@ -2845,7 +2845,7 @@ namespace flex
 			}
 		}
 
-		bool GLRenderer::LoadFont(BitmapFont** font, 
+		bool GLRenderer::LoadFont(BitmapFont** font,
 								  i16 size,
 								  const std::string& fontFilePath,
 								  const std::string& renderedFontFilePath)
@@ -2876,7 +2876,7 @@ namespace flex
 
 			error = FT_Set_Char_Size(face,
 									 0, size * 64,
-									 (FT_UInt)g_Monitor->DPI.x, 
+									 (FT_UInt)g_Monitor->DPI.x,
 									 (FT_UInt)g_Monitor->DPI.y);
 
 			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
@@ -3318,7 +3318,7 @@ namespace flex
 		{
 			glm::vec3 dirLightDir = glm::vec3(1.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
 			outView = glm::lookAt(glm::vec3(0.0f), -dirLightDir, glm::vec3(0.0f, 1.0f, 0.0f));
-			
+
 			real zoom = m_DirectionalLight.shadowMapZoom;
 			real nearPlane = m_DirectionalLight.shadowMapNearPlane;
 			real farPlane = m_DirectionalLight.shadowMapFarPlane;
@@ -3333,7 +3333,7 @@ namespace flex
 			std::vector<TextVertex> textVertices;
 			for (BitmapFont* font : m_Fonts)
 			{
-				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) * 
+				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
 					(font->GetFontSize() / 12.0f);
 
 				font->m_BufferStart = (i32)(textVertices.size());
@@ -3409,17 +3409,17 @@ namespace flex
 									prevChar = c;
 									continue;
 								}
-								
+
 								real yOff = (bUseLetterYOffsets ? textCache.letterYOffsets[j] : 0.0f);
 
-								glm::vec2 pos = 
+								glm::vec2 pos =
 									glm::vec2(textCache.pos.x * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
 									glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY + yOff) * textScale;
 
 								if (font->UseKerning())
 								{
 									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-								
+
 									auto iter = metric->kerning.find(charKey);
 									if (iter != metric->kerning.end())
 									{
@@ -3561,7 +3561,7 @@ namespace flex
 					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
 
 					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
-					
+
 					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
 					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
@@ -3576,7 +3576,7 @@ namespace flex
 
 					// Use capture projection matrix
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
-					
+
 					// TODO: Test if this is actually correct
 					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
 					for (size_t face = 0; face < 6; ++face)
@@ -3586,7 +3586,7 @@ namespace flex
 						// This doesn't work because it flips the winding order of things (I think), maybe just account for that?
 						// Flip vertically to match cubemap, cubemap shouldn't even be captured here eventually?
 						//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
-						
+
 						glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 
 						if (drawCallInfo.bDeferred)
@@ -3597,22 +3597,22 @@ namespace flex
 
 							for (size_t j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
 							{
-								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j, 
+								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j,
 									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
 							}
 						}
 						else
 						{
-							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 						}
 
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 
 						if (renderObject->indexed)
 						{
-							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(), 
+							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(),
 								GL_UNSIGNED_INT, (void*)renderObject->indices->data());
 						}
 						else
@@ -3713,7 +3713,7 @@ namespace flex
 					{
 						if (tex.textureID == InvalidID)
 						{
-							PrintError("TextureID is invalid! material: %s, binding: %i\n", 
+							PrintError("TextureID is invalid! material: %s, binding: %i\n",
 									   glMaterial->material.name.c_str(), binding);
 						}
 						else
@@ -3831,7 +3831,7 @@ namespace flex
 			static std::string newObjectName = gameObject->GetName();
 			const size_t maxStrLen = 256;
 
-			bool bItemClicked = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && 
+			bool bItemClicked = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 								ImGui::IsMouseClicked(1);
 			if (bItemClicked)
 			{
@@ -3842,8 +3842,8 @@ namespace flex
 			if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
 			{
 				bool bRename = ImGui::InputText(renameObjectPopupLabel,
-												(char*)newObjectName.data(), 
-												maxStrLen, 
+												(char*)newObjectName.data(),
+												maxStrLen,
 												ImGuiInputTextFlags_EnterReturnsTrue);
 
 				ImGui::SameLine();
@@ -4013,7 +4013,7 @@ namespace flex
 
 		bool GLRenderer::DoTextureSelector(const char* label,
 										   const std::vector<GLTexture*>& textures,
-										   i32* selectedIndex, 
+										   i32* selectedIndex,
 										   bool* bGenerateSampler)
 		{
 			bool bValueChanged = false;
@@ -4069,8 +4069,8 @@ namespace flex
 			const std::string& texturePath,
 			std::string& matTexturePath,
 			GLTexture* texture,
-			i32 i, 
-			i32* textureIndex, 
+			i32 i,
+			i32* textureIndex,
 			u32* samplerID)
 		{
 			if (bUpdateTextureMaterial)
@@ -4528,7 +4528,7 @@ namespace flex
 					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight.bCastShadow);
 					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight.shadowDarkness);
 				}
-				
+
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
 				{
 					glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
@@ -5099,7 +5099,7 @@ namespace flex
 				{
 					if (m_Materials.find(renderObject->materialID) == m_Materials.end())
 					{
-						PrintError("Render object contains invalid material ID: %i, material name: %s\n", 
+						PrintError("Render object contains invalid material ID: %i, material name: %s\n",
 								   renderObject->materialID, renderObject->materialName.c_str());
 					}
 					else
@@ -5550,7 +5550,7 @@ namespace flex
 					bUpdateFields |= bUpdateAOTextureMaterial;
 
 					ImGui::NewLine();
-					
+
 					ImGui::EndColumns();
 
 					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
@@ -6616,7 +6616,7 @@ namespace flex
 						break;
 					}
 				}
-	
+
 				if (!bChildVisibleInSceneExplorer)
 				{
 					bHasChildren = false;
@@ -6632,9 +6632,9 @@ namespace flex
 			}
 			ImGui::SameLine();
 
-			ImGuiTreeNodeFlags node_flags = 
+			ImGuiTreeNodeFlags node_flags =
 				ImGuiTreeNodeFlags_OpenOnArrow |
-				ImGuiTreeNodeFlags_OpenOnDoubleClick | 
+				ImGuiTreeNodeFlags_OpenOnDoubleClick |
 				(bSelected ? ImGuiTreeNodeFlags_Selected : 0);
 
 			if (!bHasChildren)

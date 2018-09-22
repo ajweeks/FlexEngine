@@ -5,7 +5,7 @@
 namespace flex
 {
 	class BaseCamera;
-	
+
 	class CameraManager final
 	{
 	public:

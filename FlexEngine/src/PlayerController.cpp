@@ -3,13 +3,13 @@
 #include "PlayerController.hpp"
 
 #pragma warning(push, 0)
-#include <LinearMath/btIDebugDraw.h>
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <glm/gtx/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <LinearMath/btIDebugDraw.h>
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
@@ -18,8 +18,8 @@
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
-#include "Scene/GameObject.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -61,7 +61,7 @@ namespace flex
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 		btVector3 rbPos = rb->getWorldTransform().getOrigin();
-		
+
 		btTransform& transformBT = rb->getWorldTransform();
 		Transform* transform = m_Player->GetTransform();
 		glm::vec3 up = transform->GetUp();

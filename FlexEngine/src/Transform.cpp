@@ -6,8 +6,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
-#include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #pragma warning(pop)
@@ -505,7 +505,7 @@ namespace flex
 			localPosition = position;
 			// NOTE: World position will be set in UpdateParentTransform
 		}
-		
+
 		if (bUpdateChain)
 		{
 			UpdateParentTransform();

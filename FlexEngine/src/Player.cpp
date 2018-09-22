@@ -3,9 +3,9 @@
 #include "Player.hpp"
 
 #pragma warning(push, 0)
-#include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
 #include "InputManager.hpp"
@@ -42,7 +42,7 @@ namespace flex
 		rigidBody->SetFriction(m_MoveFriction);
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
-		
+
 		m_MeshComponent = new MeshComponent(matID, this);
 		m_MeshComponent->SetRequiredAttributesFromMaterialID(matID);
 		AddTag("Player" + std::to_string(m_Index));
@@ -114,7 +114,7 @@ namespace flex
 				else
 				{
 					GameObject* interactibleObj = nullptr;
-					
+
 					for (GameObject* obj : interactibleObjects)
 					{
 						if (Find(overlappingObjects, obj) != overlappingObjects.end())

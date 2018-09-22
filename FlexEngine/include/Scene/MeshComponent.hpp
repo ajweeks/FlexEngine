@@ -1,19 +1,21 @@
 #pragma once
 
 #include <vector>
+#include <map>
 
 #pragma warning(push, 0)
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
 #include <glm/vec2.hpp>
+
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-
-#include <assimp/scene.h>
-#include <assimp/Importer.hpp>
 #pragma warning(pop)
 
+#include "Graphics/RendererTypes.hpp"
+#include "JSONTypes.hpp"
 #include "VertexAttribute.hpp"
 #include "VertexBufferData.hpp"
-#include "JSONTypes.hpp"
 
 namespace flex
 {
@@ -88,7 +90,7 @@ namespace flex
 		* Optionally pass in createInfo values to be given to the renderer
 		* when initializing the render object
 		*/
-		bool LoadPrefabShape(PrefabShape shape, 
+		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		/*

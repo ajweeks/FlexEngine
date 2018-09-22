@@ -5,9 +5,9 @@
 #include <fstream>
 
 #pragma warning(push, 0)
-#include <glm/vec3.hpp>
-
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
+#include <glm/vec3.hpp>
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
@@ -178,7 +178,7 @@ namespace flex
 				assert(skyboxMatID != InvalidMaterialID);
 
 				Skybox* skybox = new Skybox("Skybox");
-				
+
 				JSONObject emptyObj = {};
 				skybox->ParseJSON(emptyObj, this, skyboxMatID);
 
@@ -204,7 +204,7 @@ namespace flex
 				assert(sphereMatID != InvalidMaterialID);
 
 				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
-				
+
 				JSONObject emptyObj = {};
 				reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
 
@@ -214,7 +214,7 @@ namespace flex
 
 		m_Player0 = new Player(0);
 		AddRootObject(m_Player0);
-		
+
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);
 
@@ -280,8 +280,6 @@ namespace flex
 		{
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-
-		BaseCamera* camera = g_CameraManager->CurrentCamera();
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
@@ -501,7 +499,7 @@ namespace flex
 		std::string meshesFilePath = RESOURCE_LOCATION + "scenes/meshes.json";
 
 		JSONObject meshesObj = {};
-		
+
 		meshesObj.fields.emplace_back("version", JSONValue(m_FileVersion));
 
 		static const std::string meshPrefix = RESOURCE_LOCATION + "meshes/";
@@ -559,7 +557,7 @@ namespace flex
 		std::string materialsFilePath = RESOURCE_LOCATION + "scenes/materials.json";
 
 		JSONObject materialsObj = {};
-		
+
 		materialsObj.fields.emplace_back("version", JSONValue(m_FileVersion));
 
 		// Overwrite all materials in current scene in case any values were tweaked
@@ -771,7 +769,7 @@ namespace flex
 			shortSavedFileName = savedShortSaveFilePath;
 		}
 		Print("Serializing scene to %s\n", shortSavedFileName.c_str());
-		
+
 		if (bSaveOverDefault)
 		{
 			m_bUsingSaveFile = false;

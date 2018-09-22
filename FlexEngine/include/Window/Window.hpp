@@ -34,7 +34,7 @@ namespace flex
 	public:
 		Window(const std::string& title);
 		virtual ~Window();
-		
+
 		virtual void Initialize() = 0;
 		/* Called after the window has been created */
 		virtual void PostInitialize() = 0;
@@ -59,10 +59,10 @@ namespace flex
 		virtual void SetPosition(i32 newX, i32 newY) = 0;
 		/* Called when the window's position changes */
 		virtual void OnPositionChanged(i32 newX, i32 newY) = 0;
-		
+
 		glm::vec2i GetFrameBufferSize() const;
 		virtual void SetFrameBufferSize(i32 width, i32 height) = 0;
-		
+
 		/* Returns whether or not this window is the last window the user interacted with */
 		bool HasFocus() const;
 
@@ -79,7 +79,7 @@ namespace flex
 		/* Toggles between fullscreen and the last used non-fullscreen mode (windowed or borderless windowed */
 		virtual void ToggleFullscreen(bool force = false) = 0;
 		WindowMode GetWindowMode();
-		
+
 		const char* WindowModeToStr(WindowMode mode);
 		WindowMode StrToWindowMode(const char* modeStr);
 

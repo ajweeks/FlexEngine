@@ -19,7 +19,7 @@ namespace flex
 		void Initialize();
 		void UpdateAndRender();
 		void Stop();
-		
+
 		std::vector<GameObject*> GetSelectedObjects();
 		void SetSelectedObject(GameObject* gameObject);
 		void ToggleSelectedObject(GameObject* gameObject);
@@ -124,11 +124,11 @@ namespace flex
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
 		std::vector<GameObject*> m_CurrentlySelectedObjects;
-		
+
 		glm::vec3 m_SelectedObjectsCenterPos;
 		glm::quat m_SelectedObjectRotation;
 
-		// Parent of translation, rotation, and scale gizmo objects 
+		// Parent of translation, rotation, and scale gizmo objects
 		GameObject* m_TransformGizmo = nullptr;
 		// Children of m_TransformGizmo
 		GameObject* m_TranslationGizmo = nullptr;

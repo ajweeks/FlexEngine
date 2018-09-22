@@ -3,21 +3,21 @@
 #include "Physics/PhysicsWorld.hpp"
 
 #pragma warning(push, 0)
-#include <LinearMath/btVector3.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
-#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <LinearMath/btVector3.h>
 #pragma warning(pop)
 
-#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
-#include "Physics/PhysicsManager.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "Helpers.hpp"
 #include "Physics/PhysicsHelpers.hpp"
+#include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
-#include "Helpers.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -35,7 +35,7 @@ namespace flex
 		if (!m_World)
 		{
 			m_World = g_PhysicsManager->CreateWorld();
-			
+
 			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
 
 			//m_World->getPairCache()->setInternalGhostPairCallback()
@@ -58,7 +58,7 @@ namespace flex
 				m_World->removeCollisionObject(obj);
 				delete obj;
 			}
-			
+
 			SafeDelete(m_World);
 		}
 	}
@@ -241,7 +241,7 @@ namespace flex
 			//		const btVector3& ptA = pt.getPositionWorldOnA();
 			//		const btVector3& ptB = pt.getPositionWorldOnB();
 			//		const btVector3& normalOnB = pt.m_normalWorldOnB;
-			//		//Print("contact: " + std::to_string(normalOnB.getX()) + ", " + 
+			//		//Print("contact: " + std::to_string(normalOnB.getX()) + ", " +
 			//		//				std::to_string(normalOnB.getY()) + ", " + std::to_string(normalOnB.getZ()));
 			//	}
 			//}

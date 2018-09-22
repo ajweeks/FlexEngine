@@ -1,25 +1,25 @@
 #include "stdafx.hpp"
 
 #pragma warning(push, 0)
-#include <LinearMath/btTransform.h>
-#include <LinearMath/btIDebugDraw.h>
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btConeShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
-#include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <LinearMath/btIDebugDraw.h>
+#include <LinearMath/btTransform.h>
 #pragma warning(pop)
 
+#include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
-#include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
@@ -206,7 +206,7 @@ namespace flex
 		{
 			std::string shapeStr = colliderObj.GetString("shape");
 			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
-			
+
 			switch (shapeType)
 			{
 			case BOX_SHAPE_PROXYTYPE:
@@ -268,7 +268,7 @@ namespace flex
 				bColliderContainsOffset = true;
 			}
 
-			// 
+			//
 			//if (colliderObj.SetVec3Checked("offset scale", localScale))
 			//{
 			//	bColliderContainsOffset = true;
@@ -438,7 +438,7 @@ namespace flex
 			int shapeType = collisionShape->getShapeType();
 			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
 			colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
-			
+
 			switch (shapeType)
 			{
 			case BOX_SHAPE_PROXYTYPE:
@@ -483,7 +483,7 @@ namespace flex
 			} break;
 			default:
 			{
-				PrintError("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n", 
+				PrintError("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
 						   shapeType, m_Name.c_str(), scene->GetName().c_str());
 			} break;
 			}
@@ -1625,7 +1625,7 @@ namespace flex
 			dist -= Lerp(pdDistBlockMoved, dDist, 0.1f);
 			pdDistBlockMoved = dDist;
 
-			// NOTE: Don't clamp out of bounds rotation here, valve object 
+			// NOTE: Don't clamp out of bounds rotation here, valve object
 			// will handle it and play correct "overshoot" sound
 			//dist = glm::clamp(dist, minDist, maxDist);
 
@@ -1725,7 +1725,7 @@ namespace flex
 	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
 		ReflectionProbe* newGameObject = new ReflectionProbe(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
-		
+
 		newGameObject->captureMatID = captureMatID;
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);

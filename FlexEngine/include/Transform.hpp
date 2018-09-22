@@ -1,9 +1,9 @@
 #pragma once
 
 #pragma warning(push, 0)
-#include <glm/vec3.hpp>
-#include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 #pragma warning(pop)
 
 #include "JSONTypes.hpp"
@@ -67,7 +67,7 @@ namespace flex
 		void Rotate(const glm::quat& deltaQuatRotation);
 		void Rotate(const glm::vec3& deltaEulerRotationRad);
 		void Rotate(real deltaX, real deltaY, real deltaZ);
-		
+
 		void Scale(const glm::vec3& deltaScale);
 		void Scale(real deltaScale);
 		void Scale(real deltaX, real deltaY, real deltaZ);
