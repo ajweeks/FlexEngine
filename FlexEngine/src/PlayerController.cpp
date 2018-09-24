@@ -13,6 +13,7 @@
 #pragma warning(pop)
 
 #include "Cameras/CameraManager.hpp"
+#include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
 #include "Physics/PhysicsWorld.hpp"

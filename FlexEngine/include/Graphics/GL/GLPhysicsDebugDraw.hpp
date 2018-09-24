@@ -10,6 +10,7 @@
 #pragma warning(pop)
 
 #include "Types.hpp"
+#include "VertexBufferData.hpp"
 
 namespace flex
 {

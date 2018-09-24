@@ -42,6 +42,14 @@
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
 
+#if COMPILE_OPEN_GL
+#include "Graphics/GL/GLRenderer.hpp"
+#endif
+
+#if COMPILE_VULKAN
+#include "Graphics/Vulkan/VulkanRenderer.hpp"
+#endif
+
 namespace flex
 {
 	const u32 FlexEngine::EngineVersionMajor = 0;

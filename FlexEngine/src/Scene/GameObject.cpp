@@ -17,6 +17,7 @@
 
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
+#include "Graphics/Renderer.hpp"
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"

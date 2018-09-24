@@ -8,6 +8,7 @@
 #include "imgui.h"
 #pragma warning(pop)
 
+#include "Graphics/Renderer.hpp"
 #include "Window/Window.hpp"
 
 namespace flex

@@ -19,6 +19,7 @@
 #pragma warning(pop)
 
 #include "FlexEngine.hpp"
+#include "Graphics/Renderer.hpp"
 
 
 namespace flex

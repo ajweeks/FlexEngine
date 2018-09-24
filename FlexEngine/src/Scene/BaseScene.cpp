@@ -14,6 +14,7 @@
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsHelpers.hpp"
