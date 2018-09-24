@@ -3053,7 +3053,7 @@ namespace flex
 				params.wrapT = GL_CLAMP_TO_EDGE;
 
 				GLTexture* fontTex = newFont->SetTexture(new GLTexture(fileName, textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
-				//fontTex->GenerateEmpty();
+				fontTex->GenerateEmpty();
 				fontTex->Build();
 				fontTex->SetParameters(params);
 
