@@ -163,6 +163,14 @@ namespace flex
 
 	void InputManager::PostUpdate()
 	{
+		//glm::vec2i dPos = (m_MousePosition - m_PrevMousePosition);
+		//Print("%i, %i\n", dPos.x, dPos.y);
+		//i32 threshold = 300;
+		//m_bMouseWrapped = abs(dPos.x) > threshold ||
+		//	abs(dPos.y) > threshold;
+
+
+		m_bMouseWrapped = false;
 		m_PrevMousePosition = m_MousePosition;
 		m_ScrollXOffset = 0.0f;
 		m_ScrollYOffset = 0.0f;
@@ -286,6 +294,7 @@ namespace flex
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			if (m_MousePosition.x >= (real)(frameBufferSize.x - 1))
 			{
+				m_bMouseWrapped = true;
 				m_MousePosition.x -= (frameBufferSize.x - 1);
 				m_PrevMousePosition.x = m_MousePosition.x;
 				io.MousePosPrev.x = m_MousePosition.x;
@@ -297,6 +306,7 @@ namespace flex
 			}
 			else if (m_MousePosition.x <= 0)
 			{
+				m_bMouseWrapped = true;
 				m_MousePosition.x += (frameBufferSize.x - 1);
 				m_PrevMousePosition.x = m_MousePosition.x;
 				io.MousePosPrev.x = m_MousePosition.x;
@@ -309,6 +319,7 @@ namespace flex
 
 			if (m_MousePosition.y >= (real)(frameBufferSize.y - 1))
 			{
+				m_bMouseWrapped = true;
 				m_MousePosition.y -= (frameBufferSize.y - 1);
 				m_PrevMousePosition.y = m_MousePosition.y;
 				io.MousePosPrev.y = m_MousePosition.y;
@@ -320,6 +331,7 @@ namespace flex
 			}
 			else if (m_MousePosition.y <= 0)
 			{
+				m_bMouseWrapped = true;
 				m_MousePosition.y += (frameBufferSize.y - 1);
 				m_PrevMousePosition.y = m_MousePosition.y;
 				io.MousePosPrev.y = m_MousePosition.y;
@@ -401,6 +413,11 @@ namespace flex
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.AddInputCharacter((ImWchar)character);
+	}
+
+	bool InputManager::DidMouseWrap() const
+	{
+		return m_bMouseWrapped;
 	}
 
 	glm::vec2 InputManager::GetMousePosition() const

@@ -10,7 +10,7 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 02",
+			"material" : "skybox 01",
 			"skybox info" : 
 			{
 			}
@@ -56,7 +56,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "14.600, 5.466, 5.400",
+				"pos" : "17.457, 5.298, 0.000",
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
@@ -89,7 +89,7 @@
 			"material" : "pbr white",
 			"collider" : 
 			{
-				"shape" : "box",
+				"shape" : "cylinder",
 				"half extents" : "1.000, 1.000, 1.000"
 			},
 			"rigid body" : 

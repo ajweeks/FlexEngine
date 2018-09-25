@@ -56,7 +56,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-2.644, 0.420, -13.210",
+				"pos" : "-2.645, 0.420, -13.210",
 				"rot" : "0.000, 0.314, 0.000",
 				"scale" : "1.320, 1.020, 2.220"
 			},
@@ -88,10 +88,15 @@
 	],
 	"directional light" : 
 	{
-		"rotation" : "0.540, 3.250, 1.650",
+		"rotation" : "0.000, 0.487, -0.588",
 		"pos" : "0.000, 0.000, 0.000",
 		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
-		"brightness" : 0.634000
+		"brightness" : 0.634000,
+		"cast shadows" : true,
+		"shadow darkness" : 0.000000,
+		"shadow map near" : -120.000000,
+		"shadow map far" : 100.000000,
+		"shadow map zoom" : -19.000000
 	}
 }

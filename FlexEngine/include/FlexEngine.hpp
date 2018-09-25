@@ -94,7 +94,14 @@ namespace flex
 
 		void DoSceneContextMenu(BaseScene* scene);
 
-		glm::vec3 GetDragDistanceAlongAxis(const glm::vec3& axis,
+		// Returns the intersection point of the given ray & plane, projected on to axis
+		glm::vec3 CalculateRayPlaneIntersectionAlongAxis(const glm::vec3& axis,
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			const glm::vec3& planeOrigin,
+			const glm::vec3& planeNorm);
+
+		real GetDragRotation(const glm::vec3& axis,
 			const glm::vec3& rayOrigin,
 			const glm::vec3& rayEnd,
 			const glm::vec3& planeNorm);
@@ -141,10 +148,19 @@ namespace flex
 
 		TransformState m_CurrentTransformGizmoState = TransformState::TRANSLATE;
 
-		std::string m_TransformGizmoTag = "transform-gizmo";
+		std::string m_TranslationGizmoTag = "translation-gizmo";
+		std::string m_RotationGizmoTag = "rotation-gizmo";
+		std::string m_ScaleGizmoTag = "scale-gizmo";
 
 		glm::vec3 m_SelectedObjectDragStartPos;
+		glm::vec3 m_DraggingGizmoScaleLast;
 		real m_DraggingGizmoOffset; // How far along the axis the cursor was when pressed
+		real m_DraggingGizmoDistAlongAxisLast;
+		glm::vec3 m_UnmodifiedAxisProjectedOnto;
+		glm::vec3 m_AxisProjectedOnto;
+		glm::vec3 m_PlaneN;
+		glm::vec3 m_AxisOfRotation;
+
 		bool m_bDraggingGizmo = false;
 		// -1,   0, 1, 2, 3
 		// None, X, Y, Z, All Axes

@@ -247,10 +247,15 @@
 	],
 	"directional light" : 
 	{
-		"rotation" : "0.722, 0.398, 0.566",
+		"rotation" : "0.722, -0.031, -0.076",
 		"pos" : "0.000, 24.400, 0.000",
 		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
-		"brightness" : 1.338000
+		"brightness" : 1.549000,
+		"cast shadows" : true,
+		"shadow darkness" : 0.052000,
+		"shadow map near" : -80.000000,
+		"shadow map far" : 100.000000,
+		"shadow map zoom" : 56.000000
 	}
 }

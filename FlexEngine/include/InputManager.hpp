@@ -262,6 +262,8 @@ namespace flex
 		void KeyCallback(KeyCode keycode, Action action, i32 mods);
 		void CharCallback(u32 character);
 
+		bool DidMouseWrap() const;
+
 		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		void ClearMouseMovement();
@@ -303,6 +305,8 @@ namespace flex
 		glm::vec2 m_PrevMousePosition = { 0, 0 };
 		real m_ScrollXOffset = 0;
 		real m_ScrollYOffset = 0;
+
+		bool m_bMouseWrapped = false;
 
 		GamepadState m_GamepadStates[2];
 

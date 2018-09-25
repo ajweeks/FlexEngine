@@ -289,10 +289,7 @@ namespace flex
 
 	void Transform::Rotate(const glm::vec3& deltaEulerRotationRad)
 	{
-		glm::quat rotationQuat(deltaEulerRotationRad);
-		localRotation *= rotationQuat;
-
-		UpdateParentTransform();
+		Rotate(deltaEulerRotationRad.x, deltaEulerRotationRad.y, deltaEulerRotationRad.z);
 	}
 
 	void Transform::Rotate(real deltaX, real deltaY, real deltaZ)
