@@ -12,6 +12,7 @@ class btCollisionShape;
 namespace flex
 {
 	class BaseScene;
+	class MeshComponent;
 
 	class GameObject
 	{

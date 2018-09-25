@@ -5,6 +5,7 @@
 
 #include "FlexEngine.hpp"
 #include "Graphics/GL/GLHelpers.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Window/Monitor.hpp"

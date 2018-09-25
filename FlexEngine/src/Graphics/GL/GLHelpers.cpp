@@ -10,6 +10,7 @@
 #include "stb_image.h"
 #pragma warning(pop)
 
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 
 namespace flex

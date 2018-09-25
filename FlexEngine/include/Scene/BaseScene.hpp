@@ -11,6 +11,9 @@ namespace flex
 	class GameObject;
 	struct JSONObject;
 	struct JSONField;
+	struct PointLight;
+	struct DirectionalLight;
+	struct Material;
 
 	class BaseScene
 	{

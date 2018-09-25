@@ -29,8 +29,6 @@
 	#include <GLFW/glfw3native.h>
 	#include <vulkan/vulkan.hpp>
 #pragma warning(pop)
-
-	#include "Graphics/Vulkan/VulkanRenderer.hpp"
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
@@ -41,9 +39,6 @@
 	#include <GLFW/glfw3.h>
 	#include <GLFW/glfw3native.h>
 #pragma warning(pop)
-
-	#include "Graphics/GL/GLRenderer.hpp"
-
 #endif // COMPILE_OPEN_GL
 
 #include "Physics/PhysicsTypeConversions.hpp"

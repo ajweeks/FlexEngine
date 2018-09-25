@@ -1,6 +1,8 @@
 #include "stdafx.hpp"
 
 #include "Graphics/RendererTypes.hpp"
+#include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {

@@ -8,6 +8,7 @@
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #pragma warning(pop)
 
+#include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"

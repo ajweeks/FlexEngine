@@ -15,6 +15,7 @@
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Colors.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
 

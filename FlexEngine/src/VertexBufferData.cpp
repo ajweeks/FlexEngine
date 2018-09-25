@@ -3,6 +3,7 @@
 
 #include "VertexBufferData.hpp"
 
+#include "Graphics/Renderer.hpp"
 #include "VertexAttribute.hpp"
 
 namespace flex
