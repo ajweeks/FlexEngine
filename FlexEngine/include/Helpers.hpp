@@ -165,6 +165,16 @@ namespace flex
 	// Returns true if value changed
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation);
 
+	enum class ImageFormat
+	{
+		JPG,
+		TGA,
+		PNG,
+		BMP
+	};
+
+	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, real* data);
+
 	template<class T>
 	inline typename std::vector<T>::const_iterator Find(const std::vector<T>& vec, const T& t)
 	{
@@ -266,14 +276,14 @@ namespace flex
 	struct TextCache
 	{
 	public:
-		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw);
+		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw, const std::vector<glm::vec2>& letterOffsets);
 
 		std::string str;
 		AnchorPoint anchor;
 		glm::vec2 pos;
 		glm::vec4 color;
 		real xSpacing;
-		std::vector<real> letterYOffsets;
+		std::vector<glm::vec2> letterOffsets;
 		bool bRaw;
 
 	private:

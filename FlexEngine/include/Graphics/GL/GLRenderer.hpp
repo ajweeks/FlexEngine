@@ -92,7 +92,8 @@ namespace flex
 									AnchorPoint anchor,
 									const glm::vec2& pos, // Positional offset from anchor
 									real spacing,
-									bool bRaw) override; // Horizontal per-char spacing
+									bool bRaw,
+									const std::vector<glm::vec2>& letterYOffsets) override; // Horizontal per-char spacing
 
 			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;

@@ -381,6 +381,7 @@ namespace flex
 				m_BRDFTexture = new GLTexture("BRDF",
 											  brdfSize,
 											  brdfSize,
+											  2,
 											  internalFormat,
 											  format,
 											  type);
@@ -442,18 +443,30 @@ namespace flex
 
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
 			std::string ubuntuRenderedFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-32.png";
-			PROFILE_BEGIN("load font UbuntuCondensed");
-			LoadFont(&m_FntUbuntuCondensed, 32, ubuntuFilePath, ubuntuRenderedFilePath);
-			PROFILE_END("load font UbuntuCondensed");
+			{
+				PROFILE_AUTO("load font UbuntuCondensed");
+				LoadFont(&m_FntUbuntuCondensed, 32, ubuntuFilePath, ubuntuRenderedFilePath);
+			}
 			Profiler::PrintBlockDuration("load font UbuntuCondensed");
 
+
+			std::string gantFilePath = RESOURCE_LOCATION + "fonts/gant.ttf";
+			std::string gantRenderedFilePath = RESOURCE_LOCATION + "fonts/gant-regular-18.png";
+
+			{
+				PROFILE_AUTO("load font Gant");
+				LoadFont(&m_FntGant, 18, gantFilePath, gantRenderedFilePath);
+			}
+			Profiler::PrintBlockDuration("load font Gant");
 
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
 			std::string sourceCodeProRenderedFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular-12.png";
-			PROFILE_BEGIN("load font SourceCodePro");
-			LoadFont(&m_FntSourceCodePro, 12, sourceCodeProFilePath, sourceCodeProRenderedFilePath);
-			PROFILE_END("load font SourceCodePro");
+
+			{
+				PROFILE_AUTO("load font SourceCodePro");
+				LoadFont(&m_FntSourceCodePro, 18, sourceCodeProFilePath, sourceCodeProRenderedFilePath);
+			}
 			Profiler::PrintBlockDuration("load font SourceCodePro");
 
 
@@ -1860,18 +1873,22 @@ namespace flex
 
 			// Screen-space objects
 #if 1
-			std::vector<real> letterYOffsetsEmpty;
-			//std::vector<real> letterYOffsets1;
-			//letterYOffsets1.reserve(26);
+			std::vector<glm::vec2> letterOffsetsEmpty;
+			//std::vector<glm::vec2> letterOffsets1;
+			//letterOffsets1.reserve(26);
 			//for (i32 i = 0; i < 26; ++i)
 			//{
-			//	letterYOffsets1.push_back(sin(i * 0.75f + g_SecElapsedSinceProgramStart * 3.0f) * 5.0f);
+			//	letterOffsets1.emplace_back(
+			//		sin(i * 0.75f + g_SecElapsedSinceProgramStart * 3.0f) * 0.5f,
+			//		cos(i * 0.75f + g_SecElapsedSinceProgramStart * 4.35f) * 0.2f);
 			//}
-			//std::vector<real> letterYOffsets2;
-			//letterYOffsets2.reserve(26);
+			//std::vector<glm::vec2> letterOffsets2;
+			//letterOffsets2.reserve(26);
 			//for (i32 i = 0; i < 26; ++i)
 			//{
-			//	letterYOffsets2.push_back(cos(i + g_SecElapsedSinceProgramStart * 10.0f) * 5.0f);
+			//	letterOffsets2.emplace_back(
+			//		cos(i + g_SecElapsedSinceProgramStart * 10.0f) * 0.5f,
+			//		sin(i + g_SecElapsedSinceProgramStart * 4.45f) * 0.1f);
 			//}
 			//std::vector<real> letterYOffsets3;
 			//letterYOffsets3.reserve(44);
@@ -1881,6 +1898,11 @@ namespace flex
 			//}
 
 			std::string str;
+
+			SetFont(m_FntGant);
+			DrawString("ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.25f), 1.5f, false, letterOffsetsEmpty);
+			DrawString("\'\"123456789!#%&*()[]\\/|+-_~?", glm::vec4(0.5f, 0.4f, 0.68f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.0f), 1.5f, false, letterOffsetsEmpty);
+			DrawString("ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.1f, 0.8f, 0.4f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.25f), 1.5f, false, letterOffsetsEmpty);
 
 			// Text stress test:
 			/*SetFont(m_FntSourceCodePro);
@@ -1951,7 +1973,7 @@ namespace flex
 				SetFont(m_FntUbuntuCondensed);
 				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
 										0.0f, 1.0f);
-				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3, false);
+				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3, false, {});
 			}
 
 			DrawScreenSpaceSprites();
@@ -3052,7 +3074,7 @@ namespace flex
 				params.wrapS = GL_CLAMP_TO_EDGE;
 				params.wrapT = GL_CLAMP_TO_EDGE;
 
-				GLTexture* fontTex = newFont->SetTexture(new GLTexture(fileName, textureSize.x, textureSize.y, GL_RGBA16F, GL_RGBA, GL_FLOAT));
+				GLTexture* fontTex = newFont->SetTexture(new GLTexture(fileName, textureSize.x, textureSize.y, 4, GL_RGBA16F, GL_RGBA, GL_FLOAT));
 				fontTex->GenerateEmpty();
 				fontTex->Build();
 				fontTex->SetParameters(params);
@@ -3183,11 +3205,47 @@ namespace flex
 					FT_Bitmap_Done(ft, &alignedBitmap);
 				}
 
+				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
+
+				i32 stride = fontTex->channelCount * sizeof(real);
+				i32 pixelCount = fontTex->width * fontTex->height;
+				i32 bufSize = stride * pixelCount;
+				void* readBackTextureData = malloc(bufSize);
+				if (readBackTextureData)
+				{
+					//glReadPixels(0, 0, fontTex->width, fontTex->height, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+					glBindTexture(GL_TEXTURE_2D, fontTex->handle);
+					glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+
+					bool bResult = SaveImage(savedSDFTextureAbsFilePath, ImageFormat::PNG, fontTex->width, fontTex->height, fontTex->channelCount, (real*)readBackTextureData);
+
+					free(readBackTextureData);
+					readBackTextureData = nullptr;
+
+					if (bResult)
+					{
+						Print("Saved generated font SDF texture to %s\n", renderedFontFilePath.c_str());
+					}
+					else
+					{
+						PrintError("Failed to save generated font SDF texture to %s\n", renderedFontFilePath.c_str());
+					}
+				}
 
 				// Cleanup
 				glDisable(GL_BLEND);
 				glDeleteRenderbuffers(1, &captureRBO);
 				glDeleteFramebuffers(1, &captureFBO);
+
+
+				//if (fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::JPG))
+				//{
+				//	Print("Saved generated font SDF texture to %s\n", renderedFontFilePath.c_str());
+				//}
+				//else
+				//{
+				//	PrintError("Failed to save generated font SDF texture to %s\n", renderedFontFilePath.c_str());
+				//}
 			}
 
 			FT_Done_Face(face);
@@ -3262,11 +3320,12 @@ namespace flex
 									AnchorPoint anchor,
 									const glm::vec2& pos,
 									real spacing,
-									bool bRaw)
+									bool bRaw,
+									const std::vector<glm::vec2>& letterYOffsets)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw);
+			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw, letterYOffsets);
 		}
 
 		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
@@ -3343,10 +3402,10 @@ namespace flex
 				{
 					std::string currentStr = textCache.str;
 
-					bool bUseLetterYOffsets = !textCache.letterYOffsets.empty();
-					if (bUseLetterYOffsets)
+					bool bUseLetterOffsets = !textCache.letterOffsets.empty();
+					if (bUseLetterOffsets)
 					{
-						assert(textCache.letterYOffsets.size() == currentStr.size());
+						assert(textCache.letterOffsets.size() >= currentStr.size());
 					}
 
 					real totalAdvanceX = 0;
@@ -3410,11 +3469,12 @@ namespace flex
 									continue;
 								}
 
-								real yOff = (bUseLetterYOffsets ? textCache.letterYOffsets[j] : 0.0f);
+								real xOff = (bUseLetterOffsets ? textCache.letterOffsets[j].x : 0.0f);
+								real yOff = (bUseLetterOffsets ? textCache.letterOffsets[j].y : 0.0f);
 
 								glm::vec2 pos =
-									glm::vec2(textCache.pos.x * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
-									glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY + yOff) * textScale;
+									glm::vec2((textCache.pos.x) * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
+									glm::vec2(totalAdvanceX + metric->offsetX + xOff, -metric->offsetY + yOff) * textScale;
 
 								if (font->UseKerning())
 								{

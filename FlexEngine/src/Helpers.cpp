@@ -15,7 +15,9 @@
 
 #include "ShObjIdl.h"
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
+#include "stb_image_write.h"
 #pragma warning(pop)
 
 #include "FlexEngine.hpp"
@@ -150,13 +152,14 @@ namespace flex
 		return result;
 	}
 
-	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, bool bRaw) :
+	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, bool bRaw, const std::vector<glm::vec2>& letterOffsets) :
 		str(str),
 		anchor(anchor),
 		pos(pos),
 		color(color),
 		xSpacing(xSpacing),
-		bRaw(bRaw)
+		bRaw(bRaw),
+		letterOffsets(letterOffsets)
 	{
 	}
 
@@ -1186,5 +1189,57 @@ namespace flex
 		outCleanedRotation.z = rotation.z;
 
 		return bValueChanged;
+	}
+
+	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, real* data)
+	{
+		if (data == nullptr ||
+			width == 0 ||
+			height == 0 ||
+			channelCount == 0 ||
+			absoluteFilePath.empty())
+		{
+			PrintError("Attempted to save invalid image to %s\n", absoluteFilePath.c_str());
+			return false;
+		}
+
+		bool bResult = false;
+
+		const char* fileNameCstr = absoluteFilePath.c_str();
+		switch (imageFormat)
+		{
+		case ImageFormat::JPG:
+		{
+			const i32 JPEGQuality = 90;
+			if (stbi_write_jpg(fileNameCstr, width, height, channelCount, data, JPEGQuality))
+			{
+				bResult = true;
+			}
+		} break;
+		case ImageFormat::TGA:
+		{
+			if (stbi_write_tga(fileNameCstr, width, height, channelCount, data))
+			{
+				bResult = true;
+			}
+		} break;
+		case ImageFormat::PNG:
+		{
+			i32 strideInBytes = sizeof(data[0]) * channelCount;
+			if (stbi_write_png(fileNameCstr, width, height, channelCount, data, strideInBytes))
+			{
+				bResult = true;
+			}
+		} break;
+		case ImageFormat::BMP:
+		{
+			if (stbi_write_bmp(fileNameCstr, width, height, channelCount, data))
+			{
+				bResult = true;
+			}
+		} break;
+		}
+
+		return bResult;
 	}
 } // namespace flex

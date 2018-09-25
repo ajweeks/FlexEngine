@@ -100,7 +100,8 @@ namespace flex
 								AnchorPoint anchor,
 								const glm::vec2& pos,
 								real spacing,
-								bool bRaw) = 0;
+								bool bRaw,
+			const std::vector<glm::vec2>& letterYOffsets) = 0;
 
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
 		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
@@ -171,6 +172,7 @@ namespace flex
 
 		BitmapFont* m_FntUbuntuCondensed = nullptr;
 		BitmapFont* m_FntSourceCodePro = nullptr;
+		BitmapFont* m_FntGant = nullptr;
 
 	protected:
 		/*

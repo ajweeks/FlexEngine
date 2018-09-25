@@ -288,7 +288,7 @@ namespace flex
 							   AnchorPoint::CENTER,
 							   glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
 							   letterSpacing,
-							   true);
+			true, {});
 
 		real blockHeight = (frameSizeHalf.y / ((real)blockCount + 2));
 
@@ -324,7 +324,7 @@ namespace flex
 									   AnchorPoint::CENTER,
 									   pos,
 									   letterSpacing,
-									   true);
+					true, {});
 				str = FloatToString(blockDuration, 2) + "ms";
 				strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				pos.x = blockCenterNorm.x - strWidth * aspectRatio;
@@ -334,7 +334,7 @@ namespace flex
 									   AnchorPoint::CENTER,
 									   pos ,
 									   letterSpacing,
-									   true);
+					true, {});
 			}
 
 			++colorIndex;

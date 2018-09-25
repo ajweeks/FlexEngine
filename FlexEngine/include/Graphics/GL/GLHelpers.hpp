@@ -10,6 +10,7 @@
 #pragma warning(pop)
 
 #include "Graphics/RendererTypes.hpp"
+#include "Helpers.hpp"
 #include "Types.hpp"
 
 namespace flex
@@ -195,7 +196,7 @@ namespace flex
 		struct GLTexture
 		{
 			GLTexture();
-			GLTexture(const std::string& name, i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type);
+			GLTexture(const std::string& name, i32 width, i32 height, i32 channelCount, i32 internalFormat, GLenum format, GLenum type);
 			GLTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 			~GLTexture();
 
@@ -217,6 +218,8 @@ namespace flex
 
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
+
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format);
 
 		private:
 			std::string relativeFilePath;

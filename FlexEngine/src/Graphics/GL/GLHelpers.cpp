@@ -323,10 +323,11 @@ namespace flex
 		{
 		}
 
-		GLTexture::GLTexture(const std::string& name, i32 width, i32 height, i32 internalFormat, GLenum format, GLenum type) :
+		GLTexture::GLTexture(const std::string& name, i32 width, i32 height, i32 channelCount, i32 internalFormat, GLenum format, GLenum type) :
 			name(name),
 			width(width),
 			height(height),
+			channelCount(channelCount),
 			internalFormat(internalFormat),
 			format(format),
 			type(type)
@@ -511,6 +512,24 @@ namespace flex
 		std::string GLTexture::GetName() const
 		{
 			return name;
+		}
+
+		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat imageFormat)
+		{
+			i32 readBackTextureChannelCount = 4;
+			real* readBackTextureData = (real*)malloc(readBackTextureChannelCount * sizeof(real) * width * height);
+			if (readBackTextureData == nullptr)
+			{
+				return false;
+			}
+
+			glReadPixels(0, 0, width, height, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+
+			bool bResult = SaveImage(absoluteFilePath, imageFormat, width, height, channelCount, readBackTextureData);
+
+			free(readBackTextureData);
+
+			return bResult;
 		}
 
 		bool LoadGLShaders(u32 program, GLShader& shader)
