@@ -666,6 +666,125 @@ namespace flex
 			return true;
 		}
 
+		bool IsProgramValid(u32 program)
+		{
+			glValidateProgram(program);
+			i32 params = -1;
+			glGetProgramiv(program, GL_VALIDATE_STATUS, &params);
+			if (params != GL_TRUE)
+			{
+
+				return false;
+			}
+
+			return true;
+		}
+
+		void PrintProgramInfoLog(u32 program)
+		{
+			i32 max_length = 2048;
+			i32 actual_length = 0;
+			char program_log[2048];
+			glGetProgramInfoLog(program, max_length, &actual_length, program_log);
+			Print("Program info log for GL index %u:\n%s", program, program_log);
+		}
+
+		void PrintShaderInfo(u32 program, const char* shaderName /* = nullptr */)
+		{
+			if (shaderName)
+			{
+				Print("------------------\nShader %s (program %i) info:\n", shaderName, program);
+			}
+			else
+			{
+				Print("------------------\nShader program %i info:\n", program);
+			}
+			i32 params = -1;
+			glGetProgramiv(program, GL_LINK_STATUS, &params);
+			Print("GL_LINK_STATUS = %i\n", params);
+
+			glGetProgramiv(program, GL_ATTACHED_SHADERS, &params);
+			Print("GL_ATTACHED_SHADERS = %i\n", params);
+
+			glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &params);
+			Print("GL_ACTIVE_ATTRIBUTES = %i\n", params);
+			for (i32 i = 0; i < params; i++)
+			{
+				char name[64];
+				i32 max_length = 64;
+				i32 actual_length = 0;
+				i32 size = 0;
+				GLenum glType;
+				glGetActiveAttrib(
+					program,
+					i,
+					max_length,
+					&actual_length,
+					&size,
+					&glType,
+					name
+				);
+				DataType dataType = GLTypeToDataType(glType);
+
+				if (size > 1)
+				{
+					for (i32 j = 0; j < size; j++)
+					{
+						char long_name[64];
+						snprintf(long_name, 64, "%s[%i]", name, j);
+						i32 location = glGetAttribLocation(program, long_name);
+						Print("  %i) type: %s, name: \"%s\", location: %i\n",
+							i, DataTypeToString(dataType), long_name, location);
+					}
+				}
+				else
+				{
+					i32 location = glGetAttribLocation(program, name);
+					Print("  %i) type: %s, name: \"%s\", location: %i\n",
+						i, DataTypeToString(dataType), name, location);
+				}
+			}
+
+			glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &params);
+			Print("GL_ACTIVE_UNIFORMS = %i\n", params);
+			for (i32 i = 0; i < params; i++)
+			{
+				char name[64];
+				i32 max_length = 64;
+				i32 actual_length = 0;
+				i32 size = 0;
+				GLenum glType;
+				glGetActiveUniform(
+					program,
+					i,
+					max_length,
+					&actual_length,
+					&size,
+					&glType,
+					name
+				);
+				DataType dataType = GLTypeToDataType(glType);
+
+				if (size > 1)
+				{
+					for (i32 j = 0; j < size; j++)
+					{
+						char long_name[64];
+						snprintf(long_name, 64, "%s[%i]", name, j);
+						i32 location = glGetUniformLocation(program, long_name);
+						Print("  %i) type: %s, name: \"%s\", location: %i\n",
+							i, DataTypeToString(dataType), long_name, location);
+					}
+				}
+				else
+				{
+					i32 location = glGetUniformLocation(program, name);
+					Print("  %i) type: %s, name: \"%s\", location: %i\n",
+						i, DataTypeToString(dataType), name, location);
+				}
+			}
+		}
+
 		GLShader::GLShader(const std::string& name,
 						   const std::string& vertexShaderFilePath,
 						   const std::string& fragmentShaderFilePath,
@@ -793,42 +912,37 @@ namespace flex
 
 		DataType GLTypeToDataType(GLenum type)
 		{
-			if (type == GL_BYTE)
+			switch (type)
 			{
-				return DataType::BYTE;
-			}
-			else if (type == GL_UNSIGNED_BYTE)
-			{
-				return DataType::UNSIGNED_BYTE;
-			}
-			else if (type == GL_SHORT)
-			{
-				return DataType::SHORT;
-			}
-			else if (type == GL_UNSIGNED_SHORT)
-			{
-				return DataType::UNSIGNED_SHORT;
-			}
-			else if (type == GL_INT)
-			{
-				return DataType::INT;
-			}
-			else if (type == GL_UNSIGNED_INT)
-			{
-				return DataType::UNSIGNED_INT;
-			}
-			else if (type == GL_FLOAT)
-			{
-				return DataType::FLOAT;
-			}
-			else if (type == GL_DOUBLE)
-			{
-				return DataType::DOUBLE;
-			}
-			else
+			case GL_BOOL:					return DataType::BOOL;
+			case GL_BYTE:					return DataType::BYTE;
+			case GL_UNSIGNED_BYTE:			return DataType::UNSIGNED_BYTE;
+			case GL_SHORT:					return DataType::SHORT;
+			case GL_UNSIGNED_SHORT:			return DataType::UNSIGNED_SHORT;
+			case GL_INT:					return DataType::INT;
+			case GL_UNSIGNED_INT:			return DataType::UNSIGNED_INT;
+			case GL_FLOAT:					return DataType::FLOAT;
+			case GL_DOUBLE:					return DataType::DOUBLE;
+			case GL_FLOAT_VEC2:				return DataType::FLOAT_VEC2;
+			case GL_FLOAT_VEC3:				return DataType::FLOAT_VEC3;
+			case GL_FLOAT_VEC4:				return DataType::FLOAT_VEC4;
+			case GL_FLOAT_MAT3:				return DataType::FLOAT_MAT3;
+			case GL_FLOAT_MAT4:				return DataType::FLOAT_MAT4;
+			case GL_INT_VEC2:				return DataType::INT_VEC2;
+			case GL_INT_VEC3:				return DataType::INT_VEC3;
+			case GL_INT_VEC4:				return DataType::INT_VEC4;
+			case GL_SAMPLER_1D:				return DataType::SAMPLER_1D;
+			case GL_SAMPLER_2D:				return DataType::SAMPLER_2D;
+			case GL_SAMPLER_3D:				return DataType::SAMPLER_3D;
+			case GL_SAMPLER_CUBE:			return DataType::SAMPLER_CUBE;
+			case GL_SAMPLER_1D_SHADOW:		return DataType::SAMPLER_1D_SHADOW;
+			case GL_SAMPLER_2D_SHADOW:		return DataType::SAMPLER_2D_SHADOW;
+			case GL_SAMPLER_CUBE_SHADOW:	return DataType::SAMPLER_CUBE_SHADOW;
+			default:
 			{
 				PrintError("Unhandled GLType passed to GLTypeToDataType: %i\n", type);
 				return DataType::NONE;
+			}
 			}
 		}
 

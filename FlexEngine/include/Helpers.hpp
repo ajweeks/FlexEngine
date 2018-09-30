@@ -121,6 +121,9 @@ namespace flex
 
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
+	void PadEnd(std::string& str, i32 minLen, char pad);
+	void PadStart(std::string& str, i32 minLen, char pad);
+
 	std::string FloatToString(real f, i32 precision);
 
 	// String will be padded with '0's to be at least minChars long (excluding a leading '-' for negative numbers)

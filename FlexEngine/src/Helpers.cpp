@@ -872,6 +872,26 @@ namespace flex
 		}
 	}
 
+	void PadEnd(std::string& str, i32 minLen, char pad)
+	{
+		if ((i32)str.length() >= minLen)
+		{
+			return;
+		}
+
+		str = str + std::string(minLen - str.length(), pad);
+	}
+
+	void PadStart(std::string& str, i32 minLen, char pad)
+	{
+		if ((i32)str.length() >= minLen)
+		{
+			return;
+		}
+
+		str = std::string(minLen - str.length(), pad) + str;
+	}
+
 	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
 	{
 		std::string result(FloatToString(vec.x, precision) + ", " +

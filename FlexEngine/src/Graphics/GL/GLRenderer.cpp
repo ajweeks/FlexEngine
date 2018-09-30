@@ -4546,6 +4546,18 @@ namespace flex
 
 				LinkProgram(shader.program);
 
+#if 0
+				// TODO: Add option to print specific shader's info at runtime
+				PrintShaderInfo(shader.program, shader.shader.name.c_str());
+#endif
+
+#if _DEBUG
+				if (!IsProgramValid(shader.program))
+				{
+					PrintError("Shader program is invalid!\n");
+				}
+#endif
+
 				// No need to keep the code in memory
 				shader.shader.vertexShaderCode.clear();
 				shader.shader.vertexShaderCode.shrink_to_fit();

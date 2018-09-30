@@ -14,6 +14,8 @@
 #include "Functors.hpp"
 #include "JSONTypes.hpp"
 
+extern const char** DataTypeStrs;
+
 namespace flex
 {
 	class VertexBufferData;
@@ -101,6 +103,7 @@ namespace flex
 
 	enum class DataType
 	{
+		BOOL,
 		BYTE,
 		UNSIGNED_BYTE,
 		SHORT,
@@ -109,8 +112,26 @@ namespace flex
 		UNSIGNED_INT,
 		FLOAT,
 		DOUBLE,
+		FLOAT_VEC2,
+		FLOAT_VEC3,
+		FLOAT_VEC4,
+		FLOAT_MAT3,
+		FLOAT_MAT4,
+		INT_VEC2,
+		INT_VEC3,
+		INT_VEC4,
+		SAMPLER_1D,
+		SAMPLER_2D,
+		SAMPLER_3D,
+		SAMPLER_CUBE,
+		SAMPLER_1D_SHADOW,
+		SAMPLER_2D_SHADOW,
+		SAMPLER_CUBE_SHADOW,
+		// NOTE: If adding any types, entries must also be added to the following array!
 		NONE
 	};
+
+	const char* DataTypeToString(DataType dataType);
 
 	enum class TopologyMode
 	{

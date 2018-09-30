@@ -248,7 +248,10 @@ namespace flex
 
 		bool LoadGLShaders(u32 program, GLShader& shader);
 		bool LinkProgram(u32 program);
+		bool IsProgramValid(u32 program);
 
+		void PrintProgramInfoLog(u32 program);
+		void PrintShaderInfo(u32 program, const char* shaderName = nullptr);
 
 		GLboolean BoolToGLBoolean(bool value);
 		GLuint BufferTargetToGLTarget(BufferTarget bufferTarget);
