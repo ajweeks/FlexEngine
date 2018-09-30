@@ -390,6 +390,11 @@ namespace flex
 		return m_PointLights.size();
 	}
 
+	i32 Renderer::GetFramesRenderedCount() const
+	{
+		return m_FramesRendered;
+	}
+
 	Renderer::PostProcessSettings& Renderer::GetPostProcessSettings()
 	{
 		return m_PostProcessSettings;

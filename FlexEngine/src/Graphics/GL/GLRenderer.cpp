@@ -1600,6 +1600,8 @@ namespace flex
 
 		void GLRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
+			PROFILE_AUTO("CaptureSceneToCubemap");
+
 			DrawCallInfo drawCallInfo = {};
 			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
 			drawCallInfo.bRenderToCubemap = true;
@@ -1821,12 +1823,12 @@ namespace flex
 
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
-			// This fixes the weird artifacts in refl probes, but obviously isn't ideal...
-			//static i32 count = 0;
-			//if (++count == 1)
-			//{
-			//	RecaptureReflectionProbe();
-			//}
+			// TODO: Only ever use the static skybox image to avoid endlessly being out of date
+			// Capture probe again using freshly rendered skybox
+			if (m_FramesRendered == 1)
+			{
+				RecaptureReflectionProbe();
+			}
 
 			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
 			{
@@ -1991,6 +1993,7 @@ namespace flex
 			}
 
 			SwapBuffers();
+			++m_FramesRendered;
 		}
 
 		void GLRenderer::BatchRenderObjects()

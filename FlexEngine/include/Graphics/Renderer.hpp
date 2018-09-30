@@ -154,6 +154,8 @@ namespace flex
 		PointLight& GetPointLight(PointLightID pointLight);
 		i32 GetNumPointLights();
 
+		i32 GetFramesRenderedCount() const;
+
 		struct PostProcessSettings
 		{
 			bool bEnabled = true;
@@ -211,6 +213,8 @@ namespace flex
 		bool m_bDisplayBoundingVolumes = false;
 
 		bool m_bRenderGrid = true;
+
+		u32 m_FramesRendered = 0;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

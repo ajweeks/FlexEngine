@@ -1577,7 +1577,7 @@ namespace flex
 				g_Window->SaveToConfig();
 			}
 
-			const bool bProfileFrame = (m_FrameCount > 3);
+			const bool bProfileFrame = (g_Renderer->GetFramesRenderedCount() > 3);
 			if (bProfileFrame)
 			{
 				Profiler::EndFrame(m_bUpdateProfilerFrame);
@@ -1589,8 +1589,6 @@ namespace flex
 			{
 				Profiler::PrintResultsToFile();
 			}
-
-			++m_FrameCount;
 		}
 	}
 
@@ -1681,7 +1679,7 @@ namespace flex
 
 				ImGui::Text("Number of available renderers: %d", m_RendererCount);
 
-				ImGui::Text("Frames rendered: %d", m_FrameCount);
+				ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
 
 				ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
 

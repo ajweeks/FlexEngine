@@ -112,7 +112,6 @@ namespace flex
 		bool m_bRunning = false;
 
 		bool m_bRenderImGui = true;
-		u32 m_FrameCount = 0;
 
 		bool m_bRenderEditorObjects = true;
 		bool m_bUpdateProfilerFrame = false;
