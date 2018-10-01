@@ -3,20 +3,17 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/vae2k07y8a802odn?svg=true)](https://ci.appveyor.com/project/ajweeks/flexengine) -->
 
-Flex Engine is my personal game engine which I began work on in February 2017 as a playground for learning about real-time technology. During the first year of development I focused on the renderer, after which I began adding support for the plethora of other necessary systems that a game engine requires.
+Flex Engine is my personal game engine which I began work on in February 2017 as a playground for learning about real-time technology. During the first year of development I focused on the renderer, but since then I have been focusing on adding support for other systems.
 
 #### Notable Features
 - Support for both Vulkan and OpenGL, switchable at runtime
 - Signed-distance field font generation & rendering
-- Physically Based Rendering (PBR)
-- Image Based lighting (IBL)
+- Physically Based Rendering
+- Image Based lighting
 - Reflection probes
-- Post-processing stage
-- Custom scene file format
 - Scene editor
-- Scene serialization
-- Physics simulation
-- Audio playback
+- Custom scene file format
+- Post-processing stage
 - Profiling tools
 
 ![](http://i.imgur.com/3XQGcDD.png)
@@ -59,24 +56,27 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 ## Dependencies
 Flex Engine uses the following open-source libraries:
  - [Assimp](https://github.com/assimp/assimp) - Model loading
- - [ImGui](https://github.com/ocornut/imgui) - User interface
- - [stb](https://github.com/nothings/stb) - Image loading
- - [glfw](https://github.com/glfw/glfw) - Window creation, input handling
+ - [Bullet](https://github.com/bulletphysics/bullet3) - Collision detection & rigid body simulation
+ - [FreeType](https://www.freetype.org/) - Font loading
  - [glad](https://github.com/Dav1dde/glad) - OpenGL profile loading
+ - [glfw](https://github.com/glfw/glfw) - Window creation, input handling
  - [glm](https://github.com/g-truc/glm) - Math operations
+ - [ImGui](https://github.com/ocornut/imgui) - User interface
+ - [OpenAL](https://www.openal.org/) - Audio loading and playback
+ - [stb](https://github.com/nothings/stb) - Image loading
 
 ## License
 Flex engine is released as open source under The MIT License. See [license.md](license.md) for details.
 
 ## Acknowledgements
-A huge thanks to the following people/organizations for their incredibly useful resources:
+A huge thank you must be given to the following individuals and organizations for their incredibly useful resources:
  - Alexander Overvoorde of [vulkan-tutorial.com](https://vulkan-tutorial.com/)
  - Sascha Willems of [github.com/SaschaWillems/Vulkan](https://github.com/SaschaWillems/Vulkan)
  - Baldur Karlsson of [github.com/baldurk/renderdoc](https://github.com/baldurk/renderdoc)
  - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
  - Andrew Maximov for the pistol model and textures [artisaverb.info/PBT.html ](http://artisaverb.info/PBT.html)
- - [FreePBR.com](http://FreePBR.com) for the wonderful PBR textures
- - All of the library authors/contributors for their awesome OSS!
+ - [FreePBR.com](http://FreePBR.com) for the high-quality PBR textures
+ - All of the open-source library authors and contributors
 
 ## Blog
  Stay (somewhat) up to date about this project on my blog at [ajweeks.com/blog](http://ajweeks.com/blog/)
