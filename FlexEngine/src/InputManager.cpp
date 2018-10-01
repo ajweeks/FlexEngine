@@ -4,10 +4,6 @@
 
 #include <assert.h>
 
-#pragma warning(push, 0)
-#include "imgui.h"
-#pragma warning(pop)
-
 #include "Graphics/Renderer.hpp"
 #include "Window/Window.hpp"
 
@@ -279,7 +275,7 @@ namespace flex
 	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis)
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
-	
+
 		real axisValue = m_GamepadStates[gamepadIndex].axes[(i32)axis];
 		return axisValue;
 	}

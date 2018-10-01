@@ -2,10 +2,6 @@
 
 #include "Window/Window.hpp"
 
-#pragma warning(push, 0)
-#include "imgui.h"
-#pragma warning(pop)
-
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "Scene/SceneManager.hpp"

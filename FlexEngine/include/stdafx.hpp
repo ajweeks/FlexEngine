@@ -2,10 +2,13 @@
 
 #define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 0
+#define COMPILE_IMGUI 1
 
 #define ENABLE_PROFILING 1
 
 #define NOMINMAX
+
+#define GLFW_INCLUDE_NONE
 
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
 
@@ -35,7 +38,12 @@
 #pragma warning(push, 0)
 // TODO: Does this line need to be included above earlier include in Vulkan section?
 #define GLFW_EXPOSE_NATIVE_WIN32
-	#include <glad/glad.h>
+#if COMPILE_IMGUI
+#define IMGUI_IMPL_OPENGL_LOADER_GLAD
+#include "imgui.h"
+#else
+#include <glad/glad.h>
+#endif
 	#include <GLFW/glfw3.h>
 	#include <GLFW/glfw3native.h>
 #pragma warning(pop)

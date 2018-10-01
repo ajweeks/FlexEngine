@@ -13,7 +13,11 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
+#if COMPILE_IMGUI
+#define IMGUI_IMPL_OPENGL_LOADER_GLAD
 #include "imgui.h"
+#endif
+
 #pragma warning(pop)
 
 #include "Graphics/RendererTypes.hpp"

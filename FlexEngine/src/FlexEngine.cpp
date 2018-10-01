@@ -12,10 +12,12 @@
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <glm/gtx/intersect.hpp>
-#include <imgui.h>
-#include <imgui_internal.h>
 
 #include <LinearMath/btIDebugDraw.h>
+
+#if COMPILE_IMGUI
+#include "imgui_internal.h"
+#endif
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
@@ -1641,10 +1643,11 @@ namespace flex
 		style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 		style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 		style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(1.00f, 0.57f, 0.31f, 0.35f);
-		style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 		style.Colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
 		style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 		style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+		style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+		style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 	}
 
 	void FlexEngine::DrawImGuiObjects()
@@ -1653,7 +1656,7 @@ namespace flex
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
-		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_ResizeFromAnySide;
+		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove;
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
 		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),

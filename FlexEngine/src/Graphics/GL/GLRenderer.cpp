@@ -26,10 +26,12 @@
 // TODO: Remove?
 #include <glm/vec3.hpp>
 
-#include "imgui.h"
-#include "ImGui/imgui_impl_glfw_gl3.h"
-
+#if COMPILE_IMGUI
 #include "imgui_internal.h"
+
+#include "ImGui/imgui_impl_glfw.h"
+#include "ImGui/imgui_impl_opengl3.h"
+#endif
 #pragma warning(pop)
 
 #include "Cameras/BaseCamera.hpp"
@@ -441,6 +443,7 @@ namespace flex
 		{
 			GenerateGBuffer();
 
+			// TODO: Save these strings in a config file?
 			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
 			std::string ubuntuRenderedFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-32.png";
 			{
@@ -452,7 +455,6 @@ namespace flex
 
 			std::string gantFilePath = RESOURCE_LOCATION + "fonts/gant.ttf";
 			std::string gantRenderedFilePath = RESOURCE_LOCATION + "fonts/gant-regular-18.png";
-
 			{
 				PROFILE_AUTO("load font Gant");
 				LoadFont(&m_FntGant, 18, gantFilePath, gantRenderedFilePath);
@@ -462,7 +464,6 @@ namespace flex
 
 			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
 			std::string sourceCodeProRenderedFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular-12.png";
-
 			{
 				PROFILE_AUTO("load font SourceCodePro");
 				LoadFont(&m_FntSourceCodePro, 18, sourceCodeProFilePath, sourceCodeProRenderedFilePath);
@@ -477,7 +478,9 @@ namespace flex
 				return;
 			}
 
-			ImGui_ImplGlfwGL3_Init(castedWindow->GetWindow());
+			const char* glsl_version = "#version 130";
+			ImGui_ImplGlfw_InitForOpenGL(castedWindow->GetWindow(), false);
+			ImGui_ImplOpenGL3_Init(glsl_version);
 
 			m_PhysicsDebugDrawer = new GLPhysicsDebugDraw();
 			m_PhysicsDebugDrawer->Initialize();
@@ -518,7 +521,8 @@ namespace flex
 			}
 			m_LoadedTextures.clear();
 
-			ImGui_ImplGlfwGL3_Shutdown();
+			ImGui_ImplOpenGL3_Shutdown();
+			ImGui_ImplGlfw_Shutdown();
 			ImGui::DestroyContext();
 
 			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
@@ -1989,7 +1993,7 @@ namespace flex
 			{
 				PROFILE_AUTO("Render > ImGuiRender");
 				ImGui::Render();
-				ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+				ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 			}
 
 			SwapBuffers();
@@ -5256,7 +5260,9 @@ namespace flex
 
 			if (g_EngineInstance->IsRenderingImGui())
 			{
-				ImGui_ImplGlfwGL3_NewFrame();
+				ImGui_ImplOpenGL3_NewFrame();
+				ImGui_ImplGlfw_NewFrame();
+				ImGui::NewFrame();
 			}
 		}
 

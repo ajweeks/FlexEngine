@@ -3,8 +3,12 @@
 #include "Graphics/Renderer.hpp"
 
 #pragma warning(push, 0)
-#include <imgui.h>
-#include <imgui_internal.h>
+
+#if COMPILE_IMGUI
+#include "imgui.h"
+#include "imgui_internal.h"
+#endif
+
 #pragma warning(pop)
 
 #include "FlexEngine.hpp"
