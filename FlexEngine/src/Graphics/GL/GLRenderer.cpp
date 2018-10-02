@@ -1906,7 +1906,10 @@ namespace flex
 			std::string str;
 
 			SetFont(m_FntGant);
-			DrawString("FLEX_ENGINE", glm::vec4(0.95f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f), 1.5f, false, letterOffsetsEmpty);
+			DrawString("FLEX ENGINE", glm::vec4(0.95f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f), 1.5f, false, letterOffsetsEmpty);
+			//DrawString("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f), 1.5f, false, letterOffsetsEmpty);
+			//DrawString("#WOWIE# @LIQWIDICE FILE_NAME.ZIP * 17 (0)", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 1.5f, false, letterOffsetsEmpty);
+			//DrawString("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false, letterOffsetsEmpty);
 
 			// Text stress test:
 			/*SetFont(m_FntSourceCodePro);
