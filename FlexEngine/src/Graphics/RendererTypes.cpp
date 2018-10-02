@@ -91,7 +91,7 @@ namespace flex
 
 		return size;
 	}
-	
+
 	Shader::Shader(const std::string& name,
 				   const std::string& vertexShaderFilePath,
 				   const std::string& fragmentShaderFilePath,

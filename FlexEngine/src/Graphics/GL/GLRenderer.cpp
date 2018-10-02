@@ -454,10 +454,10 @@ namespace flex
 
 
 			std::string gantFilePath = RESOURCE_LOCATION + "fonts/gant.ttf";
-			std::string gantRenderedFilePath = RESOURCE_LOCATION + "fonts/gant-regular-18.png";
+			std::string gantRenderedFilePath = RESOURCE_LOCATION + "fonts/gant-regular-10.png";
 			{
 				PROFILE_AUTO("load font Gant");
-				LoadFont(&m_FntGant, 18, gantFilePath, gantRenderedFilePath);
+				LoadFont(&m_FntGant, 10, gantFilePath, gantRenderedFilePath);
 			}
 			Profiler::PrintBlockDuration("load font Gant");
 
@@ -1906,9 +1906,7 @@ namespace flex
 			std::string str;
 
 			SetFont(m_FntGant);
-			DrawString("ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.25f), 1.5f, false, letterOffsetsEmpty);
-			DrawString("\'\"123456789!#%&*()[]\\/|+-_~?", glm::vec4(0.5f, 0.4f, 0.68f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.0f), 1.5f, false, letterOffsetsEmpty);
-			DrawString("ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.1f, 0.8f, 0.4f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.25f), 1.5f, false, letterOffsetsEmpty);
+			DrawString("FLEX_ENGINE", glm::vec4(0.95f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f), 1.5f, false, letterOffsetsEmpty);
 
 			// Text stress test:
 			/*SetFont(m_FntSourceCodePro);
@@ -3043,7 +3041,7 @@ namespace flex
 				params.wrapS = GL_CLAMP_TO_EDGE;
 				params.wrapT = GL_CLAMP_TO_EDGE;
 
-				GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, true, false, false));
+				GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, false, false, false));
 
 				if (fontTex->LoadFromFile())
 				{
@@ -3214,29 +3212,53 @@ namespace flex
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
 
-				i32 stride = fontTex->channelCount * sizeof(real);
+				i32 floatBufStride = fontTex->channelCount * sizeof(real);
 				i32 pixelCount = fontTex->width * fontTex->height;
-				i32 bufSize = stride * pixelCount;
-				void* readBackTextureData = malloc(bufSize);
+				i32 floatBufSize = floatBufStride * pixelCount;
+				real* readBackTextureData = (real*)malloc(floatBufSize);
 				if (readBackTextureData)
 				{
-					//glReadPixels(0, 0, fontTex->width, fontTex->height, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
 					glBindTexture(GL_TEXTURE_2D, fontTex->handle);
-					glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+					// TODO: Investigate alternative:
+					//glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+					glReadPixels(0, 0, fontTex->width, fontTex->height, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
 
-					bool bResult = SaveImage(savedSDFTextureAbsFilePath, ImageFormat::PNG, fontTex->width, fontTex->height, fontTex->channelCount, (real*)readBackTextureData);
-
-					free(readBackTextureData);
-					readBackTextureData = nullptr;
-
-					if (bResult)
+					i32 u8BufStride = fontTex->channelCount * sizeof(u8);
+					i32 u8BufSize = u8BufStride * pixelCount;
+					u8* u8Data = (u8*)malloc(u8BufSize);
+					if (u8Data)
 					{
-						Print("Saved generated font SDF texture to %s\n", renderedFontFilePath.c_str());
+						for (i32 i = 0; i < pixelCount*fontTex->channelCount; i++)
+						{
+							u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
+						}
+
+						bool bResult = SaveImage(savedSDFTextureAbsFilePath, ImageFormat::PNG,
+							fontTex->width, fontTex->height, fontTex->channelCount, u8Data);
+
+						free(u8Data);
+						u8Data = nullptr;
+
+						free(readBackTextureData);
+						readBackTextureData = nullptr;
+
+						if (bResult)
+						{
+							Print("Saved generated SDF font texture to %s\n", renderedFontFilePath.c_str());
+						}
+						else
+						{
+							PrintError("Failed to save generated SDF font texture to %s\n", renderedFontFilePath.c_str());
+						}
 					}
 					else
 					{
-						PrintError("Failed to save generated font SDF texture to %s\n", renderedFontFilePath.c_str());
+						PrintError("Failed to allocate %d bytes for SDF texture read back\n", u8BufSize);
 					}
+				}
+				else
+				{
+					PrintError("Failed to allocate %d bytes for SDF texture read back\n", floatBufSize);
 				}
 
 				// Cleanup
@@ -3427,25 +3449,25 @@ namespace flex
 						switch (textCache.anchor)
 						{
 						case AnchorPoint::TOP_LEFT:
-							basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
+							basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
 							break;
 						case AnchorPoint::TOP:
-							basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
+							basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
 							break;
 						case AnchorPoint::TOP_RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
+							basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
 							break;
 						case AnchorPoint::RIGHT:
 							basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
 							break;
 						case AnchorPoint::BOTTOM_RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
+							basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
 							break;
 						case AnchorPoint::BOTTOM:
-							basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
+							basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
 							break;
 						case AnchorPoint::BOTTOM_LEFT:
-							basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
+							basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
 							break;
 						case AnchorPoint::LEFT:
 							basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);

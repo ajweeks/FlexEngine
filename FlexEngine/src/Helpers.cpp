@@ -1212,7 +1212,7 @@ namespace flex
 		return bValueChanged;
 	}
 
-	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, real* data)
+	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data)
 	{
 		if (data == nullptr ||
 			width == 0 ||
@@ -1246,8 +1246,8 @@ namespace flex
 		} break;
 		case ImageFormat::PNG:
 		{
-			i32 strideInBytes = sizeof(data[0]) * channelCount;
-			if (stbi_write_png(fileNameCstr, width, height, channelCount, data, strideInBytes))
+			i32 strideInBytes = sizeof(data[0]) * channelCount * width;
+			if (stbi_write_png(fileNameCstr, width, height, 4, data, strideInBytes))
 			{
 				bResult = true;
 			}

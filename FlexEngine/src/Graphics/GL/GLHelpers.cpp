@@ -526,7 +526,9 @@ namespace flex
 
 			glReadPixels(0, 0, width, height, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
 
-			bool bResult = SaveImage(absoluteFilePath, imageFormat, width, height, channelCount, readBackTextureData);
+			// TODO: IMPLEMENT:
+			bool bResult = false;
+			//bool bResult = SaveImage(absoluteFilePath, imageFormat, width, height, channelCount, readBackTextureData);
 
 			free(readBackTextureData);
 
