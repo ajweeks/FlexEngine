@@ -517,19 +517,47 @@ namespace flex
 
 		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat imageFormat)
 		{
-			i32 readBackTextureChannelCount = 4;
-			real* readBackTextureData = (real*)malloc(readBackTextureChannelCount * sizeof(real) * width * height);
-			if (readBackTextureData == nullptr)
+			bool bResult = false;
+
+			i32 pixelCount = width * height;
+
+			i32 floatBufStride = channelCount * sizeof(real);
+			i32 floatBufSize = floatBufStride * pixelCount;
+			real* readBackTextureData = (real*)malloc(floatBufSize);
+
+			i32 u8BufStride = channelCount * sizeof(u8);
+			i32 u8BufSize = u8BufStride * pixelCount;
+			u8* u8Data = (u8*)malloc(u8BufSize);
+
+			if (readBackTextureData && u8Data)
 			{
-				return false;
+				glBindTexture(GL_TEXTURE_2D, handle);
+				glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+
+				for (i32 i = 0; i < pixelCount*channelCount; i++)
+				{
+					u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
+				}
+
+				bResult = SaveImage(absoluteFilePath, imageFormat, width, height, channelCount, u8Data);
+
+				if (bResult)
+				{
+					std::string filePathShort = absoluteFilePath;
+					StripLeadingDirectories(filePathShort);
+					Print("Saved generated SDF font texture to %s\n", filePathShort.c_str());
+				}
+				else
+				{
+					PrintError("Failed to save generated SDF font texture to %s\n", absoluteFilePath.c_str());
+				}
+			}
+			else
+			{
+				PrintError("Failed to allocate %d bytes for SDF texture read back\n", floatBufSize);
 			}
 
-			glReadPixels(0, 0, width, height, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
-
-			// TODO: IMPLEMENT:
-			bool bResult = false;
-			//bool bResult = SaveImage(absoluteFilePath, imageFormat, width, height, channelCount, readBackTextureData);
-
+			free(u8Data);
 			free(readBackTextureData);
 
 			return bResult;

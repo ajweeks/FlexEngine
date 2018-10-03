@@ -3214,70 +3214,12 @@ namespace flex
 				}
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
-
-				i32 floatBufStride = fontTex->channelCount * sizeof(real);
-				i32 pixelCount = fontTex->width * fontTex->height;
-				i32 floatBufSize = floatBufStride * pixelCount;
-				real* readBackTextureData = (real*)malloc(floatBufSize);
-				if (readBackTextureData)
-				{
-					glBindTexture(GL_TEXTURE_2D, fontTex->handle);
-					// TODO: Investigate alternative:
-					//glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
-					glReadPixels(0, 0, fontTex->width, fontTex->height, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
-
-					i32 u8BufStride = fontTex->channelCount * sizeof(u8);
-					i32 u8BufSize = u8BufStride * pixelCount;
-					u8* u8Data = (u8*)malloc(u8BufSize);
-					if (u8Data)
-					{
-						for (i32 i = 0; i < pixelCount*fontTex->channelCount; i++)
-						{
-							u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
-						}
-
-						bool bResult = SaveImage(savedSDFTextureAbsFilePath, ImageFormat::PNG,
-							fontTex->width, fontTex->height, fontTex->channelCount, u8Data);
-
-						free(u8Data);
-						u8Data = nullptr;
-
-						free(readBackTextureData);
-						readBackTextureData = nullptr;
-
-						if (bResult)
-						{
-							Print("Saved generated SDF font texture to %s\n", renderedFontFilePath.c_str());
-						}
-						else
-						{
-							PrintError("Failed to save generated SDF font texture to %s\n", renderedFontFilePath.c_str());
-						}
-					}
-					else
-					{
-						PrintError("Failed to allocate %d bytes for SDF texture read back\n", u8BufSize);
-					}
-				}
-				else
-				{
-					PrintError("Failed to allocate %d bytes for SDF texture read back\n", floatBufSize);
-				}
+				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
 
 				// Cleanup
 				glDisable(GL_BLEND);
 				glDeleteRenderbuffers(1, &captureRBO);
 				glDeleteFramebuffers(1, &captureFBO);
-
-
-				//if (fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::JPG))
-				//{
-				//	Print("Saved generated font SDF texture to %s\n", renderedFontFilePath.c_str());
-				//}
-				//else
-				//{
-				//	PrintError("Failed to save generated font SDF texture to %s\n", renderedFontFilePath.c_str());
-				//}
 			}
 
 			FT_Done_Face(face);
@@ -3297,9 +3239,8 @@ namespace flex
 				glBindVertexArray(m_TextQuadVAO);
 				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
 
-				//set data and attributes
-				// TODO: ?
-				i32 bufferSize = 50;
+				// TODO: Set this value to previous high water mark?
+				i32 bufferSize = 500;
 				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
 
 				glEnableVertexAttribArray(0);
