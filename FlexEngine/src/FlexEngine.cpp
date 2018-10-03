@@ -1507,6 +1507,7 @@ namespace flex
 			if (!m_CurrentlySelectedObjects.empty())
 			{
 				m_TransformGizmo->SetVisible(true);
+				UpdateGizmoVisibility();
 				m_TransformGizmo->GetTransform()->SetWorldPosition(m_SelectedObjectsCenterPos);
 				m_TransformGizmo->GetTransform()->SetWorldRotation(m_SelectedObjectRotation);
 			}
@@ -2850,10 +2851,15 @@ namespace flex
 		{
 			m_CurrentTransformGizmoState = state;
 
-			m_TranslationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::TRANSLATE);
-			m_RotationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::ROTATE);
-			m_ScaleGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::SCALE);
+			UpdateGizmoVisibility();
 		}
+	}
+
+	void FlexEngine::UpdateGizmoVisibility()
+	{
+		m_TranslationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::TRANSLATE);
+		m_RotationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::ROTATE);
+		m_ScaleGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::SCALE);
 	}
 
 	void FlexEngine::CalculateSelectedObjectsCenter()

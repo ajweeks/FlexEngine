@@ -1161,10 +1161,7 @@ namespace flex
 			{
 				for (GameObject* child : m_Children)
 				{
-					if (child->m_RenderID != InvalidRenderID)
-					{
-						child->SetVisible(bVisible, effectChildren);
-					}
+					child->SetVisible(bVisible, effectChildren);
 				}
 			}
 		}

@@ -106,6 +106,7 @@ namespace flex
 			const glm::vec3& rayEnd,
 			const glm::vec3& planeNorm);
 
+		void UpdateGizmoVisibility();
 		void SetTransformState(TransformState state);
 
 		u32 m_RendererCount = 0;
