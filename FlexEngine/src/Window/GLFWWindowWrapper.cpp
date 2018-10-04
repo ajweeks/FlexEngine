@@ -512,7 +512,7 @@ namespace flex
 			if (virtualScreenLeft < 0)
 			{
 				// The other monitor is to the left of the main one
-				newX = -(consoleWidth + 10);
+				newX = -(consoleWidth + 67);
 			}
 			else
 			{

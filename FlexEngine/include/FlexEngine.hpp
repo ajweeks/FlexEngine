@@ -101,7 +101,7 @@ namespace flex
 			const glm::vec3& planeOrigin,
 			const glm::vec3& planeNorm);
 
-		real GetDragRotation(const glm::vec3& axis,
+		glm::quat CalculateDeltaRotationFromGizmoDrag(const glm::vec3& axis,
 			const glm::vec3& rayOrigin,
 			const glm::vec3& rayEnd,
 			const glm::vec3& planeNorm);
@@ -155,11 +155,16 @@ namespace flex
 		glm::vec3 m_SelectedObjectDragStartPos;
 		glm::vec3 m_DraggingGizmoScaleLast;
 		real m_DraggingGizmoOffset; // How far along the axis the cursor was when pressed
-		real m_DraggingGizmoDistAlongAxisLast;
+		bool m_bFirstFrameDraggingRotationGizmo = false;
 		glm::vec3 m_UnmodifiedAxisProjectedOnto;
 		glm::vec3 m_AxisProjectedOnto;
+		glm::vec3 m_StartPointOnPlane;
+		i32 m_RotationGizmoWrapCount = 0;
+		real m_LastAngle;
+		real m_pV1oV2;
 		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
+		bool b_LastDotPos = false;
 
 		bool m_bDraggingGizmo = false;
 		// -1,   0, 1, 2, 3
