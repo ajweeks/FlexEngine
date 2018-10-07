@@ -825,7 +825,7 @@ namespace flex
 
 		GLboolean BoolToGLBoolean(bool value)
 		{
-			return (value ? GL_TRUE : GL_FALSE);
+			return (GLboolean)value;
 		}
 
 		GLuint BufferTargetToGLTarget(BufferTarget bufferTarget)

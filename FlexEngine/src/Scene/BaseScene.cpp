@@ -208,9 +208,16 @@ namespace flex
 
 				JSONObject emptyObj = {};
 				reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
+				reflectionProbe->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 8.0f, 0.0f));
 
 				AddRootObject(reflectionProbe);
 			}
+
+			DirectionalLight dirLight = {};
+			dirLight.rotation = glm::quat(glm::vec3(130.0f, -65.0f, 120.0f));
+			dirLight.position = glm::vec3(0.0f, 15.0f, 0.0f);
+			dirLight.brightness = 5.0f;
+			g_Renderer->InitializeDirectionalLight(dirLight);
 		}
 
 		//m_Player0 = new Player(0);

@@ -72,6 +72,7 @@ namespace flex
 				i32 texSize;
 				i32 castShadows;
 				i32 shadowDarkness;
+				i32 textureScale;
 			};
 			UniformIDs uniformIDs;
 
@@ -110,6 +111,7 @@ namespace flex
 			GLenum cullFace = GL_BACK;
 			GLboolean enableCulling = GL_TRUE;
 
+			// TODO: Remove these in place of DrawCallInfo members
 			GLenum depthTestReadFunc = GL_LEQUAL;
 			GLboolean depthWriteEnable = GL_TRUE;
 

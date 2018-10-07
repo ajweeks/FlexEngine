@@ -1,0 +1,111 @@
+{
+	"version" : 1,
+	"name" : "Scene_11",
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 12.500, 0.000"
+			},
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "ground plane",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"scale" : "75.000, 1.000, 75.000"
+			},
+			"mesh" : "unit-plane",
+			"material" : "Grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-10.721, 4.386, 9.904",
+				"scale" : "4.000, 5.000, 3.000"
+			},
+			"mesh" : "cube",
+			"material" : "Grid"
+		},
+		{
+			"name" : "New_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-10.721, 4.386, -14.398",
+				"scale" : "4.000, 5.000, 3.000"
+			},
+			"mesh" : "cube",
+			"material" : "Grid"
+		},
+		{
+			"name" : "New_Object_02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-25.077, 4.386, -2.142",
+				"scale" : "4.000, 5.000, 11.712"
+			},
+			"mesh" : "cube",
+			"material" : "Grid"
+		}
+	],
+	"point lights" : 
+	[
+		{
+			"pos" : "21.600, 10.000, 12.900",
+			"color" : "1.00, 1.00, 1.00",
+			"enabled" : true,
+			"brightness" : 500.000000
+		}
+	],
+	"directional light" : 
+	{
+		"rotation" : "2.018, -1.174, -2.615",
+		"pos" : "0.000, 15.000, 0.000",
+		"color" : "1.00, 1.00, 1.00",
+		"enabled" : true,
+		"brightness" : 2.479000,
+		"cast shadows" : true,
+		"shadow darkness" : 0.000000,
+		"shadow map near" : -80.000000,
+		"shadow map far" : 100.000000,
+		"shadow map zoom" : 30.000000
+	}
+}

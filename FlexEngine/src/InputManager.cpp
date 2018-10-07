@@ -377,7 +377,8 @@ namespace flex
 		m_ScrollYOffset = (real)yOffset;
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.MouseWheel = m_ScrollYOffset;
+		io.MouseWheelH += m_ScrollXOffset;
+		io.MouseWheel += m_ScrollYOffset;
 	}
 
 	void InputManager::KeyCallback(KeyCode keycode, Action action, i32 mods)
@@ -409,7 +410,10 @@ namespace flex
 	void InputManager::CharCallback(u32 character)
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		io.AddInputCharacter((ImWchar)character);
+		if (character > 0 && character < 0x10000)
+		{
+			io.AddInputCharacter((ImWchar)character);
+		}
 	}
 
 	bool InputManager::DidMouseWrap() const

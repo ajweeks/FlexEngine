@@ -111,9 +111,8 @@ namespace flex
 			LoadShaders();
 
 			glEnable(GL_DEPTH_TEST);
-			//glDepthFunc(GL_LEQUAL);
-
 			glFrontFace(GL_CCW);
+			glLineWidth(5.0f);
 
 			// Prevent seams from appearing on lower mip map levels of cubemaps
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -443,33 +442,7 @@ namespace flex
 		{
 			GenerateGBuffer();
 
-			// TODO: Save these strings in a config file?
-			std::string ubuntuFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf";
-			std::string ubuntuRenderedFilePath = RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-32.png";
-			{
-				PROFILE_AUTO("load font UbuntuCondensed");
-				LoadFont(&m_FntUbuntuCondensed, 32, ubuntuFilePath, ubuntuRenderedFilePath);
-			}
-			Profiler::PrintBlockDuration("load font UbuntuCondensed");
-
-
-			std::string gantFilePath = RESOURCE_LOCATION + "fonts/gant.ttf";
-			std::string gantRenderedFilePath = RESOURCE_LOCATION + "fonts/gant-regular-10.png";
-			{
-				PROFILE_AUTO("load font Gant");
-				LoadFont(&m_FntGant, 10, gantFilePath, gantRenderedFilePath);
-			}
-			Profiler::PrintBlockDuration("load font Gant");
-
-
-			std::string sourceCodeProFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf";
-			std::string sourceCodeProRenderedFilePath = RESOURCE_LOCATION + "fonts/SourceCodePro-regular-12.png";
-			{
-				PROFILE_AUTO("load font SourceCodePro");
-				LoadFont(&m_FntSourceCodePro, 18, sourceCodeProFilePath, sourceCodeProRenderedFilePath);
-			}
-			Profiler::PrintBlockDuration("load font SourceCodePro");
-
+			LoadFonts(false);
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
 			if (castedWindow == nullptr)
@@ -649,18 +622,20 @@ namespace flex
 				{ Uniform::IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
 				{ Uniform::TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
 				{ Uniform::TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
+				{ Uniform::TEX_SIZE,						"textureScale",					&mat.uniformIDs.textureScale },
 			};
 
 			for (const UniformInfo& uniform : uniformInfo)
 			{
-				if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.uniform) ||
-					shader.shader.constantBufferUniforms.HasUniform(uniform.uniform))
+				// TODO: CLEANUP: Get rid of HasUniform in place of -1 check! :O
+				//if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.uniform) ||
+				//	shader.shader.constantBufferUniforms.HasUniform(uniform.uniform))
 				{
 					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
 					if (*uniform.id == -1)
 					{
-						PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
-								  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
+					//	PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
+					//			  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
 					}
 				}
 			}
@@ -724,6 +699,8 @@ namespace flex
 			mat.material.colorMultiplier = createInfo->colorMultiplier;
 
 			mat.material.engineMaterial = createInfo->engineMaterial;
+
+			mat.material.textureScale = createInfo->textureScale;
 
 			if (shader.shader.needIrradianceSampler)
 			{
@@ -1155,6 +1132,8 @@ namespace flex
 			glBindVertexArray(0);
 			glUseProgram(0);
 
+			m_bRebatchRenderObjects = true;
+
 			return renderID;
 		}
 
@@ -1220,6 +1199,8 @@ namespace flex
 				Profiler::PrintBlockDuration(profileBlockName);
 				//glFlush();
 			}
+
+			m_bRebatchRenderObjects = true;
 		}
 
 		void GLRenderer::ClearRenderObjects()
@@ -1232,6 +1213,8 @@ namespace flex
 				}
 			}
 			m_RenderObjects.clear();
+
+			m_bRebatchRenderObjects = true;
 		}
 
 		void GLRenderer::ClearMaterials()
@@ -1394,7 +1377,6 @@ namespace flex
 			glCullFace(skybox->cullFace);
 
 			glDepthFunc(skybox->depthTestReadFunc);
-
 			glDepthMask(skybox->depthWriteEnable);
 
 			u32 maxMipLevels = 5;
@@ -1651,7 +1633,11 @@ namespace flex
 			drawCallInfo.bDeferred = true;
 			DrawDeferredObjects(drawCallInfo);
 			drawCallInfo.bDeferred = false;
+			drawCallInfo.bWriteToDepth = false;
+			drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 			DrawGBufferContents(drawCallInfo);
+			drawCallInfo.bWriteToDepth = true;
+			drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
 			DrawForwardObjects(drawCallInfo);
 		}
 
@@ -1860,7 +1846,11 @@ namespace flex
 			drawCallInfo.bDeferred = true;
 			DrawDeferredObjects(drawCallInfo);
 			drawCallInfo.bDeferred = false;
+			drawCallInfo.bWriteToDepth = false;
+			drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 			DrawGBufferContents(drawCallInfo);
+			drawCallInfo.bWriteToDepth = true;
+			drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
 			DrawForwardObjects(drawCallInfo);
 			DrawWorldSpaceSprites();
 			DrawOffscreenTexture();
@@ -1870,11 +1860,20 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
-			// TODO: Draw world space sprites/text here! depth buffer is cleared in DrawEditorObjects
+			// TODO: Draw world space sprites/text here!
 
 			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
-				DrawEditorObjects(drawCallInfo);
+				DrawDepthAwareEditorObjects(drawCallInfo);
+				DrawSelectedObjectWireframe(drawCallInfo);
+
+				glDepthMask(GL_TRUE);
+				glClear(GL_DEPTH_BUFFER_BIT);
+
+				// Depth unaware objects write to a cleared depth buffer so they
+				// draw on top of previous geometry but are still eclipsed by other
+				// depth unaware objects
+				DrawDepthUnawareEditorObjects(drawCallInfo);
 			}
 
 			// Screen-space objects
@@ -1906,7 +1905,7 @@ namespace flex
 			std::string str;
 
 			SetFont(m_FntGant);
-			DrawString("FLEX ENGINE", glm::vec4(0.95f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f), 1.5f, false, letterOffsetsEmpty);
+			DrawString("FLEX ENGINE", glm::vec4(0.95f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f, false, letterOffsetsEmpty);
 			//DrawString("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f), 1.5f, false, letterOffsetsEmpty);
 			//DrawString("#WOWIE# @LIQWIDICE FILE_NAME.ZIP * 17 (0)", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 1.5f, false, letterOffsetsEmpty);
 			//DrawString("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false, letterOffsetsEmpty);
@@ -2019,7 +2018,8 @@ namespace flex
 
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
-			m_EditorRenderObjectBatch.clear();
+			m_DepthAwareEditorRenderObjectBatch.clear();
+			m_DepthUnawareEditorRenderObjectBatch.clear();
 
 			// Sort render objects into deferred + forward buckets
 			for (auto& materialPair : m_Materials)
@@ -2073,7 +2073,14 @@ namespace flex
 					renderObject->editorObject &&
 					renderObject->vertexBufferData)
 				{
-					m_EditorRenderObjectBatch.push_back(renderObject);
+					if (renderObject->depthWriteEnable)
+					{
+						m_DepthAwareEditorRenderObjectBatch.push_back(renderObject);
+					}
+					else
+					{
+						m_DepthUnawareEditorRenderObjectBatch.push_back(renderObject);
+					}
 				}
 			}
 
@@ -2275,8 +2282,10 @@ namespace flex
 				}
 
 				glCullFace(skybox->cullFace);
-				glDepthFunc(GL_ALWAYS);
-				glDepthMask(GL_FALSE);
+
+				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
+				glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
+
 				glUniformMatrix4fv(cubemapMaterial->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
 				glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -2331,9 +2340,8 @@ namespace flex
 
 				glCullFace(gBufferQuad->cullFace);
 
-				glDepthFunc(gBufferQuad->depthTestReadFunc);
-
-				glDepthMask(gBufferQuad->depthWriteEnable);
+				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
+				glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
 
 				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
 			}
@@ -2354,19 +2362,19 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawEditorObjects(const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawDepthAwareEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
-			PROFILE_AUTO("DrawEditorObjects");
+			PROFILE_AUTO("DrawDepthAwareEditorObjects");
 
-			glDepthMask(GL_TRUE);
-			glDepthFunc(GL_LEQUAL);
-			glClear(GL_DEPTH_BUFFER_BIT);
-
+			// TODO: Put in drawCallInfo
 			glCullFace(GL_BACK);
 			glEnable(GL_CULL_FACE);
 
-			DrawRenderObjectBatch(m_EditorRenderObjectBatch, drawCallInfo);
+			DrawRenderObjectBatch(m_DepthAwareEditorRenderObjectBatch, drawCallInfo);
+		}
 
+		void GLRenderer::DrawSelectedObjectWireframe(const DrawCallInfo& drawCallInfo)
+		{
 			const std::vector<GameObject*> selectedObjects = g_EngineInstance->GetSelectedObjects();
 			if (!selectedObjects.empty())
 			{
@@ -2393,8 +2401,21 @@ namespace flex
 				DrawCallInfo selectedObjectsDrawInfo = {};
 				selectedObjectsDrawInfo.materialOverride = m_SelectedObjectMatID;
 				selectedObjectsDrawInfo.bWireframe = true;
+				selectedObjectsDrawInfo.depthTestFunc = DepthTestFunc::ALWAYS;
+				selectedObjectsDrawInfo.bWriteToDepth = false;
 				DrawRenderObjectBatch(selectedObjectRenderBatch, selectedObjectsDrawInfo);
 			}
+		}
+
+		void GLRenderer::DrawDepthUnawareEditorObjects(const DrawCallInfo& drawCallInfo)
+		{
+			PROFILE_AUTO("DrawDepthUnawareEditorObjects");
+
+			// TODO: Put in drawCallInfo
+			glCullFace(GL_BACK);
+			glEnable(GL_CULL_FACE);
+
+			DrawRenderObjectBatch(m_DepthUnawareEditorRenderObjectBatch, drawCallInfo);
 		}
 
 		void GLRenderer::DrawOffscreenTexture()
@@ -2787,7 +2808,7 @@ namespace flex
 			}
 
 			glCullFace(spriteRenderObject->cullFace);
-			glDepthFunc(spriteRenderObject->depthTestReadFunc);
+			// TODO: Remove (use draw call info member)
 			glDepthMask(spriteRenderObject->depthWriteEnable);
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
 		}
@@ -2878,7 +2899,8 @@ namespace flex
 		bool GLRenderer::LoadFont(BitmapFont** font,
 								  i16 size,
 								  const std::string& fontFilePath,
-								  const std::string& renderedFontFilePath)
+								  const std::string& renderedFontFilePath,
+								  bool bForceRender)
 		{
 			FT_Error error;
 			error = FT_Init_FreeType(&ft);
@@ -3038,35 +3060,38 @@ namespace flex
 			}
 
 			bool bUsingPreRenderedTexture = false;
-			if (FileExists(renderedFontFilePath))
+			if (!bForceRender)
 			{
-				TextureParameters params(false);
-				params.wrapS = GL_CLAMP_TO_EDGE;
-				params.wrapT = GL_CLAMP_TO_EDGE;
-
-				GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, false, false, false));
-
-				if (fontTex->LoadFromFile())
+				if (FileExists(renderedFontFilePath))
 				{
-					bUsingPreRenderedTexture = true;
+					TextureParameters params(false);
+					params.wrapS = GL_CLAMP_TO_EDGE;
+					params.wrapT = GL_CLAMP_TO_EDGE;
 
-					for (auto& charPair : characters)
+					GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, false, false, false));
+
+					if (fontTex->LoadFromFile())
 					{
-						FontMetric* metric = charPair.second;
+						bUsingPreRenderedTexture = true;
 
-						u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
-						if (glyphIndex == 0)
+						for (auto& charPair : characters)
 						{
-							continue;
-						}
+							FontMetric* metric = charPair.second;
 
-						metric->texCoord = metric->texCoord / glm::vec2((real)fontTex->width, (real)fontTex->height);
+							u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+							if (glyphIndex == 0)
+							{
+								continue;
+							}
+
+							metric->texCoord = metric->texCoord / glm::vec2((real)fontTex->width, (real)fontTex->height);
+						}
 					}
-				}
-				else
-				{
-					newFont->m_Texture = nullptr;
-					SafeDelete(fontTex);
+					else
+					{
+						newFont->m_Texture = nullptr;
+						SafeDelete(fontTex);
+					}
 				}
 			}
 
@@ -3521,6 +3546,11 @@ namespace flex
 				materialID = drawCallInfo.materialOverride;
 			}
 			GLMaterial* material = &m_Materials[materialID];
+			if (material->material.shaderID == InvalidShaderID)
+			{
+				PrintWarn("Attempted to draw render object batch which uses invalid shader ID!\n");
+				return;
+			}
 			GLShader* glShader = &m_Shaders[material->material.shaderID];
 			Shader* shader = &glShader->shader;
 			u32 boundProgram = glShader->program;
@@ -3579,8 +3609,8 @@ namespace flex
 					glDisable(GL_BLEND);
 				}
 
-				glDepthFunc(renderObject->depthTestReadFunc);
-				glDepthMask(renderObject->depthWriteEnable);
+				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
+				glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
 
 				UpdatePerObjectUniforms(renderObject->renderID, material);
 
@@ -4011,7 +4041,16 @@ namespace flex
 					{
 						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
+						MaterialID matID = 0;
+
+						newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+						newGameObject->GetMeshComponent()->SetRequiredAttributesFromMaterialID(matID);
+						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
+
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+
+						newGameObject->Initialize();
+						newGameObject->PostInitialize();
 
 						ImGui::CloseCurrentPopup();
 					}
@@ -4215,6 +4254,7 @@ namespace flex
 				{ "deferred_combine_cubemap", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.vert", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.frag" },
 				{ "color", RESOURCE_LOCATION + "shaders/color.vert", RESOURCE_LOCATION + "shaders/color.frag" },
 				{ "pbr", RESOURCE_LOCATION + "shaders/pbr.vert", RESOURCE_LOCATION + "shaders/pbr.frag" },
+				{ "pbr-ws", RESOURCE_LOCATION + "shaders/pbr-ws.vert", RESOURCE_LOCATION + "shaders/pbr.frag" },
 				{ "skybox", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/skybox.frag" },
 				{ "equirectangular_to_cube", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/equirectangular_to_cube.frag" },
 				{ "irradiance", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/irradiance.frag" },
@@ -4335,6 +4375,41 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			++shaderID;
+
+			// PBR - WORLD SPACE
+			m_Shaders[shaderID].shader.deferred = true;
+			m_Shaders[shaderID].shader.needAlbedoSampler = true;
+			m_Shaders[shaderID].shader.needMetallicSampler = true;
+			m_Shaders[shaderID].shader.needRoughnessSampler = true;
+			m_Shaders[shaderID].shader.needAOSampler = true;
+			m_Shaders[shaderID].shader.needNormalSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::TANGENT |
+				(u32)VertexAttribute::BITANGENT |
+				(u32)VertexAttribute::NORMAL;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ALBEDO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_METALLIC);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ROUGHNESS);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_AO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEXTURE_SCALE);
 			++shaderID;
 
 			// Skybox
@@ -4538,6 +4613,64 @@ namespace flex
 			}
 		}
 
+		void GLRenderer::LoadFonts(bool bForceRender)
+		{
+			PROFILE_AUTO("Load fonts");
+
+			// TODO: Save these strings in a config file?
+			std::string filePaths[] = {
+				RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf",
+				RESOURCE_LOCATION + "fonts/gant.ttf",
+				RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf"
+			};
+
+			std::string renderedTextureFilePaths[] = {
+				RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-24.png",
+				RESOURCE_LOCATION + "fonts/gant-regular-10.png",
+				RESOURCE_LOCATION + "fonts/SourceCodePro-regular-18.png"
+			};
+
+			i32 fontSizes[] = {
+				24,
+				10,
+				18
+			};
+
+			BitmapFont** fonts[] = {
+				&m_FntUbuntuCondensed,
+				&m_FntGant,
+				&m_FntSourceCodePro,
+			};
+
+			i32 fontCount = ARRAY_LENGTH(filePaths);
+			assert(
+				ARRAY_LENGTH(renderedTextureFilePaths) == fontCount &&
+				ARRAY_LENGTH(fonts) == fontCount &&
+				ARRAY_LENGTH(fontSizes) == fontCount);
+
+			m_Fonts.clear();
+
+			for (i32 i = 0; i < fontCount; ++i)
+			{
+				if (*(fonts[i]) != nullptr)
+				{
+					delete *(fonts[i]);
+					(*(fonts[i])) = nullptr;
+				}
+
+				std::string fontName = filePaths[i];
+				StripLeadingDirectories(fontName);
+				StripFileType(fontName);
+
+				std::string blockName = "Load font " + fontName;
+				{
+					PROFILE_AUTO(blockName.c_str());
+					LoadFont(fonts[i], fontSizes[i], filePaths[i], renderedTextureFilePaths[i], bForceRender);
+				}
+				Profiler::PrintBlockDuration(blockName.c_str());
+			}
+		}
+
 		void GLRenderer::UpdateAllMaterialUniforms()
 		{
 			PROFILE_AUTO("Update material uniforms");
@@ -4563,6 +4696,12 @@ namespace flex
 			for (auto& materialPair : m_Materials)
 			{
 				GLMaterial* material = &materialPair.second;
+
+				if (material->material.shaderID == InvalidShaderID)
+				{
+					// TODO: Find out why this element still exists in the map
+					continue;
+				}
 
 				GLShader* shader = &m_Shaders[material->material.shaderID];
 
@@ -4711,6 +4850,11 @@ namespace flex
 			// TODO: OPTIMIZATION: Investigate performance impact of caching each uniform and preventing updates to data that hasn't changed
 
 			GLShader* shader = &m_Shaders[material->material.shaderID];
+
+			if (material->uniformIDs.textureScale != -1)
+			{
+				glUniform1f(material->uniformIDs.textureScale, material->material.textureScale);
+			}
 
 			// TODO: Use set functions here (SetFloat, SetMatrix, ...)
 			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL))
@@ -5159,6 +5303,8 @@ namespace flex
 					}
 				}
 			}
+
+			m_bRebatchRenderObjects = true;
 		}
 
 		GameObject* GLRenderer::GetSkyboxMesh()
@@ -5172,6 +5318,7 @@ namespace flex
 			if (renderObject)
 			{
 				renderObject->materialID = materialID;
+				m_bRebatchRenderObjects = true;
 			}
 			else
 			{
@@ -5554,6 +5701,8 @@ namespace flex
 					{
 						ImGui::PopStyleColor();
 					}
+
+					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
 
 					ImGui::NextColumn();
 

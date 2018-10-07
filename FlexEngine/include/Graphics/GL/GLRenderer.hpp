@@ -48,6 +48,7 @@ namespace flex
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
 			virtual void ReloadShaders() override;
+			virtual void LoadFonts(bool bForceRender) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
@@ -164,12 +165,13 @@ namespace flex
 			void DrawWorldSpaceSprites();
 			void DrawText();
 
-			// Will attempt to find pre-rendered font at renderedFontFilePath, and only if non-existent
-			// render a new file
+			// Will attempt to find pre-rendered font at specified path, and
+			// only render a new file if not present or if bForceRender is true
 			bool LoadFont(BitmapFont** font,
 						  i16 size,
 						  const std::string& fontFilePath,
-						  const std::string& renderedFontFilePath);
+						  const std::string& renderedFontFilePath,
+						  bool bForceRender);
 
 			void UpdateTextBuffer();
 
@@ -199,7 +201,9 @@ namespace flex
 			// Draws the GBuffer quad, or the GBuffer cube if rendering to a cubemap
 			void DrawGBufferContents(const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const DrawCallInfo& drawCallInfo);
-			void DrawEditorObjects(const DrawCallInfo& drawCallInfo);
+			void DrawDepthAwareEditorObjects(const DrawCallInfo& drawCallInfo);
+			void DrawDepthUnawareEditorObjects(const DrawCallInfo& drawCallInfo);
+			void DrawSelectedObjectWireframe(const DrawCallInfo& drawCallInfo);
 			void DrawOffscreenTexture();
 
 			// Returns the next binding that would be used
@@ -337,7 +341,8 @@ namespace flex
 
 			// Any editor objects which also require a game object wrapper
 			std::vector<GameObject*> m_EditorObjects;
-			std::vector<GLRenderObject*> m_EditorRenderObjectBatch;
+			std::vector<GLRenderObject*> m_DepthAwareEditorRenderObjectBatch;
+			std::vector<GLRenderObject*> m_DepthUnawareEditorRenderObjectBatch;
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 

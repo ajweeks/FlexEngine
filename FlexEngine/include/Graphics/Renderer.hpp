@@ -54,6 +54,7 @@ namespace flex
 		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
 		virtual void ReloadShaders() = 0;
+		virtual void LoadFonts(bool bForceRender) = 0;
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
@@ -189,10 +190,12 @@ namespace flex
 
 		struct DrawCallInfo
 		{
-			RenderID cubemapObjectRenderID = InvalidRenderID;
 			bool bRenderToCubemap = false;
 			bool bDeferred = false;
 			bool bWireframe = false;
+			bool bWriteToDepth = true;
+			DepthTestFunc depthTestFunc = DepthTestFunc::LEQUAL;
+			RenderID cubemapObjectRenderID = InvalidRenderID;
 			MaterialID materialOverride = InvalidMaterialID;
 		};
 

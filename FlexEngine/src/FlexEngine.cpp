@@ -356,7 +356,7 @@ namespace flex
 
 		RenderObjectCreateInfo gizmoCreateInfo = {};
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::LEQUAL;
-		gizmoCreateInfo.depthWriteEnable = true;
+		gizmoCreateInfo.depthWriteEnable = false;
 		gizmoCreateInfo.editorObject = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 		gizmoCreateInfo.enableCulling = true;
@@ -930,21 +930,24 @@ namespace flex
 					}
 				}
 
-				real camForDotR = glm::abs(glm::dot(camForward, gizmoTransform->GetRight()));
-				real camForDotU = glm::abs(glm::dot(camForward, gizmoTransform->GetUp()));
-				real camForDotF = glm::abs(glm::dot(camForward, gizmoTransform->GetForward()));
-				real threshold = 0.98f;
-				if (camForDotR >= threshold)
+				if (m_CurrentTransformGizmoState != TransformState::ROTATE)
 				{
-					xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotR - threshold) / (1.0f - threshold));
-				}
-				if (camForDotU >= threshold)
-				{
-					yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotU - threshold) / (1.0f - threshold));
-				}
-				if (camForDotF >= threshold)
-				{
-					zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotF - threshold) / (1.0f - threshold));
+					real camForDotR = glm::abs(glm::dot(camForward, gizmoTransform->GetRight()));
+					real camForDotU = glm::abs(glm::dot(camForward, gizmoTransform->GetUp()));
+					real camForDotF = glm::abs(glm::dot(camForward, gizmoTransform->GetForward()));
+					real threshold = 0.98f;
+					if (camForDotR >= threshold)
+					{
+						xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotR - threshold) / (1.0f - threshold));
+					}
+					if (camForDotU >= threshold)
+					{
+						yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotU - threshold) / (1.0f - threshold));
+					}
+					if (camForDotF >= threshold)
+					{
+						zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotF - threshold) / (1.0f - threshold));
+					}
 				}
 
 				if (bMouseDown || bMouseReleased)
@@ -1012,6 +1015,23 @@ namespace flex
 						glm::vec3 rayEndG = ToVec3(rayEnd);
 						glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
 						glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
+
+
+						g_Renderer->GetDebugDrawer()->drawLine(
+							ToBtVec3(gizmoTransform->GetWorldPosition()),
+							ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoTransform->GetRight() * 6.0f),
+							btVector3(1.0f, 0.0f, 0.0f));
+
+						g_Renderer->GetDebugDrawer()->drawLine(
+							ToBtVec3(gizmoTransform->GetWorldPosition()),
+							ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoTransform->GetUp() * 6.0f),
+							btVector3(0.0f, 1.0f, 0.0f));
+
+						g_Renderer->GetDebugDrawer()->drawLine(
+							ToBtVec3(gizmoTransform->GetWorldPosition()),
+							ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoTransform->GetForward() * 6.0f),
+							btVector3(0.0f, 0.0f, 1.0f));
+
 
 						switch (m_CurrentTransformGizmoState)
 						{
@@ -1112,6 +1132,9 @@ namespace flex
 						{
 							glm::quat dRot(glm::vec3(0.0f));
 
+							static glm::quat pGizmoRot = gizmoTransform->GetLocalRotation();
+							Print("%.2f,%.2f,%.2f,%.2f\n", pGizmoRot.x, pGizmoRot.y, pGizmoRot.z, pGizmoRot.w);
+
 							if (bMousePressed &
 								(m_DraggingAxisIndex == 0 || m_DraggingAxisIndex == 1 || m_DraggingAxisIndex == 2))
 							{
@@ -1119,7 +1142,10 @@ namespace flex
 								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 								m_DraggingGizmoOffset = -1.0f;
 								m_bFirstFrameDraggingRotationGizmo = true;
+								m_CurrentRot = pGizmoRot;
+								pGizmoRot = gizmoTransform->GetLocalRotation();
 							}
+
 
 							if (bMouseDown)
 							{
@@ -1138,7 +1164,7 @@ namespace flex
 										}
 									}
 
-									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN);
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN, pGizmoRot);
 								}
 								else if (m_DraggingAxisIndex == 1) // Y Axis
 								{
@@ -1155,7 +1181,7 @@ namespace flex
 										}
 									}
 
-									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN);
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN, pGizmoRot);
 								}
 								else if (m_DraggingAxisIndex == 2) // Z Axis
 								{
@@ -1172,9 +1198,11 @@ namespace flex
 										}
 									}
 
-									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN);
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN, pGizmoRot);
 								}
 							}
+
+							pGizmoRot = m_CurrentRot;
 
 							if (m_bDraggingGizmo)
 							{
@@ -1610,7 +1638,68 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
-		ImGui::ShowDemoWindow();
+		if (m_bDemoWindowShowing)
+		{
+			ImGui::ShowDemoWindow();
+		}
+
+		if (ImGui::BeginMainMenuBar())
+		{
+			if (ImGui::BeginMenu("Actions"))
+			{
+				if (ImGui::BeginMenu("Reload"))
+				{
+					if (ImGui::MenuItem("Scene"))
+					{
+						g_SceneManager->ReloadCurrentScene();
+					}
+
+					if (ImGui::MenuItem("Scene (hard: reload all meshes)"))
+					{
+						MeshComponent::DestroyAllLoadedMeshes();
+						g_SceneManager->ReloadCurrentScene();
+					}
+
+					if (ImGui::MenuItem("Shaders"))
+					{
+						g_Renderer->ReloadShaders();
+					}
+
+					if (ImGui::MenuItem("Font textures (render SDFs)"))
+					{
+						g_Renderer->LoadFonts(true);
+					}
+
+					if (ImGui::MenuItem("Player positions"))
+					{
+						BaseScene* currentScene = g_SceneManager->CurrentScene();
+						currentScene->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
+						currentScene->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
+					}
+
+					ImGui::EndMenu();
+				}
+
+				if (ImGui::MenuItem("Capture reflection probe"))
+				{
+					g_Renderer->RecaptureReflectionProbe();
+				}
+
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Misc"))
+			{
+				if (ImGui::MenuItem("Toggle Demo Window"))
+				{
+					m_bDemoWindowShowing = !m_bDemoWindowShowing;
+				}
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMainMenuBar();
+		}
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
@@ -1626,9 +1715,10 @@ namespace flex
 			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
 													  glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
 		}, this);
-		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Once);
+		real menuHeight = 20.0f;
+		ImGui::SetNextWindowPos(ImVec2(0.0f, menuHeight), ImGuiCond_Once);
 		real frameBufferHeight = (real)frameBufferSize.y;
-		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight),
+		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
 								 ImGuiCond_Always);
 		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))
 		{
@@ -2155,35 +2245,6 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			const char* reloadStr = "Reloading";
-			if (ImGui::TreeNode(reloadStr))
-			{
-				if (ImGui::Button("Reload scene file"))
-				{
-					g_SceneManager->ReloadCurrentScene();
-				}
-
-				if (ImGui::Button("Hard reload scene file (reloads all meshes)"))
-				{
-					Print("Clearing all loaded meshes\n");
-					MeshComponent::DestroyAllLoadedMeshes();
-					g_SceneManager->ReloadCurrentScene();
-				}
-
-				if (ImGui::Button("Reload all shaders"))
-				{
-					g_Renderer->ReloadShaders();
-				}
-
-				if (ImGui::Button("Reload player positions"))
-				{
-					g_SceneManager->CurrentScene()->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
-					g_SceneManager->CurrentScene()->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
-				}
-
-				ImGui::TreePop();
-			}
-
 			const char* audioStr = "Audio";
 			if (ImGui::TreeNode(audioStr))
 			{
@@ -2286,6 +2347,7 @@ namespace flex
 	void FlexEngine::DeselectCurrentlySelectedObjects()
 	{
 		m_CurrentlySelectedObjects.clear();
+		m_SelectedObjectsCenterPos = glm::vec3(0.0f);
 		m_SelectedObjectDragStartPos = glm::vec3(0.0f);
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
@@ -2760,7 +2822,8 @@ namespace flex
 		const glm::vec3& axis,
 		const glm::vec3& rayOrigin,
 		const glm::vec3& rayEnd,
-		const glm::vec3& planeNorm)
+		const glm::vec3& planeNorm,
+		const glm::quat& pRot)
 	{
 		glm::vec3 intersectionPoint(0.0f);
 
@@ -2791,7 +2854,8 @@ namespace flex
 
 
 		glm::vec3 v1 = glm::normalize(m_StartPointOnPlane - planeOrigin);
-		glm::vec3 v2 = glm::normalize(intersectionPoint - planeOrigin);
+		glm::vec3 v2L = intersectionPoint - planeOrigin;
+		glm::vec3 v2 = glm::normalize(v2L);
 
 		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, v1);
 
@@ -2827,8 +2891,6 @@ namespace flex
 		real angleRaw = acos(v1ov2);
 		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);
 
-		Print("%.2f, %i %s\n", glm::degrees(angle), m_RotationGizmoWrapCount, (m_RotationGizmoWrapCount % 2 == 0) ? "T" : "F");
-
 		m_pV1oV2 = v1ov2;
 
 		if (m_bFirstFrameDraggingRotationGizmo)
@@ -2837,6 +2899,11 @@ namespace flex
 			m_LastAngle = angle;
 			m_RotationGizmoWrapCount = 0;
 		}
+
+		g_Renderer->GetDebugDrawer()->drawLine(
+			ToBtVec3(planeOrigin),
+			ToBtVec3(planeOrigin + axis * 5.0f),
+			btVector3(1.0f, 1.0f, 0.0f));
 
 		g_Renderer->GetDebugDrawer()->drawLine(
 			ToBtVec3(planeOrigin),
@@ -2855,9 +2922,9 @@ namespace flex
 			true);
 
 		g_Renderer->GetDebugDrawer()->drawLine(
-			ToBtVec3(planeOrigin + v2),
+			ToBtVec3(planeOrigin + v2L),
 			ToBtVec3(planeOrigin),
-			btVector3(0.0f, 1.0f, 0.0f));
+			btVector3(1.0f, 1.0f, 1.0f));
 
 		g_Renderer->GetDebugDrawer()->drawLine(
 			ToBtVec3(planeOrigin),
@@ -2868,7 +2935,8 @@ namespace flex
 		glm::quat result(glm::vec3(0.0f));
 		if (!IsNanOrInf(dAngle))
 		{
-			result = glm::rotate(glm::quat(glm::vec3(0.0f)), dAngle, m_AxisOfRotation);
+			glm::quat newRot = glm::rotate(pRot, dAngle, m_AxisOfRotation);
+			result = newRot - pRot;
 		}
 
 		m_LastAngle = angle;

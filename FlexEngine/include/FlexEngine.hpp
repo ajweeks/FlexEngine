@@ -104,7 +104,8 @@ namespace flex
 		glm::quat CalculateDeltaRotationFromGizmoDrag(const glm::vec3& axis,
 			const glm::vec3& rayOrigin,
 			const glm::vec3& rayEnd,
-			const glm::vec3& planeNorm);
+			const glm::vec3& planeNorm,
+			const glm::quat& pRot);
 
 		void UpdateGizmoVisibility();
 		void SetTransformState(TransformState state);
@@ -164,6 +165,7 @@ namespace flex
 		real m_pV1oV2;
 		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
+		glm::quat m_CurrentRot;
 		bool b_LastDotPos = false;
 
 		bool m_bDraggingGizmo = false;
@@ -176,6 +178,8 @@ namespace flex
 
 		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
+
+		bool m_bDemoWindowShowing = false;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

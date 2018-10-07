@@ -1,6 +1,9 @@
 FlexEngine/resources/fonts/*.png
 FlexEngine/resources/scenes/saved/*
 FlexEngine/resources/profiles/*
+FlexEngine/resources/meshes/Bistro/**
+FlexEngine/resources/meshes/EmeraldSquare/**
+FlexEngine/resources/meshes/SunTemple/**
 
 # User settings files
 common.ini

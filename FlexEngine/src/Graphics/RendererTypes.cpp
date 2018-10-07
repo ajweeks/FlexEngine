@@ -150,7 +150,8 @@ namespace flex
 				enableBRDFLUT == other.enableBRDFLUT &&
 				renderToCubemap == other.renderToCubemap &&
 				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
-				colorMultiplier == other.colorMultiplier
+				colorMultiplier == other.colorMultiplier &&
+				textureScale == other.textureScale
 				//pushConstantBlock.mvp == other.pushConstantBlock.mvp &&
 				);
 
@@ -220,6 +221,8 @@ namespace flex
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
+
+		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
 	}
 
 	JSONObject Material::SerializeToJSON() const
@@ -366,6 +369,11 @@ namespace flex
 		{
 			std::string cleanedEnvMapPath = environmentMapPath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("environment map path", JSONValue(cleanedEnvMapPath));
+		}
+
+		if (textureScale != 1.0f)
+		{
+			materialObject.fields.emplace_back("texture scale", JSONValue(textureScale));
 		}
 
 		return materialObject;
