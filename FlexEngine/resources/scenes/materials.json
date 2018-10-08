@@ -334,12 +334,9 @@
 			"const roughness" : 1.000000,
 			"const ao" : 1.000000,
 			"enable albedo sampler" : true,
-			"enable metallic sampler" : true,
 			"generate albedo sampler" : true,
-			"generate metallic sampler" : true,
 			"albedo texture filepath" : "grid-01.png",
-			"metallic texture filepath" : "grid-01-n.png",
-			"texture scale" : 0.100000
+			"texture scale" : 0.500000
 		}
 	]
 }

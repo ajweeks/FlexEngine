@@ -4254,7 +4254,7 @@ namespace flex
 				{ "deferred_combine_cubemap", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.vert", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.frag" },
 				{ "color", RESOURCE_LOCATION + "shaders/color.vert", RESOURCE_LOCATION + "shaders/color.frag" },
 				{ "pbr", RESOURCE_LOCATION + "shaders/pbr.vert", RESOURCE_LOCATION + "shaders/pbr.frag" },
-				{ "pbr-ws", RESOURCE_LOCATION + "shaders/pbr-ws.vert", RESOURCE_LOCATION + "shaders/pbr.frag" },
+				{ "pbr-ws", RESOURCE_LOCATION + "shaders/pbr-ws.vert", RESOURCE_LOCATION + "shaders/pbr-ws.frag" },
 				{ "skybox", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/skybox.frag" },
 				{ "equirectangular_to_cube", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/equirectangular_to_cube.frag" },
 				{ "irradiance", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/irradiance.frag" },
@@ -4362,17 +4362,12 @@ namespace flex
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ALBEDO);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_METALLIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ROUGHNESS);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_AO);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			++shaderID;
@@ -4380,9 +4375,6 @@ namespace flex
 			// PBR - WORLD SPACE
 			m_Shaders[shaderID].shader.deferred = true;
 			m_Shaders[shaderID].shader.needAlbedoSampler = true;
-			m_Shaders[shaderID].shader.needMetallicSampler = true;
-			m_Shaders[shaderID].shader.needRoughnessSampler = true;
-			m_Shaders[shaderID].shader.needAOSampler = true;
 			m_Shaders[shaderID].shader.needNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -4396,17 +4388,9 @@ namespace flex
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ALBEDO);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_METALLIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ROUGHNESS);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_AO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEXTURE_SCALE);
