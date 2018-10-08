@@ -4,6 +4,7 @@ FlexEngine/resources/profiles/*
 FlexEngine/resources/meshes/Bistro/**
 FlexEngine/resources/meshes/EmeraldSquare/**
 FlexEngine/resources/meshes/SunTemple/**
+FlexEngine/resources/meshes/SunTemple.fbx
 
 # User settings files
 common.ini
