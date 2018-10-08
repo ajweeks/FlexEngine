@@ -152,7 +152,6 @@ namespace flex
 		g_CameraManager->AddCamera(fpCamera, true);
 
 		InitializeWindowAndRenderer();
-		g_InputManager->Initialize();
 
 		g_PhysicsManager = new PhysicsManager();
 		g_PhysicsManager->Initialize();
@@ -182,6 +181,7 @@ namespace flex
 		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 		g_SceneManager->PostInitializeCurrentScene();
+		g_InputManager->Initialize();
 
 		SetupImGuiStyles();
 
