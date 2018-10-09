@@ -6,6 +6,8 @@ namespace flex
 {
 	class PlayerController;
 
+	// The player is instructed by its player controller how to move by means of its
+	// transform component being updated, and it applies those changes to its rigid body itself
 	class Player : public GameObject
 	{
 	public:

@@ -4,6 +4,9 @@ namespace flex
 {
 	class Player;
 
+
+	// The player controller is responsible for setting the player's
+	// transform based on either player input, or an AI behavior
 	class PlayerController final
 	{
 	public:
@@ -15,6 +18,7 @@ namespace flex
 		void Destroy();
 
 		void ResetTransformAndVelocities();
+		void UpdateIsPossessed();
 
 	private:
 		real m_MoveAcceleration = 140.0f;
@@ -40,6 +44,8 @@ namespace flex
 		Player* m_Player = nullptr;
 
 		bool m_bGrounded = false;
+
+		bool m_bPossessed = false;
 
 	};
 } // namespace flex

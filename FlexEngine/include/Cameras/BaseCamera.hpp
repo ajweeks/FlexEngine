@@ -21,6 +21,9 @@ namespace flex
 
 		virtual void OnSceneChanged();
 
+		virtual void OnPossess();
+		virtual void OnDepossess();
+
 		void SetFOV(real FOV);
 		real GetFOV() const;
 		void SetZNear(real zNear);

@@ -87,6 +87,11 @@ namespace flex
 	{
 		if (index >= 0 && index < (i32)m_Cameras.size() && index != m_ActiveCameraIndex)
 		{
+			if (m_ActiveCameraIndex != -1)
+			{
+				m_Cameras[m_ActiveCameraIndex]->OnDepossess();
+			}
+
 			if (bAlign)
 			{
 				AlignCameras(m_Cameras[m_ActiveCameraIndex], m_Cameras[index]);
@@ -95,6 +100,7 @@ namespace flex
 			m_ActiveCameraIndex = index;
 
 			m_Cameras[m_ActiveCameraIndex]->Initialize();
+			m_Cameras[m_ActiveCameraIndex]->OnPossess();
 		}
 	}
 

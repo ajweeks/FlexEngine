@@ -220,8 +220,8 @@ namespace flex
 			g_Renderer->InitializeDirectionalLight(dirLight);
 		}
 
-		//m_Player0 = new Player(0);
-		//AddRootObject(m_Player0);
+		m_Player0 = new Player(0);
+		AddRootObject(m_Player0);
 
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);

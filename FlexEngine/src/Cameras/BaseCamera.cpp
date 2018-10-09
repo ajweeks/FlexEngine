@@ -8,6 +8,9 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
+#include "Player.hpp"
+#include "PlayerController.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -48,6 +51,28 @@ namespace flex
 	}
 
 	void BaseCamera::OnSceneChanged()
+	{
+	}
+
+	void BaseCamera::OnPossess()
+	{
+		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+		Player* player1 = g_SceneManager->CurrentScene()->GetPlayer(1);
+
+		if (player0)
+		{
+			PlayerController* pc0 = player0->GetController();
+			pc0->UpdateIsPossessed();
+		}
+
+		if (player1)
+		{
+			PlayerController* pc1 = player1->GetController();
+			pc1->UpdateIsPossessed();
+		}
+	}
+
+	void BaseCamera::OnDepossess()
 	{
 	}
 

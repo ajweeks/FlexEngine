@@ -1842,6 +1842,9 @@ namespace flex
 
 			DrawShadowDepthMaps();
 
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+
 			// World-space objects
 			drawCallInfo.bDeferred = true;
 			DrawDeferredObjects(drawCallInfo);

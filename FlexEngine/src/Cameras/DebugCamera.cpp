@@ -49,12 +49,6 @@ namespace flex
 			real pitchO = -g_InputManager->GetGamepadAxisValue(0, InputManager::GamepadAxis::RIGHT_STICK_Y) *
 				m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
 
-			if (g_InputManager->IsGamepadButtonDown(0, InputManager::GamepadButton::LEFT_STICK_DOWN))
-			{
-				yawO = 0.0f;
-				pitchO = 0.0f;
-			}
-
 			m_TurnVel += glm::vec2(yawO, pitchO);
 
 			m_Yaw += m_TurnVel.x;

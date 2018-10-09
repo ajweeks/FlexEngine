@@ -31,14 +31,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"scale" : "75.000, 1.000, 75.000"
+				"scale" : "150.000, 1.000, 150.000"
 			},
 			"mesh" : "unit-plane",
 			"material" : "Grid",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500",
+				"offset pos" : "0.000, -0.500, 0.000"
 			},
 			"rigid body" : 
 			{
