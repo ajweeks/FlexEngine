@@ -52,6 +52,12 @@ namespace flex
 
 	void InputManager::Update()
 	{
+		if (!g_Window->HasFocus())
+		{
+			ClearAllInputs();
+			return;
+		}
+
 		// Keyboard keys
 		for (auto& keyPair : m_Keys)
 		{
