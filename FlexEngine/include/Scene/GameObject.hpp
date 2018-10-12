@@ -85,6 +85,9 @@ namespace flex
 		bool IsVisibleInSceneExplorer(bool bIncludingChildren = false) const;
 		void SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer);
 
+		bool HasUniformScale() const;
+		void SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately);
+
 		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);
 		btCollisionShape* GetCollisionShape() const;
 
@@ -192,6 +195,9 @@ namespace flex
 		MeshComponent* m_MeshComponent = nullptr;
 
 		bool bBeingInteractedWith = false;
+
+		// Editor only
+		bool bUniformScale = false;
 
 		static AudioSourceID s_BunkSound;
 		static RandomizedAudioSource s_SqueakySounds;

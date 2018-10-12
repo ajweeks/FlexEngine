@@ -205,7 +205,8 @@ namespace flex
 
 		glm::vec3 translation = transform->GetLocalPosition();
 		glm::vec3 rotation = sRot;
-		glm::vec3 scale = transform->GetLocalScale();
+		glm::vec3 pScale = transform->GetLocalScale();
+		glm::vec3 scale = pScale;
 
 		bool valueChanged = false;
 
@@ -226,6 +227,27 @@ namespace flex
 			valueChanged = true;
 		}
 
+		ImGui::SameLine();
+
+		bool bUniformScale = gameObject->HasUniformScale();
+		if (ImGui::Checkbox("u", &bUniformScale))
+		{
+			valueChanged = true;
+		}
+		if (bUniformScale)
+		{
+			float newScale = scale.x;
+			if (scale.y != pScale.y)
+			{
+				newScale = scale.y;
+			}
+			else if (scale.z != pScale.z)
+			{
+				newScale = scale.z;
+			}
+			scale = glm::vec3(newScale);
+		}
+
 		if (valueChanged)
 		{
 			transform->SetLocalPosition(translation, false);
@@ -236,6 +258,7 @@ namespace flex
 
 			transform->SetLocalRotation(rotQuat, false);
 			transform->SetLocalScale(scale, true);
+			gameObject->SetUseUniformScale(bUniformScale, false);
 
 			if (gameObject->GetRigidBody())
 			{

@@ -1196,6 +1196,20 @@ namespace flex
 		}
 	}
 
+	bool GameObject::HasUniformScale() const
+	{
+		return bUniformScale;
+	}
+
+	void GameObject::SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately)
+	{
+		bUniformScale = bUseUniformScale;
+		if (bUniformScale)
+		{
+			m_Transform.SetLocalScale(glm::vec3(m_Transform.GetLocalScale().x));
+		}
+	}
+
 	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)
 	{
 		if (m_CollisionShape)
