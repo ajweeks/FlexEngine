@@ -9,6 +9,7 @@
 #pragma warning(pop)
 
 #include "Helpers.hpp"
+#include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -29,14 +30,16 @@ namespace flex
 
 	void FirstPersonCamera::Initialize()
 	{
+		BaseCamera::Initialize();
+
 		FindPlayer();
 		Update();
-
-		BaseCamera::Initialize();
 	}
 
 	void FirstPersonCamera::OnSceneChanged()
 	{
+		BaseCamera::OnSceneChanged();
+
 		FindPlayer();
 		Update();
 	}
@@ -48,15 +51,15 @@ namespace flex
 			return;
 		}
 
-		glm::vec3 targetSpot = player->GetTransform()->GetWorldPosition();
+		Transform* playerTransform = player->GetTransform();
 
-		m_Forward = player->GetTransform()->GetForward();
+		glm::vec3 targetSpot = playerTransform->GetWorldPosition();
 
-		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
-		m_Right = normalize(glm::cross(worldUp, m_Forward));
+		m_Forward = player->GetLookDirection();
+		m_Right = playerTransform->GetRight();
 		m_Up = cross(m_Forward, m_Right);
 
-		m_Position = player->GetTransform()->GetWorldPosition();
+		m_Position = playerTransform->GetWorldPosition();
 
 		CalculateYawAndPitchFromForward();
 		RecalculateViewProjection();
@@ -64,7 +67,7 @@ namespace flex
 
 	void FirstPersonCamera::FindPlayer()
 	{
-		player = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		player = (Player*)(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
 	}
 
 } // namespace flex

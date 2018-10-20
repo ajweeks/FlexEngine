@@ -367,12 +367,12 @@ namespace flex
 		return m_GameObject;
 	}
 
-	const glm::mat4& Transform::GetWorldTransform()
+	const glm::mat4& Transform::GetWorldTransform() const
 	{
 		return worldTransform;
 	}
 
-	const glm::mat4& Transform::GetLocalTransform()
+	const glm::mat4& Transform::GetLocalTransform() const
 	{
 		return localTransform;
 	}

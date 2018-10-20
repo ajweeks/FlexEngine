@@ -6,7 +6,7 @@
 
 namespace flex
 {
-	class GameObject;
+	class Player;
 
 	class FirstPersonCamera final : public BaseCamera
 	{
@@ -21,7 +21,7 @@ namespace flex
 	private:
 		void FindPlayer();
 
-		GameObject* player = nullptr;
+		Player* player = nullptr;
 
 	};
 } // namespace flex

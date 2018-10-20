@@ -83,7 +83,7 @@ namespace flex
 
 		// Grounded check
 		{
-			btVector3 rayStart = ToBtVec3(m_Player->GetTransform()->GetWorldPosition());
+			btVector3 rayStart = ToBtVec3(transform->GetWorldPosition());
 			btVector3 rayEnd = rayStart + btVector3(0, -(m_Player->GetHeight() / 2.0f + 0.05f), 0);
 
 			btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
@@ -111,26 +111,26 @@ namespace flex
 			{
 				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
 				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
-				force += ToBtVec3(m_Player->GetTransform()->GetRight()) * m_MoveAcceleration * -moveH;
-				force += ToBtVec3(m_Player->GetTransform()->GetForward()) * m_MoveAcceleration * -moveV;
+				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * -moveH;
+				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * -moveV;
 			} break;
 			}
 		}
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		{
+#define DRAW_LOCAL_AXES 0
+#if DRAW_LOCAL_AXES
 			const real lineLength = 4.0f;
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
-		}
+#endif
 
 		btQuaternion orientation = rb->getOrientation();
 		glm::vec3 euler = glm::eulerAngles(ToQuaternion(orientation));
 
 		rb->applyCentralForce(force);
-
 		btVector3 angularVel = rb->getAngularVelocity();
 		angularVel.setY(angularVel.getY() * (1.0f - m_RotateFriction));
 		rb->setAngularVelocity(angularVel);
@@ -147,6 +147,9 @@ namespace flex
 			xzVelMagnitude = m_MaxMoveSpeed;
 			bMaxVel = true;
 		}
+
+		m_Player->GetRigidBody()->UpdateParentTransform();
+
 		bool bDrawVelocity = true;
 		if (bDrawVelocity)
 		{
@@ -165,55 +168,25 @@ namespace flex
 				// Look in direction of movement
 				if (xzVelMagnitude > 0.1f)
 				{
-					btQuaternion oldRotation = transformBT.getRotation();
-					real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
-					btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
-					real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
-					real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown * g_DeltaTime;
-					btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
-					transformBT.setRotation(newRotation);
+					//btQuaternion oldRotation = transformBT.getRotation();
+					//real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
+					//btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
+					//real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
+					//real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown * g_DeltaTime;
+					//btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
+					//transformBT.setRotation(newRotation);
 				}
 			} break;
 			case Mode::FIRST_PERSON:
 			{
 				real lookH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X);
-				//real lookV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_Y);
+				real lookV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_Y);
 
-				glm::vec3 pos = transform->GetWorldPosition();
-				//Print("forward:  %.2f, %.2f, %.2f,  up:  %.2f, %.2f, %.2f,  right:  %.2f, %.2f, %.2f\n", forward.x, forward.y, forward.z, up.x, up.y, up.z, right.x, right.y, right.z);
+				glm::quat rot = transform->GetLocalRotation();
+				rot = glm::rotate(rot, -lookH * m_RotateHSpeed * g_DeltaTime, up);
+				transform->SetLocalRotation(rot);
 
-				btQuaternion oldRotation = transformBT.getRotation();
-				glm::quat rot = ToQuaternion(oldRotation);
-
-				//glm::vec3 dUp = (up - glm::vec3(0.0f, 1.0f, 0.0f));
-				//real fallingOverAmount = (glm::dot(dUp, forward));
-				//glm::vec3 rotEuler = glm::eulerAngles(rot);
-
-				//glm::vec3 newUp = glm::normalize(up + glm::vec3(0.0f, 0.5f, 0.0f));
-
-				//real yaw = atan(forward.z / forward.x);
-				//Print("Falling over amount: %.2f  yaw: %.2f  euler: %.0f, %.0f, %.0f,  forward: %.2f, %.2f, %.2f\n", fallingOverAmount, yaw, glm::degrees(rotEuler.x), glm::degrees(rotEuler.y), glm::degrees(rotEuler.z), forward.x, forward.y, forward.z);
-
-				//glm::quat newRot = glm::quat(glm::vec3(0.0f));
-				//newRot = glm::rotate(newRot, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
-
-				//glm::quat newRot = glm::toQuat(glm::lookAtLH(pos, pos + forward, newUp));
-				//rot = glm::rotate(rot, fallingOverAmount * g_DeltaTime * 5.0f, forward);
-
-
-				//rot = glm::rotate(rot, glm::clamp(fallingOverAmount * g_DeltaTime * 10.0f, 0.0f, 1.0f), right);
-
-				//glm::vec3 newRotEuler = rotEuler;
-				//newRotEuler.z *= 0.1f;
-				//newRotEuler.x *= 0.1f;
-				//glm::quat targetRot(newRotEuler);
-
-				//rot = glm::lerp(rot, newRot, glm::clamp(g_DeltaTime * 40.0f * fallingOverAmount, 0.0f, 1.0f));
-
-				rot = glm::rotate(rot, -lookH * g_DeltaTime * m_RotateSpeed, up);
-				//rot = glm::rotate(rot, lookV * g_DeltaTime, right);
-
-				transformBT.setRotation(ToBtQuaternion(rot));
+				m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
 			} break;
 			}
 		}

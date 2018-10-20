@@ -28,14 +28,16 @@ namespace flex
 
 	void OverheadCamera::Initialize()
 	{
+		BaseCamera::Initialize();
+
 		FindPlayers();
 		Update();
-
-		BaseCamera::Initialize();
 	}
 
 	void OverheadCamera::OnSceneChanged()
 	{
+		BaseCamera::OnSceneChanged();
+
 		FindPlayers();
 		Update();
 	}

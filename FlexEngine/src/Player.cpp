@@ -6,6 +6,8 @@
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+
+#include <glm/gtx/rotate_vector.hpp>
 #pragma warning(pop)
 
 #include "Graphics/Renderer.hpp"
@@ -162,6 +164,32 @@ namespace flex
 		GameObject::Destroy();
 	}
 
+	void Player::SetPitch(real pitch)
+	{
+		m_Pitch = pitch;
+		ClampPitch();
+	}
+
+	void Player::AddToPitch(real deltaPitch)
+	{
+		m_Pitch += deltaPitch;
+		ClampPitch();
+	}
+
+	real Player::GetPitch() const
+	{
+		return m_Pitch;
+	}
+
+	glm::vec3 Player::GetLookDirection() const
+	{
+		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
+		glm::vec3 lookDir = rotMat[2];
+		lookDir = glm::rotate(lookDir, m_Pitch, m_Transform.GetRight());
+
+		return lookDir;
+	}
+
 	i32 Player::GetIndex() const
 	{
 		return m_Index;
@@ -175,5 +203,11 @@ namespace flex
 	PlayerController* Player::GetController()
 	{
 		return m_Controller;
+	}
+
+	void Player::ClampPitch()
+	{
+		real limit = glm::radians(89.5f);
+		m_Pitch = glm::clamp(m_Pitch, -limit, limit);
 	}
 } // namespace flex

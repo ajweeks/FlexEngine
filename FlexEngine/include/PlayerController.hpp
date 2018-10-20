@@ -22,9 +22,10 @@ namespace flex
 
 	private:
 		real m_MoveAcceleration = 140.0f;
-		real m_MaxMoveSpeed = 16.0f;
-		real m_RotateSpeed = 4.0f;
-		real m_RotateFriction = 0.05f;
+		real m_MaxMoveSpeed = 24.0f;
+		real m_RotateHSpeed = 4.0f;
+		real m_RotateVSpeed = 1.5f;
+		real m_RotateFriction = 0.03f;
 		// How quickly to turn towards direction of movement
 		real m_RotationSnappiness = 80.0f;
 		// If the player has a velocity magnitude of this value or lower, their

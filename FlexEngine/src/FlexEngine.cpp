@@ -2258,6 +2258,21 @@ namespace flex
 			}
 
 			g_Renderer->DrawImGuiItems();
+
+			ImGui::Spacing();
+
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player)
+			{
+				if (ImGui::TreeNode("Player"))
+				{
+					ImGui::Text("Pitch: %.2f", player->GetPitch());
+					glm::vec3 euler = glm::eulerAngles(player->GetTransform()->GetWorldRotation());
+					ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
+
+					ImGui::TreePop();
+				}
+			}
 		}
 
 		ImGui::End();

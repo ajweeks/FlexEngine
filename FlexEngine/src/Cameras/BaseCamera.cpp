@@ -220,15 +220,8 @@ namespace flex
 
 	void BaseCamera::ClampPitch()
 	{
-		real pitchLimit = PI_DIV_TWO - 0.02f;
-		if (m_Pitch > pitchLimit)
-		{
-			m_Pitch = pitchLimit;
-		}
-		else if (m_Pitch < -pitchLimit)
-		{
-			m_Pitch = -pitchLimit;
-		}
+		real pitchLimit = glm::radians(89.5f);
+		m_Pitch = glm::clamp(m_Pitch, -pitchLimit, pitchLimit);
 	}
 
 	float BaseCamera::CalculateEV100(float aperture, float shutterSpeed, float sensitivity)

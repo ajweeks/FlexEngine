@@ -1782,6 +1782,8 @@ namespace flex
 
 		void GLRenderer::Update()
 		{
+			PROFILE_AUTO("Renderer update");
+
 			if (m_EditorStrSecRemaining > 0.0f)
 			{
 				m_EditorStrSecRemaining -= g_DeltaTime;
@@ -4614,13 +4616,13 @@ namespace flex
 			std::string renderedTextureFilePaths[] = {
 				RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-24.png",
 				RESOURCE_LOCATION + "fonts/gant-regular-10.png",
-				RESOURCE_LOCATION + "fonts/SourceCodePro-regular-18.png"
+				RESOURCE_LOCATION + "fonts/SourceCodePro-regular-14.png"
 			};
 
 			i32 fontSizes[] = {
 				24,
 				10,
-				18
+				14
 			};
 
 			BitmapFont** fonts[] = {
@@ -4808,7 +4810,8 @@ namespace flex
 				}
 
 				static const char* bDEBUGShowEdgesStr = "bDEBUGShowEdges";
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::SHOW_EDGES))
+				GLint location = glGetUniformLocation(shader->program, bDEBUGShowEdgesStr);
+				if (location != -1)
 				{
 					SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 				}
