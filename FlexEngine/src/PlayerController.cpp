@@ -72,11 +72,32 @@ namespace flex
 		glm::vec3 right = transform->GetRight();
 		glm::vec3 forward = transform->GetForward();
 
-		if (m_bPossessed &&
-			g_InputManager->IsGamepadButtonDown(m_PlayerIndex, InputManager::GamepadButton::BACK))
+		if (m_bPossessed)
 		{
-			ResetTransformAndVelocities();
-			return;
+			if (g_InputManager->IsGamepadButtonDown(m_PlayerIndex, InputManager::GamepadButton::BACK))
+			{
+				ResetTransformAndVelocities();
+				return;
+			}
+			else if (g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::X))
+			{
+				if (m_RailRiding)
+				{
+					m_RailRiding = nullptr;
+					Print("Detached\n");
+				}
+				else
+				{
+					real distAlongRail = -1.0f;
+					m_RailRiding = g_SceneManager->CurrentScene()->GetRailInRange(transform->GetWorldPosition(), m_RailAttachMinDist, distAlongRail);
+					if (m_RailRiding)
+					{
+						m_DistAlongRail = distAlongRail;
+						SnapPosToRail();
+						Print("Attached\n");
+					}
+				}
+			}
 		}
 
 		btVector3 force(0.0f, 0.0f, 0.0f);
@@ -94,26 +115,37 @@ namespace flex
 		}
 
 
-		if (m_bPossessed &&
-			!m_Player->GetObjectInteractingWith())
+		if (m_bPossessed)
 		{
-			switch (m_Mode)
+			real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+			real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+
+			if (m_RailRiding)
 			{
-			case Mode::THIRD_PERSON:
+				glm::vec3 railForward = glm::normalize(m_RailRiding->GetFirstDerivative(m_DistAlongRail));
+				//glm::vec3 railRight = glm::cross(railForward, glm::vec3(0.0f, 1.0f, 0.0f));
+
+				m_DistAlongRail += (-moveV * glm::dot(railForward, forward) + -moveH * glm::dot(railForward, right))
+					* m_RailMoveSpeed * g_DeltaTime;
+				m_DistAlongRail = glm::clamp(m_DistAlongRail, 0.0f, 1.0f);
+				SnapPosToRail();
+			}
+			else if (!m_Player->GetObjectInteractingWith())
 			{
-				real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
-				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
-				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
-				force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveH;
-				force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveV;
-			} break;
-			case Mode::FIRST_PERSON:
-			{
-				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
-				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
-				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * -moveH;
-				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * -moveV;
-			} break;
+				switch (m_Mode)
+				{
+				case Mode::THIRD_PERSON:
+				{
+					real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
+					force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveH;
+					force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveV;
+				} break;
+				case Mode::FIRST_PERSON:
+				{
+					force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * -moveH;
+					force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * -moveV;
+				} break;
+				}
 			}
 		}
 
@@ -215,5 +247,14 @@ namespace flex
 		{
 			m_bPossessed = true;
 		}
+	}
+
+	void PlayerController::SnapPosToRail()
+	{
+		glm::vec3 pos(m_RailRiding->GetPointOnCurve(m_DistAlongRail));
+		glm::vec3 railForward = glm::normalize(m_RailRiding->GetFirstDerivative(m_DistAlongRail));
+		glm::vec3 railRight = glm::cross(railForward, glm::vec3(0.0f, 1.0f, 0.0f));
+		pos -= railRight * 0.8f;
+		m_Player->GetTransform()->SetWorldPosition(pos, true);
 	}
 } // namespace flex

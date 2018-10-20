@@ -8,6 +8,7 @@
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
 #include <glm/vec3.hpp>
+#include <glm/gtx/norm.hpp> // for distance2
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
@@ -226,6 +227,8 @@ namespace flex
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);
 
+		m_Curves[0] = BezierCurve({ 5.0f, 2.0f, 0.0f }, { 15.0f, 2.0f, 7.0f }, { 25.0f, 2.0f, 10.0f }, { 35.0f, 2.0f, 10.0f });
+
 		for (GameObject* rootObject : m_RootObjects)
 		{
 			rootObject->Initialize();
@@ -296,6 +299,8 @@ namespace flex
 				rootObject->Update();
 			}
 		}
+
+		m_Curves[0].DrawDebug();
 	}
 
 	bool BaseScene::DestroyGameObject(GameObject* targetObject,
@@ -622,6 +627,33 @@ namespace flex
 		for (GameObject* obj : m_RootObjects)
 		{
 			obj->AddSelfAndChildrenToVec(result);
+		}
+
+		return result;
+	}
+
+	BezierCurve* BaseScene::GetRailInRange(const glm::vec3 pos, real range, real& outDistAlongRail)
+	{
+		// Let's brute force it baby
+		i32 sampleCount = 10;
+		real smallestDist = range;
+		BezierCurve* result = nullptr;
+
+		// TODO: Pre-compute AABBs for each curve for early pruning
+
+		for (BezierCurve& curve : m_Curves)
+		{
+			for (i32 i = 0; i <= sampleCount; ++i)
+			{
+				real t = (real)i / (real)(sampleCount);
+				real dist2 = glm::distance2(curve.GetPointOnCurve(t), pos);
+				if (dist2 < smallestDist)
+				{
+					smallestDist = dist2;
+					result = &curve;
+					outDistAlongRail = t;
+				}
+			}
 		}
 
 		return result;

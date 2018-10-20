@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "BezierCurve.hpp"
+
 namespace flex
 {
 	class PhysicsWorld;
@@ -86,6 +88,8 @@ namespace flex
 
 		std::vector<GameObject*> GetAllObjects();
 
+		BezierCurve* GetRailInRange(const glm::vec3 pos, real range, real& outDistAlongRail);
+
 	protected:
 		friend class GameObject;
 
@@ -129,6 +133,8 @@ namespace flex
 
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
+
+		BezierCurve m_Curves[1];
 
 	private:
 		/*

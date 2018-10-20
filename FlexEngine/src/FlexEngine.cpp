@@ -371,8 +371,8 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-			i32 rbGroup = -1;// (u32)CollisionType::EDITOR_OBJECT;
-			i32 rbMask = -1;// (i32)CollisionType::NOTHING;
+			i32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
+			i32 rbMask = (i32)CollisionType::NOTHING;
 
 			// X Axis
 			GameObject* transformXAxis = new GameObject("Translation gizmo x axis", GameObjectType::NONE);
@@ -448,8 +448,8 @@ namespace flex
 			real cylinderHeight = 0.2f;
 
 			u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-			i32 rbGroup = -1;// (u32)CollisionType::EDITOR_OBJECT;
-			i32 rbMask = -1;// (i32)CollisionType::NOTHING;
+			i32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
+			i32 rbMask = (i32)CollisionType::NOTHING;
 
 			// X Axis
 			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::NONE);
@@ -529,8 +529,8 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-			i32 rbGroup = -1;// (u32)CollisionType::EDITOR_OBJECT;
-			i32 rbMask = -1;// (i32)CollisionType::NOTHING;
+			i32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
+			i32 rbMask = (i32)CollisionType::NOTHING;
 
 			// X Axis
 			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::NONE);

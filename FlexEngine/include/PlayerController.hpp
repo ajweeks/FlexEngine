@@ -2,8 +2,8 @@
 
 namespace flex
 {
+	class BezierCurve;
 	class Player;
-
 
 	// The player controller is responsible for setting the player's
 	// transform based on either player input, or an AI behavior
@@ -21,10 +21,12 @@ namespace flex
 		void UpdateIsPossessed();
 
 	private:
+		void SnapPosToRail();
+
 		real m_MoveAcceleration = 140.0f;
-		real m_MaxMoveSpeed = 24.0f;
-		real m_RotateHSpeed = 4.0f;
-		real m_RotateVSpeed = 1.5f;
+		real m_MaxMoveSpeed = 20.0f;
+		real m_RotateHSpeed = 6.0f;
+		real m_RotateVSpeed = 2.0f;
 		real m_RotateFriction = 0.03f;
 		// How quickly to turn towards direction of movement
 		real m_RotationSnappiness = 80.0f;
@@ -47,6 +49,11 @@ namespace flex
 		bool m_bGrounded = false;
 
 		bool m_bPossessed = false;
+
+		BezierCurve* m_RailRiding = nullptr;
+		real m_DistAlongRail = 0.0f;
+		real m_RailMoveSpeed = 1.0f;
+		real m_RailAttachMinDist = 3.0f;
 
 	};
 } // namespace flex
