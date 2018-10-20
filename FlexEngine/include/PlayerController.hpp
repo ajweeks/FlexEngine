@@ -20,6 +20,8 @@ namespace flex
 		void ResetTransformAndVelocities();
 		void UpdateIsPossessed();
 
+		BezierCurve* GetRailRiding() const;
+
 	private:
 		void SnapPosToRail();
 
@@ -53,7 +55,10 @@ namespace flex
 		BezierCurve* m_RailRiding = nullptr;
 		real m_DistAlongRail = 0.0f;
 		real m_RailMoveSpeed = 1.0f;
-		real m_RailAttachMinDist = 3.0f;
+		real m_RailAttachMinDist = 4.0f;
+
+		AudioSourceID m_SoundRailAttachID;
+		AudioSourceID m_SoundRailDetachID;
 
 	};
 } // namespace flex

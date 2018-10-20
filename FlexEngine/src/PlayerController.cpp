@@ -12,6 +12,7 @@
 #include <LinearMath/btIDebugDraw.h>
 #pragma warning(pop)
 
+#include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Graphics/Renderer.hpp"
@@ -41,6 +42,10 @@ namespace flex
 
 		assert(m_PlayerIndex == 0 ||
 			   m_PlayerIndex == 1);
+
+		m_SoundRailAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/crunch-13.wav");
+		m_SoundRailDetachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-02.wav");
+		//m_SoundRailAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-07.wav");
 
 		UpdateIsPossessed();
 	}
@@ -84,6 +89,7 @@ namespace flex
 				if (m_RailRiding)
 				{
 					m_RailRiding = nullptr;
+					AudioManager::PlaySource(m_SoundRailDetachID);
 					Print("Detached\n");
 				}
 				else
@@ -94,6 +100,7 @@ namespace flex
 					{
 						m_DistAlongRail = distAlongRail;
 						SnapPosToRail();
+						AudioManager::PlaySource(m_SoundRailAttachID);
 						Print("Attached\n");
 					}
 				}
@@ -247,6 +254,11 @@ namespace flex
 		{
 			m_bPossessed = true;
 		}
+	}
+
+	BezierCurve* PlayerController::GetRailRiding() const
+	{
+		return m_RailRiding;
 	}
 
 	void PlayerController::SnapPosToRail()

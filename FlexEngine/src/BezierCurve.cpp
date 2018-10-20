@@ -23,16 +23,16 @@ namespace flex
 		m_Points[3] = p3;
 	}
 
-	void BezierCurve::DrawDebug()
+	void BezierCurve::DrawDebug(bool bHighlighted) const
 	{
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		btVector3 lineColour(0.9f, 0.2f, 0.9f);
+		btVector3 lineColour = bHighlighted ? btVector3(0.9f, 0.8f, 0.9f) : btVector3(0.9f, 0.2f, 0.9f);
 		i32 segmentCount = 20;
 		btVector3 pPoint = ToBtVec3(m_Points[0]);
 		for (i32 i = 0; i <= segmentCount; ++i)
 		{
-			real t = (real)i / (real)(segmentCount);
+			real t = (real)i / (real)segmentCount;
 			btVector3 nPoint = ToBtVec3(GetPointOnCurve(t));
 
 #define DRAW_LOCAL_AXES 0
@@ -53,7 +53,7 @@ namespace flex
 		btVector3 pointColour(0.2f, 0.2f, 0.1f);
 		for (const glm::vec3& point : m_Points)
 		{
-			debugDrawer->drawSphere(ToBtVec3(point), 0.2f, pointColour);
+			debugDrawer->drawSphere(ToBtVec3(point), 0.1f, pointColour);
 		}
 	}
 

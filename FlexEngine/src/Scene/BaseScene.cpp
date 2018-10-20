@@ -23,6 +23,7 @@
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
+#include "PlayerController.hpp"
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -300,7 +301,11 @@ namespace flex
 			}
 		}
 
-		m_Curves[0].DrawDebug();
+		for (const BezierCurve& curve : m_Curves)
+		{
+			bool bHighlighted = m_Player0->GetController()->GetRailRiding() == &curve;
+			curve.DrawDebug(bHighlighted);
+		}
 	}
 
 	bool BaseScene::DestroyGameObject(GameObject* targetObject,
@@ -635,7 +640,7 @@ namespace flex
 	BezierCurve* BaseScene::GetRailInRange(const glm::vec3 pos, real range, real& outDistAlongRail)
 	{
 		// Let's brute force it baby
-		i32 sampleCount = 10;
+		i32 sampleCount = 20;
 		real smallestDist = range;
 		BezierCurve* result = nullptr;
 

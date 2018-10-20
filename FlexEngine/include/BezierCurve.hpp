@@ -14,7 +14,7 @@ namespace flex
 		BezierCurve();
 		BezierCurve(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3);
 
-		void DrawDebug();
+		void DrawDebug(bool bHighlighted) const;
 
 		glm::vec3 GetPointOnCurve(real t) const;
 		glm::vec3 GetFirstDerivative(real t) const;
