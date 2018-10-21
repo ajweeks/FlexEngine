@@ -14,8 +14,8 @@
 
 #include "Graphics/RendererTypes.hpp"
 #include "JSONTypes.hpp"
-#include "VertexAttribute.hpp"
-#include "VertexBufferData.hpp"
+#include "Graphics/VertexAttribute.hpp"
+#include "Graphics/VertexBufferData.hpp"
 
 namespace flex
 {

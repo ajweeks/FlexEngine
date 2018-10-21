@@ -6,9 +6,9 @@
 #include <map>
 
 #include "GLHelpers.hpp"
+#include "Graphics/VertexBufferData.hpp"
 #include "Helpers.hpp"
 #include "Types.hpp"
-#include "VertexBufferData.hpp"
 
 namespace flex
 {

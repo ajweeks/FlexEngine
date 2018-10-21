@@ -9,8 +9,8 @@
 #include "LinearMath/btIDebugDraw.h"
 #pragma warning(pop)
 
+#include "Graphics/VertexBufferData.hpp"
 #include "Types.hpp"
-#include "VertexBufferData.hpp"
 
 namespace flex
 {

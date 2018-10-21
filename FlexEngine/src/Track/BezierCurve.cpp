@@ -1,7 +1,6 @@
-
 #include "stdafx.hpp"
 
-#include "BezierCurve.hpp"
+#include "Track/BezierCurve.hpp"
 
 #include "Graphics/Renderer.hpp"
 

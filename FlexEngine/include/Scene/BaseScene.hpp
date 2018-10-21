@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "BezierCurveList.hpp"
+#include "Track/BezierCurveList.hpp"
 
 namespace flex
 {

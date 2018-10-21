@@ -1,10 +1,10 @@
 
 #include "stdafx.hpp"
 
-#include "VertexBufferData.hpp"
+#include "Graphics/VertexBufferData.hpp"
 
 #include "Graphics/Renderer.hpp"
-#include "VertexAttribute.hpp"
+#include "Graphics/VertexAttribute.hpp"
 
 namespace flex
 {

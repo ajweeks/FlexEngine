@@ -12,7 +12,6 @@
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
-#include "BezierCurve.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
@@ -28,6 +27,7 @@
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Track/BezierCurve.hpp"
 
 namespace flex
 {

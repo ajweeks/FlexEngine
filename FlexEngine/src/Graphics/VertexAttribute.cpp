@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#include "VertexAttribute.hpp"
+#include "Graphics/VertexAttribute.hpp"
 
 namespace flex
 {

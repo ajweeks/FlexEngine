@@ -8,7 +8,7 @@
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLRenderer.hpp"
 #include "Graphics/Renderer.hpp"
-#include "VertexAttribute.hpp"
+#include "Graphics/VertexAttribute.hpp"
 
 namespace flex
 {
@@ -133,6 +133,8 @@ namespace flex
 			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
 			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
 
+			m_VertexBufferData.Destroy(); // Destroy previous frame's buffer since it's already been drawn
+
 			VertexBufferData::CreateInfo createInfo = {};
 			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 
@@ -145,9 +147,6 @@ namespace flex
 				createInfo.colors_R32G32B32A32.push_back(color);
 				createInfo.colors_R32G32B32A32.push_back(color);
 			}
-
-
-			m_VertexBufferData.Destroy(); // Destroy previous frame's buffer since it's already been drawn
 
 			m_VertexBufferData.Initialize(&createInfo);
 
