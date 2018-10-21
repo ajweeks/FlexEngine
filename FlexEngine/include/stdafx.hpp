@@ -81,6 +81,7 @@ inline void SafeDelete(T &pObjectToDelete)
 #define PI_DIV_TWO (glm::half_pi<real>())
 #define PI_DIV_FOUR (glm::quarter_pi<real>())
 #define THREE_OVER_TWO_PI (glm::three_over_two_pi<real>())
+#define EPSILON (glm::epsilon<real>())
 
 #if ENABLE_PROFILING
 #define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);

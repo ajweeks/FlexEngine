@@ -23,11 +23,11 @@ namespace flex
 		m_Points[3] = p3;
 	}
 
-	void BezierCurve::DrawDebug(bool bHighlighted) const
+	void BezierCurve::DrawDebug(bool bHighlighted, const btVector3& highlightColour) const
 	{
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		btVector3 lineColour = bHighlighted ? btVector3(0.9f, 0.8f, 0.9f) : btVector3(0.9f, 0.2f, 0.9f);
+		btVector3 lineColour = bHighlighted ? highlightColour : btVector3(0.9f, 0.2f, 0.9f);
 		i32 segmentCount = 20;
 		btVector3 pPoint = ToBtVec3(m_Points[0]);
 		for (i32 i = 0; i <= segmentCount; ++i)

@@ -12,6 +12,7 @@
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
+#include "BezierCurve.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
@@ -228,7 +229,13 @@ namespace flex
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);
 
-		m_Curves[0] = BezierCurve({ 5.0f, 2.0f, 0.0f }, { 15.0f, 2.0f, 7.0f }, { 25.0f, 2.0f, 10.0f }, { 35.0f, 2.0f, 10.0f });
+		BezierCurve curve0({ 5.0f, 2.0f, 0.0f }, { 15.0f, 2.0f, 7.0f }, { 25.0f, 2.0f, 10.0f }, { 35.0f, 2.0f, 10.0f });
+		BezierCurve curve1({ 35.0f, 2.0f, 10.0f }, { 45.0f, 2.0f, 10.0f }, { 55.0f, 2.0f, 10.0f }, { 65.0f, 2.0f, 10.0f });
+		BezierCurve curve2({ 65.0f, 2.0f, 10.0f }, { 70.0f, 2.0f, 5.0f }, { 75.0f, 2.0f, 2.0f }, { 75.0f, 2.0f, -2.0f });
+		BezierCurve curve3({ 75.0f, 2.0f, -2.0f }, { 70.0f, 2.0f, -6.0f }, { 60.0f, 2.0f, -8.0f }, { 50.0f, 2.0f, -8.0f });
+		std::vector<BezierCurve> curves = { curve0 , curve1, curve2, curve3 };
+
+		m_Curves[0] = BezierCurveList(curves);
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
@@ -301,10 +308,16 @@ namespace flex
 			}
 		}
 
-		for (const BezierCurve& curve : m_Curves)
+		for (const BezierCurveList& curve : m_Curves)
 		{
-			bool bHighlighted = m_Player0->GetController()->GetRailRiding() == &curve;
-			curve.DrawDebug(bHighlighted);
+			btVector3 highlightColour(0.8f, 0.84f, 0.22f);
+			real distAlongRail = m_Player0->GetController()->GetDistAlongRail();
+			if (distAlongRail == -1.0f)
+			{
+				GetRailInRange(m_Player0->GetTransform()->GetWorldPosition(), m_Player0->GetController()->GetRailAttachDistThreshold(), distAlongRail);
+				highlightColour = btVector3(0.75f, 0.65, 0.75f);
+			}
+			curve.DrawDebug(highlightColour, distAlongRail);
 		}
 	}
 
@@ -637,16 +650,16 @@ namespace flex
 		return result;
 	}
 
-	BezierCurve* BaseScene::GetRailInRange(const glm::vec3 pos, real range, real& outDistAlongRail)
+	BezierCurveList* BaseScene::GetRailInRange(const glm::vec3 pos, real range, real& outDistAlongRail)
 	{
 		// Let's brute force it baby
-		i32 sampleCount = 20;
+		i32 sampleCount = 250;
 		real smallestDist = range;
-		BezierCurve* result = nullptr;
+		BezierCurveList* result = nullptr;
 
 		// TODO: Pre-compute AABBs for each curve for early pruning
 
-		for (BezierCurve& curve : m_Curves)
+		for (BezierCurveList& curve : m_Curves)
 		{
 			for (i32 i = 0; i <= sampleCount; ++i)
 			{

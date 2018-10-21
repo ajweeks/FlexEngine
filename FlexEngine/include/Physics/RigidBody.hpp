@@ -13,7 +13,7 @@ namespace flex
 	class RigidBody
 	{
 	public:
-		RigidBody(i32 group = -1, i32 mask = -1);
+		RigidBody(i32 group = (i32)CollisionType::DEFAULT, i32 mask = (i32)CollisionType::DEFAULT);
 		// NOTE: This copy constructor does not initialize data, it only copies POD fields
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();

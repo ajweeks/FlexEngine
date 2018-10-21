@@ -2,7 +2,7 @@
 
 namespace flex
 {
-	class BezierCurve;
+	class BezierCurveList;
 	class Player;
 
 	// The player controller is responsible for setting the player's
@@ -18,17 +18,21 @@ namespace flex
 		void Destroy();
 
 		void ResetTransformAndVelocities();
-		void UpdateIsPossessed();
 
-		BezierCurve* GetRailRiding() const;
+		void UpdateIsPossessed();
+		bool IsPossessed() const;
+
+		real GetRailAttachDistThreshold() const;
+		real GetDistAlongRail() const;
+		BezierCurveList* GetRailRiding() const;
 
 	private:
 		void SnapPosToRail();
 
-		real m_MoveAcceleration = 140.0f;
+		real m_MoveAcceleration = 120.0f;
 		real m_MaxMoveSpeed = 20.0f;
-		real m_RotateHSpeed = 6.0f;
-		real m_RotateVSpeed = 2.0f;
+		real m_RotateHSpeed = 4.5f;
+		real m_RotateVSpeed = 1.6f;
 		real m_RotateFriction = 0.03f;
 		// How quickly to turn towards direction of movement
 		real m_RotationSnappiness = 80.0f;
@@ -43,18 +47,15 @@ namespace flex
 		};
 
 		Mode m_Mode = Mode::FIRST_PERSON;
-
 		i32 m_PlayerIndex = -1;
-
 		Player* m_Player = nullptr;
 
 		bool m_bGrounded = false;
-
 		bool m_bPossessed = false;
 
-		BezierCurve* m_RailRiding = nullptr;
+		BezierCurveList* m_RailRiding = nullptr;
 		real m_DistAlongRail = 0.0f;
-		real m_RailMoveSpeed = 1.0f;
+		real m_RailMoveSpeed = 0.25f;
 		real m_RailAttachMinDist = 4.0f;
 
 		AudioSourceID m_SoundRailAttachID;

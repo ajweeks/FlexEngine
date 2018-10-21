@@ -62,6 +62,12 @@ namespace flex
 		m_Position = playerTransform->GetWorldPosition();
 
 		CalculateYawAndPitchFromForward();
+
+		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+
+		m_Right = normalize(glm::cross(worldUp, m_Forward));
+		m_Up = cross(m_Forward, m_Right);
+
 		RecalculateViewProjection();
 	}
 

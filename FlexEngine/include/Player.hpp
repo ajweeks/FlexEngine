@@ -36,7 +36,7 @@ namespace flex
 		i32 m_Index = 0;
 
 		GameObject* m_Slingshot = nullptr;
-		real m_MoveFriction = 6.0f;
+		real m_MoveFriction = 12.0f;
 		real m_Height = 4.0f;
 
 		real m_Pitch = 0.0f;

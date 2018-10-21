@@ -90,7 +90,6 @@ namespace flex
 				{
 					m_RailRiding = nullptr;
 					AudioManager::PlaySource(m_SoundRailDetachID);
-					Print("Detached\n");
 				}
 				else
 				{
@@ -101,7 +100,6 @@ namespace flex
 						m_DistAlongRail = distAlongRail;
 						SnapPosToRail();
 						AudioManager::PlaySource(m_SoundRailAttachID);
-						Print("Attached\n");
 					}
 				}
 			}
@@ -130,7 +128,6 @@ namespace flex
 			if (m_RailRiding)
 			{
 				glm::vec3 railForward = glm::normalize(m_RailRiding->GetFirstDerivative(m_DistAlongRail));
-				//glm::vec3 railRight = glm::cross(railForward, glm::vec3(0.0f, 1.0f, 0.0f));
 
 				m_DistAlongRail += (-moveV * glm::dot(railForward, forward) + -moveH * glm::dot(railForward, right))
 					* m_RailMoveSpeed * g_DeltaTime;
@@ -189,11 +186,11 @@ namespace flex
 
 		m_Player->GetRigidBody()->UpdateParentTransform();
 
-		bool bDrawVelocity = true;
+		bool bDrawVelocity = false;
 		if (bDrawVelocity)
 		{
 			real scale = 1.0f;
-			btVector3 start = rbPos;
+			btVector3 start = rbPos + btVector3(0.0f, -0.5f, 0.0f);
 			btVector3 end = start + rb->getLinearVelocity() * scale;
 			debugDrawer->drawLine(start, end, bMaxVel ? btVector3(0.9f, 0.3f, 0.4f) : btVector3(0.1f, 0.85f, 0.98f));
 		}
@@ -256,7 +253,29 @@ namespace flex
 		}
 	}
 
-	BezierCurve* PlayerController::GetRailRiding() const
+	bool PlayerController::IsPossessed() const
+	{
+		return m_bPossessed;
+	}
+
+	real PlayerController::GetRailAttachDistThreshold() const
+	{
+		return m_RailAttachMinDist;
+	}
+
+	real PlayerController::GetDistAlongRail() const
+	{
+		if (m_RailRiding)
+		{
+			return m_DistAlongRail;
+		}
+		else
+		{
+			return -1.0f;
+		}
+	}
+
+	BezierCurveList* PlayerController::GetRailRiding() const
 	{
 		return m_RailRiding;
 	}
