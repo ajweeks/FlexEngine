@@ -21,7 +21,7 @@
 			"visible" : false,
 			"transform" : 
 			{
-				"pos" : "0.000, 12.500, 0.000"
+				"pos" : "-9.982, 2.938, -6.633"
 			},
 			"material" : "pbr chrome"
 		},
@@ -56,8 +56,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-                "pos" : "-9.961, 4.055, 11.021",
-                "scale" : "4.000, 6.000, 3.030"
+				"pos" : "-9.961, 4.055, 11.021",
+				"scale" : "4.000, 6.000, 3.030"
 			},
 			"mesh" : "cube",
 			"material" : "Grid"
@@ -68,8 +68,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-                "pos" : "-9.963, 4.969, -24.978",
-                "scale" : "6.000, 5.080, 7.000"
+				"pos" : "-9.963, 4.969, -24.978",
+				"scale" : "6.000, 5.080, 7.000"
 			},
 			"mesh" : "cube",
 			"material" : "Grid"
@@ -80,8 +80,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-                "pos" : "-23.986, 4.000, -3.970",
-                "scale" : "4.010, 6.040, 10.020"
+				"pos" : "-23.986, 4.000, -3.970",
+				"scale" : "4.010, 6.040, 10.020"
 			},
 			"mesh" : "cube",
 			"material" : "Grid"

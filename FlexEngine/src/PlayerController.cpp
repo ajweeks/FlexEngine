@@ -285,6 +285,7 @@ namespace flex
 		glm::vec3 pos(m_RailRiding->GetPointOnCurve(m_DistAlongRail));
 		glm::vec3 railForward = glm::normalize(m_RailRiding->GetFirstDerivative(m_DistAlongRail));
 		glm::vec3 railRight = glm::cross(railForward, glm::vec3(0.0f, 1.0f, 0.0f));
+		pos += glm::vec3(0.0f, 1.9f, 0.0f);
 		pos -= railRight * 0.8f;
 		m_Player->GetTransform()->SetWorldPosition(pos, true);
 	}

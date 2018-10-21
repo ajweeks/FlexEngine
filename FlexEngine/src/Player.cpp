@@ -60,25 +60,25 @@ namespace flex
 		m_Controller->Initialize(this);
 
 
-		MaterialCreateInfo slingshotMatCreateInfo = {};
-		slingshotMatCreateInfo.name = "Slingshot material";
-		slingshotMatCreateInfo.shaderName = "pbr";
-		slingshotMatCreateInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.02f);
-		slingshotMatCreateInfo.constMetallic = 0.0f;
-		slingshotMatCreateInfo.constRoughness = 1.0f;
-		slingshotMatCreateInfo.constAO = 1.0f;
-		MaterialID slingshotMatID = g_Renderer->InitializeMaterial(&slingshotMatCreateInfo);
+		//MaterialCreateInfo slingshotMatCreateInfo = {};
+		//slingshotMatCreateInfo.name = "Slingshot material";
+		//slingshotMatCreateInfo.shaderName = "pbr";
+		//slingshotMatCreateInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.02f);
+		//slingshotMatCreateInfo.constMetallic = 0.0f;
+		//slingshotMatCreateInfo.constRoughness = 1.0f;
+		//slingshotMatCreateInfo.constAO = 1.0f;
+		//MaterialID slingshotMatID = g_Renderer->InitializeMaterial(&slingshotMatCreateInfo);
 
-		m_Slingshot = new GameObject("Slingshot", GameObjectType::NONE);
-		MeshComponent* slingshotMesh = m_Slingshot->SetMeshComponent(new MeshComponent(slingshotMatID, m_Slingshot));
+		//m_Slingshot = new GameObject("Slingshot", GameObjectType::NONE);
+		//MeshComponent* slingshotMesh = m_Slingshot->SetMeshComponent(new MeshComponent(slingshotMatID, m_Slingshot));
 
-		slingshotMesh->SetRequiredAttributesFromMaterialID(slingshotMatID);
+		//slingshotMesh->SetRequiredAttributesFromMaterialID(slingshotMatID);
 
-		slingshotMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/slingshot.gltf");
+		//slingshotMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/slingshot.gltf");
 
-		AddChild(m_Slingshot);
+		//AddChild(m_Slingshot);
 
-		m_Slingshot->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 1.0f));
+		//m_Slingshot->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 1.0f));
 
 		m_CrosshairTextureID = g_Renderer->InitializeTexture(RESOURCE_LOCATION + "textures/cross-hair-01.png", 4, false, false, false);
 

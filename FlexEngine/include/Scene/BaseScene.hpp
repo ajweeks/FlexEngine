@@ -88,7 +88,8 @@ namespace flex
 
 		std::vector<GameObject*> GetAllObjects();
 
-		BezierCurveList* GetRailInRange(const glm::vec3 pos, real range, real& outDistAlongRail);
+		bool IsRailInRange(const BezierCurveList* rail, const glm::vec3& pos, real range, real& outDistToRail, real& outDistAlongRail);
+		BezierCurveList* GetRailInRange(const glm::vec3& pos, real range, real& outDistAlongRail);
 
 	protected:
 		friend class GameObject;
@@ -134,7 +135,7 @@ namespace flex
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 
-		BezierCurveList m_Curves[1];
+		BezierCurveList m_Curves[2];
 
 	private:
 		/*

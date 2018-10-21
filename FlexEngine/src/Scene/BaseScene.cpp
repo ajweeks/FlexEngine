@@ -229,13 +229,18 @@ namespace flex
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);
 
-		BezierCurve curve0({ 5.0f, 2.0f, 0.0f }, { 15.0f, 2.0f, 7.0f }, { 25.0f, 2.0f, 10.0f }, { 35.0f, 2.0f, 10.0f });
-		BezierCurve curve1({ 35.0f, 2.0f, 10.0f }, { 45.0f, 2.0f, 10.0f }, { 55.0f, 2.0f, 10.0f }, { 65.0f, 2.0f, 10.0f });
-		BezierCurve curve2({ 65.0f, 2.0f, 10.0f }, { 70.0f, 2.0f, 5.0f }, { 75.0f, 2.0f, 2.0f }, { 75.0f, 2.0f, -2.0f });
-		BezierCurve curve3({ 75.0f, 2.0f, -2.0f }, { 70.0f, 2.0f, -6.0f }, { 60.0f, 2.0f, -8.0f }, { 50.0f, 2.0f, -8.0f });
-		std::vector<BezierCurve> curves = { curve0 , curve1, curve2, curve3 };
-
-		m_Curves[0] = BezierCurveList(curves);
+		{
+			BezierCurve curve0({ 5.0f, 0.1f, 5.0f }, { 15.0f, 0.1f, 10.0f }, { 25.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 10.0f });
+			BezierCurve curve1({ 35.0f, 0.1f, 10.0f }, { 45.0f, 0.1f, 10.0f }, { 55.0f, 0.1f, 10.0f }, { 60.0f, 0.1f, 10.0f });
+			BezierCurve curve2({ 60.0f, 0.1f, 10.0f }, { 70.0f, 0.1f, 10.0f }, { 73.0f, 0.1f, 8.0f }, { 73.0f, 0.1f, 2.0f });
+			BezierCurve curve3({ 73.0f, 0.1f, 2.0f }, { 73.0f, 0.1f, -6.0f }, { 60.0f, 0.1f, -8.0f }, { 50.0f, 0.1f, -8.0f });
+			m_Curves[0] = BezierCurveList({ curve0 , curve1, curve2, curve3 });
+		}
+		{
+			BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 15.0f }, { 30.0f, 0.1f, 20.0f }, { 25.0f, 0.1f, 22.0f });
+			BezierCurve curve1({ 25.0f, 0.1f, 22.0f }, { 20.0f, 0.1f, 24.0f }, { 15.0f, 0.1f, 25.0f }, { 10.0f, 0.1f, 25.0f });
+			m_Curves[1] = BezierCurveList({ curve0 , curve1 });
+		}
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
@@ -311,11 +316,25 @@ namespace flex
 		for (const BezierCurveList& curve : m_Curves)
 		{
 			btVector3 highlightColour(0.8f, 0.84f, 0.22f);
-			real distAlongRail = m_Player0->GetController()->GetDistAlongRail();
-			if (distAlongRail == -1.0f)
+			real distAlongRail = -1.0f;
+			BezierCurveList* railRiding = m_Player0->GetController()->GetRailRiding();
+			if (railRiding)
 			{
-				GetRailInRange(m_Player0->GetTransform()->GetWorldPosition(), m_Player0->GetController()->GetRailAttachDistThreshold(), distAlongRail);
-				highlightColour = btVector3(0.75f, 0.65, 0.75f);
+				if (&curve == railRiding)
+				{
+					distAlongRail = m_Player0->GetController()->GetDistAlongRail();
+				}
+			}
+			else
+			{
+				real distToRail;
+				if (IsRailInRange(&curve, m_Player0->GetTransform()->GetWorldPosition(),
+					m_Player0->GetController()->GetRailAttachDistThreshold(),
+					distToRail,
+					distAlongRail))
+				{
+					highlightColour = btVector3(0.75f, 0.65, 0.75f);
+				}
 			}
 			curve.DrawDebug(highlightColour, distAlongRail);
 		}
@@ -650,27 +669,41 @@ namespace flex
 		return result;
 	}
 
-	BezierCurveList* BaseScene::GetRailInRange(const glm::vec3 pos, real range, real& outDistAlongRail)
+	bool BaseScene::IsRailInRange(const BezierCurveList* rail, const glm::vec3& pos, real range, real& outDistToRail, real& outDistAlongRail)
 	{
 		// Let's brute force it baby
 		i32 sampleCount = 250;
+
+		bool bInRange = false;
 		real smallestDist = range;
+		// TODO: Pre-compute AABBs for each curve for early pruning
+		for (i32 i = 0; i <= sampleCount; ++i)
+		{
+			real t = (real)i / (real)(sampleCount);
+			real dist = glm::distance(rail->GetPointOnCurve(t), pos);
+			if (dist < smallestDist)
+			{
+				smallestDist = dist;
+				outDistAlongRail = t;
+				outDistToRail = smallestDist;
+				bInRange = true;
+			}
+		}
+
+		return bInRange;
+	}
+
+	BezierCurveList* BaseScene::GetRailInRange(const glm::vec3& pos, real range, real& outDistAlongRail)
+	{
 		BezierCurveList* result = nullptr;
 
-		// TODO: Pre-compute AABBs for each curve for early pruning
-
+		real smallestDist = range;
 		for (BezierCurveList& curve : m_Curves)
 		{
-			for (i32 i = 0; i <= sampleCount; ++i)
+			if (IsRailInRange(&curve, pos, range, smallestDist, outDistAlongRail))
 			{
-				real t = (real)i / (real)(sampleCount);
-				real dist2 = glm::distance2(curve.GetPointOnCurve(t), pos);
-				if (dist2 < smallestDist)
-				{
-					smallestDist = dist2;
-					result = &curve;
-					outDistAlongRail = t;
-				}
+				range = smallestDist;
+				result = &curve;
 			}
 		}
 
