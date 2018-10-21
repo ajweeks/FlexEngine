@@ -57,6 +57,9 @@ namespace flex
 		real m_DistAlongRail = 0.0f;
 		real m_RailMoveSpeed = 0.25f;
 		real m_RailAttachMinDist = 4.0f;
+		// Is true when player began accelerating while facing down the rail
+		real m_pDRailMovement = 0.0f;
+		bool m_bMovingForwardDownRail = true;
 
 		AudioSourceID m_SoundRailAttachID;
 		AudioSourceID m_SoundRailDetachID;

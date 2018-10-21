@@ -122,20 +122,36 @@ namespace flex
 
 		if (m_bPossessed)
 		{
-			real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
-			real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
-
 			if (m_RailRiding)
 			{
 				glm::vec3 railForward = glm::normalize(m_RailRiding->GetFirstDerivative(m_DistAlongRail));
 
-				m_DistAlongRail += (-moveV * glm::dot(railForward, forward) + -moveH * glm::dot(railForward, right))
-					* m_RailMoveSpeed * g_DeltaTime;
+				real moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER);
+				real moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_TRIGGER);
+
+				if (m_pDRailMovement == 0.0f)
+				{
+					m_bMovingForwardDownRail = (glm::dot(railForward, forward) > 0.0f);
+				}
+
+				if (m_bMovingForwardDownRail)
+				{
+					moveForward *= -1.0f;
+					moveBackward *= -1.0f;
+				}
+
+				real pDist = m_DistAlongRail;
+				m_DistAlongRail += (moveForward - moveBackward) * m_RailMoveSpeed * g_DeltaTime;
 				m_DistAlongRail = glm::clamp(m_DistAlongRail, 0.0f, 1.0f);
 				SnapPosToRail();
+
+				m_pDRailMovement = m_DistAlongRail - pDist;
 			}
 			else if (!m_Player->GetObjectInteractingWith())
 			{
+				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+
 				switch (m_Mode)
 				{
 				case Mode::THIRD_PERSON:
