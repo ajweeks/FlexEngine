@@ -22,12 +22,12 @@ namespace flex
 		void UpdateIsPossessed();
 		bool IsPossessed() const;
 
-		real GetRailAttachDistThreshold() const;
-		real GetDistAlongRail() const;
-		BezierCurveList* GetRailRiding() const;
+		real GetTrackAttachDistThreshold() const;
+		real GetDistAlongTrack() const;
+		BezierCurveList* GetTrackRiding() const;
 
 	private:
-		void SnapPosToRail();
+		void SnapPosToTrack();
 
 		real m_MoveAcceleration = 120.0f;
 		real m_MaxMoveSpeed = 20.0f;
@@ -53,16 +53,16 @@ namespace flex
 		bool m_bGrounded = false;
 		bool m_bPossessed = false;
 
-		BezierCurveList* m_RailRiding = nullptr;
-		real m_DistAlongRail = 0.0f;
-		real m_RailMoveSpeed = 0.25f;
-		real m_RailAttachMinDist = 4.0f;
-		// Is true when player began accelerating while facing down the rail
-		real m_pDRailMovement = 0.0f;
-		bool m_bMovingForwardDownRail = true;
+		BezierCurveList* m_TrackRiding = nullptr;
+		real m_DistAlongTrack = 0.0f;
+		real m_TrackMoveSpeed = 0.20f;
+		real m_TrackAttachMinDist = 4.0f;
+		// Is true when player began accelerating while facing down the track
+		real m_pDTrackMovement = 0.0f;
+		bool m_bMovingForwardDownTrack = true;
 
-		AudioSourceID m_SoundRailAttachID;
-		AudioSourceID m_SoundRailDetachID;
+		AudioSourceID m_SoundTrackAttachID;
+		AudioSourceID m_SoundTrackDetachID;
 
 	};
 } // namespace flex

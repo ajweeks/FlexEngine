@@ -2262,12 +2262,12 @@ namespace flex
 					glm::vec3 euler = glm::eulerAngles(player->GetTransform()->GetWorldRotation());
 					ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
 
-					bool bAttachedToRail = (player->GetController()->GetRailRiding() != nullptr);
-					ImGui::Text("Attached to rail: %s", (bAttachedToRail ? "true" : "false"));
-					if (bAttachedToRail)
+					bool bRiding = (player->GetController()->GetTrackRiding() != nullptr);
+					ImGui::Text("Riding track: %s", (bRiding ? "true" : "false"));
+					if (bRiding)
 					{
 						ImGui::Indent();
-						ImGui::Text("Dist along rail: %.2f", player->GetController()->GetDistAlongRail());
+						ImGui::Text("Dist along track: %.2f", player->GetController()->GetDistAlongTrack());
 						ImGui::Unindent();
 					}
 

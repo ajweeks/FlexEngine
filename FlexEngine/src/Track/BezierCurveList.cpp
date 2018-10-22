@@ -3,7 +3,6 @@
 #include "Track/BezierCurveList.hpp"
 
 #include "Graphics/Renderer.hpp"
-#include "Track/BezierCurve.hpp"
 
 #pragma warning(push, 0)
 #include "LinearMath/btIDebugDraw.h"

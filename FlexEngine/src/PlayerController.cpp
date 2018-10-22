@@ -43,9 +43,9 @@ namespace flex
 		assert(m_PlayerIndex == 0 ||
 			   m_PlayerIndex == 1);
 
-		m_SoundRailAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/crunch-13.wav");
-		m_SoundRailDetachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-02.wav");
-		//m_SoundRailAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-07.wav");
+		m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/crunch-13.wav");
+		m_SoundTrackDetachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-02.wav");
+		//m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-07.wav");
 
 		UpdateIsPossessed();
 	}
@@ -86,20 +86,21 @@ namespace flex
 			}
 			else if (g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::X))
 			{
-				if (m_RailRiding)
+				if (m_TrackRiding)
 				{
-					m_RailRiding = nullptr;
-					AudioManager::PlaySource(m_SoundRailDetachID);
+					m_TrackRiding = nullptr;
+					AudioManager::PlaySource(m_SoundTrackDetachID);
 				}
 				else
 				{
-					real distAlongRail = -1.0f;
-					m_RailRiding = g_SceneManager->CurrentScene()->GetRailInRange(transform->GetWorldPosition(), m_RailAttachMinDist, distAlongRail);
-					if (m_RailRiding)
+					real distAlongTrack = -1.0f;
+					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+					m_TrackRiding = trackManager->GetTrackInRange(transform->GetWorldPosition(), m_TrackAttachMinDist, distAlongTrack);
+					if (m_TrackRiding)
 					{
-						m_DistAlongRail = distAlongRail;
-						SnapPosToRail();
-						AudioManager::PlaySource(m_SoundRailAttachID);
+						m_DistAlongTrack = distAlongTrack;
+						SnapPosToTrack();
+						AudioManager::PlaySource(m_SoundTrackAttachID);
 					}
 				}
 			}
@@ -122,30 +123,30 @@ namespace flex
 
 		if (m_bPossessed)
 		{
-			if (m_RailRiding)
+			if (m_TrackRiding)
 			{
-				glm::vec3 railForward = glm::normalize(m_RailRiding->GetFirstDerivative(m_DistAlongRail));
+				glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetFirstDerivative(m_DistAlongTrack));
 
 				real moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER);
 				real moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_TRIGGER);
 
-				if (m_pDRailMovement == 0.0f)
+				if (m_pDTrackMovement == 0.0f)
 				{
-					m_bMovingForwardDownRail = (glm::dot(railForward, forward) > 0.0f);
+					m_bMovingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
 				}
 
-				if (m_bMovingForwardDownRail)
+				if (m_bMovingForwardDownTrack)
 				{
 					moveForward *= -1.0f;
 					moveBackward *= -1.0f;
 				}
 
-				real pDist = m_DistAlongRail;
-				m_DistAlongRail += (moveForward - moveBackward) * m_RailMoveSpeed * g_DeltaTime;
-				m_DistAlongRail = glm::clamp(m_DistAlongRail, 0.0f, 1.0f);
-				SnapPosToRail();
+				real pDist = m_DistAlongTrack;
+				m_DistAlongTrack += (moveForward - moveBackward) * m_TrackMoveSpeed * g_DeltaTime;
+				m_DistAlongTrack = glm::clamp(m_DistAlongTrack, 0.0f, 1.0f);
+				SnapPosToTrack();
 
-				m_pDRailMovement = m_DistAlongRail - pDist;
+				m_pDTrackMovement = m_DistAlongTrack - pDist;
 			}
 			else if (!m_Player->GetObjectInteractingWith())
 			{
@@ -274,16 +275,16 @@ namespace flex
 		return m_bPossessed;
 	}
 
-	real PlayerController::GetRailAttachDistThreshold() const
+	real PlayerController::GetTrackAttachDistThreshold() const
 	{
-		return m_RailAttachMinDist;
+		return m_TrackAttachMinDist;
 	}
 
-	real PlayerController::GetDistAlongRail() const
+	real PlayerController::GetDistAlongTrack() const
 	{
-		if (m_RailRiding)
+		if (m_TrackRiding)
 		{
-			return m_DistAlongRail;
+			return m_DistAlongTrack;
 		}
 		else
 		{
@@ -291,18 +292,18 @@ namespace flex
 		}
 	}
 
-	BezierCurveList* PlayerController::GetRailRiding() const
+	BezierCurveList* PlayerController::GetTrackRiding() const
 	{
-		return m_RailRiding;
+		return m_TrackRiding;
 	}
 
-	void PlayerController::SnapPosToRail()
+	void PlayerController::SnapPosToTrack()
 	{
-		glm::vec3 pos(m_RailRiding->GetPointOnCurve(m_DistAlongRail));
-		glm::vec3 railForward = glm::normalize(m_RailRiding->GetFirstDerivative(m_DistAlongRail));
-		glm::vec3 railRight = glm::cross(railForward, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::vec3 pos(m_TrackRiding->GetPointOnCurve(m_DistAlongTrack));
+		glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetFirstDerivative(m_DistAlongTrack));
+		glm::vec3 trackRight = glm::cross(trackForward, glm::vec3(0.0f, 1.0f, 0.0f));
 		pos += glm::vec3(0.0f, 1.9f, 0.0f);
-		pos -= railRight * 0.8f;
+		pos -= trackRight * 0.8f;
 		m_Player->GetTransform()->SetWorldPosition(pos, true);
 	}
 } // namespace flex

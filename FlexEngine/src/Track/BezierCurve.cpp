@@ -36,12 +36,12 @@ namespace flex
 
 #define DRAW_LOCAL_AXES 0
 #if DRAW_LOCAL_AXES
-			glm::vec3 railForward = glm::normalize(GetFirstDerivative(t));
-			glm::vec3 railRight = glm::cross(railForward, glm::vec3(0.0f, 1.0f, 0.0f));
-			glm::vec3 railUp = glm::cross(railRight, railForward);
-			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(railRight), btVector3(0.9f, 0.1f, 0.1f));
-			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(railForward), btVector3(0.1f, 0.5f, 0.9f));
-			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(railUp), btVector3(0.1f, 0.9f, 0.1f));
+			glm::vec3 trackForward = glm::normalize(GetFirstDerivative(t));
+			glm::vec3 trackRight = glm::cross(trackForward, glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::vec3 trackUp = glm::cross(trackRight, trackForward);
+			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackRight), btVector3(0.9f, 0.1f, 0.1f));
+			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackForward), btVector3(0.1f, 0.5f, 0.9f));
+			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackUp), btVector3(0.1f, 0.9f, 0.1f));
 #else
 			debugDrawer->drawLine(pPoint, nPoint, lineColour);
 #endif

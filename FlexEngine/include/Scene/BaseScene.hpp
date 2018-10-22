@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "Track/BezierCurveList.hpp"
+#include "Track/TrackManager.hpp"
 
 namespace flex
 {
@@ -88,8 +88,7 @@ namespace flex
 
 		std::vector<GameObject*> GetAllObjects();
 
-		bool IsRailInRange(const BezierCurveList* rail, const glm::vec3& pos, real range, real& outDistToRail, real& outDistAlongRail);
-		BezierCurveList* GetRailInRange(const glm::vec3& pos, real range, real& outDistAlongRail);
+		TrackManager* GetTrackManager();
 
 	protected:
 		friend class GameObject;
@@ -135,7 +134,7 @@ namespace flex
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 
-		BezierCurveList m_Curves[2];
+		TrackManager m_TrackManager;
 
 	private:
 		/*
