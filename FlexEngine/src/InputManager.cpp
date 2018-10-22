@@ -454,6 +454,12 @@ namespace flex
 			return glm::vec2(0, 0);
 		}
 
+		if (m_MousePosition == glm::vec2(-1.0f) ||
+			m_PrevMousePosition == glm::vec2(-1.0f))
+		{
+			return glm::vec2(0.0f);
+		}
+
 		return m_MousePosition - m_PrevMousePosition;
 	}
 
