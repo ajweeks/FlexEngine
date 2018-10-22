@@ -95,6 +95,11 @@ namespace flex
 	 */
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset);
 
+	bool NearlyEquals(real a, real b, real threshhold);
+	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshhold);
+	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold);
+	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold);
+
 	real Lerp(real a, real b, real t);
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);

@@ -37,6 +37,9 @@ namespace flex
 			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override;
 			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
 
+			void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color);
+			void DrawContactPointWithAlpha(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector4& color);
+
 			virtual void flushLines() override;
 			void ClearLines();
 
@@ -47,7 +50,7 @@ namespace flex
 			{
 				btVector3 start;
 				btVector3 end;
-				btVector3 color;
+				btVector4 color;
 			};
 
 			// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()

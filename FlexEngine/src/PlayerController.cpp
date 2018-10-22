@@ -99,7 +99,7 @@ namespace flex
 					if (m_TrackRiding)
 					{
 						m_DistAlongTrack = distAlongTrack;
-						SnapPosToTrack();
+						SnapPosToTrack(0.0f);
 						AudioManager::PlaySource(m_SoundTrackAttachID);
 					}
 				}
@@ -115,7 +115,6 @@ namespace flex
 
 			btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
 			btDiscreteDynamicsWorld* physWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-			// TODO: Do several raytests to allow jumping off an edge
 			physWorld->rayTest(rayStart, rayEnd, rayCallback);
 			m_bGrounded = rayCallback.hasHit();
 		}
@@ -125,14 +124,24 @@ namespace flex
 		{
 			if (m_TrackRiding)
 			{
-				glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetFirstDerivative(m_DistAlongTrack));
-
 				real moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER);
 				real moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_TRIGGER);
 
-				if (m_pDTrackMovement == 0.0f)
+				if (moveForward == 0.0f && moveBackward == 0.0f)
 				{
+					m_bUpdateFacing = true;
+				}
+
+				if (m_bUpdateFacing)
+				{
+					m_bUpdateFacing = false;
+					bool p = m_bMovingForwardDownTrack;
+					glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
 					m_bMovingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
+					if (m_bMovingForwardDownTrack != p)
+					{
+						Print("%d\n", (i32)m_bMovingForwardDownTrack);
+					}
 				}
 
 				if (m_bMovingForwardDownTrack)
@@ -144,7 +153,7 @@ namespace flex
 				real pDist = m_DistAlongTrack;
 				m_DistAlongTrack += (moveForward - moveBackward) * m_TrackMoveSpeed * g_DeltaTime;
 				m_DistAlongTrack = glm::clamp(m_DistAlongTrack, 0.0f, 1.0f);
-				SnapPosToTrack();
+				SnapPosToTrack(pDist);
 
 				m_pDTrackMovement = m_DistAlongTrack - pDist;
 			}
@@ -297,10 +306,21 @@ namespace flex
 		return m_TrackRiding;
 	}
 
-	void PlayerController::SnapPosToTrack()
+	void PlayerController::SnapPosToTrack(real pDistAlongTrack)
 	{
-		glm::vec3 pos(m_TrackRiding->GetPointOnCurve(m_DistAlongTrack));
-		glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetFirstDerivative(m_DistAlongTrack));
+		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		BezierCurveList* newTrack = m_TrackRiding;
+		real newDistAlongTrack = m_DistAlongTrack;
+		glm::vec3 pos = trackManager->GetPointOnTrack(m_TrackRiding, m_DistAlongTrack, pDistAlongTrack, &newTrack, newDistAlongTrack);
+
+		if (newTrack != m_TrackRiding)
+		{
+			m_TrackRiding = newTrack;
+			m_DistAlongTrack = newDistAlongTrack;
+			m_bUpdateFacing = true;
+		}
+
+		glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
 		glm::vec3 trackRight = glm::cross(trackForward, glm::vec3(0.0f, 1.0f, 0.0f));
 		pos += glm::vec3(0.0f, 1.9f, 0.0f);
 		pos -= trackRight * 0.8f;

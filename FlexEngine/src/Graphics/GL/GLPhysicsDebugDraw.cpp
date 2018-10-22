@@ -91,9 +91,26 @@ namespace flex
 			return m_DebugMode;
 		}
 
-		void GLPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+		void GLPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
 			m_LineSegments.push_back(LineSegment{ from, to, color });
+		}
+
+		void GLPhysicsDebugDraw::DrawContactPointWithAlpha(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector4& color)
+		{
+			UNREFERENCED_PARAMETER(normalOnB);
+			UNREFERENCED_PARAMETER(distance);
+			UNREFERENCED_PARAMETER(lifeTime);
+
+			DrawLineWithAlpha(PointOnB + btVector3(-1.0f, 0.0f, 0.0f), PointOnB + btVector3(1.0f, 0.0f, 0.0f), color);
+			DrawLineWithAlpha(PointOnB + btVector3(0.0f, 0.0f, -1.0f), PointOnB + btVector3(0.0f, 0.0f, 1.0f), color);
+			DrawLineWithAlpha(PointOnB + btVector3(0.0f, -1.0f, 0.0f), PointOnB + btVector3(0.0f, -1.0f, 0.0f), color);
+		}
+
+		void GLPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+		{
+			btVector4 color4(color.getX(), color.getY(), color.getZ(), 1.0f);
+			m_LineSegments.push_back(LineSegment{ from, to, color4 });
 		}
 
 		void GLPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
@@ -143,7 +160,7 @@ namespace flex
 				createInfo.positions_3D.push_back(ToVec3(line.start));
 				createInfo.positions_3D.push_back(ToVec3(line.end));
 
-				glm::vec4 color = glm::vec4(ToVec3(line.color), 1.0f);
+				glm::vec4 color = ToVec4(line.color);
 				createInfo.colors_R32G32B32A32.push_back(color);
 				createInfo.colors_R32G32B32A32.push_back(color);
 			}
@@ -198,7 +215,9 @@ namespace flex
 			glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
 
 			glDepthMask(GL_FALSE);
-			glDisable(GL_BLEND);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 			glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
 		}

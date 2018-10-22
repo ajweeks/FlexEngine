@@ -3,10 +3,7 @@
 #include "Track/BezierCurve.hpp"
 
 #include "Graphics/Renderer.hpp"
-
-#pragma warning(push, 0)
-#include "LinearMath/btIDebugDraw.h"
-#pragma warning(pop)
+#include "Graphics/GL/GLPhysicsDebugDraw.hpp"
 
 namespace flex
 {
@@ -16,19 +13,19 @@ namespace flex
 
 	BezierCurve::BezierCurve(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3)
 	{
-		m_Points[0] = p0;
-		m_Points[1] = p1;
-		m_Points[2] = p2;
-		m_Points[3] = p3;
+		points[0] = p0;
+		points[1] = p1;
+		points[2] = p2;
+		points[3] = p3;
 	}
 
-	void BezierCurve::DrawDebug(bool bHighlighted, const btVector3& highlightColour) const
+	void BezierCurve::DrawDebug(bool bHighlighted, const btVector4& baseColour, const btVector4& highlightColour) const
 	{
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+		gl::GLPhysicsDebugDraw* debugDrawer = (gl::GLPhysicsDebugDraw*)g_Renderer->GetDebugDrawer();
 
-		btVector3 lineColour = bHighlighted ? highlightColour : btVector3(0.9f, 0.2f, 0.9f);
+		btVector4 lineColour = bHighlighted ? highlightColour : baseColour;
 		i32 segmentCount = 20;
-		btVector3 pPoint = ToBtVec3(m_Points[0]);
+		btVector3 pPoint = ToBtVec3(points[0]);
 		for (i32 i = 0; i <= segmentCount; ++i)
 		{
 			real t = (real)i / (real)segmentCount;
@@ -36,21 +33,28 @@ namespace flex
 
 #define DRAW_LOCAL_AXES 0
 #if DRAW_LOCAL_AXES
-			glm::vec3 trackForward = glm::normalize(GetFirstDerivative(t));
+			glm::vec3 trackForward = glm::normalize(GetCurveDirectionAt(t));
 			glm::vec3 trackRight = glm::cross(trackForward, glm::vec3(0.0f, 1.0f, 0.0f));
 			glm::vec3 trackUp = glm::cross(trackRight, trackForward);
 			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackRight), btVector3(0.9f, 0.1f, 0.1f));
 			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackForward), btVector3(0.1f, 0.5f, 0.9f));
 			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackUp), btVector3(0.1f, 0.9f, 0.1f));
 #else
-			debugDrawer->drawLine(pPoint, nPoint, lineColour);
+			debugDrawer->DrawLineWithAlpha(pPoint, nPoint, lineColour);
 #endif
 
 			pPoint = nPoint;
 		}
 
-		btVector3 pointColour(0.2f, 0.2f, 0.1f);
-		for (const glm::vec3& point : m_Points)
+		btVector4 pointColour(0.2f, 0.2f, 0.1f, 0.25f);
+
+#define DRAW_HANDLES 1
+#if DRAW_HANDLES
+		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[0]), ToBtVec3(points[1]), pointColour);
+		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), pointColour);
+#endif
+
+		for (const glm::vec3& point : points)
 		{
 			debugDrawer->drawSphere(ToBtVec3(point), 0.1f, pointColour);
 		}
@@ -60,18 +64,18 @@ namespace flex
 	{
 		t = glm::clamp(t, 0.0f, 1.0f);
 		real oneMinusT = 1.0f - t;
-		return oneMinusT * oneMinusT * oneMinusT * m_Points[0] +
-			3.0f * oneMinusT * oneMinusT * t * m_Points[1] +
-			3.0f * oneMinusT * t * t * m_Points[2] +
-			t * t * t * m_Points[3];
+		return oneMinusT * oneMinusT * oneMinusT * points[0] +
+			3.0f * oneMinusT * oneMinusT * t * points[1] +
+			3.0f * oneMinusT * t * t * points[2] +
+			t * t * t * points[3];
 	}
 
-	glm::vec3 BezierCurve::GetFirstDerivative(real t) const
+	glm::vec3 BezierCurve::GetCurveDirectionAt(real t) const
 	{
 		t = glm::clamp(t, 0.0f, 1.0f);
 		real oneMinusT = 1.0f - t;
-		return 3.0f * oneMinusT * oneMinusT * (m_Points[1] - m_Points[0]) +
-			6.0f * oneMinusT * t * (m_Points[2] - m_Points[1]) +
-			3.0f * t * t * (m_Points[3] - m_Points[2]);
+		return 3.0f * oneMinusT * oneMinusT * (points[1] - points[0]) +
+			6.0f * oneMinusT * t * (points[2] - points[1]) +
+			3.0f * t * t * (points[3] - points[2]);
 	}
 } // namespace flex

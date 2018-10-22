@@ -716,6 +716,32 @@ namespace flex
 		return -1;
 	}
 
+	bool NearlyEquals(real a, real b, real threshhold)
+	{
+		return (abs(a - b) < threshhold);
+	}
+
+	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshhold)
+	{
+		return (abs(a.x - b.x) < threshhold) &&
+			(abs(a.y - b.y) < threshhold);
+	}
+
+	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold)
+	{
+		return (abs(a.x - b.x) < threshhold) &&
+			(abs(a.y - b.y) < threshhold) &&
+			(abs(a.z - b.z) < threshhold);
+	}
+
+	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold)
+	{
+		return (abs(a.x - b.x) < threshhold) &&
+			(abs(a.y - b.y) < threshhold) &&
+			(abs(a.z - b.z) < threshhold) &&
+			(abs(a.w - b.w) < threshhold);
+	}
+
 	real Lerp(real a, real b, real t)
 	{
 		return a * (1.0f - t) + b * t;

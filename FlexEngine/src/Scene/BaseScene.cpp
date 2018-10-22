@@ -242,6 +242,12 @@ namespace flex
 			BezierCurve curve1({ 25.0f, 0.1f, 22.0f }, { 20.0f, 0.1f, 24.0f }, { 15.0f, 0.1f, 25.0f }, { 10.0f, 0.1f, 25.0f });
 			m_TrackManager.AddTrack(BezierCurveList({ curve0 , curve1 }));
 		}
+		{
+			BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 40.0f, 0.1f, -2.0f }, { 45.0f, 0.1f, 4.0f }, { 50.0f, 0.1f, -8.0f });
+			m_TrackManager.AddTrack(BezierCurveList({ curve0 }));
+		}
+		m_TrackManager.FindJunctions();
+
 
 		for (GameObject* rootObject : m_RootObjects)
 		{

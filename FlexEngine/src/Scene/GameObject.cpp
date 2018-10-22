@@ -1836,7 +1836,9 @@ namespace flex
 		assert(matID != InvalidMaterialID);
 		MeshComponent* skyboxMesh = new MeshComponent(matID, this);
 		skyboxMesh->SetRequiredAttributesFromMaterialID(matID);
-		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
+		RenderObjectCreateInfo createInfo = {};
+		createInfo.cullFace = CullFace::NONE;
+		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX, &createInfo);
 		SetMeshComponent(skyboxMesh);
 
 		JSONObject skyboxInfo;

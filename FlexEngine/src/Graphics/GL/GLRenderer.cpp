@@ -1060,7 +1060,7 @@ namespace flex
 			renderObject->indices = createInfo->indices;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
-			renderObject->enableCulling = createInfo->enableCulling ? GL_TRUE : GL_FALSE;
+			renderObject->enableCulling = (createInfo->cullFace == CullFace::NONE ? GL_FALSE : (createInfo->enableCulling ? GL_TRUE : GL_FALSE));
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
 			renderObject->editorObject = createInfo->editorObject;
@@ -1291,11 +1291,10 @@ namespace flex
 			glBindVertexArray(skyboxRenderObject->VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
 
-			glCullFace(skyboxRenderObject->cullFace);
-
 			if (skyboxRenderObject->enableCulling)
 			{
 				glEnable(GL_CULL_FACE);
+				glCullFace(skyboxRenderObject->cullFace);
 			}
 			else
 			{
@@ -1368,13 +1367,12 @@ namespace flex
 			if (skybox->enableCulling)
 			{
 				glEnable(GL_CULL_FACE);
+				glCullFace(skybox->cullFace);
 			}
 			else
 			{
 				glDisable(GL_CULL_FACE);
 			}
-
-			glCullFace(skybox->cullFace);
 
 			glDepthFunc(skybox->depthTestReadFunc);
 			glDepthMask(skybox->depthWriteEnable);
@@ -1492,13 +1490,12 @@ namespace flex
 			if (m_1x1_NDC_Quad->enableCulling)
 			{
 				glEnable(GL_CULL_FACE);
+				glCullFace(m_1x1_NDC_Quad->cullFace);
 			}
 			else
 			{
 				glDisable(GL_CULL_FACE);
 			}
-
-			glCullFace(m_1x1_NDC_Quad->cullFace);
 
 			glDepthFunc(GL_ALWAYS);
 
@@ -1557,13 +1554,12 @@ namespace flex
 			if (skybox->enableCulling)
 			{
 				glEnable(GL_CULL_FACE);
+				glCullFace(skybox->cullFace);
 			}
 			else
 			{
 				glDisable(GL_CULL_FACE);
 			}
-
-			glCullFace(skybox->cullFace);
 
 			glDepthFunc(skybox->depthTestReadFunc);
 
@@ -2280,13 +2276,12 @@ namespace flex
 				if (skybox->enableCulling)
 				{
 					glEnable(GL_CULL_FACE);
+					glCullFace(skybox->cullFace);
 				}
 				else
 				{
 					glDisable(GL_CULL_FACE);
 				}
-
-				glCullFace(skybox->cullFace);
 
 				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
 				glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
@@ -2337,13 +2332,12 @@ namespace flex
 				if (gBufferQuad->enableCulling)
 				{
 					glEnable(GL_CULL_FACE);
+					glCullFace(gBufferQuad->cullFace);
 				}
 				else
 				{
 					glDisable(GL_CULL_FACE);
 				}
-
-				glCullFace(gBufferQuad->cullFace);
 
 				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
 				glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
@@ -2806,13 +2800,13 @@ namespace flex
 			if (spriteRenderObject->enableCulling)
 			{
 				glEnable(GL_CULL_FACE);
+				glCullFace(spriteRenderObject->cullFace);
 			}
 			else
 			{
 				glDisable(GL_CULL_FACE);
 			}
 
-			glCullFace(spriteRenderObject->cullFace);
 			// TODO: Remove (use draw call info member)
 			glDepthMask(spriteRenderObject->depthWriteEnable);
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
@@ -3592,16 +3586,15 @@ namespace flex
 				glBindVertexArray(renderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
-				//if (renderObject->enableCulling)
-				//{
-				//	glEnable(GL_CULL_FACE);
-
-				//	glCullFace(renderObject->cullFace);
-				//}
-				//else
-				//{
-				//	glDisable(GL_CULL_FACE);
-				//}
+				if (renderObject->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
+					glCullFace(renderObject->cullFace);
+				}
+				else
+				{
+					glDisable(GL_CULL_FACE);
+				}
 
 				// TODO: Move to translucent pass?
 				if (shader->translucent)
