@@ -187,6 +187,9 @@ namespace flex
 		{
 			m_GamepadStates[gamepadIndex].axes[i] = axes[i];
 		}
+		// Map triggers into range [0.0,1.0]
+		m_GamepadStates[gamepadIndex].axes[4] = m_GamepadStates[gamepadIndex].axes[4] * 0.5f + 0.5f;
+		m_GamepadStates[gamepadIndex].axes[5] = m_GamepadStates[gamepadIndex].axes[5] * 0.5f + 0.5f;
 
 		HandleRadialDeadZone(&m_GamepadStates[gamepadIndex].axes[0], &m_GamepadStates[gamepadIndex].axes[1]);
 		HandleRadialDeadZone(&m_GamepadStates[gamepadIndex].axes[2], &m_GamepadStates[gamepadIndex].axes[3]);
