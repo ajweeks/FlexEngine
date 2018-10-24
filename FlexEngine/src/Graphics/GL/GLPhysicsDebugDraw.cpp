@@ -36,11 +36,38 @@ namespace flex
 			}
 
 			m_VertexBufferData = {};
+			m_VertexBufferCreateInfo = {};
+			m_VertexBufferCreateInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+
+			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
+			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
+
+			glUseProgram(glShader->program);
+
+			glGenVertexArrays(1, &m_VAO);
+			glGenBuffers(1, &m_VBO);
+
+			glBindVertexArray(m_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+
+			m_VertAttribPosLoc = glGetAttribLocation(glShader->program, "in_Position");
+			m_VertAttribColLoc = glGetAttribLocation(glShader->program, "in_Color");
+			glEnableVertexAttribArray((GLuint)m_VertAttribPosLoc);
+			glEnableVertexAttribArray((GLuint)m_VertAttribColLoc);
+
+			if (m_VertAttribPosLoc == -1.0f ||
+				m_VertAttribColLoc == -1.0f)
+			{
+				PrintWarn("Failed to find physics debug shader vertex attributes!\n");
+			}
 		}
 
 		void GLPhysicsDebugDraw::Destroy()
 		{
 			m_VertexBufferData.Destroy();
+
+			glDeleteVertexArrays(1, &m_VAO);
+			glDeleteBuffers(1, &m_VBO);
 		}
 
 		void GLPhysicsDebugDraw::UpdateDebugMode()
@@ -152,56 +179,41 @@ namespace flex
 
 			m_VertexBufferData.Destroy(); // Destroy previous frame's buffer since it's already been drawn
 
-			VertexBufferData::CreateInfo createInfo = {};
-			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+			m_VertexBufferCreateInfo.positions_3D.clear();
+			m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
+
+			m_VertexBufferCreateInfo.positions_3D.reserve(m_LineSegments.size() * 2);
+			m_VertexBufferCreateInfo.colors_R32G32B32A32.reserve(m_LineSegments.size() * 2);
 
 			for (LineSegment& line : m_LineSegments)
 			{
-				createInfo.positions_3D.push_back(ToVec3(line.start));
-				createInfo.positions_3D.push_back(ToVec3(line.end));
+				m_VertexBufferCreateInfo.positions_3D.push_back(ToVec3(line.start));
+				m_VertexBufferCreateInfo.positions_3D.push_back(ToVec3(line.end));
 
 				glm::vec4 color = ToVec4(line.color);
-				createInfo.colors_R32G32B32A32.push_back(color);
-				createInfo.colors_R32G32B32A32.push_back(color);
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.push_back(color);
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.push_back(color);
 			}
 
-			m_VertexBufferData.Initialize(&createInfo);
+			m_VertexBufferData.Initialize(&m_VertexBufferCreateInfo);
 
 			glUseProgram(glShader->program);
 
-			glGenVertexArrays(1, &m_VAO);
 			glBindVertexArray(m_VAO);
 
-			glGenBuffers(1, &m_VBO);
 			glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STREAM_DRAW);
 
-			// Describe shader variables
+			// Describe shader variables (TODO: Why can't this be done just once in initialize? glBufferData)
 			{
 				real* currentLocation = (real*)0;
 
-				GLint location = glGetAttribLocation(glShader->program, "in_Position");
-				if (location != -1)
-				{
-					glEnableVertexAttribArray((GLuint)location);
+				glVertexAttribPointer((GLuint)m_VertAttribPosLoc, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
+				currentLocation += 3;
 
-
-					glVertexAttribPointer((GLuint)location, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-
-					currentLocation += 3;
-				}
-
-				location = glGetAttribLocation(glShader->program, "in_Color");
-				if (location != -1)
-				{
-					glEnableVertexAttribArray((GLuint)location);
-
-					glVertexAttribPointer((GLuint)location, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-
-					currentLocation += 4;
-				}
+				glVertexAttribPointer((GLuint)m_VertAttribColLoc, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
+				currentLocation += 4;
 			}
-
 
 			glm::mat4 model = glm::mat4(1.0f);
 			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();

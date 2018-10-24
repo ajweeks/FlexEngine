@@ -65,8 +65,12 @@ namespace flex
 			GLuint m_VAO = 0;
 			GLuint m_VBO = 0;
 
+			i32 m_VertAttribPosLoc = -1;
+			i32 m_VertAttribColLoc = -1;
+
 			// Per-frame data
 			VertexBufferData m_VertexBufferData;
+			VertexBufferData::CreateInfo m_VertexBufferCreateInfo;
 		};
 	} // namespace gl
 } // namespace flex
