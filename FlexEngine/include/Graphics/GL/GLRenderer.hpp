@@ -34,7 +34,6 @@ namespace flex
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
-			virtual void ClearRenderObjects() override;
 			virtual void ClearMaterials() override;
 
 			virtual void Update() override;

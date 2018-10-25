@@ -37,7 +37,6 @@ namespace flex
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
-		virtual void ClearRenderObjects() = 0;
 		virtual void ClearMaterials() = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;

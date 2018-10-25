@@ -1203,20 +1203,6 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
-		void GLRenderer::ClearRenderObjects()
-		{
-			for (GLRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject)
-				{
-					DestroyRenderObject(renderObject->renderID, renderObject);
-				}
-			}
-			m_RenderObjects.clear();
-
-			m_bRebatchRenderObjects = true;
-		}
-
 		void GLRenderer::ClearMaterials()
 		{
 			auto iter = m_Materials.begin();

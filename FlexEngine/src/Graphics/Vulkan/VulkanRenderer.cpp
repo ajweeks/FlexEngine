@@ -2783,18 +2783,6 @@ namespace flex
 			UNREFERENCED_PARAMETER(renderID);
 		}
 
-		void VulkanRenderer::ClearRenderObjects()
-		{
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject)
-				{
-					DestroyRenderObject(renderObject->renderID, renderObject);
-				}
-			}
-			m_RenderObjects.clear();
-		}
-
 		void VulkanRenderer::ClearMaterials()
 		{
 			m_Materials.clear();

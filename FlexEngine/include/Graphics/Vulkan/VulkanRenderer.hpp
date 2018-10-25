@@ -33,7 +33,6 @@ namespace flex
 			virtual u32 InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
-			virtual void ClearRenderObjects() override;
 			virtual void ClearMaterials() override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
@@ -48,7 +47,7 @@ namespace flex
 			virtual void ReloadShaders() override;
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
-			
+
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
@@ -59,7 +58,7 @@ namespace flex
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
 				DataType dataType, bool normalized, i32 stride, void* pointer) override;
-			
+
 			virtual void SetSkyboxMesh(MeshComponent* skyboxMesh) override;
 			virtual MeshComponent* GetSkyboxMesh() override;
 
@@ -72,7 +71,7 @@ namespace flex
 			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
-			
+
 			virtual void NewFrame() override;
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
@@ -144,7 +143,7 @@ namespace flex
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
 
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData = nullptr);
-			
+
 			// Creates vertex buffers for all render objects
 			void CreateStaticVertexBuffers();
 
@@ -199,12 +198,12 @@ namespace flex
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
-			/* 
+			/*
 			 * How many materials we expect to have *at most* at any given time
 			 * This is only used to prevent local material reference variables to
 			 * remain valid, it could (should?) also be solved by storing materials
 			 * in a linked list, rather than a dynamic array
-			*/ 
+			*/
 			static const u32 MAT_CAPACITY = 25;
 
 			std::vector<VulkanRenderObject*> m_RenderObjects;
@@ -291,7 +290,7 @@ namespace flex
 			std::vector<u32> m_gBufferQuadIndices;
 
 			MeshComponent* m_SkyBoxMesh = nullptr;
-			
+
 			VkClearColorValue m_ClearColor;
 
 			static std::array<glm::mat4, 6> m_CaptureViews;
