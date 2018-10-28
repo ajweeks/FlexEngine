@@ -460,7 +460,7 @@ namespace flex
 		if (m_MousePosition == glm::vec2(-1.0f) ||
 			m_PrevMousePosition == glm::vec2(-1.0f))
 		{
-			return glm::vec2(0.0f);
+			return VEC2_ZERO;
 		}
 
 		return m_MousePosition - m_PrevMousePosition;
@@ -588,8 +588,8 @@ namespace flex
 
 		for (MouseDrag& mouseDrag : m_MouseButtonDrags)
 		{
-			mouseDrag.startLocation = glm::vec2(0.0f);
-			mouseDrag.endLocation = glm::vec2(0.0f);
+			mouseDrag.startLocation = VEC2_ZERO;
+			mouseDrag.endLocation = VEC2_ZERO;
 		}
 		g_Window->SetCursorMode(CursorMode::NORMAL);
 

@@ -1024,7 +1024,7 @@ namespace flex
 			comma3 == std::string::npos)
 		{
 			// Clipboard doesn't contain correctly formatted color!
-			return glm::vec4(0.0f);
+			return VEC4_ZERO;
 		}
 
 		glm::vec4 result(
@@ -1212,7 +1212,7 @@ namespace flex
 		bool bValueChanged = ImGui::DragFloat3(label, &rotation[0], 0.1f);
 		if (ImGui::IsItemClicked(1))
 		{
-			rotation = glm::vec3(0.0f);
+			rotation = VEC3_ZERO;
 			bValueChanged = true;
 		}
 

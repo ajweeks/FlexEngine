@@ -489,7 +489,7 @@ namespace flex
 		}
 
 		m_BoundingSphereRadius = 0;
-		m_BoundingSphereCenterPoint = glm::vec3(0.0f);
+		m_BoundingSphereCenterPoint = VEC3_ZERO;
 		m_VertexBufferData.Destroy();
 
 		const aiScene* scene = nullptr;

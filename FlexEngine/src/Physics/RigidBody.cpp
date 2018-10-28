@@ -19,7 +19,7 @@ namespace flex
 		m_Group(group),
 		m_Mask(mask),
 		m_LocalPosition(0.0f),
-		m_LocalRotation(glm::quat(glm::vec3(0.0f))),
+		m_LocalRotation(QUAT_UNIT),
 		m_LocalScale(1.0f)
 	{
 	}
@@ -267,13 +267,13 @@ namespace flex
 
 		btTransform transform = m_RigidBody->getWorldTransform();
 
-		glm::mat4 worldTransformMat = glm::translate(glm::mat4(1.0f), ToVec3(transform.getOrigin())) *
+		glm::mat4 worldTransformMat = glm::translate(MAT4_IDENTITY, ToVec3(transform.getOrigin())) *
 			glm::mat4(ToQuaternion(transform.getRotation())) *
-			glm::scale(glm::mat4(1.0f), ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
+			glm::scale(MAT4_IDENTITY, ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
 
-		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
+		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition) *
 			glm::mat4(m_LocalRotation) *
-			glm::scale(glm::mat4(1.0f), m_LocalScale);
+			glm::scale(MAT4_IDENTITY, m_LocalScale);
 		glm::mat4 invChildTransformMat = glm::inverse(childTransformMat);
 
 		glm::mat4 finalTransformMat = worldTransformMat * invChildTransformMat;
@@ -289,10 +289,10 @@ namespace flex
 			return;
 		}
 
-		glm::mat4 parentTransformMat = glm::translate(glm::mat4(1.0f), m_ParentTransform->GetWorldPosition())
+		glm::mat4 parentTransformMat = glm::translate(MAT4_IDENTITY, m_ParentTransform->GetWorldPosition())
 			* glm::mat4(m_ParentTransform->GetWorldRotation());
 
-		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
+		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition) *
 			glm::mat4(m_LocalRotation);
 
 		glm::mat4 finalTransformMat = parentTransformMat * childTransformMat;

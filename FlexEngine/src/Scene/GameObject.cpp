@@ -199,7 +199,7 @@ namespace flex
 		bool bColliderContainsOffset = false;
 
 		glm::vec3 localPos(0.0f);
-		glm::quat localRot(glm::vec3(0.0f));
+		glm::quat localRot(VEC3_ZERO);
 		glm::vec3 localScale(1.0f);
 
 		JSONObject colliderObj;
@@ -489,18 +489,18 @@ namespace flex
 			} break;
 			}
 
-			if (m_RigidBody->GetLocalPosition() != glm::vec3(0.0f))
+			if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
 			{
 				colliderObj.fields.emplace_back("offset pos", JSONValue(Vec3ToString(m_RigidBody->GetLocalPosition(), 3)));
 			}
 
-			if (m_RigidBody->GetLocalRotation() != glm::quat(glm::vec3(0.0f)))
+			if (m_RigidBody->GetLocalRotation() != QUAT_UNIT)
 			{
 				glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
 				colliderObj.fields.emplace_back("offset rot", JSONValue(Vec3ToString(localRotEuler, 3)));
 			}
 
-			if (m_RigidBody->GetLocalScale() != glm::vec3(1.0f))
+			if (m_RigidBody->GetLocalScale() != VEC3_ONE)
 			{
 				colliderObj.fields.emplace_back("offset scale", JSONValue(Vec3ToString(m_RigidBody->GetLocalScale(), 3)));
 			}
@@ -1570,7 +1570,7 @@ namespace flex
 		blockInfo.SetBoolChecked("affected by gravity", bAffectedByGravity);
 
 		blockInfo.SetVec3Checked("move axis", moveAxis);
-		if (moveAxis == glm::vec3(0.0f))
+		if (moveAxis == VEC3_ZERO)
 		{
 			PrintWarn("Rising block's move axis is not set! It won't be able to move\n");
 		}
@@ -1860,7 +1860,7 @@ namespace flex
 
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();
-		if (worldRot != glm::quat(glm::vec3(0.0f)))
+		if (worldRot != QUAT_UNIT)
 		{
 			std::string eulerRotStr = Vec3ToString(glm::eulerAngles(worldRot), 2);
 			skyboxInfo.fields.emplace_back("rot", JSONValue(eulerRotStr));

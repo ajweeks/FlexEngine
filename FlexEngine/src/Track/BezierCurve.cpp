@@ -34,7 +34,7 @@ namespace flex
 #define DRAW_LOCAL_AXES 0
 #if DRAW_LOCAL_AXES
 			glm::vec3 trackForward = glm::normalize(GetCurveDirectionAt(t));
-			glm::vec3 trackRight = glm::cross(trackForward, glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::vec3 trackRight = glm::cross(trackForward, VEC3_UP);
 			glm::vec3 trackUp = glm::cross(trackRight, trackForward);
 			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackRight), btVector3(0.9f, 0.1f, 0.1f));
 			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackForward), btVector3(0.1f, 0.5f, 0.9f));

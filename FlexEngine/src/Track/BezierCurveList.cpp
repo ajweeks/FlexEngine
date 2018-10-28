@@ -41,7 +41,7 @@ namespace flex
 	{
 		if (m_Curves.empty())
 		{
-			return glm::vec3(0.0f);
+			return VEC3_ZERO;
 		}
 
 		real curveT = 0.0f;
@@ -54,7 +54,7 @@ namespace flex
 	{
 		if (m_Curves.empty())
 		{
-			return glm::vec3(0.0f);
+			return VEC3_ZERO;
 		}
 
 		i32 curveIndex = 0;

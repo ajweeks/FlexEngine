@@ -213,7 +213,7 @@ namespace flex
 		valueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || valueChanged;
 		if (ImGui::IsItemClicked(1))
 		{
-			translation = glm::vec3(0.0f);
+			translation = VEC3_ZERO;
 			valueChanged = true;
 		}
 
@@ -223,7 +223,7 @@ namespace flex
 		valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
 		if (ImGui::IsItemClicked(1))
 		{
-			scale = glm::vec3(1.0f);
+			scale = VEC3_ONE;
 			valueChanged = true;
 		}
 

@@ -177,7 +177,7 @@ namespace flex
 		{
 			return ParseVec2(GetString(label));
 		}
-		return glm::vec2(0.0f);
+		return VEC2_ZERO;
 	}
 
 	glm::vec3 JSONObject::GetVec3(const std::string& label) const
@@ -186,7 +186,7 @@ namespace flex
 		{
 			return ParseVec3(GetString(label));
 		}
-		return glm::vec3(0.0f);
+		return VEC3_ZERO;
 	}
 
 	glm::vec4 JSONObject::GetVec4(const std::string& label) const
@@ -195,7 +195,7 @@ namespace flex
 		{
 			return ParseVec4(GetString(label));
 		}
-		return glm::vec4(0.0f);
+		return VEC4_ZERO;
 	}
 
 	i32 JSONObject::GetInt(const std::string& label) const

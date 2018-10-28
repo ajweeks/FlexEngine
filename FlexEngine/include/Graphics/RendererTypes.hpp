@@ -147,8 +147,8 @@ namespace flex
 
 	struct DirectionalLight
 	{
-		glm::quat rotation = glm::quat(glm::vec3(0.0f)); // Applied to unit vec (1,0,0) before being sent to shader
-		glm::vec4 color = glm::vec4(1.0f);
+		glm::quat rotation = QUAT_UNIT; // Applied to unit vec (1,0,0) before being sent to shader
+		glm::vec4 color = VEC4_ONE;
 		u32 enabled = 1;
 		real brightness = 1.0f;
 
@@ -159,7 +159,7 @@ namespace flex
 		real shadowMapZoom = 30.0f;
 
 		// Not used for rendering but allows users to position in the world
-		glm::vec3 position = glm::vec3(0.0f);
+		glm::vec3 position = VEC3_ZERO;
 
 		// DEBUG: (just for preview in ImGui)
 		u32 shadowTextureID = 0;
@@ -167,8 +167,8 @@ namespace flex
 
 	struct PointLight
 	{
-		glm::vec4 position = glm::vec4(0.0f);
-		glm::vec4 color = glm::vec4(1.0f);
+		glm::vec4 position = VEC4_ZERO;
+		glm::vec4 color = VEC4_ONE;
 		u32 enabled = 1;
 		real brightness = 500.0f;
 	};
@@ -404,11 +404,11 @@ namespace flex
 		u32 FBO = 0; // 0 for rendering to final RT
 		u32 RBO = 0; // 0 for rendering to final RT
 		MaterialID materialID = InvalidMaterialID;
-		glm::vec3 pos = glm::vec3(0.0f);
-		glm::quat rotation = glm::quat(glm::vec3(0.0f));
-		glm::vec3 scale = glm::vec3(1.0f);
+		glm::vec3 pos = VEC3_ZERO;
+		glm::quat rotation = QUAT_UNIT;
+		glm::vec3 scale = VEC3_ONE;
 		AnchorPoint anchor = AnchorPoint::TOP_LEFT;
-		glm::vec4 color = glm::vec4(1.0f);
+		glm::vec4 color = VEC4_ONE;
 		bool bScreenSpace = true;
 		bool bReadDepth = true;
 		bool bWriteDepth = true;

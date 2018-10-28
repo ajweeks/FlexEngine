@@ -161,7 +161,7 @@ namespace flex
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.name = "Transform";
 			matCreateInfo.shaderName = "color";
-			matCreateInfo.constAlbedo = glm::vec3(1.0f);
+			matCreateInfo.constAlbedo = VEC3_ONE;
 			matCreateInfo.engineMaterial = true;
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
@@ -1122,7 +1122,7 @@ namespace flex
 						} break;
 						case TransformState::ROTATE:
 						{
-							glm::quat dRot(glm::vec3(0.0f));
+							glm::quat dRot(VEC3_ZERO);
 
 							static glm::quat pGizmoRot = gizmoTransform->GetLocalRotation();
 							Print("%.2f,%.2f,%.2f,%.2f\n", pGizmoRot.x, pGizmoRot.y, pGizmoRot.z, pGizmoRot.w);
@@ -1230,7 +1230,7 @@ namespace flex
 									m_bDraggingGizmo = true;
 									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 									m_DraggingGizmoOffset = -1.0f;
-									m_DraggingGizmoScaleLast = glm::vec3(0.0f);
+									m_DraggingGizmoScaleLast = VEC3_ZERO;
 								}
 								else if (bMouseDown)
 								{
@@ -1254,7 +1254,7 @@ namespace flex
 									m_bDraggingGizmo = true;
 									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 									m_DraggingGizmoOffset = -1.0f;
-									m_DraggingGizmoScaleLast = glm::vec3(0.0f);
+									m_DraggingGizmoScaleLast = VEC3_ZERO;
 								}
 								else if (bMouseDown)
 								{
@@ -1278,7 +1278,7 @@ namespace flex
 									m_bDraggingGizmo = true;
 									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 									m_DraggingGizmoOffset = -1.0f;
-									m_DraggingGizmoScaleLast = glm::vec3(0.0f);
+									m_DraggingGizmoScaleLast = VEC3_ZERO;
 								}
 								else if (bMouseDown)
 								{
@@ -2363,8 +2363,8 @@ namespace flex
 	void FlexEngine::DeselectCurrentlySelectedObjects()
 	{
 		m_CurrentlySelectedObjects.clear();
-		m_SelectedObjectsCenterPos = glm::vec3(0.0f);
-		m_SelectedObjectDragStartPos = glm::vec3(0.0f);
+		m_SelectedObjectsCenterPos = VEC3_ZERO;
+		m_SelectedObjectDragStartPos = VEC3_ZERO;
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
 	}
@@ -2406,7 +2406,7 @@ namespace flex
 					if (IsNanOrInf(camPos))
 					{
 						PrintError("Camera pos was saved out as nan or inf, resetting to 0\n");
-						camPos = glm::vec3(0.0f);
+						camPos = VEC3_ZERO;
 					}
 					cam->SetPosition(camPos);
 
@@ -2831,7 +2831,7 @@ namespace flex
 			return constrainedPoint;
 		}
 
-		return glm::vec3(0.0f);
+		return VEC3_ZERO;
 	}
 
 	glm::quat FlexEngine::CalculateDeltaRotationFromGizmoDrag(
@@ -2948,7 +2948,7 @@ namespace flex
 			btVector3(0.5f, 1.0f, 1.0f));
 
 		real dAngle = m_LastAngle - angle;
-		glm::quat result(glm::vec3(0.0f));
+		glm::quat result(VEC3_ZERO);
 		if (!IsNanOrInf(dAngle))
 		{
 			glm::quat newRot = glm::rotate(pRot, dAngle, m_AxisOfRotation);

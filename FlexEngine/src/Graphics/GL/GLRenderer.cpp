@@ -146,12 +146,12 @@ namespace flex
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
 			m_CaptureViews =
 			{
-				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+				glm::lookAtRH(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAtRH(VEC3_ZERO, glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
 			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION + "textures/alpha-bg.png", 3, false, false, false);
@@ -369,7 +369,7 @@ namespace flex
 			selectedObjectMatCreateInfo.name = "Selected Object";
 			selectedObjectMatCreateInfo.shaderName = "color";
 			selectedObjectMatCreateInfo.engineMaterial = true;
-			selectedObjectMatCreateInfo.colorMultiplier = glm::vec4(1.0f);
+			selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
 			m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
 
 			if (!m_BRDFTexture)
@@ -1893,7 +1893,7 @@ namespace flex
 
 			SetFont(m_FntGant);
 			DrawString("FLEX ENGINE", glm::vec4(0.95f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f, false, letterOffsetsEmpty);
-			//DrawString("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f), 1.5f, false, letterOffsetsEmpty);
+			//DrawString("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, VEC2_ZERO, 1.5f, false, letterOffsetsEmpty);
 			//DrawString("#WOWIE# @LIQWIDICE FILE_NAME.ZIP * 17 (0)", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 1.5f, false, letterOffsetsEmpty);
 			//DrawString("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false, letterOffsetsEmpty);
 
@@ -1944,15 +1944,15 @@ namespace flex
 			DrawString(str, glm::vec4(0.9f, 0.9f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.8f), 6);*/
 
 			//std::string str = std::string("XYZ");
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f), 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, VEC2_ZERO, 3, &letterYOffsetsEmpty);
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
 			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
@@ -1966,7 +1966,7 @@ namespace flex
 				SetFont(m_FntUbuntuCondensed);
 				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
 										0.0f, 1.0f);
-				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, glm::vec2(0.0f), 3, false, {});
+				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3, false, {});
 			}
 
 			DrawScreenSpaceSprites();
@@ -2587,7 +2587,7 @@ namespace flex
 				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 				DrawSpriteQuad(drawInfo);
 
-				glm::vec3 dirLightForward = glm::vec3(1.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
+				glm::vec3 dirLightForward = VEC3_RIGHT * m_DirectionalLight.rotation;
 				m_PhysicsDebugDrawer->drawLine(
 					ToBtVec3(m_DirectionalLight.position),
 					ToBtVec3(m_DirectionalLight.position - dirLightForward * 2.5f),
@@ -2653,9 +2653,9 @@ namespace flex
 					}
 				}
 
-				glm::mat4 model = (glm::translate(glm::mat4(1.0f), translation) *
+				glm::mat4 model = (glm::translate(MAT4_IDENTITY, translation) *
 								   glm::mat4(rotation) *
-								   glm::scale(glm::mat4(1.0f), scale));
+								   glm::scale(MAT4_IDENTITY, scale));
 
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, GL_TRUE, &model[0][0]);
 			}
@@ -2664,7 +2664,7 @@ namespace flex
 			{
 				if (drawInfo.bScreenSpace)
 				{
-					glm::mat4 view = glm::mat4(1.0f);
+					glm::mat4 view = MAT4_IDENTITY;
 
 					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 				}
@@ -2738,7 +2738,7 @@ namespace flex
 				}
 				else
 				{
-					contrastBrightnessSaturation = glm::mat4(1.0f);
+					contrastBrightnessSaturation = MAT4_IDENTITY;
 				}
 
 				glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
@@ -2859,7 +2859,7 @@ namespace flex
 					//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
 					glm::vec3 scaleVec(1.0f);
 
-					glm::mat4 transformMat = glm::scale(glm::mat4(1.0f), scaleVec) * ortho;
+					glm::mat4 transformMat = glm::scale(MAT4_IDENTITY, scaleVec) * ortho;
 					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, GL_TRUE, &transformMat[0][0]);
 
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
@@ -3358,8 +3358,8 @@ namespace flex
 
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
-			glm::vec3 dirLightDir = glm::vec3(1.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
-			outView = glm::lookAt(glm::vec3(0.0f), -dirLightDir, glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::vec3 dirLightDir = VEC3_RIGHT * m_DirectionalLight.rotation;
+			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
 
 			real zoom = m_DirectionalLight.shadowMapZoom;
 			real nearPlane = m_DirectionalLight.shadowMapNearPlane;
@@ -6685,7 +6685,7 @@ namespace flex
 					}
 					if (ImGui::IsItemClicked(1))
 					{
-						rb->SetLocalPosition(glm::vec3(0.0f));
+						rb->SetLocalPosition(VEC3_ZERO);
 					}
 
 					glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(rb->GetLocalRotation()));

@@ -18,10 +18,10 @@ namespace flex
 	BaseCamera::BaseCamera(const std::string& cameraName, real FOV, real zNear, real zFar) :
 		m_Name(cameraName),
 		m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
-		m_Position(glm::vec3(0.0f)),
-		m_View(glm::mat4(0.0f)),
-		m_Proj(glm::mat4(0.0f)),
-		m_ViewProjection(glm::mat4(0.0f)),
+		m_Position(VEC3_ZERO),
+		m_View(MAT4_ZERO),
+		m_Proj(MAT4_ZERO),
+		m_ViewProjection(MAT4_ZERO),
 		m_Yaw(0.0f),
 		m_Pitch(0.0f),
 		m_MoveSpeed(25.0f),
@@ -170,7 +170,7 @@ namespace flex
 
 	void BaseCamera::ResetPosition()
 	{
-		m_Position = glm::vec3(0.0f);
+		m_Position = VEC3_ZERO;
 	}
 
 	void BaseCamera::ResetOrientation()

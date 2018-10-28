@@ -215,7 +215,7 @@ namespace flex
 				currentLocation += 4;
 			}
 
-			glm::mat4 model = glm::mat4(1.0f);
+			glm::mat4 model = MAT4_IDENTITY;
 			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 MVP = proj * view * model;
