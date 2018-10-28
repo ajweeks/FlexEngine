@@ -24,7 +24,12 @@ namespace flex
 
 		void AddTrack(const BezierCurveList& track);
 
-		glm::vec3 GetPointOnTrack(BezierCurveList* track, real distAlongTrack, real pDistAlongTrack, BezierCurveList** newTrack, real& newDistAlongTrack);
+		glm::vec3 GetPointOnTrack(BezierCurveList* track,
+			real distAlongTrack,
+			real pDistAlongTrack,
+			i32 desiredDir,
+			BezierCurveList** newTrack,
+			real& newDistAlongTrack);
 
 		// Compares curve end points on all BezierCurves and creates junctions when positions are
 		// within a threshold of each other
@@ -36,6 +41,8 @@ namespace flex
 		void DrawDebug();
 
 	private:
+		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine, const glm::vec3& newPoint);
+
 		static const i32 MAX_TRACK_COUNT = 8;
 		static const i32 MAX_JUNCTION_COUNT = 64;
 		static const real JUNCTION_THRESHOLD_DIST;

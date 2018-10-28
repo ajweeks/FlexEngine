@@ -90,6 +90,7 @@ namespace flex
 				{
 					m_TrackRiding = nullptr;
 					AudioManager::PlaySource(m_SoundTrackDetachID);
+					m_DistAlongTrack = -1.0f;
 				}
 				else
 				{
@@ -99,7 +100,7 @@ namespace flex
 					if (m_TrackRiding)
 					{
 						m_DistAlongTrack = distAlongTrack;
-						SnapPosToTrack(0.0f);
+						SnapPosToTrack(m_DistAlongTrack);
 						AudioManager::PlaySource(m_SoundTrackAttachID);
 					}
 				}
@@ -127,27 +128,34 @@ namespace flex
 				real moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER);
 				real moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_TRIGGER);
 
+				bool bUpdateFacing = false;
 				if (moveForward == 0.0f && moveBackward == 0.0f)
 				{
-					m_bUpdateFacing = true;
+					bUpdateFacing = true;
 				}
 
-				if (m_bUpdateFacing)
+				if (m_bUpdateFacingAndForceFoward || bUpdateFacing)
 				{
-					m_bUpdateFacing = false;
 					bool p = m_bMovingForwardDownTrack;
 					glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
 					m_bMovingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
+					if (m_bUpdateFacingAndForceFoward)
+					{
+						m_bMovingForwardDownTrack = true;
+					}
+
 					if (m_bMovingForwardDownTrack != p)
 					{
 						Print("%d\n", (i32)m_bMovingForwardDownTrack);
 					}
+
+					m_bUpdateFacingAndForceFoward = false;
 				}
 
 				if (m_bMovingForwardDownTrack)
 				{
-					moveForward *= -1.0f;
-					moveBackward *= -1.0f;
+					moveForward = 1.0f - moveForward;
+					moveBackward = 1.0f - moveBackward;
 				}
 
 				real pDist = m_DistAlongTrack;
@@ -311,17 +319,28 @@ namespace flex
 		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 		BezierCurveList* newTrack = m_TrackRiding;
 		real newDistAlongTrack = m_DistAlongTrack;
-		glm::vec3 pos = trackManager->GetPointOnTrack(m_TrackRiding, m_DistAlongTrack, pDistAlongTrack, &newTrack, newDistAlongTrack);
+		i32 desiredDir = 1;
+		real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+		static const real STICK_THRESHOLD = 0.5f;
+		if (leftStickX < -STICK_THRESHOLD)
+		{
+			desiredDir = 0;
+		}
+		else if (leftStickX > STICK_THRESHOLD)
+		{
+			desiredDir = 2;
+		}
+		glm::vec3 pos = trackManager->GetPointOnTrack(m_TrackRiding, m_DistAlongTrack, pDistAlongTrack, desiredDir, &newTrack, newDistAlongTrack);
 
 		if (newTrack != m_TrackRiding)
 		{
 			m_TrackRiding = newTrack;
 			m_DistAlongTrack = newDistAlongTrack;
-			m_bUpdateFacing = true;
+			m_bUpdateFacingAndForceFoward = true;
 		}
 
 		glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
-		glm::vec3 trackRight = glm::cross(trackForward, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::vec3 trackRight = glm::cross(trackForward, VEC3_UP);
 		pos += glm::vec3(0.0f, 1.9f, 0.0f);
 		pos -= trackRight * 0.8f;
 		m_Player->GetTransform()->SetWorldPosition(pos, true);

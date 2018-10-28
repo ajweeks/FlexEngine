@@ -16,9 +16,12 @@ namespace flex
 		// Calculates the first derivative of the curve
 		glm::vec3 GetCurveDirectionAt(real t) const;
 
+		real GetTAtJunction(i32 curveIndex);
+
 		// o---o----o---o|o---o----o---o|o---o----o---o
 		// 0             1              2             3
 		glm::vec3 GetPointAtJunction(i32 index);
+		glm::vec3 GetDirectionAtJunction(i32 index);
 
 		const std::vector<BezierCurve>& GetCurves() const;
 

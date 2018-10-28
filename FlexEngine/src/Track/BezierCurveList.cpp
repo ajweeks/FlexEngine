@@ -64,15 +64,21 @@ namespace flex
 		return m_Curves[curveIndex].GetCurveDirectionAt(curveT);
 	}
 
+	real BezierCurveList::GetTAtJunction(i32 curveIndex)
+	{
+		return (real)curveIndex / (real)(m_Curves.size());
+	}
+
 	glm::vec3 BezierCurveList::GetPointAtJunction(i32 index)
 	{
-		real t = 0.0f;
-		if (index == m_Curves.size())
-		{
-			t = 1.0f;
-		}
-
+		real t = (index == (i32)m_Curves.size() ? 1.0f : 0.0f);
 		return m_Curves[glm::clamp(index, 0, (i32)(m_Curves.size() - 1))].GetPointOnCurve(t);
+	}
+
+	glm::vec3 BezierCurveList::GetDirectionAtJunction(i32 index)
+	{
+		real t = (index == (i32)m_Curves.size() ? 1.0f : 0.0f);
+		return m_Curves[glm::clamp(index, 0, (i32)(m_Curves.size() - 1))].GetCurveDirectionAt(t);
 	}
 
 	const std::vector<BezierCurve>& BezierCurveList::GetCurves() const
@@ -83,7 +89,6 @@ namespace flex
 	void BezierCurveList::GetCurveIndexAndDistAlongCurve(real t, i32& outIndex, real& outT) const
 	{
 		i32 curveCount = m_Curves.size();
-		real tPerCurve = 1.0f / (real)curveCount;
 		real scaledT = glm::clamp(t * curveCount, 0.0f, (real)curveCount - EPSILON);
 		outIndex = glm::clamp((i32)scaledT, 0, curveCount - 1);
 

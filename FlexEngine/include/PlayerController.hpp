@@ -59,7 +59,7 @@ namespace flex
 		real m_TrackAttachMinDist = 4.0f;
 		// Is true when player began accelerating while facing down the track
 		real m_pDTrackMovement = 0.0f;
-		bool m_bUpdateFacing = false;
+		bool m_bUpdateFacingAndForceFoward = false;
 		bool m_bMovingForwardDownTrack = true;
 
 		AudioSourceID m_SoundTrackAttachID;
