@@ -134,6 +134,88 @@ namespace flex
 		PrintWarn("Attempted to set camera to unknown name: %s\n", typeStr.c_str());
 	}
 
+	void CameraManager::DrawImGuiObjects()
+	{
+		const char* cameraStr = "Camera";
+		if (ImGui::TreeNode(cameraStr))
+		{
+			BaseCamera* currentCamera = CurrentCamera();
+
+			const i32 cameraCount = (i32)m_Cameras.size();
+
+			if (cameraCount > 1) // Only show arrows if other cameras exist
+			{
+				static const char* arrowPrevStr = "<";
+				static const char* arrowNextStr = ">";
+
+				if (ImGui::Button(arrowPrevStr))
+				{
+					SetActiveIndexRelative(-1, false);
+				}
+
+				ImGui::SameLine();
+
+				std::string cameraNameStr = currentCamera->GetName();
+				ImGui::TextUnformatted(cameraNameStr.c_str());
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(arrowNextStr))
+				{
+					SetActiveIndexRelative(1, false);
+				}
+			}
+
+			static const char* moveSpeedStr = "Move speed";
+			float moveSpeed = currentCamera->GetMoveSpeed();
+			if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
+			{
+				currentCamera->SetMoveSpeed(moveSpeed);
+			}
+
+			static const char* turnSpeedStr = "Turn speed";
+			float turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
+			if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
+			{
+				currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
+			}
+
+			glm::vec3 camPos = currentCamera->GetPosition();
+			if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
+			{
+				currentCamera->SetPosition(camPos);
+			}
+
+			glm::vec2 camYawPitch;
+			camYawPitch[0] = glm::degrees(currentCamera->GetYaw());
+			camYawPitch[1] = glm::degrees(currentCamera->GetPitch());
+			if (ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f))
+			{
+				currentCamera->SetYaw(glm::radians(camYawPitch[0]));
+				currentCamera->SetPitch(glm::radians(camYawPitch[1]));
+			}
+
+			real camFOV = glm::degrees(currentCamera->GetFOV());
+			if (ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f))
+			{
+				currentCamera->SetFOV(glm::radians(camFOV));
+			}
+
+			if (ImGui::Button("Reset orientation"))
+			{
+				currentCamera->ResetOrientation();
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Reset position"))
+			{
+				currentCamera->ResetPosition();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)
 	{
 		i32 cameraIndex = -1;

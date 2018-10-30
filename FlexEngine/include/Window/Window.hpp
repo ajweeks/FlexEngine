@@ -94,9 +94,6 @@ namespace flex
 		virtual void WindowPosCallback(i32 newX, i32 newY);
 		virtual void FrameBufferSizeCallback(i32 width, i32 height);
 
-		bool GetAutoRestoreStateEnabled();
-		void SetAutoRestoreStateEnabled(bool bAutoRestoreState);
-
 		bool IsMaximized() const;
 		virtual void Maximize() = 0;
 		bool IsIconified() const;
@@ -104,6 +101,8 @@ namespace flex
 
 		bool InitFromConfig();
 		void SaveToConfig();
+
+		void DrawImGuiObjects();
 
 	protected:
 

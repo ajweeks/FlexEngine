@@ -44,6 +44,8 @@ namespace flex
 
 		void SetActiveCameraByType(const std::string& typeStr);
 
+		void DrawImGuiObjects();
+
 	private:
 		i32 GetCameraIndex(BaseCamera* camera);
 

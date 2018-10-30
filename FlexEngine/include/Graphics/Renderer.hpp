@@ -44,7 +44,8 @@ namespace flex
 
 		virtual void Update() = 0;
 		virtual void Draw() = 0;
-		virtual void DrawImGuiItems() = 0;
+		virtual void DrawImGuiRenderObjects() = 0;
+		virtual void DrawImGuiSettings();
 
 		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
 		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;

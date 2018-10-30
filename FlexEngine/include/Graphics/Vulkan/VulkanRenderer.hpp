@@ -40,7 +40,7 @@ namespace flex
 
 			virtual void Update() override;
 			virtual void Draw() override;
-			virtual void DrawImGuiItems() override;
+			virtual void DrawImGuiRenderObjects() override;
 
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 

@@ -2,6 +2,7 @@
 
 #include "Window/Window.hpp"
 
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "Scene/SceneManager.hpp"
@@ -38,7 +39,7 @@ namespace flex
 
 		if (m_CursorMode == CursorMode::HIDDEN)
 		{
-			const glm::vec2i windowSize = g_Window->GetSize();
+			const glm::vec2i windowSize = GetSize();
 			const glm::vec2 oldMousePos = g_InputManager->GetMousePosition();
 			glm::vec2 newMousePos = oldMousePos;
 			if (oldMousePos.x < 0)
@@ -205,16 +206,6 @@ namespace flex
 		SetFrameBufferSize(width, height);
 	}
 
-	bool Window::GetAutoRestoreStateEnabled()
-	{
-		return m_bAutoRestoreStateOnBootup;
-	}
-
-	void Window::SetAutoRestoreStateEnabled(bool bAutoRestoreState)
-	{
-		m_bAutoRestoreStateOnBootup = bAutoRestoreState;
-	}
-
 	bool Window::IsMaximized() const
 	{
 		return m_bMaximized;
@@ -292,13 +283,92 @@ namespace flex
 		rootObject.fields.emplace_back("initial window position", JSONValue(Vec2ToString((glm::vec2)m_Position, 0)));
 		rootObject.fields.emplace_back("initial window size", JSONValue(Vec2ToString((glm::vec2)m_Size, 0)));
 		rootObject.fields.emplace_back("maximized", JSONValue(m_bMaximized));
-		const char* windowModeStr = Window::WindowModeToStr(g_Window->GetWindowMode());
+		const char* windowModeStr = Window::WindowModeToStr(GetWindowMode());
 		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));
 		std::string fileContents = rootObject.Print(0);
 
 		if (!WriteFile(s_ConfigFilePath, fileContents, false))
 		{
 			PrintError("Failed to write window settings config file\n");
+		}
+	}
+
+	void Window::DrawImGuiObjects()
+	{
+		static const char* windowSettingsStr = "Window settings";
+		if (ImGui::TreeNode(windowSettingsStr))
+		{
+			if (ImGui::Checkbox("Auto restore state", &m_bAutoRestoreStateOnBootup))
+			{
+				g_Renderer->SaveSettingsToDisk(false, true);
+			}
+
+			if (ImGui::DragInt2("Position", &m_Position.x, 1.0f))
+			{
+				SetPosition(m_Position.x, m_Position.y);
+			}
+
+			if (ImGui::Button("Center"))
+			{
+				SetPosition(g_Monitor->width / 2 - m_Size.x / 2,
+					g_Monitor->height / 2 - m_Size.y / 2);
+			}
+
+			ImGui::NewLine();
+
+			if (ImGui::DragInt2("Size", &m_Size.x, 1.0f, 100, 3840))
+			{
+				SetSize(m_Size.x, m_Size.y);
+			}
+
+			bool bWindowWasMaximized = IsMaximized();
+			if (bWindowWasMaximized)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+			}
+			if (ImGui::Button("Maximize"))
+			{
+				Maximize();
+			}
+			if (bWindowWasMaximized)
+			{
+				ImGui::PopStyleColor();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Iconify"))
+			{
+				Iconify();
+			}
+
+			if (ImGui::Button("1920x1080"))
+			{
+				SetSize(1920, 1080);
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("1600x900"))
+			{
+				SetSize(1600, 900);
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("1280x720"))
+			{
+				SetSize(1280, 720);
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("800x600"))
+			{
+				SetSize(800, 600);
+			}
+
+			ImGui::TreePop();
 		}
 	}
 } // namespace flex

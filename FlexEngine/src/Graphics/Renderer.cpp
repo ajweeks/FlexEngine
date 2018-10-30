@@ -11,6 +11,8 @@
 
 #pragma warning(pop)
 
+#include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Scene/GameObject.hpp"
@@ -425,5 +427,223 @@ namespace flex
 	Renderer::PostProcessSettings& Renderer::GetPostProcessSettings()
 	{
 		return m_PostProcessSettings;
+	}
+
+	void Renderer::DrawImGuiSettings()
+	{
+
+		static const char* rendererSettingsStr = "Renderer settings";
+		if (ImGui::TreeNode(rendererSettingsStr))
+		{
+			if (ImGui::Button(" Save "))
+			{
+				g_Renderer->SaveSettingsToDisk(false, true);
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+			{
+				ImGui::SameLine();
+				if (ImGui::Button("Save defaults"))
+				{
+					g_Renderer->SaveSettingsToDisk(true, true);
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Reload defaults"))
+				{
+					g_Renderer->LoadSettingsFromDisk(true);
+				}
+			}
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			static const char* recaptureReflectionProbeStr = "Recapture reflection probe";
+			if (ImGui::Button(recaptureReflectionProbeStr))
+			{
+				g_Renderer->RecaptureReflectionProbe();
+			}
+
+			bool bVSyncEnabled = g_Renderer->GetVSyncEnabled();
+			static const char* vSyncEnabledStr = "VSync";
+			if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
+			{
+				g_Renderer->SetVSyncEnabled(bVSyncEnabled);
+			}
+
+			static const char* exposureControlStr = "Camera exposure";
+			if (ImGui::TreeNode(exposureControlStr))
+			{
+				BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
+
+				ImGui::Text("Exposure: %.2f", currentCamera->exposure);
+
+				ImGui::PushItemWidth(140.0f);
+				{
+					static const char* apertureStr = "Aperture (f-stops)";
+					if (ImGui::SliderFloat(apertureStr, &currentCamera->aperture, 1.0f, 64.0f))
+					{
+						currentCamera->CalculateExposure();
+					}
+
+					static const char* shutterSpeedStr = "Shutter speed (1/s)";
+					real shutterSpeedInv = 1.0f / currentCamera->shutterSpeed;
+					if (ImGui::SliderFloat(shutterSpeedStr, &shutterSpeedInv, 1.0f, 500.0f))
+					{
+						currentCamera->shutterSpeed = 1.0f / shutterSpeedInv;
+						currentCamera->CalculateExposure();
+					}
+
+					static const char* isoStr = "ISO";
+					if (ImGui::SliderFloat(isoStr, &currentCamera->lightSensitivity, 100.0f, 6400.0f))
+					{
+						// Round to nearest power of 2 * 100
+						currentCamera->lightSensitivity = pow(2.0f, ceil(log(currentCamera->lightSensitivity / 100.0f) / log(2.0f) - 0.5f)) * 100.0f;
+						currentCamera->CalculateExposure();
+					}
+				}
+				ImGui::PopItemWidth();
+
+				ImGui::TreePop();
+			}
+
+			static const char* physicsDebuggingStr = "Debug objects";
+			if (ImGui::TreeNode(physicsDebuggingStr))
+			{
+				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
+
+				static const char* disableAllStr = "Disable All";
+				ImGui::Checkbox(disableAllStr, &physicsDebuggingSettings.DisableAll);
+
+				ImGui::Spacing();
+				ImGui::Spacing();
+				ImGui::Spacing();
+
+				bool bRenderEditorObjs = g_EngineInstance->IsRenderingEditorObjects();
+				if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
+				{
+					g_EngineInstance->SetRenderingEditorObjects(bRenderEditorObjs);
+				}
+
+				if (physicsDebuggingSettings.DisableAll)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+
+				static const char* displayBoundingVolumesStr = "Bounding volumes";
+				bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
+				if (ImGui::Checkbox(displayBoundingVolumesStr, &bDisplayBoundingVolumes))
+				{
+					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
+				}
+
+				static const char* wireframeStr = "Wireframe";
+				ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
+
+				static const char* aabbStr = "AABB";
+				ImGui::Checkbox(aabbStr, &physicsDebuggingSettings.DrawAabb);
+
+				// Unused (for now):
+				//static const char* drawFeaturesTextStr = "Draw Features Text";
+				//ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
+
+				//static const char* drawContactPointsStr = "Draw Contact Points";
+				//ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
+
+				//static const char* noDeactivationStr = "No Deactivation";
+				//ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
+
+				//static const char* noHelpTextStr = "No Help Text";
+				//ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
+
+				//static const char* drawTextStr = "Draw Text";
+				//ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
+
+				//static const char* profileTimingsStr = "Profile Timings";
+				//ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
+
+				//static const char* satComparisonStr = "Sat Comparison";
+				//ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
+
+				//static const char* disableBulletLCPStr = "Disable Bullet LCP";
+				//ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
+
+				//static const char* ccdStr = "CCD";
+				//ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
+
+				//static const char* drawConstraintsStr = "Draw Constraints";
+				//ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
+
+				//static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
+				//ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
+
+				//static const char* fastWireframeStr = "Fast Wireframe";
+				//ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
+
+				//static const char* drawNormalsStr = "Draw Normals";
+				//ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
+
+				//static const char* drawFramesStr = "Draw Frames";
+				//ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
+
+				if (physicsDebuggingSettings.DisableAll)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::TreePop();
+		}
+
+		static const char* postProcessStr = "Post processing";
+		if (ImGui::TreeNode(postProcessStr))
+		{
+			ImGui::Checkbox("Enabled", &m_bPostProcessingEnabled);
+
+			static const char* fxaaEnabledStr = "FXAA";
+			ImGui::Checkbox(fxaaEnabledStr, &m_PostProcessSettings.bEnableFXAA);
+
+			if (m_PostProcessSettings.bEnableFXAA)
+			{
+				ImGui::Indent();
+				static const char* fxaaShowEdgesEnabledStr = "Show edges";
+				ImGui::Checkbox(fxaaShowEdgesEnabledStr, &m_PostProcessSettings.bEnableFXAADEBUGShowEdges);
+				ImGui::Unindent();
+			}
+
+			static const char* brightnessStr = "Brightness (RGB)";
+			real maxBrightness = 2.5f;
+			ImGui::SliderFloat3(brightnessStr, &m_PostProcessSettings.brightness.r, 0.0f, maxBrightness);
+			ImGui::SameLine();
+			ImGui::ColorButton("##1", ImVec4(
+				m_PostProcessSettings.brightness.r / maxBrightness,
+				m_PostProcessSettings.brightness.g / maxBrightness,
+				m_PostProcessSettings.brightness.b / maxBrightness, 1));
+
+			static const char* offsetStr = "Offset (RGB)";
+			real minOffset = -0.35f;
+			real maxOffset = 0.35f;
+			ImGui::SliderFloat3(offsetStr, &m_PostProcessSettings.offset.r, minOffset, maxOffset);
+			ImGui::SameLine();
+			ImGui::ColorButton("##2", ImVec4(
+				(m_PostProcessSettings.offset.r - minOffset) / (maxOffset - minOffset),
+				(m_PostProcessSettings.offset.g - minOffset) / (maxOffset - minOffset),
+				(m_PostProcessSettings.offset.b - minOffset) / (maxOffset - minOffset), 1));
+
+			static const char* saturationStr = "Saturation";
+			const real maxSaturation = 2.0f;
+			ImGui::SliderFloat(saturationStr, &m_PostProcessSettings.saturation, 0.0f, maxSaturation);
+			ImGui::SameLine();
+			ImGui::ColorButton("##3", ImVec4(
+				m_PostProcessSettings.saturation / maxSaturation,
+				m_PostProcessSettings.saturation / maxSaturation,
+				m_PostProcessSettings.saturation / maxSaturation, 1));
+
+			ImGui::TreePop();
+		}
 	}
 } // namespace flex

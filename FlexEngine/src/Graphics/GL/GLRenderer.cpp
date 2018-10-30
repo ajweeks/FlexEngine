@@ -6091,7 +6091,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		void GLRenderer::DrawImGuiItems()
+		void GLRenderer::DrawImGuiRenderObjects()
 		{
 			ImGui::NewLine();
 

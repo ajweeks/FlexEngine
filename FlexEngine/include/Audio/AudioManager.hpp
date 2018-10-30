@@ -50,6 +50,8 @@ namespace flex
 
 		static bool IsSourcePlaying(AudioSourceID sourceID);
 
+		static void DrawImGuiObjects();
+
 	private:
 		static void DisplayALError(const std::string& str, ALenum error);
 

@@ -39,6 +39,8 @@ namespace flex
 		void DeleteScene(BaseScene* scene);
 		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
 
+		void DrawImGuiObjects();
+
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
 		u32 GetSceneCount() const;
@@ -50,6 +52,7 @@ namespace flex
 
 	private:
 		bool SceneExists(const std::string& fileName) const;
+		void DoSceneContextMenu(BaseScene* scene);
 
 		u32 m_CurrentSceneIndex = u32_max;
 		std::vector<BaseScene*> m_Scenes;

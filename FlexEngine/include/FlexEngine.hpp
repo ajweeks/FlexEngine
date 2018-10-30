@@ -38,6 +38,7 @@ namespace flex
 		bool IsRenderingImGui() const;
 
 		bool IsRenderingEditorObjects() const;
+		void SetRenderingEditorObjects(bool bRenderingEditorObjects);
 
 		static std::string EngineVersionString();
 

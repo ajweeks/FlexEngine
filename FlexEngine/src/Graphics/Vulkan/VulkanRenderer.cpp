@@ -2520,7 +2520,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::DrawImGuiItems()
+		void VulkanRenderer::DrawImGuiRenderObjects()
 		{
 			if (ImGui::CollapsingHeader("Scene info"))
 			{

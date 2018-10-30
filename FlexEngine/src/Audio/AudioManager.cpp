@@ -255,6 +255,21 @@ namespace flex
 		return (s_Sources[sourceID].state == AL_PLAYING);
 	}
 
+	void AudioManager::DrawImGuiObjects()
+	{
+		const char* audioStr = "Audio";
+		if (ImGui::TreeNode(audioStr))
+		{
+			real gain = GetMasterGain();
+			if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
+			{
+				SetMasterGain(gain);
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
 	void AudioManager::SetSourcePitch(AudioSourceID sourceID, real pitch)
 	{
 		assert(sourceID < s_Sources.size());
@@ -300,7 +315,7 @@ namespace flex
 		const ALCchar* next = devices + 1;
 
 		Print("Available OpenAL devices:\n");
-		while (device && *device != '\0' && 
+		while (device && *device != '\0' &&
 			   next && *next != '\0')
 		{
 			Print("\t\t%s\n", device);
