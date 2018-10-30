@@ -17,6 +17,8 @@ namespace flex
 		points[1] = p1;
 		points[2] = p2;
 		points[3] = p3;
+
+		CalculateLength();
 	}
 
 	void BezierCurve::DrawDebug(bool bHighlighted, const btVector4& baseColour, const btVector4& highlightColour) const
@@ -77,5 +79,22 @@ namespace flex
 		return 3.0f * oneMinusT * oneMinusT * (points[1] - points[0]) +
 			6.0f * oneMinusT * t * (points[2] - points[1]) +
 			3.0f * t * t * (points[3] - points[2]);
+	}
+
+	void BezierCurve::CalculateLength()
+	{
+		calculatedLength = 0.0f;
+
+		i32 iterationCount = 128;
+		glm::vec3 lastP = GetPointOnCurve(0.0f);
+		for (i32 i = 1; i < iterationCount; ++i)
+		{
+			real t = (real)i / (real)(iterationCount - 1);
+			glm::vec3 nextP = GetPointOnCurve(t);
+
+			calculatedLength += glm::length(nextP - lastP);
+
+			lastP = nextP;
+		}
 	}
 } // namespace flex

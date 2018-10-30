@@ -125,8 +125,8 @@ namespace flex
 		{
 			if (m_TrackRiding)
 			{
-				real moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER);
-				real moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_TRIGGER);
+				real moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_TRIGGER);
+				real moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER);
 
 				bool bUpdateFacing = false;
 				if (moveForward == 0.0f && moveBackward == 0.0f)
@@ -136,15 +136,17 @@ namespace flex
 
 				if (m_bUpdateFacingAndForceFoward || bUpdateFacing)
 				{
-					bool p = m_bMovingForwardDownTrack;
+					bool pMovingForwardDownTrack = m_bMovingForwardDownTrack;
 					glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
 					m_bMovingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
 					if (m_bUpdateFacingAndForceFoward)
 					{
-						m_bMovingForwardDownTrack = true;
+						m_bMovingForwardDownTrack =
+							(m_bMovingForwardDownTrack && moveForward > 0.0f) ||
+							(m_bMovingForwardDownTrack && moveBackward > 0.0f);
 					}
 
-					if (m_bMovingForwardDownTrack != p)
+					if (m_bMovingForwardDownTrack != pMovingForwardDownTrack)
 					{
 						Print("%d\n", (i32)m_bMovingForwardDownTrack);
 					}
@@ -152,15 +154,15 @@ namespace flex
 					m_bUpdateFacingAndForceFoward = false;
 				}
 
-				if (m_bMovingForwardDownTrack)
+				if (!m_bMovingForwardDownTrack)
 				{
 					moveForward = 1.0f - moveForward;
 					moveBackward = 1.0f - moveBackward;
 				}
 
 				real pDist = m_DistAlongTrack;
-				m_DistAlongTrack += (moveForward - moveBackward) * m_TrackMoveSpeed * g_DeltaTime;
-				m_DistAlongTrack = glm::clamp(m_DistAlongTrack, 0.0f, 1.0f);
+				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+				m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_TrackRiding, (moveForward - moveBackward) * m_TrackMoveSpeed * g_DeltaTime, m_DistAlongTrack);
 				SnapPosToTrack(pDist);
 
 				m_pDTrackMovement = m_DistAlongTrack - pDist;

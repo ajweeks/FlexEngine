@@ -16,7 +16,7 @@ namespace flex
 	}
 
 	BezierCurveList::BezierCurveList(const std::vector<BezierCurve>& curves) :
-		m_Curves(curves)
+		curves(curves)
 	{
 		DEBUG_GenerateRandomSeed();
 	}
@@ -27,73 +27,77 @@ namespace flex
 		if (highlightCurveAtPoint != -1.0f)
 		{
 			real dist;
-			GetCurveIndexAndDistAlongCurve(highlightCurveAtPoint, highlightedCurveIndex, dist);
+			GetCurveIndexAndLocalTFromGlobalT(highlightCurveAtPoint, highlightedCurveIndex, dist);
 		}
 
-		for (i32 i = 0; i < m_Curves.size(); ++i)
+		for (i32 i = 0; i < curves.size(); ++i)
 		{
 			bool bHighlighted = (highlightedCurveIndex == i);
-			m_Curves[i].DrawDebug(bHighlighted, m_BaseColour, highlightColour);
+			curves[i].DrawDebug(bHighlighted, m_BaseColour, highlightColour);
 		}
 	}
 
 	glm::vec3 BezierCurveList::GetPointOnCurve(real t, i32& outCurveIndex) const
 	{
-		if (m_Curves.empty())
+		if (curves.empty())
 		{
 			return VEC3_ZERO;
 		}
 
 		real curveT = 0.0f;
-		GetCurveIndexAndDistAlongCurve(t, outCurveIndex, curveT);
+		GetCurveIndexAndLocalTFromGlobalT(t, outCurveIndex, curveT);
 
-		return m_Curves[outCurveIndex].GetPointOnCurve(curveT);
+		return curves[outCurveIndex].GetPointOnCurve(curveT);
 	}
 
 	glm::vec3 BezierCurveList::GetCurveDirectionAt(real t) const
 	{
-		if (m_Curves.empty())
+		if (curves.empty())
 		{
 			return VEC3_ZERO;
 		}
 
 		i32 curveIndex = 0;
 		real curveT = 0.0f;
-		GetCurveIndexAndDistAlongCurve(t, curveIndex, curveT);
+		GetCurveIndexAndLocalTFromGlobalT(t, curveIndex, curveT);
 
-		return m_Curves[curveIndex].GetCurveDirectionAt(curveT);
+		return curves[curveIndex].GetCurveDirectionAt(curveT);
 	}
 
 	real BezierCurveList::GetTAtJunction(i32 curveIndex)
 	{
-		return (real)curveIndex / (real)(m_Curves.size());
+		return (real)curveIndex / (real)(curves.size());
 	}
 
 	glm::vec3 BezierCurveList::GetPointAtJunction(i32 index)
 	{
-		real t = (index == (i32)m_Curves.size() ? 1.0f : 0.0f);
-		return m_Curves[glm::clamp(index, 0, (i32)(m_Curves.size() - 1))].GetPointOnCurve(t);
+		real t = (index == (i32)curves.size() ? 1.0f : 0.0f);
+		return curves[glm::clamp(index, 0, (i32)(curves.size() - 1))].GetPointOnCurve(t);
 	}
 
 	glm::vec3 BezierCurveList::GetDirectionAtJunction(i32 index)
 	{
-		real t = (index == (i32)m_Curves.size() ? 1.0f : 0.0f);
-		return m_Curves[glm::clamp(index, 0, (i32)(m_Curves.size() - 1))].GetCurveDirectionAt(t);
+		real t = (index == (i32)curves.size() ? 1.0f : 0.0f);
+		return curves[glm::clamp(index, 0, (i32)(curves.size() - 1))].GetCurveDirectionAt(t);
 	}
 
-	const std::vector<BezierCurve>& BezierCurveList::GetCurves() const
+	void BezierCurveList::GetCurveIndexAndLocalTFromGlobalT(real globalT, i32& outCurveIndex, real& outLocalT) const
 	{
-		return m_Curves;
+		i32 curveCount = curves.size();
+		real scaledT = glm::clamp(globalT * curveCount, 0.0f, (real)curveCount - EPSILON);
+		outCurveIndex = glm::clamp((i32)scaledT, 0, curveCount - 1);
+
+		outLocalT = scaledT - outCurveIndex;
+		outLocalT = glm::clamp(outLocalT, 0.0f, 1.0f);
 	}
 
-	void BezierCurveList::GetCurveIndexAndDistAlongCurve(real t, i32& outIndex, real& outT) const
+	real BezierCurveList::GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const
 	{
-		i32 curveCount = m_Curves.size();
-		real scaledT = glm::clamp(t * curveCount, 0.0f, (real)curveCount - EPSILON);
-		outIndex = glm::clamp((i32)scaledT, 0, curveCount - 1);
+		i32 curveCount = curves.size();
+		real globalT = (real)(localT + curveIndex) / (real)curveCount;
 
-		outT = scaledT - outIndex;
-		outT = glm::clamp(outT, 0.0f, 1.0f);
+		globalT = glm::clamp(globalT, 0.0f, 1.0f);
+		return globalT;
 	}
 
 	void BezierCurveList::DEBUG_GenerateRandomSeed()

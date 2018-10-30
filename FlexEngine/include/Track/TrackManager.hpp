@@ -42,6 +42,9 @@ namespace flex
 
 		void DrawImGuiObjects();
 
+		// Moves t along track according to curve length
+		real AdvanceTAlongTrack(BezierCurveList* track, real amount, real t);
+
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine, const glm::vec3& newPoint);
 

@@ -23,14 +23,13 @@ namespace flex
 		glm::vec3 GetPointAtJunction(i32 index);
 		glm::vec3 GetDirectionAtJunction(i32 index);
 
-		const std::vector<BezierCurve>& GetCurves() const;
+		void GetCurveIndexAndLocalTFromGlobalT(real globalT, i32& outCurveIndex, real& outLocalT) const;
+		real GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const;
+
+		std::vector<BezierCurve> curves;
 
 	private:
-		void GetCurveIndexAndDistAlongCurve(real t, i32& outIndex, real& outT) const;
-
 		void DEBUG_GenerateRandomSeed();
-
-		std::vector<BezierCurve> m_Curves;
 
 		real m_DebugColourRandomSeed = -1.0f;
 		btVector4 m_BaseColour;

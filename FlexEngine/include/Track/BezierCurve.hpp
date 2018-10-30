@@ -14,7 +14,11 @@ namespace flex
 		// Returns non-normalized(!) first derivative of curve (representing direction at point)
 		glm::vec3 GetCurveDirectionAt(real t) const;
 
+		void CalculateLength();
+
 		glm::vec3 points[4];
+
+		real calculatedLength = -1.0f;
 
 	};
 } // namespace flex
