@@ -406,7 +406,12 @@ namespace flex
 			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)m_Junctions[i].tracks[0]->GetCurves().size();
 			 i32 curveIndex;
 			 glm::vec3 pos = m_Junctions[i].tracks[0]->GetPointOnCurve(distAlongTrack0, curveIndex);
-			 debugDrawer->drawSphere(ToBtVec3(pos), 0.5f, btVector3(0.9f, 0.2f, 0.2f));
+			 btVector3 sphereCol = btVector3(0.9f, 0.2f, 0.2f);
+			 if (i == m_DEBUG_highlightedJunctionIndex)
+			 {
+				 sphereCol = btVector3(0.9f, 0.9f, 0.9f);
+			 }
+			 debugDrawer->drawSphere(ToBtVec3(pos), 0.5f, sphereCol);
 
 			 for (i32 j = 0; j < m_Junctions[i].trackCount; ++j)
 			 {
@@ -430,6 +435,44 @@ namespace flex
 					 debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), btVector3(0.2f, 0.6f, 0.25f));
 				 }
 			 }
+		}
+	}
+
+	void TrackManager::DrawImGuiObjects()
+	{
+		if (ImGui::TreeNode("Track Manager"))
+		{
+			ImGui::Text("%d tracks, selected: %d", m_TrackCount, m_DEBUG_highlightedJunctionIndex);
+			if (m_DEBUG_highlightedJunctionIndex != -1)
+			{
+				if (ImGui::SmallButton("<"))
+				{
+					m_DEBUG_highlightedJunctionIndex--;
+				}
+			}
+			else
+			{
+				ImGui::Spacing();
+				ImGui::Spacing();
+				ImGui::Spacing();
+			}
+			if (m_DEBUG_highlightedJunctionIndex != m_TrackCount - 1)
+			{
+				ImGui::SameLine();
+				if (ImGui::SmallButton(">"))
+				{
+					m_DEBUG_highlightedJunctionIndex++;
+				}
+			}
+
+			if (m_DEBUG_highlightedJunctionIndex != -1)
+			{
+				ImGui::Text("Junction connected track count: %d", m_Junctions[m_DEBUG_highlightedJunctionIndex].trackCount);
+			}
+
+			ImGui::Text("%d junctions", m_JunctionCount);
+
+			ImGui::TreePop();
 		}
 	}
 

@@ -40,6 +40,8 @@ namespace flex
 
 		void DrawDebug();
 
+		void DrawImGuiObjects();
+
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine, const glm::vec3& newPoint);
 
@@ -51,6 +53,8 @@ namespace flex
 		BezierCurveList m_Tracks[MAX_TRACK_COUNT];
 		i32 m_JunctionCount = 0;
 		Junction m_Junctions[MAX_JUNCTION_COUNT];
+
+		i32 m_DEBUG_highlightedJunctionIndex = -1;
 
 	};
 } // namespace flex

@@ -1765,6 +1765,8 @@ namespace flex
 
 			g_Renderer->DrawImGuiRenderObjects();
 
+			g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
+
 			ImGui::Spacing();
 
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
@@ -1850,9 +1852,9 @@ namespace flex
 
 	void FlexEngine::DeselectObject(GameObject* gameObject)
 	{
-		for (auto iter = m_CurrentlySelectedObjects.begin(); iter != m_CurrentlySelectedObjects.end(); ++iter)
+		for (GameObject* selectedObj : m_CurrentlySelectedObjects)
 		{
-			if ((*iter) == gameObject)
+			if (selectedObj == gameObject)
 			{
 				gameObject->RemoveSelfAndChildrenToVec(m_CurrentlySelectedObjects);
 				CalculateSelectedObjectsCenter();
