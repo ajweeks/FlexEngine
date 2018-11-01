@@ -387,7 +387,6 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/translation-gizmo-x.fbx", nullptr, &gizmoCreateInfo);
 
 			// Y Axis
@@ -403,7 +402,6 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
 			yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/translation-gizmo-y.fbx", nullptr, &gizmoCreateInfo);
 
 			// Z Axis
@@ -420,7 +418,6 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
 			zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/translation-gizmo-z.fbx", nullptr, &gizmoCreateInfo);
 
 
@@ -462,7 +459,6 @@ namespace flex
 			// TODO: Get this to work (-cylinderHeight / 2.0f?)
 			gizmoXAxisRB->SetLocalPosition(glm::vec3(100.0f, 0.0f, 0.0f));
 
-			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/rotation-gizmo-flat-x.fbx", nullptr, &gizmoCreateInfo);
 
 			// Y Axis
@@ -478,7 +474,6 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
 			yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/rotation-gizmo-flat-y.fbx", nullptr, &gizmoCreateInfo);
 
 			// Z Axis
@@ -495,7 +490,6 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
 			zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/rotation-gizmo-flat-z.fbx", nullptr, &gizmoCreateInfo);
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
@@ -537,7 +531,6 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-x.fbx", nullptr, &gizmoCreateInfo);
 
 			// Y Axis
@@ -553,7 +546,6 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
 			yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-y.fbx", nullptr, &gizmoCreateInfo);
 
 			// Z Axis
@@ -570,7 +562,6 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
 			zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-z.fbx", nullptr, &gizmoCreateInfo);
 
 			// Center (all axes)
@@ -587,7 +578,6 @@ namespace flex
 			gizmoAllAxesRB->SetKinematic(true);
 			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
 
-			allAxesMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatAllID);
 			allAxesMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/scale-gizmo-all.fbx", nullptr, &gizmoCreateInfo);
 
 

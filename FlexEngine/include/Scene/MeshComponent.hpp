@@ -25,7 +25,7 @@ namespace flex
 	{
 	public:
 		MeshComponent(GameObject* owner);
-		MeshComponent(MaterialID materialID, GameObject* owner);
+		MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat = true);
 		~MeshComponent();
 
 		static void DestroyAllLoadedMeshes();
@@ -73,8 +73,6 @@ namespace flex
 		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
 		 * be enforced (filled with default value if not present in mesh)
 		*/
-		//void SetRequiredAttributes(VertexAttributes requiredAttributes);
-
 		void SetRequiredAttributesFromMaterialID(MaterialID matID);
 
 		/*

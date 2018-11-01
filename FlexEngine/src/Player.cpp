@@ -47,7 +47,6 @@ namespace flex
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 
 		m_MeshComponent = new MeshComponent(matID, this);
-		m_MeshComponent->SetRequiredAttributesFromMaterialID(matID);
 		AddTag("Player" + std::to_string(m_Index));
 		SetRigidBody(rigidBody);
 		SetStatic(false);

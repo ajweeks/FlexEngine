@@ -38,12 +38,16 @@ namespace flex
 	{
 	}
 
-	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner) :
+	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat /* = true */) :
 		m_OwningGameObject(owner),
 		m_MaterialID(materialID),
 		m_UVScale(1.0f, 1.0f),
 		m_ImportSettings()
 	{
+		if (bSetRequiredAttributesFromMat)
+		{
+			SetRequiredAttributesFromMaterialID(materialID);
+		}
 	}
 
 	MeshComponent::~MeshComponent()
@@ -83,7 +87,6 @@ namespace flex
 			if (!meshFilePath.empty())
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
-				newMeshComponent->SetRequiredAttributesFromMaterialID(materialID);
 
 				MeshComponent::ImportSettings importSettings = {};
 				importSettings.flipU = flipU;
@@ -99,7 +102,6 @@ namespace flex
 			else if (!meshPrefabName.empty())
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
-				newMeshComponent->SetRequiredAttributesFromMaterialID(materialID);
 
 				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
 				newMeshComponent->LoadPrefabShape(prefabShape);
@@ -156,11 +158,6 @@ namespace flex
 	{
 		m_OwningGameObject = owner;
 	}
-
-	//void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
-	//{
-	//	m_RequiredAttributes = requiredAttributes;
-	//}
 
 	void MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)
 	{

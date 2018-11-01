@@ -233,7 +233,7 @@ namespace flex
 				}
 
 				m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
-				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid));
+				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid, false));
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.editorObject = true;
 				gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
@@ -258,7 +258,7 @@ namespace flex
 				}
 
 				m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
-				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin));
+				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin, false));
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.editorObject = true;
 				orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
@@ -4028,7 +4028,6 @@ namespace flex
 						MaterialID matID = 0;
 
 						newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						newGameObject->GetMeshComponent()->SetRequiredAttributesFromMaterialID(matID);
 						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
 
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
@@ -5954,13 +5953,12 @@ namespace flex
 
 					if (ImGui::Button("Re-import"))
 					{
-						std::string relativeFilePath = selectedMeshRelativeFilePath;
 						for (GLRenderObject* renderObject : m_RenderObjects)
 						{
 							if (renderObject && renderObject->gameObject)
 							{
 								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
-								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(relativeFilePath) == 0)
+								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
 								{
 									MeshComponent::ImportSettings importSettings = selectedMesh->importSettings;
 
@@ -5973,7 +5971,7 @@ namespace flex
 									gameObjectMesh->Destroy();
 									gameObjectMesh->SetOwner(gameObject);
 									gameObjectMesh->SetRequiredAttributesFromMaterialID(matID);
-									gameObjectMesh->LoadFromFile(relativeFilePath, &importSettings);
+									gameObjectMesh->LoadFromFile(selectedMeshRelativeFilePath, &importSettings);
 								}
 							}
 						}
@@ -6463,7 +6461,6 @@ namespace flex
 					g_Renderer->GetMaterialID("pbr chrome", matID);
 
 					MeshComponent* mesh = gameObject->SetMeshComponent(new MeshComponent(matID, gameObject));
-					mesh->SetRequiredAttributesFromMaterialID(matID);
 					mesh->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
 				}
 			}

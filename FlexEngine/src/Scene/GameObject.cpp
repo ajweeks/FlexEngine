@@ -775,7 +775,7 @@ namespace flex
 
 		if (m_MeshComponent)
 		{
-			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject, false));
 			MeshComponent::Type prefabType = m_MeshComponent->GetType();
 			if (prefabType == MeshComponent::Type::PREFAB)
 			{
@@ -1361,7 +1361,6 @@ namespace flex
 			if (!m_MeshComponent)
 			{
 				MeshComponent* valveMesh = new MeshComponent(matID, this);
-				valveMesh->SetRequiredAttributesFromMaterialID(matID);
 				valveMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/valve.gltf");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
@@ -1524,7 +1523,6 @@ namespace flex
 		if (!m_MeshComponent)
 		{
 			MeshComponent* cubeMesh = new MeshComponent(matID, this);
-			cubeMesh->SetRequiredAttributesFromMaterialID(matID);
 			cubeMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
 			SetMeshComponent(cubeMesh);
 		}
@@ -1709,7 +1707,6 @@ namespace flex
 			if (!m_MeshComponent)
 			{
 				MeshComponent* windowMesh = new MeshComponent(matID, this);
-				windowMesh->SetRequiredAttributesFromMaterialID(matID);
 				windowMesh->LoadFromFile(RESOURCE_LOCATION +
 					(bBroken ? "meshes/glass-window-broken.gltf" : "meshes/glass-window-whole.gltf"));
 				SetMeshComponent(windowMesh);
@@ -1774,7 +1771,6 @@ namespace flex
 		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
 		MeshComponent* sphereMesh = new MeshComponent(matID, this);
-		sphereMesh->SetRequiredAttributesFromMaterialID(matID);
 
 		assert(m_MeshComponent == nullptr);
 		sphereMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/ico-sphere.gltf");
@@ -1834,8 +1830,7 @@ namespace flex
 
 		assert(m_MeshComponent == nullptr);
 		assert(matID != InvalidMaterialID);
-		MeshComponent* skyboxMesh = new MeshComponent(matID, this);
-		skyboxMesh->SetRequiredAttributesFromMaterialID(matID);
+		MeshComponent* skyboxMesh = new MeshComponent(matID, this, false);
 		RenderObjectCreateInfo createInfo = {};
 		createInfo.cullFace = CullFace::NONE;
 		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX, &createInfo);
