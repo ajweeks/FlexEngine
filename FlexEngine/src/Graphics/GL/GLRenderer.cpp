@@ -5506,12 +5506,12 @@ namespace flex
 			return strHeight;
 		}
 
-		void GLRenderer::DrawAssetBrowserImGui()
+		void GLRenderer::DrawAssetBrowserImGui(bool* bShowing)
 		{
 			static i32 MAX_CHAR_COUNT = 128;
 
 			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Asset browser", &m_bShowingAssetBrowser))
+			if (ImGui::Begin("Asset browser", bShowing))
 			{
 				if (ImGui::CollapsingHeader("Materials"))
 				{

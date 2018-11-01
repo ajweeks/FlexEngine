@@ -180,7 +180,9 @@ namespace flex
 		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
+		bool m_bMainWindowShowing = true;
 		bool m_bDemoWindowShowing = false;
+		bool m_bAssetBrowserShowing = false;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

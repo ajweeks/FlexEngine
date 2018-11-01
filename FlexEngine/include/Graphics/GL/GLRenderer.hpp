@@ -101,7 +101,7 @@ namespace flex
 			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
 			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
-			virtual void DrawAssetBrowserImGui() override;
+			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
 
 			virtual void RecaptureReflectionProbe() override;
 
@@ -355,7 +355,6 @@ namespace flex
 			const char* m_MaterialPayloadCStr = "material";
 			const char* m_MeshPayloadCStr = "mesh";
 
-			bool m_bShowingAssetBrowser = false;
 			bool m_bRebatchRenderObjects = true;
 
 			GameObject* m_Grid = nullptr;

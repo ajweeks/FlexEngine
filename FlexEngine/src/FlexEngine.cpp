@@ -1627,7 +1627,7 @@ namespace flex
 	{
 		if (m_bDemoWindowShowing)
 		{
-			ImGui::ShowDemoWindow();
+			ImGui::ShowDemoWindow(&m_bDemoWindowShowing);
 		}
 
 		if (ImGui::BeginMainMenuBar())
@@ -1675,9 +1675,19 @@ namespace flex
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::BeginMenu("Misc"))
+			if (ImGui::BeginMenu("View"))
 			{
-				if (ImGui::MenuItem("Toggle Demo Window"))
+				if (ImGui::MenuItem("Main Window"))
+				{
+					m_bMainWindowShowing = !m_bMainWindowShowing;
+				}
+
+				if (ImGui::MenuItem("Asset Browser"))
+				{
+					m_bAssetBrowserShowing = !m_bAssetBrowserShowing;
+				}
+
+				if (ImGui::MenuItem("Demo Window"))
 				{
 					m_bDemoWindowShowing = !m_bDemoWindowShowing;
 				}
@@ -1707,84 +1717,90 @@ namespace flex
 		real frameBufferHeight = (real)frameBufferSize.y;
 		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
 								 ImGuiCond_Always);
-		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))
+		if (m_bMainWindowShowing)
 		{
-			if (ImGui::TreeNode("Stats"))
+			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
 			{
-				static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
-				static const char* renderNameStr = rendererNameStringStr.c_str();
-				ImGui::TextUnformatted(renderNameStr);
-
-				ImGui::Text("Number of available renderers: %d", m_RendererCount);
-
-				ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
-
-				ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
-
-				ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());
-
-				ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
-
-				ImGui::TreePop();
-			}
-
-			if (ImGui::TreeNode("Misc settings"))
-			{
-				ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
-
-				ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
-
-				if (ImGui::Button("Display latest frame"))
+				if (ImGui::TreeNode("Stats"))
 				{
-					m_bUpdateProfilerFrame = true;
-					Profiler::s_bDisplayingFrame = true;
+					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
+					static const char* renderNameStr = rendererNameStringStr.c_str();
+					ImGui::TextUnformatted(renderNameStr);
+
+					ImGui::Text("Number of available renderers: %d", m_RendererCount);
+
+					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
+
+					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
+
+					ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());
+
+					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
+
+					ImGui::TreePop();
 				}
 
-				ImGui::TreePop();
-			}
-
-			g_Renderer->DrawImGuiSettings();
-
-			g_Window->DrawImGuiObjects();
-
-			g_CameraManager->DrawImGuiObjects();
-
-			g_SceneManager->DrawImGuiObjects();
-
-			AudioManager::DrawImGuiObjects();
-
-			g_Renderer->DrawImGuiRenderObjects();
-
-			g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
-
-			ImGui::Spacing();
-
-			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-			if (player)
-			{
-				if (ImGui::TreeNode("Player"))
+				if (ImGui::TreeNode("Misc settings"))
 				{
-					ImGui::Text("Pitch: %.2f", player->GetPitch());
-					glm::vec3 euler = glm::eulerAngles(player->GetTransform()->GetWorldRotation());
-					ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
+					ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
 
-					bool bRiding = (player->GetController()->GetTrackRiding() != nullptr);
-					ImGui::Text("Riding track: %s", (bRiding ? "true" : "false"));
-					if (bRiding)
+					ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
+
+					if (ImGui::Button("Display latest frame"))
 					{
-						ImGui::Indent();
-						ImGui::Text("Dist along track: %.2f", player->GetController()->GetDistAlongTrack());
-						ImGui::Unindent();
+						m_bUpdateProfilerFrame = true;
+						Profiler::s_bDisplayingFrame = true;
 					}
 
 					ImGui::TreePop();
 				}
+
+				g_Renderer->DrawImGuiSettings();
+
+				g_Window->DrawImGuiObjects();
+
+				g_CameraManager->DrawImGuiObjects();
+
+				g_SceneManager->DrawImGuiObjects();
+
+				AudioManager::DrawImGuiObjects();
+
+				g_Renderer->DrawImGuiRenderObjects();
+
+				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
+
+				ImGui::Spacing();
+
+				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (player)
+				{
+					if (ImGui::TreeNode("Player"))
+					{
+						ImGui::Text("Pitch: %.2f", player->GetPitch());
+						glm::vec3 euler = glm::eulerAngles(player->GetTransform()->GetWorldRotation());
+						ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
+
+						bool bRiding = (player->GetController()->GetTrackRiding() != nullptr);
+						ImGui::Text("Riding track: %s", (bRiding ? "true" : "false"));
+						if (bRiding)
+						{
+							ImGui::Indent();
+							ImGui::Text("Dist along track: %.2f", player->GetController()->GetDistAlongTrack());
+							ImGui::Unindent();
+						}
+
+						ImGui::TreePop();
+					}
+				}
+
+				ImGui::End();
 			}
 		}
 
-		ImGui::End();
-
-		g_Renderer->DrawAssetBrowserImGui();
+		if (m_bAssetBrowserShowing)
+		{
+			g_Renderer->DrawAssetBrowserImGui(&m_bAssetBrowserShowing);
+		}
 	}
 
 	void FlexEngine::Stop()
