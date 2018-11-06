@@ -239,6 +239,7 @@ namespace flex
 
 		void AddValue(T newValue);
 		void Reset();
+		void Reset(const T& resetValue);
 
 		T currentAverage;
 		std::vector<T> prevValues;
@@ -281,6 +282,17 @@ namespace flex
 		}
 		currentIndex = 0;
 		currentAverage = T();
+	}
+
+	template<class T>
+	inline void RollingAverage<T>::Reset(const T& resetValue)
+	{
+		for (T& v : prevValues)
+		{
+			v = resetValue;
+		}
+		currentIndex = 0;
+		currentAverage = resetValue;
 	}
 
 	// Stores text render commands issued during the

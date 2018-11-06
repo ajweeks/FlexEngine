@@ -4,6 +4,7 @@
 
 #pragma warning(push, 0)
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp> // for rotateY
 #include <glm/vec2.hpp>
 #pragma warning(pop)
 
@@ -30,69 +31,133 @@ namespace flex
 	{
 		BaseCamera::Initialize();
 
-		FindPlayers();
+		FindPlayer();
 		Update();
+
+		m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(12);
+		m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(12);
+
+		ResetValues();
 	}
 
 	void OverheadCamera::OnSceneChanged()
 	{
 		BaseCamera::OnSceneChanged();
 
-		FindPlayers();
+		FindPlayer();
 		Update();
+
+		ResetValues();
 	}
 
 	void OverheadCamera::Update()
 	{
-		if (!player0 ||
-			!player1)
+		if (!m_Player0)
 		{
 			return;
 		}
 
-		glm::vec3 dPlayerPos = player0->GetTransform()->GetWorldPosition() -
-			player1->GetTransform()->GetWorldPosition();
-		real dist = glm::length(dPlayerPos);
+		m_PlayerForwardRollingAvg.AddValue(m_Player0->GetTransform()->GetForward());
 
-		glm::vec3 targetSpot = (player0->GetTransform()->GetWorldPosition() +
-								player1->GetTransform()->GetWorldPosition()) / 2.0f;
+		m_PlayerPosRollingAvg.AddValue(m_Player0->GetTransform()->GetWorldPosition());
+		m_TargetLookAtPos = m_PlayerPosRollingAvg.currentAverage;
 
-		m_Forward = glm::normalize(targetSpot - m_Position);
+		SetLookAt();
 
-		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
-		m_Right = normalize(glm::cross(worldUp, m_Forward));
-		m_Up = cross(m_Forward, m_Right);
-
-		real minHeight = 25.0f;
-		real maxHeight = 50.0f;
-		real minDistBack = 20.0f;
-		real maxDistBack = 50.0f;
-
-		real targetYO = glm::clamp(dist * 1.0f, minHeight, maxHeight);
-		real targetZO = glm::clamp(dist * 1.0f, minDistBack, maxDistBack);
-
-		glm::vec3 upVec = glm::vec3(0, 1, 0);
-		glm::vec3 backVec = glm::vec3(0, 0, -1);
-
-		glm::vec3 targetPos = targetSpot +
-			upVec * targetYO +
-			backVec * targetZO;
-		glm::vec3 dPos = targetPos - m_Position;
+		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
+		glm::vec3 dPos = desiredPos - m_Position;
 		real dPosMag = glm::length(dPos);
 		if (dPosMag > glm::epsilon<real>())
 		{
-			real maxDist = glm::clamp(dPosMag * 1000.0f * g_DeltaTime, 0.0f, 10.0f);
-			m_Position = targetPos - maxDist * glm::normalize(dPos);
+			//real maxDist = glm::clamp(dPosMag * 1000.0f * g_DeltaTime, 0.0f, 10.0f);
+			m_Vel += dPos / g_DeltaTime * 0.1f;
+		}
+
+		m_Vel *= 0.95f;
+		m_Position += m_Vel * g_DeltaTime;
+		if (m_Vel.x > 0.0f && m_Position.x > desiredPos.x ||
+			m_Vel.x < 0.0f && m_Position.x < desiredPos.x)
+		{
+			m_Position.x = desiredPos.x;
+			m_Vel.x = 0.0f;
+		}
+		if (m_Vel.y > 0.0f && m_Position.y > desiredPos.y ||
+			m_Vel.y < 0.0f && m_Position.y < desiredPos.y)
+		{
+			m_Position.y = desiredPos.y;
+			m_Vel.y = 0.0f;
+		}
+		if (m_Vel.z > 0.0f && m_Position.z > desiredPos.z ||
+			m_Vel.z < 0.0f && m_Position.z < desiredPos.z)
+		{
+			m_Position.z = desiredPos.z;
+			m_Vel.z = 0.0f;
 		}
 
 		CalculateYawAndPitchFromForward();
 		RecalculateViewProjection();
 	}
 
-	void OverheadCamera::FindPlayers()
+	void OverheadCamera::DrawImGuiObjects()
 	{
-		player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
-		player1 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player1");
+		if (ImGui::TreeNode("Overhead camera"))
+		{
+			ImGui::Text("Avg player forward: %s",Vec3ToString(m_PlayerForwardRollingAvg.currentAverage, 2));
+			ImGui::Text("For: %s", Vec3ToString(m_Forward, 2).c_str());
+
+			ImGui::TreePop();
+		}
 	}
 
+	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos) const
+	{
+		glm::vec3 playerForward = m_PlayerForwardRollingAvg.currentAverage;
+		glm::vec3 offsetVec(VEC3_UP * m_OffsetY + playerForward * m_OffsetZ);
+		return pos + offsetVec;
+	}
+
+	void OverheadCamera::SetPosAndLookAt()
+	{
+		if (!m_Player0)
+		{
+			return;
+		}
+
+		m_TargetLookAtPos = m_Player0->GetTransform()->GetWorldPosition();
+		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
+		m_Position = desiredPos;
+
+		SetLookAt();
+	}
+
+	void OverheadCamera::SetLookAt()
+	{
+		m_Forward = glm::normalize(m_TargetLookAtPos - m_Position);
+		m_Right = normalize(glm::cross(VEC3_UP, m_Forward));
+		m_Up = cross(m_Forward, m_Right);
+	}
+
+	void OverheadCamera::FindPlayer()
+	{
+		m_Player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+	}
+
+	void OverheadCamera::ResetValues()
+	{
+		m_Vel = VEC3_ZERO;
+		SetPosAndLookAt();
+
+		if (m_Player0)
+		{
+			m_PlayerPosRollingAvg.Reset(m_Player0->GetTransform()->GetWorldPosition());
+			m_PlayerForwardRollingAvg.Reset(m_Player0->GetTransform()->GetForward());
+		}
+		else
+		{
+			m_PlayerPosRollingAvg.Reset();
+			m_PlayerForwardRollingAvg.Reset();
+		}
+		m_OffsetY = 14.0f;
+		m_OffsetZ = -16.0f;
+	}
 } // namespace flex

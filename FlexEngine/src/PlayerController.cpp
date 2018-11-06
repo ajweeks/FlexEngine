@@ -14,6 +14,7 @@
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Cameras/OverheadCamera.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
@@ -191,13 +192,14 @@ namespace flex
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-#define DRAW_LOCAL_AXES 0
-#if DRAW_LOCAL_AXES
+		bool bDrawLocalAxes = !m_bFirstPerson;
+		if (bDrawLocalAxes)
+		{
 			const real lineLength = 4.0f;
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
-#endif
+		}
 
 		btQuaternion orientation = rb->getOrientation();
 		glm::vec3 euler = glm::eulerAngles(ToQuaternion(orientation));
@@ -221,6 +223,8 @@ namespace flex
 		}
 
 		m_Player->GetRigidBody()->UpdateParentTransform();
+
+		//m_Player->GetTransform()->SetWorldPosition(m_Player->GetTransform()->GetWorldPosition() + glm::vec3(g_DeltaTime * 1.0f, 0.0f, 0.0f));
 
 		bool bDrawVelocity = false;
 		if (bDrawVelocity)
@@ -283,10 +287,13 @@ namespace flex
 		// TODO: Implement more robust solution
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
-		if (fpCam)
+		OverheadCamera* ohCam = dynamic_cast<OverheadCamera*>(cam);
+		if (fpCam || ohCam)
 		{
 			m_bPossessed = true;
 		}
+
+		m_bFirstPerson = (fpCam != nullptr);
 	}
 
 	bool PlayerController::IsPossessed() const

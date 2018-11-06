@@ -145,8 +145,8 @@ namespace flex
 		debugCamera->SetPitch(glm::radians(-10.0f));
 		g_CameraManager->AddCamera(debugCamera, false);
 
-		//OverheadCamera* overheadCamera = new OverheadCamera();
-		//g_CameraManager->AddCamera(overheadCamera, false);
+		OverheadCamera* overheadCamera = new OverheadCamera();
+		g_CameraManager->AddCamera(overheadCamera, false);
 
 		FirstPersonCamera* fpCamera = new FirstPersonCamera();
 		g_CameraManager->AddCamera(fpCamera, true);
@@ -1768,6 +1768,8 @@ namespace flex
 				g_Renderer->DrawImGuiRenderObjects();
 
 				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
+
+				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
 
 				ImGui::Spacing();
 

@@ -391,8 +391,8 @@ namespace flex
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);
 			real distAlongTrack = -1.0f;
-			Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-			PlayerController* playerController = player0->GetController();
+			Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+			PlayerController* playerController = m_Player0->GetController();
 			BezierCurveList* trackRiding = playerController->GetTrackRiding();
 			if (trackRiding)
 			{
@@ -404,7 +404,7 @@ namespace flex
 			else
 			{
 				real distToTrack;
-				if (IsTrackInRange(&m_Tracks[i], player0->GetTransform()->GetWorldPosition(),
+				if (IsTrackInRange(&m_Tracks[i], m_Player0->GetTransform()->GetWorldPosition(),
 					playerController->GetTrackAttachDistThreshold(),
 					distToTrack,
 					distAlongTrack))

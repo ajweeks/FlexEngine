@@ -18,11 +18,28 @@ namespace flex
 		virtual void OnSceneChanged() override;
 		virtual void Update() override;
 
-	private:
-		void FindPlayers();
+		virtual void DrawImGuiObjects() override;
 
-		GameObject* player0 = nullptr;
-		GameObject* player1 = nullptr;
+	private:
+		glm::vec3 GetOffsetPosition(const glm::vec3& pos) const;
+		void SetPosAndLookAt();
+		void SetLookAt();
+		void FindPlayer();
+
+		void ResetValues();
+
+		GameObject* m_Player0 = nullptr;
+
+		RollingAverage<glm::vec3> m_PlayerPosRollingAvg;
+		RollingAverage<glm::vec3> m_PlayerForwardRollingAvg;
+
+		real m_OffsetY;
+		real m_OffsetZ;
+
+		// Where we point at on the ground
+		glm::vec3 m_TargetLookAtPos;
+		glm::vec3 m_TargetLookAtDir;
+		glm::vec3 m_Vel;
 
 	};
 } // namespace flex

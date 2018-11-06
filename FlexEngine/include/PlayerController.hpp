@@ -52,6 +52,7 @@ namespace flex
 
 		bool m_bGrounded = false;
 		bool m_bPossessed = false;
+		bool m_bFirstPerson = false;
 
 		BezierCurveList* m_TrackRiding = nullptr;
 		real m_DistAlongTrack = 0.0f;

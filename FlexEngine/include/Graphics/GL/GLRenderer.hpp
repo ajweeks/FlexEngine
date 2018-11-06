@@ -260,7 +260,7 @@ namespace flex
 
 			TextureHandle m_ShadowMapTexture;
 			u32 m_ShadowMapFBO = 0;
-			i32 m_ShadowMapSize = 1024;
+			i32 m_ShadowMapSize = 4096;
 			MaterialID m_ShadowMaterialID = InvalidMaterialID;
 
 			GLTexture* m_BRDFTexture = nullptr;

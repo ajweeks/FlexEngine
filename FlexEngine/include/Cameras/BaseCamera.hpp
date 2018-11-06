@@ -24,6 +24,8 @@ namespace flex
 		virtual void OnPossess();
 		virtual void OnDepossess();
 
+		virtual void DrawImGuiObjects();
+
 		void SetFOV(real FOV);
 		real GetFOV() const;
 		void SetZNear(real zNear);

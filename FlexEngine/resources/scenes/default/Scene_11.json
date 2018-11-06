@@ -85,6 +85,17 @@
 			},
 			"mesh" : "cube",
 			"material" : "Grid"
+		},
+		{
+			"name" : "New_Object_03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "8.775, 3.848, 0.249"
+			},
+			"mesh" : "map_tablet",
+			"material" : "pbr light grey"
 		}
 	],
 	"point lights" : 
@@ -99,14 +110,14 @@
 	"directional light" : 
 	{
 		"rotation" : "2.018, -1.174, -2.615",
-		"pos" : "0.000, 23.600, 0.000",
+		"pos" : "0.000, 25.000, 0.000",
 		"color" : "1.00, 1.00, 1.00",
 		"enabled" : true,
 		"brightness" : 2.479000,
 		"cast shadows" : true,
 		"shadow darkness" : 0.000000,
-		"shadow map near" : -80.000000,
-		"shadow map far" : 100.000000,
-		"shadow map zoom" : 30.000000
+		"shadow map near" : -92.000000,
+		"shadow map far" : 86.000000,
+		"shadow map zoom" : 96.000000
 	}
 }

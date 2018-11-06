@@ -20,10 +20,11 @@
 
 namespace flex
 {
-	Player::Player(i32 index) :
+	Player::Player(i32 index, const glm::vec3& initialPos /* = VEC3_ZERO */) :
 		GameObject("Player " + std::to_string(index), GameObjectType::PLAYER),
 		m_Index(index)
 	{
+		m_Transform.SetWorldPosition(initialPos);
 	}
 
 	Player::~Player()
@@ -53,7 +54,6 @@ namespace flex
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
 		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION + "meshes/capsule.gltf");
-		m_Transform.SetWorldPosition(glm::vec3(-5.0f + 5.0f * m_Index, 15.0f, 0.0f));
 
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);

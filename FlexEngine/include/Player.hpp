@@ -11,7 +11,7 @@ namespace flex
 	class Player : public GameObject
 	{
 	public:
-		Player(i32 index);
+		Player(i32 index, const glm::vec3& initialPos = VEC3_ZERO);
 		~Player();
 
 		virtual void Initialize() override;
@@ -35,7 +35,7 @@ namespace flex
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
-		GameObject* m_Slingshot = nullptr;
+		GameObject* m_MapTablet = nullptr;
 		real m_MoveFriction = 12.0f;
 		real m_Height = 4.0f;
 

@@ -56,12 +56,12 @@ namespace flex
 
 	void BaseCamera::OnPossess()
 	{
-		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+		Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		Player* player1 = g_SceneManager->CurrentScene()->GetPlayer(1);
 
-		if (player0)
+		if (m_Player0)
 		{
-			PlayerController* pc0 = player0->GetController();
+			PlayerController* pc0 = m_Player0->GetController();
 			pc0->UpdateIsPossessed();
 		}
 
@@ -73,6 +73,10 @@ namespace flex
 	}
 
 	void BaseCamera::OnDepossess()
+	{
+	}
+
+	void BaseCamera::DrawImGuiObjects()
 	{
 	}
 

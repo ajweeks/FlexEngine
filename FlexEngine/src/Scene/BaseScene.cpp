@@ -223,7 +223,7 @@ namespace flex
 			g_Renderer->InitializeDirectionalLight(dirLight);
 		}
 
-		m_Player0 = new Player(0);
+		m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
 		AddRootObject(m_Player0);
 
 		//m_Player1 = new Player(1);
