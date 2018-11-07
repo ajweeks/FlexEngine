@@ -43,6 +43,8 @@ namespace flex
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
+		rigidBody->SetAngularDamping(0.1f);
+		rigidBody->SetLinearDamping(0.1f);
 		rigidBody->SetFriction(m_MoveFriction);
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
@@ -59,25 +61,22 @@ namespace flex
 		m_Controller->Initialize(this);
 
 
-		//MaterialCreateInfo slingshotMatCreateInfo = {};
-		//slingshotMatCreateInfo.name = "Slingshot material";
-		//slingshotMatCreateInfo.shaderName = "pbr";
-		//slingshotMatCreateInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.02f);
-		//slingshotMatCreateInfo.constMetallic = 0.0f;
-		//slingshotMatCreateInfo.constRoughness = 1.0f;
-		//slingshotMatCreateInfo.constAO = 1.0f;
-		//MaterialID slingshotMatID = g_Renderer->InitializeMaterial(&slingshotMatCreateInfo);
+		//MaterialCreateInfo mapTabletMatCreateInfo = {};
+		//mapTabletMatCreateInfo.name = "Map tablet material";
+		//mapTabletMatCreateInfo.shaderName = "pbr";
+		//mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.02f);
+		//mapTabletMatCreateInfo.constMetallic = 0.0f;
+		//mapTabletMatCreateInfo.constRoughness = 1.0f;
+		//mapTabletMatCreateInfo.constAO = 1.0f;
+		//MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
+		//
+		//m_MapTablet = new GameObject("Map tablet", GameObjectType::NONE);
+		//MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(mapTabletMatID, m_MapTablet));
+		//mapTabletMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/map_tablet.glb");
+		//AddChild(m_MapTablet);
+		//m_MapTablet->GetTransform()->SetLocalPosition(glm::vec3(-0.75f, -0.3f, 2.3f));
+		//m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.30f), -glm::radians(86.0f))));
 
-		//m_Slingshot = new GameObject("Slingshot", GameObjectType::NONE);
-		//MeshComponent* slingshotMesh = m_Slingshot->SetMeshComponent(new MeshComponent(slingshotMatID, m_Slingshot));
-
-		//slingshotMesh->SetRequiredAttributesFromMaterialID(slingshotMatID);
-
-		//slingshotMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/slingshot.gltf");
-
-		//AddChild(m_Slingshot);
-
-		//m_Slingshot->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 1.0f));
 
 		m_CrosshairTextureID = g_Renderer->InitializeTexture(RESOURCE_LOCATION + "textures/cross-hair-01.png", 4, false, false, false);
 

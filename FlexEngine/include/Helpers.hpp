@@ -231,11 +231,17 @@ namespace flex
 		real* pixels;
 	};
 
+	enum class SamplingType
+	{
+		CONSTANT, // All samples are equally-weighted
+		LINEAR    // Latest sample is weighted N times higher than Nth sample
+	};
+
 	template <class T>
 	struct RollingAverage
 	{
 		RollingAverage();
-		RollingAverage(i32 valueCount);
+		RollingAverage(i32 valueCount, SamplingType samplingType = SamplingType::CONSTANT);
 
 		void AddValue(T newValue);
 		void Reset();
@@ -243,6 +249,8 @@ namespace flex
 
 		T currentAverage;
 		std::vector<T> prevValues;
+
+		SamplingType samplingType;
 
 		i32 currentIndex = 0;
 	};
@@ -253,7 +261,8 @@ namespace flex
 	}
 
 	template <class T>
-	RollingAverage<T>::RollingAverage(i32 valueCount)
+	RollingAverage<T>::RollingAverage(i32 valueCount, SamplingType samplingType /* = SamplingType::CONSTANT */) :
+		samplingType(samplingType)
 	{
 		prevValues.resize(valueCount);
 	}
@@ -265,12 +274,28 @@ namespace flex
 		currentIndex %= prevValues.size();
 
 		currentAverage = T();
-		std::for_each(prevValues.begin(), prevValues.end(), [&](T value)
+		i32 sampleCount = 0;
+		i32 valueCount = (i32)prevValues.size();
+		for (i32 i = 0; i < valueCount; ++i)
 		{
-			currentAverage += value;
-		});
+			switch (samplingType)
+			{
+			case SamplingType::CONSTANT:
+				currentAverage += prevValues[i];
+				sampleCount++;
+				break;
+			case SamplingType::LINEAR:
+				real sampleWeight = (real)(i <= currentIndex ? i + (valueCount - currentIndex) : i - currentIndex);
+				currentAverage += prevValues[i] * sampleWeight;
+				sampleCount += (i32)sampleWeight;
+				break;
+			}
+		}
 
-		currentAverage /= prevValues.size();
+		if (sampleCount > 0)
+		{
+			currentAverage /= sampleCount;
+		}
 	}
 
 	template <class T>

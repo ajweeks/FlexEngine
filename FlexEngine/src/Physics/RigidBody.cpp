@@ -61,7 +61,6 @@ namespace flex
 		btTransform startingTransform = ToBtTransform(*parentTransform);
 		m_MotionState = new btDefaultMotionState(startingTransform);
 		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
-
 		m_RigidBody = new btRigidBody(info);
 
 		i32 flags = m_RigidBody->getFlags();
@@ -75,7 +74,7 @@ namespace flex
 		}
 		m_RigidBody->setFlags(flags);
 
-		m_RigidBody->setDamping(0.0f, 0.0f);
+		m_RigidBody->setDamping(m_LinearDamping, m_AngularDamping);
 		m_RigidBody->setFriction(m_Friction);
 
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
@@ -163,13 +162,14 @@ namespace flex
 		return m_Friction;
 	}
 
-	void RigidBody::GetTransform(glm::vec3& outPos, glm::quat& outRot)
+	void RigidBody::SetLinearDamping(real linearDamping)
 	{
-		btTransform transform;
-		m_RigidBody->getMotionState()->getWorldTransform(transform);
+		m_LinearDamping = linearDamping;
+	}
 
-		outPos = ToVec3(transform.getOrigin());
-		outRot = ToQuaternion(transform.getRotation());
+	void RigidBody::SetAngularDamping(real angularDamping)
+	{
+		m_AngularDamping = angularDamping;
 	}
 
 	void RigidBody::SetOrientationConstraint(const btVector3& axis)

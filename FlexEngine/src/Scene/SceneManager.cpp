@@ -457,12 +457,12 @@ namespace flex
 			{
 				for (i32 i = 0; i < (i32)m_Scenes.size(); ++i)
 				{
-					bool bSceneSelected = (i == m_CurrentSceneIndex);
+					bool bSceneSelected = (i == (i32)m_CurrentSceneIndex);
 					BaseScene* scene = GetSceneAtIndex(i);
 					std::string sceneFileName = scene->GetFileName();
 					if (ImGui::Selectable(sceneFileName.c_str(), &bSceneSelected, 0, ImVec2((real)sceneItemWidth, 0)))
 					{
-						if (i != m_CurrentSceneIndex)
+						if (i != (i32)m_CurrentSceneIndex)
 						{
 							if (SetCurrentScene(i))
 							{

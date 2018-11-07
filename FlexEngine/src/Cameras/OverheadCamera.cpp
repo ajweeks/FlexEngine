@@ -6,8 +6,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp> // for rotateY
 #include <glm/vec2.hpp>
+
+#include <LinearMath/btIDebugDraw.h>
 #pragma warning(pop)
 
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -31,11 +34,11 @@ namespace flex
 	{
 		BaseCamera::Initialize();
 
+		m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
+		m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+
 		FindPlayer();
 		Update();
-
-		m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(12);
-		m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(12);
 
 		ResetValues();
 	}
@@ -65,34 +68,7 @@ namespace flex
 		SetLookAt();
 
 		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
-		glm::vec3 dPos = desiredPos - m_Position;
-		real dPosMag = glm::length(dPos);
-		if (dPosMag > glm::epsilon<real>())
-		{
-			//real maxDist = glm::clamp(dPosMag * 1000.0f * g_DeltaTime, 0.0f, 10.0f);
-			m_Vel += dPos / g_DeltaTime * 0.1f;
-		}
-
-		m_Vel *= 0.95f;
-		m_Position += m_Vel * g_DeltaTime;
-		if (m_Vel.x > 0.0f && m_Position.x > desiredPos.x ||
-			m_Vel.x < 0.0f && m_Position.x < desiredPos.x)
-		{
-			m_Position.x = desiredPos.x;
-			m_Vel.x = 0.0f;
-		}
-		if (m_Vel.y > 0.0f && m_Position.y > desiredPos.y ||
-			m_Vel.y < 0.0f && m_Position.y < desiredPos.y)
-		{
-			m_Position.y = desiredPos.y;
-			m_Vel.y = 0.0f;
-		}
-		if (m_Vel.z > 0.0f && m_Position.z > desiredPos.z ||
-			m_Vel.z < 0.0f && m_Position.z < desiredPos.z)
-		{
-			m_Position.z = desiredPos.z;
-			m_Vel.z = 0.0f;
-		}
+		m_Position = desiredPos;
 
 		CalculateYawAndPitchFromForward();
 		RecalculateViewProjection();
@@ -102,17 +78,21 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Overhead camera"))
 		{
-			ImGui::Text("Avg player forward: %s",Vec3ToString(m_PlayerForwardRollingAvg.currentAverage, 2));
+			glm::vec3 start = m_Player0->GetTransform()->GetWorldPosition();
+			glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
+			g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
+
+			ImGui::Text("Avg player forward: %s", Vec3ToString(m_PlayerForwardRollingAvg.currentAverage, 2));
 			ImGui::Text("For: %s", Vec3ToString(m_Forward, 2).c_str());
 
 			ImGui::TreePop();
 		}
 	}
 
-	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos) const
+	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos)
 	{
-		glm::vec3 playerForward = m_PlayerForwardRollingAvg.currentAverage;
-		glm::vec3 offsetVec(VEC3_UP * m_OffsetY + playerForward * m_OffsetZ);
+		glm::vec3 forward = m_PlayerForwardRollingAvg.currentAverage;
+		glm::vec3 offsetVec(VEC3_UP * m_OffsetY + forward * m_OffsetZ);
 		return pos + offsetVec;
 	}
 

@@ -37,7 +37,7 @@ namespace flex
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);
 
-		btDiscreteDynamicsWorld * m_World = nullptr;
+		btDiscreteDynamicsWorld* m_World = nullptr;
 
 		static const u32 MAX_SUBSTEPS = 32;
 

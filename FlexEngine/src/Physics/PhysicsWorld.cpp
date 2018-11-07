@@ -67,9 +67,8 @@ namespace flex
 	{
 		if (m_World)
 		{
-			PROFILE_BEGIN("Physics tick");
+			PROFILE_AUTO("Physics tick");
 			m_World->stepSimulation(deltaSeconds, MAX_SUBSTEPS);
-			PROFILE_END("Physics tick");
 		}
 	}
 

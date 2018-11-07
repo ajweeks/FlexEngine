@@ -21,7 +21,7 @@ namespace flex
 		virtual void DrawImGuiObjects() override;
 
 	private:
-		glm::vec3 GetOffsetPosition(const glm::vec3& pos) const;
+		glm::vec3 GetOffsetPosition(const glm::vec3& pos);
 		void SetPosAndLookAt();
 		void SetLookAt();
 		void FindPlayer();

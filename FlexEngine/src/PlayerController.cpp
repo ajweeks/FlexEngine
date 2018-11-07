@@ -57,6 +57,8 @@ namespace flex
 
 	void PlayerController::Update()
 	{
+		m_Player->GetRigidBody()->UpdateParentTransform();
+
 		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_EQUAL) ||
 			g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, InputManager::GamepadButton::RIGHT_BUMPER))
 		{
@@ -70,9 +72,8 @@ namespace flex
 		// TODO: Make frame-rate-independent!
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
-		btVector3 rbPos = rb->getWorldTransform().getOrigin();
+		btVector3 rbPos = rb->getInterpolationWorldTransform().getOrigin();
 
-		btTransform& transformBT = rb->getWorldTransform();
 		Transform* transform = m_Player->GetTransform();
 		glm::vec3 up = transform->GetUp();
 		glm::vec3 right = transform->GetRight();
@@ -205,9 +206,6 @@ namespace flex
 		glm::vec3 euler = glm::eulerAngles(ToQuaternion(orientation));
 
 		rb->applyCentralForce(force);
-		btVector3 angularVel = rb->getAngularVelocity();
-		angularVel.setY(angularVel.getY() * (1.0f - m_RotateFriction));
-		rb->setAngularVelocity(angularVel);
 
 		const btVector3& vel = rb->getLinearVelocity();
 		btVector3 xzVel(vel.getX(), 0, vel.getZ());
@@ -221,8 +219,6 @@ namespace flex
 			xzVelMagnitude = m_MaxMoveSpeed;
 			bMaxVel = true;
 		}
-
-		m_Player->GetRigidBody()->UpdateParentTransform();
 
 		//m_Player->GetTransform()->SetWorldPosition(m_Player->GetTransform()->GetWorldPosition() + glm::vec3(g_DeltaTime * 1.0f, 0.0f, 0.0f));
 
@@ -260,7 +256,7 @@ namespace flex
 
 				glm::quat rot = transform->GetLocalRotation();
 				rot = glm::rotate(rot, -lookH * m_RotateHSpeed * g_DeltaTime, up);
-				transform->SetLocalRotation(rot);
+				transform->SetWorldRotation(rot);
 
 				m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
 			} break;

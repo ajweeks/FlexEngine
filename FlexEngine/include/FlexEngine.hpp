@@ -4,6 +4,7 @@
 
 #include "InputManager.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Spring.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -183,6 +184,8 @@ namespace flex
 		bool m_bMainWindowShowing = true;
 		bool m_bDemoWindowShowing = false;
 		bool m_bAssetBrowserShowing = false;
+
+		std::vector<Spring<glm::vec3>> m_TestSprings;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

@@ -2360,6 +2360,8 @@ namespace flex
 
 		void GLRenderer::DrawSelectedObjectWireframe(const DrawCallInfo& drawCallInfo)
 		{
+			UNREFERENCED_PARAMETER(drawCallInfo);
+
 			const std::vector<GameObject*> selectedObjects = g_EngineInstance->GetSelectedObjects();
 			if (!selectedObjects.empty())
 			{
@@ -4597,7 +4599,7 @@ namespace flex
 				RESOURCE_LOCATION + "fonts/SourceCodePro-regular-14.png"
 			};
 
-			i32 fontSizes[] = {
+			i16 fontSizes[] = {
 				24,
 				10,
 				14
@@ -4629,12 +4631,7 @@ namespace flex
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				std::string blockName = "Load font " + fontName;
-				{
-					PROFILE_AUTO(blockName.c_str());
-					LoadFont(fonts[i], fontSizes[i], filePaths[i], renderedTextureFilePaths[i], bForceRender);
-				}
-				Profiler::PrintBlockDuration(blockName.c_str());
+				LoadFont(fonts[i], fontSizes[i], filePaths[i], renderedTextureFilePaths[i], bForceRender);
 			}
 		}
 

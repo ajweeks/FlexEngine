@@ -1597,7 +1597,7 @@ namespace flex
 		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setGravity(btVector3(0, 0, 0));
 
-		//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getWorldTransform();
+		//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
 		//btFixedConstraint* constraint = new btFixedConstraint(
 		//	*m_RigidBody->GetRigidBodyInternal(),
 		//	*m_RigidBody->GetRigidBodyInternal(),
@@ -1648,11 +1648,10 @@ namespace flex
 		if (m_RigidBody)
 		{
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
-			btTransform transform;
-			m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
+			btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
 			transform.setOrigin(ToBtVec3(newPos));
 			transform.setRotation(btQuaternion::getIdentity());
-			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
+			m_RigidBody->GetRigidBodyInternal()->setInterpolationWorldTransform(transform);
 		}
 
 		btVector3 startPos = ToBtVec3(startingPos);

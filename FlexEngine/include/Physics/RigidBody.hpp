@@ -32,7 +32,8 @@ namespace flex
 		void SetFriction(real friction);
 		real GetFriction() const;
 
-		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
+		void SetLinearDamping(real linearDamping);
+		void SetAngularDamping(real angularDamping);
 
 		// Vector passed in defines the axis (or axes) this body can rotate around
 		void SetOrientationConstraint(const btVector3& axis);
@@ -90,6 +91,9 @@ namespace flex
 
 		i32 m_Group = 0;
 		i32 m_Mask = 0;
+
+		real m_AngularDamping = 0.0f;
+		real m_LinearDamping = 0.0f;
 
 		// Flags set from PhysicsFlag enum
 		u32 m_Flags = 0;
