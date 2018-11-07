@@ -2142,7 +2142,8 @@ namespace flex
 
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
 		{
-			PROFILE_AUTO("DrawDeferredObjects");
+			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawDeferredObjectsCubemap" : "DrawDeferredObjects";
+			PROFILE_AUTO(profileBlockName);
 
 			if (!drawCallInfo.bDeferred)
 			{
@@ -2216,7 +2217,8 @@ namespace flex
 
 		void GLRenderer::DrawGBufferContents(const DrawCallInfo& drawCallInfo)
 		{
-			PROFILE_AUTO("DrawGBufferContents");
+			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawGBufferContentsCubemap" : "DrawGBufferContents";
+			PROFILE_AUTO(profileBlockName);
 
 			if (drawCallInfo.bDeferred)
 			{
@@ -2334,7 +2336,8 @@ namespace flex
 
 		void GLRenderer::DrawForwardObjects(const DrawCallInfo& drawCallInfo)
 		{
-			PROFILE_AUTO("DrawForwardObjects");
+			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawForwardObjectsCubemap" : "DrawForwardObjects";
+			PROFILE_AUTO(profileBlockName);
 
 			if (drawCallInfo.bDeferred)
 			{
