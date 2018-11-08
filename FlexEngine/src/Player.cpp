@@ -203,6 +203,29 @@ namespace flex
 		return m_Controller;
 	}
 
+	void Player::DrawImGuiObjects()
+	{
+		std::string treeNodeName = "Player " + IntToString(m_Index);
+		if (ImGui::TreeNode(treeNodeName.c_str()))
+		{
+			ImGui::Text("Pitch: %.2f", GetPitch());
+			glm::vec3 euler = glm::eulerAngles(GetTransform()->GetWorldRotation());
+			ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
+
+			bool bRiding = (GetController()->GetTrackRiding() != nullptr);
+			ImGui::Text("Riding track: %s", (bRiding ? "true" : "false"));
+			if (bRiding)
+			{
+				ImGui::Indent();
+				ImGui::Text("Dist along track: %.2f", GetController()->GetDistAlongTrack());
+				ImGui::Text("Moving forward down track: %s", (bMovingForwardDownTrack ? "true" : "false"));
+				ImGui::Unindent();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
 	void Player::ClampPitch()
 	{
 		real limit = glm::radians(89.5f);

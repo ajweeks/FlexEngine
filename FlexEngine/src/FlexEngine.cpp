@@ -199,8 +199,8 @@ namespace flex
 		for (i32 i = 0; i < springCount; ++i)
 		{
 			m_TestSprings.push_back(Spring<glm::vec3>());
-			m_TestSprings[i].kd = 6.5f;
-			m_TestSprings[i].kp = 15.0f;
+			m_TestSprings[i].kd = 30.0f;
+			m_TestSprings[i].kp = 130.0f;
 		}
 
 		PROFILE_END(profileBlockStr);
@@ -1795,32 +1795,28 @@ namespace flex
 
 				g_Renderer->DrawImGuiRenderObjects();
 
+				ImGui::Spacing();
+				ImGui::Spacing();
+				ImGui::Spacing();
+
+				ImGui::Text("Debugging");
+
 				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
 
 				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
 
-				ImGui::Spacing();
-
-				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-				if (player)
+				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (p0)
 				{
-					if (ImGui::TreeNode("Player"))
-					{
-						ImGui::Text("Pitch: %.2f", player->GetPitch());
-						glm::vec3 euler = glm::eulerAngles(player->GetTransform()->GetWorldRotation());
-						ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
+					p0->DrawImGuiObjects();
+					p0->GetController()->DrawImGuiObjects();
+				}
 
-						bool bRiding = (player->GetController()->GetTrackRiding() != nullptr);
-						ImGui::Text("Riding track: %s", (bRiding ? "true" : "false"));
-						if (bRiding)
-						{
-							ImGui::Indent();
-							ImGui::Text("Dist along track: %.2f", player->GetController()->GetDistAlongTrack());
-							ImGui::Unindent();
-						}
-
-						ImGui::TreePop();
-					}
+				Player* p1 = g_SceneManager->CurrentScene()->GetPlayer(1);
+				if (p1)
+				{
+					p1->DrawImGuiObjects();
+					p1->GetController()->DrawImGuiObjects();
 				}
 
 				if (ImGui::TreeNode("Spring"))
@@ -2131,7 +2127,7 @@ namespace flex
 		bool dotPos = (glm::dot(v2, vecPerp) > 0.0f);
 		bool dot2Pos = (v1ov2 > 0.0f);
 
-		if (dotPos && !b_LastDotPos)
+		if (dotPos && !m_bLastDotPos)
 		{
 			if (dot2Pos)
 			{
@@ -2142,7 +2138,7 @@ namespace flex
 				m_RotationGizmoWrapCount--;
 			}
 		}
-		else if (!dotPos && b_LastDotPos)
+		else if (!dotPos && m_bLastDotPos)
 		{
 			if (dot2Pos)
 			{
@@ -2154,7 +2150,7 @@ namespace flex
 			}
 		}
 
-		b_LastDotPos = dotPos;
+		m_bLastDotPos = dotPos;
 
 		real angleRaw = acos(v1ov2);
 		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);

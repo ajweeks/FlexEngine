@@ -70,7 +70,7 @@ namespace flex
 		i32 m_BufferStart = 0;
 		i32 m_BufferSize = 0;
 		gl::GLTexture* m_Texture = nullptr;
-		bool m_bIsAddedToRenderer = false;
+		bool m_bAddedToRenderer = false;
 
 		bool m_bIsCachedFont = false;
 

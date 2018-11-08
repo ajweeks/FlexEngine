@@ -168,7 +168,7 @@ namespace flex
 		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
 		glm::quat m_CurrentRot;
-		bool b_LastDotPos = false;
+		bool m_bLastDotPos = false;
 
 		bool m_bDraggingGizmo = false;
 		// -1,   0, 1, 2, 3

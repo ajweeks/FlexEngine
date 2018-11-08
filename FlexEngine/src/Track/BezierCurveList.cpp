@@ -61,7 +61,7 @@ namespace flex
 		real curveT = 0.0f;
 		GetCurveIndexAndLocalTFromGlobalT(t, curveIndex, curveT);
 
-		return curves[curveIndex].GetCurveDirectionAt(curveT);
+		return glm::normalize(curves[curveIndex].GetFirstDerivativeOnCurve(curveT));
 	}
 
 	real BezierCurveList::GetTAtJunction(i32 curveIndex)
@@ -75,11 +75,11 @@ namespace flex
 		return curves[glm::clamp(index, 0, (i32)(curves.size() - 1))].GetPointOnCurve(t);
 	}
 
-	glm::vec3 BezierCurveList::GetDirectionAtJunction(i32 index)
-	{
-		real t = (index == (i32)curves.size() ? 1.0f : 0.0f);
-		return curves[glm::clamp(index, 0, (i32)(curves.size() - 1))].GetCurveDirectionAt(t);
-	}
+	//glm::vec3 BezierCurveList::GetDirectionAtJunction(i32 index)
+	//{
+	//	real t = (index == (i32)curves.size() ? 1.0f : 0.0f);
+	//	return glm::normalize(curves[glm::clamp(index, 0, (i32)(curves.size() - 1))].GetFirstDerivativeOnCurve(t));
+	//}
 
 	void BezierCurveList::GetCurveIndexAndLocalTFromGlobalT(real globalT, i32& outCurveIndex, real& outLocalT) const
 	{

@@ -138,25 +138,20 @@ namespace flex
 
 				if (m_bUpdateFacingAndForceFoward || bUpdateFacing)
 				{
-					bool pMovingForwardDownTrack = m_bMovingForwardDownTrack;
+					bool pMovingForwardDownTrack = m_Player->bMovingForwardDownTrack;
 					glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
-					m_bMovingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
+					m_Player->bMovingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
 					if (m_bUpdateFacingAndForceFoward)
 					{
-						m_bMovingForwardDownTrack =
-							(m_bMovingForwardDownTrack && moveForward > 0.0f) ||
-							(m_bMovingForwardDownTrack && moveBackward > 0.0f);
-					}
-
-					if (m_bMovingForwardDownTrack != pMovingForwardDownTrack)
-					{
-						Print("%d\n", (i32)m_bMovingForwardDownTrack);
+						m_Player->bMovingForwardDownTrack =
+							(m_Player->bMovingForwardDownTrack && moveForward > 0.0f) ||
+							(m_Player->bMovingForwardDownTrack && moveBackward > 0.0f);
 					}
 
 					m_bUpdateFacingAndForceFoward = false;
 				}
 
-				if (!m_bMovingForwardDownTrack)
+				if (!m_Player->bMovingForwardDownTrack)
 				{
 					moveForward = 1.0f - moveForward;
 					moveBackward = 1.0f - moveBackward;
@@ -319,13 +314,26 @@ namespace flex
 		return m_TrackRiding;
 	}
 
+	void PlayerController::DrawImGuiObjects()
+	{
+		const std::string treeName = "Player Controller " + IntToString(m_PlayerIndex);
+		if (ImGui::TreeNode(treeName.c_str()))
+		{
+			ImGui::Text("Seconds attempting to turn: %.5f", m_SecondsAttemptingToTurn);
+			ImGui::Text("Turning dir: %s", m_DirTurning == TurningDir::LEFT ? "left" : m_DirTurning == TurningDir::RIGHT ? "right" : "none");
+
+			ImGui::TreePop();
+		}
+	}
+
 	void PlayerController::SnapPosToTrack(real pDistAlongTrack)
 	{
 		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 		BezierCurveList* newTrack = m_TrackRiding;
 		real newDistAlongTrack = m_DistAlongTrack;
 		i32 desiredDir = 1;
-		real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+		const real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+		const real rightStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X);
 		static const real STICK_THRESHOLD = 0.5f;
 		if (leftStickX < -STICK_THRESHOLD)
 		{
@@ -335,7 +343,8 @@ namespace flex
 		{
 			desiredDir = 2;
 		}
-		glm::vec3 pos = trackManager->GetPointOnTrack(m_TrackRiding, m_DistAlongTrack, pDistAlongTrack, desiredDir, &newTrack, newDistAlongTrack);
+		real bReversingDownTrack = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER) > 0.0f;
+		glm::vec3 newPos = trackManager->GetPointOnTrack(m_TrackRiding, m_DistAlongTrack, pDistAlongTrack, desiredDir, &newTrack, newDistAlongTrack, bReversingDownTrack);
 
 		if (newTrack != m_TrackRiding)
 		{
@@ -344,10 +353,73 @@ namespace flex
 			m_bUpdateFacingAndForceFoward = true;
 		}
 
-		glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
+		Transform* playerTransform = m_Player->GetTransform();
+
+		glm::vec3 trackForward = trackManager->GetDirectionOnTrack(m_TrackRiding, m_DistAlongTrack);
 		glm::vec3 trackRight = glm::cross(trackForward, VEC3_UP);
-		pos += glm::vec3(0.0f, 1.9f, 0.0f);
-		pos -= trackRight * 0.8f;
-		m_Player->GetTransform()->SetWorldPosition(pos, true);
+		newPos += glm::vec3(0.0f, 1.9f, 0.0f);
+		playerTransform->SetWorldPosition(newPos, true);
+
+		glm::quat rot = playerTransform->GetWorldRotation();
+
+		real invTurnSpeed = m_TurnToFaceDownTrackInvSpeed;
+
+		if (m_bTurningAroundOnTrack)
+		{
+			invTurnSpeed = m_FlipTrackDirInvSpeed;
+			m_bUpdateFacingAndForceFoward = true;
+			trackForward = m_TargetTrackFor;
+		}
+		else
+		{
+			glm::vec3 playerF = playerTransform->GetForward();
+			real TFoPF = glm::dot(trackForward, playerF);
+			if (TFoPF > 0.0f)
+			{
+				trackForward = -trackForward;
+			}
+
+			bool bTurningRight = rightStickX > m_TurnStartStickXThreshold;
+			bool bTurningLeft = rightStickX < -m_TurnStartStickXThreshold;
+			m_DirTurning = bTurningRight ? TurningDir::RIGHT : bTurningLeft ? TurningDir::LEFT : TurningDir::NONE;
+
+			if (m_DirTurning != TurningDir::NONE || m_SecondsAttemptingToTurn < 0.0f)
+			{
+				m_SecondsAttemptingToTurn += g_DeltaTime;
+			}
+			else
+			{
+				if (m_SecondsAttemptingToTurn > 0.0f)
+				{
+					m_SecondsAttemptingToTurn = 0.0f;
+				}
+			}
+
+			if (1.0f - glm::abs(TFoPF) > m_MinForDotTurnThreshold)
+			{
+				if (m_SecondsAttemptingToTurn > m_AttemptToTurnTimeThreshold)
+				{
+					m_SecondsAttemptingToTurn = -m_TurnAroundCooldown;
+					trackForward = -trackForward;
+					m_bTurningAroundOnTrack = true;
+					m_DirTurning = TurningDir::NONE;
+					m_TargetTrackFor = trackForward;
+				}
+			}
+		}
+
+		glm::quat desiredRot = glm::quatLookAt(trackForward, playerTransform->GetUp());
+		rot = glm::slerp(rot, desiredRot, 1.0f - glm::clamp(g_DeltaTime * invTurnSpeed, 0.0f, 0.99f));
+		playerTransform->SetWorldRotation(rot, true);
+
+		if (m_bTurningAroundOnTrack)
+		{
+			real newAlignedness = glm::dot(trackForward, playerTransform->GetForward());
+			real exitTurnAlignednessDotThreshold = 0.9f;
+			if (newAlignedness < -exitTurnAlignednessDotThreshold)
+			{
+				m_bTurningAroundOnTrack = false;
+			}
+		}
 	}
 } // namespace flex

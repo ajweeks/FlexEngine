@@ -8,5 +8,7 @@ October
 - Prevent input handling when window doesn't have focus
 - Triplanar mapping shader
 - Separate depth-aware editor objects from depth-unaware
-- Add tracks (Bezier Curves which the player can move along for speedy travel)
+- Add tracks (Bezier Curves which the player can move along for speedy travel) (X button to connect/disconnect)
 - Add track junctions to handle switching tracks
+- Allow player to switch direction on a track by holding right joystick in a direction
+

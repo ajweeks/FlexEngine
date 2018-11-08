@@ -309,9 +309,9 @@ namespace flex
 			return success;
 		}
 
-		TextureParameters::TextureParameters(bool bGenMipMaps, bool bIsDepthTex) :
+		TextureParameters::TextureParameters(bool bGenMipMaps, bool bDepthTex) :
 			bGenMipMaps(bGenMipMaps),
-			bIsDepthTex(bIsDepthTex),
+			bDepthTex(bDepthTex),
 			borderColor(1.0f)
 		{
 			if (bGenMipMaps)
@@ -473,7 +473,7 @@ namespace flex
 				glGenerateMipmap(GL_TEXTURE_2D);
 			}
 
-			if (params.bIsDepthTex && m_Parameters.compareMode != params.compareMode)
+			if (params.bDepthTex && m_Parameters.compareMode != params.compareMode)
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, params.compareMode);//shadow map comp mode
 			}

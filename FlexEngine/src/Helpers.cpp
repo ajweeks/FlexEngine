@@ -918,26 +918,50 @@ namespace flex
 		str = std::string(minLen - str.length(), pad) + str;
 	}
 
-	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
+	std::string Vec2ToString(glm::vec2 vec, i32 precision)
 	{
-		std::string result(FloatToString(vec.x, precision) + ", " +
+#if _DEBUG
+		if (IsNanOrInf(vec))
+		{
+			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero");
+			vec = VEC2_ZERO;
+		}
+#endif
+
+		std::string result(FloatToString(vec.x, precision) + SEPARATOR_STR +
 			FloatToString(vec.y, precision));
 		return result;
 	}
 
-	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
+	std::string Vec3ToString(glm::vec3 vec, i32 precision)
 	{
-		std::string result(FloatToString(vec.x, precision) + ", " +
-			FloatToString(vec.y, precision) + ", " +
+#if _DEBUG
+		if (IsNanOrInf(vec))
+		{
+			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero");
+			vec = VEC3_ZERO;
+		}
+#endif
+
+		std::string result(FloatToString(vec.x, precision) + SEPARATOR_STR +
+			FloatToString(vec.y, precision) + SEPARATOR_STR +
 			FloatToString(vec.z, precision));
 		return result;
 	}
 
-	std::string Vec4ToString(const glm::vec4& vec, i32 precision)
+	std::string Vec4ToString(glm::vec4 vec, i32 precision)
 	{
-		std::string result(FloatToString(vec.x, precision) + ", " +
-			FloatToString(vec.y, precision) + ", " +
-			FloatToString(vec.z, precision) + ", " +
+#if _DEBUG
+		if (IsNanOrInf(vec))
+		{
+			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero");
+			vec = VEC4_ZERO;
+		}
+#endif
+
+		std::string result(FloatToString(vec.x, precision) + SEPARATOR_STR +
+			FloatToString(vec.y, precision) + SEPARATOR_STR +
+			FloatToString(vec.z, precision) + SEPARATOR_STR +
 			FloatToString(vec.w, precision));
 		return result;
 	}

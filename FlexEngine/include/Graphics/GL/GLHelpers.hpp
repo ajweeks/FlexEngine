@@ -179,7 +179,7 @@ namespace flex
 
 		struct TextureParameters
 		{
-			TextureParameters(bool bGenMipMaps = false, bool bIsDepthTex = false);
+			TextureParameters(bool bGenMipMaps = false, bool bDepthTex = false);
 
 			//Parameters
 			i32 minFilter = GL_LINEAR;
@@ -190,7 +190,7 @@ namespace flex
 			glm::vec4 borderColor;
 
 			bool bGenMipMaps = false;
-			bool bIsDepthTex = false;
+			bool bDepthTex = false;
 
 			i32 compareMode = GL_COMPARE_REF_TO_TEXTURE;
 		};

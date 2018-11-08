@@ -261,24 +261,24 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool down = ((m_GamepadStates[gamepadIndex].buttonStates & (1 << (i32)button)) != 0);
-		return down;
+		bool bDown = ((m_GamepadStates[gamepadIndex].buttonStates & (1 << (i32)button)) != 0);
+		return bDown;
 	}
 
 	bool InputManager::IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button)
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool pressed = ((m_GamepadStates[gamepadIndex].buttonsPressed & (1 << (i32)button)) != 0);
-		return pressed;
+		bool bPressed = ((m_GamepadStates[gamepadIndex].buttonsPressed & (1 << (i32)button)) != 0);
+		return bPressed;
 	}
 
 	bool InputManager::IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button)
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		bool released = ((m_GamepadStates[gamepadIndex].buttonsReleased & (1 << (i32)button)) != 0);
-		return released;
+		bool bReleased = ((m_GamepadStates[gamepadIndex].buttonsReleased & (1 << (i32)button)) != 0);
+		return bReleased;
 	}
 
 	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis)
@@ -440,11 +440,11 @@ namespace flex
 		m_PrevMousePosition = m_MousePosition;
 	}
 
-	void InputManager::SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos)
+	void InputManager::SetMousePosition(glm::vec2 mousePos, bool bUpdatePreviousPos)
 	{
 		m_MousePosition = mousePos;
 
-		if (updatePreviousPos)
+		if (bUpdatePreviousPos)
 		{
 			m_PrevMousePosition = m_MousePosition;
 		}
@@ -473,9 +473,9 @@ namespace flex
 		m_MouseButtonsReleased &= ~(1 << ((i32)mouseButton));
 	}
 
-	bool InputManager::IsAnyMouseButtonDown(bool bbIgnoreImGui) const
+	bool InputManager::IsAnyMouseButtonDown(bool bIgnoreImGui) const
 	{
-		if (!bbIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return false;
 		}

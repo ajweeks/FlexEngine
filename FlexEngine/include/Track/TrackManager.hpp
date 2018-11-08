@@ -29,7 +29,10 @@ namespace flex
 			real pDistAlongTrack,
 			i32 desiredDir,
 			BezierCurveList** newTrack,
-			real& newDistAlongTrack);
+			real& newDistAlongTrack,
+			bool bReversingDownTrack);
+
+		glm::vec3 GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack);
 
 		// Compares curve end points on all BezierCurves and creates junctions when positions are
 		// within a threshold of each other

@@ -72,7 +72,7 @@ namespace flex
 			t * t * t * points[3];
 	}
 
-	glm::vec3 BezierCurve::GetCurveDirectionAt(real t) const
+	glm::vec3 BezierCurve::GetFirstDerivativeOnCurve(real t) const
 	{
 		t = glm::clamp(t, 0.0f, 1.0f);
 		real oneMinusT = 1.0f - t;

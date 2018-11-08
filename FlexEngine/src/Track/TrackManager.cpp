@@ -35,7 +35,8 @@ namespace flex
 		real pDistAlongTrack,
 		i32 desiredDir,
 		BezierCurveList** newTrack,
-		real& newDistAlongTrack)
+		real& newDistAlongTrack,
+		bool bReversingDownTrack)
 	{
 		i32 pCurveIdx = -1;
 		i32 newCurveIdx = -1;
@@ -117,14 +118,14 @@ namespace flex
 								}
 								else
 								{
-									glm::vec3 trackForward = glm::normalize(track->GetCurveDirectionAt(distAlongTrack));
+									glm::vec3 trackForward = track->GetCurveDirectionAt(distAlongTrack);
 									trackForward = glm::normalize(newPoint - pPoint);
 									glm::vec3 trackRight = glm::cross(trackForward, VEC3_UP);
 
 									if (desiredDir == 0)
 									{
 										// Want to go left
-										glm::vec3 desiredDirVec = -trackRight;
+										glm::vec3 desiredDirVec = bReversingDownTrack ? trackRight : -trackRight;
 										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junctionIter, track, bEndOfTheLine, newPoint);
 										if (newTrackIdx != -1)
 										{
@@ -134,7 +135,7 @@ namespace flex
 									else if (desiredDir == 2)
 									{
 										// Want to go right
-										glm::vec3 desiredDirVec = trackRight;
+										glm::vec3 desiredDirVec = bReversingDownTrack ? -trackRight : trackRight;
 										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junctionIter, track, bEndOfTheLine, newPoint);
 										if (newTrackIdx != -1)
 										{
@@ -166,8 +167,19 @@ namespace flex
 		return newPoint;
 	}
 
+	glm::vec3 TrackManager::GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack)
+	{
+		glm::vec3 dir = track->GetCurveDirectionAt(distAlongTrack);
+
+		return dir;
+	}
+
 	// TODO: Remove final param in place of junc.pos?
-	i32 TrackManager::GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine, const glm::vec3& newPoint)
+	i32 TrackManager::GetTrackIndexInDir(const glm::vec3& desiredDir,
+		Junction& junc,
+		BezierCurveList* track,
+		bool bEndOfTheLine,
+		const glm::vec3& newPoint)
 	{
 		i32 newTrackIdx = -1;
 
@@ -213,7 +225,7 @@ namespace flex
 				else
 				{
 					real distToJunc = (real)testCurveIdx / (real)(testTrackCurveCount);
-					glm::vec3 dirAtJunc = glm::normalize(testTrack->GetCurveDirectionAt(distToJunc));
+					glm::vec3 dirAtJunc = testTrack->GetCurveDirectionAt(distToJunc);
 					real dotResult = glm::dot(dirAtJunc, desiredDir);
 					if (dotResult > 0.0f)
 					{
@@ -343,7 +355,11 @@ namespace flex
 		Print("Found %d junctions\n", m_JunctionCount);
 	}
 
-	bool TrackManager::IsTrackInRange(const BezierCurveList* track, const glm::vec3& pos, real range, real& outDistToTrack, real& outDistAlongTrack)
+	bool TrackManager::IsTrackInRange(const BezierCurveList* track,
+		const glm::vec3& pos,
+		real range,
+		real& outDistToTrack,
+		real& outDistAlongTrack)
 	{
 		// Let's brute force it baby
 		i32 sampleCount = 250;

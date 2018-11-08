@@ -264,7 +264,7 @@ namespace flex
 
 		bool DidMouseWrap() const;
 
-		void SetMousePosition(glm::vec2 mousePos, bool updatePreviousPos = true);
+		void SetMousePosition(glm::vec2 mousePos, bool bUpdatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		void ClearMouseMovement();
 		glm::vec2 GetMouseMovement() const;

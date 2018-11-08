@@ -29,6 +29,10 @@ namespace flex
 		real GetHeight() const;
 		PlayerController* GetController();
 
+		void DrawImGuiObjects();
+
+		bool bMovingForwardDownTrack = true;
+
 	private:
 		void ClampPitch();
 

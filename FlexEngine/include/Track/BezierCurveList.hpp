@@ -21,7 +21,7 @@ namespace flex
 		// o---o----o---o|o---o----o---o|o---o----o---o
 		// 0             1              2             3
 		glm::vec3 GetPointAtJunction(i32 index);
-		glm::vec3 GetDirectionAtJunction(i32 index);
+		//glm::vec3 GetDirectionAtJunction(i32 index);
 
 		void GetCurveIndexAndLocalTFromGlobalT(real globalT, i32& outCurveIndex, real& outLocalT) const;
 		real GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const;

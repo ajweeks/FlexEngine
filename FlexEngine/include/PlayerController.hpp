@@ -26,6 +26,8 @@ namespace flex
 		real GetDistAlongTrack() const;
 		BezierCurveList* GetTrackRiding() const;
 
+		void DrawImGuiObjects();
+
 	private:
 		void SnapPosToTrack(real pDistAlongTrack);
 
@@ -61,7 +63,28 @@ namespace flex
 		// Is true when player began accelerating while facing down the track
 		real m_pDTrackMovement = 0.0f;
 		bool m_bUpdateFacingAndForceFoward = false;
-		bool m_bMovingForwardDownTrack = true;
+
+		enum class TurningDir
+		{
+			LEFT,
+			NONE,
+			RIGHT
+		} m_DirTurning;
+
+		sec m_SecondsAttemptingToTurn = 0.0f;
+		// How large the joystick x value must be to enter a turning state
+		const real m_TurnStartStickXThreshold = 0.15f;
+		// How large the dot product between our forward and the track forward must be to turn around
+		const real m_MinForDotTurnThreshold = 0.03f;
+		const sec m_AttemptToTurnTimeThreshold = 0.2f;
+		// How long after completing a turn around the player can start accumulating turn time again
+		const sec m_TurnAroundCooldown = 0.5f;
+
+		glm::vec3 m_TargetTrackFor;
+		bool m_bTurningAroundOnTrack = false;
+
+		const real m_TurnToFaceDownTrackInvSpeed = 30.0f;
+		const real m_FlipTrackDirInvSpeed = 45.0f;
 
 		AudioSourceID m_SoundTrackAttachID;
 		AudioSourceID m_SoundTrackDetachID;
