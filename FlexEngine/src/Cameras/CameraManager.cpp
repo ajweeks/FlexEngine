@@ -13,7 +13,6 @@ namespace flex
 
 	CameraManager::~CameraManager()
 	{
-		DestroyCameras();
 	}
 
 	void CameraManager::Initialize()

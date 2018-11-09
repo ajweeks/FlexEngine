@@ -244,6 +244,7 @@ namespace flex
 			SafeDelete(g_PhysicsManager);
 		}
 
+		g_CameraManager->DestroyCameras();
 		SafeDelete(g_CameraManager);
 
 		DestroyWindowAndRenderer();

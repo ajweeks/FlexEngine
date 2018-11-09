@@ -136,7 +136,7 @@
 			"flipV" : false
 		},
 		{
-			"file" : "map_tablet.bin",
+			"file" : "map_tablet.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
