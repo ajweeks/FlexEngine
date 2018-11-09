@@ -45,6 +45,8 @@ namespace flex
 			DisplayALError("alGenBuffers: ", error);
 			return;
 		}
+
+		s_Sources.resize(NUM_BUFFERS);
 	}
 
 	void AudioManager::Destroy()
@@ -57,9 +59,12 @@ namespace flex
 
 	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath)
 	{
-		AudioSourceID newID = s_Sources.size();
-		// TODO: Reuse buffers after sounds stop playing?
-		assert(newID < NUM_BUFFERS);
+		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
+		if (newID == InvalidAudioSourceID)
+		{
+			PrintError("Failed to add new audio source! All %d buffers are in use\n", NUM_BUFFERS);
+			return InvalidAudioSourceID;
+		}
 
 		std::string friendlyName = filePath;
 		StripLeadingDirectories(friendlyName);
@@ -98,8 +103,6 @@ namespace flex
 
 
 		// Source
-		s_Sources.resize(s_Sources.size() + 1);
-
 		alGenSources(1, &s_Sources[newID].source);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
@@ -112,6 +115,18 @@ namespace flex
 		DisplayALError("alSourcei: ", alGetError());
 
 		return newID;
+	}
+
+	bool AudioManager::DestroyAudioSource(AudioSourceID sourceID)
+	{
+		if (sourceID >= NUM_BUFFERS || s_Sources[sourceID].source == InvalidAudioSourceID)
+		{
+			return false;
+		}
+
+		alDeleteSources(1, &s_Sources[sourceID].source);
+		s_Sources[sourceID].source = InvalidAudioSourceID;
+		return true;
 	}
 
 	void AudioManager::ClearAllAudioSources()
@@ -257,8 +272,7 @@ namespace flex
 
 	void AudioManager::DrawImGuiObjects()
 	{
-		const char* audioStr = "Audio";
-		if (ImGui::TreeNode(audioStr))
+		if (ImGui::TreeNode("Audio"))
 		{
 			real gain = GetMasterGain();
 			if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
@@ -323,5 +337,18 @@ namespace flex
 			device += (len + 1);
 			next += (len + 2);
 		}
+	}
+
+	ALuint AudioManager::GetNextAvailableSourceAndBufferIndex()
+	{
+		for (i32 i = 0; i < NUM_BUFFERS; ++i)
+		{
+			if (s_Sources[i].source == InvalidAudioSourceID)
+			{
+				return (ALuint)i;
+			}
+		}
+
+		return InvalidAudioSourceID;
 	}
 } // namespace flex

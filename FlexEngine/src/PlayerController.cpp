@@ -53,6 +53,8 @@ namespace flex
 
 	void PlayerController::Destroy()
 	{
+		AudioManager::DestroyAudioSource(m_SoundTrackAttachID);
+		AudioManager::DestroyAudioSource(m_SoundTrackDetachID);
 	}
 
 	void PlayerController::Update()

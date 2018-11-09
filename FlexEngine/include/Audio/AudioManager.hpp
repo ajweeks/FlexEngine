@@ -17,6 +17,7 @@ namespace flex
 		static void Destroy();
 
 		static AudioSourceID AddAudioSource(const std::string& filePath);
+		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
 
 
@@ -57,12 +58,14 @@ namespace flex
 
 		static void PrintAudioDevices(const ALCchar* devices);
 
+		static ALuint GetNextAvailableSourceAndBufferIndex();
+
 		static const i32 NUM_BUFFERS = 32;
 		static ALuint s_Buffers[NUM_BUFFERS];
 
 		struct Source
 		{
-			ALuint source;
+			ALuint source = InvalidAudioSourceID;
 			real gain = 1.0f;
 			real pitch = 1.0f;
 
