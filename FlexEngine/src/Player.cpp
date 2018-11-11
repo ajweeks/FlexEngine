@@ -218,7 +218,7 @@ namespace flex
 			{
 				ImGui::Indent();
 				ImGui::Text("Dist along track: %.2f", GetController()->GetDistAlongTrack());
-				ImGui::Text("Moving forward down track: %s", (bMovingForwardDownTrack ? "true" : "false"));
+				ImGui::Text("Moving forward down track: %s", (bFacingForwardDownTrack ? "true" : "false"));
 				ImGui::Unindent();
 			}
 

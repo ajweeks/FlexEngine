@@ -1204,7 +1204,7 @@ namespace flex
 	void GameObject::SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately)
 	{
 		bUniformScale = bUseUniformScale;
-		if (bUniformScale)
+		if (bUniformScale && bEnforceImmediately)
 		{
 			m_Transform.SetLocalScale(glm::vec3(m_Transform.GetLocalScale().x));
 		}

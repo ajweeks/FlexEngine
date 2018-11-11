@@ -31,7 +31,8 @@ namespace flex
 
 		void DrawImGuiObjects();
 
-		bool bMovingForwardDownTrack = true;
+		// True if going the direction we're facing increases our dist along track value
+		bool bFacingForwardDownTrack = true;
 
 	private:
 		void ClampPitch();

@@ -114,8 +114,8 @@ namespace flex
 								{
 									if (bEndOfTheLine)
 									{
-										glm::vec3 desiredDir = glm::normalize(newPoint - pPoint);
-										newTrackIdx = GetTrackIndexInDir(desiredDir, junction, track, bEndOfTheLine, newPoint);
+										glm::vec3 dir = glm::normalize(newPoint - pPoint);
+										newTrackIdx = GetTrackIndexInDir(dir, junction, track, bEndOfTheLine);
 										Print("Went straight through an n-way junction (jumped tracks)\n");
 										*outJunctionIndex = i;
 									}
@@ -135,7 +135,7 @@ namespace flex
 									{
 										// Want to go left
 										glm::vec3 desiredDirVec = bReversingDownTrack ? trackRight : -trackRight;
-										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bEndOfTheLine, newPoint);
+										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bEndOfTheLine);
 										if (newTrackIdx != -1)
 										{
 											Print("Went left at an n-way junction\n");
@@ -146,7 +146,7 @@ namespace flex
 									{
 										// Want to go right
 										glm::vec3 desiredDirVec = bReversingDownTrack ? -trackRight : trackRight;
-										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bEndOfTheLine, newPoint);
+										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bEndOfTheLine);
 										if (newTrackIdx != -1)
 										{
 											Print("Went right at an n-way junction\n");
@@ -183,12 +183,16 @@ namespace flex
 	void TrackManager::UpdatePreview(BezierCurveList* track,
 		real distAlongTrack,
 		i32 desiredDir,
-		glm::vec3 currentPos,
 		glm::vec3 currentFor,
+		bool bFacingForwardDownTrack,
 		bool bReversingDownTrack)
 	{
-		real range = 0.08f;
+		real range = 0.2f;
 		real dotResult = glm::dot(track->GetCurveDirectionAt(distAlongTrack), currentFor);
+		if (!bFacingForwardDownTrack)
+		{
+			//dotResult = -dotResult;
+		}
 		real queryDist = distAlongTrack;
 		bool bFacingDownTrack = dotResult > 0.0f;
 		if (bFacingDownTrack)
@@ -216,6 +220,10 @@ namespace flex
 			// There is a junction in range
 			m_PreviewJunctionDir.junctionIndex = junctionIndex;
 			m_PreviewJunctionDir.dir = GetDirectionOnTrack(newTrack == nullptr ? track : newTrack, newDist == -1.0f ? distAlongTrack : newDist);
+			if (!bFacingForwardDownTrack && newTrack == nullptr)
+			{
+				m_PreviewJunctionDir.dir = -m_PreviewJunctionDir.dir;
+			}
 		}
 	}
 
@@ -228,8 +236,7 @@ namespace flex
 	i32 TrackManager::GetTrackIndexInDir(const glm::vec3& desiredDir,
 		Junction& junc,
 		BezierCurveList* track,
-		bool bEndOfTheLine,
-		const glm::vec3& newPoint)
+		bool bEndOfTheLine)
 	{
 		i32 newTrackIdx = -1;
 
@@ -242,7 +249,6 @@ namespace flex
 				BezierCurveList* testTrack = junc.tracks[k];
 				i32 testTrackCurveCount = (i32)testTrack->curves.size();
 
-				i32 testPointCurveIdx;
 				i32 testCurveIdx = 0;
 				glm::vec3 testPoint;
 				bool bFoundPoint = false;
@@ -475,7 +481,7 @@ namespace flex
 					distToTrack,
 					distAlongTrack))
 				{
-					highlightColour = btVector4(0.75f, 0.65, 0.75f, 1.0f);
+					highlightColour = btVector4(0.75f, 0.65f, 0.75f, 1.0f);
 				}
 			}
 			m_Tracks[i].DrawDebug(highlightColour, distAlongTrack);
@@ -502,7 +508,7 @@ namespace flex
 				 btVector3 lineColPreview = btVector3(0.95f, 0.95f, 0.98f);
 
 				 BezierCurveList* track = m_Junctions[i].tracks[j];
-				 i32 curveIndex = m_Junctions[i].curveIndices[j];
+				 curveIndex = m_Junctions[i].curveIndices[j];
 
 				 real tAtJunc = track->GetTAtJunction(curveIndex);
 				 i32 outCurveIdx;
@@ -512,7 +518,7 @@ namespace flex
 				 {
 					 glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, outCurveIdx);
 					 glm::vec3 dir1 = glm::normalize(trackP1 - pos);
-					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);// || NearlyEquals(m_PreviewJunctionDir.dir, -dir1, 0.1f);
+					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);
 					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
 					 debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
 				 }
@@ -520,14 +526,9 @@ namespace flex
 				 {
 					 glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, outCurveIdx);
 					 glm::vec3 dir2 = glm::normalize(trackP2 - pos);
-					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);// || NearlyEquals(m_PreviewJunctionDir.dir, -dir2, 0.1f);
+					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);
 					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
 					 debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
-				 }
-
-				 if (m_PreviewJunctionDir.junctionIndex == i)
-				 {
-					//debugDrawer->drawLine(start, ToBtVec3(pos + m_PreviewJunctionDir.dir * 5.0f + VEC3_UP * 1.5f), lineColPreview);
 				 }
 			 }
 		}

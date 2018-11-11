@@ -37,8 +37,8 @@ namespace flex
 		void UpdatePreview(BezierCurveList* track,
 			real distAlongTrack,
 			i32 desiredDir,
-			glm::vec3 currentPos,
 			glm::vec3 currentFor,
+			bool bFacingForwardDownTrack,
 			bool bReversingDownTrack);
 
 		glm::vec3 GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack);
@@ -58,7 +58,7 @@ namespace flex
 		real AdvanceTAlongTrack(BezierCurveList* track, real amount, real t);
 
 	private:
-		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine, const glm::vec3& newPoint);
+		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine);
 
 		static const i32 MAX_TRACK_COUNT = 8;
 		static const i32 MAX_JUNCTION_COUNT = 64;

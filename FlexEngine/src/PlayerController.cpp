@@ -140,20 +140,20 @@ namespace flex
 
 				if (m_bUpdateFacingAndForceFoward || bUpdateFacing)
 				{
-					bool pMovingForwardDownTrack = m_Player->bMovingForwardDownTrack;
+					bool pFacingForwardDownTrack = m_Player->bFacingForwardDownTrack;
 					glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
-					m_Player->bMovingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
+					m_Player->bFacingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
 					if (m_bUpdateFacingAndForceFoward)
 					{
-						m_Player->bMovingForwardDownTrack =
-							(m_Player->bMovingForwardDownTrack && moveForward > 0.0f) ||
-							(m_Player->bMovingForwardDownTrack && moveBackward > 0.0f);
+						m_Player->bFacingForwardDownTrack =
+							(m_Player->bFacingForwardDownTrack && moveForward > 0.0f) ||
+							(m_Player->bFacingForwardDownTrack && moveBackward > 0.0f);
 					}
 
 					m_bUpdateFacingAndForceFoward = false;
 				}
 
-				if (!m_Player->bMovingForwardDownTrack)
+				if (!m_Player->bFacingForwardDownTrack)
 				{
 					moveForward = 1.0f - moveForward;
 					moveBackward = 1.0f - moveBackward;
@@ -348,7 +348,7 @@ namespace flex
 		bool bReversingDownTrack = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER) > 0.0f;
 		bool bFacingJunction = glm::dot(m_Player->GetTransform()->GetForward(), newTrack->GetCurveDirectionAt(newDistAlongTrack)) > 0.0f;
 
-		trackManager->UpdatePreview(m_TrackRiding, m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetWorldPosition(), m_Player->GetTransform()->GetForward(), bReversingDownTrack);
+		trackManager->UpdatePreview(m_TrackRiding, m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetForward(), m_Player->bFacingForwardDownTrack, bReversingDownTrack);
 
 		i32 newJunctionIndex = -1;
 		i32 newCurveIndex = -1;

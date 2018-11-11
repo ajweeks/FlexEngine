@@ -82,7 +82,7 @@ namespace flex
 			glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
 			g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
 
-			ImGui::Text("Avg player forward: %s", Vec3ToString(m_PlayerForwardRollingAvg.currentAverage, 2));
+			ImGui::Text("Avg player forward: %s", Vec3ToString(m_PlayerForwardRollingAvg.currentAverage, 2).c_str());
 			ImGui::Text("For: %s", Vec3ToString(m_Forward, 2).c_str());
 
 			ImGui::TreePop();
