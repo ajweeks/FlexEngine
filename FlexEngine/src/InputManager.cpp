@@ -172,7 +172,6 @@ namespace flex
 		//m_bMouseWrapped = abs(dPos.x) > threshold ||
 		//	abs(dPos.y) > threshold;
 
-
 		m_bMouseWrapped = false;
 		m_PrevMousePosition = m_MousePosition;
 		m_ScrollXOffset = 0.0f;
@@ -182,6 +181,8 @@ namespace flex
 	void InputManager::UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15])
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
+		m_pGamepadStates[gamepadIndex] = m_GamepadStates[gamepadIndex];
 
 		for (i32 i = 0; i < 6; ++i)
 		{
@@ -287,6 +288,14 @@ namespace flex
 
 		real axisValue = m_GamepadStates[gamepadIndex].axes[(i32)axis];
 		return axisValue;
+	}
+
+	bool InputManager::HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold)
+	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
+		return (m_GamepadStates[gamepadIndex].axes[(i32)axis] >= threshold &&
+			m_pGamepadStates[gamepadIndex].axes[(i32)axis] < threshold);
 	}
 
 	void InputManager::CursorPosCallback(double x, double y)
@@ -610,6 +619,8 @@ namespace flex
 
 	void InputManager::ClearGampadInput(i32 gamepadIndex)
 	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
 		GamepadState& gamepadState = m_GamepadStates[gamepadIndex];
 
 		for (real& axis : gamepadState.axes)
@@ -622,5 +633,7 @@ namespace flex
 		gamepadState.buttonsReleased = 0;
 
 		gamepadState.averageRotationSpeeds = RollingAverage<real>(gamepadState.framesToAverageOver);
+
+		m_pGamepadStates[gamepadIndex] = gamepadState;
 	}
 } // namespace flex

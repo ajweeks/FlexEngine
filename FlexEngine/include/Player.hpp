@@ -2,6 +2,9 @@
 
 #include "Scene/GameObject.hpp"
 
+#include "Track/BezierCurve.hpp"
+#include "Track/BezierCurveList.hpp"
+
 namespace flex
 {
 	class PlayerController;
@@ -37,6 +40,8 @@ namespace flex
 	private:
 		void ClampPitch();
 
+		glm::vec3 GetTrackPlacementReticlePosWS() const;
+
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
@@ -45,6 +50,12 @@ namespace flex
 		real m_Height = 4.0f;
 
 		real m_Pitch = 0.0f;
+
+		i32 m_CurveNodesPlaced = 0;
+		BezierCurveList m_TrackPlacing;
+		BezierCurve m_CurvePlacing;
+		bool m_bPlacingTrack = false;
+		glm::vec3 m_TrackPlacementReticlePos; // Local offset
 
 		TextureID m_CrosshairTextureID;
 	};

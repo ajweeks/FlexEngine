@@ -454,10 +454,7 @@ namespace flex
 			}
 		}
 
-
-		// ImGUI
 		ImGuiIO& io = ImGui::GetIO();
-
 		// Hide OS mouse cursor if ImGui is drawing it
 		glfwSetInputMode(m_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 	}

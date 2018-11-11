@@ -255,6 +255,8 @@ namespace flex
 		bool IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button);
 
 		real GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis);
+		// Axis-equivalent to button "press"
+		bool HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold);
 
 		void CursorPosCallback(double x, double y);
 		void MouseButtonCallback(MouseButton mouseButton, Action action, i32 mods);
@@ -308,6 +310,7 @@ namespace flex
 
 		bool m_bMouseWrapped = false;
 
+		GamepadState m_pGamepadStates[2];
 		GamepadState m_GamepadStates[2];
 
 		static const real MAX_JOYSTICK_ROTATION_SPEED;

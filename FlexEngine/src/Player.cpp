@@ -7,6 +7,8 @@
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
+#include <LinearMath/btIDebugDraw.h>
+
 #include <glm/gtx/rotate_vector.hpp>
 #pragma warning(pop)
 
@@ -22,7 +24,8 @@ namespace flex
 {
 	Player::Player(i32 index, const glm::vec3& initialPos /* = VEC3_ZERO */) :
 		GameObject("Player " + std::to_string(index), GameObjectType::PLAYER),
-		m_Index(index)
+		m_Index(index),
+		m_TrackPlacementReticlePos(0.0f, -0.9f, 3.5f)
 	{
 		m_Transform.SetWorldPosition(initialPos);
 	}
@@ -148,6 +151,47 @@ namespace flex
 		drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
 		g_Renderer->DrawSprite(drawInfo);
 
+		if (g_InputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::Y))
+		{
+			m_bPlacingTrack = !m_bPlacingTrack;
+		}
+
+		if (m_bPlacingTrack && m_Controller->GetTrackRiding() == nullptr)
+		{
+			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS();
+
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, InputManager::GamepadAxis::RIGHT_TRIGGER, 0.5f))
+			{
+				m_CurvePlacing.points[m_CurveNodesPlaced++] = reticlePos;
+				if (m_CurveNodesPlaced == 4)
+				{
+					m_CurvePlacing.CalculateLength();
+					m_TrackPlacing.curves.push_back(m_CurvePlacing);
+
+					m_CurveNodesPlaced = 0;
+					m_CurvePlacing.points[0] = m_CurvePlacing.points[1] = m_CurvePlacing.points[2] = m_CurvePlacing.points[3] = VEC3_ZERO;
+				}
+			}
+
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, InputManager::GamepadAxis::LEFT_TRIGGER, 0.5f))
+			{
+				if (!m_TrackPlacing.curves.empty())
+				{
+					m_CurveNodesPlaced = 0;
+					m_CurvePlacing.points[0] = m_CurvePlacing.points[1] = m_CurvePlacing.points[2] = m_CurvePlacing.points[3] = VEC3_ZERO;
+
+					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+					trackManager->AddTrack(m_TrackPlacing);
+					m_TrackPlacing.curves.clear();
+				}
+			}
+
+			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			btTransform cylinderTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
+			debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
+			debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
+		}
+
 		GameObject::Update();
 	}
 
@@ -230,5 +274,13 @@ namespace flex
 	{
 		real limit = glm::radians(89.5f);
 		m_Pitch = glm::clamp(m_Pitch, -limit, limit);
+	}
+
+	glm::vec3 Player::GetTrackPlacementReticlePosWS() const
+	{
+		glm::vec3 offsetWS = m_TrackPlacementReticlePos;
+		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
+		offsetWS = rotMat * glm::vec4(offsetWS, 1.0f);
+		return m_Transform.GetWorldPosition() + offsetWS;
 	}
 } // namespace flex

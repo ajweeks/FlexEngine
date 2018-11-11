@@ -60,14 +60,10 @@ namespace flex
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine);
 
-		static const i32 MAX_TRACK_COUNT = 8;
-		static const i32 MAX_JUNCTION_COUNT = 64;
 		static const real JUNCTION_THRESHOLD_DIST;
 
-		i32 m_TrackCount = 0;
-		BezierCurveList m_Tracks[MAX_TRACK_COUNT];
-		i32 m_JunctionCount = 0;
-		Junction m_Junctions[MAX_JUNCTION_COUNT];
+		std::vector<BezierCurveList> m_Tracks;
+		std::vector<Junction> m_Junctions;
 		struct JunctionDirPair
 		{
 			i32 junctionIndex = -1;

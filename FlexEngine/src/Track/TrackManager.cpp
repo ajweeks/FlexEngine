@@ -24,12 +24,7 @@ namespace flex
 
 	void TrackManager::AddTrack(const BezierCurveList& track)
 	{
-		if (m_TrackCount == MAX_TRACK_COUNT)
-		{
-			PrintWarn("Attempted to add more tracks to TrackManager than allowed (MAX_TRACK_COUNT: %d)\n", MAX_TRACK_COUNT);
-			return;
-		}
-		m_Tracks[m_TrackCount++] = track;
+		m_Tracks.push_back(track);
 	}
 
 	glm::vec3 TrackManager::GetPointOnTrack(BezierCurveList* track,
@@ -72,7 +67,7 @@ namespace flex
 			glm::vec3 junctionPos = track->GetPointAtJunction(curveIdxToCheck);
 
 			// Check for junction crossings
-			for (i32 i = 0; i < m_JunctionCount; ++i)
+			for (i32 i = 0; i < (i32)m_Junctions.size(); ++i)
 			{
 				Junction& junction = m_Junctions[i];
 
@@ -324,17 +319,13 @@ namespace flex
 	void TrackManager::FindJunctions()
 	{
 		// Clear previous junctions
-		for (i32 i = m_JunctionCount; i >= 0; --i)
-		{
-			m_Junctions[i] = {};
-		}
-		m_JunctionCount = 0;
+		m_Junctions.clear();
 
-		for (i32 i = 0; i < m_TrackCount; ++i)
+		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
 			const std::vector<BezierCurve>& curvesA = m_Tracks[i].curves;
 
-			for (i32 j = i + 1; j < m_TrackCount; ++j)
+			for (i32 j = i + 1; j < (i32)m_Tracks.size(); ++j)
 			{
 				const std::vector<BezierCurve>& curvesB = m_Tracks[j].curves;
 
@@ -356,7 +347,7 @@ namespace flex
 									i32 curveIndexB = (p2Idx == 3 ? m + 1 : m);
 
 									bool bJunctionExists = false;
-									for (i32 n = 0; n < m_JunctionCount; ++n)
+									for (i32 n = 0; n < (i32)m_Junctions.size(); ++n)
 									{
 										// Junction already exists at this location, check if this track is a part of it
 										if (NearlyEquals(m_Junctions[n].pos, curvesA[k].points[p1Idx], JUNCTION_THRESHOLD_DIST))
@@ -386,8 +377,7 @@ namespace flex
 
 									if (!bJunctionExists)
 									{
-										Junction& junct = m_Junctions[m_JunctionCount++];
-										junct = {};
+										Junction junct = {};
 										junct.pos = curvesA[k].points[p1Idx];
 										junct.tracks[junct.trackCount] = &m_Tracks[i];
 										junct.curveIndices[junct.trackCount] = curveIndexA;
@@ -395,6 +385,7 @@ namespace flex
 										junct.tracks[junct.trackCount] = &m_Tracks[j];
 										junct.curveIndices[junct.trackCount] = curveIndexB;
 										junct.trackCount++;
+										m_Junctions.push_back(junct);
 									}
 								}
 							}
@@ -404,7 +395,7 @@ namespace flex
 			}
 		}
 
-		Print("Found %d junctions\n", m_JunctionCount);
+		Print("Found %d junctions\n", m_Junctions.size());
 	}
 
 	bool TrackManager::IsTrackInRange(const BezierCurveList* track,
@@ -455,7 +446,7 @@ namespace flex
 
 	void TrackManager::DrawDebug()
 	{
-		for (i32 i = 0; i < m_TrackCount; ++i)
+		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);
 			real distAlongTrack = -1.0f;
@@ -485,7 +476,7 @@ namespace flex
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		for (i32 i = 0; i < m_JunctionCount; ++i)
+		for (i32 i = 0; i < (i32)m_Junctions.size(); ++i)
 		{
 			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)m_Junctions[i].tracks[0]->curves.size();
 			 i32 curveIndex;
@@ -534,7 +525,7 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Track Manager"))
 		{
-			ImGui::Text("%d tracks, %d junctions", m_TrackCount, m_JunctionCount);
+			ImGui::Text("%d tracks, %d junctions", (i32)m_Tracks.size(), (i32)m_Junctions.size());
 			if (ImGui::SmallButton("<"))
 			{
 				m_DEBUG_highlightedJunctionIndex--;
@@ -546,7 +537,7 @@ namespace flex
 			if (ImGui::SmallButton(">"))
 			{
 				m_DEBUG_highlightedJunctionIndex++;
-				m_DEBUG_highlightedJunctionIndex = glm::min(m_DEBUG_highlightedJunctionIndex, m_JunctionCount - 1);
+				m_DEBUG_highlightedJunctionIndex = glm::min(m_DEBUG_highlightedJunctionIndex, (i32)m_Junctions.size() - 1);
 			}
 
 			if (m_DEBUG_highlightedJunctionIndex != -1)
@@ -568,6 +559,10 @@ namespace flex
 		track->GetCurveIndexAndLocalTFromGlobalT(t, startCurveIndex, oldLocalT);
 
 		real startCurveLen = track->curves[startCurveIndex].calculatedLength;
+		if (startCurveLen == -1.0f)
+		{
+			PrintWarn("TrackManager::AdvanceTAlongTrack > Curve length hasn't been calculated\n!");
+		}
 
 		static const real LENGTH_SCALE = 100.0f;
 		real newLocalT = oldLocalT + amount * (LENGTH_SCALE / startCurveLen);

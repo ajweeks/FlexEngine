@@ -26,7 +26,7 @@ namespace flex
 		gl::GLPhysicsDebugDraw* debugDrawer = (gl::GLPhysicsDebugDraw*)g_Renderer->GetDebugDrawer();
 
 		btVector4 lineColour = bHighlighted ? highlightColour : baseColour;
-		i32 segmentCount = 20;
+		i32 segmentCount = 10;
 		btVector3 pPoint = ToBtVec3(points[0]);
 		for (i32 i = 0; i <= segmentCount; ++i)
 		{
