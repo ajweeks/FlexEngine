@@ -102,6 +102,9 @@ namespace flex
 	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold);
 	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold);
 
+	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
+	real MoveTowards(const real& a, real b, real delta);
+
 	real Lerp(real a, real b, real t);
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
@@ -341,5 +344,4 @@ namespace flex
 		//TextCache& operator=(const TextCache &tmp);
 
 	};
-
 } // namespace flex

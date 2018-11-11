@@ -46,6 +46,7 @@ namespace flex
 
 		m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/crunch-13.wav");
 		m_SoundTrackDetachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-02.wav");
+		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/whistle-01.wav");
 		//m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-07.wav");
 
 		UpdateIsPossessed();
@@ -55,6 +56,7 @@ namespace flex
 	{
 		AudioManager::DestroyAudioSource(m_SoundTrackAttachID);
 		AudioManager::DestroyAudioSource(m_SoundTrackDetachID);
+		AudioManager::DestroyAudioSource(m_SoundTrackSwitchDirID);
 	}
 
 	void PlayerController::Update()
@@ -80,6 +82,7 @@ namespace flex
 		glm::vec3 up = transform->GetUp();
 		glm::vec3 right = transform->GetRight();
 		glm::vec3 forward = transform->GetForward();
+		BezierCurveList* pTrackRiding = m_TrackRiding;
 
 		if (m_bPossessed)
 		{
@@ -138,9 +141,9 @@ namespace flex
 					bUpdateFacing = true;
 				}
 
+				bool pFacingForwardDownTrack = m_Player->bFacingForwardDownTrack;
 				if (m_bUpdateFacingAndForceFoward || bUpdateFacing)
 				{
-					bool pFacingForwardDownTrack = m_Player->bFacingForwardDownTrack;
 					glm::vec3 trackForward = glm::normalize(m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack));
 					m_Player->bFacingForwardDownTrack = (glm::dot(trackForward, forward) > 0.0f);
 					if (m_bUpdateFacingAndForceFoward)
@@ -163,6 +166,12 @@ namespace flex
 				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 				m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_TrackRiding, (moveForward - moveBackward) * m_TrackMoveSpeed * g_DeltaTime, m_DistAlongTrack);
 				SnapPosToTrack(pDist);
+
+				if (m_Player->bFacingForwardDownTrack != pFacingForwardDownTrack &&
+					m_TrackRiding == pTrackRiding)
+				{
+					AudioManager::PlaySource(m_SoundTrackSwitchDirID);
+				}
 
 				m_pDTrackMovement = m_DistAlongTrack - pDist;
 			}
@@ -346,7 +355,6 @@ namespace flex
 			desiredDir = 2;
 		}
 		bool bReversingDownTrack = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER) > 0.0f;
-		bool bFacingJunction = glm::dot(m_Player->GetTransform()->GetForward(), newTrack->GetCurveDirectionAt(newDistAlongTrack)) > 0.0f;
 
 		trackManager->UpdatePreview(m_TrackRiding, m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetForward(), m_Player->bFacingForwardDownTrack, bReversingDownTrack);
 

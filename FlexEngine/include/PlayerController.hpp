@@ -88,6 +88,7 @@ namespace flex
 
 		AudioSourceID m_SoundTrackAttachID;
 		AudioSourceID m_SoundTrackDetachID;
+		AudioSourceID m_SoundTrackSwitchDirID;
 
 	};
 } // namespace flex

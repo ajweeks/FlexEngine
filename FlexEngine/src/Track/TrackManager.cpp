@@ -189,10 +189,6 @@ namespace flex
 	{
 		real range = 0.2f;
 		real dotResult = glm::dot(track->GetCurveDirectionAt(distAlongTrack), currentFor);
-		if (!bFacingForwardDownTrack)
-		{
-			//dotResult = -dotResult;
-		}
 		real queryDist = distAlongTrack;
 		bool bFacingDownTrack = dotResult > 0.0f;
 		if (bFacingDownTrack)

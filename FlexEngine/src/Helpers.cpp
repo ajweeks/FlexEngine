@@ -742,6 +742,20 @@ namespace flex
 			(abs(a.w - b.w) < threshold);
 	}
 
+	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta)
+	{
+		delta = glm::clamp(delta, 0.00001f, 1.0f);
+		glm::vec3 diff = (b - a);
+		delta = glm::min(delta, glm::length(diff));
+		return a + glm::normalize(diff) * delta;
+	}
+
+	real MoveTowards(const real& a, real b, real delta)
+	{
+		delta = glm::clamp(delta, 0.00001f, 1.0f);
+		return a + (b - a) * delta;
+	}
+
 	real Lerp(real a, real b, real t)
 	{
 		return a * (1.0f - t) + b * t;

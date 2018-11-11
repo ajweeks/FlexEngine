@@ -33,8 +33,11 @@ namespace flex
 		RollingAverage<glm::vec3> m_PlayerPosRollingAvg;
 		RollingAverage<glm::vec3> m_PlayerForwardRollingAvg;
 
-		real m_OffsetY;
-		real m_OffsetZ;
+		real m_ZoomLevel;
+		real m_TargetZoomLevel;
+		const real m_MinZoomLevel = 3.0f;
+		const real m_MaxZoomLevel = 15.0f;
+		const i32 m_ZoomLevels = 7;
 
 		// Where we point at on the ground
 		glm::vec3 m_TargetLookAtPos;

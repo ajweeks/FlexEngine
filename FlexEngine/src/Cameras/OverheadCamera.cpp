@@ -22,8 +22,7 @@ namespace flex
 	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
 		BaseCamera("overhead",FOV, zNear, zFar)
 	{
-		ResetOrientation();
-		RecalculateViewProjection();
+		ResetValues();
 	}
 
 	OverheadCamera::~OverheadCamera()
@@ -32,8 +31,6 @@ namespace flex
 
 	void OverheadCamera::Initialize()
 	{
-		BaseCamera::Initialize();
-
 		m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
 		m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
 
@@ -58,6 +55,23 @@ namespace flex
 		if (!m_Player0)
 		{
 			return;
+		}
+
+		if (g_InputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::LEFT_STICK_DOWN))
+		{
+			m_TargetZoomLevel += (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
+			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
+		}
+
+		if (g_InputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::RIGHT_STICK_DOWN))
+		{
+			m_TargetZoomLevel -= (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
+			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
+		}
+
+		if (!NearlyEquals(m_ZoomLevel, m_TargetZoomLevel, 0.01f))
+		{
+			m_ZoomLevel = MoveTowards(m_ZoomLevel, m_TargetZoomLevel, g_DeltaTime * 15.0f);
 		}
 
 		m_PlayerForwardRollingAvg.AddValue(m_Player0->GetTransform()->GetForward());
@@ -91,8 +105,9 @@ namespace flex
 
 	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos)
 	{
-		glm::vec3 forward = m_PlayerForwardRollingAvg.currentAverage;
-		glm::vec3 offsetVec(VEC3_UP * m_OffsetY + forward * m_OffsetZ);
+		glm::vec3 backward = -m_PlayerForwardRollingAvg.currentAverage;
+		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 3.0f) * m_ZoomLevel;
+		//glm::vec3 offsetVec = glm::rotate(backward, m_Pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
 		return pos + offsetVec;
 	}
 
@@ -124,7 +139,12 @@ namespace flex
 
 	void OverheadCamera::ResetValues()
 	{
+		ResetOrientation();
+
 		m_Vel = VEC3_ZERO;
+		m_TargetZoomLevel = (real)(m_ZoomLevels / 2) * ((m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1)) + m_MinZoomLevel;
+		m_ZoomLevel = m_TargetZoomLevel;
+		m_Pitch = -PI_DIV_FOUR;
 		SetPosAndLookAt();
 
 		if (m_Player0)
@@ -137,7 +157,7 @@ namespace flex
 			m_PlayerPosRollingAvg.Reset();
 			m_PlayerForwardRollingAvg.Reset();
 		}
-		m_OffsetY = 14.0f;
-		m_OffsetZ = -16.0f;
+
+		RecalculateViewProjection();
 	}
 } // namespace flex
