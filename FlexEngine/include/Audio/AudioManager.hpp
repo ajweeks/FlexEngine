@@ -17,9 +17,9 @@ namespace flex
 		static void Destroy();
 
 		static AudioSourceID AddAudioSource(const std::string& filePath);
+		static AudioSourceID SynthesizeSound(sec length, real freq);
 		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
-
 
 		/* [0.0, 1.0] logarithmic */
 		static void SetMasterGain(real masterGain);
@@ -54,6 +54,7 @@ namespace flex
 		static void DrawImGuiObjects();
 
 	private:
+
 		static void DisplayALError(const std::string& str, ALenum error);
 
 		static void PrintAudioDevices(const ALCchar* devices);

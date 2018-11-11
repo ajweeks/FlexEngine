@@ -55,6 +55,13 @@ namespace flex
 			dud_dud_dud_dud,
 			drmapan,
 			blip,
+			synthesized_01,
+			synthesized_02,
+			synthesized_03,
+			synthesized_04,
+			synthesized_05,
+			synthesized_06,
+			synthesized_07,
 
 			LAST_ELEMENT
 		};

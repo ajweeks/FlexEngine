@@ -192,6 +192,13 @@ namespace flex
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 10.20f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 9.091f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 8.099f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 7.645f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 6.811f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 6.068f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 5.727f));
 		}
 
 		i32 springCount = 6;
@@ -1509,6 +1516,34 @@ namespace flex
 			}
 			g_SceneManager->UpdateCurrentScene();
 
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_4))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_01]);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_5))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_02]);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_6))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_03]);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_7))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_04]);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_8))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_05]);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_9))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_06]);
+			}
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_0))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_07]);
+			}
 
 			g_Window->Update();
 
