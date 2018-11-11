@@ -716,30 +716,30 @@ namespace flex
 		return -1;
 	}
 
-	bool NearlyEquals(real a, real b, real threshhold)
+	bool NearlyEquals(real a, real b, real threshold)
 	{
-		return (abs(a - b) < threshhold);
+		return (abs(a - b) < threshold);
 	}
 
-	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshhold)
+	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshhold) &&
-			(abs(a.y - b.y) < threshhold);
+		return (abs(a.x - b.x) < threshold) &&
+			(abs(a.y - b.y) < threshold);
 	}
 
-	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold)
+	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshhold) &&
-			(abs(a.y - b.y) < threshhold) &&
-			(abs(a.z - b.z) < threshhold);
+		return (abs(a.x - b.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) &&
+			(abs(a.z - b.z) < threshold);
 	}
 
-	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold)
+	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshhold) &&
-			(abs(a.y - b.y) < threshhold) &&
-			(abs(a.z - b.z) < threshhold) &&
-			(abs(a.w - b.w) < threshhold);
+		return (abs(a.x - b.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) &&
+			(abs(a.z - b.z) < threshold) &&
+			(abs(a.w - b.w) < threshold);
 	}
 
 	real Lerp(real a, real b, real t)

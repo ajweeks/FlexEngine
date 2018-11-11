@@ -1142,6 +1142,8 @@ namespace flex
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			GLMaterial& material = m_Materials[renderObject->materialID];
 
+			m_bRebatchRenderObjects = true;
+
 			// glFlush calls help RenderDoc replay frames without crashing
 
 			if (material.material.generateReflectionProbeMaps)
@@ -1199,8 +1201,6 @@ namespace flex
 				Profiler::PrintBlockDuration(profileBlockName);
 				//glFlush();
 			}
-
-			m_bRebatchRenderObjects = true;
 		}
 
 		void GLRenderer::ClearMaterials()
@@ -1990,6 +1990,8 @@ namespace flex
 		void GLRenderer::BatchRenderObjects()
 		{
 			PROFILE_AUTO("BatchRenderObjects");
+
+			m_bRebatchRenderObjects = false;
 
 			/*
 			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID

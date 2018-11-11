@@ -154,22 +154,26 @@ namespace flex
 	{
 		assert(strlen(blockName) <= Timing::MAX_NAME_LEN);
 
+		ms now = Time::CurrentMilliseconds();
+
 		u64 hash = Hash(blockName);
 
-		if (s_Timings.find(hash) != s_Timings.end())
+		auto existingEntryIter = s_Timings.find(hash);
+		if (existingEntryIter == s_Timings.end())
 		{
-			PrintError("Profiler::Begin called more than once! Block name: %s (hash: %i)\n",
-					   blockName, hash);
+			Timing timing = {};
+			timing.start = now;
+			timing.end = real_min;
+			strcpy_s(timing.blockName, blockName);
+			s_Timings.insert({ hash, timing });
+
+			++s_UnendedTimings;
 		}
-
-		ms now = Time::CurrentMilliseconds();
-		Timing timing = {};
-		timing.start = now;
-		timing.end = real_min;
-		strcpy_s(timing.blockName, blockName);
-		s_Timings.insert({ hash, timing });
-
-		++s_UnendedTimings;
+		else
+		{
+			//PrintWarn("Profiler::Begin called more than once for block: %s (hash: %i)\n", blockName, hash);
+			//existingEntryIter->second.start = now;
+		}
 	}
 
 	void Profiler::Begin(const std::string& blockName)
@@ -184,17 +188,23 @@ namespace flex
 		auto iter = s_Timings.find(hash);
 		if (iter == s_Timings.end())
 		{
-			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n",
-					   blockName, hash);
+			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n", blockName, hash);
 			return;
 		}
 
 		assert(strcmp(iter->second.blockName, blockName) == 0);
 
-		ms now = Time::CurrentMilliseconds();
-		iter->second.end = now;
+		if (iter->second.end != real_min)
+		{
+			// Block has already been ended
+		}
+		else
+		{
+			ms now = Time::CurrentMilliseconds();
+			iter->second.end = now;
 
-		--s_UnendedTimings;
+			--s_UnendedTimings;
+		}
 	}
 
 	void Profiler::End(const std::string& blockName)

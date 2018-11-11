@@ -345,8 +345,14 @@ namespace flex
 		{
 			desiredDir = 2;
 		}
-		real bReversingDownTrack = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER) > 0.0f;
-		glm::vec3 newPos = trackManager->GetPointOnTrack(m_TrackRiding, m_DistAlongTrack, pDistAlongTrack, desiredDir, &newTrack, newDistAlongTrack, bReversingDownTrack);
+		bool bReversingDownTrack = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_TRIGGER) > 0.0f;
+		bool bFacingJunction = glm::dot(m_Player->GetTransform()->GetForward(), newTrack->GetCurveDirectionAt(newDistAlongTrack)) > 0.0f;
+
+		trackManager->UpdatePreview(m_TrackRiding, m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetWorldPosition(), m_Player->GetTransform()->GetForward(), bReversingDownTrack);
+
+		i32 newJunctionIndex = -1;
+		i32 newCurveIndex = -1;
+		glm::vec3 newPos = trackManager->GetPointOnTrack(m_TrackRiding, m_DistAlongTrack, pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrack, &newDistAlongTrack, &newJunctionIndex, &newCurveIndex);
 
 		if (newTrack != m_TrackRiding)
 		{

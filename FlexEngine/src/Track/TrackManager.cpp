@@ -18,6 +18,8 @@ namespace flex
 
 	TrackManager::TrackManager()
 	{
+		m_PreviewJunctionDir.junctionIndex = -1;
+		m_PreviewJunctionDir.dir = VEC3_ZERO;
 	}
 
 	void TrackManager::AddTrack(const BezierCurveList& track)
@@ -34,27 +36,29 @@ namespace flex
 		real distAlongTrack,
 		real pDistAlongTrack,
 		i32 desiredDir,
-		BezierCurveList** newTrack,
-		real& newDistAlongTrack,
-		bool bReversingDownTrack)
+		bool bReversingDownTrack,
+		BezierCurveList** outNewTrack,
+		real* outNewDistAlongTrack,
+		i32* outJunctionIndex,
+		i32* outCurveIndex)
 	{
 		i32 pCurveIdx = -1;
-		i32 newCurveIdx = -1;
+		*outCurveIndex = -1;
 		glm::vec3 pPoint = track->GetPointOnCurve(pDistAlongTrack, pCurveIdx);
-		glm::vec3 newPoint = track->GetPointOnCurve(distAlongTrack, newCurveIdx);
+		glm::vec3 newPoint = track->GetPointOnCurve(distAlongTrack, *outCurveIndex);
 
 		bool bEndOfTheLine =
-			(distAlongTrack == 0.0f && pDistAlongTrack != 0.0f) ||
-			(distAlongTrack == 1.0f && pDistAlongTrack != 1.0f);
+			(distAlongTrack <= 0.0f && pDistAlongTrack > 0.0f) ||
+			(distAlongTrack >= 1.0f && pDistAlongTrack < 1.0f);
 
-		if (newCurveIdx != pCurveIdx || bEndOfTheLine)
+		if (*outCurveIndex != pCurveIdx || bEndOfTheLine)
 		{
-			i32 curveIdxToCheck = newCurveIdx;
-			if (newCurveIdx < pCurveIdx)
+			i32 curveIdxToCheck = *outCurveIndex;
+			if (*outCurveIndex < pCurveIdx)
 			{
 				curveIdxToCheck = pCurveIdx;
 			}
-			else if (newCurveIdx == pCurveIdx)
+			else if (*outCurveIndex == pCurveIdx)
 			{
 				if (distAlongTrack == 0.0f)
 				{
@@ -70,33 +74,36 @@ namespace flex
 			// Check for junction crossings
 			for (i32 i = 0; i < m_JunctionCount; ++i)
 			{
-				Junction& junctionIter = m_Junctions[i];
+				Junction& junction = m_Junctions[i];
 
-				for (i32 j = 0; j < junctionIter.trackCount; ++j)
+				for (i32 j = 0; j < junction.trackCount; ++j)
 				{
-					if (track == junctionIter.tracks[j])
+					if (track == junction.tracks[j])
 					{
-						if (NearlyEquals(junctionPos, junctionIter.pos, JUNCTION_THRESHOLD_DIST))
+						if (NearlyEquals(junctionPos, junction.pos, JUNCTION_THRESHOLD_DIST))
 						{
 							i32 newTrackIdx = -1;
 
-							if (junctionIter.trackCount == 2)
+							if (junction.trackCount == 2)
 							{
 								if (bEndOfTheLine)
 								{
-									newTrackIdx = (junctionIter.tracks[0] == track ? 1 : 0);
+									newTrackIdx = (junction.tracks[0] == track ? 1 : 0);
 									Print("Changed to only other track at junction (it's the end of the line baby)\n");
+									*outJunctionIndex = i;
 								}
 								else
 								{
 									if (desiredDir == 1)
 									{
 										Print("Went straight through a 2-way junction\n");
+										*outJunctionIndex = i;
 									}
 									else
 									{
-										newTrackIdx = (junctionIter.tracks[0] == track ? 1 : 0);
+										newTrackIdx = (junction.tracks[0] == track ? 1 : 0);
 										Print("Changed to only other track at junction\n");
+										*outJunctionIndex = i;
 									}
 								}
 
@@ -108,12 +115,14 @@ namespace flex
 									if (bEndOfTheLine)
 									{
 										glm::vec3 desiredDir = glm::normalize(newPoint - pPoint);
-										newTrackIdx = GetTrackIndexInDir(desiredDir, junctionIter, track, bEndOfTheLine, newPoint);
+										newTrackIdx = GetTrackIndexInDir(desiredDir, junction, track, bEndOfTheLine, newPoint);
 										Print("Went straight through an n-way junction (jumped tracks)\n");
+										*outJunctionIndex = i;
 									}
 									else
 									{
 										Print("Went straight through an n-way junction (same track)\n");
+										*outJunctionIndex = i;
 									}
 								}
 								else
@@ -126,34 +135,38 @@ namespace flex
 									{
 										// Want to go left
 										glm::vec3 desiredDirVec = bReversingDownTrack ? trackRight : -trackRight;
-										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junctionIter, track, bEndOfTheLine, newPoint);
+										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bEndOfTheLine, newPoint);
 										if (newTrackIdx != -1)
 										{
 											Print("Went left at an n-way junction\n");
+											*outJunctionIndex = i;
 										}
 									}
 									else if (desiredDir == 2)
 									{
 										// Want to go right
 										glm::vec3 desiredDirVec = bReversingDownTrack ? -trackRight : trackRight;
-										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junctionIter, track, bEndOfTheLine, newPoint);
+										newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bEndOfTheLine, newPoint);
 										if (newTrackIdx != -1)
 										{
 											Print("Went right at an n-way junction\n");
+											*outJunctionIndex = i;
 										}
 									}
 									else
 									{
 										Print("Went straight through an n-way junction\n");
+										*outJunctionIndex = i;
 									}
 								}
 							}
 
 							if (newTrackIdx != -1)
 							{
-								*newTrack = junctionIter.tracks[newTrackIdx];
-								newCurveIdx = junctionIter.curveIndices[newTrackIdx];
-								newDistAlongTrack = (real)newCurveIdx / (real)((*newTrack)->curves.size());
+								*outNewTrack = junction.tracks[newTrackIdx];
+								*outCurveIndex = junction.curveIndices[newTrackIdx];
+								*outNewDistAlongTrack = (real)*outCurveIndex / (real)((*outNewTrack)->curves.size());
+								*outJunctionIndex = i;
 								return newPoint;
 							}
 						}
@@ -167,11 +180,48 @@ namespace flex
 		return newPoint;
 	}
 
+	void TrackManager::UpdatePreview(BezierCurveList* track,
+		real distAlongTrack,
+		i32 desiredDir,
+		glm::vec3 currentPos,
+		glm::vec3 currentFor,
+		bool bReversingDownTrack)
+	{
+		real range = 0.08f;
+		real dotResult = glm::dot(track->GetCurveDirectionAt(distAlongTrack), currentFor);
+		real queryDist = distAlongTrack;
+		bool bFacingDownTrack = dotResult > 0.0f;
+		if (bFacingDownTrack)
+		{
+			queryDist += range;
+		}
+		else
+		{
+			queryDist -= range;
+		}
+		BezierCurveList* newTrack = nullptr;
+		real newDist = -1.0f;
+		i32 junctionIndex = -1;
+		i32 curveIndex = -1;
+		glm::vec3 newPoint = GetPointOnTrack(track, queryDist, distAlongTrack, desiredDir, bReversingDownTrack, &newTrack, &newDist, &junctionIndex, &curveIndex);
+
+		if (junctionIndex == -1)
+		{
+			// No junctions in range
+			m_PreviewJunctionDir.junctionIndex = -1;
+			m_PreviewJunctionDir.dir = VEC3_ZERO;
+		}
+		else
+		{
+			// There is a junction in range
+			m_PreviewJunctionDir.junctionIndex = junctionIndex;
+			m_PreviewJunctionDir.dir = GetDirectionOnTrack(newTrack == nullptr ? track : newTrack, newDist == -1.0f ? distAlongTrack : newDist);
+		}
+	}
+
 	glm::vec3 TrackManager::GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack)
 	{
-		glm::vec3 dir = track->GetCurveDirectionAt(distAlongTrack);
-
-		return dir;
+		return track->GetCurveDirectionAt(distAlongTrack);
 	}
 
 	// TODO: Remove final param in place of junc.pos?
@@ -431,9 +481,10 @@ namespace flex
 			m_Tracks[i].DrawDebug(highlightColour, distAlongTrack);
 		}
 
+		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+
 		for (i32 i = 0; i < m_JunctionCount; ++i)
 		{
-			 btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)m_Junctions[i].tracks[0]->curves.size();
 			 i32 curveIndex;
 			 glm::vec3 pos = m_Junctions[i].tracks[0]->GetPointOnCurve(distAlongTrack0, curveIndex);
@@ -446,6 +497,10 @@ namespace flex
 
 			 for (i32 j = 0; j < m_Junctions[i].trackCount; ++j)
 			 {
+				 btVector3 lineColPos = btVector3(0.2f, 0.6f, 0.25f);
+				 btVector3 lineColNeg = btVector3(0.8f, 0.3f, 0.2f);
+				 btVector3 lineColPreview = btVector3(0.95f, 0.95f, 0.98f);
+
 				 BezierCurveList* track = m_Junctions[i].tracks[j];
 				 i32 curveIndex = m_Junctions[i].curveIndices[j];
 
@@ -457,13 +512,22 @@ namespace flex
 				 {
 					 glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, outCurveIdx);
 					 glm::vec3 dir1 = glm::normalize(trackP1 - pos);
-					 debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), btVector3(0.2f, 0.6f, 0.25f));
+					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);// || NearlyEquals(m_PreviewJunctionDir.dir, -dir1, 0.1f);
+					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
+					 debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
 				 }
 				 if (curveIndex > 0)
 				 {
 					 glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, outCurveIdx);
 					 glm::vec3 dir2 = glm::normalize(trackP2 - pos);
-					 debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), btVector3(0.8f, 0.3f, 0.2f));
+					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);// || NearlyEquals(m_PreviewJunctionDir.dir, -dir2, 0.1f);
+					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
+					 debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
+				 }
+
+				 if (m_PreviewJunctionDir.junctionIndex == i)
+				 {
+					//debugDrawer->drawLine(start, ToBtVec3(pos + m_PreviewJunctionDir.dir * 5.0f + VEC3_UP * 1.5f), lineColPreview);
 				 }
 			 }
 		}
@@ -492,6 +556,9 @@ namespace flex
 			{
 				ImGui::Text("Junction connected track count: %d", m_Junctions[m_DEBUG_highlightedJunctionIndex].trackCount);
 			}
+
+			ImGui::Text("Preview junc idx: %d", m_PreviewJunctionDir.junctionIndex);
+			ImGui::Text("Preview curve dir: %s", Vec3ToString(m_PreviewJunctionDir.dir, 2).c_str());
 
 			ImGui::TreePop();
 		}

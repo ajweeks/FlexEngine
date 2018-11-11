@@ -28,8 +28,17 @@ namespace flex
 			real distAlongTrack,
 			real pDistAlongTrack,
 			i32 desiredDir,
-			BezierCurveList** newTrack,
-			real& newDistAlongTrack,
+			bool bReversingDownTrack,
+			BezierCurveList** outNewTrack,
+			real* outNewDistAlongTrack,
+			i32* outJunctionIndex,
+			i32* outCurveIndex);
+
+		void UpdatePreview(BezierCurveList* track,
+			real distAlongTrack,
+			i32 desiredDir,
+			glm::vec3 currentPos,
+			glm::vec3 currentFor,
 			bool bReversingDownTrack);
 
 		glm::vec3 GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack);
@@ -59,6 +68,13 @@ namespace flex
 		BezierCurveList m_Tracks[MAX_TRACK_COUNT];
 		i32 m_JunctionCount = 0;
 		Junction m_Junctions[MAX_JUNCTION_COUNT];
+		struct JunctionDirPair
+		{
+			i32 junctionIndex = -1;
+			glm::vec3 dir;
+		};
+		// Shows the player where they will turn if they continue down the track and don't change their inputs
+		JunctionDirPair m_PreviewJunctionDir;
 
 		i32 m_DEBUG_highlightedJunctionIndex = -1;
 
