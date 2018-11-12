@@ -73,7 +73,7 @@ namespace flex
 
 				for (i32 j = 0; j < junction.trackCount; ++j)
 				{
-					if (track == junction.tracks[j])
+					if (track == &m_Tracks[junction.trackIndices[j]])
 					{
 						if (NearlyEquals(junctionPos, junction.pos, JUNCTION_THRESHOLD_DIST))
 						{
@@ -83,7 +83,7 @@ namespace flex
 							{
 								if (bEndOfTheLine)
 								{
-									newTrackIdx = (junction.tracks[0] == track ? 1 : 0);
+									newTrackIdx = (&m_Tracks[junction.trackIndices[0]] == track ? 1 : 0);
 									Print("Changed to only other track at junction (it's the end of the line baby)\n");
 									*outJunctionIndex = i;
 								}
@@ -96,7 +96,7 @@ namespace flex
 									}
 									else
 									{
-										newTrackIdx = (junction.tracks[0] == track ? 1 : 0);
+										newTrackIdx = (&m_Tracks[junction.trackIndices[0]] == track ? 1 : 0);
 										Print("Changed to only other track at junction\n");
 										*outJunctionIndex = i;
 									}
@@ -158,7 +158,7 @@ namespace flex
 
 							if (newTrackIdx != -1)
 							{
-								*outNewTrack = junction.tracks[newTrackIdx];
+								*outNewTrack = &m_Tracks[junction.trackIndices[newTrackIdx]];
 								*outCurveIndex = junction.curveIndices[newTrackIdx];
 								*outNewDistAlongTrack = (real)*outCurveIndex / (real)((*outNewTrack)->curves.size());
 								*outJunctionIndex = i;
@@ -235,9 +235,9 @@ namespace flex
 		real bestTrackDot = -1.0f;
 		for (i32 k = 0; k < junc.trackCount; ++k)
 		{
-			if (junc.tracks[k] != track)
+			if (&m_Tracks[junc.trackIndices[k]] != track)
 			{
-				BezierCurveList* testTrack = junc.tracks[k];
+				BezierCurveList* testTrack = &m_Tracks[junc.trackIndices[k]];
 				i32 testTrackCurveCount = (i32)testTrack->curves.size();
 
 				i32 testCurveIdx = 0;
@@ -356,7 +356,7 @@ namespace flex
 											i32 trackIndex = -1;
 											for (i32 o = 0; o < m_Junctions[n].trackCount; ++o)
 											{
-												if (m_Junctions[n].tracks[o] == &m_Tracks[j])
+												if (m_Junctions[n].trackIndices[o] == j)
 												{
 													trackIndex = o;
 													break;
@@ -366,7 +366,7 @@ namespace flex
 											if (trackIndex == -1)
 											{
 												Junction& junct = m_Junctions[n];
-												junct.tracks[junct.trackCount] = &m_Tracks[j];
+												junct.trackIndices[junct.trackCount] = j;
 												junct.curveIndices[junct.trackCount] = curveIndexB;
 												junct.trackCount++;
 											}
@@ -379,10 +379,10 @@ namespace flex
 									{
 										Junction junct = {};
 										junct.pos = curvesA[k].points[p1Idx];
-										junct.tracks[junct.trackCount] = &m_Tracks[i];
+										junct.trackIndices[junct.trackCount] = i;
 										junct.curveIndices[junct.trackCount] = curveIndexA;
 										junct.trackCount++;
-										junct.tracks[junct.trackCount] = &m_Tracks[j];
+										junct.trackIndices[junct.trackCount] = j;
 										junct.curveIndices[junct.trackCount] = curveIndexB;
 										junct.trackCount++;
 										m_Junctions.push_back(junct);
@@ -478,9 +478,10 @@ namespace flex
 
 		for (i32 i = 0; i < (i32)m_Junctions.size(); ++i)
 		{
-			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)m_Junctions[i].tracks[0]->curves.size();
+			BezierCurveList* track0 = &m_Tracks[m_Junctions[i].trackIndices[0]];
+			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)track0->curves.size();
 			 i32 curveIndex;
-			 glm::vec3 pos = m_Junctions[i].tracks[0]->GetPointOnCurve(distAlongTrack0, curveIndex);
+			 glm::vec3 pos = track0->GetPointOnCurve(distAlongTrack0, curveIndex);
 			 btVector3 sphereCol = btVector3(0.9f, 0.2f, 0.2f);
 			 if (i == m_DEBUG_highlightedJunctionIndex)
 			 {
@@ -494,7 +495,7 @@ namespace flex
 				 btVector3 lineColNeg = btVector3(0.8f, 0.3f, 0.2f);
 				 btVector3 lineColPreview = btVector3(0.95f, 0.95f, 0.98f);
 
-				 BezierCurveList* track = m_Junctions[i].tracks[j];
+				 BezierCurveList* track = &m_Tracks[m_Junctions[i].trackIndices[j]];
 				 curveIndex = m_Junctions[i].curveIndices[j];
 
 				 real tAtJunc = track->GetTAtJunction(curveIndex);
@@ -576,13 +577,15 @@ namespace flex
 		i32 trackAIndex = -1;
 		i32 trackBIndex = -1;
 
+		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+
 		for (i32 i = 0; i < trackCount; ++i)
 		{
-			if (tracks[i] == trackA)
+			if (&trackManager->m_Tracks[trackIndices[i]] == trackA)
 			{
 				trackAIndex = i;
 			}
-			else if (tracks[i] == trackB)
+			else if (&trackManager->m_Tracks[trackIndices[i]] == trackB)
 			{
 				trackBIndex = i;
 			}

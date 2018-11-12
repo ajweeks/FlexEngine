@@ -101,8 +101,6 @@ namespace flex
 		bool LoadCommonSettingsFromDisk();
 		void SaveCommonSettingsToDisk(bool bAddEditorStr);
 
-		void DoSceneContextMenu(BaseScene* scene);
-
 		// Returns the intersection point of the given ray & plane, projected on to axis
 		glm::vec3 CalculateRayPlaneIntersectionAlongAxis(const glm::vec3& axis,
 			const glm::vec3& rayOrigin,

@@ -20,5 +20,8 @@ namespace flex
 
 		real calculatedLength = -1.0f;
 
+		static const btVector4 s_PointColour;
+		i32 debug_SegmentCount = 10;
+
 	};
 } // namespace flex

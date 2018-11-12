@@ -12,7 +12,7 @@ namespace flex
 
 		glm::vec3 pos;
 		i32 trackCount = 0;
-		BezierCurveList* tracks[MAX_TRACKS];
+		i32 trackIndices[MAX_TRACKS];
 		// Stores which part of the curve is intersecting the junction
 		i32 curveIndices[MAX_TRACKS];
 	};
@@ -57,13 +57,14 @@ namespace flex
 		// Moves t along track according to curve length
 		real AdvanceTAlongTrack(BezierCurveList* track, real amount, real t);
 
+		std::vector<BezierCurveList> m_Tracks;
+		std::vector<Junction> m_Junctions;
+
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine);
 
 		static const real JUNCTION_THRESHOLD_DIST;
 
-		std::vector<BezierCurveList> m_Tracks;
-		std::vector<Junction> m_Junctions;
 		struct JunctionDirPair
 		{
 			i32 junctionIndex = -1;

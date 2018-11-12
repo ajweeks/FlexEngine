@@ -7,6 +7,8 @@
 
 namespace flex
 {
+	const btVector4 BezierCurve::s_PointColour = btVector4(0.2f, 0.2f, 0.1f, 0.25f);
+
 	BezierCurve::BezierCurve()
 	{
 	}
@@ -26,11 +28,10 @@ namespace flex
 		gl::GLPhysicsDebugDraw* debugDrawer = (gl::GLPhysicsDebugDraw*)g_Renderer->GetDebugDrawer();
 
 		btVector4 lineColour = bHighlighted ? highlightColour : baseColour;
-		i32 segmentCount = 10;
 		btVector3 pPoint = ToBtVec3(points[0]);
-		for (i32 i = 0; i <= segmentCount; ++i)
+		for (i32 i = 0; i <= debug_SegmentCount; ++i)
 		{
-			real t = (real)i / (real)segmentCount;
+			real t = (real)i / (real)debug_SegmentCount;
 			btVector3 nPoint = ToBtVec3(GetPointOnCurve(t));
 
 #define DRAW_LOCAL_AXES 0
@@ -48,17 +49,15 @@ namespace flex
 			pPoint = nPoint;
 		}
 
-		btVector4 pointColour(0.2f, 0.2f, 0.1f, 0.25f);
-
 #define DRAW_HANDLES 1
 #if DRAW_HANDLES
-		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[0]), ToBtVec3(points[1]), pointColour);
-		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), pointColour);
+		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[0]), ToBtVec3(points[1]), s_PointColour);
+		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), s_PointColour);
 #endif
 
 		for (const glm::vec3& point : points)
 		{
-			debugDrawer->drawSphere(ToBtVec3(point), 0.1f, pointColour);
+			debugDrawer->drawSphere(ToBtVec3(point), 0.1f, s_PointColour);
 		}
 	}
 

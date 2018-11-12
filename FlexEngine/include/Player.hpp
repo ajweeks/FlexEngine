@@ -58,5 +58,8 @@ namespace flex
 		glm::vec3 m_TrackPlacementReticlePos; // Local offset
 
 		TextureID m_CrosshairTextureID;
+
+		AudioSourceID m_SoundPlaceTrackNodeID;
+		AudioSourceID m_SoundPlaceFinalTrackNodeID;
 	};
 } // namespace flex

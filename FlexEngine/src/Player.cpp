@@ -12,6 +12,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #pragma warning(pop)
 
+#include "Audio/AudioManager.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Physics/RigidBody.hpp"
@@ -36,6 +37,9 @@ namespace flex
 
 	void Player::Initialize()
 	{
+		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/click-02.wav");
+		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/jingle-single-01.wav");
+
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
 		matCreateInfo.shaderName = "pbr";
@@ -92,6 +96,20 @@ namespace flex
 		m_RigidBody->GetRigidBodyInternal()->setSleepingThresholds(0.0f, 0.0f);
 
 		GameObject::PostInitialize();
+	}
+
+	void Player::Destroy()
+	{
+		if (m_Controller)
+		{
+			m_Controller->Destroy();
+			SafeDelete(m_Controller);
+		}
+
+		AudioManager::DestroyAudioSource(m_SoundPlaceTrackNodeID);
+		AudioManager::DestroyAudioSource(m_SoundPlaceFinalTrackNodeID);
+
+		GameObject::Destroy();
 	}
 
 	void Player::Update()
@@ -151,7 +169,7 @@ namespace flex
 		drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
 		g_Renderer->DrawSprite(drawInfo);
 
-		if (g_InputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::Y))
+		if (m_Controller->IsPossessed() && g_InputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::Y))
 		{
 			m_bPlacingTrack = !m_bPlacingTrack;
 		}
@@ -165,11 +183,22 @@ namespace flex
 				m_CurvePlacing.points[m_CurveNodesPlaced++] = reticlePos;
 				if (m_CurveNodesPlaced == 4)
 				{
+					AudioManager::PlaySource(m_SoundPlaceFinalTrackNodeID);
+
 					m_CurvePlacing.CalculateLength();
 					m_TrackPlacing.curves.push_back(m_CurvePlacing);
 
 					m_CurveNodesPlaced = 0;
 					m_CurvePlacing.points[0] = m_CurvePlacing.points[1] = m_CurvePlacing.points[2] = m_CurvePlacing.points[3] = VEC3_ZERO;
+				}
+				else
+				{
+					AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+
+					for (i32 i = 3; i > m_CurveNodesPlaced - 1; --i)
+					{
+						m_CurvePlacing.points[i] = reticlePos;
+					}
 				}
 			}
 
@@ -186,6 +215,18 @@ namespace flex
 				}
 			}
 
+			static const btVector4 placedCurveCol(0.5f, 0.8f, 0.3f, 0.9f);
+			static const btVector4 placingCurveCol(0.35f, 0.6f, 0.3f, 0.9f);
+			for (const BezierCurve& curve : m_TrackPlacing.curves)
+			{
+				curve.DrawDebug(false, placedCurveCol, placedCurveCol);
+
+			}
+			if (m_CurveNodesPlaced > 0)
+			{
+				m_CurvePlacing.DrawDebug(false, placingCurveCol, placingCurveCol);
+			}
+
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 			btTransform cylinderTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
 			debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
@@ -193,17 +234,6 @@ namespace flex
 		}
 
 		GameObject::Update();
-	}
-
-	void Player::Destroy()
-	{
-		if (m_Controller)
-		{
-			m_Controller->Destroy();
-			SafeDelete(m_Controller);
-		}
-
-		GameObject::Destroy();
 	}
 
 	void Player::SetPitch(real pitch)
