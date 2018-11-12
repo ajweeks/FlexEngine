@@ -152,6 +152,28 @@ namespace flex
 			drawLine(PointOnB + btVector3(0.0f, -1.0f, 0.0f), PointOnB + btVector3(0.0f, -1.0f, 0.0f), color);
 		}
 
+		void GLPhysicsDebugDraw::drawSphere(btScalar radius, const btTransform& transform, const btVector3& color)
+		{
+			btVector3 center = transform.getOrigin();
+			btVector3 up = transform.getBasis().getColumn(1);
+			btVector3 axis = transform.getBasis().getColumn(0);
+			btScalar minTh = -SIMD_HALF_PI;
+			btScalar maxTh = SIMD_HALF_PI;
+			btScalar minPs = -SIMD_HALF_PI;
+			btScalar maxPs = SIMD_HALF_PI;
+			btScalar stepDegrees = 45.0f;
+			drawSpherePatch(center, up, axis, radius, minTh, maxTh, minPs, maxPs, color, stepDegrees, false);
+			drawSpherePatch(center, up, -axis, radius, minTh, maxTh, minPs, maxPs, color, stepDegrees, false);
+		}
+
+		void GLPhysicsDebugDraw::drawSphere(const btVector3& p, btScalar radius, const btVector3& color)
+		{
+			btTransform tr;
+			tr.setIdentity();
+			tr.setOrigin(p);
+			drawSphere(radius, tr, color);
+		}
+
 		void GLPhysicsDebugDraw::flushLines()
 		{
 			Draw();
@@ -159,6 +181,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::ClearLines()
 		{
+			m_pLineSegments = m_LineSegments;
 			m_LineSegments.clear();
 		}
 
@@ -178,7 +201,10 @@ namespace flex
 			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
 			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
 
-			m_VertexBufferData.Destroy(); // Destroy previous frame's buffer since it's already been drawn
+			{
+				PROFILE_AUTO("PhysicsDebugRender > Destroy previous vertex buffer");
+				m_VertexBufferData.Destroy();
+			}
 
 			{
 				PROFILE_AUTO("PhysicsDebugRender > Initialze vertex buffer");
@@ -186,17 +212,20 @@ namespace flex
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
 
-				m_VertexBufferCreateInfo.positions_3D.reserve(m_LineSegments.size() * 2);
-				m_VertexBufferCreateInfo.colors_R32G32B32A32.reserve(m_LineSegments.size() * 2);
+				m_VertexBufferCreateInfo.positions_3D.resize(m_LineSegments.size() * 2);
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(m_LineSegments.size() * 2);
 
+				i32 i = 0;
 				for (LineSegment& line : m_LineSegments)
 				{
-					m_VertexBufferCreateInfo.positions_3D.push_back(ToVec3(line.start));
-					m_VertexBufferCreateInfo.positions_3D.push_back(ToVec3(line.end));
+					*(m_VertexBufferCreateInfo.positions_3D.data() + i) = (ToVec3(line.start));
+					*(m_VertexBufferCreateInfo.positions_3D.data() + i + 1) = (ToVec3(line.end));
 
 					glm::vec4 color = ToVec4(line.color);
-					m_VertexBufferCreateInfo.colors_R32G32B32A32.push_back(color);
-					m_VertexBufferCreateInfo.colors_R32G32B32A32.push_back(color);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = (color);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = (color);
+
+					i += 2;
 				}
 
 				m_VertexBufferData.Initialize(&m_VertexBufferCreateInfo);

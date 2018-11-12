@@ -40,67 +40,67 @@ namespace flex
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
-				memcpy(pDataLocation, &createInfo->positions_3D[i], sizeof(glm::vec3));
+				memcpy(pDataLocation, createInfo->positions_3D.data() + i, sizeof(glm::vec3));
 				pDataLocation = (real*)pDataLocation + 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::POSITION_2D)
 			{
-				memcpy(pDataLocation, &createInfo->positions_2D[i], sizeof(glm::vec2));
+				memcpy(pDataLocation, createInfo->positions_2D.data() + i, sizeof(glm::vec2));
 				pDataLocation = (real*)pDataLocation + 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UV)
 			{
-				memcpy(pDataLocation, &createInfo->texCoords_UV[i], sizeof(glm::vec2));
+				memcpy(pDataLocation, createInfo->texCoords_UV.data() + i, sizeof(glm::vec2));
 				pDataLocation = (real*)pDataLocation + 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UVW)
 			{
-				memcpy(pDataLocation, &createInfo->texCoords_UVW[i], sizeof(glm::vec3));
+				memcpy(pDataLocation, createInfo->texCoords_UVW.data() + i, sizeof(glm::vec3));
 				pDataLocation = (real*)pDataLocation + 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
-				memcpy(pDataLocation, &createInfo->colors_R8G8B8A8[i], sizeof(i32));
+				memcpy(pDataLocation, createInfo->colors_R8G8B8A8.data() + i, sizeof(i32));
 				pDataLocation = (real*)pDataLocation + 1;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
-				memcpy(pDataLocation, &createInfo->colors_R32G32B32A32[i], sizeof(glm::vec4));
+				memcpy(pDataLocation, createInfo->colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
 				pDataLocation = (real*)pDataLocation + 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::TANGENT)
 			{
-				memcpy(pDataLocation, &createInfo->tangents[i], sizeof(glm::vec3));
+				memcpy(pDataLocation, createInfo->tangents.data() + i, sizeof(glm::vec3));
 				pDataLocation = (real*)pDataLocation + 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::BITANGENT)
 			{
-				memcpy(pDataLocation, &createInfo->bitangents[i], sizeof(glm::vec3));
+				memcpy(pDataLocation, createInfo->bitangents.data() + i, sizeof(glm::vec3));
 				pDataLocation = (real*)pDataLocation + 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::NORMAL)
 			{
-				memcpy(pDataLocation, &createInfo->normals[i], sizeof(glm::vec3));
+				memcpy(pDataLocation, createInfo->normals.data() + i, sizeof(glm::vec3));
 				pDataLocation = (real*)pDataLocation + 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
-				memcpy(pDataLocation, &createInfo->extraVec4s[i], sizeof(glm::vec4));
+				memcpy(pDataLocation, createInfo->extraVec4s.data() + i, sizeof(glm::vec4));
 				pDataLocation = (real*)pDataLocation + 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
 			{
-				memcpy(pDataLocation, &createInfo->extraInts[i], sizeof(i32));
+				memcpy(pDataLocation, createInfo->extraInts.data() + i, sizeof(i32));
 				pDataLocation = (real*)pDataLocation + 1;
 			}
 		}
