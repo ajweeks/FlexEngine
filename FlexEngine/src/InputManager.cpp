@@ -47,6 +47,9 @@ namespace flex
 		m_ImGuiIniFilepathStr = RESOURCE_LOCATION + "config/imgui.ini";
 		io.IniFilename  = m_ImGuiIniFilepathStr.c_str();
 
+		bPlayerUsingKeyboard[0] = false;
+		bPlayerUsingKeyboard[1] = false;
+
 		ClearAllInputs();
 	}
 

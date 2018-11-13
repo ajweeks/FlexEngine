@@ -2034,6 +2034,18 @@ namespace flex
 					AudioManager::SetMasterGain(masterGain);
 				}
 
+				bool bP0UsingKeyboard = true;
+				if (rootObject.SetBoolChecked("p0 using keyboard", bP0UsingKeyboard))
+				{
+					g_InputManager->bPlayerUsingKeyboard[0] = bP0UsingKeyboard;
+				}
+
+				bool bP1UsingKeyboard = true;
+				if (rootObject.SetBoolChecked("p1 using keyboard", bP1UsingKeyboard))
+				{
+					g_InputManager->bPlayerUsingKeyboard[1] = bP1UsingKeyboard;
+				}
+
 				return true;
 			}
 			else
@@ -2072,6 +2084,9 @@ namespace flex
 
 		real masterGain = AudioManager::GetMasterGain();
 		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
+
+		rootObject.fields.emplace_back("p0 using keyboard", JSONValue(g_InputManager->bPlayerUsingKeyboard[0]));
+		rootObject.fields.emplace_back("p1 using keyboard", JSONValue(g_InputManager->bPlayerUsingKeyboard[1]));
 
 		std::string fileContents = rootObject.Print(0);
 

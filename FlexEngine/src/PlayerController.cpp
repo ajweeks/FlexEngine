@@ -177,29 +177,31 @@ namespace flex
 			}
 			else if (!m_Player->GetObjectInteractingWith())
 			{
-				real moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
-				real moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+				real moveH = 0.0f;
+				real moveV = 0.0f;
 
-				switch (m_Mode)
+				if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
 				{
-				case Mode::THIRD_PERSON:
-				{
-					real inAirMovementMultiplier = (m_bGrounded ? 1.0f : 0.5f);
-					force += btVector3(1.0f, 0.0f, 0.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveH;
-					force += btVector3(0.0f, 0.0f, 1.0f) * m_MoveAcceleration * inAirMovementMultiplier * -moveV;
-				} break;
-				case Mode::FIRST_PERSON:
-				{
-					force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * -moveH;
-					force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * -moveV;
-				} break;
+					moveH = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_D) > 0 ? 1.0f :
+						g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_A) > 0 ? -1.0f : 0.0f;
+					moveV = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_W) > 0 ? -1.0f :
+						g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_S) > 0 ? 1.0f : 0.0f;
 				}
+				else
+				{
+					moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_X);
+					moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::LEFT_STICK_Y);
+				}
+
+
+				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * -moveH;
+				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * -moveV;
 			}
 		}
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		bool bDrawLocalAxes = !m_bFirstPerson;
+		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON);
 		if (bDrawLocalAxes)
 		{
 			const real lineLength = 4.0f;
@@ -239,34 +241,27 @@ namespace flex
 
 		if (m_bPossessed)
 		{
-			switch (m_Mode)
-			{
-			case Mode::THIRD_PERSON:
-			{
-				// Look in direction of movement
-				if (xzVelMagnitude > 0.1f)
-				{
-					//btQuaternion oldRotation = transformBT.getRotation();
-					//real angle = -atan2((real)vel.getZ(), (real)vel.getX()) + PI_DIV_TWO;
-					//btQuaternion targetRotation(btVector3(0.0f, 1.0f, 0.0f), angle);
-					//real movementSpeedSlowdown = glm::clamp(xzVelMagnitude / m_MaxSlowDownRotationSpeedVel, 0.0f, 1.0f);
-					//real turnSpeed = m_RotationSnappiness * movementSpeedSlowdown * g_DeltaTime;
-					//btQuaternion newRotation = oldRotation.slerp(targetRotation, turnSpeed);
-					//transformBT.setRotation(newRotation);
-				}
-			} break;
-			case Mode::FIRST_PERSON:
-			{
-				real lookH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X);
-				real lookV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_Y);
+			real lookH = 0.0f;
+			real lookV = 0.0f;
 
-				glm::quat rot = transform->GetLocalRotation();
-				rot = glm::rotate(rot, -lookH * m_RotateHSpeed * g_DeltaTime, up);
-				transform->SetWorldRotation(rot);
-
-				m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
-			} break;
+			if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
+			{
+				lookH = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT) > 0 ? 1.0f :
+					g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
+				lookV = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP) > 0 ? -1.0f :
+					g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN) > 0 ? 1.0f : 0.0f;
 			}
+			else
+			{
+				lookH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_X);
+				lookV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, InputManager::GamepadAxis::RIGHT_STICK_Y);
+			}
+
+			glm::quat rot = transform->GetLocalRotation();
+			rot = glm::rotate(rot, -lookH * m_RotateHSpeed * g_DeltaTime, up);
+			transform->SetWorldRotation(rot);
+
+			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
 		}
 	}
 
@@ -294,8 +289,7 @@ namespace flex
 		{
 			m_bPossessed = true;
 		}
-
-		m_bFirstPerson = (fpCam != nullptr);
+		m_Mode = (fpCam == nullptr) ? Mode::THIRD_PERSON : Mode::FIRST_PERSON;
 	}
 
 	bool PlayerController::IsPossessed() const
@@ -330,6 +324,8 @@ namespace flex
 		const std::string treeName = "Player Controller " + IntToString(m_PlayerIndex);
 		if (ImGui::TreeNode(treeName.c_str()))
 		{
+			ImGui::Checkbox("Using keyboard", &g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex]);
+
 			ImGui::Text("Seconds attempting to turn: %.5f", m_SecondsAttemptingToTurn);
 			ImGui::Text("Turning dir: %s", m_DirTurning == TurningDir::LEFT ? "left" : m_DirTurning == TurningDir::RIGHT ? "right" : "none");
 
