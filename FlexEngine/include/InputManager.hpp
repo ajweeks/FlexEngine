@@ -195,7 +195,8 @@ namespace flex
 			D_PAD_DOWN			= 13,
 			D_PAD_LEFT			= 14,
 
-			_COUNT				= 15
+			_NONE,
+			_COUNT				= _NONE
 		};
 
 		enum class GamepadAxis
@@ -205,8 +206,56 @@ namespace flex
 			RIGHT_STICK_X = 2,
 			RIGHT_STICK_Y = 3,
 			LEFT_TRIGGER = 4,
-			RIGHT_TRIGGER = 5
+			RIGHT_TRIGGER = 5,
+
+			_NONE
 		};
+
+		enum class MouseAxis
+		{
+			X,
+			Y,
+			SCROLL_X,
+			SCROLL_Y,
+
+			_NONE
+		};
+
+		enum class InputAction
+		{
+			WALK_LEFT,
+			WALK_RIGHT,
+			WALK_FORWARD,
+			WALK_BACKWARD,
+			LOOK_H,
+			LOOK_V,
+			INTERACT,
+
+			DBG_SWITCH_TO_NEXT_CAM,
+			DBG_SWITCH_TO_PREV_CAM,
+			DBG_ENTER_NEXT_SCENE,
+			DBG_ENTER_PREV_SCENE,
+			DBG_SAVE_SCENE,
+			DBG_GIZMO_SELECT_TRANSLATE,
+			DBG_GIZMO_SELECT_ROTATE,
+			DBG_GIZMO_SELECT_SCALE,
+
+			_NONE,
+			COUNT = _NONE
+		};
+
+		struct InputBinding
+		{
+			KeyCode keyCode = KeyCode::_NONE;
+			MouseButton mouseButton = MouseButton::_NONE;
+			MouseAxis mouseAxis = MouseAxis::_NONE;
+			GamepadButton gamepadButton = GamepadButton::_NONE;
+			GamepadAxis gamepadAxis = GamepadAxis::_NONE;
+			bool bPositive = true; // ?
+		};
+
+		std::vector<InputBinding> g_InputBindings;
+		std::vector<std::string> g_InputBindingNames;
 
 		struct Key
 		{

@@ -47,6 +47,21 @@ namespace flex
 		m_ImGuiIniFilepathStr = RESOURCE_LOCATION + "config/imgui.ini";
 		io.IniFilename  = m_ImGuiIniFilepathStr.c_str();
 
+		g_InputBindings.resize((i32)InputAction::COUNT);
+		g_InputBindingNames.resize((i32)InputAction::COUNT);
+		g_InputBindings[(i32)InputAction::WALK_LEFT].keyCode = KeyCode::KEY_A;
+		g_InputBindingNames[(i32)InputAction::WALK_LEFT] = "Walk left";
+		g_InputBindings[(i32)InputAction::WALK_RIGHT].keyCode = KeyCode::KEY_D;
+		g_InputBindingNames[(i32)InputAction::WALK_RIGHT] = "Walk right";
+		g_InputBindings[(i32)InputAction::WALK_FORWARD].keyCode = KeyCode::KEY_W;
+		g_InputBindingNames[(i32)InputAction::WALK_FORWARD] = "Walk forward";
+		g_InputBindings[(i32)InputAction::WALK_BACKWARD].keyCode = KeyCode::KEY_S;
+		g_InputBindingNames[(i32)InputAction::WALK_BACKWARD] = "Walk backward";
+		g_InputBindings[(i32)InputAction::LOOK_H].gamepadAxis = GamepadAxis::LEFT_STICK_X;
+		g_InputBindingNames[(i32)InputAction::LOOK_H] = "Look horizontal";
+		g_InputBindings[(i32)InputAction::LOOK_V].gamepadAxis = GamepadAxis::LEFT_STICK_Y;
+		g_InputBindingNames[(i32)InputAction::LOOK_V] = "Look vertical";
+
 		bPlayerUsingKeyboard[0] = false;
 		bPlayerUsingKeyboard[1] = false;
 
