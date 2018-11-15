@@ -68,6 +68,8 @@ namespace flex
 
 		static AudioSourceID GetAudioSourceID(SoundEffect effect);
 
+		bool bWantRenameActiveElement = false;
+
 	private:
 		enum class RendererID
 		{

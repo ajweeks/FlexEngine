@@ -3870,7 +3870,7 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
-		void GLRenderer::DoGameObjectContextMenu(GameObject** gameObjectRef)
+		void GLRenderer::DoGameObjectContextMenu(GameObject** gameObjectRef, bool bActive)
 		{
 			static const char* renameObjectPopupLabel = "##rename-game-object";
 			static const char* renameObjectButtonStr = "Rename";
@@ -3885,9 +3885,16 @@ namespace flex
 			static std::string newObjectName = gameObject->GetName();
 			const size_t maxStrLen = 256;
 
-			bool bItemClicked = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+			bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 								ImGui::IsMouseClicked(1);
-			if (bItemClicked)
+
+			if (bActive && g_EngineInstance->bWantRenameActiveElement)
+			{
+				ImGui::OpenPopup(contextMenuIDStr.c_str());
+				g_EngineInstance->bWantRenameActiveElement = false;
+				bRefreshNameField = true;
+			}
+			if (bRefreshNameField)
 			{
 				newObjectName = gameObject->GetName();
 				newObjectName.resize(maxStrLen);
@@ -6239,7 +6246,7 @@ namespace flex
 
 			ImGui::Text(gameObject->GetName().c_str());
 
-			DoGameObjectContextMenu(&gameObject);
+			DoGameObjectContextMenu(&gameObject, true);
 
 			if (!gameObject)
 			{
@@ -6827,7 +6834,7 @@ namespace flex
 				ImGui::EndDragDropTarget();
 			}
 
-			DoGameObjectContextMenu(&gameObject);
+			DoGameObjectContextMenu(&gameObject, false);
 
 			bool bParentChildTreeChanged = (gameObject == nullptr);
 			if (gameObject)

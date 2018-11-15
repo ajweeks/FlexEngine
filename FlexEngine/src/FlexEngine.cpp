@@ -1388,6 +1388,11 @@ namespace flex
 				g_Renderer->ToggleRenderGrid();
 			}
 
+			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F2))
+			{
+				bWantRenameActiveElement = !bWantRenameActiveElement;
+			}
+
 			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
 			{
 				renderImGuiNextFrame = !renderImGuiNextFrame;

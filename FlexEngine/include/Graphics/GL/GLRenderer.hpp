@@ -217,7 +217,7 @@ namespace flex
 			void RemoveMaterial(MaterialID materialID);
 
 			// If the object gets deleted this frame *gameObjectRef gets set to nullptr
-			void DoGameObjectContextMenu(GameObject** gameObjectRef);
+			void DoGameObjectContextMenu(GameObject** gameObjectRef, bool bActive);
 			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
 			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName);

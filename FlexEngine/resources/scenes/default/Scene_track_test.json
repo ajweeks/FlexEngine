@@ -1,16 +1,16 @@
 {
 	"version" : 1,
-	"name" : "Scene_11",
+	"name" : "Scene_track_test",
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
+			"name" : "Skybox 1",
 			"type" : "skybox",
 			"visible" : true,
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"material" : "skybox 02",
 			"skybox info" : 
 			{
 			}
