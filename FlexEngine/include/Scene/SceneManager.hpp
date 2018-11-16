@@ -1,11 +1,9 @@
 ﻿#pragma once
 
-#include <vector>
-
-#include "Scene/BaseScene.hpp"
-
 namespace flex
 {
+	class BaseScene;
+
 	class SceneManager
 	{
 	public:

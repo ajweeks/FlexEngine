@@ -114,7 +114,7 @@ namespace flex
 
 	void Player::Update()
 	{
-		if (g_InputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::X))
+		if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::X))
 		{
 			Player* p = (Player*)this;
 
@@ -169,7 +169,7 @@ namespace flex
 		drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
 		g_Renderer->DrawSprite(drawInfo);
 
-		if (m_Controller->IsPossessed() && g_InputManager->IsGamepadButtonPressed(m_Index, InputManager::GamepadButton::Y))
+		if (m_Controller->IsPossessed() && g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y))
 		{
 			m_bPlacingTrack = !m_bPlacingTrack;
 		}
@@ -178,7 +178,7 @@ namespace flex
 		{
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS();
 
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, InputManager::GamepadAxis::RIGHT_TRIGGER, 0.5f))
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f))
 			{
 				m_CurvePlacing.points[m_CurveNodesPlaced++] = reticlePos;
 				if (m_CurveNodesPlaced == 4)
@@ -202,7 +202,7 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, InputManager::GamepadAxis::LEFT_TRIGGER, 0.5f))
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::LEFT_TRIGGER, 0.5f))
 			{
 				if (!m_TrackPlacing.curves.empty())
 				{

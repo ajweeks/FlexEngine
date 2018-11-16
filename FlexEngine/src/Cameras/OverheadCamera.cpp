@@ -12,6 +12,7 @@
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
+#include "InputManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -57,13 +58,13 @@ namespace flex
 			return;
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::LEFT_STICK_DOWN))
+		if (g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::LEFT_STICK_DOWN))
 		{
 			m_TargetZoomLevel += (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
 			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(0, InputManager::GamepadButton::RIGHT_STICK_DOWN))
+		if (g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::RIGHT_STICK_DOWN))
 		{
 			m_TargetZoomLevel -= (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
 			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);

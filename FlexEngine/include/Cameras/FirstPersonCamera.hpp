@@ -2,8 +2,6 @@
 
 #include "BaseCamera.hpp"
 
-#include "InputManager.hpp"
-
 namespace flex
 {
 	class Player;

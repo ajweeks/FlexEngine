@@ -3,14 +3,16 @@
 
 #include "Track/TrackManager.hpp"
 
-#include "Graphics/Renderer.hpp"
-#include "Player.hpp"
-#include "PlayerController.hpp"
-#include "Scene/SceneManager.hpp"
-
 #pragma warning(push, 0)
 #include "LinearMath/btIDebugDraw.h"
 #pragma warning(pop)
+
+#include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
+#include "Player.hpp"
+#include "PlayerController.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {

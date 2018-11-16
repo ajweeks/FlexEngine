@@ -1,8 +1,6 @@
 ﻿#pragma once
 
-#include <string>
-
-#include "InputManager.hpp"
+#include "InputEnums.hpp"
 
 struct GLFWwindow;
 
@@ -84,9 +82,9 @@ namespace flex
 		WindowMode StrToWindowMode(const char* modeStr);
 
 		// Callbacks
-		virtual void KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, i32 mods);
+		virtual void KeyCallback(Input::KeyCode keycode, Input::KeyAction action, i32 mods);
 		virtual void CharCallback(u32 character);
-		virtual void MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, i32 mods);
+		virtual void MouseButtonCallback(Input::MouseButton mouseButton, Input::KeyAction action, i32 mods);
 		virtual void WindowFocusCallback(i32 focused);
 		virtual void CursorPosCallback(double x, double y);
 		virtual void ScrollCallback(double xoffset, double yoffset);

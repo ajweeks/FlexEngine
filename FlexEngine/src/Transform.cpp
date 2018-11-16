@@ -12,6 +12,7 @@
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #pragma warning(pop)
 
+#include "Helpers.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Scene/GameObject.hpp"
 

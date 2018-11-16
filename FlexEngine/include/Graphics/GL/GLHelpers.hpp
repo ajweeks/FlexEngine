@@ -2,7 +2,6 @@
 #if COMPILE_OPEN_GL
 
 #include <array>
-#include <string>
 
 #pragma warning(push, 0)
 #include <glad/glad.h>
@@ -11,7 +10,6 @@
 
 #include "Graphics/RendererTypes.hpp"
 #include "Helpers.hpp"
-#include "Types.hpp"
 
 namespace flex
 {

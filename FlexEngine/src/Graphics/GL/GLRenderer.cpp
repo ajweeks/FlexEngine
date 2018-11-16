@@ -42,6 +42,7 @@
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Helpers.hpp"
+#include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "JSONTypes.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -640,7 +641,7 @@ namespace flex
 				}
 			}
 
-			if (shader.shader.needShadowMap)
+			if (shader.shader.bNeedShadowMap)
 			{
 				mat.uniformIDs.castShadows = glGetUniformLocation(shader.program, "castShadows");
 				mat.uniformIDs.shadowDarkness = glGetUniformLocation(shader.program, "shadowDarkness");
@@ -702,7 +703,7 @@ namespace flex
 
 			mat.material.textureScale = createInfo->textureScale;
 
-			if (shader.shader.needIrradianceSampler)
+			if (shader.shader.bNeedIrradianceSampler)
 			{
 				if (createInfo->irradianceSamplerMatID == InvalidID)
 				{
@@ -714,7 +715,7 @@ namespace flex
 				}
 			}
 
-			if (shader.shader.needBRDFLUT)
+			if (shader.shader.bNeedBRDFLUT)
 			{
 				if (!m_BRDFTexture)
 				{
@@ -723,7 +724,7 @@ namespace flex
 				mat.brdfLUTSamplerID = m_BRDFTexture->handle;
 			}
 
-			if (shader.shader.needPrefilteredMap)
+			if (shader.shader.bNeedPrefilteredMap)
 			{
 				if (createInfo->prefilterMapSamplerMatID == InvalidID)
 				{
@@ -757,17 +758,17 @@ namespace flex
 			// Samplers that need to be loaded from file
 			SamplerCreateInfo samplerCreateInfos[] =
 			{
-				{ shader.shader.needAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID,
+				{ shader.shader.bNeedAlbedoSampler, mat.material.generateAlbedoSampler, &mat.albedoSamplerID,
 				createInfo->albedoTexturePath, "albedoSampler", 3, false, true, false },
-				{ shader.shader.needMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID,
+				{ shader.shader.bNeedMetallicSampler, mat.material.generateMetallicSampler, &mat.metallicSamplerID,
 				createInfo->metallicTexturePath, "metallicSampler", 3, false, true, false },
-				{ shader.shader.needRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID,
+				{ shader.shader.bNeedRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID,
 				createInfo->roughnessTexturePath, "roughnessSampler", 3, false, true, false },
-				{ shader.shader.needAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID,
+				{ shader.shader.bNeedAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID,
 				createInfo->aoTexturePath, "aoSampler", 3, false, true, false },
-				{ shader.shader.needNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID,
+				{ shader.shader.bNeedNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID,
 				createInfo->normalTexturePath, "normalSampler", 3, false, true, false },
-				{ shader.shader.needHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID,
+				{ shader.shader.bNeedHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID,
 				createInfo->hdrEquirectangularTexturePath, "hdrEquirectangularSampler", 4, true, false, true },
 			};
 
@@ -921,7 +922,7 @@ namespace flex
 				GenerateGLCubemap(cubemapCreateInfo);
 			}
 
-			if (shader.shader.needCubemapSampler)
+			if (shader.shader.bNeedCubemapSampler)
 			{
 				// TODO: Save location for binding later?
 				const char* uniformName = "cubemapSampler";
@@ -938,7 +939,7 @@ namespace flex
 				++binding;
 			}
 
-			if (shader.shader.needBRDFLUT)
+			if (shader.shader.bNeedBRDFLUT)
 			{
 				const char* uniformName = "brdfLUT";
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
@@ -954,7 +955,7 @@ namespace flex
 				++binding;
 			}
 
-			if (shader.shader.needShadowMap)
+			if (shader.shader.bNeedShadowMap)
 			{
 				const char* uniformName = "shadowMap";
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
@@ -983,7 +984,7 @@ namespace flex
 				GenerateGLCubemap(cubemapCreateInfo);
 			}
 
-			if (shader.shader.needIrradianceSampler)
+			if (shader.shader.bNeedIrradianceSampler)
 			{
 				const char* uniformName = "irradianceSampler";
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
@@ -1012,7 +1013,7 @@ namespace flex
 				GenerateGLCubemap(cubemapCreateInfo);
 			}
 
-			if (shader.shader.needPrefilteredMap)
+			if (shader.shader.bNeedPrefilteredMap)
 			{
 				const char* uniformName = "prefilterMap";
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
@@ -1804,7 +1805,7 @@ namespace flex
 				RecaptureReflectionProbe();
 			}
 
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_U))
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_U))
 			{
 				RecaptureReflectionProbe();
 			}
@@ -2484,19 +2485,19 @@ namespace flex
 
 			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT))
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT))
 			{
 				pos.x += g_DeltaTime * 1.0f;
 			}
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT))
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT))
 			{
 				pos.x -= g_DeltaTime * 1.0f;
 			}
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_UP))
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP))
 			{
 				pos.y += g_DeltaTime * 1.0f;
 			}
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_DOWN))
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_DOWN))
 			{
 				pos.y -= g_DeltaTime * 1.0f;
 			}
@@ -3745,16 +3746,16 @@ namespace flex
 			};
 
 			Tex textures[] = {
-				{ shader->needAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
-				{ shader->needMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
-				{ shader->needRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
-				{ shader->needAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D },
-				{ shader->needNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
-				{ shader->needBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
-				{ shader->needShadowMap, true, m_ShadowMapTexture.id, GL_TEXTURE_2D },
-				{ shader->needIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
-				{ shader->needPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
-				{ shader->needCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
+				{ shader->bNeedAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
+				{ shader->bNeedMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
+				{ shader->bNeedRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
+				{ shader->bNeedAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D },
+				{ shader->bNeedNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
+				{ shader->bNeedBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
+				{ shader->bNeedShadowMap, true, m_ShadowMapTexture.id, GL_TEXTURE_2D },
+				{ shader->bNeedIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
+				{ shader->bNeedPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
+				{ shader->bNeedCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
 			};
 			// TODO: Update reserve count when adding more textures
 
@@ -4273,10 +4274,10 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
 			// m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
-			m_Shaders[shaderID].shader.needBRDFLUT = true;
-			m_Shaders[shaderID].shader.needShadowMap = true;
-			m_Shaders[shaderID].shader.needIrradianceSampler = true;
-			m_Shaders[shaderID].shader.needPrefilteredMap = true;
+			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
+			m_Shaders[shaderID].shader.bNeedShadowMap = true;
+			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
+			m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4300,10 +4301,10 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
 			// m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
-			m_Shaders[shaderID].shader.needBRDFLUT = true;
-			//m_Shaders[shaderID].shader.needShadowMap = true;
-			m_Shaders[shaderID].shader.needIrradianceSampler = true;
-			m_Shaders[shaderID].shader.needPrefilteredMap = true;
+			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
+			//m_Shaders[shaderID].shader.bNeedShadowMap = true;
+			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
+			m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
 
@@ -4341,11 +4342,11 @@ namespace flex
 
 			// PBR
 			m_Shaders[shaderID].shader.deferred = true;
-			m_Shaders[shaderID].shader.needAlbedoSampler = true;
-			m_Shaders[shaderID].shader.needMetallicSampler = true;
-			m_Shaders[shaderID].shader.needRoughnessSampler = true;
-			m_Shaders[shaderID].shader.needAOSampler = true;
-			m_Shaders[shaderID].shader.needNormalSampler = true;
+			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
+			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
+			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
+			m_Shaders[shaderID].shader.bNeedAOSampler = true;
+			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4371,8 +4372,8 @@ namespace flex
 
 			// PBR - WORLD SPACE
 			m_Shaders[shaderID].shader.deferred = true;
-			m_Shaders[shaderID].shader.needAlbedoSampler = true;
-			m_Shaders[shaderID].shader.needNormalSampler = true;
+			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
+			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4395,7 +4396,7 @@ namespace flex
 
 			// Skybox
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.needCubemapSampler = true;
+			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -4410,7 +4411,7 @@ namespace flex
 
 			// Equirectangular to Cube
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.needHDREquirectangularSampler = true;
+			m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -4423,7 +4424,7 @@ namespace flex
 
 			// Irradiance
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.needCubemapSampler = true;
+			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -4436,7 +4437,7 @@ namespace flex
 
 			// Prefilter
 			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.needCubemapSampler = true;
+			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -4683,7 +4684,7 @@ namespace flex
 
 				glUseProgram(shader->program);
 
-				if (shader->shader.needShadowMap)
+				if (shader->shader.bNeedShadowMap)
 				{
 					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight.bCastShadow);
 					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight.shadowDarkness);
@@ -5272,7 +5273,7 @@ namespace flex
 					{
 						GLMaterial& material = m_Materials[renderObject->materialID];
 						GLShader& shader = m_Shaders[material.material.shaderID];
-						if (shader.shader.needPrefilteredMap)
+						if (shader.shader.bNeedPrefilteredMap)
 						{
 							material.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
 							material.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
@@ -6842,11 +6843,11 @@ namespace flex
 				// TODO: Remove from renderer class
 				if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
 				{
-					if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+					if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
 					{
 						g_EngineInstance->ToggleSelectedObject(gameObject);
 					}
-					else if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_SHIFT))
+					else if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_SHIFT))
 					{
 						const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
 						if (selectedObjects.empty() ||

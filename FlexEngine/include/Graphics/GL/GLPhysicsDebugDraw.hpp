@@ -1,8 +1,6 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include <vector>
-
 #pragma warning(push, 0)
 #include <glad/glad.h>
 
@@ -10,7 +8,6 @@
 #pragma warning(pop)
 
 #include "Graphics/VertexBufferData.hpp"
-#include "Types.hpp"
 
 namespace flex
 {

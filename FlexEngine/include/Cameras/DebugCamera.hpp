@@ -2,7 +2,7 @@
 
 #include "BaseCamera.hpp"
 
-#include "InputManager.hpp"
+#include "InputEnums.hpp"
 
 namespace flex
 {
@@ -29,13 +29,13 @@ namespace flex
 		glm::vec3 m_MoveVel;
 		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
 
-		InputManager::KeyCode m_MoveForwardKey;
-		InputManager::KeyCode m_MoveBackwardKey;
-		InputManager::KeyCode m_MoveLeftKey;
-		InputManager::KeyCode m_MoveRightKey;
-		InputManager::KeyCode m_MoveUpKey;
-		InputManager::KeyCode m_MoveDownKey;
-		InputManager::KeyCode m_MoveFasterKey;
-		InputManager::KeyCode m_MoveSlowerKey;
+		Input::KeyCode m_MoveForwardKey;
+		Input::KeyCode m_MoveBackwardKey;
+		Input::KeyCode m_MoveLeftKey;
+		Input::KeyCode m_MoveRightKey;
+		Input::KeyCode m_MoveUpKey;
+		Input::KeyCode m_MoveDownKey;
+		Input::KeyCode m_MoveFasterKey;
+		Input::KeyCode m_MoveSlowerKey;
 	};
 } // namespace flex

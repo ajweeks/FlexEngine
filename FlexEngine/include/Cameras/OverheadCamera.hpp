@@ -1,8 +1,7 @@
 #pragma once
 
 #include "BaseCamera.hpp"
-
-#include "InputManager.hpp"
+#include "Helpers.hpp" // For RollingAverage
 
 namespace flex
 {

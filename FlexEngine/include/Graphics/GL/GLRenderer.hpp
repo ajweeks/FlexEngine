@@ -8,7 +8,6 @@
 #include "GLHelpers.hpp"
 #include "Graphics/VertexBufferData.hpp"
 #include "Helpers.hpp"
-#include "Types.hpp"
 
 namespace flex
 {

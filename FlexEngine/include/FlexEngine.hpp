@@ -2,10 +2,7 @@
 
 #include <string>
 
-#include "InputManager.hpp"
-#include "Scene/SceneManager.hpp"
 #include "Spring.hpp"
-#include "Window/Window.hpp"
 
 namespace flex
 {

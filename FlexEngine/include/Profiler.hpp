@@ -2,8 +2,6 @@
 
 #include <unordered_map>
 
-#include "Helpers.hpp"
-
 namespace flex
 {
 	struct AutoProfilerBlock

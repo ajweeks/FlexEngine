@@ -1,7 +1,6 @@
 #pragma once
 
 #include <direct.h> // For _getcwd
-#include <string>
 #include <vector>
 
 #pragma warning(push, 0)
@@ -21,7 +20,6 @@
 #pragma warning(pop)
 
 #include "Graphics/RendererTypes.hpp"
-#include "Types.hpp"
 
 namespace flex
 {

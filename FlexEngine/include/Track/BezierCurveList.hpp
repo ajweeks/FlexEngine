@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Track/BezierCurve.hpp"
-
 namespace flex
 {
+	class BezierCurve;
+
 	class BezierCurveList
 	{
 	public:

@@ -8,6 +8,8 @@
 #include "LinearMath/btIDebugDraw.h"
 #pragma warning(pop)
 
+#include "Track/BezierCurve.hpp"
+
 namespace flex
 {
 	BezierCurveList::BezierCurveList()
@@ -30,7 +32,7 @@ namespace flex
 			GetCurveIndexAndLocalTFromGlobalT(highlightCurveAtPoint, highlightedCurveIndex, dist);
 		}
 
-		for (i32 i = 0; i < curves.size(); ++i)
+		for (i32 i = 0; i < (i32)curves.size(); ++i)
 		{
 			bool bHighlighted = (highlightedCurveIndex == i);
 			curves[i].DrawDebug(bHighlighted, m_BaseColour, highlightColour);

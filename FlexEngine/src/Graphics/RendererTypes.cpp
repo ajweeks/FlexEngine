@@ -243,92 +243,92 @@ namespace flex
 		materialObject.fields.emplace_back("const ao", JSONValue(constAO));
 
 		static const bool defaultEnableAlbedo = false;
-		if (shader.needAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
+		if (shader.bNeedAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
 		{
 			materialObject.fields.emplace_back("enable albedo sampler", JSONValue(enableAlbedoSampler));
 		}
 
 		static const bool defaultEnableMetallicSampler = false;
-		if (shader.needMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
+		if (shader.bNeedMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
 		{
 			materialObject.fields.emplace_back("enable metallic sampler", JSONValue(enableMetallicSampler));
 		}
 
 		static const bool defaultEnableRoughness = false;
-		if (shader.needRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
+		if (shader.bNeedRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
 		{
 			materialObject.fields.emplace_back("enable roughness sampler", JSONValue(enableRoughnessSampler));
 		}
 
 		static const bool defaultEnableAO = false;
-		if (shader.needAOSampler && enableAOSampler != defaultEnableAO)
+		if (shader.bNeedAOSampler && enableAOSampler != defaultEnableAO)
 		{
 			materialObject.fields.emplace_back("enable ao sampler", JSONValue(enableAOSampler));
 		}
 
 		static const bool defaultEnableNormal = false;
-		if (shader.needNormalSampler && enableNormalSampler != defaultEnableNormal)
+		if (shader.bNeedNormalSampler && enableNormalSampler != defaultEnableNormal)
 		{
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
 		}
 
 		static const bool defaultGenerateAlbedo = false;
-		if (shader.needAlbedoSampler && generateAlbedoSampler != defaultGenerateAlbedo)
+		if (shader.bNeedAlbedoSampler && generateAlbedoSampler != defaultGenerateAlbedo)
 		{
 			materialObject.fields.emplace_back("generate albedo sampler", JSONValue(generateAlbedoSampler));
 		}
 
 		static const bool defaultGenerateMetallicSampler = false;
-		if (shader.needMetallicSampler && generateMetallicSampler != defaultGenerateMetallicSampler)
+		if (shader.bNeedMetallicSampler && generateMetallicSampler != defaultGenerateMetallicSampler)
 		{
 			materialObject.fields.emplace_back("generate metallic sampler", JSONValue(generateMetallicSampler));
 		}
 
 		static const bool defaultGenerateRoughness = false;
-		if (shader.needRoughnessSampler && generateRoughnessSampler != defaultGenerateRoughness)
+		if (shader.bNeedRoughnessSampler && generateRoughnessSampler != defaultGenerateRoughness)
 		{
 			materialObject.fields.emplace_back("generate roughness sampler", JSONValue(generateRoughnessSampler));
 		}
 
 		static const bool defaultGenerateAO = false;
-		if (shader.needAOSampler && generateAOSampler != defaultGenerateAO)
+		if (shader.bNeedAOSampler && generateAOSampler != defaultGenerateAO)
 		{
 			materialObject.fields.emplace_back("generate ao sampler", JSONValue(generateAOSampler));
 		}
 
 		static const bool defaultGenerateNormal = false;
-		if (shader.needNormalSampler && generateNormalSampler != defaultGenerateNormal)
+		if (shader.bNeedNormalSampler && generateNormalSampler != defaultGenerateNormal)
 		{
 			materialObject.fields.emplace_back("generate normal sampler", JSONValue(generateNormalSampler));
 		}
 
 		static const std::string texturePrefixStr = RESOURCE_LOCATION + "textures/";
 
-		if (shader.needAlbedoSampler && !albedoTexturePath.empty())
+		if (shader.bNeedAlbedoSampler && !albedoTexturePath.empty())
 		{
 			std::string shortAlbedoTexturePath = albedoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("albedo texture filepath", JSONValue(shortAlbedoTexturePath));
 		}
 
-		if (shader.needMetallicSampler && !metallicTexturePath.empty())
+		if (shader.bNeedMetallicSampler && !metallicTexturePath.empty())
 		{
 			std::string shortMetallicTexturePath = metallicTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("metallic texture filepath", JSONValue(shortMetallicTexturePath));
 		}
 
-		if (shader.needRoughnessSampler && !roughnessTexturePath.empty())
+		if (shader.bNeedRoughnessSampler && !roughnessTexturePath.empty())
 		{
 			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
 		}
 
-		if (shader.needAOSampler && !aoTexturePath.empty())
+		if (shader.bNeedAOSampler && !aoTexturePath.empty())
 		{
 			std::string shortAOTexturePath = aoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("ao texture filepath", JSONValue(shortAOTexturePath));
 		}
 
-		if (shader.needNormalSampler && !normalTexturePath.empty())
+		if (shader.bNeedNormalSampler && !normalTexturePath.empty())
 		{
 			std::string shortNormalTexturePath = normalTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("normal texture filepath", JSONValue(shortNormalTexturePath));
@@ -339,7 +339,7 @@ namespace flex
 			materialObject.fields.emplace_back("generate hdr cubemap sampler", JSONValue(generateHDRCubemapSampler));
 		}
 
-		if (shader.needCubemapSampler)
+		if (shader.bNeedCubemapSampler)
 		{
 			materialObject.fields.emplace_back("enable cubemap sampler", JSONValue(enableCubemapSampler));
 
@@ -349,7 +349,7 @@ namespace flex
 			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
 		}
 
-		if (shader.needIrradianceSampler || irradianceSamplerSize.x > 0)
+		if (shader.bNeedIrradianceSampler || irradianceSamplerSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
 
@@ -357,7 +357,7 @@ namespace flex
 			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
 		}
 
-		if (shader.needPrefilteredMap || prefilteredMapSize.x > 0)
+		if (shader.bNeedPrefilteredMap || prefilteredMapSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
 

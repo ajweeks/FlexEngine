@@ -5,9 +5,6 @@
 #include "AL/alc.h"
 #pragma warning(pop)
 
-#include <string>
-#include <vector>
-
 namespace flex
 {
 	class AudioManager

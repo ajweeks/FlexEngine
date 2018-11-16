@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <limits>
-#include <string>
 
 #pragma warning(push, 0)
 #include <glm/vec2.hpp>

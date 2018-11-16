@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Track/BezierCurveList.hpp"
-
 namespace flex
 {
+	class BezierCurveList;
+
 	struct Junction
 	{
 		static const i32 MAX_TRACKS = 4;

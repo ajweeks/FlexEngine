@@ -83,13 +83,13 @@ namespace flex
 					g_InputManager->ClearVerticalScrollDistance();
 				}
 
-				real hDragDist = g_InputManager->GetMouseDragDistance(InputManager::MouseButton::LEFT).x;
-				if (g_InputManager->IsMouseButtonReleased(InputManager::MouseButton::LEFT))
+				real hDragDist = g_InputManager->GetMouseDragDistance(Input::MouseButton::LEFT).x;
+				if (g_InputManager->IsMouseButtonReleased(Input::MouseButton::LEFT))
 				{
 					s_DisplayedFrameOptions.hO += s_DisplayedFrameOptions.hScroll;
 					s_DisplayedFrameOptions.hScroll = 0;
 				}
-				if (g_InputManager->IsMouseButtonDown(InputManager::MouseButton::LEFT) &&
+				if (g_InputManager->IsMouseButtonDown(Input::MouseButton::LEFT) &&
 					hDragDist != 0.0f)
 				{
 					s_DisplayedFrameOptions.hScroll = hDragDist * 0.001f;

@@ -18,9 +18,11 @@
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
 #include "Graphics/Renderer.hpp"
+#include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
@@ -1419,7 +1421,7 @@ namespace flex
 		{
 			i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
 
-			const InputManager::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
+			const Input::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * rotationSpeedScale;
 			currentAbsAvgRotationSpeed = glm::abs(gamepadState.averageRotationSpeeds.currentAverage);
 		}
@@ -1619,7 +1621,7 @@ namespace flex
 		if (valve->GetObjectInteractingWith())
 		{
 			i32 playerIndex = ((Player*)valve->GetObjectInteractingWith())->GetIndex();
-			const InputManager::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
+			const Input::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
 				valve->rotationSpeedScale;
 		}

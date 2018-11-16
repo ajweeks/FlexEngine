@@ -17,6 +17,7 @@
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
+#include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/PhysicsManager.hpp"
@@ -27,6 +28,7 @@
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Track/BezierCurve.hpp"
 
 namespace flex
@@ -303,11 +305,11 @@ namespace flex
 			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
-		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_Z))
+		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-		if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_X))
+		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X))
 		{
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}

@@ -115,7 +115,11 @@ namespace flex
 	// These fields are defined and initialized in FlexEngine.cpp
 	extern class Window* g_Window;
 	extern class CameraManager* g_CameraManager;
-	extern class InputManager* g_InputManager;
+	namespace Input
+	{
+		class Manager;
+	}
+	extern Input::Manager* g_InputManager;
 	extern class Renderer* g_Renderer;
 	extern class FlexEngine* g_EngineInstance;
 	extern class SceneManager* g_SceneManager;

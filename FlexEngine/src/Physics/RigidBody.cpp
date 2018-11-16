@@ -11,6 +11,7 @@
 
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex

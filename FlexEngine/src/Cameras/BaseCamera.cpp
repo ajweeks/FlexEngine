@@ -10,6 +10,7 @@
 #include "Helpers.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
 

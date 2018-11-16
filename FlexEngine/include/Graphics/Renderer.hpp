@@ -1,19 +1,10 @@
 #pragma once
 
-#include <array>
-#include <map>
 #include <string>
 #include <vector>
 
-#pragma warning(push, 0)
-#include <glm/mat4x4.hpp>
-#include <glm/vec4.hpp>
-#pragma warning(pop)
-
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
-#include "Transform.hpp"
-#include "VertexBufferData.hpp"
 
 class btIDebugDraw;
 

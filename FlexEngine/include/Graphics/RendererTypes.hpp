@@ -380,18 +380,18 @@ namespace flex
 		bool translucent = false;
 
 		// These variables should be set to true when the shader has these uniforms
-		bool needNormalSampler = false;
-		bool needCubemapSampler = false;
-		bool needAlbedoSampler = false;
-		bool needMetallicSampler = false;
-		bool needRoughnessSampler = false;
-		bool needAOSampler = false;
-		bool needHDREquirectangularSampler = false;
-		bool needIrradianceSampler = false;
-		bool needPrefilteredMap = false;
-		bool needBRDFLUT = false;
-		bool needShadowMap = false;
-		bool needPushConstantBlock = false;
+		bool bNeedNormalSampler = false;
+		bool bNeedCubemapSampler = false;
+		bool bNeedAlbedoSampler = false;
+		bool bNeedMetallicSampler = false;
+		bool bNeedRoughnessSampler = false;
+		bool bNeedAOSampler = false;
+		bool bNeedHDREquirectangularSampler = false;
+		bool bNeedIrradianceSampler = false;
+		bool bNeedPrefilteredMap = false;
+		bool bNeedBRDFLUT = false;
+		bool bNeedShadowMap = false;
+		bool bNeedPushConstantBlock = false;
 
 		VertexAttributes vertexAttributes = 0;
 		i32 numAttachments = 1; // How many output textures the fragment shader has

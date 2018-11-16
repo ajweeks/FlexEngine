@@ -1,8 +1,5 @@
 #pragma once
 
-#pragma warning(push, 0)
-#pragma warning(pop)
-
 namespace flex
 {
 	template<class T>

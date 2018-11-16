@@ -7,6 +7,8 @@
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
+#include "Scene/BaseScene.hpp"
 
 namespace flex
 {
