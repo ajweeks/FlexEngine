@@ -30,6 +30,8 @@ namespace flex
 		virtual void Destroy();
 		virtual void Update();
 
+		void RemoveRigidBody();
+
 		void SetParent(GameObject* parent);
 		GameObject* GetParent();
 		void DetachFromParent();

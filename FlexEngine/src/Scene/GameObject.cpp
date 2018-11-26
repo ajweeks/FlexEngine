@@ -11,6 +11,9 @@
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
 #pragma warning(pop)
@@ -20,6 +23,7 @@
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
@@ -178,7 +182,7 @@ namespace flex
 		if (obj.SetStringChecked("mesh", meshName))
 		{
 			bool bFound = false;
-			for (auto parsedMeshObj : BaseScene::s_ParsedMeshes)
+			for (const JSONObject& parsedMeshObj : BaseScene::s_ParsedMeshes)
 			{
 				std::string fileName = parsedMeshObj.GetString("file");
 				StripLeadingDirectories(fileName);
@@ -723,6 +727,26 @@ namespace flex
 		}
 	}
 
+	void GameObject::RemoveRigidBody()
+	{
+		if (m_RigidBody)
+		{
+			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			physicsWorld->removeRigidBody(m_RigidBody->GetRigidBodyInternal());
+			SetRigidBody(nullptr);
+
+			if (m_CollisionShape)
+			{
+				// NOTE: SafeDelete does not work on this type
+				if (m_CollisionShape)
+				{
+					delete m_CollisionShape;
+					m_CollisionShape = nullptr;
+				}
+			}
+		}
+	}
+
 	bool GameObject::SetInteractingWith(GameObject* gameObject)
 	{
 		m_ObjectInteractingWith = gameObject;
@@ -994,24 +1018,22 @@ namespace flex
 		if (m_Parent)
 		{
 			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
-
-			for (auto iter = siblings.begin(); iter != siblings.end(); ++iter)
+			for (GameObject* sibling : siblings)
 			{
-				if (*iter != this)
+				if (sibling != this)
 				{
-					result.push_back(*iter);
+					result.push_back(sibling);
 				}
 			}
 		}
 		else
 		{
 			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-
-			for (auto iter = rootObjects.begin(); iter != rootObjects.end(); ++iter)
+			for (GameObject* rootObject : rootObjects)
 			{
-				if (*iter != this)
+				if (rootObject != this)
 				{
-					result.push_back(*iter);
+					result.push_back(rootObject);
 				}
 			}
 		}

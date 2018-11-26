@@ -188,17 +188,24 @@ namespace flex
 					m_CurvePlacing.CalculateLength();
 					m_TrackPlacing.curves.push_back(m_CurvePlacing);
 
+					glm::vec3 prevHandlePos = m_CurvePlacing.points[2];
+
 					m_CurveNodesPlaced = 0;
 					m_CurvePlacing.points[0] = m_CurvePlacing.points[1] = m_CurvePlacing.points[2] = m_CurvePlacing.points[3] = VEC3_ZERO;
+
+					glm::vec3 controlPointPos = reticlePos;
+					glm::vec3 nextHandlePos = controlPointPos + (controlPointPos - prevHandlePos);
+					m_CurvePlacing.points[m_CurveNodesPlaced++] = controlPointPos;
+					m_CurvePlacing.points[m_CurveNodesPlaced++] = nextHandlePos;
 				}
 				else
 				{
 					AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+				}
 
-					for (i32 i = 3; i > m_CurveNodesPlaced - 1; --i)
-					{
-						m_CurvePlacing.points[i] = reticlePos;
-					}
+				for (i32 i = 3; i > m_CurveNodesPlaced - 1; --i)
+				{
+					m_CurvePlacing.points[i] = reticlePos;
 				}
 			}
 

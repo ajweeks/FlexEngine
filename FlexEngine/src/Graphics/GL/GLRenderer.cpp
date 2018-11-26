@@ -4216,11 +4216,11 @@ namespace flex
 
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, GLTexture** texture)
 		{
-			for (auto iter = m_LoadedTextures.begin(); iter != m_LoadedTextures.end(); ++iter)
+			for (GLTexture* tex : m_LoadedTextures)
 			{
-				if ((*iter)->GetRelativeFilePath().compare(filePath) == 0)
+				if (tex->GetRelativeFilePath().compare(filePath) == 0)
 				{
-					*texture = *iter;
+					*texture = tex;
 					return true;
 				}
 			}
@@ -5938,14 +5938,12 @@ namespace flex
 					std::string selectedMeshRelativeFilePath;
 					MeshComponent::LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
-					for (auto iter = MeshComponent::m_LoadedMeshes.begin();
-						iter != MeshComponent::m_LoadedMeshes.end();
-						++iter)
+					for (auto meshPair : MeshComponent::m_LoadedMeshes)
 					{
 						if (meshIdx == selectedMeshIndex)
 						{
-							selectedMesh = (iter->second);
-							selectedMeshRelativeFilePath = iter->first;
+							selectedMesh = meshPair.second;
+							selectedMeshRelativeFilePath = meshPair.first;
 							break;
 						}
 						++meshIdx;
@@ -6108,7 +6106,7 @@ namespace flex
 							  true);
 
 			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-			if (selectedObjects.size() >= 1)
+			if (!selectedObjects.empty())
 			{
 				// TODO: Draw common fields for all selected objects?
 				GameObject* selectedObject = selectedObjects[0];
@@ -6364,19 +6362,17 @@ namespace flex
 						{
 							i = 0;
 
-							for (auto iter = MeshComponent::m_LoadedMeshes.begin();
-								iter != MeshComponent::m_LoadedMeshes.end();
-								++iter)
+							for (auto meshPair : MeshComponent::m_LoadedMeshes)
 							{
 								bool bSelected = (i == selectedMeshIndex);
-								std::string meshFileName = (*iter).first;
+								std::string meshFileName = meshPair.first;
 								StripLeadingDirectories(meshFileName);
 								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 								{
 									if (selectedMeshIndex != i)
 									{
 										selectedMeshIndex = i;
-										std::string relativeFilePath = (*iter).first;
+										std::string relativeFilePath = meshPair.first;
 										MaterialID matID = mesh->GetMaterialID();
 										DestroyRenderObject(gameObject->GetRenderID());
 										gameObject->SetRenderID(InvalidRenderID);
@@ -6488,9 +6484,7 @@ namespace flex
 				{
 					if (ImGui::Button("Remove rigid body"))
 					{
-						btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-						physicsWorld->removeRigidBody(rb->GetRigidBodyInternal());
-						gameObject->SetRigidBody(nullptr);
+						gameObject->RemoveRigidBody();
 						rb = nullptr;
 					}
 

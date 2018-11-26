@@ -56,11 +56,25 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-9.961, 4.055, 11.021",
-				"scale" : "4.000, 6.000, 3.030"
+				"pos" : "-9.881, 5.999, 11.166",
+				"rot" : "0.000, 0.031, 0.000",
+				"scale" : "4.000, 6.050, 3.030"
 			},
 			"mesh" : "cube",
-			"material" : "Grid"
+			"material" : "Grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : false,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
 		},
 		{
 			"name" : "New_Object_01",
@@ -68,11 +82,25 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-9.963, 4.969, -24.978",
-				"scale" : "6.000, 5.080, 7.000"
+				"pos" : "-10.859, 5.078, -25.011",
+				"rot" : "0.000, -0.009, 0.000",
+				"scale" : "6.000, 4.940, 7.000"
 			},
 			"mesh" : "cube",
-			"material" : "Grid"
+			"material" : "Grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : false,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
 		},
 		{
 			"name" : "New_Object_02",
@@ -80,19 +108,33 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-23.986, 4.000, -3.970",
-				"scale" : "4.010, 6.040, 10.020"
+				"pos" : "-24.200, 5.997, -2.024",
+				"rot" : "0.004, -0.004, -0.000",
+				"scale" : "4.010, 6.070, 10.020"
 			},
 			"mesh" : "cube",
-			"material" : "Grid"
+			"material" : "Grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : false,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
 		},
 		{
-			"name" : "New_Object_03",
+			"name" : "Tablet",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "8.775, 3.848, 0.249"
+				"pos" : "8.778, 1.000, 0.250"
 			},
 			"mesh" : "map_tablet",
 			"material" : "pbr light grey"

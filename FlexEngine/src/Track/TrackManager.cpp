@@ -349,16 +349,16 @@ namespace flex
 									i32 curveIndexB = (p2Idx == 3 ? m + 1 : m);
 
 									bool bJunctionExists = false;
-									for (i32 n = 0; n < (i32)m_Junctions.size(); ++n)
+									for (Junction& junc : m_Junctions)
 									{
 										// Junction already exists at this location, check if this track is a part of it
-										if (NearlyEquals(m_Junctions[n].pos, curvesA[k].points[p1Idx], JUNCTION_THRESHOLD_DIST))
+										if (NearlyEquals(junc.pos, curvesA[k].points[p1Idx], JUNCTION_THRESHOLD_DIST))
 										{
 											bJunctionExists = true;
 											i32 trackIndex = -1;
-											for (i32 o = 0; o < m_Junctions[n].trackCount; ++o)
+											for (i32 o = 0; o < junc.trackCount; ++o)
 											{
-												if (m_Junctions[n].trackIndices[o] == j)
+												if (junc.trackIndices[o] == j)
 												{
 													trackIndex = o;
 													break;
@@ -367,10 +367,9 @@ namespace flex
 
 											if (trackIndex == -1)
 											{
-												Junction& junct = m_Junctions[n];
-												junct.trackIndices[junct.trackCount] = j;
-												junct.curveIndices[junct.trackCount] = curveIndexB;
-												junct.trackCount++;
+												junc.trackIndices[junc.trackCount] = j;
+												junc.curveIndices[junc.trackCount] = curveIndexB;
+												junc.trackCount++;
 											}
 
 											break;
@@ -379,15 +378,15 @@ namespace flex
 
 									if (!bJunctionExists)
 									{
-										Junction junct = {};
-										junct.pos = curvesA[k].points[p1Idx];
-										junct.trackIndices[junct.trackCount] = i;
-										junct.curveIndices[junct.trackCount] = curveIndexA;
-										junct.trackCount++;
-										junct.trackIndices[junct.trackCount] = j;
-										junct.curveIndices[junct.trackCount] = curveIndexB;
-										junct.trackCount++;
-										m_Junctions.push_back(junct);
+										Junction newJunc = {};
+										newJunc.pos = curvesA[k].points[p1Idx];
+										newJunc.trackIndices[newJunc.trackCount] = i;
+										newJunc.curveIndices[newJunc.trackCount] = curveIndexA;
+										newJunc.trackCount++;
+										newJunc.trackIndices[newJunc.trackCount] = j;
+										newJunc.curveIndices[newJunc.trackCount] = curveIndexB;
+										newJunc.trackCount++;
+										m_Junctions.push_back(newJunc);
 									}
 								}
 							}
@@ -448,7 +447,7 @@ namespace flex
 
 	void TrackManager::DrawDebug()
 	{
-		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
+		for (const BezierCurveList& track : m_Tracks)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);
 			real distAlongTrack = -1.0f;
@@ -457,7 +456,7 @@ namespace flex
 			BezierCurveList* trackRiding = playerController->GetTrackRiding();
 			if (trackRiding)
 			{
-				if (&m_Tracks[i] == trackRiding)
+				if (&track == trackRiding)
 				{
 					distAlongTrack = playerController->GetDistAlongTrack();
 				}
@@ -465,7 +464,7 @@ namespace flex
 			else
 			{
 				real distToTrack;
-				if (IsTrackInRange(&m_Tracks[i], m_Player0->GetTransform()->GetWorldPosition(),
+				if (IsTrackInRange(&track, m_Player0->GetTransform()->GetWorldPosition(),
 					playerController->GetTrackAttachDistThreshold(),
 					distToTrack,
 					distAlongTrack))
@@ -473,7 +472,7 @@ namespace flex
 					highlightColour = btVector4(0.75f, 0.65f, 0.75f, 1.0f);
 				}
 			}
-			m_Tracks[i].DrawDebug(highlightColour, distAlongTrack);
+			track.DrawDebug(highlightColour, distAlongTrack);
 		}
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
