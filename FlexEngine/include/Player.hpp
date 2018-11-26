@@ -40,7 +40,7 @@ namespace flex
 	private:
 		void ClampPitch();
 
-		glm::vec3 GetTrackPlacementReticlePosWS() const;
+		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f) const;
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;

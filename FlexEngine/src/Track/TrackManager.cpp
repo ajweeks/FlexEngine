@@ -5,6 +5,8 @@
 
 #pragma warning(push, 0)
 #include "LinearMath/btIDebugDraw.h"
+
+#include <glm/gtx/norm.hpp> // For distance2
 #pragma warning(pop)
 
 #include "Graphics/Renderer.hpp"
@@ -220,6 +222,31 @@ namespace flex
 		}
 	}
 
+	bool TrackManager::GetControlPointInRange(const glm::vec3& p, real range, glm::vec3* outPoint)
+	{
+		real smallestDist = range;
+		bool bFoundPointInRange = false;
+		for (const BezierCurveList& track : m_Tracks)
+		{
+			for (const BezierCurve& curve : track.curves)
+			{
+				for (i32 i = 0; i <= 1; ++i)
+				{
+					glm::vec3 curveP = curve.points[i * 3];
+					real dist = glm::distance(p, curveP);
+					if (dist < smallestDist)
+					{
+						bFoundPointInRange = true;
+						smallestDist = dist;
+						*outPoint = curveP;
+					}
+				}
+			}
+		}
+
+		return bFoundPointInRange;
+	}
+
 	glm::vec3 TrackManager::GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack)
 	{
 		return track->GetCurveDirectionAt(distAlongTrack);
@@ -428,51 +455,51 @@ namespace flex
 		return bInRange;
 	}
 
-	BezierCurveList* TrackManager::GetTrackInRange(const glm::vec3& pos, real range, real& outDistAlongTrack)
+	i32 TrackManager::GetTrackInRangeIndex(const glm::vec3& pos, real range, real& outDistAlongTrack)
 	{
-		BezierCurveList* result = nullptr;
+		i32 index = -1;
 
 		real smallestDist = range;
-		for (BezierCurveList& track : m_Tracks)
+		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
-			if (IsTrackInRange(&track, pos, range, smallestDist, outDistAlongTrack))
+			if (IsTrackInRange(&m_Tracks[i], pos, range, smallestDist, outDistAlongTrack))
 			{
 				range = smallestDist;
-				result = &track;
+				index = i;
 			}
 		}
 
-		return result;
+		return index;
 	}
 
 	void TrackManager::DrawDebug()
 	{
-		for (const BezierCurveList& track : m_Tracks)
+		Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+		PlayerController* playerController = m_Player0->GetController();
+		BezierCurveList* trackRiding = playerController->GetTrackRiding();
+		real distAlongClosestTrack = -1.0f;
+		i32 closestTrackIndex = GetTrackInRangeIndex(m_Player0->GetTransform()->GetWorldPosition(),
+			playerController->GetTrackAttachDistThreshold(), distAlongClosestTrack);
+		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);
 			real distAlongTrack = -1.0f;
-			Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-			PlayerController* playerController = m_Player0->GetController();
-			BezierCurveList* trackRiding = playerController->GetTrackRiding();
 			if (trackRiding)
 			{
-				if (&track == trackRiding)
+				if (&m_Tracks[i] == trackRiding)
 				{
 					distAlongTrack = playerController->GetDistAlongTrack();
 				}
 			}
 			else
 			{
-				real distToTrack;
-				if (IsTrackInRange(&track, m_Player0->GetTransform()->GetWorldPosition(),
-					playerController->GetTrackAttachDistThreshold(),
-					distToTrack,
-					distAlongTrack))
+				if (closestTrackIndex == i)
 				{
 					highlightColour = btVector4(0.75f, 0.65f, 0.75f, 1.0f);
+					distAlongTrack = distAlongClosestTrack;
 				}
 			}
-			track.DrawDebug(highlightColour, distAlongTrack);
+			m_Tracks[i].DrawDebug(highlightColour, distAlongTrack);
 		}
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();

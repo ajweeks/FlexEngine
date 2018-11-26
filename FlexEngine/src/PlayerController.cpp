@@ -103,9 +103,10 @@ namespace flex
 				{
 					real distAlongTrack = -1.0f;
 					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-					m_TrackRiding = trackManager->GetTrackInRange(transform->GetWorldPosition(), m_TrackAttachMinDist, distAlongTrack);
-					if (m_TrackRiding)
+					i32 trackInRangeIndex = trackManager->GetTrackInRangeIndex(transform->GetWorldPosition(), m_TrackAttachMinDist, distAlongTrack);
+					if (trackInRangeIndex != -1)
 					{
+						m_TrackRiding = &trackManager->m_Tracks[trackInRangeIndex];
 						m_DistAlongTrack = distAlongTrack;
 						SnapPosToTrack(m_DistAlongTrack);
 						AudioManager::PlaySource(m_SoundTrackAttachID);
