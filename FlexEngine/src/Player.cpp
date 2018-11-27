@@ -3,6 +3,7 @@
 #include "Player.hpp"
 
 #pragma warning(push, 0)
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
@@ -67,23 +68,34 @@ namespace flex
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
 
+		// Map tablet
+		{
+			MaterialCreateInfo mapTabletMatCreateInfo = {};
+			mapTabletMatCreateInfo.name = "Map tablet material";
+			mapTabletMatCreateInfo.shaderName = "pbr";
+			mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.34f, 0.38f, 0.39f);
+			mapTabletMatCreateInfo.constMetallic = 1.0f;
+			mapTabletMatCreateInfo.constRoughness = 0.24f;
+			mapTabletMatCreateInfo.constAO = 1.0f;
+			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
-		//MaterialCreateInfo mapTabletMatCreateInfo = {};
-		//mapTabletMatCreateInfo.name = "Map tablet material";
-		//mapTabletMatCreateInfo.shaderName = "pbr";
-		//mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.5f, 0.25f, 0.02f);
-		//mapTabletMatCreateInfo.constMetallic = 0.0f;
-		//mapTabletMatCreateInfo.constRoughness = 1.0f;
-		//mapTabletMatCreateInfo.constAO = 1.0f;
-		//MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
-		//
-		//m_MapTablet = new GameObject("Map tablet", GameObjectType::NONE);
-		//MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(mapTabletMatID, m_MapTablet));
-		//mapTabletMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/map_tablet.glb");
-		//AddChild(m_MapTablet);
-		//m_MapTablet->GetTransform()->SetLocalPosition(glm::vec3(-0.75f, -0.3f, 2.3f));
-		//m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.30f), -glm::radians(86.0f))));
+			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::NONE);
+			m_TabletOrbitAngle = m_TabletOrbitAngleUp;
+			m_bTabletUp = true;
+			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
+			AddChild(m_MapTabletHolder);
 
+			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::NONE);
+			//RigidBody* tabletRB = m_MapTablet->SetRigidBody(new RigidBody());
+			//tabletRB->SetKinematic(true);
+			//tabletRB->SetLocalRotation(glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f)));
+			//m_MapTablet->SetCollisionShape(new btBoxShape(btVector3(0.45f, 0.68f, 0.08f)));
+			MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(mapTabletMatID, m_MapTablet));
+			mapTabletMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/map_tablet.glb");
+			m_MapTabletHolder->AddChild(m_MapTablet);
+			m_MapTablet->GetTransform()->SetLocalPosition(glm::vec3(-0.75f, -0.3f, 2.3f));
+			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
+		}
 
 		m_CrosshairTextureID = g_Renderer->InitializeTexture(RESOURCE_LOCATION + "textures/cross-hair-01.png", 4, false, false, false);
 
@@ -156,6 +168,11 @@ namespace flex
 					}
 				}
 			}
+		}
+
+		if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A))
+		{
+			m_bTabletUp = !m_bTabletUp;
 		}
 
 		m_Controller->Update();
@@ -240,6 +257,16 @@ namespace flex
 			debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
 			debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
 		}
+
+		if (m_bTabletUp)
+		{
+			m_TabletOrbitAngle = MoveTowards(m_TabletOrbitAngle, m_TabletOrbitAngleUp, g_DeltaTime * 10.0f);
+		}
+		else
+		{
+			m_TabletOrbitAngle = MoveTowards(m_TabletOrbitAngle, m_TabletOrbitAngleDown, g_DeltaTime * 10.0f);
+		}
+		m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, glm::radians(m_TabletOrbitAngle), 0.0f)));
 
 		GameObject::Update();
 	}

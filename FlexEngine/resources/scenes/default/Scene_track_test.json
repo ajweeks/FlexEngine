@@ -127,17 +127,6 @@
 				"mask" : 1,
 				"group" : 1
 			}
-		},
-		{
-			"name" : "Tablet",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "8.778, 1.000, 0.250"
-			},
-			"mesh" : "map_tablet",
-			"material" : "pbr light grey"
 		}
 	],
 	"point lights" : 

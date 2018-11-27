@@ -18,6 +18,8 @@ namespace flex
 	using u32 = uint32_t;
 	using u64 = uint64_t;
 	using real = float;
+	using deg = real;
+	using rad = real;
 
 #define u8_min std::numeric_limits<u8>::min()
 #define u8_max std::numeric_limits<u8>::max()
