@@ -45,10 +45,6 @@ namespace flex
 
 		void SetLocalRotation(const glm::quat& quatRotation, bool bUpdateChain = true);
 		void SetWorldRotation(const glm::quat& quatRotation, bool bUpdateChain = true);
-		void SetLocalRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain = true);
-		void SetWorldRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain = true);
-		void SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain = true);
-		void SetWorldRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain = true);
 
 		void SetLocalScale(const glm::vec3& scale, bool bUpdateChain = true);
 		void SetWorldScale(const glm::vec3& scale, bool bUpdateChain = true);
@@ -59,8 +55,6 @@ namespace flex
 		void Translate(real deltaX, real deltaY, real deltaZ);
 
 		void Rotate(const glm::quat& deltaQuatRotation);
-		void Rotate(const glm::vec3& deltaEulerRotationRad);
-		void Rotate(real deltaX, real deltaY, real deltaZ);
 
 		void Scale(const glm::vec3& deltaScale);
 		void Scale(real deltaScale);

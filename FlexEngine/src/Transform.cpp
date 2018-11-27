@@ -288,19 +288,6 @@ namespace flex
 		UpdateParentTransform();
 	}
 
-	void Transform::Rotate(const glm::vec3& deltaEulerRotationRad)
-	{
-		Rotate(deltaEulerRotationRad.x, deltaEulerRotationRad.y, deltaEulerRotationRad.z);
-	}
-
-	void Transform::Rotate(real deltaX, real deltaY, real deltaZ)
-	{
-		glm::quat rotationQuat(glm::vec3(deltaX, deltaY, deltaZ));
-		localRotation *= rotationQuat;
-
-		UpdateParentTransform();
-	}
-
 	void Transform::Scale(const glm::vec3& deltaScale)
 	{
 		localScale *= deltaScale;
@@ -530,64 +517,6 @@ namespace flex
 		else
 		{
 			localRotation = quatRotation;
-			// World rotation will be set in UpdateParentTransform
-		}
-
-		if (bUpdateChain)
-		{
-			UpdateParentTransform();
-		}
-	}
-
-	void Transform::SetLocalRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain /* = true */)
-	{
-		localRotation = glm::quat(eulerAnglesRad);
-
-		if (bUpdateChain)
-		{
-			UpdateParentTransform();
-		}
-	}
-
-	void Transform::SetWorldRotation(const glm::vec3& eulerAnglesRad, bool bUpdateChain /* = true */)
-	{
-		GameObject* parent = m_GameObject->GetParent();
-		if (parent)
-		{
-			localRotation = glm::quat(eulerAnglesRad) - parent->GetTransform()->GetWorldRotation();
-		}
-		else
-		{
-			localRotation = glm::quat(eulerAnglesRad);
-			// World rotation will be set in UpdateParentTransform
-		}
-
-		if (bUpdateChain)
-		{
-			UpdateParentTransform();
-		}
-	}
-
-	void Transform::SetLocalRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain /* = true */)
-	{
-		localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad));
-
-		if (bUpdateChain)
-		{
-			UpdateParentTransform();
-		}
-	}
-
-	void Transform::SetWorldRotation(real eulerXRad, real eulerYRad, real eulerZRad, bool bUpdateChain /* = true */)
-	{
-		GameObject* parent = m_GameObject->GetParent();
-		if (parent)
-		{
-			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad)) - parent->GetTransform()->GetWorldRotation();
-		}
-		else
-		{
-			localRotation = glm::quat(glm::vec3(eulerXRad, eulerYRad, eulerZRad));
 			// World rotation will be set in UpdateParentTransform
 		}
 
