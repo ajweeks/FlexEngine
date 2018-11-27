@@ -1730,8 +1730,14 @@ namespace flex
 					if (ImGui::MenuItem("Player positions"))
 					{
 						BaseScene* currentScene = g_SceneManager->CurrentScene();
-						currentScene->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
-						currentScene->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
+						if (currentScene->GetPlayer(0))
+						{
+							currentScene->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
+						}
+						if (currentScene->GetPlayer(1))
+						{
+							currentScene->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
+						}
 					}
 
 					ImGui::EndMenu();
