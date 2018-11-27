@@ -3,7 +3,7 @@
 uniform sampler2D in_Texture;
 
 uniform float threshold = 0.5;
-uniform vec2 shadow = vec2(-0.006, -0.004);
+uniform vec2 shadow = vec2(-0.01, -0.008);
 uniform float soften = 0.035;
 
 in GSO
