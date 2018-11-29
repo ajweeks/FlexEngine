@@ -170,7 +170,8 @@ namespace flex
 			}
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A))
+		if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A) ||
+			(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_E)))
 		{
 			m_bTabletUp = !m_bTabletUp;
 		}
@@ -186,7 +187,9 @@ namespace flex
 		drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
 		g_Renderer->DrawSprite(drawInfo);
 
-		if (m_Controller->IsPossessed() && g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y))
+		if (m_Controller->IsPossessed() &&
+			(g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y) ||
+			(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Q))))
 		{
 			m_bPlacingTrack = !m_bPlacingTrack;
 		}
@@ -195,7 +198,8 @@ namespace flex
 		{
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(1.0f);
 
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f))
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X)))
 			{
 				m_CurvePlacing.points[m_CurveNodesPlaced++] = reticlePos;
 				if (m_CurveNodesPlaced == 4)
@@ -226,7 +230,8 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::LEFT_TRIGGER, 0.5f))
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::LEFT_TRIGGER, 0.5f) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C)))
 			{
 				m_CurveNodesPlaced = 0;
 				m_CurvePlacing.points[0] = m_CurvePlacing.points[1] = m_CurvePlacing.points[2] = m_CurvePlacing.points[3] = VEC3_ZERO;

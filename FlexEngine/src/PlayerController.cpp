@@ -91,7 +91,8 @@ namespace flex
 				ResetTransformAndVelocities();
 				return;
 			}
-			else if (g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, Input::GamepadButton::X))
+			else if (g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, Input::GamepadButton::X) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z)))
 			{
 				if (m_TrackRiding)
 				{
@@ -133,8 +134,18 @@ namespace flex
 		{
 			if (m_TrackRiding)
 			{
-				real moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_TRIGGER);
-				real moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_TRIGGER);
+				real moveForward = 0.0f;
+				real moveBackward = 0.0f;
+				if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
+				{
+					moveForward = g_InputManager->GetKeyDown(Input::KeyCode::KEY_W) ? 1.0f : moveForward;
+					moveBackward = g_InputManager->GetKeyDown(Input::KeyCode::KEY_S) ? 1.0f : moveBackward;
+				}
+				else
+				{
+					moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_TRIGGER);
+					moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_TRIGGER);
+				}
 
 				bool bUpdateFacing = false;
 				if (moveForward == 0.0f && moveBackward == 0.0f)
@@ -347,7 +358,16 @@ namespace flex
 		real newDistAlongTrack = m_DistAlongTrack;
 		i32 desiredDir = 1;
 		const real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_STICK_X);
-		const real rightStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_STICK_X);
+		real rightStickX = 0.0f;
+		if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
+		{
+			rightStickX = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) ? 1.0f : rightStickX;
+			rightStickX = g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) ? -1.0f : rightStickX;
+		}
+		else
+		{
+			rightStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_STICK_X);
+		}
 		static const real STICK_THRESHOLD = 0.5f;
 		if (leftStickX < -STICK_THRESHOLD)
 		{
