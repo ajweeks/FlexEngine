@@ -2,6 +2,7 @@
 
 #include "Scene/GameObject.hpp"
 
+#include "Helpers.hpp"
 #include "Track/BezierCurve.hpp"
 #include "Track/BezierCurveList.hpp"
 
@@ -32,13 +33,13 @@ namespace flex
 		real GetHeight() const;
 		PlayerController* GetController();
 
+		real GetDistAlongTrack() const;
+
 		void DrawImGuiObjects();
+		void UpdateIsPossessed();
 
-		// True if going the direction we're facing increases our dist along track value
-		bool bFacingForwardDownTrack = true;
-
-	private:
 		void ClampPitch();
+		void UpdateIsGrounded();
 
 		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f) const;
 
@@ -63,9 +64,46 @@ namespace flex
 		bool m_bPlacingTrack = false;
 		glm::vec3 m_TrackPlacementReticlePos; // Local offset
 
-		TextureID m_CrosshairTextureID;
 
-		AudioSourceID m_SoundPlaceTrackNodeID;
-		AudioSourceID m_SoundPlaceFinalTrackNodeID;
+		bool m_bGrounded = false;
+		bool m_bPossessed = false;
+
+		BezierCurveList* m_TrackRiding = nullptr;
+		real m_DistAlongTrack = 0.0f;
+		real m_TrackMoveSpeed = 0.20f;
+		real m_pDTrackMovement = 0.0f;
+		bool m_bUpdateFacingAndForceFoward = false;
+
+		real m_TrackAttachMinDist = 4.0f;
+
+		TurningDir m_DirTurning = TurningDir::NONE;
+
+		sec m_SecondsAttemptingToTurn = 0.0f;
+		// How large the joystick x value must be to enter a turning state
+		const real m_TurnStartStickXThreshold = 0.15f;
+		// How large the dot product between our forward and the track forward must be to turn around
+		const real m_MinForDotTurnThreshold = 0.03f;
+		const sec m_AttemptToTurnTimeThreshold = 0.2f;
+		// How long after completing a turn around the player can start accumulating turn time again
+		const sec m_TurnAroundCooldown = 0.5f;
+
+		glm::vec3 m_TargetTrackFor = VEC3_FORWARD;
+
+		bool m_bFacingForwardDownTrack = true;
+		bool m_bTargetFacingForwardDownTrack = false;
+
+		const real m_TurnToFaceDownTrackInvSpeed = 30.0f;
+		const real m_FlipTrackDirInvSpeed = 45.0f;
+
+	private:
+		friend class PlayerController;
+
+		AudioSourceID m_SoundPlaceTrackNodeID = InvalidAudioSourceID;
+		AudioSourceID m_SoundPlaceFinalTrackNodeID = InvalidAudioSourceID;
+		AudioSourceID m_SoundTrackAttachID = InvalidAudioSourceID;
+		AudioSourceID m_SoundTrackDetachID = InvalidAudioSourceID;
+		AudioSourceID m_SoundTrackSwitchDirID = InvalidAudioSourceID;
+
+		TextureID m_CrosshairTextureID = InvalidTextureID;
 	};
 } // namespace flex

@@ -240,6 +240,13 @@ namespace flex
 		LINEAR    // Latest sample is weighted N times higher than Nth sample
 	};
 
+	enum class TurningDir
+	{
+		LEFT,
+		NONE,
+		RIGHT
+	};
+
 	template <class T>
 	struct RollingAverage
 	{

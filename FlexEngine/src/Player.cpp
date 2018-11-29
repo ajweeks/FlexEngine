@@ -3,9 +3,11 @@
 #include "Player.hpp"
 
 #pragma warning(push, 0)
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
 #include <LinearMath/btIDebugDraw.h>
@@ -14,11 +16,17 @@
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
+#include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "Cameras/FirstPersonCamera.hpp"
+#include "Cameras/OverheadCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 
@@ -40,6 +48,10 @@ namespace flex
 	{
 		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/click-02.wav");
 		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/jingle-single-01.wav");
+		m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/crunch-13.wav");
+		m_SoundTrackDetachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-02.wav");
+		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/whistle-01.wav");
+		//m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-07.wav");
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
@@ -120,6 +132,9 @@ namespace flex
 
 		AudioManager::DestroyAudioSource(m_SoundPlaceTrackNodeID);
 		AudioManager::DestroyAudioSource(m_SoundPlaceFinalTrackNodeID);
+		AudioManager::DestroyAudioSource(m_SoundTrackAttachID);
+		AudioManager::DestroyAudioSource(m_SoundTrackDetachID);
+		AudioManager::DestroyAudioSource(m_SoundTrackSwitchDirID);
 
 		GameObject::Destroy();
 	}
@@ -187,14 +202,14 @@ namespace flex
 		drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
 		g_Renderer->DrawSprite(drawInfo);
 
-		if (m_Controller->IsPossessed() &&
+		if (m_bPossessed &&
 			(g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y) ||
 			(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Q))))
 		{
 			m_bPlacingTrack = !m_bPlacingTrack;
 		}
 
-		if (m_bPlacingTrack && m_Controller->GetTrackRiding() == nullptr)
+		if (m_bPlacingTrack && m_TrackRiding == nullptr)
 		{
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(1.0f);
 
@@ -326,13 +341,13 @@ namespace flex
 			glm::vec3 euler = glm::eulerAngles(GetTransform()->GetWorldRotation());
 			ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
 
-			bool bRiding = (GetController()->GetTrackRiding() != nullptr);
+			bool bRiding = (m_TrackRiding != nullptr);
 			ImGui::Text("Riding track: %s", (bRiding ? "true" : "false"));
 			if (bRiding)
 			{
 				ImGui::Indent();
-				ImGui::Text("Dist along track: %.2f", GetController()->GetDistAlongTrack());
-				ImGui::Text("Moving forward down track: %s", (bFacingForwardDownTrack ? "true" : "false"));
+				ImGui::Text("Dist along track: %.2f", GetDistAlongTrack());
+				ImGui::Text("Moving forward down track: %s", (m_bFacingForwardDownTrack ? "true" : "false"));
 				ImGui::Unindent();
 			}
 
@@ -344,6 +359,43 @@ namespace flex
 	{
 		real limit = glm::radians(89.5f);
 		m_Pitch = glm::clamp(m_Pitch, -limit, limit);
+	}
+
+	void Player::UpdateIsGrounded()
+	{
+		btVector3 rayStart = ToBtVec3(m_Transform.GetWorldPosition());
+		btVector3 rayEnd = rayStart + btVector3(0, - m_Height / 2.0f + 0.05f, 0);
+
+		btDynamicsWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+		btDiscreteDynamicsWorld* physWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		physWorld->rayTest(rayStart, rayEnd, rayCallback);
+		m_bGrounded = rayCallback.hasHit();
+	}
+
+	void Player::UpdateIsPossessed()
+	{
+		m_bPossessed = false;
+
+		// TODO: Implement more robust solution
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
+		OverheadCamera* ohCam = dynamic_cast<OverheadCamera*>(cam);
+		if (fpCam || ohCam)
+		{
+			m_bPossessed = true;
+		}
+	}
+
+	real Player::GetDistAlongTrack() const
+	{
+		if (m_TrackRiding)
+		{
+			return m_DistAlongTrack;
+		}
+		else
+		{
+			return -1.0f;
+		}
 	}
 
 	glm::vec3 Player::GetTrackPlacementReticlePosWS(real snapThreshold /* = -1.0f */) const
@@ -360,7 +412,6 @@ namespace flex
 			if (g_SceneManager->CurrentScene()->GetTrackManager()->GetControlPointInRange(point, snapThreshold, &pointInRange))
 			{
 				point = pointInRange;
-				Print("Snap!\n");
 			}
 		}
 

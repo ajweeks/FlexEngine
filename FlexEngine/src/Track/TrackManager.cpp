@@ -475,11 +475,10 @@ namespace flex
 	void TrackManager::DrawDebug()
 	{
 		Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-		PlayerController* playerController = m_Player0->GetController();
-		BezierCurveList* trackRiding = playerController->GetTrackRiding();
+		BezierCurveList* trackRiding = m_Player0->m_TrackRiding;
 		real distAlongClosestTrack = -1.0f;
 		i32 closestTrackIndex = GetTrackInRangeIndex(m_Player0->GetTransform()->GetWorldPosition(),
-			playerController->GetTrackAttachDistThreshold(), distAlongClosestTrack);
+			m_Player0->m_TrackAttachMinDist, distAlongClosestTrack);
 		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);
@@ -488,7 +487,7 @@ namespace flex
 			{
 				if (&m_Tracks[i] == trackRiding)
 				{
-					distAlongTrack = playerController->GetDistAlongTrack();
+					distAlongTrack = m_Player0->GetDistAlongTrack();
 				}
 			}
 			else

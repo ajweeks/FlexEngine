@@ -896,8 +896,6 @@ namespace flex
 			return defaultName;
 		}
 
-		std::string name = namePrefix;
-
 		i16 numChars;
 		i32 numEndingWith = GetNumberEndingWith(namePrefix, numChars);
 
