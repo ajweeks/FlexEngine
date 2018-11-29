@@ -75,12 +75,14 @@ namespace flex
 		intValue(intValue),
 		type(Type::INT)
 	{
+		ENSURE(!IsNanOrInf((real)intValue));
 	}
 
 	JSONValue::JSONValue(real floatValue) :
 		floatValue(floatValue),
 		type(Type::FLOAT)
 	{
+		ENSURE(!IsNanOrInf(floatValue));
 	}
 
 	JSONValue::JSONValue(bool boolValue) :
@@ -146,6 +148,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = ParseVec2(GetString(label));
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -156,6 +159,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = ParseVec3(GetString(label));
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -166,6 +170,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = ParseVec4(GetString(label));
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -175,7 +180,9 @@ namespace flex
 	{
 		if (HasField(label))
 		{
-			return ParseVec2(GetString(label));
+			glm::vec2 value = ParseVec2(GetString(label));
+			ENSURE(!IsNanOrInf(value));
+			return value;
 		}
 		return VEC2_ZERO;
 	}
@@ -184,7 +191,9 @@ namespace flex
 	{
 		if (HasField(label))
 		{
-			return ParseVec3(GetString(label));
+			glm::vec3 value = ParseVec3(GetString(label));
+			ENSURE(!IsNanOrInf(value));
+			return value;
 		}
 		return VEC3_ZERO;
 	}
@@ -193,7 +202,9 @@ namespace flex
 	{
 		if (HasField(label))
 		{
-			return ParseVec4(GetString(label));
+			glm::vec4 value = ParseVec4(GetString(label));
+			ENSURE(!IsNanOrInf(value));
+			return value;
 		}
 		return VEC4_ZERO;
 	}
@@ -206,8 +217,10 @@ namespace flex
 			{
 				if (field.value.intValue != 0)
 				{
+					ENSURE(!IsNanOrInf((real)field.value.intValue));
 					return field.value.intValue;
 				}
+				ENSURE(!IsNanOrInf(field.value.floatValue));
 				return (i32)field.value.floatValue;
 			}
 		}
@@ -233,8 +246,10 @@ namespace flex
 				// A float might be written without a decimal, making the system think it's an int
 				if (field.value.floatValue != 0.0f)
 				{
+					ENSURE(!IsNanOrInf(field.value.floatValue));
 					return field.value.floatValue;
 				}
+				ENSURE(!IsNanOrInf((real)field.value.intValue));
 				return (real)field.value.intValue;
 			}
 		}
@@ -246,6 +261,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = GetFloat(label);
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -285,7 +301,7 @@ namespace flex
 		return s_EmptyFieldArray;
 	}
 
-	bool JSONObject::SetFieldArrayChecked(const std::string & label, std::vector<JSONField>& value) const
+	bool JSONObject::SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const
 	{
 		if (HasField(label))
 		{
@@ -307,7 +323,7 @@ namespace flex
 		return s_EmptyObjectArray;
 	}
 
-	bool JSONObject::SetObjectArrayChecked(const std::string & label, std::vector<JSONObject>& value) const
+	bool JSONObject::SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const
 	{
 		if (HasField(label))
 		{

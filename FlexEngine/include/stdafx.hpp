@@ -94,6 +94,11 @@ inline void SafeDelete(T &pObjectToDelete)
 #endif
 
 #define ENSURE_NO_ENTRY PrintError("Execution entered no entry path!\n"); assert(false);
+#ifdef _DEBUG
+#define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Function: %s, Line: %d\n", __FILE__, __LINE__); assert(false); }
+#else
+#define ENSURE(condition)
+#endif
 
 namespace flex
 {
