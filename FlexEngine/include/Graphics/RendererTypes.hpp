@@ -350,8 +350,6 @@ namespace flex
 
 		bool HasUniform(Uniform uniform) const;
 		void AddUniform(Uniform uniform);
-		//void RemoveUniform(Uniform uniform);
-		u32 CalculateSize(i32 pointLightCount);
 	};
 
 	struct Shader

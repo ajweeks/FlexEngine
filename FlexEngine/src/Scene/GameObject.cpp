@@ -343,12 +343,8 @@ namespace flex
 		}
 	}
 
-	void GameObject::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, MaterialID /* matID*/)
 	{
-		UNREFERENCED_PARAMETER(parentObj);
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
-
 		// Generic game objects have no unique fields
 	}
 
@@ -570,10 +566,8 @@ namespace flex
 		return object;
 	}
 
-	void GameObject::SerializeUniqueFields(JSONObject& parentObject)
+	void GameObject::SerializeUniqueFields(JSONObject& /* parentObject */)
 	{
-		UNREFERENCED_PARAMETER(parentObject);
-
 		// Generic game objects have no unique fields
 	}
 
@@ -1364,8 +1358,6 @@ namespace flex
 
 	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
-		UNREFERENCED_PARAMETER(scene);
-
 		JSONObject valveInfo;
 		if (parentObj.SetObjectChecked("valve info", valveInfo))
 		{
@@ -1874,8 +1866,6 @@ namespace flex
 
 	void Skybox::SerializeUniqueFields(JSONObject& parentObject)
 	{
-		UNREFERENCED_PARAMETER(parentObject);
-
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();
 		if (worldRot != QUAT_UNIT)

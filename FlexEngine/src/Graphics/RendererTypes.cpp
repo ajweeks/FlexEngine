@@ -53,45 +53,6 @@ namespace flex
 		uniforms = (Uniform)((u64)uniforms | (u64)uniform);
 	}
 
-	//void Uniforms::RemoveUniform(Uniform uniform)
-	//{
-	//	uniforms = (Uniform)((u64)uniforms & ~(u64)uniform);
-	//}
-
-	u32 Uniforms::CalculateSize(i32 pointLightCount)
-	{
-		UNREFERENCED_PARAMETER(pointLightCount);
-
-		// NOTE: This function is only needed for Vulkan buffer initialization calculations
-
-		u32 size = 0;
-
-		//if (HasUniform(Uniform::MODEL)) size += sizeof(glm::mat4);
-		//if (HasUniform(Uniform::MODEL_INV_TRANSPOSE)) size += sizeof(glm::mat4);
-		//if (HasUniform(Uniform::VIEW)) size += sizeof(glm::mat4);
-		//if (HasUniform(Uniform::VIEW_INV)) size += sizeof(glm::mat4);
-		//if (HasUniform(Uniform::VIEW_PROJECTION)) size += sizeof(glm::mat4);
-		//if (HasUniform(Uniform::PROJECTION)) size += sizeof(glm::mat4);
-		//if (HasUniform(Uniform::COLOR_MULTIPLIER)) size += sizeof(glm::vec4);
-		//if (HasUniform(Uniform::CAM_POS)) size += sizeof(glm::vec4);
-		//if (HasUniform(Uniform::DIR_LIGHT)) size += sizeof(DirectionalLight);
-		//if (HasUniform(Uniform::POINT_LIGHTS)) size += sizeof(PointLight) * pointLightCount;
-		//if (HasUniform(Uniform::ALBEDO_SAMPLER)) size += sizeof(u32);
-		//if (HasUniform(Uniform::CONST_ALBEDO)) size += sizeof(glm::vec4);
-		//if (HasUniform(Uniform::METALLIC_SAMPLER)) size += sizeof(u32);
-		//if (HasUniform(Uniform::CONST_METALLIC)) size += sizeof(real);
-		//if (HasUniform(Uniform::ROUGHNESS_SAMPLER)) size += sizeof(u32);
-		//if (HasUniform(Uniform::CONST_ROUGHNESS)) size += sizeof(real);
-		////if (HasUniform(Uniform::ROUGHNESS)) size += sizeof(real);
-		//if (HasUniform(Uniform::AO_SAMPLER)) size += sizeof(u32);
-		//if (HasUniform(Uniform::CONST_AO)) size += sizeof(real);
-		//if (HasUniform(Uniform::NORMAL_SAMPLER)) size += sizeof(u32);
-		//if (HasUniform(Uniform::ENABLE_CUBEMAP_SAMPLER)) size += sizeof(u32);
-		//if (HasUniform(Uniform::IRRADIANCE_SAMPLER)) size += sizeof(u32);
-
-		return size;
-	}
-
 	Shader::Shader(const std::string& name,
 				   const std::string& vertexShaderFilePath,
 				   const std::string& fragmentShaderFilePath,

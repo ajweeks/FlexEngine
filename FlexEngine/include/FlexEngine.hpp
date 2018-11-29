@@ -110,7 +110,6 @@ namespace flex
 		glm::quat CalculateDeltaRotationFromGizmoDrag(const glm::vec3& axis,
 			const glm::vec3& rayOrigin,
 			const glm::vec3& rayEnd,
-			const glm::vec3& planeNorm,
 			const glm::quat& pRot);
 
 		void UpdateGizmoVisibility();

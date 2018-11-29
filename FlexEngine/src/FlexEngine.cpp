@@ -1188,7 +1188,7 @@ namespace flex
 										}
 									}
 
-									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN, pGizmoRot);
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, pGizmoRot);
 								}
 								else if (m_DraggingAxisIndex == 1) // Y Axis
 								{
@@ -1205,7 +1205,7 @@ namespace flex
 										}
 									}
 
-									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN, pGizmoRot);
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, pGizmoRot);
 								}
 								else if (m_DraggingAxisIndex == 2) // Z Axis
 								{
@@ -1222,7 +1222,7 @@ namespace flex
 										}
 									}
 
-									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, m_PlaneN, pGizmoRot);
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, pGizmoRot);
 								}
 							}
 
@@ -2146,12 +2146,8 @@ namespace flex
 		const glm::vec3& axis,
 		const glm::vec3& rayOrigin,
 		const glm::vec3& rayEnd,
-		const glm::vec3& planeNorm,
 		const glm::quat& pRot)
 	{
-		// TODO: Remove param
-		UNREFERENCED_PARAMETER(planeNorm);
-
 		glm::vec3 intersectionPoint(0.0f);
 
 		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
