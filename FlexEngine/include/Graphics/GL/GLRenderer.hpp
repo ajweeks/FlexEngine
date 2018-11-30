@@ -344,6 +344,8 @@ namespace flex
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
+			AsynchronousTextureSave* screenshotAsyncTextureSave = nullptr;
+
 			FT_Library ft;
 
 			std::string m_DefaultSettingsFilePathAbs;

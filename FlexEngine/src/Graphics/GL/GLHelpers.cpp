@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <chrono>
 
 #pragma warning(push, 0)
 #include "stb_image.h"
@@ -12,6 +13,7 @@
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
+#include "Profiler.hpp"
 
 namespace flex
 {
@@ -520,8 +522,12 @@ namespace flex
 			return SaveTextureToFile(absoluteFilePath, imageFormat, handle, width, height, channelCount, bFlipVertically);
 		}
 
+		// TODO: CLEANUP: Combine identical parts of SaveTextureToFile & StartAsyncTextureSaveToFile to reduce code duplication
 		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically)
 		{
+			const char* getTexImageBlockName = "glGetTexImage";
+			const char* saveImageBlockName = "saveImage";
+
 			assert(channelCount == 3 || channelCount == 4);
 
 			bool bResult = false;
@@ -538,8 +544,11 @@ namespace flex
 
 			if (readBackTextureData && u8Data)
 			{
+				PROFILE_BEGIN(getTexImageBlockName);
 				glBindTexture(GL_TEXTURE_2D, handle);
 				glGetTexImage(GL_TEXTURE_2D, 0, channelCount == 3 ? GL_RGB : GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+				PROFILE_END(getTexImageBlockName);
+				Profiler::PrintBlockDuration(getTexImageBlockName);
 
 				for (i32 i = 0; i < pixelCount*channelCount; i++)
 				{
@@ -557,6 +566,50 @@ namespace flex
 			free(readBackTextureData);
 
 			return bResult;
+		}
+
+		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave)
+		{
+			const char* getTexImageBlockName = "glGetTexImage";
+			const char* saveImageBlockName = "saveImage";
+
+			assert(channelCount == 3 || channelCount == 4);
+
+			bool bResult = false;
+
+			i32 pixelCount = width * height;
+
+			i32 floatBufStride = channelCount * sizeof(real);
+			i32 floatBufSize = floatBufStride * pixelCount;
+			real* readBackTextureData = (real*)malloc(floatBufSize);
+
+			i32 u8BufStride = channelCount * sizeof(u8);
+			i32 u8BufSize = u8BufStride * pixelCount;
+			u8* u8Data = (u8*)malloc(u8BufSize);
+
+			if (readBackTextureData && u8Data)
+			{
+				PROFILE_BEGIN(getTexImageBlockName);
+				glBindTexture(GL_TEXTURE_2D, handle);
+				// TODO: Move readback to async thread as well (takes >~40ms)
+				glGetTexImage(GL_TEXTURE_2D, 0, channelCount == 3 ? GL_RGB : GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+				PROFILE_END(getTexImageBlockName);
+				Profiler::PrintBlockDuration(getTexImageBlockName);
+
+				for (i32 i = 0; i < pixelCount*channelCount; i++)
+				{
+					u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
+				}
+
+				*asyncTextureSave = new AsynchronousTextureSave(absoluteFilePath, format, handle, width, height, channelCount, bFlipVertically, u8Data, u8BufSize);
+			}
+			else
+			{
+				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
+			}
+
+			free(u8Data);
+			free(readBackTextureData);
 		}
 
 		bool LoadGLShaders(u32 program, GLShader& shader)
@@ -1088,7 +1141,55 @@ namespace flex
 			}
 		}
 
-	} // namespace gl
+		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes) :
+			absoluteFilePath(absoluteFilePath)
+		{
+			data = (u8*)malloc(numBytes);
+			if (!data)
+			{
+				PrintError("Failed to allocate %d bytes for asynchronous texture save\n", numBytes);
+				return;
+			}
+			memcpy_s(data, numBytes, srcData, numBytes);
+			taskThread = std::thread([=, this]
+			{
+				bSuccess = SaveImage(absoluteFilePath, format, width, height, channelCount, data, bFlipVertically);
+				taskPromise.set_value(true);
+			});
+
+			taskFuture = taskPromise.get_future();
+			secSinceStatusCheck = 0.0f;
+			totalSecWaiting = 0.0f;
+		}
+
+		AsynchronousTextureSave::~AsynchronousTextureSave()
+		{
+			if (data)
+			{
+				free(data);
+			}
+		}
+
+		bool AsynchronousTextureSave::TickStatus()
+		{
+			secSinceStatusCheck += g_DeltaTime;
+			totalSecWaiting += g_DeltaTime;
+			if (secSinceStatusCheck > secBetweenStatusChecks)
+			{
+				secSinceStatusCheck -= secBetweenStatusChecks;
+				auto status = taskFuture.wait_for(std::chrono::milliseconds(0));
+
+				if (status == std::future_status::ready)
+				{
+					bComplete = true;
+					taskThread.join();
+				}
+			}
+
+			return bComplete;
+		}
+
+} // namespace gl
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL

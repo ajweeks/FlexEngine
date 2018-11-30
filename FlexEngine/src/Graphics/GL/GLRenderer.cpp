@@ -71,7 +71,6 @@ namespace flex
 
 		GLRenderer::~GLRenderer()
 		{
-
 		}
 
 		void GLRenderer::Initialize()
@@ -471,6 +470,8 @@ namespace flex
 		{
 			glDeleteVertexArrays(1, &m_TextQuadVAO);
 			glDeleteBuffers(1, &m_TextQuadVBO);
+
+			SafeDelete(screenshotAsyncTextureSave);
 
 			for (GameObject* editorObject : m_EditorObjects)
 			{
@@ -1776,6 +1777,26 @@ namespace flex
 				}
 			}
 
+			if (screenshotAsyncTextureSave != nullptr)
+			{
+				if (screenshotAsyncTextureSave->TickStatus())
+				{
+					std::string fileName = screenshotAsyncTextureSave->absoluteFilePath;
+					StripLeadingDirectories(fileName);
+
+					if (screenshotAsyncTextureSave->bSuccess)
+					{
+						Print("Saved screenshot to %s (took %.2fs asynchronously)\n", fileName.c_str(), screenshotAsyncTextureSave->totalSecWaiting);
+					}
+					else
+					{
+						PrintWarn("Failed to asynchronously save screenshot to %s\n", fileName.c_str());
+					}
+
+					SafeDelete(screenshotAsyncTextureSave);
+				}
+			}
+
 			// Fade grid out when far away
 			{
 				float maxHeightVisible = 350.0f;
@@ -1992,38 +2013,39 @@ namespace flex
 			SwapBuffers();
 			++m_FramesRendered;
 
-			if (m_bCaptureScreenshot)
+			if (m_bCaptureScreenshot && screenshotAsyncTextureSave == nullptr)
 			{
-				m_bCaptureScreenshot = false;
 				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-
 				TextureHandle handle;
 				handle.internalFormat = GL_RGBA16F;
 				handle.format = GL_RGBA;
 				handle.type = GL_FLOAT;
 				GLuint newFrameBufferFBO;
-				GLuint newFrameBufferRBO;
 
-				CreateOffscreenFrameBuffer(&newFrameBufferFBO, &newFrameBufferRBO, frameBufferSize, handle);
+				m_bCaptureScreenshot = false;
+
+
+				glGenFramebuffers(1, &newFrameBufferFBO);
+				glBindFramebuffer(GL_FRAMEBUFFER, newFrameBufferFBO);
+
+				GenerateFrameBufferTexture(&handle.id,
+					0,
+					handle.internalFormat,
+					handle.format,
+					handle.type,
+					frameBufferSize);
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, newFrameBufferFBO);
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-
 				std::string dateTimeStr = GetDateString_YMDHMS();
 				std::string relativeFilePath = ROOT_LOCATION + "screenshots/" + dateTimeStr + ".png";
 				const std::string absoluteFilePath = RelativePathToAbsolute(relativeFilePath);
-				if (SaveTextureToFile(absoluteFilePath, ImageFormat::PNG, handle.id, frameBufferSize.x, frameBufferSize.y, 3, true))
-				{
-					std::string fileName = relativeFilePath;
-					StripLeadingDirectories(relativeFilePath);
-					Print("Saved screenshot to %s\n", relativeFilePath.c_str());
-				}
-				else
-				{
-					PrintWarn("Failed to save screenshot to %s\n", absoluteFilePath.c_str());
-				}
+				StartAsyncTextureSaveToFile(absoluteFilePath, ImageFormat::PNG, handle.id, frameBufferSize.x, frameBufferSize.y, 3, true, &screenshotAsyncTextureSave);
+
+				glDeleteTextures(1, &handle.id);
+				glDeleteFramebuffers(1, &newFrameBufferFBO);
 			}
 		}
 

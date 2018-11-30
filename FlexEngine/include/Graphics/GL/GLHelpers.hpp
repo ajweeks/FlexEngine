@@ -2,6 +2,8 @@
 #if COMPILE_OPEN_GL
 
 #include <array>
+#include <thread>
+#include <future>
 
 #pragma warning(push, 0)
 #include <glad/glad.h>
@@ -220,6 +222,7 @@ namespace flex
 			std::string GetName() const;
 
 			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically);
+			// TODO: Add AsyncSave member func
 
 		private:
 			std::string relativeFilePath;
@@ -246,6 +249,31 @@ namespace flex
 			TextureParameters m_Parameters;
 		};
 
+		struct AsynchronousTextureSave
+		{
+			AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes);
+			~AsynchronousTextureSave();
+
+			// Returns true once task is complete
+			bool TickStatus();
+
+			std::thread taskThread;
+			std::promise<bool> taskPromise;
+			std::future<bool> taskFuture;
+			std::string absoluteFilePath;
+
+			GLuint textureID = 0;
+			u8* data = nullptr;
+
+			bool bSuccess = false;
+			bool bComplete = false;
+
+			sec totalSecWaiting = 0.0f;
+			sec secBetweenStatusChecks = 0.05f;
+			sec secSinceStatusCheck = 0.0f;
+		};
+
+		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave);
 		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically);
 
 		bool LoadGLShaders(u32 program, GLShader& shader);
