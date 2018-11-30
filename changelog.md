@@ -2,7 +2,13 @@
 2018
 
 November
-- 
+- Allow screenshots to be taken in-game (using numpad 9 key)
+- Add basic controls to allow player to place tracks (Y to enter placement mode, RT to place, LT to finalize, X to lock in/out, LT/RT to move along track)
+- Add basic keyboard movement inputs
+- Bring up rename UI on F2
+- Heavily optimize debug rendering
+- Add basic sound synthesis (play notes using 4-9 keys)
+- Add ability to change overhead camera zoom level (L & R joystick press)
 - Improve "overhead" camera to follow player position & rotation
 - Allow player to switch direction on a track by holding right joystick in a direction
 
@@ -15,4 +21,3 @@ October
 - Add track junctions to handle switching tracks
 - Improve transform gizmo implementation (namely rotation & scale)
 	- Fade out axes when facing head-on
-
