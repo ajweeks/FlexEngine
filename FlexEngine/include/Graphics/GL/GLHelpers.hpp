@@ -251,7 +251,7 @@ namespace flex
 
 		struct AsynchronousTextureSave
 		{
-			AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes);
+			AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes);
 			~AsynchronousTextureSave();
 
 			// Returns true once task is complete

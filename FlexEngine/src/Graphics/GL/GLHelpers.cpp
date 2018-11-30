@@ -526,7 +526,6 @@ namespace flex
 		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically)
 		{
 			const char* getTexImageBlockName = "glGetTexImage";
-			const char* saveImageBlockName = "saveImage";
 
 			assert(channelCount == 3 || channelCount == 4);
 
@@ -571,11 +570,8 @@ namespace flex
 		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave)
 		{
 			const char* getTexImageBlockName = "glGetTexImage";
-			const char* saveImageBlockName = "saveImage";
 
 			assert(channelCount == 3 || channelCount == 4);
-
-			bool bResult = false;
 
 			i32 pixelCount = width * height;
 
@@ -601,7 +597,7 @@ namespace flex
 					u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
 				}
 
-				*asyncTextureSave = new AsynchronousTextureSave(absoluteFilePath, format, handle, width, height, channelCount, bFlipVertically, u8Data, u8BufSize);
+				*asyncTextureSave = new AsynchronousTextureSave(absoluteFilePath, format, width, height, channelCount, bFlipVertically, u8Data, u8BufSize);
 			}
 			else
 			{
@@ -1141,7 +1137,7 @@ namespace flex
 			}
 		}
 
-		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes) :
+		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes) :
 			absoluteFilePath(absoluteFilePath)
 		{
 			data = (u8*)malloc(numBytes);
@@ -1151,7 +1147,7 @@ namespace flex
 				return;
 			}
 			memcpy_s(data, numBytes, srcData, numBytes);
-			taskThread = std::thread([=, this]
+			taskThread = std::thread([=]
 			{
 				bSuccess = SaveImage(absoluteFilePath, format, width, height, channelCount, data, bFlipVertically);
 				taskPromise.set_value(true);
