@@ -206,9 +206,9 @@ namespace flex
 		m_TestSprings.reserve(springCount);
 		for (i32 i = 0; i < springCount; ++i)
 		{
-			m_TestSprings.push_back(Spring<glm::vec3>());
-			m_TestSprings[i].kd = 30.0f;
-			m_TestSprings[i].kp = 130.0f;
+			m_TestSprings.emplace_back(Spring<glm::vec3>());
+			m_TestSprings[i].DR = 0.9f;
+			m_TestSprings[i].UAF = 15.0f;
 		}
 
 		PROFILE_END(profileBlockStr);
@@ -1877,16 +1877,16 @@ namespace flex
 
 				if (ImGui::TreeNode("Spring"))
 				{
-					real* kd = &m_TestSprings[0].kd;
-					real* kp = &m_TestSprings[0].kp;
+					real* DR = &m_TestSprings[0].DR;
+					real* UAF = &m_TestSprings[0].UAF;
 
-					ImGui::DragFloat("kd", kd);
-					ImGui::DragFloat("kp", kp);
+					ImGui::SliderFloat("DR", DR, 0.0f, 2.0f);
+					ImGui::SliderFloat("UAF", UAF, 0.0f, 20.0f);
 
-					for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
+					for (Spring<glm::vec3>& spring : m_TestSprings)
 					{
-						m_TestSprings[i].kd = *kd;
-						m_TestSprings[i].kp = *kp;
+						spring.DR = *DR;
+						spring.UAF = *UAF;
 					}
 
 					ImGui::TreePop();
