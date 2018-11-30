@@ -741,15 +741,23 @@ namespace flex
 
 			Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 			glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
+			m_SpringTimer += g_DeltaTime;
+			real amplitude = 1.5f;
+			real period = 5.0f;
+			if (m_SpringTimer > period)
+			{
+				m_SpringTimer -= period;
+			}
+			targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
 			glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
 
-			for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
+			for (Spring<glm::vec3>& spring : m_TestSprings)
 			{
-				m_TestSprings[i].SetTargetPos(targetPos);
-				m_TestSprings[i].SetTargetVel(targetVel);
+				spring.SetTargetPos(targetPos);
+				spring.SetTargetVel(targetVel);
 
-				targetPos = m_TestSprings[i].pos;
-				targetVel = m_TestSprings[i].vel;
+				targetPos = spring.pos;
+				targetVel = spring.vel;
 			}
 
 			for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)

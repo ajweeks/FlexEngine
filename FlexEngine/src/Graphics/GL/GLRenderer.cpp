@@ -1784,6 +1784,8 @@ namespace flex
 					std::string fileName = screenshotAsyncTextureSave->absoluteFilePath;
 					StripLeadingDirectories(fileName);
 
+					AddEditorString("Saved screenshot");
+
 					if (screenshotAsyncTextureSave->bSuccess)
 					{
 						Print("Saved screenshot to %s (took %.2fs asynchronously)\n", fileName.c_str(), screenshotAsyncTextureSave->totalSecWaiting);

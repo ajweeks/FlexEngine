@@ -189,6 +189,7 @@ namespace flex
 		bool m_bAssetBrowserShowing = false;
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
+		real m_SpringTimer = 0.0f;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;
