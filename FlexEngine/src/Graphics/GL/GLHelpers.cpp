@@ -547,17 +547,6 @@ namespace flex
 				}
 
 				bResult = SaveImage(absoluteFilePath, format, width, height, channelCount, u8Data, bFlipVertically);
-
-				if (bResult)
-				{
-					std::string filePathShort = absoluteFilePath;
-					StripLeadingDirectories(filePathShort);
-					Print("Saved texture to %s\n", filePathShort.c_str());
-				}
-				else
-				{
-					PrintError("Failed to save texture to %s\n", absoluteFilePath.c_str());
-				}
 			}
 			else
 			{

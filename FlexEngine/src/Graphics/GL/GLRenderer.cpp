@@ -2016,7 +2016,9 @@ namespace flex
 				const std::string absoluteFilePath = RelativePathToAbsolute(relativeFilePath);
 				if (SaveTextureToFile(absoluteFilePath, ImageFormat::PNG, handle.id, frameBufferSize.x, frameBufferSize.y, 3, true))
 				{
-					Print("Saved screenshot to %s\n", absoluteFilePath.c_str());
+					std::string fileName = relativeFilePath;
+					StripLeadingDirectories(relativeFilePath);
+					Print("Saved screenshot to %s\n", relativeFilePath.c_str());
 				}
 				else
 				{
