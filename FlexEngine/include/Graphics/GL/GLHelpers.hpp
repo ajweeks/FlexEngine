@@ -219,7 +219,7 @@ namespace flex
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
 
-			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format);
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically);
 
 		private:
 			std::string relativeFilePath;
@@ -245,6 +245,8 @@ namespace flex
 
 			TextureParameters m_Parameters;
 		};
+
+		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically);
 
 		bool LoadGLShaders(u32 program, GLShader& shader);
 		bool LinkProgram(u32 program);

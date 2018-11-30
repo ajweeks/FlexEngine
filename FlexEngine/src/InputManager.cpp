@@ -64,9 +64,6 @@ namespace flex
 			g_InputBindings[(i32)Action::LOOK_V].gamepadAxis = GamepadAxis::LEFT_STICK_Y;
 			g_InputBindingNames[(i32)Action::LOOK_V] = "Look vertical";
 
-			bPlayerUsingKeyboard[0] = false;
-			bPlayerUsingKeyboard[1] = false;
-
 			ClearAllInputs();
 		}
 

@@ -1809,6 +1809,11 @@ namespace flex
 			{
 				RecaptureReflectionProbe();
 			}
+
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_KP_9))
+			{
+				m_bCaptureScreenshot = true;
+			}
 		}
 
 		void GLRenderer::Draw()
@@ -1986,6 +1991,38 @@ namespace flex
 
 			SwapBuffers();
 			++m_FramesRendered;
+
+			if (m_bCaptureScreenshot)
+			{
+				m_bCaptureScreenshot = false;
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
+				TextureHandle handle;
+				handle.internalFormat = GL_RGBA16F;
+				handle.format = GL_RGBA;
+				handle.type = GL_FLOAT;
+				GLuint newFrameBufferFBO;
+				GLuint newFrameBufferRBO;
+
+				CreateOffscreenFrameBuffer(&newFrameBufferFBO, &newFrameBufferRBO, frameBufferSize, handle);
+
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, newFrameBufferFBO);
+				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+
+				std::string dateTimeStr = GetDateString_YMDHMS();
+				std::string relativeFilePath = ROOT_LOCATION + "screenshots/" + dateTimeStr + ".png";
+				const std::string absoluteFilePath = RelativePathToAbsolute(relativeFilePath);
+				if (SaveTextureToFile(absoluteFilePath, ImageFormat::PNG, handle.id, frameBufferSize.x, frameBufferSize.y, 3, true))
+				{
+					Print("Saved screenshot to %s\n", absoluteFilePath.c_str());
+				}
+				else
+				{
+					PrintWarn("Failed to save screenshot to %s\n", absoluteFilePath.c_str());
+				}
+			}
 		}
 
 		void GLRenderer::BatchRenderObjects()
@@ -3232,7 +3269,7 @@ namespace flex
 				}
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
-				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
+				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
 
 				// Cleanup
 				glDisable(GL_BLEND);

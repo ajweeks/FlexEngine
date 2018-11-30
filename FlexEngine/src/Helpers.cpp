@@ -1274,7 +1274,7 @@ namespace flex
 		return bValueChanged;
 	}
 
-	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data)
+	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically)
 	{
 		if (data == nullptr ||
 			width == 0 ||
@@ -1287,6 +1287,8 @@ namespace flex
 		}
 
 		bool bResult = false;
+
+		stbi_flip_vertically_on_write(bFlipVertically ? 1 : 0);
 
 		const char* fileNameCstr = absoluteFilePath.c_str();
 		switch (imageFormat)
@@ -1309,7 +1311,7 @@ namespace flex
 		case ImageFormat::PNG:
 		{
 			i32 strideInBytes = sizeof(data[0]) * channelCount * width;
-			if (stbi_write_png(fileNameCstr, width, height, 4, data, strideInBytes))
+			if (stbi_write_png(fileNameCstr, width, height, channelCount, data, strideInBytes))
 			{
 				bResult = true;
 			}

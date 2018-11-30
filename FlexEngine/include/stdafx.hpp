@@ -102,7 +102,8 @@ inline void SafeDelete(T &pObjectToDelete)
 
 namespace flex
 {
-	static const std::string RESOURCE_LOCATION = "../../../FlexEngine/resources/";
+	static const std::string ROOT_LOCATION = "../../../FlexEngine/";
+	static const std::string RESOURCE_LOCATION = ROOT_LOCATION + "resources/";
 
 	static const glm::vec3 VEC3_RIGHT = glm::vec3(1.0f, 0.0f, 0.0f);
 	static const glm::vec3 VEC3_UP = glm::vec3(0.0f, 1.0f, 0.0f);

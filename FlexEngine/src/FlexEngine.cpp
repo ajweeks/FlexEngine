@@ -2051,11 +2051,19 @@ namespace flex
 				{
 					g_InputManager->bPlayerUsingKeyboard[0] = bP0UsingKeyboard;
 				}
+				else
+				{
+					g_InputManager->bPlayerUsingKeyboard[0] = false;
+				}
 
 				bool bP1UsingKeyboard = true;
 				if (rootObject.SetBoolChecked("p1 using keyboard", bP1UsingKeyboard))
 				{
 					g_InputManager->bPlayerUsingKeyboard[1] = bP1UsingKeyboard;
+				}
+				else
+				{
+					g_InputManager->bPlayerUsingKeyboard[0] = false;
 				}
 
 				return true;

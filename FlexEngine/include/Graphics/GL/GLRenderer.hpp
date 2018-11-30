@@ -356,6 +356,8 @@ namespace flex
 
 			bool m_bRebatchRenderObjects = true;
 
+			bool m_bCaptureScreenshot = false;
+
 			GameObject* m_Grid = nullptr;
 			GameObject* m_WorldOrigin = nullptr;
 			MaterialID m_GridMaterialID = InvalidMaterialID;

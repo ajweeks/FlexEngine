@@ -423,7 +423,7 @@ namespace flex
 			}
 		}
 
-		newPos += glm::vec3(0.0f, 2.1f, 0.0f);
+		newPos += glm::vec3(0.0f, m_Player->m_Height / 2.0f, 0.0f);
 		playerTransform->SetWorldPosition(newPos, true);
 
 		glm::quat rot = playerTransform->GetWorldRotation();

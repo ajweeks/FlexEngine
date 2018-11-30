@@ -515,8 +515,15 @@ namespace flex
 			return name;
 		}
 
-		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat imageFormat)
+		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat imageFormat, bool bFlipVertically)
 		{
+			return SaveTextureToFile(absoluteFilePath, imageFormat, handle, width, height, channelCount, bFlipVertically);
+		}
+
+		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically)
+		{
+			assert(channelCount == 3 || channelCount == 4);
+
 			bool bResult = false;
 
 			i32 pixelCount = width * height;
@@ -532,29 +539,29 @@ namespace flex
 			if (readBackTextureData && u8Data)
 			{
 				glBindTexture(GL_TEXTURE_2D, handle);
-				glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+				glGetTexImage(GL_TEXTURE_2D, 0, channelCount == 3 ? GL_RGB : GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
 
 				for (i32 i = 0; i < pixelCount*channelCount; i++)
 				{
 					u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
 				}
 
-				bResult = SaveImage(absoluteFilePath, imageFormat, width, height, channelCount, u8Data);
+				bResult = SaveImage(absoluteFilePath, format, width, height, channelCount, u8Data, bFlipVertically);
 
 				if (bResult)
 				{
 					std::string filePathShort = absoluteFilePath;
 					StripLeadingDirectories(filePathShort);
-					Print("Saved generated SDF font texture to %s\n", filePathShort.c_str());
+					Print("Saved texture to %s\n", filePathShort.c_str());
 				}
 				else
 				{
-					PrintError("Failed to save generated SDF font texture to %s\n", absoluteFilePath.c_str());
+					PrintError("Failed to save texture to %s\n", absoluteFilePath.c_str());
 				}
 			}
 			else
 			{
-				PrintError("Failed to allocate %d bytes for SDF texture read back\n", floatBufSize);
+				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
 			}
 
 			free(u8Data);
