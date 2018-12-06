@@ -6,6 +6,8 @@ FlexEngine/resources/meshes/EmeraldSquare/**
 FlexEngine/resources/meshes/SunTemple/**
 FlexEngine/resources/meshes/SunTemple.fbx
 
+!FlexEngine/lib/Debug/*
+
 # User settings files
 common.ini
 renderer-settings.ini
