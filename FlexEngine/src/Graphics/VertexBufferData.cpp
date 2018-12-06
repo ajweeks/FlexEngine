@@ -8,14 +8,6 @@
 
 namespace flex
 {
-	VertexBufferData::VertexBufferData() :
-		pDataStart(nullptr),
-		BufferSize(0),
-		VertexStride(0),
-		VertexCount(0)
-	{
-	}
-
 	void VertexBufferData::Initialize(CreateInfo* createInfo)
 	{
 		VertexCount = createInfo->positions_3D.size();

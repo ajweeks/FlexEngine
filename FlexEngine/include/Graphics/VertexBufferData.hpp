@@ -7,8 +7,6 @@ namespace flex
 	class VertexBufferData
 	{
 	public:
-		VertexBufferData();
-
 		struct CreateInfo
 		{
 			VertexAttributes attributes;

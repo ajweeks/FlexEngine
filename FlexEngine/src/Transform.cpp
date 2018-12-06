@@ -37,10 +37,12 @@ namespace flex
 			glm::mat4((glm::quat)rotation) *
 			glm::scale(MAT4_IDENTITY, scale)),
 		worldTransform(1.0f),
-		forward(0, 0, 1),
-		up(0, 1, 0),
-		right(1, 0, 0)
+		forward(0.0f, 0.0f, 1.0f),
+		up(0.0f, 1.0f, 0.0f),
+		right(1.0f, 0.0f, 0.0f)
 	{
+		std::string s(__func__);
+		Print("%s\n", s.c_str());
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :

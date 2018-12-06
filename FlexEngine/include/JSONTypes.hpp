@@ -88,14 +88,17 @@ namespace flex
 		explicit JSONValue(const std::vector<JSONObject>& objectArrayValue);
 		explicit JSONValue(const std::vector<JSONField>& fieldArrayValue);
 
-		Type type;
+		Type type = Type::UNINITIALIZED;
+		union
+		{
+			i32 intValue = 0;
+			real floatValue;
+			bool boolValue;
+		};
+		JSONObject objectValue;
 		std::string strValue;
-		i32 intValue = 0;
-		real floatValue = 0.0f;
-		bool boolValue = false;
 		std::vector<JSONField> fieldArrayValue;
 		std::vector<JSONObject> objectArrayValue;
-		JSONObject objectValue;
 	};
 
 	struct JSONField

@@ -1155,7 +1155,7 @@ namespace flex
 			return -1;
 		}
 
-		u16 strLen = (u16)str.size();
+		i16 strLen = (i16)str.size();
 
 		if (!isdigit(str[strLen - 1]))
 		{

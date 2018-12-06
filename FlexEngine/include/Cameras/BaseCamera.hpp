@@ -6,7 +6,7 @@ namespace flex
 	{
 	public:
 		BaseCamera(const std::string& cameraName, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
-		~BaseCamera();
+		virtual ~BaseCamera();
 
 		virtual void Initialize();
 		virtual void Update() = 0;

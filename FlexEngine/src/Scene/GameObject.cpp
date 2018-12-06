@@ -1318,20 +1318,13 @@ namespace flex
 			}
 		}
 
-		switch (m_Type)
-		{
-		case GameObjectType::PLAYER:
-		{
-
-		} break;
-		default: // All non-player objects
+		if (m_Type != GameObjectType::PLAYER)
 		{
 			if (other->HasTag("Player0") ||
 				other->HasTag("Player1"))
 			{
 				m_bInteractable = false;
 			}
-		} break;
 		}
 	}
 
@@ -1578,7 +1571,7 @@ namespace flex
 
 		if (!valve)
 		{
-			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName);
+			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName.c_str());
 		}
 
 		blockInfo.SetBoolChecked("affected by gravity", bAffectedByGravity);

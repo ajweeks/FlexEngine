@@ -1650,7 +1650,6 @@ namespace flex
 
 		u32 GLRenderer::GetTextureHandle(TextureID textureID) const
 		{
-			assert(textureID >= 0);
 			assert(textureID < m_LoadedTextures.size());
 			return m_LoadedTextures[textureID]->handle;
 		}

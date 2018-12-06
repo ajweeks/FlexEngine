@@ -10,21 +10,24 @@ namespace flex
 	{
 		NORMAL,
 		HIDDEN,
-		DISABLED
+		DISABLED,
+		NONE
 	};
 
 	enum class WindowMode
 	{
 		WINDOWED,
 		WINDOWED_FULLSCREEN, // (aka "Borderless windowed")
-		FULLSCREEN
+		FULLSCREEN,
+		NONE
 	};
 
 	static const char* WindowModeStrs[] =
 	{
 		"Windowed",
 		"Windowed Fullscreen",
-		"Fullscreen"
+		"Fullscreen",
+		"None"
 	};
 
 	class Window
@@ -139,7 +142,7 @@ namespace flex
 		// Whether to restore the size and position from the previous session on bootup
 		bool m_bAutoRestoreStateOnBootup = true;
 
-		WindowMode m_CurrentWindowMode;
+		WindowMode m_CurrentWindowMode = WindowMode::NONE;
 
 		// Used to store previous window size and position to restore after exiting fullscreen
 		glm::vec2i m_LastWindowedSize;
@@ -151,8 +154,8 @@ namespace flex
 		bool m_bMaximized = false;
 		bool m_bIconified = false;
 
-		real m_UpdateWindowTitleFrequency = 0;
-		real m_SecondsSinceTitleUpdate = 0;
+		real m_UpdateWindowTitleFrequency = 0.0f;
+		real m_SecondsSinceTitleUpdate = 0.0f;
 
 		CursorMode m_CursorMode = CursorMode::NORMAL;
 

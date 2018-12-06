@@ -350,7 +350,7 @@ namespace flex
 
 		if (oldSceneIndex == -1)
 		{
-			PrintError("Attempted to delete scene not present in scene manager: %s\n ", scene->GetName());
+			PrintError("Attempted to delete scene not present in scene manager: %s\n ", scene->GetName().c_str());
 			return;
 		}
 

@@ -60,52 +60,52 @@ namespace flex
 	}
 
 	JSONValue::JSONValue(const std::string& strValue) :
-		strValue(strValue),
-		type(Type::STRING)
+		type(Type::STRING),
+		strValue(strValue)
 	{
 	}
 
 	JSONValue::JSONValue(const char* strValue) :
-		strValue(strValue),
-		type(Type::STRING)
+		type(Type::STRING),
+		strValue(strValue)
 	{
 	}
 
 	JSONValue::JSONValue(i32 intValue) :
-		intValue(intValue),
-		type(Type::INT)
+		type(Type::INT),
+		intValue(intValue)
 	{
 		ENSURE(!IsNanOrInf((real)intValue));
 	}
 
 	JSONValue::JSONValue(real floatValue) :
-		floatValue(floatValue),
-		type(Type::FLOAT)
+		type(Type::FLOAT),
+		floatValue(floatValue)
 	{
 		ENSURE(!IsNanOrInf(floatValue));
 	}
 
 	JSONValue::JSONValue(bool boolValue) :
-		boolValue(boolValue),
-		type(Type::BOOL)
+		type(Type::BOOL),
+		boolValue(boolValue)
 	{
 	}
 
 	JSONValue::JSONValue(const JSONObject& objectValue) :
-		objectValue(objectValue),
-		type(Type::OBJECT)
+		type(Type::OBJECT),
+		objectValue(objectValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONObject>& objectArrayValue) :
-		objectArrayValue(objectArrayValue),
-		type(Type::OBJECT_ARRAY)
+		type(Type::OBJECT_ARRAY),
+		objectArrayValue(objectArrayValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONField>& fieldArrayValue) :
-		fieldArrayValue(fieldArrayValue),
-		type(Type::FIELD_ARRAY)
+		type(Type::FIELD_ARRAY),
+		fieldArrayValue(fieldArrayValue)
 	{
 	}
 

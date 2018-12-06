@@ -17,10 +17,6 @@ namespace flex
 
 	Window::Window(const std::string& title) :
 		m_TitleString(title),
-		m_bShowFPSInWindowTitle(true),
-		m_bShowMSInWindowTitle(true),
-		m_UpdateWindowTitleFrequency(0.0f),
-		m_SecondsSinceTitleUpdate(0.0f),
 		m_CurrentWindowMode(WindowMode::WINDOWED)
 	{
 		g_Window = this;

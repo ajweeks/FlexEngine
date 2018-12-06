@@ -18,13 +18,12 @@ namespace flex
 {
 	BaseCamera::BaseCamera(const std::string& cameraName, real FOV, real zNear, real zFar) :
 		m_Name(cameraName),
-		m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
-		m_Position(VEC3_ZERO),
 		m_View(MAT4_ZERO),
 		m_Proj(MAT4_ZERO),
 		m_ViewProjection(MAT4_ZERO),
-		m_Yaw(0.0f),
-		m_Pitch(0.0f),
+		m_FOV(FOV),
+		m_ZNear(zNear),
+		m_ZFar(zFar),
 		m_MoveSpeed(25.0f),
 		m_PanSpeed(10.0f),
 		m_DragDollySpeed(0.1f),
@@ -34,8 +33,11 @@ namespace flex
 		m_TurnSpeedFastMultiplier(2.0f),
 		m_TurnSpeedSlowMultiplier(0.1f),
 		m_OrbitingSpeed(0.1f),
+		m_MouseRotationSpeed(0.0015f),
 		m_GamepadRotationSpeed(2.0f),
-		m_MouseRotationSpeed(0.0015f)
+		m_Position(VEC3_ZERO),
+		m_Yaw(0.0f),
+		m_Pitch(0.0f)
 	{
 		ResetOrientation();
 		CalculateAxisVectorsFromPitchAndYaw();

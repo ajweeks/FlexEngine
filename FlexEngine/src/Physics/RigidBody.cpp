@@ -17,11 +17,11 @@
 namespace flex
 {
 	RigidBody::RigidBody(i32 group, i32 mask) :
-		m_Group(group),
-		m_Mask(mask),
 		m_LocalPosition(0.0f),
 		m_LocalRotation(QUAT_UNIT),
-		m_LocalScale(1.0f)
+		m_LocalScale(1.0f),
+		m_Group(group),
+		m_Mask(mask)
 	{
 	}
 

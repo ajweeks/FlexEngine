@@ -342,8 +342,8 @@ namespace flex
 		glm::vec2 pos;
 		glm::vec4 color;
 		real xSpacing;
-		std::vector<glm::vec2> letterOffsets;
 		bool bRaw;
+		std::vector<glm::vec2> letterOffsets;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);

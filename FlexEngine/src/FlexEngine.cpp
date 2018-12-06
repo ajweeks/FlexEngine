@@ -670,7 +670,7 @@ namespace flex
 #endif
 		}
 		m_RendererName = RenderIDToString(m_RendererIndex);
-		Print("Current renderer: %s\n", m_RendererName);
+		Print("Current renderer: %s\n", m_RendererName.c_str());
 
 		CreateWindowAndRenderer();
 		InitializeWindowAndRenderer();

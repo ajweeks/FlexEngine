@@ -76,9 +76,6 @@ namespace flex
 	private:
 		void UpdateChildTransforms(); // Climbs down the parent-child trees to all leaves
 
-		glm::mat4 localTransform;
-		glm::mat4 worldTransform;
-
 		glm::vec3 localPosition;
 		glm::quat localRotation;
 		glm::vec3 localScale;
@@ -86,6 +83,9 @@ namespace flex
 		glm::vec3 worldPosition;
 		glm::quat worldRotation;
 		glm::vec3 worldScale;
+
+		glm::mat4 localTransform;
+		glm::mat4 worldTransform;
 
 		glm::vec3 forward;
 		glm::vec3 up;

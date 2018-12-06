@@ -681,7 +681,7 @@ namespace flex
 			{
 				matID = InvalidMaterialID;
 				PrintError("Invalid material name for object %s: %s\n",
-						   object.GetString("name").c_str(), materialName);
+						   object.GetString("name").c_str(), materialName.c_str());
 			}
 		}
 		return matID;

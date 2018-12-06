@@ -311,10 +311,10 @@ namespace flex
 			return success;
 		}
 
-		TextureParameters::TextureParameters(bool bGenMipMaps, bool bDepthTex) :
+		TextureParameters::TextureParameters(bool bGenMipMaps /* = false */, bool bDepthTex /* = false */) :
+			borderColor(1.0f),
 			bGenMipMaps(bGenMipMaps),
-			bDepthTex(bDepthTex),
-			borderColor(1.0f)
+			bDepthTex(bDepthTex)
 		{
 			if (bGenMipMaps)
 			{
@@ -343,10 +343,10 @@ namespace flex
 							 bool bGenerateMipMaps,
 							 bool bHDR) :
 			relativeFilePath(relativeFilePath),
-			channelCount(channelCount),
-			bFlipVerticallyOnLoad(bFlipVertically),
 			bHasMipMaps(bGenerateMipMaps),
-			bHDR(bHDR)
+			bFlipVerticallyOnLoad(bFlipVertically),
+			bHDR(bHDR),
+			channelCount(channelCount)
 		{
 			if (name.empty())
 			{
@@ -535,11 +535,11 @@ namespace flex
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc(floatBufSize);
+			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc(u8BufSize);
+			u8* u8Data = (u8*)malloc((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
@@ -577,11 +577,11 @@ namespace flex
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc(floatBufSize);
+			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc(u8BufSize);
+			u8* u8Data = (u8*)malloc((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
@@ -889,14 +889,30 @@ namespace flex
 		{
 			switch (dataType)
 			{
-			case DataType::BYTE:			return GL_BYTE;
-			case DataType::UNSIGNED_BYTE:	return GL_UNSIGNED_BYTE;
-			case DataType::SHORT:			return GL_SHORT;
-			case DataType::UNSIGNED_SHORT:	return GL_UNSIGNED_SHORT;
-			case DataType::INT:				return GL_INT;
-			case DataType::UNSIGNED_INT:	return GL_UNSIGNED_INT;
-			case DataType::FLOAT:			return GL_FLOAT;
-			case DataType::DOUBLE:			return GL_DOUBLE;
+			case DataType::BYTE:				return GL_BYTE;
+			case DataType::BOOL:				return GL_BOOL;
+			case DataType::UNSIGNED_BYTE:		return GL_UNSIGNED_BYTE;
+			case DataType::SHORT:				return GL_SHORT;
+			case DataType::UNSIGNED_SHORT:		return GL_UNSIGNED_SHORT;
+			case DataType::INT:					return GL_INT;
+			case DataType::UNSIGNED_INT:		return GL_UNSIGNED_INT;
+			case DataType::FLOAT:				return GL_FLOAT;
+			case DataType::DOUBLE:				return GL_DOUBLE;
+			case DataType::FLOAT_VEC2:			return GL_FLOAT_VEC2;
+			case DataType::FLOAT_VEC3:			return GL_FLOAT_VEC3;
+			case DataType::FLOAT_VEC4:			return GL_FLOAT_VEC4;
+			case DataType::FLOAT_MAT3:			return GL_FLOAT_MAT3;
+			case DataType::FLOAT_MAT4:			return GL_FLOAT_MAT4;
+			case DataType::INT_VEC2:			return GL_INT_VEC2;
+			case DataType::INT_VEC3:			return GL_INT_VEC3;
+			case DataType::INT_VEC4:			return GL_INT_VEC4;
+			case DataType::SAMPLER_1D:			return GL_SAMPLER_1D;
+			case DataType::SAMPLER_2D:			return GL_SAMPLER_2D;
+			case DataType::SAMPLER_3D:			return GL_SAMPLER_3D;
+			case DataType::SAMPLER_1D_SHADOW:	return GL_SAMPLER_1D_SHADOW;
+			case DataType::SAMPLER_2D_SHADOW:	return GL_SAMPLER_2D_SHADOW;
+			case DataType::SAMPLER_CUBE:		return GL_SAMPLER_CUBE;
+			case DataType::SAMPLER_CUBE_SHADOW:	return GL_SAMPLER_CUBE_SHADOW;
 			default:
 				PrintError("Unhandled DataType passed to DataTypeToGLType: %i\n", (i32)dataType);
 				return GL_INVALID_ENUM;
@@ -1140,13 +1156,13 @@ namespace flex
 		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes) :
 			absoluteFilePath(absoluteFilePath)
 		{
-			data = (u8*)malloc(numBytes);
+			data = (u8*)malloc((u32)numBytes);
 			if (!data)
 			{
 				PrintError("Failed to allocate %d bytes for asynchronous texture save\n", numBytes);
 				return;
 			}
-			memcpy_s(data, numBytes, srcData, numBytes);
+			memcpy_s(data, (u32)numBytes, srcData, (u32)numBytes);
 			taskThread = std::thread([=]
 			{
 				bSuccess = SaveImage(absoluteFilePath, format, width, height, channelCount, data, bFlipVertically);
