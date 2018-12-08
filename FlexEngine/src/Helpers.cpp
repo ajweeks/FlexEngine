@@ -31,6 +31,13 @@ namespace flex
 	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
 	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
 
+	const char* TrackStateStrs[((i32)TrackState::NONE) + 1] =
+	{
+		"Facing forward",
+		"Facing backward",
+		"NONE",
+	};
+
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, i32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
@@ -935,7 +942,7 @@ namespace flex
 #if _DEBUG
 		if (IsNanOrInf(vec))
 		{
-			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero");
+			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero\n");
 			vec = VEC2_ZERO;
 		}
 #endif
@@ -950,7 +957,7 @@ namespace flex
 #if _DEBUG
 		if (IsNanOrInf(vec))
 		{
-			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero");
+			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero\n");
 			vec = VEC3_ZERO;
 		}
 #endif
@@ -966,7 +973,7 @@ namespace flex
 #if _DEBUG
 		if (IsNanOrInf(vec))
 		{
-			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero");
+			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
 			vec = VEC4_ZERO;
 		}
 #endif
@@ -1326,5 +1333,10 @@ namespace flex
 		}
 
 		return bResult;
+	}
+
+	const char* TrackStateToString(TrackState state)
+	{
+		return TrackStateStrs[(i32)state];
 	}
 } // namespace flex

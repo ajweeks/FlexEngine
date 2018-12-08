@@ -193,6 +193,19 @@ namespace flex
 
 		m_Controller->Update();
 
+		if (m_TrackRiding)
+		{
+			glm::vec3 trackForward = m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack);
+			real invTurnSpeed = m_TurnToFaceDownTrackInvSpeed;
+			if (m_TrackState == TrackState::FACING_BACKWARD)
+			{
+				trackForward = -trackForward;
+			}
+			glm::quat desiredRot = glm::quatLookAt(trackForward, m_Transform.GetUp());
+			glm::quat rot = glm::slerp(m_Transform.GetWorldRotation(), desiredRot, 1.0f - glm::clamp(g_DeltaTime * invTurnSpeed, 0.0f, 0.99f));
+			m_Transform.SetWorldRotation(rot, true);
+		}
+
 		SpriteQuadDrawInfo drawInfo = {};
 		drawInfo.anchor = AnchorPoint::CENTER;
 		drawInfo.bScreenSpace = true;
@@ -347,7 +360,7 @@ namespace flex
 			{
 				ImGui::Indent();
 				ImGui::Text("Dist along track: %.2f", GetDistAlongTrack());
-				ImGui::Text("Moving forward down track: %s", (m_bFacingForwardDownTrack ? "true" : "false"));
+				ImGui::Text("Track state: %s", (TrackStateToString(m_TrackState)));
 				ImGui::Unindent();
 			}
 
@@ -416,5 +429,59 @@ namespace flex
 		}
 
 		return point;
+	}
+
+	void Player::AttachToTrack(BezierCurveList* track, real distAlongTrack)
+	{
+		if (m_TrackRiding)
+		{
+			PrintWarn("Player::AttachToTrack called when already attached! Detaching...\n");
+			DetachFromTrack();
+		}
+
+		m_TrackRiding = track;
+		m_DistAlongTrack = distAlongTrack;
+
+		if (m_TrackRiding->IsVectorFacingDownTrack(m_DistAlongTrack, m_Transform.GetForward()))
+		{
+			m_TrackState = TrackState::FACING_FORWARD;
+		}
+		else
+		{
+			m_TrackState = TrackState::FACING_BACKWARD;
+		}
+
+		AudioManager::PlaySource(m_SoundTrackAttachID);
+	}
+
+	void Player::DetachFromTrack()
+	{
+		if (m_TrackRiding)
+		{
+			m_TrackRiding = nullptr;
+			m_DistAlongTrack = -1.0f;
+			AudioManager::PlaySource(m_SoundTrackDetachID);
+		}
+	}
+
+	bool Player::IsFacingDownTrack() const
+	{
+		return (m_TrackState == TrackState::FACING_FORWARD);
+	}
+
+	void Player::BeginTurnTransition()
+	{
+		if (m_TrackState == TrackState::FACING_FORWARD)
+		{
+			m_TrackState = TrackState::FACING_BACKWARD;
+		}
+		else if (m_TrackState == TrackState::FACING_BACKWARD)
+		{
+			m_TrackState = TrackState::FACING_FORWARD;
+		}
+		else
+		{
+			PrintWarn("Unhandled track state when starting turn transition: %d/n", (i32)m_TrackState);
+		}
 	}
 } // namespace flex

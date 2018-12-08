@@ -102,6 +102,12 @@ namespace flex
 		return globalT;
 	}
 
+	bool BezierCurveList::IsVectorFacingDownTrack(real distAlongTrack, const glm::vec3& vec)
+	{
+		real dotResult = glm::dot(GetCurveDirectionAt(distAlongTrack), vec);
+		return (dotResult <= 0.001f);
+	}
+
 	void BezierCurveList::DEBUG_GenerateRandomSeed()
 	{
 		m_DebugColourRandomSeed = (real)rand() / (real)RAND_MAX;

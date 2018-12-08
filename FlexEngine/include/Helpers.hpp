@@ -234,6 +234,7 @@ namespace flex
 		real* pixels;
 	};
 
+	// TODO: Move enums to their own header
 	enum class SamplingType
 	{
 		CONSTANT, // All samples are equally-weighted
@@ -246,6 +247,18 @@ namespace flex
 		NONE,
 		RIGHT
 	};
+
+	enum class TrackState
+	{
+		FACING_FORWARD,
+		FACING_BACKWARD,
+		// NOTE: Add all elements to TrackStateStrs in Helpers.cpp
+		NONE
+	};
+
+	extern const char* TrackStateStrs[((i32)TrackState::NONE) + 1];
+
+	const char* TrackStateToString(TrackState state);
 
 	template <class T>
 	struct RollingAverage

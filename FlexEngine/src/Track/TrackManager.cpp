@@ -214,7 +214,16 @@ namespace flex
 		{
 			// There is a junction in range
 			m_PreviewJunctionDir.junctionIndex = junctionIndex;
-			m_PreviewJunctionDir.dir = GetDirectionOnTrack(newTrack == nullptr ? track : newTrack, newDist == -1.0f ? distAlongTrack : newDist);
+			real dist = (newDist == -1.0f ? distAlongTrack : newDist);
+			if (newTrack)
+			{
+				m_PreviewJunctionDir.dir = newTrack->GetCurveDirectionAt(dist);
+			}
+			else
+			{
+				m_PreviewJunctionDir.dir = track->GetCurveDirectionAt(dist);
+			}
+
 			if (!bFacingForwardDownTrack && newTrack == nullptr)
 			{
 				m_PreviewJunctionDir.dir = -m_PreviewJunctionDir.dir;
@@ -245,11 +254,6 @@ namespace flex
 		}
 
 		return bFoundPointInRange;
-	}
-
-	glm::vec3 TrackManager::GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack)
-	{
-		return track->GetCurveDirectionAt(distAlongTrack);
 	}
 
 	// TODO: Remove final param in place of junc.pos?

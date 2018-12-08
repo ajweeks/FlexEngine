@@ -1,8 +1,15 @@
 #pragma once
 
+// Configuration
 #define COMPILE_OPEN_GL 1
 #define COMPILE_VULKAN 0
 #define COMPILE_IMGUI 1
+
+#ifdef _DEBUG
+#define THOROUGH_CHECKS 1
+#else
+#define THOROUGH_CHECKS 0
+#endif
 
 #define ENABLE_PROFILING 1
 
@@ -80,7 +87,7 @@ inline void SafeDelete(T &pObjectToDelete)
 #define TWO_PI (glm::two_pi<real>())
 #define PI_DIV_TWO (glm::half_pi<real>())
 #define PI_DIV_FOUR (glm::quarter_pi<real>())
-#define THREE_OVER_TWO_PI (glm::three_over_two_pi<real>())
+#define THREE_PI_DIV_TWO (glm::three_over_two_pi<real>())
 #define EPSILON (glm::epsilon<real>())
 
 #if ENABLE_PROFILING
@@ -95,7 +102,7 @@ inline void SafeDelete(T &pObjectToDelete)
 
 #define ENSURE_NO_ENTRY PrintError("Execution entered no entry path!\n"); assert(false);
 #ifdef _DEBUG
-#define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Function: %s, Line: %d\n", __FILE__, __LINE__); assert(false); }
+#define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Line: %d\n", __FILE__, __LINE__); assert(false); }
 #else
 #define ENSURE(condition)
 #endif

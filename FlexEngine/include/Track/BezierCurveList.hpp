@@ -26,6 +26,8 @@ namespace flex
 		void GetCurveIndexAndLocalTFromGlobalT(real globalT, i32& outCurveIndex, real& outLocalT) const;
 		real GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const;
 
+		bool IsVectorFacingDownTrack(real distAlongTrack, const glm::vec3& vec);
+
 		std::vector<BezierCurve> curves;
 
 	private:

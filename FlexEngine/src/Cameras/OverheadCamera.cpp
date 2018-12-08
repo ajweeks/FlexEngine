@@ -80,6 +80,10 @@ namespace flex
 		m_PlayerPosRollingAvg.AddValue(m_Player0->GetTransform()->GetWorldPosition());
 		m_TargetLookAtPos = m_PlayerPosRollingAvg.currentAverage;
 
+#if THOROUGH_CHECKS
+		ENSURE(!IsNanOrInf(m_TargetLookAtPos));
+#endif
+
 		SetLookAt();
 
 		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
@@ -120,6 +124,7 @@ namespace flex
 		}
 
 		m_TargetLookAtPos = m_Player0->GetTransform()->GetWorldPosition();
+
 		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
 		m_Position = desiredPos;
 

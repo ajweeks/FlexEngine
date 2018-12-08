@@ -133,6 +133,10 @@ namespace flex
 		glm::vec3 targetForward = glm::normalize(point - m_Position);
 		m_Forward = glm::normalize(Lerp(m_Forward, targetForward, speed));
 
+#if THOROUGH_CHECKS
+		ENSURE(!IsNanOrInf(m_Forward));
+#endif
+
 		CalculateYawAndPitchFromForward();
 		RecalculateViewProjection();
 	}
@@ -203,6 +207,11 @@ namespace flex
 		m_Pitch = asin(m_Forward.y);
 		ClampPitch();
 		m_Yaw = atan2(m_Forward.z, m_Forward.x);
+
+#if THOROUGH_CHECKS
+		ENSURE(!IsNanOrInf(m_Pitch));
+		ENSURE(!IsNanOrInf(m_Yaw));
+#endif
 	}
 
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)

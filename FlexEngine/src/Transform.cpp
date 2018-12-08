@@ -41,8 +41,6 @@ namespace flex
 		up(0.0f, 1.0f, 0.0f),
 		right(1.0f, 0.0f, 0.0f)
 	{
-		std::string s(__func__);
-		Print("%s\n", s.c_str());
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :

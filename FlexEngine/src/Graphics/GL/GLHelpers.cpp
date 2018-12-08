@@ -1201,7 +1201,7 @@ namespace flex
 			return bComplete;
 		}
 
-} // namespace gl
+	} // namespace gl
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL

@@ -43,8 +43,6 @@ namespace flex
 
 		bool GetControlPointInRange(const glm::vec3& p, real range, glm::vec3* outPoint);
 
-		glm::vec3 GetDirectionOnTrack(BezierCurveList* track, real distAlongTrack);
-
 		// Compares curve end points on all BezierCurves and creates junctions when positions are
 		// within a threshold of each other
 		void FindJunctions();
