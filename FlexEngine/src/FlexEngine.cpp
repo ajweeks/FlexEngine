@@ -1854,6 +1854,21 @@ namespace flex
 
 				AudioManager::DrawImGuiObjects();
 
+				if (ImGui::RadioButton("Translate", GetTransformState() == TransformState::TRANSLATE))
+				{
+					SetTransformState(TransformState::TRANSLATE);
+				}
+				ImGui::SameLine();
+				if (ImGui::RadioButton("Rotate", GetTransformState() == TransformState::ROTATE))
+				{
+					SetTransformState(TransformState::ROTATE);
+				}
+				ImGui::SameLine();
+				if (ImGui::RadioButton("Scale", GetTransformState() == TransformState::SCALE))
+				{
+					SetTransformState(TransformState::SCALE);
+				}
+
 				g_Renderer->DrawImGuiRenderObjects();
 
 				ImGui::Spacing();
