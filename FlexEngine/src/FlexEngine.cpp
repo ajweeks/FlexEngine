@@ -1714,7 +1714,7 @@ namespace flex
 			{
 				if (ImGui::BeginMenu("Reload"))
 				{
-					if (ImGui::MenuItem("Scene"))
+					if (ImGui::MenuItem("Scene", "R"))
 					{
 						g_SceneManager->ReloadCurrentScene();
 					}
@@ -1725,7 +1725,7 @@ namespace flex
 						g_SceneManager->ReloadCurrentScene();
 					}
 
-					if (ImGui::MenuItem("Shaders"))
+					if (ImGui::MenuItem("Shaders", "Ctrl+R"))
 					{
 						g_Renderer->ReloadShaders();
 					}
@@ -1735,7 +1735,7 @@ namespace flex
 						g_Renderer->LoadFonts(true);
 					}
 
-					if (ImGui::MenuItem("Player positions"))
+					if (ImGui::MenuItem("Player position(s)"))
 					{
 						BaseScene* currentScene = g_SceneManager->CurrentScene();
 						if (currentScene->GetPlayer(0))
@@ -1746,6 +1746,11 @@ namespace flex
 						{
 							currentScene->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
 						}
+					}
+
+					if (ImGui::MenuItem("Skybox (randomize)"))
+					{
+						g_Renderer->ReloadSkybox(true);
 					}
 
 					ImGui::EndMenu();
@@ -2283,6 +2288,16 @@ namespace flex
 		return result;
 	}
 
+	void FlexEngine::UpdateGizmoVisibility()
+	{
+		if (m_TransformGizmo->IsVisible())
+		{
+			m_TranslationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::TRANSLATE);
+			m_RotationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::ROTATE);
+			m_ScaleGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::SCALE);
+		}
+	}
+
 	void FlexEngine::SetTransformState(TransformState state)
 	{
 		if (state != m_CurrentTransformGizmoState)
@@ -2293,14 +2308,9 @@ namespace flex
 		}
 	}
 
-	void FlexEngine::UpdateGizmoVisibility()
+	TransformState FlexEngine::GetTransformState() const
 	{
-		if (m_TransformGizmo->IsVisible())
-		{
-			m_TranslationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::TRANSLATE);
-			m_RotationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::ROTATE);
-			m_ScaleGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::SCALE);
-		}
+		return m_CurrentTransformGizmoState;
 	}
 
 	void FlexEngine::CalculateSelectedObjectsCenter()

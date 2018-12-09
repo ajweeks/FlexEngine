@@ -3,6 +3,7 @@
 #include <string>
 
 #include "Spring.hpp"
+#include "Helpers.hpp" // For TransformState
 
 namespace flex
 {
@@ -65,6 +66,9 @@ namespace flex
 
 		static AudioSourceID GetAudioSourceID(SoundEffect effect);
 
+		TransformState GetTransformState() const;
+		void SetTransformState(TransformState state);
+
 		bool bWantRenameActiveElement = false;
 
 	private:
@@ -74,13 +78,6 @@ namespace flex
 			GL,
 
 			_LAST_ELEMENT
-		};
-
-		enum class TransformState
-		{
-			TRANSLATE,
-			ROTATE,
-			SCALE
 		};
 
 		void Destroy();
@@ -113,7 +110,6 @@ namespace flex
 			const glm::quat& pRot);
 
 		void UpdateGizmoVisibility();
-		void SetTransformState(TransformState state);
 
 		u32 m_RendererCount = 0;
 		bool m_bRunning = false;

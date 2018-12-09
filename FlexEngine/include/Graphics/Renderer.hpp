@@ -47,6 +47,8 @@ namespace flex
 		virtual void ReloadShaders() = 0;
 		virtual void LoadFonts(bool bForceRender) = 0;
 
+		virtual void ReloadSkybox(bool bRandomizeTexture) = 0;
+
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
 		virtual void OnSceneChanged() = 0;

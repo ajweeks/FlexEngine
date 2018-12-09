@@ -419,6 +419,21 @@ namespace flex
 
 	void SceneManager::DrawImGuiObjects()
 	{
+		if (ImGui::RadioButton("Translate", g_EngineInstance->GetTransformState() == TransformState::TRANSLATE))
+		{
+			g_EngineInstance->SetTransformState(TransformState::TRANSLATE);
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("Rotate", g_EngineInstance->GetTransformState() == TransformState::ROTATE))
+		{
+			g_EngineInstance->SetTransformState(TransformState::ROTATE);
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("Scale", g_EngineInstance->GetTransformState() == TransformState::SCALE))
+		{
+			g_EngineInstance->SetTransformState(TransformState::SCALE);
+		}
+
 		static const char* scenesStr = "Scenes";
 		if (ImGui::TreeNode(scenesStr))
 		{

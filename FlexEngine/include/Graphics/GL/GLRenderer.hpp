@@ -48,6 +48,8 @@ namespace flex
 			virtual void ReloadShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;
 
+			virtual void ReloadSkybox(bool bRandomizeTexture) override;
+
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
 
@@ -135,6 +137,9 @@ namespace flex
 			bool DrawGameObjectNameAndChildren(GameObject* gameObject);
 
 			void PhysicsDebugRender();
+
+			void GenerateReflectionProbeMaps(RenderID cubemapRenderID, MaterialID materialID);
+			void GenerateIrradianceSamplerMaps(MaterialID materialID);
 
 
 			// TODO: Either use these functions or remove them
@@ -237,6 +242,9 @@ namespace flex
 
 			std::vector<GLShader> m_Shaders;
 			std::vector<GLTexture*> m_LoadedTextures;
+
+			// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
+			std::vector<std::string> m_AvailableHDRIs;
 
 			// Filled every frame
 			std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;

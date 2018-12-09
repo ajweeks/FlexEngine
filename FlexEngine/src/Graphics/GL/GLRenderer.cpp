@@ -110,6 +110,12 @@ namespace flex
 
 			LoadShaders();
 
+			std::string hdriPath = RESOURCE("textures/hdri/");
+			if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
+			{
+				PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
+			}
+
 			glEnable(GL_DEPTH_TEST);
 			glFrontFace(GL_CCW);
 			glLineWidth(5.0f);
@@ -1150,69 +1156,55 @@ namespace flex
 			return renderID;
 		}
 
+		void GLRenderer::GenerateReflectionProbeMaps(RenderID cubemapRenderID, MaterialID materialID)
+		{
+			// NOTE: glFlush calls help RenderDoc replay frames without crashing
+
+			CaptureSceneToCubemap(cubemapRenderID);
+			//glFlush();
+
+			GenerateIrradianceSamplerFromCubemap(materialID);
+			//glFlush();
+
+			GeneratePrefilteredMapFromCubemap(materialID);
+			//glFlush();
+		}
+
+		void GLRenderer::GenerateIrradianceSamplerMaps(MaterialID materialID)
+		{
+			// NOTE: glFlush calls help RenderDoc replay frames without crashing
+
+			const GLMaterial* material = &m_Materials[materialID];
+
+			GenerateCubemapFromHDREquirectangular(materialID, material->material.environmentMapPath);
+			//glFlush();
+
+			GenerateIrradianceSamplerFromCubemap(materialID);
+			//glFlush();
+
+			GeneratePrefilteredMapFromCubemap(materialID);
+			//glFlush();
+		}
+
 		void GLRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
-			GLRenderObject* renderObject = GetRenderObject(renderID);
-			GLMaterial& material = m_Materials[renderObject->materialID];
+			const GLRenderObject* renderObject = GetRenderObject(renderID);
+			const MaterialID materialID = renderObject->materialID;
+			const GLMaterial* material = &m_Materials[materialID];
 
-			m_bRebatchRenderObjects = true;
-
-			// glFlush calls help RenderDoc replay frames without crashing
-
-			if (material.material.generateReflectionProbeMaps)
+			if (material->material.generateReflectionProbeMaps)
 			{
 				BatchRenderObjects();
 
-				std::string profileBlockName = "capturing scene to cubemap " + renderObject->gameObject->GetName();
-				PROFILE_BEGIN(profileBlockName);
-				CaptureSceneToCubemap(renderID);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
-				//glFlush();
-
-				profileBlockName = "generating irradiance sampler for " + renderObject->gameObject->GetName();
-				PROFILE_BEGIN(profileBlockName);
-				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
-				//glFlush();
-
-				profileBlockName = "generating prefiltered map for " + renderObject->gameObject->GetName();
-				PROFILE_BEGIN(profileBlockName);
-				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
-				//glFlush();
-
+				GenerateReflectionProbeMaps(renderID, materialID);
 
 				// Display captured cubemap as skybox
 				//m_Materials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
 				//	m_Materials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
 			}
-			else if (material.material.generateIrradianceSampler)
+			else if (material->material.generateIrradianceSampler)
 			{
-				std::string profileBlockName = "generating cubemap for " + renderObject->gameObject->GetName();
-				PROFILE_BEGIN(profileBlockName);
-				GenerateCubemapFromHDREquirectangular(renderObject->materialID, material.material.environmentMapPath);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
-				//glFlush();
-
-
-				profileBlockName = "generating irradiance sampler for " + renderObject->gameObject->GetName();
-				PROFILE_BEGIN(profileBlockName);
-				GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
-				//glFlush();
-
-
-				profileBlockName = "generating prefiltered map for " + renderObject->gameObject->GetName();
-				PROFILE_BEGIN(profileBlockName);
-				GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
-				//glFlush();
+				GenerateIrradianceSamplerMaps(materialID);
 			}
 		}
 
@@ -1233,424 +1225,447 @@ namespace flex
 		}
 
 		void GLRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID,
-															   const std::string& environmentMapPath)
+			const std::string& environmentMapPath)
 		{
-			if (!m_SkyBoxMesh)
+			const std::string profileBlockName = "generating cubemap for material: " + m_Materials[cubemapMaterialID].material.name;
 			{
-				PrintError("Attempted to generate cubemap before skybox object was created!\n");
-				return;
-			}
+				PROFILE_AUTO(profileBlockName.c_str());
 
-			bool bRandomizeSkybox = true;
-
-			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
-			// TODO: Don't rely on material names!
-			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
-			{
-				std::string profileBlockName = "generating equirectangular mat";
-				PROFILE_BEGIN(profileBlockName);
-				MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
-				equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
-				equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
-				equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
-				equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
-				equirectangularToCubeMatCreateInfo.engineMaterial = true;
-				// TODO: Make cyclable at runtime
-				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
-
-				if (bRandomizeSkybox)
+				if (!m_SkyBoxMesh)
 				{
-					std::vector<std::string> availableHDRIs;
-					std::string hdriPath = RESOURCE("textures/hdri/");
-					if (FindFilesInDirectory(hdriPath, availableHDRIs, "hdr"))
-					{
-						i32 matIdx = RandomInt(0, (i32)availableHDRIs.size());
-						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = availableHDRIs[matIdx];
-					}
+					PrintError("Attempted to generate cubemap before skybox object was created!\n");
+					return;
 				}
 
-				equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo, equirectangularToCubeMatID);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
+				bool bRandomizeSkybox = !m_AvailableHDRIs.empty();
+
+				MaterialID equirectangularToCubeMatID = InvalidMaterialID;
+				// TODO: Don't rely on material names!
+				if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
+				{
+					std::string profileBlockName = "generating equirectangular mat";
+					PROFILE_BEGIN(profileBlockName);
+					MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
+					equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
+					equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
+					equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
+					equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
+					equirectangularToCubeMatCreateInfo.engineMaterial = true;
+					// TODO: Make cyclable at runtime
+					equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
+
+					if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
+					{
+						i32 matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
+						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = m_AvailableHDRIs[matIdx];
+					}
+
+					equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo, equirectangularToCubeMatID);
+					PROFILE_END(profileBlockName);
+					Profiler::PrintBlockDuration(profileBlockName);
+				}
+
+				GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
+				GLShader& equirectangularToCubemapShader = m_Shaders[equirectangularToCubemapMaterial.material.shaderID];
+
+				// TODO: Handle no skybox being set gracefully
+				GLRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
+				GLMaterial& skyboxGLMaterial = m_Materials[skyboxRenderObject->materialID];
+
+				glUseProgram(equirectangularToCubemapShader.program);
+
+				// TODO: Store what location this texture is at (might not be 0)
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
+
+				// Update object's uniforms under this shader's program
+				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, GL_FALSE,
+					&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
+
+				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, GL_FALSE,
+					&m_CaptureProjection[0][0]);
+
+				glm::vec2 cubemapSize = skyboxGLMaterial.material.cubemapSamplerSize;
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+				glBindVertexArray(skyboxRenderObject->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
+
+				if (skyboxRenderObject->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
+					glCullFace(skyboxRenderObject->cullFace);
+				}
+				else
+				{
+					glDisable(GL_CULL_FACE);
+				}
+
+				glDepthFunc(skyboxRenderObject->depthTestReadFunc);
+
+				for (u32 i = 0; i < 6; ++i)
+				{
+					glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, GL_FALSE,
+						&m_CaptureViews[i][0][0]);
+
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
+
+					glDepthMask(GL_TRUE);
+
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+					glDepthMask(skyboxRenderObject->depthWriteEnable);
+
+					glDrawArrays(skyboxRenderObject->topology, 0,
+						(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
+				}
+
+				// Generate mip maps for generated cubemap
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
+				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 			}
-
-			GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
-			GLShader& equirectangularToCubemapShader = m_Shaders[equirectangularToCubemapMaterial.material.shaderID];
-
-			// TODO: Handle no skybox being set gracefully
-			GLRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
-			GLMaterial& skyboxGLMaterial = m_Materials[skyboxRenderObject->materialID];
-
-			glUseProgram(equirectangularToCubemapShader.program);
-
-			// TODO: Store what location this texture is at (might not be 0)
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, m_Materials[equirectangularToCubeMatID].hdrTextureID);
-
-			// Update object's uniforms under this shader's program
-			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.model, 1, GL_FALSE,
-							   &m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-
-			glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.projection, 1, GL_FALSE,
-				&m_CaptureProjection[0][0]);
-
-			glm::vec2 cubemapSize = skyboxGLMaterial.material.cubemapSamplerSize;
-
-			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-			glBindVertexArray(skyboxRenderObject->VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
-
-			if (skyboxRenderObject->enableCulling)
-			{
-				glEnable(GL_CULL_FACE);
-				glCullFace(skyboxRenderObject->cullFace);
-			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
-
-			glDepthFunc(skyboxRenderObject->depthTestReadFunc);
-
-			for (u32 i = 0; i < 6; ++i)
-			{
-				glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, GL_FALSE,
-					&m_CaptureViews[i][0][0]);
-
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
-
-				glDepthMask(GL_TRUE);
-
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-				glDepthMask(skyboxRenderObject->depthWriteEnable);
-
-				glDrawArrays(skyboxRenderObject->topology, 0,
-					(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
-			}
-
-			// Generate mip maps for generated cubemap
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
-			glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+			Profiler::PrintBlockDuration(profileBlockName);
 		}
 
 		void GLRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
-			if (!m_SkyBoxMesh)
+			const std::string profileBlockName = "generating prefiltered map for material: " + m_Materials[cubemapMaterialID].material.name;
 			{
-				PrintError("Attempted to generate prefiltered map before skybox object was created!\n");
-				return;
-			}
+				PROFILE_AUTO(profileBlockName.c_str());
 
-			MaterialID prefilterMatID = InvalidMaterialID;
-			// TODO: Don't rely on material names!
-			if (!GetMaterialID("Prefilter", prefilterMatID))
-			{
-				MaterialCreateInfo prefilterMaterialCreateInfo = {};
-				prefilterMaterialCreateInfo.name = "Prefilter";
-				prefilterMaterialCreateInfo.shaderName = "prefilter";
-				prefilterMaterialCreateInfo.engineMaterial = true;
-				prefilterMatID = InitializeMaterial(&prefilterMaterialCreateInfo);
-			}
-
-			GLMaterial& prefilterMat = m_Materials[prefilterMatID];
-			GLShader& prefilterShader = m_Shaders[prefilterMat.material.shaderID];
-
-			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
-
-			glUseProgram(prefilterShader.program);
-
-			glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, GL_FALSE,
-				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-
-			glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
-
-			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-
-			glBindVertexArray(skybox->VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-
-			if (skybox->enableCulling)
-			{
-				glEnable(GL_CULL_FACE);
-				glCullFace(skybox->cullFace);
-			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
-
-			glDepthFunc(skybox->depthTestReadFunc);
-			glDepthMask(skybox->depthWriteEnable);
-
-			u32 maxMipLevels = 5;
-			for (u32 mip = 0; mip < maxMipLevels; ++mip)
-			{
-				u32 mipWidth = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.x * pow(0.5f, mip));
-				u32 mipHeight = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.y * pow(0.5f, mip));
-				assert(mipWidth <= Renderer::MAX_TEXTURE_DIM);
-				assert(mipHeight <= Renderer::MAX_TEXTURE_DIM);
-
-				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, mipWidth, mipHeight);
-
-				glViewport(0, 0, mipWidth, mipHeight);
-
-				real roughness = (real)mip / (real(maxMipLevels - 1));
-				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
-				glUniform1f(roughnessUniformLocation, roughness);
-				for (u32 i = 0; i < 6; ++i)
+				if (!m_SkyBoxMesh)
 				{
-					glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[i][0][0]);
-
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].prefilteredMapSamplerID, mip);
-
-					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
+					PrintError("Attempted to generate prefiltered map before skybox object was created!\n");
+					return;
 				}
-			}
 
-			// TODO: Make this a togglable bool param for the shader (or roughness param)
-			// Visualize prefiltered map as skybox:
-			//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
+				MaterialID prefilterMatID = InvalidMaterialID;
+				// TODO: Don't rely on material names!
+				if (!GetMaterialID("Prefilter", prefilterMatID))
+				{
+					MaterialCreateInfo prefilterMaterialCreateInfo = {};
+					prefilterMaterialCreateInfo.name = "Prefilter";
+					prefilterMaterialCreateInfo.shaderName = "prefilter";
+					prefilterMaterialCreateInfo.engineMaterial = true;
+					prefilterMatID = InitializeMaterial(&prefilterMaterialCreateInfo);
+				}
+
+				GLMaterial& prefilterMat = m_Materials[prefilterMatID];
+				GLShader& prefilterShader = m_Shaders[prefilterMat.material.shaderID];
+
+				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
+
+				glUseProgram(prefilterShader.program);
+
+				glUniformMatrix4fv(prefilterMat.uniformIDs.model, 1, GL_FALSE,
+					&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
+
+				glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
+
+				glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+
+				glBindVertexArray(skybox->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
+
+				if (skybox->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
+					glCullFace(skybox->cullFace);
+				}
+				else
+				{
+					glDisable(GL_CULL_FACE);
+				}
+
+				glDepthFunc(skybox->depthTestReadFunc);
+				glDepthMask(skybox->depthWriteEnable);
+
+				u32 maxMipLevels = 5;
+				for (u32 mip = 0; mip < maxMipLevels; ++mip)
+				{
+					u32 mipWidth = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.x * pow(0.5f, mip));
+					u32 mipHeight = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.y * pow(0.5f, mip));
+					assert(mipWidth <= Renderer::MAX_TEXTURE_DIM);
+					assert(mipHeight <= Renderer::MAX_TEXTURE_DIM);
+
+					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, mipWidth, mipHeight);
+
+					glViewport(0, 0, mipWidth, mipHeight);
+
+					real roughness = (real)mip / (real(maxMipLevels - 1));
+					i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
+					glUniform1f(roughnessUniformLocation, roughness);
+					for (u32 i = 0; i < 6; ++i)
+					{
+						glUniformMatrix4fv(prefilterMat.uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[i][0][0]);
+
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+							GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].prefilteredMapSamplerID, mip);
+
+						glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
+					}
+				}
+
+				// TODO: Make this a togglable bool param for the shader (or roughness param)
+				// Visualize prefiltered map as skybox:
+				//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
+			}
+			Profiler::PrintBlockDuration(profileBlockName);
 		}
 
 		void GLRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, i32 brdfLUTSize)
 		{
-			if (m_1x1_NDC_Quad)
+			const std::string profileBlockName = "generating BRDF LUT (" + std::to_string(brdfLUTSize) + "x" + std::to_string(brdfLUTSize) + ")";
 			{
-				// Don't re-create material or object
-				return;
-			}
+				PROFILE_AUTO(profileBlockName.c_str());
 
-			MaterialCreateInfo brdfMaterialCreateInfo = {};
-			brdfMaterialCreateInfo.name = "BRDF";
-			brdfMaterialCreateInfo.shaderName = "brdf";
-			brdfMaterialCreateInfo.engineMaterial = true;
-			MaterialID brdfMatID = InitializeMaterial(&brdfMaterialCreateInfo);
-
-			// Generate 1x1 NDC quad
-			{
-				VertexBufferData::CreateInfo quadVertexBufferDataCreateInfo = {};
-				quadVertexBufferDataCreateInfo.positions_3D = {
-					{ -1.0f,  1.0f, 0.0f },
-					{ -1.0f, -1.0f, 0.0f },
-					{ 1.0f,  1.0f, 0.0f },
-					{ 1.0f, -1.0f, 0.0f },
-				};
-				quadVertexBufferDataCreateInfo.texCoords_UV = {
-					{ 0.0f, 1.0f },
-					{ 0.0f, 0.0f },
-					{ 1.0f, 1.0f },
-					{ 1.0f, 0.0f },
-				};
-				quadVertexBufferDataCreateInfo.attributes =
-					(u32)VertexAttribute::POSITION |
-					(u32)VertexAttribute::UV;
-
-				m_1x1_NDC_QuadVertexBufferData = {};
-				m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
-
-				m_1x1_NDC_QuadTransform = Transform::Identity();
-
-
-				GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::NONE);
-				m_PersistentObjects.push_back(oneByOneQuadGameObject);
-				// Don't render this normally, we'll draw it manually
-				oneByOneQuadGameObject->SetVisible(false);
-
-				RenderObjectCreateInfo quadCreateInfo = {};
-				quadCreateInfo.materialID = brdfMatID;
-				quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
-				quadCreateInfo.gameObject = oneByOneQuadGameObject;
-				quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				quadCreateInfo.depthWriteEnable = false;
-				quadCreateInfo.visibleInSceneExplorer = false;
-
-				RenderID quadRenderID = InitializeRenderObject(&quadCreateInfo);
-				m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
-
-				if (!m_1x1_NDC_Quad)
+				if (m_1x1_NDC_Quad)
 				{
-					PrintError("Failed to create 1x1 NDC quad!\n");
+					// Don't re-create material or object
+					return;
+				}
+
+				MaterialCreateInfo brdfMaterialCreateInfo = {};
+				brdfMaterialCreateInfo.name = "BRDF";
+				brdfMaterialCreateInfo.shaderName = "brdf";
+				brdfMaterialCreateInfo.engineMaterial = true;
+				MaterialID brdfMatID = InitializeMaterial(&brdfMaterialCreateInfo);
+
+				// Generate 1x1 NDC quad
+				{
+					VertexBufferData::CreateInfo quadVertexBufferDataCreateInfo = {};
+					quadVertexBufferDataCreateInfo.positions_3D = {
+						{ -1.0f,  1.0f, 0.0f },
+						{ -1.0f, -1.0f, 0.0f },
+						{ 1.0f,  1.0f, 0.0f },
+						{ 1.0f, -1.0f, 0.0f },
+					};
+					quadVertexBufferDataCreateInfo.texCoords_UV = {
+						{ 0.0f, 1.0f },
+						{ 0.0f, 0.0f },
+						{ 1.0f, 1.0f },
+						{ 1.0f, 0.0f },
+					};
+					quadVertexBufferDataCreateInfo.attributes =
+						(u32)VertexAttribute::POSITION |
+						(u32)VertexAttribute::UV;
+
+					m_1x1_NDC_QuadVertexBufferData = {};
+					m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
+
+					m_1x1_NDC_QuadTransform = Transform::Identity();
+
+
+					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::NONE);
+					m_PersistentObjects.push_back(oneByOneQuadGameObject);
+					// Don't render this normally, we'll draw it manually
+					oneByOneQuadGameObject->SetVisible(false);
+
+					RenderObjectCreateInfo quadCreateInfo = {};
+					quadCreateInfo.materialID = brdfMatID;
+					quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
+					quadCreateInfo.gameObject = oneByOneQuadGameObject;
+					quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+					quadCreateInfo.depthWriteEnable = false;
+					quadCreateInfo.visibleInSceneExplorer = false;
+
+					RenderID quadRenderID = InitializeRenderObject(&quadCreateInfo);
+					m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
+
+					if (!m_1x1_NDC_Quad)
+					{
+						PrintError("Failed to create 1x1 NDC quad!\n");
+					}
+					else
+					{
+						SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
+						m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(g_Renderer, quadRenderID);
+					}
+				}
+
+				glUseProgram(m_Shaders[m_Materials[brdfMatID].material.shaderID].program);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTextureID, 0);
+
+				glBindVertexArray(m_1x1_NDC_Quad->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
+
+				glViewport(0, 0, brdfLUTSize, brdfLUTSize);
+
+				if (m_1x1_NDC_Quad->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
+					glCullFace(m_1x1_NDC_Quad->cullFace);
 				}
 				else
 				{
-					SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-					m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(g_Renderer, quadRenderID);
+					glDisable(GL_CULL_FACE);
 				}
+
+				glDepthFunc(GL_ALWAYS);
+
+				glDepthMask(GL_FALSE);
+
+				// Render quad
+				glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
 			}
-
-			glUseProgram(m_Shaders[m_Materials[brdfMatID].material.shaderID].program);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTextureID, 0);
-
-			glBindVertexArray(m_1x1_NDC_Quad->VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
-
-			glViewport(0, 0, brdfLUTSize, brdfLUTSize);
-
-			if (m_1x1_NDC_Quad->enableCulling)
-			{
-				glEnable(GL_CULL_FACE);
-				glCullFace(m_1x1_NDC_Quad->cullFace);
-			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
-
-			glDepthFunc(GL_ALWAYS);
-
-			glDepthMask(GL_FALSE);
-
-			// Render quad
-			glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
+			Profiler::PrintBlockDuration(profileBlockName);
 		}
 
 		void GLRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
 		{
-			if (!m_SkyBoxMesh)
+			const std::string profileBlockName = "generating irradiance sampler from cubemap";
 			{
-				PrintError("Attempted to generate irradiance sampler before skybox object was created!\n");
-				return;
+				PROFILE_AUTO(profileBlockName.c_str());
+
+				if (!m_SkyBoxMesh)
+				{
+					PrintError("Attempted to generate irradiance sampler before skybox object was created!\n");
+					return;
+				}
+
+				MaterialID irrandianceMatID = InvalidMaterialID;
+				// TODO: Don't rely on material names!
+				if (!GetMaterialID("Irradiance", irrandianceMatID))
+				{
+					std::string profileBlockName = "generating irradiance mat";
+					PROFILE_BEGIN(profileBlockName);
+					MaterialCreateInfo irrandianceMatCreateInfo = {};
+					irrandianceMatCreateInfo.name = "Irradiance";
+					irrandianceMatCreateInfo.shaderName = "irradiance";
+					irrandianceMatCreateInfo.enableCubemapSampler = true;
+					irrandianceMatCreateInfo.engineMaterial = true;
+					irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
+					PROFILE_END(profileBlockName);
+					Profiler::PrintBlockDuration(profileBlockName);
+				}
+
+				GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
+				GLShader& shader = m_Shaders[irradianceMat.material.shaderID];
+
+				GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
+
+				glUseProgram(shader.program);
+
+				glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, GL_FALSE,
+					&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
+
+				glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
+
+				glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
+
+				glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+				if (skybox->enableCulling)
+				{
+					glEnable(GL_CULL_FACE);
+					glCullFace(skybox->cullFace);
+				}
+				else
+				{
+					glDisable(GL_CULL_FACE);
+				}
+
+				glDepthFunc(skybox->depthTestReadFunc);
+
+				glDepthMask(skybox->depthWriteEnable);
+
+				glBindVertexArray(skybox->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
+
+				for (u32 i = 0; i < 6; ++i)
+				{
+					glUniformMatrix4fv(irradianceMat.uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[i][0][0]);
+
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].irradianceSamplerID, 0);
+
+					// Should be drawing cube here, not object (reflection probe's sphere is being drawn
+					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
+				}
 			}
-
-			MaterialID irrandianceMatID = InvalidMaterialID;
-			// TODO: Don't rely on material names!
-			if (!GetMaterialID("Irradiance", irrandianceMatID))
-			{
-				std::string profileBlockName = "generating irradiance mat";
-				PROFILE_BEGIN(profileBlockName);
-				MaterialCreateInfo irrandianceMatCreateInfo = {};
-				irrandianceMatCreateInfo.name = "Irradiance";
-				irrandianceMatCreateInfo.shaderName = "irradiance";
-				irrandianceMatCreateInfo.enableCubemapSampler = true;
-				irrandianceMatCreateInfo.engineMaterial = true;
-				irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
-				PROFILE_END(profileBlockName);
-				Profiler::PrintBlockDuration(profileBlockName);
-			}
-
-			GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
-			GLShader& shader = m_Shaders[irradianceMat.material.shaderID];
-
-			GLRenderObject* skybox = GetRenderObject(m_SkyBoxMesh->GetRenderID());
-
-			glUseProgram(shader.program);
-
-			glUniformMatrix4fv(irradianceMat.uniformIDs.model, 1, GL_FALSE,
-				&m_SkyBoxMesh->GetTransform()->GetWorldTransform()[0][0]);
-
-			glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
-
-			glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
-			glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
-
-			glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
-
-			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-			if (skybox->enableCulling)
-			{
-				glEnable(GL_CULL_FACE);
-				glCullFace(skybox->cullFace);
-			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
-
-			glDepthFunc(skybox->depthTestReadFunc);
-
-			glDepthMask(skybox->depthWriteEnable);
-
-			glBindVertexArray(skybox->VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
-
-			for (u32 i = 0; i < 6; ++i)
-			{
-				glUniformMatrix4fv(irradianceMat.uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[i][0][0]);
-
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].irradianceSamplerID, 0);
-
-				// Should be drawing cube here, not object (reflection probe's sphere is being drawn
-				glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
-			}
+			Profiler::PrintBlockDuration(profileBlockName);
 		}
 
 		void GLRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
-			PROFILE_AUTO("CaptureSceneToCubemap");
-
-			DrawCallInfo drawCallInfo = {};
-			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
-			drawCallInfo.bRenderToCubemap = true;
-
-			// Clear cubemap faces
-			GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
-			GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
-
-			glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
-
-			// Must be enabled to clear depth buffer
-			glDepthMask(GL_TRUE);
-			glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-			glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-			for (size_t face = 0; face < 6; ++face)
+			const char* profilerBlockName = "Capture scene to cubemap";
 			{
-				// Clear all G-Buffers
-				if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
-				{
-					// Skip first buffer, it'll be cleared below
-					for (size_t i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
-					{
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i,
-							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
+				PROFILE_AUTO(profilerBlockName);
 
-						glClear(GL_COLOR_BUFFER_BIT);
+				DrawCallInfo drawCallInfo = {};
+				drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
+				drawCallInfo.bRenderToCubemap = true;
+
+				// Clear cubemap faces
+				GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+				GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
+
+				glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+
+				// Must be enabled to clear depth buffer
+				glDepthMask(GL_TRUE);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+				for (size_t face = 0; face < 6; ++face)
+				{
+					// Clear all G-Buffers
+					if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
+					{
+						// Skip first buffer, it'll be cleared below
+						for (size_t i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
+						{
+							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i,
+								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
+
+							glClear(GL_COLOR_BUFFER_BIT);
+						}
 					}
+
+					// Clear base cubemap framebuffer + depth buffer
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+						GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
+
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				}
 
-				// Clear base cubemap framebuffer + depth buffer
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-					GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-									   GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
-
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				drawCallInfo.bDeferred = true;
+				DrawDeferredObjects(drawCallInfo);
+				drawCallInfo.bDeferred = false;
+				drawCallInfo.bWriteToDepth = false;
+				drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
+				DrawGBufferContents(drawCallInfo);
+				drawCallInfo.bWriteToDepth = true;
+				drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
+				DrawForwardObjects(drawCallInfo);
 			}
-
-			drawCallInfo.bDeferred = true;
-			DrawDeferredObjects(drawCallInfo);
-			drawCallInfo.bDeferred = false;
-			drawCallInfo.bWriteToDepth = false;
-			drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
-			DrawGBufferContents(drawCallInfo);
-			drawCallInfo.bWriteToDepth = true;
-			drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
-			DrawForwardObjects(drawCallInfo);
+			Profiler::PrintBlockDuration(profilerBlockName);
 		}
 
 		void GLRenderer::SwapBuffers()
@@ -1662,6 +1677,8 @@ namespace flex
 
 		void GLRenderer::RecaptureReflectionProbe()
 		{
+			const char* profilerBlockName = "Recapture reflection probe";
+			PROFILE_BEGIN(profilerBlockName);
 			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
@@ -1672,6 +1689,8 @@ namespace flex
 					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
 				}
 			}
+			PROFILE_END(profilerBlockName);
+			Profiler::PrintBlockDuration(profilerBlockName);
 
 			AddEditorString("Captured reflection probe");
 		}
@@ -4736,6 +4755,31 @@ namespace flex
 				StripFileType(fontName);
 
 				LoadFont(fonts[i], fontSizes[i], filePaths[i], renderedTextureFilePaths[i], bForceRender);
+			}
+		}
+
+		void GLRenderer::ReloadSkybox(bool bRandomizeTexture)
+		{
+			if (bRandomizeTexture && !m_AvailableHDRIs.empty())
+			{
+				bool bChanged = false;
+				for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+				{
+					if (m_Materials[i].material.generateIrradianceSampler)
+					{
+						GenerateIrradianceSamplerMaps((MaterialID)i);
+						GeneratePrefilteredMapFromCubemap((MaterialID)i);
+						bChanged = true;
+					}
+				}
+
+				if (bChanged)
+				{
+					for (GLRenderObject* renderObject : m_RenderObjects)
+					{
+
+					}
+				}
 			}
 		}
 

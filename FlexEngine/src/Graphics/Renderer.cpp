@@ -539,7 +539,7 @@ namespace flex
 					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
 				}
 
-				static const char* wireframeStr = "Wireframe";
+				static const char* wireframeStr = "Wireframe (P)";
 				ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
 
 				static const char* aabbStr = "AABB";

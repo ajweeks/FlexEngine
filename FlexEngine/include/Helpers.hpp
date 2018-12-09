@@ -251,6 +251,14 @@ namespace flex
 		RIGHT
 	};
 
+	enum class TransformState
+	{
+		TRANSLATE,
+		ROTATE,
+		SCALE,
+		NONE
+	};
+
 	enum class TrackState
 	{
 		FACING_FORWARD,
