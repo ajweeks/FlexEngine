@@ -63,8 +63,8 @@ namespace flex
 	{
 		GLRenderer::GLRenderer()
 		{
-			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/default-renderer-settings.ini"));
-			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/renderer-settings.ini"));
+			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(RESOURCE("config/default-renderer-settings.ini"));
+			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE("config/renderer-settings.ini"));
 
 			g_Renderer = this;
 		}
@@ -154,11 +154,11 @@ namespace flex
 				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION + "textures/alpha-bg.png", 3, false, false, false);
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION + "textures/loading_1.png", 3, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION + "textures/work_d.jpg", 3, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION + "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION + "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 3, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 3, false, true, false);
+			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			// Shadow map texture
 			{
@@ -223,6 +223,7 @@ namespace flex
 
 			{
 				const std::string gridMatName = "Grid";
+				// TODO: Don't rely on material names!
 				if (!g_Renderer->GetMaterialID(gridMatName, m_GridMaterialID))
 				{
 					MaterialCreateInfo gridMatInfo = {};
@@ -248,6 +249,7 @@ namespace flex
 
 			{
 				const std::string worldOriginMatName = "World origin";
+				// TODO: Don't rely on material names!
 				if (!g_Renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
 				{
 					MaterialCreateInfo worldAxisMatInfo = {};
@@ -569,10 +571,19 @@ namespace flex
 			glfwTerminate();
 		}
 
-		MaterialID GLRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo)
+		MaterialID GLRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace /* = InvalidMaterialID */)
 		{
-			MaterialID matID = GetNextAvailableMaterialID();
-			m_Materials.insert(std::pair<MaterialID, GLMaterial>(matID, {}));
+			MaterialID matID;
+			if (matToReplace != InvalidMaterialID)
+			{
+				// TODO: Do any material destruction work here
+				matID = matToReplace;
+			}
+			else
+			{
+				matID = GetNextAvailableMaterialID();
+				m_Materials.insert(std::pair<MaterialID, GLMaterial>(matID, {}));
+			}
 			GLMaterial& mat = m_Materials.at(matID);
 			mat.material = {};
 			mat.material.name = createInfo->name;
@@ -1230,8 +1241,11 @@ namespace flex
 				return;
 			}
 
+			bool bRandomizeSkybox = true;
+
 			MaterialID equirectangularToCubeMatID = InvalidMaterialID;
-			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID))
+			// TODO: Don't rely on material names!
+			if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
 			{
 				std::string profileBlockName = "generating equirectangular mat";
 				PROFILE_BEGIN(profileBlockName);
@@ -1243,7 +1257,19 @@ namespace flex
 				equirectangularToCubeMatCreateInfo.engineMaterial = true;
 				// TODO: Make cyclable at runtime
 				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
-				equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
+
+				if (bRandomizeSkybox)
+				{
+					std::vector<std::string> availableHDRIs;
+					std::string hdriPath = RESOURCE("textures/hdri/");
+					if (FindFilesInDirectory(hdriPath, availableHDRIs, "hdr"))
+					{
+						i32 matIdx = RandomInt(0, (i32)availableHDRIs.size());
+						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = availableHDRIs[matIdx];
+					}
+				}
+
+				equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo, equirectangularToCubeMatID);
 				PROFILE_END(profileBlockName);
 				Profiler::PrintBlockDuration(profileBlockName);
 			}
@@ -1323,6 +1349,7 @@ namespace flex
 			}
 
 			MaterialID prefilterMatID = InvalidMaterialID;
+			// TODO: Don't rely on material names!
 			if (!GetMaterialID("Prefilter", prefilterMatID))
 			{
 				MaterialCreateInfo prefilterMaterialCreateInfo = {};
@@ -1502,6 +1529,7 @@ namespace flex
 			}
 
 			MaterialID irrandianceMatID = InvalidMaterialID;
+			// TODO: Don't rely on material names!
 			if (!GetMaterialID("Irradiance", irrandianceMatID))
 			{
 				std::string profileBlockName = "generating irradiance mat";
@@ -2041,7 +2069,8 @@ namespace flex
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 				std::string dateTimeStr = GetDateString_YMDHMS();
-				std::string relativeFilePath = ROOT_LOCATION + "screenshots/" + dateTimeStr + ".png";
+				std::string relativeFilePath = ROOT_LOCATION "screenshots/";
+				relativeFilePath += dateTimeStr + ".png";
 				const std::string absoluteFilePath = RelativePathToAbsolute(relativeFilePath);
 				StartAsyncTextureSaveToFile(absoluteFilePath, ImageFormat::PNG, handle.id, frameBufferSize.x, frameBufferSize.y, 3, true, &screenshotAsyncTextureSave);
 
@@ -4105,7 +4134,7 @@ namespace flex
 						MaterialID matID = 0;
 
 						newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
+						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
 
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
@@ -4310,22 +4339,22 @@ namespace flex
 		void GLRenderer::LoadShaders()
 		{
 			m_Shaders = {
-				{ "deferred_combine", RESOURCE_LOCATION + "shaders/deferred_combine.vert", RESOURCE_LOCATION + "shaders/deferred_combine.frag" },
-				{ "deferred_combine_cubemap", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.vert", RESOURCE_LOCATION + "shaders/deferred_combine_cubemap.frag" },
-				{ "color", RESOURCE_LOCATION + "shaders/color.vert", RESOURCE_LOCATION + "shaders/color.frag" },
-				{ "pbr", RESOURCE_LOCATION + "shaders/pbr.vert", RESOURCE_LOCATION + "shaders/pbr.frag" },
-				{ "pbr-ws", RESOURCE_LOCATION + "shaders/pbr-ws.vert", RESOURCE_LOCATION + "shaders/pbr-ws.frag" },
-				{ "skybox", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/skybox.frag" },
-				{ "equirectangular_to_cube", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/equirectangular_to_cube.frag" },
-				{ "irradiance", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/irradiance.frag" },
-				{ "prefilter", RESOURCE_LOCATION + "shaders/skybox.vert", RESOURCE_LOCATION + "shaders/prefilter.frag" },
-				{ "brdf", RESOURCE_LOCATION + "shaders/brdf.vert", RESOURCE_LOCATION + "shaders/brdf.frag" },
-				{ "sprite", RESOURCE_LOCATION + "shaders/sprite.vert", RESOURCE_LOCATION + "shaders/sprite.frag" },
-				{ "post_process", RESOURCE_LOCATION + "shaders/post_process.vert", RESOURCE_LOCATION + "shaders/post_process.frag" },
-				{ "post_fxaa", RESOURCE_LOCATION + "shaders/post_fxaa.vert", RESOURCE_LOCATION + "shaders/post_fxaa.frag" },
-				{ "compute_sdf", RESOURCE_LOCATION + "shaders/ComputeSDF.vert", RESOURCE_LOCATION + "shaders/ComputeSDF.frag" },
-				{ "font", RESOURCE_LOCATION + "shaders/font.vert", RESOURCE_LOCATION + "shaders/font.frag",  RESOURCE_LOCATION + "shaders/font.geom" },
-				{ "shadow", RESOURCE_LOCATION + "shaders/shadow.vert", RESOURCE_LOCATION + "shaders/shadow.frag" },
+				{ "deferred_combine", RESOURCE_LOCATION  "shaders/deferred_combine.vert", RESOURCE_LOCATION  "shaders/deferred_combine.frag" },
+				{ "deferred_combine_cubemap", RESOURCE_LOCATION  "shaders/deferred_combine_cubemap.vert", RESOURCE_LOCATION  "shaders/deferred_combine_cubemap.frag" },
+				{ "color", RESOURCE_LOCATION  "shaders/color.vert", RESOURCE_LOCATION  "shaders/color.frag" },
+				{ "pbr", RESOURCE_LOCATION  "shaders/pbr.vert", RESOURCE_LOCATION  "shaders/pbr.frag" },
+				{ "pbr-ws", RESOURCE_LOCATION  "shaders/pbr-ws.vert", RESOURCE_LOCATION  "shaders/pbr-ws.frag" },
+				{ "skybox", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/skybox.frag" },
+				{ "equirectangular_to_cube", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/equirectangular_to_cube.frag" },
+				{ "irradiance", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/irradiance.frag" },
+				{ "prefilter", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/prefilter.frag" },
+				{ "brdf", RESOURCE_LOCATION  "shaders/brdf.vert", RESOURCE_LOCATION  "shaders/brdf.frag" },
+				{ "sprite", RESOURCE_LOCATION  "shaders/sprite.vert", RESOURCE_LOCATION  "shaders/sprite.frag" },
+				{ "post_process", RESOURCE_LOCATION  "shaders/post_process.vert", RESOURCE_LOCATION  "shaders/post_process.frag" },
+				{ "post_fxaa", RESOURCE_LOCATION  "shaders/post_fxaa.vert", RESOURCE_LOCATION  "shaders/post_fxaa.frag" },
+				{ "compute_sdf", RESOURCE_LOCATION  "shaders/ComputeSDF.vert", RESOURCE_LOCATION  "shaders/ComputeSDF.frag" },
+				{ "font", RESOURCE_LOCATION  "shaders/font.vert", RESOURCE_LOCATION  "shaders/font.frag",  RESOURCE_LOCATION  "shaders/font.geom" },
+				{ "shadow", RESOURCE_LOCATION  "shaders/shadow.vert", RESOURCE_LOCATION  "shaders/shadow.frag" },
 			};
 
 			ShaderID shaderID = 0;
@@ -4663,15 +4692,15 @@ namespace flex
 
 			// TODO: Save these strings in a config file?
 			std::string filePaths[] = {
-				RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular.ttf",
-				RESOURCE_LOCATION + "fonts/gant.ttf",
-				RESOURCE_LOCATION + "fonts/SourceCodePro-regular.ttf"
+				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
+				RESOURCE_LOCATION  "fonts/gant.ttf",
+				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf"
 			};
 
 			std::string renderedTextureFilePaths[] = {
-				RESOURCE_LOCATION + "fonts/UbuntuCondensed-Regular-24.png",
-				RESOURCE_LOCATION + "fonts/gant-regular-10.png",
-				RESOURCE_LOCATION + "fonts/SourceCodePro-regular-14.png"
+				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24.png",
+				RESOURCE_LOCATION  "fonts/gant-regular-10.png",
+				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14.png"
 			};
 
 			i16 fontSizes[] = {
@@ -5182,6 +5211,7 @@ namespace flex
 			// Remove existing material if present (this be true when reloading the scene)
 			{
 				MaterialID existingGBufferMatID = InvalidMaterialID;
+				// TODO: Don't rely on material names!
 				if (GetMaterialID(gBufferMatName, existingGBufferMatID))
 				{
 					RemoveMaterial(existingGBufferMatID);
@@ -5968,7 +5998,7 @@ namespace flex
 					if (ImGui::Button("Import Texture"))
 					{
 						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION + "textures/";
+						std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
@@ -6118,7 +6148,7 @@ namespace flex
 					if (ImGui::Button("Import Mesh"))
 					{
 						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION + "meshes/";
+						std::string relativeDirPath = RESOURCE_LOCATION  "meshes/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
@@ -6526,10 +6556,11 @@ namespace flex
 				if (ImGui::Button("Add mesh component"))
 				{
 					MaterialID matID = InvalidMaterialID;
+					// TODO: Don't rely on material names!
 					g_Renderer->GetMaterialID("pbr chrome", matID);
 
 					MeshComponent* mesh = gameObject->SetMeshComponent(new MeshComponent(matID, gameObject));
-					mesh->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
+					mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
 				}
 			}
 

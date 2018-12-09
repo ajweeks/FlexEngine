@@ -62,8 +62,8 @@ namespace flex
 		// Use save file if exists, otherwise use default
 		const std::string savedShortPath = "scenes/saved/" + m_FileName;
 		const std::string defaultShortPath = "scenes/default/" + m_FileName;
-		const std::string savedPath = RESOURCE_LOCATION + savedShortPath;
-		const std::string defaultPath = RESOURCE_LOCATION + defaultShortPath;
+		const std::string savedPath = RESOURCE_STR(savedShortPath);
+		const std::string defaultPath = RESOURCE_STR(defaultShortPath);
 		m_bUsingSaveFile = FileExists(savedPath);
 
 		std::string shortFilePath;
@@ -173,7 +173,7 @@ namespace flex
 				//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
 				//skyboxMatCreateInfo.generatePrefilteredMap = true;
 				//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-				//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION + "textures/hdri/Milkyway/Milkyway_Light.hdr";
+				//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION  "textures/hdri/Milkyway/Milkyway_Light.hdr";
 				//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
 				//m_LoadedMaterials.push_back(skyboxMatID);
@@ -429,7 +429,7 @@ namespace flex
 	{
 		s_ParsedMeshes.clear();
 
-		std::string meshesFilePath = RESOURCE_LOCATION + "scenes/meshes.json";
+		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
 		if (FileExists(meshesFilePath))
 		{
 			std::string cleanedFilePath = meshesFilePath;
@@ -464,7 +464,7 @@ namespace flex
 	{
 		s_ParsedMaterials.clear();
 
-		std::string materialsFilePath = RESOURCE_LOCATION + "scenes/materials.json";
+		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
 		if (FileExists(materialsFilePath))
 		{
 			std::string cleanedFilePath = materialsFilePath;
@@ -500,7 +500,7 @@ namespace flex
 		s_ParsedPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
-		if (FindFilesInDirectory(RESOURCE_LOCATION + "scenes/prefabs/", foundFiles, ".json"))
+		if (FindFilesInDirectory(RESOURCE_LOCATION  "scenes/prefabs/", foundFiles, ".json"))
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
@@ -531,13 +531,13 @@ namespace flex
 
 	bool BaseScene::SerializeMeshFile()
 	{
-		std::string meshesFilePath = RESOURCE_LOCATION + "scenes/meshes.json";
+		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
 
 		JSONObject meshesObj = {};
 
 		meshesObj.fields.emplace_back("version", JSONValue(m_FileVersion));
 
-		static const std::string meshPrefix = RESOURCE_LOCATION + "meshes/";
+		static const std::string meshPrefix = RESOURCE_LOCATION  "meshes/";
 		// Overwrite all meshes in current scene in case any values were tweaked
 		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
 		for (GameObject* obj : allObjects)
@@ -589,7 +589,7 @@ namespace flex
 
 	bool BaseScene::SerializeMaterialFile()
 	{
-		std::string materialsFilePath = RESOURCE_LOCATION + "scenes/materials.json";
+		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
 
 		JSONObject materialsObj = {};
 
@@ -797,16 +797,18 @@ namespace flex
 
 		std::string fileContents = rootSceneObject.Print(0);
 
-		std::string defaultShortSaveFilePath = "scenes/default/" + m_FileName;
-		std::string savedShortSaveFilePath = "scenes/saved/" + m_FileName;
+		const std::string defaultSaveFilePathShort = "scenes/default/" + m_FileName;
+		const std::string savedSaveFilePathShort = "scenes/saved/" + m_FileName;
+		const std::string defaultSaveFilePath = RESOURCE_STR(defaultSaveFilePathShort);
+		const std::string savedSaveFilePath = RESOURCE_STR(savedSaveFilePathShort);
 		std::string shortSavedFileName;
 		if (bSaveOverDefault)
 		{
-			shortSavedFileName = defaultShortSaveFilePath;
+			shortSavedFileName = defaultSaveFilePathShort;
 		}
 		else
 		{
-			shortSavedFileName = savedShortSaveFilePath;
+			shortSavedFileName = savedSaveFilePathShort;
 		}
 		Print("Serializing scene to %s\n", shortSavedFileName.c_str());
 
@@ -814,14 +816,14 @@ namespace flex
 		{
 			m_bUsingSaveFile = false;
 
-			if (FileExists(RESOURCE_LOCATION + savedShortSaveFilePath))
+			if (FileExists(savedSaveFilePath))
 			{
-				DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
+				DeleteFile(savedSaveFilePath);
 			}
 		}
 
 
-		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
+		std::string savedFilePathName = RESOURCE_STR(shortSavedFileName);
 		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
 		success = WriteFile(savedFilePathName, fileContents, false);
 
@@ -847,11 +849,11 @@ namespace flex
 
 	void BaseScene::DeleteSaveFiles()
 	{
-		std::string defaultShortSaveFilePath = "scenes/default/" + m_FileName;
-		std::string savedShortSaveFilePath = "scenes/saved/" + m_FileName;
+		const std::string defaultSaveFilePath = RESOURCE("scenes/default/" + m_FileName);
+		const std::string savedSaveFilePath = RESOURCE("scenes/saved/" + m_FileName);
 
-		bool bDefaultFileExists = FileExists(RESOURCE_LOCATION + defaultShortSaveFilePath);
-		bool bSavedFileExists = FileExists(RESOURCE_LOCATION + savedShortSaveFilePath);
+		bool bDefaultFileExists = FileExists(defaultSaveFilePath);
+		bool bSavedFileExists = FileExists(savedSaveFilePath);
 
 		if (bSavedFileExists ||
 			bDefaultFileExists)
@@ -860,12 +862,12 @@ namespace flex
 
 			if (bDefaultFileExists)
 			{
-				DeleteFile(RESOURCE_LOCATION + defaultShortSaveFilePath);
+				DeleteFile(defaultSaveFilePath);
 			}
 
 			if (bSavedFileExists)
 			{
-				DeleteFile(RESOURCE_LOCATION + savedShortSaveFilePath);
+				DeleteFile(savedSaveFilePath);
 			}
 		}
 
@@ -1092,18 +1094,18 @@ namespace flex
 
 	std::string BaseScene::GetDefaultRelativeFilePath() const
 	{
-		return RESOURCE_LOCATION + "scenes/default/" + m_FileName;
+		return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
 	}
 
 	std::string BaseScene::GetRelativeFilePath() const
 	{
 		if (m_bUsingSaveFile)
 		{
-			return RESOURCE_LOCATION + "scenes/saved/" + m_FileName;
+			return RESOURCE_LOCATION  "scenes/saved/" + m_FileName;
 		}
 		else
 		{
-			return RESOURCE_LOCATION + "scenes/default/" + m_FileName;
+			return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
 		}
 	}
 

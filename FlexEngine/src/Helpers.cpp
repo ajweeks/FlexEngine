@@ -439,7 +439,7 @@ namespace flex
 			return false;
 		}
 
-		return true;
+		return !filePaths.empty();
 	}
 
 	void StripLeadingDirectories(std::string& filePath)
@@ -1246,6 +1246,13 @@ namespace flex
 		std::string absolutePath = workingDirectory + '\\' + strippedFilePath;
 
 		return absolutePath;
+	}
+
+	i32 RandomInt(i32 min, i32 max)
+	{
+		// TODO: CLEANUP: FIXME: Don't use rand, for the love of God
+		i32 value = rand() % (max - min) + min;
+		return value;
 	}
 
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation)

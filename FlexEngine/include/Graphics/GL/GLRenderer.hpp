@@ -28,7 +28,7 @@ namespace flex
 			virtual void PostInitialize() override;
 			virtual void Destroy() override;
 
-			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) override;
+			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
 			virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;

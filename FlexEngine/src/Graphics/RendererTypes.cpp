@@ -145,7 +145,7 @@ namespace flex
 		{
 			if (material.HasField(param.name))
 			{
-				*param.path = RESOURCE_LOCATION + "textures/" + material.GetString(param.name);
+				*param.path = RESOURCE_LOCATION  "textures/" + material.GetString(param.name);
 			}
 		}
 
@@ -263,7 +263,7 @@ namespace flex
 			materialObject.fields.emplace_back("generate normal sampler", JSONValue(generateNormalSampler));
 		}
 
-		static const std::string texturePrefixStr = RESOURCE_LOCATION + "textures/";
+		static const std::string texturePrefixStr = RESOURCE_LOCATION  "textures/";
 
 		if (shader.bNeedAlbedoSampler && !albedoTexturePath.empty())
 		{

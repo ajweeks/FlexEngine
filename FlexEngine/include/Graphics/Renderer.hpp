@@ -23,7 +23,7 @@ namespace flex
 		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
-		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) = 0;
+		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
 		virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()

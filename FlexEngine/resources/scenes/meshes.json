@@ -24,13 +24,6 @@
 			"flipV" : false
 		},
 		{
-			"file" : "ico-sphere.gltf",
-			"swapNormalYZ" : false,
-			"flipNormalZ" : false,
-			"flipU" : false,
-			"flipV" : false
-		},
-		{
 			"file" : "unit-plane.gltf",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
@@ -115,20 +108,6 @@
 			"flipV" : false
 		},
 		{
-			"file" : "sphere.FBX",
-			"swapNormalYZ" : false,
-			"flipNormalZ" : false,
-			"flipU" : false,
-			"flipV" : false
-		},
-		{
-			"file" : "iso-sphere.gltf",
-			"swapNormalYZ" : false,
-			"flipNormalZ" : false,
-			"flipU" : false,
-			"flipV" : false
-		},
-		{
 			"file" : "SunTemple.fbx",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
@@ -137,6 +116,13 @@
 		},
 		{
 			"file" : "map_tablet.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "sphere.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,

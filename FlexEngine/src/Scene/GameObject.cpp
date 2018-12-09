@@ -47,9 +47,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(RESOURCE_LOCATION + "audio/squeak00.wav", 5);
+			s_SqueakySounds.Initialize(RESOURCE_LOCATION  "audio/squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/bunk.wav");
+			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/bunk.wav");
 		}
 	}
 
@@ -1370,7 +1370,7 @@ namespace flex
 			if (!m_MeshComponent)
 			{
 				MeshComponent* valveMesh = new MeshComponent(matID, this);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/valve.gltf");
+				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.gltf");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
 			}
@@ -1532,7 +1532,7 @@ namespace flex
 		if (!m_MeshComponent)
 		{
 			MeshComponent* cubeMesh = new MeshComponent(matID, this);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/cube.gltf");
+			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
 			SetMeshComponent(cubeMesh);
 		}
 
@@ -1715,8 +1715,16 @@ namespace flex
 			if (!m_MeshComponent)
 			{
 				MeshComponent* windowMesh = new MeshComponent(matID, this);
-				windowMesh->LoadFromFile(RESOURCE_LOCATION +
-					(bBroken ? "meshes/glass-window-broken.gltf" : "meshes/glass-window-whole.gltf"));
+				const char* filePath;
+				if (bBroken)
+				{
+					filePath = RESOURCE("meshes/glass-window-broken.gltf");
+				}
+				else
+				{
+					filePath = RESOURCE("meshes/glass-window-whole.gltf");
+				}
+				windowMesh->LoadFromFile(filePath);
 				SetMeshComponent(windowMesh);
 			}
 		}
@@ -1781,7 +1789,7 @@ namespace flex
 		MeshComponent* sphereMesh = new MeshComponent(matID, this);
 
 		assert(m_MeshComponent == nullptr);
-		sphereMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/ico-sphere.gltf");
+		sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/ico-sphere.gltf");
 		SetMeshComponent(sphereMesh);
 
 		std::string captureName = m_Name + "_capture";

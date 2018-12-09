@@ -45,7 +45,7 @@
 					{
 						"pos" : "112.440, -145.740, -54.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -122,7 +122,7 @@
 					{
 						"pos" : "112.440, -151.740, -54.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -177,7 +177,7 @@
 					{
 						"pos" : "112.440, -151.740, -73.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -232,7 +232,7 @@
 					{
 						"pos" : "112.440, -144.910, -73.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -276,7 +276,7 @@
 					{
 						"pos" : "112.440, -144.910, -35.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -331,7 +331,7 @@
 					{
 						"pos" : "112.440, -151.740, -35.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -386,7 +386,7 @@
 					{
 						"pos" : "112.440, -151.740, -15.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -463,7 +463,7 @@
 					{
 						"pos" : "112.440, -145.740, -15.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -496,7 +496,7 @@
 					{
 						"pos" : "112.440, -131.910, -35.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -551,7 +551,7 @@
 					{
 						"pos" : "112.440, -138.740, -35.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -606,7 +606,7 @@
 					{
 						"pos" : "112.440, -138.740, -15.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -683,7 +683,7 @@
 					{
 						"pos" : "112.440, -132.740, -15.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -716,7 +716,7 @@
 					{
 						"pos" : "112.440, -131.910, -73.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -771,7 +771,7 @@
 					{
 						"pos" : "112.440, -138.740, -73.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -826,7 +826,7 @@
 					{
 						"pos" : "108.880, -128.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -903,7 +903,7 @@
 					{
 						"pos" : "108.880, -122.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -925,7 +925,7 @@
 					{
 						"pos" : "117.100, -135.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1002,7 +1002,7 @@
 					{
 						"pos" : "117.100, -141.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1057,7 +1057,7 @@
 					{
 						"pos" : "117.100, -141.920, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1112,7 +1112,7 @@
 					{
 						"pos" : "117.100, -135.090, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1156,7 +1156,7 @@
 					{
 						"pos" : "117.100, -135.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1211,7 +1211,7 @@
 					{
 						"pos" : "117.100, -141.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1266,7 +1266,7 @@
 					{
 						"pos" : "117.100, -141.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1332,7 +1332,7 @@
 					{
 						"pos" : "117.100, -135.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1376,7 +1376,7 @@
 					{
 						"pos" : "117.100, -122.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1431,7 +1431,7 @@
 					{
 						"pos" : "117.100, -128.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1486,7 +1486,7 @@
 					{
 						"pos" : "117.100, -128.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1563,7 +1563,7 @@
 					{
 						"pos" : "117.100, -122.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1596,7 +1596,7 @@
 					{
 						"pos" : "117.100, -122.090, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1640,7 +1640,7 @@
 					{
 						"pos" : "117.100, -128.920, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1706,7 +1706,7 @@
 					{
 						"pos" : "117.100, -128.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1783,7 +1783,7 @@
 					{
 						"pos" : "117.100, -122.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1805,7 +1805,7 @@
 					{
 						"pos" : "127.900, -135.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1882,7 +1882,7 @@
 					{
 						"pos" : "127.900, -141.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1937,7 +1937,7 @@
 					{
 						"pos" : "127.900, -141.920, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -1992,7 +1992,7 @@
 					{
 						"pos" : "127.900, -135.090, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2036,7 +2036,7 @@
 					{
 						"pos" : "127.900, -135.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2091,7 +2091,7 @@
 					{
 						"pos" : "127.900, -141.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2146,7 +2146,7 @@
 					{
 						"pos" : "127.900, -141.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2212,7 +2212,7 @@
 					{
 						"pos" : "127.900, -135.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2256,7 +2256,7 @@
 					{
 						"pos" : "127.900, -122.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2311,7 +2311,7 @@
 					{
 						"pos" : "127.900, -128.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2366,7 +2366,7 @@
 					{
 						"pos" : "127.900, -128.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2443,7 +2443,7 @@
 					{
 						"pos" : "127.900, -122.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2476,7 +2476,7 @@
 					{
 						"pos" : "127.900, -122.090, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2520,7 +2520,7 @@
 					{
 						"pos" : "127.900, -128.920, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2586,7 +2586,7 @@
 					{
 						"pos" : "127.900, -128.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2663,7 +2663,7 @@
 					{
 						"pos" : "127.900, -122.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2685,7 +2685,7 @@
 					{
 						"pos" : "136.940, -135.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2762,7 +2762,7 @@
 					{
 						"pos" : "136.940, -141.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2817,7 +2817,7 @@
 					{
 						"pos" : "136.940, -141.920, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2872,7 +2872,7 @@
 					{
 						"pos" : "136.940, -135.090, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2916,7 +2916,7 @@
 					{
 						"pos" : "136.940, -135.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -2971,7 +2971,7 @@
 					{
 						"pos" : "136.940, -141.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3026,7 +3026,7 @@
 					{
 						"pos" : "136.940, -141.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3092,7 +3092,7 @@
 					{
 						"pos" : "136.940, -135.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3136,7 +3136,7 @@
 					{
 						"pos" : "136.940, -122.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3191,7 +3191,7 @@
 					{
 						"pos" : "136.940, -128.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3246,7 +3246,7 @@
 					{
 						"pos" : "136.940, -128.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3323,7 +3323,7 @@
 					{
 						"pos" : "136.940, -122.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3356,7 +3356,7 @@
 					{
 						"pos" : "136.940, -122.090, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3400,7 +3400,7 @@
 					{
 						"pos" : "136.940, -128.920, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3466,7 +3466,7 @@
 					{
 						"pos" : "136.940, -128.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3543,7 +3543,7 @@
 					{
 						"pos" : "136.940, -122.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3565,7 +3565,7 @@
 					{
 						"pos" : "100.780, -135.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3642,7 +3642,7 @@
 					{
 						"pos" : "100.780, -141.920, -49.380"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3697,7 +3697,7 @@
 					{
 						"pos" : "100.780, -141.920, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3752,7 +3752,7 @@
 					{
 						"pos" : "100.780, -135.090, -68.830"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3796,7 +3796,7 @@
 					{
 						"pos" : "100.780, -135.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3851,7 +3851,7 @@
 					{
 						"pos" : "100.780, -141.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3906,7 +3906,7 @@
 					{
 						"pos" : "100.780, -141.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -3972,7 +3972,7 @@
 					{
 						"pos" : "100.780, -135.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4016,7 +4016,7 @@
 					{
 						"pos" : "100.780, -122.090, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4071,7 +4071,7 @@
 					{
 						"pos" : "100.780, -128.920, -30.340"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4126,7 +4126,7 @@
 					{
 						"pos" : "100.780, -128.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4203,7 +4203,7 @@
 					{
 						"pos" : "100.780, -122.920, -10.890"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4236,7 +4236,7 @@
 					{
 						"pos" : "100.780, -122.090, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4280,7 +4280,7 @@
 					{
 						"pos" : "100.780, -128.920, -68.520"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4346,7 +4346,7 @@
 					{
 						"pos" : "100.780, -128.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4423,7 +4423,7 @@
 					{
 						"pos" : "100.780, -122.920, -49.070"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4434,7 +4434,7 @@
 					{
 						"pos" : "112.440, -145.740, 27.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4445,7 +4445,7 @@
 					{
 						"pos" : "112.440, -145.740, 27.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4588,7 +4588,7 @@
 					{
 						"pos" : "112.440, -151.740, 27.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4599,7 +4599,7 @@
 					{
 						"pos" : "112.440, -151.740, 27.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4698,7 +4698,7 @@
 					{
 						"pos" : "112.440, -151.740, 7.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4709,7 +4709,7 @@
 					{
 						"pos" : "112.440, -151.740, 7.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4808,7 +4808,7 @@
 					{
 						"pos" : "112.440, -144.910, 7.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4819,7 +4819,7 @@
 					{
 						"pos" : "112.440, -144.910, 7.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4896,7 +4896,7 @@
 					{
 						"pos" : "112.440, -144.910, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -4907,7 +4907,7 @@
 					{
 						"pos" : "112.440, -144.910, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5006,7 +5006,7 @@
 					{
 						"pos" : "112.440, -151.740, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5017,7 +5017,7 @@
 					{
 						"pos" : "112.440, -151.740, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5116,7 +5116,7 @@
 					{
 						"pos" : "112.440, -151.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5127,7 +5127,7 @@
 					{
 						"pos" : "112.440, -151.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5270,7 +5270,7 @@
 					{
 						"pos" : "112.440, -145.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5281,7 +5281,7 @@
 					{
 						"pos" : "112.440, -145.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5336,7 +5336,7 @@
 					{
 						"pos" : "112.440, -131.910, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5347,7 +5347,7 @@
 					{
 						"pos" : "112.440, -131.910, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5446,7 +5446,7 @@
 					{
 						"pos" : "112.440, -138.740, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5457,7 +5457,7 @@
 					{
 						"pos" : "112.440, -138.740, 46.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5556,7 +5556,7 @@
 					{
 						"pos" : "112.440, -138.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5567,7 +5567,7 @@
 					{
 						"pos" : "112.440, -138.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5710,7 +5710,7 @@
 					{
 						"pos" : "112.440, -132.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5721,7 +5721,7 @@
 					{
 						"pos" : "112.440, -132.740, 65.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5776,7 +5776,7 @@
 					{
 						"pos" : "112.440, -131.910, 7.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5787,7 +5787,7 @@
 					{
 						"pos" : "112.440, -131.910, 7.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5886,7 +5886,7 @@
 					{
 						"pos" : "112.440, -138.740, 7.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5897,7 +5897,7 @@
 					{
 						"pos" : "112.440, -138.740, 7.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -5996,7 +5996,7 @@
 					{
 						"pos" : "108.880, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6007,7 +6007,7 @@
 					{
 						"pos" : "108.880, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6150,7 +6150,7 @@
 					{
 						"pos" : "108.880, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6161,7 +6161,7 @@
 					{
 						"pos" : "108.880, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6194,7 +6194,7 @@
 					{
 						"pos" : "117.100, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6205,7 +6205,7 @@
 					{
 						"pos" : "117.100, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6348,7 +6348,7 @@
 					{
 						"pos" : "117.100, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6359,7 +6359,7 @@
 					{
 						"pos" : "117.100, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6458,7 +6458,7 @@
 					{
 						"pos" : "117.100, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6469,7 +6469,7 @@
 					{
 						"pos" : "117.100, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6568,7 +6568,7 @@
 					{
 						"pos" : "117.100, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6579,7 +6579,7 @@
 					{
 						"pos" : "117.100, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6656,7 +6656,7 @@
 					{
 						"pos" : "117.100, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6667,7 +6667,7 @@
 					{
 						"pos" : "117.100, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6766,7 +6766,7 @@
 					{
 						"pos" : "117.100, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6777,7 +6777,7 @@
 					{
 						"pos" : "117.100, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6876,7 +6876,7 @@
 					{
 						"pos" : "117.100, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -6887,7 +6887,7 @@
 					{
 						"pos" : "117.100, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7008,7 +7008,7 @@
 					{
 						"pos" : "117.100, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7019,7 +7019,7 @@
 					{
 						"pos" : "117.100, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7096,7 +7096,7 @@
 					{
 						"pos" : "117.100, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7107,7 +7107,7 @@
 					{
 						"pos" : "117.100, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7206,7 +7206,7 @@
 					{
 						"pos" : "117.100, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7217,7 +7217,7 @@
 					{
 						"pos" : "117.100, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7316,7 +7316,7 @@
 					{
 						"pos" : "117.100, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7327,7 +7327,7 @@
 					{
 						"pos" : "117.100, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7470,7 +7470,7 @@
 					{
 						"pos" : "117.100, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7481,7 +7481,7 @@
 					{
 						"pos" : "117.100, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7536,7 +7536,7 @@
 					{
 						"pos" : "117.100, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7547,7 +7547,7 @@
 					{
 						"pos" : "117.100, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7624,7 +7624,7 @@
 					{
 						"pos" : "117.100, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7635,7 +7635,7 @@
 					{
 						"pos" : "117.100, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7756,7 +7756,7 @@
 					{
 						"pos" : "117.100, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7767,7 +7767,7 @@
 					{
 						"pos" : "117.100, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7910,7 +7910,7 @@
 					{
 						"pos" : "117.100, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7921,7 +7921,7 @@
 					{
 						"pos" : "117.100, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7954,7 +7954,7 @@
 					{
 						"pos" : "127.900, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -7965,7 +7965,7 @@
 					{
 						"pos" : "127.900, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8108,7 +8108,7 @@
 					{
 						"pos" : "127.900, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8119,7 +8119,7 @@
 					{
 						"pos" : "127.900, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8218,7 +8218,7 @@
 					{
 						"pos" : "127.900, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8229,7 +8229,7 @@
 					{
 						"pos" : "127.900, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8328,7 +8328,7 @@
 					{
 						"pos" : "127.900, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8339,7 +8339,7 @@
 					{
 						"pos" : "127.900, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8416,7 +8416,7 @@
 					{
 						"pos" : "127.900, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8427,7 +8427,7 @@
 					{
 						"pos" : "127.900, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8526,7 +8526,7 @@
 					{
 						"pos" : "127.900, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8537,7 +8537,7 @@
 					{
 						"pos" : "127.900, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8636,7 +8636,7 @@
 					{
 						"pos" : "127.900, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8647,7 +8647,7 @@
 					{
 						"pos" : "127.900, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8768,7 +8768,7 @@
 					{
 						"pos" : "127.900, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8779,7 +8779,7 @@
 					{
 						"pos" : "127.900, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8856,7 +8856,7 @@
 					{
 						"pos" : "127.900, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8867,7 +8867,7 @@
 					{
 						"pos" : "127.900, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8966,7 +8966,7 @@
 					{
 						"pos" : "127.900, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -8977,7 +8977,7 @@
 					{
 						"pos" : "127.900, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9076,7 +9076,7 @@
 					{
 						"pos" : "127.900, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9087,7 +9087,7 @@
 					{
 						"pos" : "127.900, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9230,7 +9230,7 @@
 					{
 						"pos" : "127.900, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9241,7 +9241,7 @@
 					{
 						"pos" : "127.900, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9296,7 +9296,7 @@
 					{
 						"pos" : "127.900, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9307,7 +9307,7 @@
 					{
 						"pos" : "127.900, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9384,7 +9384,7 @@
 					{
 						"pos" : "127.900, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9395,7 +9395,7 @@
 					{
 						"pos" : "127.900, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9516,7 +9516,7 @@
 					{
 						"pos" : "127.900, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9527,7 +9527,7 @@
 					{
 						"pos" : "127.900, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9670,7 +9670,7 @@
 					{
 						"pos" : "127.900, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9681,7 +9681,7 @@
 					{
 						"pos" : "127.900, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9714,7 +9714,7 @@
 					{
 						"pos" : "136.940, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9725,7 +9725,7 @@
 					{
 						"pos" : "136.940, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9868,7 +9868,7 @@
 					{
 						"pos" : "136.940, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9879,7 +9879,7 @@
 					{
 						"pos" : "136.940, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9978,7 +9978,7 @@
 					{
 						"pos" : "136.940, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -9989,7 +9989,7 @@
 					{
 						"pos" : "136.940, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10088,7 +10088,7 @@
 					{
 						"pos" : "136.940, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10099,7 +10099,7 @@
 					{
 						"pos" : "136.940, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10176,7 +10176,7 @@
 					{
 						"pos" : "136.940, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10187,7 +10187,7 @@
 					{
 						"pos" : "136.940, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10286,7 +10286,7 @@
 					{
 						"pos" : "136.940, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10297,7 +10297,7 @@
 					{
 						"pos" : "136.940, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10396,7 +10396,7 @@
 					{
 						"pos" : "136.940, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10407,7 +10407,7 @@
 					{
 						"pos" : "136.940, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10528,7 +10528,7 @@
 					{
 						"pos" : "136.940, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10539,7 +10539,7 @@
 					{
 						"pos" : "136.940, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10616,7 +10616,7 @@
 					{
 						"pos" : "136.940, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10627,7 +10627,7 @@
 					{
 						"pos" : "136.940, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10726,7 +10726,7 @@
 					{
 						"pos" : "136.940, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10737,7 +10737,7 @@
 					{
 						"pos" : "136.940, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10836,7 +10836,7 @@
 					{
 						"pos" : "136.940, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10847,7 +10847,7 @@
 					{
 						"pos" : "136.940, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -10990,7 +10990,7 @@
 					{
 						"pos" : "136.940, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11001,7 +11001,7 @@
 					{
 						"pos" : "136.940, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11056,7 +11056,7 @@
 					{
 						"pos" : "136.940, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11067,7 +11067,7 @@
 					{
 						"pos" : "136.940, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11144,7 +11144,7 @@
 					{
 						"pos" : "136.940, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11155,7 +11155,7 @@
 					{
 						"pos" : "136.940, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11276,7 +11276,7 @@
 					{
 						"pos" : "136.940, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11287,7 +11287,7 @@
 					{
 						"pos" : "136.940, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11430,7 +11430,7 @@
 					{
 						"pos" : "136.940, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11441,7 +11441,7 @@
 					{
 						"pos" : "136.940, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11474,7 +11474,7 @@
 					{
 						"pos" : "100.780, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11485,7 +11485,7 @@
 					{
 						"pos" : "100.780, -135.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11628,7 +11628,7 @@
 					{
 						"pos" : "100.780, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11639,7 +11639,7 @@
 					{
 						"pos" : "100.780, -141.920, 32.000"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11738,7 +11738,7 @@
 					{
 						"pos" : "100.780, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11749,7 +11749,7 @@
 					{
 						"pos" : "100.780, -141.920, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11848,7 +11848,7 @@
 					{
 						"pos" : "100.780, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11859,7 +11859,7 @@
 					{
 						"pos" : "100.780, -135.090, 12.550"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11936,7 +11936,7 @@
 					{
 						"pos" : "100.780, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -11947,7 +11947,7 @@
 					{
 						"pos" : "100.780, -135.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12046,7 +12046,7 @@
 					{
 						"pos" : "100.780, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12057,7 +12057,7 @@
 					{
 						"pos" : "100.780, -141.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12156,7 +12156,7 @@
 					{
 						"pos" : "100.780, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12167,7 +12167,7 @@
 					{
 						"pos" : "100.780, -141.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12288,7 +12288,7 @@
 					{
 						"pos" : "100.780, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12299,7 +12299,7 @@
 					{
 						"pos" : "100.780, -135.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12376,7 +12376,7 @@
 					{
 						"pos" : "100.780, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12387,7 +12387,7 @@
 					{
 						"pos" : "100.780, -122.090, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12486,7 +12486,7 @@
 					{
 						"pos" : "100.780, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12497,7 +12497,7 @@
 					{
 						"pos" : "100.780, -128.920, 51.040"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12596,7 +12596,7 @@
 					{
 						"pos" : "100.780, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12607,7 +12607,7 @@
 					{
 						"pos" : "100.780, -128.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12750,7 +12750,7 @@
 					{
 						"pos" : "100.780, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12761,7 +12761,7 @@
 					{
 						"pos" : "100.780, -122.920, 70.490"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12816,7 +12816,7 @@
 					{
 						"pos" : "100.780, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12827,7 +12827,7 @@
 					{
 						"pos" : "100.780, -122.090, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12904,7 +12904,7 @@
 					{
 						"pos" : "100.780, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -12915,7 +12915,7 @@
 					{
 						"pos" : "100.780, -128.920, 12.860"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -13036,7 +13036,7 @@
 					{
 						"pos" : "100.780, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -13047,7 +13047,7 @@
 					{
 						"pos" : "100.780, -128.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -13190,7 +13190,7 @@
 					{
 						"pos" : "100.780, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -13201,7 +13201,7 @@
 					{
 						"pos" : "100.780, -122.920, 32.310"
 					},
-					"mesh" : "ico-sphere",
+					"mesh" : "sphere",
 					"material" : "pbr grey"
 				},
 				{
@@ -13224,7 +13224,7 @@
 							{
 								"pos" : "-300.000, 318.600, 50.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13301,7 +13301,7 @@
 							{
 								"pos" : "-300.000, 312.600, 50.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13356,7 +13356,7 @@
 							{
 								"pos" : "-300.000, 312.600, 31.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13411,7 +13411,7 @@
 							{
 								"pos" : "-300.000, 319.430, 31.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13455,7 +13455,7 @@
 							{
 								"pos" : "-300.000, 319.430, 69.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13510,7 +13510,7 @@
 							{
 								"pos" : "-300.000, 312.600, 69.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13565,7 +13565,7 @@
 							{
 								"pos" : "-300.000, 312.600, 89.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13642,7 +13642,7 @@
 							{
 								"pos" : "-300.000, 318.600, 89.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13675,7 +13675,7 @@
 							{
 								"pos" : "-300.000, 332.430, 69.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13730,7 +13730,7 @@
 							{
 								"pos" : "-300.000, 325.600, 69.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13785,7 +13785,7 @@
 							{
 								"pos" : "-300.000, 325.600, 89.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13862,7 +13862,7 @@
 							{
 								"pos" : "-300.000, 331.600, 89.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13895,7 +13895,7 @@
 							{
 								"pos" : "-300.000, 332.430, 31.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -13950,7 +13950,7 @@
 							{
 								"pos" : "-300.000, 325.600, 31.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14005,7 +14005,7 @@
 							{
 								"pos" : "-303.560, 335.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14082,7 +14082,7 @@
 							{
 								"pos" : "-303.560, 341.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14104,7 +14104,7 @@
 							{
 								"pos" : "-295.340, 328.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14181,7 +14181,7 @@
 							{
 								"pos" : "-295.340, 322.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14236,7 +14236,7 @@
 							{
 								"pos" : "-295.340, 322.420, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14291,7 +14291,7 @@
 							{
 								"pos" : "-295.340, 329.250, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14335,7 +14335,7 @@
 							{
 								"pos" : "-295.340, 329.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14390,7 +14390,7 @@
 							{
 								"pos" : "-295.340, 322.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14445,7 +14445,7 @@
 							{
 								"pos" : "-295.340, 322.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14511,7 +14511,7 @@
 							{
 								"pos" : "-295.340, 328.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14555,7 +14555,7 @@
 							{
 								"pos" : "-295.340, 342.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14610,7 +14610,7 @@
 							{
 								"pos" : "-295.340, 335.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14665,7 +14665,7 @@
 							{
 								"pos" : "-295.340, 335.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14742,7 +14742,7 @@
 							{
 								"pos" : "-295.340, 341.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14775,7 +14775,7 @@
 							{
 								"pos" : "-295.340, 342.250, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14819,7 +14819,7 @@
 							{
 								"pos" : "-295.340, 335.420, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14885,7 +14885,7 @@
 							{
 								"pos" : "-295.340, 335.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14962,7 +14962,7 @@
 							{
 								"pos" : "-295.340, 341.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -14984,7 +14984,7 @@
 							{
 								"pos" : "-284.540, 328.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15061,7 +15061,7 @@
 							{
 								"pos" : "-284.540, 322.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15116,7 +15116,7 @@
 							{
 								"pos" : "-284.540, 322.420, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15171,7 +15171,7 @@
 							{
 								"pos" : "-284.540, 329.250, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15215,7 +15215,7 @@
 							{
 								"pos" : "-284.540, 329.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15270,7 +15270,7 @@
 							{
 								"pos" : "-284.540, 322.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15325,7 +15325,7 @@
 							{
 								"pos" : "-284.540, 322.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15391,7 +15391,7 @@
 							{
 								"pos" : "-284.540, 328.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15435,7 +15435,7 @@
 							{
 								"pos" : "-284.540, 342.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15490,7 +15490,7 @@
 							{
 								"pos" : "-284.540, 335.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15545,7 +15545,7 @@
 							{
 								"pos" : "-284.540, 335.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15622,7 +15622,7 @@
 							{
 								"pos" : "-284.540, 341.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15655,7 +15655,7 @@
 							{
 								"pos" : "-284.540, 342.250, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15699,7 +15699,7 @@
 							{
 								"pos" : "-284.540, 335.420, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15765,7 +15765,7 @@
 							{
 								"pos" : "-284.540, 335.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15842,7 +15842,7 @@
 							{
 								"pos" : "-284.540, 341.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15864,7 +15864,7 @@
 							{
 								"pos" : "-275.500, 328.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15941,7 +15941,7 @@
 							{
 								"pos" : "-275.500, 322.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -15996,7 +15996,7 @@
 							{
 								"pos" : "-275.500, 322.420, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16051,7 +16051,7 @@
 							{
 								"pos" : "-275.500, 329.250, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16095,7 +16095,7 @@
 							{
 								"pos" : "-275.500, 329.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16150,7 +16150,7 @@
 							{
 								"pos" : "-275.500, 322.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16205,7 +16205,7 @@
 							{
 								"pos" : "-275.500, 322.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16271,7 +16271,7 @@
 							{
 								"pos" : "-275.500, 328.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16315,7 +16315,7 @@
 							{
 								"pos" : "-275.500, 342.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16370,7 +16370,7 @@
 							{
 								"pos" : "-275.500, 335.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16425,7 +16425,7 @@
 							{
 								"pos" : "-275.500, 335.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16502,7 +16502,7 @@
 							{
 								"pos" : "-275.500, 341.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16535,7 +16535,7 @@
 							{
 								"pos" : "-275.500, 342.250, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16579,7 +16579,7 @@
 							{
 								"pos" : "-275.500, 335.420, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16645,7 +16645,7 @@
 							{
 								"pos" : "-275.500, 335.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16722,7 +16722,7 @@
 							{
 								"pos" : "-275.500, 341.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16744,7 +16744,7 @@
 							{
 								"pos" : "-311.660, 328.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16821,7 +16821,7 @@
 							{
 								"pos" : "-311.660, 322.420, 55.620"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16876,7 +16876,7 @@
 							{
 								"pos" : "-311.660, 322.420, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16931,7 +16931,7 @@
 							{
 								"pos" : "-311.660, 329.250, 36.170"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -16975,7 +16975,7 @@
 							{
 								"pos" : "-311.660, 329.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17030,7 +17030,7 @@
 							{
 								"pos" : "-311.660, 322.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17085,7 +17085,7 @@
 							{
 								"pos" : "-311.660, 322.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17151,7 +17151,7 @@
 							{
 								"pos" : "-311.660, 328.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17195,7 +17195,7 @@
 							{
 								"pos" : "-311.660, 342.250, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17250,7 +17250,7 @@
 							{
 								"pos" : "-311.660, 335.420, 74.660"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17305,7 +17305,7 @@
 							{
 								"pos" : "-311.660, 335.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17382,7 +17382,7 @@
 							{
 								"pos" : "-311.660, 341.420, 94.110"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17415,7 +17415,7 @@
 							{
 								"pos" : "-311.660, 342.250, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17459,7 +17459,7 @@
 							{
 								"pos" : "-311.660, 335.420, 36.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17525,7 +17525,7 @@
 							{
 								"pos" : "-311.660, 335.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17602,7 +17602,7 @@
 							{
 								"pos" : "-311.660, 341.420, 55.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17613,7 +17613,7 @@
 							{
 								"pos" : "-300.000, 318.600, 132.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17624,7 +17624,7 @@
 							{
 								"pos" : "-300.000, 318.600, 132.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17767,7 +17767,7 @@
 							{
 								"pos" : "-300.000, 312.600, 132.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17778,7 +17778,7 @@
 							{
 								"pos" : "-300.000, 312.600, 132.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17877,7 +17877,7 @@
 							{
 								"pos" : "-300.000, 312.600, 112.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17888,7 +17888,7 @@
 							{
 								"pos" : "-300.000, 312.600, 112.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17987,7 +17987,7 @@
 							{
 								"pos" : "-300.000, 319.430, 112.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -17998,7 +17998,7 @@
 							{
 								"pos" : "-300.000, 319.430, 112.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18075,7 +18075,7 @@
 							{
 								"pos" : "-300.000, 319.430, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18086,7 +18086,7 @@
 							{
 								"pos" : "-300.000, 319.430, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18185,7 +18185,7 @@
 							{
 								"pos" : "-300.000, 312.600, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18196,7 +18196,7 @@
 							{
 								"pos" : "-300.000, 312.600, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18295,7 +18295,7 @@
 							{
 								"pos" : "-300.000, 312.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18306,7 +18306,7 @@
 							{
 								"pos" : "-300.000, 312.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18449,7 +18449,7 @@
 							{
 								"pos" : "-300.000, 318.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18460,7 +18460,7 @@
 							{
 								"pos" : "-300.000, 318.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18515,7 +18515,7 @@
 							{
 								"pos" : "-300.000, 332.430, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18526,7 +18526,7 @@
 							{
 								"pos" : "-300.000, 332.430, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18625,7 +18625,7 @@
 							{
 								"pos" : "-300.000, 325.600, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18636,7 +18636,7 @@
 							{
 								"pos" : "-300.000, 325.600, 151.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18735,7 +18735,7 @@
 							{
 								"pos" : "-300.000, 325.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18746,7 +18746,7 @@
 							{
 								"pos" : "-300.000, 325.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18889,7 +18889,7 @@
 							{
 								"pos" : "-300.000, 331.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18900,7 +18900,7 @@
 							{
 								"pos" : "-300.000, 331.600, 170.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18955,7 +18955,7 @@
 							{
 								"pos" : "-300.000, 332.430, 112.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -18966,7 +18966,7 @@
 							{
 								"pos" : "-300.000, 332.430, 112.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19065,7 +19065,7 @@
 							{
 								"pos" : "-300.000, 325.600, 112.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19076,7 +19076,7 @@
 							{
 								"pos" : "-300.000, 325.600, 112.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19175,7 +19175,7 @@
 							{
 								"pos" : "-303.560, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19186,7 +19186,7 @@
 							{
 								"pos" : "-303.560, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19329,7 +19329,7 @@
 							{
 								"pos" : "-303.560, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19340,7 +19340,7 @@
 							{
 								"pos" : "-303.560, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19373,7 +19373,7 @@
 							{
 								"pos" : "-295.340, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19384,7 +19384,7 @@
 							{
 								"pos" : "-295.340, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19527,7 +19527,7 @@
 							{
 								"pos" : "-295.340, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19538,7 +19538,7 @@
 							{
 								"pos" : "-295.340, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19637,7 +19637,7 @@
 							{
 								"pos" : "-295.340, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19648,7 +19648,7 @@
 							{
 								"pos" : "-295.340, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19747,7 +19747,7 @@
 							{
 								"pos" : "-295.340, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19758,7 +19758,7 @@
 							{
 								"pos" : "-295.340, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19835,7 +19835,7 @@
 							{
 								"pos" : "-295.340, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19846,7 +19846,7 @@
 							{
 								"pos" : "-295.340, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19945,7 +19945,7 @@
 							{
 								"pos" : "-295.340, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -19956,7 +19956,7 @@
 							{
 								"pos" : "-295.340, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20055,7 +20055,7 @@
 							{
 								"pos" : "-295.340, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20066,7 +20066,7 @@
 							{
 								"pos" : "-295.340, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20187,7 +20187,7 @@
 							{
 								"pos" : "-295.340, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20198,7 +20198,7 @@
 							{
 								"pos" : "-295.340, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20275,7 +20275,7 @@
 							{
 								"pos" : "-295.340, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20286,7 +20286,7 @@
 							{
 								"pos" : "-295.340, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20385,7 +20385,7 @@
 							{
 								"pos" : "-295.340, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20396,7 +20396,7 @@
 							{
 								"pos" : "-295.340, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20495,7 +20495,7 @@
 							{
 								"pos" : "-295.340, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20506,7 +20506,7 @@
 							{
 								"pos" : "-295.340, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20649,7 +20649,7 @@
 							{
 								"pos" : "-295.340, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20660,7 +20660,7 @@
 							{
 								"pos" : "-295.340, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20715,7 +20715,7 @@
 							{
 								"pos" : "-295.340, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20726,7 +20726,7 @@
 							{
 								"pos" : "-295.340, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20803,7 +20803,7 @@
 							{
 								"pos" : "-295.340, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20814,7 +20814,7 @@
 							{
 								"pos" : "-295.340, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20935,7 +20935,7 @@
 							{
 								"pos" : "-295.340, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -20946,7 +20946,7 @@
 							{
 								"pos" : "-295.340, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21089,7 +21089,7 @@
 							{
 								"pos" : "-295.340, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21100,7 +21100,7 @@
 							{
 								"pos" : "-295.340, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21133,7 +21133,7 @@
 							{
 								"pos" : "-284.540, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21144,7 +21144,7 @@
 							{
 								"pos" : "-284.540, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21287,7 +21287,7 @@
 							{
 								"pos" : "-284.540, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21298,7 +21298,7 @@
 							{
 								"pos" : "-284.540, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21397,7 +21397,7 @@
 							{
 								"pos" : "-284.540, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21408,7 +21408,7 @@
 							{
 								"pos" : "-284.540, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21507,7 +21507,7 @@
 							{
 								"pos" : "-284.540, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21518,7 +21518,7 @@
 							{
 								"pos" : "-284.540, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21595,7 +21595,7 @@
 							{
 								"pos" : "-284.540, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21606,7 +21606,7 @@
 							{
 								"pos" : "-284.540, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21705,7 +21705,7 @@
 							{
 								"pos" : "-284.540, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21716,7 +21716,7 @@
 							{
 								"pos" : "-284.540, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21815,7 +21815,7 @@
 							{
 								"pos" : "-284.540, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21826,7 +21826,7 @@
 							{
 								"pos" : "-284.540, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21947,7 +21947,7 @@
 							{
 								"pos" : "-284.540, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -21958,7 +21958,7 @@
 							{
 								"pos" : "-284.540, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22035,7 +22035,7 @@
 							{
 								"pos" : "-284.540, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22046,7 +22046,7 @@
 							{
 								"pos" : "-284.540, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22145,7 +22145,7 @@
 							{
 								"pos" : "-284.540, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22156,7 +22156,7 @@
 							{
 								"pos" : "-284.540, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22255,7 +22255,7 @@
 							{
 								"pos" : "-284.540, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22266,7 +22266,7 @@
 							{
 								"pos" : "-284.540, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22409,7 +22409,7 @@
 							{
 								"pos" : "-284.540, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22420,7 +22420,7 @@
 							{
 								"pos" : "-284.540, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22475,7 +22475,7 @@
 							{
 								"pos" : "-284.540, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22486,7 +22486,7 @@
 							{
 								"pos" : "-284.540, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22563,7 +22563,7 @@
 							{
 								"pos" : "-284.540, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22574,7 +22574,7 @@
 							{
 								"pos" : "-284.540, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22695,7 +22695,7 @@
 							{
 								"pos" : "-284.540, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22706,7 +22706,7 @@
 							{
 								"pos" : "-284.540, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22849,7 +22849,7 @@
 							{
 								"pos" : "-284.540, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22860,7 +22860,7 @@
 							{
 								"pos" : "-284.540, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22893,7 +22893,7 @@
 							{
 								"pos" : "-275.500, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -22904,7 +22904,7 @@
 							{
 								"pos" : "-275.500, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23047,7 +23047,7 @@
 							{
 								"pos" : "-275.500, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23058,7 +23058,7 @@
 							{
 								"pos" : "-275.500, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23157,7 +23157,7 @@
 							{
 								"pos" : "-275.500, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23168,7 +23168,7 @@
 							{
 								"pos" : "-275.500, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23267,7 +23267,7 @@
 							{
 								"pos" : "-275.500, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23278,7 +23278,7 @@
 							{
 								"pos" : "-275.500, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23355,7 +23355,7 @@
 							{
 								"pos" : "-275.500, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23366,7 +23366,7 @@
 							{
 								"pos" : "-275.500, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23465,7 +23465,7 @@
 							{
 								"pos" : "-275.500, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23476,7 +23476,7 @@
 							{
 								"pos" : "-275.500, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23575,7 +23575,7 @@
 							{
 								"pos" : "-275.500, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23586,7 +23586,7 @@
 							{
 								"pos" : "-275.500, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23707,7 +23707,7 @@
 							{
 								"pos" : "-275.500, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23718,7 +23718,7 @@
 							{
 								"pos" : "-275.500, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23795,7 +23795,7 @@
 							{
 								"pos" : "-275.500, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23806,7 +23806,7 @@
 							{
 								"pos" : "-275.500, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23905,7 +23905,7 @@
 							{
 								"pos" : "-275.500, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -23916,7 +23916,7 @@
 							{
 								"pos" : "-275.500, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24015,7 +24015,7 @@
 							{
 								"pos" : "-275.500, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24026,7 +24026,7 @@
 							{
 								"pos" : "-275.500, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24169,7 +24169,7 @@
 							{
 								"pos" : "-275.500, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24180,7 +24180,7 @@
 							{
 								"pos" : "-275.500, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24235,7 +24235,7 @@
 							{
 								"pos" : "-275.500, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24246,7 +24246,7 @@
 							{
 								"pos" : "-275.500, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24323,7 +24323,7 @@
 							{
 								"pos" : "-275.500, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24334,7 +24334,7 @@
 							{
 								"pos" : "-275.500, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24455,7 +24455,7 @@
 							{
 								"pos" : "-275.500, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24466,7 +24466,7 @@
 							{
 								"pos" : "-275.500, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24609,7 +24609,7 @@
 							{
 								"pos" : "-275.500, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24620,7 +24620,7 @@
 							{
 								"pos" : "-275.500, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24653,7 +24653,7 @@
 							{
 								"pos" : "-311.660, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24664,7 +24664,7 @@
 							{
 								"pos" : "-311.660, 328.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24807,7 +24807,7 @@
 							{
 								"pos" : "-311.660, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24818,7 +24818,7 @@
 							{
 								"pos" : "-311.660, 322.420, 137.000"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24917,7 +24917,7 @@
 							{
 								"pos" : "-311.660, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -24928,7 +24928,7 @@
 							{
 								"pos" : "-311.660, 322.420, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25027,7 +25027,7 @@
 							{
 								"pos" : "-311.660, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25038,7 +25038,7 @@
 							{
 								"pos" : "-311.660, 329.250, 117.550"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25115,7 +25115,7 @@
 							{
 								"pos" : "-311.660, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25126,7 +25126,7 @@
 							{
 								"pos" : "-311.660, 329.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25225,7 +25225,7 @@
 							{
 								"pos" : "-311.660, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25236,7 +25236,7 @@
 							{
 								"pos" : "-311.660, 322.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25335,7 +25335,7 @@
 							{
 								"pos" : "-311.660, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25346,7 +25346,7 @@
 							{
 								"pos" : "-311.660, 322.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25467,7 +25467,7 @@
 							{
 								"pos" : "-311.660, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25478,7 +25478,7 @@
 							{
 								"pos" : "-311.660, 328.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25555,7 +25555,7 @@
 							{
 								"pos" : "-311.660, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25566,7 +25566,7 @@
 							{
 								"pos" : "-311.660, 342.250, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25665,7 +25665,7 @@
 							{
 								"pos" : "-311.660, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25676,7 +25676,7 @@
 							{
 								"pos" : "-311.660, 335.420, 156.040"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25775,7 +25775,7 @@
 							{
 								"pos" : "-311.660, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25786,7 +25786,7 @@
 							{
 								"pos" : "-311.660, 335.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25929,7 +25929,7 @@
 							{
 								"pos" : "-311.660, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25940,7 +25940,7 @@
 							{
 								"pos" : "-311.660, 341.420, 175.490"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -25995,7 +25995,7 @@
 							{
 								"pos" : "-311.660, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26006,7 +26006,7 @@
 							{
 								"pos" : "-311.660, 342.250, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26083,7 +26083,7 @@
 							{
 								"pos" : "-311.660, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26094,7 +26094,7 @@
 							{
 								"pos" : "-311.660, 335.420, 117.860"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26215,7 +26215,7 @@
 							{
 								"pos" : "-311.660, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26226,7 +26226,7 @@
 							{
 								"pos" : "-311.660, 335.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26369,7 +26369,7 @@
 							{
 								"pos" : "-311.660, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26380,7 +26380,7 @@
 							{
 								"pos" : "-311.660, 341.420, 137.310"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						}
 					]
@@ -26405,7 +26405,7 @@
 							{
 								"pos" : "-569.880, 261.240, 133.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26482,7 +26482,7 @@
 							{
 								"pos" : "-569.880, 255.240, 133.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26537,7 +26537,7 @@
 							{
 								"pos" : "-569.880, 255.240, 113.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26592,7 +26592,7 @@
 							{
 								"pos" : "-569.880, 262.070, 113.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26636,7 +26636,7 @@
 							{
 								"pos" : "-569.880, 262.070, 152.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26691,7 +26691,7 @@
 							{
 								"pos" : "-569.880, 255.240, 152.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26746,7 +26746,7 @@
 							{
 								"pos" : "-569.880, 255.240, 171.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26823,7 +26823,7 @@
 							{
 								"pos" : "-569.880, 261.240, 171.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26856,7 +26856,7 @@
 							{
 								"pos" : "-569.880, 275.070, 152.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26911,7 +26911,7 @@
 							{
 								"pos" : "-569.880, 268.240, 152.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -26966,7 +26966,7 @@
 							{
 								"pos" : "-569.880, 268.240, 171.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27043,7 +27043,7 @@
 							{
 								"pos" : "-569.880, 274.240, 171.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27076,7 +27076,7 @@
 							{
 								"pos" : "-569.880, 275.070, 114.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27131,7 +27131,7 @@
 							{
 								"pos" : "-569.880, 268.240, 114.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27186,7 +27186,7 @@
 							{
 								"pos" : "-573.440, 278.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27263,7 +27263,7 @@
 							{
 								"pos" : "-573.440, 284.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27285,7 +27285,7 @@
 							{
 								"pos" : "-565.220, 271.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27362,7 +27362,7 @@
 							{
 								"pos" : "-565.220, 265.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27417,7 +27417,7 @@
 							{
 								"pos" : "-565.220, 265.060, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27472,7 +27472,7 @@
 							{
 								"pos" : "-565.220, 271.890, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27516,7 +27516,7 @@
 							{
 								"pos" : "-565.220, 271.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27571,7 +27571,7 @@
 							{
 								"pos" : "-565.220, 265.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27626,7 +27626,7 @@
 							{
 								"pos" : "-565.220, 265.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27692,7 +27692,7 @@
 							{
 								"pos" : "-565.220, 271.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27736,7 +27736,7 @@
 							{
 								"pos" : "-565.220, 284.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27791,7 +27791,7 @@
 							{
 								"pos" : "-565.220, 278.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27846,7 +27846,7 @@
 							{
 								"pos" : "-565.220, 278.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27923,7 +27923,7 @@
 							{
 								"pos" : "-565.220, 284.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -27956,7 +27956,7 @@
 							{
 								"pos" : "-565.220, 284.890, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28000,7 +28000,7 @@
 							{
 								"pos" : "-565.220, 278.060, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28066,7 +28066,7 @@
 							{
 								"pos" : "-565.220, 278.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28143,7 +28143,7 @@
 							{
 								"pos" : "-565.220, 284.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28165,7 +28165,7 @@
 							{
 								"pos" : "-554.420, 271.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28242,7 +28242,7 @@
 							{
 								"pos" : "-554.420, 265.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28297,7 +28297,7 @@
 							{
 								"pos" : "-554.420, 265.060, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28352,7 +28352,7 @@
 							{
 								"pos" : "-554.420, 271.890, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28396,7 +28396,7 @@
 							{
 								"pos" : "-554.420, 271.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28451,7 +28451,7 @@
 							{
 								"pos" : "-554.420, 265.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28506,7 +28506,7 @@
 							{
 								"pos" : "-554.420, 265.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28572,7 +28572,7 @@
 							{
 								"pos" : "-554.420, 271.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28616,7 +28616,7 @@
 							{
 								"pos" : "-554.420, 284.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28671,7 +28671,7 @@
 							{
 								"pos" : "-554.420, 278.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28726,7 +28726,7 @@
 							{
 								"pos" : "-554.420, 278.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28803,7 +28803,7 @@
 							{
 								"pos" : "-554.420, 284.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28836,7 +28836,7 @@
 							{
 								"pos" : "-554.420, 284.890, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28880,7 +28880,7 @@
 							{
 								"pos" : "-554.420, 278.060, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -28946,7 +28946,7 @@
 							{
 								"pos" : "-554.420, 278.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29023,7 +29023,7 @@
 							{
 								"pos" : "-554.420, 284.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29045,7 +29045,7 @@
 							{
 								"pos" : "-545.380, 271.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29122,7 +29122,7 @@
 							{
 								"pos" : "-545.380, 265.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29177,7 +29177,7 @@
 							{
 								"pos" : "-545.380, 265.060, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29232,7 +29232,7 @@
 							{
 								"pos" : "-545.380, 271.890, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29276,7 +29276,7 @@
 							{
 								"pos" : "-545.380, 271.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29331,7 +29331,7 @@
 							{
 								"pos" : "-545.380, 265.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29386,7 +29386,7 @@
 							{
 								"pos" : "-545.380, 265.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29452,7 +29452,7 @@
 							{
 								"pos" : "-545.380, 271.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29496,7 +29496,7 @@
 							{
 								"pos" : "-545.380, 284.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29551,7 +29551,7 @@
 							{
 								"pos" : "-545.380, 278.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29606,7 +29606,7 @@
 							{
 								"pos" : "-545.380, 278.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29683,7 +29683,7 @@
 							{
 								"pos" : "-545.380, 284.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29716,7 +29716,7 @@
 							{
 								"pos" : "-545.380, 284.890, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29760,7 +29760,7 @@
 							{
 								"pos" : "-545.380, 278.060, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29826,7 +29826,7 @@
 							{
 								"pos" : "-545.380, 278.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29903,7 +29903,7 @@
 							{
 								"pos" : "-545.380, 284.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -29925,7 +29925,7 @@
 							{
 								"pos" : "-581.540, 271.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30002,7 +30002,7 @@
 							{
 								"pos" : "-581.540, 265.060, 138.440"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30057,7 +30057,7 @@
 							{
 								"pos" : "-581.540, 265.060, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30112,7 +30112,7 @@
 							{
 								"pos" : "-581.540, 271.890, 118.990"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30156,7 +30156,7 @@
 							{
 								"pos" : "-581.540, 271.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30211,7 +30211,7 @@
 							{
 								"pos" : "-581.540, 265.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30266,7 +30266,7 @@
 							{
 								"pos" : "-581.540, 265.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30332,7 +30332,7 @@
 							{
 								"pos" : "-581.540, 271.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30376,7 +30376,7 @@
 							{
 								"pos" : "-581.540, 284.890, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30431,7 +30431,7 @@
 							{
 								"pos" : "-581.540, 278.060, 157.480"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30486,7 +30486,7 @@
 							{
 								"pos" : "-581.540, 278.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30563,7 +30563,7 @@
 							{
 								"pos" : "-581.540, 284.060, 176.930"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30596,7 +30596,7 @@
 							{
 								"pos" : "-581.540, 284.890, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30640,7 +30640,7 @@
 							{
 								"pos" : "-581.540, 278.060, 119.300"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30706,7 +30706,7 @@
 							{
 								"pos" : "-581.540, 278.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30783,7 +30783,7 @@
 							{
 								"pos" : "-581.540, 284.060, 138.750"
 							},
-							"mesh" : "ico-sphere",
+							"mesh" : "sphere",
 							"material" : "pbr grey"
 						},
 						{
@@ -30806,7 +30806,7 @@
 									{
 										"pos" : "1062.100, -359.700, -46.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -30883,7 +30883,7 @@
 									{
 										"pos" : "1062.100, -365.700, -46.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -30938,7 +30938,7 @@
 									{
 										"pos" : "1062.100, -365.700, -66.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -30993,7 +30993,7 @@
 									{
 										"pos" : "1062.100, -358.870, -66.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31037,7 +31037,7 @@
 									{
 										"pos" : "1062.100, -358.870, -27.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31092,7 +31092,7 @@
 									{
 										"pos" : "1062.100, -365.700, -27.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31147,7 +31147,7 @@
 									{
 										"pos" : "1062.100, -365.700, -8.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31224,7 +31224,7 @@
 									{
 										"pos" : "1062.100, -359.700, -8.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31257,7 +31257,7 @@
 									{
 										"pos" : "1062.100, -345.870, -27.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31312,7 +31312,7 @@
 									{
 										"pos" : "1062.100, -352.700, -27.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31367,7 +31367,7 @@
 									{
 										"pos" : "1062.100, -352.700, -8.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31444,7 +31444,7 @@
 									{
 										"pos" : "1062.100, -346.700, -8.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31477,7 +31477,7 @@
 									{
 										"pos" : "1062.100, -345.870, -65.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31532,7 +31532,7 @@
 									{
 										"pos" : "1062.100, -352.700, -65.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31587,7 +31587,7 @@
 									{
 										"pos" : "1058.540, -342.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31664,7 +31664,7 @@
 									{
 										"pos" : "1058.540, -336.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31686,7 +31686,7 @@
 									{
 										"pos" : "1066.760, -349.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31763,7 +31763,7 @@
 									{
 										"pos" : "1066.760, -355.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31818,7 +31818,7 @@
 									{
 										"pos" : "1066.760, -355.880, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31873,7 +31873,7 @@
 									{
 										"pos" : "1066.760, -349.050, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31917,7 +31917,7 @@
 									{
 										"pos" : "1066.760, -349.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -31972,7 +31972,7 @@
 									{
 										"pos" : "1066.760, -355.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32027,7 +32027,7 @@
 									{
 										"pos" : "1066.760, -355.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32093,7 +32093,7 @@
 									{
 										"pos" : "1066.760, -349.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32137,7 +32137,7 @@
 									{
 										"pos" : "1066.760, -336.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32192,7 +32192,7 @@
 									{
 										"pos" : "1066.760, -342.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32247,7 +32247,7 @@
 									{
 										"pos" : "1066.760, -342.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32324,7 +32324,7 @@
 									{
 										"pos" : "1066.760, -336.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32357,7 +32357,7 @@
 									{
 										"pos" : "1066.760, -336.050, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32401,7 +32401,7 @@
 									{
 										"pos" : "1066.760, -342.880, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32467,7 +32467,7 @@
 									{
 										"pos" : "1066.760, -342.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32544,7 +32544,7 @@
 									{
 										"pos" : "1066.760, -336.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32566,7 +32566,7 @@
 									{
 										"pos" : "1077.560, -349.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32643,7 +32643,7 @@
 									{
 										"pos" : "1077.560, -355.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32698,7 +32698,7 @@
 									{
 										"pos" : "1077.560, -355.880, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32753,7 +32753,7 @@
 									{
 										"pos" : "1077.560, -349.050, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32797,7 +32797,7 @@
 									{
 										"pos" : "1077.560, -349.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32852,7 +32852,7 @@
 									{
 										"pos" : "1077.560, -355.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32907,7 +32907,7 @@
 									{
 										"pos" : "1077.560, -355.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -32973,7 +32973,7 @@
 									{
 										"pos" : "1077.560, -349.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33017,7 +33017,7 @@
 									{
 										"pos" : "1077.560, -336.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33072,7 +33072,7 @@
 									{
 										"pos" : "1077.560, -342.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33127,7 +33127,7 @@
 									{
 										"pos" : "1077.560, -342.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33204,7 +33204,7 @@
 									{
 										"pos" : "1077.560, -336.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33237,7 +33237,7 @@
 									{
 										"pos" : "1077.560, -336.050, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33281,7 +33281,7 @@
 									{
 										"pos" : "1077.560, -342.880, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33347,7 +33347,7 @@
 									{
 										"pos" : "1077.560, -342.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33424,7 +33424,7 @@
 									{
 										"pos" : "1077.560, -336.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33446,7 +33446,7 @@
 									{
 										"pos" : "1086.600, -349.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33523,7 +33523,7 @@
 									{
 										"pos" : "1086.600, -355.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33578,7 +33578,7 @@
 									{
 										"pos" : "1086.600, -355.880, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33633,7 +33633,7 @@
 									{
 										"pos" : "1086.600, -349.050, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33677,7 +33677,7 @@
 									{
 										"pos" : "1086.600, -349.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33732,7 +33732,7 @@
 									{
 										"pos" : "1086.600, -355.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33787,7 +33787,7 @@
 									{
 										"pos" : "1086.600, -355.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33853,7 +33853,7 @@
 									{
 										"pos" : "1086.600, -349.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33897,7 +33897,7 @@
 									{
 										"pos" : "1086.600, -336.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -33952,7 +33952,7 @@
 									{
 										"pos" : "1086.600, -342.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34007,7 +34007,7 @@
 									{
 										"pos" : "1086.600, -342.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34084,7 +34084,7 @@
 									{
 										"pos" : "1086.600, -336.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34117,7 +34117,7 @@
 									{
 										"pos" : "1086.600, -336.050, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34161,7 +34161,7 @@
 									{
 										"pos" : "1086.600, -342.880, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34227,7 +34227,7 @@
 									{
 										"pos" : "1086.600, -342.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34304,7 +34304,7 @@
 									{
 										"pos" : "1086.600, -336.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34326,7 +34326,7 @@
 									{
 										"pos" : "1050.440, -349.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34403,7 +34403,7 @@
 									{
 										"pos" : "1050.440, -355.880, -41.600"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34458,7 +34458,7 @@
 									{
 										"pos" : "1050.440, -355.880, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34513,7 +34513,7 @@
 									{
 										"pos" : "1050.440, -349.050, -61.050"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34557,7 +34557,7 @@
 									{
 										"pos" : "1050.440, -349.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34612,7 +34612,7 @@
 									{
 										"pos" : "1050.440, -355.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34667,7 +34667,7 @@
 									{
 										"pos" : "1050.440, -355.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34733,7 +34733,7 @@
 									{
 										"pos" : "1050.440, -349.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34777,7 +34777,7 @@
 									{
 										"pos" : "1050.440, -336.050, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34832,7 +34832,7 @@
 									{
 										"pos" : "1050.440, -342.880, -22.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34887,7 +34887,7 @@
 									{
 										"pos" : "1050.440, -342.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34964,7 +34964,7 @@
 									{
 										"pos" : "1050.440, -336.880, -3.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -34997,7 +34997,7 @@
 									{
 										"pos" : "1050.440, -336.050, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35041,7 +35041,7 @@
 									{
 										"pos" : "1050.440, -342.880, -60.740"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35107,7 +35107,7 @@
 									{
 										"pos" : "1050.440, -342.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35184,7 +35184,7 @@
 									{
 										"pos" : "1050.440, -336.880, -41.290"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								}
 							]
@@ -35209,7 +35209,7 @@
 									{
 										"pos" : "1251.580, -417.060, -129.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35286,7 +35286,7 @@
 									{
 										"pos" : "1251.580, -423.060, -129.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35341,7 +35341,7 @@
 									{
 										"pos" : "1251.580, -423.060, -148.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35396,7 +35396,7 @@
 									{
 										"pos" : "1251.580, -416.230, -148.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35440,7 +35440,7 @@
 									{
 										"pos" : "1251.580, -416.230, -110.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35495,7 +35495,7 @@
 									{
 										"pos" : "1251.580, -423.060, -110.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35550,7 +35550,7 @@
 									{
 										"pos" : "1251.580, -423.060, -90.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35627,7 +35627,7 @@
 									{
 										"pos" : "1251.580, -417.060, -90.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35660,7 +35660,7 @@
 									{
 										"pos" : "1251.580, -403.230, -110.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35715,7 +35715,7 @@
 									{
 										"pos" : "1251.580, -410.060, -110.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35770,7 +35770,7 @@
 									{
 										"pos" : "1251.580, -410.060, -90.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35847,7 +35847,7 @@
 									{
 										"pos" : "1251.580, -404.060, -90.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35880,7 +35880,7 @@
 									{
 										"pos" : "1251.580, -403.230, -148.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35935,7 +35935,7 @@
 									{
 										"pos" : "1251.580, -410.060, -148.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -35990,7 +35990,7 @@
 									{
 										"pos" : "1248.020, -400.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36067,7 +36067,7 @@
 									{
 										"pos" : "1248.020, -394.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36089,7 +36089,7 @@
 									{
 										"pos" : "1256.240, -407.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36166,7 +36166,7 @@
 									{
 										"pos" : "1256.240, -413.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36221,7 +36221,7 @@
 									{
 										"pos" : "1256.240, -413.240, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36276,7 +36276,7 @@
 									{
 										"pos" : "1256.240, -406.410, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36320,7 +36320,7 @@
 									{
 										"pos" : "1256.240, -406.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36375,7 +36375,7 @@
 									{
 										"pos" : "1256.240, -413.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36430,7 +36430,7 @@
 									{
 										"pos" : "1256.240, -413.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36496,7 +36496,7 @@
 									{
 										"pos" : "1256.240, -407.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36540,7 +36540,7 @@
 									{
 										"pos" : "1256.240, -393.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36595,7 +36595,7 @@
 									{
 										"pos" : "1256.240, -400.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36650,7 +36650,7 @@
 									{
 										"pos" : "1256.240, -400.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36727,7 +36727,7 @@
 									{
 										"pos" : "1256.240, -394.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36760,7 +36760,7 @@
 									{
 										"pos" : "1256.240, -393.410, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36804,7 +36804,7 @@
 									{
 										"pos" : "1256.240, -400.240, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36870,7 +36870,7 @@
 									{
 										"pos" : "1256.240, -400.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36947,7 +36947,7 @@
 									{
 										"pos" : "1256.240, -394.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -36969,7 +36969,7 @@
 									{
 										"pos" : "1267.040, -407.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37046,7 +37046,7 @@
 									{
 										"pos" : "1267.040, -413.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37101,7 +37101,7 @@
 									{
 										"pos" : "1267.040, -413.240, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37156,7 +37156,7 @@
 									{
 										"pos" : "1267.040, -406.410, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37200,7 +37200,7 @@
 									{
 										"pos" : "1267.040, -406.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37255,7 +37255,7 @@
 									{
 										"pos" : "1267.040, -413.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37310,7 +37310,7 @@
 									{
 										"pos" : "1267.040, -413.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37376,7 +37376,7 @@
 									{
 										"pos" : "1267.040, -407.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37420,7 +37420,7 @@
 									{
 										"pos" : "1267.040, -393.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37475,7 +37475,7 @@
 									{
 										"pos" : "1267.040, -400.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37530,7 +37530,7 @@
 									{
 										"pos" : "1267.040, -400.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37607,7 +37607,7 @@
 									{
 										"pos" : "1267.040, -394.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37640,7 +37640,7 @@
 									{
 										"pos" : "1267.040, -393.410, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37684,7 +37684,7 @@
 									{
 										"pos" : "1267.040, -400.240, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37750,7 +37750,7 @@
 									{
 										"pos" : "1267.040, -400.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37827,7 +37827,7 @@
 									{
 										"pos" : "1267.040, -394.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37849,7 +37849,7 @@
 									{
 										"pos" : "1276.080, -407.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37926,7 +37926,7 @@
 									{
 										"pos" : "1276.080, -413.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -37981,7 +37981,7 @@
 									{
 										"pos" : "1276.080, -413.240, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38036,7 +38036,7 @@
 									{
 										"pos" : "1276.080, -406.410, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38080,7 +38080,7 @@
 									{
 										"pos" : "1276.080, -406.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38135,7 +38135,7 @@
 									{
 										"pos" : "1276.080, -413.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38190,7 +38190,7 @@
 									{
 										"pos" : "1276.080, -413.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38256,7 +38256,7 @@
 									{
 										"pos" : "1276.080, -407.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38300,7 +38300,7 @@
 									{
 										"pos" : "1276.080, -393.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38355,7 +38355,7 @@
 									{
 										"pos" : "1276.080, -400.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38410,7 +38410,7 @@
 									{
 										"pos" : "1276.080, -400.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38487,7 +38487,7 @@
 									{
 										"pos" : "1276.080, -394.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38520,7 +38520,7 @@
 									{
 										"pos" : "1276.080, -393.410, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38564,7 +38564,7 @@
 									{
 										"pos" : "1276.080, -400.240, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38630,7 +38630,7 @@
 									{
 										"pos" : "1276.080, -400.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38707,7 +38707,7 @@
 									{
 										"pos" : "1276.080, -394.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38729,7 +38729,7 @@
 									{
 										"pos" : "1239.920, -407.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38806,7 +38806,7 @@
 									{
 										"pos" : "1239.920, -413.240, -124.420"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38861,7 +38861,7 @@
 									{
 										"pos" : "1239.920, -413.240, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38916,7 +38916,7 @@
 									{
 										"pos" : "1239.920, -406.410, -143.870"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -38960,7 +38960,7 @@
 									{
 										"pos" : "1239.920, -406.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39015,7 +39015,7 @@
 									{
 										"pos" : "1239.920, -413.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39070,7 +39070,7 @@
 									{
 										"pos" : "1239.920, -413.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39136,7 +39136,7 @@
 									{
 										"pos" : "1239.920, -407.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39180,7 +39180,7 @@
 									{
 										"pos" : "1239.920, -393.410, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39235,7 +39235,7 @@
 									{
 										"pos" : "1239.920, -400.240, -105.380"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39290,7 +39290,7 @@
 									{
 										"pos" : "1239.920, -400.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39367,7 +39367,7 @@
 									{
 										"pos" : "1239.920, -394.240, -85.930"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39400,7 +39400,7 @@
 									{
 										"pos" : "1239.920, -393.410, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39444,7 +39444,7 @@
 									{
 										"pos" : "1239.920, -400.240, -143.560"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39510,7 +39510,7 @@
 									{
 										"pos" : "1239.920, -400.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39587,7 +39587,7 @@
 									{
 										"pos" : "1239.920, -394.240, -124.110"
 									},
-									"mesh" : "ico-sphere",
+									"mesh" : "sphere",
 									"material" : "pbr grey"
 								},
 								{
@@ -39610,7 +39610,7 @@
 											{
 												"pos" : "-1617.020, 318.600, 59.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -39687,7 +39687,7 @@
 											{
 												"pos" : "-1617.020, 312.600, 59.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -39742,7 +39742,7 @@
 											{
 												"pos" : "-1617.020, 312.600, 39.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -39797,7 +39797,7 @@
 											{
 												"pos" : "-1617.020, 319.430, 39.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -39841,7 +39841,7 @@
 											{
 												"pos" : "-1617.020, 319.430, 78.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -39896,7 +39896,7 @@
 											{
 												"pos" : "-1617.020, 312.600, 78.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -39951,7 +39951,7 @@
 											{
 												"pos" : "-1617.020, 312.600, 97.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40028,7 +40028,7 @@
 											{
 												"pos" : "-1617.020, 318.600, 97.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40061,7 +40061,7 @@
 											{
 												"pos" : "-1617.020, 332.430, 78.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40116,7 +40116,7 @@
 											{
 												"pos" : "-1617.020, 325.600, 78.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40171,7 +40171,7 @@
 											{
 												"pos" : "-1617.020, 325.600, 97.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40248,7 +40248,7 @@
 											{
 												"pos" : "-1617.020, 331.600, 97.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40281,7 +40281,7 @@
 											{
 												"pos" : "-1617.020, 332.430, 39.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40336,7 +40336,7 @@
 											{
 												"pos" : "-1617.020, 325.600, 39.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40391,7 +40391,7 @@
 											{
 												"pos" : "-1620.580, 335.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40468,7 +40468,7 @@
 											{
 												"pos" : "-1620.580, 341.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40490,7 +40490,7 @@
 											{
 												"pos" : "-1612.360, 328.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40567,7 +40567,7 @@
 											{
 												"pos" : "-1612.360, 322.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40622,7 +40622,7 @@
 											{
 												"pos" : "-1612.360, 322.420, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40677,7 +40677,7 @@
 											{
 												"pos" : "-1612.360, 329.250, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40721,7 +40721,7 @@
 											{
 												"pos" : "-1612.360, 329.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40776,7 +40776,7 @@
 											{
 												"pos" : "-1612.360, 322.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40831,7 +40831,7 @@
 											{
 												"pos" : "-1612.360, 322.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40897,7 +40897,7 @@
 											{
 												"pos" : "-1612.360, 328.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40941,7 +40941,7 @@
 											{
 												"pos" : "-1612.360, 342.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -40996,7 +40996,7 @@
 											{
 												"pos" : "-1612.360, 335.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41051,7 +41051,7 @@
 											{
 												"pos" : "-1612.360, 335.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41128,7 +41128,7 @@
 											{
 												"pos" : "-1612.360, 341.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41161,7 +41161,7 @@
 											{
 												"pos" : "-1612.360, 342.250, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41205,7 +41205,7 @@
 											{
 												"pos" : "-1612.360, 335.420, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41271,7 +41271,7 @@
 											{
 												"pos" : "-1612.360, 335.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41348,7 +41348,7 @@
 											{
 												"pos" : "-1612.360, 341.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41370,7 +41370,7 @@
 											{
 												"pos" : "-1601.560, 328.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41447,7 +41447,7 @@
 											{
 												"pos" : "-1601.560, 322.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41502,7 +41502,7 @@
 											{
 												"pos" : "-1601.560, 322.420, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41557,7 +41557,7 @@
 											{
 												"pos" : "-1601.560, 329.250, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41601,7 +41601,7 @@
 											{
 												"pos" : "-1601.560, 329.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41656,7 +41656,7 @@
 											{
 												"pos" : "-1601.560, 322.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41711,7 +41711,7 @@
 											{
 												"pos" : "-1601.560, 322.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41777,7 +41777,7 @@
 											{
 												"pos" : "-1601.560, 328.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41821,7 +41821,7 @@
 											{
 												"pos" : "-1601.560, 342.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41876,7 +41876,7 @@
 											{
 												"pos" : "-1601.560, 335.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -41931,7 +41931,7 @@
 											{
 												"pos" : "-1601.560, 335.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42008,7 +42008,7 @@
 											{
 												"pos" : "-1601.560, 341.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42041,7 +42041,7 @@
 											{
 												"pos" : "-1601.560, 342.250, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42085,7 +42085,7 @@
 											{
 												"pos" : "-1601.560, 335.420, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42151,7 +42151,7 @@
 											{
 												"pos" : "-1601.560, 335.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42228,7 +42228,7 @@
 											{
 												"pos" : "-1601.560, 341.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42250,7 +42250,7 @@
 											{
 												"pos" : "-1592.520, 328.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42327,7 +42327,7 @@
 											{
 												"pos" : "-1592.520, 322.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42382,7 +42382,7 @@
 											{
 												"pos" : "-1592.520, 322.420, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42437,7 +42437,7 @@
 											{
 												"pos" : "-1592.520, 329.250, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42481,7 +42481,7 @@
 											{
 												"pos" : "-1592.520, 329.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42536,7 +42536,7 @@
 											{
 												"pos" : "-1592.520, 322.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42591,7 +42591,7 @@
 											{
 												"pos" : "-1592.520, 322.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42657,7 +42657,7 @@
 											{
 												"pos" : "-1592.520, 328.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42701,7 +42701,7 @@
 											{
 												"pos" : "-1592.520, 342.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42756,7 +42756,7 @@
 											{
 												"pos" : "-1592.520, 335.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42811,7 +42811,7 @@
 											{
 												"pos" : "-1592.520, 335.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42888,7 +42888,7 @@
 											{
 												"pos" : "-1592.520, 341.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42921,7 +42921,7 @@
 											{
 												"pos" : "-1592.520, 342.250, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -42965,7 +42965,7 @@
 											{
 												"pos" : "-1592.520, 335.420, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43031,7 +43031,7 @@
 											{
 												"pos" : "-1592.520, 335.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43108,7 +43108,7 @@
 											{
 												"pos" : "-1592.520, 341.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43130,7 +43130,7 @@
 											{
 												"pos" : "-1628.680, 328.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43207,7 +43207,7 @@
 											{
 												"pos" : "-1628.680, 322.420, 64.020"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43262,7 +43262,7 @@
 											{
 												"pos" : "-1628.680, 322.420, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43317,7 +43317,7 @@
 											{
 												"pos" : "-1628.680, 329.250, 44.570"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43361,7 +43361,7 @@
 											{
 												"pos" : "-1628.680, 329.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43416,7 +43416,7 @@
 											{
 												"pos" : "-1628.680, 322.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43471,7 +43471,7 @@
 											{
 												"pos" : "-1628.680, 322.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43537,7 +43537,7 @@
 											{
 												"pos" : "-1628.680, 328.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43581,7 +43581,7 @@
 											{
 												"pos" : "-1628.680, 342.250, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43636,7 +43636,7 @@
 											{
 												"pos" : "-1628.680, 335.420, 83.060"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43691,7 +43691,7 @@
 											{
 												"pos" : "-1628.680, 335.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43768,7 +43768,7 @@
 											{
 												"pos" : "-1628.680, 341.420, 102.510"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43801,7 +43801,7 @@
 											{
 												"pos" : "-1628.680, 342.250, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43845,7 +43845,7 @@
 											{
 												"pos" : "-1628.680, 335.420, 44.880"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43911,7 +43911,7 @@
 											{
 												"pos" : "-1628.680, 335.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										},
 										{
@@ -43988,7 +43988,7 @@
 											{
 												"pos" : "-1628.680, 341.420, 64.330"
 											},
-											"mesh" : "ico-sphere",
+											"mesh" : "sphere",
 											"material" : "pbr grey"
 										}
 									]

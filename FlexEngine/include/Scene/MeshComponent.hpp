@@ -126,7 +126,7 @@ namespace flex
 			Assimp::Importer importer = {};
 			const aiScene* scene = nullptr;
 		};
-		// First field is relative file path (e.g. RESOURCE_LOCATION + "meshes/cube.gltf")
+		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.gltf")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
 		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);

@@ -110,7 +110,7 @@
 				"pos" : "6.300, 4.400, -12.000",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -122,7 +122,7 @@
 				"pos" : "-0.500, 4.400, -12.000",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -134,7 +134,7 @@
 				"pos" : "2.800, 4.100, -7.300",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -146,7 +146,7 @@
 				"pos" : "2.800, 4.100, -17.700",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -158,7 +158,7 @@
 				"pos" : "2.600, 4.100, 13.870",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -170,7 +170,7 @@
 				"pos" : "6.300, 4.400, 18.570",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -182,7 +182,7 @@
 				"pos" : "-0.500, 4.400, 18.570",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		},
 		{
@@ -194,7 +194,7 @@
 				"pos" : "2.800, 4.100, 23.270",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white"
 		}
 	],

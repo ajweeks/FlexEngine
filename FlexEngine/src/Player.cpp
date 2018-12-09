@@ -46,12 +46,12 @@ namespace flex
 
 	void Player::Initialize()
 	{
-		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/click-02.wav");
-		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/jingle-single-01.wav");
-		m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/crunch-13.wav");
-		m_SoundTrackDetachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-02.wav");
-		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/whistle-01.wav");
-		//m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/schluck-07.wav");
+		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/click-02.wav");
+		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/jingle-single-01.wav");
+		m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/crunch-13.wav");
+		m_SoundTrackDetachID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/schluck-02.wav");
+		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/whistle-01.wav");
+		//m_SoundTrackAttachID = AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/schluck-07.wav");
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
@@ -75,7 +75,7 @@ namespace flex
 		SetStatic(false);
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
-		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION + "meshes/capsule.gltf");
+		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION  "meshes/capsule.gltf");
 
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
@@ -103,13 +103,13 @@ namespace flex
 			//tabletRB->SetLocalRotation(glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f)));
 			//m_MapTablet->SetCollisionShape(new btBoxShape(btVector3(0.45f, 0.68f, 0.08f)));
 			MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(mapTabletMatID, m_MapTablet));
-			mapTabletMesh->LoadFromFile(RESOURCE_LOCATION + "meshes/map_tablet.glb");
+			mapTabletMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/map_tablet.glb");
 			m_MapTabletHolder->AddChild(m_MapTablet);
 			m_MapTablet->GetTransform()->SetLocalPosition(glm::vec3(-0.75f, -0.3f, 2.3f));
 			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
 		}
 
-		m_CrosshairTextureID = g_Renderer->InitializeTexture(RESOURCE_LOCATION + "textures/cross-hair-01.png", 4, false, false, false);
+		m_CrosshairTextureID = g_Renderer->InitializeTexture(RESOURCE_LOCATION  "textures/cross-hair-01.png", 4, false, false, false);
 
 		GameObject::Initialize();
 	}

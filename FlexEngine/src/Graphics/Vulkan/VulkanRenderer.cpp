@@ -258,7 +258,7 @@ namespace flex
 			}
 
 			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
-			m_BlankTexture->CreateFromTexture(RESOURCE_LOCATION + "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, false);
+			m_BlankTexture->CreateFromTexture(RESOURCE_LOCATION  "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, false);
 
 			//CreateInstance();
 			//SetupDebugCallback();
@@ -510,10 +510,10 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			// TODO: Make cyclable at runtime
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath =
-				//RESOURCE_LOCATION + "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
-				RESOURCE_LOCATION + "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
-				//RESOURCE_LOCATION + "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
-				//RESOURCE_LOCATION + "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
+				//RESOURCE_LOCATION  "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
+				RESOURCE_LOCATION  "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
+				//RESOURCE_LOCATION  "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
+				//RESOURCE_LOCATION  "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -5306,7 +5306,7 @@ namespace flex
 
 		void VulkanRenderer::LoadDefaultShaderCode()
 		{
-			const std::string shaderDirectory = RESOURCE_LOCATION + "shaders/GLSL/spv/";
+			const std::string shaderDirectory = RESOURCE_LOCATION  "shaders/GLSL/spv/";
 			m_Shaders = {
 				{ "deferred_simple", shaderDirectory + "vk_deferred_simple_vert.spv", shaderDirectory + "vk_deferred_simple_frag.spv", m_VulkanDevice->m_LogicalDevice },
 				{ "color",  shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv", m_VulkanDevice->m_LogicalDevice },

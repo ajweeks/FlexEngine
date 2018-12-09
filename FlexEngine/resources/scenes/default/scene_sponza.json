@@ -72,7 +72,7 @@
 				"rot" : "-2.663, -0.409, 2.701",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -98,7 +98,7 @@
 				"rot" : "2.160, 1.322, -0.433",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -124,7 +124,7 @@
 				"rot" : "1.977, 0.266, 1.875",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -150,7 +150,7 @@
 				"rot" : "-0.093, 0.322, 1.705",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -176,7 +176,7 @@
 				"rot" : "-0.601, -0.843, 1.893",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -202,7 +202,7 @@
 				"rot" : "0.199, 0.539, 0.338",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -228,7 +228,7 @@
 				"rot" : "0.510, 0.679, 1.310",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -254,7 +254,7 @@
 				"rot" : "0.484, 0.648, 2.338",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -280,7 +280,7 @@
 				"rot" : "0.535, 0.664, 1.792",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -306,7 +306,7 @@
 				"rot" : "0.510, 0.659, 2.853",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -332,7 +332,7 @@
 				"rot" : "0.515, 0.658, 2.733",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -358,7 +358,7 @@
 				"rot" : "0.479, 0.651, 2.808",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "sphere",
 			"material" : "pbr white",
 			"collider" : 
 			{

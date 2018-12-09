@@ -19,11 +19,11 @@ namespace flex
 	{
 		m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
 
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_128.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_64.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_48.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_32.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION + "icons/flex-logo-03_16.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_64.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_48.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_32.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_16.png", 4));
 	}
 
 	GLFWWindowWrapper::~GLFWWindowWrapper()
