@@ -1243,8 +1243,8 @@ namespace flex
 				// TODO: Don't rely on material names!
 				if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
 				{
-					std::string profileBlockName = "generating equirectangular mat";
-					PROFILE_BEGIN(profileBlockName);
+					std::string equirectangularProfileBlockName = "generating equirectangular mat";
+					PROFILE_BEGIN(equirectangularProfileBlockName);
 					MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 					equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
 					equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
@@ -1261,8 +1261,8 @@ namespace flex
 					}
 
 					equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo, equirectangularToCubeMatID);
-					PROFILE_END(profileBlockName);
-					Profiler::PrintBlockDuration(profileBlockName);
+					PROFILE_END(equirectangularProfileBlockName);
+					Profiler::PrintBlockDuration(equirectangularProfileBlockName);
 				}
 
 				GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
@@ -1541,16 +1541,16 @@ namespace flex
 				// TODO: Don't rely on material names!
 				if (!GetMaterialID("Irradiance", irrandianceMatID))
 				{
-					std::string profileBlockName = "generating irradiance mat";
-					PROFILE_BEGIN(profileBlockName);
+					std::string irradianceProfileBlockName = "generating irradiance mat";
+					PROFILE_BEGIN(irradianceProfileBlockName);
 					MaterialCreateInfo irrandianceMatCreateInfo = {};
 					irrandianceMatCreateInfo.name = "Irradiance";
 					irrandianceMatCreateInfo.shaderName = "irradiance";
 					irrandianceMatCreateInfo.enableCubemapSampler = true;
 					irrandianceMatCreateInfo.engineMaterial = true;
 					irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
-					PROFILE_END(profileBlockName);
-					Profiler::PrintBlockDuration(profileBlockName);
+					PROFILE_END(irradianceProfileBlockName);
+					Profiler::PrintBlockDuration(irradianceProfileBlockName);
 				}
 
 				GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
