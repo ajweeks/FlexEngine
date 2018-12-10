@@ -104,6 +104,7 @@ namespace flex
 
 	bool BezierCurveList::IsVectorFacingDownTrack(real distAlongTrack, const glm::vec3& vec)
 	{
+		// TODO: Make this return the intuitive result (the opposite of this)
 		real dotResult = glm::dot(GetCurveDirectionAt(distAlongTrack), vec);
 		return (dotResult <= 0.001f);
 	}

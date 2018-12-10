@@ -24,7 +24,7 @@ namespace flex
 		void DrawImGuiObjects();
 
 	private:
-		void SnapPosToTrack(real pDistAlongTrack, bool bWasFacingDownTrack, real moveForward, real moveBackward);
+		void SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack);
 
 		real m_MoveAcceleration = 120.0f;
 		real m_MaxMoveSpeed = 20.0f;

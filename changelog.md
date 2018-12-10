@@ -1,6 +1,9 @@
 
 2018
 
+December
+- Fix player direction handling at junctions
+
 November
 - Allow screenshots to be taken in-game (using numpad 9 key)
 - Add basic controls to allow player to place tracks (Y to enter placement mode, RT to place, LT to finalize, X to lock in/out, LT/RT to move along track)

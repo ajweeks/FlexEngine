@@ -111,23 +111,6 @@ namespace flex
 								else
 								{
 									newTrackIdx = (&m_Tracks[junction.trackIndices[0]] == track ? 1 : 0);
-									newCurveIdx = junction.curveIndices[newTrackIdx];
-									newDistAlongTrack = (real)newCurveIdx / (real)(m_Tracks[junction.trackIndices[newTrackIdx]].curves.size());
-									glm::vec3 desiredDirVec = (desiredDir == 2 ? trackRight : -trackRight);
-									newTrackState = GetTrackStateInDir(desiredDirVec, &m_Tracks[junction.trackIndices[newTrackIdx]], newDistAlongTrack, bReversingDownTrack);
-									if (newTrackState == TrackState::FACING_FORWARD)
-									{
-										newDistAlongTrack += 0.001f;
-									}
-									else  if (newTrackState == TrackState::FACING_BACKWARD)
-									{
-										newDistAlongTrack -= 0.001f;
-									}
-									else
-									{
-										PrintWarn("Unexpected track state when desired dir != 1\n");
-									}
-									newDistAlongTrack = glm::clamp(newDistAlongTrack, 0.0f, 1.0f);
 									if (bPrint) Print("Changed to only other track at junction\n");
 								}
 							}
@@ -152,10 +135,10 @@ namespace flex
 								if (desiredDir == 0)
 								{
 									// Want to go left
-									glm::vec3 desiredDirVec = bReversingDownTrack ? trackRight : -trackRight;
-									if (distAlongTrack < pDistAlongTrack)
+									glm::vec3 desiredDirVec = -trackRight;
+									if (bReversingDownTrack)
 									{
-										//desiredDirVec = -desiredDirVec;
+										desiredDirVec = -desiredDirVec;
 									}
 									newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bReachedEndOfTheLine);
 									if (newTrackIdx != -1)
@@ -166,10 +149,10 @@ namespace flex
 								else if (desiredDir == 2)
 								{
 									// Want to go right
-									glm::vec3 desiredDirVec = bReversingDownTrack ? -trackRight : trackRight;
-									if (distAlongTrack < pDistAlongTrack)
+									glm::vec3 desiredDirVec = trackRight;
+									if (bReversingDownTrack)
 									{
-										//desiredDirVec = -desiredDirVec;
+										desiredDirVec = -desiredDirVec;
 									}
 									newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bReachedEndOfTheLine);
 									if (newTrackIdx != -1)
@@ -190,18 +173,40 @@ namespace flex
 							newCurveIdx = junction.curveIndices[newTrackIdx];
 							newDistAlongTrack = (real)newCurveIdx / (real)(newTrack->curves.size());
 							glm::vec3 desiredDirVec = (desiredDir == 1 ? glm::normalize(newPoint - pPoint) : desiredDir == 2 ? trackRight : -trackRight);
-							if (desiredDir != 1 && (distAlongTrack < pDistAlongTrack))
+							if (desiredDir == 1 && bReversingDownTrack)
 							{
-								//desiredDirVec = -desiredDirVec;
+								desiredDirVec = -desiredDirVec;
 							}
 							newTrackState = GetTrackStateInDir(desiredDirVec, &m_Tracks[junction.trackIndices[newTrackIdx]], newDistAlongTrack, bReversingDownTrack);
-							if (newTrackState == TrackState::FACING_FORWARD)
+							if (bReversingDownTrack)
 							{
-								newDistAlongTrack += 0.001f;
+								if (newTrackState == TrackState::FACING_FORWARD)
+								{
+									newDistAlongTrack -= 0.001f;
+								}
+								else if (newTrackState == TrackState::FACING_BACKWARD)
+								{
+									newDistAlongTrack += 0.001f;
+								}
+								else
+								{
+									PrintWarn("Unexpected track state when desired dir != 1\n");
+								}
 							}
-							else if (newTrackState == TrackState::FACING_BACKWARD)
+							else
 							{
-								newDistAlongTrack -= 0.001f;
+								if (newTrackState == TrackState::FACING_FORWARD)
+								{
+									newDistAlongTrack += 0.001f;
+								}
+								else if (newTrackState == TrackState::FACING_BACKWARD)
+								{
+									newDistAlongTrack -= 0.001f;
+								}
+								else
+								{
+									PrintWarn("Unexpected track state when desired dir != 1\n");
+								}
 							}
 							newDistAlongTrack = glm::clamp(newDistAlongTrack, 0.0f, 1.0f);
 						}
@@ -399,13 +404,27 @@ namespace flex
 	{
 		bool bFacingDownTrack = track->IsVectorFacingDownTrack(distAlongTrack, desiredDir);
 
-		if (bReversing ? !bFacingDownTrack : bFacingDownTrack)
+		if (bReversing)
 		{
-			return TrackState::FACING_BACKWARD;
+			if (bFacingDownTrack)
+			{
+				return TrackState::FACING_BACKWARD;
+			}
+			else
+			{
+				return TrackState::FACING_FORWARD;
+			}
 		}
 		else
 		{
-			return TrackState::FACING_FORWARD;
+			if (bFacingDownTrack)
+			{
+				return TrackState::FACING_BACKWARD;
+			}
+			else
+			{
+				return TrackState::FACING_FORWARD;
+			}
 		}
 	}
 
