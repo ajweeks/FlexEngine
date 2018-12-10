@@ -134,10 +134,15 @@ namespace flex
 		i32 size = (i32)(sampleRate * length);
 		u8* data = (u8*)malloc((u32)size);
 
+		// Fade out last 10%
+		real fadeOutFrac = 0.1f;
+
 		for (i32 i = 0; i < size; ++i)
 		{
-			real t = pow(sin((real)i / (real)(size - 1) * PI), 0.01f); // Fade in/out
-			data[i] = (u8)((sin((real)i / freq) * t * 0.5f + 0.5f) * 255.0f);// +(sin((real)i / freq * 0.6565f) * t * 0.5f + 0.5f) * 127.0f);
+			real t = (real)i / (real)(size - 1);
+			t -= fmod(t, 0.5f); // Linear fade in/out
+			//t = pow(sin(t* PI), 0.01f); // Sinusodal fade in/out
+			data[i] = (u8)((sin((real)i / freq) * t * 0.5f + 0.5f) * 255.0f);
 		}
 
 		ALenum error = alGetError();

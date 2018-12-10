@@ -197,7 +197,7 @@ namespace flex
 		{
 			glm::vec3 trackForward = m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack);
 			real invTurnSpeed = m_TurnToFaceDownTrackInvSpeed;
-			if (m_TrackState == TrackState::FACING_BACKWARD)
+			if (m_TrackState == TrackState::FACING_FORWARD)
 			{
 				trackForward = -trackForward;
 			}
@@ -222,7 +222,7 @@ namespace flex
 			m_bPlacingTrack = !m_bPlacingTrack;
 		}
 
-		if (m_bPlacingTrack && m_TrackRiding == nullptr)
+		if (m_bPossessed && m_bPlacingTrack && m_TrackRiding == nullptr)
 		{
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(1.0f);
 
@@ -433,22 +433,26 @@ namespace flex
 
 	void Player::AttachToTrack(BezierCurveList* track, real distAlongTrack)
 	{
+		assert(track);
+
 		if (m_TrackRiding)
 		{
 			PrintWarn("Player::AttachToTrack called when already attached! Detaching...\n");
 			DetachFromTrack();
 		}
 
+		distAlongTrack = glm::clamp(distAlongTrack, 0.0f, 1.0f);
+
 		m_TrackRiding = track;
 		m_DistAlongTrack = distAlongTrack;
 
 		if (m_TrackRiding->IsVectorFacingDownTrack(m_DistAlongTrack, m_Transform.GetForward()))
 		{
-			m_TrackState = TrackState::FACING_FORWARD;
+			m_TrackState = TrackState::FACING_BACKWARD;
 		}
 		else
 		{
-			m_TrackState = TrackState::FACING_BACKWARD;
+			m_TrackState = TrackState::FACING_FORWARD;
 		}
 
 		AudioManager::PlaySource(m_SoundTrackAttachID);

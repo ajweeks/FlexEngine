@@ -24,7 +24,7 @@ namespace flex
 		void DrawImGuiObjects();
 
 	private:
-		void SnapPosToTrack(real pDistAlongTrack, real moveForward, real moveBackward);
+		void SnapPosToTrack(real pDistAlongTrack, bool bWasFacingDownTrack, real moveForward, real moveBackward);
 
 		real m_MoveAcceleration = 120.0f;
 		real m_MaxMoveSpeed = 20.0f;
@@ -57,6 +57,9 @@ namespace flex
 		Mode m_Mode = Mode::FIRST_PERSON;
 		i32 m_PlayerIndex = -1;
 		Player* m_Player = nullptr;
+
+		glm::vec3 a, b;
+
 
 	};
 } // namespace flex

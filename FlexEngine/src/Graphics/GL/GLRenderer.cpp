@@ -1256,7 +1256,20 @@ namespace flex
 
 					if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
 					{
-						i32 matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
+						i32 matIdx = -1;
+						i32 attemptCount = 0;
+						do
+						{
+							matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
+							++attemptCount;
+						} while (!FileExists(m_AvailableHDRIs[matIdx]) && attemptCount < 15);
+
+						if (matIdx == -1)
+						{
+							PrintWarn("Unable to open any randomly chosen HDRI!\n");
+							return;
+						}
+
 						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = m_AvailableHDRIs[matIdx];
 					}
 
@@ -4762,22 +4775,12 @@ namespace flex
 		{
 			if (bRandomizeTexture && !m_AvailableHDRIs.empty())
 			{
-				bool bChanged = false;
 				for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 				{
 					if (m_Materials[i].material.generateIrradianceSampler)
 					{
 						GenerateIrradianceSamplerMaps((MaterialID)i);
 						GeneratePrefilteredMapFromCubemap((MaterialID)i);
-						bChanged = true;
-					}
-				}
-
-				if (bChanged)
-				{
-					for (GLRenderObject* renderObject : m_RenderObjects)
-					{
-
 					}
 				}
 			}

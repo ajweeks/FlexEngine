@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Helpers.hpp" // For TrackState
+
 namespace flex
 {
 	class BezierCurveList;
@@ -32,7 +34,9 @@ namespace flex
 			BezierCurveList** outNewTrack,
 			real* outNewDistAlongTrack,
 			i32* outJunctionIndex,
-			i32* outCurveIndex);
+			i32* outCurveIndex,
+			TrackState* outTrackState,
+			bool bPrint);
 
 		void UpdatePreview(BezierCurveList* track,
 			real distAlongTrack,
@@ -62,6 +66,7 @@ namespace flex
 
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine);
+		TrackState GetTrackStateInDir(const glm::vec3& desiredDir, BezierCurveList* track, real distAlongTrack, bool bReversing);
 
 		static const real JUNCTION_THRESHOLD_DIST;
 

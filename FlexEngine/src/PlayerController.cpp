@@ -29,7 +29,9 @@
 
 namespace flex
 {
-	PlayerController::PlayerController()
+	PlayerController::PlayerController() :
+		a(VEC3_ZERO),
+		b(VEC3_ZERO)
 	{
 	}
 
@@ -105,7 +107,7 @@ namespace flex
 					{
 						m_Player->AttachToTrack(&trackManager->m_Tracks[trackInRangeIndex], distAlongTrack);
 
-						SnapPosToTrack(m_Player->m_DistAlongTrack, 0.0f, 0.0f);
+						SnapPosToTrack(m_Player->m_DistAlongTrack, m_Player->IsFacingDownTrack(), 0.0f, 0.0f);
 					}
 				}
 			}
@@ -137,7 +139,7 @@ namespace flex
 
 				const real oMoveForward = moveForward;
 				const real oMoveBackward = moveBackward;
-				if (m_Player->IsFacingDownTrack())
+				if (!m_Player->IsFacingDownTrack())
 				{
 					moveForward = 1.0f - moveForward;
 					moveBackward = 1.0f - moveBackward;
@@ -147,7 +149,7 @@ namespace flex
 				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 				m_Player->m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_Player->m_TrackRiding,
 					(moveForward - moveBackward) * m_Player->m_TrackMoveSpeed * g_DeltaTime, m_Player->m_DistAlongTrack);
-				SnapPosToTrack(pDist, oMoveForward, oMoveBackward);
+				SnapPosToTrack(pDist, bWasFacingDownTrack, oMoveForward, oMoveBackward);
 
 				if (m_Player->IsFacingDownTrack() != bWasFacingDownTrack &&
 					m_Player->m_TrackRiding == pTrackRiding)
@@ -213,6 +215,9 @@ namespace flex
 
 		// Jitter tester:
 		//m_Player->GetTransform()->SetWorldPosition(m_Player->GetTransform()->GetWorldPosition() + glm::vec3(g_DeltaTime * 1.0f, 0.0f, 0.0f));
+
+		debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(a * 3.0f), btVector3(0.1f, 0.1f, 0.1f));
+		debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(b * 3.0f), btVector3(1.0f, 1.0f, 1.0f));
 
 		bool bDrawVelocity = false;
 		if (bDrawVelocity)
@@ -281,7 +286,7 @@ namespace flex
 		}
 	}
 
-	void PlayerController::SnapPosToTrack(real pDistAlongTrack, real moveForward, real moveBackward)
+	void PlayerController::SnapPosToTrack(real pDistAlongTrack, bool bWasFacingDownTrack, real moveForward, real moveBackward)
 	{
 		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 		BezierCurveList* newTrack = m_Player->m_TrackRiding;
@@ -307,64 +312,87 @@ namespace flex
 		{
 			desiredDir = 2;
 		}
-		bool bReversingDownTrack = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_TRIGGER) > 0.0f;
 
-		trackManager->UpdatePreview(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetForward(), m_Player->IsFacingDownTrack(), bReversingDownTrack);
+		//trackManager->UpdatePreview(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetForward(), m_Player->IsFacingDownTrack(), bReversingDownTrack);
 
+		const bool bReversingDownTrack = moveBackward > 0.0f;
 		i32 newJunctionIndex = -1;
 		i32 newCurveIndex = -1;
-		glm::vec3 newPos = trackManager->GetPointOnTrack(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrack, &newDistAlongTrack, &newJunctionIndex, &newCurveIndex);
+		TrackState newTrackState = TrackState::NONE;
+		glm::vec3 newPos = trackManager->GetPointOnTrack(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrack, &newDistAlongTrack, &newJunctionIndex, &newCurveIndex, &newTrackState, true);
 
-		bool bSwitchedTracks = newTrack != m_Player->m_TrackRiding;
+		bool bSwitchedTracks = newTrack && (newTrack != m_Player->m_TrackRiding);
 		if (bSwitchedTracks)
 		{
+			m_SecondsAttemptingToTurn = 0.0f;
+			m_DirTurning = TurningDir::NONE;
+
 			BezierCurveList* pTrack = m_Player->m_TrackRiding;
 			real pDist = m_Player->m_DistAlongTrack;
 			m_Player->m_TrackRiding = newTrack;
 			m_Player->m_DistAlongTrack = newDistAlongTrack;
+			bool bFacingDownTrack = m_Player->IsFacingDownTrack();
 
-
-			glm::vec3 pTrackF = pTrack->GetCurveDirectionAt(pDist);
-			glm::vec3 newTrackF = newTrack->GetCurveDirectionAt(newDistAlongTrack);
-
-			//if (pDist > 0.5f)
-			//{
-			//	pTrackF = -pTrackF;
-			//}
-
-			//if (newDistAlongTrack > 0.5f)
-			//{
-			//	newTrackF = -newTrackF;
-			//}
-
-			real angleBetweenTracks = glm::angle(pTrackF, newTrackF);
-			Print("angle between tracks; %.3f\n", angleBetweenTracks);
-
-			bool bForwardFacingDownNewTrack = newTrack->IsVectorFacingDownTrack(newDistAlongTrack, m_Player->GetTransform()->GetForward());
-			real epsilon = 0.01f;
-			if (angleBetweenTracks <= (PI_DIV_TWO + epsilon) || angleBetweenTracks >= (THREE_PI_DIV_TWO - epsilon))
+			if (newTrackState == TrackState::NONE)
 			{
-				Print("Acute\n");
-				if (bForwardFacingDownNewTrack)
+				glm::vec3 pTrackF = pTrack->GetCurveDirectionAt(pDist);
+				glm::vec3 newTrackF = newTrack->GetCurveDirectionAt(newDistAlongTrack);
+
+				if ((bWasFacingDownTrack && pDist > 0.5f) ||
+					(!bWasFacingDownTrack && pDist < 0.5f))
 				{
-					m_Player->m_TrackState = TrackState::FACING_BACKWARD;
+					pTrackF = -pTrackF;
+				}
+
+				if ((bFacingDownTrack && newDistAlongTrack > 0.5f) ||
+					(!bFacingDownTrack && newDistAlongTrack < 0.5f))
+				{
+					newTrackF = -newTrackF;
+				}
+
+				real angleBetweenTracks = glm::angle(pTrackF, newTrackF);
+
+				a = pTrackF;
+				b = newTrackF;
+
+				glm::vec3 rotatedFor = m_Player->GetTransform()->GetForward();
+				rotatedFor = glm::rotate(glm::mat4(1.0f), -PI_DIV_TWO, VEC3_UP) * glm::vec4(rotatedFor, 0.0f);
+				bool bForwardFacingDownNewTrack = newTrack->IsVectorFacingDownTrack(newDistAlongTrack, rotatedFor);
+				real epsilon = 0.1f;
+				if (angleBetweenTracks <= (PI_DIV_TWO - epsilon) || angleBetweenTracks >= (THREE_PI_DIV_TWO + epsilon))
+				{
+					// Angle is acute
+					Print("Acute (%.2f)\n", glm::degrees(angleBetweenTracks));
+					if (bForwardFacingDownNewTrack)
+					{
+						m_Player->m_TrackState = TrackState::FACING_FORWARD;
+						Print("Forward\n");
+					}
+					else
+					{
+						m_Player->m_TrackState = TrackState::FACING_BACKWARD;
+						Print("Backward\n");
+					}
 				}
 				else
 				{
-					m_Player->m_TrackState = TrackState::FACING_FORWARD;
+					// Angle is obtuse
+					Print("Obtuse (%.2f)\n", glm::degrees(angleBetweenTracks));
+					if (bForwardFacingDownNewTrack)
+					{
+						m_Player->m_TrackState = TrackState::FACING_BACKWARD;
+						Print("Backward\n");
+					}
+					else
+					{
+						m_Player->m_TrackState = TrackState::FACING_FORWARD;
+						Print("Forward\n");
+					}
 				}
 			}
 			else
 			{
-				Print("Obtuse\n");
-				if (bForwardFacingDownNewTrack)
-				{
-					m_Player->m_TrackState = TrackState::FACING_FORWARD;
-				}
-				else
-				{
-					m_Player->m_TrackState = TrackState::FACING_BACKWARD;
-				}
+				m_Player->m_TrackState = newTrackState;
 			}
 		}
 
