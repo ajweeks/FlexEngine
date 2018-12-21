@@ -231,6 +231,8 @@ namespace flex
 		bool bFacingForwardDownTrack,
 		bool bReversingDownTrack)
 	{
+		// TODO: Use real-world distance rather than [0-1] spine dist
+		// TODO: Ensure not stepping over multiple junctions
 		real range = 0.2f;
 		real dotResult = glm::dot(track->GetCurveDirectionAt(distAlongTrack), currentFor);
 		real queryDist = distAlongTrack;

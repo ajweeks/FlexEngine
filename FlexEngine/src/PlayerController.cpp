@@ -238,6 +238,8 @@ namespace flex
 			{
 				lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT) > 0 ? 1.0f :
 					g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
+				lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) > 0 ? 1.0f :
+					g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) > 0 ? -1.0f : lookH;
 				if (m_Mode == Mode::FIRST_PERSON)
 				{
 					lookV = g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP) > 0 ? -1.0f :
@@ -304,17 +306,34 @@ namespace flex
 		{
 			rightStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_STICK_X);
 		}
-		static const real STICK_THRESHOLD = 0.5f;
-		if (leftStickX < -STICK_THRESHOLD)
+
+		if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
 		{
-			desiredDir = 0;
+			real lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT) > 0 ? 1.0f :
+				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
+			if (lookH > 0.5f)
+			{
+				desiredDir = 2;
+			}
+			else if (lookH < -0.5f)
+			{
+				desiredDir = 0;
+			}
 		}
-		else if (leftStickX > STICK_THRESHOLD)
+		else
 		{
-			desiredDir = 2;
+			static const real STICK_THRESHOLD = 0.5f;
+			if (leftStickX < -STICK_THRESHOLD)
+			{
+				desiredDir = 0;
+			}
+			else if (leftStickX > STICK_THRESHOLD)
+			{
+				desiredDir = 2;
+			}
 		}
 
-		//trackManager->UpdatePreview(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetForward(), m_Player->IsFacingDownTrack(), bReversingDownTrack);
+		trackManager->UpdatePreview(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetForward(), m_Player->IsFacingDownTrack(), bReversingDownTrack);
 
 		i32 newJunctionIndex = -1;
 		i32 newCurveIndex = -1;
@@ -330,65 +349,7 @@ namespace flex
 			m_Player->m_TrackRiding = newTrack;
 			m_Player->m_DistAlongTrack = newDistAlongTrack;
 
-			if (newTrackState == TrackState::NONE)
-			{
-				//glm::vec3 pTrackF = pTrack->GetCurveDirectionAt(pDist);
-				//glm::vec3 newTrackF = newTrack->GetCurveDirectionAt(newDistAlongTrack);
-
-				//bool bFacingDownTrack = m_Player->IsFacingDownTrack();
-				//if ((bWasFacingDownTrack && pDist > 0.5f) ||
-				//	(!bWasFacingDownTrack && pDist < 0.5f))
-				//{
-				//	pTrackF = -pTrackF;
-				//}
-
-				//if ((bFacingDownTrack && newDistAlongTrack > 0.5f) ||
-				//	(!bFacingDownTrack && newDistAlongTrack < 0.5f))
-				//{
-				//	newTrackF = -newTrackF;
-				//}
-
-				//real angleBetweenTracks = glm::angle(pTrackF, newTrackF);
-
-				//a = pTrackF;
-				//b = newTrackF;
-
-				//glm::vec3 rotatedFor = m_Player->GetTransform()->GetForward();
-				//rotatedFor = glm::rotate(glm::mat4(1.0f), -PI_DIV_TWO, VEC3_UP) * glm::vec4(rotatedFor, 0.0f);
-				//bool bForwardFacingDownNewTrack = newTrack->IsVectorFacingDownTrack(newDistAlongTrack, rotatedFor);
-				//real epsilon = 0.1f;
-				//if (angleBetweenTracks <= (PI_DIV_TWO - epsilon) || angleBetweenTracks >= (THREE_PI_DIV_TWO + epsilon))
-				//{
-				//	// Angle is acute
-				//	Print("Acute (%.2f)\n", glm::degrees(angleBetweenTracks));
-				//	if (bForwardFacingDownNewTrack)
-				//	{
-				//		m_Player->m_TrackState = TrackState::FACING_FORWARD;
-				//		Print("Forward\n");
-				//	}
-				//	else
-				//	{
-				//		m_Player->m_TrackState = TrackState::FACING_BACKWARD;
-				//		Print("Backward\n");
-				//	}
-				//}
-				//else
-				//{
-				//	// Angle is obtuse
-				//	Print("Obtuse (%.2f)\n", glm::degrees(angleBetweenTracks));
-				//	if (bForwardFacingDownNewTrack)
-				//	{
-				//		m_Player->m_TrackState = TrackState::FACING_BACKWARD;
-				//		Print("Backward\n");
-				//	}
-				//	else
-				//	{
-				//		m_Player->m_TrackState = TrackState::FACING_FORWARD;
-				//		Print("Forward\n");
-				//	}
-				//}
-			}
-			else
+			if (newTrackState != TrackState::NONE)
 			{
 				m_Player->m_TrackState = newTrackState;
 			}
