@@ -100,7 +100,7 @@ inline void SafeDelete(T &pObjectToDelete)
 #define PROFILE_AUTO(blockName)
 #endif
 
-#define ENSURE_NO_ENTRY PrintError("Execution entered no entry path!\n"); assert(false);
+#define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); assert(false); }
 #ifdef _DEBUG
 #define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Line: %d\n", __FILE__, __LINE__); assert(false); }
 #else

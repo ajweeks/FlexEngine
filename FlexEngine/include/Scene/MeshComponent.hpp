@@ -31,7 +31,7 @@ namespace flex
 		static void DestroyAllLoadedMeshes();
 
 		static MeshComponent* ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID);
-		JSONObject SerializeToJSON();
+		JSONObject Serialize() const;
 
 		void Update();
 		void Destroy();

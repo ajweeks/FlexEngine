@@ -4,7 +4,6 @@
 
 namespace flex
 {
-	class BezierCurveList;
 	class Player;
 
 	// The player controller is responsible for setting the player's

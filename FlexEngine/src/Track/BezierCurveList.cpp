@@ -23,6 +23,19 @@ namespace flex
 		DEBUG_GenerateRandomSeed();
 	}
 
+	BezierCurveList BezierCurveList::InitializeFromJSON(const JSONObject& obj)
+	{
+		BezierCurveList result = {};
+
+		for (const JSONField& field : obj.fields)
+		{
+			std::string curveString = field.value.strValue;
+			result.curves.push_back(BezierCurve::FromString(curveString));
+		}
+
+		return result;
+	}
+
 	void BezierCurveList::DrawDebug(const btVector4& highlightColour, real highlightCurveAtPoint /* = -1.0f */) const
 	{
 		i32 highlightedCurveIndex = -1;
@@ -107,6 +120,18 @@ namespace flex
 		// TODO: Make this return the intuitive result (the opposite of this)
 		real dotResult = glm::dot(GetCurveDirectionAt(distAlongTrack), vec);
 		return (dotResult <= 0.001f);
+	}
+
+	JSONObject BezierCurveList::Serialize() const
+	{
+		JSONObject result = {};
+
+		for (const BezierCurve& curve : curves)
+		{
+			result.fields.emplace_back("curve", JSONValue(curve.ToString()));
+		}
+
+		return result;
 	}
 
 	void BezierCurveList::DEBUG_GenerateRandomSeed()

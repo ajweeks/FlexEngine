@@ -23,7 +23,7 @@ namespace flex
 		~Transform();
 
 		static Transform ParseJSON(const JSONObject& object);
-		JSONField SerializeToJSON();
+		JSONField Serialize() const;
 
 		void SetAsIdentity();
 

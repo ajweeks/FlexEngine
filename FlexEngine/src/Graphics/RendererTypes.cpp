@@ -186,7 +186,7 @@ namespace flex
 		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
 	}
 
-	JSONObject Material::SerializeToJSON() const
+	JSONObject Material::Serialize() const
 	{
 		JSONObject materialObject = {};
 

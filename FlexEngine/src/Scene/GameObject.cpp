@@ -348,7 +348,7 @@ namespace flex
 		// Generic game objects have no unique fields
 	}
 
-	JSONObject GameObject::SerializeToJSON(BaseScene* scene)
+	JSONObject GameObject::Serialize(const BaseScene* scene) const
 	{
 		JSONObject object = {};
 
@@ -390,14 +390,13 @@ namespace flex
 			object.fields.emplace_back("static", JSONValue(true));
 		}
 
-		object.fields.push_back(GetTransform()->SerializeToJSON());
+		object.fields.push_back(m_Transform.Serialize());
 
-		MeshComponent* meshComponent = GetMeshComponent();
-		if (meshComponent &&
+		if (m_MeshComponent &&
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			std::string meshName = meshComponent->GetRelativeFilePath();
+			std::string meshName = m_MeshComponent->GetRelativeFilePath();
 			StripLeadingDirectories(meshName);
 			StripFileType(meshName);
 
@@ -408,9 +407,9 @@ namespace flex
 			MaterialID matID = InvalidMaterialID;
 			RenderObjectCreateInfo renderObjectCreateInfo;
 			RenderID renderID = GetRenderID();
-			if (meshComponent)
+			if (m_MeshComponent)
 			{
-				matID = meshComponent->GetMaterialID();
+				matID = m_MeshComponent->GetMaterialID();
 			}
 			else if (renderID != InvalidRenderID && g_Renderer->GetRenderObjectCreateInfo(renderID, renderObjectCreateInfo))
 			{
@@ -552,7 +551,7 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					childrenToSerialize.push_back(child->SerializeToJSON(scene));
+					childrenToSerialize.push_back(child->Serialize(scene));
 				}
 			}
 
@@ -566,7 +565,7 @@ namespace flex
 		return object;
 	}
 
-	void GameObject::SerializeUniqueFields(JSONObject& /* parentObject */)
+	void GameObject::SerializeUniqueFields(JSONObject& /* parentObject */) const
 	{
 		// Generic game objects have no unique fields
 	}
@@ -1397,7 +1396,7 @@ namespace flex
 		}
 	}
 
-	void Valve::SerializeUniqueFields(JSONObject& parentObject)
+	void Valve::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject valveInfo = {};
 
@@ -1583,7 +1582,7 @@ namespace flex
 		}
 	}
 
-	void RisingBlock::SerializeUniqueFields(JSONObject& parentObject)
+	void RisingBlock::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject blockInfo = {};
 
@@ -1738,7 +1737,7 @@ namespace flex
 		}
 	}
 
-	void GlassPane::SerializeUniqueFields(JSONObject& parentObject)
+	void GlassPane::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject windowInfo = {};
 
@@ -1812,7 +1811,7 @@ namespace flex
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject)
+	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		UNREFERENCED_PARAMETER(parentObject);
 
@@ -1865,7 +1864,7 @@ namespace flex
 		g_Renderer->SetSkyboxMesh(this);
 	}
 
-	void Skybox::SerializeUniqueFields(JSONObject& parentObject)
+	void Skybox::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();

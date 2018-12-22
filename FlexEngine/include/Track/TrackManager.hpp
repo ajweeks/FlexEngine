@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Helpers.hpp" // For TrackState
+#include "JSONTypes.hpp"
 
 namespace flex
 {
@@ -8,9 +9,12 @@ namespace flex
 
 	struct Junction
 	{
+		// TODO: Update ToString if this value changes
 		static const i32 MAX_TRACKS = 4;
 
 		bool Equals(BezierCurveList* trackA, BezierCurveList* trackB, i32 curveIndexA, i32 curveIndexB);
+
+		JSONObject Serialize() const;
 
 		glm::vec3 pos;
 		i32 trackCount = 0;
@@ -23,6 +27,8 @@ namespace flex
 	{
 	public:
 		TrackManager();
+
+		void InitializeFromJSON(const JSONObject& obj);
 
 		void AddTrack(const BezierCurveList& track);
 
@@ -60,6 +66,8 @@ namespace flex
 
 		// Moves t along track according to curve length
 		real AdvanceTAlongTrack(BezierCurveList* track, real amount, real t);
+
+		JSONObject Serialize() const;
 
 		std::vector<BezierCurveList> m_Tracks;
 		std::vector<Junction> m_Junctions;

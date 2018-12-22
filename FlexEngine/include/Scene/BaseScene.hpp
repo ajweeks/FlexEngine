@@ -45,7 +45,7 @@ namespace flex
 		* Only writes data that has non-default values (e.g. an identity
 		* transform is not saved)
 		*/
-		void SerializeToFile(bool bSaveOverDefault = false);
+		void SerializeToFile(bool bSaveOverDefault = false) const;
 
 		void DeleteSaveFiles();
 
@@ -97,8 +97,8 @@ namespace flex
 		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
 		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
 
-		JSONObject SerializePointLight(PointLight& pointLight);
-		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight);
+		JSONObject SerializePointLight(PointLight& pointLight) const;
+		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight) const;
 
 		i32 GetMaterialArrayIndex(const Material& material);
 
@@ -116,7 +116,7 @@ namespace flex
 
 		std::vector<GameObject*> m_RootObjects;
 
-		bool m_bUsingSaveFile = false;
+		//bool m_bUsingSaveFile = false;
 
 		bool m_bLoaded = false;
 

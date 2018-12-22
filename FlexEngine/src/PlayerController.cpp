@@ -238,8 +238,11 @@ namespace flex
 			{
 				lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT) > 0 ? 1.0f :
 					g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
-				lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) > 0 ? 1.0f :
-					g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) > 0 ? -1.0f : lookH;
+				if (m_Player->m_TrackRiding)
+				{
+					lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) > 0 ? 1.0f :
+						g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) > 0 ? -1.0f : lookH;
+				}
 				if (m_Mode == Mode::FIRST_PERSON)
 				{
 					lookV = g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP) > 0 ? -1.0f :

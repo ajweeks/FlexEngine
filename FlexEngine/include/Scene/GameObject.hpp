@@ -22,7 +22,7 @@ namespace flex
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
-		JSONObject SerializeToJSON(BaseScene* scene);
+		JSONObject Serialize(const BaseScene* scene) const;
 		void ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
 		virtual void Initialize();
@@ -125,7 +125,7 @@ namespace flex
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
-		virtual void SerializeUniqueFields(JSONObject& parentObject);
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
 
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
@@ -233,7 +233,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -263,7 +263,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -278,7 +278,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -295,7 +295,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -308,7 +308,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 

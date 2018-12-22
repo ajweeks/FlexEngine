@@ -26,6 +26,19 @@ namespace flex
 		m_PreviewJunctionDir.dir = VEC3_ZERO;
 	}
 
+	void TrackManager::InitializeFromJSON(const JSONObject& obj)
+	{
+		const JSONObject& tracksObj = obj.GetObject("tracks");
+		const JSONObject& junctionsObj = obj.GetObject("junctions");
+
+		for (const JSONField& field : tracksObj.fields)
+		{
+			m_Tracks.push_back(BezierCurveList::InitializeFromJSON(field.value.objectValue));
+		}
+
+		FindJunctions();
+	}
+
 	void TrackManager::AddTrack(const BezierCurveList& track)
 	{
 		m_Tracks.push_back(track);
@@ -684,6 +697,29 @@ namespace flex
 		return newGlobalT;
 	}
 
+	JSONObject TrackManager::Serialize() const
+	{
+		JSONObject result = {};
+
+		JSONObject tracks = {};
+		JSONObject junctions = {};
+
+		for (const BezierCurveList& track : m_Tracks)
+		{
+			tracks.fields.emplace_back("track", JSONValue(track.Serialize()));
+		}
+
+		for (const Junction& junction : m_Junctions)
+		{
+			junctions.fields.emplace_back("junction", JSONValue(junction.Serialize()));
+		}
+
+		result.fields.emplace_back("tracks", JSONValue(tracks));
+		result.fields.emplace_back("junctions", JSONValue(junctions));
+
+		return result;
+	}
+
 	bool Junction::Equals(BezierCurveList* trackA, BezierCurveList* trackB, i32 curveIndexA, i32 curveIndexB)
 	{
 		i32 trackAIndex = -1;
@@ -714,5 +750,25 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	JSONObject Junction::Serialize() const
+	{
+		JSONObject result = {};
+
+		const char* delim = ", ";
+		std::string trackIndicesStr(IntToString(trackIndices[0]) + delim +
+			IntToString(trackIndices[1]) + delim +
+			IntToString(trackIndices[2]) + delim +
+			IntToString(trackIndices[3]));
+		std::string curveIndicesStr(IntToString(curveIndices[0]) + delim +
+			IntToString(curveIndices[1]) + delim +
+			IntToString(curveIndices[2]) + delim +
+			IntToString(curveIndices[3]));
+
+		result.fields.emplace_back("track indices", JSONValue(trackIndicesStr));
+		result.fields.emplace_back("curve indices", JSONValue(curveIndicesStr));
+
+		return result;
 	}
 } // namespace flex

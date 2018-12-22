@@ -134,9 +134,6 @@ namespace flex
 		i32 size = (i32)(sampleRate * length);
 		u8* data = (u8*)malloc((u32)size);
 
-		// Fade out last 10%
-		real fadeOutFrac = 0.1f;
-
 		for (i32 i = 0; i < size; ++i)
 		{
 			real t = (real)i / (real)(size - 1);

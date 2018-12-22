@@ -59,21 +59,23 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
+		m_TrackManager = TrackManager();
+
 		// Use save file if exists, otherwise use default
 		const std::string savedShortPath = "scenes/saved/" + m_FileName;
 		const std::string defaultShortPath = "scenes/default/" + m_FileName;
 		const std::string savedPath = RESOURCE_STR(savedShortPath);
 		const std::string defaultPath = RESOURCE_STR(defaultShortPath);
-		m_bUsingSaveFile = FileExists(savedPath);
+		//m_bUsingSaveFile = FileExists(savedPath);
 
 		std::string shortFilePath;
 		std::string filePath;
-		if (m_bUsingSaveFile)
-		{
-			shortFilePath = savedShortPath;
-			filePath = savedPath;
-		}
-		else
+		//if (m_bUsingSaveFile)
+		//{
+		//	shortFilePath = savedShortPath;
+		//	filePath = savedPath;
+		//}
+		//else
 		{
 			shortFilePath = defaultShortPath;
 			filePath = defaultPath;
@@ -122,7 +124,6 @@ namespace flex
 				m_LoadedMaterials.push_back(matID);
 			}
 
-
 			// This holds all the objects in the scene which do not have a parent
 			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
 			for (const JSONObject& rootObjectJSON : rootObjects)
@@ -153,6 +154,13 @@ namespace flex
 				CreateDirectionalLightFromJSON(directionalLightObj, dirLight);
 
 				g_Renderer->InitializeDirectionalLight(dirLight);
+			}
+
+			if (sceneRootObject.HasField("track manager"))
+			{
+				const JSONObject& trackManagerObj = sceneRootObject.GetObject("track manager");
+
+				m_TrackManager.InitializeFromJSON(trackManagerObj);
 			}
 		}
 		else
@@ -231,24 +239,26 @@ namespace flex
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);
 
-		m_TrackManager = TrackManager();
+		if (m_TrackManager.m_Tracks.empty())
 		{
-			BezierCurve curve0({ 5.0f, 0.1f, 5.0f }, { 15.0f, 0.1f, 10.0f }, { 25.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 10.0f });
-			BezierCurve curve1({ 35.0f, 0.1f, 10.0f }, { 45.0f, 0.1f, 10.0f }, { 55.0f, 0.1f, 10.0f }, { 60.0f, 0.1f, 10.0f });
-			BezierCurve curve2({ 60.0f, 0.1f, 10.0f }, { 70.0f, 0.1f, 10.0f }, { 73.0f, 0.1f, 8.0f }, { 73.0f, 0.1f, 2.0f });
-			BezierCurve curve3({ 73.0f, 0.1f, 2.0f }, { 73.0f, 0.1f, -6.0f }, { 60.0f, 0.1f, -8.0f }, { 50.0f, 0.1f, -8.0f });
-			m_TrackManager.AddTrack(BezierCurveList({ curve0 , curve1, curve2, curve3 }));
+			{
+				BezierCurve curve0({ 5.0f, 0.1f, 5.0f }, { 15.0f, 0.1f, 10.0f }, { 25.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 10.0f });
+				BezierCurve curve1({ 35.0f, 0.1f, 10.0f }, { 45.0f, 0.1f, 10.0f }, { 55.0f, 0.1f, 10.0f }, { 60.0f, 0.1f, 10.0f });
+				BezierCurve curve2({ 60.0f, 0.1f, 10.0f }, { 70.0f, 0.1f, 10.0f }, { 73.0f, 0.1f, 8.0f }, { 73.0f, 0.1f, 2.0f });
+				BezierCurve curve3({ 73.0f, 0.1f, 2.0f }, { 73.0f, 0.1f, -6.0f }, { 60.0f, 0.1f, -8.0f }, { 50.0f, 0.1f, -8.0f });
+				m_TrackManager.AddTrack(BezierCurveList({ curve0 , curve1, curve2, curve3 }));
+			}
+			{
+				BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 15.0f }, { 30.0f, 0.1f, 20.0f }, { 25.0f, 0.1f, 22.0f });
+				BezierCurve curve1({ 25.0f, 0.1f, 22.0f }, { 20.0f, 0.1f, 24.0f }, { 15.0f, 0.1f, 25.0f }, { 10.0f, 0.1f, 25.0f });
+				m_TrackManager.AddTrack(BezierCurveList({ curve0 , curve1 }));
+			}
+			{
+				BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 40.0f, 0.1f, -2.0f }, { 45.0f, 0.1f, 4.0f }, { 50.0f, 0.1f, -8.0f });
+				m_TrackManager.AddTrack(BezierCurveList({ curve0 }));
+			}
+			m_TrackManager.FindJunctions();
 		}
-		{
-			BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 15.0f }, { 30.0f, 0.1f, 20.0f }, { 25.0f, 0.1f, 22.0f });
-			BezierCurve curve1({ 25.0f, 0.1f, 22.0f }, { 20.0f, 0.1f, 24.0f }, { 15.0f, 0.1f, 25.0f }, { 10.0f, 0.1f, 25.0f });
-			m_TrackManager.AddTrack(BezierCurveList({ curve0 , curve1 }));
-		}
-		{
-			BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 40.0f, 0.1f, -2.0f }, { 45.0f, 0.1f, 4.0f }, { 50.0f, 0.1f, -8.0f });
-			m_TrackManager.AddTrack(BezierCurveList({ curve0 }));
-		}
-		m_TrackManager.FindJunctions();
 
 
 		for (GameObject* rootObject : m_RootObjects)
@@ -554,7 +564,7 @@ namespace flex
 					{
 						if (parsedMeshObj.GetString("file").compare(meshFileName) == 0)
 						{
-							parsedMeshObj = mesh->SerializeToJSON();
+							parsedMeshObj = mesh->Serialize();
 							bFound = true;
 							break;
 						}
@@ -562,7 +572,7 @@ namespace flex
 
 					if (!bFound)
 					{
-						JSONObject serializedMeshObj = mesh->SerializeToJSON();
+						JSONObject serializedMeshObj = mesh->Serialize();
 						s_ParsedMeshes.push_back(serializedMeshObj);
 					}
 
@@ -605,7 +615,7 @@ namespace flex
 			{
 				if (parsedMatObj.GetString("name").compare(mat.name) == 0)
 				{
-					parsedMatObj = mat.SerializeToJSON();
+					parsedMatObj = mat.Serialize();
 					bExistsInFile = true;
 					break;
 				}
@@ -613,7 +623,7 @@ namespace flex
 
 			if (!bExistsInFile)
 			{
-				s_ParsedMaterials.push_back(mat.SerializeToJSON());
+				s_ParsedMaterials.push_back(mat.Serialize());
 			}
 		}
 
@@ -637,8 +647,7 @@ namespace flex
 	bool BaseScene::SerializePrefabFile()
 	{
 		// TODO: Implement
-		PrintWarn("SerializePrefabFile is unimplemented!\n");
-
+		ENSURE_NO_ENTRY();
 		return false;
 	}
 
@@ -749,13 +758,13 @@ namespace flex
 		}
 	}
 
-	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */)
+	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const
 	{
 		bool success = false;
 
 		success |= BaseScene::SerializeMeshFile();
 		success |= BaseScene::SerializeMaterialFile();
-		success |= BaseScene::SerializePrefabFile();
+		//success |= BaseScene::SerializePrefabFile();
 
 		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
 		PROFILE_BEGIN(profileBlockName);
@@ -772,7 +781,7 @@ namespace flex
 			{
 				if (rootObject->IsSerializable())
 				{
-					objectsArray.push_back(rootObject->SerializeToJSON(this));
+					objectsArray.push_back(rootObject->Serialize(this));
 				}
 			}
 		}
@@ -795,6 +804,11 @@ namespace flex
 			JSONValue(SerializeDirectionalLight(dirLight)));
 		rootSceneObject.fields.push_back(directionalLightsField);
 
+		if (!m_TrackManager.m_Tracks.empty())
+		{
+			rootSceneObject.fields.emplace_back("track manager", JSONValue(m_TrackManager.Serialize()));
+		}
+
 		std::string fileContents = rootSceneObject.Print(0);
 
 		const std::string defaultSaveFilePathShort = "scenes/default/" + m_FileName;
@@ -814,7 +828,7 @@ namespace flex
 
 		if (bSaveOverDefault)
 		{
-			m_bUsingSaveFile = false;
+			//m_bUsingSaveFile = false;
 
 			if (FileExists(savedSaveFilePath))
 			{
@@ -834,7 +848,7 @@ namespace flex
 
 			if (!bSaveOverDefault)
 			{
-				m_bUsingSaveFile = true;
+				//m_bUsingSaveFile = true;
 			}
 
 			PROFILE_END(profileBlockName);
@@ -871,10 +885,10 @@ namespace flex
 			}
 		}
 
-		m_bUsingSaveFile = false;
+		//m_bUsingSaveFile = false;
 	}
 
-	JSONObject BaseScene::SerializePointLight(PointLight& pointLight)
+	JSONObject BaseScene::SerializePointLight(PointLight& pointLight) const
 	{
 		JSONObject object;
 
@@ -890,7 +904,7 @@ namespace flex
 		return object;
 	}
 
-	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight)
+	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight) const
 	{
 		JSONObject object;
 
@@ -1099,26 +1113,26 @@ namespace flex
 
 	std::string BaseScene::GetRelativeFilePath() const
 	{
-		if (m_bUsingSaveFile)
-		{
-			return RESOURCE_LOCATION  "scenes/saved/" + m_FileName;
-		}
-		else
-		{
+		//if (m_bUsingSaveFile)
+		//{
+		//	return RESOURCE_LOCATION  "scenes/saved/" + m_FileName;
+		//}
+		//else
+		//{
 			return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
-		}
+		//}
 	}
 
 	std::string BaseScene::GetShortRelativeFilePath() const
 	{
-		if (m_bUsingSaveFile)
-		{
-			return "scenes/saved/" + m_FileName;
-		}
-		else
-		{
+		//if (m_bUsingSaveFile)
+		//{
+		//	return "scenes/saved/" + m_FileName;
+		//}
+		//else
+		//{
 			return "scenes/default/" + m_FileName;
-		}
+		//}
 	}
 
 	bool BaseScene::SetFileName(const std::string& fileName, bool bDeletePreviousFiles)
@@ -1136,7 +1150,7 @@ namespace flex
 		std::string absDefaultFilePathTo = defaultAbsFileDir + fileName;
 		if (CopyFile(absDefaultFilePathFrom, absDefaultFilePathTo))
 		{
-			if (m_bUsingSaveFile)
+			//if (m_bUsingSaveFile)
 			{
 				std::string absSavedFilePathFrom = RelativePathToAbsolute(GetRelativeFilePath());
 				std::string savedAbsFileDir = absSavedFilePathFrom;
@@ -1147,10 +1161,10 @@ namespace flex
 					success = true;
 				}
 			}
-			else
-			{
-				success = true;
-			}
+			//else
+			//{
+			//	success = true;
+			//}
 
 			// Don't delete files unless copies worked
 			if (success)
@@ -1160,11 +1174,11 @@ namespace flex
 					std::string pAbsDefaultFilePath = RelativePathToAbsolute(GetDefaultRelativeFilePath());
 					DeleteFile(pAbsDefaultFilePath, false);
 
-					if (m_bUsingSaveFile)
-					{
-						std::string pAbsSavedFilePath = RelativePathToAbsolute(GetRelativeFilePath());
-						DeleteFile(pAbsSavedFilePath, false);
-					}
+					//if (m_bUsingSaveFile)
+					//{
+					//	std::string pAbsSavedFilePath = RelativePathToAbsolute(GetRelativeFilePath());
+					//	DeleteFile(pAbsSavedFilePath, false);
+					//}
 				}
 
 				m_FileName = fileName;
@@ -1181,7 +1195,8 @@ namespace flex
 
 	bool BaseScene::IsUsingSaveFile() const
 	{
-		return m_bUsingSaveFile;
+		//return m_bUsingSaveFile;
+		return false;
 	}
 
 	PhysicsWorld* BaseScene::GetPhysicsWorld()

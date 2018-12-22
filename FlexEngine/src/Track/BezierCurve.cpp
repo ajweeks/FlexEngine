@@ -2,8 +2,9 @@
 
 #include "Track/BezierCurve.hpp"
 
-#include "Graphics/Renderer.hpp"
 #include "Graphics/GL/GLPhysicsDebugDraw.hpp"
+#include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -95,5 +96,39 @@ namespace flex
 
 			lastP = nextP;
 		}
+	}
+
+	BezierCurve BezierCurve::FromString(const std::string& str)
+	{
+		assert(!str.empty());
+
+		BezierCurve result = {};
+
+		std::vector<std::string> parts = Split(str, ',');
+		if (parts.size() != 12)
+		{
+			PrintWarn("Invalidly formatted BezierCurve string! %s\n", str.c_str());
+		}
+
+		result.points[0] = glm::vec3(std::atoi(parts[0].c_str()), std::atoi(parts[1].c_str()), std::atoi(parts[2].c_str()));
+		result.points[1] = glm::vec3(std::atoi(parts[3].c_str()), std::atoi(parts[4].c_str()), std::atoi(parts[5].c_str()));
+		result.points[2] = glm::vec3(std::atoi(parts[6].c_str()), std::atoi(parts[7].c_str()), std::atoi(parts[8].c_str()));
+		result.points[3] = glm::vec3(std::atoi(parts[9].c_str()), std::atoi(parts[10].c_str()), std::atoi(parts[11].c_str()));
+
+		result.CalculateLength();
+
+		return result;
+	}
+
+	std::string BezierCurve::ToString() const
+	{
+		const i32 precision = 5;
+		const char* delim = ", ";
+		std::string result(Vec3ToString(points[0], precision) + delim +
+			Vec3ToString(points[1], precision) + delim +
+			Vec3ToString(points[2], precision) + delim +
+			Vec3ToString(points[3], precision));
+
+		return result;
 	}
 } // namespace flex

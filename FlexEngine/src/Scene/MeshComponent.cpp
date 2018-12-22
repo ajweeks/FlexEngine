@@ -117,7 +117,7 @@ namespace flex
 		return newMeshComponent;
 	}
 
-	JSONObject MeshComponent::SerializeToJSON()
+	JSONObject MeshComponent::Serialize() const
 	{
 		JSONObject meshObject = {};
 

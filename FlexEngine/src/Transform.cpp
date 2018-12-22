@@ -213,7 +213,7 @@ namespace flex
 		return Transform(pos, rotQuat, scale);
 	}
 
-	JSONField Transform::SerializeToJSON()
+	JSONField Transform::Serialize() const
 	{
 		const i32 floatPrecision = 3;
 
@@ -222,41 +222,45 @@ namespace flex
 
 		JSONObject transformObject = {};
 
-		if (IsNanOrInf(localPosition))
+		glm::vec3 pos = localPosition;
+		glm::quat rot = localRotation;
+		glm::vec3 scale = localScale;
+
+		if (IsNanOrInf(pos))
 		{
-			PrintError("Attempted to serialize garbage value for %s's pos, writing default value\n", m_GameObject->GetName().c_str());
-			localPosition = VEC3_ZERO;
+			PrintError("Attempted to serialize garbage value for position of %s, writing default value\n", m_GameObject->GetName().c_str());
+			pos = VEC3_ZERO;
 		}
 
-		if (IsNanOrInf(localRotation))
+		if (IsNanOrInf(rot))
 		{
-			PrintError("Attempted to serialize garbage value for %s's rotation, writing default value\n", m_GameObject->GetName().c_str());
-			localRotation = glm::quat();
+			PrintError("Attempted to serialize garbage value for rotation of %s, writing default value\n", m_GameObject->GetName().c_str());
+			rot = glm::quat();
 		}
 
-		if (IsNanOrInf(localScale))
+		if (IsNanOrInf(scale))
 		{
-			PrintError("Attempted to serialize garbage value for %s's scale, writing default value\n", m_GameObject->GetName().c_str());
-			localScale = VEC3_ONE;
+			PrintError("Attempted to serialize garbage value for scale of %s, writing default value\n", m_GameObject->GetName().c_str());
+			scale = VEC3_ONE;
 		}
 
-		glm::vec3 localRotEuler = glm::eulerAngles(localRotation);
 
-		if (localPosition != VEC3_ZERO)
+		if (pos != VEC3_ZERO)
 		{
-			std::string posStr = Vec3ToString(localPosition, floatPrecision);
+			std::string posStr = Vec3ToString(pos, floatPrecision);
 			transformObject.fields.emplace_back("pos", JSONValue(posStr));
 		}
 
-		if (localRotation != QUAT_UNIT)
+		if (rot != QUAT_UNIT)
 		{
-			std::string rotStr = Vec3ToString(localRotEuler, floatPrecision);
+			glm::vec3 rotEuler = glm::eulerAngles(rot);
+			std::string rotStr = Vec3ToString(rotEuler, floatPrecision);
 			transformObject.fields.emplace_back("rot", JSONValue(rotStr));
 		}
 
-		if (localScale != VEC3_ONE)
+		if (scale != VEC3_ONE)
 		{
-			std::string scaleStr = Vec3ToString(localScale, floatPrecision);
+			std::string scaleStr = Vec3ToString(scale, floatPrecision);
 			transformObject.fields.emplace_back("scale", JSONValue(scaleStr));
 		}
 

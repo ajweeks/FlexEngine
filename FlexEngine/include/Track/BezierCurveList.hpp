@@ -1,5 +1,7 @@
 #pragma once
 
+#include "JSONTypes.hpp"
+
 namespace flex
 {
 	class BezierCurve;
@@ -9,6 +11,8 @@ namespace flex
 	public:
 		BezierCurveList();
 		BezierCurveList(const std::vector<BezierCurve>& curves);
+
+		static BezierCurveList InitializeFromJSON(const JSONObject& obj);
 
 		void DrawDebug(const btVector4& highlightColour, real highlightCurveAtPoint = -1.0f) const;
 
@@ -27,6 +31,8 @@ namespace flex
 		real GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const;
 
 		bool IsVectorFacingDownTrack(real distAlongTrack, const glm::vec3& vec);
+
+		JSONObject Serialize() const;
 
 		std::vector<BezierCurve> curves;
 
