@@ -1787,6 +1787,14 @@ namespace flex
 			ImGui::EndMainMenuBar();
 		}
 
+		static auto windowSizeCallbackLambda = [](ImGuiSizeCallbackData* data)
+		{
+			FlexEngine* engine = (FlexEngine*)data->UserData;
+			engine->m_ImGuiMainWindowWidth = data->DesiredSize.x;
+			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
+				glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
+		};
+
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
 		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove;
@@ -1794,13 +1802,7 @@ namespace flex
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
 		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),
 											ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
-											[](ImGuiSizeCallbackData* data)
-		{
-			FlexEngine* engine = (FlexEngine*)data->UserData;
-			engine->m_ImGuiMainWindowWidth = data->DesiredSize.x;
-			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
-													  glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
-		}, this);
+											windowSizeCallbackLambda, this);
 		real menuHeight = 20.0f;
 		ImGui::SetNextWindowPos(ImVec2(0.0f, menuHeight), ImGuiCond_Once);
 		real frameBufferHeight = (real)frameBufferSize.y;
