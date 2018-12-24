@@ -18,9 +18,9 @@ namespace flex
 
 		glm::vec3 pos;
 		i32 trackCount = 0;
-		i32 trackIndices[MAX_TRACKS];
+		i32 trackIndices[MAX_TRACKS]{ -1, -1, -1, -1 };
 		// Stores which part of the curve is intersecting the junction
-		i32 curveIndices[MAX_TRACKS];
+		i32 curveIndices[MAX_TRACKS]{ -1, -1, -1, -1 };
 	};
 
 	class TrackManager
@@ -51,7 +51,8 @@ namespace flex
 			bool bFacingForwardDownTrack,
 			bool bReversingDownTrack);
 
-		bool GetControlPointInRange(const glm::vec3& p, real range, glm::vec3* outPoint);
+		bool GetPointInRange(const glm::vec3& p, bool bIncludeHandles, real range, glm::vec3* outPoint);
+		bool GetPointInRange(const glm::vec3& p, real range, BezierCurveList** outTrack, i32* outCurveIndex, i32* outPointIdx);
 
 		// Compares curve end points on all BezierCurves and creates junctions when positions are
 		// within a threshold of each other

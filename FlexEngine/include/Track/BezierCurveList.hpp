@@ -16,7 +16,10 @@ namespace flex
 
 		void DrawDebug(const btVector4& highlightColour, real highlightCurveAtPoint = -1.0f) const;
 
-		glm::vec3 GetPointOnCurve(real t, i32& outCurveIndex) const;
+		glm::vec3 GetPointOnCurve(real t, i32* outCurveIndex) const;
+		glm::vec3 GetPointOnCurve(i32 curveIndex, i32 pointIndex, real* outT) const;
+		void SetPointPosAtIndex(i32 curveIndex, i32 pointIndex, const glm::vec3& point, bool bKeepHandlesMirrored);
+
 		// Calculates the first derivative of the curve
 		glm::vec3 GetCurveDirectionAt(real t) const;
 
@@ -27,7 +30,7 @@ namespace flex
 		glm::vec3 GetPointAtJunction(i32 index);
 		//glm::vec3 GetDirectionAtJunction(i32 index);
 
-		void GetCurveIndexAndLocalTFromGlobalT(real globalT, i32& outCurveIndex, real& outLocalT) const;
+		void GetCurveIndexAndLocalTFromGlobalT(real globalT, i32* outCurveIndex, real* outLocalT) const;
 		real GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const;
 
 		bool IsVectorFacingDownTrack(real distAlongTrack, const glm::vec3& vec);

@@ -41,7 +41,7 @@ namespace flex
 		void ClampPitch();
 		void UpdateIsGrounded();
 
-		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f) const;
+		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false) const;
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
@@ -62,6 +62,10 @@ namespace flex
 		BezierCurveList m_TrackPlacing;
 		BezierCurve m_CurvePlacing;
 		bool m_bPlacingTrack = false;
+		BezierCurveList* m_TrackEditing = nullptr;
+		i32 m_TrackEditingCurveIdx = -1;
+		i32 m_TrackEditingPointIdx = -1;
+		bool m_bEditingTrack = false;
 		glm::vec3 m_TrackPlacementReticlePos; // Local offset
 
 

@@ -63,8 +63,8 @@ namespace flex
 		i32 junctionIndex = -1;
 		TrackState newTrackState = TrackState::NONE;
 
-		glm::vec3 pPoint = track->GetPointOnCurve(pDistAlongTrack, pCurveIdx);
-		glm::vec3 newPoint = track->GetPointOnCurve(distAlongTrack, newCurveIdx);
+		glm::vec3 pPoint = track->GetPointOnCurve(pDistAlongTrack, &pCurveIdx);
+		glm::vec3 newPoint = track->GetPointOnCurve(distAlongTrack, &newCurveIdx);
 
 		const bool bReachedEndOfTheLine =
 			(distAlongTrack <= 0.0f && pDistAlongTrack > 0.0f) ||
@@ -294,7 +294,7 @@ namespace flex
 		}
 	}
 
-	bool TrackManager::GetControlPointInRange(const glm::vec3& p, real range, glm::vec3* outPoint)
+	bool TrackManager::GetPointInRange(const glm::vec3& p, bool bIncludeHandles, real range, glm::vec3* outPoint)
 	{
 		real smallestDist = range;
 		bool bFoundPointInRange = false;
@@ -302,15 +302,42 @@ namespace flex
 		{
 			for (const BezierCurve& curve : track.curves)
 			{
-				for (i32 i = 0; i <= 1; ++i)
+				for (i32 i = 0; i < 4; i += (bIncludeHandles ? 1 : 3))
 				{
-					glm::vec3 curveP = curve.points[i * 3];
+					glm::vec3 curveP = curve.points[i];
 					real dist = glm::distance(p, curveP);
 					if (dist < smallestDist)
 					{
 						bFoundPointInRange = true;
 						smallestDist = dist;
 						*outPoint = curveP;
+					}
+				}
+			}
+		}
+
+		return bFoundPointInRange;
+	}
+
+	bool TrackManager::GetPointInRange(const glm::vec3& p, real range, BezierCurveList** outTrack, i32* outCurveIndex, i32* outPointIdx)
+	{
+		real smallestDist = range;
+		bool bFoundPointInRange = false;
+		for (BezierCurveList& track : m_Tracks)
+		{
+			for (i32 c = 0; c < (i32)track.curves.size(); ++c)
+			{
+				for (i32 i = 0; i < 4; ++i)
+				{
+					glm::vec3 curveP = track.curves[c].points[i];
+					real dist = glm::distance(p, curveP);
+					if (dist < smallestDist)
+					{
+						bFoundPointInRange = true;
+						smallestDist = dist;
+						*outTrack = &track;
+						*outCurveIndex = c;
+						*outPointIdx = i;
 					}
 				}
 			}
@@ -380,7 +407,7 @@ namespace flex
 					}
 				}
 				i32 testPosCurveIdx = -1;
-				glm::vec3 testPos = testTrack->GetPointOnCurve(testDist, testPosCurveIdx);
+				glm::vec3 testPos = testTrack->GetPointOnCurve(testDist, &testPosCurveIdx);
 				glm::vec3 dPos = glm::normalize(testPos - junc.pos); // not newPoint?
 				real dotResult = glm::dot(dPos, desiredDir);
 				if (dotResult > 0.0f && dotResult > bestTrackDot)
@@ -520,8 +547,6 @@ namespace flex
 				}
 			}
 		}
-
-		Print("Found %d junctions\n", m_Junctions.size());
 	}
 
 	bool TrackManager::IsTrackInRange(const BezierCurveList* track,
@@ -540,7 +565,7 @@ namespace flex
 		{
 			real t = (real)i / (real)(sampleCount);
 			i32 curveIndex;
-			real dist = glm::distance(track->GetPointOnCurve(t, curveIndex), pos);
+			real dist = glm::distance(track->GetPointOnCurve(t, &curveIndex), pos);
 			if (dist < smallestDist)
 			{
 				smallestDist = dist;
@@ -606,7 +631,7 @@ namespace flex
 			BezierCurveList* track0 = &m_Tracks[m_Junctions[i].trackIndices[0]];
 			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)track0->curves.size();
 			 i32 curveIndex;
-			 glm::vec3 pos = track0->GetPointOnCurve(distAlongTrack0, curveIndex);
+			 glm::vec3 pos = track0->GetPointOnCurve(distAlongTrack0, &curveIndex);
 			 btVector3 sphereCol = btVector3(0.9f, 0.2f, 0.2f);
 			 if (i == m_DEBUG_highlightedJunctionIndex)
 			 {
@@ -629,7 +654,7 @@ namespace flex
 
 				 if (curveIndex < (i32)track->curves.size())
 				 {
-					 glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, outCurveIdx);
+					 glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, &outCurveIdx);
 					 glm::vec3 dir1 = glm::normalize(trackP1 - pos);
 					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);
 					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
@@ -637,7 +662,7 @@ namespace flex
 				 }
 				 if (curveIndex > 0)
 				 {
-					 glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, outCurveIdx);
+					 glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, &outCurveIdx);
 					 glm::vec3 dir2 = glm::normalize(trackP2 - pos);
 					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);
 					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
@@ -682,7 +707,7 @@ namespace flex
 	{
 		i32 startCurveIndex;
 		real oldLocalT = 0.0f;
-		track->GetCurveIndexAndLocalTFromGlobalT(t, startCurveIndex, oldLocalT);
+		track->GetCurveIndexAndLocalTFromGlobalT(t, &startCurveIndex, &oldLocalT);
 
 		real startCurveLen = track->curves[startCurveIndex].calculatedLength;
 		if (startCurveLen == -1.0f)
@@ -702,20 +727,13 @@ namespace flex
 		JSONObject result = {};
 
 		JSONObject tracks = {};
-		JSONObject junctions = {};
 
 		for (const BezierCurveList& track : m_Tracks)
 		{
 			tracks.fields.emplace_back("track", JSONValue(track.Serialize()));
 		}
 
-		for (const Junction& junction : m_Junctions)
-		{
-			junctions.fields.emplace_back("junction", JSONValue(junction.Serialize()));
-		}
-
 		result.fields.emplace_back("tracks", JSONValue(tracks));
-		result.fields.emplace_back("junctions", JSONValue(junctions));
 
 		return result;
 	}

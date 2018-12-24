@@ -216,10 +216,21 @@ namespace flex
 		g_Renderer->DrawSprite(drawInfo);
 
 		if (m_bPossessed &&
-			(g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y) ||
-			(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Q))))
+			m_TrackRiding == nullptr)
 		{
-			m_bPlacingTrack = !m_bPlacingTrack;
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Q)))
+			{
+				m_bPlacingTrack = !m_bPlacingTrack;
+				m_bEditingTrack = false;
+			}
+
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::B) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F)))
+			{
+				m_bEditingTrack = !m_bEditingTrack;
+				m_bPlacingTrack = false;
+			}
 		}
 
 		if (m_bPossessed && m_bPlacingTrack && m_TrackRiding == nullptr)
@@ -289,6 +300,62 @@ namespace flex
 			btTransform cylinderTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
 			debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
 			debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
+		}
+
+		if (m_bPossessed && m_bEditingTrack && m_TrackRiding == nullptr)
+		{
+			real outT;
+			// TODO: Snap to points other than the one we are editing
+			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(m_TrackEditing == nullptr ? 1.0f : 0.0f, true);
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X)))
+			{
+				if (m_TrackEditingCurveIdx == -1)
+				{
+					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+					BezierCurveList* track = nullptr;
+					i32 curveIndex = -1;
+					i32 pointIndex = -1;
+					if (trackManager->GetPointInRange(reticlePos, 0.1f, &track, &curveIndex, &pointIndex))
+					{
+						m_TrackEditing = track;
+						m_TrackEditingCurveIdx = curveIndex;
+						m_TrackEditingPointIdx = pointIndex;
+					}
+				}
+				else
+				{
+					m_TrackEditing = nullptr;
+					m_TrackEditingCurveIdx = -1;
+					m_TrackEditingPointIdx = -1;
+				}
+			}
+
+			if (m_TrackEditing)
+			{
+				real tAlongCurve;
+				glm::vec3 point = m_TrackEditing->GetPointOnCurve(m_TrackEditingCurveIdx, m_TrackEditingPointIdx, &tAlongCurve);
+
+				glm::vec3 newPoint(reticlePos.x, point.y, reticlePos.z);
+				m_TrackEditing->SetPointPosAtIndex(m_TrackEditingCurveIdx, m_TrackEditingPointIdx, newPoint, true);
+
+				static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
+				static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
+				for (const BezierCurve& curve : m_TrackEditing->curves)
+				{
+					curve.DrawDebug(false, editedCurveCol, editingCurveCol);
+				}
+
+				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+				trackManager->FindJunctions();
+			}
+
+			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			btTransform cylinderTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
+			static btVector3 ringColEditing(0.48f, 0.22f, 0.65f);
+			static btVector3 ringColEditingActive(0.6f, 0.4f, 0.85f);
+			debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_TrackEditing == nullptr ? ringColEditing : ringColEditingActive);
+			debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_TrackEditing == nullptr ? ringColEditing : ringColEditingActive);
 		}
 
 		if (m_bTabletUp)
@@ -411,7 +478,7 @@ namespace flex
 		}
 	}
 
-	glm::vec3 Player::GetTrackPlacementReticlePosWS(real snapThreshold /* = -1.0f */) const
+	glm::vec3 Player::GetTrackPlacementReticlePosWS(real snapThreshold /* = -1.0f */, bool bSnapToHandles /* = false */) const
 	{
 		glm::vec3 offsetWS = m_TrackPlacementReticlePos;
 		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
@@ -422,7 +489,7 @@ namespace flex
 		if (snapThreshold != -1.0f)
 		{
 			glm::vec3 pointInRange;
-			if (g_SceneManager->CurrentScene()->GetTrackManager()->GetControlPointInRange(point, snapThreshold, &pointInRange))
+			if (g_SceneManager->CurrentScene()->GetTrackManager()->GetPointInRange(point, bSnapToHandles, snapThreshold, &pointInRange))
 			{
 				point = pointInRange;
 			}

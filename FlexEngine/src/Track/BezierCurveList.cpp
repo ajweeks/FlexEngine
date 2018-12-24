@@ -42,7 +42,7 @@ namespace flex
 		if (highlightCurveAtPoint != -1.0f)
 		{
 			real dist;
-			GetCurveIndexAndLocalTFromGlobalT(highlightCurveAtPoint, highlightedCurveIndex, dist);
+			GetCurveIndexAndLocalTFromGlobalT(highlightCurveAtPoint, &highlightedCurveIndex, &dist);
 		}
 
 		for (i32 i = 0; i < (i32)curves.size(); ++i)
@@ -52,7 +52,7 @@ namespace flex
 		}
 	}
 
-	glm::vec3 BezierCurveList::GetPointOnCurve(real t, i32& outCurveIndex) const
+	glm::vec3 BezierCurveList::GetPointOnCurve(real t, i32* outCurveIndex) const
 	{
 		if (curves.empty())
 		{
@@ -60,9 +60,58 @@ namespace flex
 		}
 
 		real curveT = 0.0f;
-		GetCurveIndexAndLocalTFromGlobalT(t, outCurveIndex, curveT);
+		GetCurveIndexAndLocalTFromGlobalT(t, outCurveIndex, &curveT);
 
-		return curves[outCurveIndex].GetPointOnCurve(curveT);
+		return curves[*outCurveIndex].GetPointOnCurve(curveT);
+	}
+
+	glm::vec3 BezierCurveList::GetPointOnCurve(i32 curveIndex, i32 pointIndex, real* outT) const
+	{
+		return curves[curveIndex].points[pointIndex];
+	}
+
+	void BezierCurveList::SetPointPosAtIndex(i32 curveIndex, i32 pointIndex, const glm::vec3& point, bool bKeepHandlesMirrored)
+	{
+		glm::vec3 dPos = point - curves[curveIndex].points[pointIndex];
+		curves[curveIndex].points[pointIndex] = point;
+		if (pointIndex == 0 && curveIndex > 0)
+		{
+			curves[curveIndex - 1].points[3] = point;
+		}
+		else if (pointIndex == 3 && curveIndex < (i32)curves.size() - 1)
+		{
+			curves[curveIndex + 1].points[0] = point;
+		}
+
+		if (bKeepHandlesMirrored)
+		{
+			if (pointIndex == 2 && curveIndex < (i32)curves.size() - 1)
+			{
+				curves[curveIndex + 1].points[1] = curves[curveIndex].points[3] + (curves[curveIndex].points[3] - curves[curveIndex].points[2]);
+			}
+			else if (pointIndex == 1 && curveIndex > 0)
+			{
+				curves[curveIndex - 1].points[2] = curves[curveIndex].points[0] + (curves[curveIndex].points[0] - curves[curveIndex].points[1]);
+			}
+			else if (pointIndex == 0)
+			{
+				curves[curveIndex].points[1] += dPos;
+
+				if (curveIndex > 0)
+				{
+					curves[curveIndex - 1].points[2] += dPos;
+				}
+			}
+			else if (pointIndex == 3)
+			{
+				curves[curveIndex].points[2] += dPos;
+
+				if (curveIndex < (i32)curves.size() - 1)
+				{
+					curves[curveIndex + 1].points[1] += dPos;
+				}
+			}
+		}
 	}
 
 	glm::vec3 BezierCurveList::GetCurveDirectionAt(real t) const
@@ -74,7 +123,7 @@ namespace flex
 
 		i32 curveIndex = 0;
 		real curveT = 0.0f;
-		GetCurveIndexAndLocalTFromGlobalT(t, curveIndex, curveT);
+		GetCurveIndexAndLocalTFromGlobalT(t, &curveIndex, &curveT);
 
 		return glm::normalize(curves[curveIndex].GetFirstDerivativeOnCurve(curveT));
 	}
@@ -90,20 +139,14 @@ namespace flex
 		return curves[glm::clamp(index, 0, (i32)(curves.size() - 1))].GetPointOnCurve(t);
 	}
 
-	//glm::vec3 BezierCurveList::GetDirectionAtJunction(i32 index)
-	//{
-	//	real t = (index == (i32)curves.size() ? 1.0f : 0.0f);
-	//	return glm::normalize(curves[glm::clamp(index, 0, (i32)(curves.size() - 1))].GetFirstDerivativeOnCurve(t));
-	//}
-
-	void BezierCurveList::GetCurveIndexAndLocalTFromGlobalT(real globalT, i32& outCurveIndex, real& outLocalT) const
+	void BezierCurveList::GetCurveIndexAndLocalTFromGlobalT(real globalT, i32* outCurveIndex, real* outLocalT) const
 	{
 		i32 curveCount = curves.size();
 		real scaledT = glm::clamp(globalT * curveCount, 0.0f, (real)curveCount - EPSILON);
-		outCurveIndex = glm::clamp((i32)scaledT, 0, curveCount - 1);
+		*outCurveIndex = glm::clamp((i32)scaledT, 0, curveCount - 1);
 
-		outLocalT = scaledT - outCurveIndex;
-		outLocalT = glm::clamp(outLocalT, 0.0f, 1.0f);
+		*outLocalT = scaledT - *outCurveIndex;
+		*outLocalT = glm::clamp(*outLocalT, 0.0f, 1.0f);
 	}
 
 	real BezierCurveList::GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const
