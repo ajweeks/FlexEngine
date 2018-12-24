@@ -197,18 +197,21 @@ namespace flex
 
 		std::streampos length = file.tellg();
 
-		fileContents.resize((size_t)length);
-
-		file.seekg(0, std::ios::beg);
-		file.read(&fileContents[0], length);
-		file.close();
-
-		// Remove extra null terminators caused by Windows line endings
-		for (u32 charIndex = 0; charIndex < fileContents.size() - 1; ++charIndex)
+		if ((size_t)length > 0)
 		{
-			if (fileContents[charIndex] == '\0')
+			fileContents.resize((size_t)length);
+
+			file.seekg(0, std::ios::beg);
+			file.read(&fileContents[0], length);
+			file.close();
+
+			// Remove extra null terminators caused by Windows line endings
+			for (i32 charIndex = 0; charIndex < fileContents.size() - 1; ++charIndex)
 			{
-				fileContents = fileContents.substr(0, charIndex);
+				if (fileContents[charIndex] == '\0')
+				{
+					fileContents = fileContents.substr(0, charIndex);
+				}
 			}
 		}
 

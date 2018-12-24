@@ -63,8 +63,8 @@ namespace flex
 	{
 		GLRenderer::GLRenderer()
 		{
-			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(RESOURCE("config/default-renderer-settings.ini"));
-			m_SettingsFilePathAbs = RelativePathToAbsolute(RESOURCE("config/renderer-settings.ini"));
+			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
+			m_SettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/config/renderer-settings.ini");
 
 			g_Renderer = this;
 		}

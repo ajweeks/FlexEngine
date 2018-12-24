@@ -97,6 +97,8 @@ namespace flex
 		bool LoadCommonSettingsFromDisk();
 		void SaveCommonSettingsToDisk(bool bAddEditorStr);
 
+		void AppendToBootupTimesFile(const std::string& entry);
+
 		// Returns the intersection point of the given ray & plane, projected on to axis
 		glm::vec3 CalculateRayPlaneIntersectionAlongAxis(const glm::vec3& axis,
 			const glm::vec3& rayOrigin,
@@ -176,6 +178,9 @@ namespace flex
 
 		std::string m_CommonSettingsFileName;
 		std::string m_CommonSettingsAbsFilePath;
+
+		std::string m_BootupTimesFileName;
+		std::string m_BootupTimesAbsFilePath;
 
 		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;

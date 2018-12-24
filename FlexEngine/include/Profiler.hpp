@@ -30,6 +30,9 @@ namespace flex
 		static void PrintBlockDuration(const char* blockName);
 		static void PrintBlockDuration(const std::string& blockName);
 
+		static ms GetBlockDuration(const char* blockName);
+		static ms GetBlockDuration(const std::string& blockName);
+
 		static void DrawDisplayedFrame();
 
 		static bool s_bDisplayingFrame;

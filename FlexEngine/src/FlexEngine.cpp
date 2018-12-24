@@ -83,11 +83,17 @@ namespace flex
 
 		RetrieveCurrentWorkingDirectory();
 
-		std::string configDirAbs = RelativePathToAbsolute(RESOURCE_LOCATION "config/");
+		std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/config/");
 		m_CommonSettingsFileName = "common.ini";
 		m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
 
 		CreateDirectoryRecursive(configDirAbs);
+
+		std::string bootupDirAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/");
+		m_BootupTimesFileName = "bootup-times.log";
+		m_BootupTimesAbsFilePath = bootupDirAbs + m_BootupTimesFileName;
+
+		CreateDirectoryRecursive(bootupDirAbs);
 
 		RendererID preferredInitialRenderer = RendererID::GL;
 
@@ -213,6 +219,10 @@ namespace flex
 
 		PROFILE_END(profileBlockStr);
 		Profiler::PrintBlockDuration(profileBlockStr);
+
+		ms blockDuration = Profiler::GetBlockDuration(profileBlockStr);
+		std::string bootupTimesEntry = GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
+		AppendToBootupTimesFile(bootupTimesEntry);
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -1643,7 +1653,7 @@ namespace flex
 
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-		std::string fontFilePath(RESOURCE_LOCATION  "fonts/lucon.ttf");
+		std::string fontFilePath(RESOURCE_LOCATION u8"fonts/lucon.ttf");
 		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;
@@ -1913,9 +1923,8 @@ namespace flex
 
 					ImGui::TreePop();
 				}
-
-				ImGui::End();
 			}
+			ImGui::End();
 		}
 
 		if (m_bAssetBrowserShowing)
@@ -2148,6 +2157,26 @@ namespace flex
 		if (bAddEditorStr)
 		{
 			g_Renderer->AddEditorString("Saved common settings");
+		}
+	}
+
+	void FlexEngine::AppendToBootupTimesFile(const std::string& entry)
+	{
+		std::string newFileContents;
+		if (FileExists(m_BootupTimesAbsFilePath))
+		{
+			if (!ReadFile(m_BootupTimesAbsFilePath, newFileContents, false))
+			{
+				PrintWarn("Failed to read bootup times file: %s\n", m_BootupTimesAbsFilePath.c_str());
+				return;
+			}
+		}
+
+		newFileContents += entry + std::string("\n");
+
+		if (!WriteFile(m_BootupTimesAbsFilePath, newFileContents, false))
+		{
+			PrintWarn("Failed to write bootup times file: %s\n", m_BootupTimesAbsFilePath.c_str());
 		}
 	}
 

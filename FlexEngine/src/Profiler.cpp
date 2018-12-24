@@ -255,6 +255,25 @@ namespace flex
 		PrintBlockDuration(blockName.c_str());
 	}
 
+	ms Profiler::GetBlockDuration(const char* blockName)
+	{
+		u64 hash = Hash(blockName);
+
+		auto iter = s_Timings.find(hash);
+		if (iter != s_Timings.end())
+		{
+			ms duration = (iter->second.end - iter->second.start);
+			return duration;
+		}
+
+		return -1.0f;
+	}
+
+	ms Profiler::GetBlockDuration(const std::string& blockName)
+	{
+		return GetBlockDuration(blockName.c_str());
+	}
+
 	void Profiler::DrawDisplayedFrame()
 	{
 		if (!s_bDisplayingFrame ||
