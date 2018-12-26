@@ -20,6 +20,7 @@
 
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
@@ -143,13 +144,25 @@ namespace flex
 		case GameObjectType::GLASS_PANE:
 			newGameObject = new GlassPane(objectName);
 			break;
+		case GameObjectType::POINT_LIGHT:
+			newGameObject = new PointLight(objectName);
+			break;
+		case GameObjectType::DIRECTIONAL_LIGHT:
+			newGameObject = new DirectionalLight(objectName);
+			break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
 			break;
+		default:
+			PrintError("Unhandled game object type in CreateGameObjectFromJSON\n");
+			ENSURE_NO_ENTRY();
 		}
 
-		newGameObject->ParseJSON(obj, scene, overriddenMatID);
+		if (newGameObject != nullptr)
+		{
+			newGameObject->ParseJSON(obj, scene, overriddenMatID);
+		}
 
 		return newGameObject;
 	}
@@ -720,6 +733,549 @@ namespace flex
 		}
 	}
 
+	void GameObject::DrawImGuiObjects()
+	{
+		//GLRenderObject* renderObject = nullptr;
+		std::string objectID = "##";
+		//if (m_RenderID != InvalidRenderID)
+		//{
+		//	//renderObject = GetRenderObject(m_RenderID);
+		//	objectID += std::to_string(renderObject->renderID);
+
+		//	if (!gameObject->IsVisibleInSceneExplorer())
+		//	{
+		//		return;
+		//	}
+		//}
+
+		ImGui::Text(m_Name.c_str());
+
+		DoImGuiContextMenu(true);
+
+		if (!this)
+		{
+			// Early return if object was just deleted
+			return;
+		}
+
+		const std::string objectVisibleLabel("Visible" + objectID + m_Name);
+		ImGui::Checkbox(objectVisibleLabel.c_str(), &m_bVisible);
+
+		ImGui::Checkbox("Static", &m_bStatic);
+
+		ImGui::Text("Transform");
+		{
+			if (ImGui::BeginPopupContextItem("transform context menu"))
+			{
+				if (ImGui::Button("Copy"))
+				{
+					CopyTransformToClipboard(&m_Transform);
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Paste"))
+				{
+					PasteTransformFromClipboard(&m_Transform);
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			static int transformSpace = 0;
+
+			static glm::vec3 sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
+
+			if (!ImGui::IsMouseDown(0))
+			{
+				sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
+			}
+
+			glm::vec3 translation = m_Transform.GetLocalPosition();
+			glm::vec3 rotation = sRot;
+			glm::vec3 pScale = m_Transform.GetLocalScale();
+			glm::vec3 scale = pScale;
+
+			bool valueChanged = false;
+
+			valueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || valueChanged;
+			if (ImGui::IsItemClicked(1))
+			{
+				translation = VEC3_ZERO;
+				valueChanged = true;
+			}
+
+			glm::vec3 cleanedRot;
+			valueChanged = DoImGuiRotationDragFloat3("Rotation", rotation, cleanedRot) || valueChanged;
+
+			valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
+			if (ImGui::IsItemClicked(1))
+			{
+				scale = VEC3_ONE;
+				valueChanged = true;
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Checkbox("u", &m_bUniformScale))
+			{
+				valueChanged = true;
+			}
+			if (m_bUniformScale)
+			{
+				float newScale = scale.x;
+				if (scale.y != pScale.y)
+				{
+					newScale = scale.y;
+				}
+				else if (scale.z != pScale.z)
+				{
+					newScale = scale.z;
+				}
+				scale = glm::vec3(newScale);
+			}
+
+			if (valueChanged)
+			{
+				m_Transform.SetLocalPosition(translation, false);
+
+				sRot = rotation;
+
+				glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
+
+				m_Transform.SetLocalRotation(rotQuat, false);
+				m_Transform.SetLocalScale(scale, true);
+				SetUseUniformScale(m_bUniformScale, false);
+
+				if (m_RigidBody)
+				{
+					m_RigidBody->MatchParentTransform();
+				}
+
+				if (g_EngineInstance->IsObjectSelected(this))
+				{
+					g_EngineInstance->CalculateSelectedObjectsCenter();
+				}
+			}
+		}
+
+		if (m_RenderID != InvalidRenderID)
+		{
+			g_Renderer->DrawImGuiForRenderID(m_RenderID);
+		}
+		else
+		{
+			if (ImGui::Button("Add mesh component"))
+			{
+				MaterialID matID = InvalidMaterialID;
+				// TODO: Don't rely on material names!
+				g_Renderer->GetMaterialID("pbr chrome", matID);
+
+				MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
+			}
+		}
+
+		if (m_RigidBody)
+		{
+			ImGui::Spacing();
+
+			btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
+
+			ImGui::Text("Rigid body");
+
+			if (ImGui::BeginPopupContextItem("rb context menu"))
+			{
+				if (ImGui::Button("Remove rigid body"))
+				{
+					RemoveRigidBody();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			if (m_RigidBody != nullptr)
+			{
+				bool bStatic = m_RigidBody->IsStatic();
+				if (ImGui::Checkbox("Static##rb", &bStatic))
+				{
+					m_RigidBody->SetStatic(bStatic);
+				}
+
+				bool bKinematic = m_RigidBody->IsKinematic();
+				if (ImGui::Checkbox("Kinematic", &bKinematic))
+				{
+					m_RigidBody->SetKinematic(bKinematic);
+				}
+
+				ImGui::PushItemWidth(80.0f);
+				{
+					i32 group = m_RigidBody->GetGroup();
+					if (ImGui::InputInt("Group", &group, 1, 16))
+					{
+						group = glm::clamp(group, -1, 16);
+						m_RigidBody->SetGroup(group);
+					}
+
+					ImGui::SameLine();
+
+					i32 mask = m_RigidBody->GetMask();
+					if (ImGui::InputInt("Mask", &mask, 1, 16))
+					{
+						mask = glm::clamp(mask, -1, 16);
+						m_RigidBody->SetMask(mask);
+					}
+				}
+				ImGui::PopItemWidth();
+
+				// TODO: Array of buttons for each category
+				i32 flags = m_RigidBody->GetPhysicsFlags();
+				if (ImGui::SliderInt("Flags", &flags, 0, 16))
+				{
+					m_RigidBody->SetPhysicsFlags(flags);
+				}
+
+				real mass = m_RigidBody->GetMass();
+				if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
+				{
+					m_RigidBody->SetMass(mass);
+				}
+
+				real friction = m_RigidBody->GetFriction();
+				if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
+				{
+					m_RigidBody->SetFriction(friction);
+				}
+
+				ImGui::Spacing();
+
+				btCollisionShape* shape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+				std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
+
+				if (ImGui::BeginCombo("Shape", shapeTypeStr.c_str()))
+				{
+					i32 selectedColliderShape = -1;
+					for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+					{
+						if (g_CollisionTypes[i] == shape->getShapeType())
+						{
+							selectedColliderShape = i;
+							break;
+						}
+					}
+
+					if (selectedColliderShape == -1)
+					{
+						PrintError("Failed to find collider shape in array!\n");
+					}
+					else
+					{
+						for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+						{
+							bool bSelected = (i == selectedColliderShape);
+							const char* colliderShapeName = g_CollisionTypeStrs[i];
+							if (ImGui::Selectable(colliderShapeName, &bSelected))
+							{
+								if (selectedColliderShape != i)
+								{
+									selectedColliderShape = i;
+
+									switch (g_CollisionTypes[selectedColliderShape])
+									{
+									case BOX_SHAPE_PROXYTYPE:
+									{
+										btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
+										SetCollisionShape(newShape);
+									} break;
+									case SPHERE_SHAPE_PROXYTYPE:
+									{
+										btSphereShape* newShape = new btSphereShape(1.0f);
+										SetCollisionShape(newShape);
+									} break;
+									case CAPSULE_SHAPE_PROXYTYPE:
+									{
+										btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
+										SetCollisionShape(newShape);
+									} break;
+									case CYLINDER_SHAPE_PROXYTYPE:
+									{
+										btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
+										SetCollisionShape(newShape);
+									} break;
+									case CONE_SHAPE_PROXYTYPE:
+									{
+										btConeShape* newShape = new btConeShape(1.0f, 1.0f);
+										SetCollisionShape(newShape);
+									} break;
+									}
+								}
+							}
+						}
+					}
+
+					ImGui::EndCombo();
+				}
+
+				glm::vec3 scale = m_Transform.GetWorldScale();
+				switch (shape->getShapeType())
+				{
+				case BOX_SHAPE_PROXYTYPE:
+				{
+					btBoxShape* boxShape = (btBoxShape*)shape;
+					btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
+					glm::vec3 halfExtentsG = ToVec3(halfExtents);
+					halfExtentsG /= scale;
+
+					real maxExtent = 1000.0f;
+					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+					{
+						halfExtents = ToBtVec3(halfExtentsG);
+						btBoxShape* newShape = new btBoxShape(halfExtents);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				case SPHERE_SHAPE_PROXYTYPE:
+				{
+					btSphereShape* sphereShape = (btSphereShape*)shape;
+					real radius = sphereShape->getRadius();
+					radius /= scale.x;
+
+					real maxExtent = 1000.0f;
+					if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
+					{
+						btSphereShape* newShape = new btSphereShape(radius);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				case CAPSULE_SHAPE_PROXYTYPE:
+				{
+					btCapsuleShapeZ* capsuleShape = (btCapsuleShapeZ*)shape;
+					real radius = capsuleShape->getRadius();
+					real halfHeight = capsuleShape->getHalfHeight();
+					radius /= scale.x;
+					halfHeight /= scale.x;
+
+					real maxExtent = 1000.0f;
+					bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
+					bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
+
+					if (bUpdateShape)
+					{
+						btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				case CYLINDER_SHAPE_PROXYTYPE:
+				{
+					btCylinderShape* cylinderShape = (btCylinderShape*)shape;
+					btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
+					glm::vec3 halfExtentsG = ToVec3(halfExtents);
+					halfExtentsG /= scale;
+
+					real maxExtent = 1000.0f;
+					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+					{
+						halfExtents = ToBtVec3(halfExtentsG);
+						btCylinderShape* newShape = new btCylinderShape(halfExtents);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				}
+
+				glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
+				if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
+				{
+					m_RigidBody->SetLocalPosition(localOffsetPos);
+				}
+				if (ImGui::IsItemClicked(1))
+				{
+					m_RigidBody->SetLocalPosition(VEC3_ZERO);
+				}
+
+				glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
+				glm::vec3 cleanedRot;
+				if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
+				{
+					m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+				}
+
+				ImGui::Spacing();
+
+				glm::vec3 linearVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getLinearVelocity());
+				if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
+				{
+					rbInternal->setLinearVelocity(ToBtVec3(linearVel));
+				}
+				if (ImGui::IsItemClicked(1))
+				{
+					rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				}
+
+				glm::vec3 angularVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getAngularVelocity());
+				if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
+				{
+					rbInternal->setAngularVelocity(ToBtVec3(angularVel));
+				}
+				if (ImGui::IsItemClicked(1))
+				{
+					rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				}
+
+
+				//glm::vec3 localOffsetScale = m_RigidBody->GetLocalScale();
+				//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
+				//{
+				//	real epsilon = 0.001f;
+				//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
+				//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
+				//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
+
+				//	m_RigidBody->SetLocalScale(localOffsetScale);
+				//}
+
+			}
+		}
+		else
+		{
+			if (ImGui::Button("Add rigid body"))
+			{
+				RigidBody* rb = SetRigidBody(new RigidBody());
+				btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
+				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+
+				SetCollisionShape(boxShape);
+				rb->Initialize(boxShape, &m_Transform);
+				rb->GetRigidBodyInternal()->setUserPointer(this);
+			}
+		}
+	}
+
+	void GameObject::DoImGuiContextMenu(bool bActive)
+	{
+		static const char* renameObjectPopupLabel = "##rename-game-object";
+		static const char* renameObjectButtonStr = "Rename";
+		static const char* duplicateObjectButtonStr = "Duplicate...";
+		static const char* deletePopupStr = "Delete object";
+		static const char* deleteButtonStr = "Delete";
+		static const char* deleteCancelButtonStr = "Cancel";
+
+		// TODO: Prevent name collisions
+		std::string contextMenuIDStr = "context window game object " + m_Name;
+		static std::string newObjectName = m_Name;
+		const size_t maxStrLen = 256;
+
+		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+			ImGui::IsMouseClicked(1);
+
+		if (bActive && g_EngineInstance->bWantRenameActiveElement)
+		{
+			ImGui::OpenPopup(contextMenuIDStr.c_str());
+			g_EngineInstance->bWantRenameActiveElement = false;
+			bRefreshNameField = true;
+		}
+		if (bRefreshNameField)
+		{
+			newObjectName = m_Name;
+			newObjectName.resize(maxStrLen);
+		}
+
+		if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
+		{
+			bool bRename = ImGui::InputText(renameObjectPopupLabel,
+				(char*)newObjectName.data(),
+				maxStrLen,
+				ImGuiInputTextFlags_EnterReturnsTrue);
+
+			ImGui::SameLine();
+
+			bRename |= ImGui::Button(renameObjectButtonStr);
+
+			bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+			if (bRename && !bInvalidName)
+			{
+				// Remove excess trailing \0 chars
+				newObjectName = std::string(newObjectName.c_str());
+
+				m_Name = newObjectName;
+
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (DoDuplicateGameObjectButton(duplicateObjectButtonStr))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button(deleteButtonStr))
+			{
+				ImGui::OpenPopup(deletePopupStr);
+			}
+
+			if (ImGui::BeginPopupModal(deletePopupStr, NULL,
+				ImGuiWindowFlags_AlwaysAutoResize |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoNavInputs))
+			{
+				static std::string objectName = m_Name;
+
+				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+				std::string textStr = "Are you sure you want to permanently delete " + objectName + "?";
+				ImGui::Text(textStr.c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				if (ImGui::Button(deleteButtonStr))
+				{
+					if (g_SceneManager->CurrentScene()->DestroyGameObject(this, true))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+					else
+					{
+						PrintWarn("Failed to delete game object: %s\n", m_Name.c_str());
+					}
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(deleteCancelButtonStr))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+	bool GameObject::DoDuplicateGameObjectButton(const char* buttonName)
+	{
+		static const char* duplicateObjectButtonStr = "Duplicate";
+
+		if (ImGui::Button(buttonName))
+		{
+			GameObject* newGameObject = CopySelfAndAddToScene(nullptr, true);
+
+			g_EngineInstance->SetSelectedObject(newGameObject);
+
+			return true;
+		}
+
+		return false;
+	}
+
 	void GameObject::RemoveRigidBody()
 	{
 		if (m_RigidBody)
@@ -744,7 +1300,7 @@ namespace flex
 	{
 		m_ObjectInteractingWith = gameObject;
 
-		bBeingInteractedWith = (gameObject != nullptr);
+		m_bBeingInteractedWith = (gameObject != nullptr);
 
 		return true;
 	}
@@ -1103,6 +1659,11 @@ namespace flex
 		return &m_Transform;
 	}
 
+	const Transform* GameObject::GetTransform() const
+	{
+		return &m_Transform;
+	}
+
 	void GameObject::AddTag(const std::string& tag)
 	{
 		if (std::find(m_Tags.begin(), m_Tags.end(), tag) == m_Tags.end())
@@ -1215,13 +1776,13 @@ namespace flex
 
 	bool GameObject::HasUniformScale() const
 	{
-		return bUniformScale;
+		return m_bUniformScale;
 	}
 
 	void GameObject::SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately)
 	{
-		bUniformScale = bUseUniformScale;
-		if (bUniformScale && bEnforceImmediately)
+		m_bUniformScale = bUseUniformScale;
+		if (m_bUniformScale && bEnforceImmediately)
 		{
 			m_Transform.SetLocalScale(glm::vec3(m_Transform.GetLocalScale().x));
 		}
@@ -1875,6 +2436,308 @@ namespace flex
 		}
 
 		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+	}
+
+	DirectionalLight::DirectionalLight() :
+		GameObject("Directional Light", GameObjectType::DIRECTIONAL_LIGHT)
+	{
+	}
+
+	DirectionalLight::DirectionalLight(const std::string& name) :
+		GameObject(name, GameObjectType::DIRECTIONAL_LIGHT)
+	{
+	}
+
+	void DirectionalLight::Initialize()
+	{
+		g_Renderer->RegisterDirectionalLight(this);
+	}
+
+	void DirectionalLight::Destroy()
+	{
+		g_Renderer->RemoveDirectionalLight();
+	}
+
+	void DirectionalLight::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		static const ImGuiColorEditFlags colorEditFlags =
+			ImGuiColorEditFlags_NoInputs |
+			ImGuiColorEditFlags_Float |
+			ImGuiColorEditFlags_RGB |
+			ImGuiColorEditFlags_PickerHueWheel |
+			ImGuiColorEditFlags_HDR;
+
+		if (ImGui::TreeNode("Directional Light"))
+		{
+			glm::vec3 pos = m_Transform.GetLocalPosition();
+			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
+			{
+				m_Transform.SetLocalPosition(pos);
+			}
+			glm::vec3 dirtyRot = glm::degrees(glm::eulerAngles(m_Transform.GetLocalRotation()));
+			glm::vec3 cleanedRot;
+			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
+			{
+				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+			}
+			ImGui::SliderFloat("Brightness", &brightness, 0.0f, 15.0f);
+			ImGui::ColorEdit4("Color ", &color.r, colorEditFlags);
+
+			ImGui::Spacing();
+			ImGui::Text("Shadow");
+
+			ImGui::Checkbox("Cast shadow", &bCastShadow);
+			ImGui::SliderFloat("Shadow darkness", &shadowDarkness, 0.0f, 1.0f);
+
+			ImGui::DragFloat("Near", &shadowMapNearPlane);
+			ImGui::DragFloat("Far", &shadowMapFarPlane);
+			ImGui::DragFloat("Zoom", &shadowMapZoom);
+
+			if (ImGui::CollapsingHeader("Preview"))
+			{
+				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256));
+			}
+
+			ImGui::TreePop();
+		}
+
+		ImGui::SameLine();
+
+		bool bDirLightEnabled = (enabled == 1);
+		if (ImGui::Checkbox("##dir-light-enabled", &bDirLightEnabled))
+		{
+			enabled = bDirLightEnabled ? 1 : 0;
+		}
+	}
+
+	void DirectionalLight::SetPos(const glm::vec3& pos)
+	{
+		m_Transform.SetLocalPosition(pos);
+	}
+
+	glm::vec3 DirectionalLight::GetPos() const
+	{
+		return m_Transform.GetWorldPosition();
+	}
+
+	glm::quat DirectionalLight::GetRot() const
+	{
+		return m_Transform.GetWorldRotation();
+	}
+
+	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+
+		JSONObject directionalLightObj;
+		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
+		{
+			std::string dirStr = directionalLightObj.GetString("rotation");
+			m_Transform.SetLocalRotation(glm::quat(ParseVec3(dirStr)));
+
+			std::string posStr = directionalLightObj.GetString("pos");
+			if (!posStr.empty())
+			{
+				m_Transform.SetLocalPosition(ParseVec3(posStr));
+			}
+
+			directionalLightObj.SetVec4Checked("color", color);
+
+			directionalLightObj.SetFloatChecked("brightness", brightness);
+
+			if (directionalLightObj.HasField("enabled"))
+			{
+				enabled = directionalLightObj.GetBool("enabled") ? 1 : 0;
+			}
+
+			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
+			directionalLightObj.SetFloatChecked("shadow darkness", shadowDarkness);
+
+			if (directionalLightObj.HasField("shadow map near"))
+			{
+				directionalLightObj.SetFloatChecked("shadow map near", shadowMapNearPlane);
+			}
+
+			if (directionalLightObj.HasField("shadow map far"))
+			{
+				directionalLightObj.SetFloatChecked("shadow map far", shadowMapFarPlane);
+			}
+
+			if (directionalLightObj.HasField("shadow map zoom"))
+			{
+				directionalLightObj.SetFloatChecked("shadow map zoom", shadowMapZoom);
+			}
+		}
+	}
+
+	void DirectionalLight::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject dirLightObj = {};
+
+		glm::vec3 dirLightDir = glm::eulerAngles(m_Transform.GetLocalRotation());
+		std::string dirStr = Vec3ToString(dirLightDir, 3);
+		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
+
+		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		dirLightObj.fields.emplace_back("pos", JSONValue(posStr));
+
+		std::string colorStr = Vec3ToString(color, 2);
+		dirLightObj.fields.emplace_back("color", JSONValue(colorStr));
+
+		dirLightObj.fields.emplace_back("enabled", JSONValue(enabled != 0));
+		dirLightObj.fields.emplace_back("brightness", JSONValue(brightness));
+
+		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
+		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowDarkness));
+		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
+		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
+		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));
+
+		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
+	}
+
+	bool DirectionalLight::operator==(const DirectionalLight& other)
+	{
+		return other.m_Transform.GetLocalRotation() == m_Transform.GetLocalRotation() &&
+			other.m_Transform.GetLocalPosition() == m_Transform.GetLocalPosition() &&
+			other.color == color &&
+			other.enabled == enabled &&
+			other.brightness == brightness;
+	}
+
+	void DirectionalLight::SetRot(const glm::quat& rot)
+	{
+		m_Transform.SetLocalRotation(rot);
+	}
+
+	PointLight::PointLight() :
+		GameObject("Point Light", GameObjectType::POINT_LIGHT)
+	{
+	}
+
+	PointLight::PointLight(const std::string& name) :
+		GameObject(name, GameObjectType::POINT_LIGHT)
+	{
+	}
+
+	void PointLight::Initialize()
+	{
+		g_Renderer->RegisterPointLight(this);
+	}
+
+	void PointLight::Destroy()
+	{
+		g_Renderer->RemovePointLight(this);
+	}
+
+	void PointLight::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		static const ImGuiColorEditFlags colorEditFlags =
+			ImGuiColorEditFlags_NoInputs |
+			ImGuiColorEditFlags_Float |
+			ImGuiColorEditFlags_RGB |
+			ImGuiColorEditFlags_PickerHueWheel |
+			ImGuiColorEditFlags_HDR;
+
+		const std::string objectName("Point Light##" + m_Name);
+		const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
+		bool bRemovedPointLight = false;
+
+		if (ImGui::BeginPopupContextItem())
+		{
+			static const char* removePointLightStr = "Delete";
+			if (ImGui::Button(removePointLightStr))
+			{
+				g_Renderer->RemovePointLight(this);
+				bRemovedPointLight = true;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (!bRemovedPointLight && bTreeOpen)
+		{
+			bool bPointLightEnabled = (enabled == 1);
+			if (ImGui::Checkbox("enabled", &bPointLightEnabled))
+			{
+				enabled = bPointLightEnabled ? 1 : 0;
+			}
+
+			glm::vec3 pos = m_Transform.GetLocalPosition();
+			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
+			{
+				m_Transform.SetLocalPosition(pos);
+			}
+			ImGui::ColorEdit4("Color ", &color.r, colorEditFlags);
+			ImGui::SliderFloat("Brightness", &brightness, 0.0f, 1000.0f);
+		}
+
+		if (bTreeOpen)
+		{
+			ImGui::TreePop();
+		}
+	}
+
+	void PointLight::SetPos(const glm::vec3& pos)
+	{
+		m_Transform.SetLocalPosition(pos);
+	}
+
+	glm::vec3 PointLight::GetPos() const
+	{
+		return m_Transform.GetWorldPosition();
+	}
+
+	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+
+		JSONObject pointLightObj;
+		if (parentObject.SetObjectChecked("point light info", pointLightObj))
+		{
+			std::string posStr = pointLightObj.GetString("pos");
+			m_Transform.SetLocalPosition(glm::vec3(ParseVec3(posStr)));
+
+			pointLightObj.SetVec4Checked("color", color);
+
+			pointLightObj.SetFloatChecked("brightness", brightness);
+
+			if (pointLightObj.HasField("enabled"))
+			{
+				enabled = pointLightObj.GetBool("enabled") ? 1 : 0;
+			}
+		}
+	}
+
+	void PointLight::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject pointLightObj = {};
+
+		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		pointLightObj.fields.emplace_back("pos", JSONValue(posStr));
+
+		std::string colorStr = Vec3ToString(color, 2);
+		pointLightObj.fields.emplace_back("color", JSONValue(colorStr));
+
+		pointLightObj.fields.emplace_back("enabled", JSONValue(enabled != 0));
+		pointLightObj.fields.emplace_back("brightness", JSONValue(brightness));
+
+		parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
+	}
+
+	bool PointLight::operator==(const PointLight& other)
+	{
+		return other.GetTransform()->GetLocalPosition() == m_Transform.GetLocalPosition() &&
+			other.color == color &&
+			other.enabled == enabled &&
+			other.brightness == brightness;
 	}
 
 } // namespace flex

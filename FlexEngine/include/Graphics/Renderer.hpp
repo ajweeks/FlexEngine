@@ -5,6 +5,7 @@
 
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
+#include "Scene/GameObject.hpp" // For PointLight & DirecitonalLight
 
 class btIDebugDraw;
 
@@ -37,6 +38,8 @@ namespace flex
 		virtual void Draw() = 0;
 		virtual void DrawImGuiRenderObjects() = 0;
 		virtual void DrawImGuiSettings();
+
+		virtual void DrawImGuiForRenderID(RenderID renderID) = 0;
 
 		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
 		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
@@ -138,14 +141,15 @@ namespace flex
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
-		bool InitializeDirectionalLight(const DirectionalLight& dirLight);
-		PointLightID InitializePointLight(const PointLight& pointLight);
+		bool RegisterDirectionalLight(DirectionalLight* dirLight);
+		PointLightID RegisterPointLight(PointLight* pointLight);
 
-		void ClearDirectionalLight();
-		void ClearPointLights();
+		void RemoveDirectionalLight();
+		void RemovePointLight(const PointLight* pointLight);
+		void RemoveAllPointLights();
 
-		DirectionalLight& GetDirectionalLight();
-		PointLight& GetPointLight(PointLightID pointLight);
+		DirectionalLight* GetDirectionalLight();
+		PointLight* GetPointLight(PointLightID pointLight);
 		i32 GetNumPointLights();
 
 		i32 GetFramesRenderedCount() const;
@@ -171,15 +175,8 @@ namespace flex
 		BitmapFont* m_FntGant = nullptr;
 
 	protected:
-		/*
-		* Draws common data for a game object
-		*/
-		void DrawImGuiForRenderObjectCommon(GameObject* gameObject);
-
-		void DrawImGuiLights();
-
-		std::vector<PointLight> m_PointLights;
-		DirectionalLight m_DirectionalLight;
+		std::vector<PointLight*> m_PointLights;
+		DirectionalLight* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo
 		{

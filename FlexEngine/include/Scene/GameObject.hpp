@@ -30,6 +30,10 @@ namespace flex
 		virtual void Destroy();
 		virtual void Update();
 
+		virtual void DrawImGuiObjects();
+		virtual void DoImGuiContextMenu(bool bActive);
+		virtual bool DoDuplicateGameObjectButton(const char* buttonName);
+
 		void RemoveRigidBody();
 
 		void SetParent(GameObject* parent);
@@ -59,6 +63,7 @@ namespace flex
 		std::vector<GameObject*> GetLaterSiblings();
 
 		virtual Transform* GetTransform();
+		virtual const Transform* GetTransform() const;
 
 		void AddTag(const std::string& tag);
 		bool HasTag(const std::string& tag);
@@ -192,10 +197,10 @@ namespace flex
 
 		MeshComponent* m_MeshComponent = nullptr;
 
-		bool bBeingInteractedWith = false;
+		bool m_bBeingInteractedWith = false;
 
 		// Editor only
-		bool bUniformScale = false;
+		bool m_bUniformScale = false;
 
 		static AudioSourceID s_BunkSound;
 		static RandomizedAudioSource s_SqueakySounds;
@@ -203,6 +208,65 @@ namespace flex
 	};
 
 	// Child classes
+
+	class DirectionalLight : public GameObject
+	{
+	public:
+		DirectionalLight();
+		DirectionalLight(const std::string& name);
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void DrawImGuiObjects() override;
+
+		bool operator==(const DirectionalLight& other);
+
+		void SetPos(const glm::vec3& pos);
+		glm::vec3 GetPos() const;
+		void SetRot(const glm::quat& rot);
+		glm::quat GetRot() const;
+
+		glm::vec4 color = VEC4_ONE;
+		u32 enabled = 1;
+		real brightness = 1.0f;
+
+		real shadowDarkness = 0.0f;
+		bool bCastShadow = true;
+		real shadowMapNearPlane = -80.0f;
+		real shadowMapFarPlane = 100.0f;
+		real shadowMapZoom = 30.0f;
+
+		// DEBUG: (just for preview in ImGui)
+		u32 shadowTextureID = 0;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+	};
+
+	class PointLight : public GameObject
+	{
+	public:
+		PointLight();
+		PointLight(const std::string& name);
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void DrawImGuiObjects() override;
+
+		bool operator==(const PointLight& other);
+
+		void SetPos(const glm::vec3& pos);
+		glm::vec3 GetPos() const;
+
+		glm::vec4 color = VEC4_ONE;
+		u32 enabled = 1;
+		real brightness = 500.0f;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+	};
 
 	class Valve : public GameObject
 	{

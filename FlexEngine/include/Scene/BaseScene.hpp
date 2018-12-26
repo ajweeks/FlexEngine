@@ -8,10 +8,10 @@ namespace flex
 	class ReflectionProbe;
 	class Player;
 	class GameObject;
+	class PointLight;
+	class DirectionalLight;
 	struct JSONObject;
 	struct JSONField;
-	struct PointLight;
-	struct DirectionalLight;
 	struct Material;
 
 	class BaseScene
@@ -94,17 +94,13 @@ namespace flex
 		// Returns true if targetObject was found and deleted
 		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
 
-		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
-		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
-
-		JSONObject SerializePointLight(PointLight& pointLight) const;
-		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight) const;
-
 		i32 GetMaterialArrayIndex(const Material& material);
 
 		MaterialID FindMaterialIDByName(const JSONObject& object);
 
 		void UpdateRootObjectSiblingIndices();
+
+		void CreateDefaultDirectionalLight();
 
 		static const i32 m_FileVersion = 1;
 

@@ -68,6 +68,8 @@ namespace flex
 	enum class GameObjectType
 	{
 		OBJECT,
+		POINT_LIGHT,
+		DIRECTIONAL_LIGHT,
 		PLAYER,
 		SKYBOX,
 		REFLECTION_PROBE,
@@ -84,13 +86,14 @@ namespace flex
 	static const char* GameObjectTypeStrings[] =
 	{
 		"object",
+		"point light",
+		"directional light",
 		"player",
 		"skybox",
 		"reflection probe",
 		"valve",
 		"rising block",
 		"glass pane",
-
 
 		"NONE"
 	};

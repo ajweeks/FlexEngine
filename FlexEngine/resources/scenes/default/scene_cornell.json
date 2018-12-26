@@ -216,46 +216,29 @@
 				"mask" : 0,
 				"group" : 0
 			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
 		}
-	],
-	"point lights" : 
-	[
-		{
-			"pos" : "16.800, 18.600, 2.200",
-			"color" : "0.93, 0.93, 0.89",
-			"enabled" : true,
-			"brightness" : 549.296021
-		},
-		{
-			"pos" : "7.000, 18.000, -8.700",
-			"color" : "0.93, 0.93, 0.89",
-			"enabled" : true,
-			"brightness" : 206.572998
-		},
-		{
-			"pos" : "30.300, 9.300, 10.400",
-			"color" : "0.93, 0.93, 0.89",
-			"enabled" : true,
-			"brightness" : 140.845001
-		},
-		{
-			"pos" : "1.800, 32.900, 5.100",
-			"color" : "0.93, 0.93, 0.89",
-			"enabled" : true,
-			"brightness" : 276.994995
-		}
-	],
-	"directional light" : 
-	{
-		"rotation" : "0.722, -0.031, -0.076",
-		"pos" : "0.000, 24.400, 0.000",
-		"color" : "1.00, 1.00, 1.00",
-		"enabled" : true,
-		"brightness" : 1.549000,
-		"cast shadows" : true,
-		"shadow darkness" : 0.052000,
-		"shadow map near" : -80.000000,
-		"shadow map far" : 100.000000,
-		"shadow map zoom" : 56.000000
-	}
+	]
 }

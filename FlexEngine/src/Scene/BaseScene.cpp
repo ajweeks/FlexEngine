@@ -133,29 +133,6 @@ namespace flex
 				AddRootObject(rootObj);
 			}
 
-			if (sceneRootObject.HasField("point lights"))
-			{
-				const std::vector<JSONObject>& pointLightsArray = sceneRootObject.GetObjectArray("point lights");
-
-				for (const JSONObject& pointLightObj : pointLightsArray)
-				{
-					PointLight pointLight = {};
-					CreatePointLightFromJSON(pointLightObj, pointLight);
-
-					g_Renderer->InitializePointLight(pointLight);
-				}
-			}
-
-			if (sceneRootObject.HasField("directional light"))
-			{
-				const JSONObject& directionalLightObj = sceneRootObject.GetObject("directional light");
-
-				DirectionalLight dirLight = {};
-				CreateDirectionalLightFromJSON(directionalLightObj, dirLight);
-
-				g_Renderer->InitializeDirectionalLight(dirLight);
-			}
-
 			if (sceneRootObject.HasField("track manager"))
 			{
 				const JSONObject& trackManagerObj = sceneRootObject.GetObject("track manager");
@@ -225,12 +202,6 @@ namespace flex
 
 				AddRootObject(reflectionProbe);
 			}
-
-			DirectionalLight dirLight = {};
-			dirLight.rotation = glm::quat(glm::vec3(130.0f, -65.0f, 120.0f));
-			dirLight.position = glm::vec3(0.0f, 15.0f, 0.0f);
-			dirLight.brightness = 5.0f;
-			g_Renderer->InitializeDirectionalLight(dirLight);
 		}
 
 		m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
@@ -265,6 +236,11 @@ namespace flex
 		{
 			rootObject->Initialize();
 		}
+		if (g_Renderer->GetDirectionalLight() == nullptr)
+		{
+			CreateDefaultDirectionalLight();
+		}
+
 		UpdateRootObjectSiblingIndices();
 
 		m_bLoaded = true;
@@ -298,8 +274,8 @@ namespace flex
 
 		g_Renderer->ClearMaterials();
 		g_Renderer->SetSkyboxMesh(nullptr);
-		g_Renderer->ClearDirectionalLight();
-		g_Renderer->ClearPointLights();
+		g_Renderer->RemoveDirectionalLight();
+		g_Renderer->RemoveAllPointLights();
 
 		if (m_PhysicsWorld)
 		{
@@ -403,9 +379,17 @@ namespace flex
 				targetObject->m_Children.clear();
 			}
 
+			bool bIsDirectionalLight = ((DirectionalLight*)targetObject) != nullptr;
+
 			targetObject->Destroy();
 
 			SafeDelete(targetObject);
+
+			if (bIsDirectionalLight)
+			{
+				CreateDefaultDirectionalLight();
+			}
+
 			return true;
 		}
 
@@ -704,58 +688,14 @@ namespace flex
 		}
 	}
 
-	void BaseScene::CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight)
+	void BaseScene::CreateDefaultDirectionalLight()
 	{
-		std::string posStr = obj.GetString("pos");
-		pointLight.position = glm::vec4(ParseVec3(posStr), 0);
-
-		obj.SetVec4Checked("color", pointLight.color);
-
-		obj.SetFloatChecked("brightness", pointLight.brightness);
-
-		if (obj.HasField("enabled"))
-		{
-			pointLight.enabled = obj.GetBool("enabled") ? 1 : 0;
-		}
-	}
-
-	void BaseScene::CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight)
-	{
-		std::string dirStr = obj.GetString("rotation");
-		directionalLight.rotation = glm::quat(ParseVec3(dirStr));
-
-		std::string posStr = obj.GetString("pos");
-		if (!posStr.empty())
-		{
-			directionalLight.position = ParseVec3(posStr);
-		}
-
-		obj.SetVec4Checked("color", directionalLight.color);
-
-		obj.SetFloatChecked("brightness", directionalLight.brightness);
-
-		if (obj.HasField("enabled"))
-		{
-			directionalLight.enabled = obj.GetBool("enabled") ? 1 : 0;
-		}
-
-		obj.SetBoolChecked("cast shadows", directionalLight.bCastShadow);
-		obj.SetFloatChecked("shadow darkness", directionalLight.shadowDarkness);
-
-		if (obj.HasField("shadow map near"))
-		{
-			obj.SetFloatChecked("shadow map near", directionalLight.shadowMapNearPlane);
-		}
-
-		if (obj.HasField("shadow map far"))
-		{
-			obj.SetFloatChecked("shadow map far", directionalLight.shadowMapFarPlane);
-		}
-
-		if (obj.HasField("shadow map zoom"))
-		{
-			obj.SetFloatChecked("shadow map zoom", directionalLight.shadowMapZoom);
-		}
+		DirectionalLight* dirLight = new DirectionalLight();
+		g_SceneManager->CurrentScene()->AddRootObject(dirLight);
+		dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
+		dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
+		dirLight->brightness = 5.0f;
+		g_Renderer->RegisterDirectionalLight(dirLight);
 	}
 
 	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const
@@ -786,23 +726,6 @@ namespace flex
 			}
 		}
 		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
-
-
-		JSONField pointLightsField = {};
-		pointLightsField.label = "point lights";
-		std::vector<JSONObject> pointLightsArray;
-		for (i32 i = 0; i < g_Renderer->GetNumPointLights(); ++i)
-		{
-			PointLight& pointLight = g_Renderer->GetPointLight(i);
-			pointLightsArray.push_back(SerializePointLight(pointLight));
-		}
-		pointLightsField.value = JSONValue(pointLightsArray);
-		rootSceneObject.fields.push_back(pointLightsField);
-
-		DirectionalLight& dirLight = g_Renderer->GetDirectionalLight();
-		JSONField directionalLightsField("directional light",
-			JSONValue(SerializeDirectionalLight(dirLight)));
-		rootSceneObject.fields.push_back(directionalLightsField);
 
 		if (!m_TrackManager.m_Tracks.empty())
 		{
@@ -886,48 +809,6 @@ namespace flex
 		}
 
 		//m_bUsingSaveFile = false;
-	}
-
-	JSONObject BaseScene::SerializePointLight(PointLight& pointLight) const
-	{
-		JSONObject object;
-
-		std::string posStr = Vec3ToString(pointLight.position, 3);
-		object.fields.emplace_back("pos", JSONValue(posStr));
-
-		std::string colorStr = Vec3ToString(pointLight.color, 2);
-		object.fields.emplace_back("color", JSONValue(colorStr));
-
-		object.fields.emplace_back("enabled", JSONValue(pointLight.enabled != 0));
-		object.fields.emplace_back("brightness", JSONValue(pointLight.brightness));
-
-		return object;
-	}
-
-	JSONObject BaseScene::SerializeDirectionalLight(DirectionalLight& directionalLight) const
-	{
-		JSONObject object;
-
-		glm::vec3 dirLightDir = glm::eulerAngles(directionalLight.rotation);
-		std::string dirStr = Vec3ToString(dirLightDir, 3);
-		object.fields.emplace_back("rotation", JSONValue(dirStr));
-
-		std::string posStr = Vec3ToString(directionalLight.position, 3);
-		object.fields.emplace_back("pos", JSONValue(posStr));
-
-		std::string colorStr = Vec3ToString(directionalLight.color, 2);
-		object.fields.emplace_back("color", JSONValue(colorStr));
-
-		object.fields.emplace_back("enabled", JSONValue(directionalLight.enabled != 0));
-		object.fields.emplace_back("brightness", JSONValue(directionalLight.brightness));
-
-		object.fields.emplace_back("cast shadows", JSONValue(directionalLight.bCastShadow));
-		object.fields.emplace_back("shadow darkness", JSONValue(directionalLight.shadowDarkness));
-		object.fields.emplace_back("shadow map near", JSONValue(directionalLight.shadowMapNearPlane));
-		object.fields.emplace_back("shadow map far", JSONValue(directionalLight.shadowMapFarPlane));
-		object.fields.emplace_back("shadow map zoom", JSONValue(directionalLight.shadowMapZoom));
-
-		return object;
 	}
 
 	GameObject* BaseScene::AddRootObject(GameObject* gameObject)

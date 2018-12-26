@@ -29,7 +29,6 @@ namespace flex
 	void TrackManager::InitializeFromJSON(const JSONObject& obj)
 	{
 		const JSONObject& tracksObj = obj.GetObject("tracks");
-		const JSONObject& junctionsObj = obj.GetObject("junctions");
 
 		for (const JSONField& field : tracksObj.fields)
 		{

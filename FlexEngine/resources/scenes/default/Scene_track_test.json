@@ -127,30 +127,31 @@
 				"mask" : 1,
 				"group" : 1
 			}
-		}
-	],
-	"point lights" : 
-	[
+		},
 		{
-			"pos" : "18.300, 16.800, 23.700",
-			"color" : "1.00, 1.00, 1.00",
-			"enabled" : false,
-			"brightness" : 323.944000
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
 		}
 	],
-	"directional light" : 
-	{
-		"rotation" : "2.018, -1.174, -2.615",
-		"pos" : "0.000, 25.000, 0.000",
-		"color" : "1.00, 1.00, 1.00",
-		"enabled" : true,
-		"brightness" : 2.479000,
-		"cast shadows" : true,
-		"shadow darkness" : 0.000000,
-		"shadow map near" : -92.000000,
-		"shadow map far" : 86.000000,
-		"shadow map zoom" : 96.000000
-	},
 	"track manager" : 
 	{
 		"tracks" : 

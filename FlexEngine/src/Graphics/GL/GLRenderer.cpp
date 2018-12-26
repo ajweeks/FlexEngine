@@ -192,7 +192,10 @@ namespace flex
 					PrintError("Shadow depth buffer is incomplete!\n");
 				}
 
-				m_DirectionalLight.shadowTextureID = m_ShadowMapTexture.id;
+				if (m_DirectionalLight)
+				{
+					m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+				}
 			}
 
 			MaterialCreateInfo shadowMatCreateInfo = {};
@@ -470,6 +473,9 @@ namespace flex
 			{
 				editorObject->PostInitialize();
 			}
+
+			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+
 
 			Print("Renderer initialized!\n");
 		}
@@ -1402,6 +1408,9 @@ namespace flex
 				glDepthFunc(skybox->depthTestReadFunc);
 				glDepthMask(skybox->depthWriteEnable);
 
+				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
+
 				u32 maxMipLevels = 5;
 				for (u32 mip = 0; mip < maxMipLevels; ++mip)
 				{
@@ -1410,13 +1419,11 @@ namespace flex
 					assert(mipWidth <= Renderer::MAX_TEXTURE_DIM);
 					assert(mipHeight <= Renderer::MAX_TEXTURE_DIM);
 
-					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, mipWidth, mipHeight);
 
 					glViewport(0, 0, mipWidth, mipHeight);
 
 					real roughness = (real)mip / (real(maxMipLevels - 1));
-					i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
 					glUniform1f(roughnessUniformLocation, roughness);
 					for (u32 i = 0; i < 6; ++i)
 					{
@@ -1873,7 +1880,7 @@ namespace flex
 			}
 
 #if 0 // Auto-rotate directional light
-			m_DirectionalLight.rotation = glm::rotate(m_DirectionalLight.rotation,
+			m_DirectionalLight->rotation = glm::rotate(m_DirectionalLight->rotation,
 				g_DeltaTime * 0.5f,
 				glm::vec3(0.0f, 0.5f, 0.5f));
 #endif
@@ -2696,32 +2703,32 @@ namespace flex
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			glm::vec3 camPos = cam->GetPosition();
 			glm::vec3 camUp = cam->GetUp();
-			for (const PointLight& pointLight : m_PointLights)
+			for (PointLight* pointLight : m_PointLights)
 			{
-				if (pointLight.enabled)
+				if (pointLight->enabled)
 				{
-					drawInfo.pos = pointLight.position;
-					drawInfo.color = pointLight.color * 1.5f;
+					drawInfo.pos = pointLight->GetPos();
+					drawInfo.color = pointLight->color * 1.5f;
 					drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
-					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight.position, camUp);
+					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight->GetPos(), camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(drawInfo);
 				}
 			}
 
-			if (m_DirectionalLight.enabled)
+			if (m_DirectionalLight->enabled)
 			{
-				drawInfo.color = m_DirectionalLight.color * 1.5f;
-				drawInfo.pos = m_DirectionalLight.position;
+				drawInfo.color = m_DirectionalLight->color * 1.5f;
+				drawInfo.pos = m_DirectionalLight->GetPos();
 				drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
-				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight.position, camUp);
+				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->GetPos(), camUp);
 				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 				DrawSpriteQuad(drawInfo);
 
-				glm::vec3 dirLightForward = VEC3_RIGHT * m_DirectionalLight.rotation;
+				glm::vec3 dirLightForward = VEC3_RIGHT * m_DirectionalLight->GetRot();
 				m_PhysicsDebugDrawer->drawLine(
-					ToBtVec3(m_DirectionalLight.position),
-					ToBtVec3(m_DirectionalLight.position - dirLightForward * 2.5f),
+					ToBtVec3(m_DirectionalLight->GetPos()),
+					ToBtVec3(m_DirectionalLight->GetPos() - dirLightForward * 2.5f),
 					btVector3(0.0f, 0.0f, 1.0f));
 			}
 		}
@@ -3489,12 +3496,12 @@ namespace flex
 
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
-			glm::vec3 dirLightDir = VEC3_RIGHT * m_DirectionalLight.rotation;
+			glm::vec3 dirLightDir = VEC3_RIGHT * m_DirectionalLight->GetRot();
 			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
 
-			real zoom = m_DirectionalLight.shadowMapZoom;
-			real nearPlane = m_DirectionalLight.shadowMapNearPlane;
-			real farPlane = m_DirectionalLight.shadowMapFarPlane;
+			real zoom = m_DirectionalLight->shadowMapZoom;
+			real nearPlane = m_DirectionalLight->shadowMapNearPlane;
+			real farPlane = m_DirectionalLight->shadowMapFarPlane;
 			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, nearPlane, farPlane);
 		}
 
@@ -3994,117 +4001,6 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
-		void GLRenderer::DoGameObjectContextMenu(GameObject** gameObjectRef, bool bActive)
-		{
-			static const char* renameObjectPopupLabel = "##rename-game-object";
-			static const char* renameObjectButtonStr = "Rename";
-			static const char* duplicateObjectButtonStr = "Duplicate...";
-			static const char* deletePopupStr = "Delete object";
-			static const char* deleteButtonStr = "Delete";
-			static const char* deleteCancelButtonStr = "Cancel";
-
-			GameObject* gameObject = *gameObjectRef;
-
-			std::string contextMenuIDStr = "context window game object " + gameObject->GetName() + std::to_string(gameObject->GetRenderID());
-			static std::string newObjectName = gameObject->GetName();
-			const size_t maxStrLen = 256;
-
-			bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
-								ImGui::IsMouseClicked(1);
-
-			if (bActive && g_EngineInstance->bWantRenameActiveElement)
-			{
-				ImGui::OpenPopup(contextMenuIDStr.c_str());
-				g_EngineInstance->bWantRenameActiveElement = false;
-				bRefreshNameField = true;
-			}
-			if (bRefreshNameField)
-			{
-				newObjectName = gameObject->GetName();
-				newObjectName.resize(maxStrLen);
-			}
-
-			if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
-			{
-				bool bRename = ImGui::InputText(renameObjectPopupLabel,
-												(char*)newObjectName.data(),
-												maxStrLen,
-												ImGuiInputTextFlags_EnterReturnsTrue);
-
-				ImGui::SameLine();
-
-				bRename |= ImGui::Button(renameObjectButtonStr);
-
-				bool bInvalidName = std::string(newObjectName.c_str()).empty();
-
-				if (bRename && !bInvalidName)
-				{
-					// Remove excess trailing \0 chars
-					newObjectName = std::string(newObjectName.c_str());
-
-					gameObject->SetName(newObjectName);
-
-					ImGui::CloseCurrentPopup();
-				}
-
-				if (DoDuplicateGameObjectButton(gameObject, duplicateObjectButtonStr))
-				{
-					*gameObjectRef = nullptr;
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button(deleteButtonStr))
-				{
-					ImGui::OpenPopup(deletePopupStr);
-				}
-
-				if (ImGui::BeginPopupModal(deletePopupStr, NULL,
-					ImGuiWindowFlags_AlwaysAutoResize |
-					ImGuiWindowFlags_NoSavedSettings |
-					ImGuiWindowFlags_NoNavInputs))
-				{
-					static std::string objectName = gameObject->GetName();
-
-					ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
-					std::string textStr = "Are you sure you want to permanently delete " + objectName + "?";
-					ImGui::Text(textStr.c_str());
-					ImGui::PopStyleColor();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-					if (ImGui::Button(deleteButtonStr))
-					{
-						if (g_SceneManager->CurrentScene()->DestroyGameObject(gameObject, true))
-						{
-							*gameObjectRef = nullptr;
-							ImGui::CloseCurrentPopup();
-						}
-						else
-						{
-							PrintWarn("Failed to delete game object: %s\n", gameObject->GetName().c_str());
-						}
-					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-
-					ImGui::SameLine();
-
-					if (ImGui::Button(deleteCancelButtonStr))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::EndPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-		}
-
 		void GLRenderer::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 		{
 			static const char* defaultNewNameBase = "New_Object_";
@@ -4186,22 +4082,6 @@ namespace flex
 
 				ImGui::EndPopup();
 			}
-		}
-
-		bool GLRenderer::DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName)
-		{
-			static const char* duplicateObjectButtonStr = "Duplicate";
-
-			if (ImGui::Button(buttonName))
-			{
-				GameObject* newGameObject = objectToCopy->CopySelfAndAddToScene(nullptr, true);
-
-				g_EngineInstance->SetSelectedObject(newGameObject);
-
-				return true;
-			}
-
-			return false;
 		}
 
 		bool GLRenderer::DoTextureSelector(const char* label,
@@ -4824,8 +4704,8 @@ namespace flex
 
 				if (shader->shader.bNeedShadowMap)
 				{
-					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight.bCastShadow);
-					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight.shadowDarkness);
+					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight->bCastShadow);
+					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight->shadowDarkness);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
@@ -4865,14 +4745,14 @@ namespace flex
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::DIR_LIGHT))
 				{
 					static const char* dirLightEnabledStr = "dirLight.enabled";
-					if (m_DirectionalLight.enabled)
+					if (m_DirectionalLight->enabled)
 					{
 						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
 						static const char* dirLightDirectionStr = "dirLight.direction";
-						glm::vec4 dirLightDir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * m_DirectionalLight.rotation;
+						glm::vec4 dirLightDir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * m_DirectionalLight->GetRot();
 						SetVec4f(material->material.shaderID, dirLightDirectionStr, dirLightDir);
 						static const char* dirLightColorStr = "dirLight.color";
-						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight.color * m_DirectionalLight.brightness);
+						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight->color * m_DirectionalLight->brightness);
 					}
 					else
 					{
@@ -4899,7 +4779,7 @@ namespace flex
 						strcat_s(enabledStr, dotEnabledStr);
 						if (i < m_PointLights.size())
 						{
-							if (m_PointLights[i].enabled)
+							if (m_PointLights[i]->enabled)
 							{
 								SetUInt(material->material.shaderID, enabledStr, 1);
 
@@ -4907,13 +4787,13 @@ namespace flex
 								strcpy_s(positionStr, pointLightStrStart);
 								static const char* dotPositionStr = ".position";
 								strcat_s(positionStr, dotPositionStr);
-								SetVec4f(material->material.shaderID, positionStr, m_PointLights[i].position);
+								SetVec4f(material->material.shaderID, positionStr, glm::vec4(m_PointLights[i]->GetPos(), 0.0f));
 
 								char colorStr[strStartLen + 6];
 								strcpy_s(colorStr, pointLightStrStart);
 								static const char* dotColorStr = ".color";
 								strcat_s(colorStr, dotColorStr);
-								SetVec4f(material->material.shaderID, colorStr, m_PointLights[i].color * m_PointLights[i].brightness);
+								SetVec4f(material->material.shaderID, colorStr, m_PointLights[i]->color * m_PointLights[i]->brightness);
 							}
 							else
 							{
@@ -5102,7 +4982,7 @@ namespace flex
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer();
-			m_DirectionalLight.shadowTextureID = m_ShadowMapTexture.id;
+			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
 		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -6232,7 +6112,6 @@ namespace flex
 				}
 			}
 
-
 			ImGui::End();
 		}
 
@@ -6251,7 +6130,7 @@ namespace flex
 				GameObject* selectedObject = selectedObjects[0];
 				if (selectedObject)
 				{
-					DrawGameObjectImGui(selectedObject);
+					selectedObject->DrawImGuiObjects();
 				}
 			}
 
@@ -6310,99 +6189,25 @@ namespace flex
 
 			DoCreateGameObjectButton("Add object...", "Add object");
 
-			DrawImGuiLights();
-		}
-
-		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos,
-			AnchorPoint anchor,
-			const glm::vec2& size,
-			const glm::vec4& color)
-		{
-			SpriteQuadDrawInfo drawInfo = {};
-
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
-			drawInfo.bScreenSpace = true;
-			drawInfo.bReadDepth = false;
-			drawInfo.bWriteDepth = false;
-			drawInfo.anchor = anchor;
-			drawInfo.color = color;
-			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
-			drawInfo.bEnableAlbedoSampler = false;
-
-			DrawSpriteQuad(drawInfo);
-		}
-
-		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos,
-			const glm::vec2& size,
-			const glm::vec4& color)
-		{
-			SpriteQuadDrawInfo drawInfo = {};
-
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
-			drawInfo.bScreenSpace = true;
-			drawInfo.bReadDepth = false;
-			drawInfo.bWriteDepth = false;
-			drawInfo.bRaw = true;
-			drawInfo.color = color;
-			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
-			drawInfo.bEnableAlbedoSampler = false;
-
-			DrawSpriteQuad(drawInfo);
-		}
-
-		void GLRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)
-		{
-			if (drawInfo.bScreenSpace)
+			if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
 			{
-				m_QueuedSSSprites.push_back(drawInfo);
-			}
-			else
-			{
-				m_QueuedWSSprites.push_back(drawInfo);
-			}
-		}
-
-		void GLRenderer::DrawGameObjectImGui(GameObject* gameObject)
-		{
-			RenderID renderID = gameObject->GetRenderID();
-			GLRenderObject* renderObject = nullptr;
-			std::string objectID = "##";
-			if (renderID != InvalidRenderID)
-			{
-				renderObject = GetRenderObject(renderID);
-				objectID += std::to_string(renderObject->renderID);
-
-				if (!gameObject->IsVisibleInSceneExplorer())
+				static const char* newPointLightStr = "Add point light";
+				if (ImGui::Button(newPointLightStr))
 				{
-					return;
+					PointLight* newPointLight = new PointLight();
+					g_SceneManager->CurrentScene()->AddRootObject(newPointLight);
+					RegisterPointLight(newPointLight);
 				}
 			}
+		}
 
-			ImGui::Text(gameObject->GetName().c_str());
-
-			DoGameObjectContextMenu(&gameObject, true);
-
-			if (!gameObject)
-			{
-				// Early return if object was just deleted
-				return;
-			}
-
-			bool visible = gameObject->IsVisible();
-			const std::string objectVisibleLabel("Visible" + objectID + gameObject->GetName());
-			if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
-			{
-				gameObject->SetVisible(visible);
-			}
-
-			DrawImGuiForRenderObjectCommon(gameObject);
-
+		void GLRenderer::DrawImGuiForRenderID(RenderID renderID)
+		{
+			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject)
 			{
+				GameObject* gameObject = renderObject->gameObject;
+
 				GLMaterial& material = m_Materials[renderObject->materialID];
 
 				MaterialID selectedMaterialID = 0;
@@ -6598,292 +6403,58 @@ namespace flex
 					}
 				}
 			}
-			else
+		}
+
+		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos,
+			AnchorPoint anchor,
+			const glm::vec2& size,
+			const glm::vec4& color)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.anchor = anchor;
+			drawInfo.color = color;
+			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+			drawInfo.bEnableAlbedoSampler = false;
+
+			DrawSpriteQuad(drawInfo);
+		}
+
+		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos,
+			const glm::vec2& size,
+			const glm::vec4& color)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bWriteDepth = false;
+			drawInfo.bRaw = true;
+			drawInfo.color = color;
+			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+			drawInfo.bEnableAlbedoSampler = false;
+
+			DrawSpriteQuad(drawInfo);
+		}
+
+		void GLRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)
+		{
+			if (drawInfo.bScreenSpace)
 			{
-				if (ImGui::Button("Add mesh component"))
-				{
-					MaterialID matID = InvalidMaterialID;
-					// TODO: Don't rely on material names!
-					g_Renderer->GetMaterialID("pbr chrome", matID);
-
-					MeshComponent* mesh = gameObject->SetMeshComponent(new MeshComponent(matID, gameObject));
-					mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
-				}
-			}
-
-			if (gameObject->GetRigidBody())
-			{
-				ImGui::Spacing();
-
-				RigidBody* rb = gameObject->GetRigidBody();
-				btRigidBody* rbInternal = rb->GetRigidBodyInternal();
-
-				ImGui::Text("Rigid body");
-
-				if (ImGui::BeginPopupContextItem("rb context menu"))
-				{
-					if (ImGui::Button("Remove rigid body"))
-					{
-						gameObject->RemoveRigidBody();
-						rb = nullptr;
-					}
-
-					ImGui::EndPopup();
-				}
-
-				if (rb != nullptr)
-				{
-					bool bStatic = rb->IsStatic();
-					if (ImGui::Checkbox("Static##rb", &bStatic))
-					{
-						rb->SetStatic(bStatic);
-					}
-
-					bool bKinematic = rb->IsKinematic();
-					if (ImGui::Checkbox("Kinematic", &bKinematic))
-					{
-						rb->SetKinematic(bKinematic);
-					}
-
-					ImGui::PushItemWidth(80.0f);
-					{
-						i32 group = rb->GetGroup();
-						if (ImGui::InputInt("Group", &group, 1, 16))
-						{
-							group = glm::clamp(group, -1, 16);
-							rb->SetGroup(group);
-						}
-
-						ImGui::SameLine();
-
-						i32 mask = rb->GetMask();
-						if (ImGui::InputInt("Mask", &mask, 1, 16))
-						{
-							mask = glm::clamp(mask, -1, 16);
-							rb->SetMask(mask);
-						}
-					}
-					ImGui::PopItemWidth();
-
-					// TODO: Array of buttons for each category
-					i32 flags = rb->GetPhysicsFlags();
-					if (ImGui::SliderInt("Flags", &flags, 0, 16))
-					{
-						rb->SetPhysicsFlags(flags);
-					}
-
-					real mass = rb->GetMass();
-					if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
-					{
-						rb->SetMass(mass);
-					}
-
-					real friction = rb->GetFriction();
-					if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
-					{
-						rb->SetFriction(friction);
-					}
-
-					ImGui::Spacing();
-
-					btCollisionShape* shape = rb->GetRigidBodyInternal()->getCollisionShape();
-					std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
-
-					if (ImGui::BeginCombo("Shape", shapeTypeStr.c_str()))
-					{
-						i32 selectedColliderShape = -1;
-						for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
-						{
-							if (g_CollisionTypes[i] == shape->getShapeType())
-							{
-								selectedColliderShape = i;
-								break;
-							}
-						}
-
-						if (selectedColliderShape == -1)
-						{
-							PrintError("Failed to find collider shape in array!\n");
-						}
-						else
-						{
-							for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
-							{
-								bool bSelected = (i == selectedColliderShape);
-								const char* colliderShapeName = g_CollisionTypeStrs[i];
-								if (ImGui::Selectable(colliderShapeName, &bSelected))
-								{
-									if (selectedColliderShape != i)
-									{
-										selectedColliderShape = i;
-
-										switch (g_CollisionTypes[selectedColliderShape])
-										{
-										case BOX_SHAPE_PROXYTYPE:
-										{
-											btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
-											gameObject->SetCollisionShape(newShape);
-										} break;
-										case SPHERE_SHAPE_PROXYTYPE:
-										{
-											btSphereShape* newShape = new btSphereShape(1.0f);
-											gameObject->SetCollisionShape(newShape);
-										} break;
-										case CAPSULE_SHAPE_PROXYTYPE:
-										{
-											btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
-											gameObject->SetCollisionShape(newShape);
-										} break;
-										case CYLINDER_SHAPE_PROXYTYPE:
-										{
-											btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
-											gameObject->SetCollisionShape(newShape);
-										} break;
-										case CONE_SHAPE_PROXYTYPE:
-										{
-											btConeShape* newShape = new btConeShape(1.0f, 1.0f);
-											gameObject->SetCollisionShape(newShape);
-										} break;
-										}
-									}
-								}
-							}
-						}
-
-						ImGui::EndCombo();
-					}
-
-					glm::vec3 scale = gameObject->GetTransform()->GetWorldScale();
-					switch (shape->getShapeType())
-					{
-					case BOX_SHAPE_PROXYTYPE:
-					{
-						btBoxShape* boxShape = (btBoxShape*)shape;
-						btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
-						glm::vec3 halfExtentsG = ToVec3(halfExtents);
-						halfExtentsG /= scale;
-
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
-						{
-							halfExtents = ToBtVec3(halfExtentsG);
-							btBoxShape* newShape = new btBoxShape(halfExtents);
-							gameObject->SetCollisionShape(newShape);
-						}
-					} break;
-					case SPHERE_SHAPE_PROXYTYPE:
-					{
-						btSphereShape* sphereShape = (btSphereShape*)shape;
-						real radius = sphereShape->getRadius();
-						radius /= scale.x;
-
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
-						{
-							btSphereShape* newShape = new btSphereShape(radius);
-							gameObject->SetCollisionShape(newShape);
-						}
-					} break;
-					case CAPSULE_SHAPE_PROXYTYPE:
-					{
-						btCapsuleShapeZ* capsuleShape = (btCapsuleShapeZ*)shape;
-						real radius = capsuleShape->getRadius();
-						real halfHeight = capsuleShape->getHalfHeight();
-						radius /= scale.x;
-						halfHeight /= scale.x;
-
-						real maxExtent = 1000.0f;
-						bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
-						bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
-
-						if (bUpdateShape)
-						{
-							btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
-							gameObject->SetCollisionShape(newShape);
-						}
-					} break;
-					case CYLINDER_SHAPE_PROXYTYPE:
-					{
-						btCylinderShape* cylinderShape = (btCylinderShape*)shape;
-						btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
-						glm::vec3 halfExtentsG = ToVec3(halfExtents);
-						halfExtentsG /= scale;
-
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
-						{
-							halfExtents = ToBtVec3(halfExtentsG);
-							btCylinderShape* newShape = new btCylinderShape(halfExtents);
-							gameObject->SetCollisionShape(newShape);
-						}
-					} break;
-					}
-
-					glm::vec3 localOffsetPos = rb->GetLocalPosition();
-					if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
-					{
-						rb->SetLocalPosition(localOffsetPos);
-					}
-					if (ImGui::IsItemClicked(1))
-					{
-						rb->SetLocalPosition(VEC3_ZERO);
-					}
-
-					glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(rb->GetLocalRotation()));
-					glm::vec3 cleanedRot;
-					if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
-					{
-						rb->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-					}
-
-					ImGui::Spacing();
-
-					glm::vec3 linearVel = ToVec3(rb->GetRigidBodyInternal()->getLinearVelocity());
-					if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
-					{
-						rbInternal->setLinearVelocity(ToBtVec3(linearVel));
-					}
-					if (ImGui::IsItemClicked(1))
-					{
-						rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
-					}
-
-					glm::vec3 angularVel = ToVec3(rb->GetRigidBodyInternal()->getAngularVelocity());
-					if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
-					{
-						rbInternal->setAngularVelocity(ToBtVec3(angularVel));
-					}
-					if (ImGui::IsItemClicked(1))
-					{
-						rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
-					}
-
-
-					//glm::vec3 localOffsetScale = rb->GetLocalScale();
-					//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
-					//{
-					//	real epsilon = 0.001f;
-					//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
-					//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
-					//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
-
-					//	rb->SetLocalScale(localOffsetScale);
-					//}
-
-				}
+				m_QueuedSSSprites.push_back(drawInfo);
 			}
 			else
 			{
-				if (ImGui::Button("Add rigid body"))
-				{
-					RigidBody* rb = gameObject->SetRigidBody(new RigidBody());
-					btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
-					btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-					gameObject->SetCollisionShape(boxShape);
-					rb->Initialize(boxShape, gameObject->GetTransform());
-					rb->GetRigidBodyInternal()->setUserPointer(gameObject);
-				}
+				m_QueuedWSSprites.push_back(drawInfo);
 			}
 		}
 
@@ -6969,7 +6540,7 @@ namespace flex
 				ImGui::EndDragDropTarget();
 			}
 
-			DoGameObjectContextMenu(&gameObject, false);
+			gameObject->DoImGuiContextMenu(false);
 
 			bool bParentChildTreeChanged = (gameObject == nullptr);
 			if (gameObject)

@@ -206,7 +206,7 @@ namespace flex
 			file.close();
 
 			// Remove extra null terminators caused by Windows line endings
-			for (i32 charIndex = 0; charIndex < fileContents.size() - 1; ++charIndex)
+			for (i32 charIndex = 0; charIndex < (i32)fileContents.size() - 1; ++charIndex)
 			{
 				if (fileContents[charIndex] == '\0')
 				{
@@ -1188,11 +1188,15 @@ namespace flex
 
 	const char* GameObjectTypeToString(GameObjectType type)
 	{
+		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::NONE + 1);
+
 		return GameObjectTypeStrings[(i32)type];
 	}
 
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
 	{
+		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::NONE + 1);
+
 		for (i32 i = 0; i < (i32)GameObjectType::NONE; ++i)
 		{
 			if (strcmp(GameObjectTypeStrings[i], gameObjectTypeStr) == 0)

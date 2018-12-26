@@ -15,7 +15,9 @@
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -161,228 +163,13 @@ namespace flex
 		return m_PhysicsDebuggingSettings;
 	}
 
-	void Renderer::DrawImGuiForRenderObjectCommon(GameObject* gameObject)
-	{
-		if (!gameObject)
-		{
-			return;
-		}
-
-		bool bStatic = gameObject->IsStatic();
-		if (ImGui::Checkbox("Static", &bStatic))
-		{
-			gameObject->SetStatic(bStatic);
-		}
-
-		ImGui::Text("Transform");
-
-		Transform* transform = gameObject->GetTransform();
-		if (ImGui::BeginPopupContextItem("transform context menu"))
-		{
-			if (ImGui::Button("Copy"))
-			{
-				CopyTransformToClipboard(transform);
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("Paste"))
-			{
-				PasteTransformFromClipboard(transform);
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-
-		static int transformSpace = 0;
-
-		static glm::vec3 sRot = glm::degrees((glm::eulerAngles(transform->GetLocalRotation())));
-
-		if (!ImGui::IsMouseDown(0))
-		{
-			sRot = glm::degrees((glm::eulerAngles(transform->GetLocalRotation())));
-		}
-
-		glm::vec3 translation = transform->GetLocalPosition();
-		glm::vec3 rotation = sRot;
-		glm::vec3 pScale = transform->GetLocalScale();
-		glm::vec3 scale = pScale;
-
-		bool valueChanged = false;
-
-		valueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || valueChanged;
-		if (ImGui::IsItemClicked(1))
-		{
-			translation = VEC3_ZERO;
-			valueChanged = true;
-		}
-
-		glm::vec3 cleanedRot;
-		valueChanged = DoImGuiRotationDragFloat3("Rotation", rotation, cleanedRot) || valueChanged;
-
-		valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
-		if (ImGui::IsItemClicked(1))
-		{
-			scale = VEC3_ONE;
-			valueChanged = true;
-		}
-
-		ImGui::SameLine();
-
-		bool bUniformScale = gameObject->HasUniformScale();
-		if (ImGui::Checkbox("u", &bUniformScale))
-		{
-			valueChanged = true;
-		}
-		if (bUniformScale)
-		{
-			float newScale = scale.x;
-			if (scale.y != pScale.y)
-			{
-				newScale = scale.y;
-			}
-			else if (scale.z != pScale.z)
-			{
-				newScale = scale.z;
-			}
-			scale = glm::vec3(newScale);
-		}
-
-		if (valueChanged)
-		{
-			transform->SetLocalPosition(translation, false);
-
-			sRot = rotation;
-
-			glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
-
-			transform->SetLocalRotation(rotQuat, false);
-			transform->SetLocalScale(scale, true);
-			gameObject->SetUseUniformScale(bUniformScale, false);
-
-			if (gameObject->GetRigidBody())
-			{
-				gameObject->GetRigidBody()->MatchParentTransform();
-			}
-
-			if (g_EngineInstance->IsObjectSelected(gameObject))
-			{
-				g_EngineInstance->CalculateSelectedObjectsCenter();
-			}
-		}
-	}
-
-	void Renderer::DrawImGuiLights()
-	{
-		ImGui::Text("Lights");
-		ImGuiColorEditFlags colorEditFlags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float | ImGuiColorEditFlags_RGB | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_HDR;
-
-		bool bDirLightEnabled = (m_DirectionalLight.enabled == 1);
-		if (ImGui::Checkbox("##dir-light-enabled", &bDirLightEnabled))
-		{
-			m_DirectionalLight.enabled = bDirLightEnabled ? 1 : 0;
-		}
-
-		ImGui::SameLine();
-
-		if (ImGui::TreeNode("Directional Light"))
-		{
-			ImGui::DragFloat3("Position", &m_DirectionalLight.position.x, 0.1f);
-			glm::vec3 dirtyRot = glm::degrees(glm::eulerAngles(m_DirectionalLight.rotation));
-			glm::vec3 cleanedRot;
-			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
-			{
-				m_DirectionalLight.rotation = glm::quat(glm::radians(cleanedRot));
-			}
-			ImGui::SliderFloat("Brightness", &m_DirectionalLight.brightness, 0.0f, 15.0f);
-			ImGui::ColorEdit4("Color ", &m_DirectionalLight.color.r, colorEditFlags);
-
-			ImGui::Spacing();
-			ImGui::Text("Shadow");
-
-			ImGui::Checkbox("Cast shadow", &m_DirectionalLight.bCastShadow);
-			ImGui::SliderFloat("Shadow darkness", &m_DirectionalLight.shadowDarkness, 0.0f, 1.0f);
-
-			ImGui::DragFloat("Near", &m_DirectionalLight.shadowMapNearPlane);
-			ImGui::DragFloat("Far", &m_DirectionalLight.shadowMapFarPlane);
-			ImGui::DragFloat("Zoom", &m_DirectionalLight.shadowMapZoom);
-
-			if (ImGui::CollapsingHeader("Preview"))
-			{
-				ImGui::Image((void*)m_DirectionalLight.shadowTextureID, ImVec2(256, 256));
-			}
-
-			ImGui::TreePop();
-		}
-
-		i32 i = 0;
-		while (i < (i32)m_PointLights.size())
-		{
-			const std::string iStr = std::to_string(i);
-
-			bool bPointLightEnabled = (m_PointLights[i].enabled == 1);
-			if (ImGui::Checkbox(std::string("##point-light-enabled" + iStr).c_str(), &bPointLightEnabled))
-			{
-				m_PointLights[i].enabled = bPointLightEnabled ? 1 : 0;
-			}
-
-			ImGui::SameLine();
-
-			const std::string objectName("Point Light##" + iStr);
-			const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
-			bool bRemovedPointLight = false;
-
-			if (ImGui::BeginPopupContextItem())
-			{
-				static const char* removePointLightStr = "Delete";
-				if (ImGui::Button(removePointLightStr))
-				{
-					m_PointLights.erase(m_PointLights.begin() + i);
-					bRemovedPointLight = true;
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-
-			if (!bRemovedPointLight && bTreeOpen)
-			{
-				ImGui::DragFloat3("Position", &m_PointLights[i].position.x, 0.1f);
-				ImGui::ColorEdit4("Color ", &m_PointLights[i].color.r, colorEditFlags);
-				ImGui::SliderFloat("Brightness", &m_PointLights[i].brightness, 0.0f, 1000.0f);
-			}
-
-			if (bTreeOpen)
-			{
-				ImGui::TreePop();
-			}
-
-			if (!bRemovedPointLight)
-			{
-				++i;
-			}
-		}
-
-		if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
-		{
-			static const char* newPointLightStr = "Add point light";
-			if (ImGui::Button(newPointLightStr))
-			{
-				PointLight newPointLight = {};
-				InitializePointLight(newPointLight);
-			}
-		}
-	}
-
-	bool Renderer::InitializeDirectionalLight(const DirectionalLight& dirLight)
+	bool Renderer::RegisterDirectionalLight(DirectionalLight* dirLight)
 	{
 		m_DirectionalLight = dirLight;
 		return true;
 	}
 
-	PointLightID Renderer::InitializePointLight(const PointLight& pointLight)
+	PointLightID Renderer::RegisterPointLight(PointLight* pointLight)
 	{
 		if (m_PointLights.size() == MAX_POINT_LIGHT_COUNT)
 		{
@@ -394,22 +181,33 @@ namespace flex
 		return m_PointLights.size() - 1;
 	}
 
-	void Renderer::ClearDirectionalLight()
+	void Renderer::RemoveDirectionalLight()
 	{
-		m_DirectionalLight = {};
+		m_DirectionalLight = nullptr;
 	}
 
-	void Renderer::ClearPointLights()
+	void Renderer::RemovePointLight(const PointLight* pointLight)
+	{
+		auto iter = std::find(m_PointLights.begin(), m_PointLights.end(), pointLight);
+		if (iter == m_PointLights.end())
+		{
+			PrintWarn("Attempted to remove point light which doesn't exist! %s\n", pointLight->GetName().c_str());
+			return;
+		}
+		m_PointLights.erase(iter);
+	}
+
+	void Renderer::RemoveAllPointLights()
 	{
 		m_PointLights.clear();
 	}
 
-	DirectionalLight& Renderer::GetDirectionalLight()
+	DirectionalLight* Renderer::GetDirectionalLight()
 	{
 		return m_DirectionalLight;
 	}
 
-	PointLight& Renderer::GetPointLight(PointLightID pointLight)
+	PointLight* Renderer::GetPointLight(PointLightID pointLight)
 	{
 		return m_PointLights[pointLight];
 	}
@@ -431,7 +229,6 @@ namespace flex
 
 	void Renderer::DrawImGuiSettings()
 	{
-
 		static const char* rendererSettingsStr = "Renderer settings";
 		if (ImGui::TreeNode(rendererSettingsStr))
 		{

@@ -145,34 +145,6 @@ namespace flex
 		NONE
 	};
 
-	struct DirectionalLight
-	{
-		glm::quat rotation = QUAT_UNIT; // Applied to unit vec (1,0,0) before being sent to shader
-		glm::vec4 color = VEC4_ONE;
-		u32 enabled = 1;
-		real brightness = 1.0f;
-
-		real shadowDarkness = 0.0f;
-		bool bCastShadow = true;
-		real shadowMapNearPlane = -80.0f;
-		real shadowMapFarPlane = 100.0f;
-		real shadowMapZoom = 30.0f;
-
-		// Not used for rendering but allows users to position in the world
-		glm::vec3 position = VEC3_ZERO;
-
-		// DEBUG: (just for preview in ImGui)
-		u32 shadowTextureID = 0;
-	};
-
-	struct PointLight
-	{
-		glm::vec4 position = VEC4_ZERO;
-		glm::vec4 color = VEC4_ONE;
-		u32 enabled = 1;
-		real brightness = 500.0f;
-	};
-
 	// TODO: Is setting all the members to false necessary?
 	// TODO: Straight up copy most of these with a memcpy?
 	struct MaterialCreateInfo

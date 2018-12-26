@@ -39,6 +39,8 @@ namespace flex
 			virtual void Draw() override;
 			virtual void DrawImGuiRenderObjects() override;
 
+			virtual void DrawImGuiForRenderID(RenderID renderID) override;
+
 			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
@@ -130,7 +132,6 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
-			void DrawGameObjectImGui(GameObject* gameObject);
 			/*
 			* Returns true if the parent-child tree changed during this call
 			*/
@@ -221,10 +222,8 @@ namespace flex
 			void RemoveMaterial(MaterialID materialID);
 
 			// If the object gets deleted this frame *gameObjectRef gets set to nullptr
-			void DoGameObjectContextMenu(GameObject** gameObjectRef, bool bActive);
 			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
-			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName);
 			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 											  const std::string& texturePath,

@@ -312,40 +312,29 @@
 					"material" : "sphere 21"
 				}
 			]
-		}
-	],
-	"point lights" : 
-	[
-		{
-			"pos" : "15.000, 12.000, -32.000",
-			"color" : "1.00, 1.00, 1.00",
-			"enabled" : true,
-			"brightness" : 500.000000
 		},
 		{
-			"pos" : "15.000, 12.000, 32.000",
-			"color" : "1.00, 1.00, 1.00",
-			"enabled" : true,
-			"brightness" : 500.000000
-		},
-		{
-			"pos" : "15.000, 12.000, 0.000",
-			"color" : "1.00, 1.00, 1.00",
-			"enabled" : true,
-			"brightness" : 500.000000
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
 		}
-	],
-	"directional light" : 
-	{
-		"rotation" : "0.540, -0.841, 0.000",
-		"pos" : "0.000, 0.000, 0.000",
-		"color" : "1.00, 1.00, 1.00",
-		"enabled" : false,
-		"brightness" : 1.000000,
-		"cast shadows" : true,
-		"shadow darkness" : 0.000000,
-		"shadow map near" : -80.000000,
-		"shadow map far" : 100.000000,
-		"shadow map zoom" : 30.000000
-	}
+	]
 }

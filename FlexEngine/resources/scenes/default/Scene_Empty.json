@@ -75,28 +75,29 @@
 				"mask" : -1,
 				"group" : -1
 			}
-		}
-	],
-	"point lights" : 
-	[
+		},
 		{
-			"pos" : "4.300, 10.300, 2.700",
-			"color" : "1.00, 1.00, 1.00",
-			"enabled" : true,
-			"brightness" : 248.826004
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
 		}
-	],
-	"directional light" : 
-	{
-		"rotation" : "0.000, 0.487, -0.588",
-		"pos" : "0.000, 0.000, 0.000",
-		"color" : "1.00, 1.00, 1.00",
-		"enabled" : true,
-		"brightness" : 0.634000,
-		"cast shadows" : true,
-		"shadow darkness" : 0.000000,
-		"shadow map near" : -120.000000,
-		"shadow map far" : 100.000000,
-		"shadow map zoom" : -19.000000
-	}
+	]
 }
