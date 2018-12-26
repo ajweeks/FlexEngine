@@ -17,7 +17,7 @@ namespace flex
 		void DrawDebug(const btVector4& highlightColour, real highlightCurveAtPoint = -1.0f) const;
 
 		glm::vec3 GetPointOnCurve(real t, i32* outCurveIndex) const;
-		glm::vec3 GetPointOnCurve(i32 curveIndex, i32 pointIndex, real* outT) const;
+		glm::vec3 GetPointOnCurve(i32 curveIndex, i32 pointIndex) const;
 		void SetPointPosAtIndex(i32 curveIndex, i32 pointIndex, const glm::vec3& point, bool bKeepHandlesMirrored);
 
 		// Calculates the first derivative of the curve

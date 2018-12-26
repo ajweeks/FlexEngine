@@ -304,7 +304,6 @@ namespace flex
 
 		if (m_bPossessed && m_bEditingTrack && m_TrackRiding == nullptr)
 		{
-			real outT;
 			// TODO: Snap to points other than the one we are editing
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(m_TrackEditing == nullptr ? 1.0f : 0.0f, true);
 			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
@@ -333,8 +332,7 @@ namespace flex
 
 			if (m_TrackEditing)
 			{
-				real tAlongCurve;
-				glm::vec3 point = m_TrackEditing->GetPointOnCurve(m_TrackEditingCurveIdx, m_TrackEditingPointIdx, &tAlongCurve);
+				glm::vec3 point = m_TrackEditing->GetPointOnCurve(m_TrackEditingCurveIdx, m_TrackEditingPointIdx);
 
 				glm::vec3 newPoint(reticlePos.x, point.y, reticlePos.z);
 				m_TrackEditing->SetPointPosAtIndex(m_TrackEditingCurveIdx, m_TrackEditingPointIdx, newPoint, true);

@@ -65,7 +65,7 @@ namespace flex
 		return curves[*outCurveIndex].GetPointOnCurve(curveT);
 	}
 
-	glm::vec3 BezierCurveList::GetPointOnCurve(i32 curveIndex, i32 pointIndex, real* outT) const
+	glm::vec3 BezierCurveList::GetPointOnCurve(i32 curveIndex, i32 pointIndex) const
 	{
 		return curves[curveIndex].points[pointIndex];
 	}
