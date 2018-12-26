@@ -18,10 +18,10 @@
 		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-9.982, 2.938, -6.633"
+				"pos" : "-8.434, 7.266, 0.000"
 			},
 			"material" : "pbr chrome"
 		},

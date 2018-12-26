@@ -3693,8 +3693,8 @@ namespace flex
 
 				if (!renderObject->vertexBufferData)
 				{
-					PrintError("Attempted to draw object which contains no vertex buffer data: %s\n", renderObject->gameObject->GetName().c_str());
-					return;
+					//PrintError("Attempted to draw object which contains no vertex buffer data: %s\n", renderObject->gameObject->GetName().c_str());
+					continue;
 				}
 
 				if (drawCallInfo.materialOverride == InvalidMaterialID)
