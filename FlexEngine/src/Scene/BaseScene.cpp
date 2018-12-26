@@ -210,28 +210,6 @@ namespace flex
 		//m_Player1 = new Player(1);
 		//AddRootObject(m_Player1);
 
-		if (m_TrackManager.m_Tracks.empty())
-		{
-			{
-				BezierCurve curve0({ 5.0f, 0.1f, 5.0f }, { 15.0f, 0.1f, 10.0f }, { 25.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 10.0f });
-				BezierCurve curve1({ 35.0f, 0.1f, 10.0f }, { 45.0f, 0.1f, 10.0f }, { 55.0f, 0.1f, 10.0f }, { 60.0f, 0.1f, 10.0f });
-				BezierCurve curve2({ 60.0f, 0.1f, 10.0f }, { 70.0f, 0.1f, 10.0f }, { 73.0f, 0.1f, 8.0f }, { 73.0f, 0.1f, 2.0f });
-				BezierCurve curve3({ 73.0f, 0.1f, 2.0f }, { 73.0f, 0.1f, -6.0f }, { 60.0f, 0.1f, -8.0f }, { 50.0f, 0.1f, -8.0f });
-				m_TrackManager.AddTrack(BezierCurveList({ curve0 , curve1, curve2, curve3 }));
-			}
-			{
-				BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 35.0f, 0.1f, 15.0f }, { 30.0f, 0.1f, 20.0f }, { 25.0f, 0.1f, 22.0f });
-				BezierCurve curve1({ 25.0f, 0.1f, 22.0f }, { 20.0f, 0.1f, 24.0f }, { 15.0f, 0.1f, 25.0f }, { 10.0f, 0.1f, 25.0f });
-				m_TrackManager.AddTrack(BezierCurveList({ curve0 , curve1 }));
-			}
-			{
-				BezierCurve curve0({ 35.0f, 0.1f, 10.0f }, { 40.0f, 0.1f, -2.0f }, { 45.0f, 0.1f, 4.0f }, { 50.0f, 0.1f, -8.0f });
-				m_TrackManager.AddTrack(BezierCurveList({ curve0 }));
-			}
-			m_TrackManager.FindJunctions();
-		}
-
-
 		for (GameObject* rootObject : m_RootObjects)
 		{
 			rootObject->Initialize();

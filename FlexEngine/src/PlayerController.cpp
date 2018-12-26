@@ -29,9 +29,7 @@
 
 namespace flex
 {
-	PlayerController::PlayerController() :
-		a(VEC3_ZERO),
-		b(VEC3_ZERO)
+	PlayerController::PlayerController()
 	{
 	}
 
@@ -63,17 +61,6 @@ namespace flex
 		// TODO: Make frame-rate-independent!
 
 		m_Player->GetRigidBody()->UpdateParentTransform();
-
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_EQUAL) ||
-			g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, Input::GamepadButton::RIGHT_BUMPER))
-		{
-			g_CameraManager->SetActiveIndexRelative(1, false);
-		}
-		else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_MINUS) ||
-			g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, Input::GamepadButton::LEFT_BUMPER))
-		{
-			g_CameraManager->SetActiveIndexRelative(-1, false);
-		}
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 		btVector3 rbPos = rb->getInterpolationWorldTransform().getOrigin();
@@ -216,9 +203,6 @@ namespace flex
 
 		// Jitter tester:
 		//m_Player->GetTransform()->SetWorldPosition(m_Player->GetTransform()->GetWorldPosition() + glm::vec3(g_DeltaTime * 1.0f, 0.0f, 0.0f));
-
-		debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(a * 3.0f), btVector3(0.1f, 0.1f, 0.1f));
-		debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(b * 3.0f), btVector3(1.0f, 1.0f, 1.0f));
 
 		bool bDrawVelocity = false;
 		if (bDrawVelocity)

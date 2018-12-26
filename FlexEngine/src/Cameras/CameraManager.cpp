@@ -4,6 +4,7 @@
 #include "Cameras/CameraManager.hpp"
 
 #include "Cameras/BaseCamera.hpp"
+#include "InputManager.hpp"
 
 namespace flex
 {
@@ -22,7 +23,16 @@ namespace flex
 
 	void CameraManager::Update()
 	{
-		m_Cameras[m_ActiveCameraIndex]->Update();
+		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_EQUAL) ||
+			g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::RIGHT_BUMPER))
+		{
+			g_CameraManager->SetActiveIndexRelative(1, false);
+		}
+		else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_MINUS) ||
+			g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::LEFT_BUMPER))
+		{
+			g_CameraManager->SetActiveIndexRelative(-1, false);
+		}
 	}
 
 	void CameraManager::OnSceneChanged()

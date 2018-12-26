@@ -13,6 +13,7 @@ namespace flex
 		~DebugCamera();
 
 		virtual void Update() override;
+		virtual bool IsDebugCam() const override;
 
 		void LoadDefaultKeybindings();
 

@@ -15,11 +15,12 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void OnSceneChanged() override;
 		virtual void Update() override;
+		virtual bool IsDebugCam() const override;
 
 	private:
 		void FindPlayer();
 
-		Player* player = nullptr;
+		Player* m_Player = nullptr;
 
 	};
 } // namespace flex

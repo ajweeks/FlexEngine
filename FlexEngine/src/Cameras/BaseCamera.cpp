@@ -298,4 +298,5 @@ namespace flex
 		real EV100 = CalculateEV100(aperture, shutterSpeed, lightSensitivity);
 		exposure = ComputeExposureNormFactor(EV100);
 	}
+
 } // namespace flex

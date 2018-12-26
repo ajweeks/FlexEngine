@@ -702,11 +702,17 @@ namespace flex
 		sec frameStartTime = Time::CurrentSeconds();
 		while (m_bRunning)
 		{
-			sec frameEndTime = Time::CurrentSeconds();
+			sec now = Time::CurrentSeconds();
+
+			// This variable should be the one changed during this frame so we always
+			// end frames that we start, next frame we will begin using the new value
+			bool renderImGuiNextFrame = m_bRenderImGui;
+
+			sec frameEndTime = now;
 			sec dt = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-			dt = glm::clamp(dt, m_MinDT, m_MaxDT);
+			dt = glm::clamp(dt * m_SimulationSpeed, m_MinDT, m_MaxDT);
 
 			g_DeltaTime = dt;
 			g_SecElapsedSinceProgramStart = frameEndTime;
@@ -734,10 +740,6 @@ namespace flex
 			}
 #endif
 
-			// This variable should be the one changed during this frame so we always
-			// end frames that we start, next frame we will begin using the new value
-			bool renderImGuiNextFrame = m_bRenderImGui;
-
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
 			g_Renderer->NewFrame();
@@ -748,35 +750,6 @@ namespace flex
 				DrawImGuiObjects();
 				PROFILE_END("DrawImGuiObjects");
 			}
-
-			Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-			glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
-			m_SpringTimer += g_DeltaTime;
-			real amplitude = 1.5f;
-			real period = 5.0f;
-			if (m_SpringTimer > period)
-			{
-				m_SpringTimer -= period;
-			}
-			targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
-			glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
-
-			for (Spring<glm::vec3>& spring : m_TestSprings)
-			{
-				spring.SetTargetPos(targetPos);
-				spring.SetTargetVel(targetVel);
-
-				targetPos = spring.pos;
-				targetVel = spring.vel;
-			}
-
-			for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
-			{
-				m_TestSprings[i].Tick(g_DeltaTime);
-				real t = (real)i / (real)m_TestSprings.size();
-				g_Renderer->GetDebugDrawer()->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
-			}
-
 
 			// Hovered object
 			{
@@ -1402,6 +1375,18 @@ namespace flex
 				rayEndLast = rayEnd;
 			}
 
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F5))
+			{
+				m_bSimulationPaused = false;
+				m_bSimulateNextFrame = true;
+			}
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F10))
+			{
+				m_bSimulationPaused = true;
+				m_bSimulateNextFrame = true;
+			}
+
 			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_G))
 			{
 				g_Renderer->ToggleRenderGrid();
@@ -1525,7 +1510,49 @@ namespace flex
 
 			Profiler::Update();
 
+			const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
+			m_bSimulateNextFrame = false;
+
 			g_CameraManager->Update();
+
+			const bool bDebugCam = g_CameraManager->CurrentCamera()->IsDebugCam();
+			if (bDebugCam || bSimulateFrame)
+			{
+				g_CameraManager->CurrentCamera()->Update();
+			}
+
+			if (bSimulateFrame)
+			{
+				g_SceneManager->CurrentScene()->Update();
+
+				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+				glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
+				m_SpringTimer += g_DeltaTime;
+				real amplitude = 1.5f;
+				real period = 5.0f;
+				if (m_SpringTimer > period)
+				{
+					m_SpringTimer -= period;
+				}
+				targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
+				glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
+
+				for (Spring<glm::vec3>& spring : m_TestSprings)
+				{
+					spring.SetTargetPos(targetPos);
+					spring.SetTargetVel(targetVel);
+
+					targetPos = spring.pos;
+					targetVel = spring.vel;
+				}
+			}
+
+			for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
+			{
+				m_TestSprings[i].Tick(g_DeltaTime);
+				real t = (real)i / (real)m_TestSprings.size();
+				g_Renderer->GetDebugDrawer()->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
+			}
 
 			if (!m_CurrentlySelectedObjects.empty())
 			{
@@ -1538,7 +1565,35 @@ namespace flex
 			{
 				m_TransformGizmo->SetVisible(false);
 			}
-			g_SceneManager->UpdateCurrentScene();
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_S) &&
+				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
+			{
+				g_SceneManager->CurrentScene()->SerializeToFile(true);
+			}
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_D) &&
+				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
+			{
+				if (!m_CurrentlySelectedObjects.empty())
+				{
+					std::vector<GameObject*> newSelectedGameObjects;
+
+					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					{
+						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
+
+						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+					}
+
+					DeselectCurrentlySelectedObjects();
+
+					m_CurrentlySelectedObjects = newSelectedGameObjects;
+					CalculateSelectedObjectsCenter();
+				}
+			}
+
+			CalculateSelectedObjectsCenter();
 
 			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_4))
 			{
@@ -1570,35 +1625,6 @@ namespace flex
 			}
 
 			g_Window->Update();
-
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_S) &&
-				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
-			{
-				g_SceneManager->CurrentScene()->SerializeToFile(true);
-			}
-
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_D) &&
-				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
-			{
-				if (!m_CurrentlySelectedObjects.empty())
-				{
-					std::vector<GameObject*> newSelectedGameObjects;
-
-					for (GameObject* gameObject : m_CurrentlySelectedObjects)
-					{
-						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
-
-						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
-					}
-
-					DeselectCurrentlySelectedObjects();
-
-					m_CurrentlySelectedObjects = newSelectedGameObjects;
-					CalculateSelectedObjectsCenter();
-				}
-			}
-
-			CalculateSelectedObjectsCenter();
 
 			bool bWriteProfilingResultsToFile =
 				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_K);
@@ -1811,17 +1837,38 @@ namespace flex
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
 		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),
-											ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
-											windowSizeCallbackLambda, this);
+			ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
+			windowSizeCallbackLambda, this);
 		real menuHeight = 20.0f;
 		ImGui::SetNextWindowPos(ImVec2(0.0f, menuHeight), ImGuiCond_Once);
 		real frameBufferHeight = (real)frameBufferSize.y;
 		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
-								 ImGuiCond_Always);
+			ImGuiCond_Always);
 		if (m_bMainWindowShowing)
 		{
 			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
 			{
+				if (ImGui::TreeNode("Simulation"))
+				{
+					ImGui::Checkbox("Paused", &m_bSimulationPaused);
+
+					if (ImGui::Button("Step (F10)"))
+					{
+						m_bSimulationPaused = true;
+						m_bSimulateNextFrame = true;
+					}
+
+					if (ImGui::Button("Continue (F5)"))
+					{
+						m_bSimulationPaused = false;
+						m_bSimulateNextFrame = true;
+					}
+
+					ImGui::SliderFloat("Speed", &m_SimulationSpeed, 0.0001f, 10.0f);
+
+					ImGui::TreePop();
+				}
+
 				if (ImGui::TreeNode("Stats"))
 				{
 					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);

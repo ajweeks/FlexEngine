@@ -32,13 +32,22 @@ namespace flex
 
 	void OverheadCamera::Initialize()
 	{
-		m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
-		m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+		if (m_Player0 == nullptr)
+		{
+			FindPlayer();
+		}
 
-		FindPlayer();
-		Update();
+		if (!m_bInitialized)
+		{
+			m_bInitialized = true;
 
-		ResetValues();
+			BaseCamera::Initialize();
+
+			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
+			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+
+			ResetValues();
+		}
 	}
 
 	void OverheadCamera::OnSceneChanged()
@@ -46,7 +55,6 @@ namespace flex
 		BaseCamera::OnSceneChanged();
 
 		FindPlayer();
-		Update();
 
 		ResetValues();
 	}
@@ -166,4 +174,10 @@ namespace flex
 
 		RecalculateViewProjection();
 	}
+
+	bool OverheadCamera::IsDebugCam() const
+	{
+		return false;
+	}
+
 } // namespace flex

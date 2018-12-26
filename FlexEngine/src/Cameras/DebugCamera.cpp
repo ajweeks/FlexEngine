@@ -218,4 +218,9 @@ namespace flex
 		m_MoveSlowerKey = Input::KeyCode::KEY_LEFT_CONTROL;
 	}
 
+	bool DebugCamera::IsDebugCam() const
+	{
+		return true;
+	}
+
 } // namespace flex

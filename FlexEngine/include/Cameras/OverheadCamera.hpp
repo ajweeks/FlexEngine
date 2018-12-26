@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BaseCamera.hpp"
+
 #include "Helpers.hpp" // For RollingAverage
 
 namespace flex
@@ -16,6 +17,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void OnSceneChanged() override;
 		virtual void Update() override;
+		virtual bool IsDebugCam() const override;
 
 		virtual void DrawImGuiObjects() override;
 

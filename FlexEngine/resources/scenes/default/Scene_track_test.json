@@ -150,6 +150,71 @@
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 30.000000
 			}
+		},
+		{
+			"name" : "Point Light",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 2.492, -14.951"
+			},
+			"point light info" : 
+			{
+				"pos" : "0.000, 2.492, -14.951",
+				"color" : "0.91, 0.93, 0.56",
+				"enabled" : true,
+				"brightness" : 500.000000
+			}
+		},
+		{
+			"name" : "Point Light",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-7.088, 3.245, 4.599"
+			},
+			"point light info" : 
+			{
+				"pos" : "-7.088, 3.245, 4.599",
+				"color" : "0.94, 0.67, 0.45",
+				"enabled" : true,
+				"brightness" : 142.856995
+			}
+		},
+		{
+			"name" : "Point Light",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-10.281, 5.221, -6.278"
+			},
+			"point light info" : 
+			{
+				"pos" : "-10.281, 5.221, -6.278",
+				"color" : "0.48, 0.95, 0.96",
+				"enabled" : true,
+				"brightness" : 500.000000
+			}
+		},
+		{
+			"name" : "Point Light",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "10.797, 4.438, -5.741",
+				"rot" : "0.000, 0.489, 0.000"
+			},
+			"point light info" : 
+			{
+				"pos" : "10.797, 4.438, -5.741",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 500.000000
+			}
 		}
 	],
 	"track manager" : 

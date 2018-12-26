@@ -11,6 +11,8 @@ namespace flex
 		virtual void Initialize();
 		virtual void Update() = 0;
 
+		virtual bool IsDebugCam() const = 0;
+
 		virtual void OnSceneChanged();
 
 		virtual void OnPossess();
@@ -81,6 +83,8 @@ namespace flex
 
 		// Computes the exposure normalization factor from the camera's EV100
 		static float ComputeExposureNormFactor(float EV100);
+
+		bool m_bInitialized = false;
 
 		std::string m_Name;
 

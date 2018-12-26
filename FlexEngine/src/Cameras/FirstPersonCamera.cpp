@@ -29,10 +29,19 @@ namespace flex
 
 	void FirstPersonCamera::Initialize()
 	{
-		BaseCamera::Initialize();
+		if (m_Player == nullptr)
+		{
+			FindPlayer();
+		}
 
-		FindPlayer();
-		Update();
+		if (!m_bInitialized)
+		{
+			m_bInitialized = true;
+
+			BaseCamera::Initialize();
+
+			Update();
+		}
 	}
 
 	void FirstPersonCamera::OnSceneChanged()
@@ -45,16 +54,16 @@ namespace flex
 
 	void FirstPersonCamera::Update()
 	{
-		if (!player)
+		if (!m_Player)
 		{
 			return;
 		}
 
-		Transform* playerTransform = player->GetTransform();
+		Transform* playerTransform = m_Player->GetTransform();
 
 		glm::vec3 targetSpot = playerTransform->GetWorldPosition();
 
-		m_Forward = player->GetLookDirection();
+		m_Forward = m_Player->GetLookDirection();
 		m_Right = playerTransform->GetRight();
 		m_Up = cross(m_Forward, m_Right);
 
@@ -72,7 +81,12 @@ namespace flex
 
 	void FirstPersonCamera::FindPlayer()
 	{
-		player = (Player*)(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
+		m_Player = (Player*)(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
+	}
+
+	bool FirstPersonCamera::IsDebugCam() const
+	{
+		return false;
 	}
 
 } // namespace flex

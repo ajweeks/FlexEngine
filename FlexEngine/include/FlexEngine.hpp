@@ -123,6 +123,12 @@ namespace flex
 
 		const sec m_MinDT = 0.0001f;
 		const sec m_MaxDT = 1.0f;
+		const sec m_StepDT = 1.0f / 60.0f;
+
+		bool m_bSimulationPaused = false;
+		bool m_bSimulateNextFrame = false;
+
+		real m_SimulationSpeed = 1.0f;
 
 		real m_ImGuiMainWindowWidthMin = 200;
 		real m_ImGuiMainWindowWidthMax = 0;

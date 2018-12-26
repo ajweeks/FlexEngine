@@ -28,17 +28,6 @@ namespace flex
 	{
 	}
 
-	void SceneManager::UpdateCurrentScene()
-	{
-		if (m_Scenes.empty())
-		{
-			PrintError("No scenes added to SceneManager\n");
-			return;
-		}
-
-		m_Scenes[m_CurrentSceneIndex]->Update();
-	}
-
 	void SceneManager::AddScene(BaseScene* newScene)
 	{
 		bool unique = true;

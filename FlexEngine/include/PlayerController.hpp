@@ -57,8 +57,6 @@ namespace flex
 		i32 m_PlayerIndex = -1;
 		Player* m_Player = nullptr;
 
-		glm::vec3 a, b;
-
 
 	};
 } // namespace flex
