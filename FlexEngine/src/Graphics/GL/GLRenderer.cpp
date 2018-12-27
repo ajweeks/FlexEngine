@@ -2707,8 +2707,10 @@ namespace flex
 			{
 				if (pointLight->enabled)
 				{
+					// TODO: Sort back to front? Or clear depth and then enable depth test
 					drawInfo.pos = pointLight->GetPos();
 					drawInfo.color = pointLight->color * 1.5f;
+					drawInfo.color.a = pointLight->color.a;
 					drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight->GetPos(), camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
@@ -2719,6 +2721,7 @@ namespace flex
 			if (m_DirectionalLight->enabled)
 			{
 				drawInfo.color = m_DirectionalLight->color * 1.5f;
+				drawInfo.color.a = m_DirectionalLight->color.a;
 				drawInfo.pos = m_DirectionalLight->GetPos();
 				drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
 				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->GetPos(), camUp);

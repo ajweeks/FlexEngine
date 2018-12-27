@@ -6,6 +6,9 @@ FlexEngine/resources/meshes/EmeraldSquare/**
 FlexEngine/resources/meshes/SunTemple/**
 FlexEngine/resources/meshes/SunTemple.fbx
 
+FlexEngine/saved/**
+!FlexEngine/saved/config/**
+
 FlexEngine/resources/textures/hdri/**
 !FlexEngine/resources/textures/hdri/Milkyway_small.hdr
 
