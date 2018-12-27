@@ -2,6 +2,10 @@
 
 #include <string>
 
+#if COMPILE_RENDERDOC_API
+#include "renderdoc/api/app/renderdoc_app.h"
+#endif
+
 #include "Spring.hpp"
 #include "Helpers.hpp" // For TransformState
 
@@ -79,6 +83,10 @@ namespace flex
 
 			_LAST_ELEMENT
 		};
+
+#if COMPILE_RENDERDOC_API
+		void SetupRenderDocAPI();
+#endif
 
 		void Destroy();
 
@@ -197,6 +205,13 @@ namespace flex
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;
+
+#if COMPILE_RENDERDOC_API
+		RENDERDOC_API_1_3_0 *m_RenderDocAPI = nullptr;
+		bool m_bRenderDocTriggerCaptureNextFrame = false;
+		bool m_bRenderDocCapturingFrame = false;
+		i32 m_RenderDocUIPID = -1;
+#endif
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

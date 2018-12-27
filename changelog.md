@@ -2,6 +2,12 @@
 2018
 
 December
+- Add RenderDoc API integration to allow capturing frames with a keypress (F9)
+- Add support for time dilation
+- Add support for pausing and single stepping simulation
+- Allow player to edit tracks
+- Save track data to file
+- Save bootup times to file (`saved/bootup-times.log`)
 - Fix player direction handling at junctions
 
 November

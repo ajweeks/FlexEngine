@@ -5,6 +5,8 @@
 #define COMPILE_VULKAN 0
 #define COMPILE_IMGUI 1
 
+#define COMPILE_RENDERDOC_API 1
+
 #ifdef _DEBUG
 #define THOROUGH_CHECKS 1
 #else

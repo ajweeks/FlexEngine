@@ -136,6 +136,10 @@ namespace flex
 		const char* profileBlockStr = "Engine initialize";
 		PROFILE_BEGIN(profileBlockStr);
 
+#if COMPILE_RENDERDOC_API
+		SetupRenderDocAPI();
+#endif
+
 		g_EngineInstance = this;
 
 		AudioManager::Initialize();
@@ -737,6 +741,15 @@ namespace flex
 				g_InputManager->ClearAllInputs();
 				CycleRenderer();
 				continue;
+			}
+#endif
+
+#if COMPILE_RENDERDOC_API
+			if (m_bRenderDocTriggerCaptureNextFrame)
+			{
+				m_bRenderDocTriggerCaptureNextFrame = false;
+				m_bRenderDocCapturingFrame = true;
+				m_RenderDocAPI->StartFrameCapture(NULL, NULL);
 			}
 #endif
 
@@ -1375,6 +1388,16 @@ namespace flex
 				rayEndLast = rayEnd;
 			}
 
+#if COMPILE_RENDERDOC_API
+			if (!m_bRenderDocCapturingFrame &&
+				!m_bRenderDocTriggerCaptureNextFrame &&
+				m_RenderDocAPI &&
+				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F9))
+			{
+				m_bRenderDocTriggerCaptureNextFrame = true;
+			}
+#endif
+
 			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F5))
 			{
 				m_bSimulationPaused = false;
@@ -1640,6 +1663,34 @@ namespace flex
 			g_Renderer->Draw();
 			PROFILE_END("Render");
 
+#if COMPILE_RENDERDOC_API
+			if (m_RenderDocAPI && m_bRenderDocCapturingFrame)
+			{
+				m_bRenderDocCapturingFrame = false;
+				m_RenderDocAPI->EndFrameCapture(NULL, NULL);
+				u32 bufferSize;
+				u32 captureIndex = 0;
+				m_RenderDocAPI->GetCapture(captureIndex, nullptr, &bufferSize, nullptr);
+				std::string captureFilePath(bufferSize, '\0');
+				u32 result = m_RenderDocAPI->GetCapture(captureIndex, (char*)captureFilePath.data(), &bufferSize, nullptr);
+				if (result == 0)
+				{
+					PrintWarn("Failed to retrieve capture with index %d\n", captureIndex);
+				}
+				else
+				{
+					g_Renderer->AddEditorString("Captured RenderDoc frame");
+					std::string captureFileName = captureFilePath;
+					StripLeadingDirectories(captureFileName);
+					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
+					if (m_RenderDocUIPID == -1)
+					{
+						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(true, captureFilePath.c_str());
+					}
+				}
+			}
+#endif
+
 			// We can update this now that the renderer has had a chance to end the frame
 			m_bRenderImGui = renderImGuiNextFrame;
 
@@ -1748,6 +1799,13 @@ namespace flex
 		{
 			if (ImGui::BeginMenu("Actions"))
 			{
+#if COMPILE_RENDERDOC_API
+				if (ImGui::MenuItem("Capture RenderDoc frame"))
+				{
+					m_bRenderDocTriggerCaptureNextFrame = true;
+				}
+#endif
+
 				if (ImGui::BeginMenu("Reload"))
 				{
 					if (ImGui::MenuItem("Scene", "R"))
@@ -2444,4 +2502,40 @@ namespace flex
 			IntToString(EngineVersionMinor) + "." +
 			IntToString(EngineVersionPatch);
 	}
+
+#if COMPILE_RENDERDOC_API
+	void FlexEngine::SetupRenderDocAPI()
+	{
+		std::string dllPath = RelativePathToAbsolute(ROOT_LOCATION "lib/Debug/renderdoc.dll");
+		if (FileExists(dllPath))
+		{
+			HMODULE renderDocModule = LoadLibraryA(dllPath.c_str());
+			//HMODULE renderDocModule = GetModuleHandleA(dllPath.c_str());
+			if (renderDocModule == NULL)
+			{
+				PrintWarn("Failed to retrieve render doc dll\n");
+				return;
+			}
+
+			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(renderDocModule, "RENDERDOC_GetAPI");
+			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void **)&m_RenderDocAPI);
+			assert(ret == 1);
+
+			i32 major = 0, minor = 0, patch = 0;
+			m_RenderDocAPI->GetAPIVersion(&major, &minor, &patch);
+			Print("RenderDoc API v%i.%i.%i connected, F9 to capture\n", major, minor, patch);
+
+			std::string dateStr = GetDateString_YMDHMS();
+			std::string captureFilePath = RelativePathToAbsolute(ROOT_LOCATION "saved/RenderDocCaptures/FlexEngine_" + dateStr);
+			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
+
+			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);
+			m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
+			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
+
+			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
+		}
+	}
+#endif
+
 } // namespace flex

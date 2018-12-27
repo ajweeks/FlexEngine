@@ -121,6 +121,7 @@ configuration "vs*"
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
 		path.join(DEPENDENCIES_DIR, "openAL"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
+		DEPENDENCIES_DIR,
 	}
 	debugdir "$(OutDir)"
 configuration { "vs*", "x32" }

@@ -663,7 +663,7 @@ namespace flex
 		std::stringstream result;
 
 		SYSTEMTIME time;
-		GetLocalTime(&time);
+		GetSystemTime(&time);
 
 		result << time.wYear << '-' << std::setw(2) << std::setfill('0') << time.wMonth << '-' << time.wDay;
 
@@ -675,7 +675,7 @@ namespace flex
 		std::stringstream result;
 
 		SYSTEMTIME time;
-		GetLocalTime(&time);
+		GetSystemTime(&time);
 
 		result << time.wYear << '-' << std::setw(2) << std::setfill('0') << time.wMonth << '-' << time.wDay <<
 			'_' << time.wHour << '-' << time.wMinute << '-' << time.wSecond;
