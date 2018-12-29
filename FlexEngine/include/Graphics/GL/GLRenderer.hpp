@@ -358,6 +358,8 @@ namespace flex
 			std::string m_DefaultSettingsFilePathAbs;
 			std::string m_SettingsFilePathAbs;
 
+			sec m_MonitorResCheckTimeRemaining = 0.0f;
+
 			// Must be 12 chars or less
 			const char* m_GameObjectPayloadCStr = "gameobject";
 			const char* m_MaterialPayloadCStr = "material";

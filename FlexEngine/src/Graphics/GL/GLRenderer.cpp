@@ -659,8 +659,8 @@ namespace flex
 					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
 					if (*uniform.id == -1)
 					{
-					//	PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
-					//			  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
+						//	PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
+						//			  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
 					}
 				}
 			}
@@ -806,7 +806,7 @@ namespace flex
 						if (samplerCreateInfo.filepath.empty())
 						{
 							PrintError("Empty file path specified in SamplerCreateInfo for texture %s in material %s\n",
-									   samplerCreateInfo.textureName.c_str(), mat.material.name.c_str());
+								samplerCreateInfo.textureName.c_str(), mat.material.name.c_str());
 						}
 						else
 						{
@@ -1833,6 +1833,31 @@ namespace flex
 		void GLRenderer::Update()
 		{
 			PROFILE_AUTO("Renderer update");
+
+			// TODO: Hook into callback
+			// TODO: Generate fonts asynchronously
+			// TODO: Allow fonts to be rendered using different DPI than originally created on
+			// TODO: Or, specify DPI on rendered image to prevent issue when resolution is changed
+			// while game isn't running
+			m_MonitorResCheckTimeRemaining -= g_DeltaTime;
+			if (m_MonitorResCheckTimeRemaining <= 0.0f)
+			{
+				m_MonitorResCheckTimeRemaining = 2.0f;
+				static const char* blockName = "Renderer update > retrieve monitor info";
+				{
+					PROFILE_AUTO(blockName);
+					real pDPIx = g_Monitor->DPI.x;
+					real pDPIy = g_Monitor->DPI.y;
+					g_Window->RetrieveMonitorInfo();
+					real newDPIx = g_Monitor->DPI.x;
+					real newDPIy = g_Monitor->DPI.y;
+					if (newDPIx != pDPIx || newDPIy != pDPIy)
+					{
+						LoadFonts(true);
+					}
+				}
+				//Profiler::PrintBlockDuration(blockName);
+			}
 
 			if (m_EditorStrSecRemaining > 0.0f)
 			{
