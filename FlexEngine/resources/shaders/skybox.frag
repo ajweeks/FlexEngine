@@ -12,6 +12,7 @@ void main()
 	if (enableCubemapSampler)
 	{
 		FragColor = texture(cubemapSampler, ex_SampleDirection) * exposure;
+		FragColor.a = 1.0;
 	}
 	else
 	{
