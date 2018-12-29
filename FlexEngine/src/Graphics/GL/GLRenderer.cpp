@@ -4631,16 +4631,17 @@ namespace flex
 			PROFILE_AUTO("Load fonts");
 
 			// TODO: Save these strings in a config file?
-			std::string filePaths[] = {
+			std::string fontFilePaths[] = {
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
 				RESOURCE_LOCATION  "fonts/gant.ttf",
 				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf"
 			};
 
+			std::string extension = ".png";
 			std::string renderedTextureFilePaths[] = {
-				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24.png",
-				RESOURCE_LOCATION  "fonts/gant-regular-10.png",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14.png"
+				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
+				RESOURCE_LOCATION  "fonts/gant-regular-10",
+				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14"
 			};
 
 			i16 fontSizes[] = {
@@ -4655,7 +4656,14 @@ namespace flex
 				&m_FntSourceCodePro,
 			};
 
-			i32 fontCount = ARRAY_LENGTH(filePaths);
+			std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
+
+			for (std::string& path : renderedTextureFilePaths)
+			{
+				path += "-" + DPIStr + extension;
+			}
+
+			i32 fontCount = ARRAY_LENGTH(fontFilePaths);
 			assert(
 				ARRAY_LENGTH(renderedTextureFilePaths) == fontCount &&
 				ARRAY_LENGTH(fonts) == fontCount &&
@@ -4671,11 +4679,11 @@ namespace flex
 					(*(fonts[i])) = nullptr;
 				}
 
-				std::string fontName = filePaths[i];
+				std::string fontName = fontFilePaths[i];
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				LoadFont(fonts[i], fontSizes[i], filePaths[i], renderedTextureFilePaths[i], bForceRender);
+				LoadFont(fonts[i], fontSizes[i], fontFilePaths[i], renderedTextureFilePaths[i], bForceRender);
 			}
 		}
 
