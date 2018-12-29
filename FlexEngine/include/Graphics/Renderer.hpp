@@ -209,6 +209,10 @@ namespace flex
 
 		u32 m_FramesRendered = 0;
 
+		// Must be stored as member because ImGui will not make a copy
+		std::string m_ImGuiIniFilepathStr;
+		std::string m_ImGuiLogFilepathStr;
+
 	private:
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer(const Renderer&) = delete;

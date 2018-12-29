@@ -92,9 +92,6 @@ namespace flex
 			GamepadState m_GamepadStates[2];
 
 			static const real MAX_JOYSTICK_ROTATION_SPEED;
-
-			// Must be stored as member because ImGui will not make a copy
-			std::string m_ImGuiIniFilepathStr;
 		};
 	} // namespace Input
 } // namespace flex

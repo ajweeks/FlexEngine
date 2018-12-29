@@ -410,6 +410,12 @@ namespace flex
 
 			ImGui::CreateContext();
 
+			ImGuiIO& io = ImGui::GetIO();
+			m_ImGuiIniFilepathStr = ROOT_LOCATION "saved/config/imgui.ini";
+			io.IniFilename = m_ImGuiIniFilepathStr.c_str();
+			m_ImGuiLogFilepathStr = ROOT_LOCATION "saved/config/imgui.log";
+			io.LogFilename = m_ImGuiLogFilepathStr.c_str();
+
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
