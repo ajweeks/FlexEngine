@@ -252,6 +252,7 @@ namespace flex
 		glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
 		glfwSetJoystickCallback(GLFWJoystickCallback);
+		glfwSetMonitorCallback(GLFWMointorCallback);
 	}
 
 	void GLFWWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
@@ -638,6 +639,20 @@ namespace flex
 		}
 
 		g_JoysticksConnected[JID] = (event == GLFW_CONNECTED);
+	}
+
+	void GLFWMointorCallback(GLFWmonitor* monitor, int event)
+	{
+		i32 w, h;
+		glfwGetMonitorPhysicalSize(monitor, &w, &h);
+		if (event == GLFW_CONNECTED)
+		{
+			Print("Monitor connected: %s, %dmm x %dmm\n", glfwGetMonitorName(monitor), w, h);
+		}
+		else
+		{
+			Print("Monitor disconnected: %s, %dmm x %dmm\n", glfwGetMonitorName(monitor), w, h);
+		}
 	}
 
 	Input::KeyAction GLFWActionToInputManagerAction(i32 glfwAction)

@@ -82,6 +82,7 @@ namespace flex
 	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 	void GLFWJoystickCallback(i32 JID, i32 event);
+	void GLFWMointorCallback(GLFWmonitor* monitor, int event);
 
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
 							  GLsizei length, const GLchar *message, const void *userParam);
