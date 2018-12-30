@@ -2144,6 +2144,12 @@ namespace flex
 					g_SceneManager->SetCurrentScene(lastOpenedSceneName, false);
 				}
 
+				bool bRenderImGui;
+				if (rootObject.SetBoolChecked("render imgui", bRenderImGui))
+				{
+					m_bRenderImGui = bRenderImGui;
+				}
+
 				std::string cameraType;
 				if (rootObject.SetStringChecked("last camera type", cameraType))
 				{
@@ -2231,6 +2237,7 @@ namespace flex
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
 		rootObject.fields.emplace_back("last camera type", JSONValue(cam->GetName().c_str()));
 		std::string posStr = Vec3ToString(cam->GetPosition(), 3);
 		real pitch = cam->GetPitch();
