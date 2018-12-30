@@ -110,7 +110,7 @@ namespace flex
 		}
 
 		ms frameDuration = glm::min(s_FrameEndTime - s_FrameStartTime, MAX_FRAME_TIME);
-		s_PendingCSV.append(std::to_string(frameDuration) + ",");
+		s_PendingCSV.append(std::to_string(frameDuration) + "\n");
 
 		//Print("Profiler results:");
 		//Print("Whole frame: " + std::to_string(s_FrameEndTime - s_FrameStartTime) + "ms");
