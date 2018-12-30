@@ -271,6 +271,15 @@ namespace flex
 
 	const char* TrackStateToString(TrackState state);
 
+	enum class LookDirection
+	{
+		LEFT,
+		CENTER,
+		RIGHT,
+
+		NONE
+	};
+
 	template <class T>
 	struct RollingAverage
 	{

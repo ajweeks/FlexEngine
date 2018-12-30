@@ -110,6 +110,7 @@ namespace flex
 
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 
+			// Should be called when objects need to be rebatched
 			virtual void RenderObjectStateChanged() override;
 
 			virtual void SetRenderGrid(bool bRenderGrid) override;

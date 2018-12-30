@@ -191,11 +191,58 @@ namespace flex
 			m_bTabletUp = !m_bTabletUp;
 		}
 
+
+		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C))
+		{
+			Cart* cart = new Cart();
+			cart->Initialize();
+			cart->PostInitialize();
+			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
+			m_Inventory.push_back(cart);
+		}
+
+		if (!m_Inventory.empty())
+		{
+			// Place item in inventory
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_SPACE)))
+			{
+				GameObject* obj = m_Inventory[0];
+				bool bPlaced = false;
+
+				if (Cart* objCart = (Cart*)obj)
+				{
+					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+					glm::vec3 samplePos = m_Transform.GetWorldPosition() + m_Transform.GetForward() * 1.5f;
+					real rangeThreshold = 10.0f;
+					real distAlongNearestTrack;
+					TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+
+					if (nearestTrackID != InvalidTrackID)
+					{
+						bPlaced = true;
+						objCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+					}
+				}
+				else
+				{
+					PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", obj->GetName().c_str());
+				}
+
+				if (bPlaced)
+				{
+					m_Inventory.erase(m_Inventory.begin());
+				}
+			}
+		}
+
 		m_Controller->Update();
 
-		if (m_TrackRiding)
+		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+
+		if (m_TrackRidingID != InvalidTrackID)
 		{
-			glm::vec3 trackForward = m_TrackRiding->GetCurveDirectionAt(m_DistAlongTrack);
+			glm::vec3 trackForward = trackManager->GetTrack(m_TrackRidingID)->GetCurveDirectionAt(m_DistAlongTrack);
 			real invTurnSpeed = m_TurnToFaceDownTrackInvSpeed;
 			if (m_TrackState == TrackState::FACING_FORWARD)
 			{
@@ -216,7 +263,7 @@ namespace flex
 		g_Renderer->DrawSprite(drawInfo);
 
 		if (m_bPossessed &&
-			m_TrackRiding == nullptr)
+			m_TrackRidingID == InvalidTrackID)
 		{
 			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y) ||
 				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Q)))
@@ -233,7 +280,9 @@ namespace flex
 			}
 		}
 
-		if (m_bPossessed && m_bPlacingTrack && m_TrackRiding == nullptr)
+		if (m_bPossessed &&
+			m_bPlacingTrack &&
+			m_TrackRidingID == InvalidTrackID)
 		{
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(1.0f);
 
@@ -277,7 +326,6 @@ namespace flex
 
 				if (!m_TrackPlacing.curves.empty())
 				{
-					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 					trackManager->AddTrack(m_TrackPlacing);
 					trackManager->FindJunctions();
 					m_TrackPlacing.curves.clear();
@@ -302,49 +350,50 @@ namespace flex
 			debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
 		}
 
-		if (m_bPossessed && m_bEditingTrack && m_TrackRiding == nullptr)
+		if (m_bPossessed &&
+			m_bEditingTrack &&
+			m_TrackRidingID == InvalidTrackID)
 		{
 			// TODO: Snap to points other than the one we are editing
-			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(m_TrackEditing == nullptr ? 1.0f : 0.0f, true);
+			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(m_TrackEditingID == InvalidTrackID ? 1.0f : 0.0f, true);
 			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
 				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X)))
 			{
 				if (m_TrackEditingCurveIdx == -1)
 				{
-					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-					BezierCurveList* track = nullptr;
+					TrackID trackID = InvalidTrackID;
 					i32 curveIndex = -1;
 					i32 pointIndex = -1;
-					if (trackManager->GetPointInRange(reticlePos, 0.1f, &track, &curveIndex, &pointIndex))
+					if (trackManager->GetPointInRange(reticlePos, 0.1f, &trackID, &curveIndex, &pointIndex))
 					{
-						m_TrackEditing = track;
+						m_TrackEditingID = trackID;
 						m_TrackEditingCurveIdx = curveIndex;
 						m_TrackEditingPointIdx = pointIndex;
 					}
 				}
 				else
 				{
-					m_TrackEditing = nullptr;
+					m_TrackEditingID = InvalidTrackID;
 					m_TrackEditingCurveIdx = -1;
 					m_TrackEditingPointIdx = -1;
 				}
 			}
 
-			if (m_TrackEditing)
+			if (m_TrackEditingID != InvalidTrackID)
 			{
-				glm::vec3 point = m_TrackEditing->GetPointOnCurve(m_TrackEditingCurveIdx, m_TrackEditingPointIdx);
+				BezierCurveList* trackEditing = trackManager->GetTrack(m_TrackEditingID);
+				glm::vec3 point = trackEditing->GetPointOnCurve(m_TrackEditingCurveIdx, m_TrackEditingPointIdx);
 
 				glm::vec3 newPoint(reticlePos.x, point.y, reticlePos.z);
-				m_TrackEditing->SetPointPosAtIndex(m_TrackEditingCurveIdx, m_TrackEditingPointIdx, newPoint, true);
+				trackEditing->SetPointPosAtIndex(m_TrackEditingCurveIdx, m_TrackEditingPointIdx, newPoint, true);
 
 				static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
 				static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
-				for (const BezierCurve& curve : m_TrackEditing->curves)
+				for (const BezierCurve& curve : trackEditing->curves)
 				{
 					curve.DrawDebug(false, editedCurveCol, editingCurveCol);
 				}
 
-				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 				trackManager->FindJunctions();
 			}
 
@@ -352,8 +401,8 @@ namespace flex
 			btTransform cylinderTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
 			static btVector3 ringColEditing(0.48f, 0.22f, 0.65f);
 			static btVector3 ringColEditingActive(0.6f, 0.4f, 0.85f);
-			debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_TrackEditing == nullptr ? ringColEditing : ringColEditingActive);
-			debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_TrackEditing == nullptr ? ringColEditing : ringColEditingActive);
+			debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
+			debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
 		}
 
 		if (m_bTabletUp)
@@ -419,7 +468,7 @@ namespace flex
 			glm::vec3 euler = glm::eulerAngles(GetTransform()->GetWorldRotation());
 			ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
 
-			bool bRiding = (m_TrackRiding != nullptr);
+			bool bRiding = (m_TrackRidingID != InvalidTrackID);
 			ImGui::Text("Riding track: %s", (bRiding ? "true" : "false"));
 			if (bRiding)
 			{
@@ -466,13 +515,13 @@ namespace flex
 
 	real Player::GetDistAlongTrack() const
 	{
-		if (m_TrackRiding)
+		if (m_TrackRidingID == InvalidTrackID)
 		{
-			return m_DistAlongTrack;
+			return -1.0f;
 		}
 		else
 		{
-			return -1.0f;
+			return m_DistAlongTrack;
 		}
 	}
 
@@ -496,11 +545,13 @@ namespace flex
 		return point;
 	}
 
-	void Player::AttachToTrack(BezierCurveList* track, real distAlongTrack)
+	void Player::AttachToTrack(TrackID trackID, real distAlongTrack)
 	{
+		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		BezierCurveList* track = trackManager->GetTrack(trackID);
 		assert(track);
 
-		if (m_TrackRiding)
+		if (m_TrackRidingID != InvalidTrackID)
 		{
 			PrintWarn("Player::AttachToTrack called when already attached! Detaching...\n");
 			DetachFromTrack();
@@ -508,10 +559,10 @@ namespace flex
 
 		distAlongTrack = glm::clamp(distAlongTrack, 0.0f, 1.0f);
 
-		m_TrackRiding = track;
+		m_TrackRidingID = trackID;
 		m_DistAlongTrack = distAlongTrack;
 
-		if (m_TrackRiding->IsVectorFacingDownTrack(m_DistAlongTrack, m_Transform.GetForward()))
+		if (track->IsVectorFacingDownTrack(m_DistAlongTrack, m_Transform.GetForward()))
 		{
 			m_TrackState = TrackState::FACING_BACKWARD;
 		}
@@ -525,9 +576,9 @@ namespace flex
 
 	void Player::DetachFromTrack()
 	{
-		if (m_TrackRiding)
+		if (m_TrackRidingID != InvalidTrackID)
 		{
-			m_TrackRiding = nullptr;
+			m_TrackRidingID = InvalidTrackID;
 			m_DistAlongTrack = -1.0f;
 			AudioManager::PlaySource(m_SoundTrackDetachID);
 		}
@@ -553,4 +604,10 @@ namespace flex
 			PrintWarn("Unhandled track state when starting turn transition: %d/n", (i32)m_TrackState);
 		}
 	}
+
+	void Player::AddToInventory(GameObject* obj)
+	{
+		m_Inventory.push_back(obj);
+	}
+
 } // namespace flex

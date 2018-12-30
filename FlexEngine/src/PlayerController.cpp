@@ -69,7 +69,8 @@ namespace flex
 		glm::vec3 up = transform->GetUp();
 		glm::vec3 right = transform->GetRight();
 		glm::vec3 forward = transform->GetForward();
-		BezierCurveList* pTrackRiding = m_Player->m_TrackRiding;
+		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
 		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
 
 		if (m_Player->m_bPossessed)
@@ -82,21 +83,20 @@ namespace flex
 			else if (g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, Input::GamepadButton::X) ||
 				(g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z)))
 			{
-				if (m_Player->m_TrackRiding)
-				{
-					m_Player->DetachFromTrack();
-				}
-				else
+				if (m_Player->m_TrackRidingID == InvalidTrackID)
 				{
 					real distAlongTrack = -1.0f;
-					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-					i32 trackInRangeIndex = trackManager->GetTrackInRangeIndex(transform->GetWorldPosition(), m_Player->m_TrackAttachMinDist, distAlongTrack);
+					TrackID trackInRangeIndex = trackManager->GetTrackInRangeID(transform->GetWorldPosition(), m_Player->m_TrackAttachMinDist, &distAlongTrack);
 					if (trackInRangeIndex != -1)
 					{
-						m_Player->AttachToTrack(&trackManager->m_Tracks[trackInRangeIndex], distAlongTrack);
+						m_Player->AttachToTrack(trackInRangeIndex, distAlongTrack);
 
 						SnapPosToTrack(m_Player->m_DistAlongTrack, false);
 					}
+				}
+				else
+				{
+					m_Player->DetachFromTrack();
 				}
 			}
 		}
@@ -107,7 +107,7 @@ namespace flex
 
 		if (m_Player->m_bPossessed)
 		{
-			if (m_Player->m_TrackRiding)
+			if (m_Player->m_TrackRidingID != InvalidTrackID)
 			{
 				real moveForward = 0.0f;
 				real moveBackward = 0.0f;
@@ -122,7 +122,8 @@ namespace flex
 					moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_TRIGGER);
 				}
 
-				glm::vec3 newCurveDir = m_Player->m_TrackRiding->GetCurveDirectionAt(m_Player->m_DistAlongTrack);
+
+				glm::vec3 newCurveDir = trackManager->GetTrack(m_Player->m_TrackRidingID)->GetCurveDirectionAt(m_Player->m_DistAlongTrack);
 				static glm::vec3 pCurveDir = newCurveDir;
 
 				const bool bReversing = (moveBackward > 0.0f);
@@ -134,13 +135,12 @@ namespace flex
 				}
 
 				real pDist = m_Player->m_DistAlongTrack;
-				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-				m_Player->m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_Player->m_TrackRiding,
+				m_Player->m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_Player->m_TrackRidingID,
 					(moveForward - moveBackward) * m_Player->m_TrackMoveSpeed * g_DeltaTime, m_Player->m_DistAlongTrack);
 				SnapPosToTrack(pDist, bReversing);
 
 				if (m_Player->IsFacingDownTrack() != bWasFacingDownTrack &&
-					m_Player->m_TrackRiding == pTrackRiding)
+					m_Player->m_TrackRidingID == pTrackRidingID)
 				{
 					AudioManager::PlaySource(m_Player->m_SoundTrackSwitchDirID);
 				}
@@ -222,11 +222,12 @@ namespace flex
 			{
 				lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT) > 0 ? 1.0f :
 					g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
-				if (m_Player->m_TrackRiding)
+				if (m_Player->m_TrackRidingID != InvalidTrackID)
 				{
 					lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) > 0 ? 1.0f :
 						g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) > 0 ? -1.0f : lookH;
 				}
+
 				if (m_Mode == Mode::FIRST_PERSON)
 				{
 					lookV = g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP) > 0 ? -1.0f :
@@ -279,9 +280,9 @@ namespace flex
 	void PlayerController::SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack)
 	{
 		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-		BezierCurveList* newTrack = m_Player->m_TrackRiding;
+		TrackID newTrackID = m_Player->m_TrackRidingID;
 		real newDistAlongTrack = m_Player->m_DistAlongTrack;
-		i32 desiredDir = 1;
+		LookDirection desiredDir = LookDirection::CENTER;
 		const real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_STICK_X);
 		real rightStickX = 0.0f;
 		if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
@@ -300,11 +301,11 @@ namespace flex
 				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
 			if (lookH > 0.5f)
 			{
-				desiredDir = 2;
+				desiredDir = LookDirection::RIGHT;
 			}
 			else if (lookH < -0.5f)
 			{
-				desiredDir = 0;
+				desiredDir = LookDirection::LEFT;
 			}
 		}
 		else
@@ -312,28 +313,32 @@ namespace flex
 			static const real STICK_THRESHOLD = 0.5f;
 			if (leftStickX < -STICK_THRESHOLD)
 			{
-				desiredDir = 0;
+				desiredDir = LookDirection::LEFT;
 			}
 			else if (leftStickX > STICK_THRESHOLD)
 			{
-				desiredDir = 2;
+				desiredDir = LookDirection::RIGHT;
 			}
 		}
 
-		trackManager->UpdatePreview(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, desiredDir, m_Player->GetTransform()->GetForward(), m_Player->IsFacingDownTrack(), bReversingDownTrack);
+		trackManager->UpdatePreview(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack,
+			desiredDir, m_Player->GetTransform()->GetForward(), m_Player->IsFacingDownTrack(),
+			bReversingDownTrack);
 
 		i32 newJunctionIndex = -1;
 		i32 newCurveIndex = -1;
 		TrackState newTrackState = TrackState::NONE;
-		glm::vec3 newPos = trackManager->GetPointOnTrack(m_Player->m_TrackRiding, m_Player->m_DistAlongTrack, pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrack, &newDistAlongTrack, &newJunctionIndex, &newCurveIndex, &newTrackState, true);
+		glm::vec3 newPos = trackManager->GetPointOnTrack(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack,
+			pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrackID, &newDistAlongTrack,
+			&newJunctionIndex, &newCurveIndex, &newTrackState, true);
 
-		bool bSwitchedTracks = newTrack && (newTrack != m_Player->m_TrackRiding);
+		bool bSwitchedTracks = (newTrackID != InvalidTrackID) && (newTrackID != m_Player->m_TrackRidingID);
 		if (bSwitchedTracks)
 		{
 			m_SecondsAttemptingToTurn = 0.0f;
 			m_DirTurning = TurningDir::NONE;
 
-			m_Player->m_TrackRiding = newTrack;
+			m_Player->m_TrackRidingID = newTrackID;
 			m_Player->m_DistAlongTrack = newDistAlongTrack;
 
 			if (newTrackState != TrackState::NONE)

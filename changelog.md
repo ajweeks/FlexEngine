@@ -2,6 +2,7 @@
 2018
 
 December
+- Add carts that ride along tracks (create with C, place onto nearest track with SPACE)
 - Add RenderDoc API integration to allow capturing frames with a keypress (F9)
 - Add support for time dilation
 - Add support for pausing and single stepping simulation

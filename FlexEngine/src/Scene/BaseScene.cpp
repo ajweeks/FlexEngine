@@ -278,12 +278,45 @@ namespace flex
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
 
-		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (rootObject)
+			PROFILE_AUTO("Tick scene objects");
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				rootObject->Update();
+				if (rootObject)
+				{
+					rootObject->Update();
+				}
 			}
+		}
+
+		if (!m_ObjectsToRemoveAtEndOfFrame.empty())
+		{
+			for (GameObject* gameObject : m_ObjectsToRemoveAtEndOfFrame)
+			{
+				auto iter = std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject);
+				if (iter == m_RootObjects.end())
+				{
+					PrintWarn("Attempted to remove game object from scene which doesn't exist! %s\n", gameObject->GetName().c_str());
+				}
+				else
+				{
+					DestroyGameObject(*iter, true);
+				}
+			}
+			m_ObjectsToRemoveAtEndOfFrame.clear();
+
+			g_Renderer->RenderObjectStateChanged();
+		}
+
+		if (!m_ObjectsToAddAtEndOfFrame.empty())
+		{
+			for (GameObject* gameObject : m_ObjectsToAddAtEndOfFrame)
+			{
+				m_RootObjects.push_back(gameObject);
+			}
+			m_ObjectsToAddAtEndOfFrame.clear();
+
+			g_Renderer->RenderObjectStateChanged();
 		}
 
 		m_TrackManager.DrawDebug();
@@ -297,6 +330,7 @@ namespace flex
 			if (DestroyGameObjectRecursive(gameObject, targetObject, bDeleteChildren))
 			{
 				UpdateRootObjectSiblingIndices();
+				g_Renderer->RenderObjectStateChanged();
 				return true;
 			}
 		}
@@ -357,7 +391,7 @@ namespace flex
 				targetObject->m_Children.clear();
 			}
 
-			bool bIsDirectionalLight = ((DirectionalLight*)targetObject) != nullptr;
+			bool bIsDirectionalLight = (dynamic_cast<DirectionalLight*>(targetObject)) != nullptr;
 
 			targetObject->Destroy();
 
@@ -630,6 +664,80 @@ namespace flex
 		return &m_TrackManager;
 	}
 
+	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
+	{
+		std::string result = prefix;
+
+		i32 existingCount = 0;
+		std::vector<GameObject*> allObjects = GetAllObjects();
+		for (GameObject* gameObject : allObjects)
+		{
+			std::string s = gameObject->GetName();
+			if (StartsWith(s, prefix))
+			{
+				existingCount++;
+			}
+		}
+
+		result += IntToString(existingCount, digits);
+
+		return result;
+	}
+
+	void BaseScene::RemoveObjectAtEndOfFrame(GameObject* obj)
+	{
+#if _DEBUG
+		auto iter = std::find(m_ObjectsToRemoveAtEndOfFrame.begin(), m_ObjectsToRemoveAtEndOfFrame.end(), obj);
+		if (iter != m_ObjectsToRemoveAtEndOfFrame.end())
+		{
+			PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", obj->GetName().c_str());
+		}
+#endif
+		m_ObjectsToRemoveAtEndOfFrame.push_back(obj);
+	}
+
+	void BaseScene::RemoveObjectsAtEndOfFrame(const std::vector<GameObject*>& objs)
+	{
+#if _DEBUG
+		for (auto o : objs)
+		{
+			auto iter = std::find(m_ObjectsToRemoveAtEndOfFrame.begin(), m_ObjectsToRemoveAtEndOfFrame.end(), o);
+			if (iter != m_ObjectsToRemoveAtEndOfFrame.end())
+			{
+				PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", o->GetName().c_str());
+			}
+		}
+#endif
+		m_ObjectsToRemoveAtEndOfFrame.insert(m_ObjectsToRemoveAtEndOfFrame.end(), objs.begin(), objs.end());
+	}
+
+	void BaseScene::AddObjectAtEndOFFrame(GameObject* obj)
+	{
+#if _DEBUG
+		auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), obj);
+		if (iter != m_ObjectsToAddAtEndOfFrame.end())
+		{
+			PrintWarn("Attempted to flag object to be added at end of frame more than once! %s\n", obj->GetName().c_str());
+		}
+#endif
+		m_ObjectsToAddAtEndOfFrame.push_back(obj);
+	}
+
+	void BaseScene::AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs)
+	{
+#if _DEBUG
+		for (auto o : objs)
+		{
+			auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), o);
+			if (iter != m_ObjectsToAddAtEndOfFrame.end())
+			{
+				PrintWarn("Attempted to flag object to be added at end of frame more than once! %s\n", o->GetName().c_str());
+			}
+		}
+#endif
+		m_ObjectsToAddAtEndOfFrame.insert(m_ObjectsToAddAtEndOfFrame.end(), objs.begin(), objs.end());
+	}
+
 	MaterialID BaseScene::FindMaterialIDByName(const JSONObject& object)
 	{
 		MaterialID matID = InvalidMaterialID;
@@ -808,6 +916,7 @@ namespace flex
 		gameObject->SetParent(nullptr);
 		m_RootObjects.push_back(gameObject);
 		UpdateRootObjectSiblingIndices();
+		g_Renderer->RenderObjectStateChanged();
 
 		return gameObject;
 	}
@@ -826,6 +935,7 @@ namespace flex
 
 				iter = m_RootObjects.erase(iter);
 				UpdateRootObjectSiblingIndices();
+				g_Renderer->RenderObjectStateChanged();
 				return;
 			}
 			else
@@ -850,6 +960,7 @@ namespace flex
 			iter = m_RootObjects.erase(iter);
 		}
 		m_RootObjects.clear();
+		g_Renderer->RenderObjectStateChanged();
 	}
 
 	std::vector<MaterialID> BaseScene::GetMaterialIDs()
@@ -1062,4 +1173,5 @@ namespace flex
 	{
 		return m_PhysicsWorld;
 	}
+
 } // namespace flex

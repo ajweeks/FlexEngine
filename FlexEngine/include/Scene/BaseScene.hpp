@@ -87,6 +87,15 @@ namespace flex
 
 		TrackManager* GetTrackManager();
 
+		// Returns 'prefix' with a number appended representing
+		// how many other objects with that prefix are in the scene
+		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
+
+		void RemoveObjectAtEndOfFrame(GameObject* obj);
+		void RemoveObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
+		void AddObjectAtEndOFFrame(GameObject* obj);
+		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
+
 	protected:
 		friend class GameObject;
 
@@ -128,6 +137,9 @@ namespace flex
 		Player* m_Player1 = nullptr;
 
 		TrackManager m_TrackManager;
+
+		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
+		std::vector<GameObject*> m_ObjectsToRemoveAtEndOfFrame;
 
 	private:
 		/*

@@ -6748,7 +6748,7 @@ namespace flex
 									}
 									else
 									{
-										g_SceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
+										g_SceneManager->CurrentScene()->RemoveObjectAtEndOfFrame(draggedGameObject);
 										gameObject->AddChild(draggedGameObject);
 										bParentChildTreeChanged = true;
 									}

@@ -1434,16 +1434,7 @@ namespace flex
 			{
 				if (!m_CurrentlySelectedObjects.empty())
 				{
-					i32 i = 0;
-					while (i < (i32)m_CurrentlySelectedObjects.size())
-					{
-						if (!g_SceneManager->CurrentScene()->DestroyGameObject(m_CurrentlySelectedObjects[i], true))
-						{
-							// This path should never execute, but if it does in a shipping build at least prevent an infinite loop
-							assert(false);
-							++i;
-						}
-					}
+					g_SceneManager->CurrentScene()->RemoveObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
 
 					DeselectCurrentlySelectedObjects();
 				}
@@ -1500,16 +1491,20 @@ namespace flex
 						maxPos = glm::max(maxPos, max);
 					}
 				}
-				glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-				real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
 
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				if (minPos.x != FLT_MAX && maxPos.x != FLT_MIN)
+				{
+					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
 
-				glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
-				glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
 
-				cam->SetPosition(sphereCenterWS + newOffset);
-				cam->LookAt(sphereCenterWS);
+					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
+					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
+
+					cam->SetPosition(sphereCenterWS + newOffset);
+					cam->LookAt(sphereCenterWS);
+				}
 			}
 
 			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL) &&

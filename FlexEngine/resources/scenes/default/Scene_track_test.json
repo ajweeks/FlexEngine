@@ -110,7 +110,7 @@
 			{
 				"pos" : "-24.200, 5.997, -2.024",
 				"rot" : "0.004, -0.004, -0.000",
-				"scale" : "4.010, 6.070, 10.020"
+				"scale" : "4.010, 6.070, 10.022"
 			},
 			"mesh" : "cube",
 			"material" : "Grid",
@@ -147,8 +147,8 @@
 				"cast shadows" : true,
 				"shadow darkness" : 0.000000,
 				"shadow map near" : -80.000000,
-				"shadow map far" : 100.000000,
-				"shadow map zoom" : 30.000000
+				"shadow map far" : 41.000000,
+				"shadow map zoom" : 69.000000
 			}
 		},
 		{
@@ -214,6 +214,729 @@
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 500.000000
+			}
+		},
+		{
+			"name" : "Cart_0000",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "32.576, 0.000, 15.123",
+				"rot" : "-3.142, 1.003, -3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 1,
+				"dist along track" : 0.186878,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
+		},
+		{
+			"name" : "Cart_0001",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "14.765, 0.000, -7.865",
+				"rot" : "-0.000, 0.513, -0.000"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 5,
+				"dist along track" : 0.270695,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0002",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "16.860, 0.000, -1.937",
+				"rot" : "-0.000, 0.096, -0.000"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 5,
+				"dist along track" : 0.073632,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0003",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "16.357, 0.000, 1.551",
+				"rot" : "0.000, -1.048, 0.000"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 6,
+				"dist along track" : 0.818670,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0004",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "14.700, 0.000, 2.107",
+				"rot" : "0.000, -1.514, 0.000"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 6,
+				"dist along track" : 0.644034,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0005",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "12.148, 0.000, 2.089",
+				"rot" : "3.142, -1.500, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 6,
+				"dist along track" : 0.460755,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0006",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.167, 0.000, -1.418",
+				"rot" : "3.142, -0.381, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 5,
+				"dist along track" : 0.894106,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0007",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "72.646, 0.000, 5.006",
+				"rot" : "0.000, -0.350, 0.000"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 0,
+				"dist along track" : 0.702399,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0008",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "35.064, 0.000, 10.242",
+				"rot" : "3.142, -0.110, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 1,
+				"dist along track" : 0.005846,
+				"move speed" : 0.200000,
+				"move direction" : -1.000000
+			}
+		},
+		{
+			"name" : "Cart_0009",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "35.011, 0.000, 12.711",
+				"rot" : "3.142, 0.490, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 1,
+				"dist along track" : 0.077097,
+				"move speed" : 0.200000,
+				"move direction" : -1.000000
+			}
+		},
+		{
+			"name" : "Cart_0010",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "33.187, 0.000, 14.776",
+				"rot" : "3.142, 1.069, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 1,
+				"dist along track" : 0.166589,
+				"move speed" : 0.200000,
+				"move direction" : -1.000000
+			}
+		},
+		{
+			"name" : "Cart_0011",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "18.714, 0.000, 8.307",
+				"rot" : "0.000, -1.546, 0.000"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 0,
+				"dist along track" : 0.114284,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0012",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "14.655, 0.000, 8.275",
+				"rot" : "3.142, -1.478, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 0,
+				"dist along track" : 0.080455,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0013",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "12.224, 0.000, 7.984",
+				"rot" : "3.142, -1.365, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 0,
+				"dist along track" : 0.060199,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0014",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "9.000, 0.000, 7.115",
+				"rot" : "3.142, -1.180, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 0,
+				"dist along track" : 0.033336,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0015",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "6.621, 0.000, 6.016",
+				"rot" : "3.142, -1.039, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 0,
+				"dist along track" : 0.013509,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0016",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "26.962, 0.000, -9.946",
+				"rot" : "3.142, -0.898, 3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 3,
+				"dist along track" : 0.701082,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0017",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "26.715, 0.000, -12.382",
+				"rot" : "-3.142, 0.398, -3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 3,
+				"dist along track" : 0.670724,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0018",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "28.107, 0.000, -15.635",
+				"rot" : "-3.142, 0.371, -3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 3,
+				"dist along track" : 0.652212,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0019",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "29.181, 0.000, -18.539",
+				"rot" : "-3.142, 0.284, -3.142"
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : 3,
+				"dist along track" : 0.635032,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0020",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : -1,
+				"dist along track" : -1.000000,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
+			}
+		},
+		{
+			"name" : "Cart_0021",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			},
+			"mesh" : "cart-empty",
+			"cart info" : 
+			{
+				"track ID" : -1,
+				"dist along track" : -1.000000,
+				"move speed" : 0.200000,
+				"move direction" : 1.000000
 			}
 		}
 	],

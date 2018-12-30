@@ -9,6 +9,7 @@ namespace flex
 {
 	class BaseScene;
 	class MeshComponent;
+	class BezierCurveList;
 
 	class GameObject
 	{
@@ -369,6 +370,35 @@ namespace flex
 		Skybox(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+	};
+
+	class Cart : public GameObject
+	{
+	public:
+		Cart();
+		Cart(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		//virtual void Initialize() override;
+		//virtual void PostInitialize() override;
+		//virtual void Destroy() override;
+		virtual void Update() override;
+		virtual void DrawImGuiObjects() override;
+
+		void OnTrackMount(TrackID trackID, real newDistAlongTrack);
+		void OnTrackDismount();
+
+		TrackID currentTrackID = InvalidTrackID;
+		real distAlongTrack = -1.0f;
+
+		real moveSpeed = 0.2f;
+		real moveDirection = 1.0f; // -1.0f or 1.0f
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;

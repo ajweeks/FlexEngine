@@ -32,12 +32,27 @@ namespace flex
 
 		void AddTrack(const BezierCurveList& track);
 
+		BezierCurveList* GetTrack(TrackID trackID);
+
+		// TODO: Remove overloaded functions, force use of TrackID
 		glm::vec3 GetPointOnTrack(BezierCurveList* track,
 			real distAlongTrack,
 			real pDistAlongTrack,
-			i32 desiredDir,
+			LookDirection desiredDir,
 			bool bReversingDownTrack,
-			BezierCurveList** outNewTrack,
+			TrackID* outNewTrackID,
+			real* outNewDistAlongTrack,
+			i32* outJunctionIndex,
+			i32* outCurveIndex,
+			TrackState* outTrackState,
+			bool bPrint);
+
+		glm::vec3 GetPointOnTrack(TrackID trackID,
+			real distAlongTrack,
+			real pDistAlongTrack,
+			LookDirection desiredDir,
+			bool bReversingDownTrack,
+			TrackID* outNewTrackID,
 			real* outNewDistAlongTrack,
 			i32* outJunctionIndex,
 			i32* outCurveIndex,
@@ -46,20 +61,27 @@ namespace flex
 
 		void UpdatePreview(BezierCurveList* track,
 			real distAlongTrack,
-			i32 desiredDir,
+			LookDirection desiredDir,
+			glm::vec3 currentFor,
+			bool bFacingForwardDownTrack,
+			bool bReversingDownTrack);
+
+		void UpdatePreview(TrackID trackID,
+			real distAlongTrack,
+			LookDirection desiredDir,
 			glm::vec3 currentFor,
 			bool bFacingForwardDownTrack,
 			bool bReversingDownTrack);
 
 		bool GetPointInRange(const glm::vec3& p, bool bIncludeHandles, real range, glm::vec3* outPoint);
-		bool GetPointInRange(const glm::vec3& p, real range, BezierCurveList** outTrack, i32* outCurveIndex, i32* outPointIdx);
+		bool GetPointInRange(const glm::vec3& p, real range, TrackID* outTrackID, i32* outCurveIndex, i32* outPointIdx);
 
 		// Compares curve end points on all BezierCurves and creates junctions when positions are
 		// within a threshold of each other
 		void FindJunctions();
 
-		bool IsTrackInRange(const BezierCurveList* track, const glm::vec3& pos, real range, real& outDistToTrack, real& outDistAlongTrack);
-		i32 GetTrackInRangeIndex(const glm::vec3& pos, real range, real& outDistAlongTrack);
+		bool IsTrackInRange(const BezierCurveList* track, const glm::vec3& pos, real range, real* outDistToTrack, real* outDistAlongTrack);
+		TrackID GetTrackInRangeID(const glm::vec3& pos, real range, real* outDistAlongTrack);
 
 		void DrawDebug();
 
@@ -67,6 +89,7 @@ namespace flex
 
 		// Moves t along track according to curve length
 		real AdvanceTAlongTrack(BezierCurveList* track, real amount, real t);
+		real AdvanceTAlongTrack(TrackID trackID, real amount, real t);
 
 		JSONObject Serialize() const;
 

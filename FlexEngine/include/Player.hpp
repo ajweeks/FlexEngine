@@ -43,9 +43,17 @@ namespace flex
 
 		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false) const;
 
+		void AttachToTrack(TrackID trackID, real distAlongTrack);
+		void DetachFromTrack();
+		bool IsFacingDownTrack() const;
+		void BeginTurnTransition();
+
+		void AddToInventory(GameObject* obj);
+
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
+		// TODO: Store IDs rather than raw pointer
 		GameObject* m_MapTablet = nullptr;
 		GameObject* m_MapTabletHolder = nullptr;
 		deg m_TabletOrbitAngleUp = 13.3f;
@@ -62,7 +70,7 @@ namespace flex
 		BezierCurveList m_TrackPlacing;
 		BezierCurve m_CurvePlacing;
 		bool m_bPlacingTrack = false;
-		BezierCurveList* m_TrackEditing = nullptr;
+		TrackID m_TrackEditingID = InvalidTrackID;
 		i32 m_TrackEditingCurveIdx = -1;
 		i32 m_TrackEditingPointIdx = -1;
 		bool m_bEditingTrack = false;
@@ -72,7 +80,7 @@ namespace flex
 		bool m_bGrounded = false;
 		bool m_bPossessed = false;
 
-		BezierCurveList* m_TrackRiding = nullptr;
+		TrackID m_TrackRidingID = InvalidTrackID;
 		real m_DistAlongTrack = 0.0f;
 		real m_TrackMoveSpeed = 0.20f;
 		real m_pDTrackMovement = 0.0f;
@@ -81,10 +89,7 @@ namespace flex
 
 		TrackState m_TrackState;
 
-		void AttachToTrack(BezierCurveList* track, real distAlongTrack);
-		void DetachFromTrack();
-		bool IsFacingDownTrack() const;
-		void BeginTurnTransition();
+		std::vector<GameObject*> m_Inventory;
 
 		const real m_TurnToFaceDownTrackInvSpeed = 30.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;

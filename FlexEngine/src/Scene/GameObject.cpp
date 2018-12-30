@@ -150,6 +150,9 @@ namespace flex
 		case GameObjectType::DIRECTIONAL_LIGHT:
 			newGameObject = new DirectionalLight(objectName);
 			break;
+		case GameObjectType::CART:
+			newGameObject = new Cart(objectName);
+			break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -2738,6 +2741,148 @@ namespace flex
 			other.color == color &&
 			other.enabled == enabled &&
 			other.brightness == brightness;
+	}
+
+	Cart::Cart() :
+		GameObject(g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4), GameObjectType::CART)
+	{
+		SetRigidBody(new RigidBody());
+		SetCollisionShape(new btBoxShape(btVector3(0.5f, 0.5f, 0.5f)));
+		MaterialID matID;
+		if (!g_Renderer->GetMaterialID("pbr grey", matID))
+		{
+			// :shrug:
+			// TODO: Create own material
+			matID = 0;
+		}
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/cart-empty.glb")))
+		{
+			PrintWarn("Failed to load cart mesh!\n");
+		}
+	}
+
+	Cart::Cart(const std::string& name) :
+		GameObject(name, GameObjectType::CART)
+	{
+	}
+
+	GameObject* Cart::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		Cart* newGameObject = new Cart();
+
+		newGameObject->currentTrackID = currentTrackID;
+		newGameObject->distAlongTrack = distAlongTrack;
+
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
+
+		return newGameObject;
+	}
+
+	void Cart::Update()
+	{
+		if (currentTrackID != InvalidTrackID)
+		{
+			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+
+			real pDistAlongTrack = distAlongTrack;
+			distAlongTrack = trackManager->AdvanceTAlongTrack(currentTrackID, g_DeltaTime * moveSpeed * moveDirection, distAlongTrack);
+
+			real newDistAlongTrack;
+			i32 curveIndex;
+			i32 juncIndex;
+			TrackID newTrackID = InvalidTrackID;
+			TrackState trackState;
+			glm::vec3 newPos = trackManager->GetPointOnTrack(currentTrackID, distAlongTrack, pDistAlongTrack,
+				LookDirection::CENTER, false, &newTrackID, &newDistAlongTrack, &juncIndex, &curveIndex, &trackState, false);
+
+			bool bSwitchedTracks = (newTrackID != InvalidTrackID) && (newTrackID != currentTrackID);
+			if (bSwitchedTracks)
+			{
+				currentTrackID = newTrackID;
+				distAlongTrack = newDistAlongTrack;
+				if (distAlongTrack > 0.5f)
+				{
+					moveDirection = -1.0f;
+				}
+				else
+				{
+					moveDirection = 1.0f;
+				}
+			}
+			else if (newDistAlongTrack == -1.0f ||
+					(newDistAlongTrack == 1.0f && moveDirection > 0.0f) ||
+					(newDistAlongTrack == 0.0f && moveDirection < 0.0f))
+			{
+				moveDirection = -moveDirection;
+			}
+
+			if (currentTrackID != InvalidTrackID)
+			{
+				glm::vec3 trackF = trackManager->GetTrack(currentTrackID)->GetCurveDirectionAt(distAlongTrack);
+				glm::quat pRot = m_Transform.GetWorldRotation();
+				glm::quat newRot = glm::quatLookAt(trackF, VEC3_UP);
+				// TODO: Make frame-rate independent
+				m_Transform.SetWorldRotation(glm::slerp(pRot, newRot, 0.5f));
+			}
+
+			m_Transform.SetWorldPosition(newPos);
+		}
+	}
+
+	void Cart::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (ImGui::TreeNode("Cart"))
+		{
+			ImGui::Text("move speed: %.2f", moveSpeed);
+			ImGui::Text("move dir: %.0f", moveDirection);
+			ImGui::Text("track ID: %d", currentTrackID);
+			ImGui::Text("dist along track: %.2f", distAlongTrack);
+
+			ImGui::TreePop();
+		}
+	}
+
+	void Cart::OnTrackMount(TrackID trackID, real newDistAlongTrack)
+	{
+		currentTrackID = trackID;
+		distAlongTrack = newDistAlongTrack;
+	}
+
+	void Cart::OnTrackDismount()
+	{
+		currentTrackID = InvalidTrackID;
+		distAlongTrack = -1.0f;
+	}
+
+	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		JSONObject cartInfo = parentObject.GetObject("cart info");
+		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
+		distAlongTrack = cartInfo.GetFloat("dist along track");
+		moveSpeed = cartInfo.GetFloat("move speed");
+		moveDirection = cartInfo.GetFloat("move direction");
+	}
+
+	void Cart::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		std::string meshName = m_MeshComponent->GetRelativeFilePath();
+		StripLeadingDirectories(meshName);
+		StripFileType(meshName);
+
+		parentObject.fields.emplace_back("mesh", JSONValue(meshName));
+
+
+		JSONObject cartInfo = {};
+
+		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
+		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
+		cartInfo.fields.emplace_back("move speed", JSONValue(moveSpeed));
+		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
+
+		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
 	}
 
 } // namespace flex

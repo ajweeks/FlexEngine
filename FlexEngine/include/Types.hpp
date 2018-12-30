@@ -54,6 +54,7 @@ namespace flex
 	using TextureID = u32;
 	using PointLightID = u32;
 	using AudioSourceID = u32;
+	using TrackID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
@@ -61,6 +62,7 @@ namespace flex
 #define InvalidTextureID ((TextureID)u32_max)
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidAudioSourceID ((AudioSourceID)u32_max)
+#define InvalidTrackID ((TrackID)u32_max)
 
 	template<bool> struct StaticAssert;
 	template<> struct StaticAssert<true> {};
@@ -76,6 +78,7 @@ namespace flex
 		VALVE,
 		RISING_BLOCK,
 		GLASS_PANE,
+		CART,
 
 
 		// NOTE: Add new types above this line
@@ -94,6 +97,7 @@ namespace flex
 		"valve",
 		"rising block",
 		"glass pane",
+		"cart",
 
 		"NONE"
 	};
