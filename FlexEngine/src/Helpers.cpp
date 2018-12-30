@@ -665,7 +665,9 @@ namespace flex
 		SYSTEMTIME time;
 		GetSystemTime(&time);
 
-		result << time.wYear << '-' << std::setw(2) << std::setfill('0') << time.wMonth << '-' << time.wDay;
+		result << IntToString(time.wYear, 4) << '-' <<
+			IntToString(time.wMonth, 2) << '-' <<
+			IntToString(time.wDay, 2);
 
 		return result.str();
 	}
@@ -677,8 +679,12 @@ namespace flex
 		SYSTEMTIME time;
 		GetSystemTime(&time);
 
-		result << time.wYear << '-' << std::setw(2) << std::setfill('0') << time.wMonth << '-' << time.wDay <<
-			'_' << time.wHour << '-' << time.wMinute << '-' << time.wSecond;
+		result << IntToString(time.wYear, 4) << '-' <<
+			IntToString(time.wMonth, 2) << '-' <<
+			IntToString(time.wDay, 2) << '_' <<
+			IntToString(time.wHour, 2) << '-' <<
+			IntToString(time.wMinute, 2) << '-' <<
+			IntToString(time.wSecond, 2);
 
 		return result.str();
 	}
