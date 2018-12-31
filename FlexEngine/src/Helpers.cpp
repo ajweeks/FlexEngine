@@ -9,7 +9,6 @@
 #pragma warning(push, 0)
 #include <glm/gtx/matrix_decompose.hpp>
 
-// Fucking windows headers man...
 #include "AL/al.h"
 #include "CommCtrl.h"
 

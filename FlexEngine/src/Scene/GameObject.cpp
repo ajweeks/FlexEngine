@@ -275,7 +275,7 @@ namespace flex
 			} break;
 			default:
 			{
-				PrintError("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
+				PrintWarn("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
 			} break;
 			}
 
@@ -501,7 +501,7 @@ namespace flex
 			} break;
 			default:
 			{
-				PrintError("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
+				PrintWarn("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
 						   shapeType, m_Name.c_str(), scene->GetName().c_str());
 			} break;
 			}
@@ -1085,6 +1085,10 @@ namespace flex
 						SetCollisionShape(newShape);
 					}
 				} break;
+				default:
+				{
+					PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects");
+				} break;
 				}
 
 				glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
@@ -1376,8 +1380,56 @@ namespace flex
 		{
 			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
 
-			btCollisionShape* collisionShape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
-			newGameObject->SetCollisionShape(collisionShape);
+			btCollisionShape* pCollisionShape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+			btCollisionShape* newCollisionShape = nullptr;
+
+			btVector3 btWorldScale = ToBtVec3(m_Transform.GetWorldScale());
+			real btWorldScaleX = btWorldScale.getX();
+
+			i32 shapeType = pCollisionShape->getShapeType();
+			switch (shapeType)
+			{
+			case BOX_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btBoxShape*)pCollisionShape)->getHalfExtentsWithMargin();
+				btHalfExtents = btHalfExtents / btWorldScale;
+				newCollisionShape = new btBoxShape(btHalfExtents);
+			} break;
+			case SPHERE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btSphereShape*)pCollisionShape)->getRadius();
+				radius /= btWorldScaleX;
+				newCollisionShape = new btSphereShape(radius);
+			} break;
+			case CAPSULE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btCapsuleShapeZ*)pCollisionShape)->getRadius();
+				real height = ((btCapsuleShapeZ*)pCollisionShape)->getHalfHeight() * 2.0f;
+				radius /= btWorldScaleX;
+				height /= btWorldScaleX;
+				newCollisionShape = new btCapsuleShapeZ(radius, height);
+			} break;
+			case CONE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btConeShape*)pCollisionShape)->getRadius();
+				real height = ((btConeShape*)pCollisionShape)->getHeight();
+				radius /= btWorldScaleX;
+				height /= btWorldScaleX;
+				newCollisionShape = new btConeShape(radius, height);
+			} break;
+			case CYLINDER_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btCylinderShape*)pCollisionShape)->getHalfExtentsWithMargin();
+				btHalfExtents = btHalfExtents / btWorldScale;
+				newCollisionShape = new btCylinderShape(btHalfExtents);
+			} break;
+			default:
+			{
+				PrintWarn("Unhanded shape type in GameObject::CopyGenericFields\n");
+			} break;
+			}
+
+			newGameObject->SetCollisionShape(newCollisionShape);
 
 			// TODO: Copy over constraints here
 		}
@@ -2474,6 +2526,12 @@ namespace flex
 
 		if (ImGui::TreeNode("Directional Light"))
 		{
+			bool bDirLightEnabled = (enabled == 1);
+			if (ImGui::Checkbox("Enabled", &bDirLightEnabled))
+			{
+				enabled = bDirLightEnabled ? 1 : 0;
+			}
+
 			glm::vec3 pos = m_Transform.GetLocalPosition();
 			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
 			{
@@ -2504,14 +2562,6 @@ namespace flex
 			}
 
 			ImGui::TreePop();
-		}
-
-		ImGui::SameLine();
-
-		bool bDirLightEnabled = (enabled == 1);
-		if (ImGui::Checkbox("##dir-light-enabled", &bDirLightEnabled))
-		{
-			enabled = bDirLightEnabled ? 1 : 0;
 		}
 	}
 
