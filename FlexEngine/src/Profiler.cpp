@@ -221,7 +221,7 @@ namespace flex
 			return;
 		}
 
-		std::string directory = RESOURCE_LOCATION "profiles/";
+		std::string directory = ROOT_LOCATION "saved/profiles/";
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
 		CreateDirectoryRecursive(absoluteDirectory);
 
