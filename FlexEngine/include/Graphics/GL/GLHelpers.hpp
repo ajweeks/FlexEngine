@@ -71,7 +71,7 @@ namespace flex
 				i32 transformMat;
 				i32 texSize;
 				i32 castShadows;
-				i32 shadowDarkness;
+				i32 shadowOpacity;
 				i32 textureScale;
 			};
 			UniformIDs uniformIDs;

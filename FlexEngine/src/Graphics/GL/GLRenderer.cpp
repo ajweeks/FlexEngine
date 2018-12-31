@@ -674,7 +674,7 @@ namespace flex
 			if (shader.shader.bNeedShadowMap)
 			{
 				mat.uniformIDs.castShadows = glGetUniformLocation(shader.program, "castShadows");
-				mat.uniformIDs.shadowDarkness = glGetUniformLocation(shader.program, "shadowDarkness");
+				mat.uniformIDs.shadowOpacity = glGetUniformLocation(shader.program, "shadowOpacity");
 			}
 
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
@@ -4747,7 +4747,7 @@ namespace flex
 				if (shader->shader.bNeedShadowMap)
 				{
 					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight->bCastShadow);
-					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight->shadowDarkness);
+					glUniform1f(material->uniformIDs.shadowOpacity, m_DirectionalLight->shadowOpacity);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW))

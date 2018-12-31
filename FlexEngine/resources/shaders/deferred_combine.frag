@@ -36,7 +36,7 @@ uniform bool enableIrradianceSampler;
 uniform float exposure = 1.0;
 uniform mat4 lightViewProj;
 uniform bool castShadows = true;
-uniform float shadowDarkness = 0.0;
+uniform float shadowOpacity = 0.0;
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
@@ -170,21 +170,17 @@ void main()
 		vec3 radiance = dirLight.color.rgb;
 		float NoL = max(dot(N, L), 0.0);
 		
-		float dirLightShadow = 1.0;
+		float dirLightShadowOpacity = 1.0;
 		vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0);
 		if (castShadows)
 		{	
 			vec3 transformedShadowPos = vec3(lightViewProj * vec4(worldPos, 1.0));
 
-			if (transformedShadowPos.z > 1.0)
-			{
-				// Outside of light frustum
-				dirLightShadow = 1.0;
-			}
-			else
+			if (transformedShadowPos.z <= 1.0)
 			{
 				float baseBias = 0.005;
 				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
+				float shadowSampleContrib = shadowOpacity / 9.0;
 
 #if QUALITY_LEVEL_HIGH
 				for (int x = -1; x <= 1; ++x)
@@ -194,25 +190,23 @@ void main()
 						float shadowDepth = texture(shadowMap, 
 							transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize).r;
 
-						if (shadowDepth > transformedShadowPos.z - bias)
+						if (shadowDepth < transformedShadowPos.z - bias)
 						{
-							dirLightShadow += (1.0-shadowDarkness);
+							dirLightShadowOpacity -= shadowSampleContrib;
 						}
 					}
 				}
-
-				dirLightShadow /= 9.0;
 #else
 				float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
 				if (shadowDepth < transformedShadowPos.z - bias)
 				{
-					dirLightShadow = shadowDarkness;
+					dirLightShadowOpacity = 1.0-shadowOpacity;
 				}
 #endif
 			}
 		}
 
-		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadow;
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}
 
 	vec3 F = FresnelSchlickRoughness(NoV, F0, roughness);
