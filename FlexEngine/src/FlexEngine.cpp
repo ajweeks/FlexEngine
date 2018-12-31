@@ -7,40 +7,55 @@
 #include <time.h> // For time
 
 #pragma warning(push, 0)
-#include <imgui.h>
-#include <imgui_internal.h>
-
-#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
+#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
+
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <glm/gtx/intersect.hpp>
+
 #include <LinearMath/btIDebugDraw.h>
+
+#if COMPILE_IMGUI
+#include "imgui_internal.h"
+#endif
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
+#include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
-#include "JSONTypes.hpp"
+#include "InputManager.hpp"
 #include "JSONParser.hpp"
+#include "JSONTypes.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Profiler.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
+#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
+#include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
+
+#if COMPILE_OPEN_GL
+#include "Graphics/GL/GLRenderer.hpp"
+#endif
+
+#if COMPILE_VULKAN
+#include "Graphics/Vulkan/VulkanRenderer.hpp"
+#endif
 
 namespace flex
 {
 	const u32 FlexEngine::EngineVersionMajor = 0;
-	const u32 FlexEngine::EngineVersionMinor = 6;
+	const u32 FlexEngine::EngineVersionMinor = 7;
 	const u32 FlexEngine::EngineVersionPatch = 0;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
@@ -50,7 +65,7 @@ namespace flex
 	// Globals declared in stdafx.hpp
 	class Window* g_Window = nullptr;
 	class CameraManager* g_CameraManager = nullptr;
-	class InputManager* g_InputManager = nullptr;
+	class Input::Manager* g_InputManager = nullptr;
 	class Renderer* g_Renderer = nullptr;
 	class FlexEngine* g_EngineInstance = nullptr;
 	class SceneManager* g_SceneManager = nullptr;
@@ -68,11 +83,17 @@ namespace flex
 
 		RetrieveCurrentWorkingDirectory();
 
-		std::string configDirAbs = RelativePathToAbsolute(RESOURCE_LOCATION + std::string("config/"));
+		std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/config/");
 		m_CommonSettingsFileName = "common.ini";
 		m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
 
 		CreateDirectoryRecursive(configDirAbs);
+
+		std::string bootupDirAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/");
+		m_BootupTimesFileName = "bootup-times.log";
+		m_BootupTimesAbsFilePath = bootupDirAbs + m_BootupTimesFileName;
+
+		CreateDirectoryRecursive(bootupDirAbs);
 
 		RendererID preferredInitialRenderer = RendererID::GL;
 
@@ -99,10 +120,10 @@ namespace flex
 		GetConsoleHandle();
 
 		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
-		Print("%i renderer%s %s, Current renderer: %s\n", 
+		Print("%i renderer%s %s, Current renderer: %s\n",
 			  m_RendererCount, (m_RendererCount > 1 ? "s" : ""), "enabled", m_RendererName.c_str());
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 	}
 
 	FlexEngine::~FlexEngine()
@@ -115,13 +136,17 @@ namespace flex
 		const char* profileBlockStr = "Engine initialize";
 		PROFILE_BEGIN(profileBlockStr);
 
+#if COMPILE_RENDERDOC_API
+		SetupRenderDocAPI();
+#endif
+
 		g_EngineInstance = this;
 
 		AudioManager::Initialize();
 
 		CreateWindowAndRenderer();
 
-		g_InputManager = new InputManager();
+		g_InputManager = new Input::Manager();
 
 		g_CameraManager = new CameraManager();
 
@@ -129,13 +154,15 @@ namespace flex
 		debugCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
 		debugCamera->SetYaw(glm::radians(130.0f));
 		debugCamera->SetPitch(glm::radians(-10.0f));
-		g_CameraManager->AddCamera(debugCamera, true);
+		g_CameraManager->AddCamera(debugCamera, false);
 
 		OverheadCamera* overheadCamera = new OverheadCamera();
 		g_CameraManager->AddCamera(overheadCamera, false);
 
+		FirstPersonCamera* fpCamera = new FirstPersonCamera();
+		g_CameraManager->AddCamera(fpCamera, true);
+
 		InitializeWindowAndRenderer();
-		g_InputManager->Initialize();
 
 		g_PhysicsManager = new PhysicsManager();
 		g_PhysicsManager->Initialize();
@@ -145,21 +172,27 @@ namespace flex
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.name = "Transform";
 			matCreateInfo.shaderName = "color";
-			matCreateInfo.constAlbedo = glm::vec3(1.0f);
+			matCreateInfo.constAlbedo = VEC3_ONE;
 			matCreateInfo.engineMaterial = true;
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			m_TransformGizmoMatAllID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
+
+		BaseScene::ParseFoundMeshFiles();
+		BaseScene::ParseFoundMaterialFiles();
+		BaseScene::ParseFoundPrefabFiles();
 
 		g_SceneManager = new SceneManager();
 		g_SceneManager->AddFoundScenes();
 
 		LoadCommonSettingsFromDisk();
 
-		g_SceneManager->InitializeCurrentScene();		
+		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 		g_SceneManager->PostInitializeCurrentScene();
+		g_InputManager->Initialize();
 
 		SetupImGuiStyles();
 
@@ -167,13 +200,33 @@ namespace flex
 
 		if (s_AudioSourceIDs.empty())
 		{
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 10.20f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 9.091f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 8.099f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 7.645f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 6.811f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 6.068f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 5.727f));
+		}
+
+		i32 springCount = 6;
+		m_TestSprings.reserve(springCount);
+		for (i32 i = 0; i < springCount; ++i)
+		{
+			m_TestSprings.emplace_back(Spring<glm::vec3>());
+			m_TestSprings[i].DR = 0.9f;
+			m_TestSprings[i].UAF = 15.0f;
 		}
 
 		PROFILE_END(profileBlockStr);
 		Profiler::PrintBlockDuration(profileBlockStr);
+
+		ms blockDuration = Profiler::GetBlockDuration(profileBlockStr);
+		std::string bootupTimesEntry = GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
+		AppendToBootupTimesFile(bootupTimesEntry);
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -191,7 +244,7 @@ namespace flex
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 
 		if (m_TransformGizmo)
 		{
@@ -213,40 +266,32 @@ namespace flex
 			SafeDelete(g_PhysicsManager);
 		}
 
+		g_CameraManager->DestroyCameras();
 		SafeDelete(g_CameraManager);
 
 		DestroyWindowAndRenderer();
-		
+
 		SafeDelete(g_Monitor);
 
 		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
+
+		// Reset console color to default
+		Print("\n");
 	}
 
 	void FlexEngine::CreateWindowAndRenderer()
 	{
-		// TODO: Determine user's display size before creating a window
-		//glm::vec2i desiredWindowSize(500, 300);
-		//glm::vec2i desiredWindowPos(300, 300);
-
 		assert(g_Window == nullptr);
 		assert(g_Renderer == nullptr);
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
-#if COMPILE_VULKAN
-		if (m_RendererIndex == RendererID::VULKAN)
+		if (g_Window == nullptr)
 		{
-			g_Window = new vk::VulkanWindowWrapper(titleString);
+			g_Window = new GLFWWindowWrapper(titleString);
 		}
-#endif
-#if COMPILE_OPEN_GL
-		if (m_RendererIndex == RendererID::GL)
-		{
-			g_Window = new gl::GLWindowWrapper(titleString);
-		}
-#endif
 		if (g_Window == nullptr)
 		{
 			PrintError("Failed to create a window! Are any compile flags set in stdafx.hpp?\n");
@@ -265,12 +310,9 @@ namespace flex
 
 		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercetange * g_Monitor->contentScaleY);
 		i32 newWindowSizeX = i32(newWindowSizeY * desiredAspectRatio);
-		// TODO:
-		//g_Window->SetSize(newWindowSizeX, newWindowSizeY);
 
 		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
 		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
-		//g_Window->SetPosition(newWindowPosX, newWindowPosY);
 
 		g_Window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
 
@@ -337,100 +379,266 @@ namespace flex
 			SafeDelete(m_TransformGizmo);
 		}
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 	}
 
 	void FlexEngine::OnSceneChanged()
 	{
 		SaveCommonSettingsToDisk(false);
 
-		Material& transformGizmoMaterial = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
-		Shader& transformGizmoShader = g_Renderer->GetShader(transformGizmoMaterial.shaderID);
-		VertexAttributes requiredVertexAttributes = transformGizmoShader.vertexAttributes;
-
-		RenderObjectCreateInfo gizmoAxisCreateInfo = {};
-		gizmoAxisCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-		gizmoAxisCreateInfo.depthWriteEnable = true;
-		gizmoAxisCreateInfo.editorObject = true;
-
-		real cylinderRadius = 0.2f;
-		real cylinderHeight = 1.6f;
-
-		u32 rbFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-		u32 rbGroup = (u32)CollisionType::EDITOR_OBJECT;
-		u32 rbMask = 1;
-
-		// X Axis
-		GameObject* transformXAxis = new GameObject("Transform gizmo x axis", GameObjectType::NONE);
-		transformXAxis->AddTag("transform gizmo");
-		transformXAxis->SetVisibleInSceneExplorer(false);
-		MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
-
-		btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-		transformXAxis->SetCollisionShape(xAxisShape);
-
-		RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
-		gizmoXAxisRB->SetMass(0.0f);
-		gizmoXAxisRB->SetKinematic(true);
-		gizmoXAxisRB->SetPhysicsFlags(rbFlags);
-
-		xAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
-		xAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-x-axis.fbx", nullptr, &gizmoAxisCreateInfo);
-
-		// Y Axis
-		GameObject* transformYAxis = new GameObject("Transform gizmo y axis", GameObjectType::NONE);
-		transformYAxis->AddTag("transform gizmo");
-		transformYAxis->SetVisibleInSceneExplorer(false);
-		MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
-
-		btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-		transformYAxis->SetCollisionShape(yAxisShape);
-
-		RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
-		gizmoYAxisRB->SetMass(0.0f);
-		gizmoYAxisRB->SetKinematic(true);
-		gizmoYAxisRB->SetPhysicsFlags(rbFlags);
-
-		yAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
-		yAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-y-axis.fbx", nullptr, &gizmoAxisCreateInfo);
-
-		// Z Axis
-		GameObject* transformZAxis = new GameObject("Transform gizmo z axis", GameObjectType::NONE);
-		transformZAxis->AddTag("transform gizmo");
-		transformZAxis->SetVisibleInSceneExplorer(false);
-
-		MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
-
-		btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-		transformZAxis->SetCollisionShape(zAxisShape);
-
-		RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody(rbGroup, rbMask));
-		gizmoZAxisRB->SetMass(0.0f);
-		gizmoZAxisRB->SetKinematic(true);
-		gizmoZAxisRB->SetPhysicsFlags(rbFlags);
-
-		zAxisMesh->SetRequiredAttributes(requiredVertexAttributes);
-		zAxisMesh->LoadFromFile(RESOURCE_LOCATION + "models/transform-gizmo-z-axis.fbx", nullptr, &gizmoAxisCreateInfo);
-
+		RenderObjectCreateInfo gizmoCreateInfo = {};
+		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::LEQUAL;
+		gizmoCreateInfo.depthWriteEnable = false;
+		gizmoCreateInfo.editorObject = true;
+		gizmoCreateInfo.cullFace = CullFace::BACK;
+		gizmoCreateInfo.enableCulling = true;
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
-		m_TransformGizmo->SetVisibleInSceneExplorer(false);
 
-		m_TransformGizmo->AddChild(transformXAxis);
-		m_TransformGizmo->AddChild(transformYAxis);
-		m_TransformGizmo->AddChild(transformZAxis);
+		// Scene explorer visibility doesn't need to be set because this object isn't a root object
+
+		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
+		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
+		i32 gizmoRBMask = (i32)CollisionType::DEFAULT;
+
+		// Translation gizmo
+		{
+			real cylinderRadius = 0.3f;
+			real cylinderHeight = 1.8f;
+
+			// X Axis
+			GameObject* transformXAxis = new GameObject("Translation gizmo x axis", GameObjectType::NONE);
+			transformXAxis->AddTag(m_TranslationGizmoTag);
+			MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
+
+			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			transformXAxis->SetCollisionShape(xAxisShape);
+
+			RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoXAxisRB->SetMass(0.0f);
+			gizmoXAxisRB->SetKinematic(true);
+			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-x.fbx", nullptr, &gizmoCreateInfo);
+
+			// Y Axis
+			GameObject* transformYAxis = new GameObject("Translation gizmo y axis", GameObjectType::NONE);
+			transformYAxis->AddTag(m_TranslationGizmoTag);
+			MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
+
+			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			transformYAxis->SetCollisionShape(yAxisShape);
+
+			RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoYAxisRB->SetMass(0.0f);
+			gizmoYAxisRB->SetKinematic(true);
+			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-y.fbx", nullptr, &gizmoCreateInfo);
+
+			// Z Axis
+			GameObject* transformZAxis = new GameObject("Translation gizmo z axis", GameObjectType::NONE);
+			transformZAxis->AddTag(m_TranslationGizmoTag);
+
+			MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
+
+			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			transformZAxis->SetCollisionShape(zAxisShape);
+
+			RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoZAxisRB->SetMass(0.0f);
+			gizmoZAxisRB->SetKinematic(true);
+			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			zAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-z.fbx", nullptr, &gizmoCreateInfo);
+
+
+			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+
+			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::NONE);
+
+			m_TranslationGizmo->AddChild(transformXAxis);
+			m_TranslationGizmo->AddChild(transformYAxis);
+			m_TranslationGizmo->AddChild(transformZAxis);
+
+			m_TransformGizmo->AddChild(m_TranslationGizmo);
+		}
+
+		// Rotation gizmo
+		{
+			real cylinderRadius = 3.4f;
+			real cylinderHeight = 0.2f;
+
+			// X Axis
+			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::NONE);
+			rotationXAxis->AddTag(m_RotationGizmoTag);
+			MeshComponent* xAxisMesh = rotationXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, rotationXAxis));
+
+			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			rotationXAxis->SetCollisionShape(xAxisShape);
+
+			RigidBody* gizmoXAxisRB = rotationXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoXAxisRB->SetMass(0.0f);
+			gizmoXAxisRB->SetKinematic(true);
+			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
+			// TODO: Get this to work (-cylinderHeight / 2.0f?)
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(100.0f, 0.0f, 0.0f));
+
+			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-x.fbx", nullptr, &gizmoCreateInfo);
+
+			// Y Axis
+			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::NONE);
+			rotationYAxis->AddTag(m_RotationGizmoTag);
+			MeshComponent* yAxisMesh = rotationYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, rotationYAxis));
+
+			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			rotationYAxis->SetCollisionShape(yAxisShape);
+
+			RigidBody* gizmoYAxisRB = rotationYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoYAxisRB->SetMass(0.0f);
+			gizmoYAxisRB->SetKinematic(true);
+			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-y.fbx", nullptr, &gizmoCreateInfo);
+
+			// Z Axis
+			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::NONE);
+			rotationZAxis->AddTag(m_RotationGizmoTag);
+
+			MeshComponent* zAxisMesh = rotationZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, rotationZAxis));
+
+			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			rotationZAxis->SetCollisionShape(zAxisShape);
+
+			RigidBody* gizmoZAxisRB = rotationZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoZAxisRB->SetMass(0.0f);
+			gizmoZAxisRB->SetKinematic(true);
+			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			zAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-z.fbx", nullptr, &gizmoCreateInfo);
+
+			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+
+			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::NONE);
+
+			m_RotationGizmo->AddChild(rotationXAxis);
+			m_RotationGizmo->AddChild(rotationYAxis);
+			m_RotationGizmo->AddChild(rotationZAxis);
+
+			m_TransformGizmo->AddChild(m_RotationGizmo);
+
+			m_RotationGizmo->SetVisible(false);
+		}
+
+		// Scale gizmo
+		{
+			real boxScale = 0.5f;
+			real cylinderRadius = 0.3f;
+			real cylinderHeight = 1.8f;
+
+			// X Axis
+			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::NONE);
+			scaleXAxis->AddTag(m_ScaleGizmoTag);
+			MeshComponent* xAxisMesh = scaleXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, scaleXAxis));
+
+			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			scaleXAxis->SetCollisionShape(xAxisShape);
+
+			RigidBody* gizmoXAxisRB = scaleXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoXAxisRB->SetMass(0.0f);
+			gizmoXAxisRB->SetKinematic(true);
+			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-x.fbx", nullptr, &gizmoCreateInfo);
+
+			// Y Axis
+			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::NONE);
+			scaleYAxis->AddTag(m_ScaleGizmoTag);
+			MeshComponent* yAxisMesh = scaleYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, scaleYAxis));
+
+			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			scaleYAxis->SetCollisionShape(yAxisShape);
+
+			RigidBody* gizmoYAxisRB = scaleYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoYAxisRB->SetMass(0.0f);
+			gizmoYAxisRB->SetKinematic(true);
+			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-y.fbx", nullptr, &gizmoCreateInfo);
+
+			// Z Axis
+			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::NONE);
+			scaleZAxis->AddTag(m_ScaleGizmoTag);
+
+			MeshComponent* zAxisMesh = scaleZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, scaleZAxis));
+
+			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
+			scaleZAxis->SetCollisionShape(zAxisShape);
+
+			RigidBody* gizmoZAxisRB = scaleZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoZAxisRB->SetMass(0.0f);
+			gizmoZAxisRB->SetKinematic(true);
+			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
+
+			zAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-z.fbx", nullptr, &gizmoCreateInfo);
+
+			// Center (all axes)
+			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::NONE);
+			scaleAllAxes->AddTag(m_ScaleGizmoTag);
+
+			MeshComponent* allAxesMesh = scaleAllAxes->SetMeshComponent(new MeshComponent(m_TransformGizmoMatAllID, scaleAllAxes));
+
+			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
+			scaleAllAxes->SetCollisionShape(allAxesShape);
+
+			RigidBody* gizmoAllAxesRB = scaleAllAxes->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			gizmoAllAxesRB->SetMass(0.0f);
+			gizmoAllAxesRB->SetKinematic(true);
+			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
+
+			allAxesMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-all.fbx", nullptr, &gizmoCreateInfo);
+
+
+			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
+
+			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
+
+			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
+			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
+
+
+			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::NONE);
+
+			m_ScaleGizmo->AddChild(scaleXAxis);
+			m_ScaleGizmo->AddChild(scaleYAxis);
+			m_ScaleGizmo->AddChild(scaleZAxis);
+			m_ScaleGizmo->AddChild(scaleAllAxes);
+
+			m_TransformGizmo->AddChild(m_ScaleGizmo);
+
+			m_ScaleGizmo->SetVisible(false);
+		}
+
 		m_TransformGizmo->Initialize();
 
-
-		gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-		gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
-
-		gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-		gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-		gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
-
 		m_TransformGizmo->PostInitialize();
+
+		m_CurrentTransformGizmoState = TransformState::TRANSLATE;
 	}
 
 	bool FlexEngine::IsRenderingImGui() const
@@ -443,12 +651,17 @@ namespace flex
 		return m_bRenderEditorObjects;
 	}
 
+	void FlexEngine::SetRenderingEditorObjects(bool bRenderingEditorObjects)
+	{
+		m_bRenderEditorObjects = bRenderingEditorObjects;
+	}
+
 	void FlexEngine::CycleRenderer()
 	{
 		// TODO? ??
 		//g_Renderer->InvalidateFontObjects();
 
-		DeselectCurrentlySelectedObject();
+		DeselectCurrentlySelectedObjects();
 		PreSceneChange();
 		g_SceneManager->DestroyAllScenes();
 		DestroyWindowAndRenderer();
@@ -471,7 +684,7 @@ namespace flex
 #endif
 		}
 		m_RendererName = RenderIDToString(m_RendererIndex);
-		Print("Current renderer: %s\n", m_RendererName);
+		Print("Current renderer: %s\n", m_RendererName.c_str());
 
 		CreateWindowAndRenderer();
 		InitializeWindowAndRenderer();
@@ -479,7 +692,7 @@ namespace flex
 		SetupImGuiStyles();
 
 		g_SceneManager->AddFoundScenes();
-		
+
 		LoadCommonSettingsFromDisk();
 
 		g_SceneManager->InitializeCurrentScene();
@@ -489,15 +702,21 @@ namespace flex
 
 	void FlexEngine::UpdateAndRender()
 	{
-		m_Running = true;
+		m_bRunning = true;
 		sec frameStartTime = Time::CurrentSeconds();
-		while (m_Running)
+		while (m_bRunning)
 		{
-			sec frameEndTime = Time::CurrentSeconds();
+			sec now = Time::CurrentSeconds();
+
+			// This variable should be the one changed during this frame so we always
+			// end frames that we start, next frame we will begin using the new value
+			bool renderImGuiNextFrame = m_bRenderImGui;
+
+			sec frameEndTime = now;
 			sec dt = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-			dt = glm::clamp(dt, m_MinDT, m_MaxDT);
+			dt = glm::clamp(dt * m_SimulationSpeed, m_MinDT, m_MaxDT);
 
 			g_DeltaTime = dt;
 			g_SecElapsedSinceProgramStart = frameEndTime;
@@ -515,7 +734,7 @@ namespace flex
 
 			// Disabled for now since we only support Open GL
 #if 0
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_T))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_T))
 			{
 				g_InputManager->Update();
 				g_InputManager->PostUpdate();
@@ -525,14 +744,19 @@ namespace flex
 			}
 #endif
 
-			// This variable should be the one changed during this frame so we always
-			// end frames that we start, next frame we will begin using the new value
-			bool renderImGuiNextFrame = m_bRenderImGui;
+#if COMPILE_RENDERDOC_API
+			if (m_bRenderDocTriggerCaptureNextFrame)
+			{
+				m_bRenderDocTriggerCaptureNextFrame = false;
+				m_bRenderDocCapturingFrame = true;
+				m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+			}
+#endif
 
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
 			g_Renderer->NewFrame();
-			 
+
 			if (m_bRenderImGui)
 			{
 				PROFILE_BEGIN("DrawImGuiObjects");
@@ -542,23 +766,24 @@ namespace flex
 
 			// Hovered object
 			{
-				GameObject* hoveredOverGameObject = nullptr;
-
 				glm::vec2 mousePos = g_InputManager->GetMousePosition();
 				PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-				btVector3 cameraPos = Vec3ToBtVec3(g_CameraManager->CurrentCamera()->GetPosition());
+				glm::vec3 camPosG = g_CameraManager->CurrentCamera()->GetPosition();
+				btVector3 cameraPos = ToBtVec3(camPosG);
+				glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
+				Transform* gizmoTransform = m_TransformGizmo->GetTransform();
 
 				real maxDist = 1000.0f;
 
 				btVector3 rayStart(cameraPos);
 				btVector3 rayDir = physicsWorld->GenerateDirectionRayFromScreenPos((i32)mousePos.x, (i32)mousePos.y);
 				btVector3 rayEnd = rayStart + rayDir * maxDist;
-
-				btRigidBody* pickedBody = physicsWorld->PickBody(rayStart, rayEnd);
+				static btVector3 rayEndLast = rayEnd; // Used to catch mouse wraps
 
 				Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 				Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 				Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+				Material& allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
 				glm::vec4 white(1.0f);
 				if (m_DraggingAxisIndex != 0)
 				{
@@ -572,88 +797,205 @@ namespace flex
 				{
 					zMat.colorMultiplier = white;
 				}
+				if (m_DraggingAxisIndex != 3)
+				{
+					allMat.colorMultiplier = white;
+				}
 
-				std::vector<GameObject*> transformAxes = m_TransformGizmo->GetChildren();
-
-				real gizmoHoverMultiplier = 3.0f;
-				real gizmoSelectedMultiplier = 8.0f;
+				real gizmoHoverMultiplier = 0.6f;
+				real gizmoSelectedMultiplier = 0.4f;
 
 				glm::vec4 selectedColor(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
 				glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
 
 				// TODO: Bring keybindings out to external file (or at least variables)
-				InputManager::MouseButton dragButton = InputManager::MouseButton::LEFT;
+				Input::MouseButton dragButton = Input::MouseButton::LEFT;
 				bool bMouseDown = g_InputManager->IsMouseButtonDown(dragButton);
 				bool bMousePressed = g_InputManager->IsMouseButtonPressed(dragButton);
 				bool bMouseReleased = g_InputManager->IsMouseButtonReleased(dragButton);
 
-				if (!m_bDraggingGizmo && pickedBody)
+				std::string gizmoTag = (m_CurrentTransformGizmoState == TransformState::TRANSLATE ?
+					m_TranslationGizmoTag : (m_CurrentTransformGizmoState == TransformState::ROTATE ?
+						m_RotationGizmoTag : m_ScaleGizmoTag));
+				GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag);
+				if (!m_bDraggingGizmo && pickedTransformGizmo)
 				{
-					hoveredOverGameObject = (GameObject*)(pickedBody->getUserPointer());
-
-					if (hoveredOverGameObject)
+					switch (m_CurrentTransformGizmoState)
 					{
-						btRigidBody* pickedTransform = physicsWorld->PickBody(rayStart, rayEnd);
-						if (pickedTransform)
+					case TransformState::TRANSLATE:
+					{
+						std::vector<GameObject*> translationAxes = m_TranslationGizmo->GetChildren();
+
+						if (pickedTransformGizmo == translationAxes[0]) // X Axis
 						{
-							GameObject* pickedTransformGameObject = (GameObject*)(pickedTransform->getUserPointer());
-
-							if (pickedTransformGameObject)
+							if (bMousePressed)
 							{
-
-								if (hoveredOverGameObject == transformAxes[0]) // X Axis
-								{
-									if (bMousePressed)
-									{
-										m_DraggingAxisIndex = 0;
-										xMat.colorMultiplier = selectedColor;
-									}
-									else
-									{
-										xMat.colorMultiplier = hoverColor;
-									}
-								}
-								else if (hoveredOverGameObject == transformAxes[1]) // Y Axis
-								{
-									if (bMousePressed)
-									{
-										m_DraggingAxisIndex = 1;
-										yMat.colorMultiplier = selectedColor;
-									}
-									else
-									{
-										yMat.colorMultiplier = hoverColor;
-									}
-								}
-								else if (hoveredOverGameObject == transformAxes[2]) // Z Axis
-								{
-									if (bMousePressed)
-									{
-										m_DraggingAxisIndex = 2;
-										zMat.colorMultiplier = selectedColor;
-									}
-									else
-									{
-										zMat.colorMultiplier = hoverColor;
-									}
-								}
+								m_DraggingAxisIndex = 0;
+								xMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								xMat.colorMultiplier = hoverColor;
 							}
 						}
+						else if (pickedTransformGizmo == translationAxes[1]) // Y Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 1;
+								yMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								yMat.colorMultiplier = hoverColor;
+							}
+						}
+						else if (pickedTransformGizmo == translationAxes[2]) // Z Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 2;
+								zMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								zMat.colorMultiplier = hoverColor;
+							}
+						}
+					} break;
+					case TransformState::ROTATE:
+					{
+						std::vector<GameObject*> rotationAxes = m_RotationGizmo->GetChildren();
+
+						if (pickedTransformGizmo == rotationAxes[0]) // X Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 0;
+								xMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								xMat.colorMultiplier = hoverColor;
+							}
+						}
+						else if (pickedTransformGizmo == rotationAxes[1]) // Y Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 1;
+								yMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								yMat.colorMultiplier = hoverColor;
+							}
+						}
+						else if (pickedTransformGizmo == rotationAxes[2]) // Z Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 2;
+								zMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								zMat.colorMultiplier = hoverColor;
+							}
+						}
+					} break;
+					case TransformState::SCALE:
+					{
+						std::vector<GameObject*> scaleAxes = m_ScaleGizmo->GetChildren();
+
+						if (pickedTransformGizmo == scaleAxes[0]) // X Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 0;
+								xMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								xMat.colorMultiplier = hoverColor;
+							}
+						}
+						else if (pickedTransformGizmo == scaleAxes[1]) // Y Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 1;
+								yMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								yMat.colorMultiplier = hoverColor;
+							}
+						}
+						else if (pickedTransformGizmo == scaleAxes[2]) // Z Axis
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 2;
+								zMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								zMat.colorMultiplier = hoverColor;
+							}
+						}
+						else if (pickedTransformGizmo == scaleAxes[3]) // All axes
+						{
+							if (bMousePressed)
+							{
+								m_DraggingAxisIndex = 3;
+								allMat.colorMultiplier = selectedColor;
+							}
+							else
+							{
+								allMat.colorMultiplier = hoverColor;
+							}
+						}
+					} break;
+					}
+				}
+
+				if (m_CurrentTransformGizmoState != TransformState::ROTATE)
+				{
+					real camForDotR = glm::abs(glm::dot(camForward, gizmoTransform->GetRight()));
+					real camForDotU = glm::abs(glm::dot(camForward, gizmoTransform->GetUp()));
+					real camForDotF = glm::abs(glm::dot(camForward, gizmoTransform->GetForward()));
+					real threshold = 0.98f;
+					if (camForDotR >= threshold)
+					{
+						xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotR - threshold) / (1.0f - threshold));
+					}
+					if (camForDotU >= threshold)
+					{
+						yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotU - threshold) / (1.0f - threshold));
+					}
+					if (camForDotF >= threshold)
+					{
+						zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotF - threshold) / (1.0f - threshold));
 					}
 				}
 
 				if (bMouseDown || bMouseReleased)
 				{
+					static glm::vec2 pDragDist(0.0f);
 					glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(dragButton);
+					glm::vec2 dDragDist = dragDist - pDragDist;
 					real maxMoveDist = 1.0f;
 
 					if (bMouseReleased)
 					{
 						if (m_bDraggingGizmo)
 						{
-							if (m_CurrentlySelectedObject)
+							if (!m_CurrentlySelectedObjects.empty())
 							{
-								m_SelectedObjectDragStartPos = m_CurrentlySelectedObject->GetTransform()->GetLocalPosition();
+								CalculateSelectedObjectsCenter();
+								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+								m_DraggingGizmoOffset = -1.0f;
 							}
 							m_bDraggingGizmo = false;
 							m_DraggingAxisIndex = -1;
@@ -663,172 +1005,647 @@ namespace flex
 							// If the mouse hasn't moved then the user clicked on something - select it
 							if (glm::length(dragDist) < maxMoveDist)
 							{
+								btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
+								GameObject* hoveredOverGameObject = pickedBody ? (GameObject*)pickedBody->getUserPointer() : nullptr;
+
 								if (hoveredOverGameObject)
 								{
 									RigidBody* rb = hoveredOverGameObject->GetRigidBody();
 									if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
 									{
-										m_CurrentlySelectedObject = hoveredOverGameObject;
+										if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_SHIFT))
+										{
+											ToggleSelectedObject(hoveredOverGameObject);
+										}
+										else
+										{
+											DeselectCurrentlySelectedObjects();
+											m_CurrentlySelectedObjects.push_back(hoveredOverGameObject);
+										}
 										g_InputManager->ClearMouseInput();
+										CalculateSelectedObjectsCenter();
 									}
 									else
 									{
-										DeselectCurrentlySelectedObject();
+										DeselectCurrentlySelectedObjects();
 									}
 								}
 								else
 								{
-									DeselectCurrentlySelectedObject();
+									DeselectCurrentlySelectedObjects();
 								}
 							}
 						}
 					}
 
 					// Handle dragging transform gizmo
-					if (m_CurrentlySelectedObject)
+					if (!m_CurrentlySelectedObjects.empty())
 					{
-						Transform* selectedObjectTransform = m_CurrentlySelectedObject->GetTransform();
-						glm::vec3 selectedObjectScale = selectedObjectTransform->GetWorldScale();
-						real scale = 0.01f;
-						if (m_DraggingAxisIndex == 0) // X Axis
-						{
-							if (bMousePressed)
-							{
-								m_bDraggingGizmo = true;
-								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
-							}
-							else if (bMouseDown)
-							{
-								glm::vec3 right = selectedObjectTransform->GetLocalRotation() * glm::vec3(1, 0, 0);
-								glm::vec3 deltaPos = (dragDist.x * scale * selectedObjectScale.x * right);
-								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
-							}
-						}
-						else if (m_DraggingAxisIndex == 1) // Y Axis
-						{
-							if (bMousePressed)
-							{
-								m_bDraggingGizmo = true;
-								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
-							}
-							else if (bMouseDown)
-							{
-								glm::vec3 up = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 1, 0);
-								glm::vec3 deltaPos = (-dragDist.y * selectedObjectScale.y * scale * up);
-								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
-							}
-						}
-						else if (m_DraggingAxisIndex == 2) // Z Axis
-						{
-							if (bMousePressed)
-							{
-								m_bDraggingGizmo = true;
-								m_SelectedObjectDragStartPos = selectedObjectTransform->GetLocalPosition();
-							}
-							else if (bMouseDown)
-							{
-								glm::vec3 forward = selectedObjectTransform->GetLocalRotation() * glm::vec3(0, 0, 1);
-								glm::vec3 deltaPos = (-dragDist.x * selectedObjectScale.z * scale * forward);
-								selectedObjectTransform->SetLocalPosition(m_SelectedObjectDragStartPos + deltaPos);
-							}
-						}
+						glm::vec3 rayEndG = ToVec3(rayEnd);
+						glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
 
-						if (m_bDraggingGizmo)
+
+						g_Renderer->GetDebugDrawer()->drawLine(
+							ToBtVec3(gizmoTransform->GetWorldPosition()),
+							ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoTransform->GetRight() * 6.0f),
+							btVector3(1.0f, 0.0f, 0.0f));
+
+						g_Renderer->GetDebugDrawer()->drawLine(
+							ToBtVec3(gizmoTransform->GetWorldPosition()),
+							ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoTransform->GetUp() * 6.0f),
+							btVector3(0.0f, 1.0f, 0.0f));
+
+						g_Renderer->GetDebugDrawer()->drawLine(
+							ToBtVec3(gizmoTransform->GetWorldPosition()),
+							ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoTransform->GetForward() * 6.0f),
+							btVector3(0.0f, 0.0f, 1.0f));
+
+
+						switch (m_CurrentTransformGizmoState)
 						{
-							g_Renderer->GetDebugDrawer()->drawLine(
-								Vec3ToBtVec3(m_SelectedObjectDragStartPos),
-								Vec3ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-								(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.0f, 0.0f, 1.0f)));
+						case TransformState::TRANSLATE:
+						{
+							glm::vec3 dPos(0.0f);
+
+							if (g_InputManager->DidMouseWrap())
+							{
+								m_DraggingGizmoOffset = -1.0f;
+								Print("warp\n");
+							}
+
+							if (m_DraggingAxisIndex == 0) // X Axis
+							{
+								if (bMousePressed)
+								{
+									m_bDraggingGizmo = true;
+									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+									m_DraggingGizmoOffset = -1.0f;
+								}
+								else if (bMouseDown)
+								{
+									glm::vec3 axis = gizmoTransform->GetRight();
+									glm::vec3 planeN = gizmoTransform->GetForward();
+									if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+									{
+										planeN = gizmoTransform->GetUp();
+									}
+									glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, camPosG, rayEndG, planeOrigin, planeN);
+									dPos = intersectionPont - planeOrigin;
+								}
+							}
+							else if (m_DraggingAxisIndex == 1) // Y Axis
+							{
+								if (bMousePressed)
+								{
+									m_bDraggingGizmo = true;
+									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+									m_DraggingGizmoOffset = -1.0f;
+								}
+								else if (bMouseDown)
+								{
+									glm::vec3 axis = gizmoTransform->GetUp();
+									glm::vec3 planeN = gizmoTransform->GetRight();
+									if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+									{
+										planeN = gizmoTransform->GetForward();
+									}
+									glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, camPosG, rayEndG, planeOrigin, planeN);
+									dPos = intersectionPont - planeOrigin;
+								}
+							}
+							else if (m_DraggingAxisIndex == 2) // Z Axis
+							{
+								if (bMousePressed)
+								{
+									m_bDraggingGizmo = true;
+									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+									m_DraggingGizmoOffset = -1.0f;
+								}
+								else if (bMouseDown)
+								{
+									glm::vec3 axis = gizmoTransform->GetForward();
+									glm::vec3 planeN = gizmoTransform->GetUp();
+									if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+									{
+										planeN = gizmoTransform->GetRight();
+									}
+									glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, camPosG, rayEndG, planeOrigin, planeN);
+									dPos = intersectionPont - planeOrigin;
+								}
+							}
+
+							if (m_bDraggingGizmo)
+							{
+								Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
+
+								g_Renderer->GetDebugDrawer()->drawLine(
+									ToBtVec3(m_SelectedObjectDragStartPos),
+									ToBtVec3(selectedObjectTransform->GetLocalPosition()),
+									(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
+
+								for (GameObject* gameObject : m_CurrentlySelectedObjects)
+								{
+									GameObject* parent = gameObject->GetParent();
+									bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+									if (bObjectIsntChild)
+									{
+										gameObject->GetTransform()->Translate(dPos);
+									}
+								}
+
+								CalculateSelectedObjectsCenter();
+							}
+						} break;
+						case TransformState::ROTATE:
+						{
+							glm::quat dRot(VEC3_ZERO);
+
+							static glm::quat pGizmoRot = gizmoTransform->GetLocalRotation();
+							Print("%.2f,%.2f,%.2f,%.2f\n", pGizmoRot.x, pGizmoRot.y, pGizmoRot.z, pGizmoRot.w);
+
+							if (bMousePressed &
+								(m_DraggingAxisIndex == 0 || m_DraggingAxisIndex == 1 || m_DraggingAxisIndex == 2))
+							{
+								m_bDraggingGizmo = true;
+								m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+								m_DraggingGizmoOffset = -1.0f;
+								m_bFirstFrameDraggingRotationGizmo = true;
+								m_CurrentRot = pGizmoRot;
+								pGizmoRot = gizmoTransform->GetLocalRotation();
+							}
+
+
+							if (bMouseDown)
+							{
+								if (m_DraggingAxisIndex == 0) // X Axis
+								{
+									if (m_bFirstFrameDraggingRotationGizmo)
+									{
+										m_UnmodifiedAxisProjectedOnto = gizmoTransform->GetUp();
+										m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
+										m_AxisOfRotation = gizmoTransform->GetRight();
+										m_PlaneN = m_AxisOfRotation;
+										if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
+										{
+											m_AxisProjectedOnto = gizmoTransform->GetForward();
+											m_PlaneN = gizmoTransform->GetUp();
+										}
+									}
+
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, pGizmoRot);
+								}
+								else if (m_DraggingAxisIndex == 1) // Y Axis
+								{
+									if (m_bFirstFrameDraggingRotationGizmo)
+									{
+										m_UnmodifiedAxisProjectedOnto = gizmoTransform->GetRight();
+										m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
+										m_AxisOfRotation = gizmoTransform->GetUp();
+										m_PlaneN = m_AxisOfRotation;
+										if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
+										{
+											m_AxisProjectedOnto = gizmoTransform->GetForward();
+											//m_PlaneN = gizmoTransform->GetUp();
+										}
+									}
+
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, pGizmoRot);
+								}
+								else if (m_DraggingAxisIndex == 2) // Z Axis
+								{
+									if (m_bFirstFrameDraggingRotationGizmo)
+									{
+										m_UnmodifiedAxisProjectedOnto = gizmoTransform->GetUp();
+										m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
+										m_AxisOfRotation = gizmoTransform->GetForward();
+										m_PlaneN = m_AxisOfRotation;
+										if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
+										{
+											m_AxisProjectedOnto = gizmoTransform->GetForward();
+											m_PlaneN = gizmoTransform->GetRight();
+										}
+									}
+
+									dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, camPosG, rayEndG, pGizmoRot);
+								}
+							}
+
+							pGizmoRot = m_CurrentRot;
+
+							if (m_bDraggingGizmo)
+							{
+								Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
+
+								g_Renderer->GetDebugDrawer()->drawLine(
+									ToBtVec3(m_SelectedObjectDragStartPos),
+									ToBtVec3(selectedObjectTransform->GetLocalPosition()),
+									(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
+
+								for (GameObject* gameObject : m_CurrentlySelectedObjects)
+								{
+									GameObject* parent = gameObject->GetParent();
+									bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+									if (bObjectIsntChild)
+									{
+										gameObject->GetTransform()->Rotate(dRot);
+									}
+								}
+
+								CalculateSelectedObjectsCenter();
+							}
+						} break;
+						case TransformState::SCALE:
+						{
+							glm::vec3 dScale(1.0f);
+							real scale = 0.1f;
+
+							if (m_DraggingAxisIndex == 0) // X Axis
+							{
+								if (bMousePressed)
+								{
+									m_bDraggingGizmo = true;
+									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+									m_DraggingGizmoOffset = -1.0f;
+									m_DraggingGizmoScaleLast = VEC3_ZERO;
+								}
+								else if (bMouseDown)
+								{
+									glm::vec3 axis = gizmoTransform->GetRight();
+									glm::vec3 planeN = gizmoTransform->GetForward();
+									if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+									{
+										planeN = gizmoTransform->GetUp();
+									}
+									glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, camPosG, rayEndG, planeOrigin, planeN);
+									glm::vec3 scaleNow = (intersectionPont - planeOrigin);
+									dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+
+									m_DraggingGizmoScaleLast = scaleNow;
+								}
+							}
+							else if (m_DraggingAxisIndex == 1) // Y Axis
+							{
+								if (bMousePressed)
+								{
+									m_bDraggingGizmo = true;
+									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+									m_DraggingGizmoOffset = -1.0f;
+									m_DraggingGizmoScaleLast = VEC3_ZERO;
+								}
+								else if (bMouseDown)
+								{
+									glm::vec3 axis = gizmoTransform->GetUp();
+									glm::vec3 planeN = gizmoTransform->GetRight();
+									if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+									{
+										planeN = gizmoTransform->GetForward();
+									}
+									glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, camPosG, rayEndG, planeOrigin, planeN);
+									glm::vec3 scaleNow = (intersectionPont - planeOrigin);
+									dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+
+									m_DraggingGizmoScaleLast = scaleNow;
+								}
+							}
+							else if (m_DraggingAxisIndex == 2) // Z Axis
+							{
+								if (bMousePressed)
+								{
+									m_bDraggingGizmo = true;
+									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+									m_DraggingGizmoOffset = -1.0f;
+									m_DraggingGizmoScaleLast = VEC3_ZERO;
+								}
+								else if (bMouseDown)
+								{
+									glm::vec3 axis = gizmoTransform->GetForward();
+									glm::vec3 planeN = gizmoTransform->GetUp();
+									if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+									{
+										planeN = gizmoTransform->GetRight();
+									}
+									glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, camPosG, rayEndG, planeOrigin, planeN);
+									glm::vec3 scaleNow = (intersectionPont - planeOrigin);
+									dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+
+									m_DraggingGizmoScaleLast = scaleNow;
+								}
+							}
+							else if (m_DraggingAxisIndex == 3) // All axes
+							{
+								if (bMousePressed)
+								{
+									m_bDraggingGizmo = true;
+									m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
+									m_DraggingGizmoOffset = -1.0f;
+								}
+								else if (bMouseDown)
+								{
+									glm::vec3 axis = gizmoTransform->GetRight();
+									glm::vec3 planeN = gizmoTransform->GetForward();
+									if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+									{
+										planeN = gizmoTransform->GetUp();
+									}
+									glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, camPosG, rayEndG, planeOrigin, planeN);
+									glm::vec3 scaleNow = (intersectionPont - planeOrigin);
+									dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+
+									m_DraggingGizmoScaleLast = scaleNow;
+								}
+							}
+
+							if (m_bDraggingGizmo)
+							{
+								Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
+
+								dScale = glm::clamp(dScale, 0.01f, 10.0f);
+
+								g_Renderer->GetDebugDrawer()->drawLine(
+									ToBtVec3(m_SelectedObjectDragStartPos),
+									ToBtVec3(selectedObjectTransform->GetLocalPosition()),
+									(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
+
+								for (GameObject* gameObject : m_CurrentlySelectedObjects)
+								{
+									GameObject* parent = gameObject->GetParent();
+									bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+									if (bObjectIsntChild)
+									{
+										gameObject->GetTransform()->Scale(dScale);
+									}
+								}
+
+								CalculateSelectedObjectsCenter();
+							}
+						} break;
 						}
 					}
+
+					pDragDist = dragDist;
 				}
+
+				rayEndLast = rayEnd;
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_G))
+#if COMPILE_RENDERDOC_API
+			if (!m_bRenderDocCapturingFrame &&
+				!m_bRenderDocTriggerCaptureNextFrame &&
+				m_RenderDocAPI &&
+				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F9))
 			{
-				m_bRenderEditorObjects = !m_bRenderEditorObjects;
+				m_bRenderDocTriggerCaptureNextFrame = true;
+			}
+#endif
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F5))
+			{
+				m_bSimulationPaused = false;
+				m_bSimulateNextFrame = true;
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F1, true))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F10))
+			{
+				m_bSimulationPaused = true;
+				m_bSimulateNextFrame = true;
+			}
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_G))
+			{
+				g_Renderer->ToggleRenderGrid();
+			}
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F2))
+			{
+				bWantRenameActiveElement = !bWantRenameActiveElement;
+			}
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F1, true))
 			{
 				renderImGuiNextFrame = !renderImGuiNextFrame;
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_ESCAPE))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_ESCAPE))
 			{
-				DeselectCurrentlySelectedObject();
+				DeselectCurrentlySelectedObjects();
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_DELETE))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_DELETE))
 			{
-				if (m_CurrentlySelectedObject)
+				if (!m_CurrentlySelectedObjects.empty())
 				{
-					g_SceneManager->CurrentScene()->DestroyGameObject(m_CurrentlySelectedObject, true);
+					g_SceneManager->CurrentScene()->RemoveObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
+
+					DeselectCurrentlySelectedObjects();
 				}
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_RIGHT_BRACKET))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_RIGHT_BRACKET))
 			{
 				g_SceneManager->SetNextSceneActiveAndInit();
 			}
-			else if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_LEFT_BRACKET))
+			else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_LEFT_BRACKET))
 			{
 				g_SceneManager->SetPreviousSceneActiveAndInit();
 			}
 
-			if (g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL) &&
-				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL) &&
+				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_R))
 			{
 				g_Renderer->ReloadShaders();
 			}
-			else if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_R))
+			else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_R))
 			{
 				g_InputManager->ClearAllInputs();
 
 				g_SceneManager->ReloadCurrentScene();
 			}
 
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_P))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_P))
 			{
 				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 				settings.DrawWireframe = !settings.DrawWireframe;
 			}
 
-			bool altDown = g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_ALT) ||
-				g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_RIGHT_ALT);
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_F11) ||
-				(altDown && g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_ENTER)))
+			bool altDown = g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_ALT) ||
+				g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT_ALT);
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F11) ||
+				(altDown && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_ENTER)))
 			{
 				g_Window->ToggleFullscreen();
 			}
 
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F) && !m_CurrentlySelectedObjects.empty())
+			{
+				glm::vec3 minPos(FLT_MAX);
+				glm::vec3 maxPos(FLT_MIN);
+				for (GameObject* gameObject : m_CurrentlySelectedObjects)
+				{
+					MeshComponent* mesh = gameObject->GetMeshComponent();
+					if (mesh)
+					{
+						Transform* transform = gameObject->GetTransform();
+						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
+						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
+						minPos = glm::min(minPos, min);
+						maxPos = glm::max(maxPos, max);
+					}
+				}
+
+				if (minPos.x != FLT_MAX && maxPos.x != FLT_MIN)
+				{
+					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
+					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
+
+					cam->SetPosition(sphereCenterWS + newOffset);
+					cam->LookAt(sphereCenterWS);
+				}
+			}
+
+			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL) &&
+				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_A))
+			{
+				SelectAll();
+			}
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_1))
+			{
+				SetTransformState(TransformState::TRANSLATE);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_2))
+			{
+				SetTransformState(TransformState::ROTATE);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_3))
+			{
+				SetTransformState(TransformState::SCALE);
+			}
+
 			Profiler::Update();
+
+			const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
+			m_bSimulateNextFrame = false;
 
 			g_CameraManager->Update();
 
-			if (m_CurrentlySelectedObject)
+			const bool bDebugCam = g_CameraManager->CurrentCamera()->IsDebugCam();
+			if (bDebugCam || bSimulateFrame)
+			{
+				g_CameraManager->CurrentCamera()->Update();
+			}
+
+			if (bSimulateFrame)
+			{
+				g_SceneManager->CurrentScene()->Update();
+
+				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+				glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
+				m_SpringTimer += g_DeltaTime;
+				real amplitude = 1.5f;
+				real period = 5.0f;
+				if (m_SpringTimer > period)
+				{
+					m_SpringTimer -= period;
+				}
+				targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
+				glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
+
+				for (Spring<glm::vec3>& spring : m_TestSprings)
+				{
+					spring.SetTargetPos(targetPos);
+					spring.SetTargetVel(targetVel);
+
+					targetPos = spring.pos;
+					targetVel = spring.vel;
+				}
+			}
+
+			for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
+			{
+				m_TestSprings[i].Tick(g_DeltaTime);
+				real t = (real)i / (real)m_TestSprings.size();
+				g_Renderer->GetDebugDrawer()->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
+			}
+
+			if (!m_CurrentlySelectedObjects.empty())
 			{
 				m_TransformGizmo->SetVisible(true);
-				m_TransformGizmo->GetTransform()->SetWorldPosition(m_CurrentlySelectedObject->GetTransform()->GetWorldPosition());
-				m_TransformGizmo->GetTransform()->SetWorldRotation(m_CurrentlySelectedObject->GetTransform()->GetWorldRotation());
+				UpdateGizmoVisibility();
+				m_TransformGizmo->GetTransform()->SetWorldPosition(m_SelectedObjectsCenterPos);
+				m_TransformGizmo->GetTransform()->SetWorldRotation(m_SelectedObjectRotation);
 			}
 			else
 			{
 				m_TransformGizmo->SetVisible(false);
 			}
-			g_SceneManager->UpdateCurrentScene();
 
-			
-			g_Window->Update();
-
-			if (g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_S) &&
-				g_InputManager->GetKeyDown(InputManager::KeyCode::KEY_LEFT_CONTROL))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_S) &&
+				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
 			{
 				g_SceneManager->CurrentScene()->SerializeToFile(true);
 			}
 
-			bool bWriteProfilingResultsToFile = 
-				g_InputManager->GetKeyPressed(InputManager::KeyCode::KEY_K);
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_D) &&
+				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
+			{
+				if (!m_CurrentlySelectedObjects.empty())
+				{
+					std::vector<GameObject*> newSelectedGameObjects;
+
+					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					{
+						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
+
+						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+					}
+
+					DeselectCurrentlySelectedObjects();
+
+					m_CurrentlySelectedObjects = newSelectedGameObjects;
+					CalculateSelectedObjectsCenter();
+				}
+			}
+
+			CalculateSelectedObjectsCenter();
+
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_4))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_01]);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_5))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_02]);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_6))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_03]);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_7))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_04]);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_8))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_05]);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_9))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_06]);
+			}
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_0))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_07]);
+			}
+
+			g_Window->Update();
+
+			bool bWriteProfilingResultsToFile =
+				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_K);
 
 			g_Renderer->Update();
 
@@ -840,6 +1657,34 @@ namespace flex
 			PROFILE_BEGIN("Render");
 			g_Renderer->Draw();
 			PROFILE_END("Render");
+
+#if COMPILE_RENDERDOC_API
+			if (m_RenderDocAPI && m_bRenderDocCapturingFrame)
+			{
+				m_bRenderDocCapturingFrame = false;
+				m_RenderDocAPI->EndFrameCapture(NULL, NULL);
+				u32 bufferSize;
+				u32 captureIndex = 0;
+				m_RenderDocAPI->GetCapture(captureIndex, nullptr, &bufferSize, nullptr);
+				std::string captureFilePath(bufferSize, '\0');
+				u32 result = m_RenderDocAPI->GetCapture(captureIndex, (char*)captureFilePath.data(), &bufferSize, nullptr);
+				if (result == 0)
+				{
+					PrintWarn("Failed to retrieve capture with index %d\n", captureIndex);
+				}
+				else
+				{
+					g_Renderer->AddEditorString("Captured RenderDoc frame");
+					std::string captureFileName = captureFilePath;
+					StripLeadingDirectories(captureFileName);
+					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
+					if (m_RenderDocUIPID == -1)
+					{
+						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(true, captureFilePath.c_str());
+					}
+				}
+			}
+#endif
 
 			// We can update this now that the renderer has had a chance to end the frame
 			m_bRenderImGui = renderImGuiNextFrame;
@@ -858,7 +1703,7 @@ namespace flex
 				g_Window->SaveToConfig();
 			}
 
-			const bool bProfileFrame = (m_FrameCount > 3);
+			const bool bProfileFrame = (g_Renderer->GetFramesRenderedCount() > 3);
 			if (bProfileFrame)
 			{
 				Profiler::EndFrame(m_bUpdateProfilerFrame);
@@ -870,8 +1715,6 @@ namespace flex
 			{
 				Profiler::PrintResultsToFile();
 			}
-
-			++m_FrameCount;
 		}
 	}
 
@@ -880,601 +1723,400 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 
-		std::string fontFilePath(RESOURCE_LOCATION + "fonts/lucon.ttf");
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+		std::string fontFilePath(RESOURCE_LOCATION u8"fonts/lucon.ttf");
 		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;
 
-		ImGuiStyle& style = ImGui::GetStyle();
-		style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
-		style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.85f);
-		style.Colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-		style.Colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
-		style.Colors[ImGuiCol_Border] = ImVec4(0.70f, 0.70f, 0.70f, 0.40f);
-		style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-		style.Colors[ImGuiCol_FrameBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);
-		style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
-		style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
-		style.Colors[ImGuiCol_TitleBg] = ImVec4(0.74f, 0.33f, 0.09f, 0.94f);
-		style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.87f, 0.15f, 0.02f, 0.94f);
-		style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.74f, 0.33f, 0.09f, 0.20f);
-		style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.83f, 0.25f, 0.07f, 0.55f);
-		style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.20f, 0.25f, 0.30f, 0.60f);
-		style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.75f, 0.40f, 0.40f);
-		style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.80f, 0.75f, 0.41f, 0.50f);
-		style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.92f, 0.82f, 0.29f, 0.60f);
-		style.Colors[ImGuiCol_CheckMark] = ImVec4(0.97f, 0.54f, 0.03f, 1.00f);
-		style.Colors[ImGuiCol_SliderGrab] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
-		style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.82f, 0.61f, 0.37f, 1.00f);
-		style.Colors[ImGuiCol_Button] = ImVec4(0.95f, 0.53f, 0.22f, 0.60f);
-		style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.82f, 0.49f, 0.20f, 1.00f);
-		style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.71f, 0.37f, 0.11f, 1.00f);
-		style.Colors[ImGuiCol_Header] = ImVec4(0.66f, 0.32f, 0.17f, 0.76f);
-		style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.74f, 0.43f, 0.29f, 0.76f);
-		style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.60f, 0.23f, 0.07f, 0.80f);
-		style.Colors[ImGuiCol_Separator] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-		style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.70f, 0.62f, 0.60f, 1.00f);
-		style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.90f, 0.78f, 0.70f, 1.00f);
-		style.Colors[ImGuiCol_ResizeGrip] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
-		style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
-		style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
-		style.Colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-		style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-		style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-		style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-		style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(1.00f, 0.57f, 0.31f, 0.35f);
-		style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
-		style.Colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
-		style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-		style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+		ImVec4* colors = ImGui::GetStyle().Colors;
+		colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
+		colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+		colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.85f);
+		colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
+		colors[ImGuiCol_Border] = ImVec4(0.70f, 0.70f, 0.70f, 0.40f);
+		colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		colors[ImGuiCol_FrameBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);
+		colors[ImGuiCol_FrameBgHovered] = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
+		colors[ImGuiCol_FrameBgActive] = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
+		colors[ImGuiCol_TitleBg] = ImVec4(0.73f, 0.34f, 0.00f, 0.94f);
+		colors[ImGuiCol_TitleBgActive] = ImVec4(0.76f, 0.46f, 0.19f, 1.00f);
+		colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.74f, 0.33f, 0.09f, 0.20f);
+		colors[ImGuiCol_MenuBarBg] = ImVec4(0.60f, 0.18f, 0.04f, 0.55f);
+		colors[ImGuiCol_ScrollbarBg] = ImVec4(0.20f, 0.25f, 0.30f, 0.60f);
+		colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.75f, 0.40f, 0.40f);
+		colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.80f, 0.75f, 0.41f, 0.50f);
+		colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.92f, 0.82f, 0.29f, 0.60f);
+		colors[ImGuiCol_CheckMark] = ImVec4(0.97f, 0.54f, 0.03f, 1.00f);
+		colors[ImGuiCol_SliderGrab] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
+		colors[ImGuiCol_SliderGrabActive] = ImVec4(0.82f, 0.61f, 0.37f, 1.00f);
+		colors[ImGuiCol_Button] = ImVec4(0.95f, 0.53f, 0.22f, 0.60f);
+		colors[ImGuiCol_ButtonHovered] = ImVec4(0.82f, 0.49f, 0.20f, 1.00f);
+		colors[ImGuiCol_ButtonActive] = ImVec4(0.71f, 0.37f, 0.11f, 1.00f);
+		colors[ImGuiCol_Header] = ImVec4(0.66f, 0.32f, 0.17f, 0.76f);
+		colors[ImGuiCol_HeaderHovered] = ImVec4(0.74f, 0.43f, 0.29f, 0.76f);
+		colors[ImGuiCol_HeaderActive] = ImVec4(0.60f, 0.23f, 0.07f, 0.80f);
+		colors[ImGuiCol_Separator] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+		colors[ImGuiCol_SeparatorHovered] = ImVec4(0.70f, 0.62f, 0.60f, 1.00f);
+		colors[ImGuiCol_SeparatorActive] = ImVec4(0.90f, 0.78f, 0.70f, 1.00f);
+		colors[ImGuiCol_ResizeGrip] = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
+		colors[ImGuiCol_ResizeGripHovered] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
+		colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
+		colors[ImGuiCol_Tab] = ImVec4(0.59f, 0.32f, 0.09f, 1.00f);
+		colors[ImGuiCol_TabHovered] = ImVec4(0.76f, 0.45f, 0.19f, 1.00f);
+		colors[ImGuiCol_TabActive] = ImVec4(0.70f, 0.41f, 0.04f, 1.00f);
+		colors[ImGuiCol_TabUnfocused] = ImVec4(0.50f, 0.28f, 0.08f, 1.00f);
+		colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.62f, 0.33f, 0.08f, 1.00f);
+		colors[ImGuiCol_DockingPreview] = ImVec4(0.83f, 0.44f, 0.11f, 0.70f);
+		colors[ImGuiCol_DockingBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+		colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+		colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+		colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+		colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+		colors[ImGuiCol_TextSelectedBg] = ImVec4(1.00f, 0.57f, 0.31f, 0.35f);
+		colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
+		colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+		colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+		colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 	}
 
 	void FlexEngine::DrawImGuiObjects()
 	{
-		ImGui::ShowDemoWindow();
+		if (m_bDemoWindowShowing)
+		{
+			ImGui::ShowDemoWindow(&m_bDemoWindowShowing);
+		}
 
-		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
-		static const char* titleCharStr = titleString.c_str();
-		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_ResizeFromAnySide;
-		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
-		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300), 
-											ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
-											[](ImGuiSizeCallbackData* data)
+		if (ImGui::BeginMainMenuBar())
+		{
+			if (ImGui::BeginMenu("Actions"))
+			{
+#if COMPILE_RENDERDOC_API
+				if (ImGui::MenuItem("Capture RenderDoc frame"))
+				{
+					m_bRenderDocTriggerCaptureNextFrame = true;
+				}
+#endif
+
+				if (ImGui::BeginMenu("Reload"))
+				{
+					if (ImGui::MenuItem("Scene", "R"))
+					{
+						g_SceneManager->ReloadCurrentScene();
+					}
+
+					if (ImGui::MenuItem("Scene (hard: reload all meshes)"))
+					{
+						MeshComponent::DestroyAllLoadedMeshes();
+						g_SceneManager->ReloadCurrentScene();
+					}
+
+					if (ImGui::MenuItem("Shaders", "Ctrl+R"))
+					{
+						g_Renderer->ReloadShaders();
+					}
+
+					if (ImGui::MenuItem("Font textures (render SDFs)"))
+					{
+						g_Renderer->LoadFonts(true);
+					}
+
+					if (ImGui::MenuItem("Player position(s)"))
+					{
+						BaseScene* currentScene = g_SceneManager->CurrentScene();
+						if (currentScene->GetPlayer(0))
+						{
+							currentScene->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
+						}
+						if (currentScene->GetPlayer(1))
+						{
+							currentScene->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
+						}
+					}
+
+					if (ImGui::MenuItem("Skybox (randomize)"))
+					{
+						g_Renderer->ReloadSkybox(true);
+					}
+
+					ImGui::EndMenu();
+				}
+
+				if (ImGui::MenuItem("Capture reflection probe"))
+				{
+					g_Renderer->RecaptureReflectionProbe();
+				}
+
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("View"))
+			{
+				if (ImGui::MenuItem("Main Window"))
+				{
+					m_bMainWindowShowing = !m_bMainWindowShowing;
+				}
+
+				if (ImGui::MenuItem("Asset Browser"))
+				{
+					m_bAssetBrowserShowing = !m_bAssetBrowserShowing;
+				}
+
+				if (ImGui::MenuItem("Demo Window"))
+				{
+					m_bDemoWindowShowing = !m_bDemoWindowShowing;
+				}
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMainMenuBar();
+		}
+
+		static auto windowSizeCallbackLambda = [](ImGuiSizeCallbackData* data)
 		{
 			FlexEngine* engine = (FlexEngine*)data->UserData;
 			engine->m_ImGuiMainWindowWidth = data->DesiredSize.x;
 			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
-													  glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
-		}, this);
-		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Once);
+				glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
+		};
+
+		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
+		static const char* titleCharStr = titleString.c_str();
+		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove;
+		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
+		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),
+			ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
+			windowSizeCallbackLambda, this);
+		real menuHeight = 20.0f;
+		ImGui::SetNextWindowPos(ImVec2(0.0f, menuHeight), ImGuiCond_Once);
 		real frameBufferHeight = (real)frameBufferSize.y;
-		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight),
-								 ImGuiCond_Always);
-		if (ImGui::Begin(titleCharStr, nullptr, mainWindowFlags))
+		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
+			ImGuiCond_Always);
+		if (m_bMainWindowShowing)
 		{
-			if (ImGui::TreeNode("Stats"))
+			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
 			{
-				static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
-				static const char* renderNameStr = rendererNameStringStr.c_str();
-				ImGui::TextUnformatted(renderNameStr);
-
-				ImGui::TreePop();
-			}
-
-			if (ImGui::TreeNode("Misc settings"))
-			{
-				ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
-
-				ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
-
-				if (ImGui::Button("Display latest frame"))
+				if (ImGui::TreeNode("Simulation"))
 				{
-					m_bUpdateProfilerFrame = true;
-					Profiler::s_bDisplayingFrame = true;
-				}
+					ImGui::Checkbox("Paused", &m_bSimulationPaused);
 
-				ImGui::TreePop();
-			}
-
-			static const char* rendererSettingsStr = "Renderer settings";
-			if (ImGui::TreeNode(rendererSettingsStr))
-			{
-				if (ImGui::Button("  Save  "))
-				{
-					g_Renderer->SaveSettingsToDisk(false, true);
-				}
-
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-				{
-					ImGui::SameLine();
-					if (ImGui::Button("Save over defaults"))
+					if (ImGui::Button("Step (F10)"))
 					{
-						g_Renderer->SaveSettingsToDisk(true, true);
+						m_bSimulationPaused = true;
+						m_bSimulateNextFrame = true;
 					}
 
-					ImGui::SameLine();
-					if (ImGui::Button("Reload defaults"))
+					if (ImGui::Button("Continue (F5)"))
 					{
-						g_Renderer->LoadSettingsFromDisk(true);
+						m_bSimulationPaused = false;
+						m_bSimulateNextFrame = true;
 					}
-				}
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
 
-				bool bVSyncEnabled = g_Renderer->GetVSyncEnabled();
-				static const char* vSyncEnabledStr = "VSync";
-				if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
-				{
-					g_Renderer->SetVSyncEnabled(bVSyncEnabled);
-				}
-
-				static const char* physicsDebuggingStr = "Physics debugging";
-				if (ImGui::TreeNode(physicsDebuggingStr))
-				{
-					PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
-
-					static const char* disableAllStr = "Disable All";
-					ImGui::Checkbox(disableAllStr, &physicsDebuggingSettings.DisableAll);
-
-					ImGui::Spacing();
-					ImGui::Spacing();
-					ImGui::Spacing();
-
-					static const char* wireframeStr = "Wireframe";
-					ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
-
-					static const char* aabbStr = "AABB";
-					ImGui::Checkbox(aabbStr, &physicsDebuggingSettings.DrawAabb);
-
-					static const char* drawFeaturesTextStr = "Draw Features Text";
-					ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
-
-					static const char* drawContactPointsStr = "Draw Contact Points";
-					ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
-
-					static const char* noDeactivationStr = "No Deactivation";
-					ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
-
-					static const char* noHelpTextStr = "No Help Text";
-					ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
-
-					static const char* drawTextStr = "Draw Text";
-					ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
-
-					static const char* profileTimingsStr = "Profile Timings";
-					ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
-
-					static const char* satComparisonStr = "Sat Comparison";
-					ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
-
-					static const char* disableBulletLCPStr = "Disable Bullet LCP";
-					ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
-
-					static const char* ccdStr = "CCD";
-					ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
-
-					static const char* drawConstraintsStr = "Draw Constraints";
-					ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
-
-					static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
-					ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
-
-					static const char* fastWireframeStr = "Fast Wireframe";
-					ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
-
-					static const char* drawNormalsStr = "Draw Normals";
-					ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
-
-					static const char* drawFramesStr = "Draw Frames";
-					ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
+					ImGui::SliderFloat("Speed", &m_SimulationSpeed, 0.0001f, 10.0f);
 
 					ImGui::TreePop();
 				}
 
-				static const char* postProcessStr = "Post processing";
-				if (ImGui::TreeNode(postProcessStr))
+				if (ImGui::TreeNode("Stats"))
 				{
-					Renderer::PostProcessSettings& postProcessSettings = g_Renderer->GetPostProcessSettings();
+					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
+					static const char* renderNameStr = rendererNameStringStr.c_str();
+					ImGui::TextUnformatted(renderNameStr);
 
-					bool bPostProcessingEnabled = g_Renderer->GetPostProcessingEnabled();
-					if (ImGui::Checkbox("Enabled", &bPostProcessingEnabled))
-					{
-						g_Renderer->SetPostProcessingEnabled(bPostProcessingEnabled);
-					}
+					ImGui::Text("Number of available renderers: %d", m_RendererCount);
 
-					static const char* fxaaEnabledStr = "FXAA";
-					ImGui::Checkbox(fxaaEnabledStr, &postProcessSettings.bEnableFXAA);
+					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
 
-					if (postProcessSettings.bEnableFXAA)
-					{
-						ImGui::Indent();
-						static const char* fxaaShowEdgesEnabledStr = "Show edges";
-						ImGui::Checkbox(fxaaShowEdgesEnabledStr, &postProcessSettings.bEnableFXAADEBUGShowEdges);
-						ImGui::Unindent();
-					}
+					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
 
-					static const char* brightnessStr = "Brightness (RGB)";
-					real maxBrightness = 2.5f;
-					ImGui::SliderFloat3(brightnessStr, &postProcessSettings.brightness.r, 0.0f, maxBrightness);
-					ImGui::SameLine();
-					ImGui::ColorButton("##1", ImVec4(
-						postProcessSettings.brightness.r / maxBrightness,
-						postProcessSettings.brightness.g / maxBrightness,
-						postProcessSettings.brightness.b / maxBrightness, 1));
+					ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());
 
-					static const char* offsetStr = "Offset (RGB)";
-					real minOffset = -0.35f;
-					real maxOffset = 0.35f;
-					ImGui::SliderFloat3(offsetStr, &postProcessSettings.offset.r, minOffset, maxOffset);
-					ImGui::SameLine();
-					ImGui::ColorButton("##2", ImVec4(
-						(postProcessSettings.offset.r - minOffset) / (maxOffset - minOffset),
-						(postProcessSettings.offset.g - minOffset) / (maxOffset - minOffset),
-						(postProcessSettings.offset.b - minOffset) / (maxOffset - minOffset), 1));
-
-					static const char* saturationStr = "Saturation";
-					const real maxSaturation = 2.0f;
-					ImGui::SliderFloat(saturationStr, &postProcessSettings.saturation, 0.0f, maxSaturation);
-					ImGui::SameLine();
-					ImGui::ColorButton("##3", ImVec4(
-						postProcessSettings.saturation / maxSaturation,
-						postProcessSettings.saturation / maxSaturation,
-						postProcessSettings.saturation / maxSaturation, 1));
+					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
 
 					ImGui::TreePop();
 				}
 
-				ImGui::TreePop();
-			}
-
-			static const char* windowSettingsStr = "Window settings";
-			if (ImGui::TreeNode(windowSettingsStr))
-			{
-				bool bAutoRestoreWindow = g_Window->GetAutoRestoreStateEnabled();
-				if (ImGui::Checkbox("Auto restore state", &bAutoRestoreWindow))
+				if (ImGui::TreeNode("Misc settings"))
 				{
-					g_Window->SetAutoRestoreStateEnabled(bAutoRestoreWindow);
-					g_Renderer->SaveSettingsToDisk(false, true);
-				}
+					ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
 
-				glm::vec2i windowPos = g_Window->GetPosition();
-				if (ImGui::DragInt2("Position", &windowPos.x, 1.0f))
-				{
-					g_Window->SetPosition(windowPos.x, windowPos.y);
-				}
+					ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
 
-				if (ImGui::Button("Center"))
-				{
-					glm::vec2i windowSize = g_Window->GetSize();
-					g_Window->SetPosition(g_Monitor->width / 2 - windowSize.x / 2,
-										  g_Monitor->height / 2 - windowSize.y / 2);
-				}
-
-				ImGui::NewLine();
-
-				glm::vec2i windowSize = g_Window->GetSize();
-				if (ImGui::DragInt2("Size", &windowSize.x, 1.0f, 100, 3840))
-				{
-					g_Window->SetSize(windowSize.x, windowSize.y);
-				}
-
-				bool bWindowWasMaximized = g_Window->IsMaximized();
-				if (bWindowWasMaximized)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-				}
-				if (ImGui::Button("Maximize"))
-				{
-					g_Window->Maximize();
-				}
-				if (bWindowWasMaximized)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Iconify"))
-				{
-					g_Window->Iconify();
-				}
-
-				if (ImGui::Button("1920x1080"))
-				{
-					g_Window->SetSize(1920, 1080);
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("1600x900"))
-				{
-					g_Window->SetSize(1600, 900);
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("1280x720"))
-				{
-					g_Window->SetSize(1280, 720);
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("800x600"))
-				{
-					g_Window->SetSize(800, 600);
-				}
-
-				ImGui::TreePop();
-			}
-
-			// TODO: Add DrawImGuiItems to camera class and let it handle itself?
-			const char* cameraStr = "Camera";
-			if (ImGui::TreeNode(cameraStr))
-			{
-				BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
-
-				const i32 cameraCount = g_CameraManager->CameraCount();
-
-				if (cameraCount > 1) // Only show arrows if other cameras exist
-				{
-					static const char* arrowPrevStr = "<";
-					static const char* arrowNextStr = ">";
-
-					if (ImGui::Button(arrowPrevStr))
+					if (ImGui::Button("Display latest frame"))
 					{
-						g_CameraManager->SetActiveIndexRelative(-1, false);
+						m_bUpdateProfilerFrame = true;
+						Profiler::s_bDisplayingFrame = true;
 					}
 
-					ImGui::SameLine();
-
-					std::string cameraNameStr = currentCamera->GetName();
-					ImGui::TextUnformatted(cameraNameStr.c_str());
-
-					ImGui::SameLine();
-
-					if (ImGui::Button(arrowNextStr))
-					{
-						g_CameraManager->SetActiveIndexRelative(1, false);
-					}
+					ImGui::TreePop();
 				}
 
-				static const char* moveSpeedStr = "Move speed";
-				float moveSpeed = currentCamera->GetMoveSpeed();
-				if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
+				g_Renderer->DrawImGuiSettings();
+
+				g_Window->DrawImGuiObjects();
+
+				g_CameraManager->DrawImGuiObjects();
+
+				g_SceneManager->DrawImGuiObjects();
+
+				AudioManager::DrawImGuiObjects();
+
+				if (ImGui::RadioButton("Translate", GetTransformState() == TransformState::TRANSLATE))
 				{
-					currentCamera->SetMoveSpeed(moveSpeed);
+					SetTransformState(TransformState::TRANSLATE);
 				}
-
-				static const char* turnSpeedStr = "Turn speed";
-				float turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
-				if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
-				{
-					currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
-				}
-
-				glm::vec3 camPos = currentCamera->GetPosition();
-				if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
-				{
-					currentCamera->SetPosition(camPos);
-				}
-
-				glm::vec2 camYawPitch;
-				camYawPitch[0] = glm::degrees(currentCamera->GetYaw());
-				camYawPitch[1] = glm::degrees(currentCamera->GetPitch());
-				if (ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f))
-				{
-					currentCamera->SetYaw(glm::radians(camYawPitch[0]));
-					currentCamera->SetPitch(glm::radians(camYawPitch[1]));
-				}
-
-				real camFOV = glm::degrees(currentCamera->GetFOV());
-				if (ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f))
-				{
-					currentCamera->SetFOV(glm::radians(camFOV));
-				}
-
-				if (ImGui::Button("Reset orientation"))
-				{
-					currentCamera->ResetOrientation();
-				}
-
 				ImGui::SameLine();
-				if (ImGui::Button("Reset position"))
+				if (ImGui::RadioButton("Rotate", GetTransformState() == TransformState::ROTATE))
 				{
-					currentCamera->ResetPosition();
+					SetTransformState(TransformState::ROTATE);
 				}
-
-				ImGui::TreePop();
-			}
-
-			static const char* scenesStr = "Scenes";
-			if (ImGui::TreeNode(scenesStr))
-			{
-				static const char* arrowPrevStr = "<";
-				static const char* arrowNextStr = ">";
-
-				if (ImGui::Button(arrowPrevStr))
-				{
-					g_SceneManager->SetPreviousSceneActiveAndInit();
-				}
-				
 				ImGui::SameLine();
-
-				BaseScene* currentScene = g_SceneManager->CurrentScene();
-
-				const std::string currentSceneNameStr(currentScene->GetName() + (currentScene->IsUsingSaveFile() ? " (saved)" : " (default)"));
-				ImGui::Text(currentSceneNameStr.c_str());
-				
-				DoSceneContextMenu(currentScene);
-
-				if (ImGui::IsItemHovered())
+				if (ImGui::RadioButton("Scale", GetTransformState() == TransformState::SCALE))
 				{
-					std::string fileName = currentScene->GetShortRelativeFilePath();
-					ImGui::BeginTooltip();
-					ImGui::TextUnformatted(fileName.c_str());
-					ImGui::EndTooltip();
+					SetTransformState(TransformState::SCALE);
 				}
 
-				ImGui::SameLine();
+				g_Renderer->DrawImGuiRenderObjects();
 
-				if (ImGui::Button(arrowNextStr))
+				ImGui::Spacing();
+				ImGui::Spacing();
+				ImGui::Spacing();
+
+				ImGui::Text("Debugging");
+
+				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
+
+				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
+
+				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (p0)
 				{
-					g_SceneManager->SetNextSceneActiveAndInit();
+					p0->DrawImGuiObjects();
+					p0->GetController()->DrawImGuiObjects();
 				}
 
-				i32 sceneItemWidth = 240;
-				if (ImGui::BeginChild("Scenes", ImVec2((real)sceneItemWidth, 120), true, ImGuiWindowFlags_NoResize))
+				Player* p1 = g_SceneManager->CurrentScene()->GetPlayer(1);
+				if (p1)
 				{
-					i32 currentSceneIndex = g_SceneManager->GetCurrentSceneIndex();
-					for (i32 i = 0; i < (i32)g_SceneManager->GetSceneCount(); ++i)
+					p1->DrawImGuiObjects();
+					p1->GetController()->DrawImGuiObjects();
+				}
+
+				if (ImGui::TreeNode("Spring"))
+				{
+					real* DR = &m_TestSprings[0].DR;
+					real* UAF = &m_TestSprings[0].UAF;
+
+					ImGui::SliderFloat("DR", DR, 0.0f, 2.0f);
+					ImGui::SliderFloat("UAF", UAF, 0.0f, 20.0f);
+
+					for (Spring<glm::vec3>& spring : m_TestSprings)
 					{
-						bool bSceneSelected = (i == currentSceneIndex);
-						BaseScene* scene = g_SceneManager->GetSceneAtIndex(i);
-						std::string sceneFileName = scene->GetFileName();
-						if (ImGui::Selectable(sceneFileName.c_str(), &bSceneSelected, 0, ImVec2((real)sceneItemWidth, 0)))
-						{
-							if (i != currentSceneIndex)
-							{
-								if (g_SceneManager->SetCurrentScene(i))
-								{
-									g_SceneManager->InitializeCurrentScene();
-									g_SceneManager->PostInitializeCurrentScene();
-								}
-							}
-						}
-
-						DoSceneContextMenu(scene);
-					}
-				}
-				ImGui::EndChild();
-
-				static const char* addSceneStr = "Add scene...";
-				std::string addScenePopupID = "Add scene";
-				if (ImGui::Button(addSceneStr))
-				{
-					ImGui::OpenPopup(addScenePopupID.c_str());
-				}
-
-				if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
-				{
-					static std::string newSceneName = "Scene_" + IntToString(g_SceneManager->GetSceneCount(), 2);
-
-					const size_t maxStrLen = 256;
-					newSceneName.resize(maxStrLen);
-					bool bCreate = ImGui::InputText("Scene name", 
-													(char*)newSceneName.data(), 
-													maxStrLen,
-													ImGuiInputTextFlags_EnterReturnsTrue);
-
-					bCreate |= ImGui::Button("Create");
-
-					if (bCreate)
-					{
-						// Remove trailing '\0' characters
-						newSceneName = std::string(newSceneName.c_str());
-
-						g_SceneManager->CreateNewScene(newSceneName, true);
-
-						ImGui::CloseCurrentPopup();
+						spring.DR = *DR;
+						spring.UAF = *UAF;
 					}
 
-					ImGui::SameLine();
-
-					if (ImGui::Button("Cancel"))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::EndPopup();
+					ImGui::TreePop();
 				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Refresh scenes"))
-				{
-					g_SceneManager->AddFoundScenes();
-					g_SceneManager->RemoveDeletedScenes();
-				}
-
-				ImGui::TreePop();
 			}
-			
-			const char* reloadStr = "Reloading";
-			if (ImGui::TreeNode(reloadStr))
-			{
-				if (ImGui::Button("Reload scene file"))
-				{
-					g_SceneManager->ReloadCurrentScene();
-				}
-
-				if (ImGui::Button("Hard reload scene file (reloads all meshes)"))
-				{
-					Print("Clearing all loaded meshes\n");
-					MeshComponent::DestroyAllLoadedMeshes();
-					g_SceneManager->ReloadCurrentScene();
-				}
-
-				if (ImGui::Button("Reload all shaders"))
-				{
-					g_Renderer->ReloadShaders();
-				}
-
-				if (ImGui::Button("Reload player positions"))
-				{
-					g_SceneManager->CurrentScene()->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
-					g_SceneManager->CurrentScene()->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
-				}
-
-				ImGui::TreePop();
-			}
-
-			const char* audioStr = "Audio";
-			if (ImGui::TreeNode(audioStr))
-			{
-				real gain = AudioManager::GetMasterGain();
-				if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
-				{
-					AudioManager::SetMasterGain(gain);
-				}
-
-				ImGui::TreePop();
-			}
-
-			g_Renderer->DrawImGuiItems();
+			ImGui::End();
 		}
 
-		ImGui::End();
+		if (m_bAssetBrowserShowing)
+		{
+			g_Renderer->DrawAssetBrowserImGui(&m_bAssetBrowserShowing);
+		}
 	}
 
 	void FlexEngine::Stop()
 	{
-		m_Running = false;
+		m_bRunning = false;
 	}
 
-	GameObject* FlexEngine::GetSelectedObject()
+	std::vector<GameObject*> FlexEngine::GetSelectedObjects()
 	{
-		return m_CurrentlySelectedObject;
+		return m_CurrentlySelectedObjects;
 	}
 
 	void FlexEngine::SetSelectedObject(GameObject* gameObject)
 	{
-		m_CurrentlySelectedObject = gameObject;
+		DeselectCurrentlySelectedObjects();
 
-		if (gameObject == nullptr)
+		if (gameObject != nullptr)
 		{
-			DeselectCurrentlySelectedObject();
+			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+		}
+
+		CalculateSelectedObjectsCenter();
+	}
+
+	void FlexEngine::ToggleSelectedObject(GameObject* gameObject)
+	{
+		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
+		if (iter == m_CurrentlySelectedObjects.end())
+		{
+			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+		}
+		else
+		{
+			m_CurrentlySelectedObjects.erase(iter);
+
+			if (m_CurrentlySelectedObjects.empty())
+			{
+				DeselectCurrentlySelectedObjects();
+			}
+		}
+
+		CalculateSelectedObjectsCenter();
+	}
+
+	void FlexEngine::AddSelectedObject(GameObject* gameObject)
+	{
+		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
+		if (iter == m_CurrentlySelectedObjects.end())
+		{
+			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+
+			CalculateSelectedObjectsCenter();
 		}
 	}
 
-	void FlexEngine::DeselectCurrentlySelectedObject()
+	void FlexEngine::DeselectObject(GameObject* gameObject)
 	{
-		m_CurrentlySelectedObject = nullptr;
+		for (GameObject* selectedObj : m_CurrentlySelectedObjects)
+		{
+			if (selectedObj == gameObject)
+			{
+				gameObject->RemoveSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+				CalculateSelectedObjectsCenter();
+				return;
+			}
+		}
+
+		PrintWarn("Attempted to deselect object which wasn't selected!\n");
+	}
+
+	bool FlexEngine::IsObjectSelected(GameObject* gameObject)
+	{
+		bool bSelected = (Find(m_CurrentlySelectedObjects, gameObject) != m_CurrentlySelectedObjects.end());
+		return bSelected;
+	}
+
+	glm::vec3 FlexEngine::GetSelectedObjectsCenter()
+	{
+		return m_SelectedObjectsCenterPos;
+	}
+
+	void FlexEngine::DeselectCurrentlySelectedObjects()
+	{
+		m_CurrentlySelectedObjects.clear();
+		m_SelectedObjectsCenterPos = VEC3_ZERO;
+		m_SelectedObjectDragStartPos = VEC3_ZERO;
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
 	}
@@ -1491,7 +2133,7 @@ namespace flex
 		{
 			Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
 
-			JSONObject rootObject{};
+			JSONObject rootObject = {};
 
 			if (JSONParser::Parse(m_CommonSettingsAbsFilePath, rootObject))
 			{
@@ -1502,19 +2144,71 @@ namespace flex
 					g_SceneManager->SetCurrentScene(lastOpenedSceneName, false);
 				}
 
+				bool bRenderImGui;
+				if (rootObject.SetBoolChecked("render imgui", bRenderImGui))
+				{
+					m_bRenderImGui = bRenderImGui;
+				}
+
+				std::string cameraType;
+				if (rootObject.SetStringChecked("last camera type", cameraType))
+				{
+					g_CameraManager->SetActiveCameraByType(cameraType);
+				}
+
 				JSONObject cameraTransform;
 				if (rootObject.SetObjectChecked("camera transform", cameraTransform))
 				{
 					BaseCamera* cam = g_CameraManager->CurrentCamera();
-					cam->SetPosition(ParseVec3(cameraTransform.GetString("position")));
-					cam->SetPitch(cameraTransform.GetFloat("pitch"));
-					cam->SetYaw(cameraTransform.GetFloat("yaw"));
+					glm::vec3 camPos = ParseVec3(cameraTransform.GetString("position"));
+					if (IsNanOrInf(camPos))
+					{
+						PrintError("Camera pos was saved out as nan or inf, resetting to 0\n");
+						camPos = VEC3_ZERO;
+					}
+					cam->SetPosition(camPos);
+
+					real camPitch = cameraTransform.GetFloat("pitch");
+					if (IsNanOrInf(camPitch))
+					{
+						PrintError("Camera pitch was saved out as nan or inf, resetting to 0\n");
+						camPitch = 0.0f;
+					}
+					cam->SetPitch(camPitch);
+
+					real camYaw = cameraTransform.GetFloat("yaw");
+					if (IsNanOrInf(camYaw))
+					{
+						PrintError("Camera yaw was saved out as nan or inf, resetting to 0\n");
+						camYaw = 0.0f;
+					}
+					cam->SetYaw(camYaw);
 				}
 
 				real masterGain;
 				if (rootObject.SetFloatChecked("master gain", masterGain))
 				{
 					AudioManager::SetMasterGain(masterGain);
+				}
+
+				bool bP0UsingKeyboard = true;
+				if (rootObject.SetBoolChecked("p0 using keyboard", bP0UsingKeyboard))
+				{
+					g_InputManager->bPlayerUsingKeyboard[0] = bP0UsingKeyboard;
+				}
+				else
+				{
+					g_InputManager->bPlayerUsingKeyboard[0] = false;
+				}
+
+				bool bP1UsingKeyboard = true;
+				if (rootObject.SetBoolChecked("p1 using keyboard", bP1UsingKeyboard))
+				{
+					g_InputManager->bPlayerUsingKeyboard[1] = bP1UsingKeyboard;
+				}
+				else
+				{
+					g_InputManager->bPlayerUsingKeyboard[0] = false;
 				}
 
 				return true;
@@ -1543,7 +2237,9 @@ namespace flex
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		std::string posStr = Vec3ToString(cam->GetPosition());
+		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
+		rootObject.fields.emplace_back("last camera type", JSONValue(cam->GetName().c_str()));
+		std::string posStr = Vec3ToString(cam->GetPosition(), 3);
 		real pitch = cam->GetPitch();
 		real yaw = cam->GetYaw();
 		JSONObject cameraTransform = {};
@@ -1554,6 +2250,9 @@ namespace flex
 
 		real masterGain = AudioManager::GetMasterGain();
 		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
+
+		rootObject.fields.emplace_back("p0 using keyboard", JSONValue(g_InputManager->bPlayerUsingKeyboard[0]));
+		rootObject.fields.emplace_back("p1 using keyboard", JSONValue(g_InputManager->bPlayerUsingKeyboard[1]));
 
 		std::string fileContents = rootObject.Print(0);
 
@@ -1568,351 +2267,277 @@ namespace flex
 		}
 	}
 
-	void FlexEngine::DoSceneContextMenu(BaseScene* scene)
+	void FlexEngine::AppendToBootupTimesFile(const std::string& entry)
 	{
-		bool bClicked = ImGui::IsMouseReleased(1) && 
-						ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-
-		BaseScene* currentScene = g_SceneManager->CurrentScene();
-
-		std::string contextMenuID = "scene context menu " + scene->GetFileName();
-		if (ImGui::BeginPopupContextItem(contextMenuID.c_str()))
+		std::string newFileContents;
+		if (FileExists(m_BootupTimesAbsFilePath))
 		{
+			if (!ReadFile(m_BootupTimesAbsFilePath, newFileContents, false))
 			{
-				const i32 sceneNameMaxCharCount = 256;
-
-				// We don't know the names of scene's that haven't been loaded
-				if (scene->IsLoaded())
-				{
-					static char newSceneName[sceneNameMaxCharCount];
-					if (bClicked)
-					{
-						strcpy_s(newSceneName, scene->GetName().c_str());
-					}
-
-					bool bRenameScene = ImGui::InputText("##rename-scene",
-														 newSceneName,
-														 sceneNameMaxCharCount,
-														 ImGuiInputTextFlags_EnterReturnsTrue);
-
-					ImGui::SameLine();
-
-					bRenameScene |= ImGui::Button("Rename scene");
-
-					if (bRenameScene)
-					{
-						scene->SetName(newSceneName);
-						// Don't close popup here since we will likely want to save that change
-					}
-				}
-
-				static char newSceneFileName[sceneNameMaxCharCount];
-				if (bClicked)
-				{
-					strcpy_s(newSceneFileName, scene->GetFileName().c_str());
-				}
-
-				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
-															 newSceneFileName,
-															 sceneNameMaxCharCount,
-															 ImGuiInputTextFlags_EnterReturnsTrue);
-
-				ImGui::SameLine();
-
-				bRenameSceneFileName |= ImGui::Button("Rename file");
-
-				if (bRenameSceneFileName)
-				{
-					std::string newSceneFileNameStr(newSceneFileName);
-					std::string fileDir = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					ExtractDirectoryString(fileDir);
-					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
-					bool bNameEmpty = newSceneFileNameStr.empty();
-					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
-					bool bFileExists = FileExists(newSceneFilePath);
-					bool bSceneNameValid = (!bNameEmpty &&
-											bCorrectFileType &&
-											!bFileExists);
-
-					if (bSceneNameValid)
-					{
-						if (scene->SetFileName(newSceneFileNameStr, true))
-						{
-							ImGui::CloseCurrentPopup();
-						}
-					}
-					else
-					{
-						PrintError("Attempted name scene with invalid name: %s\n", newSceneFileNameStr.c_str());
-						if (bNameEmpty)
-						{
-							PrintError("(file name is empty!)\n");
-						}
-						else if (!bCorrectFileType)
-						{
-							PrintError("(must end with \".json\"!)\n");
-						}
-						else if (bFileExists)
-						{
-							PrintError("(file already exists!)\n");
-						}
-					}
-				}
+				PrintWarn("Failed to read bootup times file: %s\n", m_BootupTimesAbsFilePath.c_str());
+				return;
 			}
-
-			// Only allow current scene to be saved
-			if (currentScene == scene)
-			{
-				if (scene->IsUsingSaveFile())
-				{
-					if (ImGui::Button("Save"))
-					{
-						scene->SerializeToFile(false);
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-
-					if (ImGui::Button("Save over default"))
-					{
-						scene->SerializeToFile(true);
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("Hard reload (deletes save file!)"))
-					{
-						DeleteFile(scene->GetRelativeFilePath());
-						g_SceneManager->ReloadCurrentScene();
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-				}
-				else
-				{
-					if (ImGui::Button("Save"))
-					{
-						scene->SerializeToFile(false);
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-
-					if (ImGui::Button("Save over default"))
-					{
-						scene->SerializeToFile(true);
-
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-				}
-			}
-
-			static const char* duplicateScenePopupLabel = "Duplicate scene";
-			const i32 sceneNameMaxCharCount = 256;
-			static char newSceneName[sceneNameMaxCharCount];
-			static char newSceneFileName[sceneNameMaxCharCount];
-			if (ImGui::Button("Duplicate..."))
-			{
-				ImGui::OpenPopup(duplicateScenePopupLabel);
-
-				std::string newSceneNameStr = scene->GetName();
-				newSceneNameStr += " Copy";
-				strcpy_s(newSceneName, newSceneNameStr.c_str());
-
-				std::string newSceneFileNameStr = scene->GetFileName();
-				StripFileType(newSceneFileNameStr);
-
-				bool bValidName = false;
-				do 
-				{
-					i16 numNumericalChars = 0;
-					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
-					if (numNumericalChars > 0)
-					{
-						u32 charsBeforeNum = (newSceneFileNameStr.length() - numNumericalChars);
-						newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
-							IntToString(numEndingWith + 1, numNumericalChars);
-					}
-					else
-					{
-						newSceneFileNameStr += "_01";
-					}
-
-					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string fullNewFilePath = filePathFrom;
-					ExtractDirectoryString(fullNewFilePath);
-					fullNewFilePath += newSceneFileNameStr + ".json";
-					bValidName = !FileExists(fullNewFilePath);
-				} while (!bValidName);
-
-				newSceneFileNameStr += ".json";
-
-				strcpy_s(newSceneFileName, newSceneFileNameStr.c_str());
-			}
-
-			bool bCloseContextMenu = false;
-			if (ImGui::BeginPopupModal(duplicateScenePopupLabel,
-				NULL,
-				ImGuiWindowFlags_AlwaysAutoResize))
-			{
-
-				bool bDuplicateScene = ImGui::InputText("Name##duplicate-scene-name",
-														newSceneName,
-														sceneNameMaxCharCount,
-														ImGuiInputTextFlags_EnterReturnsTrue);
-
-				bDuplicateScene |= ImGui::InputText("File name##duplicate-scene-file-path",
-													newSceneFileName,
-													sceneNameMaxCharCount,
-													ImGuiInputTextFlags_EnterReturnsTrue);
-
-				bDuplicateScene |= ImGui::Button("Duplicate");
-
-				bool bValidInput = true;
-
-				if (strlen(newSceneName) == 0 ||
-					strlen(newSceneFileName) == 0 ||
-					!EndsWith(newSceneFileName, ".json"))
-				{
-					bValidInput = false;
-				}
-
-				if (bDuplicateScene && bValidInput)
-				{
-					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string sceneFileDir = filePathFrom;
-					ExtractDirectoryString(sceneFileDir);
-					std::string filePathTo = sceneFileDir + newSceneFileName;
-
-					if (FileExists(filePathTo))
-					{
-						PrintError("Attempting to duplicate scene onto already existing file name!\n");
-					}
-					else
-					{
-						if (CopyFile(filePathFrom, filePathTo))
-						{
-							BaseScene* newScene = new BaseScene(newSceneFileName);
-							g_SceneManager->AddScene(newScene);
-							g_SceneManager->SetCurrentScene(newScene);
-
-							g_SceneManager->InitializeCurrentScene();
-							g_SceneManager->PostInitializeCurrentScene();
-							newScene->SetName(newSceneName);
-
-							g_SceneManager->CurrentScene()->SerializeToFile(true);
-
-							bCloseContextMenu = true;
-
-							ImGui::CloseCurrentPopup();
-						}
-						else
-						{
-							PrintError("Failed to copy scene's file to %s\n", newSceneFileName);
-						}
-					}
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-
-			ImGui::SameLine();
-
-			static const char* deleteSceneStr = "Delete scene...";
-			const std::string deleteScenePopupID = "Delete scene";
-
-			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-
-			if (ImGui::Button(deleteSceneStr))
-			{
-				ImGui::OpenPopup(deleteScenePopupID.c_str());
-			}
-
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-
-			if (ImGui::BeginPopupModal(deleteScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
-			{
-				static std::string sceneName = g_SceneManager->CurrentScene()->GetName();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
-				std::string textStr = "Are you sure you want to permanently delete " + sceneName + "? (both the default & saved files)";
-				ImGui::Text(textStr.c_str());
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-				if (ImGui::Button("Delete"))
-				{
-					g_SceneManager->DeleteScene(scene);
-
-					ImGui::CloseCurrentPopup();
-
-					bCloseContextMenu = true;
-				}
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-
-			if (bCloseContextMenu)
-			{
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
 		}
+
+		newFileContents += entry + std::string("\n");
+
+		if (!WriteFile(m_BootupTimesAbsFilePath, newFileContents, false))
+		{
+			PrintWarn("Failed to write bootup times file: %s\n", m_BootupTimesAbsFilePath.c_str());
+		}
+	}
+
+	glm::vec3 FlexEngine::CalculateRayPlaneIntersectionAlongAxis(const glm::vec3& axis,
+		const glm::vec3& rayOrigin,
+		const glm::vec3& rayEnd,
+		const glm::vec3& planeOrigin,
+		const glm::vec3& planeNorm)
+	{
+		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
+		glm::vec3 planeN = planeNorm;
+		if (glm::dot(planeN, cameraForward) > 0.0f)
+		{
+			planeN = -planeN;
+		}
+		real intersectionDistance;
+		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
+		{
+			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
+			if (m_DraggingGizmoOffset == -1.0f)
+			{
+				m_DraggingGizmoOffset = glm::dot(intersectionPoint - m_SelectedObjectDragStartPos, axis);
+			}
+
+			glm::vec3 constrainedPoint = planeOrigin + (glm::dot(intersectionPoint - planeOrigin, axis) - m_DraggingGizmoOffset) * axis;
+			return constrainedPoint;
+		}
+
+		return VEC3_ZERO;
+	}
+
+	glm::quat FlexEngine::CalculateDeltaRotationFromGizmoDrag(
+		const glm::vec3& axis,
+		const glm::vec3& rayOrigin,
+		const glm::vec3& rayEnd,
+		const glm::quat& pRot)
+	{
+		glm::vec3 intersectionPoint(0.0f);
+
+		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
+		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
+		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
+		glm::vec3 planeN = m_PlaneN;
+		bool bFlip = glm::dot(planeN, cameraForward) > 0.0f;
+		if (bFlip)
+		{
+			planeN = -planeN;
+		}
+		real intersectionDistance;
+		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
+		{
+			intersectionPoint = rayOrigin + rayDir * intersectionDistance;
+			if (m_DraggingGizmoOffset == -1.0f)
+			{
+				m_DraggingGizmoOffset = glm::dot(intersectionPoint - m_SelectedObjectDragStartPos, m_AxisProjectedOnto);
+			}
+
+			if (m_bFirstFrameDraggingRotationGizmo)
+			{
+				m_StartPointOnPlane = intersectionPoint;
+			}
+		}
+
+
+		glm::vec3 v1 = glm::normalize(m_StartPointOnPlane - planeOrigin);
+		glm::vec3 v2L = intersectionPoint - planeOrigin;
+		glm::vec3 v2 = glm::normalize(v2L);
+
+		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, v1);
+
+		real v1ov2 = glm::dot(v1, v2);
+		bool dotPos = (glm::dot(v2, vecPerp) > 0.0f);
+		bool dot2Pos = (v1ov2 > 0.0f);
+
+		if (dotPos && !m_bLastDotPos)
+		{
+			if (dot2Pos)
+			{
+				m_RotationGizmoWrapCount++;
+			}
+			else
+			{
+				m_RotationGizmoWrapCount--;
+			}
+		}
+		else if (!dotPos && m_bLastDotPos)
+		{
+			if (dot2Pos)
+			{
+				m_RotationGizmoWrapCount--;
+			}
+			else
+			{
+				m_RotationGizmoWrapCount++;
+			}
+		}
+
+		m_bLastDotPos = dotPos;
+
+		real angleRaw = acos(v1ov2);
+		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);
+
+		m_pV1oV2 = v1ov2;
+
+		if (m_bFirstFrameDraggingRotationGizmo)
+		{
+			m_bFirstFrameDraggingRotationGizmo = false;
+			m_LastAngle = angle;
+			m_RotationGizmoWrapCount = 0;
+		}
+
+		g_Renderer->GetDebugDrawer()->drawLine(
+			ToBtVec3(planeOrigin),
+			ToBtVec3(planeOrigin + axis * 5.0f),
+			btVector3(1.0f, 1.0f, 0.0f));
+
+		g_Renderer->GetDebugDrawer()->drawLine(
+			ToBtVec3(planeOrigin),
+			ToBtVec3(planeOrigin + v1),
+			btVector3(1.0f, 0.0f, 0.0f));
+
+		g_Renderer->GetDebugDrawer()->drawArc(
+			ToBtVec3(planeOrigin),
+			ToBtVec3(m_PlaneN),
+			ToBtVec3(v1),
+			1.0f,
+			1.0f,
+			(m_RotationGizmoWrapCount * PI) - angle,
+			0.0f,
+			btVector3(0.1f, 0.1f, 0.15f),
+			true);
+
+		g_Renderer->GetDebugDrawer()->drawLine(
+			ToBtVec3(planeOrigin + v2L),
+			ToBtVec3(planeOrigin),
+			btVector3(1.0f, 1.0f, 1.0f));
+
+		g_Renderer->GetDebugDrawer()->drawLine(
+			ToBtVec3(planeOrigin),
+			ToBtVec3(planeOrigin + vecPerp * 3.0f),
+			btVector3(0.5f, 1.0f, 1.0f));
+
+		real dAngle = m_LastAngle - angle;
+		glm::quat result(VEC3_ZERO);
+		if (!IsNanOrInf(dAngle))
+		{
+			glm::quat newRot = glm::rotate(pRot, dAngle, m_AxisOfRotation);
+			result = newRot - pRot;
+		}
+
+		m_LastAngle = angle;
+
+		return result;
+	}
+
+	void FlexEngine::UpdateGizmoVisibility()
+	{
+		if (m_TransformGizmo->IsVisible())
+		{
+			m_TranslationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::TRANSLATE);
+			m_RotationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::ROTATE);
+			m_ScaleGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::SCALE);
+		}
+	}
+
+	void FlexEngine::SetTransformState(TransformState state)
+	{
+		if (state != m_CurrentTransformGizmoState)
+		{
+			m_CurrentTransformGizmoState = state;
+
+			UpdateGizmoVisibility();
+		}
+	}
+
+	TransformState FlexEngine::GetTransformState() const
+	{
+		return m_CurrentTransformGizmoState;
+	}
+
+	void FlexEngine::CalculateSelectedObjectsCenter()
+	{
+		if (m_CurrentlySelectedObjects.empty())
+		{
+			return;
+		}
+
+		glm::vec3 avgPos(0.0f);
+		for (GameObject* gameObject : m_CurrentlySelectedObjects)
+		{
+			avgPos += gameObject->GetTransform()->GetWorldPosition();
+		}
+		m_SelectedObjectsCenterPos = m_SelectedObjectDragStartPos;
+		m_SelectedObjectRotation = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform()->GetWorldRotation();
+
+		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjects.size());
+	}
+
+	void FlexEngine::SelectAll()
+	{
+		for (GameObject* gameObject : g_SceneManager->CurrentScene()->GetAllObjects())
+		{
+			m_CurrentlySelectedObjects.push_back(gameObject);
+		}
+		CalculateSelectedObjectsCenter();
 	}
 
 	bool FlexEngine::IsDraggingGizmo() const
 	{
 		return m_bDraggingGizmo;
 	}
-	
+
 	std::string FlexEngine::EngineVersionString()
 	{
-		return std::to_string(EngineVersionMajor) + "." +
-			std::to_string(EngineVersionMinor) + "." +
-			std::to_string(EngineVersionPatch);
+		return IntToString(EngineVersionMajor) + "." +
+			IntToString(EngineVersionMinor) + "." +
+			IntToString(EngineVersionPatch);
 	}
+
+#if COMPILE_RENDERDOC_API
+	void FlexEngine::SetupRenderDocAPI()
+	{
+		std::string dllPath = RelativePathToAbsolute(ROOT_LOCATION "lib/Debug/renderdoc.dll");
+		if (FileExists(dllPath))
+		{
+			HMODULE renderDocModule = LoadLibraryA(dllPath.c_str());
+			//HMODULE renderDocModule = GetModuleHandleA(dllPath.c_str());
+			if (renderDocModule == NULL)
+			{
+				PrintWarn("Failed to retrieve render doc dll\n");
+				return;
+			}
+
+			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(renderDocModule, "RENDERDOC_GetAPI");
+			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void **)&m_RenderDocAPI);
+			assert(ret == 1);
+
+			i32 major = 0, minor = 0, patch = 0;
+			m_RenderDocAPI->GetAPIVersion(&major, &minor, &patch);
+			Print("RenderDoc API v%i.%i.%i connected, F9 to capture\n", major, minor, patch);
+
+			std::string dateStr = GetDateString_YMDHMS();
+			std::string captureFilePath = RelativePathToAbsolute(ROOT_LOCATION "saved/RenderDocCaptures/FlexEngine_" + dateStr);
+			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
+
+			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);
+			m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
+			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
+
+			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
+		}
+	}
+#endif
+
 } // namespace flex

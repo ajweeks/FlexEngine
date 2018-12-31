@@ -2,18 +2,10 @@
 
 #include <string>
 #include <vector>
-#include <array>
-#include <map>
 
-#pragma warning(push, 0)
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-#pragma warning(pop)
-
-#include "VertexBufferData.hpp"
-#include "Transform.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
+#include "Scene/GameObject.hpp" // For PointLight & DirecitonalLight
 
 class btIDebugDraw;
 
@@ -32,11 +24,11 @@ namespace flex
 		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
-		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) = 0;
+		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
+		virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
-		virtual void ClearRenderObjects() = 0;
 		virtual void ClearMaterials() = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
@@ -44,15 +36,21 @@ namespace flex
 
 		virtual void Update() = 0;
 		virtual void Draw() = 0;
-		virtual void DrawImGuiItems() = 0;
+		virtual void DrawImGuiRenderObjects() = 0;
+		virtual void DrawImGuiSettings();
 
-		// Values should be specified relative to screen size, in [0, 1]
+		virtual void DrawImGuiForRenderID(RenderID renderID) = 0;
+
 		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
 		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
+		virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) = 0;
 
 		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
 		virtual void ReloadShaders() = 0;
+		virtual void LoadFonts(bool bForceRender) = 0;
+
+		virtual void ReloadSkybox(bool bRandomizeTexture) = 0;
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
@@ -98,14 +96,28 @@ namespace flex
 								const glm::vec4& color,
 								AnchorPoint anchor,
 								const glm::vec2& pos,
-								real spacing, 
-								bool bRaw) = 0;
+								real spacing,
+								bool bRaw,
+			const std::vector<glm::vec2>& letterYOffsets) = 0;
 
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
 		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
 
 		virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const = 0;
 		virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const = 0;
+
+		virtual void DrawAssetBrowserImGui(bool* bShowing) = 0;
+
+		virtual void RecaptureReflectionProbe() = 0;
+
+		virtual u32 GetTextureHandle(TextureID textureID) const = 0;
+
+		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
+		virtual void RenderObjectStateChanged() = 0;
+
+		void ToggleRenderGrid();
+		bool IsRenderingGrid() const;
+		virtual void SetRenderGrid(bool bRenderGrid);
 
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
@@ -122,19 +134,25 @@ namespace flex
 										  glm::vec2& scaleOut);
 
 		void SetPostProcessingEnabled(bool bEnabled);
-		bool GetPostProcessingEnabled() const;
+		bool IsPostProcessingEnabled() const;
+
+		void SetDisplayBoundingVolumesEnabled(bool bEnabled);
+		bool IsDisplayBoundingVolumesEnabled()const;
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
-		bool InitializeDirectionalLight(const DirectionalLight& dirLight);
-		PointLightID InitializePointLight(const PointLight& pointLight);
+		bool RegisterDirectionalLight(DirectionalLight* dirLight);
+		PointLightID RegisterPointLight(PointLight* pointLight);
 
-		void ClearDirectionalLight();
-		void ClearPointLights();
+		void RemoveDirectionalLight();
+		void RemovePointLight(const PointLight* pointLight);
+		void RemoveAllPointLights();
 
-		DirectionalLight& GetDirectionalLight();
-		PointLight& GetPointLight(PointLightID pointLight);
+		DirectionalLight* GetDirectionalLight();
+		PointLight* GetPointLight(PointLightID pointLight);
 		i32 GetNumPointLights();
+
+		i32 GetFramesRenderedCount() const;
 
 		struct PostProcessSettings
 		{
@@ -146,7 +164,7 @@ namespace flex
 			bool bEnableFXAA = true;
 			bool bEnableFXAADEBUGShowEdges = false;
 		};
-			
+
 		PostProcessSettings& GetPostProcessSettings();
 
 		static const u32 MAX_TEXTURE_DIM = 65536;
@@ -154,25 +172,23 @@ namespace flex
 
 		BitmapFont* m_FntUbuntuCondensed = nullptr;
 		BitmapFont* m_FntSourceCodePro = nullptr;
+		BitmapFont* m_FntGant = nullptr;
 
 	protected:
-		/*
-		* Draws common data for a game object
-		*/
-		void DrawImGuiForRenderObjectCommon(GameObject* gameObject);
-
-		void DrawImGuiLights();
-		
-		std::vector<PointLight> m_PointLights;
-		DirectionalLight m_DirectionalLight;
+		std::vector<PointLight*> m_PointLights;
+		DirectionalLight* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo
 		{
-			RenderID cubemapObjectRenderID = InvalidRenderID;
 			bool bRenderToCubemap = false;
 			bool bDeferred = false;
+			bool bWireframe = false;
+			bool bWriteToDepth = true;
+			DepthTestFunc depthTestFunc = DepthTestFunc::LEQUAL;
+			RenderID cubemapObjectRenderID = InvalidRenderID;
+			MaterialID materialOverride = InvalidMaterialID;
 		};
-		
+
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 		bool m_bVSyncEnabled = true;
@@ -180,13 +196,22 @@ namespace flex
 
 		/* Objects that are created at bootup and stay active until shutdown, regardless of scene */
 		std::vector<GameObject*> m_PersistentObjects;
-		
+
 		BitmapFont* m_CurrentFont = nullptr;
 		std::vector<BitmapFont*> m_Fonts;
 
 		PostProcessSettings m_PostProcessSettings;
 
 		bool m_bPostProcessingEnabled = true;
+		bool m_bDisplayBoundingVolumes = false;
+
+		bool m_bRenderGrid = true;
+
+		u32 m_FramesRendered = 0;
+
+		// Must be stored as member because ImGui will not make a copy
+		std::string m_ImGuiIniFilepathStr;
+		std::string m_ImGuiLogFilepathStr;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

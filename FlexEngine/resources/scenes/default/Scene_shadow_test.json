@@ -1,0 +1,246 @@
+{
+	"version" : 1,
+	"name" : "Scene_shadow_test",
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : false,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.600, 0.000"
+			},
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "ground plane",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-0.600, -0.379, 1.200",
+				"scale" : "30.000, 0.600, 30.000"
+			},
+			"mesh" : "cube",
+			"material" : "pbr grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "17.457, 5.298, 0.000",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Cylinder",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "3.330, 4.569, 1.150",
+				"rot" : "0.000, 1.570, 0.000",
+				"scale" : "1.000, 5.150, 1.000"
+			},
+			"mesh" : "cylinder",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "cylinder",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "bawl",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "6.300, 4.400, -12.000",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "New_Game_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-0.500, 4.400, -12.000",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "New_Game_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "2.800, 4.100, -7.300",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "New_Game_Object_02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "2.800, 4.100, -17.700",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "New_Game_Object_03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "2.600, 4.100, 13.870",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "New_Game_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "6.300, 4.400, 18.570",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "New_Game_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-0.500, 4.400, 18.570",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "New_Game_Object_02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "2.800, 4.100, 23.270",
+				"scale" : "1.500, 1.500, 1.500"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
+		}
+	],
+	"track manager" : 
+	{
+		"tracks" : 
+		{
+			"track" : 
+			{
+				"curve" : "5.00000, 0.00000, 5.00000, 15.00000, 0.00000, 10.00000, 25.00000, 0.00000, 10.00000, 35.00000, 0.00000, 10.00000",
+				"curve" : "35.00000, 0.00000, 10.00000, 45.00000, 0.00000, 10.00000, 55.00000, 0.00000, 10.00000, 60.00000, 0.00000, 10.00000",
+				"curve" : "60.00000, 0.00000, 10.00000, 70.00000, 0.00000, 10.00000, 73.00000, 0.00000, 8.00000, 73.00000, 0.00000, 2.00000",
+				"curve" : "73.00000, 0.00000, 2.00000, 73.00000, 0.00000, -6.00000, 60.00000, 0.00000, -8.00000, 50.00000, 0.00000, -8.00000"
+			},
+			"track" : 
+			{
+				"curve" : "35.00000, 0.00000, 10.00000, 35.00000, 0.00000, 15.00000, 30.00000, 0.00000, 20.00000, 25.00000, 0.00000, 22.00000",
+				"curve" : "25.00000, 0.00000, 22.00000, 20.00000, 0.00000, 24.00000, 15.00000, 0.00000, 25.00000, 10.00000, 0.00000, 25.00000"
+			},
+			"track" : 
+			{
+				"curve" : "35.00000, 0.00000, 10.00000, 40.00000, 0.00000, -2.00000, 45.00000, 0.00000, 4.00000, 50.00000, 0.00000, -8.00000"
+			}
+		}
+	}
+}

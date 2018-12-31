@@ -1,17 +1,15 @@
 #pragma once
 
-#include <vector>
-
 #include "Audio/RandomizedAudioSource.hpp"
-#include "Helpers.hpp"
 #include "Transform.hpp"
-#include "JSONTypes.hpp"
 
 class btCollisionShape;
 
 namespace flex
 {
 	class BaseScene;
+	class MeshComponent;
+	class BezierCurveList;
 
 	class GameObject
 	{
@@ -21,11 +19,11 @@ namespace flex
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren);
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren);
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
-		JSONObject SerializeToJSON(BaseScene* scene);
+		JSONObject Serialize(const BaseScene* scene) const;
 		void ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
 		virtual void Initialize();
@@ -33,9 +31,21 @@ namespace flex
 		virtual void Destroy();
 		virtual void Update();
 
+		virtual void DrawImGuiObjects();
+		virtual void DoImGuiContextMenu(bool bActive);
+		virtual bool DoDuplicateGameObjectButton(const char* buttonName);
+
+		void RemoveRigidBody();
+
 		void SetParent(GameObject* parent);
 		GameObject* GetParent();
 		void DetachFromParent();
+
+		// Returns a list of objects, starting with the root, going up to this object
+		std::vector<GameObject*> GetParentChain();
+
+		// Walks up the tree to the highest parent
+		GameObject* GetRootParent();
 
 		GameObject* AddChild(GameObject* child);
 		bool RemoveChild(GameObject* child);
@@ -43,8 +53,19 @@ namespace flex
 
 		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
 
+		void UpdateSiblingIndices(i32 myIndex);
+		i32 GetSiblingIndex() const;
+
+		// Returns all objects who share our parent
+		std::vector<GameObject*> GetAllSiblings();
+		// Returns all objects who share our parent and have a larger sibling index
+		std::vector<GameObject*> GetEarlierSiblings();
+		// Returns all objects who share our parent and have a smaller sibling index
+		std::vector<GameObject*> GetLaterSiblings();
+
 		virtual Transform* GetTransform();
-		
+		virtual const Transform* GetTransform() const;
+
 		void AddTag(const std::string& tag);
 		bool HasTag(const std::string& tag);
 		std::vector<std::string> GetTags() const;
@@ -64,8 +85,12 @@ namespace flex
 		bool IsVisible() const;
 		void SetVisible(bool bVisible, bool effectChildren = true);
 
-		bool IsVisibleInSceneExplorer() const;
+		// If bIncludingChildren is true, true will be returned if this or any children are visible in scene explorer
+		bool IsVisibleInSceneExplorer(bool bIncludingChildren = false) const;
 		void SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer);
+
+		bool HasUniformScale() const;
+		void SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately);
 
 		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);
 		btCollisionShape* GetCollisionShape() const;
@@ -94,14 +119,21 @@ namespace flex
 
 		GameObjectType GetType() const;
 
+		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+
 	protected:
 		friend class BaseClass;
 		friend class BaseScene;
 
+		static const char* s_DefaultNewGameObjectName;
+
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
-		virtual void SerializeUniqueFields(JSONObject& parentObject);
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
+
+		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
 		std::string m_Name;
 
@@ -156,6 +188,8 @@ namespace flex
 		*/
 		GameObject* m_ObjectInteractingWith = nullptr;
 
+		i32 m_SiblingIndex = 0;
+
 		btCollisionShape* m_CollisionShape = nullptr;
 		RigidBody* m_RigidBody = nullptr;
 
@@ -164,7 +198,10 @@ namespace flex
 
 		MeshComponent* m_MeshComponent = nullptr;
 
-		bool bBeingInteractedWith = false;
+		bool m_bBeingInteractedWith = false;
+
+		// Editor only
+		bool m_bUniformScale = false;
 
 		static AudioSourceID s_BunkSound;
 		static RandomizedAudioSource s_SqueakySounds;
@@ -173,12 +210,71 @@ namespace flex
 
 	// Child classes
 
+	class DirectionalLight : public GameObject
+	{
+	public:
+		DirectionalLight();
+		DirectionalLight(const std::string& name);
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void DrawImGuiObjects() override;
+
+		bool operator==(const DirectionalLight& other);
+
+		void SetPos(const glm::vec3& pos);
+		glm::vec3 GetPos() const;
+		void SetRot(const glm::quat& rot);
+		glm::quat GetRot() const;
+
+		glm::vec4 color = VEC4_ONE;
+		u32 enabled = 1;
+		real brightness = 1.0f;
+
+		real shadowOpacity = 0.0f;
+		bool bCastShadow = true;
+		real shadowMapNearPlane = -80.0f;
+		real shadowMapFarPlane = 100.0f;
+		real shadowMapZoom = 30.0f;
+
+		// DEBUG: (just for preview in ImGui)
+		u32 shadowTextureID = 0;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+	};
+
+	class PointLight : public GameObject
+	{
+	public:
+		PointLight();
+		PointLight(const std::string& name);
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void DrawImGuiObjects() override;
+
+		bool operator==(const PointLight& other);
+
+		void SetPos(const glm::vec3& pos);
+		glm::vec3 GetPos() const;
+
+		glm::vec4 color = VEC4_ONE;
+		u32 enabled = 1;
+		real brightness = 500.0f;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+	};
+
 	class Valve : public GameObject
 	{
 	public:
 		Valve(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void PostInitialize() override;
 		virtual void Update() override;
@@ -202,7 +298,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -211,7 +307,7 @@ namespace flex
 	public:
 		RisingBlock(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -221,7 +317,7 @@ namespace flex
 		Valve* valve = nullptr; // (object name is serialized)
 		glm::vec3 moveAxis;
 
-		// If true this block will "fall" to its minimum 
+		// If true this block will "fall" to its minimum
 		// value when a player is not interacting with it
 		bool bAffectedByGravity = false;
 
@@ -232,7 +328,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -241,13 +337,13 @@ namespace flex
 	public:
 		GlassPane(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		bool bBroken = false;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -256,7 +352,7 @@ namespace flex
 	public:
 		ReflectionProbe(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void PostInitialize() override;
 
@@ -264,7 +360,7 @@ namespace flex
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -273,11 +369,40 @@ namespace flex
 	public:
 		Skybox(const std::string& name);
 
-		virtual GameObject* CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+	};
+
+	class Cart : public GameObject
+	{
+	public:
+		Cart();
+		Cart(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		//virtual void Initialize() override;
+		//virtual void PostInitialize() override;
+		//virtual void Destroy() override;
+		virtual void Update() override;
+		virtual void DrawImGuiObjects() override;
+
+		void OnTrackMount(TrackID trackID, real newDistAlongTrack);
+		void OnTrackDismount();
+
+		TrackID currentTrackID = InvalidTrackID;
+		real distAlongTrack = -1.0f;
+
+		real moveSpeed = 0.2f;
+		real moveDirection = 1.0f; // -1.0f or 1.0f
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 

@@ -5,7 +5,7 @@
 namespace flex
 {
 	class BaseCamera;
-	
+
 	class CameraManager final
 	{
 	public:
@@ -42,6 +42,10 @@ namespace flex
 		 */
 		void SetActiveIndexRelative(i32 delta, bool bAlign = true);
 
+		void SetActiveCameraByType(const std::string& typeStr);
+
+		void DrawImGuiObjects();
+
 	private:
 		i32 GetCameraIndex(BaseCamera* camera);
 
@@ -50,9 +54,6 @@ namespace flex
 
 		std::vector<BaseCamera*> m_Cameras;
 		i32 m_ActiveCameraIndex = -1;
-
-		// TODO: Implement camera animation here
-		//bool animating = false;
 
 	};
 } // namespace flex

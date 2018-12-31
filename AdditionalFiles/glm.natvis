@@ -34,7 +34,34 @@
     </Expand>
   </Type>
 
-  <Type Name="glm::tmat4&lt;*&gt;">
+  <Type Name="glm::vec2&lt;*&gt;">
+    <DisplayString>{x}, {y}</DisplayString>
+    <Expand>
+      <Item Name="x">x</Item>
+      <Item Name="y">y</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="glm::vec3&lt;*&gt;">
+    <DisplayString>{x}, {y}, {z}</DisplayString>
+    <Expand>
+      <Item Name="x">x</Item>
+      <Item Name="y">y</Item>
+      <Item Name="z">z</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="glm::vec4&lt;*&gt;">
+    <DisplayString>{x}, {y}, {z}, {w}</DisplayString>
+    <Expand>
+      <Item Name="x">x</Item>
+      <Item Name="y">y</Item>
+      <Item Name="z">z</Item>
+      <Item Name="w">w</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="glm::mat&lt;*&gt;">
     <DisplayString>{value[0]}, {value[1]}, {value[2]}, {value[3]}</DisplayString>
     <Expand>
       <Item Name="[0]">value[0]</Item>

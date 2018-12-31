@@ -1,19 +1,21 @@
 #pragma once
 
 #include <vector>
+#include <map>
 
 #pragma warning(push, 0)
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
 #include <glm/vec2.hpp>
+
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-
-#include <assimp/scene.h>
-#include <assimp/Importer.hpp>
 #pragma warning(pop)
 
-#include "VertexAttribute.hpp"
-#include "VertexBufferData.hpp"
+#include "Graphics/RendererTypes.hpp"
 #include "JSONTypes.hpp"
+#include "Graphics/VertexAttribute.hpp"
+#include "Graphics/VertexBufferData.hpp"
 
 namespace flex
 {
@@ -23,15 +25,18 @@ namespace flex
 	{
 	public:
 		MeshComponent(GameObject* owner);
-		MeshComponent(MaterialID materialID, GameObject* owner);
+		MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat = true);
 		~MeshComponent();
 
 		static void DestroyAllLoadedMeshes();
 
 		static MeshComponent* ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID);
+		JSONObject Serialize() const;
 
 		void Update();
 		void Destroy();
+
+		void SetOwner(GameObject* owner);
 
 		enum class Type
 		{
@@ -68,13 +73,13 @@ namespace flex
 		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
 		 * be enforced (filled with default value if not present in mesh)
 		*/
-		void SetRequiredAttributes(VertexAttributes requiredAttributes);
+		void SetRequiredAttributesFromMaterialID(MaterialID matID);
 
 		/*
 		* Loads a mesh from file
 		*/
 		bool LoadFromFile(
-			const std::string& filePath,
+			const std::string& relativeFilePath,
 			ImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
@@ -83,8 +88,13 @@ namespace flex
 		* Optionally pass in createInfo values to be given to the renderer
 		* when initializing the render object
 		*/
-		bool LoadPrefabShape(PrefabShape shape, 
+		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
+		/*
+		* Destroys then loads this object
+		*/
+		void Reload();
 
 		MaterialID GetMaterialID() const;
 		void SetMaterialID(MaterialID materialID);
@@ -95,18 +105,40 @@ namespace flex
 
 		Type GetType() const;
 
-		std::string GetFilepath() const;
+		std::string GetRelativeFilePath() const;
+		std::string GetFileName() const;
 		PrefabShape GetShape() const;
 		ImportSettings GetImportSettings() const;
 
-	private:
+		real GetScaledBoundingSphereRadius() const;
+		glm::vec3 GetBoundingSphereCenterPointWS() const;
+
+		glm::vec3 m_MinPoint;
+		glm::vec3 m_MaxPoint;
+
+		real m_BoundingSphereRadius = 0.0f;
+		glm::vec3 m_BoundingSphereCenterPoint;
+
 		struct LoadedMesh
 		{
+			std::string relativeFilePath;
+			ImportSettings importSettings;
 			Assimp::Importer importer = {};
 			const aiScene* scene = nullptr;
 		};
-		static bool GetLoadedMesh(const std::string& filePath, const aiScene** scene);
+		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.gltf")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
+
+		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
+
+		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, ImportSettings* importSettings = nullptr);
+
+	private:
+		real CalculateBoundingSphereScale() const;
+
+		bool LoadFromAiScene(const aiScene* scene,
+							 ImportSettings* importSettings = nullptr,
+							 RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		GameObject* m_OwningGameObject = nullptr;
 
@@ -120,7 +152,8 @@ namespace flex
 		static const u32 GRID_LINE_COUNT;
 
 		Type m_Type = Type::NONE;
-		std::string m_FilePath;
+		std::string m_RelativeFilePath;
+		std::string m_FileName;
 
 		glm::vec2 m_UVScale = { 1,1 };
 
@@ -131,6 +164,7 @@ namespace flex
 
 		// Saved so we can reload meshes and serialize contents to file
 		ImportSettings m_ImportSettings = {};
+		RenderObjectCreateInfo m_OptionalCreateInfo = {};
 
 		static glm::vec4 m_DefaultColor_4;
 		static glm::vec3 m_DefaultPosition;

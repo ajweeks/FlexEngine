@@ -3,24 +3,27 @@
 #include "Cameras/BaseCamera.hpp"
 
 #pragma warning(push, 0)
-#include <glm/vec2.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/vec2.hpp>
 #pragma warning(pop)
 
 #include "Helpers.hpp"
+#include "Player.hpp"
+#include "PlayerController.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
 	BaseCamera::BaseCamera(const std::string& cameraName, real FOV, real zNear, real zFar) :
 		m_Name(cameraName),
-		m_FOV(FOV), m_ZNear(zNear), m_ZFar(zFar),
-		m_Position(glm::vec3(0.0f)),
-		m_View(glm::mat4(0.0f)),
-		m_Proj(glm::mat4(0.0f)),
-		m_ViewProjection(glm::mat4(0.0f)),
-		m_Yaw(0.0f),
-		m_Pitch(0.0f),
+		m_View(MAT4_ZERO),
+		m_Proj(MAT4_ZERO),
+		m_ViewProjection(MAT4_ZERO),
+		m_FOV(FOV),
+		m_ZNear(zNear),
+		m_ZFar(zFar),
 		m_MoveSpeed(25.0f),
 		m_PanSpeed(10.0f),
 		m_DragDollySpeed(0.1f),
@@ -29,12 +32,17 @@ namespace flex
 		m_MoveSpeedSlowMultiplier(0.05f),
 		m_TurnSpeedFastMultiplier(2.0f),
 		m_TurnSpeedSlowMultiplier(0.1f),
+		m_OrbitingSpeed(0.1f),
+		m_MouseRotationSpeed(0.0015f),
 		m_GamepadRotationSpeed(2.0f),
-		m_MouseRotationSpeed(0.0015f)
+		m_Position(VEC3_ZERO),
+		m_Yaw(0.0f),
+		m_Pitch(0.0f)
 	{
 		ResetOrientation();
-		CalculateAxisVectors();
+		CalculateAxisVectorsFromPitchAndYaw();
 		RecalculateViewProjection();
+		CalculateExposure();
 	}
 
 	BaseCamera::~BaseCamera()
@@ -46,6 +54,30 @@ namespace flex
 	}
 
 	void BaseCamera::OnSceneChanged()
+	{
+	}
+
+	void BaseCamera::OnPossess()
+	{
+		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+		Player* player1 = g_SceneManager->CurrentScene()->GetPlayer(1);
+
+		if (player0)
+		{
+			player0->UpdateIsPossessed();
+		}
+
+		if (player1)
+		{
+			player1->UpdateIsPossessed();
+		}
+	}
+
+	void BaseCamera::OnDepossess()
+	{
+	}
+
+	void BaseCamera::DrawImGuiObjects()
 	{
 	}
 
@@ -96,20 +128,17 @@ namespace flex
 
 	void BaseCamera::LookAt(glm::vec3 point, real speed)
 	{
-		glm::vec3 dPos = glm::normalize(point - m_Position);
-		glm::vec3 dDir = glm::normalize(dPos);
+		speed = glm::clamp(speed, 0.0f, 1.0f);
 
-		glm::vec3 targetRight = glm::cross(dPos, m_Up);
-		glm::vec3 targetForward = glm::cross(targetRight, m_Up);
+		glm::vec3 targetForward = glm::normalize(point - m_Position);
+		m_Forward = glm::normalize(Lerp(m_Forward, targetForward, speed));
 
-		//real dYaw = glm::acos(glm::dot(glm::vec2(dPos.x, dPos.z), glm::vec2(m_Forward.x, m_Forward.z)));
-		//real dPitch = glm::dot(glm::vec2(dPos.y, dPos.x), glm::vec2(m_Forward.y, m_Forward.x));
+#if THOROUGH_CHECKS
+		ENSURE(!IsNanOrInf(m_Forward));
+#endif
 
-		const real targetYaw = glm::atan(dDir.z, dDir.x);
-		const real targetPitch = glm::atan(dDir.y, dDir.z);
-
-		m_Yaw = Lerp(m_Yaw, targetYaw, glm::clamp(speed, 0.0f, 1.0f));
-		m_Pitch = Lerp(m_Pitch, targetPitch, glm::clamp(speed, 0.0f, 1.0f));
+		CalculateYawAndPitchFromForward();
+		RecalculateViewProjection();
 	}
 
 	void BaseCamera::Translate(glm::vec3 translation)
@@ -150,7 +179,7 @@ namespace flex
 
 	void BaseCamera::ResetPosition()
 	{
-		m_Position = glm::vec3(0.0f);
+		m_Position = VEC3_ZERO;
 	}
 
 	void BaseCamera::ResetOrientation()
@@ -159,7 +188,7 @@ namespace flex
 		m_Yaw = PI;
 	}
 
-	void BaseCamera::CalculateAxisVectors()
+	void BaseCamera::CalculateAxisVectorsFromPitchAndYaw()
 	{
 		m_Forward = {};
 		m_Forward.x = cos(m_Pitch) * cos(m_Yaw);
@@ -176,7 +205,13 @@ namespace flex
 	void BaseCamera::CalculateYawAndPitchFromForward()
 	{
 		m_Pitch = asin(m_Forward.y);
-		m_Yaw = atan2(m_Forward.x, m_Forward.z);
+		ClampPitch();
+		m_Yaw = atan2(m_Forward.z, m_Forward.x);
+
+#if THOROUGH_CHECKS
+		ENSURE(!IsNanOrInf(m_Pitch));
+		ENSURE(!IsNanOrInf(m_Yaw));
+#endif
 	}
 
 	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)
@@ -199,15 +234,18 @@ namespace flex
 
 	void BaseCamera::ClampPitch()
 	{
-		real pitchLimit = PI_DIV_TWO - 0.02f;
-		if (m_Pitch > pitchLimit)
-		{
-			m_Pitch = pitchLimit;
-		}
-		else if (m_Pitch < -pitchLimit)
-		{
-			m_Pitch = -pitchLimit;
-		}
+		real pitchLimit = glm::radians(89.5f);
+		m_Pitch = glm::clamp(m_Pitch, -pitchLimit, pitchLimit);
+	}
+
+	float BaseCamera::CalculateEV100(float aperture, float shutterSpeed, float sensitivity)
+	{
+		return log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
+	}
+
+	float BaseCamera::ComputeExposureNormFactor(float EV100)
+	{
+		return pow(2.0f, EV100) * 1.2f;
 	}
 
 	real BaseCamera::GetYaw() const
@@ -254,4 +292,11 @@ namespace flex
 	{
 		return m_Name;
 	}
+
+	void BaseCamera::CalculateExposure()
+	{
+		real EV100 = CalculateEV100(aperture, shutterSpeed, lightSensitivity);
+		exposure = ComputeExposureNormFactor(EV100);
+	}
+
 } // namespace flex

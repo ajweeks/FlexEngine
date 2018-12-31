@@ -1,0 +1,146 @@
+{
+	"version" : 1,
+	"meshes" : 
+	[
+		{
+			"file" : "cube.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "capsule.FBX",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "cone.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "unit-plane.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "CornellBox/cornell-box.fbx",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"prefab" : "world axis ground",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "street-02.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "sponza/sponza.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "teapot_smooth.FBX",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "mori-knob.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "Cerberus_by_Andrew_Maximov/cerberus.glb",
+			"swapNormalYZ" : true,
+			"flipNormalZ" : true,
+			"flipU" : false,
+			"flipV" : true
+		},
+		{
+			"file" : "valve.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "capsule.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "slingshot.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "cylinder.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "SunTemple.fbx",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "map_tablet.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "sphere.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "ico-sphere.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "cart-empty.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		}
+	]
+}

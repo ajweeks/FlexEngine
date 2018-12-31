@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include "Track/TrackManager.hpp"
 
 namespace flex
 {
@@ -9,8 +8,11 @@ namespace flex
 	class ReflectionProbe;
 	class Player;
 	class GameObject;
+	class PointLight;
+	class DirectionalLight;
 	struct JSONObject;
 	struct JSONField;
+	struct Material;
 
 	class BaseScene
 	{
@@ -38,12 +40,12 @@ namespace flex
 
 		PhysicsWorld* GetPhysicsWorld();
 
-		/* 
+		/*
 		* Serializes all data from scene into JSON scene file.
-		* Only writes data that has non-default values (e.g. an identity 
+		* Only writes data that has non-default values (e.g. an identity
 		* transform is not saved)
 		*/
-		void SerializeToFile(bool bSaveOverDefault = false);
+		void SerializeToFile(bool bSaveOverDefault = false) const;
 
 		void DeleteSaveFiles();
 
@@ -69,6 +71,31 @@ namespace flex
 
 		bool IsLoaded() const;
 
+		static void ParseFoundMeshFiles();
+		static void ParseFoundMaterialFiles();
+		static void ParseFoundPrefabFiles();
+
+		static bool SerializeMeshFile();
+		static bool SerializeMaterialFile();
+		static bool SerializePrefabFile();
+
+		static std::vector<JSONObject> s_ParsedMaterials;
+		static std::vector<JSONObject> s_ParsedMeshes;
+		static std::vector<JSONObject> s_ParsedPrefabs;
+
+		std::vector<GameObject*> GetAllObjects();
+
+		TrackManager* GetTrackManager();
+
+		// Returns 'prefix' with a number appended representing
+		// how many other objects with that prefix are in the scene
+		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
+
+		void RemoveObjectAtEndOfFrame(GameObject* obj);
+		void RemoveObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
+		void AddObjectAtEndOFFrame(GameObject* obj);
+		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
+
 	protected:
 		friend class GameObject;
 
@@ -76,26 +103,25 @@ namespace flex
 		// Returns true if targetObject was found and deleted
 		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
 
-		void CreatePointLightFromJSON(const JSONObject& obj, PointLight& pointLight);
-		void CreateDirectionalLightFromJSON(const JSONObject& obj, DirectionalLight& directionalLight);
-
-		JSONObject SerializePointLight(PointLight& pointLight);
-		JSONObject SerializeDirectionalLight(DirectionalLight& directionalLight);
-
 		i32 GetMaterialArrayIndex(const Material& material);
 
-		void ParseFoundPrefabFiles();
+		MaterialID FindMaterialIDByName(const JSONObject& object);
 
-		MaterialID ParseMatID(const JSONObject& object);
+		void UpdateRootObjectSiblingIndices();
+
+		void CreateDefaultDirectionalLight();
+
+		static const i32 m_FileVersion = 1;
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		std::string m_Name;
 		std::string m_FileName;
 
+
 		std::vector<GameObject*> m_RootObjects;
 
-		bool m_bUsingSaveFile = false;
+		//bool m_bUsingSaveFile = false;
 
 		bool m_bLoaded = false;
 
@@ -106,17 +132,14 @@ namespace flex
 		std::vector<MaterialID> m_LoadedMaterials;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
-		
-		// TODO: Merge into one object type
-		GameObject* m_Grid = nullptr;
-		GameObject* m_WorldOrigin = nullptr;
-		MaterialID m_GridMaterialID = InvalidMaterialID;
-		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 
-		std::vector<JSONObject> m_ParsedPrefabs;
+		TrackManager m_TrackManager;
+
+		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
+		std::vector<GameObject*> m_ObjectsToRemoveAtEndOfFrame;
 
 	private:
 		/*

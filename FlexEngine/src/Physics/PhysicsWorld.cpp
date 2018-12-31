@@ -3,21 +3,22 @@
 #include "Physics/PhysicsWorld.hpp"
 
 #pragma warning(push, 0)
-#include <LinearMath/btVector3.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
-#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <LinearMath/btVector3.h>
 #pragma warning(pop)
 
-#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
-#include "Physics/PhysicsManager.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "Helpers.hpp"
 #include "Physics/PhysicsHelpers.hpp"
+#include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
-#include "Helpers.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
@@ -34,7 +35,7 @@ namespace flex
 		if (!m_World)
 		{
 			m_World = g_PhysicsManager->CreateWorld();
-			
+
 			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
 
 			//m_World->getPairCache()->setInternalGhostPairCallback()
@@ -57,7 +58,7 @@ namespace flex
 				m_World->removeCollisionObject(obj);
 				delete obj;
 			}
-			
+
 			SafeDelete(m_World);
 		}
 	}
@@ -66,9 +67,8 @@ namespace flex
 	{
 		if (m_World)
 		{
-			PROFILE_BEGIN("Physics tick");
+			PROFILE_AUTO("Physics tick");
 			m_World->stepSimulation(deltaSeconds, MAX_SUBSTEPS);
-			PROFILE_END("Physics tick");
 		}
 	}
 
@@ -99,55 +99,80 @@ namespace flex
 		glm::vec4 rayOrigin(0, 0, 0, 1);
 		glm::vec3 rayOriginWorld = cameraView * rayOrigin;
 
-		glm::vec3 rayPWorld = cameraView * glm::vec4(pixelCameraX, pixelCameraY, -1.0f, 1);
-		btVector3 rayDirection = Vec3ToBtVec3(rayPWorld - rayOriginWorld);
+		glm::vec3 rayPWorld = cameraView * glm::vec4(pixelCameraX, pixelCameraY, -1.0f, 1.0f);
+		btVector3 rayDirection = ToBtVec3(rayPWorld - rayOriginWorld);
 		rayDirection.normalize();
 
 		return rayDirection;
 	}
 
-	btRigidBody* PhysicsWorld::PickBody(const btVector3& rayStart, const btVector3& rayEnd)
+	GameObject* PhysicsWorld::PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag)
 	{
-		btRigidBody* pickedBody = nullptr;
-		//btVector3 hitPos(0.0f, 0.0f, 0.0f);
-		//real pickingDist = 0.0f;
-		//i32 savedState = 0;
-		//btTypedConstraint* pickedConstraint = nullptr;
+		GameObject* pickedGameObject = nullptr;
 
 		btCollisionWorld::AllHitsRayResultCallback rayCallback(rayStart, rayEnd);
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
+		real closestGizmoDist2 = FLT_MAX;
 		if (rayCallback.hasHit())
 		{
 			for (i32 i = 0; i < rayCallback.m_hitPointWorld.size(); ++i)
 			{
 				btVector3 pickPos = rayCallback.m_hitPointWorld[i];
-				btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
+				const btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObjects[i]);
 				if (body)
 				{
-					GameObject* pickedGameObject = (GameObject*)body->getUserPointer();
+					GameObject* gameObject = (GameObject*)body->getUserPointer();
 
-					if (pickedGameObject)
+					if (gameObject && gameObject->HasTag(tag))
 					{
-						pickedBody = body;
-						break;
+						real dist2 = (pickPos - rayStart).length2();
+						if (dist2 < closestGizmoDist2)
+						{
+							closestGizmoDist2 = dist2;
+							pickedGameObject = gameObject;
+						}
 					}
-
-					//pickedBody->activate(true);
-					//pickedBody->clearForces();
-					//
-					//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
-					//pickedBody->applyForce({ 0, 600, 0 }, localPivot);
-
-					//savedState = pickedBody->getActivationState();
-					//pickedBody->setActivationState(DISABLE_DEACTIVATION);
-
-					//btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body, localPivot);
-					//dynamicsWorld->addConstraint(p2p, true);
-					//pickedConstraint = p2p;
-					//btScalar mousePickClamping = 30.f;
-					//p2p->m_setting.m_impulseClamp = mousePickClamping;
-					//p2p->m_setting.m_tau = 0.001f;
 				}
+			}
+		}
+
+		return pickedGameObject;
+	}
+
+	btRigidBody* PhysicsWorld::PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd)
+	{
+		btRigidBody* pickedBody = nullptr;
+
+		btCollisionWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+		m_World->rayTest(rayStart, rayEnd, rayCallback);
+		if (rayCallback.hasHit())
+		{
+			btVector3 pickPos = rayCallback.m_hitPointWorld;
+			btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
+			if (body)
+			{
+				GameObject* pickedGameObject = (GameObject*)body->getUserPointer();
+
+				if (pickedGameObject)
+				{
+					pickedBody = body;
+				}
+
+				//pickedBody->activate(true);
+				//pickedBody->clearForces();
+				//
+				//btVector3 localPivot = body->getCenterOfMassTransform().inverse() * pickPos;
+				//pickedBody->applyForce({ 0, 600, 0 }, localPivot);
+
+				//savedState = pickedBody->getActivationState();
+				//pickedBody->setActivationState(DISABLE_DEACTIVATION);
+
+				//btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*body, localPivot);
+				//dynamicsWorld->addConstraint(p2p, true);
+				//pickedConstraint = p2p;
+				//btScalar mousePickClamping = 30.f;
+				//p2p->m_setting.m_impulseClamp = mousePickClamping;
+				//p2p->m_setting.m_tau = 0.001f;
 			}
 			//hitPos = pickPos;
 			//pickingDist = (pickPos - rayFromWorld).length();
@@ -215,7 +240,7 @@ namespace flex
 			//		const btVector3& ptA = pt.getPositionWorldOnA();
 			//		const btVector3& ptB = pt.getPositionWorldOnB();
 			//		const btVector3& normalOnB = pt.m_normalWorldOnB;
-			//		//Print("contact: " + std::to_string(normalOnB.getX()) + ", " + 
+			//		//Print("contact: " + std::to_string(normalOnB.getX()) + ", " +
 			//		//				std::to_string(normalOnB.getY()) + ", " + std::to_string(normalOnB.getZ()));
 			//	}
 			//}

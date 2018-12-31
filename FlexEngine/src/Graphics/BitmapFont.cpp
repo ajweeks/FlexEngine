@@ -32,12 +32,12 @@ namespace flex
 	{
 		return (character >= 0 && character < CHAR_COUNT);
 	}
-	
+
 	void BitmapFont::SetMetric(const FontMetric& metric, wchar_t character)
 	{
 		m_CharTable[character] = metric;
 	}
-	
+
 	FontMetric* BitmapFont::GetMetric(wchar_t character)
 	{
 		return &m_CharTable[character];

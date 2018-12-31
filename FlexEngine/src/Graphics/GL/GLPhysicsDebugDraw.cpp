@@ -8,7 +8,8 @@
 #include "Graphics/GL/GLHelpers.hpp"
 #include "Graphics/GL/GLRenderer.hpp"
 #include "Graphics/Renderer.hpp"
-#include "VertexAttribute.hpp"
+#include "Graphics/VertexAttribute.hpp"
+#include "Profiler.hpp"
 
 namespace flex
 {
@@ -36,11 +37,38 @@ namespace flex
 			}
 
 			m_VertexBufferData = {};
+			m_VertexBufferCreateInfo = {};
+			m_VertexBufferCreateInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+
+			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
+			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
+
+			glUseProgram(glShader->program);
+
+			glGenVertexArrays(1, &m_VAO);
+			glGenBuffers(1, &m_VBO);
+
+			glBindVertexArray(m_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+
+			m_VertAttribPosLoc = glGetAttribLocation(glShader->program, "in_Position");
+			m_VertAttribColLoc = glGetAttribLocation(glShader->program, "in_Color");
+			glEnableVertexAttribArray((GLuint)m_VertAttribPosLoc);
+			glEnableVertexAttribArray((GLuint)m_VertAttribColLoc);
+
+			if (m_VertAttribPosLoc == -1.0f ||
+				m_VertAttribColLoc == -1.0f)
+			{
+				PrintWarn("Failed to find physics debug shader vertex attributes!\n");
+			}
 		}
-		
+
 		void GLPhysicsDebugDraw::Destroy()
 		{
 			m_VertexBufferData.Destroy();
+
+			glDeleteVertexArrays(1, &m_VAO);
+			glDeleteBuffers(1, &m_VBO);
 		}
 
 		void GLPhysicsDebugDraw::UpdateDebugMode()
@@ -91,21 +119,61 @@ namespace flex
 			return m_DebugMode;
 		}
 
-		void GLPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+		void GLPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
 			m_LineSegments.push_back(LineSegment{ from, to, color });
 		}
 
-		void GLPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
+		void GLPhysicsDebugDraw::DrawContactPointWithAlpha(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector4& color)
 		{
-			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
-			UNREFERENCED_PARAMETER(PointOnB);
 			UNREFERENCED_PARAMETER(normalOnB);
 			UNREFERENCED_PARAMETER(distance);
 			UNREFERENCED_PARAMETER(lifeTime);
-			UNREFERENCED_PARAMETER(color);
+
+			DrawLineWithAlpha(PointOnB + btVector3(-1.0f, 0.0f, 0.0f), PointOnB + btVector3(1.0f, 0.0f, 0.0f), color);
+			DrawLineWithAlpha(PointOnB + btVector3(0.0f, 0.0f, -1.0f), PointOnB + btVector3(0.0f, 0.0f, 1.0f), color);
+			DrawLineWithAlpha(PointOnB + btVector3(0.0f, -1.0f, 0.0f), PointOnB + btVector3(0.0f, -1.0f, 0.0f), color);
 		}
-		
+
+		void GLPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+		{
+			btVector4 color4(color.getX(), color.getY(), color.getZ(), 1.0f);
+			m_LineSegments.push_back(LineSegment{ from, to, color4 });
+		}
+
+		void GLPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
+		{
+			UNREFERENCED_PARAMETER(normalOnB);
+			UNREFERENCED_PARAMETER(distance);
+			UNREFERENCED_PARAMETER(lifeTime);
+
+			drawLine(PointOnB + btVector3(-1.0f, 0.0f, 0.0f), PointOnB + btVector3(1.0f, 0.0f, 0.0f), color);
+			drawLine(PointOnB + btVector3(0.0f, 0.0f, -1.0f), PointOnB + btVector3(0.0f, 0.0f, 1.0f), color);
+			drawLine(PointOnB + btVector3(0.0f, -1.0f, 0.0f), PointOnB + btVector3(0.0f, -1.0f, 0.0f), color);
+		}
+
+		void GLPhysicsDebugDraw::drawSphere(btScalar radius, const btTransform& transform, const btVector3& color)
+		{
+			btVector3 center = transform.getOrigin();
+			btVector3 up = transform.getBasis().getColumn(1);
+			btVector3 axis = transform.getBasis().getColumn(0);
+			btScalar minTh = -SIMD_HALF_PI;
+			btScalar maxTh = SIMD_HALF_PI;
+			btScalar minPs = -SIMD_HALF_PI;
+			btScalar maxPs = SIMD_HALF_PI;
+			btScalar stepDegrees = 45.0f;
+			drawSpherePatch(center, up, axis, radius, minTh, maxTh, minPs, maxPs, color, stepDegrees, false);
+			drawSpherePatch(center, up, -axis, radius, minTh, maxTh, minPs, maxPs, color, stepDegrees, false);
+		}
+
+		void GLPhysicsDebugDraw::drawSphere(const btVector3& p, btScalar radius, const btVector3& color)
+		{
+			btTransform tr;
+			tr.setIdentity();
+			tr.setOrigin(p);
+			drawSphere(radius, tr, color);
+		}
+
 		void GLPhysicsDebugDraw::flushLines()
 		{
 			Draw();
@@ -113,6 +181,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::ClearLines()
 		{
+			m_pLineSegments = m_LineSegments;
 			m_LineSegments.clear();
 		}
 
@@ -132,75 +201,75 @@ namespace flex
 			GLMaterial* glMat = &m_Renderer->m_Materials[m_MaterialID];
 			GLShader* glShader = &m_Renderer->m_Shaders[glMat->material.shaderID];
 
-			VertexBufferData::CreateInfo createInfo = {};
-			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-
-			for (LineSegment& line : m_LineSegments)
 			{
-				createInfo.positions_3D.push_back(BtVec3ToVec3(line.start));
-				createInfo.positions_3D.push_back(BtVec3ToVec3(line.end));
-
-				glm::vec4 color = glm::vec4(BtVec3ToVec3(line.color), 1.0f);
-				createInfo.colors_R32G32B32A32.push_back(color);
-				createInfo.colors_R32G32B32A32.push_back(color);
+				PROFILE_AUTO("PhysicsDebugRender > Destroy previous vertex buffer");
+				m_VertexBufferData.Destroy();
 			}
 
-
-			m_VertexBufferData.Destroy(); // Destroy previous frame's buffer since it's already been drawn
-
-			m_VertexBufferData.Initialize(&createInfo);
-
-			glUseProgram(glShader->program);
-
-			glGenVertexArrays(1, &m_VAO);
-			glBindVertexArray(m_VAO);
-
-			glGenBuffers(1, &m_VBO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STATIC_DRAW);
-
-			// Describe shader variables
 			{
-				real* currentLocation = (real*)0;
+				PROFILE_AUTO("PhysicsDebugRender > Initialze vertex buffer");
 
-				GLint location = glGetAttribLocation(glShader->program, "in_Position");
-				if (location != -1)
+				m_VertexBufferCreateInfo.positions_3D.clear();
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
+
+				m_VertexBufferCreateInfo.positions_3D.resize(m_LineSegments.size() * 2);
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(m_LineSegments.size() * 2);
+
+				i32 i = 0;
+				for (LineSegment& line : m_LineSegments)
 				{
-					glEnableVertexAttribArray((GLuint)location);
+					*(m_VertexBufferCreateInfo.positions_3D.data() + i) = (ToVec3(line.start));
+					*(m_VertexBufferCreateInfo.positions_3D.data() + i + 1) = (ToVec3(line.end));
 
+					glm::vec4 color = ToVec4(line.color);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = (color);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = (color);
 
-					glVertexAttribPointer((GLuint)location, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-
-					currentLocation += 3;
+					i += 2;
 				}
 
-				location = glGetAttribLocation(glShader->program, "in_Color");
-				if (location != -1)
+				m_VertexBufferData.Initialize(&m_VertexBufferCreateInfo);
+			}
+
+			{
+				PROFILE_AUTO("PhysicsDebugRender > render");
+
+				glUseProgram(glShader->program);
+
+				glBindVertexArray(m_VAO);
+
+				glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STREAM_DRAW);
+
+				// Describe shader variables (TODO: Why can't this be done just once in initialize? glBufferData)
 				{
-					glEnableVertexAttribArray((GLuint)location);
+					real* currentLocation = (real*)0;
 
-					glVertexAttribPointer((GLuint)location, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
+					glVertexAttribPointer((GLuint)m_VertAttribPosLoc, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
+					currentLocation += 3;
 
+					glVertexAttribPointer((GLuint)m_VertAttribColLoc, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
 					currentLocation += 4;
 				}
+
+				glm::mat4 model = MAT4_IDENTITY;
+				glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+				glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
+				glm::mat4 MVP = proj * view * model;
+				glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
+
+				glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
+				glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
+				glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
+				glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
+
+				glDepthMask(GL_FALSE);
+
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+				glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
 			}
-
-
-			glm::mat4 model = glm::mat4(1.0f);
-			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-			glm::mat4 MVP = proj * view * model;
-			glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
-
-			glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
-			glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
-			glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
-			glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-
-			glDepthMask(GL_FALSE);
-			glDisable(GL_BLEND);
-
-			glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
 		}
 	} // namespace gl
 } // namespace flex

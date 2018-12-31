@@ -5,12 +5,14 @@ in vec3 ex_SampleDirection;
 
 uniform bool enableCubemapSampler;
 uniform samplerCube cubemapSampler;
+uniform float exposure = 1.0;
 
 void main() 
 {
 	if (enableCubemapSampler)
 	{
-		FragColor = texture(cubemapSampler, ex_SampleDirection);
+		FragColor = texture(cubemapSampler, ex_SampleDirection) * exposure;
+		FragColor.a = 1.0;
 	}
 	else
 	{

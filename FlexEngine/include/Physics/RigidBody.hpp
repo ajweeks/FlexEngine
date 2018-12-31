@@ -13,7 +13,7 @@ namespace flex
 	class RigidBody
 	{
 	public:
-		RigidBody(i32 group = 1, i32 mask = 1);
+		RigidBody(i32 group = (i32)CollisionType::DEFAULT, i32 mask = (i32)CollisionType::DEFAULT);
 		// NOTE: This copy constructor does not initialize data, it only copies POD fields
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();
@@ -32,8 +32,15 @@ namespace flex
 		void SetFriction(real friction);
 		real GetFriction() const;
 
-		void GetTransform(glm::vec3& outPos, glm::quat& outRot);
-		
+		void SetLinearDamping(real linearDamping);
+		void SetAngularDamping(real angularDamping);
+
+		// Vector passed in defines the axis (or axes) this body can rotate around
+		void SetOrientationConstraint(const btVector3& axis);
+
+		// Vector passed in defines the axis (or axes) this body can move along
+		void SetPositionalConstraint(const btVector3& axis);
+
 		// Set local transform (relative to parent transform)
 		void SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos);
 		void SetLocalPosition(const glm::vec3& pos);
@@ -41,7 +48,12 @@ namespace flex
 		void SetLocalScale(const glm::vec3& scale);
 
 		i32 GetGroup() const;
+		// NOTE: This function removes, then re-adds this object to the world!
+		void SetGroup(i32 group);
+
 		i32 GetMask() const;
+		// NOTE: This function removes, then re-adds this object to the world!
+		void SetMask(i32 mask);
 
 		glm::vec3 GetLocalPosition() const;
 		glm::quat GetLocalRotation() const;
@@ -79,6 +91,9 @@ namespace flex
 
 		i32 m_Group = 0;
 		i32 m_Mask = 0;
+
+		real m_AngularDamping = 0.0f;
+		real m_LinearDamping = 0.0f;
 
 		// Flags set from PhysicsFlag enum
 		u32 m_Flags = 0;

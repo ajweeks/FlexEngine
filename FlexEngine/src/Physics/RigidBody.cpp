@@ -3,24 +3,25 @@
 #include "Physics/RigidBody.hpp"
 
 #pragma warning(push, 0)
-#include <btBulletDynamicsCommon.h>
 #include <btBulletCollisionCommon.h>
+#include <btBulletDynamicsCommon.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #pragma warning(pop)
 
-#include "Physics/PhysicsWorld.hpp"
 #include "Physics/PhysicsManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
 {
 	RigidBody::RigidBody(i32 group, i32 mask) :
-		m_Group(group),
-		m_Mask(mask),
 		m_LocalPosition(0.0f),
-		m_LocalRotation(glm::quat(glm::vec3(0.0f))),
-		m_LocalScale(1.0f)
+		m_LocalRotation(QUAT_UNIT),
+		m_LocalScale(1.0f),
+		m_Group(group),
+		m_Mask(mask)
 	{
 	}
 
@@ -58,10 +59,9 @@ namespace flex
 			assert(m_Mass == 0); // Static objects must have a mass of 0!
 		}
 
-		btTransform startingTransform = TransformToBtTransform(*parentTransform);
+		btTransform startingTransform = ToBtTransform(*parentTransform);
 		m_MotionState = new btDefaultMotionState(startingTransform);
 		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
-
 		m_RigidBody = new btRigidBody(info);
 
 		i32 flags = m_RigidBody->getFlags();
@@ -75,12 +75,13 @@ namespace flex
 		}
 		m_RigidBody->setFlags(flags);
 
-		m_RigidBody->setDamping(0.0f, 0.0f);
+		m_RigidBody->setDamping(m_LinearDamping, m_AngularDamping);
 		m_RigidBody->setFriction(m_Friction);
 
-		g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		world->addRigidBody(m_RigidBody, m_Group, m_Mask);
 
-		m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(parentTransform->GetWorldScale()));
+		m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(parentTransform->GetWorldScale()));
 	}
 
 	void RigidBody::Destroy()
@@ -119,6 +120,13 @@ namespace flex
 	void RigidBody::SetKinematic(bool bKinematic)
 	{
 		m_bKinematic = bKinematic;
+
+		if (bKinematic && m_RigidBody)
+		{
+			m_RigidBody->clearForces();
+			m_RigidBody->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			m_RigidBody->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		}
 	}
 
 	bool RigidBody::IsKinematic() const
@@ -129,6 +137,10 @@ namespace flex
 	void RigidBody::SetStatic(bool bStatic)
 	{
 		m_bStatic = bStatic;
+		if (bStatic)
+		{
+			m_Mass = 0.0f;
+		}
 	}
 
 	bool RigidBody::IsStatic() const
@@ -151,13 +163,24 @@ namespace flex
 		return m_Friction;
 	}
 
-	void RigidBody::GetTransform(glm::vec3& outPos, glm::quat& outRot)
+	void RigidBody::SetLinearDamping(real linearDamping)
 	{
-		btTransform transform;
-		m_RigidBody->getMotionState()->getWorldTransform(transform);
+		m_LinearDamping = linearDamping;
+	}
 
-		outPos = BtVec3ToVec3(transform.getOrigin());
-		outRot = BtQuaternionToQuaternion(transform.getRotation());
+	void RigidBody::SetAngularDamping(real angularDamping)
+	{
+		m_AngularDamping = angularDamping;
+	}
+
+	void RigidBody::SetOrientationConstraint(const btVector3& axis)
+	{
+		m_RigidBody->setAngularFactor(axis);
+	}
+
+	void RigidBody::SetPositionalConstraint(const btVector3& axis)
+	{
+		m_RigidBody->setLinearFactor(axis);
 	}
 
 	void RigidBody::SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos)
@@ -195,9 +218,33 @@ namespace flex
 		return m_Group;
 	}
 
+	void RigidBody::SetGroup(i32 group)
+	{
+		m_Group = group;
+
+		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		if (m_RigidBody)
+		{
+			world->removeRigidBody(m_RigidBody);
+			world->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		}
+	}
+
 	i32 RigidBody::GetMask() const
 	{
 		return m_Mask;
+	}
+
+	void RigidBody::SetMask(i32 mask)
+	{
+		m_Mask = mask;
+
+		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		if (m_RigidBody)
+		{
+			world->removeRigidBody(m_RigidBody);
+			world->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		}
 	}
 
 	glm::vec3 RigidBody::GetLocalPosition() const
@@ -221,13 +268,13 @@ namespace flex
 
 		btTransform transform = m_RigidBody->getWorldTransform();
 
-		glm::mat4 worldTransformMat = glm::translate(glm::mat4(1.0f), BtVec3ToVec3(transform.getOrigin())) *
-			glm::mat4(BtQuaternionToQuaternion(transform.getRotation())) *
-			glm::scale(glm::mat4(1.0f), BtVec3ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
+		glm::mat4 worldTransformMat = glm::translate(MAT4_IDENTITY, ToVec3(transform.getOrigin())) *
+			glm::mat4(ToQuaternion(transform.getRotation())) *
+			glm::scale(MAT4_IDENTITY, ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
 
-		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
+		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition) *
 			glm::mat4(m_LocalRotation) *
-			glm::scale(glm::mat4(1.0f), m_LocalScale);
+			glm::scale(MAT4_IDENTITY, m_LocalScale);
 		glm::mat4 invChildTransformMat = glm::inverse(childTransformMat);
 
 		glm::mat4 finalTransformMat = worldTransformMat * invChildTransformMat;
@@ -243,10 +290,10 @@ namespace flex
 			return;
 		}
 
-		glm::mat4 parentTransformMat = glm::translate(glm::mat4(1.0f), m_ParentTransform->GetWorldPosition())
+		glm::mat4 parentTransformMat = glm::translate(MAT4_IDENTITY, m_ParentTransform->GetWorldPosition())
 			* glm::mat4(m_ParentTransform->GetWorldRotation());
-		
-		glm::mat4 childTransformMat = glm::translate(glm::mat4(1.0f), m_LocalPosition) *
+
+		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition) *
 			glm::mat4(m_LocalRotation);
 
 		glm::mat4 finalTransformMat = parentTransformMat * childTransformMat;
@@ -258,7 +305,7 @@ namespace flex
 
 		if (m_RigidBody->getCollisionShape())
 		{
-			m_RigidBody->getCollisionShape()->setLocalScaling(Vec3ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldScale()));
+			m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldScale()));
 		}
 
 		m_RigidBody->activate();
@@ -266,16 +313,12 @@ namespace flex
 
 	void RigidBody::GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward)
 	{
-		const btVector3 worldUp(0.0f, 1.0f, 0.0f);
-		const btVector3 worldRight(1.0f, 0.0f, 0.0f);
-		const btVector3 worldForward(0.0f, 0.0f, 1.0f);
 		const btTransform& transform = m_RigidBody->getWorldTransform();
-		
 		btQuaternion rot = transform.getRotation();
-		btMatrix3x3 rotMat(rot);
-		up = rotMat * worldUp;
-		right = rotMat * worldRight;
-		forward = rotMat * worldForward;
+		btMatrix3x3 rotMat = btMatrix3x3(rot).transpose();
+		right = rotMat[0];
+		up = rotMat[1];
+		forward = rotMat[2];
 	}
 
 	btRigidBody* RigidBody::GetRigidBodyInternal()

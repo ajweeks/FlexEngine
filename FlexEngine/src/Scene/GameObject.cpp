@@ -1,30 +1,41 @@
 #include "stdafx.hpp"
 
 #pragma warning(push, 0)
-#include <LinearMath/btTransform.h>
-#include <LinearMath/btIDebugDraw.h>
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btConeShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
-#include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
+#include <LinearMath/btIDebugDraw.h>
+#include <LinearMath/btTransform.h>
 #pragma warning(pop)
 
+#include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
+#include "FlexEngine.hpp"
+#include "Graphics/Renderer.hpp"
+#include "InputManager.hpp"
 #include "JSONParser.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
-#include "Scene/GameObject.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
+	const char* GameObject::s_DefaultNewGameObjectName = "New_Game_Object_00";
+
 	RandomizedAudioSource GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
@@ -37,9 +48,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(RESOURCE_LOCATION + "audio/squeak00.wav", 5);
+			s_SqueakySounds.Initialize(RESOURCE_LOCATION  "audio/squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION + "audio/bunk.wav");
+			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/bunk.wav");
 		}
 	}
 
@@ -47,9 +58,9 @@ namespace flex
 	{
 	}
 
-	GameObject* GameObject::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* GameObject::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		GameObject* newGameObject = new GameObject(newObjectName, m_Type);
+		GameObject* newGameObject = new GameObject(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName), m_Type);
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
@@ -67,7 +78,7 @@ namespace flex
 			std::string prefabTypeStr = obj.GetString("prefab type");
 			JSONObject* prefab = nullptr;
 
-			for (JSONObject& parsedPrefab : scene->m_ParsedPrefabs)
+			for (JSONObject& parsedPrefab : scene->s_ParsedPrefabs)
 			{
 				if (parsedPrefab.GetString("name").compare(prefabTypeStr) == 0)
 				{
@@ -85,7 +96,7 @@ namespace flex
 			{
 				std::string name = obj.GetString("name");
 
-				MaterialID matID = scene->ParseMatID(obj);
+				MaterialID matID = scene->FindMaterialIDByName(obj);
 
 				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, matID);
 				prefabInstance->m_bLoadedFromPrefab = true;
@@ -133,13 +144,28 @@ namespace flex
 		case GameObjectType::GLASS_PANE:
 			newGameObject = new GlassPane(objectName);
 			break;
+		case GameObjectType::POINT_LIGHT:
+			newGameObject = new PointLight(objectName);
+			break;
+		case GameObjectType::DIRECTIONAL_LIGHT:
+			newGameObject = new DirectionalLight(objectName);
+			break;
+		case GameObjectType::CART:
+			newGameObject = new Cart(objectName);
+			break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
 			break;
+		default:
+			PrintError("Unhandled game object type in CreateGameObjectFromJSON\n");
+			ENSURE_NO_ENTRY();
 		}
 
-		newGameObject->ParseJSON(obj, scene, overriddenMatID);
+		if (newGameObject != nullptr)
+		{
+			newGameObject->ParseJSON(obj, scene, overriddenMatID);
+		}
 
 		return newGameObject;
 	}
@@ -158,7 +184,7 @@ namespace flex
 		}
 		else
 		{
-			matID = scene->ParseMatID(obj);
+			matID = scene->FindMaterialIDByName(obj);
 		}
 
 
@@ -168,11 +194,35 @@ namespace flex
 			m_Transform = Transform::ParseJSON(transformObj);
 		}
 
-		JSONObject meshObj;
-		if (obj.SetObjectChecked("mesh", meshObj))
+		std::string meshName;
+		if (obj.SetStringChecked("mesh", meshName))
 		{
-			MeshComponent::ParseJSON(meshObj, this, matID);
+			bool bFound = false;
+			for (const JSONObject& parsedMeshObj : BaseScene::s_ParsedMeshes)
+			{
+				std::string fileName = parsedMeshObj.GetString("file");
+				StripLeadingDirectories(fileName);
+				StripFileType(fileName);
+
+				if (fileName.compare(meshName) == 0)
+				{
+					MeshComponent::ParseJSON(parsedMeshObj, this, matID);
+					bFound = true;
+					break;
+				}
+			}
+
+			if (!bFound)
+			{
+				PrintWarn("Failed to find mesh with name %s in BaseScene::s_ParsedMeshes\n", meshName.c_str());
+			}
 		}
+
+		bool bColliderContainsOffset = false;
+
+		glm::vec3 localPos(0.0f);
+		glm::quat localRot(VEC3_ZERO);
+		glm::vec3 localScale(1.0f);
 
 		JSONObject colliderObj;
 		if (obj.SetObjectChecked("collider", colliderObj))
@@ -202,7 +252,7 @@ namespace flex
 			{
 				real radius = colliderObj.GetFloat("radius");
 				real height = colliderObj.GetFloat("height");
-				btCapsuleShape* capsuleShape = new btCapsuleShape(radius, height);
+				btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius, height);
 
 				SetCollisionShape(capsuleShape);
 			} break;
@@ -225,9 +275,27 @@ namespace flex
 			} break;
 			default:
 			{
-				PrintError("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
+				PrintWarn("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
 			} break;
 			}
+
+			if (colliderObj.SetVec3Checked("offset pos", localPos))
+			{
+				bColliderContainsOffset = true;
+			}
+
+			glm::vec3 localRotEuler;
+			if (colliderObj.SetVec3Checked("offset rot", localRotEuler))
+			{
+				localRot = glm::quat(localRotEuler);
+				bColliderContainsOffset = true;
+			}
+
+			//
+			//if (colliderObj.SetVec3Checked("offset scale", localScale))
+			//{
+			//	bColliderContainsOffset = true;
+			//}
 
 			//bool bIsTrigger = colliderObj.GetBool("trigger");
 			// TODO: Create btGhostObject to use for trigger
@@ -244,12 +312,22 @@ namespace flex
 			{
 				real mass = rigidBodyObj.GetFloat("mass");
 				bool bKinematic = rigidBodyObj.GetBool("kinematic");
+				bool bStatic = rigidBodyObj.GetBool("static");
+				int mask = rigidBodyObj.GetInt("mask");
+				int group = rigidBodyObj.GetInt("group");
 
-				RigidBody* rigidBody = SetRigidBody(new RigidBody());
+				RigidBody* rigidBody = SetRigidBody(new RigidBody(group, mask));
 				rigidBody->SetMass(mass);
 				rigidBody->SetKinematic(bKinematic);
-				rigidBody->SetStatic(IsStatic());
+				// TODO: Use IsStatic() ?
+				rigidBody->SetStatic(bStatic);
 			}
+		}
+
+		// Must happen after rigid body has been created
+		if (bColliderContainsOffset)
+		{
+			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
 		}
 
 		VertexAttributes requiredVertexAttributes = 0;
@@ -281,16 +359,12 @@ namespace flex
 		}
 	}
 
-	void GameObject::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, MaterialID /* matID*/)
 	{
-		UNREFERENCED_PARAMETER(parentObj);
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
-
 		// Generic game objects have no unique fields
 	}
 
-	JSONObject GameObject::SerializeToJSON(BaseScene* scene)
+	JSONObject GameObject::Serialize(const BaseScene* scene) const
 	{
 		JSONObject object = {};
 
@@ -332,49 +406,28 @@ namespace flex
 			object.fields.emplace_back("static", JSONValue(true));
 		}
 
-		object.fields.push_back(GetTransform()->SerializeToJSON());
+		object.fields.push_back(m_Transform.Serialize());
 
-		MeshComponent* meshComponent = GetMeshComponent();
-		if (meshComponent &&
+		if (m_MeshComponent &&
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			JSONObject meshObject = {};
+			std::string meshName = m_MeshComponent->GetRelativeFilePath();
+			StripLeadingDirectories(meshName);
+			StripFileType(meshName);
 
-			MeshComponent::Type meshType = meshComponent->GetType();
-			if (meshType == MeshComponent::Type::FILE)
-			{
-				std::string meshFilepath = meshComponent->GetFilepath().substr(RESOURCE_LOCATION.length());
-				meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
-			}
-			// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
-			else if (meshType == MeshComponent::Type::PREFAB)
-			{
-				std::string prefabShapeStr = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
-				meshObject.fields.emplace_back("prefab", JSONValue(prefabShapeStr));
-			}
-			else
-			{
-				PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
-			}
-
-			MeshComponent::ImportSettings importSettings = meshComponent->GetImportSettings();
-			meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.swapNormalYZ));
-			meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.flipNormalZ));
-			meshObject.fields.emplace_back("flipU", JSONValue(importSettings.flipU));
-			meshObject.fields.emplace_back("flipV", JSONValue(importSettings.flipV));
-
-			object.fields.emplace_back("mesh", JSONValue(meshObject));
+			object.fields.emplace_back("mesh", JSONValue(meshName));
 		}
 
 		{
 			MaterialID matID = InvalidMaterialID;
 			RenderObjectCreateInfo renderObjectCreateInfo;
-			if (meshComponent)
+			RenderID renderID = GetRenderID();
+			if (m_MeshComponent)
 			{
-				matID = meshComponent->GetMaterialID();
+				matID = m_MeshComponent->GetMaterialID();
 			}
-			else if (g_Renderer->GetRenderObjectCreateInfo(GetRenderID(), renderObjectCreateInfo))
+			else if (renderID != InvalidRenderID && g_Renderer->GetRenderObjectCreateInfo(renderID, renderObjectCreateInfo))
 			{
 				matID = renderObjectCreateInfo.materialID;
 			}
@@ -382,16 +435,14 @@ namespace flex
 			if (matID != InvalidMaterialID)
 			{
 				const Material& material = g_Renderer->GetMaterial(matID);
-				i32 materialArrayIndex = scene->GetMaterialArrayIndex(material);
-				if (materialArrayIndex == -1)
+				std::string materialName = material.name;
+				if (materialName.empty())
 				{
-						PrintError("Mesh object contains material not present in "
-										 "BaseScene::m_LoadedMaterials! Parsing this file will fail! "
-										 "Object name: %s, matID: %i\n", m_Name.c_str(), matID);
+					PrintWarn("Game object contains material with empty material name!\n");
 				}
 				else
 				{
-					object.fields.emplace_back("material array index", JSONValue(materialArrayIndex));
+					object.fields.emplace_back("material", JSONValue(materialName));
 				}
 			}
 		}
@@ -404,7 +455,6 @@ namespace flex
 
 			int shapeType = collisionShape->getShapeType();
 			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
-
 			colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
 
 			switch (shapeType)
@@ -412,19 +462,23 @@ namespace flex
 			case BOX_SHAPE_PROXYTYPE:
 			{
 				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				glm::vec3 halfExtents = ToVec3(btHalfExtents);
+				halfExtents /= m_Transform.GetWorldScale();
+				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
 				real radius = ((btSphereShape*)collisionShape)->getRadius();
+				radius /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 			} break;
 			case CAPSULE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btCapsuleShape*)collisionShape)->getRadius();
-				real height = ((btCapsuleShape*)collisionShape)->getHalfHeight(); // TODO: Double?
+				real radius = ((btCapsuleShapeZ*)collisionShape)->getRadius();
+				real height = ((btCapsuleShapeZ*)collisionShape)->getHalfHeight() * 2.0f;
+				radius /= m_Transform.GetWorldScale().x;
+				height /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 				colliderObj.fields.emplace_back("height", JSONValue(height));
 			} break;
@@ -432,21 +486,40 @@ namespace flex
 			{
 				real radius = ((btConeShape*)collisionShape)->getRadius();
 				real height = ((btConeShape*)collisionShape)->getHeight();
+				radius /= m_Transform.GetWorldScale().x;
+				height /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 				colliderObj.fields.emplace_back("height", JSONValue(height));
 			} break;
 			case CYLINDER_SHAPE_PROXYTYPE:
 			{
 				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = BtVec3ToVec3(btHalfExtents);
-				std::string halfExtentsStr = Vec3ToString(halfExtents);
+				glm::vec3 halfExtents = ToVec3(btHalfExtents);
+				halfExtents /= m_Transform.GetWorldScale();
+				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			default:
 			{
-				PrintError("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n", 
+				PrintWarn("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
 						   shapeType, m_Name.c_str(), scene->GetName().c_str());
 			} break;
+			}
+
+			if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
+			{
+				colliderObj.fields.emplace_back("offset pos", JSONValue(Vec3ToString(m_RigidBody->GetLocalPosition(), 3)));
+			}
+
+			if (m_RigidBody->GetLocalRotation() != QUAT_UNIT)
+			{
+				glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
+				colliderObj.fields.emplace_back("offset rot", JSONValue(Vec3ToString(localRotEuler, 3)));
+			}
+
+			if (m_RigidBody->GetLocalScale() != VEC3_ONE)
+			{
+				colliderObj.fields.emplace_back("offset scale", JSONValue(Vec3ToString(m_RigidBody->GetLocalScale(), 3)));
 			}
 
 			//bool bTrigger = false;
@@ -471,10 +544,14 @@ namespace flex
 				real mass = rigidBody->GetMass();
 				bool bKinematic = rigidBody->IsKinematic();
 				bool bStatic = rigidBody->IsStatic();
+				int mask = m_RigidBody->GetMask();
+				int group = m_RigidBody->GetMask();
 
 				rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
 				rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
 				rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
+				rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
+				rigidBodyObj.fields.emplace_back("group", JSONValue(group));
 			}
 
 			object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
@@ -490,7 +567,7 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					childrenToSerialize.push_back(child->SerializeToJSON(scene));
+					childrenToSerialize.push_back(child->Serialize(scene));
 				}
 			}
 
@@ -504,11 +581,47 @@ namespace flex
 		return object;
 	}
 
-	void GameObject::SerializeUniqueFields(JSONObject& parentObject)
+	void GameObject::SerializeUniqueFields(JSONObject& /* parentObject */) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
-
 		// Generic game objects have no unique fields
+	}
+
+	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	{
+		if (Find(vec, this) == vec.end())
+		{
+			vec.push_back(this);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			if (Find(vec, child) == vec.end())
+			{
+				vec.push_back(child);
+			}
+
+			child->AddSelfAndChildrenToVec(vec);
+		}
+	}
+
+	void GameObject::RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	{
+		auto iter = Find(vec, this);
+		if (iter != vec.end())
+		{
+			vec.erase(iter);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			auto childIter = Find(vec, child);
+			if (childIter != vec.end())
+			{
+				vec.erase(childIter);
+			}
+
+			child->RemoveSelfAndChildrenToVec(vec);
+		}
 	}
 
 	void GameObject::Initialize()
@@ -592,14 +705,14 @@ namespace flex
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			btVector3 pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
+			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			btVector3 pos = Vec3ToBtVec3(m_Transform.GetWorldPosition());
+			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}
@@ -623,11 +736,578 @@ namespace flex
 		}
 	}
 
+	void GameObject::DrawImGuiObjects()
+	{
+		//GLRenderObject* renderObject = nullptr;
+		std::string objectID = "##";
+		//if (m_RenderID != InvalidRenderID)
+		//{
+		//	//renderObject = GetRenderObject(m_RenderID);
+		//	objectID += std::to_string(renderObject->renderID);
+
+		//	if (!gameObject->IsVisibleInSceneExplorer())
+		//	{
+		//		return;
+		//	}
+		//}
+
+		ImGui::Text(m_Name.c_str());
+
+		DoImGuiContextMenu(true);
+
+		if (!this)
+		{
+			// Early return if object was just deleted
+			return;
+		}
+
+		const std::string objectVisibleLabel("Visible" + objectID + m_Name);
+		ImGui::Checkbox(objectVisibleLabel.c_str(), &m_bVisible);
+
+		ImGui::Checkbox("Static", &m_bStatic);
+
+		ImGui::Text("Transform");
+		{
+			if (ImGui::BeginPopupContextItem("transform context menu"))
+			{
+				if (ImGui::Button("Copy"))
+				{
+					CopyTransformToClipboard(&m_Transform);
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Paste"))
+				{
+					PasteTransformFromClipboard(&m_Transform);
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			static int transformSpace = 0;
+
+			static glm::vec3 sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
+
+			if (!ImGui::IsMouseDown(0))
+			{
+				sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
+			}
+
+			glm::vec3 translation = m_Transform.GetLocalPosition();
+			glm::vec3 rotation = sRot;
+			glm::vec3 pScale = m_Transform.GetLocalScale();
+			glm::vec3 scale = pScale;
+
+			bool valueChanged = false;
+
+			valueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || valueChanged;
+			if (ImGui::IsItemClicked(1))
+			{
+				translation = VEC3_ZERO;
+				valueChanged = true;
+			}
+
+			glm::vec3 cleanedRot;
+			valueChanged = DoImGuiRotationDragFloat3("Rotation", rotation, cleanedRot) || valueChanged;
+
+			valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
+			if (ImGui::IsItemClicked(1))
+			{
+				scale = VEC3_ONE;
+				valueChanged = true;
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Checkbox("u", &m_bUniformScale))
+			{
+				valueChanged = true;
+			}
+			if (m_bUniformScale)
+			{
+				float newScale = scale.x;
+				if (scale.y != pScale.y)
+				{
+					newScale = scale.y;
+				}
+				else if (scale.z != pScale.z)
+				{
+					newScale = scale.z;
+				}
+				scale = glm::vec3(newScale);
+			}
+
+			if (valueChanged)
+			{
+				m_Transform.SetLocalPosition(translation, false);
+
+				sRot = rotation;
+
+				glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
+
+				m_Transform.SetLocalRotation(rotQuat, false);
+				m_Transform.SetLocalScale(scale, true);
+				SetUseUniformScale(m_bUniformScale, false);
+
+				if (m_RigidBody)
+				{
+					m_RigidBody->MatchParentTransform();
+				}
+
+				if (g_EngineInstance->IsObjectSelected(this))
+				{
+					g_EngineInstance->CalculateSelectedObjectsCenter();
+				}
+			}
+		}
+
+		if (m_RenderID != InvalidRenderID)
+		{
+			g_Renderer->DrawImGuiForRenderID(m_RenderID);
+		}
+		else
+		{
+			if (ImGui::Button("Add mesh component"))
+			{
+				MaterialID matID = InvalidMaterialID;
+				// TODO: Don't rely on material names!
+				g_Renderer->GetMaterialID("pbr chrome", matID);
+
+				MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
+			}
+		}
+
+		if (m_RigidBody)
+		{
+			ImGui::Spacing();
+
+			btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
+
+			ImGui::Text("Rigid body");
+
+			if (ImGui::BeginPopupContextItem("rb context menu"))
+			{
+				if (ImGui::Button("Remove rigid body"))
+				{
+					RemoveRigidBody();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			if (m_RigidBody != nullptr)
+			{
+				bool bStatic = m_RigidBody->IsStatic();
+				if (ImGui::Checkbox("Static##rb", &bStatic))
+				{
+					m_RigidBody->SetStatic(bStatic);
+				}
+
+				bool bKinematic = m_RigidBody->IsKinematic();
+				if (ImGui::Checkbox("Kinematic", &bKinematic))
+				{
+					m_RigidBody->SetKinematic(bKinematic);
+				}
+
+				ImGui::PushItemWidth(80.0f);
+				{
+					i32 group = m_RigidBody->GetGroup();
+					if (ImGui::InputInt("Group", &group, 1, 16))
+					{
+						group = glm::clamp(group, -1, 16);
+						m_RigidBody->SetGroup(group);
+					}
+
+					ImGui::SameLine();
+
+					i32 mask = m_RigidBody->GetMask();
+					if (ImGui::InputInt("Mask", &mask, 1, 16))
+					{
+						mask = glm::clamp(mask, -1, 16);
+						m_RigidBody->SetMask(mask);
+					}
+				}
+				ImGui::PopItemWidth();
+
+				// TODO: Array of buttons for each category
+				i32 flags = m_RigidBody->GetPhysicsFlags();
+				if (ImGui::SliderInt("Flags", &flags, 0, 16))
+				{
+					m_RigidBody->SetPhysicsFlags(flags);
+				}
+
+				real mass = m_RigidBody->GetMass();
+				if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
+				{
+					m_RigidBody->SetMass(mass);
+				}
+
+				real friction = m_RigidBody->GetFriction();
+				if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
+				{
+					m_RigidBody->SetFriction(friction);
+				}
+
+				ImGui::Spacing();
+
+				btCollisionShape* shape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+				std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
+
+				if (ImGui::BeginCombo("Shape", shapeTypeStr.c_str()))
+				{
+					i32 selectedColliderShape = -1;
+					for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+					{
+						if (g_CollisionTypes[i] == shape->getShapeType())
+						{
+							selectedColliderShape = i;
+							break;
+						}
+					}
+
+					if (selectedColliderShape == -1)
+					{
+						PrintError("Failed to find collider shape in array!\n");
+					}
+					else
+					{
+						for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+						{
+							bool bSelected = (i == selectedColliderShape);
+							const char* colliderShapeName = g_CollisionTypeStrs[i];
+							if (ImGui::Selectable(colliderShapeName, &bSelected))
+							{
+								if (selectedColliderShape != i)
+								{
+									selectedColliderShape = i;
+
+									switch (g_CollisionTypes[selectedColliderShape])
+									{
+									case BOX_SHAPE_PROXYTYPE:
+									{
+										btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
+										SetCollisionShape(newShape);
+									} break;
+									case SPHERE_SHAPE_PROXYTYPE:
+									{
+										btSphereShape* newShape = new btSphereShape(1.0f);
+										SetCollisionShape(newShape);
+									} break;
+									case CAPSULE_SHAPE_PROXYTYPE:
+									{
+										btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
+										SetCollisionShape(newShape);
+									} break;
+									case CYLINDER_SHAPE_PROXYTYPE:
+									{
+										btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
+										SetCollisionShape(newShape);
+									} break;
+									case CONE_SHAPE_PROXYTYPE:
+									{
+										btConeShape* newShape = new btConeShape(1.0f, 1.0f);
+										SetCollisionShape(newShape);
+									} break;
+									}
+								}
+							}
+						}
+					}
+
+					ImGui::EndCombo();
+				}
+
+				glm::vec3 scale = m_Transform.GetWorldScale();
+				switch (shape->getShapeType())
+				{
+				case BOX_SHAPE_PROXYTYPE:
+				{
+					btBoxShape* boxShape = (btBoxShape*)shape;
+					btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
+					glm::vec3 halfExtentsG = ToVec3(halfExtents);
+					halfExtentsG /= scale;
+
+					real maxExtent = 1000.0f;
+					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+					{
+						halfExtents = ToBtVec3(halfExtentsG);
+						btBoxShape* newShape = new btBoxShape(halfExtents);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				case SPHERE_SHAPE_PROXYTYPE:
+				{
+					btSphereShape* sphereShape = (btSphereShape*)shape;
+					real radius = sphereShape->getRadius();
+					radius /= scale.x;
+
+					real maxExtent = 1000.0f;
+					if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
+					{
+						btSphereShape* newShape = new btSphereShape(radius);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				case CAPSULE_SHAPE_PROXYTYPE:
+				{
+					btCapsuleShapeZ* capsuleShape = (btCapsuleShapeZ*)shape;
+					real radius = capsuleShape->getRadius();
+					real halfHeight = capsuleShape->getHalfHeight();
+					radius /= scale.x;
+					halfHeight /= scale.x;
+
+					real maxExtent = 1000.0f;
+					bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
+					bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
+
+					if (bUpdateShape)
+					{
+						btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				case CYLINDER_SHAPE_PROXYTYPE:
+				{
+					btCylinderShape* cylinderShape = (btCylinderShape*)shape;
+					btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
+					glm::vec3 halfExtentsG = ToVec3(halfExtents);
+					halfExtentsG /= scale;
+
+					real maxExtent = 1000.0f;
+					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+					{
+						halfExtents = ToBtVec3(halfExtentsG);
+						btCylinderShape* newShape = new btCylinderShape(halfExtents);
+						SetCollisionShape(newShape);
+					}
+				} break;
+				default:
+				{
+					PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects");
+				} break;
+				}
+
+				glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
+				if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
+				{
+					m_RigidBody->SetLocalPosition(localOffsetPos);
+				}
+				if (ImGui::IsItemClicked(1))
+				{
+					m_RigidBody->SetLocalPosition(VEC3_ZERO);
+				}
+
+				glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
+				glm::vec3 cleanedRot;
+				if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
+				{
+					m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+				}
+
+				ImGui::Spacing();
+
+				glm::vec3 linearVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getLinearVelocity());
+				if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
+				{
+					rbInternal->setLinearVelocity(ToBtVec3(linearVel));
+				}
+				if (ImGui::IsItemClicked(1))
+				{
+					rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				}
+
+				glm::vec3 angularVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getAngularVelocity());
+				if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
+				{
+					rbInternal->setAngularVelocity(ToBtVec3(angularVel));
+				}
+				if (ImGui::IsItemClicked(1))
+				{
+					rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				}
+
+
+				//glm::vec3 localOffsetScale = m_RigidBody->GetLocalScale();
+				//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
+				//{
+				//	real epsilon = 0.001f;
+				//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
+				//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
+				//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
+
+				//	m_RigidBody->SetLocalScale(localOffsetScale);
+				//}
+
+			}
+		}
+		else
+		{
+			if (ImGui::Button("Add rigid body"))
+			{
+				RigidBody* rb = SetRigidBody(new RigidBody());
+				btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
+				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+
+				SetCollisionShape(boxShape);
+				rb->Initialize(boxShape, &m_Transform);
+				rb->GetRigidBodyInternal()->setUserPointer(this);
+			}
+		}
+	}
+
+	void GameObject::DoImGuiContextMenu(bool bActive)
+	{
+		static const char* renameObjectPopupLabel = "##rename-game-object";
+		static const char* renameObjectButtonStr = "Rename";
+		static const char* duplicateObjectButtonStr = "Duplicate...";
+		static const char* deletePopupStr = "Delete object";
+		static const char* deleteButtonStr = "Delete";
+		static const char* deleteCancelButtonStr = "Cancel";
+
+		// TODO: Prevent name collisions
+		std::string contextMenuIDStr = "context window game object " + m_Name;
+		static std::string newObjectName = m_Name;
+		const size_t maxStrLen = 256;
+
+		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+			ImGui::IsMouseClicked(1);
+
+		if (bActive && g_EngineInstance->bWantRenameActiveElement)
+		{
+			ImGui::OpenPopup(contextMenuIDStr.c_str());
+			g_EngineInstance->bWantRenameActiveElement = false;
+			bRefreshNameField = true;
+		}
+		if (bRefreshNameField)
+		{
+			newObjectName = m_Name;
+			newObjectName.resize(maxStrLen);
+		}
+
+		if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
+		{
+			bool bRename = ImGui::InputText(renameObjectPopupLabel,
+				(char*)newObjectName.data(),
+				maxStrLen,
+				ImGuiInputTextFlags_EnterReturnsTrue);
+
+			ImGui::SameLine();
+
+			bRename |= ImGui::Button(renameObjectButtonStr);
+
+			bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+			if (bRename && !bInvalidName)
+			{
+				// Remove excess trailing \0 chars
+				newObjectName = std::string(newObjectName.c_str());
+
+				m_Name = newObjectName;
+
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (DoDuplicateGameObjectButton(duplicateObjectButtonStr))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button(deleteButtonStr))
+			{
+				ImGui::OpenPopup(deletePopupStr);
+			}
+
+			if (ImGui::BeginPopupModal(deletePopupStr, NULL,
+				ImGuiWindowFlags_AlwaysAutoResize |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoNavInputs))
+			{
+				static std::string objectName = m_Name;
+
+				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+				std::string textStr = "Are you sure you want to permanently delete " + objectName + "?";
+				ImGui::Text(textStr.c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				if (ImGui::Button(deleteButtonStr))
+				{
+					if (g_SceneManager->CurrentScene()->DestroyGameObject(this, true))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+					else
+					{
+						PrintWarn("Failed to delete game object: %s\n", m_Name.c_str());
+					}
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				if (ImGui::Button(deleteCancelButtonStr))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+	bool GameObject::DoDuplicateGameObjectButton(const char* buttonName)
+	{
+		static const char* duplicateObjectButtonStr = "Duplicate";
+
+		if (ImGui::Button(buttonName))
+		{
+			GameObject* newGameObject = CopySelfAndAddToScene(nullptr, true);
+
+			g_EngineInstance->SetSelectedObject(newGameObject);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	void GameObject::RemoveRigidBody()
+	{
+		if (m_RigidBody)
+		{
+			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			physicsWorld->removeRigidBody(m_RigidBody->GetRigidBodyInternal());
+			SetRigidBody(nullptr);
+
+			if (m_CollisionShape)
+			{
+				// NOTE: SafeDelete does not work on this type
+				if (m_CollisionShape)
+				{
+					delete m_CollisionShape;
+					m_CollisionShape = nullptr;
+				}
+			}
+		}
+	}
+
 	bool GameObject::SetInteractingWith(GameObject* gameObject)
 	{
 		m_ObjectInteractingWith = gameObject;
 
-		bBeingInteractedWith = (gameObject != nullptr);
+		m_bBeingInteractedWith = (gameObject != nullptr);
 
 		return true;
 	}
@@ -677,7 +1357,7 @@ namespace flex
 
 		if (m_MeshComponent)
 		{
-			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject, false));
 			MeshComponent::Type prefabType = m_MeshComponent->GetType();
 			if (prefabType == MeshComponent::Type::PREFAB)
 			{
@@ -686,7 +1366,7 @@ namespace flex
 			}
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
-				std::string filePath = m_MeshComponent->GetFilepath();
+				std::string filePath = m_MeshComponent->GetRelativeFilePath();
 				MeshComponent::ImportSettings importSettings = m_MeshComponent->GetImportSettings();
 				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
 			}
@@ -700,8 +1380,56 @@ namespace flex
 		{
 			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
 
-			btCollisionShape* collisionShape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
-			newGameObject->SetCollisionShape(collisionShape);
+			btCollisionShape* pCollisionShape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+			btCollisionShape* newCollisionShape = nullptr;
+
+			btVector3 btWorldScale = ToBtVec3(m_Transform.GetWorldScale());
+			real btWorldScaleX = btWorldScale.getX();
+
+			i32 shapeType = pCollisionShape->getShapeType();
+			switch (shapeType)
+			{
+			case BOX_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btBoxShape*)pCollisionShape)->getHalfExtentsWithMargin();
+				btHalfExtents = btHalfExtents / btWorldScale;
+				newCollisionShape = new btBoxShape(btHalfExtents);
+			} break;
+			case SPHERE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btSphereShape*)pCollisionShape)->getRadius();
+				radius /= btWorldScaleX;
+				newCollisionShape = new btSphereShape(radius);
+			} break;
+			case CAPSULE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btCapsuleShapeZ*)pCollisionShape)->getRadius();
+				real height = ((btCapsuleShapeZ*)pCollisionShape)->getHalfHeight() * 2.0f;
+				radius /= btWorldScaleX;
+				height /= btWorldScaleX;
+				newCollisionShape = new btCapsuleShapeZ(radius, height);
+			} break;
+			case CONE_SHAPE_PROXYTYPE:
+			{
+				real radius = ((btConeShape*)pCollisionShape)->getRadius();
+				real height = ((btConeShape*)pCollisionShape)->getHeight();
+				radius /= btWorldScaleX;
+				height /= btWorldScaleX;
+				newCollisionShape = new btConeShape(radius, height);
+			} break;
+			case CYLINDER_SHAPE_PROXYTYPE:
+			{
+				btVector3 btHalfExtents = ((btCylinderShape*)pCollisionShape)->getHalfExtentsWithMargin();
+				btHalfExtents = btHalfExtents / btWorldScale;
+				newCollisionShape = new btCylinderShape(btHalfExtents);
+			} break;
+			default:
+			{
+				PrintWarn("Unhanded shape type in GameObject::CopyGenericFields\n");
+			} break;
+			}
+
+			newGameObject->SetCollisionShape(newCollisionShape);
 
 			// TODO: Copy over constraints here
 		}
@@ -714,7 +1442,7 @@ namespace flex
 			for (GameObject* child : m_Children)
 			{
 				std::string newChildName = child->GetName();
-				GameObject* newChild = child->CopySelf(newGameObject, newChildName, bCopyChildren);
+				GameObject* newChild = child->CopySelfAndAddToScene(newGameObject, bCopyChildren);
 				newGameObject->AddChild(newChild);
 			}
 		}
@@ -733,6 +1461,27 @@ namespace flex
 		}
 	}
 
+	std::vector<GameObject*> GameObject::GetParentChain()
+	{
+		std::vector<GameObject*> result;
+
+		result.push_back(this);
+
+		if (m_Parent)
+		{
+			GameObject* parent = m_Parent;
+			while (parent)
+			{
+				result.push_back(parent);
+				parent = parent->m_Parent;
+			}
+		}
+
+		std::reverse(result.begin(), result.end());
+
+		return result;
+	}
+
 	void GameObject::SetParent(GameObject* parent)
 	{
 		if (parent == this)
@@ -741,11 +1490,23 @@ namespace flex
 			return;
 		}
 
-		glm::mat4 worldTransform = m_Transform.GetWorldTransform();
-
 		m_Parent = parent;
+	}
 
-		m_Transform.SetWorldTransform(worldTransform);
+	GameObject* GameObject::GetRootParent()
+	{
+		if (m_Parent == nullptr)
+		{
+			return this;
+		}
+
+		GameObject* parent = m_Parent;
+		while (parent->m_Parent)
+		{
+			parent = parent->m_Parent;
+		}
+
+		return parent;
 	}
 
 	GameObject* GameObject::AddChild(GameObject* child)
@@ -762,6 +1523,7 @@ namespace flex
 		}
 
 		Transform* childTransform = child->GetTransform();
+		GameObject* childPParent = child->GetParent();
 		glm::mat4 childWorldTransform = childTransform->GetWorldTransform();
 
 		if (child == m_Parent)
@@ -782,7 +1544,10 @@ namespace flex
 
 		child->SetParent(this);
 
-		childTransform->SetWorldTransform(childWorldTransform);
+		if (childPParent)
+		{
+			childTransform->SetWorldTransform(childWorldTransform);
+		}
 
 		return child;
 	}
@@ -835,7 +1600,121 @@ namespace flex
 		return false;
 	}
 
+	void GameObject::UpdateSiblingIndices(i32 myIndex)
+	{
+		m_SiblingIndex = myIndex;
+
+		for (i32 i = 0; i < (i32)m_Children.size(); ++i)
+		{
+			m_Children[i]->UpdateSiblingIndices(i);
+		}
+	}
+
+	i32 GameObject::GetSiblingIndex() const
+	{
+		return m_SiblingIndex;
+	}
+
+	std::vector<GameObject*> GameObject::GetAllSiblings()
+	{
+		std::vector<GameObject*> result;
+
+		if (m_Parent)
+		{
+			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
+			for (GameObject* sibling : siblings)
+			{
+				if (sibling != this)
+				{
+					result.push_back(sibling);
+				}
+			}
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+			for (GameObject* rootObject : rootObjects)
+			{
+				if (rootObject != this)
+				{
+					result.push_back(rootObject);
+				}
+			}
+		}
+
+		return result;
+	}
+
+	std::vector<GameObject*> GameObject::GetEarlierSiblings()
+	{
+		std::vector<GameObject*> result;
+
+		if (m_Parent)
+		{
+			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
+
+			auto thisIter = Find(siblings, this);
+			assert(thisIter != siblings.end());
+
+			for (auto iter = siblings.begin(); iter != thisIter; ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+
+			auto thisIter = Find(rootObjects, this);
+			assert(thisIter != rootObjects.end());
+
+			for (auto iter = rootObjects.begin(); iter != thisIter; ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+
+		return result;
+	}
+
+	std::vector<GameObject*> GameObject::GetLaterSiblings()
+	{
+		std::vector<GameObject*> result;
+
+		if (m_Parent)
+		{
+			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
+
+			auto thisIter = Find(siblings, this);
+			assert(thisIter != siblings.end());
+
+			for (auto iter = thisIter + 1; iter != siblings.end(); ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+
+			auto thisIter = Find(rootObjects, this);
+			assert(thisIter != rootObjects.end());
+
+			for (auto iter = thisIter + 1; iter != rootObjects.end(); ++iter)
+			{
+				result.push_back(*iter);
+			}
+		}
+
+		return result;
+	}
+
 	Transform* GameObject::GetTransform()
+	{
+		return &m_Transform;
+	}
+
+	const Transform* GameObject::GetTransform() const
 	{
 		return &m_Transform;
 	}
@@ -909,23 +1788,37 @@ namespace flex
 		if (m_bVisible != bVisible)
 		{
 			m_bVisible = bVisible;
+			g_Renderer->RenderObjectStateChanged();
 
 			if (effectChildren)
 			{
 				for (GameObject* child : m_Children)
 				{
-					if (child->m_RenderID != InvalidRenderID)
-					{
-						child->SetVisible(bVisible, effectChildren);
-					}
+					child->SetVisible(bVisible, effectChildren);
 				}
 			}
 		}
 	}
 
-	bool GameObject::IsVisibleInSceneExplorer() const
+	bool GameObject::IsVisibleInSceneExplorer(bool bIncludingChildren) const
 	{
-		return m_bVisibleInSceneExplorer;
+		if (m_bVisibleInSceneExplorer)
+		{
+			return true;
+		}
+
+		if (bIncludingChildren)
+		{
+			for (GameObject* child : m_Children)
+			{
+				if (child->IsVisibleInSceneExplorer(bIncludingChildren))
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	void GameObject::SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer)
@@ -933,6 +1826,20 @@ namespace flex
 		if (m_bVisibleInSceneExplorer != bVisibleInSceneExplorer)
 		{
 			m_bVisibleInSceneExplorer = bVisibleInSceneExplorer;
+		}
+	}
+
+	bool GameObject::HasUniformScale() const
+	{
+		return m_bUniformScale;
+	}
+
+	void GameObject::SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately)
+	{
+		m_bUniformScale = bUseUniformScale;
+		if (m_bUniformScale && bEnforceImmediately)
+		{
+			m_Transform.SetLocalScale(glm::vec3(m_Transform.GetLocalScale().x));
 		}
 	}
 
@@ -945,6 +1852,12 @@ namespace flex
 		}
 
 		m_CollisionShape = collisionShape;
+
+		if (m_RigidBody && m_RigidBody->GetRigidBodyInternal())
+		{
+			m_RigidBody->GetRigidBodyInternal()->setCollisionShape(collisionShape);
+		}
+
 		return collisionShape;
 	}
 
@@ -958,6 +1871,12 @@ namespace flex
 		SafeDelete(m_RigidBody);
 
 		m_RigidBody = rigidBody;
+
+		if (rigidBody && rigidBody->GetRigidBodyInternal())
+		{
+			rigidBody->GetRigidBodyInternal()->setUserPointer(this);
+		}
+
 		return rigidBody;
 	}
 
@@ -973,7 +1892,16 @@ namespace flex
 
 	MeshComponent* GameObject::SetMeshComponent(MeshComponent* meshComponent)
 	{
+		if (m_MeshComponent)
+		{
+			g_Renderer->DestroyRenderObject(m_RenderID);
+			m_RenderID = InvalidRenderID;
+			m_MeshComponent->Destroy();
+			SafeDelete(m_MeshComponent);
+		}
+
 		m_MeshComponent = meshComponent;
+		g_Renderer->RenderObjectStateChanged();
 		return meshComponent;
 	}
 
@@ -1005,20 +1933,13 @@ namespace flex
 			}
 		}
 
-		switch (m_Type)
-		{
-		case GameObjectType::PLAYER:
-		{
-
-		} break;
-		default: // All non-player objects
+		if (m_Type != GameObjectType::PLAYER)
 		{
 			if (other->HasTag("Player0") ||
 				other->HasTag("Player1"))
 			{
 				m_bInteractable = false;
 			}
-		} break;
 		}
 	}
 
@@ -1027,9 +1948,9 @@ namespace flex
 	{
 	}
 
-	GameObject* Valve::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* Valve::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		Valve* newGameObject = new Valve(newObjectName);
+		Valve* newGameObject = new Valve(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		newGameObject->minRotation = minRotation;
 		newGameObject->maxRotation = maxRotation;
@@ -1045,8 +1966,6 @@ namespace flex
 
 	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
 	{
-		UNREFERENCED_PARAMETER(scene);
-
 		JSONObject valveInfo;
 		if (parentObj.SetObjectChecked("valve info", valveInfo))
 		{
@@ -1065,17 +1984,8 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				VertexAttributes requiredVertexAttributes = 0;
-				if (matID != InvalidMaterialID)
-				{
-					Material& material = g_Renderer->GetMaterial(matID);
-					Shader& shader = g_Renderer->GetShader(material.shaderID);
-					requiredVertexAttributes = shader.vertexAttributes;
-				}
-
 				MeshComponent* valveMesh = new MeshComponent(matID, this);
-				valveMesh->SetRequiredAttributes(requiredVertexAttributes);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION + "models/valve.gltf");
+				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.gltf");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
 			}
@@ -1102,12 +2012,12 @@ namespace flex
 		}
 	}
 
-	void Valve::SerializeUniqueFields(JSONObject& parentObject)
+	void Valve::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject valveInfo = {};
 
 		glm::vec2 valveRange(minRotation, maxRotation);
-		valveInfo.fields.emplace_back("range", JSONValue(Vec2ToString(valveRange)));
+		valveInfo.fields.emplace_back("range", JSONValue(Vec2ToString(valveRange, 2)));
 
 		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
 	}
@@ -1133,7 +2043,7 @@ namespace flex
 		{
 			i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
 
-			const InputManager::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
+			const Input::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * rotationSpeedScale;
 			currentAbsAvgRotationSpeed = glm::abs(gamepadState.averageRotationSpeeds.currentAverage);
 		}
@@ -1218,9 +2128,9 @@ namespace flex
 	{
 	}
 
-	GameObject* RisingBlock::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* RisingBlock::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		RisingBlock* newGameObject = new RisingBlock(newObjectName);
+		RisingBlock* newGameObject = new RisingBlock(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		newGameObject->valve = valve;
 		newGameObject->moveAxis = moveAxis;
@@ -1236,17 +2146,8 @@ namespace flex
 	{
 		if (!m_MeshComponent)
 		{
-			VertexAttributes requiredVertexAttributes = 0;
-			if (matID != InvalidMaterialID)
-			{
-				Material& material = g_Renderer->GetMaterial(matID);
-				Shader& shader = g_Renderer->GetShader(material.shaderID);
-				requiredVertexAttributes = shader.vertexAttributes;
-			}
-
 			MeshComponent* cubeMesh = new MeshComponent(matID, this);
-			cubeMesh->SetRequiredAttributes(requiredVertexAttributes);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION + "models/cube.gltf");
+			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
 			SetMeshComponent(cubeMesh);
 		}
 
@@ -1285,24 +2186,24 @@ namespace flex
 
 		if (!valve)
 		{
-			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName);
+			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName.c_str());
 		}
 
 		blockInfo.SetBoolChecked("affected by gravity", bAffectedByGravity);
 
 		blockInfo.SetVec3Checked("move axis", moveAxis);
-		if (moveAxis == glm::vec3(0.0f))
+		if (moveAxis == VEC3_ZERO)
 		{
 			PrintWarn("Rising block's move axis is not set! It won't be able to move\n");
 		}
 	}
 
-	void RisingBlock::SerializeUniqueFields(JSONObject& parentObject)
+	void RisingBlock::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject blockInfo = {};
 
 		blockInfo.fields.emplace_back("valve name", JSONValue(valve->GetName()));
-		blockInfo.fields.emplace_back("move axis", JSONValue(Vec3ToString(moveAxis)));
+		blockInfo.fields.emplace_back("move axis", JSONValue(Vec3ToString(moveAxis, 3)));
 		blockInfo.fields.emplace_back("affected by gravity", JSONValue(bAffectedByGravity));
 
 		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
@@ -1320,7 +2221,7 @@ namespace flex
 		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setGravity(btVector3(0, 0, 0));
 
-		//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getWorldTransform();
+		//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
 		//btFixedConstraint* constraint = new btFixedConstraint(
 		//	*m_RigidBody->GetRigidBodyInternal(),
 		//	*m_RigidBody->GetRigidBodyInternal(),
@@ -1342,7 +2243,7 @@ namespace flex
 		if (valve->GetObjectInteractingWith())
 		{
 			i32 playerIndex = ((Player*)valve->GetObjectInteractingWith())->GetIndex();
-			const InputManager::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
+			const Input::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
 				valve->rotationSpeedScale;
 		}
@@ -1358,7 +2259,7 @@ namespace flex
 			dist -= Lerp(pdDistBlockMoved, dDist, 0.1f);
 			pdDistBlockMoved = dDist;
 
-			// NOTE: Don't clamp out of bounds rotation here, valve object 
+			// NOTE: Don't clamp out of bounds rotation here, valve object
 			// will handle it and play correct "overshoot" sound
 			//dist = glm::clamp(dist, minDist, maxDist);
 
@@ -1371,29 +2272,28 @@ namespace flex
 		if (m_RigidBody)
 		{
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
-			btTransform transform;
-			m_RigidBody->GetRigidBodyInternal()->getMotionState()->getWorldTransform(transform);
-			transform.setOrigin(Vec3ToBtVec3(newPos));
+			btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
+			transform.setOrigin(ToBtVec3(newPos));
 			transform.setRotation(btQuaternion::getIdentity());
-			m_RigidBody->GetRigidBodyInternal()->setWorldTransform(transform);
+			m_RigidBody->GetRigidBodyInternal()->setInterpolationWorldTransform(transform);
 		}
 
-		btVector3 startPos = Vec3ToBtVec3(startingPos);
+		btVector3 startPos = ToBtVec3(startingPos);
 		g_Renderer->GetDebugDrawer()->drawLine(
 			startPos,
-			startPos + Vec3ToBtVec3(moveAxis * maxDist),
+			startPos + ToBtVec3(moveAxis * maxDist),
 			btVector3(1, 1, 1));
 		if (minDist < 0.0f)
 		{
 			g_Renderer->GetDebugDrawer()->drawLine(
 				startPos,
-				startPos + Vec3ToBtVec3(moveAxis * minDist),
+				startPos + ToBtVec3(moveAxis * minDist),
 				btVector3(0.99f, 0.6f, 0.6f));
 		}
 
 		g_Renderer->GetDebugDrawer()->drawLine(
 			startPos,
-			startPos + Vec3ToBtVec3(moveAxis * dist),
+			startPos + ToBtVec3(moveAxis * dist),
 			btVector3(0.3f, 0.3f, 0.5f));
 	}
 
@@ -1407,9 +2307,9 @@ namespace flex
 	{
 	}
 
-	GameObject* GlassPane::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* GlassPane::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		GlassPane* newGameObject = new GlassPane(newObjectName);
+		GlassPane* newGameObject = new GlassPane(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		newGameObject->bBroken = bBroken;
 
@@ -1429,18 +2329,17 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				VertexAttributes requiredVertexAttributes = 0;
-				if (matID != InvalidMaterialID)
-				{
-					Material& material = g_Renderer->GetMaterial(matID);
-					Shader& shader = g_Renderer->GetShader(material.shaderID);
-					requiredVertexAttributes = shader.vertexAttributes;
-				}
-
 				MeshComponent* windowMesh = new MeshComponent(matID, this);
-				windowMesh->SetRequiredAttributes(requiredVertexAttributes);
-				windowMesh->LoadFromFile(RESOURCE_LOCATION +
-					(bBroken ? "models/glass-window-broken.gltf" : "models/glass-window-whole.gltf"));
+				const char* filePath;
+				if (bBroken)
+				{
+					filePath = RESOURCE("meshes/glass-window-broken.gltf");
+				}
+				else
+				{
+					filePath = RESOURCE("meshes/glass-window-whole.gltf");
+				}
+				windowMesh->LoadFromFile(filePath);
 				SetMeshComponent(windowMesh);
 			}
 		}
@@ -1454,7 +2353,7 @@ namespace flex
 		}
 	}
 
-	void GlassPane::SerializeUniqueFields(JSONObject& parentObject)
+	void GlassPane::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject windowInfo = {};
 
@@ -1463,10 +2362,10 @@ namespace flex
 		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 	}
 
-	GameObject* ReflectionProbe::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		ReflectionProbe* newGameObject = new ReflectionProbe(newObjectName);
-		
+		ReflectionProbe* newGameObject = new ReflectionProbe(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
+
 		newGameObject->captureMatID = captureMatID;
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
@@ -1478,10 +2377,6 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(parentObj);
-
-		Material& material = g_Renderer->GetMaterial(matID);
-		Shader& shader = g_Renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
 
 		// Probe capture material
 		MaterialCreateInfo probeCaptureMatCreateInfo = {};
@@ -1507,10 +2402,9 @@ namespace flex
 		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
 		MeshComponent* sphereMesh = new MeshComponent(matID, this);
-		sphereMesh->SetRequiredAttributes(requiredVertexAttributes);
 
 		assert(m_MeshComponent == nullptr);
-		sphereMesh->LoadFromFile(RESOURCE_LOCATION + "models/ico-sphere.gltf");
+		sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/ico-sphere.gltf");
 		SetMeshComponent(sphereMesh);
 
 		std::string captureName = m_Name + "_capture";
@@ -1533,7 +2427,7 @@ namespace flex
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject)
+	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		UNREFERENCED_PARAMETER(parentObject);
 
@@ -1552,9 +2446,9 @@ namespace flex
 	{
 	}
 
-	GameObject* Skybox::CopySelf(GameObject* parent, const std::string& newObjectName, bool bCopyChildren)
+	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		Skybox* newGameObject = new Skybox(newObjectName);
+		Skybox* newGameObject = new Skybox(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
@@ -1565,21 +2459,19 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(scene);
 
-		Material& material = g_Renderer->GetMaterial(matID);
-		Shader& shader = g_Renderer->GetShader(material.shaderID);
-		VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
 		assert(m_MeshComponent == nullptr);
-		MeshComponent* skyboxMesh = new MeshComponent(matID, this);
-		skyboxMesh->SetRequiredAttributes(requiredVertexAttributes);
-		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
+		assert(matID != InvalidMaterialID);
+		MeshComponent* skyboxMesh = new MeshComponent(matID, this, false);
+		RenderObjectCreateInfo createInfo = {};
+		createInfo.cullFace = CullFace::NONE;
+		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX, &createInfo);
 		SetMeshComponent(skyboxMesh);
 
 		JSONObject skyboxInfo;
 		if (parentObj.SetObjectChecked("skybox info", skyboxInfo))
 		{
 			glm::vec3 rotEuler;
-			if (skyboxInfo.SetVec3Checked("rotation", rotEuler))
+			if (skyboxInfo.SetVec3Checked("rot", rotEuler))
 			{
 				m_Transform.SetWorldRotation(glm::quat(rotEuler));
 			}
@@ -1588,15 +2480,462 @@ namespace flex
 		g_Renderer->SetSkyboxMesh(this);
 	}
 
-	void Skybox::SerializeUniqueFields(JSONObject& parentObject)
+	void Skybox::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
-
 		JSONObject skyboxInfo = {};
-		std::string eulerRotStr = Vec3ToString(glm::eulerAngles(m_Transform.GetWorldRotation()));
-		skyboxInfo.fields.emplace_back("rotation", JSONValue(eulerRotStr));
+		glm::quat worldRot = m_Transform.GetWorldRotation();
+		if (worldRot != QUAT_UNIT)
+		{
+			std::string eulerRotStr = Vec3ToString(glm::eulerAngles(worldRot), 2);
+			skyboxInfo.fields.emplace_back("rot", JSONValue(eulerRotStr));
+		}
 
 		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+	}
+
+	DirectionalLight::DirectionalLight() :
+		GameObject("Directional Light", GameObjectType::DIRECTIONAL_LIGHT)
+	{
+	}
+
+	DirectionalLight::DirectionalLight(const std::string& name) :
+		GameObject(name, GameObjectType::DIRECTIONAL_LIGHT)
+	{
+	}
+
+	void DirectionalLight::Initialize()
+	{
+		g_Renderer->RegisterDirectionalLight(this);
+	}
+
+	void DirectionalLight::Destroy()
+	{
+		g_Renderer->RemoveDirectionalLight();
+	}
+
+	void DirectionalLight::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		static const ImGuiColorEditFlags colorEditFlags =
+			ImGuiColorEditFlags_NoInputs |
+			ImGuiColorEditFlags_Float |
+			ImGuiColorEditFlags_RGB |
+			ImGuiColorEditFlags_PickerHueWheel |
+			ImGuiColorEditFlags_HDR;
+
+		if (ImGui::TreeNode("Directional Light"))
+		{
+			bool bDirLightEnabled = (enabled == 1);
+			if (ImGui::Checkbox("Enabled", &bDirLightEnabled))
+			{
+				enabled = bDirLightEnabled ? 1 : 0;
+			}
+
+			glm::vec3 pos = m_Transform.GetLocalPosition();
+			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
+			{
+				m_Transform.SetLocalPosition(pos);
+			}
+			glm::vec3 dirtyRot = glm::degrees(glm::eulerAngles(m_Transform.GetLocalRotation()));
+			glm::vec3 cleanedRot;
+			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
+			{
+				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+			}
+			ImGui::SliderFloat("Brightness", &brightness, 0.0f, 15.0f);
+			ImGui::ColorEdit4("Color ", &color.r, colorEditFlags);
+
+			ImGui::Spacing();
+			ImGui::Text("Shadow");
+
+			ImGui::Checkbox("Cast shadow", &bCastShadow);
+			ImGui::SliderFloat("Shadow darkness", &shadowOpacity, 0.0f, 1.0f);
+
+			ImGui::DragFloat("Near", &shadowMapNearPlane);
+			ImGui::DragFloat("Far", &shadowMapFarPlane);
+			ImGui::DragFloat("Zoom", &shadowMapZoom);
+
+			if (ImGui::CollapsingHeader("Preview"))
+			{
+				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256));
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
+	void DirectionalLight::SetPos(const glm::vec3& pos)
+	{
+		m_Transform.SetLocalPosition(pos);
+	}
+
+	glm::vec3 DirectionalLight::GetPos() const
+	{
+		return m_Transform.GetWorldPosition();
+	}
+
+	glm::quat DirectionalLight::GetRot() const
+	{
+		return m_Transform.GetWorldRotation();
+	}
+
+	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+
+		JSONObject directionalLightObj;
+		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
+		{
+			std::string dirStr = directionalLightObj.GetString("rotation");
+			m_Transform.SetLocalRotation(glm::quat(ParseVec3(dirStr)));
+
+			std::string posStr = directionalLightObj.GetString("pos");
+			if (!posStr.empty())
+			{
+				m_Transform.SetLocalPosition(ParseVec3(posStr));
+			}
+
+			directionalLightObj.SetVec4Checked("color", color);
+
+			directionalLightObj.SetFloatChecked("brightness", brightness);
+
+			if (directionalLightObj.HasField("enabled"))
+			{
+				enabled = directionalLightObj.GetBool("enabled") ? 1 : 0;
+			}
+
+			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
+			directionalLightObj.SetFloatChecked("shadow darkness", shadowOpacity);
+
+			if (directionalLightObj.HasField("shadow map near"))
+			{
+				directionalLightObj.SetFloatChecked("shadow map near", shadowMapNearPlane);
+			}
+
+			if (directionalLightObj.HasField("shadow map far"))
+			{
+				directionalLightObj.SetFloatChecked("shadow map far", shadowMapFarPlane);
+			}
+
+			if (directionalLightObj.HasField("shadow map zoom"))
+			{
+				directionalLightObj.SetFloatChecked("shadow map zoom", shadowMapZoom);
+			}
+		}
+	}
+
+	void DirectionalLight::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject dirLightObj = {};
+
+		glm::vec3 dirLightDir = glm::eulerAngles(m_Transform.GetLocalRotation());
+		std::string dirStr = Vec3ToString(dirLightDir, 3);
+		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
+
+		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		dirLightObj.fields.emplace_back("pos", JSONValue(posStr));
+
+		std::string colorStr = Vec3ToString(color, 2);
+		dirLightObj.fields.emplace_back("color", JSONValue(colorStr));
+
+		dirLightObj.fields.emplace_back("enabled", JSONValue(enabled != 0));
+		dirLightObj.fields.emplace_back("brightness", JSONValue(brightness));
+
+		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
+		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowOpacity));
+		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
+		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
+		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));
+
+		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
+	}
+
+	bool DirectionalLight::operator==(const DirectionalLight& other)
+	{
+		return other.m_Transform.GetLocalRotation() == m_Transform.GetLocalRotation() &&
+			other.m_Transform.GetLocalPosition() == m_Transform.GetLocalPosition() &&
+			other.color == color &&
+			other.enabled == enabled &&
+			other.brightness == brightness;
+	}
+
+	void DirectionalLight::SetRot(const glm::quat& rot)
+	{
+		m_Transform.SetLocalRotation(rot);
+	}
+
+	PointLight::PointLight() :
+		GameObject("Point Light", GameObjectType::POINT_LIGHT)
+	{
+	}
+
+	PointLight::PointLight(const std::string& name) :
+		GameObject(name, GameObjectType::POINT_LIGHT)
+	{
+	}
+
+	void PointLight::Initialize()
+	{
+		g_Renderer->RegisterPointLight(this);
+	}
+
+	void PointLight::Destroy()
+	{
+		g_Renderer->RemovePointLight(this);
+	}
+
+	void PointLight::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		static const ImGuiColorEditFlags colorEditFlags =
+			ImGuiColorEditFlags_NoInputs |
+			ImGuiColorEditFlags_Float |
+			ImGuiColorEditFlags_RGB |
+			ImGuiColorEditFlags_PickerHueWheel |
+			ImGuiColorEditFlags_HDR;
+
+		const std::string objectName("Point Light##" + m_Name);
+		const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
+		bool bRemovedPointLight = false;
+
+		if (ImGui::BeginPopupContextItem())
+		{
+			static const char* removePointLightStr = "Delete";
+			if (ImGui::Button(removePointLightStr))
+			{
+				g_Renderer->RemovePointLight(this);
+				bRemovedPointLight = true;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (!bRemovedPointLight && bTreeOpen)
+		{
+			bool bPointLightEnabled = (enabled == 1);
+			if (ImGui::Checkbox("enabled", &bPointLightEnabled))
+			{
+				enabled = bPointLightEnabled ? 1 : 0;
+			}
+
+			glm::vec3 pos = m_Transform.GetLocalPosition();
+			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
+			{
+				m_Transform.SetLocalPosition(pos);
+			}
+			ImGui::ColorEdit4("Color ", &color.r, colorEditFlags);
+			ImGui::SliderFloat("Brightness", &brightness, 0.0f, 1000.0f);
+		}
+
+		if (bTreeOpen)
+		{
+			ImGui::TreePop();
+		}
+	}
+
+	void PointLight::SetPos(const glm::vec3& pos)
+	{
+		m_Transform.SetLocalPosition(pos);
+	}
+
+	glm::vec3 PointLight::GetPos() const
+	{
+		return m_Transform.GetWorldPosition();
+	}
+
+	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+
+		JSONObject pointLightObj;
+		if (parentObject.SetObjectChecked("point light info", pointLightObj))
+		{
+			std::string posStr = pointLightObj.GetString("pos");
+			m_Transform.SetLocalPosition(glm::vec3(ParseVec3(posStr)));
+
+			pointLightObj.SetVec4Checked("color", color);
+
+			pointLightObj.SetFloatChecked("brightness", brightness);
+
+			if (pointLightObj.HasField("enabled"))
+			{
+				enabled = pointLightObj.GetBool("enabled") ? 1 : 0;
+			}
+		}
+	}
+
+	void PointLight::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject pointLightObj = {};
+
+		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		pointLightObj.fields.emplace_back("pos", JSONValue(posStr));
+
+		std::string colorStr = Vec3ToString(color, 2);
+		pointLightObj.fields.emplace_back("color", JSONValue(colorStr));
+
+		pointLightObj.fields.emplace_back("enabled", JSONValue(enabled != 0));
+		pointLightObj.fields.emplace_back("brightness", JSONValue(brightness));
+
+		parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
+	}
+
+	bool PointLight::operator==(const PointLight& other)
+	{
+		return other.GetTransform()->GetLocalPosition() == m_Transform.GetLocalPosition() &&
+			other.color == color &&
+			other.enabled == enabled &&
+			other.brightness == brightness;
+	}
+
+	Cart::Cart() :
+		GameObject(g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4), GameObjectType::CART)
+	{
+		SetRigidBody(new RigidBody());
+		SetCollisionShape(new btBoxShape(btVector3(0.5f, 0.5f, 0.5f)));
+		MaterialID matID;
+		if (!g_Renderer->GetMaterialID("pbr grey", matID))
+		{
+			// :shrug:
+			// TODO: Create own material
+			matID = 0;
+		}
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/cart-empty.glb")))
+		{
+			PrintWarn("Failed to load cart mesh!\n");
+		}
+	}
+
+	Cart::Cart(const std::string& name) :
+		GameObject(name, GameObjectType::CART)
+	{
+	}
+
+	GameObject* Cart::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		Cart* newGameObject = new Cart();
+
+		newGameObject->currentTrackID = currentTrackID;
+		newGameObject->distAlongTrack = distAlongTrack;
+
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
+
+		return newGameObject;
+	}
+
+	void Cart::Update()
+	{
+		if (currentTrackID != InvalidTrackID)
+		{
+			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+
+			real pDistAlongTrack = distAlongTrack;
+			distAlongTrack = trackManager->AdvanceTAlongTrack(currentTrackID, g_DeltaTime * moveSpeed * moveDirection, distAlongTrack);
+
+			real newDistAlongTrack;
+			i32 curveIndex;
+			i32 juncIndex;
+			TrackID newTrackID = InvalidTrackID;
+			TrackState trackState;
+			glm::vec3 newPos = trackManager->GetPointOnTrack(currentTrackID, distAlongTrack, pDistAlongTrack,
+				LookDirection::CENTER, false, &newTrackID, &newDistAlongTrack, &juncIndex, &curveIndex, &trackState, false);
+
+			bool bSwitchedTracks = (newTrackID != InvalidTrackID) && (newTrackID != currentTrackID);
+			if (bSwitchedTracks)
+			{
+				currentTrackID = newTrackID;
+				distAlongTrack = newDistAlongTrack;
+				if (distAlongTrack > 0.5f)
+				{
+					moveDirection = -1.0f;
+				}
+				else
+				{
+					moveDirection = 1.0f;
+				}
+			}
+			else if (newDistAlongTrack == -1.0f ||
+					(newDistAlongTrack == 1.0f && moveDirection > 0.0f) ||
+					(newDistAlongTrack == 0.0f && moveDirection < 0.0f))
+			{
+				moveDirection = -moveDirection;
+			}
+
+			if (currentTrackID != InvalidTrackID)
+			{
+				glm::vec3 trackF = trackManager->GetTrack(currentTrackID)->GetCurveDirectionAt(distAlongTrack);
+				glm::quat pRot = m_Transform.GetWorldRotation();
+				glm::quat newRot = glm::quatLookAt(trackF, VEC3_UP);
+				// TODO: Make frame-rate independent
+				m_Transform.SetWorldRotation(glm::slerp(pRot, newRot, 0.5f));
+			}
+
+			m_Transform.SetWorldPosition(newPos);
+		}
+	}
+
+	void Cart::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (ImGui::TreeNode("Cart"))
+		{
+			ImGui::Text("move speed: %.2f", moveSpeed);
+			ImGui::Text("move dir: %.0f", moveDirection);
+			ImGui::Text("track ID: %d", currentTrackID);
+			ImGui::Text("dist along track: %.2f", distAlongTrack);
+
+			ImGui::TreePop();
+		}
+	}
+
+	void Cart::OnTrackMount(TrackID trackID, real newDistAlongTrack)
+	{
+		currentTrackID = trackID;
+		distAlongTrack = newDistAlongTrack;
+	}
+
+	void Cart::OnTrackDismount()
+	{
+		currentTrackID = InvalidTrackID;
+		distAlongTrack = -1.0f;
+	}
+
+	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+
+		JSONObject cartInfo = parentObject.GetObject("cart info");
+		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
+		distAlongTrack = cartInfo.GetFloat("dist along track");
+		moveSpeed = cartInfo.GetFloat("move speed");
+		moveDirection = cartInfo.GetFloat("move direction");
+	}
+
+	void Cart::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		std::string meshName = m_MeshComponent->GetRelativeFilePath();
+		StripLeadingDirectories(meshName);
+		StripFileType(meshName);
+
+		parentObject.fields.emplace_back("mesh", JSONValue(meshName));
+
+
+		JSONObject cartInfo = {};
+
+		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
+		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
+		cartInfo.fields.emplace_back("move speed", JSONValue(moveSpeed));
+		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
+
+		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
 	}
 
 } // namespace flex

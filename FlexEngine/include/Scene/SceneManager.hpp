@@ -1,18 +1,14 @@
 ﻿#pragma once
 
-#include <vector>
-
-#include "Scene/BaseScene.hpp"
-
 namespace flex
 {
+	class BaseScene;
+
 	class SceneManager
 	{
 	public:
 		SceneManager();
 		virtual ~SceneManager();
-
-		void UpdateCurrentScene();
 
 		void AddScene(BaseScene* newScene);
 
@@ -39,6 +35,8 @@ namespace flex
 		void DeleteScene(BaseScene* scene);
 		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
 
+		void DrawImGuiObjects();
+
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
 		u32 GetSceneCount() const;
@@ -50,6 +48,7 @@ namespace flex
 
 	private:
 		bool SceneExists(const std::string& fileName) const;
+		void DoSceneContextMenu(BaseScene* scene);
 
 		u32 m_CurrentSceneIndex = u32_max;
 		std::vector<BaseScene*> m_Scenes;

@@ -6,9 +6,9 @@
 
 // Memory leak checking includes
 #if defined(DEBUG) | defined(_DEBUG)
-#define _CRTDBG_MAP_ALLOC  
-#include <stdlib.h>  
-#include <crtdbg.h>  
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#include <stdlib.h>
 #endif
 
 int main(int argc, char *argv[])
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 	// Enable run-time memory leak check for debug builds
 #if defined(DEBUG) | defined(_DEBUG)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-	//_CrtSetBreakAlloc(178);
+	//_CrtSetBreakAlloc(47947);
 #endif
 
 	{
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 	}
 
 	system("PAUSE");
-	
+
 	return 0;
 }
 
@@ -44,5 +44,5 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	UNREFERENCED_PARAMETER(nCmdShow);
 
-	return main(0, {});
+	return main(0, nullptr);
 }

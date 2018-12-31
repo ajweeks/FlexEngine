@@ -45,6 +45,8 @@ namespace flex
 			DisplayALError("alGenBuffers: ", error);
 			return;
 		}
+
+		s_Sources.resize(NUM_BUFFERS);
 	}
 
 	void AudioManager::Destroy()
@@ -57,9 +59,12 @@ namespace flex
 
 	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath)
 	{
-		AudioSourceID newID = s_Sources.size();
-		// TODO: Reuse buffers after sounds stop playing?
-		assert(newID < NUM_BUFFERS);
+		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
+		if (newID == InvalidAudioSourceID)
+		{
+			PrintError("Failed to add new audio source! All %d buffers are in use\n", NUM_BUFFERS);
+			return InvalidAudioSourceID;
+		}
 
 		std::string friendlyName = filePath;
 		StripLeadingDirectories(friendlyName);
@@ -98,8 +103,6 @@ namespace flex
 
 
 		// Source
-		s_Sources.resize(s_Sources.size() + 1);
-
 		alGenSources(1, &s_Sources[newID].source);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
@@ -112,6 +115,79 @@ namespace flex
 		DisplayALError("alSourcei: ", alGetError());
 
 		return newID;
+	}
+
+	AudioSourceID AudioManager::SynthesizeSound(sec length, real freq)
+	{
+		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
+		if (newID == InvalidAudioSourceID)
+		{
+			PrintError("Failed to add new audio source! All %d buffers are in use\n", NUM_BUFFERS);
+			return InvalidAudioSourceID;
+		}
+
+		Print("Synthesizing audio source\n");
+
+		// WAVE file
+		i32 format = AL_FORMAT_STEREO8;
+		i32 sampleRate = 44100;
+		i32 size = (i32)(sampleRate * length);
+		u8* data = (u8*)malloc((u32)size);
+
+		for (i32 i = 0; i < size; ++i)
+		{
+			real t = (real)i / (real)(size - 1);
+			t -= fmod(t, 0.5f); // Linear fade in/out
+			//t = pow(sin(t* PI), 0.01f); // Sinusodal fade in/out
+			data[i] = (u8)((sin((real)i / freq) * t * 0.5f + 0.5f) * 255.0f);
+		}
+
+		ALenum error = alGetError();
+		if (error != AL_NO_ERROR)
+		{
+			DisplayALError("OpenAndParseWAVFile: ", error);
+			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
+			return InvalidAudioSourceID;
+		}
+
+
+		// Buffer
+		alBufferData(s_Buffers[newID], format, data, size, sampleRate);
+		error = alGetError();
+		if (error != AL_NO_ERROR)
+		{
+			DisplayALError("alBufferData: ", error);
+			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
+			return InvalidAudioSourceID;
+		}
+		delete[] data;
+
+
+		// Source
+		alGenSources(1, &s_Sources[newID].source);
+		error = alGetError();
+		if (error != AL_NO_ERROR)
+		{
+			DisplayALError("alGenSources 1: ", error);
+			return InvalidAudioSourceID;
+		}
+
+		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
+		DisplayALError("alSourcei: ", alGetError());
+
+		return newID;
+	}
+
+	bool AudioManager::DestroyAudioSource(AudioSourceID sourceID)
+	{
+		if (sourceID >= NUM_BUFFERS || s_Sources[sourceID].source == InvalidAudioSourceID)
+		{
+			return false;
+		}
+
+		alDeleteSources(1, &s_Sources[sourceID].source);
+		s_Sources[sourceID].source = InvalidAudioSourceID;
+		return true;
 	}
 
 	void AudioManager::ClearAllAudioSources()
@@ -255,6 +331,20 @@ namespace flex
 		return (s_Sources[sourceID].state == AL_PLAYING);
 	}
 
+	void AudioManager::DrawImGuiObjects()
+	{
+		if (ImGui::TreeNode("Audio"))
+		{
+			real gain = GetMasterGain();
+			if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
+			{
+				SetMasterGain(gain);
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
 	void AudioManager::SetSourcePitch(AudioSourceID sourceID, real pitch)
 	{
 		assert(sourceID < s_Sources.size());
@@ -300,7 +390,7 @@ namespace flex
 		const ALCchar* next = devices + 1;
 
 		Print("Available OpenAL devices:\n");
-		while (device && *device != '\0' && 
+		while (device && *device != '\0' &&
 			   next && *next != '\0')
 		{
 			Print("\t\t%s\n", device);
@@ -308,5 +398,18 @@ namespace flex
 			device += (len + 1);
 			next += (len + 2);
 		}
+	}
+
+	ALuint AudioManager::GetNextAvailableSourceAndBufferIndex()
+	{
+		for (i32 i = 0; i < NUM_BUFFERS; ++i)
+		{
+			if (s_Sources[i].source == InvalidAudioSourceID)
+			{
+				return (ALuint)i;
+			}
+		}
+
+		return InvalidAudioSourceID;
 	}
 } // namespace flex

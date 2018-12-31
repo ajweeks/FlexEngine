@@ -12,7 +12,7 @@
  * + single line comments like in C - denoted as "//"
  * + lists of objects (e.g. [ { "A" : "ay", "B" : "bee" }, { "C" : "see", "D" : "dee" } ] )
  * + lists of fields (e.g. [ "A" : "ay", "B" : "bee", "C" : "see", "D" : "dee" ] )
- * 
+ *
  * Does not currently support:
  * - lists of values (e.g. [ "A", "B", "C" ] )
  *
@@ -44,7 +44,7 @@ namespace flex
 		*/
 		static bool ParseField(const std::string& fileContents, i32* offset, JSONField& field);
 
-		/* 
+		/*
 		 * Expects offset to point at the opening bracket
 		 * Returns the index of the closing bracket for the given opening bracket - (, [, and { are allowed
 		 * Returns -1 if no matching bracket is found

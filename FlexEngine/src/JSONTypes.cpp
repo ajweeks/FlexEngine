@@ -60,50 +60,52 @@ namespace flex
 	}
 
 	JSONValue::JSONValue(const std::string& strValue) :
-		strValue(strValue),
-		type(Type::STRING)
+		type(Type::STRING),
+		strValue(strValue)
 	{
 	}
 
 	JSONValue::JSONValue(const char* strValue) :
-		strValue(strValue),
-		type(Type::STRING)
+		type(Type::STRING),
+		strValue(strValue)
 	{
 	}
 
 	JSONValue::JSONValue(i32 intValue) :
-		intValue(intValue),
-		type(Type::INT)
+		type(Type::INT),
+		intValue(intValue)
 	{
+		ENSURE(!IsNanOrInf((real)intValue));
 	}
 
 	JSONValue::JSONValue(real floatValue) :
-		floatValue(floatValue),
-		type(Type::FLOAT)
+		type(Type::FLOAT),
+		floatValue(floatValue)
 	{
+		ENSURE(!IsNanOrInf(floatValue));
 	}
 
 	JSONValue::JSONValue(bool boolValue) :
-		boolValue(boolValue),
-		type(Type::BOOL)
+		type(Type::BOOL),
+		boolValue(boolValue)
 	{
 	}
 
 	JSONValue::JSONValue(const JSONObject& objectValue) :
-		objectValue(objectValue),
-		type(Type::OBJECT)
+		type(Type::OBJECT),
+		objectValue(objectValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONObject>& objectArrayValue) :
-		objectArrayValue(objectArrayValue),
-		type(Type::OBJECT_ARRAY)
+		type(Type::OBJECT_ARRAY),
+		objectArrayValue(objectArrayValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONField>& fieldArrayValue) :
-		fieldArrayValue(fieldArrayValue),
-		type(Type::FIELD_ARRAY)
+		type(Type::FIELD_ARRAY),
+		fieldArrayValue(fieldArrayValue)
 	{
 	}
 
@@ -146,6 +148,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = ParseVec2(GetString(label));
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -156,6 +159,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = ParseVec3(GetString(label));
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -166,6 +170,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = ParseVec4(GetString(label));
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -175,27 +180,33 @@ namespace flex
 	{
 		if (HasField(label))
 		{
-			return ParseVec2(GetString(label));
+			glm::vec2 value = ParseVec2(GetString(label));
+			ENSURE(!IsNanOrInf(value));
+			return value;
 		}
-		return glm::vec2(0.0f);
+		return VEC2_ZERO;
 	}
 
 	glm::vec3 JSONObject::GetVec3(const std::string& label) const
 	{
 		if (HasField(label))
 		{
-			return ParseVec3(GetString(label));
+			glm::vec3 value = ParseVec3(GetString(label));
+			ENSURE(!IsNanOrInf(value));
+			return value;
 		}
-		return glm::vec3(0.0f);
+		return VEC3_ZERO;
 	}
 
 	glm::vec4 JSONObject::GetVec4(const std::string& label) const
 	{
 		if (HasField(label))
 		{
-			return ParseVec4(GetString(label));
+			glm::vec4 value = ParseVec4(GetString(label));
+			ENSURE(!IsNanOrInf(value));
+			return value;
 		}
-		return glm::vec4(0.0f);
+		return VEC4_ZERO;
 	}
 
 	i32 JSONObject::GetInt(const std::string& label) const
@@ -206,8 +217,10 @@ namespace flex
 			{
 				if (field.value.intValue != 0)
 				{
+					ENSURE(!IsNanOrInf((real)field.value.intValue));
 					return field.value.intValue;
 				}
+				ENSURE(!IsNanOrInf(field.value.floatValue));
 				return (i32)field.value.floatValue;
 			}
 		}
@@ -233,8 +246,10 @@ namespace flex
 				// A float might be written without a decimal, making the system think it's an int
 				if (field.value.floatValue != 0.0f)
 				{
+					ENSURE(!IsNanOrInf(field.value.floatValue));
 					return field.value.floatValue;
 				}
+				ENSURE(!IsNanOrInf((real)field.value.intValue));
 				return (real)field.value.intValue;
 			}
 		}
@@ -246,6 +261,7 @@ namespace flex
 		if (HasField(label))
 		{
 			value = GetFloat(label);
+			ENSURE(!IsNanOrInf(value));
 			return true;
 		}
 		return false;
@@ -285,7 +301,7 @@ namespace flex
 		return s_EmptyFieldArray;
 	}
 
-	bool JSONObject::SetFieldArrayChecked(const std::string & label, std::vector<JSONField>& value) const
+	bool JSONObject::SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const
 	{
 		if (HasField(label))
 		{
@@ -307,7 +323,7 @@ namespace flex
 		return s_EmptyObjectArray;
 	}
 
-	bool JSONObject::SetObjectArrayChecked(const std::string & label, std::vector<JSONObject>& value) const
+	bool JSONObject::SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const
 	{
 		if (HasField(label))
 		{

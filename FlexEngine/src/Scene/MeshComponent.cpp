@@ -5,16 +5,17 @@
 #include <string>
 
 #pragma warning(push, 0)
-#include <assimp/vector3.h>
-#include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <assimp/vector3.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #pragma warning(pop)
 
-#include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "Colors.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
 
@@ -37,12 +38,16 @@ namespace flex
 	{
 	}
 
-	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner) :
+	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat /* = true */) :
 		m_OwningGameObject(owner),
 		m_MaterialID(materialID),
 		m_UVScale(1.0f, 1.0f),
 		m_ImportSettings()
 	{
+		if (bSetRequiredAttributesFromMat)
+		{
+			SetRequiredAttributesFromMaterialID(materialID);
+		}
 	}
 
 	MeshComponent::~MeshComponent()
@@ -65,7 +70,7 @@ namespace flex
 		std::string meshFilePath = object.GetString("file");
 		if (!meshFilePath.empty())
 		{
-			meshFilePath = RESOURCE_LOCATION + meshFilePath;
+			meshFilePath = RESOURCE_LOCATION  "meshes/" + meshFilePath;
 		}
 		std::string meshPrefabName = object.GetString("prefab");
 		bool swapNormalYZ = object.GetBool("swapNormalYZ");
@@ -79,14 +84,9 @@ namespace flex
 		}
 		else
 		{
-			Material& material = g_Renderer->GetMaterial(materialID);
-			Shader& shader = g_Renderer->GetShader(material.shaderID);
-			VertexAttributes requiredVertexAttributes = shader.vertexAttributes;
-
 			if (!meshFilePath.empty())
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
-				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
 
 				MeshComponent::ImportSettings importSettings = {};
 				importSettings.flipU = flipU;
@@ -102,7 +102,6 @@ namespace flex
 			else if (!meshPrefabName.empty())
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
-				newMeshComponent->SetRequiredAttributes(requiredVertexAttributes);
 
 				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
 				newMeshComponent->LoadPrefabShape(prefabShape);
@@ -118,6 +117,36 @@ namespace flex
 		return newMeshComponent;
 	}
 
+	JSONObject MeshComponent::Serialize() const
+	{
+		JSONObject meshObject = {};
+
+		if (m_Type == MeshComponent::Type::FILE)
+		{
+			std::string prefixStr = RESOURCE_LOCATION  "meshes/";
+			std::string meshFilepath = GetRelativeFilePath().substr(prefixStr.length());
+			meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
+		}
+		// TODO: CLEANUP: Remove "prefab" meshes entirely (always load from file)
+		else if (m_Type == MeshComponent::Type::PREFAB)
+		{
+			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(m_Shape);
+			meshObject.fields.emplace_back("prefab", JSONValue(prefabShapeStr));
+		}
+		else
+		{
+			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
+		}
+
+		MeshComponent::ImportSettings importSettings = m_ImportSettings;
+		meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.swapNormalYZ));
+		meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.flipNormalZ));
+		meshObject.fields.emplace_back("flipU", JSONValue(importSettings.flipU));
+		meshObject.fields.emplace_back("flipV", JSONValue(importSettings.flipV));
+
+		return meshObject;
+	}
+
 	void MeshComponent::Destroy()
 	{
 		m_VertexBufferData.Destroy();
@@ -125,85 +154,106 @@ namespace flex
 		m_Initialized = false;
 	}
 
-	void MeshComponent::SetRequiredAttributes(VertexAttributes requiredAttributes)
+	void MeshComponent::SetOwner(GameObject* owner)
 	{
-		m_RequiredAttributes = requiredAttributes;
+		m_OwningGameObject = owner;
 	}
 
-	bool MeshComponent::GetLoadedMesh(const std::string& filePath, const aiScene** scene)
+	void MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)
 	{
-		auto iter = m_LoadedMeshes.find(filePath);
+		assert(matID != InvalidMaterialID);
+
+		Material& mat = g_Renderer->GetMaterial(matID);
+		Shader& shader = g_Renderer->GetShader(mat.shaderID);
+		m_RequiredAttributes = shader.vertexAttributes;
+	}
+
+	bool MeshComponent::GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
+	{
+		auto iter = m_LoadedMeshes.find(relativeFilePath);
 		if (iter == m_LoadedMeshes.end())
 		{
 			return false;
 		}
 		else
 		{
-			*scene = iter->second->scene;
+			*loadedMesh = iter->second;
 			return true;
 		}
 	}
 
-	bool MeshComponent::LoadFromFile(
-		const std::string& filePath,
-		ImportSettings* importSettings /* = nullptr */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, ImportSettings* importSettings /* = nullptr */)
 	{
-		m_Type = Type::FILE;
-		m_Shape = PrefabShape::NONE;
-		m_FilePath = filePath;
-		if (importSettings)
+		if (relativeFilePath.find(':') != std::string::npos)
 		{
-			m_ImportSettings = *importSettings;
+			PrintError("Called LoadMesh with an absolute file path! Must be relative!\n");
+			return nullptr;
 		}
 
-		m_VertexBufferData.Destroy();
+		// Mesh hasn't been loaded before, load it now
+		std::string fileName = relativeFilePath;
+		StripLeadingDirectories(fileName);
 
-		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
-
-		std::string meshFileName = filePath;
-		StripLeadingDirectories(meshFileName);
-
-		const aiScene* scene = nullptr;
-		if (GetLoadedMesh(filePath, &scene))
+		LoadedMesh* newLoadedMesh = nullptr;
 		{
-			Print("Reusing loaded mesh from %s\n", meshFileName.c_str());
-		}
-		else
-		{
-			// Mesh hasn't been loaded before, load it now
-			Print("Loading mesh %s\n", meshFileName.c_str());
-
-			LoadedMesh* loadedMesh = new LoadedMesh();
-			m_LoadedMeshes.emplace(filePath, loadedMesh);
-
-			loadedMesh->scene = loadedMesh->importer.ReadFile(filePath,
-				aiProcess_FindInvalidData |
-				aiProcess_GenNormals |
-				aiProcess_CalcTangentSpace
-			);
-
-			scene = loadedMesh->scene;
-
-			if (!scene)
+			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
+			if (existingIter == m_LoadedMeshes.end())
 			{
-				PrintError("%s\n", loadedMesh->importer.GetErrorString());
-				return false;
+				Print("Loading mesh %s\n", fileName.c_str());
+				newLoadedMesh = new LoadedMesh();
+				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
+			}
+			else
+			{
+				Print("Reloading mesh %s\n", fileName.c_str());
+				newLoadedMesh = existingIter->second;
 			}
 		}
 
-		if (!scene)
+		if (importSettings)
 		{
-			PrintError("Failed to load mesh %s\n", filePath.c_str());
-			return false;
+			newLoadedMesh->importSettings = *importSettings;
 		}
 
+		newLoadedMesh->relativeFilePath = relativeFilePath;
+		newLoadedMesh->scene = newLoadedMesh->importer.ReadFile(relativeFilePath,
+																aiProcess_FindInvalidData |
+																aiProcess_GenNormals |
+																aiProcess_CalcTangentSpace);
+
+		return newLoadedMesh;
+	}
+
+	real MeshComponent::CalculateBoundingSphereScale() const
+	{
+		Transform* transform = m_OwningGameObject->GetTransform();
+		glm::vec3 scale = transform->GetWorldScale();
+		glm::vec3 scaledMin = scale * m_MinPoint;
+		glm::vec3 scaledMax = scale * m_MaxPoint;
+
+		real sphereScale = (glm::max(glm::max(glm::abs(scaledMax.x), glm::abs(scaledMin.x)),
+							glm::max(glm::max(glm::abs(scaledMax.y), glm::abs(scaledMin.y)),
+									 glm::max(glm::abs(scaledMax.z), glm::abs(scaledMin.z)))));
+		return sphereScale;
+	}
+
+	bool MeshComponent::LoadFromAiScene(const aiScene* scene,
+										ImportSettings* importSettings /* = nullptr */,
+										RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		if (m_Initialized)
+		{
+			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
+			return false;
+		}
 
 		if (!scene->HasMeshes())
 		{
-			PrintWarn("Loaded mesh file has no meshes! %s\n", filePath.c_str());
+			PrintWarn("Loaded mesh file has no meshes!\n");
 			return false;
 		}
+
+		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
 
 		std::vector<aiMesh*> meshes(scene->mNumMeshes);
 		for (size_t i = 0; i < scene->mNumMeshes; ++i)
@@ -212,6 +262,9 @@ namespace flex
 		}
 
 		size_t totalVertCount = 0;
+		m_MinPoint = glm::vec3(FLT_MAX);
+		m_MaxPoint = glm::vec3(FLT_MIN);
+
 
 		for (aiMesh* mesh : meshes)
 		{
@@ -222,17 +275,20 @@ namespace flex
 			const bool meshHasTangentsAndBitangents = mesh->HasTangentsAndBitangents();
 			const bool meshHasNormals = mesh->HasNormals();
 			const bool meshHasTexCoord0 = mesh->HasTextureCoords(0);
-			
+
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			
+
 			for (size_t i = 0; i < numMeshVerts; ++i)
 			{
 				// Position
 				glm::vec3 pos = ToVec3(mesh->mVertices[i]);
 				vertexBufferDataCreateInfo.positions_3D.push_back(pos);
 
+				m_MinPoint = glm::min(m_MinPoint, pos);
+				m_MaxPoint = glm::max(m_MaxPoint, pos);
+
 				// Color
-				if ((m_RequiredAttributes && 
+				if ((m_RequiredAttributes &&
 					(m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)) ||
 					(!m_RequiredAttributes && meshHasVertexColors0))
 				{
@@ -341,7 +397,25 @@ namespace flex
 				}
 			}
 		}
-		
+
+		if (!vertexBufferDataCreateInfo.positions_3D.empty())
+		{
+			m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
+
+			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
+			{
+				real posMagnitude = glm::length(pos - m_BoundingSphereCenterPoint);
+				if (posMagnitude > m_BoundingSphereRadius)
+				{
+					m_BoundingSphereRadius = posMagnitude;
+				}
+			}
+			if (m_BoundingSphereRadius == 0.0f)
+			{
+				PrintWarn("Mesh's bounding sphere's radius is 0, do any valid vertices exist?\n");
+			}
+		}
+
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
@@ -362,11 +436,11 @@ namespace flex
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
-				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
+				PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
 			}
 			if (optionalCreateInfo->indices != nullptr)
 			{
-				PrintError("Can not override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
+				PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
 			}
 		}
 
@@ -375,6 +449,10 @@ namespace flex
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
 		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
+		{
+			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
+		}
 		m_OwningGameObject->SetRenderID(renderID);
 
 		g_Renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
@@ -386,8 +464,77 @@ namespace flex
 		return true;
 	}
 
+	bool MeshComponent::LoadFromFile(
+		const std::string& relativeFilePath,
+		ImportSettings* importSettings /* = nullptr */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		if (m_Initialized)
+		{
+			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
+			return false;
+		}
+
+		m_Type = Type::FILE;
+		m_Shape = PrefabShape::NONE;
+		m_RelativeFilePath = relativeFilePath;
+		m_FileName = m_RelativeFilePath;
+		StripLeadingDirectories(m_FileName);
+		if (importSettings)
+		{
+			m_ImportSettings = *importSettings;
+		}
+
+		m_BoundingSphereRadius = 0;
+		m_BoundingSphereCenterPoint = VEC3_ZERO;
+		m_VertexBufferData.Destroy();
+
+		const aiScene* scene = nullptr;
+		LoadedMesh* loadedMesh = nullptr;
+		if (GetLoadedMesh(relativeFilePath, &loadedMesh))
+		{
+			scene = loadedMesh->scene;
+
+			if (importSettings == nullptr)
+			{
+				importSettings = &loadedMesh->importSettings;
+				m_ImportSettings = loadedMesh->importSettings;
+			}
+		}
+		else
+		{
+			// Mesh hasn't been loaded before, load it now
+			LoadedMesh* newLoadedMesh = LoadMesh(relativeFilePath, importSettings);
+
+			if (newLoadedMesh)
+			{
+				scene = newLoadedMesh->scene;
+
+				if (!scene)
+				{
+					PrintError("%s\n", newLoadedMesh->importer.GetErrorString());
+					return false;
+				}
+			}
+		}
+
+		if (!scene)
+		{
+			PrintError("Failed to load mesh %s\n", relativeFilePath.c_str());
+			return false;
+		}
+
+		return LoadFromAiScene(scene, importSettings, optionalCreateInfo);
+	}
+
 	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
+		if (m_Initialized)
+		{
+			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
+			return false;
+		}
+
 		m_Type = Type::PREFAB;
 		m_Shape = shape;
 
@@ -1024,12 +1171,43 @@ namespace flex
 		} break;
 		}
 
+		if (!vertexBufferDataCreateInfo.positions_3D.empty())
+		{
+			m_MinPoint = glm::vec3(FLT_MAX);
+			m_MaxPoint = glm::vec3(FLT_MIN);
+
+			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
+			{
+				m_MinPoint = glm::min(m_MinPoint, pos);
+				m_MaxPoint = glm::max(m_MaxPoint, pos);
+			}
+
+			m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
+
+			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
+			{
+				real posMagnitude = glm::length(pos - m_BoundingSphereCenterPoint);
+				if (posMagnitude > m_BoundingSphereRadius)
+				{
+					m_BoundingSphereRadius = posMagnitude;
+				}
+			}
+			if (m_BoundingSphereRadius == 0.0f)
+			{
+				PrintWarn("Mesh's bounding sphere's radius is 0, do any valid vertices exist?\n");
+			}
+		}
+
 		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
 
 		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
+		{
+			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
+		}
 		m_OwningGameObject->SetRenderID(renderID);
 
 		g_Renderer->SetTopologyMode(renderID, topologyMode);
@@ -1047,10 +1225,37 @@ namespace flex
 			Transform* transform = m_OwningGameObject->GetTransform();
 			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
-				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING), 
+				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING),
 				transform->GetWorldPosition().y,
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
 			transform->SetWorldPosition(newGridPos);
+		}
+	}
+
+	void MeshComponent::Reload()
+	{
+		if (m_Type != Type::FILE)
+		{
+			PrintWarn("Prefab reloading is unsupported\n");
+			return;
+		}
+
+		GameObject* owningGameObject = m_OwningGameObject;
+
+		RenderObjectCreateInfo renderObjectCreateInfo;
+		g_Renderer->GetRenderObjectCreateInfo(m_OwningGameObject->GetRenderID(), renderObjectCreateInfo);
+
+		// These fields can't be passed in, make it clear we aren't trying to
+		renderObjectCreateInfo.vertexBufferData = nullptr;
+		renderObjectCreateInfo.indices = nullptr;
+
+		Destroy();
+
+		SetOwner(owningGameObject);
+
+		if (!LoadFromFile(m_RelativeFilePath, &m_ImportSettings, &renderObjectCreateInfo))
+		{
+			PrintError("Failed to reload mesh at %s\n", m_RelativeFilePath.c_str());
 		}
 	}
 
@@ -1111,13 +1316,13 @@ namespace flex
 	{
 		switch (shape)
 		{
-		case MeshComponent::PrefabShape::CUBE:					return "cube";
-		case MeshComponent::PrefabShape::GRID:					return "grid";
+		case MeshComponent::PrefabShape::CUBE:				return "cube";
+		case MeshComponent::PrefabShape::GRID:				return "grid";
 		case MeshComponent::PrefabShape::WORLD_AXIS_GROUND:	return "world axis ground";
 		case MeshComponent::PrefabShape::PLANE:				return "plane";
 		case MeshComponent::PrefabShape::UV_SPHERE:			return "uv sphere";
-		case MeshComponent::PrefabShape::SKYBOX:				return "skybox";
-		case MeshComponent::PrefabShape::NONE:					return "NONE";
+		case MeshComponent::PrefabShape::SKYBOX:			return "skybox";
+		case MeshComponent::PrefabShape::NONE:				return "NONE";
 		default:											return "UNHANDLED PREFAB SHAPE";
 		}
 	}
@@ -1137,8 +1342,37 @@ namespace flex
 		return m_ImportSettings;
 	}
 
-	std::string MeshComponent::GetFilepath() const
+	real MeshComponent::GetScaledBoundingSphereRadius() const
 	{
-		return m_FilePath;
+		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
+		{
+			PrintError("Attempted to get bounding sphere radius of mesh component which contains no 3D vertices!"
+					   "Radius will always be 0\n");
+		}
+		real sphereScale = CalculateBoundingSphereScale();
+		return m_BoundingSphereRadius * sphereScale;
+	}
+
+	glm::vec3 MeshComponent::GetBoundingSphereCenterPointWS() const
+	{
+		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
+		{
+			PrintError("Attempted to get bounding sphere center point of mesh component which contains no 3D vertices!"
+					   "Center point will always be 0\n");
+		}
+
+		Transform* transform = m_OwningGameObject->GetTransform();
+		glm::vec3 transformedCenter = transform->GetWorldTransform() * glm::vec4(m_BoundingSphereCenterPoint, 1.0f);
+		return transformedCenter;
+	}
+
+	std::string MeshComponent::GetRelativeFilePath() const
+	{
+		return m_RelativeFilePath;
+	}
+
+	std::string MeshComponent::GetFileName() const
+	{
+		return m_FileName;
 	}
 } // namespace flex

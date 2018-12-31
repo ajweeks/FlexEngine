@@ -5,7 +5,7 @@ uniform float lumaThresholdMax = 1.0/3.0;
 uniform float lumaThresholdMin = 1.0/16.0;
 uniform float mulReduce = 1.0/8.0;
 uniform float minReduce = 1.0/128.0;
-uniform float maxSpan = 8;
+uniform float maxSpan = 8.0;
 uniform vec2 texelStep;
 
 uniform bool bDEBUGShowEdges = false;
@@ -67,15 +67,15 @@ void main()
 
 	if (lumaFourTap < lumaMin || lumaFourTap > lumaMax)
 	{
-		out_Color = vec4(rgbTwoTap, 1);
+		out_Color = vec4(rgbTwoTap, 1.0);
 	}
 	else
 	{
-		out_Color = vec4(rgbFourTap, 1);
+		out_Color = vec4(rgbFourTap, 1.0);
 	}
 
 	if (bDEBUGShowEdges)
 	{
-		out_Color.r = 1;
+		out_Color.r = 1.0;
 	}
 }

@@ -1,58 +1,6 @@
 {
 	"version" : 1,
 	"name" : "Sponza",
-	"materials" : 
-	[
-		{
-			"name" : "pbr grey",
-			"shader" : "pbr",
-			"const albedo" : "0.780000, 0.120000, 0.110000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.250000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr",
-			"shader" : "pbr",
-			"const albedo" : "0.230000, 0.250000, 0.290000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.200000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.540000, 0.100000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.200000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr chrome",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "Skybox",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
-		}
-	],
 	"objects" : 
 	[
 		{
@@ -61,19 +9,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"mesh" : 
-			{
-				"file" : "models/sponza/sponza.glb",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 0
+			"mesh" : "sponza",
+			"material" : "pbr grey"
 		},
 		{
 			"name" : "ground plane",
@@ -82,29 +20,23 @@
 			"static" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, -1.100000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "100.000000, 1.000000, 100.000000"
+				"pos" : "0.000, -1.100, 0.000",
+				"scale" : "152.290, 1.000, 100.000"
 			},
-			"mesh" : 
-			{
-				"file" : "models/cube.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 1,
+			"mesh" : "cube",
+			"material" : "pbr light grey",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1000000.000000, 1.000000, 1000000.000000"
+				"half extents" : "1.000, 1.000, 1.000"
 			},
 			"rigid body" : 
 			{
 				"mass" : 0.000000,
 				"kinematic" : false,
-				"static" : false
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
 			}
 		},
 		{
@@ -113,11 +45,11 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 4
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
 		},
 		{
 			"name" : "Reflection Probe 01",
@@ -125,29 +57,345 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "3.100000, 1.000000, 0.000000",
-				"rotation" : "0.036652, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
+				"pos" : "3.100, 16.485, 4.048",
+				"rot" : "0.037, -0.000, 0.000"
 			},
-			"material array index" : 3
-		}
-	],
-	"point lights" : 
-	[
+			"material" : "pbr chrome"
+		},
 		{
-			"name" : "Point light 01",
-			"position" : "0.000000, 10.900001, 0.000000",
-			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : false,
-			"brightness" : 793.388062
+			"name" : "ball 01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "18.842, 0.900, 3.196",
+				"rot" : "-2.663, -0.409, 2.701",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "16.609, 0.900, 1.917",
+				"rot" : "2.160, 1.322, -0.433",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "11.650, 0.900, 1.529",
+				"rot" : "1.977, 0.266, 1.875",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 04",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "24.719, 0.900, 3.349",
+				"rot" : "-0.093, 0.322, 1.705",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 05",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "19.324, 0.900, 7.319",
+				"rot" : "-0.601, -0.843, 1.893",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 06",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "11.458, 0.900, 5.702",
+				"rot" : "0.199, 0.539, 0.338",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 07",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "8.227, 0.900, 5.679",
+				"rot" : "0.510, 0.679, 1.310",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 08",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "3.792, 0.900, 5.736",
+				"rot" : "0.484, 0.648, 2.338",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 09",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "1.714, 0.900, 5.689",
+				"rot" : "0.535, 0.664, 1.792",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 10",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-4.538, 0.900, 5.707",
+				"rot" : "0.510, 0.659, 2.853",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 11",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-8.695, 0.900, 5.703",
+				"rot" : "0.515, 0.658, 2.733",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "ball 12",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-10.758, 0.900, 5.746",
+				"rot" : "0.479, 0.651, 2.808",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "sphere",
+			"material" : "pbr white",
+			"collider" : 
+			{
+				"shape" : "sphere",
+				"radius" : 1.000000
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
 		}
-	],
-	"directional light" : 
-	{
-		"direction" : "0.380000, 0.750000, -0.160000",
-		"position" : "0.000000, 0.000000, 0.000000",
-		"color" : "1.000000, 1.000000, 1.000000",
-		"enabled" : true,
-		"brightness" : 2.355000
-	}
+	]
 }

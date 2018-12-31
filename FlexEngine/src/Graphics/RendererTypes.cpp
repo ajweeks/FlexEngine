@@ -1,64 +1,58 @@
 #include "stdafx.hpp"
 
 #include "Graphics/RendererTypes.hpp"
+#include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
-	bool Uniforms::HasUniform(const char* name) const
-	{
-		return (types.find(name) != types.end());
-	}
+	static const char* DataTypeStrs[(i32)DataType::NONE + 1] = {
+		"bool",
+		"byte",
+		"unsigned byte",
+		"short",
+		"unsigned short",
+		"int",
+		"unsigned int",
+		"float",
+		"double",
+		"float vector 2",
+		"float vector 3",
+		"float vector 4",
+		"float matrix 3",
+		"float matrix 4",
+		"int vector 2",
+		"int vector 3",
+		"int vector 4",
+		"sampler 1D",
+		"sampler 2D",
+		"sampler 3D",
+		"sampler cube",
+		"sampler 1D shadow",
+		"sampler 2D shadow",
+		"sampler cube shadow",
+		"NONE",
+	};
 
-	void Uniforms::AddUniform(const char* name)
+	const char* DataTypeToString(DataType dataType)
 	{
-		types.insert({ name, true });
-	}
-
-	void Uniforms::RemoveUniform(const char* name)
-	{
-		auto iter = types.find(name);
-		if (iter == types.end())
+		if ((i32)dataType >= 0 && (i32)dataType <= (i32)DataType::NONE)
 		{
-			PrintWarn("Attempted to remove uniform that doesn't exist! %s\n", name);
+			return DataTypeStrs[(i32)dataType];
 		}
-		else
-		{
-			types.erase(iter);
-		}
+		return nullptr;
 	}
 
-	u32 Uniforms::CalculateSize(i32 PointLightCount)
+	bool Uniforms::HasUniform(Uniform uniform) const
 	{
-		u32 size = 0;
-
-		if (HasUniform("model")) size += sizeof(glm::mat4);
-		if (HasUniform("modelInvTranspose")) size += sizeof(glm::mat4);
-		if (HasUniform("modelViewProjection")) size += sizeof(glm::mat4);
-		if (HasUniform("view")) size += sizeof(glm::mat4);
-		if (HasUniform("viewInv")) size += sizeof(glm::mat4);
-		if (HasUniform("viewProjection")) size += sizeof(glm::mat4);
-		if (HasUniform("projection")) size += sizeof(glm::mat4);
-		if (HasUniform("colorMultiplier")) size += sizeof(glm::vec4);
-		if (HasUniform("camPos")) size += sizeof(glm::vec4);
-		if (HasUniform("dirLight")) size += sizeof(DirectionalLight);
-		if (HasUniform("pointLights")) size += sizeof(PointLight) * PointLightCount;
-		if (HasUniform("enableAlbedoSampler")) size += sizeof(u32);
-		if (HasUniform("constAlbedo")) size += sizeof(glm::vec4);
-		if (HasUniform("enableMetallicSampler")) size += sizeof(u32);
-		if (HasUniform("constMetallic")) size += sizeof(real);
-		if (HasUniform("enableRoughnessSampler")) size += sizeof(u32);
-		if (HasUniform("constRoughness")) size += sizeof(real);
-		if (HasUniform("roughness")) size += sizeof(real);
-		if (HasUniform("enableAOSampler")) size += sizeof(u32);
-		if (HasUniform("constAO")) size += sizeof(real);
-		if (HasUniform("enableNormalSampler")) size += sizeof(u32);
-		if (HasUniform("enableDiffuseSampler")) size += sizeof(u32);
-		if (HasUniform("enableCubemapSampler")) size += sizeof(u32);
-		if (HasUniform("enableIrradianceSampler")) size += sizeof(u32);
-
-		return size;
+		return ((u64)uniforms & (u64)uniform) != 0;
 	}
-	
+
+	void Uniforms::AddUniform(Uniform uniform)
+	{
+		uniforms = (Uniform)((u64)uniforms | (u64)uniform);
+	}
+
 	Shader::Shader(const std::string& name,
 				   const std::string& vertexShaderFilePath,
 				   const std::string& fragmentShaderFilePath,
@@ -78,9 +72,6 @@ namespace flex
 		bool equal =
 			(name == other.name &&
 				shaderID == other.shaderID &&
-				generateDiffuseSampler == other.generateDiffuseSampler &&
-				enableDiffuseSampler == other.enableDiffuseSampler &&
-				diffuseTexturePath == other.diffuseTexturePath &&
 				generateNormalSampler == other.generateNormalSampler &&
 				enableNormalSampler == other.enableNormalSampler &&
 				normalTexturePath == other.normalTexturePath &&
@@ -120,7 +111,8 @@ namespace flex
 				enableBRDFLUT == other.enableBRDFLUT &&
 				renderToCubemap == other.renderToCubemap &&
 				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
-				colorMultiplier == other.colorMultiplier
+				colorMultiplier == other.colorMultiplier &&
+				textureScale == other.textureScale
 				//pushConstantBlock.mvp == other.pushConstantBlock.mvp &&
 				);
 
@@ -153,7 +145,7 @@ namespace flex
 		{
 			if (material.HasField(param.name))
 			{
-				*param.path = RESOURCE_LOCATION + material.GetString(param.name);
+				*param.path = RESOURCE_LOCATION  "textures/" + material.GetString(param.name);
 			}
 		}
 
@@ -190,9 +182,11 @@ namespace flex
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
 		material.SetFloatChecked("const ao", createInfoOut.constAO);
+
+		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
 	}
 
-	JSONObject Material::SerializeToJSON() const
+	JSONObject Material::Serialize() const
 	{
 		JSONObject materialObject = {};
 
@@ -203,99 +197,101 @@ namespace flex
 
 		// TODO: Find out way of determining if the following four  values
 		// are used by the shader (only currently used by PBR I think)
-		std::string constAlbedoStr = Vec3ToString(constAlbedo);
+		std::string constAlbedoStr = Vec3ToString(constAlbedo, 3);
 		materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
 		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
 		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
 		materialObject.fields.emplace_back("const ao", JSONValue(constAO));
 
 		static const bool defaultEnableAlbedo = false;
-		if (shader.needAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
+		if (shader.bNeedAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
 		{
 			materialObject.fields.emplace_back("enable albedo sampler", JSONValue(enableAlbedoSampler));
 		}
 
 		static const bool defaultEnableMetallicSampler = false;
-		if (shader.needMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
+		if (shader.bNeedMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
 		{
 			materialObject.fields.emplace_back("enable metallic sampler", JSONValue(enableMetallicSampler));
 		}
 
 		static const bool defaultEnableRoughness = false;
-		if (shader.needRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
+		if (shader.bNeedRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
 		{
 			materialObject.fields.emplace_back("enable roughness sampler", JSONValue(enableRoughnessSampler));
 		}
 
 		static const bool defaultEnableAO = false;
-		if (shader.needAOSampler && enableAOSampler != defaultEnableAO)
+		if (shader.bNeedAOSampler && enableAOSampler != defaultEnableAO)
 		{
 			materialObject.fields.emplace_back("enable ao sampler", JSONValue(enableAOSampler));
 		}
 
 		static const bool defaultEnableNormal = false;
-		if (shader.needNormalSampler && enableNormalSampler != defaultEnableNormal)
+		if (shader.bNeedNormalSampler && enableNormalSampler != defaultEnableNormal)
 		{
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
 		}
 
 		static const bool defaultGenerateAlbedo = false;
-		if (shader.needAlbedoSampler && generateAlbedoSampler != defaultGenerateAlbedo)
+		if (shader.bNeedAlbedoSampler && generateAlbedoSampler != defaultGenerateAlbedo)
 		{
 			materialObject.fields.emplace_back("generate albedo sampler", JSONValue(generateAlbedoSampler));
 		}
 
 		static const bool defaultGenerateMetallicSampler = false;
-		if (shader.needMetallicSampler && generateMetallicSampler != defaultGenerateMetallicSampler)
+		if (shader.bNeedMetallicSampler && generateMetallicSampler != defaultGenerateMetallicSampler)
 		{
 			materialObject.fields.emplace_back("generate metallic sampler", JSONValue(generateMetallicSampler));
 		}
 
 		static const bool defaultGenerateRoughness = false;
-		if (shader.needRoughnessSampler && generateRoughnessSampler != defaultGenerateRoughness)
+		if (shader.bNeedRoughnessSampler && generateRoughnessSampler != defaultGenerateRoughness)
 		{
 			materialObject.fields.emplace_back("generate roughness sampler", JSONValue(generateRoughnessSampler));
 		}
 
 		static const bool defaultGenerateAO = false;
-		if (shader.needAOSampler && generateAOSampler != defaultGenerateAO)
+		if (shader.bNeedAOSampler && generateAOSampler != defaultGenerateAO)
 		{
 			materialObject.fields.emplace_back("generate ao sampler", JSONValue(generateAOSampler));
 		}
 
 		static const bool defaultGenerateNormal = false;
-		if (shader.needNormalSampler && generateNormalSampler != defaultGenerateNormal)
+		if (shader.bNeedNormalSampler && generateNormalSampler != defaultGenerateNormal)
 		{
 			materialObject.fields.emplace_back("generate normal sampler", JSONValue(generateNormalSampler));
 		}
 
-		if (shader.needAlbedoSampler && !albedoTexturePath.empty())
+		static const std::string texturePrefixStr = RESOURCE_LOCATION  "textures/";
+
+		if (shader.bNeedAlbedoSampler && !albedoTexturePath.empty())
 		{
-			std::string shortAlbedoTexturePath = albedoTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortAlbedoTexturePath = albedoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("albedo texture filepath", JSONValue(shortAlbedoTexturePath));
 		}
 
-		if (shader.needMetallicSampler && !metallicTexturePath.empty())
+		if (shader.bNeedMetallicSampler && !metallicTexturePath.empty())
 		{
-			std::string shortMetallicTexturePath = metallicTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortMetallicTexturePath = metallicTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("metallic texture filepath", JSONValue(shortMetallicTexturePath));
 		}
 
-		if (shader.needRoughnessSampler && !roughnessTexturePath.empty())
+		if (shader.bNeedRoughnessSampler && !roughnessTexturePath.empty())
 		{
-			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
 		}
 
-		if (shader.needAOSampler && !aoTexturePath.empty())
+		if (shader.bNeedAOSampler && !aoTexturePath.empty())
 		{
-			std::string shortAOTexturePath = aoTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortAOTexturePath = aoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("ao texture filepath", JSONValue(shortAOTexturePath));
 		}
 
-		if (shader.needNormalSampler && !normalTexturePath.empty())
+		if (shader.bNeedNormalSampler && !normalTexturePath.empty())
 		{
-			std::string shortNormalTexturePath = normalTexturePath.substr(RESOURCE_LOCATION.length());
+			std::string shortNormalTexturePath = normalTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("normal texture filepath", JSONValue(shortNormalTexturePath));
 		}
 
@@ -304,36 +300,41 @@ namespace flex
 			materialObject.fields.emplace_back("generate hdr cubemap sampler", JSONValue(generateHDRCubemapSampler));
 		}
 
-		if (shader.needCubemapSampler)
+		if (shader.bNeedCubemapSampler)
 		{
 			materialObject.fields.emplace_back("enable cubemap sampler", JSONValue(enableCubemapSampler));
 
 			materialObject.fields.emplace_back("enable cubemap trilinear filtering", JSONValue(enableCubemapTrilinearFiltering));
 
-			std::string cubemapSamplerSizeStr = Vec2ToString(cubemapSamplerSize);
+			std::string cubemapSamplerSizeStr = Vec2ToString(cubemapSamplerSize, 0);
 			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
 		}
 
-		if (shader.needIrradianceSampler || irradianceSamplerSize.x > 0)
+		if (shader.bNeedIrradianceSampler || irradianceSamplerSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
 
-			std::string irradianceSamplerSizeStr = Vec2ToString(irradianceSamplerSize);
+			std::string irradianceSamplerSizeStr = Vec2ToString(irradianceSamplerSize, 0);
 			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
 		}
 
-		if (shader.needPrefilteredMap || prefilteredMapSize.x > 0)
+		if (shader.bNeedPrefilteredMap || prefilteredMapSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
 
-			std::string prefilteredMapSizeStr = Vec2ToString(prefilteredMapSize);
+			std::string prefilteredMapSizeStr = Vec2ToString(prefilteredMapSize, 0);
 			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSizeStr));
 		}
 
 		if (!environmentMapPath.empty())
 		{
-			std::string cleanedEnvMapPath = environmentMapPath.substr(RESOURCE_LOCATION.length());
+			std::string cleanedEnvMapPath = environmentMapPath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("environment map path", JSONValue(cleanedEnvMapPath));
+		}
+
+		if (textureScale != 1.0f)
+		{
+			materialObject.fields.emplace_back("texture scale", JSONValue(textureScale));
 		}
 
 		return materialObject;

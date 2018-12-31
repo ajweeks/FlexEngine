@@ -1,58 +1,6 @@
 {
 	"version" : 1,
 	"name" : "Scene Empty",
-	"materials" : 
-	[
-		{
-			"name" : "Reflection Probe",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "Skybox",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
-		},
-		{
-			"name" : "PBR 1",
-			"shader" : "pbr",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000
-		},
-		{
-			"name" : "PBR 2.5",
-			"shader" : "pbr",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000
-		},
-		{
-			"name" : "this is a test",
-			"shader" : "sprite",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000
-		}
-	],
 	"objects" : 
 	[
 		{
@@ -61,11 +9,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 7.080000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
+				"pos" : "0.000, 7.080, 0.000"
 			},
-			"material array index" : 0
+			"material" : "pbr chrome"
 		},
 		{
 			"name" : "Skybox",
@@ -73,14 +19,10 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 1,
+			"material" : "skybox 02",
 			"skybox info" : 
 			{
-				"rotation" : "0.000000, -0.000000, 0.000000"
 			}
 		},
 		{
@@ -89,37 +31,73 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "10.000000, 0.100000, 10.000000"
+				"pos" : "0.000, -1.600, 0.000",
+				"scale" : "80.000, 1.000, 80.000"
 			},
-			"mesh" : 
+			"mesh" : "cube",
+			"material" : "pbr light grey",
+			"collider" : 
 			{
-				"prefab" : "cube",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
 			},
-			"material array index" : 3
-		}
-	],
-	"point lights" : 
-	[
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
 		{
-			"name" : "",
-			"position" : "0.000000, 10.600000, 0.000000",
-			"color" : "1.000000, 1.000000, 1.000000",
-			"enabled" : true,
-			"brightness" : 286.385010
+			"name" : "box",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-2.645, 0.420, -13.210",
+				"rot" : "0.000, 0.314, 0.000",
+				"scale" : "1.320, 1.020, 2.220"
+			},
+			"mesh" : "cube",
+			"material" : "pbr chrome",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
 		}
-	],
-	"directional light" : 
-	{
-		"direction" : "0.000000, 0.000000, 1.000000",
-		"position" : "0.000000, 17.900000, 0.000000",
-		"color" : "1.000000, 1.000000, 1.000000",
-		"enabled" : true,
-		"brightness" : 2.042000
-	}
+	]
 }

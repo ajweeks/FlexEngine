@@ -1,12 +1,12 @@
 #pragma once
 
-#include <utility>
 #include <set>
+#include <utility>
 
 #pragma warning(push, 0)
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
-#include <LinearMath/btVector3.h>
 #include <LinearMath/btScalar.h>
+#include <LinearMath/btVector3.h>
 #pragma warning(pop)
 
 class btDiscreteDynamicsWorld;
@@ -31,12 +31,13 @@ namespace flex
 
 		btVector3 GenerateDirectionRayFromScreenPos(i32 x, i32 y);
 
-		btRigidBody* PickBody(const btVector3& rayStart, const btVector3& rayEnd);
+		btRigidBody* PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd);
+		GameObject* PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag);
 
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);
 
-		btDiscreteDynamicsWorld * m_World = nullptr;
+		btDiscreteDynamicsWorld* m_World = nullptr;
 
 		static const u32 MAX_SUBSTEPS = 32;
 

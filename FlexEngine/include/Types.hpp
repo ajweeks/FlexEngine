@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <limits>
-#include <string>
 
 #pragma warning(push, 0)
 #include <glm/vec2.hpp>
@@ -10,15 +9,17 @@
 
 namespace flex
 {
-	typedef int8_t i8;
-	typedef int16_t i16;
-	typedef int32_t i32;
-	typedef int64_t i64;
-	typedef uint8_t u8;
-	typedef uint16_t u16;
-	typedef uint32_t u32;
-	typedef uint64_t u64;
-	typedef float real;
+	using i8 = int8_t;
+	using i16 = int16_t;
+	using i32 = int32_t;
+	using i64 = int64_t;
+	using u8 = uint8_t;
+	using u16 = uint16_t;
+	using u32 = uint32_t;
+	using u64 = uint64_t;
+	using real = float;
+	using deg = real;
+	using rad = real;
 
 #define u8_min std::numeric_limits<u8>::min()
 #define u8_max std::numeric_limits<u8>::max()
@@ -41,23 +42,27 @@ namespace flex
 #define real_min std::numeric_limits<real>::min()
 #define real_max std::numeric_limits<real>::max()
 
-	typedef real sec;	// Seconds
-	typedef real ms;	// Milliseconds		1x10^-3 seconds
-	typedef real us;	// Microseconds		1x10^-6 seconds
-	typedef real ns;	// Nanoseconds		1x10^-9 seconds
+	using sec = real;	// Seconds
+	using ms = real;	// Milliseconds		1x10^-3 seconds
+	using us = real;	// Microseconds		1x10^-6 seconds
+	using ns = real;	// Nanoseconds		1x10^-9 seconds
 
-	typedef u32 VertexAttributes;
-	typedef u32 RenderID;
-	typedef u32 ShaderID;
-	typedef u32 MaterialID;
-	typedef u32 PointLightID;
-	typedef u32 AudioSourceID;
+	using VertexAttributes = u32;
+	using RenderID = u32;
+	using ShaderID = u32;
+	using MaterialID = u32;
+	using TextureID = u32;
+	using PointLightID = u32;
+	using AudioSourceID = u32;
+	using TrackID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
 #define InvalidMaterialID ((MaterialID)u32_max)
+#define InvalidTextureID ((TextureID)u32_max)
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidAudioSourceID ((AudioSourceID)u32_max)
+#define InvalidTrackID ((TrackID)u32_max)
 
 	template<bool> struct StaticAssert;
 	template<> struct StaticAssert<true> {};
@@ -65,13 +70,16 @@ namespace flex
 	enum class GameObjectType
 	{
 		OBJECT,
+		POINT_LIGHT,
+		DIRECTIONAL_LIGHT,
 		PLAYER,
 		SKYBOX,
 		REFLECTION_PROBE,
 		VALVE,
 		RISING_BLOCK,
 		GLASS_PANE,
-		
+		CART,
+
 
 		// NOTE: Add new types above this line
 		// NOTE: All additions *must* be also added to GameObjectTypeStrings in the same order!
@@ -81,13 +89,15 @@ namespace flex
 	static const char* GameObjectTypeStrings[] =
 	{
 		"object",
+		"point light",
+		"directional light",
 		"player",
 		"skybox",
 		"reflection probe",
 		"valve",
 		"rising block",
 		"glass pane",
-
+		"cart",
 
 		"NONE"
 	};
@@ -110,10 +120,11 @@ namespace flex
 #define STATIC_ASSERT(e) StaticAssert<(e)>{}
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define ARRAY_LENGTH(a) ARRAY_SIZE(a)
 
 } // namespace flex
 
 namespace glm
 {
-	typedef tvec2<flex::i32> vec2i;
+	using vec2i = tvec2<flex::i32>;
 }

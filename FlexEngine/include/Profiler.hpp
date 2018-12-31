@@ -2,10 +2,16 @@
 
 #include <unordered_map>
 
-#include "Helpers.hpp"
-
 namespace flex
 {
+	struct AutoProfilerBlock
+	{
+		AutoProfilerBlock(const char* blockName);
+		~AutoProfilerBlock();
+
+		const char* m_BlockName;
+	};
+
 	class Profiler
 	{
 	public:
@@ -23,6 +29,9 @@ namespace flex
 
 		static void PrintBlockDuration(const char* blockName);
 		static void PrintBlockDuration(const std::string& blockName);
+
+		static ms GetBlockDuration(const char* blockName);
+		static ms GetBlockDuration(const std::string& blockName);
 
 		static void DrawDisplayedFrame();
 

@@ -1,8 +1,6 @@
 ﻿#pragma once
 
-#include <string>
-
-#include "InputManager.hpp"
+#include "InputEnums.hpp"
 
 struct GLFWwindow;
 
@@ -12,21 +10,24 @@ namespace flex
 	{
 		NORMAL,
 		HIDDEN,
-		DISABLED
+		DISABLED,
+		NONE
 	};
 
 	enum class WindowMode
 	{
 		WINDOWED,
 		WINDOWED_FULLSCREEN, // (aka "Borderless windowed")
-		FULLSCREEN
+		FULLSCREEN,
+		NONE
 	};
 
 	static const char* WindowModeStrs[] =
 	{
 		"Windowed",
 		"Windowed Fullscreen",
-		"Fullscreen"
+		"Fullscreen",
+		"None"
 	};
 
 	class Window
@@ -34,16 +35,16 @@ namespace flex
 	public:
 		Window(const std::string& title);
 		virtual ~Window();
-		
+
 		virtual void Initialize() = 0;
 		/* Called after the window has been created */
 		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
-		virtual void RetrieveMonitorInfo() = 0;
-
 		// Size and pos are only used if "window-settings" config file does not exist
 		virtual void Create(const glm::vec2i& size, const glm::vec2i& pos) = 0;
+
+		virtual void RetrieveMonitorInfo() = 0;
 
 		virtual void Update();
 		virtual void PollEvents() = 0;
@@ -59,10 +60,10 @@ namespace flex
 		virtual void SetPosition(i32 newX, i32 newY) = 0;
 		/* Called when the window's position changes */
 		virtual void OnPositionChanged(i32 newX, i32 newY) = 0;
-		
+
 		glm::vec2i GetFrameBufferSize() const;
 		virtual void SetFrameBufferSize(i32 width, i32 height) = 0;
-		
+
 		/* Returns whether or not this window is the last window the user interacted with */
 		bool HasFocus() const;
 
@@ -79,23 +80,20 @@ namespace flex
 		/* Toggles between fullscreen and the last used non-fullscreen mode (windowed or borderless windowed */
 		virtual void ToggleFullscreen(bool force = false) = 0;
 		WindowMode GetWindowMode();
-		
+
 		const char* WindowModeToStr(WindowMode mode);
 		WindowMode StrToWindowMode(const char* modeStr);
 
 		// Callbacks
-		virtual void KeyCallback(InputManager::KeyCode keycode, InputManager::Action action, i32 mods);
+		virtual void KeyCallback(Input::KeyCode keycode, Input::KeyAction action, i32 mods);
 		virtual void CharCallback(u32 character);
-		virtual void MouseButtonCallback(InputManager::MouseButton mouseButton, InputManager::Action action, i32 mods);
+		virtual void MouseButtonCallback(Input::MouseButton mouseButton, Input::KeyAction action, i32 mods);
 		virtual void WindowFocusCallback(i32 focused);
 		virtual void CursorPosCallback(double x, double y);
 		virtual void ScrollCallback(double xoffset, double yoffset);
 		virtual void WindowSizeCallback(i32 width, i32 height, bool bMaximized, bool bIconified);
 		virtual void WindowPosCallback(i32 newX, i32 newY);
 		virtual void FrameBufferSizeCallback(i32 width, i32 height);
-
-		bool GetAutoRestoreStateEnabled();
-		void SetAutoRestoreStateEnabled(bool bAutoRestoreState);
 
 		bool IsMaximized() const;
 		virtual void Maximize() = 0;
@@ -104,6 +102,8 @@ namespace flex
 
 		bool InitFromConfig();
 		void SaveToConfig();
+
+		void DrawImGuiObjects();
 
 	protected:
 
@@ -118,10 +118,6 @@ namespace flex
 		friend void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 		friend void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN
-
-#if COMPILE_D3D
-		friend LRESULT CALLBACK WndProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-#endif // COMPILE_D3D
 
 		//void UpdateWindowSize(i32 width, i32 height);
 		//void UpdateWindowSize(glm::vec2i windowSize);
@@ -146,7 +142,7 @@ namespace flex
 		// Whether to restore the size and position from the previous session on bootup
 		bool m_bAutoRestoreStateOnBootup = true;
 
-		WindowMode m_CurrentWindowMode;
+		WindowMode m_CurrentWindowMode = WindowMode::NONE;
 
 		// Used to store previous window size and position to restore after exiting fullscreen
 		glm::vec2i m_LastWindowedSize;
@@ -158,8 +154,8 @@ namespace flex
 		bool m_bMaximized = false;
 		bool m_bIconified = false;
 
-		real m_UpdateWindowTitleFrequency = 0;
-		real m_SecondsSinceTitleUpdate = 0;
+		real m_UpdateWindowTitleFrequency = 0.0f;
+		real m_SecondsSinceTitleUpdate = 0.0f;
 
 		CursorMode m_CursorMode = CursorMode::NORMAL;
 

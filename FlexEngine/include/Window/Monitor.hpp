@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Types.hpp"
-
 namespace flex
 {
 	struct Monitor
@@ -16,4 +14,4 @@ namespace flex
 		real contentScaleX = 1.0f;
 		real contentScaleY = 1.0f;
 	};
-}
+} // namespace flex

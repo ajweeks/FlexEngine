@@ -1,25 +1,24 @@
 #pragma once
 
-#include "InputManager.hpp"
-
-#pragma warning(push, 0)
-#include <glm/mat4x4.hpp>
-#include <glm/vec3.hpp>
-#include <glm/trigonometric.hpp>
-#pragma warning(pop)
-
 namespace flex
 {
 	class BaseCamera
 	{
 	public:
 		BaseCamera(const std::string& cameraName, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
-		~BaseCamera();
+		virtual ~BaseCamera();
 
 		virtual void Initialize();
 		virtual void Update() = 0;
 
+		virtual bool IsDebugCam() const = 0;
+
 		virtual void OnSceneChanged();
+
+		virtual void OnPossess();
+		virtual void OnDepossess();
+
+		virtual void DrawImGuiObjects();
 
 		void SetFOV(real FOV);
 		real GetFOV() const;
@@ -59,13 +58,33 @@ namespace flex
 
 		std::string GetName() const;
 
+		void CalculateExposure();
+
+		// Exposure control
+		real aperture = 1.0f; // f-stops
+		real shutterSpeed = 1 / 8.0f; // seconds
+		real lightSensitivity = 800.0f; // ISO
+		real exposure = 0.0f;
+
 	protected:
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
-		void CalculateAxisVectors();
+		void CalculateAxisVectorsFromPitchAndYaw();
 		void CalculateYawAndPitchFromForward();
 		void RecalculateViewProjection();
 
 		void ClampPitch();
+
+		// Exposure calculations taken from Google's Filament rendering engine
+		// Computes the camera's EV100
+		// aperture measured in f-stops
+		// shutterSpeed measured in seconds
+		// sensitivity measured in ISO
+		static float CalculateEV100(float aperture, float shutterSpeed, float sensitivity);
+
+		// Computes the exposure normalization factor from the camera's EV100
+		static float ComputeExposureNormFactor(float EV100);
+
+		bool m_bInitialized = false;
 
 		std::string m_Name;
 
@@ -85,6 +104,7 @@ namespace flex
 		real m_MoveSpeedSlowMultiplier = 0;
 		real m_TurnSpeedFastMultiplier = 0;
 		real m_TurnSpeedSlowMultiplier = 0;
+		real m_OrbitingSpeed = 0;			// Alt-LMB drag
 		real m_MouseRotationSpeed = 0;		// LMB drag
 		real m_GamepadRotationSpeed = 0;	// Gamepad right stick
 

@@ -1,23 +1,25 @@
 #pragma once
 
-#include <string>
-#include <vector>
 #include <direct.h> // For _getcwd
+#include <vector>
 
 #pragma warning(push, 0)
+#include <assimp/color4.h>
+#include <assimp/vector2.h>
+#include <assimp/vector3.h>
+
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
-#include <assimp/vector2.h>
-#include <assimp/vector3.h>
-#include <assimp/color4.h>
-
+#if COMPILE_IMGUI
+#define IMGUI_IMPL_OPENGL_LOADER_GLAD
 #include "imgui.h"
+#endif
+
 #pragma warning(pop)
 
 #include "Graphics/RendererTypes.hpp"
-#include "Types.hpp"
 
 namespace flex
 {
@@ -26,92 +28,10 @@ namespace flex
 	extern ImVec4 g_WarningButtonHoveredColor;
 	extern ImVec4 g_WarningButtonActiveColor;
 
+	static const char* SEPARATOR_STR = ", ";
+
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, i32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
-
-	struct HDRImage
-	{
-		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically);
-		void Free();
-
-		i32 width;
-		i32 height;
-		i32 channelCount;
-		std::string filePath;
-		real* pixels;
-	};
-
-	template <class T>
-	struct RollingAverage
-	{
-		RollingAverage();
-		RollingAverage(i32 valueCount);
-
-		void AddValue(T newValue);
-		void Reset();
-
-		T currentAverage;
-		std::vector<T> prevValues;
-
-		i32 currentIndex = 0;
-	};
-
-	template<class T>
-	inline RollingAverage<T>::RollingAverage()
-	{
-	}
-
-	template <class T>
-	RollingAverage<T>::RollingAverage(i32 valueCount)
-	{
-		prevValues.resize(valueCount);
-	}
-
-	template <class T>
-	void RollingAverage<T>::AddValue(T newValue)
-	{
-		prevValues[currentIndex++] = newValue;
-		currentIndex %= prevValues.size();
-
-		currentAverage = T();
-		std::for_each(prevValues.begin(), prevValues.end(), [&](T value)
-		{
-			currentAverage += value;
-		});
-
-		currentAverage /= prevValues.size();
-	}
-
-	template <class T>
-	void RollingAverage<T>::Reset()
-	{
-		for (T& v : prevValues)
-		{
-			v = T();
-		}
-		currentIndex = 0;
-		currentAverage = T();
-	}
-	
-	// Stores text render commands issued during the 
-	// frame to later be converted to "TextVertex"s
-	struct TextCache
-	{
-	public:
-		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw);
-
-		std::string str;
-		AnchorPoint anchor;
-		glm::vec2 pos;
-		glm::vec4 color;
-		real xSpacing;
-		std::vector<real> letterYOffsets;
-		bool bRaw;
-
-	private:
-		//TextCache& operator=(const TextCache &tmp);
-
-	};
 
 	bool FileExists(const std::string& filePath);
 
@@ -127,11 +47,15 @@ namespace flex
 
 	bool DirectoryExists(const std::string& absoluteDirectoryPath);
 
+	void OpenExplorer(const std::string& absoluteDirectory);
+	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
+	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
+
 	// Returns true if any files were found
 	// Set fileType to "*" to retrieve all files
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
 
-	// Removes all content before final '/' or '\' 
+	// Removes all content before final '/' or '\'
 	void StripLeadingDirectories(std::string& filePath);
 
 	// Removes all content after final '/' or '\'
@@ -158,6 +82,10 @@ namespace flex
 	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
 	u16 Parse16u(char* ptr);
 
+	// Returns the current year, month, & day  (YYYY-MM-DD)
+	std::string GetDateString_YMD();
+	// Returns the current year, month, day, hour, minute, & second (YYYY-MM-DD_HH-MM-SS)
+	std::string GetDateString_YMDHMS();
 
 	std::vector<std::string> Split(const std::string& str, char delim);
 
@@ -167,9 +95,18 @@ namespace flex
 	 */
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset);
 
+	bool NearlyEquals(real a, real b, real threshhold);
+	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshhold);
+	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold);
+	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold);
+
+	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
+	real MoveTowards(const real& a, real b, real delta);
+
 	real Lerp(real a, real b, real t);
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
+	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
 
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
 	real ParseFloat(const std::string& floatStr);
@@ -188,13 +125,76 @@ namespace flex
 	*/
 	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
 
+	bool IsNanOrInf(real val);
 	bool IsNanOrInf(const glm::vec2& vec);
 	bool IsNanOrInf(const glm::vec3& vec);
 	bool IsNanOrInf(const glm::vec4& vec);
 	bool IsNanOrInf(const glm::quat& quat);
 
+	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
+
+	void PadEnd(std::string& str, i32 minLen, char pad);
+	void PadStart(std::string& str, i32 minLen, char pad);
+
+	std::string FloatToString(real f, i32 precision);
+
+	// String will be padded with '0's to be at least minChars long (excluding a leading '-' for negative numbers)
+	std::string IntToString(i32 i, u16 minChars = 0);
+
+	std::string Vec2ToString(glm::vec2 vec, i32 precision);
+	std::string Vec3ToString(glm::vec3 vec, i32 precision);
+	std::string Vec4ToString(glm::vec4 vec, i32 precision);
+
+	void CopyVec3ToClipboard(const glm::vec3& vec);
+	void CopyVec4ToClipboard(const glm::vec4& vec);
+
+	void CopyColorToClipboard(const glm::vec3& col);
+	void CopyColorToClipboard(const glm::vec4& col);
+
+	void CopyTransformToClipboard(Transform* transform);
+	bool PasteTransformFromClipboard(Transform* transform);
+
+	glm::vec3 PasteColor3FromClipboard();
+	glm::vec4 PasteColor4FromClipboard();
+
+	CullFace StringToCullFace(const std::string& str);
+	std::string CullFaceToString(CullFace cullFace);
+
+	void ToLower(std::string& str);
+	void ToUpper(std::string& str);
+
+	bool StartsWith(const std::string& str, const std::string& start);
+	bool EndsWith(const std::string& str, const std::string& end);
+
+	// Returns the number str ends with or -1 if last char isn't numeral
+	// outNumNumericalChars will be set to the number of chars in the num (e.g. "001" => 3)
+	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars);
+
+	const char* GameObjectTypeToString(GameObjectType type);
+	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
+
+	// Must be called at least once to set g_CurrentWorkingDirectory!
+	void RetrieveCurrentWorkingDirectory();
+	std::string RelativePathToAbsolute(const std::string& relativePath);
+
+	// Returns random value in range [min, max)
+	i32 RandomInt(i32 min, i32 max);
+
+	// Returns true if value changed
+	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation);
+
+	enum class ImageFormat
+	{
+		JPG,
+		TGA,
+		PNG,
+		BMP
+	};
+
+	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically = false);
+
 	template<class T>
-	inline typename std::vector<T>::const_iterator Contains(const std::vector<T>& vec, const T& t)
+	inline typename std::vector<T>::const_iterator Find(const std::vector<T>& vec, const T& t)
 	{
 		for (std::vector<T>::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
 		{
@@ -225,38 +225,161 @@ namespace flex
 		return glm::vec4(color.r, color.g, color.b, color.a);
 	}
 
-	std::string FloatToString(real f, i32 precision);
+	struct HDRImage
+	{
+		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically);
+		void Free();
 
-	// String will be padded with '0's to be at least minChars long (excluding a leading '-' for negative numbers)
-	std::string IntToString(i32 i, u16 minChars = 0);
+		i32 width;
+		i32 height;
+		i32 channelCount;
+		std::string filePath;
+		real* pixels;
+	};
 
-	std::string Vec2ToString(const glm::vec2& vec);
-	std::string Vec3ToString(const glm::vec3& vec);
-	std::string Vec4ToString(const glm::vec4& vec);
+	// TODO: Move enums to their own header
+	enum class SamplingType
+	{
+		CONSTANT, // All samples are equally-weighted
+		LINEAR    // Latest sample is weighted N times higher than Nth sample
+	};
 
-	void CopyColorToClipboard(const glm::vec4& col);
-	void CopyColorToClipboard(const glm::vec3& col);
+	enum class TurningDir
+	{
+		LEFT,
+		NONE,
+		RIGHT
+	};
 
-	glm::vec3 PasteColor3FromClipboard();
-	glm::vec4 PasteColor4FromClipboard();
+	enum class TransformState
+	{
+		TRANSLATE,
+		ROTATE,
+		SCALE,
+		NONE
+	};
 
-	CullFace StringToCullFace(const std::string& str);
-	std::string CullFaceToString(CullFace cullFace);
+	enum class TrackState
+	{
+		FACING_FORWARD,
+		FACING_BACKWARD,
+		// NOTE: Add all elements to TrackStateStrs in Helpers.cpp
+		NONE
+	};
 
-	void ToLower(std::string& str);
-	void ToUpper(std::string& str);
+	extern const char* TrackStateStrs[((i32)TrackState::NONE) + 1];
 
-	bool StartsWith(const std::string& str, const std::string& start);
-	bool EndsWith(const std::string& str, const std::string& end);
+	const char* TrackStateToString(TrackState state);
 
-	// Returns the number str ends with or -1 if last char isn't numeral
-	// outNumNumericalChars will be set to the number of chars in the num (e.g. "001" => 3)
-	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars);
+	enum class LookDirection
+	{
+		LEFT,
+		CENTER,
+		RIGHT,
 
-	const char* GameObjectTypeToString(GameObjectType type);
-	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
+		NONE
+	};
 
-	// Must be called at least once to set g_CurrentWorkingDirectory!
-	void RetrieveCurrentWorkingDirectory();
-	std::string RelativePathToAbsolute(const std::string& relativePath);
+	template <class T>
+	struct RollingAverage
+	{
+		RollingAverage();
+		RollingAverage(i32 valueCount, SamplingType samplingType = SamplingType::CONSTANT);
+
+		void AddValue(T newValue);
+		void Reset();
+		void Reset(const T& resetValue);
+
+		T currentAverage;
+		std::vector<T> prevValues;
+
+		SamplingType samplingType;
+
+		i32 currentIndex = 0;
+	};
+
+	template<class T>
+	inline RollingAverage<T>::RollingAverage()
+	{
+	}
+
+	template <class T>
+	RollingAverage<T>::RollingAverage(i32 valueCount, SamplingType samplingType /* = SamplingType::CONSTANT */) :
+		samplingType(samplingType)
+	{
+		prevValues.resize(valueCount);
+	}
+
+	template <class T>
+	void RollingAverage<T>::AddValue(T newValue)
+	{
+		prevValues[currentIndex++] = newValue;
+		currentIndex %= prevValues.size();
+
+		currentAverage = T();
+		i32 sampleCount = 0;
+		i32 valueCount = (i32)prevValues.size();
+		for (i32 i = 0; i < valueCount; ++i)
+		{
+			switch (samplingType)
+			{
+			case SamplingType::CONSTANT:
+				currentAverage += prevValues[i];
+				sampleCount++;
+				break;
+			case SamplingType::LINEAR:
+				real sampleWeight = (real)(i <= currentIndex ? i + (valueCount - currentIndex) : i - currentIndex);
+				currentAverage += prevValues[i] * sampleWeight;
+				sampleCount += (i32)sampleWeight;
+				break;
+			}
+		}
+
+		if (sampleCount > 0)
+		{
+			currentAverage /= sampleCount;
+		}
+	}
+
+	template <class T>
+	void RollingAverage<T>::Reset()
+	{
+		for (T& v : prevValues)
+		{
+			v = T();
+		}
+		currentIndex = 0;
+		currentAverage = T();
+	}
+
+	template<class T>
+	inline void RollingAverage<T>::Reset(const T& resetValue)
+	{
+		for (T& v : prevValues)
+		{
+			v = resetValue;
+		}
+		currentIndex = 0;
+		currentAverage = resetValue;
+	}
+
+	// Stores text render commands issued during the
+	// frame to later be converted to "TextVertex"s
+	struct TextCache
+	{
+	public:
+		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw, const std::vector<glm::vec2>& letterOffsets);
+
+		std::string str;
+		AnchorPoint anchor;
+		glm::vec2 pos;
+		glm::vec4 color;
+		real xSpacing;
+		bool bRaw;
+		std::vector<glm::vec2> letterOffsets;
+
+	private:
+		//TextCache& operator=(const TextCache &tmp);
+
+	};
 } // namespace flex

@@ -5,9 +5,6 @@
 #include "AL/alc.h"
 #pragma warning(pop)
 
-#include <string>
-#include <vector>
-
 namespace flex
 {
 	class AudioManager
@@ -17,8 +14,9 @@ namespace flex
 		static void Destroy();
 
 		static AudioSourceID AddAudioSource(const std::string& filePath);
+		static AudioSourceID SynthesizeSound(sec length, real freq);
+		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
-
 
 		/* [0.0, 1.0] logarithmic */
 		static void SetMasterGain(real masterGain);
@@ -30,7 +28,7 @@ namespace flex
 
 		/*
 		* Multiplies the source by gainScale
-		* Optionally prevents gain from reaching zero so that it 
+		* Optionally prevents gain from reaching zero so that it
 		* can be scale up again later
 		*/
 		static void ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool preventZero = true);
@@ -50,17 +48,22 @@ namespace flex
 
 		static bool IsSourcePlaying(AudioSourceID sourceID);
 
+		static void DrawImGuiObjects();
+
 	private:
+
 		static void DisplayALError(const std::string& str, ALenum error);
 
 		static void PrintAudioDevices(const ALCchar* devices);
+
+		static ALuint GetNextAvailableSourceAndBufferIndex();
 
 		static const i32 NUM_BUFFERS = 32;
 		static ALuint s_Buffers[NUM_BUFFERS];
 
 		struct Source
 		{
-			ALuint source;
+			ALuint source = InvalidAudioSourceID;
 			real gain = 1.0f;
 			real pitch = 1.0f;
 

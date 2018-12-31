@@ -1,50 +1,6 @@
 {
 	"version" : 1,
 	"name" : "Cornell Scene",
-	"materials" : 
-	[
-		{
-			"name" : "pbr chrome",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "Skybox",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Milkyway/Milkyway_Light.hdr"
-		},
-		{
-			"name" : "cornell",
-			"shader" : "pbr",
-			"const albedo" : "1.000000, 1.000000, 1.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 1.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "pbr white",
-			"shader" : "pbr",
-			"const albedo" : "0.990000, 0.990000, 0.990000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.900000,
-			"const ao" : 1.000000
-		}
-	],
 	"objects" : 
 	[
 		{
@@ -53,14 +9,10 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 1,
+			"material" : "skybox 01",
 			"skybox info" : 
 			{
-				"rotation" : "0.000000, -0.000000, 0.000000"
 			}
 		},
 		{
@@ -69,11 +21,9 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 18.600000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "0.999999, 1.000000, 0.999999"
+				"pos" : "0.000, 18.600, 0.000"
 			},
-			"material array index" : 0
+			"material" : "pbr chrome"
 		},
 		{
 			"name" : "Cornell Box",
@@ -81,19 +31,12 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-28.690001, 0.000062, -0.000905",
-				"rotation" : "-1.566237, 1.568696, 0.004567",
-				"scale" : "19.999269, 19.999750, 19.999008"
+				"pos" : "-28.690, 0.000, -0.001",
+				"rot" : "1.570, 1.570, 3.141",
+				"scale" : "19.999, 20.000, 19.999"
 			},
-			"mesh" : 
-			{
-				"file" : "models/CornellBox/cornell-box.fbx",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 2
+			"mesh" : "cornell-box",
+			"material" : "cornell"
 		},
 		{
 			"name" : "Sphere 01",
@@ -101,19 +44,11 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "6.848998, 5.205111, -12.373000",
-				"rotation" : "-0.000414, 0.000000, 0.000263",
-				"scale" : "3.000000, 3.000000, 3.000000"
+				"pos" : "6.849, 5.205, -12.373",
+				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : 
-			{
-				"file" : "models/ico-sphere.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 3
+			"mesh" : "sphere",
+			"material" : "pbr red"
 		},
 		{
 			"name" : "Sphere 02",
@@ -121,19 +56,11 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-0.269232, 8.073162, -9.520214",
-				"rotation" : "-0.000414, 0.000000, 0.000263",
-				"scale" : "5.000000, 5.000000, 5.000000"
+				"pos" : "-0.269, 8.073, -9.520",
+				"scale" : "5.000, 5.000, 5.000"
 			},
-			"mesh" : 
-			{
-				"file" : "models/ico-sphere.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
-			},
-			"material array index" : 3
+			"mesh" : "sphere",
+			"material" : "pbr white"
 		},
 		{
 			"name" : "mori knob",
@@ -141,58 +68,177 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "-12.514131, 0.000000, 7.708018",
-				"rotation" : "0.000000, -1.434660, 0.000000",
-				"scale" : "5.000000, 5.000000, 5.000000"
+				"pos" : "-12.514, 0.000, 12.608",
+				"rot" : "0.000, -1.435, 0.000",
+				"scale" : "5.000, 5.000, 5.000"
 			},
-			"mesh" : 
+			"mesh" : "mori-knob",
+			"material" : "pbr blue"
+		},
+		{
+			"name" : "Cerberus",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
 			{
-				"file" : "models/mori-knob.gltf",
-				"swapNormalYZ" : false,
-				"flipNormalZ" : false,
-				"flipU" : false,
-				"flipV" : false
+				"pos" : "7.800, 5.420, 16.700",
+				"rot" : "0.000, 0.351, 0.716",
+				"scale" : "20.000, 20.000, 20.000"
 			},
-			"material array index" : 3
+			"mesh" : "cerberus",
+			"material" : "cerberus"
+		},
+		{
+			"name" : "Baby cornell",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-27.380, 20.111, 0.025",
+				"rot" : "1.571, 1.570, -3.141",
+				"scale" : "3.000, 3.000, 3.000"
+			},
+			"mesh" : "cornell-box",
+			"material" : "cornell"
+		},
+		{
+			"name" : "Teapot",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-28.435, -0.220, 0.000",
+				"rot" : "-1.571, 0.559, -0.000",
+				"scale" : "0.200, 0.200, 0.200"
+			},
+			"mesh" : "teapot_smooth",
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "Valve",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "19.958, -0.000, 16.185",
+				"rot" : "0.000, 1.284, 0.000",
+				"scale" : "5.000, 5.000, 5.000"
+			},
+			"mesh" : "valve",
+			"material" : "pbr cyan",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.750, 0.750, 0.750",
+				"offset pos" : "0.000, 3.700, 0.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : true,
+				"static" : false,
+				"mask" : 0,
+				"group" : 0
+			}
+		},
+		{
+			"name" : "ground plane",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"scale" : "50.000, 1.000, 50.000"
+			},
+			"mesh" : "cube",
+			"material" : "pbr chrome",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "cylinder",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "17.270, 7.260, -31.480",
+				"scale" : "4.000, 4.000, 4.000"
+			},
+			"mesh" : "cylinder",
+			"material" : "pbr chrome",
+			"collider" : 
+			{
+				"shape" : "cylinder",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : true,
+				"static" : false,
+				"mask" : 0,
+				"group" : 0
+			}
+		},
+		{
+			"name" : "capsule",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "9.045, 51.601, -52.278",
+				"rot" : "0.778, 0.132, -0.306"
+			},
+			"mesh" : "capsule",
+			"material" : "pbr green",
+			"collider" : 
+			{
+				"shape" : "capsule",
+				"radius" : 12.500001,
+				"height" : 24.999998,
+				"offset pos" : "0.000, 0.000, 25.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 9.852000,
+				"kinematic" : true,
+				"static" : false,
+				"mask" : 0,
+				"group" : 0
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 0.000000,
+				"shadow map near" : -80.000000,
+				"shadow map far" : 100.000000,
+				"shadow map zoom" : 30.000000
+			}
 		}
-	],
-	"point lights" : 
-	[
-		{
-			"name" : "Point light 01",
-			"position" : "0.000000, 31.300001, 0.000000",
-			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : true,
-			"brightness" : 1000.000061
-		},
-		{
-			"name" : "Point light 02",
-			"position" : "9.500000, -2.100000, 12.600000",
-			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : false,
-			"brightness" : 394.030029
-		},
-		{
-			"name" : "Point light 03",
-			"position" : "5.500000, 4.100000, -6.000000",
-			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : false,
-			"brightness" : 274.627014
-		},
-		{
-			"name" : "Point light 04",
-			"position" : "5.400000, 14.300001, 5.800000",
-			"color" : "0.926747, 0.926159, 0.892008",
-			"enabled" : false,
-			"brightness" : 382.090027
-		}
-	],
-	"directional light" : 
-	{
-		"direction" : "0.380000, 0.750000, -0.160000",
-		"position" : "0.000000, 0.000000, 0.000000",
-		"color" : "1.000000, 1.000000, 1.000000",
-		"enabled" : false,
-		"brightness" : 2.355000
-	}
+	]
 }

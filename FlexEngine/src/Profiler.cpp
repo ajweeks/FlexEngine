@@ -2,8 +2,10 @@
 
 #include "Profiler.hpp"
 
-#include "Time.hpp"
 #include "Graphics/Renderer.hpp"
+#include "InputManager.hpp"
+#include "Time.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
@@ -81,13 +83,13 @@ namespace flex
 					g_InputManager->ClearVerticalScrollDistance();
 				}
 
-				real hDragDist = g_InputManager->GetMouseDragDistance(InputManager::MouseButton::LEFT).x;
-				if (g_InputManager->IsMouseButtonReleased(InputManager::MouseButton::LEFT))
+				real hDragDist = g_InputManager->GetMouseDragDistance(Input::MouseButton::LEFT).x;
+				if (g_InputManager->IsMouseButtonReleased(Input::MouseButton::LEFT))
 				{
 					s_DisplayedFrameOptions.hO += s_DisplayedFrameOptions.hScroll;
 					s_DisplayedFrameOptions.hScroll = 0;
 				}
-				if (g_InputManager->IsMouseButtonDown(InputManager::MouseButton::LEFT) &&
+				if (g_InputManager->IsMouseButtonDown(Input::MouseButton::LEFT) &&
 					hDragDist != 0.0f)
 				{
 					s_DisplayedFrameOptions.hScroll = hDragDist * 0.001f;
@@ -108,7 +110,7 @@ namespace flex
 		}
 
 		ms frameDuration = glm::min(s_FrameEndTime - s_FrameStartTime, MAX_FRAME_TIME);
-		s_PendingCSV.append(std::to_string(frameDuration) + ",");
+		s_PendingCSV.append(std::to_string(frameDuration) + "\n");
 
 		//Print("Profiler results:");
 		//Print("Whole frame: " + std::to_string(s_FrameEndTime - s_FrameStartTime) + "ms");
@@ -118,7 +120,7 @@ namespace flex
 			//s_PendingCSV.append(std::string(element.first) + "," +
 			//					std::to_string(element.second) + '\n');
 
-			//Print(std::string(element.first) + ": " + 
+			//Print(std::string(element.first) + ": " +
 			//				std::to_string(element.second) + "ms");
 		//}
 
@@ -152,22 +154,26 @@ namespace flex
 	{
 		assert(strlen(blockName) <= Timing::MAX_NAME_LEN);
 
+		ms now = Time::CurrentMilliseconds();
+
 		u64 hash = Hash(blockName);
 
-		if (s_Timings.find(hash) != s_Timings.end())
+		auto existingEntryIter = s_Timings.find(hash);
+		if (existingEntryIter == s_Timings.end())
 		{
-			PrintError("Profiler::Begin called more than once! Block name: %s (hash: %i)\n",
-					   blockName, hash);
+			Timing timing = {};
+			timing.start = now;
+			timing.end = real_min;
+			strcpy_s(timing.blockName, blockName);
+			s_Timings.insert({ hash, timing });
+
+			++s_UnendedTimings;
 		}
-
-		ms now = Time::CurrentMilliseconds();
-		Timing timing = {};
-		timing.start = now;
-		timing.end = real_min;
-		strcpy_s(timing.blockName, blockName);
-		s_Timings.insert({ hash, timing });
-
-		++s_UnendedTimings;
+		else
+		{
+			//PrintWarn("Profiler::Begin called more than once for block: %s (hash: %i)\n", blockName, hash);
+			//existingEntryIter->second.start = now;
+		}
 	}
 
 	void Profiler::Begin(const std::string& blockName)
@@ -182,17 +188,23 @@ namespace flex
 		auto iter = s_Timings.find(hash);
 		if (iter == s_Timings.end())
 		{
-			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n", 
-					   blockName, hash);
+			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n", blockName, hash);
 			return;
 		}
 
 		assert(strcmp(iter->second.blockName, blockName) == 0);
 
-		ms now = Time::CurrentMilliseconds();
-		iter->second.end = now;
+		if (iter->second.end != real_min)
+		{
+			// Block has already been ended
+		}
+		else
+		{
+			ms now = Time::CurrentMilliseconds();
+			iter->second.end = now;
 
-		--s_UnendedTimings;
+			--s_UnendedTimings;
+		}
 	}
 
 	void Profiler::End(const std::string& blockName)
@@ -209,11 +221,12 @@ namespace flex
 			return;
 		}
 
-		std::string directory = RESOURCE_LOCATION + "profiles/";
+		std::string directory = ROOT_LOCATION "saved/profiles/";
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
 		CreateDirectoryRecursive(absoluteDirectory);
 
-		std::string filePath = absoluteDirectory + "frame_times.csv";
+		std::string dateString = GetDateString_YMDHMS();
+		std::string filePath = absoluteDirectory + "frame_times_" + dateString + ".csv";
 
 		if (WriteFile(filePath, s_PendingCSV, false))
 		{
@@ -242,6 +255,25 @@ namespace flex
 		PrintBlockDuration(blockName.c_str());
 	}
 
+	ms Profiler::GetBlockDuration(const char* blockName)
+	{
+		u64 hash = Hash(blockName);
+
+		auto iter = s_Timings.find(hash);
+		if (iter != s_Timings.end())
+		{
+			ms duration = (iter->second.end - iter->second.start);
+			return duration;
+		}
+
+		return -1.0f;
+	}
+
+	ms Profiler::GetBlockDuration(const std::string& blockName)
+	{
+		return GetBlockDuration(blockName.c_str());
+	}
+
 	void Profiler::DrawDisplayedFrame()
 	{
 		if (!s_bDisplayingFrame ||
@@ -256,10 +288,9 @@ namespace flex
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
 		ms frameStart = s_DisplayedFrameTimings[0].start;
 		ms frameEnd = s_DisplayedFrameTimings[0].end;
-
 		ms frameDuration = frameEnd - frameStart;
 
-		const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom, 
+		const glm::vec2 frameSizeHalf(s_DisplayedFrameOptions.screenWidthPercent * s_DisplayedFrameOptions.hZoom,
 									  s_DisplayedFrameOptions.screenHeightPercent );
 		const glm::vec2 frameCenter = glm::vec2(s_DisplayedFrameOptions.xOffPercent + s_DisplayedFrameOptions.hScroll + s_DisplayedFrameOptions.hO,
 												s_DisplayedFrameOptions.yOffPercent);
@@ -286,7 +317,7 @@ namespace flex
 							   AnchorPoint::CENTER,
 							   glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
 							   letterSpacing,
-							   true);
+			true, {});
 
 		real blockHeight = (frameSizeHalf.y / ((real)blockCount + 2));
 
@@ -322,7 +353,7 @@ namespace flex
 									   AnchorPoint::CENTER,
 									   pos,
 									   letterSpacing,
-									   true);
+					true, {});
 				str = FloatToString(blockDuration, 2) + "ms";
 				strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				pos.x = blockCenterNorm.x - strWidth * aspectRatio;
@@ -332,18 +363,29 @@ namespace flex
 									   AnchorPoint::CENTER,
 									   pos ,
 									   letterSpacing,
-									   true);
+					true, {});
 			}
 
 			++colorIndex;
-			colorIndex %= ARRAY_SIZE(blockColors);
+			colorIndex %= ARRAY_LENGTH(blockColors);
 		}
 	}
 
 	u64 Profiler::Hash(const char* str)
 	{
 		size_t result = std::hash<std::string>{}(str);
-		
+
 		return (u64)result;
+	}
+
+	AutoProfilerBlock::AutoProfilerBlock(const char* blockName)
+	{
+		Profiler::Begin(blockName);
+		m_BlockName = blockName;
+	}
+
+	AutoProfilerBlock::~AutoProfilerBlock()
+	{
+		Profiler::End(m_BlockName);
 	}
 } // namespace flex

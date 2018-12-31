@@ -5,9 +5,8 @@
 
 #include <map>
 
-#include "Types.hpp"
-#include "Graphics/GL/GLHelpers.hpp"
-#include "VertexBufferData.hpp"
+#include "GLHelpers.hpp"
+#include "Graphics/VertexBufferData.hpp"
 #include "Helpers.hpp"
 
 namespace flex
@@ -29,23 +28,29 @@ namespace flex
 			virtual void PostInitialize() override;
 			virtual void Destroy() override;
 
-			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) override;
+			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
+			virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
-			virtual void ClearRenderObjects() override;
 			virtual void ClearMaterials() override;
 
 			virtual void Update() override;
 			virtual void Draw() override;
-			virtual void DrawImGuiItems() override;
+			virtual void DrawImGuiRenderObjects() override;
+
+			virtual void DrawImGuiForRenderID(RenderID renderID) override;
 
 			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
+			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
 
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
 			virtual void ReloadShaders() override;
+			virtual void LoadFonts(bool bForceRender) override;
+
+			virtual void ReloadSkybox(bool bRandomizeTexture) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColor(real r, real g, real b) override;
@@ -64,7 +69,7 @@ namespace flex
 			u32 GetActiveRenderObjectCount() const;
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
-			
+
 			virtual void SetSkyboxMesh(GameObject* skyboxMesh) override;
 			virtual GameObject* GetSkyboxMesh() override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
@@ -76,7 +81,7 @@ namespace flex
 			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
-			
+
 			virtual void NewFrame() override;
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
@@ -87,10 +92,11 @@ namespace flex
 			virtual void AddEditorString(const std::string& str) override;
 			virtual void DrawString(const std::string& str,
 									const glm::vec4& color,
-									AnchorPoint anchor, 
+									AnchorPoint anchor,
 									const glm::vec2& pos, // Positional offset from anchor
 									real spacing,
-									bool bRaw) override; // Horizontal per-char spacing
+									bool bRaw,
+									const std::vector<glm::vec2>& letterYOffsets) override; // Horizontal per-char spacing
 
 			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
@@ -98,15 +104,28 @@ namespace flex
 			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
 			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
+			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
+
+			virtual void RecaptureReflectionProbe() override;
+
+			virtual u32 GetTextureHandle(TextureID textureID) const override;
+
+			// Should be called when objects need to be rebatched
+			virtual void RenderObjectStateChanged() override;
+
+			virtual void SetRenderGrid(bool bRenderGrid) override;
+
 			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
+
+			void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
 
 		private:
 			struct TextureHandle
 			{
 				u32 id;
-				GLenum format;
 				GLenum internalFormat;
+				GLenum format;
 				GLenum type;
 			};
 
@@ -114,13 +133,15 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
-			void DrawGameObjectImGui(GameObject* gameObject);
 			/*
 			* Returns true if the parent-child tree changed during this call
 			*/
 			bool DrawGameObjectNameAndChildren(GameObject* gameObject);
 
 			void PhysicsDebugRender();
+
+			void GenerateReflectionProbeMaps(RenderID cubemapRenderID, MaterialID materialID);
+			void GenerateIrradianceSamplerMaps(MaterialID materialID);
 
 
 			// TODO: Either use these functions or remove them
@@ -144,36 +165,18 @@ namespace flex
 
 			void SwapBuffers();
 
-			struct SpriteQuadDrawInfo
-			{
-				RenderID spriteObjectRenderID;
-				u32 inputTextureHandle = 0;
-				u32 FBO = 0; // 0 for rendering to final RT
-				u32 RBO = 0; // 0 for rendering to final RT
-				MaterialID materialID = InvalidMaterialID;
-				glm::vec3 pos = glm::vec3(0.0f);
-				glm::quat rotation = glm::quat(glm::vec3(0.0f));
-				glm::vec3 scale = glm::vec3(1.0f);
-				AnchorPoint anchor = AnchorPoint::TOP_LEFT;
-				glm::vec4 color = glm::vec4(1.0f);
-				bool bScreenSpace = true;
-				bool bReadDepth = true;
-				bool bWriteDepth = true;
-				bool bEnableAlbedoSampler = true;
-				bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
-			};
-
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
 			void DrawScreenSpaceSprites();
 			void DrawWorldSpaceSprites();
 			void DrawText();
 
-			// Will attempt to find pre-rendered font at renderedFontFilePath, and only if non-existent
-			// render a new file
+			// Will attempt to find pre-rendered font at specified path, and
+			// only render a new file if not present or if bForceRender is true
 			bool LoadFont(BitmapFont** font,
 						  i16 size,
 						  const std::string& fontFilePath,
-						  const std::string& renderedFontFilePath);
+						  const std::string& renderedFontFilePath,
+						  bool bForceRender);
 
 			void UpdateTextBuffer();
 
@@ -193,16 +196,19 @@ namespace flex
 			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
-			void UpdateMaterialUniforms(MaterialID materialID);
-			void UpdatePerObjectUniforms(RenderID renderID);
-			void UpdatePerObjectUniforms(MaterialID materialID, const glm::mat4& model);
+			void UpdateAllMaterialUniforms();
+			void UpdatePerObjectUniforms(RenderID renderID, GLMaterial* materialOverride = nullptr);
+			void UpdatePerObjectUniforms(GLMaterial* material, const glm::mat4& model);
 
 			void BatchRenderObjects();
+			void DrawShadowDepthMaps();
 			void DrawDeferredObjects(const DrawCallInfo& drawCallInfo);
 			// Draws the GBuffer quad, or the GBuffer cube if rendering to a cubemap
 			void DrawGBufferContents(const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const DrawCallInfo& drawCallInfo);
-			void DrawEditorObjects(const DrawCallInfo& drawCallInfo);
+			void DrawDepthAwareEditorObjects(const DrawCallInfo& drawCallInfo);
+			void DrawDepthUnawareEditorObjects(const DrawCallInfo& drawCallInfo);
+			void DrawSelectedObjectWireframe(const DrawCallInfo& drawCallInfo);
 			void DrawOffscreenTexture();
 
 			// Returns the next binding that would be used
@@ -217,13 +223,10 @@ namespace flex
 			void RemoveMaterial(MaterialID materialID);
 
 			// If the object gets deleted this frame *gameObjectRef gets set to nullptr
-			void DoGameObjectContextMenu(GameObject** gameObjectRef);
 			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
-			bool DoDuplicateGameObjectButton(GameObject* objectToCopy, const char* buttonName, const char* popupName);
-			void DoMaterialEditor(bool* bShowMaterialEditor);
-			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex);
-			void UpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
+			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 											  const std::string& texturePath,
 											  std::string& matTexturePath,
 											  GLTexture* texture,
@@ -237,9 +240,15 @@ namespace flex
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
 
-			// TODO: Convert to map?
 			std::vector<GLShader> m_Shaders;
-			std::map<std::string, GLTexture*> m_LoadedTextures; // Key is filepath
+			std::vector<GLTexture*> m_LoadedTextures;
+
+			// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
+			std::vector<std::string> m_AvailableHDRIs;
+
+			// Filled every frame
+			std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
+			std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;
 
 			// TODO: Clean up (make more dynamic)
 			u32 viewProjectionUBO = 0;
@@ -256,11 +265,16 @@ namespace flex
 			TextureHandle m_gBuffer_NormalRoughnessHandle;
 			TextureHandle m_gBuffer_DiffuseAOHandle;
 
+			TextureHandle m_ShadowMapTexture;
+			u32 m_ShadowMapFBO = 0;
+			i32 m_ShadowMapSize = 4096;
+			MaterialID m_ShadowMaterialID = InvalidMaterialID;
+
 			GLTexture* m_BRDFTexture = nullptr;
 
-			// Everything is drawn to this texture before being drawn to the default 
+			// Everything is drawn to this texture before being drawn to the default
 			// frame buffer through some post-processing effects
-			TextureHandle m_OffscreenTexture0Handle; 
+			TextureHandle m_OffscreenTexture0Handle;
 			u32 m_Offscreen0FBO = 0;
 			u32 m_Offscreen0RBO = 0;
 
@@ -270,12 +284,12 @@ namespace flex
 
 			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
 
-			GLTexture* m_AlphaBGTexture = nullptr;
-			GLTexture* m_LoadingTexture = nullptr;
-			GLTexture* m_WorkTexture = nullptr;
+			TextureID m_AlphaBGTextureID = InvalidTextureID;
+			TextureID m_LoadingTextureID = InvalidTextureID;
+			TextureID m_WorkTextureID = InvalidTextureID;
 
-			GLTexture* m_PointLightIcon = nullptr;
-			GLTexture* m_DirectionalLightIcon = nullptr;
+			TextureID m_PointLightIconID = InvalidTextureID;
+			TextureID m_DirectionalLightIconID = InvalidTextureID;
 
 			// TODO: Use a mesh prefab here
 			VertexBufferData m_Quad3DVertexBufferData;
@@ -303,8 +317,10 @@ namespace flex
 
 			MaterialID m_SpriteMatID = InvalidMaterialID;
 			MaterialID m_FontMatID = InvalidMaterialID;
+			MaterialID m_ShadowMatID = InvalidMaterialID;
 			MaterialID m_PostProcessMatID = InvalidMaterialID;
 			MaterialID m_PostFXAAMatID = InvalidMaterialID;
+			MaterialID m_SelectedObjectMatID = InvalidMaterialID;
 
 			u32 m_CaptureFBO = 0;
 			u32 m_CaptureRBO = 0;
@@ -316,30 +332,48 @@ namespace flex
 			std::array<glm::mat4, 6> m_CaptureViews;
 
 			GameObject* m_SkyBoxMesh = nullptr;
-			
+
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			Transform m_1x1_NDC_QuadTransform;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
 
-			// The transform to be used for all objects who don't specify one in their 
+			// The transform to be used for all objects who don't specify one in their
 			// create info. Always set to identity.
 			//Transform m_DefaultTransform;
 
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
 			// All render objects which have "editorObject" set to true
-			std::vector<GLRenderObject*> m_EditorRenderObjectBatch;
+
+			// Any editor objects which also require a game object wrapper
+			std::vector<GameObject*> m_EditorObjects;
+			std::vector<GLRenderObject*> m_DepthAwareEditorRenderObjectBatch;
+			std::vector<GLRenderObject*> m_DepthUnawareEditorRenderObjectBatch;
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
+
+			AsynchronousTextureSave* screenshotAsyncTextureSave = nullptr;
 
 			FT_Library ft;
 
 			std::string m_DefaultSettingsFilePathAbs;
 			std::string m_SettingsFilePathAbs;
 
+			sec m_MonitorResCheckTimeRemaining = 0.0f;
+
 			// Must be 12 chars or less
-			const char* m_RenderObjectPayloadCStr = "renderobject";
+			const char* m_GameObjectPayloadCStr = "gameobject";
 			const char* m_MaterialPayloadCStr = "material";
+			const char* m_MeshPayloadCStr = "mesh";
+
+			bool m_bRebatchRenderObjects = true;
+
+			bool m_bCaptureScreenshot = false;
+
+			GameObject* m_Grid = nullptr;
+			GameObject* m_WorldOrigin = nullptr;
+			MaterialID m_GridMaterialID = InvalidMaterialID;
+			MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

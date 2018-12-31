@@ -2,6 +2,9 @@
 
 // Deferred PBR combine
 
+// TODO: Move to common header
+#define QUALITY_LEVEL_HIGH 1
+
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
@@ -30,14 +33,19 @@ uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 uniform vec4 camPos;
 uniform bool enableIrradianceSampler;
+uniform float exposure = 1.0;
+uniform mat4 lightViewProj;
+uniform bool castShadows = true;
+uniform float shadowOpacity = 0.0;
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
 layout (binding = 1) uniform sampler2D normalRoughnessFrameBufferSampler;
 layout (binding = 2) uniform sampler2D albedoAOFrameBufferSampler;
 layout (binding = 3) uniform sampler2D brdfLUT;
-layout (binding = 4) uniform samplerCube irradianceSampler;
-layout (binding = 5) uniform samplerCube prefilterMap;
+layout (binding = 4) uniform sampler2D shadowMap;
+layout (binding = 5) uniform samplerCube irradianceSampler;
+layout (binding = 6) uniform samplerCube prefilterMap;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -51,47 +59,39 @@ vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-	float a = roughness * roughness;
-	float a2 = a * a;
-	float NdotH = max(dot(N, H), 0.0);
-	float NdotH2 = NdotH * NdotH;
-
-	float nom = a2;
-	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-	denom = PI * denom * denom;
-
-	return nom / denom;
+	float a2 = roughness * roughness;
+	float NoH = max(dot(N, H), 0.0);
+	float f = (NoH * a2 - NoH) * NoH + 1.0;
+	return a2 / (PI * f * f);
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness)
+float GeometrySchlickGGX(float NoV, float roughness)
 {
 	float r = (roughness + 1.0);
 	float k = (r * r) / 8.0;
 
-	float nom = NdotV;
-	float denom = NdotV * (1.0 - k) + k;
+	float nom = NoV;
+	float denom = NoV * (1.0 - k) + k;
 
 	return nom / denom;
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+float GeometrySmith(float NoV, float NoL, float roughness)
 {
-	float NdotV = max(dot(N, V), 0.0);
-	float NdotL = max(dot(N, L), 0.0);
-	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+	float ggx2 = GeometrySchlickGGX(NoV, roughness);
+	float ggx1 = GeometrySchlickGGX(NoL, roughness);
 
 	return ggx1 * ggx2;
 }
 
-vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, 
+vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 	float roughness, float metallic, vec3 F0, vec3 albedo)
 {
 	vec3 H = normalize(V + L);
 
 	// Cook-Torrance BRDF
 	float NDF = DistributionGGX(N, H, roughness);
-	float G = GeometrySmith(N, V, L, roughness);
+	float G = GeometrySmith(NoV, NoL, roughness);
 	vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
 
 	vec3 kS = F;
@@ -99,13 +99,18 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L,
 	kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
 
 	vec3 nominator = NDF * G * F;
-	float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
+	float denominator = 4 * NoV * NoL + 0.001; // Add epsilon to prevent divide by zero
 	vec3 specular = nominator / denominator;
 
-	float NdotL = max(dot(N, L), 0.0);
-
-	return (kD * albedo / PI + specular) * radiance * NdotL;
+	return (kD * albedo / PI + specular) * radiance * NoL;
 }
+
+// "UDN normal map blending": [Hill12]
+// vec3 t = texture(baseMap,   uv).xyz * 2.0 - 1.0;
+// vec3 u = texture(detailMap, uv).xyz * 2.0 - 1.0;
+// vec3 r = normalize(t.xy + u.xy, t.z);
+// return r;
+//
 
 void main()
 {
@@ -115,12 +120,18 @@ void main()
 
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
+    // If using half floats: (prevent division by zero)
+    //roughness = max(roughness, 0.089);
+    // If using fp32:
+    roughness = max(roughness, 0.045);
 
     vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;
     float ao = texture(albedoAOFrameBufferSampler, ex_TexCoord).a;
 
 	vec3 V = normalize(camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
+
+	float NoV = max(dot(N, V), 0.0);
 
 	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
 	vec3 F0 = vec3(0.04);
@@ -144,22 +155,61 @@ void main()
 			continue;
 		}
 
-		float attenuation = 1.0 / (distance * distance);
+		// Pretend point lights have a radius of 1cm to avoid division by 0
+		float attenuation = 1.0 / max((distance * distance), 0.001);
 		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
 		vec3 radiance = pointLights[i].color.rgb * attenuation;
+		float NoL = max(dot(N, L), 0.0);
 	
-		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
 	if (dirLight.enabled)
 	{
 		vec3 L = normalize(dirLight.direction.xyz);
 		vec3 radiance = dirLight.color.rgb;
+		float NoL = max(dot(N, L), 0.0);
 		
-		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
+		float dirLightShadowOpacity = 1.0;
+		vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0);
+		if (castShadows)
+		{	
+			vec3 transformedShadowPos = vec3(lightViewProj * vec4(worldPos, 1.0));
+
+			if (transformedShadowPos.z <= 1.0)
+			{
+				float baseBias = 0.005;
+				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
+				float shadowSampleContrib = shadowOpacity / 9.0;
+
+#if QUALITY_LEVEL_HIGH
+				for (int x = -1; x <= 1; ++x)
+				{
+					for (int y = -1; y <= 1; ++y)
+					{
+						float shadowDepth = texture(shadowMap, 
+							transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize).r;
+
+						if (shadowDepth < transformedShadowPos.z - bias)
+						{
+							dirLightShadowOpacity -= shadowSampleContrib;
+						}
+					}
+				}
+#else
+				float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
+				if (shadowDepth < transformedShadowPos.z - bias)
+				{
+					dirLightShadowOpacity = 1.0-shadowOpacity;
+				}
+#endif
+			}
+		}
+
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}
 
-	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+	vec3 F = FresnelSchlickRoughness(NoV, F0, roughness);
 
 	vec3 ambient;
 	if (enableIrradianceSampler)
@@ -174,8 +224,12 @@ void main()
 		// Specular ambient term (IBL)
 		const float MAX_REFLECTION_LOAD = 5.0;
 		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
-		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec2 brdf = texture(brdfLUT, vec2(NoV, roughness)).rg;
 		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+		// Prevent specular light leaking [Russell15]
+		float horizon = min(1.0 + dot(R, N), 1.0);
+		specular *= horizon * horizon;
 
 	    ambient = (kD * diffuse + specular) * ao;
 	}
@@ -185,6 +239,8 @@ void main()
 	}
 
 	vec3 color = ambient + Lo;
+
+	color *= exposure;
 
 	fragmentColor = vec4(color, 1.0);
 }

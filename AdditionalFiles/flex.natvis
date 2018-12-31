@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="flex::JSONObject">
+    <!-- Ugly as heck but it works -->
+    <DisplayString>{{size = {fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst</Size>
+        <ValuePointer>fields._Mypair._Myval2._Myfirst</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="flex::JSONField">
+    <DisplayString>{label}, {value}</DisplayString>
+  </Type>
+
+  <Type Name="flex::JSONValue">
+    <DisplayString Condition="type == flex::JSONValue::Type::STRING">{strValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::INT">{intValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::FLOAT">{floatValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::BOOL">{boolValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::OBJECT">{objectValue}</DisplayString>
+    <!--<DisplayString Condition="type == flex::JSONValue::Type::OBJECT_ARRAY">{obj}</DisplayString>
+    <Expand>
+      <Item Name="obj">objectArrayValue</Item>
+    </Expand>-->
+    <!--<DisplayString Condition="type == flex::JSONValue::Type::FIELD_ARRAY">{field}</DisplayString>
+    <Expand>
+      <Item Name="field">fieldArrayValue</Item>
+    </Expand>-->
+    <DisplayString Condition="type == flex::JSONValue::Type::UNINITIALIZED">uninitialized</DisplayString>
+  </Type>
+
+</AutoVisualizer>

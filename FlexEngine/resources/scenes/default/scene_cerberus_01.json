@@ -1,57 +1,6 @@
 {
 	"version" : 1,
 	"name" : "Cerberus Scene",
-	"materials" : 
-	[
-		{
-			"name" : "cerberus",
-			"shader" : "pbr",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"enable albedo sampler" : true,
-			"enable metallic sampler" : true,
-			"enable roughness sampler" : true,
-			"enable ao sampler" : true,
-			"enable normal sampler" : true,
-			"generate albedo sampler" : true,
-			"generate metallic sampler" : true,
-			"generate roughness sampler" : true,
-			"generate ao sampler" : true,
-			"generate normal sampler" : true,
-			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.jpg",
-			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.jpg",
-			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.jpg",
-			"ao texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_AO.jpg",
-			"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.jpg"
-		},
-		{
-			"name" : "pbr chrome",
-			"shader" : "pbr",
-			"const albedo" : "0.800000, 0.800000, 0.800000",
-			"const metallic" : 1.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 1.000000
-		},
-		{
-			"name" : "Skybox",
-			"shader" : "skybox",
-			"const albedo" : "0.000000, 0.000000, 0.000000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
-			"const ao" : 0.000000,
-			"generate hdr cubemap sampler" : true,
-			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
-			"generated cubemap size" : "512.000000, 512.000000",
-			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32.000000, 32.000000",
-			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128.000000, 128.000000",
-			"environment map path" : "textures/hdri/Protospace_B/Protospace_B_Env.hdr"
-		}
-	],
 	"objects" : 
 	[
 		{
@@ -60,19 +9,11 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 7.800000, -5.900000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "20.000000, 20.000000, 20.000000"
+				"pos" : "0.000, 7.800, -5.900",
+				"scale" : "20.000, 20.000, 20.000"
 			},
-			"mesh" : 
-			{
-				"file" : "Cerberus_by_Andrew_Maximov/cerberus.glb",
-				"swapNormalYZ" : true,
-				"flipNormalZ" : true,
-				"flipU" : false,
-				"flipV" : true
-			},
-			"material array index" : 0
+			"mesh" : "cerberus",
+			"material" : "cerberus"
 		},
 		{
 			"name" : "Skybox",
@@ -80,14 +21,10 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "0.000000, 0.000000, 0.000000",
-				"rotation" : "0.000000, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
 			},
-			"material array index" : 2,
+			"material" : "skybox 01",
 			"skybox info" : 
 			{
-				"rotation" : "0.000000, -0.000000, 0.000000"
 			}
 		},
 		{
@@ -96,49 +33,44 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"position" : "3.100000, 18.919554, 1.977968",
-				"rotation" : "0.036652, -0.000000, 0.000000",
-				"scale" : "1.000000, 1.000000, 1.000000"
+				"pos" : "3.100, 18.920, 1.978",
+				"rot" : "0.037, -0.000, 0.000"
 			},
-			"material array index" : 1
+			"material" : "pbr chrome"
 		}
 	],
 	"point lights" : 
 	[
 		{
-			"name" : "",
-			"position" : "12.200000, 19.400000, 8.700000",
-			"color" : "0.523781, 0.546497, 1.000000",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.52, 0.55, 1.00",
 			"enabled" : true,
 			"brightness" : 206.572998
 		},
 		{
-			"name" : "",
-			"position" : "-4.400000, 9.600000, -13.200000",
-			"color" : "0.886507, 0.853158, 0.471757",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.89, 0.85, 0.47",
 			"enabled" : true,
 			"brightness" : 370.891998
 		},
 		{
-			"name" : "",
-			"position" : "13.600000, 7.000000, 13.400000",
-			"color" : "0.523781, 0.546497, 1.000000",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.52, 0.55, 1.00",
 			"enabled" : true,
 			"brightness" : 356.807007
 		},
 		{
-			"name" : "",
-			"position" : "13.700000, 14.400000, -13.600000",
-			"color" : "0.934571, 0.659195, 0.327762",
+			"pos" : "-1.000, -1.000, -1.000",
+			"color" : "0.93, 0.66, 0.33",
 			"enabled" : true,
 			"brightness" : 323.944000
 		}
 	],
 	"directional light" : 
 	{
-		"direction" : "0.380000, 0.750000, -0.160000",
-		"position" : "0.700000, 23.299999, -1.000000",
-		"color" : "0.870165, 0.826675, 0.589158",
+		"rotation" : "0.722, 0.398, 0.566",
+		"pos" : "0.000, 0.000, 0.000",
+		"color" : "0.87, 0.83, 0.59",
 		"enabled" : true,
 		"brightness" : 2.394000
 	}
