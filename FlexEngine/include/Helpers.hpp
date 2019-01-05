@@ -4,10 +4,6 @@
 #include <vector>
 
 #pragma warning(push, 0)
-#include <assimp/color4.h>
-#include <assimp/vector2.h>
-#include <assimp/vector3.h>
-
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>

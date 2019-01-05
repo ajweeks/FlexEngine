@@ -4,10 +4,12 @@
 #include <map>
 
 #pragma warning(push, 0)
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <glm/vec2.hpp>
+//#define TINYGLTF_NO_FS
+#define TINYGLTF_NO_STB_IMAGE
+#define TINYGLTF_NO_STB_IMAGE_WRITE
+#include <tiny_gltf/tiny_gltf.h>
 
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #pragma warning(pop)
@@ -69,9 +71,9 @@ namespace flex
 		};
 
 		/*
-		 * Call before loading to force certain attributes to be filled/ignored based on shader
-		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
-		 * be enforced (filled with default value if not present in mesh)
+		* Call before loading to force certain attributes to be filled/ignored based on shader
+		* requirements. Any attribute not set here will be ignored. Any attribute set here will
+		* be enforced (filled with default value if not present in mesh)
 		*/
 		void SetRequiredAttributesFromMaterialID(MaterialID matID);
 
@@ -123,8 +125,8 @@ namespace flex
 		{
 			std::string relativeFilePath;
 			ImportSettings importSettings;
-			Assimp::Importer importer = {};
-			const aiScene* scene = nullptr;
+			tinygltf::Model model;
+			tinygltf::TinyGLTF loader;
 		};
 		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.gltf")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
@@ -136,9 +138,9 @@ namespace flex
 	private:
 		real CalculateBoundingSphereScale() const;
 
-		bool LoadFromAiScene(const aiScene* scene,
-							 ImportSettings* importSettings = nullptr,
-							 RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+		bool LoadFromTinyGLTFModel(const tinygltf::Model* model,
+			ImportSettings* importSettings = nullptr,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		GameObject* m_OwningGameObject = nullptr;
 
