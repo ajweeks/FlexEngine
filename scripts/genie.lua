@@ -75,24 +75,24 @@ end
 
 
 --copy files that are specific for the platform being built for
-function windowsPlatformPostBuild()
-	local cfgs = configurations()
-	local cfg_lib_dirs = {
-		"Debug",
-		"Release",
-		"Release"
-	};
+-- function windowsPlatformPostBuild()
+-- 	local cfgs = configurations()
+-- 	local cfg_lib_dirs = {
+-- 		"Debug",
+-- 		"Release",
+-- 		"Release"
+-- 	};
 
-	for i = 1, #cfgs do
-		--copy dlls and resources after build
-		configuration { "vs*", cfgs[i] }
-			postbuildcommands { 
-				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. cfg_lib_dirs[i] .. "\\assimp-vc140-mt.dll\" " ..
-				"\"$(OutDir)assimp-vc140-mt.dll\""
-			}
-	end
-	configuration {}
-end
+-- 	for i = 1, #cfgs do
+-- 		--copy dlls and resources after build
+-- 		configuration { "vs*", cfgs[i] }
+-- 			postbuildcommands { 
+-- 				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. cfg_lib_dirs[i] .. "\\assimp-vc140-mt.dll\" " ..
+-- 				"\"$(OutDir)assimp-vc140-mt.dll\""
+-- 			}
+-- 	end
+-- 	configuration {}
+-- end
 
 
 configuration "Debug"
@@ -115,7 +115,6 @@ configuration "vs*"
 		path.join(DEPENDENCIES_DIR, "glfw/include"), 
 		path.join(DEPENDENCIES_DIR, "glm"), 
 		path.join(DEPENDENCIES_DIR, "stb"), 
-		path.join(DEPENDENCIES_DIR, "assimp/include"),
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
@@ -150,10 +149,9 @@ project "FlexEngine"
 
 	platformLibraries()
 	staticPlatformLibraries()
-	windowsPlatformPostBuild()
 
 	--Linked libraries
-    links { "opengl32", "glfw3", "vulkan-1", "assimp-vc140-mt", "OpenAL32" }
+    links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
 
 
 configuration { "Debug" }
