@@ -56,7 +56,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-9.881, 5.999, 11.166",
+				"pos" : "-9.881, 2.947, 11.166",
 				"rot" : "0.000, 0.031, 0.000",
 				"scale" : "4.000, 6.050, 3.030"
 			},
@@ -65,7 +65,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -82,7 +82,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-10.859, 5.078, -25.011",
+				"pos" : "-10.859, 2.026, -25.011",
 				"rot" : "0.000, -0.009, 0.000",
 				"scale" : "6.000, 4.940, 7.000"
 			},
@@ -91,7 +91,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -108,7 +108,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-24.200, 5.997, -2.024",
+				"pos" : "-24.200, 2.945, -2.024",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "4.010, 6.070, 10.022"
 			},
@@ -117,7 +117,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -145,10 +145,10 @@
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,
-				"shadow darkness" : 0.000000,
+				"shadow darkness" : 0.911000,
 				"shadow map near" : -80.000000,
 				"shadow map far" : 41.000000,
-				"shadow map zoom" : 69.000000
+				"shadow map zoom" : 81.000000
 			}
 		},
 		{
@@ -157,14 +157,14 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 2.492, -14.951"
+				"pos" : "0.000, 3.981, -14.951"
 			},
 			"point light info" : 
 			{
-				"pos" : "0.000, 2.492, -14.951",
+				"pos" : "0.000, 3.981, -14.951",
 				"color" : "0.91, 0.93, 0.56",
 				"enabled" : true,
-				"brightness" : 500.000000
+				"brightness" : 151.042007
 			}
 		},
 		{
@@ -173,11 +173,11 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-7.088, 3.245, 4.599"
+				"pos" : "-14.025, 5.058, 4.599"
 			},
 			"point light info" : 
 			{
-				"pos" : "-7.088, 3.245, 4.599",
+				"pos" : "-14.025, 5.058, 4.599",
 				"color" : "0.94, 0.67, 0.45",
 				"enabled" : true,
 				"brightness" : 142.856995
@@ -189,31 +189,14 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-10.281, 5.221, -6.278"
+				"pos" : "-28.534, 5.221, -13.490"
 			},
 			"point light info" : 
 			{
-				"pos" : "-10.281, 5.221, -6.278",
+				"pos" : "-28.534, 5.221, -13.490",
 				"color" : "0.48, 0.95, 0.96",
 				"enabled" : true,
-				"brightness" : 500.000000
-			}
-		},
-		{
-			"name" : "Point Light",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "10.797, 4.438, -5.741",
-				"rot" : "0.000, 0.489, 0.000"
-			},
-			"point light info" : 
-			{
-				"pos" : "10.797, 4.438, -5.741",
-				"color" : "1.00, 1.00, 1.00",
-				"enabled" : true,
-				"brightness" : 500.000000
+				"brightness" : 192.707993
 			}
 		},
 		{
@@ -222,8 +205,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "43.155, 0.000, 10.000",
-				"rot" : "3.142, -1.570, 3.142"
+				"pos" : "71.189, 0.000, 7.522",
+				"rot" : "0.000, -0.910, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -239,13 +222,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 0,
-				"dist along track" : 0.318824,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.646914
 			}
 		},
 		{
@@ -254,8 +234,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "7.820, 0.000, -13.023",
-				"rot" : "-0.000, 1.341, -0.000"
+				"pos" : "-0.351, 0.000, -2.830",
+				"rot" : "-3.142, -0.236, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -271,13 +251,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 5,
-				"dist along track" : 0.504294,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.858792
 			}
 		},
 		{
@@ -286,8 +263,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "7.820, 0.000, -13.023",
-				"rot" : "-0.000, 1.341, -0.000"
+				"pos" : "-0.351, 0.000, -2.830",
+				"rot" : "-3.142, -0.236, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -303,13 +280,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 5,
-				"dist along track" : 0.504294,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.858792
 			}
 		},
 		{
@@ -318,8 +292,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "7.820, 0.000, -13.023",
-				"rot" : "-0.000, 1.341, -0.000"
+				"pos" : "-0.351, 0.000, -2.830",
+				"rot" : "-3.142, -0.236, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -335,13 +309,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 5,
-				"dist along track" : 0.504294,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.858792
 			}
 		},
 		{
@@ -350,8 +321,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "7.820, 0.000, -13.023",
-				"rot" : "-0.000, 1.341, -0.000"
+				"pos" : "-0.351, 0.000, -2.830",
+				"rot" : "-3.142, -0.236, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -367,13 +338,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 5,
-				"dist along track" : 0.504294,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.858792
 			}
 		},
 		{
@@ -382,8 +350,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "7.820, 0.000, -13.023",
-				"rot" : "-0.000, 1.341, -0.000"
+				"pos" : "-0.351, 0.000, -2.830",
+				"rot" : "-3.142, -0.236, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -399,13 +367,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 5,
-				"dist along track" : 0.504294,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.858792
 			}
 		},
 		{
@@ -414,8 +379,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "7.820, 0.000, -13.023",
-				"rot" : "-0.000, 1.341, -0.000"
+				"pos" : "-0.351, 0.000, -2.830",
+				"rot" : "-3.142, -0.236, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -431,13 +396,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 5,
-				"dist along track" : 0.504294,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.858792
 			}
 		},
 		{
@@ -446,8 +408,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "70.540, 0.000, -3.187",
-				"rot" : "0.000, 0.884, 0.000"
+				"pos" : "58.160, 0.000, 10.000",
+				"rot" : "0.000, -1.567, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -463,13 +425,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 0,
-				"dist along track" : 0.816529,
-				"move speed" : 0.200000,
-				"move direction" : -1.000000
+				"dist along track" : 0.472287
 			}
 		},
 		{
@@ -478,8 +437,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "49.725, 0.000, -7.357",
-				"rot" : "-0.000, 0.084, -0.000"
+				"pos" : "34.353, 0.000, 13.808",
+				"rot" : "3.142, 0.717, 3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -495,13 +454,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 2,
-				"dist along track" : 0.981652,
-				"move speed" : 0.200000,
-				"move direction" : -1.000000
+				"track ID" : 1,
+				"dist along track" : 0.119313
 			}
 		},
 		{
@@ -510,8 +466,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "49.725, 0.000, -7.357",
-				"rot" : "-0.000, 0.084, -0.000"
+				"pos" : "34.353, 0.000, 13.808",
+				"rot" : "3.142, 0.717, 3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -527,13 +483,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 2,
-				"dist along track" : 0.981652,
-				"move speed" : 0.200000,
-				"move direction" : -1.000000
+				"track ID" : 1,
+				"dist along track" : 0.119313
 			}
 		},
 		{
@@ -542,8 +495,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "72.804, 0.000, 4.338",
-				"rot" : "0.000, -0.234, 0.000"
+				"pos" : "49.463, 0.000, -6.779",
+				"rot" : "0.000, 0.071, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -559,13 +512,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 0,
-				"dist along track" : 0.714196,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"track ID" : 2,
+				"dist along track" : 0.964211
 			}
 		},
 		{
@@ -574,8 +524,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "39.973, 0.000, 2.688",
-				"rot" : "0.000, -0.866, 0.000"
+				"pos" : "62.395, 0.000, -6.789",
+				"rot" : "0.000, 1.348, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -591,13 +541,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 2,
-				"dist along track" : 0.331535,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"track ID" : 0,
+				"dist along track" : 0.900174
 			}
 		},
 		{
@@ -606,8 +553,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "39.973, 0.000, 2.688",
-				"rot" : "0.000, -0.866, 0.000"
+				"pos" : "62.395, 0.000, -6.789",
+				"rot" : "0.000, 1.348, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -623,13 +570,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 2,
-				"dist along track" : 0.331535,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"track ID" : 0,
+				"dist along track" : 0.900174
 			}
 		},
 		{
@@ -638,8 +582,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "39.973, 0.000, 2.688",
-				"rot" : "0.000, -0.866, 0.000"
+				"pos" : "62.395, 0.000, -6.789",
+				"rot" : "0.000, 1.348, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -655,13 +599,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 2,
-				"dist along track" : 0.331535,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"track ID" : 0,
+				"dist along track" : 0.900174
 			}
 		},
 		{
@@ -670,8 +611,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "39.973, 0.000, 2.688",
-				"rot" : "0.000, -0.866, 0.000"
+				"pos" : "62.395, 0.000, -6.789",
+				"rot" : "0.000, 1.348, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -687,13 +628,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 2,
-				"dist along track" : 0.331535,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"track ID" : 0,
+				"dist along track" : 0.900174
 			}
 		},
 		{
@@ -702,8 +640,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "39.973, 0.000, 2.688",
-				"rot" : "0.000, -0.866, 0.000"
+				"pos" : "62.395, 0.000, -6.789",
+				"rot" : "0.000, 1.348, 0.000"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -719,13 +657,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
-				"track ID" : 2,
-				"dist along track" : 0.331535,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"track ID" : 0,
+				"dist along track" : 0.900174
 			}
 		},
 		{
@@ -734,8 +669,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "35.752, 0.000, -22.358",
-				"rot" : "0.000, 0.001, 0.000"
+				"pos" : "27.050, 0.000, -29.950",
+				"rot" : "-3.142, -0.781, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -751,13 +686,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 3,
-				"dist along track" : 0.058184,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.555925
 			}
 		},
 		{
@@ -766,8 +698,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "35.752, 0.000, -22.358",
-				"rot" : "0.000, 0.001, 0.000"
+				"pos" : "27.050, 0.000, -29.950",
+				"rot" : "-3.142, -0.781, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -783,13 +715,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 3,
-				"dist along track" : 0.058184,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.555925
 			}
 		},
 		{
@@ -798,8 +727,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "35.752, 0.000, -22.358",
-				"rot" : "0.000, 0.001, 0.000"
+				"pos" : "27.050, 0.000, -29.950",
+				"rot" : "-3.142, -0.781, -3.142"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -815,13 +744,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 3,
-				"dist along track" : 0.058184,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.555925
 			}
 		},
 		{
@@ -830,8 +756,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "35.969, 0.000, -17.063",
-				"rot" : "0.000, 0.041, 0.000"
+				"pos" : "23.552, 0.000, -35.733",
+				"rot" : "-3.141, -0.369, -3.141"
 			},
 			"material" : "pbr grey",
 			"collider" : 
@@ -847,73 +773,10 @@
 				"mask" : 1,
 				"group" : 1
 			},
-			"mesh" : "cart-empty",
 			"cart info" : 
 			{
 				"track ID" : 3,
-				"dist along track" : 0.012231,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
-			}
-		},
-		{
-			"name" : "Cart_0020",
-			"type" : "cart",
-			"visible" : true,
-			"transform" : 
-			{
-			},
-			"material" : "pbr grey",
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
-			},
-			"mesh" : "cart-empty",
-			"cart info" : 
-			{
-				"track ID" : -1,
-				"dist along track" : -1.000000,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
-			}
-		},
-		{
-			"name" : "Cart_0021",
-			"type" : "cart",
-			"visible" : true,
-			"transform" : 
-			{
-			},
-			"material" : "pbr grey",
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
-			},
-			"mesh" : "cart-empty",
-			"cart info" : 
-			{
-				"track ID" : -1,
-				"dist along track" : -1.000000,
-				"move speed" : 0.200000,
-				"move direction" : 1.000000
+				"dist along track" : 0.524474
 			}
 		},
 		{
@@ -922,7 +785,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-41.846, 5.997, -2.095",
+				"pos" : "-41.846, 1.915, -2.111",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "5.413, 4.346, 7.675"
 			},
@@ -931,7 +794,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -948,16 +811,16 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-41.947, 5.897, 22.990",
+				"pos" : "-41.947, 2.595, 22.977",
 				"rot" : "0.004, -0.004, -0.000",
-				"scale" : "4.021, 10.790, 5.010"
+				"scale" : "4.021, 10.791, 5.011"
 			},
 			"mesh" : "cube",
 			"material" : "Grid",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -974,7 +837,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-31.359, 5.897, 23.032",
+				"pos" : "-31.359, 2.595, 23.019",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "4.010, 5.325, 10.017"
 			},
@@ -983,7 +846,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1000,7 +863,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-31.452, 5.804, 46.223",
+				"pos" : "-31.452, 2.502, 46.210",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "4.012, 4.688, 8.645"
 			},
@@ -1009,7 +872,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1026,7 +889,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-44.331, 5.804, 46.171",
+				"pos" : "-44.331, 2.502, 46.158",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "4.020, 6.085, 5.405"
 			},
@@ -1035,7 +898,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1052,16 +915,16 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-57.290, 5.804, 46.119",
+				"pos" : "-57.290, 2.502, 46.106",
 				"rot" : "0.004, -0.004, -0.000",
-				"scale" : "5.051, 6.081, 6.179"
+				"scale" : "5.051, 6.080, 6.178"
 			},
 			"mesh" : "cube",
 			"material" : "Grid",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1078,7 +941,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-57.198, 5.897, 22.906",
+				"pos" : "-57.198, 2.595, 22.893",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "4.010, 9.869, 10.042"
 			},
@@ -1087,7 +950,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1104,7 +967,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-57.097, 5.998, -2.270",
+				"pos" : "-57.097, 2.696, -2.283",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "6.565, 6.070, 10.043"
 			},
@@ -1113,7 +976,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1130,7 +993,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-56.998, 6.097, -26.965",
+				"pos" : "-56.998, 2.795, -26.978",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "8.866, 6.070, 10.059"
 			},
@@ -1139,7 +1002,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1156,7 +1019,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-41.523, 6.097, -26.903",
+				"pos" : "-41.523, 2.795, -26.916",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "4.010, 12.723, 10.054"
 			},
@@ -1165,7 +1028,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1182,7 +1045,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-26.550, 6.097, -26.843",
+				"pos" : "-26.550, 2.795, -26.856",
 				"rot" : "0.004, -0.004, -0.000",
 				"scale" : "4.010, 6.070, 10.022"
 			},
@@ -1191,7 +1054,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{
@@ -1208,16 +1071,16 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-26.550, 6.097, -26.843",
+				"pos" : "-26.550, 2.795, -26.856",
 				"rot" : "0.004, -0.004, -0.000",
-				"scale" : "4.010, 7.861, 10.031"
+				"scale" : "4.010, 7.861, 10.030"
 			},
 			"mesh" : "cube",
 			"material" : "Grid",
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.500, 0.500, 0.500"
 			},
 			"rigid body" : 
 			{

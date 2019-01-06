@@ -159,7 +159,7 @@ namespace flex
 
 			//glGenBuffers(1, &m_VBO);
 			//glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-			//glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STATIC_DRAW);
+			//glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.VertexBufferSize, m_VertexBufferData.vertexData, GL_STATIC_DRAW);
 
 
 			// Describe shader variables

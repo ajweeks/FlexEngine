@@ -2511,8 +2511,13 @@ namespace flex
 		std::string dllPath = RelativePathToAbsolute(ROOT_LOCATION "lib/Debug/renderdoc.dll");
 		if (FileExists(dllPath))
 		{
-			HMODULE renderDocModule = LoadLibraryA(dllPath.c_str());
-			//HMODULE renderDocModule = GetModuleHandleA(dllPath.c_str());
+			HMODULE renderDocModule = GetModuleHandleA(dllPath.c_str());
+
+			if (renderDocModule == NULL)
+			{
+				renderDocModule = LoadLibraryA(dllPath.c_str());
+			}
+
 			if (renderDocModule == NULL)
 			{
 				PrintWarn("Failed to retrieve render doc dll\n");

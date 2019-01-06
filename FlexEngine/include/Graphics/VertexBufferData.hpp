@@ -30,8 +30,8 @@ namespace flex
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
 
-		void* pDataStart = nullptr;
-		u32 BufferSize = 0;
+		real* vertexData = nullptr;
+		u32 VertexBufferSize = 0;
 		u32 VertexCount = 0;
 		u32 VertexStride = 0;
 		VertexAttributes Attributes = 0;

@@ -16,13 +16,12 @@ namespace flex
 		{
 			stride += sizeof(glm::vec2);
 		}
-		if (vertexAttributes & (u32)VertexAttribute::UV){
+		if (vertexAttributes & (u32)VertexAttribute::UV)
+		{
 			stride += sizeof(glm::vec2);
 		}
-		if (vertexAttributes & (u32)VertexAttribute::UVW){
-			stride += sizeof(glm::vec3);
-		}
-		if (vertexAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM){
+		if (vertexAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+		{
 			stride += sizeof(i32);
 		}
 		if (vertexAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)

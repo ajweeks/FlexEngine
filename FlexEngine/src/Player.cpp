@@ -75,7 +75,7 @@ namespace flex
 		SetStatic(false);
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
-		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION  "meshes/capsule.gltf");
+		m_MeshComponent->LoadFromFile(RESOURCE_LOCATION  "meshes/capsule.glb");
 
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);

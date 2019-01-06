@@ -5,7 +5,6 @@
 #include <string>
 
 #pragma warning(push, 0)
-//#define TINYGLTF_NO_FS
 #define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf/tiny_gltf.h>
 
@@ -187,11 +186,10 @@ namespace flex
 	{
 		if (relativeFilePath.find(':') != std::string::npos)
 		{
-			PrintError("Called LoadMesh with an absolute file path! Must be relative!\n");
+			PrintError("Called MeshComponent::LoadMesh with an absolute file path! Filepath must be relative. %s\n", relativeFilePath.c_str());
 			return nullptr;
 		}
 
-		// Mesh hasn't been loaded before, load it now
 		std::string fileName = relativeFilePath;
 		StripLeadingDirectories(fileName);
 
@@ -211,6 +209,7 @@ namespace flex
 			}
 		}
 
+		// If import settings were passed in, save them in the cached mesh
 		if (importSettings)
 		{
 			newLoadedMesh->importSettings = *importSettings;
@@ -234,7 +233,7 @@ namespace flex
 
 		if (!success)
 		{
-			PrintWarn("Failed to load ASCII GLTF from file at: %s\nerr: %s\nwarn: %s\n", relativeFilePath.c_str(), err.c_str(), warn.c_str());
+			PrintWarn("Failed to load gltf/glb file at: %s\nerr: %s\nwarn: %s\n", relativeFilePath.c_str(), err.c_str(), warn.c_str());
 		}
 
 		return newLoadedMesh;
@@ -253,282 +252,65 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::LoadFromTinyGLTFModel(const tinygltf::Model* model,
-		ImportSettings* importSettings /* = nullptr */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	bool MeshComponent::CalculateTangents(VertexBufferData::CreateInfo& createInfo, const tinygltf::Primitive& primitive)
 	{
-		if (m_Initialized)
+		if (createInfo.normals.empty())
 		{
-			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
+			PrintError("Can't calculate tangents and bitangents for mesh which contains no normals!\n");
 			return false;
 		}
 
-		if (model->meshes.empty())
+		const real angleEpsilon = 0.9999f;
+		const i32 vertCount = (i32)createInfo.normals.size();
+
+		if (!createInfo.tangents.empty() ||
+			createInfo.bitangents.empty())
 		{
-			PrintWarn("Loaded mesh file has no meshes\n");
-			return false;
+			// Calculate bitangents from cross of normal with tangents!
+			createInfo.bitangents.reserve(vertCount);
+
+			for (i32 i = 0; i < vertCount; ++i)
+			{
+				createInfo.bitangents[i] = glm::normalize(glm::cross(createInfo.normals[i], createInfo.tangents[i]));
+			}
+
+			return true;
 		}
 
-		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+		ENSURE_NO_ENTRY();
 
-		//size_t totalVertCount = 0;
-		m_MinPoint = glm::vec3(FLT_MAX);
-		m_MaxPoint = glm::vec3(FLT_MIN);
+		// TODO: Implement?
 
-		for (const tinygltf::Mesh& mesh : model->meshes)
-		{
-			{
-				//if (bufferView.target == 0)
-				//{
-				//	PrintWarn("Buffer view's target is 0!\n");
-				//	continue;
-				//}
+		//if (createInfo.texCoords_UV.empty())
+		//{
+		//	PrintError("Can't calculate tangents and bitangents for mesh which contains no texture coordinates!\n");
+		//	return false;
+		//}
 
-				const float* posBuffer = nullptr;
-				const float* normBuffer = nullptr;
-				const float* bitanBuffer = nullptr;
-				const float* tanBuffer = nullptr;
-				const float* colBuffer = nullptr;
-				const float* uv0Buffer = nullptr;
+		//if (!createInfo.tangents.empty() ||
+		//	!createInfo.bitangents.empty())
+		//{
+		//	PrintWarn("Attempted to calculate tangents and bitangents on mesh which already has tangents or bitangents\n");
+		//}
 
-				//const tinygltf::Buffer& buffer = model->buffers[bufferView.buffer];
-				const std::map<std::string, i32>& attribs = mesh.primitives[0].attributes;
-				auto posIter = attribs.find("POSITION");
-				assert(posIter != attribs.end());
-				const tinygltf::Accessor& posAccessor = model->accessors[posIter->second];
-				const tinygltf::BufferView& posView = model->bufferViews[posAccessor.bufferView];
-				posBuffer = reinterpret_cast<const float*>(&(model->buffers[posView.buffer].data[posAccessor.byteOffset + posView.byteOffset]));
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+		//createInfo.tangents.reserve(vertCount);
+		//createInfo.bitangents.reserve(vertCount);
 
-				glm::vec3 posMin = glm::vec3(posAccessor.minValues[0], posAccessor.minValues[1], posAccessor.minValues[2]);
-				glm::vec3 posMax = glm::vec3(posAccessor.maxValues[0], posAccessor.maxValues[1], posAccessor.maxValues[2]);
+		//const glm::vec3* meshPos = &createInfo.positions_3D[0];
+		//const glm::vec3* meshNorm = &createInfo.normals[0];
+		//const glm::vec2* meshUV = &createInfo.texCoords_UV[0];
+		//glm::vec3* meshTan = &createInfo.tangents[0];
+		//glm::vec3* meshBitan = &createInfo.bitangents[0];
 
-				m_MinPoint = glm::min(m_MinPoint, posMin);
-				m_MaxPoint = glm::max(m_MaxPoint, posMax);
+		assert(primitive.mode == TINYGLTF_MODE_TRIANGLES);
 
-				auto normIter = attribs.find("NORMAL");
-				if (normIter != attribs.end())
-				{
-					const tinygltf::Accessor& normAccessor = model->accessors[normIter->second];
-					const tinygltf::BufferView& normView = model->bufferViews[normAccessor.bufferView];
-					normBuffer = reinterpret_cast<const float*>(&(model->buffers[normView.buffer].data[normAccessor.byteOffset + normView.byteOffset]));
-				}
+		//i32 numFaces = vertCount / 3;
+		//for (i32 i = 0; i < numFaces; ++i)
+		//{
 
-				auto tanIter = attribs.find("TANGENT");
-				if (tanIter != attribs.end())
-				{
-					const tinygltf::Accessor& tanAccessor = model->accessors[tanIter->second];
-					const tinygltf::BufferView& tanView = model->bufferViews[tanAccessor.bufferView];
-					tanBuffer = reinterpret_cast<const float*>(&(model->buffers[tanView.buffer].data[tanAccessor.byteOffset + tanView.byteOffset]));
-				}
+		//}
 
-				auto bitanIter = attribs.find("BITANGENT");
-				if (bitanIter != attribs.end())
-				{
-					const tinygltf::Accessor& bitanAccessor = model->accessors[bitanIter->second];
-					const tinygltf::BufferView& bitanView = model->bufferViews[bitanAccessor.bufferView];
-					bitanBuffer = reinterpret_cast<const float*>(&(model->buffers[bitanView.buffer].data[bitanAccessor.byteOffset + bitanView.byteOffset]));
-				}
-
-				auto colIter = attribs.find("COLOR_0");
-				if (colIter != attribs.end())
-				{
-					const tinygltf::Accessor& colAccessor = model->accessors[colIter->second];
-					const tinygltf::BufferView& colView = model->bufferViews[colAccessor.bufferView];
-					colBuffer = reinterpret_cast<const float*>(&(model->buffers[colView.buffer].data[colAccessor.byteOffset + colView.byteOffset]));
-				}
-
-				auto uv0Iter = attribs.find("TEXCOORD_0");
-				if (uv0Iter != attribs.end())
-				{
-					const tinygltf::Accessor& uv0Accessor = model->accessors[uv0Iter->second];
-					const tinygltf::BufferView& uv0View = model->bufferViews[uv0Accessor.bufferView];
-					uv0Buffer = reinterpret_cast<const float*>(&(model->buffers[uv0View.buffer].data[uv0Accessor.byteOffset + uv0View.byteOffset]));
-				}
-
-				//totalVertCount += posAccessor.count;
-
-				for (u32 i = 0; i < posAccessor.count; ++i)
-				{
-					// Position
-					glm::vec3 pos = glm::make_vec3(&posBuffer[i * 3]);
-					vertexBufferDataCreateInfo.positions_3D.push_back(pos);
-
-					// Normal
-					if ((m_RequiredAttributes &&
-						(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
-						(!m_RequiredAttributes && normBuffer != nullptr))
-					{
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
-
-						if (normBuffer == nullptr)
-						{
-							vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
-						}
-						else
-						{
-							glm::vec3 norm = glm::make_vec3(&normBuffer[i * 3]);
-							if (importSettings && importSettings->swapNormalYZ)
-							{
-								std::swap(norm.y, norm.z);
-							}
-							if (importSettings && importSettings->flipNormalZ)
-							{
-								norm.z = -norm.z;
-							}
-							vertexBufferDataCreateInfo.normals.push_back(norm);
-						}
-					}
-
-					// Tangent
-					if ((m_RequiredAttributes &&
-						(m_RequiredAttributes & (u32)VertexAttribute::TANGENT)) ||
-						(!m_RequiredAttributes && tanBuffer != nullptr))
-					{
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-
-						if (tanBuffer == nullptr)
-						{
-							vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
-						}
-						else
-						{
-							glm::vec3 tangent = glm::make_vec3(&tanBuffer[i * 3]);
-							vertexBufferDataCreateInfo.tangents.push_back(tangent);
-						}
-					}
-
-					// Bitangent
-					if ((m_RequiredAttributes &&
-						(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
-						(!m_RequiredAttributes && bitanBuffer != nullptr))
-					{
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
-
-						if (bitanBuffer == nullptr)
-						{
-							vertexBufferDataCreateInfo.bitangents.push_back(m_DefaultBitangent);
-						}
-						else
-						{
-							glm::vec3 bitangent = glm::make_vec3(&bitanBuffer[i * 3]);
-							vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
-						}
-					}
-
-					// Color
-					if ((m_RequiredAttributes &&
-						(m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)) ||
-						(!m_RequiredAttributes && colBuffer != nullptr))
-					{
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-
-						if (colBuffer == nullptr)
-						{
-							vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
-						}
-						else
-						{
-							glm::vec4 col = glm::make_vec4(&colBuffer[i * 4]);
-							vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
-						}
-					}
-
-					// Texcoord 0
-					if ((m_RequiredAttributes &&
-						(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
-						(!m_RequiredAttributes && uv0Buffer != nullptr))
-					{
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
-
-						if (uv0Buffer == nullptr)
-						{
-							vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
-						}
-						else
-						{
-							// Truncate w component
-							glm::vec2 uv0 = glm::make_vec2(&uv0Buffer[i * 2]);
-							uv0 *= m_UVScale;
-							if (importSettings && importSettings->flipU)
-							{
-								uv0.x = 1.0f - uv0.x;
-							}
-							if (importSettings && importSettings->flipV)
-							{
-								uv0.y = 1.0f - uv0.y;
-							}
-							vertexBufferDataCreateInfo.texCoords_UV.push_back(uv0);
-						}
-					}
-				}
-			}
-		}
-
-		if (!vertexBufferDataCreateInfo.positions_3D.empty())
-		{
-			m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
-
-			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
-			{
-				real posMagnitude = glm::length(pos - m_BoundingSphereCenterPoint);
-				if (posMagnitude > m_BoundingSphereRadius)
-				{
-					m_BoundingSphereRadius = posMagnitude;
-				}
-			}
-			if (m_BoundingSphereRadius == 0.0f)
-			{
-				PrintWarn("Mesh's bounding sphere's radius is 0, do any valid vertices exist?\n");
-			}
-		}
-
-		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
-
-		RenderObjectCreateInfo renderObjectCreateInfo = {};
-
-		if (optionalCreateInfo)
-		{
-			if (optionalCreateInfo->materialID != InvalidMaterialID)
-			{
-				m_MaterialID = optionalCreateInfo->materialID;
-				renderObjectCreateInfo.materialID = m_MaterialID;
-			}
-			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
-			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
-			renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
-			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
-			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
-			renderObjectCreateInfo.editorObject = optionalCreateInfo->editorObject;
-
-			if (optionalCreateInfo->vertexBufferData != nullptr)
-			{
-				PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
-			}
-			if (optionalCreateInfo->indices != nullptr)
-			{
-				PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
-			}
-		}
-
-		renderObjectCreateInfo.gameObject = m_OwningGameObject;
-		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		renderObjectCreateInfo.materialID = m_MaterialID;
-
-		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
-		{
-			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
-		}
-		m_OwningGameObject->SetRenderID(renderID);
-
-		g_Renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
-
-		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
-
-		m_Initialized = true;
-
-		return true;
+		return false;
 	}
 
 	bool MeshComponent::LoadFromFile(
@@ -547,10 +329,6 @@ namespace flex
 		m_RelativeFilePath = relativeFilePath;
 		m_FileName = m_RelativeFilePath;
 		StripLeadingDirectories(m_FileName);
-		if (importSettings)
-		{
-			m_ImportSettings = *importSettings;
-		}
 
 		m_BoundingSphereRadius = 0;
 		m_BoundingSphereCenterPoint = VEC3_ZERO;
@@ -559,38 +337,366 @@ namespace flex
 		LoadedMesh* loadedMesh = nullptr;
 		if (GetLoadedMesh(relativeFilePath, &loadedMesh))
 		{
-			//scene = loadedMesh->scene;
-
-			//if (importSettings == nullptr)
-			//{
-			//	importSettings = &loadedMesh->importSettings;
-			//	m_ImportSettings = loadedMesh->importSettings;
-			//}
+			// If no import settings have been passed in, grab any from the cached mesh
+			if (importSettings == nullptr)
+			{
+				importSettings = &loadedMesh->importSettings;
+			}
 		}
 		else
 		{
 			// Mesh hasn't been loaded before, load it now
 			loadedMesh = LoadMesh(relativeFilePath, importSettings);
-
-			//if (newLoadedMesh)
-			//{
-			//	scene = newLoadedMesh->scene;
-
-			//	if (!scene)
-			//	{
-			//		PrintError("%s\n", newLoadedMesh->importer.GetErrorString());
-			//		return false;
-			//	}
-			//}
 		}
 
-		//if (!scene)
-		//{
-		//	PrintError("Failed to load mesh %s\n", relativeFilePath.c_str());
-		//	return false;
-		//}
+		if (loadedMesh == nullptr)
+		{
+			PrintError("Failed to load mesh at %s\n", relativeFilePath.c_str());
+			return false;
+		}
 
-		return LoadFromTinyGLTFModel(&loadedMesh->model, importSettings, optionalCreateInfo);
+		m_ImportSettings = loadedMesh->importSettings;
+
+		// Convert data from tinygltf layout into vertex & index buffers
+		{
+			tinygltf::Model* model = &loadedMesh->model;
+			if (model->meshes.empty())
+			{
+				PrintError("Loaded mesh file has no meshes\n");
+				return false;
+			}
+
+			VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+
+			//size_t totalVertCount = 0;
+			m_MinPoint = glm::vec3(FLT_MAX);
+			m_MaxPoint = glm::vec3(FLT_MIN);
+
+			for (const tinygltf::Mesh& mesh : model->meshes)
+			{
+				for (const tinygltf::Primitive& primitive : mesh.primitives)
+				{
+					if (primitive.indices < 0)
+					{
+						continue;
+					}
+
+					i32 indexStart = (i32)m_Indices.size();
+					//i32 vertexStart = (i32)vertexBufferDataCreateInfo.positions_3D.size();
+
+					const float* posBuffer = nullptr;
+					const float* normBuffer = nullptr;
+					const float* bitanBuffer = nullptr;
+					const float* tanBuffer = nullptr;
+					const float* colBuffer = nullptr;
+					const float* uv0Buffer = nullptr;
+
+					bool bCalculateTangents = false;
+
+					const std::map<std::string, i32>& attribs = primitive.attributes;
+					auto posIter = attribs.find("POSITION");
+					assert(posIter != attribs.end());
+					const tinygltf::Accessor& posAccessor = model->accessors[posIter->second];
+					const tinygltf::BufferView& posView = model->bufferViews[posAccessor.bufferView];
+					posBuffer = reinterpret_cast<const float*>(&(model->buffers[posView.buffer].data[posAccessor.byteOffset + posView.byteOffset]));
+					vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+
+					glm::vec3 posMin = glm::vec3(posAccessor.minValues[0], posAccessor.minValues[1], posAccessor.minValues[2]);
+					glm::vec3 posMax = glm::vec3(posAccessor.maxValues[0], posAccessor.maxValues[1], posAccessor.maxValues[2]);
+
+					m_MinPoint = glm::min(m_MinPoint, posMin);
+					m_MaxPoint = glm::max(m_MaxPoint, posMax);
+
+					auto normIter = attribs.find("NORMAL");
+					if (normIter != attribs.end())
+					{
+						const tinygltf::Accessor& normAccessor = model->accessors[normIter->second];
+						const tinygltf::BufferView& normView = model->bufferViews[normAccessor.bufferView];
+						normBuffer = reinterpret_cast<const float*>(&(model->buffers[normView.buffer].data[normAccessor.byteOffset + normView.byteOffset]));
+					}
+
+					auto tanIter = attribs.find("TANGENT");
+					if (tanIter != attribs.end())
+					{
+						const tinygltf::Accessor& tanAccessor = model->accessors[tanIter->second];
+						const tinygltf::BufferView& tanView = model->bufferViews[tanAccessor.bufferView];
+						tanBuffer = reinterpret_cast<const float*>(&(model->buffers[tanView.buffer].data[tanAccessor.byteOffset + tanView.byteOffset]));
+					}
+					else
+					{
+						if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT)
+						{
+							bCalculateTangents = true;
+						}
+					}
+
+					auto bitanIter = attribs.find("BITANGENT");
+					if (bitanIter != attribs.end())
+					{
+						const tinygltf::Accessor& bitanAccessor = model->accessors[bitanIter->second];
+						const tinygltf::BufferView& bitanView = model->bufferViews[bitanAccessor.bufferView];
+						bitanBuffer = reinterpret_cast<const float*>(&(model->buffers[bitanView.buffer].data[bitanAccessor.byteOffset + bitanView.byteOffset]));
+					}
+					else
+					{
+						if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)
+						{
+							bCalculateTangents = true;
+						}
+					}
+
+					auto colIter = attribs.find("COLOR_0");
+					if (colIter != attribs.end())
+					{
+						const tinygltf::Accessor& colAccessor = model->accessors[colIter->second];
+						const tinygltf::BufferView& colView = model->bufferViews[colAccessor.bufferView];
+						colBuffer = reinterpret_cast<const float*>(&(model->buffers[colView.buffer].data[colAccessor.byteOffset + colView.byteOffset]));
+					}
+
+					auto uv0Iter = attribs.find("TEXCOORD_0");
+					if (uv0Iter != attribs.end())
+					{
+						const tinygltf::Accessor& uv0Accessor = model->accessors[uv0Iter->second];
+						const tinygltf::BufferView& uv0View = model->bufferViews[uv0Accessor.bufferView];
+						uv0Buffer = reinterpret_cast<const float*>(&(model->buffers[uv0View.buffer].data[uv0Accessor.byteOffset + uv0View.byteOffset]));
+					}
+
+					//totalVertCount += posAccessor.count;
+
+					// Vertices
+					u32 vertCount = posAccessor.count;
+					for (u32 i = 0; i < vertCount; ++i)
+					{
+						// Position
+						glm::vec3 pos = glm::make_vec3(&posBuffer[i * 3]);
+						vertexBufferDataCreateInfo.positions_3D.push_back(pos);
+
+						// Normal
+						if ((m_RequiredAttributes &&
+							(m_RequiredAttributes & (u32)VertexAttribute::NORMAL)) ||
+							(!m_RequiredAttributes && normBuffer != nullptr))
+						{
+							vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
+
+							if (normBuffer == nullptr)
+							{
+								vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
+							}
+							else
+							{
+								glm::vec3 norm = glm::make_vec3(&normBuffer[i * 3]);
+								if (importSettings && importSettings->swapNormalYZ)
+								{
+									std::swap(norm.y, norm.z);
+								}
+								if (importSettings && importSettings->flipNormalZ)
+								{
+									norm.z = -norm.z;
+								}
+								vertexBufferDataCreateInfo.normals.push_back(norm);
+							}
+						}
+
+						// Tangent
+						if ((m_RequiredAttributes &&
+							(m_RequiredAttributes & (u32)VertexAttribute::TANGENT)) ||
+							(!m_RequiredAttributes && tanBuffer != nullptr))
+						{
+							vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
+
+							if (tanBuffer == nullptr)
+							{
+								vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
+							}
+							else
+							{
+								glm::vec3 tangent = glm::make_vec3(&tanBuffer[i * 3]);
+								vertexBufferDataCreateInfo.tangents.push_back(tangent);
+							}
+						}
+
+						// Bitangent
+						if ((m_RequiredAttributes &&
+							(m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)) ||
+							(!m_RequiredAttributes && bitanBuffer != nullptr))
+						{
+							vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
+
+							if (bitanBuffer == nullptr)
+							{
+								vertexBufferDataCreateInfo.bitangents.push_back(m_DefaultBitangent);
+							}
+							else
+							{
+								glm::vec3 bitangent = glm::make_vec3(&bitanBuffer[i * 3]);
+								vertexBufferDataCreateInfo.bitangents.push_back(bitangent);
+							}
+						}
+
+						// Color
+						if ((m_RequiredAttributes &&
+							(m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)) ||
+							(!m_RequiredAttributes && colBuffer != nullptr))
+						{
+							vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+							if (colBuffer == nullptr)
+							{
+								vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
+							}
+							else
+							{
+								glm::vec4 col = glm::make_vec4(&colBuffer[i * 4]);
+								vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
+							}
+						}
+
+						// UV 0
+						if ((m_RequiredAttributes &&
+							(m_RequiredAttributes & (u32)VertexAttribute::UV)) ||
+							(!m_RequiredAttributes && uv0Buffer != nullptr))
+						{
+							vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
+
+							if (uv0Buffer == nullptr)
+							{
+								vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
+							}
+							else
+							{
+								glm::vec2 uv0 = glm::make_vec2(&uv0Buffer[i * 2]);
+								uv0 *= m_UVScale;
+								if (importSettings && importSettings->flipU)
+								{
+									uv0.x = 1.0f - uv0.x;
+								}
+								if (importSettings && importSettings->flipV)
+								{
+									uv0.y = 1.0f - uv0.y;
+								}
+								vertexBufferDataCreateInfo.texCoords_UV.push_back(uv0);
+							}
+						}
+					}
+
+					// Indices
+					{
+						const tinygltf::Accessor& indAccessor = model->accessors[primitive.indices];
+						const tinygltf::BufferView& indView = model->bufferViews[indAccessor.bufferView];
+						const tinygltf::Buffer& indBuffer = model->buffers[indView.buffer];
+
+						const i32 indexCount = (i32)indAccessor.count;
+
+						switch (indAccessor.componentType)
+						{
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
+						{
+							const u32* data = (const u32*)&indBuffer.data[indAccessor.byteOffset + indView.byteOffset];
+							for (i32 i = 0; i < indexCount; ++i)
+							{
+								m_Indices.push_back(data[i] + indexStart);
+							}
+						} break;
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
+						{
+							const u16* data = (const u16*)&indBuffer.data[indAccessor.byteOffset + indView.byteOffset];
+							for (i32 i = 0; i < indexCount; ++i)
+							{
+								m_Indices.push_back(data[i] + indexStart);
+							}
+						} break;
+						case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
+						{
+							const u8* data = (const u8*)&indBuffer.data[indAccessor.byteOffset + indView.byteOffset];
+							for (i32 i = 0; i < indexCount; ++i)
+							{
+								m_Indices.push_back(data[i] + indexStart);
+							}
+						} break;
+						default:
+						{
+							PrintError("Unhandled index component type found in mesh: %d\n", indAccessor.componentType);
+						} break;
+						}
+					}
+
+					if (bCalculateTangents)
+					{
+						if (!CalculateTangents(vertexBufferDataCreateInfo, primitive))
+						{
+							PrintWarn("Failed to calculate tangents/bitangents for mesh!\n");
+						}
+					}
+				}
+			}
+
+			// Calculate bounding sphere radius
+			if (!vertexBufferDataCreateInfo.positions_3D.empty())
+			{
+				m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
+
+				for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
+				{
+					real posMagnitude = glm::length(pos - m_BoundingSphereCenterPoint);
+					if (posMagnitude > m_BoundingSphereRadius)
+					{
+						m_BoundingSphereRadius = posMagnitude;
+					}
+				}
+				if (m_BoundingSphereRadius == 0.0f)
+				{
+					PrintError("Mesh's bounding sphere's radius is 0, do any valid vertices exist?\n");
+				}
+			}
+
+			m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
+
+			RenderObjectCreateInfo renderObjectCreateInfo = {};
+
+			if (optionalCreateInfo)
+			{
+				if (optionalCreateInfo->materialID != InvalidMaterialID)
+				{
+					m_MaterialID = optionalCreateInfo->materialID;
+					renderObjectCreateInfo.materialID = m_MaterialID;
+				}
+				renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
+				renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
+				renderObjectCreateInfo.enableCulling = optionalCreateInfo->enableCulling;
+				renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
+				renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+				renderObjectCreateInfo.editorObject = optionalCreateInfo->editorObject;
+
+				if (optionalCreateInfo->vertexBufferData != nullptr)
+				{
+					PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
+				}
+				if (optionalCreateInfo->indices != nullptr)
+				{
+					PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
+				}
+			}
+
+			renderObjectCreateInfo.gameObject = m_OwningGameObject;
+			renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
+			renderObjectCreateInfo.indices = &m_Indices;
+			renderObjectCreateInfo.materialID = m_MaterialID;
+
+			RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+			if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
+			{
+				g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
+			}
+			m_OwningGameObject->SetRenderID(renderID);
+
+			g_Renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);
+
+			m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
+
+			m_Initialized = true;
+		}
+
+		return true;
 	}
 
 	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)

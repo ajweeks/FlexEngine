@@ -69,6 +69,16 @@ namespace flex
 		va_end(argList);
 	}
 
+	void PrintLong(const char* str, ...)
+	{
+		i32 len = strlen(str);
+		for (i32 i = 0; i < len; i += MAX_CHARS)
+		{
+			Print(str + i);
+		}
+		Print(str + len - len % MAX_CHARS);
+	}
+
 	void Print(const char* str, va_list argList)
 	{
 		if (!g_bEnableLogToConsole)
@@ -76,7 +86,6 @@ namespace flex
 			return;
 		}
 
-		const u32 MAX_CHARS = 1024;
 		static char s_buffer[MAX_CHARS];
 
 		vsnprintf(s_buffer, MAX_CHARS, str, argList);

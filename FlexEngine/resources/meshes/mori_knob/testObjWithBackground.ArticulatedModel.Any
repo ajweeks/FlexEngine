@@ -1,4 +1,0 @@
-/* -*- c++ -*- */
-ArticulatedModel::Specification {
-filename = "testObj.obj";
-}

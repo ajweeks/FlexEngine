@@ -4543,7 +4543,7 @@ namespace flex
 					{
 						if (renderObject && renderObject->vertexBufferData && m_Materials[renderObject->materialID].material.shaderID == i)
 						{
-							requiredMemory += renderObject->vertexBufferData->BufferSize;
+							requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
 						}
 					}
 
@@ -4577,12 +4577,12 @@ namespace flex
 				{
 					renderObject->vertexOffset = vertexCount;
 
-					memcpy(vertexBufferData, renderObject->vertexBufferData->pDataStart, renderObject->vertexBufferData->BufferSize);
+					memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
 
 					vertexCount += renderObject->vertexBufferData->VertexCount;
-					vertexBufferSize += renderObject->vertexBufferData->BufferSize;
+					vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
 
-					vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->BufferSize;
+					vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
 				}
 			}
 

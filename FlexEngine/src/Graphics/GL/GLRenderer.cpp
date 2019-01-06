@@ -491,6 +491,17 @@ namespace flex
 			glDeleteVertexArrays(1, &m_TextQuadVAO);
 			glDeleteBuffers(1, &m_TextQuadVBO);
 
+			glDeleteBuffers(1, &m_CaptureRBO);
+			glDeleteBuffers(1, &m_CaptureFBO);
+
+			glDeleteFramebuffers(1, &m_Offscreen0FBO);
+			glDeleteRenderbuffers(1, &m_Offscreen0RBO);
+
+			glDeleteFramebuffers(1, &m_Offscreen1FBO);
+			glDeleteRenderbuffers(1, &m_Offscreen1RBO);
+
+			glDeleteFramebuffers(1, &m_ShadowMapFBO);
+
 			SafeDelete(screenshotAsyncTextureSave);
 
 			for (GameObject* editorObject : m_EditorObjects)
@@ -520,7 +531,7 @@ namespace flex
 			ImGui_ImplGlfw_Shutdown();
 			ImGui::DestroyContext();
 
-			if (m_1x1_NDC_QuadVertexBufferData.pDataStart)
+			if (m_1x1_NDC_QuadVertexBufferData.vertexData)
 			{
 				m_1x1_NDC_QuadVertexBufferData.Destroy();
 			}
@@ -1147,7 +1158,7 @@ namespace flex
 
 				glGenBuffers(1, &renderObject->VBO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)createInfo->vertexBufferData->BufferSize, createInfo->vertexBufferData->pDataStart, GL_STATIC_DRAW);
+				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)createInfo->vertexBufferData->VertexBufferSize, createInfo->vertexBufferData->vertexData, GL_STATIC_DRAW);
 			}
 
 			if (createInfo->indices != nullptr &&
@@ -1157,7 +1168,8 @@ namespace flex
 
 				glGenBuffers(1, &renderObject->IBO);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(createInfo->indices[0]) * createInfo->indices->size()), createInfo->indices->data(), GL_STATIC_DRAW);
+				GLsizeiptr count = (GLsizeiptr)(sizeof(u32) * createInfo->indices->size());
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, count, createInfo->indices->data(), GL_STATIC_DRAW);
 			}
 
 			glBindVertexArray(0);
@@ -1851,7 +1863,7 @@ namespace flex
 				m_MonitorResCheckTimeRemaining = 2.0f;
 				static const char* blockName = "Renderer update > retrieve monitor info";
 				{
-					PROFILE_AUTO(blockName);
+					PROFILE_BEGIN(blockName);
 					real pDPIx = g_Monitor->DPI.x;
 					real pDPIy = g_Monitor->DPI.y;
 					g_Window->RetrieveMonitorInfo();
@@ -1861,6 +1873,7 @@ namespace flex
 					{
 						LoadFonts(true);
 					}
+					PROFILE_END(blockName);
 				}
 				//Profiler::PrintBlockDuration(blockName);
 			}
@@ -2270,38 +2283,41 @@ namespace flex
 		{
 			PROFILE_AUTO("DrawShadowDepthMaps");
 
-			GLMaterial* material = &m_Materials[m_ShadowMaterialID];
-			GLShader* shader = &m_Shaders[material->material.shaderID];
-			glUseProgram(shader->program);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
-
-			glViewport(0, 0, m_ShadowMapSize, m_ShadowMapSize);
-
-			glDepthMask(GL_TRUE);
-			glDrawBuffer(GL_NONE);
-
-			glClear(GL_DEPTH_BUFFER_BIT);
-
-			DrawCallInfo drawCallInfo = {};
-			drawCallInfo.materialOverride = m_ShadowMaterialID;
-
-			glm::mat4 view, proj;
-			ComputeDirLightViewProj(view, proj);
-
-			glm::mat4 lightViewProj = proj * view;
-			glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
-
-			glCullFace(GL_FRONT);
-
-			for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->enabled)
 			{
-				DrawRenderObjectBatch(batch, drawCallInfo);
-			}
+				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
+				GLShader* shader = &m_Shaders[material->material.shaderID];
+				glUseProgram(shader->program);
 
-			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			//glDrawBuffer(GL_BACK);
-			glCullFace(GL_BACK);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
+
+				glViewport(0, 0, m_ShadowMapSize, m_ShadowMapSize);
+
+				glDepthMask(GL_TRUE);
+				glDrawBuffer(GL_NONE);
+
+				glClear(GL_DEPTH_BUFFER_BIT);
+
+				DrawCallInfo drawCallInfo = {};
+				drawCallInfo.materialOverride = m_ShadowMaterialID;
+
+				glm::mat4 view, proj;
+				ComputeDirLightViewProj(view, proj);
+
+				glm::mat4 lightViewProj = proj * view;
+				glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
+
+				glCullFace(GL_FRONT);
+
+				for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+				{
+					DrawRenderObjectBatch(batch, drawCallInfo);
+				}
+
+				//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				//glDrawBuffer(GL_BACK);
+				glCullFace(GL_BACK);
+			}
 		}
 
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
@@ -2395,7 +2411,7 @@ namespace flex
 				return;
 			}
 
-			if (!m_gBufferQuadVertexBufferData.pDataStart)
+			if (!m_gBufferQuadVertexBufferData.vertexData)
 			{
 				// Generate GBuffer if not already generated
 				GenerateGBuffer();
@@ -3831,8 +3847,9 @@ namespace flex
 
 						if (renderObject->indexed)
 						{
-							glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(),
-								GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+							glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
+							GLsizei count = (GLsizei)renderObject->indices->size();
+							glDrawElements(renderObject->topology, count, GL_UNSIGNED_INT, (void*)0);
 						}
 						else
 						{
@@ -3855,8 +3872,9 @@ namespace flex
 
 					if (renderObject->indexed)
 					{
-						glDrawElements(renderObject->topology, (GLsizei)renderObject->indices->size(),
-							GL_UNSIGNED_INT, (void*)renderObject->indices->data());
+						glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
+						GLsizei count = (GLsizei)renderObject->indices->size();
+						glDrawElements(renderObject->topology, count, GL_UNSIGNED_INT, (void*)0);
 					}
 					else
 					{
@@ -4096,7 +4114,7 @@ namespace flex
 						MaterialID matID = 0;
 
 						newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
+						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
@@ -5143,7 +5161,7 @@ namespace flex
 
 		void GLRenderer::GenerateGBufferVertexBuffer()
 		{
-			if (m_gBufferQuadVertexBufferData.pDataStart == nullptr)
+			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
 			{
 				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 
@@ -5167,7 +5185,7 @@ namespace flex
 
 		void GLRenderer::GenerateGBuffer()
 		{
-			if (!m_gBufferQuadVertexBufferData.pDataStart)
+			if (!m_gBufferQuadVertexBufferData.vertexData)
 			{
 				GenerateGBufferVertexBuffer();
 			}
@@ -5389,8 +5407,15 @@ namespace flex
 		{
 			if (renderObject)
 			{
-				glDeleteBuffers(1, &renderObject->VBO);
-				if (renderObject->indexed)
+				if (renderObject->VAO != InvalidID)
+				{
+					glDeleteVertexArrays(1, &renderObject->VAO);
+				}
+				if (renderObject->VBO != InvalidID)
+				{
+					glDeleteBuffers(1, &renderObject->VBO);
+				}
+				if (renderObject->IBO != InvalidID)
 				{
 					glDeleteBuffers(1, &renderObject->IBO);
 				}

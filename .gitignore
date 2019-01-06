@@ -15,6 +15,8 @@ FlexEngine/resources/textures/hdri/**
 
 !FlexEngine/lib/Debug/*
 FlexEngine/lib/Debug/renderdoc.pdb
+FlexEngine/lib/Debug/renderdoc.dll
+FlexEngine/lib/Debug/dbghelp.dll
 
 
 # Excludes

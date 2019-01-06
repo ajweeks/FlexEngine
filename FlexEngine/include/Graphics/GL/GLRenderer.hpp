@@ -306,8 +306,8 @@ namespace flex
 				i32 channel; // uses extra ints slot
 			};
 
-			u32 m_TextQuadVBO = 0;
 			u32 m_TextQuadVAO = 0;
+			u32 m_TextQuadVBO = 0;
 			VertexBufferData m_TextQuadsVertexBufferData;
 
 			sec m_EditorStrSecRemaining = 0.0f;

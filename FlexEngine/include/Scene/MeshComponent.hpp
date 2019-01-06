@@ -4,7 +4,6 @@
 #include <map>
 
 #pragma warning(push, 0)
-//#define TINYGLTF_NO_FS
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tiny_gltf/tiny_gltf.h>
@@ -77,25 +76,14 @@ namespace flex
 		*/
 		void SetRequiredAttributesFromMaterialID(MaterialID matID);
 
-		/*
-		* Loads a mesh from file
-		*/
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			ImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
-		/*
-		* Loads a predefined shape
-		* Optionally pass in createInfo values to be given to the renderer
-		* when initializing the render object
-		*/
 		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
-		/*
-		* Destroys then loads this object
-		*/
 		void Reload();
 
 		MaterialID GetMaterialID() const;
@@ -128,7 +116,7 @@ namespace flex
 			tinygltf::Model model;
 			tinygltf::TinyGLTF loader;
 		};
-		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.gltf")
+		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.glb")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
 		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
@@ -138,9 +126,7 @@ namespace flex
 	private:
 		real CalculateBoundingSphereScale() const;
 
-		bool LoadFromTinyGLTFModel(const tinygltf::Model* model,
-			ImportSettings* importSettings = nullptr,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo, const tinygltf::Primitive& primitive);
 
 		GameObject* m_OwningGameObject = nullptr;
 
