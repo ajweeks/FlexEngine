@@ -13,7 +13,7 @@ FlexEngine/saved/**
 FlexEngine/resources/textures/hdri/**
 !FlexEngine/resources/textures/hdri/Milkyway_small.hdr
 
-!FlexEngine/lib/Debug/*
+# !FlexEngine/lib/Debug/*
 FlexEngine/lib/Debug/renderdoc.pdb
 FlexEngine/lib/Debug/renderdoc.dll
 FlexEngine/lib/Debug/dbghelp.dll

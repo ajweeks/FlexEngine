@@ -1,6 +1,11 @@
 
-2018
+_2019_
+January
+- 
+- Replace Assimp with tinygltf
 
+
+_2018_
 December
 - Add carts that ride along tracks (create with C, place onto nearest track with SPACE)
 - Add RenderDoc API integration to allow capturing frames with a keypress (F9)
