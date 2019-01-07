@@ -3,35 +3,35 @@
 	"meshes" : 
 	[
 		{
-			"file" : "cube.gltf",
+			"file" : "cube.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "capsule.FBX",
+			"file" : "capsule.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "cone.gltf",
+			"file" : "cone.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "unit-plane.gltf",
+			"file" : "unit-plane.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "CornellBox/cornell-box.fbx",
+			"file" : "cornell-box.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -45,70 +45,77 @@
 			"flipV" : false
 		},
 		{
-			"file" : "street-02.gltf",
+			"file" : "street-02.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "sponza/sponza.glb",
+			"file" : "street-03.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "teapot_smooth.FBX",
+			"file" : "sponza.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "mori-knob.gltf",
+			"file" : "teapot_smooth.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "Cerberus_by_Andrew_Maximov/cerberus.glb",
+			"file" : "mori-knob.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "cerberus.glb",
 			"swapNormalYZ" : true,
 			"flipNormalZ" : true,
 			"flipU" : false,
 			"flipV" : true
 		},
 		{
-			"file" : "valve.gltf",
+			"file" : "valve.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "capsule.gltf",
+			"file" : "capsule.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "slingshot.gltf",
+			"file" : "slingshot.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "cylinder.gltf",
+			"file" : "cylinder.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
 		},
 		{
-			"file" : "SunTemple.fbx",
+			"file" : "SunTemple.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -129,7 +136,7 @@
 			"flipV" : false
 		},
 		{
-			"file" : "ico-sphere.gltf",
+			"file" : "ico-sphere.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
@@ -137,6 +144,13 @@
 		},
 		{
 			"file" : "cart-empty.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "cart-engine.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,

@@ -54,6 +54,7 @@ namespace flex
 	{
 		BaseCamera::OnSceneChanged();
 
+		m_Player0 = nullptr;
 		FindPlayer();
 
 		ResetValues();

@@ -239,7 +239,7 @@ namespace flex
 				glBindVertexArray(m_VAO);
 
 				glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.BufferSize, m_VertexBufferData.pDataStart, GL_STREAM_DRAW);
+				glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.VertexBufferSize, m_VertexBufferData.vertexData, GL_STREAM_DRAW);
 
 				// Describe shader variables (TODO: Why can't this be done just once in initialize? glBufferData)
 				{

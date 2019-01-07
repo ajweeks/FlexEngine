@@ -9,9 +9,13 @@ namespace flex
 	void Print(const char* str, ...);
 	void PrintWarn(const char* str, ...);
 	void PrintError(const char* str, ...);
+	// Call when results are expected to be larger than MAX_CHARS
+	void PrintLong(const char* str, ...);
 	void Print(const char* str, va_list argList);
 
 	void GetConsoleHandle();
+
+	static const int MAX_CHARS = 1024;
 
 	extern bool g_bEnableLogToConsole;
 

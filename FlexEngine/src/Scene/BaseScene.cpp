@@ -96,7 +96,7 @@ namespace flex
 			if (printSceneContentsToConsole)
 			{
 				Print("Parsed scene file:\n");
-				Print(sceneRootObject.Print(0).c_str());
+				PrintLong(sceneRootObject.Print(0).c_str());
 			}
 
 			int sceneVersion = sceneRootObject.GetInt("version");
@@ -176,6 +176,11 @@ namespace flex
 				AddRootObject(skybox);
 			}
 
+			MaterialID sphereMatID = InvalidMaterialID;
+			g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
+
+			assert(sphereMatID != InvalidMaterialID);
+
 			// Reflection probe
 			{
 				//MaterialCreateInfo reflectionProbeMatCreateInfo = {};
@@ -189,11 +194,6 @@ namespace flex
 
 				//m_LoadedMaterials.push_back(sphereMatID);
 
-				MaterialID sphereMatID = InvalidMaterialID;
-				g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
-
-				assert(sphereMatID != InvalidMaterialID);
-
 				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 
 				JSONObject emptyObj = {};
@@ -202,6 +202,10 @@ namespace flex
 
 				AddRootObject(reflectionProbe);
 			}
+
+			GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
+			sphere->SetMeshComponent(new MeshComponent(sphereMatID, sphere))->LoadPrefabShape(MeshComponent::PrefabShape::UV_SPHERE);
+			AddRootObject(sphere);
 		}
 
 		m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
@@ -269,6 +273,8 @@ namespace flex
 			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
+		m_TrackManager.Update();
+
 		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
@@ -313,6 +319,8 @@ namespace flex
 			for (GameObject* gameObject : m_ObjectsToAddAtEndOfFrame)
 			{
 				m_RootObjects.push_back(gameObject);
+				gameObject->Initialize();
+				gameObject->PostInitialize();
 			}
 			m_ObjectsToAddAtEndOfFrame.clear();
 

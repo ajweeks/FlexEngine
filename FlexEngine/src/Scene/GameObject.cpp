@@ -877,7 +877,7 @@ namespace flex
 				g_Renderer->GetMaterialID("pbr chrome", matID);
 
 				MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
-				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
+				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 			}
 		}
 
@@ -1985,7 +1985,7 @@ namespace flex
 			if (!m_MeshComponent)
 			{
 				MeshComponent* valveMesh = new MeshComponent(matID, this);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.gltf");
+				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.glb");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
 			}
@@ -2147,7 +2147,7 @@ namespace flex
 		if (!m_MeshComponent)
 		{
 			MeshComponent* cubeMesh = new MeshComponent(matID, this);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.gltf");
+			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 			SetMeshComponent(cubeMesh);
 		}
 
@@ -2333,11 +2333,11 @@ namespace flex
 				const char* filePath;
 				if (bBroken)
 				{
-					filePath = RESOURCE("meshes/glass-window-broken.gltf");
+					filePath = RESOURCE("meshes/glass-window-broken.glb");
 				}
 				else
 				{
-					filePath = RESOURCE("meshes/glass-window-whole.gltf");
+					filePath = RESOURCE("meshes/glass-window-whole.glb");
 				}
 				windowMesh->LoadFromFile(filePath);
 				SetMeshComponent(windowMesh);
@@ -2404,7 +2404,7 @@ namespace flex
 		MeshComponent* sphereMesh = new MeshComponent(matID, this);
 
 		assert(m_MeshComponent == nullptr);
-		sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/ico-sphere.gltf");
+		sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/ico-sphere.glb");
 		SetMeshComponent(sphereMesh);
 
 		std::string captureName = m_Name + "_capture";

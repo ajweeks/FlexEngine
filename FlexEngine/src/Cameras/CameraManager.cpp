@@ -37,7 +37,10 @@ namespace flex
 
 	void CameraManager::OnSceneChanged()
 	{
-		m_Cameras[m_ActiveCameraIndex]->OnSceneChanged();
+		for (BaseCamera* cam : m_Cameras)
+		{
+			cam->OnSceneChanged();
+		}
 	}
 
 	void CameraManager::DestroyCameras()

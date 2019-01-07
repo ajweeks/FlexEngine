@@ -4,10 +4,11 @@
 #include <map>
 
 #pragma warning(push, 0)
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <glm/vec2.hpp>
+#define TINYGLTF_NO_STB_IMAGE
+#define TINYGLTF_NO_STB_IMAGE_WRITE
+#include <tiny_gltf/tiny_gltf.h>
 
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #pragma warning(pop)
@@ -69,31 +70,20 @@ namespace flex
 		};
 
 		/*
-		 * Call before loading to force certain attributes to be filled/ignored based on shader
-		 * requirements. Any attribute not set here will be ignored. Any attribute set here will
-		 * be enforced (filled with default value if not present in mesh)
+		* Call before loading to force certain attributes to be filled/ignored based on shader
+		* requirements. Any attribute not set here will be ignored. Any attribute set here will
+		* be enforced (filled with default value if not present in mesh)
 		*/
 		void SetRequiredAttributesFromMaterialID(MaterialID matID);
 
-		/*
-		* Loads a mesh from file
-		*/
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			ImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
-		/*
-		* Loads a predefined shape
-		* Optionally pass in createInfo values to be given to the renderer
-		* when initializing the render object
-		*/
 		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
-		/*
-		* Destroys then loads this object
-		*/
 		void Reload();
 
 		MaterialID GetMaterialID() const;
@@ -123,10 +113,10 @@ namespace flex
 		{
 			std::string relativeFilePath;
 			ImportSettings importSettings;
-			Assimp::Importer importer = {};
-			const aiScene* scene = nullptr;
+			tinygltf::Model model;
+			tinygltf::TinyGLTF loader;
 		};
-		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.gltf")
+		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.glb")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
 		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
@@ -136,9 +126,7 @@ namespace flex
 	private:
 		real CalculateBoundingSphereScale() const;
 
-		bool LoadFromAiScene(const aiScene* scene,
-							 ImportSettings* importSettings = nullptr,
-							 RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo, const tinygltf::Primitive& primitive);
 
 		GameObject* m_OwningGameObject = nullptr;
 

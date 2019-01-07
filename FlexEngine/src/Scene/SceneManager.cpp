@@ -244,7 +244,7 @@ namespace flex
 			Print("Added %i scenes to list:\n", addedSceneFileNames.size());
 			for (std::string& fileName : addedSceneFileNames)
 			{
-				Print("%s ", fileName.c_str());
+				Print("%s, ", fileName.c_str());
 
 			}
 			Print("\n");

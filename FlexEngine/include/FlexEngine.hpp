@@ -75,6 +75,8 @@ namespace flex
 
 		bool bWantRenameActiveElement = false;
 
+		bool bHasGLDebugExtension = false;
+
 	private:
 		enum class RendererID
 		{

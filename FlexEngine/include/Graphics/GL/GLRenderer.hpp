@@ -204,12 +204,12 @@ namespace flex
 			void DrawShadowDepthMaps();
 			void DrawDeferredObjects(const DrawCallInfo& drawCallInfo);
 			// Draws the GBuffer quad, or the GBuffer cube if rendering to a cubemap
-			void DrawGBufferContents(const DrawCallInfo& drawCallInfo);
+			void ShadeDeferredObjects(const DrawCallInfo& drawCallInfo);
 			void DrawForwardObjects(const DrawCallInfo& drawCallInfo);
 			void DrawDepthAwareEditorObjects(const DrawCallInfo& drawCallInfo);
 			void DrawDepthUnawareEditorObjects(const DrawCallInfo& drawCallInfo);
 			void DrawSelectedObjectWireframe(const DrawCallInfo& drawCallInfo);
-			void DrawOffscreenTexture();
+			void ApplyPostProcessing();
 
 			// Returns the next binding that would be used
 			u32 BindTextures(Shader* shader, GLMaterial* glMaterial, u32 startingBinding = 0);
@@ -306,8 +306,8 @@ namespace flex
 				i32 channel; // uses extra ints slot
 			};
 
-			u32 m_TextQuadVBO = 0;
 			u32 m_TextQuadVAO = 0;
+			u32 m_TextQuadVBO = 0;
 			VertexBufferData m_TextQuadsVertexBufferData;
 
 			sec m_EditorStrSecRemaining = 0.0f;
