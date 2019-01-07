@@ -1698,7 +1698,7 @@ namespace flex
 				drawCallInfo.bDeferred = false;
 				drawCallInfo.bWriteToDepth = false;
 				drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
-				DrawGBufferContents(drawCallInfo);
+				ShadeDeferredObjects(drawCallInfo);
 				drawCallInfo.bWriteToDepth = true;
 				drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
 				DrawForwardObjects(drawCallInfo);
@@ -1974,12 +1974,12 @@ namespace flex
 			drawCallInfo.bDeferred = false;
 			drawCallInfo.bWriteToDepth = false;
 			drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
-			DrawGBufferContents(drawCallInfo);
+			ShadeDeferredObjects(drawCallInfo);
 			drawCallInfo.bWriteToDepth = true;
 			drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
 			DrawForwardObjects(drawCallInfo);
 			DrawWorldSpaceSprites();
-			DrawOffscreenTexture();
+			ApplyPostProcessing();
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
@@ -2118,8 +2118,13 @@ namespace flex
 			if (g_EngineInstance->IsRenderingImGui())
 			{
 				PROFILE_AUTO("Render > ImGuiRender");
+
+				GL_PUSH_DEBUG_GROUP("ImGui");
+
 				ImGui::Render();
 				ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+				GL_POP_DEBUG_GROUP();
 			}
 
 			SwapBuffers();
@@ -2283,6 +2288,8 @@ namespace flex
 		{
 			PROFILE_AUTO("DrawShadowDepthMaps");
 
+			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
+
 			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->enabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
@@ -2318,12 +2325,16 @@ namespace flex
 				//glDrawBuffer(GL_BACK);
 				glCullFace(GL_BACK);
 			}
+
+			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
 		{
 			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawDeferredObjectsCubemap" : "DrawDeferredObjects";
 			PROFILE_AUTO(profileBlockName);
+
+			GL_PUSH_DEBUG_GROUP("Deferred Objects");
 
 			if (!drawCallInfo.bDeferred)
 			{
@@ -2393,21 +2404,25 @@ namespace flex
 					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+			GL_POP_DEBUG_GROUP();
 		}
 
-		void GLRenderer::DrawGBufferContents(const DrawCallInfo& drawCallInfo)
+		void GLRenderer::ShadeDeferredObjects(const DrawCallInfo& drawCallInfo)
 		{
-			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawGBufferContentsCubemap" : "DrawGBufferContents";
+			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawGBufferContentsCubemap" : "ShadeDeferredObjects";
 			PROFILE_AUTO(profileBlockName);
+
+			GL_PUSH_DEBUG_GROUP("Shade Deferred");
 
 			if (drawCallInfo.bDeferred)
 			{
-				PrintError("DrawGBufferContents was called with a drawCallInfo set to deferred!\n");
+				PrintError("ShadeDeferredObjects was called with a drawCallInfo set to deferred!\n");
 			}
 
 			if (!m_SkyBoxMesh)
 			{
-				PrintError("Attempted to draw GBUffer contents to cubemap before skybox object was created!\n");
+				PrintError("Attempted to draw GBuffer contents to cubemap before skybox object was created!\n");
 				return;
 			}
 
@@ -2512,12 +2527,16 @@ namespace flex
 
 				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
 			}
+
+			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::DrawForwardObjects(const DrawCallInfo& drawCallInfo)
 		{
 			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawForwardObjectsCubemap" : "DrawForwardObjects";
 			PROFILE_AUTO(profileBlockName);
+
+			GL_PUSH_DEBUG_GROUP("Forward Objects");
 
 			if (drawCallInfo.bDeferred)
 			{
@@ -2528,17 +2547,26 @@ namespace flex
 			{
 				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
+
+			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::DrawDepthAwareEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
-			PROFILE_AUTO("DrawDepthAwareEditorObjects");
+			if (!m_DepthAwareEditorRenderObjectBatch.empty())
+			{
+				PROFILE_AUTO("DrawDepthAwareEditorObjects");
 
-			// TODO: Put in drawCallInfo
-			glCullFace(GL_BACK);
-			glEnable(GL_CULL_FACE);
+				GL_PUSH_DEBUG_GROUP("Depth Aware Editor Objects");
 
-			DrawRenderObjectBatch(m_DepthAwareEditorRenderObjectBatch, drawCallInfo);
+				// TODO: Put in drawCallInfo
+				glCullFace(GL_BACK);
+				glEnable(GL_CULL_FACE);
+
+				DrawRenderObjectBatch(m_DepthAwareEditorRenderObjectBatch, drawCallInfo);
+
+				GL_POP_DEBUG_GROUP();
+			}
 		}
 
 		void GLRenderer::DrawSelectedObjectWireframe(const DrawCallInfo& drawCallInfo)
@@ -2548,6 +2576,8 @@ namespace flex
 			const std::vector<GameObject*> selectedObjects = g_EngineInstance->GetSelectedObjects();
 			if (!selectedObjects.empty())
 			{
+				GL_PUSH_DEBUG_GROUP("Selected Object Wireframe");
+
 				std::vector<GLRenderObject*> selectedObjectRenderBatch;
 				for (GameObject* selectedObject : selectedObjects)
 				{
@@ -2562,7 +2592,6 @@ namespace flex
 					}
 				}
 
-
 				static const glm::vec4 color0 = { 0.95f, 0.95f, 0.95f, 0.4f };
 				static const glm::vec4 color1 = { 0.85f, 0.15f, 0.85f, 0.4f };
 				real pulseSpeed = 8.0f;
@@ -2574,23 +2603,34 @@ namespace flex
 				selectedObjectsDrawInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 				selectedObjectsDrawInfo.bWriteToDepth = false;
 				DrawRenderObjectBatch(selectedObjectRenderBatch, selectedObjectsDrawInfo);
+
+				GL_POP_DEBUG_GROUP();
 			}
 		}
 
 		void GLRenderer::DrawDepthUnawareEditorObjects(const DrawCallInfo& drawCallInfo)
 		{
-			PROFILE_AUTO("DrawDepthUnawareEditorObjects");
+			if (!m_DepthAwareEditorRenderObjectBatch.empty())
+			{
+				PROFILE_AUTO("DrawDepthUnawareEditorObjects");
 
-			// TODO: Put in drawCallInfo
-			glCullFace(GL_BACK);
-			glEnable(GL_CULL_FACE);
+				GL_PUSH_DEBUG_GROUP("Depth Unaware Editor Objects");
 
-			DrawRenderObjectBatch(m_DepthUnawareEditorRenderObjectBatch, drawCallInfo);
+				// TODO: Put in drawCallInfo
+				glCullFace(GL_BACK);
+				glEnable(GL_CULL_FACE);
+
+				DrawRenderObjectBatch(m_DepthUnawareEditorRenderObjectBatch, drawCallInfo);
+
+				GL_POP_DEBUG_GROUP();
+			}
 		}
 
-		void GLRenderer::DrawOffscreenTexture()
+		void GLRenderer::ApplyPostProcessing()
 		{
-			PROFILE_AUTO("DrawOffscreenTexture");
+			PROFILE_AUTO("ApplyPostProcessing");
+
+			GL_PUSH_DEBUG_GROUP("Post Processing");
 
 			SpriteQuadDrawInfo drawInfo = {};
 
@@ -2634,19 +2674,26 @@ namespace flex
 				drawInfo.materialID = m_PostFXAAMatID;
 				DrawSpriteQuad(drawInfo);
 			}
+			GL_POP_DEBUG_GROUP();
 
 			{
+				GL_PUSH_DEBUG_GROUP("Blit Depth");
+
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y,
 								  0, 0, frameBufferSize.x, frameBufferSize.y,
 								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+				GL_POP_DEBUG_GROUP();
 			}
 		}
 
 		void GLRenderer::DrawScreenSpaceSprites()
 		{
+			GL_PUSH_DEBUG_GROUP("Screen-space Sprites");
+
 			{
 				PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
 				Profiler::DrawDisplayedFrame();
@@ -2721,11 +2768,15 @@ namespace flex
 
 			//drawInfo.anchor = AnchorPoint::CENTER;
 			//DrawSpriteQuad(drawInfo);
+
+			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::DrawWorldSpaceSprites()
 		{
 			PROFILE_AUTO("DrawWorldSpaceSprites");
+
+			GL_PUSH_DEBUG_GROUP("World-space Sprites");
 
 			for (SpriteQuadDrawInfo& drawInfo : m_QueuedWSSprites)
 			{
@@ -2781,6 +2832,8 @@ namespace flex
 					ToBtVec3(m_DirectionalLight->GetPos() - dirLightForward * 2.5f),
 					btVector3(0.0f, 0.0f, 1.0f));
 			}
+
+			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
@@ -2988,6 +3041,8 @@ namespace flex
 
 		void GLRenderer::DrawText()
 		{
+			GL_PUSH_DEBUG_GROUP("Text");
+
 			bool bHasText = false;
 			for (BitmapFont* font : m_Fonts)
 			{
@@ -3067,6 +3122,8 @@ namespace flex
 					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
 				}
 			}
+
+			GL_POP_DEBUG_GROUP();
 		}
 
 		bool GLRenderer::LoadFont(BitmapFont** font,
@@ -5452,8 +5509,12 @@ namespace flex
 		{
 			PROFILE_AUTO("PhysicsDebugRender");
 
+			GL_PUSH_DEBUG_GROUP("Physics Debug");
+
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
+
+			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)

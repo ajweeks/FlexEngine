@@ -190,6 +190,11 @@ namespace flex
 		}
 #endif // _DEBUG
 
+		if (GLAD_GL_KHR_debug)
+		{
+			g_EngineInstance->bHasGLDebugExtension = true;
+		}
+
 		Print("OpenGL loaded\n");
 		Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
 		Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));

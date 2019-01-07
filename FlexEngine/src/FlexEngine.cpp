@@ -1644,8 +1644,7 @@ namespace flex
 
 			g_Window->Update();
 
-			bool bWriteProfilingResultsToFile =
-				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_K);
+			bool bWriteProfilingResultsToFile = g_InputManager->GetKeyPressed(Input::KeyCode::KEY_K);
 
 			g_Renderer->Update();
 
@@ -1653,6 +1652,11 @@ namespace flex
 			g_InputManager->Update();
 			g_InputManager->PostUpdate();
 			PROFILE_END("Update");
+
+			if (bSimulateFrame)
+			{
+				g_SceneManager->CurrentScene()->LateUpdate();
+			}
 
 			PROFILE_BEGIN("Render");
 			g_Renderer->Draw();

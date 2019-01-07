@@ -5,15 +5,15 @@
 #define COMPILE_VULKAN 0
 #define COMPILE_IMGUI 1
 
-#define COMPILE_RENDERDOC_API 1
-
 #ifdef _DEBUG
 #define THOROUGH_CHECKS 1
+#define ENABLE_PROFILING 1
+#define COMPILE_RENDERDOC_API 1
 #else
 #define THOROUGH_CHECKS 0
+#define ENABLE_PROFILING 0
+#define COMPILE_RENDERDOC_API 0
 #endif
-
-#define ENABLE_PROFILING 1
 
 #define NOMINMAX
 
@@ -108,6 +108,21 @@ inline void SafeDelete(T &pObjectToDelete)
 #else
 #define ENSURE(condition)
 #endif
+
+#if COMPILE_OPEN_GL
+#ifdef _DEBUG
+#define GL_PUSH_DEBUG_GROUP(str) \
+if (g_EngineInstance->bHasGLDebugExtension) { glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION, 0, -1, str); }
+#define GL_POP_DEBUG_GROUP() \
+if (g_EngineInstance->bHasGLDebugExtension) { glPopDebugGroupKHR(); }
+#else
+#define GL_PUSH_DEBUG_GROUP(str)
+#define GL_POP_DEBUG_GROUP()
+#endif // _DEBUG
+#else
+#define GL_PUSH_DEBUG_GROUP(str)
+#define GL_POP_DEBUG_GROUP()
+#endif // COMPILE_OPEN_GL
 
 namespace flex
 {
