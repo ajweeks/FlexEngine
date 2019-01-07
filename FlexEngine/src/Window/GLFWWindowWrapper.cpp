@@ -853,13 +853,14 @@ namespace flex
 		UNREFERENCED_PARAMETER(userParam);
 		UNREFERENCED_PARAMETER(length);
 
-		// Ignore insignificant error/warning codes
-		if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+		// Ignore insignificant error/warning codes & notification messages
+		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 ||
+			severity == GL_DEBUG_SEVERITY_NOTIFICATION)
 		{
 			return;
 		}
 
-		PrintError("---------------\n\t");
+		PrintError("-----------------------------------------\n");
 		PrintError("GL Debug message (%i): %s\n", id, message);
 
 		switch (source)
@@ -871,7 +872,7 @@ namespace flex
 		case GL_DEBUG_SOURCE_APPLICATION:     PrintError("Source: Application"); break;
 		case GL_DEBUG_SOURCE_OTHER:           PrintError("Source: Other"); break;
 		}
-		PrintError("\n\t");
+		PrintError("\n");
 
 		switch (type)
 		{
@@ -885,16 +886,16 @@ namespace flex
 		case GL_DEBUG_TYPE_POP_GROUP:           PrintError("Type: Pop Group"); break;
 		case GL_DEBUG_TYPE_OTHER:               PrintError("Type: Other"); break;
 		}
-		PrintError("\n\t");
+		PrintError("\n");
 
 		switch (severity)
 		{
 		case GL_DEBUG_SEVERITY_HIGH:         PrintError("Severity: high"); break;
 		case GL_DEBUG_SEVERITY_MEDIUM:       PrintError("Severity: medium"); break;
 		case GL_DEBUG_SEVERITY_LOW:          PrintError("Severity: low"); break;
-		case GL_DEBUG_SEVERITY_NOTIFICATION: PrintError("Severity: notification"); break;
+		//case GL_DEBUG_SEVERITY_NOTIFICATION: PrintError("Severity: notification"); break;
 		}
-		PrintError("\n---------------\n");
+		PrintError("\n-----------------------------------------\n");
 	}
 } // namespace flex
 

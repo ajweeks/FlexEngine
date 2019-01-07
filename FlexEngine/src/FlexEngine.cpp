@@ -745,7 +745,7 @@ namespace flex
 #endif
 
 #if COMPILE_RENDERDOC_API
-			if (m_bRenderDocTriggerCaptureNextFrame)
+			if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
 			{
 				m_bRenderDocTriggerCaptureNextFrame = false;
 				m_bRenderDocCapturingFrame = true;
@@ -1389,9 +1389,9 @@ namespace flex
 			}
 
 #if COMPILE_RENDERDOC_API
-			if (!m_bRenderDocCapturingFrame &&
+			if (m_RenderDocAPI &&
+				!m_bRenderDocCapturingFrame &&
 				!m_bRenderDocTriggerCaptureNextFrame &&
-				m_RenderDocAPI &&
 				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F9))
 			{
 				m_bRenderDocTriggerCaptureNextFrame = true;
@@ -1653,11 +1653,6 @@ namespace flex
 			g_InputManager->PostUpdate();
 			PROFILE_END("Update");
 
-			if (bSimulateFrame)
-			{
-				g_SceneManager->CurrentScene()->LateUpdate();
-			}
-
 			PROFILE_BEGIN("Render");
 			g_Renderer->Draw();
 			PROFILE_END("Render");
@@ -1799,7 +1794,7 @@ namespace flex
 			if (ImGui::BeginMenu("Actions"))
 			{
 #if COMPILE_RENDERDOC_API
-				if (ImGui::MenuItem("Capture RenderDoc frame"))
+				if (m_RenderDocAPI && ImGui::MenuItem("Capture RenderDoc frame"))
 				{
 					m_bRenderDocTriggerCaptureNextFrame = true;
 				}

@@ -273,8 +273,6 @@ namespace flex
 			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
-		m_TrackManager.Update();
-
 		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
