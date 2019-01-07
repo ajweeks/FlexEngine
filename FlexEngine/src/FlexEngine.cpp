@@ -56,7 +56,7 @@ namespace flex
 {
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 0;
+	const u32 FlexEngine::EngineVersionPatch = 1;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
@@ -745,7 +745,7 @@ namespace flex
 #endif
 
 #if COMPILE_RENDERDOC_API
-			if (m_bRenderDocTriggerCaptureNextFrame)
+			if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
 			{
 				m_bRenderDocTriggerCaptureNextFrame = false;
 				m_bRenderDocCapturingFrame = true;
@@ -1389,9 +1389,9 @@ namespace flex
 			}
 
 #if COMPILE_RENDERDOC_API
-			if (!m_bRenderDocCapturingFrame &&
+			if (m_RenderDocAPI &&
+				!m_bRenderDocCapturingFrame &&
 				!m_bRenderDocTriggerCaptureNextFrame &&
-				m_RenderDocAPI &&
 				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F9))
 			{
 				m_bRenderDocTriggerCaptureNextFrame = true;
@@ -1799,7 +1799,7 @@ namespace flex
 			if (ImGui::BeginMenu("Actions"))
 			{
 #if COMPILE_RENDERDOC_API
-				if (ImGui::MenuItem("Capture RenderDoc frame"))
+				if (m_RenderDocAPI && ImGui::MenuItem("Capture RenderDoc frame"))
 				{
 					m_bRenderDocTriggerCaptureNextFrame = true;
 				}
