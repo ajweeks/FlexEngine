@@ -181,7 +181,7 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile)
 	{
-		int fileMode = std::ios::in | std::ios::ate;
+		int fileMode = std::ios::in;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -194,7 +194,10 @@ namespace flex
 			return false;
 		}
 
-		std::streampos length = file.tellg();
+		file.ignore(std::numeric_limits<std::streamsize>::max());
+		std::streampos length = file.gcount();
+		file.clear(); // Clear eof flag
+		file.seekg(0, std::ios::beg);
 
 		if ((size_t)length > 0)
 		{
