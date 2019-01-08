@@ -146,7 +146,9 @@ namespace flex
 
 		if (fileContents[quoteEnd + 1] != ':')
 		{
-			PrintError("Invalidly formatted JSON file (':' must occur after a field label)\n");
+			PrintError("Invalidly formatted JSON file, ':' must occur after a field label\n...\n");
+			std::string surroundingText(fileContents.substr(quoteStart - 20, 40));
+			PrintError("%s\n...\n", surroundingText.c_str());
 			return false;
 		}
 
