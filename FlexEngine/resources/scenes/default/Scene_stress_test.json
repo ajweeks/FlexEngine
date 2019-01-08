@@ -31,7 +31,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-19.640, 19.380, 5.000"
+				"pos" : "-19.640, 182.380, 5.000"
 			},
 			"mesh" : "cube",
 			"material" : "pbr grey",
