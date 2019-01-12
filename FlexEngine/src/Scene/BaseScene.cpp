@@ -295,6 +295,11 @@ namespace flex
 			}
 		}
 
+		m_TrackManager.DrawDebug();
+	}
+
+	void BaseScene::LateUpdate()
+	{
 		if (!m_ObjectsToRemoveAtEndOfFrame.empty())
 		{
 			for (GameObject* gameObject : m_ObjectsToRemoveAtEndOfFrame)
@@ -326,8 +331,6 @@ namespace flex
 
 			g_Renderer->RenderObjectStateChanged();
 		}
-
-		m_TrackManager.DrawDebug();
 	}
 
 	bool BaseScene::DestroyGameObject(GameObject* targetObject,

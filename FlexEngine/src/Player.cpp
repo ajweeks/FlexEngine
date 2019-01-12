@@ -185,8 +185,9 @@ namespace flex
 			}
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A) ||
-			(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_E)))
+		if (m_bPossessed &&
+			(g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A) ||
+			(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_E))))
 		{
 			m_bTabletUp = !m_bTabletUp;
 		}
@@ -194,11 +195,26 @@ namespace flex
 
 		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C))
 		{
+			// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
 			Cart* cart = new Cart();
-			cart->Initialize();
-			cart->PostInitialize();
 			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
 			m_Inventory.push_back(cart);
+		}
+
+		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_V))
+		{
+			// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
+			EngineCart* engineCart = new EngineCart();
+			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(engineCart);
+			m_Inventory.push_back(engineCart);
+		}
+
+		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_B))
+		{
+			// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
+			MobileLiquidBox* box = new MobileLiquidBox();
+			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+			m_Inventory.push_back(box);
 		}
 
 		if (!m_Inventory.empty())
@@ -210,18 +226,60 @@ namespace flex
 				GameObject* obj = m_Inventory[0];
 				bool bPlaced = false;
 
-				if (Cart* objCart = (Cart*)obj)
+				if (EngineCart* engineCart = dynamic_cast<EngineCart*>(obj))
 				{
 					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 					glm::vec3 samplePos = m_Transform.GetWorldPosition() + m_Transform.GetForward() * 1.5f;
-					real rangeThreshold = 10.0f;
+					real rangeThreshold = 4.0f;
 					real distAlongNearestTrack;
 					TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
 
 					if (nearestTrackID != InvalidTrackID)
 					{
 						bPlaced = true;
-						objCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+						engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+					}
+				}
+				else if(Cart* cart = dynamic_cast<Cart*>(obj))
+				{
+					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+					glm::vec3 samplePos = m_Transform.GetWorldPosition() + m_Transform.GetForward() * 1.5f;
+					real rangeThreshold = 4.0f;
+					real distAlongNearestTrack;
+					TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+
+					if (nearestTrackID != InvalidTrackID)
+					{
+						bPlaced = true;
+						cart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+					}
+				}
+				else if (MobileLiquidBox* box = dynamic_cast<MobileLiquidBox*>(obj))
+				{
+					std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
+					glm::vec3 playerPos = m_Transform.GetWorldPosition();
+					real threshold = 8.0f;
+					real closestCartDist = threshold;
+					i32 closestCartIdx = -1;
+					for (i32 i = 0; i < (i32)carts.size(); ++i)
+					{
+						real d = glm::distance(carts[i]->GetTransform()->GetWorldPosition(), playerPos);
+						if (d <= closestCartDist)
+						{
+							closestCartDist = d;
+							closestCartIdx = i;
+						}
+					}
+
+					if (closestCartIdx != -1)
+					{
+						if (carts[closestCartIdx]->GetParent() == nullptr)
+						{
+							g_SceneManager->CurrentScene()->RemoveRootObject(carts[closestCartIdx], false);
+						}
+
+						carts[closestCartIdx]->AddChild(box);
+						box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
 					}
 				}
 				else

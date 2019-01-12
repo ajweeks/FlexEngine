@@ -2707,24 +2707,24 @@ namespace flex
 			}
 			m_QueuedSSSprites.clear();
 
-			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
+			//static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT))
-			{
-				pos.x += g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT))
-			{
-				pos.x -= g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP))
-			{
-				pos.y += g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_DOWN))
-			{
-				pos.y -= g_DeltaTime * 1.0f;
-			}
+			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT))
+			//{
+			//	pos.x += g_DeltaTime * 1.0f;
+			//}
+			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT))
+			//{
+			//	pos.x -= g_DeltaTime * 1.0f;
+			//}
+			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP))
+			//{
+			//	pos.y += g_DeltaTime * 1.0f;
+			//}
+			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_DOWN))
+			//{
+			//	pos.y -= g_DeltaTime * 1.0f;
+			//}
 
 			//glm::vec4 color(1.0f);
 			//
@@ -6551,7 +6551,7 @@ namespace flex
 			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
 			drawInfo.bEnableAlbedoSampler = false;
 
-			DrawSpriteQuad(drawInfo);
+			DrawSprite(drawInfo);
 		}
 
 		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos,
@@ -6571,7 +6571,7 @@ namespace flex
 			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
 			drawInfo.bEnableAlbedoSampler = false;
 
-			DrawSpriteQuad(drawInfo);
+			DrawSprite(drawInfo);
 		}
 
 		void GLRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)

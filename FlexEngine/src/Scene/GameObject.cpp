@@ -36,6 +36,17 @@ namespace flex
 {
 	const char* GameObject::s_DefaultNewGameObjectName = "New_Game_Object_00";
 
+	void GameObject::OnDestroy(GameObject* obj)
+	{
+		if (g_SceneManager)
+		{
+			g_SceneManager->CurrentScene()->GetTrackManager()->OnGameObjectDestroyed(obj);
+		}
+	}
+
+	const char* Cart::emptyCartMeshName = "cart-empty.glb";
+	const char* EngineCart::engineMeshName = "cart-engine.glb";
+
 	RandomizedAudioSource GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
@@ -666,6 +677,8 @@ namespace flex
 
 	void GameObject::Destroy()
 	{
+		OnDestroy(this);
+
 		for (GameObject* child : m_Children)
 		{
 			child->Destroy();
@@ -2793,11 +2806,18 @@ namespace flex
 			other.brightness == brightness;
 	}
 
-	Cart::Cart() :
-		GameObject(g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4), GameObjectType::CART)
+	Cart::Cart(GameObjectType type /* = GameObjectType::CART */) :
+		Cart(g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4), type)
+	{
+	}
+
+	Cart::Cart(const std::string& name,
+		GameObjectType type /* = GameObjectType::CART */,
+		const char* meshName /* = "emptyCartMeshName" */) :
+		GameObject(name, type)
 	{
 		SetRigidBody(new RigidBody());
-		SetCollisionShape(new btBoxShape(btVector3(0.5f, 0.5f, 0.5f)));
+		SetCollisionShape(new btBoxShape(btVector3(1.0f, 1.0f, 1.0f)));
 		MaterialID matID;
 		if (!g_Renderer->GetMaterialID("pbr grey", matID))
 		{
@@ -2806,15 +2826,11 @@ namespace flex
 			matID = 0;
 		}
 		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/cart-empty.glb")))
+		std::string meshFilePath = std::string(RESOURCE("meshes/")) + std::string(meshName);
+		if (!mesh->LoadFromFile(meshFilePath))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
 		}
-	}
-
-	Cart::Cart(const std::string& name) :
-		GameObject(name, GameObjectType::CART)
-	{
 	}
 
 	GameObject* Cart::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -2833,10 +2849,65 @@ namespace flex
 	{
 		if (currentTrackID != InvalidTrackID)
 		{
+			if (chainID != InvalidCartChainID)
+			{
+				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+				real dT = trackManager->GetChainDrivePower(chainID) * g_DeltaTime;
+
+				AdvanceAlongTrack(dT);
+			}
+		}
+	}
+
+	void Cart::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (ImGui::TreeNode("Cart"))
+		{
+			ImGui::Text("track ID: %d", currentTrackID);
+			ImGui::Text("dist along track: %.2f", distAlongTrack);
+
+			ImGui::TreePop();
+		}
+	}
+
+	void Cart::OnTrackMount(TrackID trackID, real newDistAlongTrack)
+	{
+		if (trackID == InvalidTrackID)
+		{
+			PrintWarn("Attempted to attach cart to track with invalid ID!\n");
+		}
+		else
+		{
+			currentTrackID = trackID;
+			distAlongTrack = newDistAlongTrack;
+		}
+	}
+
+	void Cart::OnTrackDismount()
+	{
+		currentTrackID = InvalidTrackID;
+		distAlongTrack = -1.0f;
+	}
+
+	void Cart::SetItemHolding(GameObject* obj)
+	{
+		// TODO:
+	}
+
+	void Cart::RemoveItemHolding()
+	{
+	}
+
+	void Cart::AdvanceAlongTrack(real dT)
+	{
+		if (currentTrackID != InvalidTrackID)
+		{
 			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 
 			real pDistAlongTrack = distAlongTrack;
-			distAlongTrack = trackManager->AdvanceTAlongTrack(currentTrackID, g_DeltaTime * moveSpeed * moveDirection, distAlongTrack);
+			distAlongTrack = trackManager->AdvanceTAlongTrack(currentTrackID, dT, distAlongTrack);
 
 			real newDistAlongTrack;
 			i32 curveIndex;
@@ -2846,25 +2917,11 @@ namespace flex
 			glm::vec3 newPos = trackManager->GetPointOnTrack(currentTrackID, distAlongTrack, pDistAlongTrack,
 				LookDirection::CENTER, false, &newTrackID, &newDistAlongTrack, &juncIndex, &curveIndex, &trackState, false);
 
-			bool bSwitchedTracks = (newTrackID != InvalidTrackID) && (newTrackID != currentTrackID);
+			bool bSwitchedTracks = (newTrackID != InvalidTrackID) && (currentTrackID != newTrackID);
 			if (bSwitchedTracks)
 			{
 				currentTrackID = newTrackID;
 				distAlongTrack = newDistAlongTrack;
-				if (distAlongTrack > 0.5f)
-				{
-					moveDirection = -1.0f;
-				}
-				else
-				{
-					moveDirection = 1.0f;
-				}
-			}
-			else if (newDistAlongTrack == -1.0f ||
-					(newDistAlongTrack == 1.0f && moveDirection > 0.0f) ||
-					(newDistAlongTrack == 0.0f && moveDirection < 0.0f))
-			{
-				moveDirection = -moveDirection;
 			}
 
 			if (currentTrackID != InvalidTrackID)
@@ -2880,33 +2937,6 @@ namespace flex
 		}
 	}
 
-	void Cart::DrawImGuiObjects()
-	{
-		GameObject::DrawImGuiObjects();
-
-		if (ImGui::TreeNode("Cart"))
-		{
-			ImGui::Text("move speed: %.2f", moveSpeed);
-			ImGui::Text("move dir: %.0f", moveDirection);
-			ImGui::Text("track ID: %d", currentTrackID);
-			ImGui::Text("dist along track: %.2f", distAlongTrack);
-
-			ImGui::TreePop();
-		}
-	}
-
-	void Cart::OnTrackMount(TrackID trackID, real newDistAlongTrack)
-	{
-		currentTrackID = trackID;
-		distAlongTrack = newDistAlongTrack;
-	}
-
-	void Cart::OnTrackDismount()
-	{
-		currentTrackID = InvalidTrackID;
-		distAlongTrack = -1.0f;
-	}
-
 	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
 	{
 		UNREFERENCED_PARAMETER(scene);
@@ -2915,27 +2945,180 @@ namespace flex
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
 		distAlongTrack = cartInfo.GetFloat("dist along track");
-		moveSpeed = cartInfo.GetFloat("move speed");
-		moveDirection = cartInfo.GetFloat("move direction");
 	}
 
 	void Cart::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		std::string meshName = m_MeshComponent->GetRelativeFilePath();
-		StripLeadingDirectories(meshName);
-		StripFileType(meshName);
-
-		parentObject.fields.emplace_back("mesh", JSONValue(meshName));
-
-
 		JSONObject cartInfo = {};
 
 		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
 		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
-		cartInfo.fields.emplace_back("move speed", JSONValue(moveSpeed));
-		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
 
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+	}
+
+	EngineCart::EngineCart() :
+		Cart(g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 4), GameObjectType::ENGINE_CART, engineMeshName)
+	{
+	}
+
+	EngineCart::EngineCart(const std::string& name) :
+		Cart(name, GameObjectType::ENGINE_CART, engineMeshName)
+	{
+	}
+
+	GameObject* EngineCart::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		EngineCart* newGameObject = new EngineCart();
+
+		newGameObject->powerRemaining = powerRemaining;
+
+		newGameObject->currentTrackID = currentTrackID;
+		newGameObject->distAlongTrack = distAlongTrack;
+
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
+
+		return newGameObject;
+	}
+
+	void EngineCart::Update()
+	{
+		if (currentTrackID != InvalidTrackID && powerRemaining > 0.0f)
+		{
+			TrackID pTrackID = currentTrackID;
+
+			real dT = g_DeltaTime * GetDrivePower();
+			AdvanceAlongTrack(dT);
+
+			powerRemaining -= powerDrainMultiplier * g_DeltaTime;
+			powerRemaining = glm::max(powerRemaining, 0.0f);
+
+			bool bSwitchedTracks = (currentTrackID != pTrackID);
+			if (bSwitchedTracks)
+			{
+				if (distAlongTrack > 0.5f)
+				{
+					moveDirection = -1.0f;
+				}
+				else
+				{
+					moveDirection = 1.0f;
+				}
+			}
+			else if (distAlongTrack == -1.0f ||
+				(distAlongTrack == 1.0f && moveDirection > 0.0f) ||
+				(distAlongTrack == 0.0f && moveDirection < 0.0f))
+			{
+				moveDirection = -moveDirection;
+			}
+		}
+	}
+
+	void EngineCart::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (ImGui::TreeNode("Engine Cart"))
+		{
+			ImGui::Text("track ID: %d", currentTrackID);
+			ImGui::Text("dist along track: %.2f", distAlongTrack);
+			ImGui::Text("move direction: %.2f", moveDirection);
+			ImGui::Text("power remaining: %.2f", powerRemaining);
+
+			ImGui::TreePop();
+		}
+	}
+
+	real EngineCart::GetDrivePower() const
+	{
+		return powerRemaining * moveDirection;
+	}
+
+	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+
+		JSONObject cartInfo = parentObject.GetObject("cart info");
+		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
+		distAlongTrack = cartInfo.GetFloat("dist along track");
+
+		moveDirection = cartInfo.GetFloat("move direction");
+		powerRemaining = cartInfo.GetFloat("power remaining");
+	}
+
+	void EngineCart::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject cartInfo = {};
+
+		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
+		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
+
+		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
+		cartInfo.fields.emplace_back("power remaining", JSONValue(powerRemaining));
+
+		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+	}
+
+	MobileLiquidBox::MobileLiquidBox() :
+		GameObject(g_SceneManager->CurrentScene()->GetUniqueObjectName("MobileLiquidBox_", 4), GameObjectType::MOBILE_LIQUID_BOX)
+	{
+		SetRigidBody(new RigidBody());
+		SetCollisionShape(new btBoxShape(btVector3(0.6f, 0.6f, 0.6f)));
+		MaterialID matID;
+		if (!g_Renderer->GetMaterialID("pbr white", matID))
+		{
+			// TODO: Create own material
+			matID = 0;
+		}
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb")))
+		{
+			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
+		}
+	}
+
+	MobileLiquidBox::MobileLiquidBox(const std::string& name) :
+		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX)
+	{
+	}
+
+	GameObject* MobileLiquidBox::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		GameObject* newGameObject = new MobileLiquidBox();
+
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
+
+		return newGameObject;
+	}
+
+	void MobileLiquidBox::Update()
+	{
+	}
+
+	void MobileLiquidBox::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (ImGui::TreeNode("Mobile liquid box"))
+		{
+			ImGui::Text("In cart: %d", bInCart ? 1 : 0);
+			ImGui::Text("Liquid amount: %.2f", liquidAmount);
+
+			ImGui::TreePop();
+		}
+	}
+
+	void MobileLiquidBox::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(parentObject);
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+	}
+
+	void MobileLiquidBox::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		UNREFERENCED_PARAMETER(parentObject);
 	}
 
 } // namespace flex

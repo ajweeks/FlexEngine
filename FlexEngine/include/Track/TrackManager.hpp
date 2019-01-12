@@ -2,10 +2,25 @@
 
 #include "Helpers.hpp" // For TrackState
 #include "JSONTypes.hpp"
+#include "Types.hpp" // For OnGameObjectDestroyedFunctor
 
 namespace flex
 {
+	class BaseScene;
 	class BezierCurveList;
+	class Cart;
+
+	struct CartChain
+	{
+		void AddUnique(Cart* cart);
+		void Remove(Cart* cart);
+		bool Contains(Cart* cart) const;
+
+		bool operator!=(const CartChain& other);
+		bool operator==(const CartChain& other);
+
+		std::vector<Cart*> carts;
+	};
 
 	struct Junction
 	{
@@ -33,6 +48,8 @@ namespace flex
 		void AddTrack(const BezierCurveList& track);
 
 		BezierCurveList* GetTrack(TrackID trackID);
+
+		void Update();
 
 		// TODO: Remove overloaded functions, force use of TrackID
 		glm::vec3 GetPointOnTrack(BezierCurveList* track,
@@ -93,8 +110,13 @@ namespace flex
 
 		JSONObject Serialize() const;
 
+		real GetChainDrivePower(CartChainID cartChainID) const;
+
+		void OnGameObjectDestroyed(GameObject* gameObject);
+
 		std::vector<BezierCurveList> m_Tracks;
 		std::vector<Junction> m_Junctions;
+		std::vector<CartChain> m_CartChains;
 
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, BezierCurveList* track, bool bEndOfTheLine);

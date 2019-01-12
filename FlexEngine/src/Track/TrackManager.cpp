@@ -21,6 +21,94 @@ namespace flex
 {
 	const real TrackManager::JUNCTION_THRESHOLD_DIST = 0.01f;
 
+	void CartChain::AddUnique(Cart* cart)
+	{
+		if (std::find(carts.begin(), carts.end(), cart) == carts.end())
+		{
+			carts.push_back(cart);
+		}
+	}
+
+	void CartChain::Remove(Cart* cart)
+	{
+		auto iter = std::find(carts.begin(), carts.end(), cart);
+		if (iter == carts.end())
+		{
+			PrintWarn("Attempted to remove cart from CartChain which isn't present!\n");
+			return;
+		}
+
+		(*iter)->chainID = InvalidCartChainID;
+		carts.erase(iter);
+	}
+
+	bool CartChain::Contains(Cart* cart) const
+	{
+		return (std::find(carts.begin(), carts.end(), cart) != carts.end());
+	}
+
+	bool CartChain::operator!=(const CartChain& other)
+	{
+		return !(*this == other);
+	}
+
+	bool CartChain::operator==(const CartChain& other)
+	{
+		return other.carts == carts;
+	}
+
+	bool Junction::Equals(BezierCurveList* trackA, BezierCurveList* trackB, i32 curveIndexA, i32 curveIndexB)
+	{
+		i32 trackAIndex = -1;
+		i32 trackBIndex = -1;
+
+		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+
+		for (i32 i = 0; i < trackCount; ++i)
+		{
+			if (&trackManager->m_Tracks[trackIndices[i]] == trackA)
+			{
+				trackAIndex = i;
+			}
+			else if (&trackManager->m_Tracks[trackIndices[i]] == trackB)
+			{
+				trackBIndex = i;
+			}
+		}
+
+		if (trackAIndex != -1 &&
+			trackBIndex != -1)
+		{
+			if (curveIndices[trackAIndex] == curveIndexA &&
+				curveIndices[trackBIndex] == curveIndexB)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	JSONObject Junction::Serialize() const
+	{
+		JSONObject result = {};
+
+		const char* delim = ", ";
+		std::string trackIndicesStr(IntToString(trackIndices[0]) + delim +
+			IntToString(trackIndices[1]) + delim +
+			IntToString(trackIndices[2]) + delim +
+			IntToString(trackIndices[3]));
+		std::string curveIndicesStr(IntToString(curveIndices[0]) + delim +
+			IntToString(curveIndices[1]) + delim +
+			IntToString(curveIndices[2]) + delim +
+			IntToString(curveIndices[3]));
+
+		result.fields.emplace_back("track indices", JSONValue(trackIndicesStr));
+		result.fields.emplace_back("curve indices", JSONValue(curveIndicesStr));
+
+		return result;
+	}
+
 	TrackManager::TrackManager()
 	{
 		m_PreviewJunctionDir.junctionIndex = -1;
@@ -48,6 +136,97 @@ namespace flex
 	{
 		assert((i32)trackID < (i32)m_Tracks.size());
 		return &m_Tracks[(i32)trackID];
+	}
+
+	void TrackManager::Update()
+	{
+		std::vector<Cart*> allCarts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
+
+		for (i32 i = 0; i < (i32)allCarts.size(); ++i)
+		{
+			for (i32 j = i + 1; j < (i32)allCarts.size(); ++j)
+			{
+				if (allCarts[i]->currentTrackID == allCarts[j]->currentTrackID)
+				{
+					real d = glm::distance(allCarts[i]->GetTransform()->GetWorldPosition(), allCarts[j]->GetTransform()->GetWorldPosition());
+					real t = glm::min(allCarts[i]->attachThreshold, allCarts[j]->attachThreshold);
+					if (d <= t)
+					{
+						i32 c1 = -1;
+						i32 c2 = -1;
+						for (i32 c = 0; c < (i32)m_CartChains.size(); ++c)
+						{
+							if (m_CartChains[c].Contains(allCarts[i]))
+							{
+								c1 = c;
+							}
+							if (m_CartChains[c].Contains(allCarts[j]))
+							{
+								c2 = c;
+							}
+						}
+
+						if (c1 == -1 || c1 != c2)
+						{
+							if (c1 == -1 && c2 == -1)
+							{
+								// Neither are already in a chain
+								CartChain newChain = {};
+
+								newChain.AddUnique(allCarts[i]);
+								newChain.AddUnique(allCarts[j]);
+
+								m_CartChains.push_back(newChain);
+
+								CartChainID cartChainID = (CartChainID)(m_CartChains.size() - 1);
+								allCarts[i]->chainID = cartChainID;
+								allCarts[j]->chainID = cartChainID;
+							}
+							else if (c1 == -1)
+							{
+								// Only c2 is already in a chain
+								CartChain& chain = m_CartChains[c2];
+								chain.AddUnique(allCarts[i]);
+								allCarts[i]->chainID = (CartChainID)c2;
+							}
+							else if (c2 == -1)
+							{
+								// Only c1 is already in a chain
+								CartChain& chain = m_CartChains[c1];
+								chain.AddUnique(allCarts[j]);
+								allCarts[j]->chainID = (CartChainID)c1;
+							}
+							else
+							{
+								// Both are already in chains, move all of c2 into c1
+								CartChain& chain1 = m_CartChains[c1];
+								CartChain& chain2 = m_CartChains[c2];
+
+								assert(chain1 != chain2);
+
+								for (Cart* cart : chain2.carts)
+								{
+									chain1.AddUnique(cart);
+									cart->chainID = (CartChainID)c1;
+								}
+								m_CartChains.erase(m_CartChains.begin() + c2);
+
+								for (i32 c = c2 + 1; c < (i32)m_CartChains.size(); ++c)
+								{
+									for (Cart* cart : m_CartChains[c].carts)
+									{
+										cart->chainID -= 1;
+									}
+								}
+
+								chain1.AddUnique(allCarts[j]);
+								allCarts[j]->chainID = (CartChainID)c1;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	glm::vec3 TrackManager::GetPointOnTrack(BezierCurveList* track,
@@ -724,6 +903,23 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Track Manager"))
 		{
+			if (ImGui::TreeNode("Carts"))
+			{
+				for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
+				{
+					std::string nodeName("Chain##" + std::to_string(i));
+					if (ImGui::TreeNode(nodeName.c_str()))
+					{
+						for (auto cart : m_CartChains[i].carts)
+						{
+							ImGui::Text("%s", cart->GetName().c_str());
+						}
+						ImGui::TreePop();
+					}
+				}
+				ImGui::TreePop();
+			}
+
 			ImGui::Text("%d tracks, %d junctions", (i32)m_Tracks.size(), (i32)m_Junctions.size());
 			if (ImGui::SmallButton("<"))
 			{
@@ -791,55 +987,41 @@ namespace flex
 		return result;
 	}
 
-	bool Junction::Equals(BezierCurveList* trackA, BezierCurveList* trackB, i32 curveIndexA, i32 curveIndexB)
+	real TrackManager::GetChainDrivePower(CartChainID cartChainID) const
 	{
-		i32 trackAIndex = -1;
-		i32 trackBIndex = -1;
+		real drivePower = 0.0f;
 
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-
-		for (i32 i = 0; i < trackCount; ++i)
+		const CartChain& cartChain = m_CartChains[cartChainID];
+		for (Cart* cart : cartChain.carts)
 		{
-			if (&trackManager->m_Tracks[trackIndices[i]] == trackA)
+			// TODO: Store engine carts at beginning of vector?
+			// TODO: *OR* sort vector based on physical location of carts
+			if (EngineCart* engineCart = dynamic_cast<EngineCart*>(cart))
 			{
-				trackAIndex = i;
-			}
-			else if (&trackManager->m_Tracks[trackIndices[i]] == trackB)
-			{
-				trackBIndex = i;
+				drivePower += engineCart->GetDrivePower();
 			}
 		}
 
-		if (trackAIndex != -1 &&
-			trackBIndex != -1)
+		return drivePower;
+	}
+
+	void TrackManager::OnGameObjectDestroyed(GameObject* gameObject)
+	{
+		if (Cart* cart = dynamic_cast<Cart*>(gameObject))
 		{
-			if (curveIndices[trackAIndex] == curveIndexA &&
-				curveIndices[trackBIndex] == curveIndexB)
+			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 			{
-				return true;
+				if (m_CartChains[i].Contains(cart))
+				{
+					m_CartChains[i].Remove(cart);
+
+					//if (m_CartChains[i].carts.empty())
+					//{
+					//	m_CartChains.erase(m_CartChains.begin() + i);
+					//}
+				}
 			}
 		}
-
-		return false;
 	}
 
-	JSONObject Junction::Serialize() const
-	{
-		JSONObject result = {};
-
-		const char* delim = ", ";
-		std::string trackIndicesStr(IntToString(trackIndices[0]) + delim +
-			IntToString(trackIndices[1]) + delim +
-			IntToString(trackIndices[2]) + delim +
-			IntToString(trackIndices[3]));
-		std::string curveIndicesStr(IntToString(curveIndices[0]) + delim +
-			IntToString(curveIndices[1]) + delim +
-			IntToString(curveIndices[2]) + delim +
-			IntToString(curveIndices[3]));
-
-		result.fields.emplace_back("track indices", JSONValue(trackIndicesStr));
-		result.fields.emplace_back("curve indices", JSONValue(curveIndicesStr));
-
-		return result;
-	}
 } // namespace flex

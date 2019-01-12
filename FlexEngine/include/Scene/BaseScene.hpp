@@ -25,6 +25,7 @@ namespace flex
 		virtual void PostInitialize();
 		virtual void Destroy();
 		virtual void Update();
+		virtual void LateUpdate();
 
 		void SetName(const std::string& name);
 		std::string GetName() const;
@@ -84,6 +85,23 @@ namespace flex
 		static std::vector<JSONObject> s_ParsedPrefabs;
 
 		std::vector<GameObject*> GetAllObjects();
+
+		template<class T>
+		std::vector<T*> GetObjectsOfType()
+		{
+			std::vector<GameObject*> objs = GetAllObjects();
+			std::vector<T*> result;
+
+			for (GameObject* obj : objs)
+			{
+				if (dynamic_cast<T*>(obj) != nullptr)
+				{
+					result.push_back((T*)obj);
+				}
+			}
+
+			return result;
+		}
 
 		TrackManager* GetTrackManager();
 

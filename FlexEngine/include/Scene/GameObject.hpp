@@ -128,6 +128,8 @@ namespace flex
 
 		static const char* s_DefaultNewGameObjectName;
 
+		static void OnDestroy(GameObject* obj);
+
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
@@ -377,28 +379,82 @@ namespace flex
 
 	};
 
+	class EngineCart;
+
 	class Cart : public GameObject
 	{
 	public:
-		Cart();
-		Cart(const std::string& name);
+		Cart(GameObjectType type = GameObjectType::CART);
+		Cart(const std::string& name, GameObjectType type = GameObjectType::CART, const char* meshName = emptyCartMeshName);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
-		//virtual void Initialize() override;
-		//virtual void PostInitialize() override;
-		//virtual void Destroy() override;
 		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
 
 		void OnTrackMount(TrackID trackID, real newDistAlongTrack);
 		void OnTrackDismount();
 
+		void SetItemHolding(GameObject* obj);
+		void RemoveItemHolding();
+
+		// Advances along track, rotates to face correct direction
+		void AdvanceAlongTrack(real dT);
+
 		TrackID currentTrackID = InvalidTrackID;
 		real distAlongTrack = -1.0f;
 
-		real moveSpeed = 0.2f;
+		// Non-serialized fields
+		real attachThreshold = 0.5f;
+
+		CartChainID chainID = InvalidCartChainID;
+
+		static const char* emptyCartMeshName;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+	};
+
+	class EngineCart : public Cart
+	{
+	public:
+		EngineCart();
+		EngineCart(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Update() override;
+		virtual void DrawImGuiObjects() override;
+
+		real GetDrivePower() const;
+
 		real moveDirection = 1.0f; // -1.0f or 1.0f
+		real powerRemaining = 1.0f;
+		real powerDrainMultiplier = 0.1f;
+
+		static const char* engineMeshName;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+	};
+
+	class MobileLiquidBox : public GameObject
+	{
+	public:
+		MobileLiquidBox();
+		MobileLiquidBox(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Update() override;
+		virtual void DrawImGuiObjects() override;
+
+		bool bInCart = false;
+		real liquidAmount = 0.0f;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
