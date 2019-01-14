@@ -2881,17 +2881,17 @@ namespace flex
 		else
 		{
 			currentTrackID = trackID;
-			distAlongTrack = newDistAlongTrack;
 
 			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-			i32 curveIndex;
-			i32 juncIndex;
-			TrackID newTrackID = InvalidTrackID;
+			i32 curveIndex, juncIndex;
+			TrackID newTrackID = trackID;
 			TrackState trackState;
-			glm::vec3 newPos = trackManager->GetPointOnTrack(currentTrackID, distAlongTrack, distAlongTrack,
+			glm::vec3 newPos = trackManager->GetPointOnTrack(currentTrackID, newDistAlongTrack, newDistAlongTrack,
 				LookDirection::CENTER, false, &newTrackID, &newDistAlongTrack, &juncIndex, &curveIndex, &trackState, false);
-			m_Transform.SetLocalPosition(newPos);
+			assert(newTrackID == trackID);
 
+			distAlongTrack = newDistAlongTrack;
+			m_Transform.SetLocalPosition(newPos);
 		}
 	}
 
