@@ -117,7 +117,7 @@ namespace flex
 
 		m_RendererName = RenderIDToString(m_RendererIndex);
 
-		GetConsoleHandle();
+		InitializeLogger();
 
 		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
 		Print("%i renderer%s %s, Current renderer: %s\n",
@@ -756,6 +756,13 @@ namespace flex
 			// Call as early as possible in the frame
 			// Starts new ImGui frame and clears debug draw lines
 			g_Renderer->NewFrame();
+
+			SecSinceLogSave += dt;
+			if (SecSinceLogSave >= LogSaveRate)
+			{
+				SecSinceLogSave -= LogSaveRate;
+				SaveLogBufferToFile();
+			}
 
 			if (m_bRenderImGui)
 			{
@@ -1652,11 +1659,6 @@ namespace flex
 			g_InputManager->Update();
 			g_InputManager->PostUpdate();
 			PROFILE_END("Update");
-
-			if (bSimulateFrame)
-			{
-				g_SceneManager->CurrentScene()->LateUpdate();
-			}
 
 			PROFILE_BEGIN("Render");
 			g_Renderer->Draw();

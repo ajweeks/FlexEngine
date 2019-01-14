@@ -1,6 +1,9 @@
 #include "stdafx.hpp"
 
+#include <fstream>
 #include <iostream>
+
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -10,12 +13,49 @@ namespace flex
 
 	bool g_bEnableLogToConsole = true;
 
-	void GetConsoleHandle()
+	void InitializeLogger()
 	{
 #ifdef _WIN32
 		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
 #endif
+
+		g_LogBufferFilePath = ROOT_LOCATION "saved/FlexEngine.log";
+
+		ClearLogFile();
+
+		g_LogBuffer << '[' << GetDateString_YMDHMS() << ']' << '\n';
+	}
+
+	void ClearLogFile()
+	{
+		std::ofstream file(g_LogBufferFilePath);
+		if (file)
+		{
+			char c = '\0';
+			file.write(&c, 1);
+			file.close();
+		}
+	}
+
+	void SaveLogBufferToFile()
+	{
+		// TODO: Only append new content rather than overwriting old content?
+		std::ofstream file(g_LogBufferFilePath, std::ios::trunc);
+		if (file)
+		{
+			std::string fileContents(g_LogBuffer.str());
+			file.write(fileContents.data(), fileContents.size());
+			file.close();
+		}
+		else
+		{
+			PrintWarn("Failed to save log to %s\n", g_LogBufferFilePath);
+		}
+	}
+
+	void DestroyLogger()
+	{
 	}
 
 	void Print(const char* str, ...)
@@ -89,6 +129,10 @@ namespace flex
 		static char s_buffer[MAX_CHARS];
 
 		vsnprintf(s_buffer, MAX_CHARS, str, argList);
+
+		std::string s(s_buffer);
+		s[s.size()-1] = '\n';
+		g_LogBuffer << s;
 
 		std::cout << s_buffer;
 	}

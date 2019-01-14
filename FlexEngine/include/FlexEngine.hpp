@@ -215,6 +215,9 @@ namespace flex
 		i32 m_RenderDocUIPID = -1;
 #endif
 
+		sec SecSinceLogSave = 0.0f;
+		sec LogSaveRate = 5.0f;
+
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;
 	};
