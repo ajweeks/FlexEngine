@@ -6301,7 +6301,6 @@ namespace flex
 							}
 						}
 					}
-
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -6588,6 +6587,8 @@ namespace flex
 
 		bool GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject)
 		{
+			bool bParentChildTreeDirty = false;
+
 			RenderID renderID = gameObject->GetRenderID();
 			GLRenderObject* renderObject = nullptr;
 			std::string objectName = gameObject->GetName();
@@ -6670,8 +6671,11 @@ namespace flex
 
 			gameObject->DoImGuiContextMenu(false);
 
-			bool bParentChildTreeChanged = (gameObject == nullptr);
-			if (gameObject)
+			if (gameObject == nullptr)
+			{
+				bParentChildTreeDirty = true;
+			}
+			else
 			{
 				// TODO: Remove from renderer class
 				if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
@@ -6829,14 +6833,14 @@ namespace flex
 										{
 											draggedGameObject->DetachFromParent();
 											gameObject->AddChild(draggedGameObject);
-											bParentChildTreeChanged = true;
+											bParentChildTreeDirty = true;
 										}
 									}
 									else
 									{
-										g_SceneManager->CurrentScene()->RemoveObjectAtEndOfFrame(draggedGameObject);
+										g_SceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
 										gameObject->AddChild(draggedGameObject);
-										bParentChildTreeChanged = true;
+										bParentChildTreeDirty = true;
 									}
 								}
 							}
@@ -6849,7 +6853,7 @@ namespace flex
 
 			if (node_open && bHasChildren)
 			{
-				if (!bParentChildTreeChanged && gameObject)
+				if (!bParentChildTreeDirty && gameObject)
 				{
 					ImGui::Indent();
 					// Don't cache results since children can change during this recursive call
@@ -6871,7 +6875,7 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			return bParentChildTreeChanged;
+			return bParentChildTreeDirty;
 		}
 
 		void GLRenderer::UpdateRenderObjectVertexData(RenderID renderID)

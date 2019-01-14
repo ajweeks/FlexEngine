@@ -54,8 +54,8 @@ namespace flex
 		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);
 
 		GameObject* AddRootObject(GameObject* gameObject);
-		void RemoveRootObject(GameObject* gameObject, bool deleteRootObject);
-		void RemoveAllRootObjects(bool deleteRootObjects);
+		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
+		void RemoveAllRootObjects(bool bDestroy);
 
 		std::vector<MaterialID> GetMaterialIDs();
 		void AddMaterialID(MaterialID newMaterialID);
@@ -68,7 +68,7 @@ namespace flex
 
 		// Deletes and removes targetObject if exists in scene
 		// Returns true if targetObject was found
-		bool DestroyGameObject(GameObject* targetObject, bool bDeleteChildren);
+		bool DestroyGameObject(GameObject* targetObject, bool bDestroyChildren);
 
 		bool IsLoaded() const;
 
@@ -109,8 +109,8 @@ namespace flex
 		// how many other objects with that prefix are in the scene
 		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
 
-		void RemoveObjectAtEndOfFrame(GameObject* obj);
-		void RemoveObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
+		void DestroyObjectAtEndOfFrame(GameObject* obj);
+		void DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
 		void AddObjectAtEndOFFrame(GameObject* obj);
 		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
 
@@ -119,7 +119,7 @@ namespace flex
 
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
-		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
+		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDestroyChildren);
 
 		i32 GetMaterialArrayIndex(const Material& material);
 
@@ -157,7 +157,7 @@ namespace flex
 		TrackManager m_TrackManager;
 
 		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
-		std::vector<GameObject*> m_ObjectsToRemoveAtEndOfFrame;
+		std::vector<GameObject*> m_ObjectsToDestroyAtEndOfFrame;
 
 	private:
 		/*

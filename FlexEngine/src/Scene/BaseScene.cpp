@@ -300,9 +300,9 @@ namespace flex
 
 	void BaseScene::LateUpdate()
 	{
-		if (!m_ObjectsToRemoveAtEndOfFrame.empty())
+		if (!m_ObjectsToDestroyAtEndOfFrame.empty())
 		{
-			for (GameObject* gameObject : m_ObjectsToRemoveAtEndOfFrame)
+			for (GameObject* gameObject : m_ObjectsToDestroyAtEndOfFrame)
 			{
 				auto iter = std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject);
 				if (iter == m_RootObjects.end())
@@ -314,7 +314,7 @@ namespace flex
 					DestroyGameObject(*iter, true);
 				}
 			}
-			m_ObjectsToRemoveAtEndOfFrame.clear();
+			m_ObjectsToDestroyAtEndOfFrame.clear();
 
 			g_Renderer->RenderObjectStateChanged();
 		}
@@ -333,12 +333,11 @@ namespace flex
 		}
 	}
 
-	bool BaseScene::DestroyGameObject(GameObject* targetObject,
-									 bool bDeleteChildren)
+	bool BaseScene::DestroyGameObject(GameObject* targetObject, bool bDestroyChildren)
 	{
 		for (GameObject* gameObject : m_RootObjects)
 		{
-			if (DestroyGameObjectRecursive(gameObject, targetObject, bDeleteChildren))
+			if (DestroyGameObjectRecursive(gameObject, targetObject, bDestroyChildren))
 			{
 				UpdateRootObjectSiblingIndices();
 				g_Renderer->RenderObjectStateChanged();
@@ -355,7 +354,7 @@ namespace flex
 
 	bool BaseScene::DestroyGameObjectRecursive(GameObject* currentObject,
 											  GameObject* targetObject,
-											  bool bDeleteChildren)
+											  bool bDestroyChildren)
 	{
 		if (currentObject == targetObject)
 		{
@@ -375,7 +374,7 @@ namespace flex
 			}
 
 			// Set children's parents
-			if (!bDeleteChildren)
+			if (!bDestroyChildren)
 			{
 				for (GameObject* childObject : targetObject->m_Children)
 				{
@@ -397,7 +396,7 @@ namespace flex
 
 			// If children are still in m_Children array when
 			// targetObject is destroyed they will also be destroyed
-			if (!bDeleteChildren)
+			if (!bDestroyChildren)
 			{
 				targetObject->m_Children.clear();
 			}
@@ -418,7 +417,7 @@ namespace flex
 
 		for (GameObject* childObject : currentObject->m_Children)
 		{
-			if (DestroyGameObjectRecursive(childObject, targetObject, bDeleteChildren))
+			if (DestroyGameObjectRecursive(childObject, targetObject, bDestroyChildren))
 			{
 				return true;
 			}
@@ -695,31 +694,31 @@ namespace flex
 		return result;
 	}
 
-	void BaseScene::RemoveObjectAtEndOfFrame(GameObject* obj)
+	void BaseScene::DestroyObjectAtEndOfFrame(GameObject* obj)
 	{
 #if _DEBUG
-		auto iter = std::find(m_ObjectsToRemoveAtEndOfFrame.begin(), m_ObjectsToRemoveAtEndOfFrame.end(), obj);
-		if (iter != m_ObjectsToRemoveAtEndOfFrame.end())
+		auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), obj);
+		if (iter != m_ObjectsToDestroyAtEndOfFrame.end())
 		{
 			PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", obj->GetName().c_str());
 		}
 #endif
-		m_ObjectsToRemoveAtEndOfFrame.push_back(obj);
+		m_ObjectsToDestroyAtEndOfFrame.push_back(obj);
 	}
 
-	void BaseScene::RemoveObjectsAtEndOfFrame(const std::vector<GameObject*>& objs)
+	void BaseScene::DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs)
 	{
 #if _DEBUG
 		for (auto o : objs)
 		{
-			auto iter = std::find(m_ObjectsToRemoveAtEndOfFrame.begin(), m_ObjectsToRemoveAtEndOfFrame.end(), o);
-			if (iter != m_ObjectsToRemoveAtEndOfFrame.end())
+			auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), o);
+			if (iter != m_ObjectsToDestroyAtEndOfFrame.end())
 			{
 				PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", o->GetName().c_str());
 			}
 		}
 #endif
-		m_ObjectsToRemoveAtEndOfFrame.insert(m_ObjectsToRemoveAtEndOfFrame.end(), objs.begin(), objs.end());
+		m_ObjectsToDestroyAtEndOfFrame.insert(m_ObjectsToDestroyAtEndOfFrame.end(), objs.begin(), objs.end());
 	}
 
 	void BaseScene::AddObjectAtEndOFFrame(GameObject* obj)
@@ -932,14 +931,14 @@ namespace flex
 		return gameObject;
 	}
 
-	void BaseScene::RemoveRootObject(GameObject* gameObject, bool deleteRootObject)
+	void BaseScene::RemoveRootObject(GameObject* gameObject, bool bDestroy)
 	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
 		{
 			if (*iter == gameObject)
 			{
-				if (deleteRootObject)
+				if (bDestroy)
 				{
 					SafeDelete(*iter);
 				}
@@ -958,12 +957,12 @@ namespace flex
 		PrintWarn("Attempting to remove non-existent child from scene %s\n", m_Name.c_str());
 	}
 
-	void BaseScene::RemoveAllRootObjects(bool deleteRootObjects)
+	void BaseScene::RemoveAllRootObjects(bool bDestroy)
 	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
 		{
-			if (deleteRootObjects)
+			if (bDestroy)
 			{
 				delete *iter;
 			}

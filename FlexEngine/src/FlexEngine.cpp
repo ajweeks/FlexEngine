@@ -1441,7 +1441,7 @@ namespace flex
 			{
 				if (!m_CurrentlySelectedObjects.empty())
 				{
-					g_SceneManager->CurrentScene()->RemoveObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
+					g_SceneManager->CurrentScene()->DestroyObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
 
 					DeselectCurrentlySelectedObjects();
 				}
@@ -1650,6 +1650,11 @@ namespace flex
 			}
 
 			g_Window->Update();
+
+			if (bSimulateFrame)
+			{
+				g_SceneManager->CurrentScene()->LateUpdate();
+			}
 
 			bool bWriteProfilingResultsToFile = g_InputManager->GetKeyPressed(Input::KeyCode::KEY_K);
 
