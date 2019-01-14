@@ -106,7 +106,8 @@ namespace flex
 #endif // _DEBUG
 
 		// Don't hide window when losing focus in Windowed Fullscreen
-		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_TRUE);
+		glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
 
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
