@@ -2290,7 +2290,7 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->enabled)
+			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->IsVisible())
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
@@ -2803,7 +2803,7 @@ namespace flex
 			glm::vec3 camUp = cam->GetUp();
 			for (PointLight* pointLight : m_PointLights)
 			{
-				if (pointLight->enabled)
+				if (pointLight->IsVisible())
 				{
 					// TODO: Sort back to front? Or clear depth and then enable depth test
 					drawInfo.pos = pointLight->GetPos();
@@ -2816,7 +2816,7 @@ namespace flex
 				}
 			}
 
-			if (m_DirectionalLight->enabled)
+			if (m_DirectionalLight->IsVisible())
 			{
 				drawInfo.color = m_DirectionalLight->color * 1.5f;
 				drawInfo.color.a = m_DirectionalLight->color.a;
@@ -4862,7 +4862,7 @@ namespace flex
 				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::DIR_LIGHT))
 				{
 					static const char* dirLightEnabledStr = "dirLight.enabled";
-					if (m_DirectionalLight->enabled)
+					if (m_DirectionalLight->IsVisible())
 					{
 						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
 						static const char* dirLightDirectionStr = "dirLight.direction";
@@ -4896,7 +4896,7 @@ namespace flex
 						strcat_s(enabledStr, dotEnabledStr);
 						if (i < m_PointLights.size())
 						{
-							if (m_PointLights[i]->enabled)
+							if (m_PointLights[i]->IsVisible())
 							{
 								SetUInt(material->material.shaderID, enabledStr, 1);
 
@@ -6321,8 +6321,9 @@ namespace flex
 				static const char* newPointLightStr = "Add point light";
 				if (ImGui::Button(newPointLightStr))
 				{
-					PointLight* newPointLight = new PointLight();
-					g_SceneManager->CurrentScene()->AddRootObject(newPointLight);
+					BaseScene* scene = g_SceneManager->CurrentScene();
+					PointLight* newPointLight = new PointLight(scene);
+					scene->AddRootObject(newPointLight);
 					RegisterPointLight(newPointLight);
 				}
 			}

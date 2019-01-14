@@ -2539,11 +2539,7 @@ namespace flex
 
 		if (ImGui::TreeNode("Directional Light"))
 		{
-			bool bDirLightEnabled = (enabled == 1);
-			if (ImGui::Checkbox("Enabled", &bDirLightEnabled))
-			{
-				enabled = bDirLightEnabled ? 1 : 0;
-			}
+			ImGui::Checkbox("Enabled", &m_bVisible);
 
 			glm::vec3 pos = m_Transform.GetLocalPosition();
 			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
@@ -2616,7 +2612,7 @@ namespace flex
 
 			if (directionalLightObj.HasField("enabled"))
 			{
-				enabled = directionalLightObj.GetBool("enabled") ? 1 : 0;
+				m_bVisible = directionalLightObj.GetBool("enabled") ? 1 : 0;
 			}
 
 			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
@@ -2653,7 +2649,7 @@ namespace flex
 		std::string colorStr = Vec3ToString(color, 2);
 		dirLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
-		dirLightObj.fields.emplace_back("enabled", JSONValue(enabled != 0));
+		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
 		dirLightObj.fields.emplace_back("brightness", JSONValue(brightness));
 
 		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
@@ -2670,7 +2666,7 @@ namespace flex
 		return other.m_Transform.GetLocalRotation() == m_Transform.GetLocalRotation() &&
 			other.m_Transform.GetLocalPosition() == m_Transform.GetLocalPosition() &&
 			other.color == color &&
-			other.enabled == enabled &&
+			other.m_bVisible == m_bVisible &&
 			other.brightness == brightness;
 	}
 
@@ -2679,8 +2675,8 @@ namespace flex
 		m_Transform.SetLocalRotation(rot);
 	}
 
-	PointLight::PointLight() :
-		GameObject("Point Light", GameObjectType::POINT_LIGHT)
+	PointLight::PointLight(BaseScene* scene) :
+		GameObject(scene->GetUniqueObjectName("PointLight_", 2), GameObjectType::POINT_LIGHT)
 	{
 	}
 
@@ -2729,12 +2725,6 @@ namespace flex
 
 		if (!bRemovedPointLight && bTreeOpen)
 		{
-			bool bPointLightEnabled = (enabled == 1);
-			if (ImGui::Checkbox("enabled", &bPointLightEnabled))
-			{
-				enabled = bPointLightEnabled ? 1 : 0;
-			}
-
 			glm::vec3 pos = m_Transform.GetLocalPosition();
 			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
 			{
@@ -2777,7 +2767,7 @@ namespace flex
 
 			if (pointLightObj.HasField("enabled"))
 			{
-				enabled = pointLightObj.GetBool("enabled") ? 1 : 0;
+				m_bVisible = pointLightObj.GetBool("enabled") ? 1 : 0;
 			}
 		}
 	}
@@ -2792,7 +2782,7 @@ namespace flex
 		std::string colorStr = Vec3ToString(color, 2);
 		pointLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
-		pointLightObj.fields.emplace_back("enabled", JSONValue(enabled != 0));
+		pointLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
 		pointLightObj.fields.emplace_back("brightness", JSONValue(brightness));
 
 		parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
@@ -2802,7 +2792,7 @@ namespace flex
 	{
 		return other.GetTransform()->GetLocalPosition() == m_Transform.GetLocalPosition() &&
 			other.color == color &&
-			other.enabled == enabled &&
+			other.m_bVisible == m_bVisible &&
 			other.brightness == brightness;
 	}
 

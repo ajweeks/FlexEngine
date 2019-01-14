@@ -123,8 +123,7 @@ namespace flex
 		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 
 	protected:
-		friend class BaseClass;
-		friend class BaseScene;
+		friend BaseScene;
 
 		static const char* s_DefaultNewGameObjectName;
 
@@ -230,7 +229,6 @@ namespace flex
 		glm::quat GetRot() const;
 
 		glm::vec4 color = VEC4_ONE;
-		u32 enabled = 1;
 		real brightness = 1.0f;
 
 		real shadowOpacity = 0.0f;
@@ -250,7 +248,7 @@ namespace flex
 	class PointLight : public GameObject
 	{
 	public:
-		PointLight();
+		PointLight(BaseScene* scene);
 		PointLight(const std::string& name);
 
 		virtual void Initialize() override;
@@ -263,7 +261,6 @@ namespace flex
 		glm::vec3 GetPos() const;
 
 		glm::vec4 color = VEC4_ONE;
-		u32 enabled = 1;
 		real brightness = 500.0f;
 
 	protected:
