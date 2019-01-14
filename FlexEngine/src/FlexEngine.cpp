@@ -2004,20 +2004,6 @@ namespace flex
 
 				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
 
-				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-				if (p0)
-				{
-					p0->DrawImGuiObjects();
-					p0->GetController()->DrawImGuiObjects();
-				}
-
-				Player* p1 = g_SceneManager->CurrentScene()->GetPlayer(1);
-				if (p1)
-				{
-					p1->DrawImGuiObjects();
-					p1->GetController()->DrawImGuiObjects();
-				}
-
 				if (ImGui::TreeNode("Spring"))
 				{
 					real* DR = &m_TestSprings[0].DR;

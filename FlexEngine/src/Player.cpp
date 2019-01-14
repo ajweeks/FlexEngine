@@ -519,6 +519,8 @@ namespace flex
 
 	void Player::DrawImGuiObjects()
 	{
+		GameObject::DrawImGuiObjects();
+
 		std::string treeNodeName = "Player " + IntToString(m_Index);
 		if (ImGui::TreeNode(treeNodeName.c_str()))
 		{
