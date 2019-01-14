@@ -1,7 +1,8 @@
 
 _2019_
 January
-- 
+- Markup OpenGL render passes for easier debugging in RenderDoc
+- Save console output to FlexEngine.log periodically
 - Replace Assimp with tinygltf
 
 

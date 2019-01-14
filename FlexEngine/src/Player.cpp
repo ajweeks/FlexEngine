@@ -141,155 +141,156 @@ namespace flex
 
 	void Player::Update()
 	{
-		if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::X))
+		if (m_bPossessed)
 		{
-			Player* p = (Player*)this;
-
-			if (p->m_ObjectInteractingWith)
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::X))
 			{
-				// Toggle interaction when already interacting
-				p->m_ObjectInteractingWith->SetInteractingWith(nullptr);
-				p->SetInteractingWith(nullptr);
-			}
-			else
-			{
-				std::vector<GameObject*> interactibleObjects;
-				g_SceneManager->CurrentScene()->GetInteractibleObjects(interactibleObjects);
+				Player* p = (Player*)this;
 
-				if (interactibleObjects.empty())
+				if (p->m_ObjectInteractingWith)
 				{
+					// Toggle interaction when already interacting
+					p->m_ObjectInteractingWith->SetInteractingWith(nullptr);
 					p->SetInteractingWith(nullptr);
 				}
 				else
 				{
-					GameObject* interactibleObj = nullptr;
+					std::vector<GameObject*> interactibleObjects;
+					g_SceneManager->CurrentScene()->GetInteractibleObjects(interactibleObjects);
 
-					for (GameObject* obj : interactibleObjects)
+					if (interactibleObjects.empty())
 					{
-						if (Find(overlappingObjects, obj) != overlappingObjects.end())
-						{
-							interactibleObj = obj;
-						}
+						p->SetInteractingWith(nullptr);
 					}
-
-					if (interactibleObj)
+					else
 					{
-						GameObject* objInteractingWith = interactibleObj->GetObjectInteractingWith();
-						if (objInteractingWith == nullptr)
+						GameObject* interactableObj = nullptr;
+
+						for (GameObject* obj : interactibleObjects)
 						{
-							interactibleObj->SetInteractingWith(p);
-							p->SetInteractingWith(interactibleObj);
+							if (Find(overlappingObjects, obj) != overlappingObjects.end())
+							{
+								interactableObj = obj;
+							}
+						}
+
+						if (interactableObj)
+						{
+							GameObject* objInteractingWith = interactableObj->GetObjectInteractingWith();
+							if (objInteractingWith == nullptr)
+							{
+								interactableObj->SetInteractingWith(p);
+								p->SetInteractingWith(interactableObj);
+							}
 						}
 					}
 				}
 			}
-		}
 
-		if (m_bPossessed &&
-			(g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A) ||
-			(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_E))))
-		{
-			m_bTabletUp = !m_bTabletUp;
-		}
-
-
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C))
-		{
-			// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
-			Cart* cart = new Cart();
-			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
-			m_Inventory.push_back(cart);
-		}
-
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_V))
-		{
-			// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
-			EngineCart* engineCart = new EngineCart();
-			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(engineCart);
-			m_Inventory.push_back(engineCart);
-		}
-
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_B))
-		{
-			// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
-			MobileLiquidBox* box = new MobileLiquidBox();
-			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
-			m_Inventory.push_back(box);
-		}
-
-		if (!m_Inventory.empty())
-		{
-			// Place item in inventory
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_SPACE)))
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_E)))
 			{
-				GameObject* obj = m_Inventory[0];
-				bool bPlaced = false;
+				m_bTabletUp = !m_bTabletUp;
+			}
 
-				if (EngineCart* engineCart = dynamic_cast<EngineCart*>(obj))
-				{
-					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-					glm::vec3 samplePos = m_Transform.GetWorldPosition() + m_Transform.GetForward() * 1.5f;
-					real rangeThreshold = 4.0f;
-					real distAlongNearestTrack;
-					TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C))
+			{
+				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
+				Cart* cart = new Cart();
+				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
+				m_Inventory.push_back(cart);
+			}
 
-					if (nearestTrackID != InvalidTrackID)
-					{
-						bPlaced = true;
-						engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-					}
-				}
-				else if(Cart* cart = dynamic_cast<Cart*>(obj))
-				{
-					TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-					glm::vec3 samplePos = m_Transform.GetWorldPosition() + m_Transform.GetForward() * 1.5f;
-					real rangeThreshold = 4.0f;
-					real distAlongNearestTrack;
-					TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_V))
+			{
+				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
+				EngineCart* engineCart = new EngineCart();
+				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(engineCart);
+				m_Inventory.push_back(engineCart);
+			}
 
-					if (nearestTrackID != InvalidTrackID)
-					{
-						bPlaced = true;
-						cart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-					}
-				}
-				else if (MobileLiquidBox* box = dynamic_cast<MobileLiquidBox*>(obj))
+			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_B))
+			{
+				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
+				MobileLiquidBox* box = new MobileLiquidBox();
+				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+				m_Inventory.push_back(box);
+			}
+
+			if (!m_Inventory.empty())
+			{
+				// Place item in inventory
+				if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
+					(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_SPACE)))
 				{
-					std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
-					glm::vec3 playerPos = m_Transform.GetWorldPosition();
-					real threshold = 8.0f;
-					real closestCartDist = threshold;
-					i32 closestCartIdx = -1;
-					for (i32 i = 0; i < (i32)carts.size(); ++i)
+					GameObject* obj = m_Inventory[0];
+					bool bPlaced = false;
+
+					if (EngineCart* engineCart = dynamic_cast<EngineCart*>(obj))
 					{
-						real d = glm::distance(carts[i]->GetTransform()->GetWorldPosition(), playerPos);
-						if (d <= closestCartDist)
+						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+						glm::vec3 samplePos = m_Transform.GetWorldPosition() + m_Transform.GetForward() * 1.5f;
+						real rangeThreshold = 4.0f;
+						real distAlongNearestTrack;
+						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+
+						if (nearestTrackID != InvalidTrackID)
 						{
-							closestCartDist = d;
-							closestCartIdx = i;
+							bPlaced = true;
+							engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
 						}
 					}
-
-					if (closestCartIdx != -1)
+					else if(Cart* cart = dynamic_cast<Cart*>(obj))
 					{
-						if (carts[closestCartIdx]->GetParent() == nullptr)
+						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+						glm::vec3 samplePos = m_Transform.GetWorldPosition() + m_Transform.GetForward() * 1.5f;
+						real rangeThreshold = 4.0f;
+						real distAlongNearestTrack;
+						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+
+						if (nearestTrackID != InvalidTrackID)
 						{
-							g_SceneManager->CurrentScene()->RemoveRootObject(carts[closestCartIdx], false);
+							bPlaced = true;
+							cart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+						}
+					}
+					else if (MobileLiquidBox* box = dynamic_cast<MobileLiquidBox*>(obj))
+					{
+						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
+						glm::vec3 playerPos = m_Transform.GetWorldPosition();
+						real threshold = 8.0f;
+						real closestCartDist = threshold;
+						i32 closestCartIdx = -1;
+						for (i32 i = 0; i < (i32)carts.size(); ++i)
+						{
+							real d = glm::distance(carts[i]->GetTransform()->GetWorldPosition(), playerPos);
+							if (d <= closestCartDist)
+							{
+								closestCartDist = d;
+								closestCartIdx = i;
+							}
 						}
 
-						carts[closestCartIdx]->AddChild(box);
-						box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
-					}
-				}
-				else
-				{
-					PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", obj->GetName().c_str());
-				}
+						if (closestCartIdx != -1)
+						{
+							if (carts[closestCartIdx]->GetParent() == nullptr)
+							{
+								g_SceneManager->CurrentScene()->RemoveRootObject(carts[closestCartIdx], false);
+							}
 
-				if (bPlaced)
-				{
-					m_Inventory.erase(m_Inventory.begin());
+							carts[closestCartIdx]->AddChild(box);
+							box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
+						}
+					}
+					else
+					{
+						PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", obj->GetName().c_str());
+					}
+
+					if (bPlaced)
+					{
+						m_Inventory.erase(m_Inventory.begin());
+					}
 				}
 			}
 		}
@@ -537,6 +538,14 @@ namespace flex
 				ImGui::Text("Track state: %s", (TrackStateToString(m_TrackState)));
 				ImGui::Unindent();
 			}
+
+			ImGui::Text("Inventory:");
+			ImGui::Indent();
+			for (GameObject* gameObject : m_Inventory)
+			{
+				ImGui::Text(gameObject->GetName().c_str());
+			}
+			ImGui::Unindent();
 
 			ImGui::TreePop();
 		}

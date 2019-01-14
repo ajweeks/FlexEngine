@@ -1803,7 +1803,7 @@ namespace flex
 
 		if (ImGui::BeginMainMenuBar())
 		{
-			if (ImGui::BeginMenu("Actions"))
+			if (ImGui::BeginMenu("File"))
 			{
 #if COMPILE_RENDERDOC_API
 				if (m_RenderDocAPI && ImGui::MenuItem("Capture RenderDoc frame"))
@@ -1864,22 +1864,45 @@ namespace flex
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::BeginMenu("View"))
+			if (ImGui::BeginMenu("Edit"))
 			{
-				if (ImGui::MenuItem("Main Window"))
+				if (ImGui::BeginMenu("Add to inventory"))
 				{
-					m_bMainWindowShowing = !m_bMainWindowShowing;
+					if (ImGui::MenuItem("Cart"))
+					{
+						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+						Cart* cart = new Cart();
+						g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
+						player->AddToInventory(cart);
+					}
+
+					if (ImGui::MenuItem("Engine cart"))
+					{
+						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+						EngineCart* engineCart = new EngineCart();
+						g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(engineCart);
+						player->AddToInventory(engineCart);
+					}
+
+					if (ImGui::MenuItem("Mobile liquid box"))
+					{
+						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+						MobileLiquidBox* box = new MobileLiquidBox();
+						g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+						player->AddToInventory(box);
+					}
+
+					ImGui::EndMenu();
 				}
 
-				if (ImGui::MenuItem("Asset Browser"))
-				{
-					m_bAssetBrowserShowing = !m_bAssetBrowserShowing;
-				}
+				ImGui::EndMenu();
+			}
 
-				if (ImGui::MenuItem("Demo Window"))
-				{
-					m_bDemoWindowShowing = !m_bDemoWindowShowing;
-				}
+			if (ImGui::BeginMenu("Window"))
+			{
+				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
+				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
+				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
 
 				ImGui::EndMenu();
 			}
@@ -1938,15 +1961,10 @@ namespace flex
 					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
 					static const char* renderNameStr = rendererNameStringStr.c_str();
 					ImGui::TextUnformatted(renderNameStr);
-
 					ImGui::Text("Number of available renderers: %d", m_RendererCount);
-
 					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
-
 					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
-
 					ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());
-
 					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
 
 					ImGui::TreePop();
@@ -1955,7 +1973,6 @@ namespace flex
 				if (ImGui::TreeNode("Misc settings"))
 				{
 					ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
-
 					ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
 
 					if (ImGui::Button("Display latest frame"))
