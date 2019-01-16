@@ -429,7 +429,9 @@ namespace flex
 
 		real moveDirection = 1.0f; // -1.0f or 1.0f
 		real powerRemaining = 1.0f;
+
 		real powerDrainMultiplier = 0.1f;
+		real speed = 0.25f;
 
 		static const char* engineMeshName;
 

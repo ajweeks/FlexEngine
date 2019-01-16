@@ -3031,7 +3031,7 @@ namespace flex
 
 	real EngineCart::GetDrivePower() const
 	{
-		return powerRemaining * moveDirection;
+		return (1.0f - glm::pow(1.0f - powerRemaining, 5.0f)) * moveDirection * speed;
 	}
 
 	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
