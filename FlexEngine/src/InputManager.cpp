@@ -318,7 +318,7 @@ namespace flex
 
 			ImGuiIO& io = ImGui::GetIO();
 
-			if (g_InputManager->IsAnyMouseButtonDown(true))
+			if (g_InputManager->IsAnyMouseButtonDown(true) && !io.WantCaptureMouse)
 			{
 				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (m_MousePosition.x >= (real)(frameBufferSize.x - 1))
