@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Track/TrackManager.hpp"
+#include "Managers/CartManager.hpp"
 
 namespace flex
 {
@@ -104,6 +105,7 @@ namespace flex
 		}
 
 		TrackManager* GetTrackManager();
+		CartManager* GetCartManager();
 
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
@@ -155,6 +157,7 @@ namespace flex
 		Player* m_Player1 = nullptr;
 
 		TrackManager m_TrackManager;
+		CartManager m_CartManager;
 
 		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
 		std::vector<GameObject*> m_ObjectsToDestroyAtEndOfFrame;

@@ -21,17 +21,17 @@ namespace flex
 {
 	const real TrackManager::JUNCTION_THRESHOLD_DIST = 0.01f;
 
-	void CartChain::AddUnique(Cart* cart)
+	void CartChain::AddUnique(CartID cartID)
 	{
-		if (std::find(carts.begin(), carts.end(), cart) == carts.end())
+		if (std::find(carts.begin(), carts.end(), cartID) == carts.end())
 		{
 			carts.push_back(cart);
 		}
 	}
 
-	void CartChain::Remove(Cart* cart)
+	void CartChain::Remove(CartID cartID)
 	{
-		auto iter = std::find(carts.begin(), carts.end(), cart);
+		auto iter = std::find(carts.begin(), carts.end(), cartID);
 		if (iter == carts.end())
 		{
 			PrintWarn("Attempted to remove cart from CartChain which isn't present!\n");
@@ -42,9 +42,9 @@ namespace flex
 		carts.erase(iter);
 	}
 
-	bool CartChain::Contains(Cart* cart) const
+	bool CartChain::Contains(CartID cartID) const
 	{
-		return (std::find(carts.begin(), carts.end(), cart) != carts.end());
+		return (std::find(carts.begin(), carts.end(), cartID) != carts.end());
 	}
 
 	bool CartChain::operator!=(const CartChain& other)
@@ -109,7 +109,7 @@ namespace flex
 
 	void TrackManager::Update()
 	{
-		std::vector<Cart*> allCarts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
+		CartManager* cartManager = g_SceneManager->GetCartManager();
 
 		for (i32 i = 0; i < (i32)allCarts.size(); ++i)
 		{
@@ -932,7 +932,7 @@ namespace flex
 		return result;
 	}
 
-	real TrackManager::GetChainDrivePower(CartChainID cartChainID) const
+	CartID TrackManager::GetFinalCartInChain(CartChainID cartChainID) const
 	{
 		real drivePower = 0.0f;
 

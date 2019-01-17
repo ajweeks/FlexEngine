@@ -135,6 +135,7 @@ namespace flex
 
 		std::string objectName = obj.GetString("name");
 
+		// TODO: Use managers here to spawn objects!
 		switch (gameObjectType)
 		{
 		case GameObjectType::PLAYER:
@@ -162,7 +163,9 @@ namespace flex
 			newGameObject = new DirectionalLight(objectName);
 			break;
 		case GameObjectType::CART:
-			newGameObject = new Cart(objectName);
+			CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
+			CartID newCartID = cartManager->CreateCart(objectName);
+			newGameObject = cartManager->GetCart(newCartID);
 			break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::NONE:

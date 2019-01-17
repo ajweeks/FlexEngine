@@ -55,6 +55,7 @@ namespace flex
 	using PointLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
+	using CartID = u32;
 	using CartChainID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)

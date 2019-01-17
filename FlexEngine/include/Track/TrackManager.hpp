@@ -12,14 +12,14 @@ namespace flex
 
 	struct CartChain
 	{
-		void AddUnique(Cart* cart);
-		void Remove(Cart* cart);
-		bool Contains(Cart* cart) const;
+		void AddUnique(CartID cartID);
+		void Remove(CartID cartID);
+		bool Contains(CartID cartID) const;
 
 		bool operator!=(const CartChain& other);
 		bool operator==(const CartChain& other);
 
-		std::vector<Cart*> carts;
+		std::vector<CartID> carts;
 	};
 
 	struct Junction

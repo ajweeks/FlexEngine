@@ -60,6 +60,7 @@ namespace flex
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
 		m_TrackManager = TrackManager();
+		m_CartManager = CartManager();
 
 		// Use save file if exists, otherwise use default
 		const std::string savedShortPath = "scenes/saved/" + m_FileName;
@@ -672,6 +673,11 @@ namespace flex
 	TrackManager* BaseScene::GetTrackManager()
 	{
 		return &m_TrackManager;
+	}
+
+	CartManager* BaseScene::GetCartManager()
+	{
+		return &m_CartManager;
 	}
 
 	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
