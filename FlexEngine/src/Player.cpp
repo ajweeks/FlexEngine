@@ -196,16 +196,18 @@ namespace flex
 			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
-				Cart* cart = new Cart();
-				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
+				Cart* cart = scene->GetCartManager()->GetCart(cartID);
 				m_Inventory.push_back(cart);
 			}
 
 			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_V))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
-				EngineCart* engineCart = new EngineCart();
-				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(engineCart);
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
+				EngineCart* engineCart = (EngineCart*)scene->GetCartManager()->GetCart(cartID);
 				m_Inventory.push_back(engineCart);
 			}
 

@@ -2,25 +2,11 @@
 
 #include "Helpers.hpp" // For TrackState
 #include "JSONTypes.hpp"
-#include "Types.hpp" // For OnGameObjectDestroyedFunctor
 
 namespace flex
 {
 	class BaseScene;
 	class BezierCurveList;
-	class Cart;
-
-	struct CartChain
-	{
-		void AddUnique(CartID cartID);
-		void Remove(CartID cartID);
-		bool Contains(CartID cartID) const;
-
-		bool operator!=(const CartChain& other);
-		bool operator==(const CartChain& other);
-
-		std::vector<CartID> carts;
-	};
 
 	struct Junction
 	{
@@ -39,7 +25,7 @@ namespace flex
 	class TrackManager
 	{
 	public:
-		TrackManager();
+		TrackManager(BaseScene* owningScene);
 
 		void InitializeFromJSON(const JSONObject& obj);
 
@@ -71,6 +57,8 @@ namespace flex
 		bool GetPointInRange(const glm::vec3& p, bool bIncludeHandles, real range, glm::vec3* outPoint);
 		bool GetPointInRange(const glm::vec3& p, real range, TrackID* outTrackID, i32* outCurveIndex, i32* outPointIdx);
 
+		void Destroy();
+
 		// Compares curve end points on all BezierCurves and creates junctions when positions are
 		// within a threshold of each other
 		void FindJunctions();
@@ -87,17 +75,16 @@ namespace flex
 
 		JSONObject Serialize() const;
 
-		real GetChainDrivePower(CartChainID cartChainID) const;
-
-		void OnGameObjectDestroyed(GameObject* gameObject);
+		real GetCartTargetDistAlongTrackInChain(CartChainID cartChainID, CartID cartID) const;
 
 		std::vector<BezierCurveList> m_Tracks;
 		std::vector<Junction> m_Junctions;
-		std::vector<CartChain> m_CartChains;
 
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, TrackID trackID, bool bEndOfTheLine);
 		TrackState GetTrackStateInDir(const glm::vec3& desiredDir, TrackID trackID, real distAlongTrack, bool bReversing);
+
+		BaseScene* m_OwningScene = nullptr;
 
 		static const real JUNCTION_THRESHOLD_DIST;
 

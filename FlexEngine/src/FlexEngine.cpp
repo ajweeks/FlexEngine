@@ -1870,25 +1870,30 @@ namespace flex
 				{
 					if (ImGui::MenuItem("Cart"))
 					{
-						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-						Cart* cart = new Cart();
-						g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						CartManager* cartManager = scene->GetCartManager();
+						Player* player = scene->GetPlayer(0);
+						CartID cartID = cartManager->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
+						Cart* cart = cartManager->GetCart(cartID);
 						player->AddToInventory(cart);
 					}
 
 					if (ImGui::MenuItem("Engine cart"))
 					{
-						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-						EngineCart* engineCart = new EngineCart();
-						g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(engineCart);
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						CartManager* cartManager = scene->GetCartManager();
+						Player* player = scene->GetPlayer(0);
+						CartID cartID = cartManager->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
+						EngineCart* engineCart = (EngineCart*)cartManager->GetCart(cartID);
 						player->AddToInventory(engineCart);
 					}
 
 					if (ImGui::MenuItem("Mobile liquid box"))
 					{
-						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						Player* player = scene->GetPlayer(0);
 						MobileLiquidBox* box = new MobileLiquidBox();
-						g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+						scene->AddObjectAtEndOFFrame(box);
 						player->AddToInventory(box);
 					}
 
@@ -2018,6 +2023,8 @@ namespace flex
 				ImGui::Text("Debugging");
 
 				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
+
+				g_SceneManager->CurrentScene()->GetCartManager()->DrawImGuiObjects();
 
 				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
 

@@ -117,7 +117,8 @@ namespace flex
 		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
 
 	protected:
-		friend class GameObject;
+		friend GameObject;
+		friend CartManager;
 
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted

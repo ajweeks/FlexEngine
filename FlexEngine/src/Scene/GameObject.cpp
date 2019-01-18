@@ -40,7 +40,7 @@ namespace flex
 	{
 		if (g_SceneManager)
 		{
-			g_SceneManager->CurrentScene()->GetTrackManager()->OnGameObjectDestroyed(obj);
+			g_SceneManager->CurrentScene()->GetCartManager()->OnGameObjectDestroyed(obj);
 		}
 	}
 
@@ -163,10 +163,11 @@ namespace flex
 			newGameObject = new DirectionalLight(objectName);
 			break;
 		case GameObjectType::CART:
+		{
 			CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
 			CartID newCartID = cartManager->CreateCart(objectName);
 			newGameObject = cartManager->GetCart(newCartID);
-			break;
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -2799,18 +2800,18 @@ namespace flex
 			other.brightness == brightness;
 	}
 
-	Cart::Cart(GameObjectType type /* = GameObjectType::CART */) :
-		Cart(g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4), type)
+	Cart::Cart(CartID cartID, GameObjectType type /* = GameObjectType::CART */) :
+		Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4), type)
 	{
 	}
 
-	Cart::Cart(const std::string& name,
+	Cart::Cart(CartID cartID,
+		const std::string& name,
 		GameObjectType type /* = GameObjectType::CART */,
 		const char* meshName /* = "emptyCartMeshName" */) :
-		GameObject(name, type)
+		GameObject(name, type),
+		cartID(cartID)
 	{
-		SetRigidBody(new RigidBody());
-		SetCollisionShape(new btBoxShape(btVector3(1.0f, 1.0f, 1.0f)));
 		MaterialID matID;
 		if (!g_Renderer->GetMaterialID("pbr grey", matID))
 		{
@@ -2824,11 +2825,14 @@ namespace flex
 		{
 			PrintWarn("Failed to load cart mesh!\n");
 		}
+
+		m_TSpringToCartAhead.DR = 1.0f;
 	}
 
 	GameObject* Cart::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		Cart* newGameObject = new Cart();
+		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
+		Cart* newGameObject = new Cart(cartID);
 
 		newGameObject->currentTrackID = currentTrackID;
 		newGameObject->distAlongTrack = distAlongTrack;
@@ -2845,7 +2849,11 @@ namespace flex
 			if (chainID != InvalidCartChainID)
 			{
 				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-				real dT = trackManager->GetChainDrivePower(chainID) * g_DeltaTime;
+				real targetT = trackManager->GetCartTargetDistAlongTrackInChain(chainID, cartID);
+
+				m_TSpringToCartAhead.targetPos = targetT;
+				m_TSpringToCartAhead.Tick(g_DeltaTime);
+				real dT = (m_TSpringToCartAhead.pos - distAlongTrack);
 
 				AdvanceAlongTrack(dT);
 			}
@@ -2863,6 +2871,11 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+	}
+
+	real Cart::GetDrivePower() const
+	{
+		return 0.0f;
 	}
 
 	void Cart::OnTrackMount(TrackID trackID, real newDistAlongTrack)
@@ -2960,19 +2973,20 @@ namespace flex
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
 	}
 
-	EngineCart::EngineCart() :
-		Cart(g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 4), GameObjectType::ENGINE_CART, engineMeshName)
+	EngineCart::EngineCart(CartID cartID) :
+		Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 4), GameObjectType::ENGINE_CART, engineMeshName)
 	{
 	}
 
-	EngineCart::EngineCart(const std::string& name) :
-		Cart(name, GameObjectType::ENGINE_CART, engineMeshName)
+	EngineCart::EngineCart(CartID cartID, const std::string& name) :
+		Cart(cartID, name, GameObjectType::ENGINE_CART, engineMeshName)
 	{
 	}
 
 	GameObject* EngineCart::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		EngineCart* newGameObject = new EngineCart();
+		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
+		EngineCart* newGameObject = new EngineCart(cartID);
 
 		newGameObject->powerRemaining = powerRemaining;
 
