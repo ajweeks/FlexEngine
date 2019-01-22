@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Audio/RandomizedAudioSource.hpp"
+#include "Spring.hpp"
 #include "Transform.hpp"
 
 class btCollisionShape;
@@ -381,13 +382,13 @@ namespace flex
 	class Cart : public GameObject
 	{
 	public:
-		Cart(GameObjectType type = GameObjectType::CART);
-		Cart(const std::string& name, GameObjectType type = GameObjectType::CART, const char* meshName = emptyCartMeshName);
+		Cart(CartID cartID, GameObjectType type = GameObjectType::CART);
+		Cart(CartID cartID, const std::string& name, GameObjectType type = GameObjectType::CART, const char* meshName = emptyCartMeshName);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
-		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
+		virtual real GetDrivePower() const;
 
 		void OnTrackMount(TrackID trackID, real newDistAlongTrack);
 		void OnTrackDismount();
@@ -398,11 +399,21 @@ namespace flex
 		// Advances along track, rotates to face correct direction
 		void AdvanceAlongTrack(real dT);
 
+		// Returns velocity
+		real UpdatePosition();
+
+		CartID cartID = InvalidCartID;
+
 		TrackID currentTrackID = InvalidTrackID;
 		real distAlongTrack = -1.0f;
+		real velocityT = 1.0f;
+
+		real distToRearNeighbor = -1.0f;
 
 		// Non-serialized fields
-		real attachThreshold = 0.5f;
+		real attachThreshold = 1.5f;
+
+		Spring<real> m_TSpringToCartAhead;
 
 		CartChainID chainID = InvalidCartChainID;
 
@@ -417,21 +428,21 @@ namespace flex
 	class EngineCart : public Cart
 	{
 	public:
-		EngineCart();
-		EngineCart(const std::string& name);
+		EngineCart(CartID cartID);
+		EngineCart(CartID cartID, const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
+		virtual real GetDrivePower() const override;
 
-		real GetDrivePower() const;
 
 		real moveDirection = 1.0f; // -1.0f or 1.0f
 		real powerRemaining = 1.0f;
 
 		real powerDrainMultiplier = 0.1f;
-		real speed = 0.25f;
+		real speed = 0.1f;
 
 		static const char* engineMeshName;
 

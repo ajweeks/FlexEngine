@@ -55,6 +55,7 @@ namespace flex
 	using PointLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
+	using CartID = u32;
 	using CartChainID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
@@ -64,6 +65,7 @@ namespace flex
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidAudioSourceID ((AudioSourceID)u32_max)
 #define InvalidTrackID ((TrackID)u32_max)
+#define InvalidCartID ((CartChainID)u32_max)
 #define InvalidCartChainID ((CartChainID)u32_max)
 
 	template<bool> struct StaticAssert;

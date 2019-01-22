@@ -196,16 +196,18 @@ namespace flex
 			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
-				Cart* cart = new Cart();
-				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(cart);
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
+				Cart* cart = scene->GetCartManager()->GetCart(cartID);
 				m_Inventory.push_back(cart);
 			}
 
 			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_V))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
-				EngineCart* engineCart = new EngineCart();
-				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(engineCart);
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
+				EngineCart* engineCart = (EngineCart*)scene->GetCartManager()->GetCart(cartID);
 				m_Inventory.push_back(engineCart);
 			}
 
@@ -273,10 +275,12 @@ namespace flex
 
 						if (closestCartIdx != -1)
 						{
-							if (carts[closestCartIdx]->GetParent() == nullptr)
+							if (box->GetParent() == nullptr)
 							{
-								g_SceneManager->CurrentScene()->RemoveRootObject(carts[closestCartIdx], false);
+								g_SceneManager->CurrentScene()->RemoveRootObject(box, false);
 							}
+
+							bPlaced = true;
 
 							carts[closestCartIdx]->AddChild(box);
 							box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));

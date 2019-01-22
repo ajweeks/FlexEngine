@@ -38,7 +38,9 @@ namespace flex
 	std::vector<JSONObject> BaseScene::s_ParsedPrefabs;
 
 	BaseScene::BaseScene(const std::string& fileName) :
-		m_FileName(fileName)
+		m_FileName(fileName),
+		m_TrackManager(this),
+		m_CartManager(this)
 	{
 	}
 
@@ -59,7 +61,6 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
-		m_TrackManager = TrackManager();
 
 		// Use save file if exists, otherwise use default
 		const std::string savedShortPath = "scenes/saved/" + m_FileName;
@@ -252,6 +253,9 @@ namespace flex
 		}
 		m_RootObjects.clear();
 
+		m_TrackManager.Destroy();
+		m_CartManager.Destroy();
+
 		m_LoadedMaterials.clear();
 
 		g_Renderer->ClearMaterials();
@@ -268,12 +272,15 @@ namespace flex
 
 	void BaseScene::Update()
 	{
+		PROFILE_AUTO("Update Scene");
+
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
 		m_TrackManager.Update();
+		m_CartManager.Update();
 
 		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z))
 		{
@@ -288,6 +295,11 @@ namespace flex
 			PROFILE_AUTO("Tick scene objects");
 			for (GameObject* rootObject : m_RootObjects)
 			{
+				if (rootObject == (GameObject*)0xdddddddd)
+				{
+ 					PrintWarn("ruh roh\n");
+				}
+				else
 				if (rootObject)
 				{
 					rootObject->Update();
@@ -323,6 +335,14 @@ namespace flex
 		{
 			for (GameObject* gameObject : m_ObjectsToAddAtEndOfFrame)
 			{
+#if THOROUGH_CHECKS
+				if (std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject) != m_RootObjects.end())
+				{
+					PrintWarn("Attempted to add root object multiple times!\n");
+					continue;
+				}
+#endif
+
 				m_RootObjects.push_back(gameObject);
 				gameObject->Initialize();
 				gameObject->PostInitialize();
@@ -672,6 +692,11 @@ namespace flex
 	TrackManager* BaseScene::GetTrackManager()
 	{
 		return &m_TrackManager;
+	}
+
+	CartManager* BaseScene::GetCartManager()
+	{
+		return &m_CartManager;
 	}
 
 	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
