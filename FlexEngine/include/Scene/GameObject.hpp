@@ -387,7 +387,6 @@ namespace flex
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
-		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
 		virtual real GetDrivePower() const;
 
@@ -400,13 +399,19 @@ namespace flex
 		// Advances along track, rotates to face correct direction
 		void AdvanceAlongTrack(real dT);
 
+		// Returns velocity
+		real UpdatePosition();
+
 		CartID cartID = InvalidCartID;
 
 		TrackID currentTrackID = InvalidTrackID;
 		real distAlongTrack = -1.0f;
+		real velocityT = 1.0f;
+
+		real distToRearNeighbor = -1.0f;
 
 		// Non-serialized fields
-		real attachThreshold = 0.5f;
+		real attachThreshold = 1.5f;
 
 		Spring<real> m_TSpringToCartAhead;
 
@@ -437,7 +442,7 @@ namespace flex
 		real powerRemaining = 1.0f;
 
 		real powerDrainMultiplier = 0.1f;
-		real speed = 0.25f;
+		real speed = 0.1f;
 
 		static const char* engineMeshName;
 

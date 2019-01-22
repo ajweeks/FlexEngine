@@ -2842,24 +2842,6 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Cart::Update()
-	{
-		if (currentTrackID != InvalidTrackID)
-		{
-			if (chainID != InvalidCartChainID)
-			{
-				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-				real targetT = trackManager->GetCartTargetDistAlongTrackInChain(chainID, cartID);
-
-				m_TSpringToCartAhead.targetPos = targetT;
-				m_TSpringToCartAhead.Tick(g_DeltaTime);
-				real dT = (m_TSpringToCartAhead.pos - distAlongTrack);
-
-				AdvanceAlongTrack(dT);
-			}
-		}
-	}
-
 	void Cart::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
@@ -2898,6 +2880,8 @@ namespace flex
 
 			distAlongTrack = newDistAlongTrack;
 			m_Transform.SetLocalPosition(newPos);
+
+			velocityT = (distAlongTrack > 0.5f ? -1.0f : 1.0f);
 		}
 	}
 
@@ -2938,6 +2922,8 @@ namespace flex
 			{
 				currentTrackID = newTrackID;
 				distAlongTrack = newDistAlongTrack;
+
+				velocityT = (distAlongTrack > 0.5f ? -1.0f : 1.0f);
 			}
 
 			if (currentTrackID != InvalidTrackID)
@@ -2950,6 +2936,95 @@ namespace flex
 			}
 
 			m_Transform.SetWorldPosition(newPos);
+		}
+	}
+
+	real Cart::UpdatePosition()
+	{
+		if (currentTrackID != InvalidTrackID)
+		{
+			if (chainID != InvalidCartChainID)
+			{
+				BaseScene* baseScene = g_SceneManager->CurrentScene();
+				TrackManager* trackManager = baseScene->GetTrackManager();
+
+				//real targetT = trackManager->GetCartTargetDistAlongTrackInChain(chainID, cartID);
+				//assert(targetT != -1.0f);
+
+				//m_TSpringToCartAhead.targetPos = targetT;
+				//m_TSpringToCartAhead.Tick(g_DeltaTime);
+				//real dT = (m_TSpringToCartAhead.pos - distAlongTrack);
+
+				//real newDistAlongTrack = trackManager->AdvanceTAlongTrack(currentTrackID, g_DeltaTime*0.1f, distAlongTrack);
+				//real dT = newDistAlongTrack - distAlongTrack;
+
+				//real minDist = 0.05f;
+				//real d = (targetT - distAlongTrack);
+				//real stepSize = 0.08f;
+				//if (velocityT < 0.0f && targetT > 0.75f && distAlongTrack < 0.25f)
+				//{
+				//	// Target has crossed 0.0->1.0
+				//	d = (targetT - (distAlongTrack + 1.0f));
+
+				//}
+				//else if (velocityT > 0.0f && targetT < 0.25f && distAlongTrack > 0.75f)
+				//{
+				//	// Target has crossed 1.0->0.0
+				//	d = (targetT - (distAlongTrack - 1.0f));
+				//}
+
+				//{
+				//	if (glm::abs(d) <= minDist)
+				//	{
+				//		targetT = d >= 0.0f ? targetT - minDist : targetT + minDist;
+				//		d = (targetT - distAlongTrack);
+				//	}
+				//	if (d < 0.0f)
+				//	{
+				//		stepSize = -stepSize;
+				//	}
+				//}
+				//real dA = d >= 0.0f ? std::min(d, stepSize) : -std::min(-d, -stepSize);
+				//Print("%.2f, %.2f, %.2f\n", targetT, distAlongTrack, dA);
+
+				//velocityT += dA * g_DeltaTime;
+				//real dT = velocityT * g_DeltaTime;
+
+				//real pDistAlongTrack = distAlongTrack;
+				//real newDistAlongTrack = trackManager->AdvanceTAlongTrack(currentTrackID, g_DeltaTime*chainDrivePower, distAlongTrack);
+
+				//TrackID newTrackID;
+				//real newDistAlongTrack;
+				//i32 newJunctionIdx;
+				//i32 newCurveIdx;
+				//TrackState newTrackState;
+				//trackManager->GetPointOnTrack(currentTrackID, newDistAlongTrack, distAlongTrack, LookDirection::CENTER, false, &newTrackID, &newDistAlongTrack, &newJunctionIdx, &newCurveIdx, &newTrackState, true);
+
+				//if (newTrackID != currentTrackID)
+				//{
+				//	currentTrackID = newTrackID;
+				//}
+
+				//distAlongTrack = newDistAlongTrack;
+
+				//const CartChain* chain = cartManager->GetCartChain(chainID);
+				//i32 cartInChainIndex = chain->GetCartIndex(cartID);
+				//real pDistToRearNeighbor = distToRearNeighbor;
+				//if (cartInChainIndex < (i32)chain->carts.size() - 1)
+				//{
+				//	// Not at end
+				//	distToRearNeighbor = trackManager->GetCartTargetDistAlongTrackInChain(chainID, chain->carts[cartInChainIndex + 1]);
+				//}
+
+				//real neighborDT = distToRearNeighbor - pDistToRearNeighbor;
+
+				CartManager* cartManager = baseScene->GetCartManager();
+				real chainDrivePower = cartManager->GetChainDrivePower(chainID);
+
+				real dT = g_DeltaTime * chainDrivePower * velocityT;
+				AdvanceAlongTrack(dT);
+				return dT;
+			}
 		}
 	}
 
@@ -3000,15 +3075,18 @@ namespace flex
 
 	void EngineCart::Update()
 	{
+		powerRemaining -= powerDrainMultiplier * g_DeltaTime;
+		powerRemaining = glm::max(powerRemaining, 0.0f);
+
+		if (chainID == InvalidCartChainID)
+		{
+			real dT = g_DeltaTime * GetDrivePower();
+			AdvanceAlongTrack(dT);
+		}
+
 		if (currentTrackID != InvalidTrackID && powerRemaining > 0.0f)
 		{
 			TrackID pTrackID = currentTrackID;
-
-			real dT = g_DeltaTime * GetDrivePower();
-			AdvanceAlongTrack(dT);
-
-			powerRemaining -= powerDrainMultiplier * g_DeltaTime;
-			powerRemaining = glm::max(powerRemaining, 0.0f);
 
 			bool bSwitchedTracks = (currentTrackID != pTrackID);
 			if (bSwitchedTracks)
@@ -3080,8 +3158,6 @@ namespace flex
 	MobileLiquidBox::MobileLiquidBox() :
 		GameObject(g_SceneManager->CurrentScene()->GetUniqueObjectName("MobileLiquidBox_", 4), GameObjectType::MOBILE_LIQUID_BOX)
 	{
-		SetRigidBody(new RigidBody());
-		SetCollisionShape(new btBoxShape(btVector3(0.6f, 0.6f, 0.6f)));
 		MaterialID matID;
 		if (!g_Renderer->GetMaterialID("pbr white", matID))
 		{

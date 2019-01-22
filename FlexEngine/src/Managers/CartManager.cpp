@@ -1,11 +1,15 @@
 #include "stdafx.hpp"
 
-#pragma warning(push, 0)
-#include <glm/gtx/norm.hpp> // For distance2
-#pragma warning(pop)
-
 #include "Managers/CartManager.hpp"
 
+#pragma warning(push, 0)
+#include <glm/gtx/norm.hpp> // For distance2
+
+#include <LinearMath/btIDebugDraw.h>
+#pragma warning(pop)
+
+#include "FlexEngine.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -21,11 +25,18 @@ namespace flex
 
 	void CartChain::AddUnique(CartID cartID)
 	{
+		bool bAdded = false;
 		if (std::find(carts.begin(), carts.end(), cartID) == carts.end())
 		{
 			carts.push_back(cartID);
+			bAdded = true;
 		}
 		g_SceneManager->CurrentScene()->GetCartManager()->GetCart(cartID)->chainID = chainID;
+
+		if (bAdded)
+		{
+			Sort();
+		}
 	}
 
 	void CartChain::Remove(CartID cartID)
@@ -70,6 +81,7 @@ namespace flex
 
 	real CartChain::GetCartAtIndexDistAlongTrack(i32 cartIndex)
 	{
+		assert(cartIndex >= 0 && cartIndex < (i32)carts.size());
 		return g_SceneManager->CurrentScene()->GetCartManager()->GetCart(carts[cartIndex])->distAlongTrack;
 	}
 
@@ -77,6 +89,24 @@ namespace flex
 	{
 		carts.clear();
 		chainID = InvalidCartChainID;
+	}
+
+	void CartChain::Sort()
+	{
+		if (carts.size() <= 1)
+		{
+			return;
+		}
+
+		CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
+		std::sort(carts.begin(), carts.end(), [cartManager, this](CartID cartAID, CartID cartBID) -> bool
+			{
+				assert(cartManager->GetCart(cartAID)->chainID == chainID &&
+					   cartManager->GetCart(cartBID)->chainID == chainID);
+				real distA = cartManager->GetCart(cartAID)->distAlongTrack;
+				real distB = cartManager->GetCart(cartBID)->distAlongTrack;
+				return distA > distB;
+			});
 	}
 
 	CartManager::CartManager(BaseScene* owningScene) :
@@ -223,7 +253,7 @@ namespace flex
 						}
 						else
 						{
-							// Both are already in chains, move all of c2 into c1
+							// Both are already in chains moving the same direction, move all of c2 into c1
 
 							assert(GetCart(i)->chainID != InvalidCartChainID);
 							assert(GetCart(j)->chainID != InvalidCartChainID);
@@ -236,20 +266,52 @@ namespace flex
 
 							assert(chain1 != chain2);
 
-							while (!chain2.carts.empty())
+							if ((chain1.velT > 0.0f && chain2.velT > 0.0f) ||
+								(chain1.velT < 0.0f && chain2.velT < 0.0f) ||
+								(chain1.velT == 0.0f || chain2.velT == 0.0f))
 							{
-								CartID cartID = chain2.carts[chain2.carts.size() - 1];
-								chain2.Remove(cartID);
-								chain1.AddUnique(cartID);
-							}
-							m_CartChains[c2].Reset();
+								while (!chain2.carts.empty())
+								{
+									CartID cartID = chain2.carts[chain2.carts.size() - 1];
+									chain2.Remove(cartID);
+									chain1.AddUnique(cartID);
+								}
+								m_CartChains[c2].Reset();
 
-							assert(GetCart(i)->chainID == c1);
-							assert(GetCart(j)->chainID == c1);
-							assert(m_CartChains[c2].carts.empty());
+								assert(GetCart(i)->chainID == c1);
+								assert(GetCart(j)->chainID == c1);
+								assert(m_CartChains[c2].carts.empty());
+							}
 						}
 					}
 				}
+			}
+		}
+
+		for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
+		{
+			real avgVel = 0.0f;
+			for (i32 j = 0; j < (i32)m_CartChains[i].carts.size(); ++j)
+			{
+				avgVel += GetCart(m_CartChains[i].carts[j])->UpdatePosition();
+			}
+			m_CartChains[i].velT = avgVel / m_CartChains[i].carts.size();
+		}
+
+		for (Cart* cart : m_Carts)
+		{
+			if (cart->chainID == InvalidCartChainID)
+			{
+				cart->UpdatePosition();
+			}
+		}
+
+		if (g_EngineInstance->IsRenderingEditorObjects())
+		{
+			auto debugDrawer = g_Renderer->GetDebugDrawer();
+			for (Cart* cart : m_Carts)
+			{
+				debugDrawer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
 			}
 		}
 
@@ -352,5 +414,4 @@ namespace flex
 			}
 		}
 	}
-
 } // namespace flex

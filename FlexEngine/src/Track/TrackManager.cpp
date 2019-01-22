@@ -804,12 +804,12 @@ namespace flex
 		i32 cartIndex = cartChain->GetCartIndex(cartID);
 		if (cartIndex == 0)
 		{
-			targetT = cartManager->GetCart(cartID)->distAlongTrack + cartManager->GetChainDrivePower(cartChainID);
+			targetT = cartChain->GetCartAtIndexDistAlongTrack(cartIndex + 1);
+			//targetT = cartManager->GetCart(cartID)->distAlongTrack + cartManager->GetChainDrivePower(cartChainID);
 		}
 		else
 		{
-			real cartInFrontT = cartChain->GetCartAtIndexDistAlongTrack(cartIndex - 1);
-			targetT = cartInFrontT;
+			targetT = cartChain->GetCartAtIndexDistAlongTrack(cartIndex - 1);
 		}
 
 		return targetT;

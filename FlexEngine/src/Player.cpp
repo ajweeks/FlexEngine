@@ -275,10 +275,12 @@ namespace flex
 
 						if (closestCartIdx != -1)
 						{
-							if (carts[closestCartIdx]->GetParent() == nullptr)
+							if (box->GetParent() == nullptr)
 							{
-								g_SceneManager->CurrentScene()->RemoveRootObject(carts[closestCartIdx], false);
+								g_SceneManager->CurrentScene()->RemoveRootObject(box, false);
 							}
+
+							bPlaced = true;
 
 							carts[closestCartIdx]->AddChild(box);
 							box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));

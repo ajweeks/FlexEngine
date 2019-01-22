@@ -280,6 +280,7 @@ namespace flex
 		}
 
 		m_TrackManager.Update();
+		m_CartManager.Update();
 
 		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z))
 		{

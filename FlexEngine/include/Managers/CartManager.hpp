@@ -19,8 +19,15 @@ namespace flex
 		bool operator!=(const CartChain& other);
 		bool operator==(const CartChain& other);
 
+		// Carts in order (0=rear, n=front)
 		std::vector<CartID> carts;
 		CartChainID chainID = InvalidCartChainID;
+
+		real velT;
+
+	private:
+		void Sort();
+
 	};
 
 	class CartManager
