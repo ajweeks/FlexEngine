@@ -118,7 +118,7 @@ namespace flex
 
 			glEnable(GL_DEPTH_TEST);
 			glFrontFace(GL_CCW);
-			glLineWidth(5.0f);
+			glLineWidth(3.0f);
 
 			// Prevent seams from appearing on lower mip map levels of cubemaps
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);

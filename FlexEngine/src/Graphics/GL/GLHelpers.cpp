@@ -342,11 +342,11 @@ namespace flex
 							 bool bFlipVertically,
 							 bool bGenerateMipMaps,
 							 bool bHDR) :
+			channelCount(channelCount),
 			relativeFilePath(relativeFilePath),
 			bHasMipMaps(bGenerateMipMaps),
 			bFlipVerticallyOnLoad(bFlipVertically),
-			bHDR(bHDR),
-			channelCount(channelCount)
+			bHDR(bHDR)
 		{
 			if (name.empty())
 			{

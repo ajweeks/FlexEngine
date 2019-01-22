@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #endif
 
+bool gIncludeConsole = true;
+
 int main(int argc, char *argv[])
 {
 	UNREFERENCED_PARAMETER(argc);
@@ -32,7 +34,10 @@ int main(int argc, char *argv[])
 		SafeDelete(engineInstance);
 	}
 
-	system("PAUSE");
+	if (gIncludeConsole)
+	{
+		system("PAUSE");
+	}
 
 	return 0;
 }
@@ -43,6 +48,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	UNREFERENCED_PARAMETER(nCmdShow);
+
+	gIncludeConsole = false;
 
 	return main(0, nullptr);
 }

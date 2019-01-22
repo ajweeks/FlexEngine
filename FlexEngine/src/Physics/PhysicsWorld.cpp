@@ -207,8 +207,8 @@ namespace flex
 				u32 obAFlags = obAGameObject->GetRigidBody()->GetPhysicsFlags();
 				u32 obBFlags = obBGameObject->GetRigidBody()->GetPhysicsFlags();
 
-				i32 bObATrigger = (obAFlags & (u32)PhysicsFlag::TRIGGER);
-				i32 bObBTrigger = (obBFlags & (u32)PhysicsFlag::TRIGGER);
+				u32 bObATrigger = (obAFlags & (u32)PhysicsFlag::TRIGGER);
+				u32 bObBTrigger = (obBFlags & (u32)PhysicsFlag::TRIGGER);
 				// If exactly one of the two objects is a trigger (not both)
 				if (bObATrigger ^ bObBTrigger)
 				{

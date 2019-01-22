@@ -159,6 +159,24 @@ namespace flex
 		std::string aoTexturePath = "";
 		std::string hdrEquirectangularTexturePath = "";
 
+		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
+		std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
+		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
+		std::string environmentMapPath = "";
+		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+		glm::vec2 generatedCubemapSize = { 0.0f, 0.0f };
+		glm::vec2 generatedPrefilteredCubemapSize = { 0.0f, 0.0f };
+		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
+
+		// PBR Constant values
+		glm::vec3 constAlbedo = { 1.0f, 1.0f, 1.0f };
+		real constMetallic = 0.0f;
+		real constRoughness = 0.0f;
+		real constAO = 0.0f;
+
+		real textureScale = 1.0f;
+
 		bool generateNormalSampler = false;
 		bool enableNormalSampler = false;
 		bool generateAlbedoSampler = false;
@@ -173,42 +191,24 @@ namespace flex
 		bool enableHDREquirectangularSampler = false;
 		bool generateHDRCubemapSampler = false;
 
-		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
-
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
-		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
-		std::string environmentMapPath = "";
 
 		bool enableBRDFLUT = false;
 		bool renderToCubemap = true;
 
-		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 		bool enableCubemapSampler = false;
 		bool enableCubemapTrilinearFiltering = false;
 		bool generateCubemapSampler = false;
-		glm::vec2 generatedCubemapSize = { 0.0f, 0.0f };
 		bool generateCubemapDepthBuffers = false;
 
 		bool generatePrefilteredMap = false;
 		bool enablePrefilteredMap = false;
-		glm::vec2 generatedPrefilteredCubemapSize = { 0.0f, 0.0f };
-		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
 		bool generateReflectionProbeMaps = false;
 
-		// PBR Constant values
-		glm::vec3 constAlbedo = { 1.0f, 1.0f, 1.0f };
-		real constMetallic = 0.0f;
-		real constRoughness = 0.0f;
-		real constAO = 0.0f;
-
-		real textureScale = 1.0f;
-
 		bool engineMaterial = false;
+
 	};
 
 	struct Material
@@ -219,18 +219,12 @@ namespace flex
 		JSONObject Serialize() const;
 
 		std::string name = "";
-
 		ShaderID shaderID = InvalidShaderID;
-
-		bool generateNormalSampler = false;
-		bool enableNormalSampler = false;
 		std::string normalTexturePath = "";
 
 		// GBuffer samplers
 		std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
-		bool generateCubemapSampler = false;
-		bool enableCubemapSampler = false;
 		glm::vec2 cubemapSamplerSize = { 0, 0 };
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
@@ -239,46 +233,51 @@ namespace flex
 		real constMetallic = 0;
 		real constRoughness = 0;
 		real constAO = 1;
+		std::string albedoTexturePath = "";
+		std::string metallicTexturePath = "";
+		std::string roughnessTexturePath = "";
+		std::string aoTexturePath = "";
+		std::string hdrEquirectangularTexturePath = "";
+		glm::vec2 irradianceSamplerSize = { 0, 0 };
+		std::string environmentMapPath = "";
+		glm::vec2 prefilteredMapSize = { 0, 0 };
+		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
+
+		bool generateNormalSampler = false;
+		bool enableNormalSampler = false;
+
+		bool generateCubemapSampler = false;
+		bool enableCubemapSampler = false;
 
 		// PBR samplers
 		bool generateAlbedoSampler = false;
 		bool enableAlbedoSampler = false;
-		std::string albedoTexturePath = "";
 
 		bool generateMetallicSampler = false;
 		bool enableMetallicSampler = false;
-		std::string metallicTexturePath = "";
 
 		bool generateRoughnessSampler = false;
 		bool enableRoughnessSampler = false;
-		std::string roughnessTexturePath = "";
 
 		bool generateAOSampler = false;
 		bool enableAOSampler = false;
-		std::string aoTexturePath = "";
 
 		bool generateHDREquirectangularSampler = false;
 		bool enableHDREquirectangularSampler = false;
-		std::string hdrEquirectangularTexturePath = "";
 
 		bool enableCubemapTrilinearFiltering = false;
 		bool generateHDRCubemapSampler = false;
 
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::vec2 irradianceSamplerSize = { 0, 0 };
-		std::string environmentMapPath = "";
 
 		bool enablePrefilteredMap = false;
 		bool generatePrefilteredMap = false;
-		glm::vec2 prefilteredMapSize = { 0, 0 };
 
 		bool enableBRDFLUT = false;
 		bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!
 
 		bool generateReflectionProbeMaps = false;
-
-		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
 
 		// If true, this material shouldn't be removed when switching scenes
 		bool engineMaterial = false;
@@ -302,16 +301,13 @@ namespace flex
 
 		GameObject* gameObject = nullptr;
 
+		DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
+		CullFace cullFace = CullFace::BACK;
+
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
-
-		CullFace cullFace = CullFace::BACK;
-		// TODO: Rename to enableBackfaceCulling
 		bool enableCulling = true;
-
-		DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
 		bool depthWriteEnable = true;
-
 		bool editorObject = false;
 	};
 
@@ -344,8 +340,11 @@ namespace flex
 		Uniforms constantBufferUniforms = {};
 		Uniforms dynamicBufferUniforms = {};
 
-		bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+		VertexAttributes vertexAttributes = 0;
+		i32 numAttachments = 1; // How many output textures the fragment shader has
+
 		i32 subpass = 0;
+		bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 		bool depthWriteEnable = true;
 		bool translucent = false;
 
@@ -362,9 +361,6 @@ namespace flex
 		bool bNeedBRDFLUT = false;
 		bool bNeedShadowMap = false;
 		bool bNeedPushConstantBlock = false;
-
-		VertexAttributes vertexAttributes = 0;
-		i32 numAttachments = 1; // How many output textures the fragment shader has
 	};
 
 	struct SpriteQuadDrawInfo
@@ -379,6 +375,7 @@ namespace flex
 		glm::vec3 scale = VEC3_ONE;
 		AnchorPoint anchor = AnchorPoint::TOP_LEFT;
 		glm::vec4 color = VEC4_ONE;
+
 		bool bScreenSpace = true;
 		bool bReadDepth = true;
 		bool bWriteDepth = true;

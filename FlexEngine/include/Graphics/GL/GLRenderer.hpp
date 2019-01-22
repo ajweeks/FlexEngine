@@ -137,7 +137,6 @@ namespace flex
 			* Returns true if the parent-child tree changed during this call
 			*/
 			bool DrawGameObjectNameAndChildren(GameObject* gameObject);
-
 			void PhysicsDebugRender();
 
 			void GenerateReflectionProbeMaps(RenderID cubemapRenderID, MaterialID materialID);

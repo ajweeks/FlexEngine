@@ -15,13 +15,12 @@
 #define COMPILE_RENDERDOC_API 0
 #endif
 
+
 #define NOMINMAX
-
 #define GLFW_INCLUDE_NONE
-
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
 
-//#pragma warning(disable : 4201) // nonstandard extension used: nanmeless struct/union
+//#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
 //#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'
 //#pragma warning(disable : 4868) // compiler may not enforce left-to-right evaluation order in braced initializer list
 //#pragma warning(disable : 4710) // function not inlined

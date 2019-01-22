@@ -141,11 +141,11 @@ namespace flex
 		{
 			if (result.length() < minChars)
 			{
-				result = '-' + std::string(minChars - result.length(), '0') + result;
+				result = "-" + std::string(minChars - result.length(), '0') + result;
 			}
 			else
 			{
-				result = '-' + result;
+				result = "-" + result;
 			}
 		}
 		else

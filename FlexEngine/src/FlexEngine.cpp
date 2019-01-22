@@ -1549,7 +1549,6 @@ namespace flex
 			if (bSimulateFrame)
 			{
 				g_SceneManager->CurrentScene()->Update();
-
 				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 				glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
 				m_SpringTimer += g_DeltaTime;

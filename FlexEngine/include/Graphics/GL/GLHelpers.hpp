@@ -118,15 +118,15 @@ namespace flex
 			u32 vertexBuffer = 0;
 			VertexBufferData* vertexBufferData = nullptr;
 
-			bool indexed = false;
 			u32 indexBuffer = 0;
 			std::vector<u32>* indices = nullptr;
+
+			MaterialID materialID = InvalidMaterialID;
 
 			// If true this object will be drawn after post processing
 			// and not drawn in shipping builds
 			bool editorObject = false;
-
-			MaterialID materialID = InvalidMaterialID;
+			bool indexed = false;
 		};
 
 		struct UniformInfo
@@ -169,6 +169,7 @@ namespace flex
 			std::vector<GLCubemapGBuffer>* textureGBufferIDs = nullptr;
 			glm::vec2 textureSize = { 0, 0 };
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
+
 			bool generateMipmaps = false;
 			bool enableTrilinearFiltering = false;
 			bool HDR = false;
@@ -229,24 +230,22 @@ namespace flex
 			std::string name; // absFilePath but without the leading directories, or a custom name if not loaded from file
 
 		public:
-
 			GLuint handle = 0;
 
 			i32 width = 0;
 			i32 height = 0;
-
-			bool bHasMipMaps = false;
-			bool bFlipVerticallyOnLoad = false;
-			bool bHDR = false;
 			i32 channelCount = 0;
-
-			bool bLoaded = false;
 
 			i32 internalFormat = GL_RGB;
 			GLenum format = GL_RGB;
 			GLenum type = GL_FLOAT;
 
 			TextureParameters m_Parameters;
+
+			bool bHasMipMaps = false;
+			bool bFlipVerticallyOnLoad = false;
+			bool bHDR = false;
+			bool bLoaded = false;
 		};
 
 		struct AsynchronousTextureSave
@@ -265,12 +264,12 @@ namespace flex
 			GLuint textureID = 0;
 			u8* data = nullptr;
 
-			bool bSuccess = false;
-			bool bComplete = false;
-
 			sec totalSecWaiting = 0.0f;
 			sec secBetweenStatusChecks = 0.05f;
 			sec secSinceStatusCheck = 0.0f;
+
+			bool bSuccess = false;
+			bool bComplete = false;
 		};
 
 		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave);
