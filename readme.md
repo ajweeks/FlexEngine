@@ -55,7 +55,6 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 
 ## Dependencies
 Flex Engine uses the following open-source libraries:
- - [Assimp](https://github.com/assimp/assimp) - Model loading
  - [Bullet](https://github.com/bulletphysics/bullet3) - Collision detection & rigid body simulation
  - [FreeType](https://www.freetype.org/) - Font loading
  - [glad](https://github.com/Dav1dde/glad) - OpenGL profile loading
