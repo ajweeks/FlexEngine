@@ -3007,19 +3007,27 @@ namespace flex
 
 				//distAlongTrack = newDistAlongTrack;
 
-				//const CartChain* chain = cartManager->GetCartChain(chainID);
-				//i32 cartInChainIndex = chain->GetCartIndex(cartID);
+				CartManager* cartManager = baseScene->GetCartManager();
+
+				const CartChain* chain = cartManager->GetCartChain(chainID);
+				i32 cartInChainIndex = chain->GetCartIndex(cartID);
+
 				//real pDistToRearNeighbor = distToRearNeighbor;
-				//if (cartInChainIndex < (i32)chain->carts.size() - 1)
-				//{
-				//	// Not at end
-				//	distToRearNeighbor = trackManager->GetCartTargetDistAlongTrackInChain(chainID, chain->carts[cartInChainIndex + 1]);
-				//}
+				if (cartInChainIndex < (i32)chain->carts.size() - 1)
+				{
+					// Not at end
+					distToRearNeighbor = trackManager->GetCartTargetDistAlongTrackInChain(chainID, chain->carts[cartInChainIndex + 1]);
+				}
 
 				//real neighborDT = distToRearNeighbor - pDistToRearNeighbor;
 
-				CartManager* cartManager = baseScene->GetCartManager();
 				real chainDrivePower = cartManager->GetChainDrivePower(chainID);
+
+				if (distToRearNeighbor > -1.0f && distToRearNeighbor < 0.2f)
+				{
+					chainDrivePower += 1.0f;
+				}
+
 
 				real dT = g_DeltaTime * chainDrivePower * velocityT;
 				AdvanceAlongTrack(dT);
