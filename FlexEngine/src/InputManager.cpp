@@ -11,6 +11,7 @@
 namespace flex
 {
 	const real InputManager::MAX_JOYSTICK_ROTATION_SPEED = 15.0f;
+	const std::string InputManager::s_InputBindingFilePath = SAVED_LOCATION "config/input-bindings.ini";
 
 	InputManager::InputManager()
 	{
@@ -46,6 +47,7 @@ namespace flex
 		io.KeyMap[ImGuiKey_Z] = (i32)KeyCode::KEY_Z; // for text edit CTRL+Z: undo
 
 		LoadInputBindingsFromFile();
+		SaveInputBindingsToFile();
 
 		ClearAllInputs();
 	}
@@ -639,9 +641,8 @@ namespace flex
 
 	void InputManager::LoadInputBindingsFromFile()
 	{
-		std::string inputBindingFilePath = SAVED_LOCATION "config/input-bindings.ini";
 		JSONObject rootObject;
-		if (!JSONParser::Parse(inputBindingFilePath, rootObject))
+		if (!JSONParser::Parse(s_InputBindingFilePath, rootObject))
 		{
 			PrintError("Failed to load input bindings from file! Won't have any inputs mapped!!\n");
 			return;
@@ -653,7 +654,7 @@ namespace flex
 			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%d expected, %d found)\n", actionCount, rootObject.fields.size());
 		}
 
-		g_InputBindings.resize(actionCount);
+		m_InputBindings.resize(actionCount);
 		for (u32 i = 0; i < actionCount; ++i)
 		{
 			const JSONObject& child = rootObject.GetObject(ActionStrings[i]);
@@ -663,13 +664,42 @@ namespace flex
 			}
 			else
 			{
-				g_InputBindings[i].keyCode = (KeyCode)child.GetInt("key code");
-				g_InputBindings[i].mouseButton = (MouseButton)child.GetInt("mouse button");
-				g_InputBindings[i].mouseAxis = (MouseAxis)child.GetInt("mouse axis");
-				g_InputBindings[i].gamepadButton = (GamepadButton)child.GetInt("gamepad button");
-				g_InputBindings[i].gamepadAxis = (GamepadAxis)child.GetInt("gamepad axis");
-				g_InputBindings[i].bPositive = child.GetBool("positive");
+				m_InputBindings[i].keyCode = (KeyCode)child.GetInt("key code");
+				m_InputBindings[i].mouseButton = (MouseButton)child.GetInt("mouse button");
+				m_InputBindings[i].mouseAxis = (MouseAxis)child.GetInt("mouse axis");
+				m_InputBindings[i].gamepadButton = (GamepadButton)child.GetInt("gamepad button");
+				m_InputBindings[i].gamepadAxis = (GamepadAxis)child.GetInt("gamepad axis");
+				m_InputBindings[i].bPositive = child.GetBool("positive");
 			}
+		}
+	}
+
+	void InputManager::SaveInputBindingsToFile()
+	{
+		JSONObject rootObject = {};
+
+		for (u32 i = 0; i < m_InputBindings.size(); ++i)
+		{
+			JSONObject bindingObj = {};
+
+			bindingObj.fields.emplace_back("key code", JSONValue((i32)m_InputBindings[i].keyCode));
+			bindingObj.fields.emplace_back("mouse button", JSONValue((i32)m_InputBindings[i].mouseButton));
+			bindingObj.fields.emplace_back("mouse axis", JSONValue((i32)m_InputBindings[i].mouseAxis));
+			bindingObj.fields.emplace_back("gamepad button", JSONValue((i32)m_InputBindings[i].gamepadButton));
+			bindingObj.fields.emplace_back("gamepad axis", JSONValue((i32)m_InputBindings[i].gamepadAxis));
+			bindingObj.fields.emplace_back("positive", JSONValue(m_InputBindings[i].bPositive));
+
+			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
+		}
+
+		std::string fileContents = rootObject.Print(0);
+		if (WriteFile(s_InputBindingFilePath, fileContents, false))
+		{
+			Print("Saved input bindings file to %s\n", s_InputBindingFilePath.c_str());
+		}
+		else
+		{
+			PrintWarn("Failed to save input bindings file to %s\n", s_InputBindingFilePath.c_str());
 		}
 	}
 } // namespace flex

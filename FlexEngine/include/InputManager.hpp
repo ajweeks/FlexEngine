@@ -65,13 +65,14 @@ namespace flex
 
 		bool bPlayerUsingKeyboard[2];
 
-		std::vector<Binding> g_InputBindings;
-
 	private:
 		void HandleRadialDeadZone(real* x, real* y);
 		void LoadInputBindingsFromFile();
+		void SaveInputBindingsToFile();
 
 		std::map<KeyCode, Key> m_Keys;
+
+		std::vector<Binding> m_InputBindings;
 
 		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_COUNT;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
@@ -85,6 +86,8 @@ namespace flex
 		real m_ScrollYOffset = 0;
 
 		bool m_bMouseWrapped = false;
+
+		static const std::string s_InputBindingFilePath;
 
 		GamepadState m_pGamepadStates[2];
 		GamepadState m_GamepadStates[2];
