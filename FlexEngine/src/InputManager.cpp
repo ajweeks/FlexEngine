@@ -6,6 +6,7 @@
 
 #include "Graphics/Renderer.hpp"
 #include "Window/Window.hpp"
+#include "JSONParser.hpp"
 
 namespace flex
 {
@@ -44,20 +45,7 @@ namespace flex
 		io.KeyMap[ImGuiKey_Y] = (i32)KeyCode::KEY_Y; // for text edit CTRL+Y: redo
 		io.KeyMap[ImGuiKey_Z] = (i32)KeyCode::KEY_Z; // for text edit CTRL+Z: undo
 
-		g_InputBindings.resize((i32)Action::COUNT);
-		g_InputBindingNames.resize((i32)Action::COUNT);
-		g_InputBindings[(i32)Action::WALK_LEFT].keyCode = KeyCode::KEY_A;
-		g_InputBindingNames[(i32)Action::WALK_LEFT] = "Walk left";
-		g_InputBindings[(i32)Action::WALK_RIGHT].keyCode = KeyCode::KEY_D;
-		g_InputBindingNames[(i32)Action::WALK_RIGHT] = "Walk right";
-		g_InputBindings[(i32)Action::WALK_FORWARD].keyCode = KeyCode::KEY_W;
-		g_InputBindingNames[(i32)Action::WALK_FORWARD] = "Walk forward";
-		g_InputBindings[(i32)Action::WALK_BACKWARD].keyCode = KeyCode::KEY_S;
-		g_InputBindingNames[(i32)Action::WALK_BACKWARD] = "Walk backward";
-		g_InputBindings[(i32)Action::LOOK_H].gamepadAxis = GamepadAxis::LEFT_STICK_X;
-		g_InputBindingNames[(i32)Action::LOOK_H] = "Look horizontal";
-		g_InputBindings[(i32)Action::LOOK_V].gamepadAxis = GamepadAxis::LEFT_STICK_Y;
-		g_InputBindingNames[(i32)Action::LOOK_V] = "Look vertical";
+		LoadInputBindingsFromFile();
 
 		ClearAllInputs();
 	}
@@ -647,5 +635,41 @@ namespace flex
 		gamepadState.averageRotationSpeeds = RollingAverage<real>(gamepadState.framesToAverageOver);
 
 		m_pGamepadStates[gamepadIndex] = gamepadState;
+	}
+
+	void InputManager::LoadInputBindingsFromFile()
+	{
+		std::string inputBindingFilePath = SAVED_LOCATION "config/input-bindings.ini";
+		JSONObject rootObject;
+		if (!JSONParser::Parse(inputBindingFilePath, rootObject))
+		{
+			PrintError("Failed to load input bindings from file! Won't have any inputs mapped!!\n");
+			return;
+		}
+
+		const u32 actionCount = (u32)Action::_NONE;
+		if (rootObject.fields.size() != actionCount)
+		{
+			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%d expected, %d found)\n", actionCount, rootObject.fields.size());
+		}
+
+		g_InputBindings.resize(actionCount);
+		for (u32 i = 0; i < actionCount; ++i)
+		{
+			const JSONObject& child = rootObject.GetObject(ActionStrings[i]);
+			if (child.fields.empty())
+			{
+				PrintWarn("Malformed input bindings file! Failed to parse action with name: %s\n", ActionStrings[i]);
+			}
+			else
+			{
+				g_InputBindings[i].keyCode = (KeyCode)child.GetInt("key code");
+				g_InputBindings[i].mouseButton = (MouseButton)child.GetInt("mouse button");
+				g_InputBindings[i].mouseAxis = (MouseAxis)child.GetInt("mouse axis");
+				g_InputBindings[i].gamepadButton = (GamepadButton)child.GetInt("gamepad button");
+				g_InputBindings[i].gamepadAxis = (GamepadAxis)child.GetInt("gamepad axis");
+				g_InputBindings[i].bPositive = child.GetBool("positive");
+			}
+		}
 	}
 } // namespace flex

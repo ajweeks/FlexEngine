@@ -169,7 +169,7 @@ namespace flex
 			newGameObject = cartManager->GetCart(newCartID);
 		} break;
 		case GameObjectType::OBJECT: // Fall through
-		case GameObjectType::NONE:
+		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
 			break;
 		default:
@@ -393,7 +393,7 @@ namespace flex
 		// Non-basic objects shouldn't serialize certain fields which are constant across all instances
 		// TODO: Save out overridden prefab fields
 		bool bIsBasicObject = (m_Type == GameObjectType::OBJECT ||
-							   m_Type == GameObjectType::NONE);
+							   m_Type == GameObjectType::_NONE);
 
 
 		object.fields.emplace_back("name", JSONValue(m_Name));
@@ -2425,7 +2425,7 @@ namespace flex
 		SetMeshComponent(sphereMesh);
 
 		std::string captureName = m_Name + "_capture";
-		GameObject* captureObject = new GameObject(captureName, GameObjectType::NONE);
+		GameObject* captureObject = new GameObject(captureName, GameObjectType::_NONE);
 		captureObject->SetSerializable(false);
 		captureObject->SetVisible(false);
 		captureObject->SetVisibleInSceneExplorer(false);

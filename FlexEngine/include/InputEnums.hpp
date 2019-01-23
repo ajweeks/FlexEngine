@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Helpers.hpp" // For RollingAverage
+#include "Types.hpp" // For glm::vec2
 
 namespace flex
 {
@@ -140,7 +141,7 @@ namespace flex
 		_NONE
 	};
 
-	enum class Mod
+	enum class InputModifier
 	{
 		_NONE = 0,
 
@@ -218,10 +219,14 @@ namespace flex
 		WALK_RIGHT,
 		WALK_FORWARD,
 		WALK_BACKWARD,
-		LOOK_H,
-		LOOK_V,
+		LOOK_UP,
+		LOOK_DOWN,
+		LOOK_LEFT,
+		LOOK_RIGHT,
 		INTERACT,
+		QUIT,
 
+#ifdef _DEBUG
 		DBG_SWITCH_TO_NEXT_CAM,
 		DBG_SWITCH_TO_PREV_CAM,
 		DBG_ENTER_NEXT_SCENE,
@@ -230,10 +235,40 @@ namespace flex
 		DBG_GIZMO_SELECT_TRANSLATE,
 		DBG_GIZMO_SELECT_ROTATE,
 		DBG_GIZMO_SELECT_SCALE,
+#endif // _DEBUG
 
 		_NONE,
 		COUNT = _NONE
 	};
+
+	static const char* ActionStrings[] =
+	{
+		"Walk left",
+		"Walk right",
+		"Walk forward",
+		"Walk backward",
+		"Look up",
+		"Look down",
+		"Look left",
+		"Look right",
+		"Interact",
+		"Quit",
+
+#ifdef _DEBUG
+		"DBG Switch to next cam",
+		"DBG Switch to prev cam",
+		"DBG Enter next scene",
+		"DBG Enter prev scene",
+		"DBG Save scene",
+		"DBG Gizmo select translate",
+		"DBG Gizmo select rotate",
+		"DBG Gizmo select scale",
+#endif // _DEBUG
+
+		"None"
+	};
+
+	static_assert(ARRAY_LENGTH(ActionStrings) == (u32)Action::_NONE + 1, "Action strings length must match Action enum");
 
 	struct Binding
 	{
@@ -242,7 +277,7 @@ namespace flex
 		MouseAxis mouseAxis = MouseAxis::_NONE;
 		GamepadButton gamepadButton = GamepadButton::_NONE;
 		GamepadAxis gamepadAxis = GamepadAxis::_NONE;
-		bool bPositive = true; // ?
+		bool bPositive = true;
 	};
 
 	struct Key

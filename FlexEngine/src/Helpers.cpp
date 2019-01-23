@@ -1196,16 +1196,16 @@ namespace flex
 
 	const char* GameObjectTypeToString(GameObjectType type)
 	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::NONE + 1);
+		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
 
 		return GameObjectTypeStrings[(i32)type];
 	}
 
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
 	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::NONE + 1);
+		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
 
-		for (i32 i = 0; i < (i32)GameObjectType::NONE; ++i)
+		for (i32 i = 0; i < (i32)GameObjectType::_NONE; ++i)
 		{
 			if (strcmp(GameObjectTypeStrings[i], gameObjectTypeStr) == 0)
 			{
@@ -1213,7 +1213,7 @@ namespace flex
 			}
 		}
 
-		return GameObjectType::NONE;
+		return GameObjectType::_NONE;
 	}
 
 	void RetrieveCurrentWorkingDirectory()

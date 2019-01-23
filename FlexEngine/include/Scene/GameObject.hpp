@@ -144,7 +144,7 @@ namespace flex
 		Transform m_Transform;
 		RenderID m_RenderID = InvalidRenderID;
 
-		GameObjectType m_Type = GameObjectType::NONE;
+		GameObjectType m_Type = GameObjectType::_NONE;
 
 		/*
 		* If true, this object will be written out to file

@@ -7,9 +7,6 @@ namespace flex
 	class InputManager
 	{
 	public:
-		std::vector<Binding> g_InputBindings;
-		std::vector<std::string> g_InputBindingNames;
-
 		InputManager();
 		~InputManager();
 
@@ -68,8 +65,11 @@ namespace flex
 
 		bool bPlayerUsingKeyboard[2];
 
+		std::vector<Binding> g_InputBindings;
+
 	private:
 		void HandleRadialDeadZone(real* x, real* y);
+		void LoadInputBindingsFromFile();
 
 		std::map<KeyCode, Key> m_Keys;
 

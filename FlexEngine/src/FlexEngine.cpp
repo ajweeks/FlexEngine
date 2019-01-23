@@ -83,13 +83,13 @@ namespace flex
 
 		RetrieveCurrentWorkingDirectory();
 
-		std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/config/");
+		std::string configDirAbs = RelativePathToAbsolute(SAVED_LOCATION "config/");
 		m_CommonSettingsFileName = "common.ini";
 		m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
 
 		CreateDirectoryRecursive(configDirAbs);
 
-		std::string bootupDirAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/");
+		std::string bootupDirAbs = RelativePathToAbsolute(SAVED_LOCATION "");
 		m_BootupTimesFileName = "bootup-times.log";
 		m_BootupTimesAbsFilePath = bootupDirAbs + m_BootupTimesFileName;
 
@@ -393,7 +393,7 @@ namespace flex
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 		gizmoCreateInfo.enableCulling = true;
 
-		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::NONE);
+		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
 
 		// Scene explorer visibility doesn't need to be set because this object isn't a root object
 
@@ -407,7 +407,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* transformXAxis = new GameObject("Translation gizmo x axis", GameObjectType::NONE);
+			GameObject* transformXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
 			transformXAxis->AddTag(m_TranslationGizmoTag);
 			MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
 
@@ -422,7 +422,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-x.glb", nullptr, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* transformYAxis = new GameObject("Translation gizmo y axis", GameObjectType::NONE);
+			GameObject* transformYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
 			transformYAxis->AddTag(m_TranslationGizmoTag);
 			MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
 
@@ -437,7 +437,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-y.glb", nullptr, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* transformZAxis = new GameObject("Translation gizmo z axis", GameObjectType::NONE);
+			GameObject* transformZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
 			transformZAxis->AddTag(m_TranslationGizmoTag);
 
 			MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
@@ -462,7 +462,7 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::NONE);
+			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::_NONE);
 
 			m_TranslationGizmo->AddChild(transformXAxis);
 			m_TranslationGizmo->AddChild(transformYAxis);
@@ -477,7 +477,7 @@ namespace flex
 			real cylinderHeight = 0.2f;
 
 			// X Axis
-			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::NONE);
+			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::_NONE);
 			rotationXAxis->AddTag(m_RotationGizmoTag);
 			MeshComponent* xAxisMesh = rotationXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, rotationXAxis));
 
@@ -494,7 +494,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-x.glb", nullptr, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::NONE);
+			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
 			rotationYAxis->AddTag(m_RotationGizmoTag);
 			MeshComponent* yAxisMesh = rotationYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, rotationYAxis));
 
@@ -509,7 +509,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-y.glb", nullptr, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::NONE);
+			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
 			rotationZAxis->AddTag(m_RotationGizmoTag);
 
 			MeshComponent* zAxisMesh = rotationZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, rotationZAxis));
@@ -533,7 +533,7 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::NONE);
+			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::_NONE);
 
 			m_RotationGizmo->AddChild(rotationXAxis);
 			m_RotationGizmo->AddChild(rotationYAxis);
@@ -551,7 +551,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::NONE);
+			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::_NONE);
 			scaleXAxis->AddTag(m_ScaleGizmoTag);
 			MeshComponent* xAxisMesh = scaleXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, scaleXAxis));
 
@@ -566,7 +566,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-x.glb", nullptr, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::NONE);
+			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
 			scaleYAxis->AddTag(m_ScaleGizmoTag);
 			MeshComponent* yAxisMesh = scaleYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, scaleYAxis));
 
@@ -581,7 +581,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-y.glb", nullptr, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::NONE);
+			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
 			scaleZAxis->AddTag(m_ScaleGizmoTag);
 
 			MeshComponent* zAxisMesh = scaleZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, scaleZAxis));
@@ -597,7 +597,7 @@ namespace flex
 			zAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-z.glb", nullptr, &gizmoCreateInfo);
 
 			// Center (all axes)
-			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::NONE);
+			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
 			scaleAllAxes->AddTag(m_ScaleGizmoTag);
 
 			MeshComponent* allAxesMesh = scaleAllAxes->SetMeshComponent(new MeshComponent(m_TransformGizmoMatAllID, scaleAllAxes));
@@ -622,7 +622,7 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::NONE);
+			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::_NONE);
 
 			m_ScaleGizmo->AddChild(scaleXAxis);
 			m_ScaleGizmo->AddChild(scaleYAxis);
@@ -2553,7 +2553,7 @@ namespace flex
 			Print("RenderDoc API v%i.%i.%i connected, F9 to capture\n", major, minor, patch);
 
 			std::string dateStr = GetDateString_YMDHMS();
-			std::string captureFilePath = RelativePathToAbsolute(ROOT_LOCATION "saved/RenderDocCaptures/FlexEngine_" + dateStr);
+			std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
 			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
 
 			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);

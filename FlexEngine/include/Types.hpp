@@ -7,6 +7,12 @@
 #include <glm/vec2.hpp>
 #pragma warning(pop)
 
+
+#define STATIC_ASSERT(e) StaticAssert<(e)>{}
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define ARRAY_LENGTH(a) ARRAY_SIZE(a)
+
 namespace flex
 {
 	using i8 = int8_t;
@@ -89,7 +95,7 @@ namespace flex
 
 		// NOTE: Add new types above this line
 		// NOTE: All additions *must* be also added to GameObjectTypeStrings in the same order!
-		NONE
+		_NONE
 	};
 
 	static const char* GameObjectTypeStrings[] =
@@ -110,6 +116,8 @@ namespace flex
 		"NONE"
 	};
 
+	static_assert(ARRAY_LENGTH(GameObjectTypeStrings) == (u32)GameObjectType::_NONE + 1, "Length of GameObjectTypeStrings must match length of GameObjectType enum");
+
 	// Screen-space anchors
 	enum class AnchorPoint
 	{
@@ -124,12 +132,6 @@ namespace flex
 		LEFT,
 		WHOLE // cover the whole screen
 	};
-
-#define STATIC_ASSERT(e) StaticAssert<(e)>{}
-
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-#define ARRAY_LENGTH(a) ARRAY_SIZE(a)
-
 } // namespace flex
 
 namespace glm

@@ -91,13 +91,13 @@ namespace flex
 			mapTabletMatCreateInfo.constAO = 1.0f;
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
-			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::NONE);
+			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::_NONE);
 			m_TabletOrbitAngle = m_TabletOrbitAngleUp;
 			m_bTabletUp = true;
 			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
 			AddChild(m_MapTabletHolder);
 
-			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::NONE);
+			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::_NONE);
 			//RigidBody* tabletRB = m_MapTablet->SetRigidBody(new RigidBody());
 			//tabletRB->SetKinematic(true);
 			//tabletRB->SetLocalRotation(glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f)));

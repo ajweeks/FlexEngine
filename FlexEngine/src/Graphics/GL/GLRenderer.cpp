@@ -64,7 +64,7 @@ namespace flex
 		GLRenderer::GLRenderer()
 		{
 			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
-			m_SettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/config/renderer-settings.ini");
+			m_SettingsFilePathAbs = RelativePathToAbsolute(SAVED_LOCATION "config/renderer-settings.ini");
 
 			g_Renderer = this;
 		}
@@ -305,7 +305,7 @@ namespace flex
 				m_Quad2DVertexBufferData.Initialize(&quad2DVertexBufferDataCreateInfo);
 
 
-				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::NONE);
+				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::_NONE);
 				m_PersistentObjects.push_back(quad2DGameObject);
 				quad2DGameObject->SetVisible(false);
 
@@ -354,7 +354,7 @@ namespace flex
 				m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
 
 
-				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::NONE);
+				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
 				m_PersistentObjects.push_back(quad3DGameObject);
 				quad3DGameObject->SetVisible(false);
 
@@ -411,9 +411,9 @@ namespace flex
 			ImGui::CreateContext();
 
 			ImGuiIO& io = ImGui::GetIO();
-			m_ImGuiIniFilepathStr = ROOT_LOCATION "saved/config/imgui.ini";
+			m_ImGuiIniFilepathStr = SAVED_LOCATION "config/imgui.ini";
 			io.IniFilename = m_ImGuiIniFilepathStr.c_str();
-			m_ImGuiLogFilepathStr = ROOT_LOCATION "saved/config/imgui.log";
+			m_ImGuiLogFilepathStr = SAVED_LOCATION "config/imgui.log";
 			io.LogFilename = m_ImGuiLogFilepathStr.c_str();
 
 			// G-buffer objects
@@ -1504,7 +1504,7 @@ namespace flex
 					m_1x1_NDC_QuadTransform = Transform::Identity();
 
 
-					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::NONE);
+					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::_NONE);
 					m_PersistentObjects.push_back(oneByOneQuadGameObject);
 					// Don't render this normally, we'll draw it manually
 					oneByOneQuadGameObject->SetVisible(false);
@@ -5296,7 +5296,7 @@ namespace flex
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
 
-			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::NONE);
+			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::_NONE);
 			m_PersistentObjects.push_back(gBufferQuadGameObject);
 			// Don't render the g buffer normally, we'll handle it separately
 			gBufferQuadGameObject->SetVisible(false);

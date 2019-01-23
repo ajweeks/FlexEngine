@@ -824,10 +824,10 @@ namespace flex
 	{
 		i32 inputMods = 0;
 
-		if (glfwMods & GLFW_MOD_SHIFT) inputMods |= (i32)Mod::SHIFT;
-		if (glfwMods & GLFW_MOD_ALT) inputMods |= (i32)Mod::ALT;
-		if (glfwMods & GLFW_MOD_CONTROL) inputMods |= (i32)Mod::CONTROL;
-		if (glfwMods & GLFW_MOD_SUPER) inputMods |= (i32)Mod::SUPER;
+		if (glfwMods & GLFW_MOD_SHIFT) inputMods |= (i32)InputModifier::SHIFT;
+		if (glfwMods & GLFW_MOD_ALT) inputMods |= (i32)InputModifier::ALT;
+		if (glfwMods & GLFW_MOD_CONTROL) inputMods |= (i32)InputModifier::CONTROL;
+		if (glfwMods & GLFW_MOD_SUPER) inputMods |= (i32)InputModifier::SUPER;
 
 		return inputMods;
 	}
