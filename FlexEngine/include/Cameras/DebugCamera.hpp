@@ -30,13 +30,13 @@ namespace flex
 		glm::vec3 m_MoveVel;
 		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
 
-		Input::KeyCode m_MoveForwardKey;
-		Input::KeyCode m_MoveBackwardKey;
-		Input::KeyCode m_MoveLeftKey;
-		Input::KeyCode m_MoveRightKey;
-		Input::KeyCode m_MoveUpKey;
-		Input::KeyCode m_MoveDownKey;
-		Input::KeyCode m_MoveFasterKey;
-		Input::KeyCode m_MoveSlowerKey;
+		KeyCode m_MoveForwardKey;
+		KeyCode m_MoveBackwardKey;
+		KeyCode m_MoveLeftKey;
+		KeyCode m_MoveRightKey;
+		KeyCode m_MoveUpKey;
+		KeyCode m_MoveDownKey;
+		KeyCode m_MoveFasterKey;
+		KeyCode m_MoveSlowerKey;
 	};
 } // namespace flex

@@ -1938,12 +1938,12 @@ namespace flex
 				RecaptureReflectionProbe();
 			}
 
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_U))
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_U))
 			{
 				RecaptureReflectionProbe();
 			}
 
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_KP_9))
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_KP_9))
 			{
 				m_bCaptureScreenshot = true;
 			}
@@ -2709,19 +2709,19 @@ namespace flex
 
 			//static glm::vec3 pos(0.01f, -0.01f, 0.0f);
 
-			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT))
+			//if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
 			//{
 			//	pos.x += g_DeltaTime * 1.0f;
 			//}
-			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT))
+			//if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
 			//{
 			//	pos.x -= g_DeltaTime * 1.0f;
 			//}
-			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP))
+			//if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
 			//{
 			//	pos.y += g_DeltaTime * 1.0f;
 			//}
-			//if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_DOWN))
+			//if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
 			//{
 			//	pos.y -= g_DeltaTime * 1.0f;
 			//}
@@ -6681,11 +6681,11 @@ namespace flex
 				// TODO: Remove from renderer class
 				if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
 				{
-					if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
+					if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
 					{
 						g_EngineInstance->ToggleSelectedObject(gameObject);
 					}
-					else if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_SHIFT))
+					else if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 					{
 						const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
 						if (selectedObjects.empty() ||

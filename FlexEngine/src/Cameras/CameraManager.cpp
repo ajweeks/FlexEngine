@@ -23,13 +23,13 @@ namespace flex
 
 	void CameraManager::Update()
 	{
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_EQUAL) ||
-			g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::RIGHT_BUMPER))
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_EQUAL) ||
+			g_InputManager->IsGamepadButtonPressed(0, GamepadButton::RIGHT_BUMPER))
 		{
 			g_CameraManager->SetActiveIndexRelative(1, false);
 		}
-		else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_MINUS) ||
-			g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::LEFT_BUMPER))
+		else if (g_InputManager->GetKeyPressed(KeyCode::KEY_MINUS) ||
+			g_InputManager->IsGamepadButtonPressed(0, GamepadButton::LEFT_BUMPER))
 		{
 			g_CameraManager->SetActiveIndexRelative(-1, false);
 		}

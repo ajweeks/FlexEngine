@@ -146,7 +146,7 @@ namespace flex
 	}
 
 	// Callbacks
-	void Window::KeyCallback(Input::KeyCode keycode, Input::KeyAction action, i32 mods)
+	void Window::KeyCallback(KeyCode keycode, KeyAction action, i32 mods)
 	{
 		g_InputManager->KeyCallback(keycode, action, mods);
 	}
@@ -156,7 +156,7 @@ namespace flex
 		g_InputManager->CharCallback(character);
 	}
 
-	void Window::MouseButtonCallback(Input::MouseButton mouseButton, Input::KeyAction action, i32 mods)
+	void Window::MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods)
 	{
 		g_InputManager->MouseButtonCallback(mouseButton, action, mods);
 	}

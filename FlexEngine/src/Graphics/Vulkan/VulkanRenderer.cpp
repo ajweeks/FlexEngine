@@ -2468,7 +2468,7 @@ namespace flex
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_U))
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_U))
 			{
 				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
 				{

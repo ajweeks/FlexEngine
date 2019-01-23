@@ -65,7 +65,7 @@ namespace flex
 	// Globals declared in stdafx.hpp
 	class Window* g_Window = nullptr;
 	class CameraManager* g_CameraManager = nullptr;
-	class Input::Manager* g_InputManager = nullptr;
+	class InputManager* g_InputManager = nullptr;
 	class Renderer* g_Renderer = nullptr;
 	class FlexEngine* g_EngineInstance = nullptr;
 	class SceneManager* g_SceneManager = nullptr;
@@ -146,7 +146,7 @@ namespace flex
 
 		CreateWindowAndRenderer();
 
-		g_InputManager = new Input::Manager();
+		g_InputManager = new InputManager();
 
 		g_CameraManager = new CameraManager();
 
@@ -734,7 +734,7 @@ namespace flex
 
 			// Disabled for now since we only support Open GL
 #if 0
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_T))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_T))
 			{
 				g_InputManager->Update();
 				g_InputManager->PostUpdate();
@@ -816,7 +816,7 @@ namespace flex
 				glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
 
 				// TODO: Bring keybindings out to external file (or at least variables)
-				Input::MouseButton dragButton = Input::MouseButton::LEFT;
+				MouseButton dragButton = MouseButton::LEFT;
 				bool bMouseDown = g_InputManager->IsMouseButtonDown(dragButton);
 				bool bMousePressed = g_InputManager->IsMouseButtonPressed(dragButton);
 				bool bMouseReleased = g_InputManager->IsMouseButtonReleased(dragButton);
@@ -1020,7 +1020,7 @@ namespace flex
 									RigidBody* rb = hoveredOverGameObject->GetRigidBody();
 									if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
 									{
-										if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_SHIFT))
+										if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 										{
 											ToggleSelectedObject(hoveredOverGameObject);
 										}
@@ -1399,45 +1399,45 @@ namespace flex
 			if (m_RenderDocAPI &&
 				!m_bRenderDocCapturingFrame &&
 				!m_bRenderDocTriggerCaptureNextFrame &&
-				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F9))
+				g_InputManager->GetKeyPressed(KeyCode::KEY_F9))
 			{
 				m_bRenderDocTriggerCaptureNextFrame = true;
 			}
 #endif
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F5))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F5))
 			{
 				m_bSimulationPaused = false;
 				m_bSimulateNextFrame = true;
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F10))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F10))
 			{
 				m_bSimulationPaused = true;
 				m_bSimulateNextFrame = true;
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_G))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_G))
 			{
 				g_Renderer->ToggleRenderGrid();
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F2))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F2))
 			{
 				bWantRenameActiveElement = !bWantRenameActiveElement;
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F1, true))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F1, true))
 			{
 				renderImGuiNextFrame = !renderImGuiNextFrame;
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_ESCAPE))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE))
 			{
 				DeselectCurrentlySelectedObjects();
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_DELETE))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_DELETE))
 			{
 				if (!m_CurrentlySelectedObjects.empty())
 				{
@@ -1447,42 +1447,42 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_RIGHT_BRACKET))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_RIGHT_BRACKET))
 			{
 				g_SceneManager->SetNextSceneActiveAndInit();
 			}
-			else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_LEFT_BRACKET))
+			else if (g_InputManager->GetKeyPressed(KeyCode::KEY_LEFT_BRACKET))
 			{
 				g_SceneManager->SetPreviousSceneActiveAndInit();
 			}
 
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL) &&
-				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_R))
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL) &&
+				g_InputManager->GetKeyPressed(KeyCode::KEY_R))
 			{
 				g_Renderer->ReloadShaders();
 			}
-			else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_R))
+			else if (g_InputManager->GetKeyPressed(KeyCode::KEY_R))
 			{
 				g_InputManager->ClearAllInputs();
 
 				g_SceneManager->ReloadCurrentScene();
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_P))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_P))
 			{
 				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 				settings.DrawWireframe = !settings.DrawWireframe;
 			}
 
-			bool altDown = g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_ALT) ||
-				g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT_ALT);
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F11) ||
-				(altDown && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_ENTER)))
+			bool altDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_ALT) ||
+				g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT_ALT);
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F11) ||
+				(altDown && g_InputManager->GetKeyPressed(KeyCode::KEY_ENTER)))
 			{
 				g_Window->ToggleFullscreen();
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F) && !m_CurrentlySelectedObjects.empty())
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F) && !m_CurrentlySelectedObjects.empty())
 			{
 				glm::vec3 minPos(FLT_MAX);
 				glm::vec3 maxPos(FLT_MIN);
@@ -1514,21 +1514,21 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL) &&
-				g_InputManager->GetKeyPressed(Input::KeyCode::KEY_A))
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL) &&
+				g_InputManager->GetKeyPressed(KeyCode::KEY_A))
 			{
 				SelectAll();
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_1))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_1))
 			{
 				SetTransformState(TransformState::TRANSLATE);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_2))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_2))
 			{
 				SetTransformState(TransformState::ROTATE);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_3))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_3))
 			{
 				SetTransformState(TransformState::SCALE);
 			}
@@ -1590,14 +1590,14 @@ namespace flex
 				m_TransformGizmo->SetVisible(false);
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_S) &&
-				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_S) &&
+				g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
 			{
 				g_SceneManager->CurrentScene()->SerializeToFile(true);
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_D) &&
-				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_D) &&
+				g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
 			{
 				if (!m_CurrentlySelectedObjects.empty())
 				{
@@ -1619,31 +1619,31 @@ namespace flex
 
 			CalculateSelectedObjectsCenter();
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_4))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_4))
 			{
 				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_01]);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_5))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_5))
 			{
 				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_02]);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_6))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_6))
 			{
 				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_03]);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_7))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_7))
 			{
 				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_04]);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_8))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_8))
 			{
 				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_05]);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_9))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_9))
 			{
 				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_06]);
 			}
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_0))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_0))
 			{
 				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_07]);
 			}
@@ -1655,7 +1655,7 @@ namespace flex
 				g_SceneManager->CurrentScene()->LateUpdate();
 			}
 
-			bool bWriteProfilingResultsToFile = g_InputManager->GetKeyPressed(Input::KeyCode::KEY_K);
+			bool bWriteProfilingResultsToFile = g_InputManager->GetKeyPressed(KeyCode::KEY_K);
 
 			g_Renderer->Update();
 

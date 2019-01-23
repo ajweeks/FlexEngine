@@ -143,7 +143,7 @@ namespace flex
 	{
 		if (m_bPossessed)
 		{
-			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::X))
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, GamepadButton::X))
 			{
 				Player* p = (Player*)this;
 
@@ -187,13 +187,13 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::A) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_E)))
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, GamepadButton::A) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_E)))
 			{
 				m_bTabletUp = !m_bTabletUp;
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_C))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
 				BaseScene* scene = g_SceneManager->CurrentScene();
@@ -202,7 +202,7 @@ namespace flex
 				m_Inventory.push_back(cart);
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_V))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_V))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
 				BaseScene* scene = g_SceneManager->CurrentScene();
@@ -211,7 +211,7 @@ namespace flex
 				m_Inventory.push_back(engineCart);
 			}
 
-			if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_B))
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_B))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
 				MobileLiquidBox* box = new MobileLiquidBox();
@@ -222,8 +222,8 @@ namespace flex
 			if (!m_Inventory.empty())
 			{
 				// Place item in inventory
-				if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
-					(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_SPACE)))
+				if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
+					(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_SPACE)))
 				{
 					GameObject* obj = m_Inventory[0];
 					bool bPlaced = false;
@@ -328,15 +328,15 @@ namespace flex
 		if (m_bPossessed &&
 			m_TrackRidingID == InvalidTrackID)
 		{
-			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::Y) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Q)))
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, GamepadButton::Y) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_Q)))
 			{
 				m_bPlacingTrack = !m_bPlacingTrack;
 				m_bEditingTrack = false;
 			}
 
-			if (g_InputManager->IsGamepadButtonPressed(m_Index, Input::GamepadButton::B) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_F)))
+			if (g_InputManager->IsGamepadButtonPressed(m_Index, GamepadButton::B) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_F)))
 			{
 				m_bEditingTrack = !m_bEditingTrack;
 				m_bPlacingTrack = false;
@@ -349,8 +349,8 @@ namespace flex
 		{
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(1.0f);
 
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X)))
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_X)))
 			{
 				m_CurvePlacing.points[m_CurveNodesPlaced++] = reticlePos;
 				if (m_CurveNodesPlaced == 4)
@@ -381,8 +381,8 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::LEFT_TRIGGER, 0.5f) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_C)))
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, GamepadAxis::LEFT_TRIGGER, 0.5f) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_C)))
 			{
 				m_CurveNodesPlaced = 0;
 				m_CurvePlacing.points[0] = m_CurvePlacing.points[1] = m_CurvePlacing.points[2] = m_CurvePlacing.points[3] = VEC3_ZERO;
@@ -419,8 +419,8 @@ namespace flex
 		{
 			// TODO: Snap to points other than the one we are editing
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(m_TrackEditingID == InvalidTrackID ? 1.0f : 0.0f, true);
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, Input::GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X)))
+			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_X)))
 			{
 				if (m_TrackEditingCurveIdx == -1)
 				{

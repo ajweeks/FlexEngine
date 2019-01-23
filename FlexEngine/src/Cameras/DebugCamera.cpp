@@ -41,13 +41,13 @@ namespace flex
 
 		if (m_EnableGamepadMovement)
 		{
-			bool turnFast = g_InputManager->IsGamepadButtonDown(0, Input::GamepadButton::RIGHT_BUMPER);
-			bool turnSlow = g_InputManager->IsGamepadButtonDown(0, Input::GamepadButton::LEFT_BUMPER);
+			bool turnFast = g_InputManager->IsGamepadButtonDown(0, GamepadButton::RIGHT_BUMPER);
+			bool turnSlow = g_InputManager->IsGamepadButtonDown(0, GamepadButton::LEFT_BUMPER);
 			real turnSpeedMultiplier = turnFast ? m_TurnSpeedFastMultiplier : turnSlow ? m_TurnSpeedSlowMultiplier : 1.0f;
 
-			real yawO = g_InputManager->GetGamepadAxisValue(0, Input::GamepadAxis::RIGHT_STICK_X) *
+			real yawO = g_InputManager->GetGamepadAxisValue(0, GamepadAxis::RIGHT_STICK_X) *
 				m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
-			real pitchO = -g_InputManager->GetGamepadAxisValue(0, Input::GamepadAxis::RIGHT_STICK_Y) *
+			real pitchO = -g_InputManager->GetGamepadAxisValue(0, GamepadAxis::RIGHT_STICK_Y) *
 				m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
 
 			m_TurnVel += glm::vec2(yawO, pitchO);
@@ -59,17 +59,17 @@ namespace flex
 
 			CalculateAxisVectorsFromPitchAndYaw();
 
-			bool moveFast = g_InputManager->IsGamepadButtonDown(0, Input::GamepadButton::RIGHT_BUMPER);
-			bool moveSlow = g_InputManager->IsGamepadButtonDown(0, Input::GamepadButton::LEFT_BUMPER);
+			bool moveFast = g_InputManager->IsGamepadButtonDown(0, GamepadButton::RIGHT_BUMPER);
+			bool moveSlow = g_InputManager->IsGamepadButtonDown(0, GamepadButton::LEFT_BUMPER);
 			real moveSpeedMultiplier = moveFast ? m_MoveSpeedFastMultiplier : moveSlow ? m_MoveSpeedSlowMultiplier : 1.0f;
 
-			real posYO = -g_InputManager->GetGamepadAxisValue(0, Input::GamepadAxis::LEFT_TRIGGER) *
+			real posYO = -g_InputManager->GetGamepadAxisValue(0, GamepadAxis::LEFT_TRIGGER) *
 				m_MoveSpeed * 0.5f * g_DeltaTime;
-			posYO += g_InputManager->GetGamepadAxisValue(0, Input::GamepadAxis::RIGHT_TRIGGER) *
+			posYO += g_InputManager->GetGamepadAxisValue(0, GamepadAxis::RIGHT_TRIGGER) *
 				m_MoveSpeed * 0.5f * g_DeltaTime;
-			real posXO = -g_InputManager->GetGamepadAxisValue(0, Input::GamepadAxis::LEFT_STICK_X) *
+			real posXO = -g_InputManager->GetGamepadAxisValue(0, GamepadAxis::LEFT_STICK_X) *
 				m_MoveSpeed * g_DeltaTime;
-			real posZO = -g_InputManager->GetGamepadAxisValue(0, Input::GamepadAxis::LEFT_STICK_Y) *
+			real posZO = -g_InputManager->GetGamepadAxisValue(0, GamepadAxis::LEFT_STICK_Y) *
 				m_MoveSpeed * g_DeltaTime;
 
 			targetDPos +=
@@ -80,11 +80,11 @@ namespace flex
 
 		if (m_EnableKeyboardMovement)
 		{
-			bool bAltDown = g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_ALT) > 0;
+			bool bAltDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_ALT) > 0;
 
 			glm::vec2 look(0.0f);
 			if (!g_EngineInstance->IsDraggingGizmo() &&
-				g_InputManager->IsMouseButtonDown(Input::MouseButton::LEFT))
+				g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
 			{
 				look = g_InputManager->GetMouseMovement();
 
@@ -146,13 +146,13 @@ namespace flex
 				translation -= m_Up;
 			}
 
-			if (g_InputManager->IsMouseButtonPressed(Input::MouseButton::MIDDLE))
+			if (g_InputManager->IsMouseButtonPressed(MouseButton::MIDDLE))
 			{
 				m_DragStartPosition = m_Position;
 			}
-			else if (g_InputManager->IsMouseButtonDown(Input::MouseButton::MIDDLE))
+			else if (g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
 			{
-				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(Input::MouseButton::MIDDLE);
+				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE);
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
 				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
@@ -164,7 +164,7 @@ namespace flex
 				translation += m_Forward * scrollDistance * m_ScrollDollySpeed;
 			}
 
-			if (g_InputManager->IsMouseButtonDown(Input::MouseButton::RIGHT))
+			if (g_InputManager->IsMouseButtonDown(MouseButton::RIGHT))
 			{
 				glm::vec2 zoom = g_InputManager->GetMouseMovement();
 				translation += m_Forward * -zoom.y * m_DragDollySpeed;
@@ -208,14 +208,14 @@ namespace flex
 
 	void DebugCamera::LoadDefaultKeybindings()
 	{
-		m_MoveForwardKey = Input::KeyCode::KEY_W;
-		m_MoveBackwardKey = Input::KeyCode::KEY_S;
-		m_MoveLeftKey = Input::KeyCode::KEY_A;
-		m_MoveRightKey = Input::KeyCode::KEY_D;
-		m_MoveUpKey = Input::KeyCode::KEY_E;
-		m_MoveDownKey = Input::KeyCode::KEY_Q;
-		m_MoveFasterKey = Input::KeyCode::KEY_LEFT_SHIFT;
-		m_MoveSlowerKey = Input::KeyCode::KEY_LEFT_CONTROL;
+		m_MoveForwardKey = KeyCode::KEY_W;
+		m_MoveBackwardKey = KeyCode::KEY_S;
+		m_MoveLeftKey = KeyCode::KEY_A;
+		m_MoveRightKey = KeyCode::KEY_D;
+		m_MoveUpKey = KeyCode::KEY_E;
+		m_MoveDownKey = KeyCode::KEY_Q;
+		m_MoveFasterKey = KeyCode::KEY_LEFT_SHIFT;
+		m_MoveSlowerKey = KeyCode::KEY_LEFT_CONTROL;
 	}
 
 	bool DebugCamera::IsDebugCam() const

@@ -67,10 +67,10 @@ namespace flex
 		GLFWWindowWrapper& operator=(const GLFWWindowWrapper&) = delete;
 	};
 
-	Input::KeyAction GLFWActionToInputManagerAction(i32 glfwAction);
-	Input::KeyCode GLFWKeyToInputManagerKey(i32 glfwKey);
+	KeyAction GLFWActionToInputManagerAction(i32 glfwAction);
+	KeyCode GLFWKeyToInputManagerKey(i32 glfwKey);
 	i32 GLFWModsToInputManagerMods(i32 glfwMods);
-	Input::MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton);
+	MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton);
 
 	void GLFWErrorCallback(i32 error, const char* description);
 	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods);

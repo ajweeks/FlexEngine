@@ -2060,7 +2060,7 @@ namespace flex
 		{
 			i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
 
-			const Input::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
+			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * rotationSpeedScale;
 			currentAbsAvgRotationSpeed = glm::abs(gamepadState.averageRotationSpeeds.currentAverage);
 		}
@@ -2260,7 +2260,7 @@ namespace flex
 		if (valve->GetObjectInteractingWith())
 		{
 			i32 playerIndex = ((Player*)valve->GetObjectInteractingWith())->GetIndex();
-			const Input::GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
+			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
 				valve->rotationSpeedScale;
 		}

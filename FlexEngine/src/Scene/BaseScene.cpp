@@ -282,11 +282,11 @@ namespace flex
 		m_TrackManager.Update();
 		m_CartManager.Update();
 
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z))
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X))
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_X))
 		{
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}

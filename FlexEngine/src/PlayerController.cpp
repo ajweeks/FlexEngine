@@ -75,13 +75,13 @@ namespace flex
 
 		if (m_Player->m_bPossessed)
 		{
-			if (g_InputManager->IsGamepadButtonDown(m_PlayerIndex, Input::GamepadButton::BACK))
+			if (g_InputManager->IsGamepadButtonDown(m_PlayerIndex, GamepadButton::BACK))
 			{
 				ResetTransformAndVelocities();
 				return;
 			}
-			else if (g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, Input::GamepadButton::X) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z)))
+			else if (g_InputManager->IsGamepadButtonPressed(m_PlayerIndex, GamepadButton::X) ||
+				(g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex] && g_InputManager->GetKeyPressed(KeyCode::KEY_Z)))
 			{
 				if (m_Player->m_TrackRidingID == InvalidTrackID)
 				{
@@ -113,13 +113,13 @@ namespace flex
 				real moveBackward = 0.0f;
 				if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
 				{
-					moveForward = g_InputManager->GetKeyDown(Input::KeyCode::KEY_W) ? 1.0f : moveForward;
-					moveBackward = g_InputManager->GetKeyDown(Input::KeyCode::KEY_S) ? 1.0f : moveBackward;
+					moveForward = g_InputManager->GetKeyDown(KeyCode::KEY_W) ? 1.0f : moveForward;
+					moveBackward = g_InputManager->GetKeyDown(KeyCode::KEY_S) ? 1.0f : moveBackward;
 				}
 				else
 				{
-					moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_TRIGGER);
-					moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_TRIGGER);
+					moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::RIGHT_TRIGGER);
+					moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_TRIGGER);
 				}
 
 
@@ -155,15 +155,15 @@ namespace flex
 
 				if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
 				{
-					moveH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) > 0 ? 1.0f :
-						g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) > 0 ? -1.0f : 0.0f;
-					moveV = g_InputManager->GetKeyDown(Input::KeyCode::KEY_W) > 0 ? -1.0f :
-						g_InputManager->GetKeyDown(Input::KeyCode::KEY_S) > 0 ? 1.0f : 0.0f;
+					moveH = g_InputManager->GetKeyDown(KeyCode::KEY_D) > 0 ? 1.0f :
+						g_InputManager->GetKeyDown(KeyCode::KEY_A) > 0 ? -1.0f : 0.0f;
+					moveV = g_InputManager->GetKeyDown(KeyCode::KEY_W) > 0 ? -1.0f :
+						g_InputManager->GetKeyDown(KeyCode::KEY_S) > 0 ? 1.0f : 0.0f;
 				}
 				else
 				{
-					moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_STICK_X);
-					moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_STICK_Y);
+					moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_STICK_X);
+					moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_STICK_Y);
 				}
 
 
@@ -220,26 +220,26 @@ namespace flex
 
 			if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
 			{
-				lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT) > 0 ? 1.0f :
-					g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
+				lookH = g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT) > 0 ? 1.0f :
+					g_InputManager->GetKeyDown(KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
 				if (m_Player->m_TrackRidingID != InvalidTrackID)
 				{
-					lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) > 0 ? 1.0f :
-						g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) > 0 ? -1.0f : lookH;
+					lookH = g_InputManager->GetKeyDown(KeyCode::KEY_D) > 0 ? 1.0f :
+						g_InputManager->GetKeyDown(KeyCode::KEY_A) > 0 ? -1.0f : lookH;
 				}
 
 				if (m_Mode == Mode::FIRST_PERSON)
 				{
-					lookV = g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP) > 0 ? -1.0f :
-						g_InputManager->GetKeyDown(Input::KeyCode::KEY_DOWN) > 0 ? 1.0f : 0.0f;
+					lookV = g_InputManager->GetKeyDown(KeyCode::KEY_UP) > 0 ? -1.0f :
+						g_InputManager->GetKeyDown(KeyCode::KEY_DOWN) > 0 ? 1.0f : 0.0f;
 				}
 			}
 			else
 			{
-				lookH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_STICK_X);
+				lookH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::RIGHT_STICK_X);
 				if (m_Mode == Mode::FIRST_PERSON)
 				{
-					lookV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_STICK_Y);
+					lookV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::RIGHT_STICK_Y);
 				}
 			}
 
@@ -283,22 +283,22 @@ namespace flex
 		TrackID newTrackID = m_Player->m_TrackRidingID;
 		real newDistAlongTrack = m_Player->m_DistAlongTrack;
 		LookDirection desiredDir = LookDirection::CENTER;
-		const real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::LEFT_STICK_X);
+		const real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_STICK_X);
 		real rightStickX = 0.0f;
 		if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
 		{
-			rightStickX = g_InputManager->GetKeyDown(Input::KeyCode::KEY_D) ? 1.0f : rightStickX;
-			rightStickX = g_InputManager->GetKeyDown(Input::KeyCode::KEY_A) ? -1.0f : rightStickX;
+			rightStickX = g_InputManager->GetKeyDown(KeyCode::KEY_D) ? 1.0f : rightStickX;
+			rightStickX = g_InputManager->GetKeyDown(KeyCode::KEY_A) ? -1.0f : rightStickX;
 		}
 		else
 		{
-			rightStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, Input::GamepadAxis::RIGHT_STICK_X);
+			rightStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::RIGHT_STICK_X);
 		}
 
 		if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
 		{
-			real lookH = g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT) > 0 ? 1.0f :
-				g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
+			real lookH = g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT) > 0 ? 1.0f :
+				g_InputManager->GetKeyDown(KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
 			if (lookH > 0.5f)
 			{
 				desiredDir = LookDirection::RIGHT;
