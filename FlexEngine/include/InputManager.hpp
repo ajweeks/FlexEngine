@@ -4,6 +4,20 @@
 
 namespace flex
 {
+	/*
+	* There are three main ways of retrieving input:
+	*   1. Call GetKey(Down/Pressed) with a keycode value
+	*     - This is the fastest, but also least portable method. Good for debugging.
+	*
+	*   2. Call GetActionDown with an action type
+	*     - This requires setting up an abstract representation of the input
+	*       action, but allows for users to remap the keycode to whatever they like
+	*
+	*    3. Register as a listener
+	*      - This is the most involved method, but allows for full input binding
+	*        and proper event consumption. This is the method all real game inputs
+	*        should use.
+	*/
 	class InputManager
 	{
 	public:
@@ -18,16 +32,23 @@ namespace flex
 		void UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15]);
 		GamepadState& GetGamepadState(i32 gamepadIndex);
 
+		i32 GetActionDown(Action action) const;
+		bool GetActionPressed(Action action) const;
+		bool GetActionReleased(Action action) const;
+		real GetActionAxisValue(Action action) const;
+
 		i32 GetKeyDown(KeyCode keyCode, bool bIgnoreImGui = false) const;
 		bool GetKeyPressed(KeyCode keyCode, bool bIgnoreImGui = false) const;
+		bool GetKeyReleased(KeyCode keyCode, bool bIgnoreImGui = false) const;
 
-		bool IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button);
-		bool IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button);
-		bool IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button);
+		bool IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button) const;
+		bool IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button) const;
+		bool IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button) const;
 
-		real GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis);
+		real GetPrevGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const;
+		real GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const;
 		// Axis-equivalent to button "press"
-		bool HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold);
+		bool HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold) const;
 
 		void CursorPosCallback(double x, double y);
 		void MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods);
@@ -72,7 +93,7 @@ namespace flex
 
 		std::map<KeyCode, Key> m_Keys;
 
-		std::vector<Binding> m_InputBindings;
+		std::vector<InputBinding> m_InputBindings;
 
 		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_COUNT;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;

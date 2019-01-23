@@ -174,6 +174,11 @@ namespace flex
 		//m_bMouseWrapped = abs(dPos.x) > threshold ||
 		//	abs(dPos.y) > threshold;
 
+		for (auto iter : m_Keys)
+		{
+			iter.second.pDown = iter.second.down;
+		}
+
 		m_bMouseWrapped = false;
 		m_PrevMousePosition = m_MousePosition;
 		m_ScrollXOffset = 0.0f;
@@ -190,6 +195,12 @@ namespace flex
 		{
 			m_GamepadStates[gamepadIndex].axes[i] = axes[i];
 		}
+
+		// Invert Y (0 at bottom, 1 at top)
+		// TODO: Make option for player
+		m_GamepadStates[gamepadIndex].axes[1] = -m_GamepadStates[gamepadIndex].axes[1];
+		m_GamepadStates[gamepadIndex].axes[3] = -m_GamepadStates[gamepadIndex].axes[3];
+
 		// Map triggers into range [0.0,1.0]
 		m_GamepadStates[gamepadIndex].axes[4] = m_GamepadStates[gamepadIndex].axes[4] * 0.5f + 0.5f;
 		m_GamepadStates[gamepadIndex].axes[5] = m_GamepadStates[gamepadIndex].axes[5] * 0.5f + 0.5f;
@@ -217,29 +228,260 @@ namespace flex
 		return m_GamepadStates[gamepadIndex];
 	}
 
-	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
-	void InputManager::HandleRadialDeadZone(real* x, real* y)
+	i32 InputManager::GetActionDown(Action action) const
 	{
-		real deadzone = 0.25f;
+		// TODO: Set gamepad index correctly
+		i32 gamepadIndex = 0;
 
-		glm::vec2 stick(*x, *y);
-		real stickMagnitude = glm::length(stick);
-		if (stickMagnitude < deadzone)
+		const InputBinding& binding = m_InputBindings[(i32)action];
+		if (binding.keyCode != KeyCode::_NONE)
 		{
-			*x = 0.0f;
-			*y = 0.0f;
+			i32 down = GetKeyDown(binding.keyCode);
+			if (down > 0)
+			{
+				return down;
+			}
 		}
-		else
+		if (binding.mouseButton != MouseButton::_NONE)
 		{
-			glm::vec2 stickDir = (stick / stickMagnitude);
-			glm::vec2 stickScaled = stickDir * ((stickMagnitude - deadzone) / (1.0f - deadzone));
+			if (IsMouseButtonDown(binding.mouseButton))
+			{
+				// TODO: Return 2 to prevent click handling?
+				return 1;
+			}
+		}
+		if (binding.gamepadButton != GamepadButton::_NONE)
+		{
+			if (IsGamepadButtonDown(gamepadIndex, binding.gamepadButton))
+			{
+				return 1;
+			}
+		}
+		if (binding.gamepadAxis != GamepadAxis::_NONE)
+		{
+			real axisValue = GetGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
+			if (axisValue >= 0.5f)
+			{
+				return 1;
+			}
+		}
+		if (binding.mouseAxis == MouseAxis::SCROLL_Y)
+		{
+			if (m_ScrollYOffset > 0.0f)
+			{
+				return 1;
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::SCROLL_X)
+		{
+			if (m_ScrollXOffset > 0.0f)
+			{
+				return 1;
+			}
+		}
 
-			*x = stickScaled.x;
-			*y = stickScaled.y;
-		}
+		return 0;
 	}
 
-	i32 InputManager::GetKeyDown(KeyCode keyCode, bool bIgnoreImGui) const
+	bool InputManager::GetActionPressed(Action action) const
+	{
+		// TODO: Set gamepad index correctly
+		i32 gamepadIndex = 0;
+
+		const InputBinding& binding = m_InputBindings[(i32)action];
+		if (binding.keyCode != KeyCode::_NONE)
+		{
+			if (GetKeyPressed(binding.keyCode))
+			{
+				return true;
+			}
+		}
+		if (binding.mouseButton != MouseButton::_NONE)
+		{
+			if (IsMouseButtonPressed(binding.mouseButton))
+			{
+				// TODO: Return 2 to prevent click handling?
+				return true;
+			}
+		}
+		if (binding.gamepadButton != GamepadButton::_NONE)
+		{
+			if (IsGamepadButtonPressed(gamepadIndex, binding.gamepadButton))
+			{
+				return true;
+			}
+		}
+		if (binding.gamepadAxis != GamepadAxis::_NONE)
+		{
+			real pAxisValue = GetPrevGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
+			real axisValue = GetGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
+			if (axisValue >= 0.5f && pAxisValue < 0.5f)
+			{
+				return true;
+			}
+		}
+		if (binding.mouseAxis == MouseAxis::SCROLL_Y)
+		{
+			if (m_ScrollYOffset > 0.0f)
+			{
+				return true;
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::SCROLL_X)
+		{
+			if (m_ScrollXOffset > 0.0f)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool InputManager::GetActionReleased(Action action) const
+	{
+		// TODO: Set gamepad index correctly
+		i32 gamepadIndex = 0;
+
+		const InputBinding& binding = m_InputBindings[(i32)action];
+		if (binding.keyCode != KeyCode::_NONE)
+		{
+			if (GetKeyReleased(binding.keyCode))
+			{
+				return true;
+			}
+		}
+		if (binding.mouseButton != MouseButton::_NONE)
+		{
+			if (IsMouseButtonReleased(binding.mouseButton))
+			{
+				// TODO: Return 2 to prevent click handling?
+				return true;
+			}
+		}
+		if (binding.gamepadButton != GamepadButton::_NONE)
+		{
+			if (IsGamepadButtonReleased(gamepadIndex, binding.gamepadButton))
+			{
+				return true;
+			}
+		}
+		if (binding.gamepadAxis != GamepadAxis::_NONE)
+		{
+			real pAxisValue = GetPrevGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
+			real axisValue = GetGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
+			if (axisValue >= 0.5f && pAxisValue < 0.5f)
+			{
+				return true;
+			}
+		}
+		if (binding.mouseAxis == MouseAxis::SCROLL_Y)
+		{
+			if (m_ScrollYOffset > 0.0f)
+			{
+				return true;
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::SCROLL_X)
+		{
+			if (m_ScrollXOffset > 0.0f)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	real InputManager::GetActionAxisValue(Action action) const
+	{
+		// TODO: Set gamepad index correctly
+		i32 gamepadIndex = 0;
+
+		const InputBinding& binding = m_InputBindings[(i32)action];
+		if (binding.keyCode != KeyCode::_NONE)
+		{
+			if (GetKeyDown(binding.keyCode) > 0)
+			{
+				if (binding.bNegative)
+				{
+					return -1.0f;
+				}
+				else
+				{
+					return 1.0f;
+				}
+			}
+		}
+		if (binding.mouseButton != MouseButton::_NONE)
+		{
+			if (IsMouseButtonDown(binding.mouseButton))
+			{
+				if (binding.bNegative)
+				{
+					return -1.0f;
+				}
+				else
+				{
+					return 1.0f;
+				}
+			}
+		}
+		if (binding.gamepadButton != GamepadButton::_NONE)
+		{
+			if (IsGamepadButtonDown(gamepadIndex, binding.gamepadButton))
+			{
+				if (binding.bNegative)
+				{
+					return -1.0f;
+				}
+				else
+				{
+					return 1.0f;
+				}
+			}
+		}
+		if (binding.gamepadAxis != GamepadAxis::_NONE)
+		{
+			real axisValue = GetGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
+			if (axisValue != 0.0f)
+			{
+				return axisValue;
+			}
+		}
+		if (binding.mouseAxis == MouseAxis::SCROLL_Y)
+		{
+			if (m_ScrollYOffset != 0.0f)
+			{
+				if (binding.bNegative)
+				{
+					return -m_ScrollYOffset;
+				}
+				else
+				{
+					return m_ScrollYOffset;
+				}
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::SCROLL_X)
+		{
+			if (m_ScrollXOffset != 0.0f)
+			{
+				if (binding.bNegative)
+				{
+					return m_ScrollXOffset;
+				}
+				else
+				{
+					return -m_ScrollXOffset;
+				}
+			}
+		}
+
+		return 0.0f;
+	}
+
+	i32 InputManager::GetKeyDown(KeyCode keyCode, bool bIgnoreImGui /* = false */) const
 	{
 		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureKeyboard)
 		{
@@ -255,12 +497,29 @@ namespace flex
 		return 0;
 	}
 
-	bool InputManager::GetKeyPressed(KeyCode keyCode, bool bIgnoreImGui) const
+	bool InputManager::GetKeyPressed(KeyCode keyCode, bool bIgnoreImGui /* = false */) const
 	{
 		return GetKeyDown(keyCode, bIgnoreImGui) == 1;
 	}
 
-	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button)
+	bool InputManager::GetKeyReleased(KeyCode keyCode, bool bIgnoreImGui /* = false */) const
+	{
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureKeyboard)
+		{
+			return 0;
+		}
+
+		auto iter = m_Keys.find(keyCode);
+		if (iter != m_Keys.end())
+		{
+			const Key& key = iter->second;
+			return key.down == 0 && key.pDown > 0;
+		}
+
+		return 0;
+	}
+
+	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button) const
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
@@ -268,7 +527,7 @@ namespace flex
 		return bDown;
 	}
 
-	bool InputManager::IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button)
+	bool InputManager::IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button) const
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
@@ -276,7 +535,7 @@ namespace flex
 		return bPressed;
 	}
 
-	bool InputManager::IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button)
+	bool InputManager::IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button) const
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
@@ -284,7 +543,15 @@ namespace flex
 		return bReleased;
 	}
 
-	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis)
+	real InputManager::GetPrevGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const
+	{
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
+
+		real axisValue = m_pGamepadStates[gamepadIndex].axes[(i32)axis];
+		return axisValue;
+	}
+
+	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
@@ -292,7 +559,7 @@ namespace flex
 		return axisValue;
 	}
 
-	bool InputManager::HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold)
+	bool InputManager::HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold) const
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
@@ -405,6 +672,8 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(mods);
 
+		m_Keys[keycode].pDown = m_Keys[keycode].down;
+
 		if (action == KeyAction::PRESS)
 		{
 			m_Keys[keycode].down = 1;
@@ -484,7 +753,7 @@ namespace flex
 		m_MouseButtonsReleased &= ~(1 << ((i32)mouseButton));
 	}
 
-	bool InputManager::IsAnyMouseButtonDown(bool bIgnoreImGui) const
+	bool InputManager::IsAnyMouseButtonDown(bool bIgnoreImGui /* = false */) const
 	{
 		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
@@ -615,6 +884,7 @@ namespace flex
 	{
 		for (auto& keyPair : m_Keys)
 		{
+			keyPair.second.pDown = 0;
 			keyPair.second.down = 0;
 		}
 	}
@@ -637,6 +907,28 @@ namespace flex
 		gamepadState.averageRotationSpeeds = RollingAverage<real>(gamepadState.framesToAverageOver);
 
 		m_pGamepadStates[gamepadIndex] = gamepadState;
+	}
+
+	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
+	void InputManager::HandleRadialDeadZone(real* x, real* y)
+	{
+		real deadzone = 0.25f;
+
+		glm::vec2 stick(*x, *y);
+		real stickMagnitude = glm::length(stick);
+		if (stickMagnitude < deadzone)
+		{
+			*x = 0.0f;
+			*y = 0.0f;
+		}
+		else
+		{
+			glm::vec2 stickDir = (stick / stickMagnitude);
+			glm::vec2 stickScaled = stickDir * ((stickMagnitude - deadzone) / (1.0f - deadzone));
+
+			*x = stickScaled.x;
+			*y = stickScaled.y;
+		}
 	}
 
 	void InputManager::LoadInputBindingsFromFile()
@@ -664,12 +956,33 @@ namespace flex
 			}
 			else
 			{
-				m_InputBindings[i].keyCode = (KeyCode)child.GetInt("key code");
-				m_InputBindings[i].mouseButton = (MouseButton)child.GetInt("mouse button");
-				m_InputBindings[i].mouseAxis = (MouseAxis)child.GetInt("mouse axis");
-				m_InputBindings[i].gamepadButton = (GamepadButton)child.GetInt("gamepad button");
-				m_InputBindings[i].gamepadAxis = (GamepadAxis)child.GetInt("gamepad axis");
-				m_InputBindings[i].bPositive = child.GetBool("positive");
+				i32 keyCode = child.GetInt("key code");
+				if (keyCode != -1)
+				{
+					m_InputBindings[i].keyCode = (KeyCode)keyCode;
+				}
+				i32 mouseButton = child.GetInt("mouse button");
+				if (mouseButton != -1)
+				{
+					m_InputBindings[i].mouseButton = (MouseButton)mouseButton;
+				}
+				i32 mouseAxis = child.GetInt("mouse axis");
+				if (mouseAxis != -1)
+				{
+					m_InputBindings[i].mouseAxis = (MouseAxis)mouseAxis;
+				}
+				i32 gamepadButton = child.GetInt("gamepad button");
+				if (gamepadButton != -1)
+				{
+					m_InputBindings[i].gamepadButton = (GamepadButton)gamepadButton;
+				}
+				i32 gamepadAxis = child.GetInt("gamepad axis");
+				if (gamepadAxis != -1)
+				{
+					m_InputBindings[i].gamepadAxis = (GamepadAxis)gamepadAxis;
+				}
+
+				m_InputBindings[i].bNegative = child.GetBool("negative");
 			}
 		}
 	}
@@ -682,12 +995,17 @@ namespace flex
 		{
 			JSONObject bindingObj = {};
 
-			bindingObj.fields.emplace_back("key code", JSONValue((i32)m_InputBindings[i].keyCode));
-			bindingObj.fields.emplace_back("mouse button", JSONValue((i32)m_InputBindings[i].mouseButton));
-			bindingObj.fields.emplace_back("mouse axis", JSONValue((i32)m_InputBindings[i].mouseAxis));
-			bindingObj.fields.emplace_back("gamepad button", JSONValue((i32)m_InputBindings[i].gamepadButton));
-			bindingObj.fields.emplace_back("gamepad axis", JSONValue((i32)m_InputBindings[i].gamepadAxis));
-			bindingObj.fields.emplace_back("positive", JSONValue(m_InputBindings[i].bPositive));
+			i32 keyCode = m_InputBindings[i].keyCode == KeyCode::_NONE ? -1 : (i32)m_InputBindings[i].keyCode;
+			bindingObj.fields.emplace_back("key code", JSONValue(keyCode));
+			i32 mouseButton = m_InputBindings[i].mouseButton == MouseButton::_NONE ? -1 : (i32)m_InputBindings[i].mouseButton;
+			bindingObj.fields.emplace_back("mouse button", JSONValue(mouseButton));
+			i32 mouseAxis = m_InputBindings[i].mouseAxis == MouseAxis::_NONE ? -1 : (i32)m_InputBindings[i].mouseAxis;
+			bindingObj.fields.emplace_back("mouse axis", JSONValue(mouseAxis));
+			i32 gamepadButton = m_InputBindings[i].gamepadButton == GamepadButton::_NONE ? -1 : (i32)m_InputBindings[i].gamepadButton;
+			bindingObj.fields.emplace_back("gamepad button", JSONValue(gamepadButton));
+			i32 gamepadAxis = m_InputBindings[i].gamepadAxis == GamepadAxis::_NONE ? -1 : (i32)m_InputBindings[i].gamepadAxis;
+			bindingObj.fields.emplace_back("gamepad axis", JSONValue(gamepadAxis));
+			bindingObj.fields.emplace_back("negative", JSONValue(m_InputBindings[i].bNegative));
 
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}

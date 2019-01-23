@@ -22,6 +22,8 @@ namespace flex
 
 		void DrawImGuiObjects();
 
+		void UpdateMode();
+
 	private:
 		void SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack);
 

@@ -270,18 +270,19 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(ActionStrings) == (u32)Action::_NONE + 1, "Action strings length must match Action enum");
 
-	struct Binding
+	struct InputBinding
 	{
 		KeyCode keyCode = KeyCode::_NONE;
 		MouseButton mouseButton = MouseButton::_NONE;
 		MouseAxis mouseAxis = MouseAxis::_NONE;
 		GamepadButton gamepadButton = GamepadButton::_NONE;
 		GamepadAxis gamepadAxis = GamepadAxis::_NONE;
-		bool bPositive = true;
+		bool bNegative = false;
 	};
 
 	struct Key
 	{
+		i32 pDown = 0;
 		i32 down = 0; // A count of how many frames this key has been down for (0 means not down)
 	};
 

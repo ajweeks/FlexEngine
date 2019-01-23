@@ -1,6 +1,9 @@
 
 _2019_
 January
+- Add input binding file (`saved/config/input-bindings.ini`)
+- Add engine carts which drive cart chains
+- Make carts that bump into each other connect up into a chain
 - Markup OpenGL render passes for easier debugging in RenderDoc
 - Save console output to FlexEngine.log periodically
 - Replace Assimp with tinygltf

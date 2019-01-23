@@ -584,6 +584,8 @@ namespace flex
 		{
 			m_bPossessed = true;
 		}
+
+		m_Controller->UpdateMode();
 	}
 
 	real Player::GetDistAlongTrack() const

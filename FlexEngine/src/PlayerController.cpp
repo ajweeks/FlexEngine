@@ -46,10 +46,6 @@ namespace flex
 			   m_PlayerIndex == 1);
 
 		m_Player->UpdateIsPossessed();
-
-		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
-		m_Mode = (fpCam == nullptr) ? Mode::THIRD_PERSON : Mode::FIRST_PERSON;
 	}
 
 	void PlayerController::Destroy()
@@ -109,19 +105,8 @@ namespace flex
 		{
 			if (m_Player->m_TrackRidingID != InvalidTrackID)
 			{
-				real moveForward = 0.0f;
-				real moveBackward = 0.0f;
-				if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
-				{
-					moveForward = g_InputManager->GetKeyDown(KeyCode::KEY_W) ? 1.0f : moveForward;
-					moveBackward = g_InputManager->GetKeyDown(KeyCode::KEY_S) ? 1.0f : moveBackward;
-				}
-				else
-				{
-					moveForward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::RIGHT_TRIGGER);
-					moveBackward = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_TRIGGER);
-				}
-
+				real moveForward = g_InputManager->GetActionAxisValue(Action::WALK_FORWARD);
+				real moveBackward = g_InputManager->GetActionAxisValue(Action::WALK_BACKWARD);
 
 				glm::vec3 newCurveDir = trackManager->GetTrack(m_Player->m_TrackRidingID)->GetCurveDirectionAt(m_Player->m_DistAlongTrack);
 				static glm::vec3 pCurveDir = newCurveDir;
@@ -150,25 +135,16 @@ namespace flex
 			}
 			else if (!m_Player->GetObjectInteractingWith())
 			{
-				real moveH = 0.0f;
-				real moveV = 0.0f;
+				real moveForward = g_InputManager->GetActionAxisValue(Action::WALK_FORWARD);
+				real moveBackward = g_InputManager->GetActionAxisValue(Action::WALK_BACKWARD);
+				real moveLeft = g_InputManager->GetActionAxisValue(Action::WALK_LEFT);
+				real moveRight = g_InputManager->GetActionAxisValue(Action::WALK_RIGHT);
 
-				if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
-				{
-					moveH = g_InputManager->GetKeyDown(KeyCode::KEY_D) > 0 ? 1.0f :
-						g_InputManager->GetKeyDown(KeyCode::KEY_A) > 0 ? -1.0f : 0.0f;
-					moveV = g_InputManager->GetKeyDown(KeyCode::KEY_W) > 0 ? -1.0f :
-						g_InputManager->GetKeyDown(KeyCode::KEY_S) > 0 ? 1.0f : 0.0f;
-				}
-				else
-				{
-					moveH = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_STICK_X);
-					moveV = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_STICK_Y);
-				}
+				real moveH = moveLeft + moveRight;
+				real moveV = moveBackward + moveForward;
 
-
-				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * -moveH;
-				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * -moveV;
+				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveH;
+				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveV;
 			}
 		}
 
@@ -373,4 +349,12 @@ namespace flex
 			m_Player->BeginTurnTransition();
 		}
 	}
+
+	void PlayerController::UpdateMode()
+	{
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
+		m_Mode = (fpCam == nullptr) ? Mode::THIRD_PERSON : Mode::FIRST_PERSON;
+	}
+
 } // namespace flex

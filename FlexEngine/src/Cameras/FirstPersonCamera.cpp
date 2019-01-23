@@ -50,6 +50,8 @@ namespace flex
 
 		FindPlayer();
 		Update();
+
+		m_Player->UpdateIsPossessed();
 	}
 
 	void FirstPersonCamera::Update()
