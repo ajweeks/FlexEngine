@@ -506,7 +506,7 @@ namespace flex
 	{
 		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureKeyboard)
 		{
-			return 0;
+			return false;
 		}
 
 		auto iter = m_Keys.find(keyCode);
@@ -516,7 +516,7 @@ namespace flex
 			return key.down == 0 && key.pDown > 0;
 		}
 
-		return 0;
+		return false;
 	}
 
 	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button) const
@@ -952,7 +952,7 @@ namespace flex
 			const JSONObject& child = rootObject.GetObject(ActionStrings[i]);
 			if (child.fields.empty())
 			{
-				PrintWarn("Malformed input bindings file! Failed to parse action with name: %s\n", ActionStrings[i]);
+				PrintWarn("Couldn't find action with name: %s in input-bindings.ini - using default values\n", ActionStrings[i]);
 			}
 			else
 			{

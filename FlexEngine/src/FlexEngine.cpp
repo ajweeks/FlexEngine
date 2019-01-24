@@ -1395,6 +1395,11 @@ namespace flex
 				rayEndLast = rayEnd;
 			}
 
+			if (g_InputManager->GetActionPressed(Action::PAUSE))
+			{
+				m_bSimulationPaused = !m_bSimulationPaused;
+			}
+
 #if COMPILE_RENDERDOC_API
 			if (m_RenderDocAPI &&
 				!m_bRenderDocCapturingFrame &&
@@ -1422,7 +1427,7 @@ namespace flex
 				g_Renderer->ToggleRenderGrid();
 			}
 
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F2))
+			if (g_InputManager->GetActionPressed(Action::EDITOR_RENAMESELECTED))
 			{
 				bWantRenameActiveElement = !bWantRenameActiveElement;
 			}
@@ -1447,11 +1452,11 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_RIGHT_BRACKET))
+			if (g_InputManager->GetActionPressed(Action::DBG_ENTER_NEXT_SCENE))
 			{
 				g_SceneManager->SetNextSceneActiveAndInit();
 			}
-			else if (g_InputManager->GetKeyPressed(KeyCode::KEY_LEFT_BRACKET))
+			else if (g_InputManager->GetActionPressed(Action::DBG_ENTER_PREV_SCENE))
 			{
 				g_SceneManager->SetPreviousSceneActiveAndInit();
 			}
@@ -1520,15 +1525,15 @@ namespace flex
 				SelectAll();
 			}
 
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_1))
+			if (g_InputManager->GetActionPressed(Action::EDITOR_SELECT_TRANSLATE_GIZMO))
 			{
 				SetTransformState(TransformState::TRANSLATE);
 			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_2))
+			if (g_InputManager->GetActionPressed(Action::EDITOR_SELECT_ROTATE_GIZMO))
 			{
 				SetTransformState(TransformState::ROTATE);
 			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_3))
+			if (g_InputManager->GetActionPressed(Action::EDITOR_SELECT_SCALE_GIZMO))
 			{
 				SetTransformState(TransformState::SCALE);
 			}

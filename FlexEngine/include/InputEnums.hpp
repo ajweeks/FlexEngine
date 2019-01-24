@@ -224,7 +224,11 @@ namespace flex
 		LOOK_LEFT,
 		LOOK_RIGHT,
 		INTERACT,
-		QUIT,
+		PAUSE,
+		EDITOR_RENAMESELECTED,
+		EDITOR_SELECT_TRANSLATE_GIZMO,
+		EDITOR_SELECT_ROTATE_GIZMO,
+		EDITOR_SELECT_SCALE_GIZMO,
 
 #ifdef _DEBUG
 		DBG_SWITCH_TO_NEXT_CAM,
@@ -232,9 +236,6 @@ namespace flex
 		DBG_ENTER_NEXT_SCENE,
 		DBG_ENTER_PREV_SCENE,
 		DBG_SAVE_SCENE,
-		DBG_GIZMO_SELECT_TRANSLATE,
-		DBG_GIZMO_SELECT_ROTATE,
-		DBG_GIZMO_SELECT_SCALE,
 #endif // _DEBUG
 
 		_NONE,
@@ -252,7 +253,11 @@ namespace flex
 		"Look left",
 		"Look right",
 		"Interact",
-		"Quit",
+		"Pause",
+		"Editor Rename selected",
+		"Editor Select translate gizmo",
+		"Editor Select rotate gizmo",
+		"Editor Select scale gizmo",
 
 #ifdef _DEBUG
 		"DBG Switch to next cam",
@@ -260,9 +265,6 @@ namespace flex
 		"DBG Enter next scene",
 		"DBG Enter prev scene",
 		"DBG Save scene",
-		"DBG Gizmo select translate",
-		"DBG Gizmo select rotate",
-		"DBG Gizmo select scale",
 #endif // _DEBUG
 
 		"None"

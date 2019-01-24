@@ -23,13 +23,11 @@ namespace flex
 
 	void CameraManager::Update()
 	{
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_EQUAL) ||
-			g_InputManager->IsGamepadButtonPressed(0, GamepadButton::RIGHT_BUMPER))
+		if (g_InputManager->GetActionPressed(Action::DBG_SWITCH_TO_NEXT_CAM))
 		{
 			g_CameraManager->SetActiveIndexRelative(1, false);
 		}
-		else if (g_InputManager->GetKeyPressed(KeyCode::KEY_MINUS) ||
-			g_InputManager->IsGamepadButtonPressed(0, GamepadButton::LEFT_BUMPER))
+		else if (g_InputManager->GetActionPressed(Action::DBG_SWITCH_TO_PREV_CAM))
 		{
 			g_CameraManager->SetActiveIndexRelative(-1, false);
 		}
