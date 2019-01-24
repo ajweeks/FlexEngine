@@ -67,15 +67,13 @@ namespace flex
 			return;
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(0, GamepadButton::LEFT_STICK_DOWN) ||
-			(g_InputManager->bPlayerUsingKeyboard[0] && g_InputManager->GetKeyPressed(KeyCode::KEY_DOWN)))
+		if (g_InputManager->GetActionPressed(Action::ZOOM_OUT))
 		{
 			m_TargetZoomLevel += (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
 			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(0, GamepadButton::RIGHT_STICK_DOWN) ||
-			(g_InputManager->bPlayerUsingKeyboard[0] && g_InputManager->GetKeyPressed(KeyCode::KEY_UP)))
+		if (g_InputManager->GetActionPressed(Action::ZOOM_IN))
 		{
 			m_TargetZoomLevel -= (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
 			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);

@@ -215,17 +215,27 @@ namespace flex
 
 	enum class Action
 	{
-		WALK_LEFT,
-		WALK_RIGHT,
-		WALK_FORWARD,
-		WALK_BACKWARD,
+		MOVE_LEFT,
+		MOVE_RIGHT,
+		MOVE_FORWARD,
+		MOVE_BACKWARD,
 		LOOK_UP,
 		LOOK_DOWN,
 		LOOK_LEFT,
 		LOOK_RIGHT,
 		INTERACT,
+		PLACE_ITEM,
 		PAUSE,
-		EDITOR_RENAMESELECTED,
+		ZOOM_IN,
+		ZOOM_OUT,
+		TOGGLE_TABLET,
+		PLACE_NODE,
+		COMPLETE_TRACK,
+
+		TAKE_SCREENSHOT,
+
+		// Editor
+		EDITOR_RENAME_SELECTED,
 		EDITOR_SELECT_TRANSLATE_GIZMO,
 		EDITOR_SELECT_ROTATE_GIZMO,
 		EDITOR_SELECT_SCALE_GIZMO,
@@ -235,7 +245,6 @@ namespace flex
 		DBG_SWITCH_TO_PREV_CAM,
 		DBG_ENTER_NEXT_SCENE,
 		DBG_ENTER_PREV_SCENE,
-		DBG_SAVE_SCENE,
 #endif // _DEBUG
 
 		_NONE,
@@ -244,16 +253,26 @@ namespace flex
 
 	static const char* ActionStrings[] =
 	{
-		"Walk left",
-		"Walk right",
-		"Walk forward",
-		"Walk backward",
+		"Move left",
+		"Move right",
+		"Move forward",
+		"Move backward",
 		"Look up",
 		"Look down",
 		"Look left",
 		"Look right",
 		"Interact",
+		"Place item",
 		"Pause",
+		"Zoom in",
+		"Zoom out",
+		"Toggle tablet",
+		"Place node",
+		"Complete track",
+
+		"Take screenshot",
+
+		// Editor
 		"Editor Rename selected",
 		"Editor Select translate gizmo",
 		"Editor Select rotate gizmo",
@@ -264,7 +283,6 @@ namespace flex
 		"DBG Switch to prev cam",
 		"DBG Enter next scene",
 		"DBG Enter prev scene",
-		"DBG Save scene",
 #endif // _DEBUG
 
 		"None"

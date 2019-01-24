@@ -223,8 +223,7 @@ namespace flex
 
 	GamepadState& InputManager::GetGamepadState(i32 gamepadIndex)
 	{
-		assert(gamepadIndex == 0 ||
-				gamepadIndex == 1);
+		assert(gamepadIndex == 0 || gamepadIndex == 1);
 		return m_GamepadStates[gamepadIndex];
 	}
 
@@ -444,7 +443,8 @@ namespace flex
 		if (binding.gamepadAxis != GamepadAxis::_NONE)
 		{
 			real axisValue = GetGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
-			if (axisValue != 0.0f)
+			if ((binding.bNegative && axisValue > 0.0f) ||
+				(!binding.bNegative && axisValue < 0.0f))
 			{
 				return axisValue;
 			}

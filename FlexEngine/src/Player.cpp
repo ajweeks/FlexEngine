@@ -143,7 +143,7 @@ namespace flex
 	{
 		if (m_bPossessed)
 		{
-			if (g_InputManager->IsGamepadButtonPressed(m_Index, GamepadButton::X))
+			if (g_InputManager->GetActionPressed(Action::INTERACT))
 			{
 				Player* p = (Player*)this;
 
@@ -187,12 +187,12 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->IsGamepadButtonPressed(m_Index, GamepadButton::A) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_E)))
+			if (g_InputManager->GetActionPressed(Action::TOGGLE_TABLET))
 			{
 				m_bTabletUp = !m_bTabletUp;
 			}
 
+			// TEMP:
 			if (g_InputManager->GetKeyPressed(KeyCode::KEY_C))
 			{
 				// TODO: Hide before being placed somehow? (Don't create RB or mesh yet?)
@@ -221,9 +221,8 @@ namespace flex
 
 			if (!m_Inventory.empty())
 			{
-				// Place item in inventory
-				if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
-					(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_SPACE)))
+				// Place item from inventory
+				if (g_InputManager->GetActionPressed(Action::PLACE_ITEM))
 				{
 					GameObject* obj = m_Inventory[0];
 					bool bPlaced = false;
@@ -381,8 +380,7 @@ namespace flex
 				}
 			}
 
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, GamepadAxis::LEFT_TRIGGER, 0.5f) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_C)))
+			if (g_InputManager->GetActionPressed(Action::COMPLETE_TRACK))
 			{
 				m_CurveNodesPlaced = 0;
 				m_CurvePlacing.points[0] = m_CurvePlacing.points[1] = m_CurvePlacing.points[2] = m_CurvePlacing.points[3] = VEC3_ZERO;
@@ -419,8 +417,7 @@ namespace flex
 		{
 			// TODO: Snap to points other than the one we are editing
 			glm::vec3 reticlePos = GetTrackPlacementReticlePosWS(m_TrackEditingID == InvalidTrackID ? 1.0f : 0.0f, true);
-			if (g_InputManager->HasGamepadAxisValueJustPassedThreshold(m_Index, GamepadAxis::RIGHT_TRIGGER, 0.5f) ||
-				(g_InputManager->bPlayerUsingKeyboard[m_Index] && g_InputManager->GetKeyPressed(KeyCode::KEY_X)))
+			if (g_InputManager->GetActionPressed(Action::PLACE_NODE))
 			{
 				if (m_TrackEditingCurveIdx == -1)
 				{

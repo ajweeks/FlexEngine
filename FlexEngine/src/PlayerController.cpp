@@ -76,7 +76,7 @@ namespace flex
 				ResetTransformAndVelocities();
 				return;
 			}
-			
+
 			if (g_InputManager->GetActionPressed(Action::INTERACT))
 			{
 				if (m_Player->m_TrackRidingID == InvalidTrackID)
@@ -105,23 +105,24 @@ namespace flex
 		{
 			if (m_Player->m_TrackRidingID != InvalidTrackID)
 			{
-				real moveForward = g_InputManager->GetActionAxisValue(Action::WALK_FORWARD);
-				real moveBackward = g_InputManager->GetActionAxisValue(Action::WALK_BACKWARD);
+				real moveForward = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
+				real moveBackward = g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
 
 				glm::vec3 newCurveDir = trackManager->GetTrack(m_Player->m_TrackRidingID)->GetCurveDirectionAt(m_Player->m_DistAlongTrack);
 				static glm::vec3 pCurveDir = newCurveDir;
 
-				const bool bReversing = (moveBackward > 0.0f);
-
 				if (!m_Player->IsFacingDownTrack())
 				{
-					moveForward = 1.0f - moveForward;
-					moveBackward = 1.0f - moveBackward;
+					moveForward = -moveForward;
+					moveBackward = -moveBackward;
 				}
 
+				const bool bReversing = (moveBackward < 0.0f);
+
+				real targetDDist = (moveForward + moveBackward) * m_Player->m_TrackMoveSpeed * g_DeltaTime;
 				real pDist = m_Player->m_DistAlongTrack;
 				m_Player->m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_Player->m_TrackRidingID,
-					(moveForward - moveBackward) * m_Player->m_TrackMoveSpeed * g_DeltaTime, m_Player->m_DistAlongTrack);
+					targetDDist, m_Player->m_DistAlongTrack);
 				SnapPosToTrack(pDist, bReversing);
 
 				if (m_Player->IsFacingDownTrack() != bWasFacingDownTrack &&
@@ -135,10 +136,10 @@ namespace flex
 			}
 			else if (!m_Player->GetObjectInteractingWith())
 			{
-				real moveForward = g_InputManager->GetActionAxisValue(Action::WALK_FORWARD);
-				real moveBackward = g_InputManager->GetActionAxisValue(Action::WALK_BACKWARD);
-				real moveLeft = g_InputManager->GetActionAxisValue(Action::WALK_LEFT);
-				real moveRight = g_InputManager->GetActionAxisValue(Action::WALK_RIGHT);
+				real moveForward = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
+				real moveBackward = g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
+				real moveLeft = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT);
+				real moveRight = g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 
 				real moveH = moveLeft + moveRight;
 				real moveV = moveBackward + moveForward;
@@ -238,34 +239,16 @@ namespace flex
 		TrackID newTrackID = m_Player->m_TrackRidingID;
 		real newDistAlongTrack = m_Player->m_DistAlongTrack;
 		LookDirection desiredDir = LookDirection::CENTER;
-		const real leftStickX = g_InputManager->GetGamepadAxisValue(m_PlayerIndex, GamepadAxis::LEFT_STICK_X);
-		real rightStickX = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+		const real lookH = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+		const real lookV = g_InputManager->GetActionAxisValue(Action::LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::LOOK_UP);
 
-		// TODO: Replace with actions
-		if (g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex])
+		if (lookH > 0.5f)
 		{
-			real lookH = g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT) > 0 ? 1.0f :
-				g_InputManager->GetKeyDown(KeyCode::KEY_LEFT) > 0 ? -1.0f : 0.0f;
-			if (lookH > 0.5f)
-			{
-				desiredDir = LookDirection::RIGHT;
-			}
-			else if (lookH < -0.5f)
-			{
-				desiredDir = LookDirection::LEFT;
-			}
+			desiredDir = LookDirection::RIGHT;
 		}
-		else
+		else if (lookH < -0.5f)
 		{
-			static const real STICK_THRESHOLD = 0.5f;
-			if (leftStickX < -STICK_THRESHOLD)
-			{
-				desiredDir = LookDirection::LEFT;
-			}
-			else if (leftStickX > STICK_THRESHOLD)
-			{
-				desiredDir = LookDirection::RIGHT;
-			}
+			desiredDir = LookDirection::LEFT;
 		}
 
 		trackManager->UpdatePreview(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack,
@@ -297,8 +280,10 @@ namespace flex
 		newPos += glm::vec3(0.0f, m_Player->m_Height / 2.0f, 0.0f);
 		m_Player->GetTransform()->SetWorldPosition(newPos);
 
-		bool bTurningRight = rightStickX > m_TurnStartStickXThreshold;
-		bool bTurningLeft = rightStickX < -m_TurnStartStickXThreshold;
+		const real moveH = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+
+		bool bTurningRight = moveH > m_TurnStartStickXThreshold;
+		bool bTurningLeft = moveH < -m_TurnStartStickXThreshold;
 		m_DirTurning = bTurningRight ? TurningDir::RIGHT : bTurningLeft ? TurningDir::LEFT : TurningDir::NONE;
 
 		if (m_DirTurning != TurningDir::NONE || m_SecondsAttemptingToTurn < 0.0f)

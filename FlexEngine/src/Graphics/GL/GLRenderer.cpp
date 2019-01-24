@@ -1943,7 +1943,7 @@ namespace flex
 				RecaptureReflectionProbe();
 			}
 
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_KP_9))
+			if (g_InputManager->GetActionPressed(Action::TAKE_SCREENSHOT))
 			{
 				m_bCaptureScreenshot = true;
 			}

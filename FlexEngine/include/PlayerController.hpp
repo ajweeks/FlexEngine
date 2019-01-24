@@ -40,7 +40,7 @@ namespace flex
 
 		sec m_SecondsAttemptingToTurn = 0.0f;
 		// How large the joystick x value must be to enter a turning state
-		const real m_TurnStartStickXThreshold = 0.15f;
+		const real m_TurnStartStickXThreshold = 0.7f;
 		// How large the dot product between our forward and the track forward must be to turn around
 		const real m_MinForDotTurnThreshold = 0.03f;
 		const sec m_AttemptToTurnTimeThreshold = 0.2f;

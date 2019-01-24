@@ -1427,7 +1427,7 @@ namespace flex
 				g_Renderer->ToggleRenderGrid();
 			}
 
-			if (g_InputManager->GetActionPressed(Action::EDITOR_RENAMESELECTED))
+			if (g_InputManager->GetActionPressed(Action::EDITOR_RENAME_SELECTED))
 			{
 				bWantRenameActiveElement = !bWantRenameActiveElement;
 			}
@@ -1479,10 +1479,9 @@ namespace flex
 				settings.DrawWireframe = !settings.DrawWireframe;
 			}
 
-			bool altDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_ALT) ||
-				g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT_ALT);
+			const bool bAltDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_ALT) || g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT_ALT);
 			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F11) ||
-				(altDown && g_InputManager->GetKeyPressed(KeyCode::KEY_ENTER)))
+				(bAltDown && g_InputManager->GetKeyPressed(KeyCode::KEY_ENTER)))
 			{
 				g_Window->ToggleFullscreen();
 			}
