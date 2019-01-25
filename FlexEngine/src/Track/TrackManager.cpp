@@ -74,8 +74,7 @@ namespace flex
 
 	void TrackManager::Update()
 	{
-		CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
-		cartManager->Update();
+		
 	}
 
 	glm::vec3 TrackManager::GetPointOnTrack(TrackID trackID,
@@ -651,7 +650,7 @@ namespace flex
 
 	void TrackManager::DrawDebug()
 	{
-		PROFILE_AUTO("TrackManager::DrawDebug");
+		PROFILE_AUTO("TrackManager DrawDebug");
 
 		Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		BezierCurveList* trackRiding = (m_Player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)m_Player0->m_TrackRidingID]);

@@ -104,5 +104,7 @@ namespace flex
 		AudioSourceID m_SoundTrackSwitchDirID = InvalidAudioSourceID;
 
 		TextureID m_CrosshairTextureID = InvalidTextureID;
+	public:
+		bool IsRidingTrack();
 	};
 } // namespace flex

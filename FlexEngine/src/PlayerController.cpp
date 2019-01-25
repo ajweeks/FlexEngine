@@ -193,6 +193,10 @@ namespace flex
 		if (m_Player->m_bPossessed)
 		{
 			real lookH = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+			if (m_Player->IsRidingTrack())
+			{
+				lookH += g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+			}
 			real lookV = 0.0f;
 			if (m_Mode == Mode::FIRST_PERSON)
 			{
@@ -200,7 +204,8 @@ namespace flex
 			}
 
 			glm::quat rot = transform->GetLocalRotation();
-			rot = glm::rotate(rot, -lookH * m_RotateHSpeed * g_DeltaTime, up);
+			real angle = -lookH * m_RotateHSpeed * g_DeltaTime;
+			rot = glm::rotate(rot, angle, up);
 			transform->SetWorldRotation(rot);
 
 			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
@@ -280,7 +285,7 @@ namespace flex
 		newPos += glm::vec3(0.0f, m_Player->m_Height / 2.0f, 0.0f);
 		m_Player->GetTransform()->SetWorldPosition(newPos);
 
-		const real moveH = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+		real moveH = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 
 		bool bTurningRight = moveH > m_TurnStartStickXThreshold;
 		bool bTurningLeft = moveH < -m_TurnStartStickXThreshold;

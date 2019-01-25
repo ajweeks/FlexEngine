@@ -682,4 +682,9 @@ namespace flex
 		m_Inventory.push_back(obj);
 	}
 
+	bool Player::IsRidingTrack()
+	{
+		return m_TrackRidingID != InvalidTrackID;
+	}
+
 } // namespace flex

@@ -145,142 +145,146 @@ namespace flex
 		PROFILE_AUTO("Cart manager update");
 
 		// Update cart chains
-		for (i32 i = 0; i < (i32)m_Carts.size(); ++i)
 		{
-			if (m_Carts[i]->currentTrackID == InvalidTrackID)
-			{
-				continue;
-			}
+			PROFILE_AUTO("Cart manager update - find chains");
 
-			for (i32 j = i + 1; j < (i32)m_Carts.size(); ++j)
+			for (i32 i = 0; i < (i32)m_Carts.size(); ++i)
 			{
-				if (m_Carts[j]->currentTrackID == InvalidTrackID)
+				if (m_Carts[i]->currentTrackID == InvalidTrackID)
 				{
 					continue;
 				}
 
-				if (m_Carts[i]->currentTrackID == m_Carts[j]->currentTrackID)
+				for (i32 j = i + 1; j < (i32)m_Carts.size(); ++j)
 				{
-					real d = glm::distance2(m_Carts[i]->GetTransform()->GetWorldPosition(), m_Carts[j]->GetTransform()->GetWorldPosition());
-					real t = glm::min(m_Carts[i]->attachThreshold * m_Carts[i]->attachThreshold,
-									  m_Carts[j]->attachThreshold * m_Carts[j]->attachThreshold);
-					if (d <= t)
+					if (m_Carts[j]->currentTrackID == InvalidTrackID)
 					{
-						CartChainID c1 = InvalidCartChainID;
-						CartChainID c2 = InvalidCartChainID;
-						for (i32 c = 0; c < (i32)m_CartChains.size(); ++c)
+						continue;
+					}
+
+					if (m_Carts[i]->currentTrackID == m_Carts[j]->currentTrackID)
+					{
+						real d = glm::distance2(m_Carts[i]->GetTransform()->GetWorldPosition(), m_Carts[j]->GetTransform()->GetWorldPosition());
+						real t = glm::min(m_Carts[i]->attachThreshold * m_Carts[i]->attachThreshold,
+							m_Carts[j]->attachThreshold * m_Carts[j]->attachThreshold);
+						if (d <= t)
 						{
-							if (m_CartChains[c].chainID != InvalidCartChainID)
+							CartChainID c1 = InvalidCartChainID;
+							CartChainID c2 = InvalidCartChainID;
+							for (i32 c = 0; c < (i32)m_CartChains.size(); ++c)
 							{
-								if (m_CartChains[c].Contains(i))
+								if (m_CartChains[c].chainID != InvalidCartChainID)
 								{
-									c1 = c;
+									if (m_CartChains[c].Contains(i))
+									{
+										c1 = c;
+									}
+									if (m_CartChains[c].Contains(j))
+									{
+										c2 = c;
+									}
 								}
-								if (m_CartChains[c].Contains(j))
+							}
+
+							if (c1 != InvalidCartChainID && c1 == c2)
+							{
+								continue;
+							}
+
+							if (c1 == InvalidCartChainID && c2 == InvalidCartChainID)
+							{
+								// Neither are already in a chain
+
+								assert(GetCart(i)->chainID == InvalidCartChainID);
+								assert(GetCart(j)->chainID == InvalidCartChainID);
+
+								CartChainID newCartChainID = GetNextAvailableCartChainID();
+								CartChain& newChain = m_CartChains[newCartChainID];
+								assert(newChain.chainID == newCartChainID);
+
+								newChain.AddUnique(i);
+								newChain.AddUnique(j);
+
+								assert(GetCart(i)->chainID == newCartChainID);
+								assert(GetCart(j)->chainID == newCartChainID);
+
+								if (newCartChainID != InvalidCartChainID &&
+									newCartChainID >= m_CartChains.size())
 								{
-									c2 = c;
+									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", newCartChainID, m_CartChains.size());
 								}
 							}
-						}
-
-						if (c1 != InvalidCartChainID && c1 == c2)
-						{
-							continue;
-						}
-
-						if (c1 == InvalidCartChainID && c2 == InvalidCartChainID)
-						{
-							// Neither are already in a chain
-
-							assert(GetCart(i)->chainID == InvalidCartChainID);
-							assert(GetCart(j)->chainID == InvalidCartChainID);
-
-							CartChainID newCartChainID = GetNextAvailableCartChainID();
-							CartChain& newChain = m_CartChains[newCartChainID];
-							assert(newChain.chainID == newCartChainID);
-
-							newChain.AddUnique(i);
-							newChain.AddUnique(j);
-
-							assert(GetCart(i)->chainID == newCartChainID);
-							assert(GetCart(j)->chainID == newCartChainID);
-
-							if (newCartChainID != InvalidCartChainID &&
-								newCartChainID >= m_CartChains.size())
+							else if (c1 == InvalidCartChainID)
 							{
-								PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", newCartChainID, m_CartChains.size());
-							}
-						}
-						else if (c1 == InvalidCartChainID)
-						{
-							// Only c2 is already in a chain
+								// Only c2 is already in a chain
 
-							assert(GetCart(i)->chainID == InvalidCartChainID);
-							assert(GetCart(j)->chainID != InvalidCartChainID);
+								assert(GetCart(i)->chainID == InvalidCartChainID);
+								assert(GetCart(j)->chainID != InvalidCartChainID);
 
-							CartChain& chain = m_CartChains[c2];
-							assert(chain.chainID == c2);
-							chain.AddUnique(i);
+								CartChain& chain = m_CartChains[c2];
+								assert(chain.chainID == c2);
+								chain.AddUnique(i);
 
-							assert(GetCart(i)->chainID == c2);
-							assert(GetCart(j)->chainID == c2);
+								assert(GetCart(i)->chainID == c2);
+								assert(GetCart(j)->chainID == c2);
 
-							if (m_Carts[i]->chainID != InvalidCartChainID &&
-								m_Carts[i]->chainID >= m_CartChains.size())
-							{
-								PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", m_Carts[i]->chainID, m_CartChains.size());
-							}
-						}
-						else if (c2 == InvalidCartChainID)
-						{
-							// Only c1 is already in a chain
-
-							assert(GetCart(i)->chainID != InvalidCartChainID);
-							assert(GetCart(j)->chainID == InvalidCartChainID);
-
-							CartChain& chain = m_CartChains[c1];
-							assert(chain.chainID == c1);
-							chain.AddUnique(j);
-
-							assert(GetCart(i)->chainID == c1);
-							assert(GetCart(j)->chainID == c1);
-
-							if (m_Carts[j]->chainID != InvalidCartChainID &&
-								m_Carts[j]->chainID >= m_CartChains.size())
-							{
-								PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", m_Carts[j]->chainID, m_CartChains.size());
-							}
-						}
-						else
-						{
-							// Both are already in chains moving the same direction, move all of c2 into c1
-
-							assert(GetCart(i)->chainID != InvalidCartChainID);
-							assert(GetCart(j)->chainID != InvalidCartChainID);
-
-							CartChain& chain1 = m_CartChains[c1];
-							CartChain& chain2 = m_CartChains[c2];
-
-							assert(chain1.chainID == c1);
-							assert(chain2.chainID == c2);
-
-							assert(chain1 != chain2);
-
-							if ((chain1.velT > 0.0f && chain2.velT > 0.0f) ||
-								(chain1.velT < 0.0f && chain2.velT < 0.0f) ||
-								(chain1.velT == 0.0f || chain2.velT == 0.0f))
-							{
-								while (!chain2.carts.empty())
+								if (m_Carts[i]->chainID != InvalidCartChainID &&
+									m_Carts[i]->chainID >= m_CartChains.size())
 								{
-									CartID cartID = chain2.carts[chain2.carts.size() - 1];
-									chain2.Remove(cartID);
-									chain1.AddUnique(cartID);
+									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", m_Carts[i]->chainID, m_CartChains.size());
 								}
-								m_CartChains[c2].Reset();
+							}
+							else if (c2 == InvalidCartChainID)
+							{
+								// Only c1 is already in a chain
+
+								assert(GetCart(i)->chainID != InvalidCartChainID);
+								assert(GetCart(j)->chainID == InvalidCartChainID);
+
+								CartChain& chain = m_CartChains[c1];
+								assert(chain.chainID == c1);
+								chain.AddUnique(j);
 
 								assert(GetCart(i)->chainID == c1);
 								assert(GetCart(j)->chainID == c1);
-								assert(m_CartChains[c2].carts.empty());
+
+								if (m_Carts[j]->chainID != InvalidCartChainID &&
+									m_Carts[j]->chainID >= m_CartChains.size())
+								{
+									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", m_Carts[j]->chainID, m_CartChains.size());
+								}
+							}
+							else
+							{
+								// Both are already in chains moving the same direction, move all of c2 into c1
+
+								assert(GetCart(i)->chainID != InvalidCartChainID);
+								assert(GetCart(j)->chainID != InvalidCartChainID);
+
+								CartChain& chain1 = m_CartChains[c1];
+								CartChain& chain2 = m_CartChains[c2];
+
+								assert(chain1.chainID == c1);
+								assert(chain2.chainID == c2);
+
+								assert(chain1 != chain2);
+
+								if ((chain1.velT > 0.0f && chain2.velT > 0.0f) ||
+									(chain1.velT < 0.0f && chain2.velT < 0.0f) ||
+									(chain1.velT == 0.0f || chain2.velT == 0.0f))
+								{
+									while (!chain2.carts.empty())
+									{
+										CartID cartID = chain2.carts[chain2.carts.size() - 1];
+										chain2.Remove(cartID);
+										chain1.AddUnique(cartID);
+									}
+									m_CartChains[c2].Reset();
+
+									assert(GetCart(i)->chainID == c1);
+									assert(GetCart(j)->chainID == c1);
+									assert(m_CartChains[c2].carts.empty());
+								}
 							}
 						}
 					}
@@ -288,39 +292,56 @@ namespace flex
 			}
 		}
 
-		for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 		{
-			real avgVel = 0.0f;
-			for (i32 j = 0; j < (i32)m_CartChains[i].carts.size(); ++j)
-			{
-				avgVel += GetCart(m_CartChains[i].carts[j])->UpdatePosition();
-			}
-			m_CartChains[i].velT = avgVel / m_CartChains[i].carts.size();
-		}
+			PROFILE_AUTO("Cart manager update - update positions in chains");
 
-		for (Cart* cart : m_Carts)
-		{
-			if (cart->chainID == InvalidCartChainID)
+			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 			{
-				cart->UpdatePosition();
+				real avgVel = 0.0f;
+				for (i32 j = 0; j < (i32)m_CartChains[i].carts.size(); ++j)
+				{
+					avgVel += GetCart(m_CartChains[i].carts[j])->UpdatePosition();
+				}
+				m_CartChains[i].velT = avgVel / m_CartChains[i].carts.size();
 			}
 		}
 
-		if (g_EngineInstance->IsRenderingEditorObjects())
 		{
-			auto debugDrawer = g_Renderer->GetDebugDrawer();
+			PROFILE_AUTO("Cart manager update - update positions out of chains");
+
 			for (Cart* cart : m_Carts)
 			{
-				debugDrawer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
+				if (cart->chainID == InvalidCartChainID)
+				{
+					cart->UpdatePosition();
+				}
 			}
 		}
 
-		for (Cart* cart : m_Carts)
 		{
-			if (cart->chainID != InvalidCartChainID &&
-				cart->chainID >= m_CartChains.size())
+			PROFILE_AUTO("Cart manager update - draw spheres");
+
+			PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
+			const bool bRenderBoundingSpheres =
+				!physicsDebuggingSettings.DisableAll &&
+				physicsDebuggingSettings.DrawWireframe &&
+				g_EngineInstance->IsRenderingEditorObjects();
+			if (bRenderBoundingSpheres)
 			{
- 				PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", cart->chainID, m_CartChains.size());
+				auto debugDrawer = g_Renderer->GetDebugDrawer();
+				for (Cart* cart : m_Carts)
+				{
+					debugDrawer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
+				}
+			}
+
+			for (Cart* cart : m_Carts)
+			{
+				if (cart->chainID != InvalidCartChainID &&
+					cart->chainID >= m_CartChains.size())
+				{
+					PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", cart->chainID, m_CartChains.size());
+				}
 			}
 		}
 	}
