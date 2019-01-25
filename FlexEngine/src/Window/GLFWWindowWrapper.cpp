@@ -55,6 +55,8 @@ namespace flex
 			Print("%i joysticks connected on bootup\n", numJoysticksConnected);
 		}
 
+		GetCurrentProcessId();
+
 		// TODO: Look into supporting system-DPI awareness
 		//SetProcessDPIAware();
 	}

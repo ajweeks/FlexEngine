@@ -18,6 +18,7 @@ namespace flex
 	std::vector<Profiler::Timing> Profiler::s_DisplayedFrameTimings;
 	const real Profiler::s_ScrollSpeed = 0.4f;
 	bool Profiler::s_bDisplayingFrame = false;
+	std::vector<JSONObject> Profiler::s_PendingTraceEvents;
 
 	glm::vec4 Profiler::blockColors[] = {
 		glm::vec4(0.43f, 0.48f, 0.58f, 0.8f), // Pale dark blue
@@ -203,6 +204,20 @@ namespace flex
 			ms now = Time::CurrentMilliseconds();
 			iter->second.end = now;
 
+			JSONObject objStart = {};
+			objStart.fields.emplace_back("name", JSONValue(blockName));
+			objStart.fields.emplace_back("ph", JSONValue("B"));
+			objStart.fields.emplace_back("pid", JSONValue(123));
+			objStart.fields.emplace_back("ts", JSONValue(iter->second.start));
+			s_PendingTraceEvents.emplace_back(objStart);
+
+			JSONObject objEnd = {};
+			objEnd.fields.emplace_back("name", JSONValue(blockName));
+			objEnd.fields.emplace_back("ph", JSONValue("E"));
+			objEnd.fields.emplace_back("pid", JSONValue(123));
+			objEnd.fields.emplace_back("ts", JSONValue(iter->second.end));
+			s_PendingTraceEvents.emplace_back(objEnd);
+
 			--s_UnendedTimings;
 		}
 	}
@@ -235,6 +250,20 @@ namespace flex
 		else
 		{
 			Print("Failed to write profiling results to %s\n", filePath.c_str());
+		}
+
+		std::string filePath2 = absoluteDirectory + "flex_trace_" + dateString + ".json";
+
+		JSONObject traceEvents = {};
+		traceEvents.fields.emplace_back("traceEvents", JSONValue(s_PendingTraceEvents));
+		std::string tracingObjectContents = traceEvents.Print(0);
+		if (WriteFile(filePath2, tracingObjectContents, false))
+		{
+			Print("Wrote tracing results to %s\n", filePath2.c_str());
+		}
+		else
+		{
+			Print("Failed to write tracing results to %s\n", filePath2.c_str());
 		}
 	}
 

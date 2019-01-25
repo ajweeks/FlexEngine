@@ -218,6 +218,8 @@ namespace flex
 		sec SecSinceLogSave = 0.0f;
 		sec LogSaveRate = 5.0f;
 
+		i32 m_MainProcessID = -1;
+
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;
 	};

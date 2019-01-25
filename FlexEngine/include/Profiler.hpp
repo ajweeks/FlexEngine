@@ -57,6 +57,8 @@ namespace flex
 
 		static std::string s_PendingCSV;
 
+		static std::vector<JSONObject> s_PendingTraceEvents;
+
 		// Stores a single frame's timings to be displayed visually
 		static std::vector<Timing> s_DisplayedFrameTimings;
 
