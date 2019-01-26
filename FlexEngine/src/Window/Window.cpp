@@ -369,4 +369,10 @@ namespace flex
 			ImGui::TreePop();
 		}
 	}
+
+	glm::u32 Window::GetPID() const
+	{
+		return m_PID;
+	}
+
 } // namespace flex

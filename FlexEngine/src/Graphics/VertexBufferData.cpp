@@ -19,6 +19,7 @@ namespace flex
 		VertexStride = CalculateVertexStride(Attributes);
 		VertexBufferSize = VertexCount * VertexStride;
 
+		assert(vertexData == nullptr);
 		vertexData = (real*)malloc(VertexBufferSize);
 		if (vertexData == nullptr)
 		{

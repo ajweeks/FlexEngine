@@ -105,6 +105,8 @@ namespace flex
 
 		void DrawImGuiObjects();
 
+		u32 GetPID() const;
+
 	protected:
 
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
@@ -158,6 +160,8 @@ namespace flex
 		real m_SecondsSinceTitleUpdate = 0.0f;
 
 		CursorMode m_CursorMode = CursorMode::NORMAL;
+
+		u32 m_PID;
 
 	private:
 		std::string GenerateWindowTitle();

@@ -1982,6 +1982,7 @@ namespace flex
 				{
 					ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
 					ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
+					ImGui::Checkbox("Toggle profiler trace recording", &Profiler::s_bRecordingTrace);
 
 					if (ImGui::Button("Display latest frame"))
 					{

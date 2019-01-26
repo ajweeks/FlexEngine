@@ -87,8 +87,6 @@ namespace flex
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
 							  GLsizei length, const GLchar *message, const void *userParam);
 
-
-
 	// Stores whether a controller is connected or not
 	const i32 MAX_JOYSTICK_COUNT = 4;
 	extern std::array<bool, MAX_JOYSTICK_COUNT> g_JoysticksConnected;

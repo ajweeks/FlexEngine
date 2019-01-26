@@ -36,6 +36,7 @@ namespace flex
 		static void DrawDisplayedFrame();
 
 		static bool s_bDisplayingFrame;
+		static bool s_bRecordingTrace;
 
 	private:
 		static u64 Hash(const char* str);

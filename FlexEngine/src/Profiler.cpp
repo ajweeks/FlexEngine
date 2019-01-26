@@ -9,16 +9,17 @@
 
 namespace flex
 {
-	i32 Profiler::s_UnendedTimings = 0;
+	bool Profiler::s_bDisplayingFrame = false;
+	bool Profiler::s_bRecordingTrace = false;
+	std::unordered_map<u64, Profiler::Timing> Profiler::s_Timings;
 	ms Profiler::s_FrameStartTime = 0;
 	ms Profiler::s_FrameEndTime = 0;
-	std::unordered_map<u64, Profiler::Timing> Profiler::s_Timings;
+	i32 Profiler::s_UnendedTimings = 0;
 	std::string Profiler::s_PendingCSV;
-	Profiler::DisplayedFrameOptions Profiler::s_DisplayedFrameOptions;
+	std::vector<JSONObject> Profiler::s_PendingTraceEvents;
 	std::vector<Profiler::Timing> Profiler::s_DisplayedFrameTimings;
 	const real Profiler::s_ScrollSpeed = 0.4f;
-	bool Profiler::s_bDisplayingFrame = false;
-	std::vector<JSONObject> Profiler::s_PendingTraceEvents;
+	Profiler::DisplayedFrameOptions Profiler::s_DisplayedFrameOptions;
 
 	glm::vec4 Profiler::blockColors[] = {
 		glm::vec4(0.43f, 0.48f, 0.58f, 0.8f), // Pale dark blue
@@ -204,21 +205,22 @@ namespace flex
 			ms now = Time::CurrentMilliseconds();
 			iter->second.end = now;
 
-			JSONObject objStart = {};
-			objStart.fields.emplace_back("name", JSONValue(blockName));
-			objStart.fields.emplace_back("ph", JSONValue("B"));
-			objStart.fields.emplace_back("pid", JSONValue(123));
-			objStart.fields.emplace_back("ts", JSONValue(iter->second.start));
-			s_PendingTraceEvents.emplace_back(objStart);
-
-			JSONObject objEnd = {};
-			objEnd.fields.emplace_back("name", JSONValue(blockName));
-			objEnd.fields.emplace_back("ph", JSONValue("E"));
-			objEnd.fields.emplace_back("pid", JSONValue(123));
-			objEnd.fields.emplace_back("ts", JSONValue(iter->second.end));
-			s_PendingTraceEvents.emplace_back(objEnd);
-
 			--s_UnendedTimings;
+
+			if (s_bRecordingTrace)
+			{
+				i32 PID = (i32)g_Window->GetPID();
+
+				JSONObject obj = {};
+				obj.fields.emplace_back("name", JSONValue(blockName));
+				obj.fields.emplace_back("ph", JSONValue("X"));
+				obj.fields.emplace_back("pid", JSONValue(PID));
+				us tStart = Time::ConvertFormats(iter->second.start, Time::Format::MILLISECOND, Time::Format::MICROSECOND);
+				us dur = Time::ConvertFormats(iter->second.end - iter->second.start, Time::Format::MILLISECOND, Time::Format::MICROSECOND);
+				obj.fields.emplace_back("ts", JSONValue(tStart));
+				obj.fields.emplace_back("dur", JSONValue(dur));
+				s_PendingTraceEvents.emplace_back(obj);
+			}
 		}
 	}
 
@@ -232,38 +234,46 @@ namespace flex
 		if (s_PendingCSV.empty())
 		{
 			PrintWarn("Attempted to print profiler results to file before any results were generated!"
-					  "Did you set bPrintTimings when calling EndFrame?\n");
-			return;
+				"Did you set bPrintTimings when calling EndFrame?\n");
 		}
 
 		std::string directory = SAVED_LOCATION "profiles/";
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
 		CreateDirectoryRecursive(absoluteDirectory);
-
 		std::string dateString = GetDateString_YMDHMS();
-		std::string filePath = absoluteDirectory + "frame_times_" + dateString + ".csv";
 
-		if (WriteFile(filePath, s_PendingCSV, false))
+		if (!s_PendingCSV.empty())
 		{
-			Print("Wrote profiling results to %s\n", filePath.c_str());
-		}
-		else
-		{
-			Print("Failed to write profiling results to %s\n", filePath.c_str());
+			std::string filePath = absoluteDirectory + "flex_frame_times_" + dateString + ".csv";
+
+			if (WriteFile(filePath, s_PendingCSV, false))
+			{
+				Print("Wrote profiling results to %s\n", filePath.c_str());
+			}
+			else
+			{
+				Print("Failed to write profiling results to %s\n", filePath.c_str());
+			}
 		}
 
-		std::string filePath2 = absoluteDirectory + "flex_trace_" + dateString + ".json";
+		if (!s_PendingTraceEvents.empty())
+		{
+			std::string filePath = absoluteDirectory + "flex_trace_" + dateString + ".json";
 
-		JSONObject traceEvents = {};
-		traceEvents.fields.emplace_back("traceEvents", JSONValue(s_PendingTraceEvents));
-		std::string tracingObjectContents = traceEvents.Print(0);
-		if (WriteFile(filePath2, tracingObjectContents, false))
-		{
-			Print("Wrote tracing results to %s\n", filePath2.c_str());
-		}
-		else
-		{
-			Print("Failed to write tracing results to %s\n", filePath2.c_str());
+			// TODO: Don't generate unnecessary whitespace characters in result
+			// TODO: Add systemTraceEvents field containing ETW trace data (see https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.q8di1j2nawlp)
+			// TODO: Add counter events (ph: c, args: {num: 99})
+			JSONObject traceEvents = {};
+			traceEvents.fields.emplace_back("traceEvents", JSONValue(s_PendingTraceEvents));
+			std::string tracingObjectContents = traceEvents.Print(0);
+			if (WriteFile(filePath, tracingObjectContents, false))
+			{
+				Print("Wrote tracing results to %s\n", filePath.c_str());
+			}
+			else
+			{
+				Print("Failed to write tracing results to %s\n", filePath.c_str());
+			}
 		}
 	}
 
