@@ -3,28 +3,12 @@
 
 #include "Graphics/GL/GLRenderer.hpp"
 
-#include <algorithm>
-#include <array>
-#include <functional>
-#include <string>
-#include <utility>
-
 #pragma warning(push, 0)
-#include <BulletCollision/CollisionShapes/btBoxShape.h>
-#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletCollision/CollisionShapes/btConeShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
-
-#include <BulletCollision/CollisionShapes/btSphereShape.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
-#include <freetype/ftbitmap.h>
-#include <glm/gtc/matrix_transform.hpp>
 
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
-// TODO: Remove?
-#include <glm/vec3.hpp>
+
+#include <freetype/ftbitmap.h>
 
 #if COMPILE_IMGUI
 #include "imgui_internal.h"
@@ -52,7 +36,6 @@
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Time.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"

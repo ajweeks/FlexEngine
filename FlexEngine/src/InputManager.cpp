@@ -2,11 +2,10 @@
 
 #include "InputManager.hpp"
 
-#include <assert.h>
-
 #include "Graphics/Renderer.hpp"
-#include "Window/Window.hpp"
+#include "Helpers.hpp" // For WriteFile
 #include "JSONParser.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

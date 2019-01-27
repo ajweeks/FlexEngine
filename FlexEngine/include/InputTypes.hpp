@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Helpers.hpp" // For RollingAverage
-#include "Types.hpp" // For glm::vec2
+#include "RollingAverage.hpp"
 
 namespace flex
 {

@@ -2,8 +2,6 @@
 
 #include "Scene/MeshComponent.hpp"
 
-#include <string>
-
 #pragma warning(push, 0)
 #define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf/tiny_gltf.h>

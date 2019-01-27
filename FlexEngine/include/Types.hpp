@@ -76,8 +76,8 @@ namespace flex
 #define InvalidCartID ((CartChainID)u32_max)
 #define InvalidCartChainID ((CartChainID)u32_max)
 
-	template<bool> struct StaticAssert;
-	template<> struct StaticAssert<true> {};
+	//template<bool> struct StaticAssert;
+	//template<> struct StaticAssert<true> {};
 
 	enum class GameObjectType
 	{
@@ -141,33 +141,53 @@ namespace flex
 		UNCONSUMED
 	};
 
-	// TODO: Move into different header!
-	class ICallbackGameObject
+	// TODO: Move enums to their own header
+	enum class SamplingType
 	{
-	public:
-		virtual void Execute(GameObject* obj) = 0;
+		CONSTANT, // All samples are equally-weighted
+		LINEAR    // Latest sample is weighted N times higher than Nth sample
 	};
 
-	template<typename T>
-	class OnGameObjectDestroyedCallback : public ICallbackGameObject
+	enum class TurningDir
 	{
-		using CallbackFunction = void(T::*)(GameObject*);
+		LEFT,
+		NONE,
+		RIGHT
+	};
 
-	public:
-		OnGameObjectDestroyedCallback(T* obj, CallbackFunction fun) :
-			mObject(obj),
-			mFunction(fun)
-		{
-		}
+	enum class TransformState
+	{
+		TRANSLATE,
+		ROTATE,
+		SCALE,
+		_NONE
+	};
 
-		virtual void Execute(GameObject* obj) override
-		{
-			(mObject->*mFunction)(obj);
-		}
+	enum class TrackState
+	{
+		FACING_FORWARD,
+		FACING_BACKWARD,
 
-	private:
-		CallbackFunction mFunction;
-		T* mObject;
+		_NONE
+	};
+
+	static const char* TrackStateStrs[((i32)TrackState::_NONE) + 1] =
+	{
+		"Facing forward",
+		"Facing backward",
+
+		"NONE",
+	};
+
+	static_assert(ARRAY_LENGTH(TrackStateStrs) == (u32)TrackState::_NONE + 1, "Length of TrackStateStrs must match length of TrackState enum");
+
+	enum class LookDirection
+	{
+		LEFT,
+		CENTER,
+		RIGHT,
+
+		_NONE
 	};
 
 } // namespace flex

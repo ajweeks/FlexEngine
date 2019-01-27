@@ -1,22 +1,15 @@
 #pragma once
 
-#include <vector>
-#include <map>
-
 #pragma warning(push, 0)
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tiny_gltf/tiny_gltf.h>
-
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
 #pragma warning(pop)
 
 #include "Graphics/RendererTypes.hpp"
-#include "JSONTypes.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
+#include "JSONTypes.hpp"
 
 namespace flex
 {

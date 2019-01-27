@@ -2,6 +2,8 @@
 
 #include "InputTypes.hpp"
 
+#include <map>
+
 namespace flex
 {
 	/*

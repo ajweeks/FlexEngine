@@ -15,6 +15,8 @@
 #define COMPILE_RENDERDOC_API 0
 #endif
 
+#define VC_EXTRALEAN
+
 
 #define NOMINMAX
 #define GLFW_INCLUDE_NONE
@@ -49,6 +51,15 @@
 #if COMPILE_IMGUI
 #define IMGUI_IMPL_OPENGL_LOADER_GLAD
 #include "imgui.h"
+
+namespace flex
+{
+	extern ImVec4 g_WarningTextColor;
+	extern ImVec4 g_WarningButtonColor;
+	extern ImVec4 g_WarningButtonHoveredColor;
+	extern ImVec4 g_WarningButtonActiveColor;
+}
+
 #else
 #include <glad/glad.h>
 #endif

@@ -2,12 +2,9 @@
 
 #include "Scene/BaseScene.hpp"
 
-#include <fstream>
-
 #pragma warning(push, 0)
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
-#include <glm/vec3.hpp>
 #include <glm/gtx/norm.hpp> // for distance2
 #pragma warning(pop)
 

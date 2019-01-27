@@ -2,8 +2,6 @@
 
 #include <array>
 #include <map>
-#include <string>
-#include <vector>
 
 #pragma warning(push, 0)
 #include <glm/gtc/quaternion.hpp>

@@ -1,7 +1,6 @@
 #include "stdafx.hpp"
 
 #pragma warning(push, 0)
-#include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
@@ -11,8 +10,6 @@
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
-
-#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>

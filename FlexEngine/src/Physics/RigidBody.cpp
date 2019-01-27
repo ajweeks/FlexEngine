@@ -3,8 +3,12 @@
 #include "Physics/RigidBody.hpp"
 
 #pragma warning(push, 0)
-#include <btBulletCollisionCommon.h>
-#include <btBulletDynamicsCommon.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletCollision/CollisionShapes/btCollisionShape.h>
+#include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
+#include <LinearMath/btDefaultMotionState.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #pragma warning(pop)

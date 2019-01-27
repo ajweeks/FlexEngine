@@ -4,9 +4,9 @@
 
 #pragma warning(push, 0)
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
-#include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+
 #include <LinearMath/btVector3.h>
 #pragma warning(pop)
 

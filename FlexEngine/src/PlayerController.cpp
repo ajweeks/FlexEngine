@@ -262,7 +262,7 @@ namespace flex
 
 		i32 newJunctionIndex = -1;
 		i32 newCurveIndex = -1;
-		TrackState newTrackState = TrackState::NONE;
+		TrackState newTrackState = TrackState::_NONE;
 		glm::vec3 newPos = trackManager->GetPointOnTrack(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack,
 			pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrackID, &newDistAlongTrack,
 			&newJunctionIndex, &newCurveIndex, &newTrackState, true);
@@ -276,7 +276,7 @@ namespace flex
 			m_Player->m_TrackRidingID = newTrackID;
 			m_Player->m_DistAlongTrack = newDistAlongTrack;
 
-			if (newTrackState != TrackState::NONE)
+			if (newTrackState != TrackState::_NONE)
 			{
 				m_Player->m_TrackState = newTrackState;
 			}

@@ -2,7 +2,6 @@
 
 #include "BaseCamera.hpp"
 
-#include "InputTypes.hpp"
 #include "InputTypes.hpp" // For MouseButtonCallback
 
 namespace flex

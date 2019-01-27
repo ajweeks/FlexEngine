@@ -1,10 +1,20 @@
 #pragma once
 
-#include <string>
 #include <sstream>
-#include <vector>
 #include <stdio.h> // For va_list
-#include "wtypes.h" // For HANDLE, WORD
+
+typedef void * HANDLE;
+typedef unsigned short WORD;
+
+// Taken from ntddvdeo.h:
+#define FOREGROUND_BLUE      0x0001
+#define FOREGROUND_GREEN     0x0002
+#define FOREGROUND_RED       0x0004
+#define FOREGROUND_INTENSITY 0x0008
+#define BACKGROUND_BLUE      0x0010
+#define BACKGROUND_GREEN     0x0020
+#define BACKGROUND_RED       0x0040
+#define BACKGROUND_INTENSITY 0x0080
 
 namespace flex
 {
@@ -18,8 +28,8 @@ namespace flex
 	void InitializeLogger();
 	void ClearLogFile();
 	void SaveLogBufferToFile();
-	void DestroyLogger();
 
+	// Max number of characters allowed in a single message
 	static const int MAX_CHARS = 1024;
 
 	extern bool g_bEnableLogToConsole;

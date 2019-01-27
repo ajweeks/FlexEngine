@@ -3,6 +3,7 @@
 #include "Profiler.hpp"
 
 #include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Time.hpp"
 #include "Window/Window.hpp"
