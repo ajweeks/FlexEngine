@@ -1084,8 +1084,8 @@ namespace flex
 					{
 						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(true, captureFilePath.c_str());
 					}
-				}
-			}
+		}
+	}
 #endif
 
 			// We can update this now that the renderer has had a chance to end the frame
@@ -1117,8 +1117,8 @@ namespace flex
 			{
 				Profiler::PrintResultsToFile();
 			}
-		}
 	}
+}
 
 	void FlexEngine::SetupImGuiStyles()
 	{
@@ -1253,7 +1253,7 @@ namespace flex
 				}
 
 				ImGui::EndMenu();
-			}
+	}
 
 			if (ImGui::BeginMenu("Edit"))
 			{
@@ -1955,8 +1955,8 @@ namespace flex
 			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
 
 			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
-		}
-}
+	}
+	}
 #endif
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)

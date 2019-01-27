@@ -12,8 +12,7 @@
 
 namespace flex
 {
-	SceneManager::SceneManager() :
-		m_CurrentSceneIndex(0)
+	SceneManager::SceneManager()
 	{
 		m_SavedDirStr = RelativePathToAbsolute(RESOURCE_LOCATION  "scenes/saved");
 		m_DefaultDirStr = RelativePathToAbsolute(RESOURCE_LOCATION  "scenes/default");

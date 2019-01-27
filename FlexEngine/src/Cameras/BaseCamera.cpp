@@ -51,10 +51,15 @@ namespace flex
 
 	void BaseCamera::Initialize()
 	{
+		m_bInitialized = true;
 	}
 
 	void BaseCamera::Destroy()
 	{
+		if (m_bInitialized)
+		{
+			m_bInitialized = false;
+		}
 	}
 
 	void BaseCamera::OnSceneChanged()

@@ -21,7 +21,7 @@
 namespace flex
 {
 	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("overhead",FOV, zNear, zFar)
+		BaseCamera("overhead", FOV, zNear, zFar)
 	{
 		ResetValues();
 	}
@@ -32,21 +32,26 @@ namespace flex
 
 	void OverheadCamera::Initialize()
 	{
-		if (m_Player0 == nullptr)
-		{
-			FindPlayer();
-		}
-
 		if (!m_bInitialized)
 		{
+			if (m_Player0 == nullptr)
+			{
+				FindPlayer();
+			}
+
+			if (!m_bInitialized)
+			{
+				m_bInitialized = true;
+
+				BaseCamera::Initialize();
+
+				m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
+				m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+
+				ResetValues();
+			}
+
 			m_bInitialized = true;
-
-			BaseCamera::Initialize();
-
-			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
-			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
-
-			ResetValues();
 		}
 	}
 

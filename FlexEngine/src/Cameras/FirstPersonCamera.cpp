@@ -17,7 +17,7 @@
 namespace flex
 {
 	FirstPersonCamera::FirstPersonCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("first-person",FOV, zNear, zFar)
+		BaseCamera("first-person", FOV, zNear, zFar)
 	{
 		ResetOrientation();
 		RecalculateViewProjection();
@@ -29,18 +29,23 @@ namespace flex
 
 	void FirstPersonCamera::Initialize()
 	{
-		if (m_Player == nullptr)
+		if (m_bInitialized)
 		{
-			FindPlayer();
-		}
+			if (m_Player == nullptr)
+			{
+				FindPlayer();
+			}
 
-		if (!m_bInitialized)
-		{
+			if (!m_bInitialized)
+			{
+				m_bInitialized = true;
+
+				BaseCamera::Initialize();
+
+				Update();
+			}
+
 			m_bInitialized = true;
-
-			BaseCamera::Initialize();
-
-			Update();
 		}
 	}
 

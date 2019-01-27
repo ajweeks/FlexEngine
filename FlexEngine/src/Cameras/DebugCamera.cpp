@@ -18,7 +18,7 @@
 namespace flex
 {
 	DebugCamera::DebugCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("debug",FOV, zNear, zFar),
+		BaseCamera("debug", FOV, zNear, zFar),
 		m_MoveVel(0.0f),
 		m_TurnVel(0.0f),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
@@ -33,19 +33,28 @@ namespace flex
 
 	void DebugCamera::Initialize()
 	{
-		ResetOrientation();
-		RecalculateViewProjection();
+		if (!m_bInitialized)
+		{
+			ResetOrientation();
+			RecalculateViewProjection();
 
-		LoadDefaultKeybindings();
+			LoadDefaultKeybindings();
 
-		g_InputManager->BindMouseButtonCallback(&mouseButtonCallback);
-		g_InputManager->BindMouseMovedCallback(&mouseMovedCallback);
+			g_InputManager->BindMouseButtonCallback(&mouseButtonCallback);
+			g_InputManager->BindMouseMovedCallback(&mouseMovedCallback);
+
+			m_bInitialized = true;
+		}
 	}
 
 	void DebugCamera::Destroy()
 	{
-		g_InputManager->UnbindMouseButtonCallback(&mouseButtonCallback);
-		g_InputManager->UnbindMouseMovedCallback(&mouseMovedCallback);
+		if (m_bInitialized)
+		{
+			g_InputManager->UnbindMouseButtonCallback(&mouseButtonCallback);
+			g_InputManager->UnbindMouseMovedCallback(&mouseMovedCallback);
+			m_bInitialized = false;
+		}
 	}
 
 	void DebugCamera::Update()
@@ -121,14 +130,14 @@ namespace flex
 					orbitingCenter = g_EngineInstance->GetSelectedObjectsCenter();
 					bOrbiting = true;
 					targetDPos += m_Right * m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier +
-								  m_Up * m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier;
+						m_Up * m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier;
 				}
 				else
 				{
 					m_MouseDragDist.y = -m_MouseDragDist.y;
 
 					m_TurnVel += glm::vec2(m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
-										   m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
+						m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
 
 					m_Yaw += m_TurnVel.x;
 					m_Pitch += m_TurnVel.y;
