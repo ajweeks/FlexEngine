@@ -130,7 +130,7 @@ namespace flex
 
 		GameObject* m_OwningGameObject = nullptr;
 
-		bool m_Initialized = false;
+		bool m_bInitialized = false;
 
 		MaterialID m_MaterialID = InvalidMaterialID;
 

@@ -13,11 +13,10 @@ namespace flex
 		~CameraManager();
 
 		void Initialize();
+		void Destroy();
 		void Update();
 
 		void OnSceneChanged();
-
-		void DestroyCameras();
 
 		BaseCamera* CurrentCamera() const;
 		i32 CameraCount() const;
@@ -54,6 +53,8 @@ namespace flex
 
 		std::vector<BaseCamera*> m_Cameras;
 		i32 m_ActiveCameraIndex = -1;
+
+		bool m_bInitialized = false;
 
 	};
 } // namespace flex

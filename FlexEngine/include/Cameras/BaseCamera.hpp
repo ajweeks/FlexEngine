@@ -10,6 +10,7 @@ namespace flex
 
 		virtual void Initialize();
 		virtual void Update() = 0;
+		virtual void Destroy();
 
 		virtual bool IsDebugCam() const = 0;
 

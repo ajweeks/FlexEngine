@@ -135,10 +135,13 @@ namespace flex
 	static const glm::vec3 VEC3_UP = glm::vec3(0.0f, 1.0f, 0.0f);
 	static const glm::vec3 VEC3_FORWARD = glm::vec3(0.0f, 0.0f, 1.0f);
 	static const glm::vec2 VEC2_ONE = glm::vec2(1.0f);
+	static const glm::vec2 VEC2_NEG_ONE = glm::vec2(-1.0f);
 	static const glm::vec2 VEC2_ZERO = glm::vec2(0.0f);
 	static const glm::vec3 VEC3_ONE = glm::vec3(1.0f);
+	static const glm::vec3 VEC3_NEG_ONE = glm::vec3(-1.0f);
 	static const glm::vec3 VEC3_ZERO = glm::vec3(0.0f);
 	static const glm::vec4 VEC4_ONE = glm::vec4(1.0f);
+	static const glm::vec4 VEC4_NEG_ONE = glm::vec4(-1.0f);
 	static const glm::vec4 VEC4_ZERO = glm::vec4(0.0f);
 	static const glm::quat QUAT_UNIT = glm::quat(VEC3_ZERO);
 	static const glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);

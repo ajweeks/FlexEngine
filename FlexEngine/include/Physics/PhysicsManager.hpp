@@ -18,7 +18,7 @@ namespace flex
 		btDiscreteDynamicsWorld* CreateWorld();
 
 	private:
-		bool m_Initialized = false;
+		bool m_bInitialized = false;
 
 		btDefaultCollisionConfiguration * m_CollisionConfiguration = nullptr;
 		btCollisionDispatcher* m_Dispatcher = nullptr;

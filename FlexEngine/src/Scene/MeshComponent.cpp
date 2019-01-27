@@ -151,7 +151,7 @@ namespace flex
 	{
 		m_VertexBufferData.Destroy();
 		m_OwningGameObject = nullptr;
-		m_Initialized = false;
+		m_bInitialized = false;
 	}
 
 	void MeshComponent::SetOwner(GameObject* owner)
@@ -318,7 +318,7 @@ namespace flex
 		ImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
-		if (m_Initialized)
+		if (m_bInitialized)
 		{
 			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
 			return false;
@@ -693,7 +693,7 @@ namespace flex
 
 			m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
-			m_Initialized = true;
+			m_bInitialized = true;
 		}
 
 		return true;
@@ -701,7 +701,7 @@ namespace flex
 
 	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
 	{
-		if (m_Initialized)
+		if (m_bInitialized)
 		{
 			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
 			return false;
@@ -1385,7 +1385,7 @@ namespace flex
 		g_Renderer->SetTopologyMode(renderID, topologyMode);
 		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
-		m_Initialized = true;
+		m_bInitialized = true;
 
 		return true;
 	}
@@ -1439,7 +1439,7 @@ namespace flex
 	void MeshComponent::SetMaterialID(MaterialID materialID)
 	{
 		m_MaterialID = materialID;
-		if (m_Initialized && m_OwningGameObject)
+		if (m_bInitialized && m_OwningGameObject)
 		{
 			g_Renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
 		}

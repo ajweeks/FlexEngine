@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "InputEnums.hpp"
+#include "InputTypes.hpp"
 
 struct GLFWwindow;
 

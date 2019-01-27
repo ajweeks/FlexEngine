@@ -20,16 +20,32 @@ namespace flex
 	DebugCamera::DebugCamera(real FOV, real zNear, real zFar) :
 		BaseCamera("debug",FOV, zNear, zFar),
 		m_MoveVel(0.0f),
-		m_TurnVel(0.0f)
+		m_TurnVel(0.0f),
+		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
+		mouseMovedCallback(this, &DebugCamera::OnMouseMovedEvent),
+		m_MouseDragDist(0.0f)
+	{
+	}
+
+	DebugCamera::~DebugCamera()
+	{
+	}
+
+	void DebugCamera::Initialize()
 	{
 		ResetOrientation();
 		RecalculateViewProjection();
 
 		LoadDefaultKeybindings();
+
+		g_InputManager->BindMouseButtonCallback(&mouseButtonCallback);
+		g_InputManager->BindMouseMovedCallback(&mouseMovedCallback);
 	}
 
-	DebugCamera::~DebugCamera()
+	void DebugCamera::Destroy()
 	{
+		g_InputManager->UnbindMouseButtonCallback(&mouseButtonCallback);
+		g_InputManager->UnbindMouseMovedCallback(&mouseMovedCallback);
 	}
 
 	void DebugCamera::Update()
@@ -39,7 +55,7 @@ namespace flex
 		bool bOrbiting = false;
 		glm::vec3 orbitingCenter(0.0f);
 
-		if (m_EnableGamepadMovement)
+		if (m_bEnableGamepadMovement)
 		{
 			bool turnFast = g_InputManager->IsGamepadButtonDown(0, GamepadButton::RIGHT_BUMPER);
 			bool turnSlow = g_InputManager->IsGamepadButtonDown(0, GamepadButton::LEFT_BUMPER);
@@ -78,16 +94,18 @@ namespace flex
 				m_Forward * posZO * moveSpeedMultiplier;
 		}
 
-		if (m_EnableKeyboardMovement)
+		// If someone else handled the mouse up event we'll never release
+		if (!g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
+		{
+			m_bDraggingMouse = false;
+		}
+
+		if (m_bEnableKeyboardMovement)
 		{
 			bool bAltDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_ALT) > 0;
 
-			glm::vec2 look(0.0f);
-			if (!g_EngineInstance->IsDraggingGizmo() &&
-				g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
+			if (m_bDraggingMouse)
 			{
-				look = g_InputManager->GetMouseMovement();
-
 				real turnSpeedMultiplier = 1.0f;
 				if (g_InputManager->GetKeyDown(m_MoveFasterKey))
 				{
@@ -102,15 +120,15 @@ namespace flex
 				{
 					orbitingCenter = g_EngineInstance->GetSelectedObjectsCenter();
 					bOrbiting = true;
-					targetDPos += m_Right * look.x * m_OrbitingSpeed * turnSpeedMultiplier +
-								  m_Up * look.y * m_OrbitingSpeed * turnSpeedMultiplier;
+					targetDPos += m_Right * m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier +
+								  m_Up * m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier;
 				}
 				else
 				{
-					look.y = -look.y;
+					m_MouseDragDist.y = -m_MouseDragDist.y;
 
-					m_TurnVel += glm::vec2(look.x * m_MouseRotationSpeed * turnSpeedMultiplier,
-										   look.y * m_MouseRotationSpeed * turnSpeedMultiplier);
+					m_TurnVel += glm::vec2(m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
+										   m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
 
 					m_Yaw += m_TurnVel.x;
 					m_Pitch += m_TurnVel.y;
@@ -204,6 +222,8 @@ namespace flex
 		m_TurnVel *= m_TurnLag;
 
 		RecalculateViewProjection();
+
+		m_MouseDragDist = glm::vec2(0.0f);
 	}
 
 	void DebugCamera::LoadDefaultKeybindings()
@@ -221,6 +241,35 @@ namespace flex
 	bool DebugCamera::IsDebugCam() const
 	{
 		return true;
+	}
+
+	EventReply DebugCamera::OnMouseButtonEvent(MouseButton button, KeyAction action)
+	{
+		if (button == MouseButton::LEFT)
+		{
+			if (action == KeyAction::PRESS)
+			{
+				m_bDraggingMouse = true;
+				return EventReply::UNCONSUMED;
+			}
+			else if (action == KeyAction::RELEASE)
+			{
+				m_bDraggingMouse = false;
+				return EventReply::UNCONSUMED;
+			}
+		}
+
+		return EventReply::UNCONSUMED;
+	}
+
+	EventReply DebugCamera::OnMouseMovedEvent(const glm::vec2& dMousePos)
+	{
+		if (m_bDraggingMouse)
+		{
+			m_MouseDragDist = dMousePos;
+			return EventReply::CONSUMED;
+		}
+		return EventReply::UNCONSUMED;
 	}
 
 } // namespace flex

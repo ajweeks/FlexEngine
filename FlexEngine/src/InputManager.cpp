@@ -628,6 +628,14 @@ namespace flex
 		}
 
 		io.MousePos = m_MousePosition;
+
+		for (auto iter = m_MouseMovedCallbacks.rbegin(); iter != m_MouseMovedCallbacks.rend(); ++iter)
+		{
+			if ((*iter)->Execute(m_MousePosition - m_PrevMousePosition) == EventReply::CONSUMED)
+			{
+				break;
+			}
+		}
 	}
 
 	void InputManager::MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods)
@@ -656,6 +664,14 @@ namespace flex
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDown[(i32)mouseButton] = (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
+
+		for (auto iter = m_MouseButtonCallbacks.rbegin(); iter != m_MouseButtonCallbacks.rend(); ++iter)
+		{
+			if ((*iter)->Execute(mouseButton, action) == EventReply::CONSUMED)
+			{
+				break;
+			}
+		}
 	}
 
 	void InputManager::ScrollCallback(double xOffset, double yOffset)
@@ -909,6 +925,52 @@ namespace flex
 		m_pGamepadStates[gamepadIndex] = gamepadState;
 	}
 
+	void InputManager::BindMouseButtonCallback(ICallbackMouseButton* callback)
+	{
+		if (std::find(m_MouseButtonCallbacks.begin(), m_MouseButtonCallbacks.end(), callback) != m_MouseButtonCallbacks.end())
+		{
+			PrintWarn("Attempted to bind on mouse button callback multiple times!\n");
+			return;
+		}
+
+		m_MouseButtonCallbacks.push_back(callback);
+	}
+
+	void InputManager::UnbindMouseButtonCallback(ICallbackMouseButton* callback)
+	{
+		auto iter = std::find(m_MouseButtonCallbacks.begin(), m_MouseButtonCallbacks.end(), callback);
+		if (iter == m_MouseButtonCallbacks.end())
+		{
+			PrintWarn("Attempted to unbind mouse button callback that isn't present in callback list!\n");
+			return;
+		}
+
+		m_MouseButtonCallbacks.erase(iter);
+	}
+
+	void InputManager::BindMouseMovedCallback(ICallbackMouseMoved* callback)
+	{
+		if (std::find(m_MouseMovedCallbacks.begin(), m_MouseMovedCallbacks.end(), callback) != m_MouseMovedCallbacks.end())
+		{
+			PrintWarn("Attempted to bind on mouse moved callback multiple times!\n");
+			return;
+		}
+
+		m_MouseMovedCallbacks.push_back(callback);
+	}
+
+	void InputManager::UnbindMouseMovedCallback(ICallbackMouseMoved* callback)
+	{
+		auto iter = std::find(m_MouseMovedCallbacks.begin(), m_MouseMovedCallbacks.end(), callback);
+		if (iter == m_MouseMovedCallbacks.end())
+		{
+			PrintWarn("Attempted to unbind mouse moved callback that isn't present in callback list!\n");
+			return;
+		}
+
+		m_MouseMovedCallbacks.erase(iter);
+	}
+
 	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
 	void InputManager::HandleRadialDeadZone(real* x, real* y)
 	{
@@ -1020,4 +1082,5 @@ namespace flex
 			PrintWarn("Failed to save input bindings file to %s\n", s_InputBindingFilePath.c_str());
 		}
 	}
+
 } // namespace flex

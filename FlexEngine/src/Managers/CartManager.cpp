@@ -110,39 +110,28 @@ namespace flex
 	}
 
 	CartManager::CartManager(BaseScene* owningScene) :
-		m_OwningScene(owningScene)
+		m_OwningScene(owningScene),
+		m_OnGameObjectDestroyedCallback(this, &CartManager::OnGameObjectDestroyed)
 	{
 	}
 
-	CartID CartManager::CreateCart(const std::string& name)
+	void CartManager::Initialize()
 	{
-		// TODO: Use custom memory allocator
-		CartID cartID = (CartID)m_Carts.size();
-		Cart* newCart = new Cart(cartID, name);
-		m_Carts.push_back(newCart);
-		g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(newCart);
-		return cartID;
+		g_SceneManager->CurrentScene()->BindOnGameObjectDestroyedCallback(&m_OnGameObjectDestroyedCallback);
 	}
 
-	CartID CartManager::CreateEngineCart(const std::string& name)
+	void CartManager::Destroy()
 	{
-		// TODO: Use custom memory allocator
-		CartID cartID = (CartID)m_Carts.size();
-		EngineCart* newCart = new EngineCart(cartID, name);
-		m_Carts.push_back(newCart);
-		g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(newCart);
-		return cartID;
-	}
+		g_SceneManager->CurrentScene()->UnbindOnGameObjectDestroyedCallback(&m_OnGameObjectDestroyedCallback);
 
-	flex::Cart* CartManager::GetCart(CartID cartID)
-	{
-		assert(cartID < m_Carts.size());
-		return m_Carts[cartID];
+		m_Carts.clear();
+		m_CartChains.clear();
 	}
 
 	void CartManager::Update()
 	{
-		PROFILE_AUTO("Cart manager update");
+		const char* profileBlockName = "Cart manager update";
+		PROFILE_BEGIN(profileBlockName);
 
 		// Update cart chains
 		{
@@ -344,6 +333,34 @@ namespace flex
 				}
 			}
 		}
+
+		PROFILE_END(profileBlockName);
+	}
+
+	CartID CartManager::CreateCart(const std::string& name)
+	{
+		// TODO: Use custom memory allocator
+		CartID cartID = (CartID)m_Carts.size();
+		Cart* newCart = new Cart(cartID, name);
+		m_Carts.push_back(newCart);
+		g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(newCart);
+		return cartID;
+	}
+
+	CartID CartManager::CreateEngineCart(const std::string& name)
+	{
+		// TODO: Use custom memory allocator
+		CartID cartID = (CartID)m_Carts.size();
+		EngineCart* newCart = new EngineCart(cartID, name);
+		m_Carts.push_back(newCart);
+		g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(newCart);
+		return cartID;
+	}
+
+	Cart* CartManager::GetCart(CartID cartID)
+	{
+		assert(cartID < m_Carts.size());
+		return m_Carts[cartID];
 	}
 
 	void CartManager::DrawImGuiObjects()
@@ -368,12 +385,6 @@ namespace flex
 			}
 			ImGui::TreePop();
 		}
-	}
-
-	void CartManager::Destroy()
-	{
-		m_Carts.clear();
-		m_CartChains.clear();
 	}
 
 	CartChainID CartManager::GetNextAvailableCartChainID()
@@ -418,6 +429,8 @@ namespace flex
 
 	void CartManager::OnGameObjectDestroyed(GameObject* gameObject)
 	{
+		// TODO: Update chains properly!?
+
 		if (Cart* cart = dynamic_cast<Cart*>(gameObject))
 		{
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)

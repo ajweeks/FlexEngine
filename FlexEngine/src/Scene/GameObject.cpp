@@ -36,14 +36,6 @@ namespace flex
 {
 	const char* GameObject::s_DefaultNewGameObjectName = "New_Game_Object_00";
 
-	void GameObject::OnDestroy(GameObject* obj)
-	{
-		if (g_SceneManager)
-		{
-			g_SceneManager->CurrentScene()->GetCartManager()->OnGameObjectDestroyed(obj);
-		}
-	}
-
 	const char* Cart::emptyCartMeshName = "cart-empty.glb";
 	const char* EngineCart::engineMeshName = "cart-engine.glb";
 
@@ -681,8 +673,6 @@ namespace flex
 
 	void GameObject::Destroy()
 	{
-		OnDestroy(this);
-
 		for (GameObject* child : m_Children)
 		{
 			child->Destroy();
@@ -3034,6 +3024,8 @@ namespace flex
 				return dT;
 			}
 		}
+
+		return 0.0f;
 	}
 
 	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)

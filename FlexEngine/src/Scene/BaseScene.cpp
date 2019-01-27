@@ -61,6 +61,7 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
+		m_CartManager.Initialize();
 
 		// Use save file if exists, otherwise use default
 		const std::string savedShortPath = "scenes/saved/" + m_FileName;
@@ -272,7 +273,8 @@ namespace flex
 
 	void BaseScene::Update()
 	{
-		PROFILE_AUTO("Update Scene");
+		const char* profileBlockName = "Update Scene";
+		PROFILE_BEGIN(profileBlockName);
 
 		if (m_PhysicsWorld)
 		{
@@ -308,6 +310,8 @@ namespace flex
 		}
 
 		m_TrackManager.DrawDebug();
+
+		PROFILE_END(profileBlockName);
 	}
 
 	void BaseScene::LateUpdate()
@@ -378,6 +382,11 @@ namespace flex
 	{
 		if (currentObject == targetObject)
 		{
+			for (auto callback : m_OnGameObjectDestroyedCallbacks)
+			{
+				callback->Execute(targetObject);
+			}
+
 			// Target's parent pointer will be cleared upon removing from parent, cache it before that happens
 			GameObject* targetParent = targetObject->m_Parent;
 			if (targetObject->m_Parent)
@@ -1098,6 +1107,29 @@ namespace flex
 				interactibleObjects.push_back(rootObject);
 			}
 		}
+	}
+
+	void BaseScene::BindOnGameObjectDestroyedCallback(ICallbackGameObject* callback)
+	{
+		if (std::find(m_OnGameObjectDestroyedCallbacks.begin(), m_OnGameObjectDestroyedCallbacks.end(), callback) != m_OnGameObjectDestroyedCallbacks.end())
+		{
+			PrintWarn("Attempted to bind on game object destroyed callback multiple times!\n");
+			return;
+		}
+
+		m_OnGameObjectDestroyedCallbacks.push_back(callback);
+	}
+
+	void BaseScene::UnbindOnGameObjectDestroyedCallback(ICallbackGameObject* callback)
+	{
+		auto iter = std::find(m_OnGameObjectDestroyedCallbacks.begin(), m_OnGameObjectDestroyedCallbacks.end(), callback);
+		if (iter == m_OnGameObjectDestroyedCallbacks.end())
+		{
+			PrintWarn("Attempted to unbind game object destroyed callback that isn't present in callback list!\n");
+			return;
+		}
+
+		m_OnGameObjectDestroyedCallbacks.erase(iter);
 	}
 
 	void BaseScene::SetName(const std::string& name)

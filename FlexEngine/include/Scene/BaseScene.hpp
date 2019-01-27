@@ -2,6 +2,7 @@
 
 #include "Track/TrackManager.hpp"
 #include "Managers/CartManager.hpp"
+#include "Types.hpp" // For ICallbackGameObject
 
 namespace flex
 {
@@ -27,6 +28,9 @@ namespace flex
 		virtual void Destroy();
 		virtual void Update();
 		virtual void LateUpdate();
+
+		void BindOnGameObjectDestroyedCallback(ICallbackGameObject* callback);
+		void UnbindOnGameObjectDestroyedCallback(ICallbackGameObject* callback);
 
 		void SetName(const std::string& name);
 		std::string GetName() const;
@@ -139,7 +143,6 @@ namespace flex
 		std::string m_Name;
 		std::string m_FileName;
 
-
 		std::vector<GameObject*> m_RootObjects;
 
 		//bool m_bUsingSaveFile = false;
@@ -162,6 +165,8 @@ namespace flex
 
 		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
 		std::vector<GameObject*> m_ObjectsToDestroyAtEndOfFrame;
+
+		std::vector<ICallbackGameObject*> m_OnGameObjectDestroyedCallbacks;
 
 	private:
 		/*

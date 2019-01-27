@@ -19,6 +19,21 @@ namespace flex
 	void CameraManager::Initialize()
 	{
 		m_Cameras[m_ActiveCameraIndex]->Initialize();
+		m_Cameras[m_ActiveCameraIndex]->OnPossess();
+		m_bInitialized = true;
+	}
+
+	void CameraManager::Destroy()
+	{
+		m_bInitialized = false;
+
+		for (BaseCamera* camera : m_Cameras)
+		{
+			camera->Destroy();
+			SafeDelete(camera);
+		}
+		m_Cameras.clear();
+		m_ActiveCameraIndex = -1;
 	}
 
 	void CameraManager::Update()
@@ -39,16 +54,6 @@ namespace flex
 		{
 			cam->OnSceneChanged();
 		}
-	}
-
-	void CameraManager::DestroyCameras()
-	{
-		for (BaseCamera* camera : m_Cameras)
-		{
-			SafeDelete(camera);
-		}
-		m_Cameras.clear();
-		m_ActiveCameraIndex = -1;
 	}
 
 	BaseCamera* CameraManager::CurrentCamera() const
@@ -100,6 +105,7 @@ namespace flex
 			if (m_ActiveCameraIndex != -1)
 			{
 				m_Cameras[m_ActiveCameraIndex]->OnDepossess();
+				m_Cameras[m_ActiveCameraIndex]->Destroy();
 			}
 
 			if (bAlign)
@@ -109,8 +115,11 @@ namespace flex
 
 			m_ActiveCameraIndex = index;
 
-			m_Cameras[m_ActiveCameraIndex]->Initialize();
-			m_Cameras[m_ActiveCameraIndex]->OnPossess();
+			if (m_bInitialized)
+			{
+				m_Cameras[m_ActiveCameraIndex]->Initialize();
+				m_Cameras[m_ActiveCameraIndex]->OnPossess();
+			}
 		}
 	}
 
@@ -247,4 +256,5 @@ namespace flex
 		to->SetYaw(from->GetYaw());
 		to->SetFOV(from->GetFOV());
 	}
+
 } // namespace flex

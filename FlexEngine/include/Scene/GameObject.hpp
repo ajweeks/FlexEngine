@@ -128,8 +128,6 @@ namespace flex
 
 		static const char* s_DefaultNewGameObjectName;
 
-		static void OnDestroy(GameObject* obj);
-
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);

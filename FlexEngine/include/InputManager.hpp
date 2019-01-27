@@ -1,6 +1,6 @@
 #pragma once
 
-#include "InputEnums.hpp"
+#include "InputTypes.hpp"
 
 namespace flex
 {
@@ -82,6 +82,12 @@ namespace flex
 		void ClearKeyboadInput();
 		void ClearGampadInput(i32 gamepadIndex);
 
+		void BindMouseButtonCallback(ICallbackMouseButton* callback);
+		void UnbindMouseButtonCallback(ICallbackMouseButton* callback);
+
+		void BindMouseMovedCallback(ICallbackMouseMoved* callback);
+		void UnbindMouseMovedCallback(ICallbackMouseMoved* callback);
+
 		static i32 s_JoystickDisconnected;
 
 		bool bPlayerUsingKeyboard[2];
@@ -91,12 +97,16 @@ namespace flex
 		void LoadInputBindingsFromFile();
 		void SaveInputBindingsToFile();
 
+		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_COUNT;
+		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
+		static const real MAX_JOYSTICK_ROTATION_SPEED;
+
 		std::map<KeyCode, Key> m_Keys;
 
 		std::vector<InputBinding> m_InputBindings;
+		std::vector<ICallbackMouseButton*> m_MouseButtonCallbacks;
+		std::vector<ICallbackMouseMoved*> m_MouseMovedCallbacks;
 
-		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_COUNT;
-		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		u32 m_MouseButtonStates;
 		u32 m_MouseButtonsPressed;
 		u32 m_MouseButtonsReleased;
@@ -113,6 +123,5 @@ namespace flex
 		GamepadState m_pGamepadStates[2];
 		GamepadState m_GamepadStates[2];
 
-		static const real MAX_JOYSTICK_ROTATION_SPEED;
 	};
 } // namespace flex

@@ -15,6 +15,8 @@
 
 namespace flex
 {
+	class GameObject;
+
 	using i8 = int8_t;
 	using i16 = int16_t;
 	using i32 = int32_t;
@@ -132,6 +134,42 @@ namespace flex
 		LEFT,
 		WHOLE // cover the whole screen
 	};
+
+	enum class EventReply
+	{
+		CONSUMED,
+		UNCONSUMED
+	};
+
+	// TODO: Move into different header!
+	class ICallbackGameObject
+	{
+	public:
+		virtual void Execute(GameObject* obj) = 0;
+	};
+
+	template<typename T>
+	class OnGameObjectDestroyedCallback : public ICallbackGameObject
+	{
+		using CallbackFunction = void(T::*)(GameObject*);
+
+	public:
+		OnGameObjectDestroyedCallback(T* obj, CallbackFunction fun) :
+			mObject(obj),
+			mFunction(fun)
+		{
+		}
+
+		virtual void Execute(GameObject* obj) override
+		{
+			(mObject->*mFunction)(obj);
+		}
+
+	private:
+		CallbackFunction mFunction;
+		T* mObject;
+	};
+
 } // namespace flex
 
 namespace glm

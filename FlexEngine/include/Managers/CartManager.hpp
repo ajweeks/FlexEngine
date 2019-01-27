@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Types.hpp" // For OnGameObjectDestroyedCallback
+
 namespace flex
 {
 	class Cart;
@@ -35,20 +37,23 @@ namespace flex
 	public:
 		CartManager(BaseScene* owningScene);
 
+		void Initialize();
+		void Destroy();
+		void Update();
+
 		// Creates a new cart with given name and adds to the current scene
 		CartID CreateCart(const std::string& name);
 		CartID CreateEngineCart(const std::string& name);
 		Cart* GetCart(CartID cartID);
 		CartChain* GetCartChain(CartChainID cartChainID);
 		real GetChainDrivePower(CartChainID cartChainID);
-		void OnGameObjectDestroyed(GameObject* gameObject);
-
-		void Update();
 
 		void DrawImGuiObjects();
 
-		void Destroy();
 	private:
+		void OnGameObjectDestroyed(GameObject* gameObject);
+		OnGameObjectDestroyedCallback<CartManager> m_OnGameObjectDestroyedCallback;
+
 		// Allocates room for and return the id of the next cart chain ID
 		CartChainID GetNextAvailableCartChainID();
 

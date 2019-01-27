@@ -2,7 +2,8 @@
 
 #include "BaseCamera.hpp"
 
-#include "InputEnums.hpp"
+#include "InputTypes.hpp"
+#include "InputTypes.hpp" // For MouseButtonCallback
 
 namespace flex
 {
@@ -12,14 +13,26 @@ namespace flex
 		DebugCamera(real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
 		~DebugCamera();
 
+		virtual void Initialize() override;
 		virtual void Update() override;
+		virtual void Destroy() override;
 		virtual bool IsDebugCam() const override;
 
 		void LoadDefaultKeybindings();
 
 	private:
-		bool m_EnableGamepadMovement = true;
-		bool m_EnableKeyboardMovement = true;
+		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
+		MouseButtonCallback<DebugCamera> mouseButtonCallback;
+
+		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
+		MouseMovedCallback<DebugCamera> mouseMovedCallback;
+
+		glm::vec2 m_MouseDragDist;
+
+		bool m_bEnableGamepadMovement = true;
+		bool m_bEnableKeyboardMovement = true;
+
+		bool m_bDraggingMouse = false;
 
 		glm::vec3 m_DragStartPosition;
 

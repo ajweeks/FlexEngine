@@ -53,6 +53,10 @@ namespace flex
 	{
 	}
 
+	void BaseCamera::Destroy()
+	{
+	}
+
 	void BaseCamera::OnSceneChanged()
 	{
 	}

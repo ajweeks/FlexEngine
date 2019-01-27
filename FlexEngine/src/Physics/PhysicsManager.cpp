@@ -17,22 +17,22 @@ namespace flex
 {
 	void PhysicsManager::Initialize()
 	{
-		if (!m_Initialized)
+		if (!m_bInitialized)
 		{
 			m_CollisionConfiguration = new btDefaultCollisionConfiguration();
 			m_Dispatcher = new btCollisionDispatcher(m_CollisionConfiguration);
 			m_OverlappingPairCache = new btDbvtBroadphase();
 			m_Solver = new btSequentialImpulseConstraintSolver;
 
-			m_Initialized = true;
+			m_bInitialized = true;
 		}
 	}
 
 	void PhysicsManager::Destroy()
 	{
-		if (m_Initialized)
+		if (m_bInitialized)
 		{
-			m_Initialized = false;
+			m_bInitialized = false;
 
 			SafeDelete(m_Solver);
 			SafeDelete(m_OverlappingPairCache);
@@ -43,7 +43,7 @@ namespace flex
 
 	btDiscreteDynamicsWorld* PhysicsManager::CreateWorld()
 	{
-		if (m_Initialized)
+		if (m_bInitialized)
 		{
 			btDiscreteDynamicsWorld* world = new btDiscreteDynamicsWorld(m_Dispatcher, m_OverlappingPairCache, m_Solver, m_CollisionConfiguration);
 			return world;

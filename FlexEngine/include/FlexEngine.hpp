@@ -8,6 +8,7 @@
 
 #include "Spring.hpp"
 #include "Helpers.hpp" // For TransformState
+#include "InputTypes.hpp" // For MouseButtonCallback
 
 namespace flex
 {
@@ -86,6 +87,15 @@ namespace flex
 			_LAST_ELEMENT
 		};
 
+		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
+		MouseButtonCallback<FlexEngine> mouseButtonCallback;
+
+		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
+		MouseMovedCallback<FlexEngine> mouseMovedCallback;
+
+		// True for one frame after the mouse has been released after being pressed at the same location
+		glm::vec2i m_LMBDownPos;
+
 #if COMPILE_RENDERDOC_API
 		void SetupRenderDocAPI();
 #endif
@@ -123,6 +133,22 @@ namespace flex
 
 		void UpdateGizmoVisibility();
 
+		// TODO: Convert into more general function which finds the object we're hovering over
+		// Checks for mouse hover over gizmo, updates materials & m_HoveringAxisIndex accordingly
+		// Only call when mouse is not down!
+		// Returns true if gizmo is being hovered over
+		bool HandleGizmoHover();
+		// Should be called when mouse is released and gizmo is hovered
+		void HandleGizmoClick();
+		// Converts mouse movement into gizmo (and selected object) movement
+		void HandleGizmoMovement();
+
+		// Checks for raycast intersections based on mouse pos
+		// Returns true if object was selected or deselected
+		bool HandleObjectClick();
+
+		void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
+
 		u32 m_RendererCount = 0;
 		bool m_bRunning = false;
 
@@ -140,9 +166,9 @@ namespace flex
 
 		real m_SimulationSpeed = 1.0f;
 
-		real m_ImGuiMainWindowWidthMin = 200;
-		real m_ImGuiMainWindowWidthMax = 0;
-		real m_ImGuiMainWindowWidth = 350;
+		real m_ImGuiMainWindowWidthMin = 200.0f;
+		real m_ImGuiMainWindowWidthMax = 0.0f;
+		real m_ImGuiMainWindowWidth = 350.0f;
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
 		std::string m_RendererName = "";
@@ -174,14 +200,14 @@ namespace flex
 
 		glm::vec3 m_SelectedObjectDragStartPos;
 		glm::vec3 m_DraggingGizmoScaleLast;
-		real m_DraggingGizmoOffset; // How far along the axis the cursor was when pressed
+		real m_DraggingGizmoOffset = -1.0f; // How far along the axis the cursor was when pressed
 		bool m_bFirstFrameDraggingRotationGizmo = false;
 		glm::vec3 m_UnmodifiedAxisProjectedOnto;
 		glm::vec3 m_AxisProjectedOnto;
 		glm::vec3 m_StartPointOnPlane;
 		i32 m_RotationGizmoWrapCount = 0;
-		real m_LastAngle;
-		real m_pV1oV2;
+		real m_LastAngle = -1.0f;
+		real m_pV1oV2= -1.0f;
 		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
 		glm::quat m_CurrentRot;
@@ -191,6 +217,7 @@ namespace flex
 		// -1,   0, 1, 2, 3
 		// None, X, Y, Z, All Axes
 		i32 m_DraggingAxisIndex = -1;
+		i32 m_HoveringAxisIndex = -1;
 
 		std::string m_CommonSettingsFileName;
 		std::string m_CommonSettingsAbsFilePath;
