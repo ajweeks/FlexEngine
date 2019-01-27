@@ -74,7 +74,6 @@ namespace flex
 
 	void TrackManager::Update()
 	{
-		
 	}
 
 	glm::vec3 TrackManager::GetPointOnTrack(TrackID trackID,
@@ -684,46 +683,46 @@ namespace flex
 		for (i32 i = 0; i < (i32)m_Junctions.size(); ++i)
 		{
 			BezierCurveList* track0 = &m_Tracks[m_Junctions[i].trackIndices[0]];
-			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)track0->curves.size();
-			 i32 curveIndex;
-			 glm::vec3 pos = track0->GetPointOnCurve(distAlongTrack0, &curveIndex);
-			 btVector3 sphereCol = btVector3(0.9f, 0.2f, 0.2f);
-			 if (i == m_DEBUG_highlightedJunctionIndex)
-			 {
-				 sphereCol = btVector3(0.9f, 0.9f, 0.9f);
-			 }
-			 debugDrawer->drawSphere(ToBtVec3(pos), 0.5f, sphereCol);
+			real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)track0->curves.size();
+			i32 curveIndex;
+			glm::vec3 pos = track0->GetPointOnCurve(distAlongTrack0, &curveIndex);
+			btVector3 sphereCol = btVector3(0.9f, 0.2f, 0.2f);
+			if (i == m_DEBUG_highlightedJunctionIndex)
+			{
+				sphereCol = btVector3(0.9f, 0.9f, 0.9f);
+			}
+			debugDrawer->drawSphere(ToBtVec3(pos), 0.5f, sphereCol);
 
-			 for (i32 j = 0; j < m_Junctions[i].trackCount; ++j)
-			 {
-				 btVector3 lineColPos = btVector3(0.2f, 0.6f, 0.25f);
-				 btVector3 lineColNeg = btVector3(0.8f, 0.3f, 0.2f);
-				 btVector3 lineColPreview = btVector3(0.95f, 0.95f, 0.98f);
+			for (i32 j = 0; j < m_Junctions[i].trackCount; ++j)
+			{
+				btVector3 lineColPos = btVector3(0.2f, 0.6f, 0.25f);
+				btVector3 lineColNeg = btVector3(0.8f, 0.3f, 0.2f);
+				btVector3 lineColPreview = btVector3(0.95f, 0.95f, 0.98f);
 
-				 BezierCurveList* track = &m_Tracks[m_Junctions[i].trackIndices[j]];
-				 curveIndex = m_Junctions[i].curveIndices[j];
+				BezierCurveList* track = &m_Tracks[m_Junctions[i].trackIndices[j]];
+				curveIndex = m_Junctions[i].curveIndices[j];
 
-				 real tAtJunc = track->GetTAtJunction(curveIndex);
-				 i32 outCurveIdx;
-				 btVector3 start = ToBtVec3(pos + VEC3_UP * 1.5f);
+				real tAtJunc = track->GetTAtJunction(curveIndex);
+				i32 outCurveIdx;
+				btVector3 start = ToBtVec3(pos + VEC3_UP * 1.5f);
 
-				 if (curveIndex < (i32)track->curves.size())
-				 {
-					 glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, &outCurveIdx);
-					 glm::vec3 dir1 = glm::normalize(trackP1 - pos);
-					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);
-					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
-					 debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
-				 }
-				 if (curveIndex > 0)
-				 {
-					 glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, &outCurveIdx);
-					 glm::vec3 dir2 = glm::normalize(trackP2 - pos);
-					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);
-					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
-					 debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
-				 }
-			 }
+				if (curveIndex < (i32)track->curves.size())
+				{
+					glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, &outCurveIdx);
+					glm::vec3 dir1 = glm::normalize(trackP1 - pos);
+					bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);
+					btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
+					debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
+				}
+				if (curveIndex > 0)
+				{
+					glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, &outCurveIdx);
+					glm::vec3 dir2 = glm::normalize(trackP2 - pos);
+					bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);
+					btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
+					debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
+				}
+			}
 		}
 	}
 
@@ -819,5 +818,4 @@ namespace flex
 		m_Tracks.clear();
 		m_Junctions.clear();
 	}
-
 } // namespace flex
