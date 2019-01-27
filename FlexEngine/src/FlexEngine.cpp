@@ -52,6 +52,13 @@
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #endif
 
+// Specify that we prefer to be run on a discrete card on laptops when available
+extern "C"
+{
+	__declspec(dllexport) DWORD NvOptimusEnablement = 0x01;
+	__declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x01;
+}
+
 namespace flex
 {
 	const u32 FlexEngine::EngineVersionMajor = 0;
