@@ -63,6 +63,7 @@ Flex Engine uses the following open-source libraries:
  - [ImGui](https://github.com/ocornut/imgui) - User interface
  - [OpenAL](https://www.openal.org/) - Audio loading and playback
  - [stb](https://github.com/nothings/stb) - Image loading
+ - [tinygltf](https://github.com/syoyo/tinygltf) - Mesh loading
 
 ## License
 Flex engine is released as open source under The MIT License. See [license.md](license.md) for details.
