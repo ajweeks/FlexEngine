@@ -135,5 +135,8 @@ namespace flex
 		g_LogBuffer << s;
 
 		std::cout << s_buffer;
+
+		// TODO: Disable in shipping
+		OutputDebugString(s.c_str());
 	}
 } // namespace flex
