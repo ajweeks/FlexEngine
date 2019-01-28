@@ -19,6 +19,7 @@
 #include "Audio/AudioManager.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -1371,7 +1372,7 @@ namespace flex
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
 				std::string filePath = m_MeshComponent->GetRelativeFilePath();
-				MeshComponent::ImportSettings importSettings = m_MeshComponent->GetImportSettings();
+				MeshImportSettings importSettings = m_MeshComponent->GetImportSettings();
 				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
 			}
 			else

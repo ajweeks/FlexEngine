@@ -5,7 +5,6 @@
 
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
-#include "Scene/GameObject.hpp" // For PointLight & DirecitonalLight
 
 class btIDebugDraw;
 
@@ -13,6 +12,9 @@ namespace flex
 {
 	class MeshComponent;
 	class BitmapFont;
+	class GameObject;
+	class PointLight;
+	class DirectionalLight;
 
 	class Renderer
 	{

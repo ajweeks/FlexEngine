@@ -9,6 +9,7 @@
 #pragma warning(pop)
 
 #include "Audio/AudioManager.hpp"
+#include "Callbacks/GameObjectCallbacks.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"

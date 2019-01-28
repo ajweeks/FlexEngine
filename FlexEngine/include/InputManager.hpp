@@ -6,6 +6,9 @@
 
 namespace flex
 {
+	class ICallbackMouseButton;
+	class ICallbackMouseMoved;
+
 	/*
 	* There are three main ways of retrieving input:
 	*   1. Call GetKey(Down/Pressed) with a keycode value

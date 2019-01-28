@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Helpers.hpp" // For TransformState
-#include "InputTypes.hpp" // For MouseButtonCallback
+#include "Callbacks/InputCallbacks.hpp"
 #include "Spring.hpp"
 
 namespace flex
 {
 	class GameObject;
+	enum class TransformState;
 
 	class FlexEngine final
 	{

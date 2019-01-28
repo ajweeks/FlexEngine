@@ -3,27 +3,27 @@
 #include "Helpers.hpp"
 
 #include <direct.h> // For _getcwd
-#include <fstream>
-#include <iomanip>
-#include <sstream>
 #include <stdio.h> // For gcvt, fopen
+#include <iomanip> // for setprecision
 
 #pragma warning(push, 0)
 #include <glm/gtx/matrix_decompose.hpp>
 
-#include "AL/al.h"
-#include "CommCtrl.h"
-
-#include "ShObjIdl.h"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_image_write.h"
 #pragma warning(pop)
 
-#include "FlexEngine.hpp"
-#include "Graphics/Renderer.hpp"
+#include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
+#include "Graphics/Renderer.hpp" // For Renderer::MAX_TEXTURE_DIM
+#include "Transform.hpp"
 
+// Taken from "AL/al.h":
+#define AL_FORMAT_MONO8                           0x1100
+#define AL_FORMAT_MONO16                          0x1101
+#define AL_FORMAT_STEREO8                         0x1102
+#define AL_FORMAT_STEREO16                        0x1103
 
 namespace flex
 {

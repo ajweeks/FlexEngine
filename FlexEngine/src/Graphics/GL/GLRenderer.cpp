@@ -35,6 +35,7 @@
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
@@ -1483,9 +1484,6 @@ namespace flex
 
 					m_1x1_NDC_QuadVertexBufferData = {};
 					m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
-
-					m_1x1_NDC_QuadTransform = Transform::Identity();
-
 
 					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::_NONE);
 					m_PersistentObjects.push_back(oneByOneQuadGameObject);
@@ -6066,7 +6064,7 @@ namespace flex
 					static bool bUpdateName = true;
 
 					std::string selectedMeshRelativeFilePath;
-					MeshComponent::LoadedMesh* selectedMesh = nullptr;
+					LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
 					for (auto meshPair : MeshComponent::m_LoadedMeshes)
 					{
@@ -6098,7 +6096,7 @@ namespace flex
 								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
 								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
 								{
-									MeshComponent::ImportSettings importSettings = selectedMesh->importSettings;
+									MeshImportSettings importSettings = selectedMesh->importSettings;
 
 									MaterialID matID = renderObject->materialID;
 									GameObject* gameObject = renderObject->gameObject;
@@ -6197,7 +6195,7 @@ namespace flex
 							StripLeadingDirectories(fileNameAndExtension);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
-							MeshComponent::LoadedMesh* existingMesh = nullptr;
+							LoadedMesh* existingMesh = nullptr;
 							if (MeshComponent::GetLoadedMesh(relativeFilePath, &existingMesh))
 							{
 								i32 j = 0;

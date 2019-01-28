@@ -1,6 +1,8 @@
 
 _2019_
 January
+- Add input event callbacks
+- Add callback functionality
 - Add input binding file (`saved/config/input-bindings.ini`)
 - Add engine carts which drive cart chains
 - Make carts that bump into each other connect up into a chain

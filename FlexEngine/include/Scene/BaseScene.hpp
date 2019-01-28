@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Track/TrackManager.hpp"
 #include "Managers/CartManager.hpp"
-#include "Types.hpp" // For ICallbackGameObject
+#include "Track/TrackManager.hpp"
 
 namespace flex
 {
@@ -15,6 +14,7 @@ namespace flex
 	struct JSONObject;
 	struct JSONField;
 	struct Material;
+	class ICallbackGameObject;
 
 	class BaseScene
 	{

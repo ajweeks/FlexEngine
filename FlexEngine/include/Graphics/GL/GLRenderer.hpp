@@ -332,7 +332,6 @@ namespace flex
 			GameObject* m_SkyBoxMesh = nullptr;
 
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
-			Transform m_1x1_NDC_QuadTransform;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
 
 			// The transform to be used for all objects who don't specify one in their

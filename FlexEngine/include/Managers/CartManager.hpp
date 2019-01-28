@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scene/GameObjectDestroyedCallback.hpp"
+#include "Callbacks/GameObjectCallbacks.hpp"
 
 namespace flex
 {

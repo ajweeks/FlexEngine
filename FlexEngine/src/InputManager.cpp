@@ -2,6 +2,7 @@
 
 #include "InputManager.hpp"
 
+#include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp" // For WriteFile
 #include "JSONParser.hpp"

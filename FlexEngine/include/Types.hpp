@@ -3,11 +3,6 @@
 #include <cstdint>
 #include <limits>
 
-#pragma warning(push, 0)
-#include <glm/vec2.hpp>
-#pragma warning(pop)
-
-
 #define STATIC_ASSERT(e) StaticAssert<(e)>{}
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -100,7 +95,7 @@ namespace flex
 		_NONE
 	};
 
-	static const char* GameObjectTypeStrings[] =
+	static constexpr char* GameObjectTypeStrings[] =
 	{
 		"object",
 		"point light",
@@ -171,7 +166,7 @@ namespace flex
 		_NONE
 	};
 
-	static const char* TrackStateStrs[((i32)TrackState::_NONE) + 1] =
+	static constexpr char* TrackStateStrs[((i32)TrackState::_NONE) + 1] =
 	{
 		"Facing forward",
 		"Facing backward",
@@ -190,9 +185,16 @@ namespace flex
 		_NONE
 	};
 
-} // namespace flex
+	struct MeshImportSettings
+	{
+		/* Whether or not to invert the horizontal texture coordinate */
+		bool flipU = false;
+		/* Whether or not to invert the vertical texture coordinate */
+		bool flipV = false;
+		/* Whether or not to invert the Z component (up) of all normals */
+		bool flipNormalZ = false;
+		/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
+		bool swapNormalYZ = false;
+	};
 
-namespace glm
-{
-	using vec2i = tvec2<flex::i32>;
-}
+} // namespace flex

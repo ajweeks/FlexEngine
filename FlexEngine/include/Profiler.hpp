@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 
+#include "JSONTypes.hpp"
+
 namespace flex
 {
 	struct AutoProfilerBlock
