@@ -2,10 +2,13 @@
 
 #include "Scene/MeshComponent.hpp"
 
-#include <string>
+// Must be included above tiny_gltf
+#include "Scene/LoadedMesh.hpp"
 
 #pragma warning(push, 0)
 #define TINYGLTF_IMPLEMENTATION
+#define TINYGLTF_NO_STB_IMAGE
+#define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tiny_gltf/tiny_gltf.h>
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -24,7 +27,7 @@ namespace flex
 	const real MeshComponent::GRID_LINE_SPACING = 1.0f;
 	const u32 MeshComponent::GRID_LINE_COUNT = 151; // Keep odd to align with origin
 
-	std::map<std::string, MeshComponent::LoadedMesh*> MeshComponent::m_LoadedMeshes;
+	std::map<std::string, LoadedMesh*> MeshComponent::m_LoadedMeshes;
 
 	glm::vec4 MeshComponent::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshComponent::m_DefaultPosition(0.0f, 0.0f, 0.0f);
@@ -41,8 +44,7 @@ namespace flex
 	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat /* = true */) :
 		m_OwningGameObject(owner),
 		m_MaterialID(materialID),
-		m_UVScale(1.0f, 1.0f),
-		m_ImportSettings()
+		m_UVScale(1.0f, 1.0f)
 	{
 		if (bSetRequiredAttributesFromMat)
 		{
@@ -88,14 +90,13 @@ namespace flex
 			{
 				newMeshComponent = new MeshComponent(materialID, owner);
 
-				MeshComponent::ImportSettings importSettings = {};
+				MeshImportSettings importSettings = {};
 				importSettings.flipU = flipU;
 				importSettings.flipV = flipV;
 				importSettings.flipNormalZ = flipNormalZ;
 				importSettings.swapNormalYZ = swapNormalYZ;
 
-				newMeshComponent->LoadFromFile(meshFilePath,
-											   &importSettings);
+				newMeshComponent->LoadFromFile(meshFilePath, &importSettings);
 
 				owner->SetMeshComponent(newMeshComponent);
 			}
@@ -138,7 +139,7 @@ namespace flex
 			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
 		}
 
-		MeshComponent::ImportSettings importSettings = m_ImportSettings;
+		MeshImportSettings importSettings = m_ImportSettings;
 		meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.swapNormalYZ));
 		meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.flipNormalZ));
 		meshObject.fields.emplace_back("flipU", JSONValue(importSettings.flipU));
@@ -182,7 +183,7 @@ namespace flex
 		}
 	}
 
-	MeshComponent::LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, ImportSettings* importSettings /* = nullptr */)
+	LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings /* = nullptr */)
 	{
 		if (relativeFilePath.find(':') != std::string::npos)
 		{
@@ -252,7 +253,7 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::CalculateTangents(VertexBufferData::CreateInfo& createInfo, const tinygltf::Primitive& primitive)
+	bool MeshComponent::CalculateTangents(VertexBufferData::CreateInfo& createInfo)
 	{
 		if (createInfo.normals.empty())
 		{
@@ -302,7 +303,7 @@ namespace flex
 		//glm::vec3* meshTan = &createInfo.tangents[0];
 		//glm::vec3* meshBitan = &createInfo.bitangents[0];
 
-		assert(primitive.mode == TINYGLTF_MODE_TRIANGLES);
+		//assert(primitive.mode == TINYGLTF_MODE_TRIANGLES);
 
 		//i32 numFaces = vertCount / 3;
 		//for (i32 i = 0; i < numFaces; ++i)
@@ -315,7 +316,7 @@ namespace flex
 
 	bool MeshComponent::LoadFromFile(
 		const std::string& relativeFilePath,
-		ImportSettings* importSettings /* = nullptr */,
+		MeshImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		if (m_bInitialized)
@@ -622,7 +623,7 @@ namespace flex
 
 					if (bCalculateTangents)
 					{
-						if (!CalculateTangents(vertexBufferDataCreateInfo, primitive))
+						if (!CalculateTangents(vertexBufferDataCreateInfo))
 						{
 							PrintWarn("Failed to calculate tangents/bitangents for mesh!\n");
 						}
@@ -1509,7 +1510,7 @@ namespace flex
 		return m_Shape;
 	}
 
-	MeshComponent::ImportSettings MeshComponent::GetImportSettings() const
+	MeshImportSettings MeshComponent::GetImportSettings() const
 	{
 		return m_ImportSettings;
 	}

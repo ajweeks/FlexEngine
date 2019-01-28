@@ -3,9 +3,6 @@
 
 #include "JSONParser.hpp"
 
-#include <cwctype>
-#include <fstream>
-
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
 

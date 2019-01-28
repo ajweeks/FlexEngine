@@ -1,18 +1,12 @@
 #pragma once
 
-#include <string>
-
-#if COMPILE_RENDERDOC_API
-#include "renderdoc/api/app/renderdoc_app.h"
-#endif
-
+#include "Callbacks/InputCallbacks.hpp"
 #include "Spring.hpp"
-#include "Helpers.hpp" // For TransformState
-#include "InputTypes.hpp" // For MouseButtonCallback
 
 namespace flex
 {
 	class GameObject;
+	enum class TransformState;
 
 	class FlexEngine final
 	{
@@ -236,7 +230,7 @@ namespace flex
 		real m_SpringTimer = 0.0f;
 
 #if COMPILE_RENDERDOC_API
-		RENDERDOC_API_1_3_0 *m_RenderDocAPI = nullptr;
+		struct RENDERDOC_API_1_3_0 *m_RenderDocAPI = nullptr;
 		bool m_bRenderDocTriggerCaptureNextFrame = false;
 		bool m_bRenderDocCapturingFrame = false;
 		i32 m_RenderDocUIPID = -1;

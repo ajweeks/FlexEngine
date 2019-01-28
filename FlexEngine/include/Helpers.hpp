@@ -1,29 +1,9 @@
 #pragma once
 
-#include <direct.h> // For _getcwd
-#include <vector>
-
-#pragma warning(push, 0)
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-
-#if COMPILE_IMGUI
-#define IMGUI_IMPL_OPENGL_LOADER_GLAD
-#include "imgui.h"
-#endif
-
-#pragma warning(pop)
-
 #include "Graphics/RendererTypes.hpp"
 
 namespace flex
 {
-	extern ImVec4 g_WarningTextColor;
-	extern ImVec4 g_WarningButtonColor;
-	extern ImVec4 g_WarningButtonHoveredColor;
-	extern ImVec4 g_WarningButtonActiveColor;
-
 	static const char* SEPARATOR_STR = ", ";
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, i32* channelCountOut = nullptr);
@@ -214,132 +194,6 @@ namespace flex
 		std::string filePath;
 		real* pixels;
 	};
-
-	// TODO: Move enums to their own header
-	enum class SamplingType
-	{
-		CONSTANT, // All samples are equally-weighted
-		LINEAR    // Latest sample is weighted N times higher than Nth sample
-	};
-
-	enum class TurningDir
-	{
-		LEFT,
-		NONE,
-		RIGHT
-	};
-
-	enum class TransformState
-	{
-		TRANSLATE,
-		ROTATE,
-		SCALE,
-		NONE
-	};
-
-	enum class TrackState
-	{
-		FACING_FORWARD,
-		FACING_BACKWARD,
-		// NOTE: Add all elements to TrackStateStrs in Helpers.cpp
-		NONE
-	};
-
-	extern const char* TrackStateStrs[((i32)TrackState::NONE) + 1];
-
-	const char* TrackStateToString(TrackState state);
-
-	enum class LookDirection
-	{
-		LEFT,
-		CENTER,
-		RIGHT,
-
-		NONE
-	};
-
-	template <class T>
-	struct RollingAverage
-	{
-		RollingAverage();
-		RollingAverage(i32 valueCount, SamplingType samplingType = SamplingType::CONSTANT);
-
-		void AddValue(T newValue);
-		void Reset();
-		void Reset(const T& resetValue);
-
-		T currentAverage;
-		std::vector<T> prevValues;
-
-		SamplingType samplingType;
-
-		i32 currentIndex = 0;
-	};
-
-	template<class T>
-	inline RollingAverage<T>::RollingAverage()
-	{
-	}
-
-	template <class T>
-	RollingAverage<T>::RollingAverage(i32 valueCount, SamplingType samplingType /* = SamplingType::CONSTANT */) :
-		samplingType(samplingType)
-	{
-		prevValues.resize(valueCount);
-	}
-
-	template <class T>
-	void RollingAverage<T>::AddValue(T newValue)
-	{
-		prevValues[currentIndex++] = newValue;
-		currentIndex %= prevValues.size();
-
-		currentAverage = T();
-		i32 sampleCount = 0;
-		i32 valueCount = (i32)prevValues.size();
-		for (i32 i = 0; i < valueCount; ++i)
-		{
-			switch (samplingType)
-			{
-			case SamplingType::CONSTANT:
-				currentAverage += prevValues[i];
-				sampleCount++;
-				break;
-			case SamplingType::LINEAR:
-				real sampleWeight = (real)(i <= currentIndex ? i + (valueCount - currentIndex) : i - currentIndex);
-				currentAverage += prevValues[i] * sampleWeight;
-				sampleCount += (i32)sampleWeight;
-				break;
-			}
-		}
-
-		if (sampleCount > 0)
-		{
-			currentAverage /= sampleCount;
-		}
-	}
-
-	template <class T>
-	void RollingAverage<T>::Reset()
-	{
-		for (T& v : prevValues)
-		{
-			v = T();
-		}
-		currentIndex = 0;
-		currentAverage = T();
-	}
-
-	template<class T>
-	inline void RollingAverage<T>::Reset(const T& resetValue)
-	{
-		for (T& v : prevValues)
-		{
-			v = resetValue;
-		}
-		currentIndex = 0;
-		currentAverage = resetValue;
-	}
 
 	// Stores text render commands issued during the
 	// frame to later be converted to "TextVertex"s

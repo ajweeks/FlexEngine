@@ -1,7 +1,7 @@
 #include "stdafx.hpp"
 
-#include <fstream>
 #include <iostream>
+#include <cstdio> // For fprintf, ...
 
 #include "Helpers.hpp"
 
@@ -29,33 +29,29 @@ namespace flex
 
 	void ClearLogFile()
 	{
-		std::ofstream file(g_LogBufferFilePath);
-		if (file)
+		FILE* f = nullptr;
+		fopen_s(&f, g_LogBufferFilePath, "w");
+
+		if (f)
 		{
-			char c = '\0';
-			file.write(&c, 1);
-			file.close();
+			fprintf(f, "\0");
+			fclose(f);
 		}
 	}
 
 	void SaveLogBufferToFile()
 	{
 		// TODO: Only append new content rather than overwriting old content?
-		std::ofstream file(g_LogBufferFilePath, std::ios::trunc);
-		if (file)
+
+		FILE* f = nullptr;
+		fopen_s(&f, g_LogBufferFilePath, "w");
+
+		if (f)
 		{
 			std::string fileContents(g_LogBuffer.str());
-			file.write(fileContents.data(), fileContents.size());
-			file.close();
+			fprintf(f, fileContents.c_str());
+			fclose(f);
 		}
-		else
-		{
-			PrintWarn("Failed to save log to %s\n", g_LogBufferFilePath);
-		}
-	}
-
-	void DestroyLogger()
-	{
 	}
 
 	void Print(const char* str, ...)

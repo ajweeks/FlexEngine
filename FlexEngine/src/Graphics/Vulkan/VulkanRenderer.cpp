@@ -3,11 +3,6 @@
 
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 
-#include <algorithm>
-#include <set>
-#include <unordered_map>
-#include <functional>
-
 #pragma warning(push, 0) // Don't generate warnings for third party code
 #include "stb_image.h"
 

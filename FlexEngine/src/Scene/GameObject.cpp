@@ -1,7 +1,6 @@
 #include "stdafx.hpp"
 
 #pragma warning(push, 0)
-#include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
@@ -12,8 +11,6 @@
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
-#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
 #pragma warning(pop)
@@ -22,6 +19,7 @@
 #include "Audio/AudioManager.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -1374,7 +1372,7 @@ namespace flex
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
 				std::string filePath = m_MeshComponent->GetRelativeFilePath();
-				MeshComponent::ImportSettings importSettings = m_MeshComponent->GetImportSettings();
+				MeshImportSettings importSettings = m_MeshComponent->GetImportSettings();
 				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
 			}
 			else

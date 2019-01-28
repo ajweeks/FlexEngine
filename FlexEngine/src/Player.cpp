@@ -4,9 +4,8 @@
 
 #pragma warning(push, 0)
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
-#include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
+
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
@@ -536,7 +535,7 @@ namespace flex
 			{
 				ImGui::Indent();
 				ImGui::Text("Dist along track: %.2f", GetDistAlongTrack());
-				ImGui::Text("Track state: %s", (TrackStateToString(m_TrackState)));
+				ImGui::Text("Track state: %s", TrackStateStrs[(i32)m_TrackState]);
 				ImGui::Unindent();
 			}
 

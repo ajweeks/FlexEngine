@@ -1,20 +1,39 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include <array>
 #include <thread>
 #include <future>
 
 #pragma warning(push, 0)
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+//#include <glad/glad.h>
+//#include <GLFW/glfw3.h>
 #pragma warning(pop)
 
 #include "Graphics/RendererTypes.hpp"
 #include "Helpers.hpp"
+#include "Types.hpp"
+
+typedef unsigned int GLenum;
+typedef unsigned char GLboolean;
+typedef unsigned int GLbitfield;
+typedef signed char GLbyte;
+typedef short GLshort;
+typedef int GLint;
+typedef int GLsizei;
+typedef unsigned char GLubyte;
+typedef unsigned short GLushort;
+typedef unsigned int GLuint;
+typedef float GLfloat;
+typedef float GLclampf;
+typedef double GLdouble;
+typedef double GLclampd;
+typedef void GLvoid;
 
 namespace flex
 {
+	class GameObject;
+	class VertexBufferData;
+
 	namespace gl
 	{
 #define InvalidID u32_max
@@ -107,13 +126,13 @@ namespace flex
 			u32 VBO = InvalidID;
 			u32 IBO = InvalidID;
 
-			GLenum topology = GL_TRIANGLES;
-			GLenum cullFace = GL_BACK;
-			GLboolean enableCulling = GL_TRUE;
+			GLenum topology = 0x0004; // GL_TRIANGLES;
+			GLenum cullFace = 0x0405; // GL_BACK;
+			GLboolean enableCulling = 1;
 
 			// TODO: Remove these in place of DrawCallInfo members
-			GLenum depthTestReadFunc = GL_LEQUAL;
-			GLboolean depthWriteEnable = GL_TRUE;
+			GLenum depthTestReadFunc = 0x0203; // GL_LEQUAL;
+			GLboolean depthWriteEnable = 1;
 
 			u32 vertexBuffer = 0;
 			VertexBufferData* vertexBufferData = nullptr;
@@ -183,17 +202,17 @@ namespace flex
 			TextureParameters(bool bGenMipMaps = false, bool bDepthTex = false);
 
 			//Parameters
-			i32 minFilter = GL_LINEAR;
-			i32 magFilter = GL_LINEAR;
-			i32 wrapS = GL_REPEAT;
-			i32 wrapT = GL_REPEAT;
-			i32 wrapR = GL_REPEAT;
+			i32 minFilter = 0x2601; //GL_LINEAR;
+			i32 magFilter = 0x2601; //GL_LINEAR;
+			i32 wrapS = 0x2901; //GL_REPEAT;
+			i32 wrapT = 0x2901; //GL_REPEAT;
+			i32 wrapR = 0x2901; //GL_REPEAT;
 			glm::vec4 borderColor;
 
 			bool bGenMipMaps = false;
 			bool bDepthTex = false;
 
-			i32 compareMode = GL_COMPARE_REF_TO_TEXTURE;
+			i32 compareMode = 0x884E; // GL_COMPARE_REF_TO_TEXTURE;
 		};
 
 		struct GLTexture
@@ -236,9 +255,9 @@ namespace flex
 			i32 height = 0;
 			i32 channelCount = 0;
 
-			i32 internalFormat = GL_RGB;
-			GLenum format = GL_RGB;
-			GLenum type = GL_FLOAT;
+			i32 internalFormat = 0x1907; // GL_RGB;
+			GLenum format = 0x1907; // GL_RGB;
+			GLenum type = 0x1406; // GL_FLOAT;
 
 			TextureParameters m_Parameters;
 

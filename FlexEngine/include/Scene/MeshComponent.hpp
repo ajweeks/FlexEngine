@@ -1,26 +1,15 @@
 #pragma once
 
-#include <vector>
-#include <map>
-
-#pragma warning(push, 0)
-#define TINYGLTF_NO_STB_IMAGE
-#define TINYGLTF_NO_STB_IMAGE_WRITE
-#include <tiny_gltf/tiny_gltf.h>
-
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#pragma warning(pop)
-
 #include "Graphics/RendererTypes.hpp"
-#include "JSONTypes.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
+#include "JSONTypes.hpp"
+#include "Types.hpp"
 
 namespace flex
 {
 	class GameObject;
+	struct LoadedMesh;
 
 	class MeshComponent
 	{
@@ -57,18 +46,6 @@ namespace flex
 			NONE
 		};
 
-		struct ImportSettings
-		{
-			/* Whether or not to invert the horizontal texture coordinate */
-			bool flipU = false;
-			/* Whether or not to invert the vertical texture coordinate */
-			bool flipV = false;
-			/* Whether or not to invert the Z component (up) of all normals */
-			bool flipNormalZ = false;
-			/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
-			bool swapNormalYZ = false;
-		};
-
 		/*
 		* Call before loading to force certain attributes to be filled/ignored based on shader
 		* requirements. Any attribute not set here will be ignored. Any attribute set here will
@@ -78,7 +55,7 @@ namespace flex
 
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
-			ImportSettings* importSettings = nullptr,
+			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadPrefabShape(PrefabShape shape,
@@ -98,7 +75,7 @@ namespace flex
 		std::string GetRelativeFilePath() const;
 		std::string GetFileName() const;
 		PrefabShape GetShape() const;
-		ImportSettings GetImportSettings() const;
+		MeshImportSettings GetImportSettings() const;
 
 		real GetScaledBoundingSphereRadius() const;
 		glm::vec3 GetBoundingSphereCenterPointWS() const;
@@ -109,24 +86,18 @@ namespace flex
 		real m_BoundingSphereRadius = 0.0f;
 		glm::vec3 m_BoundingSphereCenterPoint;
 
-		struct LoadedMesh
-		{
-			std::string relativeFilePath;
-			ImportSettings importSettings;
-			tinygltf::Model model;
-			tinygltf::TinyGLTF loader;
-		};
+
 		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.glb")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
 		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 
-		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, ImportSettings* importSettings = nullptr);
+		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
 
 	private:
 		real CalculateBoundingSphereScale() const;
 
-		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo, const tinygltf::Primitive& primitive);
+		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo);
 
 		GameObject* m_OwningGameObject = nullptr;
 
@@ -151,7 +122,7 @@ namespace flex
 		std::vector<u32> m_Indices;
 
 		// Saved so we can reload meshes and serialize contents to file
-		ImportSettings m_ImportSettings = {};
+		MeshImportSettings m_ImportSettings = {};
 		RenderObjectCreateInfo m_OptionalCreateInfo = {};
 
 		static glm::vec4 m_DefaultColor_4;

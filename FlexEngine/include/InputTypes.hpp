@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Helpers.hpp" // For RollingAverage
-#include "Types.hpp" // For glm::vec2
+#include "RollingAverage.hpp"
 
 namespace flex
 {
@@ -328,61 +327,4 @@ namespace flex
 		real pJoystickY = 0.0f;
 		i32 previousQuadrant = -1;
 	};
-
-	class ICallbackMouseButton
-	{
-	public:
-		virtual EventReply Execute(MouseButton button, KeyAction action) = 0;
-	};
-
-	template<typename T>
-	class MouseButtonCallback : public ICallbackMouseButton
-	{
-	public:
-		using CallbackFunction = EventReply(T::*)(MouseButton, KeyAction);
-
-		MouseButtonCallback(T* inst, CallbackFunction func) :
-			inst(inst),
-			func(func)
-		{
-		}
-
-		virtual EventReply Execute(MouseButton button, KeyAction action) override
-		{
-			return (inst->*func)(button, action);
-		}
-
-	private:
-		CallbackFunction func;
-		T* inst;
-	};
-
-	class ICallbackMouseMoved
-	{
-	public:
-		virtual EventReply Execute(const glm::vec2& dMousePos) = 0;
-	};
-
-	template<typename T>
-	class MouseMovedCallback : public ICallbackMouseMoved
-	{
-	public:
-		using CallbackFunction = EventReply(T::*)(const glm::vec2&);
-
-		MouseMovedCallback(T* inst, CallbackFunction func) :
-			inst(inst),
-			func(func)
-		{
-		}
-
-		virtual EventReply Execute(const glm::vec2& dMousePos) override
-		{
-			return (inst->*func)(dMousePos);
-		}
-
-	private:
-		CallbackFunction func;
-		T* inst;
-	};
-
 } // namespace flex

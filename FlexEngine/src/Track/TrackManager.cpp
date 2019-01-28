@@ -94,7 +94,7 @@ namespace flex
 		i32 pCurveIdx = -1;
 		i32 newCurveIdx = -1;
 		i32 junctionIndex = -1;
-		TrackState newTrackState = TrackState::NONE;
+		TrackState newTrackState = TrackState::_NONE;
 
 		glm::vec3 pPoint = track->GetPointOnCurve(pDistAlongTrack, &pCurveIdx);
 		glm::vec3 newPoint = track->GetPointOnCurve(distAlongTrack, &newCurveIdx);
@@ -313,7 +313,7 @@ namespace flex
 		real newDist = -1.0f;
 		i32 junctionIndex = -1;
 		i32 curveIndex = -1;
-		TrackState newTrackState = TrackState::NONE;
+		TrackState newTrackState = TrackState::_NONE;
 		glm::vec3 newPoint = GetPointOnTrack(trackID, queryDist, distAlongTrack, desiredDir, bReversingDownTrack, &newTrackID, &newDist, &junctionIndex, &curveIndex, &newTrackState, false);
 
 		if (junctionIndex == -1)

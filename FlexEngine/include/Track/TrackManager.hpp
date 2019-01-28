@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Helpers.hpp" // For TrackState
 #include "JSONTypes.hpp"
 
 namespace flex
 {
 	class BaseScene;
 	class BezierCurveList;
+	enum class TrackState;
 
 	struct Junction
 	{

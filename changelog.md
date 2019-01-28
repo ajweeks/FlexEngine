@@ -1,6 +1,9 @@
 
 _2019_
 January
+- Improve compile times (full build: ~45s -> ~25s)
+- Add input event callbacks
+- Add callback functionality
 - Add input binding file (`saved/config/input-bindings.ini`)
 - Add engine carts which drive cart chains
 - Make carts that bump into each other connect up into a chain

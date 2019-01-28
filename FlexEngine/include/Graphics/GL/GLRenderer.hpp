@@ -7,7 +7,6 @@
 
 #include "GLHelpers.hpp"
 #include "Graphics/VertexBufferData.hpp"
-#include "Helpers.hpp"
 
 namespace flex
 {
@@ -281,7 +280,7 @@ namespace flex
 			u32 m_Offscreen1FBO = 0;
 			u32 m_Offscreen1RBO = 0;
 
-			GLenum m_OffscreenDepthBufferInternalFormat = GL_DEPTH_COMPONENT24;
+			GLenum m_OffscreenDepthBufferInternalFormat = 0x81A6; // GL_DEPTH_COMPONENT24;
 
 			TextureID m_AlphaBGTextureID = InvalidTextureID;
 			TextureID m_LoadingTextureID = InvalidTextureID;
@@ -323,7 +322,7 @@ namespace flex
 
 			u32 m_CaptureFBO = 0;
 			u32 m_CaptureRBO = 0;
-			GLenum m_CaptureDepthInternalFormat = GL_DEPTH_COMPONENT16;
+			GLenum m_CaptureDepthInternalFormat = 0x81A5; // GL_DEPTH_COMPONENT16;
 
 			glm::vec3 m_ClearColor = { 1.0f, 0.0f, 1.0f };
 
@@ -333,7 +332,6 @@ namespace flex
 			GameObject* m_SkyBoxMesh = nullptr;
 
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
-			Transform m_1x1_NDC_QuadTransform;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
 
 			// The transform to be used for all objects who don't specify one in their

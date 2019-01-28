@@ -181,6 +181,12 @@ namespace flex
 		bool m_bInteractable = false;
 
 		bool m_bLoadedFromPrefab = false;
+
+		bool m_bBeingInteractedWith = false;
+
+		// Editor only
+		bool m_bUniformScale = false;
+
 		std::string m_PrefabName;
 
 		/*
@@ -197,11 +203,6 @@ namespace flex
 		std::vector<GameObject*> m_Children;
 
 		MeshComponent* m_MeshComponent = nullptr;
-
-		bool m_bBeingInteractedWith = false;
-
-		// Editor only
-		bool m_bUniformScale = false;
 
 		static AudioSourceID s_BunkSound;
 		static RandomizedAudioSource s_SqueakySounds;

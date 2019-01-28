@@ -91,11 +91,11 @@ namespace flex
 		result += " | " + g_SceneManager->CurrentScene()->GetName();
 		if (m_bShowMSInWindowTitle)
 		{
-			result += " | " + Time::MillisecondsToString(g_DeltaTime, 2);
+			result += " | " + FloatToString(g_DeltaTime, 2) + "ms";
 		}
 		if (m_bShowFPSInWindowTitle)
 		{
-			result += +" : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
+			result += + " : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
 		}
 
 

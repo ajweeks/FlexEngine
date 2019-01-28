@@ -1075,7 +1075,7 @@ class TinyGLTF {
 #endif
 
 #ifdef _WIN32
-#include <windows.h>
+//#include <windows.h>
 #elif !defined(__ANDROID__)
 #include <wordexp.h>
 #endif

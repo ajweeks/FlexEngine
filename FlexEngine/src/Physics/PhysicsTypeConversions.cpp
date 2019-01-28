@@ -2,6 +2,8 @@
 
 #include "Physics/PhysicsTypeConversions.hpp"
 
+#include "Transform.hpp"
+
 btVector3 ToBtVec3(const glm::vec3& rhs)
 {
 	return btVector3(rhs.x, rhs.y, rhs.z);

@@ -15,6 +15,8 @@
 #define COMPILE_RENDERDOC_API 0
 #endif
 
+#define VC_EXTRALEAN
+
 
 #define NOMINMAX
 #define GLFW_INCLUDE_NONE
@@ -24,6 +26,25 @@
 //#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'
 //#pragma warning(disable : 4868) // compiler may not enforce left-to-right evaluation order in braced initializer list
 //#pragma warning(disable : 4710) // function not inlined
+
+#include <algorithm>
+#include <functional>
+#include <future>
+#include <map>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+#include <sstream>
+#include <fstream>
+#include <array>
+#include <set>
+#include <limits>
+#include <unordered_map>
+
+#include <crtdbg.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "Logger.hpp"
 #include "Types.hpp"
@@ -35,39 +56,49 @@
 
 #if COMPILE_VULKAN
 #pragma warning(push, 0)
-	#include <glad/glad.h>
-	#include <GLFW/glfw3.h>
-	#include <GLFW/glfw3native.h>
-	#include <vulkan/vulkan.hpp>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+#include <vulkan/vulkan.hpp>
 #pragma warning(pop)
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
 #pragma warning(push, 0)
-// TODO: Does this line need to be included above earlier include in Vulkan section?
 #define GLFW_EXPOSE_NATIVE_WIN32
+
 #if COMPILE_IMGUI
 #define IMGUI_IMPL_OPENGL_LOADER_GLAD
 #include "imgui.h"
-#else
+
+namespace flex
+{
+	extern ImVec4 g_WarningTextColor;
+	extern ImVec4 g_WarningButtonColor;
+	extern ImVec4 g_WarningButtonHoveredColor;
+	extern ImVec4 g_WarningButtonActiveColor;
+}
+
+#else // COMPILE_IMGUI
 #include <glad/glad.h>
-#endif
-	#include <GLFW/glfw3.h>
-	#include <GLFW/glfw3native.h>
+#endif // COMPILE_IMGUI
+
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 #pragma warning(pop)
 #endif // COMPILE_OPEN_GL
 
+
 #include "Physics/PhysicsTypeConversions.hpp"
 
-template<class T>
-inline void SafeDelete(T &pObjectToDelete)
-{
-	if (pObjectToDelete != nullptr)
-	{
-		delete(pObjectToDelete);
-		pObjectToDelete = nullptr;
-	}
-}
+#define SafeDelete(pObjectToDelete) \
+{ \
+	if (pObjectToDelete != nullptr) \
+	{ \
+		delete(pObjectToDelete); \
+		pObjectToDelete = nullptr; \
+	} \
+} \
 
 #ifndef btAssert
 #define btAssert(e) assert(e)
@@ -160,4 +191,9 @@ namespace flex
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;
+}
+
+namespace glm
+{
+	using vec2i = tvec2<flex::i32>;
 }

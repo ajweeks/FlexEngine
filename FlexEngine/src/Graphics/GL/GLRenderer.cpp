@@ -3,28 +3,12 @@
 
 #include "Graphics/GL/GLRenderer.hpp"
 
-#include <algorithm>
-#include <array>
-#include <functional>
-#include <string>
-#include <utility>
-
 #pragma warning(push, 0)
-#include <BulletCollision/CollisionShapes/btBoxShape.h>
-#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletCollision/CollisionShapes/btConeShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
-
-#include <BulletCollision/CollisionShapes/btSphereShape.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
-#include <freetype/ftbitmap.h>
-#include <glm/gtc/matrix_transform.hpp>
 
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
-// TODO: Remove?
-#include <glm/vec3.hpp>
+
+#include <freetype/ftbitmap.h>
 
 #if COMPILE_IMGUI
 #include "imgui_internal.h"
@@ -51,8 +35,8 @@
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Time.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
@@ -1500,9 +1484,6 @@ namespace flex
 
 					m_1x1_NDC_QuadVertexBufferData = {};
 					m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
-
-					m_1x1_NDC_QuadTransform = Transform::Identity();
-
 
 					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::_NONE);
 					m_PersistentObjects.push_back(oneByOneQuadGameObject);
@@ -6083,7 +6064,7 @@ namespace flex
 					static bool bUpdateName = true;
 
 					std::string selectedMeshRelativeFilePath;
-					MeshComponent::LoadedMesh* selectedMesh = nullptr;
+					LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
 					for (auto meshPair : MeshComponent::m_LoadedMeshes)
 					{
@@ -6115,7 +6096,7 @@ namespace flex
 								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
 								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
 								{
-									MeshComponent::ImportSettings importSettings = selectedMesh->importSettings;
+									MeshImportSettings importSettings = selectedMesh->importSettings;
 
 									MaterialID matID = renderObject->materialID;
 									GameObject* gameObject = renderObject->gameObject;
@@ -6214,7 +6195,7 @@ namespace flex
 							StripLeadingDirectories(fileNameAndExtension);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
-							MeshComponent::LoadedMesh* existingMesh = nullptr;
+							LoadedMesh* existingMesh = nullptr;
 							if (MeshComponent::GetLoadedMesh(relativeFilePath, &existingMesh))
 							{
 								i32 j = 0;

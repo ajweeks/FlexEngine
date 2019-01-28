@@ -2,41 +2,31 @@
 
 #include "Helpers.hpp"
 
-#include <fstream>
-#include <iomanip>
-#include <sstream>
+#include <direct.h> // For _getcwd
+#include <stdio.h> // For gcvt, fopen
+#include <iomanip> // for setprecision
 
 #pragma warning(push, 0)
 #include <glm/gtx/matrix_decompose.hpp>
 
-#include "AL/al.h"
-#include "CommCtrl.h"
-
-#include "ShObjIdl.h"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_image_write.h"
 #pragma warning(pop)
 
-#include "FlexEngine.hpp"
-#include "Graphics/Renderer.hpp"
+#include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
+#include "Graphics/Renderer.hpp" // For Renderer::MAX_TEXTURE_DIM
+#include "Transform.hpp"
 
+// Taken from "AL/al.h":
+#define AL_FORMAT_MONO8                           0x1100
+#define AL_FORMAT_MONO16                          0x1101
+#define AL_FORMAT_STEREO8                         0x1102
+#define AL_FORMAT_STEREO16                        0x1103
 
 namespace flex
 {
-	ImVec4 g_WarningTextColor(1.0f, 0.25f, 0.25f, 1.0f);
-	ImVec4 g_WarningButtonColor(0.65f, 0.12f, 0.09f, 1.0f);
-	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
-	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
-
-	const char* TrackStateStrs[((i32)TrackState::NONE) + 1] =
-	{
-		"Facing forward",
-		"Facing backward",
-		"NONE",
-	};
-
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, i32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
@@ -127,9 +117,7 @@ namespace flex
 	std::string FloatToString(real f, i32 precision)
 	{
 		std::stringstream stream;
-
 		stream << std::fixed << std::setprecision(precision) << f;
-
 		return stream.str();
 	}
 
@@ -172,11 +160,16 @@ namespace flex
 
 	bool FileExists(const std::string& filePath)
 	{
-		std::ifstream file(filePath.c_str());
-		bool exists = file.good();
-		file.close();
+		FILE* file = nullptr;
+		fopen_s(&file, filePath.c_str(), "r");
 
-		return exists;
+		if (file)
+		{
+			fclose(file);
+			return true;
+		}
+
+		return false;
 	}
 
 	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile)
@@ -1355,10 +1348,5 @@ namespace flex
 		}
 
 		return bResult;
-	}
-
-	const char* TrackStateToString(TrackState state)
-	{
-		return TrackStateStrs[(i32)state];
 	}
 } // namespace flex

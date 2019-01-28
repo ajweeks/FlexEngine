@@ -5,7 +5,7 @@
 #include <vector>
 #include <sstream>
 
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+#pragma warning(push, 0) // Don't generate warnings for 3rd party code
 #include <vulkan/vulkan.hpp>
 #pragma warning(pop)
 
@@ -190,8 +190,8 @@ namespace flex
 			// Non-static member functions
 			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
 
-			/* 
-			 * Creates image, image view, and sampler based on the texture at filePath 
+			/*
+			 * Creates image, image view, and sampler based on the texture at filePath
 			 * Returns size of image in bytes
 			 */
 			VkDeviceSize CreateFromTexture(const std::string& filePath, VkFormat format, bool hdr = false, u32 mipLevels = 1);

@@ -3,12 +3,11 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <chrono>
-
 #pragma warning(push, 0)
 #include "stb_image.h"
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #pragma warning(pop)
 
 #include "Graphics/Renderer.hpp"

@@ -2,7 +2,7 @@
 
 #include "BaseCamera.hpp"
 
-#include "Helpers.hpp" // For RollingAverage
+#include "RollingAverage.hpp"
 
 namespace flex
 {

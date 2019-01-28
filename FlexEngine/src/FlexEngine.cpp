@@ -2,7 +2,6 @@
 
 #include "FlexEngine.hpp"
 
-#include <sstream>
 #include <stdlib.h> // For srand, rand
 #include <time.h> // For time
 
@@ -14,6 +13,10 @@
 #include <glm/gtx/intersect.hpp>
 
 #include <LinearMath/btIDebugDraw.h>
+
+#if COMPILE_RENDERDOC_API
+#include "renderdoc/api/app/renderdoc_app.h"
+#endif
 
 #if COMPILE_IMGUI
 #include "imgui_internal.h"

@@ -10,7 +10,10 @@
 #include <LinearMath/btVector3.h>
 #pragma warning(pop)
 
-#include "Transform.hpp"
+namespace flex
+{
+	class Transform;
+}
 
 btVector3 ToBtVec3(const glm::vec3& rhs);
 btVector4 ToBtVec4(const glm::vec4& rhs);
