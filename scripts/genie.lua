@@ -189,7 +189,7 @@ configuration {}
 
 	-- Don't use pre-compiled header for the following files
 	nopch {
-		-- path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
 		path.join(DEPENDENCIES_DIR, "imgui/imgui_draw.cpp"),
 		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),
 		path.join(DEPENDENCIES_DIR, "imgui/imgui_widgets.cpp"),
