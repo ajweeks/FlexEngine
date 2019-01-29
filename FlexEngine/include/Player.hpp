@@ -12,11 +12,10 @@ namespace flex
 
 	// The player is instructed by its player controller how to move by means of its
 	// transform component being updated, and it applies those changes to its rigid body itself
-	class Player : public GameObject
+	__declspec(align(16)) class Player : public GameObject
 	{
 	public:
 		Player(i32 index, const glm::vec3& initialPos = VEC3_ZERO);
-		~Player();
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -50,6 +49,8 @@ namespace flex
 
 		void AddToInventory(GameObject* obj);
 
+		bool IsRidingTrack();
+
 		// TODO: Figure out why this class requires alignment to appease warning C4316
 		void* operator new(size_t i);
 		void operator delete(void* p);
@@ -80,7 +81,6 @@ namespace flex
 		bool m_bEditingTrack = false;
 		glm::vec3 m_TrackPlacementReticlePos; // Local offset
 
-
 		bool m_bGrounded = false;
 		bool m_bPossessed = false;
 
@@ -108,7 +108,5 @@ namespace flex
 		AudioSourceID m_SoundTrackSwitchDirID = InvalidAudioSourceID;
 
 		TextureID m_CrosshairTextureID = InvalidTextureID;
-	public:
-		bool IsRidingTrack();
 	};
 } // namespace flex

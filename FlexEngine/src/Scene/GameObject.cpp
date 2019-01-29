@@ -2881,6 +2881,7 @@ namespace flex
 
 	void Cart::SetItemHolding(GameObject* obj)
 	{
+		UNREFERENCED_PARAMETER(obj);
 		// TODO:
 	}
 

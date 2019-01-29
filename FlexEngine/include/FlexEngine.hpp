@@ -38,6 +38,8 @@ namespace flex
 		bool IsRenderingEditorObjects() const;
 		void SetRenderingEditorObjects(bool bRenderingEditorObjects);
 
+		bool IsSimulationPaused() const;
+
 		static std::string EngineVersionString();
 
 		static const u32 EngineVersionMajor;
@@ -223,8 +225,9 @@ namespace flex
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
 		bool m_bMainWindowShowing = true;
-		bool m_bDemoWindowShowing = false;
 		bool m_bAssetBrowserShowing = false;
+		bool m_bDemoWindowShowing = false;
+		bool m_bInputMapperShowing = false;
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;

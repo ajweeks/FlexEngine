@@ -142,7 +142,7 @@ namespace flex
 #endif
 
 		std::string nowStr = GetDateString_YMDHMS();
-		Print("FlexEngine [%s] - Config: [%s] x32\n", nowStr.c_str(), configStr);
+		Print("FlexEngine [%s] - Config: [%s x32]\n", nowStr.c_str(), configStr);
 
 		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
 		Print("%i renderer%s enabled, Current renderer: %s\n",
@@ -1107,8 +1107,8 @@ namespace flex
 					{
 						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(true, captureFilePath.c_str());
 					}
-		}
-	}
+				}
+			}
 #endif
 
 			// We can update this now that the renderer has had a chance to end the frame
@@ -1140,8 +1140,8 @@ namespace flex
 			{
 				Profiler::PrintResultsToFile();
 			}
+		}
 	}
-}
 
 	void FlexEngine::SetupImGuiStyles()
 	{
@@ -1276,7 +1276,7 @@ namespace flex
 				}
 
 				ImGui::EndMenu();
-	}
+			}
 
 			if (ImGui::BeginMenu("Edit"))
 			{
@@ -1322,6 +1322,7 @@ namespace flex
 				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
 				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
 				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
+				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
 
 				ImGui::EndMenu();
 			}
@@ -1466,6 +1467,11 @@ namespace flex
 		if (m_bAssetBrowserShowing)
 		{
 			g_Renderer->DrawAssetBrowserImGui(&m_bAssetBrowserShowing);
+		}
+
+		if (m_bInputMapperShowing)
+		{
+			g_InputManager->DrawImGuiKeyMapper(&m_bInputMapperShowing);
 		}
 	}
 
@@ -1978,7 +1984,7 @@ namespace flex
 			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
 
 			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
-	}
+		}
 	}
 #endif
 
@@ -2584,6 +2590,11 @@ namespace flex
 		glm::vec2 mousePos = g_InputManager->GetMousePosition();
 		btVector3 rayDir = physicsWorld->GenerateDirectionRayFromScreenPos((i32)mousePos.x, (i32)mousePos.y);
 		outRayEnd = outRayStart + rayDir * maxDist;
+	}
+
+	bool FlexEngine::IsSimulationPaused() const
+	{
+		return m_bSimulationPaused;
 	}
 
 } // namespace flex

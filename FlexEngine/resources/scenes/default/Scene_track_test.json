@@ -477,12 +477,23 @@
 				{
 					"name" : "Reflection Probe 01",
 					"type" : "reflection probe",
-					"visible" : true,
+					"visible" : false,
 					"transform" : 
 					{
 						"pos" : "-8.434, 7.266, 0.000"
 					},
-					"material" : "pbr chrome"
+					"material" : "pbr chrome",
+					"children" : 
+					[
+						{
+							"name" : "New_Game_Object_00",
+							"type" : "NONE",
+							"visible" : true,
+							"transform" : 
+							{
+							}
+						}
+					]
 				},
 				{
 					"name" : "PointLight_03",
@@ -490,14 +501,14 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-14.147, 3.883, -10.992"
+						"pos" : "-22.547, 9.283, -11.692"
 					},
 					"point light info" : 
 					{
-						"pos" : "-14.147, 3.883, -10.992",
+						"pos" : "-22.547, 9.283, -11.692",
 						"color" : "1.00, 1.00, 1.00",
 						"enabled" : true,
-						"brightness" : 500.000000
+						"brightness" : 812.500000
 					}
 				},
 				{
@@ -506,14 +517,14 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-4.863, 3.557, 14.795"
+						"pos" : "-14.163, 6.757, 14.795"
 					},
 					"point light info" : 
 					{
-						"pos" : "-4.863, 3.557, 14.795",
+						"pos" : "-14.163, 6.757, 14.795",
 						"color" : "0.97, 0.97, 0.70",
 						"enabled" : true,
-						"brightness" : 39.409000
+						"brightness" : 145.832993
 					}
 				},
 				{
@@ -522,11 +533,11 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "0.000, 0.837, -19.751"
+						"pos" : "3.100, 4.737, -25.251"
 					},
 					"point light info" : 
 					{
-						"pos" : "0.000, 0.837, -19.751",
+						"pos" : "3.100, 4.737, -25.251",
 						"color" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 270.936005
@@ -538,14 +549,183 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "8.465, 10.622, 0.000"
+						"pos" : "10.065, 7.522, 14.100"
 					},
 					"point light info" : 
 					{
-						"pos" : "8.465, 10.622, 0.000",
-						"color" : "0.50, 0.58, 1.00",
+						"pos" : "10.065, 7.522, 14.100",
+						"color" : "0.60, 0.67, 1.00",
 						"enabled" : true,
-						"brightness" : 349.753998
+						"brightness" : 723.958008
+					}
+				},
+				{
+					"name" : "New_Game_Object_00",
+					"type" : "directional light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 15.000, 0.000",
+						"rot" : "1.195, -0.973, -2.522"
+					}
+				},
+				{
+					"name" : "Skybox 2",
+					"type" : "skybox",
+					"visible" : true,
+					"transform" : 
+					{
+					},
+					"material" : "skybox 02",
+					"skybox info" : 
+					{
+					}
+				},
+				{
+					"name" : "Reflection Probe 02",
+					"type" : "reflection probe",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-8.434, 7.266, 0.000"
+					},
+					"material" : "pbr chrome",
+					"children" : 
+					[
+						{
+							"name" : "New_Game_Object_00",
+							"type" : "NONE",
+							"visible" : true,
+							"transform" : 
+							{
+							}
+						}
+					]
+				},
+				{
+					"name" : "PointLight_04",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-22.547, 9.283, -11.692"
+					}
+				},
+				{
+					"name" : "PointLight_01",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-14.163, 6.757, 14.795"
+					}
+				},
+				{
+					"name" : "PointLight_02",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "3.100, 4.737, -25.251"
+					}
+				},
+				{
+					"name" : "PointLight_03",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "10.065, 7.522, 14.100"
+					}
+				}
+			]
+		},
+		{
+			"name" : "New_Game_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"children" : 
+			[
+				{
+					"name" : "New_Game_Object_00",
+					"type" : "directional light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 15.000, 0.000",
+						"rot" : "1.195, -0.973, -2.522"
+					}
+				},
+				{
+					"name" : "Skybox 2",
+					"type" : "skybox",
+					"visible" : true,
+					"transform" : 
+					{
+					},
+					"material" : "skybox 02",
+					"skybox info" : 
+					{
+					}
+				},
+				{
+					"name" : "Reflection Probe 02",
+					"type" : "reflection probe",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-8.434, 7.266, 0.000"
+					},
+					"material" : "pbr chrome",
+					"children" : 
+					[
+						{
+							"name" : "New_Game_Object_00",
+							"type" : "NONE",
+							"visible" : true,
+							"transform" : 
+							{
+							}
+						}
+					]
+				},
+				{
+					"name" : "PointLight_04",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-22.547, 9.283, -11.692"
+					}
+				},
+				{
+					"name" : "PointLight_01",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-14.163, 6.757, 14.795"
+					}
+				},
+				{
+					"name" : "PointLight_02",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "3.100, 4.737, -25.251"
+					}
+				},
+				{
+					"name" : "PointLight_03",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "10.065, 7.522, 14.100"
 					}
 				}
 			]

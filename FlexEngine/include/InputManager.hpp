@@ -93,6 +93,8 @@ namespace flex
 		void BindMouseMovedCallback(ICallbackMouseMoved* callback);
 		void UnbindMouseMovedCallback(ICallbackMouseMoved* callback);
 
+		void DrawImGuiKeyMapper(bool* bOpen);
+
 		static i32 s_JoystickDisconnected;
 
 		bool bPlayerUsingKeyboard[2];
@@ -108,6 +110,7 @@ namespace flex
 
 		std::map<KeyCode, Key> m_Keys;
 
+		// Contains one entry for each entry in the Action enum
 		std::vector<InputBinding> m_InputBindings;
 		std::vector<ICallbackMouseButton*> m_MouseButtonCallbacks;
 		std::vector<ICallbackMouseMoved*> m_MouseMovedCallbacks;

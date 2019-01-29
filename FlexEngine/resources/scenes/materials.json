@@ -329,13 +329,13 @@
 		{
 			"name" : "Grid",
 			"shader" : "pbr-ws",
-			"const albedo" : "1.000, 1.000, 1.000",
+			"const albedo" : "0.055, 0.055, 0.055",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,
 			"const ao" : 1.000000,
 			"enable albedo sampler" : true,
 			"generate albedo sampler" : true,
-			"albedo texture filepath" : "grid-01.png",
+			"albedo texture filepath" : "alpha-bg.png",
 			"texture scale" : 0.500000
 		}
 	]

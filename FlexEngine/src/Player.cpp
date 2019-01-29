@@ -39,10 +39,6 @@ namespace flex
 		m_Transform.SetWorldPosition(initialPos);
 	}
 
-	Player::~Player()
-	{
-	}
-
 	void Player::Initialize()
 	{
 		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/click-02.wav");

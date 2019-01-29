@@ -629,11 +629,14 @@ namespace flex
 
 		io.MousePos = m_MousePosition;
 
-		for (auto iter = m_MouseMovedCallbacks.rbegin(); iter != m_MouseMovedCallbacks.rend(); ++iter)
+		if (!io.WantCaptureMouse)
 		{
-			if ((*iter)->Execute(m_MousePosition - m_PrevMousePosition) == EventReply::CONSUMED)
+			for (auto iter = m_MouseMovedCallbacks.rbegin(); iter != m_MouseMovedCallbacks.rend(); ++iter)
 			{
-				break;
+				if ((*iter)->Execute(m_MousePosition - m_PrevMousePosition) == EventReply::CONSUMED)
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -665,11 +668,14 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDown[(i32)mouseButton] = (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 
-		for (auto iter = m_MouseButtonCallbacks.rbegin(); iter != m_MouseButtonCallbacks.rend(); ++iter)
+		if (!io.WantCaptureMouse)
 		{
-			if ((*iter)->Execute(mouseButton, action) == EventReply::CONSUMED)
+			for (auto iter = m_MouseButtonCallbacks.rbegin(); iter != m_MouseButtonCallbacks.rend(); ++iter)
 			{
-				break;
+				if ((*iter)->Execute(mouseButton, action) == EventReply::CONSUMED)
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -969,6 +975,93 @@ namespace flex
 		}
 
 		m_MouseMovedCallbacks.erase(iter);
+	}
+
+	void InputManager::DrawImGuiKeyMapper(bool* bOpen)
+	{
+		if (ImGui::Begin("Key Mapper", bOpen))
+		{
+			const i32 numCols = 6;
+			ImGui::Columns(numCols);
+
+			ImGui::SetColumnWidth(-1, 210);
+			ImGui::Text("Action");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 80);
+			ImGui::Text("key code");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 107);
+			ImGui::Text("mouse button");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 95);
+			ImGui::Text("mouse axis");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 125);
+			ImGui::Text("gamepad button");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 105);
+			ImGui::Text("gamepad axis");
+			ImGui::NextColumn();
+
+			ImGui::Separator();
+			ImGui::Separator();
+
+			for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+			{
+				const InputBinding& binding = m_InputBindings[i];
+
+				ImGui::Columns(numCols);
+
+				ImGui::Text(ActionStrings[i]);
+				ImGui::NextColumn();
+
+				if (binding.keyCode != KeyCode::_NONE)
+				{
+					ImGui::Text("%d", (u32)binding.keyCode);
+				}
+				ImGui::NextColumn();
+
+
+				if (binding.mouseButton != MouseButton::_NONE)
+				{
+					ImGui::Text("%d", (u32)binding.mouseButton);
+				}
+				ImGui::NextColumn();
+
+
+				if (binding.mouseAxis != MouseAxis::_NONE)
+				{
+					ImGui::Text("%d", (u32)binding.mouseAxis);
+				}
+				ImGui::NextColumn();
+
+
+				if (binding.gamepadButton != GamepadButton::_NONE)
+				{
+					ImGui::Text("%d", (u32)binding.gamepadButton);
+				}
+				ImGui::NextColumn();
+
+
+				if (binding.gamepadAxis != GamepadAxis::_NONE)
+				{
+					ImGui::Text("%d", (i32)binding.gamepadAxis);
+				}
+				ImGui::NextColumn();
+
+				if (i != (i32)Action::_NONE - 1)
+				{
+					ImGui::Separator();
+				}
+			}
+		}
+
+		ImGui::End();
 	}
 
 	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
