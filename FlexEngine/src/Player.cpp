@@ -686,4 +686,13 @@ namespace flex
 		return m_TrackRidingID != InvalidTrackID;
 	}
 
+	void* Player::operator new(size_t i)
+	{
+		return _mm_malloc(i, 16);
+	}
+
+	void Player::operator delete(void* p)
+	{
+		_mm_free(p);
+	}
 } // namespace flex

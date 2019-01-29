@@ -50,6 +50,10 @@ namespace flex
 
 		void AddToInventory(GameObject* obj);
 
+		// TODO: Figure out why this class requires alignment to appease warning C4316
+		void* operator new(size_t i);
+		void operator delete(void* p);
+
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
