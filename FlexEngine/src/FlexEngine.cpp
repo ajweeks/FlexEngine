@@ -131,9 +131,22 @@ namespace flex
 
 		InitializeLogger();
 
+#if _DEBUG
+		const char* configStr = "Debug";
+#elif DEVELOPMENT
+		const char* configStr = "Development";
+#elif SHIPPING
+		const char* configStr = "Release";
+#else
+		assert(false);
+#endif
+
+		std::string nowStr = GetDateString_YMDHMS();
+		Print("FlexEngine [%s] - Config: [%s] x32\n", nowStr.c_str(), configStr);
+
 		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
-		Print("%i renderer%s %s, Current renderer: %s\n",
-			m_RendererCount, (m_RendererCount > 1 ? "s" : ""), "enabled", m_RendererName.c_str());
+		Print("%i renderer%s enabled, Current renderer: %s\n",
+			m_RendererCount, (m_RendererCount > 1 ? "s" : ""), m_RendererName.c_str());
 
 		DeselectCurrentlySelectedObjects();
 	}

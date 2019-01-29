@@ -239,12 +239,11 @@ namespace flex
 		EDITOR_SELECT_ROTATE_GIZMO,
 		EDITOR_SELECT_SCALE_GIZMO,
 
-#ifdef _DEBUG
+		// Debug
 		DBG_SWITCH_TO_NEXT_CAM,
 		DBG_SWITCH_TO_PREV_CAM,
 		DBG_ENTER_NEXT_SCENE,
 		DBG_ENTER_PREV_SCENE,
-#endif // _DEBUG
 
 		_NONE,
 		COUNT = _NONE
@@ -277,12 +276,11 @@ namespace flex
 		"Editor Select rotate gizmo",
 		"Editor Select scale gizmo",
 
-#ifdef _DEBUG
+		// Debug
 		"DBG Switch to next cam",
 		"DBG Switch to prev cam",
 		"DBG Enter next scene",
 		"DBG Enter prev scene",
-#endif // _DEBUG
 
 		"None"
 	};
