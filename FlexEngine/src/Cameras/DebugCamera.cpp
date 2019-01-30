@@ -40,8 +40,8 @@ namespace flex
 
 			LoadDefaultKeybindings();
 
-			g_InputManager->BindMouseButtonCallback(&mouseButtonCallback);
-			g_InputManager->BindMouseMovedCallback(&mouseMovedCallback);
+			g_InputManager->BindMouseButtonCallback(&mouseButtonCallback, 10);
+			g_InputManager->BindMouseMovedCallback(&mouseMovedCallback, 10);
 
 			m_bInitialized = true;
 		}

@@ -11,7 +11,7 @@
 namespace flex
 {
 	bool Profiler::s_bDisplayingFrame = false;
-	bool Profiler::s_bRecordingTrace = true;
+	bool Profiler::s_bRecordingTrace = false;
 	std::unordered_map<u64, Profiler::Timing> Profiler::s_Timings;
 	ms Profiler::s_FrameStartTime = 0;
 	ms Profiler::s_FrameEndTime = 0;

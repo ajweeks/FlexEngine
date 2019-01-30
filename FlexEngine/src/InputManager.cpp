@@ -631,9 +631,9 @@ namespace flex
 
 		if (!io.WantCaptureMouse)
 		{
-			for (auto iter = m_MouseMovedCallbacks.rbegin(); iter != m_MouseMovedCallbacks.rend(); ++iter)
+			for (auto iter = m_MouseMovedCallbacks.begin(); iter != m_MouseMovedCallbacks.end(); ++iter)
 			{
-				if ((*iter)->Execute(m_MousePosition - m_PrevMousePosition) == EventReply::CONSUMED)
+				if (iter->first->Execute(m_MousePosition - m_PrevMousePosition) == EventReply::CONSUMED)
 				{
 					break;
 				}
@@ -670,9 +670,9 @@ namespace flex
 
 		if (!io.WantCaptureMouse)
 		{
-			for (auto iter = m_MouseButtonCallbacks.rbegin(); iter != m_MouseButtonCallbacks.rend(); ++iter)
+			for (auto iter = m_MouseButtonCallbacks.begin(); iter != m_MouseButtonCallbacks.end(); ++iter)
 			{
-				if ((*iter)->Execute(mouseButton, action) == EventReply::CONSUMED)
+				if (iter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
 				{
 					break;
 				}
@@ -931,50 +931,100 @@ namespace flex
 		m_pGamepadStates[gamepadIndex] = gamepadState;
 	}
 
-	void InputManager::BindMouseButtonCallback(ICallbackMouseButton* callback)
+	void InputManager::BindMouseButtonCallback(ICallbackMouseButton* callback, i32 priority)
 	{
-		if (std::find(m_MouseButtonCallbacks.begin(), m_MouseButtonCallbacks.end(), callback) != m_MouseButtonCallbacks.end())
+		for (auto callbackPair : m_MouseButtonCallbacks)
 		{
-			PrintWarn("Attempted to bind on mouse button callback multiple times!\n");
-			return;
+			if (callbackPair.first == callback)
+			{
+				PrintWarn("Attempted to bind on mouse button callback multiple times!\n");
+				return;
+			}
 		}
 
-		m_MouseButtonCallbacks.push_back(callback);
+		bool bAdded = false;
+		for (auto iter = m_MouseButtonCallbacks.begin(); iter != m_MouseButtonCallbacks.end(); ++iter)
+		{
+			if (iter->second < priority)
+			{
+				m_MouseButtonCallbacks.insert(iter, Pair<ICallbackMouseButton*, i32>(callback, priority));
+				bAdded = true;
+				break;
+			}
+		}
+		if (!bAdded)
+		{
+			m_MouseButtonCallbacks.push_back(Pair<ICallbackMouseButton*, i32>(callback, priority));
+		}
 	}
 
 	void InputManager::UnbindMouseButtonCallback(ICallbackMouseButton* callback)
 	{
-		auto iter = std::find(m_MouseButtonCallbacks.begin(), m_MouseButtonCallbacks.end(), callback);
-		if (iter == m_MouseButtonCallbacks.end())
+		auto found = m_MouseButtonCallbacks.end();
+		for (auto iter = m_MouseButtonCallbacks.begin(); iter != m_MouseButtonCallbacks.end(); ++iter)
+		{
+			if (iter->first == callback)
+			{
+				found = iter;
+				break;
+			}
+		}
+
+		if (found == m_MouseButtonCallbacks.end())
 		{
 			PrintWarn("Attempted to unbind mouse button callback that isn't present in callback list!\n");
 			return;
 		}
 
-		m_MouseButtonCallbacks.erase(iter);
+		m_MouseButtonCallbacks.erase(found);
 	}
 
-	void InputManager::BindMouseMovedCallback(ICallbackMouseMoved* callback)
+	void InputManager::BindMouseMovedCallback(ICallbackMouseMoved* callback, i32 priority)
 	{
-		if (std::find(m_MouseMovedCallbacks.begin(), m_MouseMovedCallbacks.end(), callback) != m_MouseMovedCallbacks.end())
+		for (auto callbackPair : m_MouseMovedCallbacks)
 		{
-			PrintWarn("Attempted to bind on mouse moved callback multiple times!\n");
-			return;
+			if (callbackPair.first == callback)
+			{
+				PrintWarn("Attempted to bind on mouse moved callback multiple times!\n");
+				return;
+			}
 		}
 
-		m_MouseMovedCallbacks.push_back(callback);
+		bool bAdded = false;
+		for (auto iter = m_MouseMovedCallbacks.begin(); iter != m_MouseMovedCallbacks.end(); ++iter)
+		{
+			if (iter->second < priority)
+			{
+				m_MouseMovedCallbacks.insert(iter, Pair<ICallbackMouseMoved*, i32>(callback, priority));
+				bAdded = true;
+				break;
+			}
+		}
+		if (!bAdded)
+		{
+			m_MouseMovedCallbacks.push_back(Pair<ICallbackMouseMoved*, i32>(callback, priority));
+		}
 	}
 
 	void InputManager::UnbindMouseMovedCallback(ICallbackMouseMoved* callback)
 	{
-		auto iter = std::find(m_MouseMovedCallbacks.begin(), m_MouseMovedCallbacks.end(), callback);
-		if (iter == m_MouseMovedCallbacks.end())
+		auto found = m_MouseMovedCallbacks.end();
+		for (auto iter = m_MouseMovedCallbacks.begin(); iter != m_MouseMovedCallbacks.end(); ++iter)
+		{
+			if (iter->first == callback)
+			{
+				found = iter;
+				break;
+			}
+		}
+
+		if (found == m_MouseMovedCallbacks.end())
 		{
 			PrintWarn("Attempted to unbind mouse moved callback that isn't present in callback list!\n");
 			return;
 		}
 
-		m_MouseMovedCallbacks.erase(iter);
+		m_MouseMovedCallbacks.erase(found);
 	}
 
 	void InputManager::DrawImGuiKeyMapper(bool* bOpen)

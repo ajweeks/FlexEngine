@@ -1,6 +1,7 @@
 #pragma once
 
 #include "InputTypes.hpp"
+#include "Pair.hpp"
 
 #include <map>
 
@@ -87,10 +88,10 @@ namespace flex
 		void ClearKeyboadInput();
 		void ClearGampadInput(i32 gamepadIndex);
 
-		void BindMouseButtonCallback(ICallbackMouseButton* callback);
+		void BindMouseButtonCallback(ICallbackMouseButton* callback, i32 priority);
 		void UnbindMouseButtonCallback(ICallbackMouseButton* callback);
 
-		void BindMouseMovedCallback(ICallbackMouseMoved* callback);
+		void BindMouseMovedCallback(ICallbackMouseMoved* callback, i32 priority);
 		void UnbindMouseMovedCallback(ICallbackMouseMoved* callback);
 
 		void DrawImGuiKeyMapper(bool* bOpen);
@@ -112,8 +113,8 @@ namespace flex
 
 		// Contains one entry for each entry in the Action enum
 		std::vector<InputBinding> m_InputBindings;
-		std::vector<ICallbackMouseButton*> m_MouseButtonCallbacks;
-		std::vector<ICallbackMouseMoved*> m_MouseMovedCallbacks;
+		std::vector<Pair<ICallbackMouseButton*, i32>> m_MouseButtonCallbacks;
+		std::vector<Pair<ICallbackMouseMoved*, i32>> m_MouseMovedCallbacks;
 
 		u32 m_MouseButtonStates;
 		u32 m_MouseButtonsPressed;

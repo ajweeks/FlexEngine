@@ -225,8 +225,8 @@ namespace flex
 
 		// TODO: Specify a certain level of priority when registering us to prevent
 		// the DebugCamera from having higher priority than us after switching cams
-		g_InputManager->BindMouseButtonCallback(&mouseButtonCallback);
-		g_InputManager->BindMouseMovedCallback(&mouseMovedCallback);
+		g_InputManager->BindMouseButtonCallback(&mouseButtonCallback, 99);
+		g_InputManager->BindMouseMovedCallback(&mouseMovedCallback, 99);
 
 		if (s_AudioSourceIDs.empty())
 		{
