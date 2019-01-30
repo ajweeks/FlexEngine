@@ -13,6 +13,17 @@ namespace flex
 		_NONE
 	};
 
+	static constexpr const char* KeyActionStrings[] =
+	{
+		"Press",
+		"Release",
+		"Repeat",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(KeyActionStrings) == (u32)KeyAction::_NONE + 1, "KeyActionStrings length must match KeyAction enum");
+
 	enum class KeyCode
 	{
 		KEY_SPACE,
@@ -140,14 +151,153 @@ namespace flex
 		_NONE
 	};
 
+	static constexpr const char* KeyCodeStrings[] =
+	{
+		"Space",
+		"Apostrophe",
+		"Comma",
+		"Minus",
+		"Period",
+		"Slash",
+		"0",
+		"1",
+		"2",
+		"3",
+		"4",
+		"5",
+		"6",
+		"7",
+		"8",
+		"9",
+		"Semicolon",
+		"Equal",
+		"A",
+		"B",
+		"C",
+		"D",
+		"E",
+		"F",
+		"G",
+		"H",
+		"I",
+		"J",
+		"K",
+		"L",
+		"M",
+		"N",
+		"O",
+		"P",
+		"Q",
+		"R",
+		"S",
+		"T",
+		"U",
+		"V",
+		"W",
+		"X",
+		"Y",
+		"Z",
+		"Left bracket",
+		"Backslash",
+		"Right bracket",
+		"Grave accent",
+		"World 1",
+		"World 2",
+
+		"Escape",
+		"Enter",
+		"Tab",
+		"Backspace",
+		"Insert",
+		"Delete",
+		"Right",
+		"Left",
+		"Down",
+		"Up",
+		"Page up",
+		"Page down",
+		"Home",
+		"End",
+		"Caps lock",
+		"Scroll lock",
+		"Num lock",
+		"Print screen",
+		"Pause",
+		"F1",
+		"F2",
+		"F3",
+		"F4",
+		"F5",
+		"F6",
+		"F7",
+		"F8",
+		"F9",
+		"F10",
+		"F11",
+		"F12",
+		"F13",
+		"F14",
+		"F15",
+		"F16",
+		"F17",
+		"F18",
+		"F19",
+		"F20",
+		"F21",
+		"F22",
+		"F23",
+		"F24",
+		"F25",
+		"KP_0",
+		"KP_1",
+		"KP_2",
+		"KP3",
+		"KP__4",
+		"Keypad 5",
+		"Keypad 6",
+		"Keypad 7",
+		"Keypad 8",
+		"Keypad 9",
+		"Keypad Decimal",
+		"Keypad Divide",
+		"Keypad Multiply",
+		"Keypad Subtract",
+		"Keypad Add",
+		"Keypad Enter",
+		"Keypad Equal",
+		"Left Shift",
+		"Left Control",
+		"Left Alt",
+		"Left Super",
+		"Right Shift",
+		"Right Control",
+		"Right Alt",
+		"Right Super",
+		"Menu",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(KeyCodeStrings) == (u32)KeyCode::_NONE + 1, "Key code strings length must match KeyCode enum");
+
 	enum class InputModifier
 	{
-		_NONE = 0,
-
 		SHIFT = (1 << 0),
 		CONTROL = (1 << 1),
 		ALT = (1 << 2),
-		SUPER = (1 << 3)
+		SUPER = (1 << 3),
+
+		_NONE = 0,
+	};
+
+	static constexpr const char* InputModifierStrings[] =
+	{
+		"Shift",
+		"Control",
+		"Alt",
+		"Super",
+
+		"NONE"
 	};
 
 	enum class MouseButton
@@ -168,6 +318,22 @@ namespace flex
 		_NONE = MOUSE_BUTTON_8 + 1
 	};
 
+	static constexpr const char* MouseButtonStrings[] =
+	{
+		"Left Button",
+		"Right Button",
+		"Middle Button",
+		"Button 4",
+		"Button 5",
+		"Button 6",
+		"Button 7",
+		"Button 8",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(MouseButtonStrings) == (u32)MouseButton::_NONE + 1, "MouseButtonStrings length must match MouseButton enum");
+
 	enum class GamepadButton
 	{
 		A = 0,
@@ -186,9 +352,32 @@ namespace flex
 		D_PAD_DOWN = 13,
 		D_PAD_LEFT = 14,
 
-		_NONE,
-		_COUNT = _NONE
+		_NONE
 	};
+
+	// TODO: Support naming for other common gamepads
+	static constexpr const char* GamepadButtonStrings[] =
+	{
+		"A",
+		"B",
+		"X",
+		"Y",
+		"Left bumper",
+		"Right bumper",
+		"Back",
+		"Start",
+		"Invalid", // TODO: Find out what gamepads use this index
+		"Left stick press",
+		"Right stick press",
+		"D-Pad up",
+		"D-Pad right",
+		"D-Pad down",
+		"D-Pad left",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(GamepadButtonStrings) == (u32)GamepadButton::_NONE + 1, "GamepadButtonStrings length must match GamepadButton enum");
 
 	enum class GamepadAxis
 	{
@@ -202,6 +391,20 @@ namespace flex
 		_NONE
 	};
 
+	static constexpr const char* GamepadAxisStrings[] =
+	{
+		"Left stick X",
+		"Left stick Y",
+		"Right stick X",
+		"Right stick Y",
+		"Left trigger",
+		"Right trigger",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(GamepadAxisStrings) == (u32)GamepadAxis::_NONE + 1, "GamepadAxisStrings length must match GamepadAxis enum");
+
 	enum class MouseAxis
 	{
 		X,
@@ -211,6 +414,18 @@ namespace flex
 
 		_NONE
 	};
+
+	static constexpr const char* MouseAxisStrings[] =
+	{
+		"X",
+		"Y",
+		"Scroll X",
+		"Scroll Y",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(MouseAxisStrings) == (u32)MouseAxis::_NONE + 1, "MouseAxisStrings length must match MouseAxis enum");
 
 	enum class Action
 	{
@@ -249,7 +464,7 @@ namespace flex
 		COUNT = _NONE
 	};
 
-	static const char* ActionStrings[] =
+	static constexpr const char* ActionStrings[] =
 	{
 		"Move left",
 		"Move right",
@@ -285,7 +500,7 @@ namespace flex
 		"None"
 	};
 
-	static_assert(ARRAY_LENGTH(ActionStrings) == (u32)Action::_NONE + 1, "Action strings length must match Action enum");
+	static_assert(ARRAY_LENGTH(ActionStrings) == (u32)Action::_NONE + 1, "ActionStrings length must match Action enum");
 
 	struct InputBinding
 	{

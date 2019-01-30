@@ -104,7 +104,7 @@ namespace flex
 		void LoadInputBindingsFromFile();
 		void SaveInputBindingsToFile();
 
-		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_COUNT;
+		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_NONE;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		static const real MAX_JOYSTICK_ROTATION_SPEED;
 
