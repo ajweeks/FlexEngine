@@ -981,31 +981,23 @@ namespace flex
 	{
 		if (ImGui::Begin("Key Mapper", bOpen))
 		{
-			const i32 numCols = 6;
+			const i32 numCols = 4;
 			ImGui::Columns(numCols);
 
-			ImGui::SetColumnWidth(-1, 210);
+			ImGui::SetColumnWidth(-1, 250);
 			ImGui::Text("Action");
 			ImGui::NextColumn();
 
-			ImGui::SetColumnWidth(-1, 80);
-			ImGui::Text("key code");
+			ImGui::SetColumnWidth(-1, 120);
+			ImGui::Text("Keyboard");
 			ImGui::NextColumn();
 
-			ImGui::SetColumnWidth(-1, 107);
-			ImGui::Text("mouse button");
+			ImGui::SetColumnWidth(-1, 150);
+			ImGui::Text("Mouse");
 			ImGui::NextColumn();
 
-			ImGui::SetColumnWidth(-1, 95);
-			ImGui::Text("mouse axis");
-			ImGui::NextColumn();
-
-			ImGui::SetColumnWidth(-1, 125);
-			ImGui::Text("gamepad button");
-			ImGui::NextColumn();
-
-			ImGui::SetColumnWidth(-1, 105);
-			ImGui::Text("gamepad axis");
+			ImGui::SetColumnWidth(-1, 150);
+			ImGui::Text("Gamepad");
 			ImGui::NextColumn();
 
 			ImGui::Separator();
@@ -1022,35 +1014,27 @@ namespace flex
 
 				if (binding.keyCode != KeyCode::_NONE)
 				{
-					ImGui::Text("%d", (u32)binding.keyCode);
+					ImGui::Text("%s", KeyCodeStrings[(u32)binding.keyCode]);
 				}
 				ImGui::NextColumn();
-
 
 				if (binding.mouseButton != MouseButton::_NONE)
 				{
-					ImGui::Text("%d", (u32)binding.mouseButton);
+					ImGui::Text("%s", MouseButtonStrings[(u32)binding.mouseButton]);
 				}
-				ImGui::NextColumn();
-
-
 				if (binding.mouseAxis != MouseAxis::_NONE)
 				{
-					ImGui::Text("%d", (u32)binding.mouseAxis);
+					ImGui::Text("%s", MouseAxisStrings[(u32)binding.mouseAxis]);
 				}
 				ImGui::NextColumn();
-
 
 				if (binding.gamepadButton != GamepadButton::_NONE)
 				{
-					ImGui::Text("%d", (u32)binding.gamepadButton);
+					ImGui::Text("%s", GamepadButtonStrings[(u32)binding.gamepadButton]);
 				}
-				ImGui::NextColumn();
-
-
 				if (binding.gamepadAxis != GamepadAxis::_NONE)
 				{
-					ImGui::Text("%d", (i32)binding.gamepadAxis);
+					ImGui::Text("%s", GamepadAxisStrings[(i32)binding.gamepadAxis]);
 				}
 				ImGui::NextColumn();
 

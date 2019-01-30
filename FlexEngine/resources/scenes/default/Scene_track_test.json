@@ -601,42 +601,6 @@
 							}
 						}
 					]
-				},
-				{
-					"name" : "PointLight_04",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "-22.547, 9.283, -11.692"
-					}
-				},
-				{
-					"name" : "PointLight_01",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "-14.163, 6.757, 14.795"
-					}
-				},
-				{
-					"name" : "PointLight_02",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "3.100, 4.737, -25.251"
-					}
-				},
-				{
-					"name" : "PointLight_03",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "10.065, 7.522, 14.100"
-					}
 				}
 			]
 		},
@@ -691,42 +655,6 @@
 							}
 						}
 					]
-				},
-				{
-					"name" : "PointLight_04",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "-22.547, 9.283, -11.692"
-					}
-				},
-				{
-					"name" : "PointLight_01",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "-14.163, 6.757, 14.795"
-					}
-				},
-				{
-					"name" : "PointLight_02",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "3.100, 4.737, -25.251"
-					}
-				},
-				{
-					"name" : "PointLight_03",
-					"type" : "point light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "10.065, 7.522, 14.100"
-					}
 				}
 			]
 		}
