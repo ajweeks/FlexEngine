@@ -95,7 +95,7 @@ namespace flex
 		}
 		if (m_bShowFPSInWindowTitle)
 		{
-			result += + " : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
+			result += " : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
 		}
 
 
@@ -222,17 +222,8 @@ namespace flex
 
 			if (JSONParser::Parse(s_ConfigFilePath, rootObject))
 			{
-				bool bMoveConsole;
-				if (rootObject.SetBoolChecked("move console to other monitor on bootup", bMoveConsole))
-				{
-					m_bMoveConsoleToOtherMonitor = bMoveConsole;
-				}
-
-				bool bAutoRestore;
-				if (rootObject.SetBoolChecked("auto restore state", bAutoRestore))
-				{
-					m_bAutoRestoreStateOnBootup = bAutoRestore;
-				}
+				rootObject.SetBoolChecked("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
+				rootObject.SetBoolChecked("auto restore state", m_bAutoRestoreStateOnBootup);
 
 				if (m_bAutoRestoreStateOnBootup)
 				{
@@ -248,17 +239,19 @@ namespace flex
 						m_Size = (glm::vec2i)initialWindowSize;
 					}
 
-					bool bMaximized;
-					if (rootObject.SetBoolChecked("maximized", bMaximized))
-					{
-						m_bMaximized = bMaximized;
-					}
+					rootObject.SetBoolChecked("maximized", m_bMaximized);
 
 					std::string windowModeStr;
 					if (rootObject.SetStringChecked("window mode", windowModeStr))
 					{
 						m_CurrentWindowMode = StrToWindowMode(windowModeStr.c_str());
 					}
+				}
+
+				bool bVSyncEnabled;
+				if (rootObject.SetBoolChecked("v-sync", bVSyncEnabled))
+				{
+					SetVSyncEnabled(bVSyncEnabled);
 				}
 
 				return true;
@@ -283,6 +276,7 @@ namespace flex
 		rootObject.fields.emplace_back("maximized", JSONValue(m_bMaximized));
 		const char* windowModeStr = Window::WindowModeToStr(GetWindowMode());
 		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));
+		rootObject.fields.emplace_back("v-sync", JSONValue(m_bVSyncEnabled));
 		std::string fileContents = rootObject.Print(0);
 
 		if (!WriteFile(s_ConfigFilePath, fileContents, false))
@@ -373,6 +367,23 @@ namespace flex
 	glm::u32 Window::GetPID() const
 	{
 		return m_PID;
+	}
+
+	bool Window::GetVSyncEnabled() const
+	{
+		return m_bVSyncEnabled;
+	}
+
+	void Window::SetVSyncEnabled(bool bEnabled)
+	{
+		if (m_bVSyncEnabled != bEnabled)
+		{
+			m_bVSyncEnabled = bEnabled;
+			if (g_Renderer)
+			{
+				g_Renderer->SetVSyncEnabled(bEnabled);
+			}
+		}
 	}
 
 } // namespace flex

@@ -65,7 +65,6 @@ namespace flex
 		virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) = 0;
 
 		virtual void SetVSyncEnabled(bool enableVSync) = 0;
-		virtual bool GetVSyncEnabled() = 0;
 
 		virtual u32 GetRenderObjectCount() const = 0;
 		virtual u32 GetRenderObjectCapacity() const = 0;

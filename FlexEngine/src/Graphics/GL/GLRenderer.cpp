@@ -61,6 +61,8 @@ namespace flex
 		{
 			LoadSettingsFromDisk();
 
+			SetVSyncEnabled(g_Window->GetVSyncEnabled());
+
 			m_OffscreenTexture0Handle = {};
 			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
 			m_OffscreenTexture0Handle.format = GL_RGBA;
@@ -5115,13 +5117,7 @@ namespace flex
 
 		void GLRenderer::SetVSyncEnabled(bool enableVSync)
 		{
-			m_bVSyncEnabled = enableVSync;
 			glfwSwapInterval(enableVSync ? 1 : 0);
-		}
-
-		bool GLRenderer::GetVSyncEnabled()
-		{
-			return m_bVSyncEnabled;
 		}
 
 		void GLRenderer::SetFloat(ShaderID shaderID, const char* valName, real val)

@@ -107,6 +107,9 @@ namespace flex
 
 		u32 GetPID() const;
 
+		bool GetVSyncEnabled() const;
+		void SetVSyncEnabled(bool bEnabled);
+
 	protected:
 
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
@@ -155,6 +158,7 @@ namespace flex
 		bool m_bShowMSInWindowTitle = true;
 		bool m_bMaximized = false;
 		bool m_bIconified = false;
+		bool m_bVSyncEnabled = true;
 
 		real m_UpdateWindowTitleFrequency = 0.0f;
 		real m_SecondsSinceTitleUpdate = 0.0f;

@@ -61,7 +61,6 @@ namespace flex
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
-			virtual bool GetVSyncEnabled() override;
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;

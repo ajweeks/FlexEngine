@@ -263,11 +263,11 @@ namespace flex
 				g_Renderer->RecaptureReflectionProbe();
 			}
 
-			bool bVSyncEnabled = g_Renderer->GetVSyncEnabled();
+			bool bVSyncEnabled = g_Window->GetVSyncEnabled();
 			static const char* vSyncEnabledStr = "VSync";
 			if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
 			{
-				g_Renderer->SetVSyncEnabled(bVSyncEnabled);
+				g_Window->SetVSyncEnabled(bVSyncEnabled);
 			}
 
 			static const char* exposureControlStr = "Camera exposure";
