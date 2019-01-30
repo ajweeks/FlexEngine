@@ -265,7 +265,7 @@ namespace flex
 		TrackState newTrackState = TrackState::_NONE;
 		glm::vec3 newPos = trackManager->GetPointOnTrack(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack,
 			pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrackID, &newDistAlongTrack,
-			&newJunctionIndex, &newCurveIndex, &newTrackState, true);
+			&newJunctionIndex, &newCurveIndex, &newTrackState, false);
 
 		bool bSwitchedTracks = (newTrackID != InvalidTrackID) && (newTrackID != m_Player->m_TrackRidingID);
 		if (bSwitchedTracks)

@@ -44,7 +44,7 @@ namespace flex
 			createInfo.colors_R32G32B32A32 = {};
 			m_VertexBufferData.Initialize(&createInfo);
 
-			m_GameObject = new GameObject("Physics Debug Draw Object", SerializableType::NONE);
+			m_GameObject = new GameObject("Physics Debug Draw Object", SerializableType::_NONE);
 
 			RenderObjectCreateInfo renderObjectCreateInfo = {};
 			renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;

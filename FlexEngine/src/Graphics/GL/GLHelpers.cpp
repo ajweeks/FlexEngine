@@ -808,14 +808,14 @@ namespace flex
 						snprintf(long_name, 64, "%s[%i]", name, j);
 						i32 location = glGetAttribLocation(program, long_name);
 						Print("  %i) type: %s, name: \"%s\", location: %i\n",
-							i, DataTypeToString(dataType), long_name, location);
+							i, DataTypeStrings[(u32)dataType], long_name, location);
 					}
 				}
 				else
 				{
 					i32 location = glGetAttribLocation(program, name);
 					Print("  %i) type: %s, name: \"%s\", location: %i\n",
-						i, DataTypeToString(dataType), name, location);
+						i, DataTypeStrings[(u32)dataType], name, location);
 				}
 			}
 
@@ -847,14 +847,14 @@ namespace flex
 						snprintf(long_name, 64, "%s[%i]", name, j);
 						i32 location = glGetUniformLocation(program, long_name);
 						Print("  %i) type: %s, name: \"%s\", location: %i\n",
-							i, DataTypeToString(dataType), long_name, location);
+							i, DataTypeStrings[(u32)dataType], long_name, location);
 					}
 				}
 				else
 				{
 					i32 location = glGetUniformLocation(program, name);
 					Print("  %i) type: %s, name: \"%s\", location: %i\n",
-						i, DataTypeToString(dataType), name, location);
+						i, DataTypeStrings[(u32)dataType], name, location);
 				}
 			}
 		}
@@ -996,7 +996,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GLTarget passed to GLTargetToBufferTarget: %i\n", (i32)target);
-				return BufferTarget::NONE;
+				return BufferTarget::_NONE;
 			}
 		}
 
@@ -1031,7 +1031,7 @@ namespace flex
 			default:
 			{
 				PrintError("Unhandled GLType passed to GLTypeToDataType: %i\n", type);
-				return DataType::NONE;
+				return DataType::_NONE;
 			}
 			}
 		}
@@ -1049,7 +1049,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GL usage flag passed to GLUsageFlagToUsageFlag: %i\n", usage);
-				return UsageFlag::NONE;
+				return UsageFlag::_NONE;
 			}
 		}
 
@@ -1086,7 +1086,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GL mode passed to GLModeToTopologyMode: %i\n", mode);
-				return TopologyMode::NONE;
+				return TopologyMode::_NONE;
 			}
 		}
 
@@ -1107,7 +1107,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GL cull face passed to GLCullFaceToCullFace: %i\n", cullFace);
-				return CullFace::NONE;
+				return CullFace::_NONE;
 			}
 		}
 
@@ -1148,7 +1148,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GL enum passed to GlenumToDepthTestFunc: %i\n", depthTestFunc);
-				return DepthTestFunc::NONE;
+				return DepthTestFunc::_NONE;
 			}
 		}
 

@@ -341,7 +341,7 @@ namespace flex
 		case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
 		case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
 		case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-		case CursorMode::NONE:
+		case CursorMode::_NONE:
 		default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
 		}
 
@@ -394,7 +394,7 @@ namespace flex
 				glfwSetWindowMonitor(m_Window, nullptr, m_LastWindowedPos.x, m_LastWindowedPos.y, m_LastWindowedSize.x, m_LastWindowedSize.y, videoMode->refreshRate);
 				m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
 			} break;
-			case WindowMode::NONE:
+			case WindowMode::_NONE:
 			default:
 			{
 				PrintError("Unhandled window mode: %d\n", mode);

@@ -314,7 +314,8 @@ namespace flex
 		i32 junctionIndex = -1;
 		i32 curveIndex = -1;
 		TrackState newTrackState = TrackState::_NONE;
-		glm::vec3 newPoint = GetPointOnTrack(trackID, queryDist, distAlongTrack, desiredDir, bReversingDownTrack, &newTrackID, &newDist, &junctionIndex, &curveIndex, &newTrackState, false);
+		glm::vec3 newPoint = GetPointOnTrack(trackID, queryDist, distAlongTrack, desiredDir,
+			bReversingDownTrack, &newTrackID, &newDist, &junctionIndex, &curveIndex, &newTrackState, false);
 
 		if (junctionIndex == -1)
 		{

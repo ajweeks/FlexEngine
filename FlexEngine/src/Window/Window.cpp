@@ -124,17 +124,14 @@ namespace flex
 
 	const char* Window::WindowModeToStr(WindowMode mode)
 	{
-		assert(((i32)mode) >= 0);
-		assert(((i32)mode) < ARRAY_SIZE(WindowModeStrs));
-
-		return WindowModeStrs[(i32)mode];
+		return WindowModeStrings[(i32)mode];
 	}
 
 	WindowMode Window::StrToWindowMode(const char* modeStr)
 	{
-		for (i32 i = 0; i < ARRAY_SIZE(WindowModeStrs); ++i)
+		for (i32 i = 0; i < (i32)WindowMode::_NONE; ++i)
 		{
-			if (strcmp(WindowModeStrs[i], modeStr) == 0)
+			if (strcmp(WindowModeStrings[i], modeStr) == 0)
 			{
 				return (WindowMode)i;
 			}

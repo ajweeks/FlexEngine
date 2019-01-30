@@ -11,6 +11,7 @@
 
 #include "Functors.hpp"
 #include "JSONTypes.hpp"
+#include "Pair.hpp"
 
 extern const char** DataTypeStrs;
 
@@ -61,7 +62,8 @@ namespace flex
 		COLOR =   (1 << 0),
 		DEPTH =   (1 << 1),
 		STENCIL = (1 << 2),
-		NONE
+
+		_NONE
 	};
 
 	enum class CullFace
@@ -69,7 +71,8 @@ namespace flex
 		BACK,
 		FRONT,
 		FRONT_AND_BACK,
-		NONE
+
+		_NONE
 	};
 
 	enum class DepthTestFunc
@@ -82,21 +85,24 @@ namespace flex
 		GEQUAL,
 		EQUAL,
 		NOTEQUAL,
-		NONE
+
+		_NONE
 	};
 
 	enum class BufferTarget
 	{
 		ARRAY_BUFFER,
 		ELEMENT_ARRAY_BUFFER,
-		NONE
+
+		_NONE
 	};
 
 	enum class UsageFlag
 	{
 		STATIC_DRAW,
 		DYNAMIC_DRAW,
-		NONE
+
+		_NONE
 	};
 
 	enum class DataType
@@ -125,11 +131,41 @@ namespace flex
 		SAMPLER_1D_SHADOW,
 		SAMPLER_2D_SHADOW,
 		SAMPLER_CUBE_SHADOW,
-		// NOTE: If adding any types, entries must also be added to the following array!
-		NONE
+
+		_NONE
 	};
 
-	const char* DataTypeToString(DataType dataType);
+	static constexpr const char* DataTypeStrings[] =
+	{
+		"bool",
+		"byte",
+		"unsigned byte",
+		"short",
+		"unsigned short",
+		"int",
+		"unsigned int",
+		"float",
+		"double",
+		"float vector 2",
+		"float vector 3",
+		"float vector 4",
+		"float matrix 3",
+		"float matrix 4",
+		"int vector 2",
+		"int vector 3",
+		"int vector 4",
+		"sampler 1D",
+		"sampler 2D",
+		"sampler 3D",
+		"sampler cube",
+		"sampler 1D shadow",
+		"sampler 2D shadow",
+		"sampler cube shadow",
+
+		"NONE",
+	};
+
+	static_assert(ARRAY_LENGTH(DataTypeStrings) == (u32)DataType::_NONE + 1, "DataTypeStrings length must match DataType enum");
 
 	enum class TopologyMode
 	{
@@ -140,7 +176,8 @@ namespace flex
 		TRIANGLE_LIST,
 		TRIANGLE_STRIP,
 		TRIANGLE_FAN,
-		NONE
+
+		_NONE
 	};
 
 	// TODO: Is setting all the members to false necessary?
@@ -158,7 +195,7 @@ namespace flex
 		std::string hdrEquirectangularTexturePath = "";
 
 		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
-		std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 		std::string environmentMapPath = "";
@@ -221,7 +258,7 @@ namespace flex
 		std::string normalTexturePath = "";
 
 		// GBuffer samplers
-		std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
 		glm::vec2 cubemapSamplerSize = { 0, 0 };
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT

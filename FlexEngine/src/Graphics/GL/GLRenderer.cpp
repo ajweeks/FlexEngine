@@ -1088,7 +1088,7 @@ namespace flex
 			renderObject->indices = createInfo->indices;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
-			renderObject->enableCulling = (createInfo->cullFace == CullFace::NONE ? GL_FALSE : (createInfo->enableCulling ? GL_TRUE : GL_FALSE));
+			renderObject->enableCulling = (createInfo->cullFace == CullFace::_NONE ? GL_FALSE : (createInfo->enableCulling ? GL_TRUE : GL_FALSE));
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
 			renderObject->editorObject = createInfo->editorObject;
@@ -6487,7 +6487,7 @@ namespace flex
 
 						if (ImGui::BeginCombo("Prefab", currentMeshName.c_str()))
 						{
-							for (i32 i = 0; i < (i32)MeshComponent::PrefabShape::NONE; ++i)
+							for (i32 i = 0; i < (i32)MeshComponent::PrefabShape::_NONE; ++i)
 							{
 								std::string shapeStr = MeshComponent::PrefabShapeToString((MeshComponent::PrefabShape)i);
 								bool bSelected = (selectedMeshIndex == i);

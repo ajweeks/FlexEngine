@@ -6,43 +6,6 @@
 
 namespace flex
 {
-	static const char* DataTypeStrs[(i32)DataType::NONE + 1] = {
-		"bool",
-		"byte",
-		"unsigned byte",
-		"short",
-		"unsigned short",
-		"int",
-		"unsigned int",
-		"float",
-		"double",
-		"float vector 2",
-		"float vector 3",
-		"float vector 4",
-		"float matrix 3",
-		"float matrix 4",
-		"int vector 2",
-		"int vector 3",
-		"int vector 4",
-		"sampler 1D",
-		"sampler 2D",
-		"sampler 3D",
-		"sampler cube",
-		"sampler 1D shadow",
-		"sampler 2D shadow",
-		"sampler cube shadow",
-		"NONE",
-	};
-
-	const char* DataTypeToString(DataType dataType)
-	{
-		if ((i32)dataType >= 0 && (i32)dataType <= (i32)DataType::NONE)
-		{
-			return DataTypeStrs[(i32)dataType];
-		}
-		return nullptr;
-	}
-
 	bool Uniforms::HasUniform(Uniform uniform) const
 	{
 		return ((u64)uniforms & (u64)uniform) != 0;

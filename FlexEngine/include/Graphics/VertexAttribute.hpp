@@ -4,7 +4,6 @@ namespace flex
 {
 	enum class VertexAttribute : u32
 	{
-		NONE						= 0,
 		POSITION					= (1 << 0),
 		POSITION_2D					= (1 << 1),
 		UV							= (1 << 2),
@@ -15,7 +14,8 @@ namespace flex
 		NORMAL						= (1 << 7),
 		EXTRA_VEC4					= (1 << 8),
 		EXTRA_INT					= (1 << 9),
-		// NOTE: s_VertexTypes must be updated to stay aligned with this enum
+
+		_NONE						= 0,
 	};
 
 	struct VertexType
@@ -24,7 +24,8 @@ namespace flex
 		i32 size;
 	};
 
-	static VertexType s_VertexTypes[] = {
+	static VertexType s_VertexTypes[] =
+	{
 		{ "in_Position", 3 },
 		{ "in_Position2D", 2 },
 		{ "in_TexCoord", 2 },

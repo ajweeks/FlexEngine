@@ -326,7 +326,7 @@ namespace flex
 		}
 
 		m_Type = Type::FILE;
-		m_Shape = PrefabShape::NONE;
+		m_Shape = PrefabShape::_NONE;
 		m_RelativeFilePath = relativeFilePath;
 		m_FileName = m_RelativeFilePath;
 		StripLeadingDirectories(m_FileName);
@@ -1480,7 +1480,7 @@ namespace flex
 		else
 		{
 			PrintError("Unhandled prefab shape string: %s\n", prefabName.c_str());
-			return PrefabShape::NONE;
+			return PrefabShape::_NONE;
 		}
 
 	}
@@ -1495,7 +1495,7 @@ namespace flex
 		case MeshComponent::PrefabShape::PLANE:				return "plane";
 		case MeshComponent::PrefabShape::UV_SPHERE:			return "uv sphere";
 		case MeshComponent::PrefabShape::SKYBOX:			return "skybox";
-		case MeshComponent::PrefabShape::NONE:				return "NONE";
+		case MeshComponent::PrefabShape::_NONE:				return "NONE";
 		default:											return "UNHANDLED PREFAB SHAPE";
 		}
 	}

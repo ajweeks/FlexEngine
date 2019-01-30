@@ -32,7 +32,8 @@ namespace flex
 		{
 			PREFAB,
 			FILE,
-			NONE
+
+			_NONE
 		};
 
 		enum class PrefabShape
@@ -43,7 +44,8 @@ namespace flex
 			PLANE,
 			UV_SPHERE,
 			SKYBOX,
-			NONE
+
+			_NONE
 		};
 
 		/*
@@ -105,18 +107,18 @@ namespace flex
 
 		MaterialID m_MaterialID = InvalidMaterialID;
 
-		PrefabShape m_Shape = PrefabShape::NONE;
+		PrefabShape m_Shape = PrefabShape::_NONE;
 
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
 
-		Type m_Type = Type::NONE;
+		Type m_Type = Type::_NONE;
 		std::string m_RelativeFilePath;
 		std::string m_FileName;
 
 		glm::vec2 m_UVScale = { 1,1 };
 
-		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::NONE;
+		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::_NONE;
 		VertexBufferData m_VertexBufferData = {};
 
 		std::vector<u32> m_Indices;

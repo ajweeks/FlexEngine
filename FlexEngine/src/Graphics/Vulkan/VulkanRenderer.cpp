@@ -322,7 +322,7 @@ namespace flex
 				m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 
 
-				GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", SerializableType::NONE);
+				GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", SerializableType::_NONE);
 				m_PersistentObjects.push_back(gBufferQuadGameObject);
 				// Don't render the g buffer normally, we'll render it separately
 				gBufferQuadGameObject->SetVisible(false);

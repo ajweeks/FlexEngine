@@ -1381,7 +1381,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: " + std::to_string((i32)primitiveTopology));
-				return TopologyMode::NONE;
+				return TopologyMode::_NONE;
 			}
 		}
 
@@ -1402,7 +1402,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: " + std::to_string((i32)cullMode));
-				return CullFace::NONE;
+				return CullFace::_NONE;
 			}
 		}
 

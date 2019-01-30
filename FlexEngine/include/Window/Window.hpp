@@ -11,7 +11,8 @@ namespace flex
 		NORMAL,
 		HIDDEN,
 		DISABLED,
-		NONE
+
+		_NONE
 	};
 
 	enum class WindowMode
@@ -19,16 +20,20 @@ namespace flex
 		WINDOWED,
 		WINDOWED_FULLSCREEN, // (aka "Borderless windowed")
 		FULLSCREEN,
-		NONE
+
+		_NONE
 	};
 
-	static const char* WindowModeStrs[] =
+	static constexpr const char* WindowModeStrings[] =
 	{
 		"Windowed",
 		"Windowed Fullscreen",
 		"Fullscreen",
-		"None"
+
+		"NONE"
 	};
+
+	static_assert(ARRAY_LENGTH(WindowModeStrings) == (u32)WindowMode::_NONE + 1, "WindowModeStrings length must match WindowMode enum");
 
 	class Window
 	{
@@ -147,7 +152,7 @@ namespace flex
 		// Whether to restore the size and position from the previous session on bootup
 		bool m_bAutoRestoreStateOnBootup = true;
 
-		WindowMode m_CurrentWindowMode = WindowMode::NONE;
+		WindowMode m_CurrentWindowMode = WindowMode::_NONE;
 
 		// Used to store previous window size and position to restore after exiting fullscreen
 		glm::vec2i m_LastWindowedSize;

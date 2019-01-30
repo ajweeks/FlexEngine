@@ -155,6 +155,7 @@ namespace flex
 		TRANSLATE,
 		ROTATE,
 		SCALE,
+
 		_NONE
 	};
 
