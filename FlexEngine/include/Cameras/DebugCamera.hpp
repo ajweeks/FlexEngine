@@ -17,8 +17,6 @@ namespace flex
 		virtual void Destroy() override;
 		virtual bool IsDebugCam() const override;
 
-		void LoadDefaultKeybindings();
-
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<DebugCamera> mouseButtonCallback;
@@ -28,10 +26,8 @@ namespace flex
 
 		glm::vec2 m_MouseDragDist;
 
-		bool m_bEnableGamepadMovement = true;
-		bool m_bEnableKeyboardMovement = true;
-
 		bool m_bDraggingMouse = false;
+		bool m_bOrbiting = false;
 
 		glm::vec3 m_DragStartPosition;
 
@@ -41,14 +37,5 @@ namespace flex
 		real m_TurnLag = 0.1f;
 		glm::vec3 m_MoveVel;
 		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
-
-		KeyCode m_MoveForwardKey;
-		KeyCode m_MoveBackwardKey;
-		KeyCode m_MoveLeftKey;
-		KeyCode m_MoveRightKey;
-		KeyCode m_MoveUpKey;
-		KeyCode m_MoveDownKey;
-		KeyCode m_MoveFasterKey;
-		KeyCode m_MoveSlowerKey;
 	};
 } // namespace flex

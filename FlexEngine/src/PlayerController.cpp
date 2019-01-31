@@ -229,8 +229,6 @@ namespace flex
 		const std::string treeName = "Player Controller " + IntToString(m_PlayerIndex);
 		if (ImGui::TreeNode(treeName.c_str()))
 		{
-			ImGui::Checkbox("Using keyboard", &g_InputManager->bPlayerUsingKeyboard[m_PlayerIndex]);
-
 			ImGui::Text("Seconds attempting to turn: %.5f", m_SecondsAttemptingToTurn);
 			ImGui::Text("Turning dir: %s", m_DirTurning == TurningDir::LEFT ? "left" : m_DirTurning == TurningDir::RIGHT ? "right" : "none");
 

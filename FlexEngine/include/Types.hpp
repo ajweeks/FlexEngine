@@ -167,7 +167,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr char* TrackStateStrs[((i32)TrackState::_NONE) + 1] =
+	static constexpr const char* TrackStateStrs[] =
 	{
 		"Facing forward",
 		"Facing backward",

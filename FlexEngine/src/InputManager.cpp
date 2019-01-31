@@ -629,11 +629,17 @@ namespace flex
 
 		io.MousePos = m_MousePosition;
 
+		if (m_PrevMousePosition.x == -1.0f)
+		{
+			m_PrevMousePosition = m_MousePosition;
+		}
+
 		if (!io.WantCaptureMouse)
 		{
+			const glm::vec2 dMousePos = m_MousePosition - m_PrevMousePosition;
 			for (auto iter = m_MouseMovedCallbacks.begin(); iter != m_MouseMovedCallbacks.end(); ++iter)
 			{
-				if (iter->first->Execute(m_MousePosition - m_PrevMousePosition) == EventReply::CONSUMED)
+				if (iter->first->Execute(dMousePos) == EventReply::CONSUMED)
 				{
 					break;
 				}
@@ -756,11 +762,11 @@ namespace flex
 	{
 		if (ImGui::GetIO().WantCaptureMouse)
 		{
-			return glm::vec2(0, 0);
+			return VEC2_ZERO;
 		}
 
-		if (m_MousePosition == glm::vec2(-1.0f) ||
-			m_PrevMousePosition == glm::vec2(-1.0f))
+		if (m_MousePosition == VEC2_NEG_ONE ||
+			m_PrevMousePosition == VEC2_NEG_ONE)
 		{
 			return VEC2_ZERO;
 		}
@@ -1031,6 +1037,18 @@ namespace flex
 	{
 		if (ImGui::Begin("Key Mapper", bOpen))
 		{
+			if (ImGui::Button("Save"))
+			{
+				SaveInputBindingsToFile();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Load"))
+			{
+				LoadInputBindingsFromFile();
+			}
+
 			const i32 numCols = 4;
 			ImGui::Columns(numCols);
 

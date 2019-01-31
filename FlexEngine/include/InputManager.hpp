@@ -98,8 +98,6 @@ namespace flex
 
 		static i32 s_JoystickDisconnected;
 
-		bool bPlayerUsingKeyboard[2];
-
 	private:
 		void HandleRadialDeadZone(real* x, real* y);
 		void LoadInputBindingsFromFile();

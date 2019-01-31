@@ -1393,8 +1393,8 @@ namespace flex
 				if (ImGui::TreeNode("Misc settings"))
 				{
 					ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
-					ImGui::Checkbox("Toggle profiler overview", &Profiler::s_bDisplayingFrame);
-					ImGui::Checkbox("Toggle profiler trace recording", &Profiler::s_bRecordingTrace);
+					ImGui::Checkbox("Show profiler", &Profiler::s_bDisplayingFrame);
+					ImGui::Checkbox("chrome://tracing recording", &Profiler::s_bRecordingTrace);
 
 					if (ImGui::Button("Display latest frame"))
 					{
@@ -1633,26 +1633,6 @@ namespace flex
 					AudioManager::SetMasterGain(masterGain);
 				}
 
-				bool bP0UsingKeyboard = true;
-				if (rootObject.SetBoolChecked("p0 using keyboard", bP0UsingKeyboard))
-				{
-					g_InputManager->bPlayerUsingKeyboard[0] = bP0UsingKeyboard;
-				}
-				else
-				{
-					g_InputManager->bPlayerUsingKeyboard[0] = false;
-				}
-
-				bool bP1UsingKeyboard = true;
-				if (rootObject.SetBoolChecked("p1 using keyboard", bP1UsingKeyboard))
-				{
-					g_InputManager->bPlayerUsingKeyboard[1] = bP1UsingKeyboard;
-				}
-				else
-				{
-					g_InputManager->bPlayerUsingKeyboard[0] = false;
-				}
-
 				return true;
 			}
 			else
@@ -1692,9 +1672,6 @@ namespace flex
 
 		real masterGain = AudioManager::GetMasterGain();
 		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
-
-		rootObject.fields.emplace_back("p0 using keyboard", JSONValue(g_InputManager->bPlayerUsingKeyboard[0]));
-		rootObject.fields.emplace_back("p1 using keyboard", JSONValue(g_InputManager->bPlayerUsingKeyboard[1]));
 
 		std::string fileContents = rootObject.Print(0);
 

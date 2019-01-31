@@ -443,7 +443,10 @@ namespace flex
 		ZOOM_IN,
 		ZOOM_OUT,
 		TOGGLE_TABLET,
-		PLACE_NODE,
+
+		// Tracks
+		ENTER_TRACK_BUILD_MODE,
+		ENTER_TRACK_EDIT_MODE,
 		COMPLETE_TRACK,
 
 		TAKE_SCREENSHOT,
@@ -454,11 +457,29 @@ namespace flex
 		EDITOR_SELECT_ROTATE_GIZMO,
 		EDITOR_SELECT_SCALE_GIZMO,
 
+		EDITOR_MOD_FASTER,
+		EDITOR_MOD_SLOWER,
+
+		EDITOR_ORBIT,
+
 		// Debug
 		DBG_SWITCH_TO_NEXT_CAM,
 		DBG_SWITCH_TO_PREV_CAM,
 		DBG_ENTER_NEXT_SCENE,
 		DBG_ENTER_PREV_SCENE,
+
+		// Debug Camera
+		DBG_CAM_MOVE_FORWARD,
+		DBG_CAM_MOVE_BACKWARD,
+		DBG_CAM_MOVE_LEFT,
+		DBG_CAM_MOVE_RIGHT,
+		DBG_CAM_MOVE_UP,
+		DBG_CAM_MOVE_DOWN,
+		DBG_CAM_LOOK_UP,
+		DBG_CAM_LOOK_DOWN,
+		DBG_CAM_LOOK_LEFT,
+		DBG_CAM_LOOK_RIGHT,
+		DBG_CAM_ZOOM,
 
 		_NONE,
 		COUNT = _NONE
@@ -480,7 +501,10 @@ namespace flex
 		"Zoom in",
 		"Zoom out",
 		"Toggle tablet",
-		"Place node",
+
+		// Tracks
+		"Enter track build mode",
+		"Enter track edit mode",
 		"Complete track",
 
 		"Take screenshot",
@@ -491,11 +515,28 @@ namespace flex
 		"Editor Select rotate gizmo",
 		"Editor Select scale gizmo",
 
+		"Editor Mod faster",
+		"Editor Mod slower",
+
+		"Editor Orbit",
+
 		// Debug
 		"DBG Switch to next cam",
 		"DBG Switch to prev cam",
 		"DBG Enter next scene",
 		"DBG Enter prev scene",
+
+		"DBG CAM Move forward",
+		"DBG CAM Move backward",
+		"DBG CAM Move left",
+		"DBG CAM Move right",
+		"DBG CAM Move up",
+		"DBG CAM Move down",
+		"DBG CAM Look up",
+		"DBG CAM Look down",
+		"DBG CAM Look left",
+		"DBG CAM Look right",
+		"DBG CAM Zoom",
 
 		"None"
 	};

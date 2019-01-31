@@ -207,8 +207,8 @@ namespace flex
 
 		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
 
-		m_Right = normalize(glm::cross(worldUp, m_Forward));
-		m_Up = cross(m_Forward, m_Right);
+		m_Right = normalize(glm::cross(m_Forward, worldUp));
+		m_Up = cross(m_Right, m_Forward);
 	}
 
 	void BaseCamera::CalculateYawAndPitchFromForward()
