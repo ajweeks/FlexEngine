@@ -337,6 +337,14 @@
 			"generate albedo sampler" : true,
 			"albedo texture filepath" : "alpha-bg.png",
 			"texture scale" : 0.500000
+		},
+		{
+			"name" : "Terminal Copper",
+			"shader" : "pbr",
+			"const albedo" : "0.490, 0.127, 0.038",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.170000,
+			"const ao" : 1.000000
 		}
 	]
 }

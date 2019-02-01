@@ -155,20 +155,19 @@ namespace flex
 		}
 
 		// TODO: Handle in action callback
-		if (g_InputManager->GetActionPressed(Action::DBG_CAM_ZOOM))
+		if (g_InputManager->IsMouseButtonPressed(MouseButton::MIDDLE))
 		{
 			m_DragStartPosition = m_Position;
 		}
 		else
 		{
 			// TODO: Handle in action callback
-			real zoom = g_InputManager->GetActionAxisValue(Action::DBG_CAM_ZOOM);
-			if (zoom != 0.0f)
+			if (g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
 			{
 				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE);
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
-				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
+				m_Position = (m_DragStartPosition + (-normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
 			}
 		}
 

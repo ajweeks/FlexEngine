@@ -149,6 +149,8 @@ namespace flex
 			m_RendererCount, (m_RendererCount > 1 ? "s" : ""), m_RendererName.c_str());
 
 		DeselectCurrentlySelectedObjects();
+
+		m_LMBDownPos = glm::vec2i(-1);
 	}
 
 	FlexEngine::~FlexEngine()
@@ -799,15 +801,33 @@ namespace flex
 				PROFILE_END("DrawImGuiObjects");
 			}
 
-			if (!g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
+			if (g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
 			{
-				//m_bDraggingGizmo = false;
-				HandleGizmoHover();
+				if (!m_bDraggingGizmo)
+				{
+					m_HoveringAxisIndex = -1;
+				}
+			}
+			else
+			{
+				m_bDraggingGizmo = false;
+				if (!m_CurrentlySelectedObjects.empty())
+				{
+					HandleGizmoHover();
+				}
 			}
 
+			// TODO: Use keypress callback
 			if (g_InputManager->GetActionPressed(Action::PAUSE))
 			{
-				m_bSimulationPaused = !m_bSimulationPaused;
+				if (m_CurrentlySelectedObjects.empty())
+				{
+					m_bSimulationPaused = !m_bSimulationPaused;
+				}
+				else
+				{
+					DeselectCurrentlySelectedObjects();
+				}
 			}
 
 #if COMPILE_RENDERDOC_API
@@ -845,11 +865,6 @@ namespace flex
 			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F1, true))
 			{
 				renderImGuiNextFrame = !renderImGuiNextFrame;
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE))
-			{
-				DeselectCurrentlySelectedObjects();
 			}
 
 			if (g_InputManager->GetKeyPressed(KeyCode::KEY_DELETE))
@@ -1559,6 +1574,8 @@ namespace flex
 		m_CurrentlySelectedObjects.clear();
 		m_SelectedObjectsCenterPos = VEC3_ZERO;
 		m_SelectedObjectDragStartPos = VEC3_ZERO;
+		m_DraggingGizmoScaleLast = VEC3_ZERO;
+		m_DraggingGizmoOffset = -1.0f;
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
 	}
@@ -1995,10 +2012,11 @@ namespace flex
 						m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
 						m_DraggingGizmoOffset = -1.0f;
 					}
+
 					m_bDraggingGizmo = false;
 					m_DraggingAxisIndex = -1;
-					m_DraggingGizmoOffset = -1.0f;
 					m_DraggingGizmoScaleLast = VEC3_ZERO;
+					m_DraggingGizmoOffset = -1.0f;
 				}
 
 				if (m_LMBDownPos != glm::vec2i(-1))
@@ -2010,7 +2028,6 @@ namespace flex
 						if (HandleObjectClick())
 						{
 							m_LMBDownPos = glm::vec2i(-1);
-							Print("FlexEngine consumed mouse release because obj was clicked\n");
 							return EventReply::CONSUMED;
 						}
 					}
@@ -2037,8 +2054,16 @@ namespace flex
 
 	bool FlexEngine::HandleGizmoHover()
 	{
-		assert(m_bDraggingGizmo == false);
-		assert(m_DraggingAxisIndex == -1);
+		if (m_bDraggingGizmo == true)
+		{
+			PrintError("Called HandleGizmoHover when m_bDraggingGizmo == true\n");
+			return false;
+		}
+		if (m_DraggingAxisIndex != -1)
+		{
+			PrintError("Called HandleGizmoHover when m_DraggingAxisIndex == %i\n", m_DraggingAxisIndex);
+			return false;
+		}
 
 		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
@@ -2261,7 +2286,11 @@ namespace flex
 		assert(m_HoveringAxisIndex != -1);
 		assert(m_DraggingAxisIndex != -1);
 		assert(m_bDraggingGizmo);
-		assert(!m_CurrentlySelectedObjects.empty());
+		if (m_CurrentlySelectedObjects.empty())
+		{
+			DeselectCurrentlySelectedObjects();
+			return;
+		}
 
 		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
 		const glm::vec3 gizmoUp = gizmoTransform->GetUp();

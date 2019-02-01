@@ -95,7 +95,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr char* GameObjectTypeStrings[] =
+	static constexpr const char* GameObjectTypeStrings[] =
 	{
 		"object",
 		"point light",
