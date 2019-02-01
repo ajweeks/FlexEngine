@@ -64,7 +64,7 @@ namespace flex
 		deg m_TabletOrbitAngleUp = 13.3f;
 		deg m_TabletOrbitAngleDown = -45.0f;
 		real m_TabletOrbitAngle = m_TabletOrbitAngleUp;
-		bool m_bTabletUp = true;
+		bool m_bTabletUp = false;
 
 		real m_MoveFriction = 12.0f;
 		real m_Height = 4.0f;

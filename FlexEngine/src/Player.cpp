@@ -88,7 +88,6 @@ namespace flex
 
 			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::_NONE);
 			m_TabletOrbitAngle = m_TabletOrbitAngleUp;
-			m_bTabletUp = true;
 			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
 			AddChild(m_MapTabletHolder);
 
