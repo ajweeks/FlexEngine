@@ -18,7 +18,7 @@
 namespace flex
 {
 	DebugCamera::DebugCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("debug", FOV, zNear, zFar),
+		BaseCamera("debug", false, FOV, zNear, zFar),
 		m_MoveVel(0.0f),
 		m_TurnVel(0.0f),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),

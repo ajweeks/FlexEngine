@@ -1971,7 +1971,8 @@ namespace flex
 
 			// TODO: Draw world space sprites/text here!
 
-			if (g_EngineInstance->IsRenderingEditorObjects())
+			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+			if (g_EngineInstance->IsRenderingEditorObjects() && bUsingGameplayCam)
 			{
 				DrawDepthAwareEditorObjects(drawCallInfo);
 				DrawSelectedObjectWireframe(drawCallInfo);
@@ -2774,51 +2775,54 @@ namespace flex
 			}
 			m_QueuedWSSprites.clear();
 
-			glm::vec3 scale(1.0f, -1.0f, 1.0f);
-
-			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.FBO = m_Offscreen0FBO;
-			drawInfo.RBO = m_Offscreen0RBO;
-			drawInfo.bScreenSpace = false;
-			drawInfo.bReadDepth = true;
-			drawInfo.bWriteDepth = true;
-			drawInfo.scale = scale;
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			glm::vec3 camPos = cam->GetPosition();
-			glm::vec3 camUp = cam->GetUp();
-			for (PointLight* pointLight : m_PointLights)
+			if (!cam->bIsGameplayCam)
 			{
-				if (pointLight->IsVisible())
+				glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.FBO = m_Offscreen0FBO;
+				drawInfo.RBO = m_Offscreen0RBO;
+				drawInfo.bScreenSpace = false;
+				drawInfo.bReadDepth = true;
+				drawInfo.bWriteDepth = true;
+				drawInfo.scale = scale;
+				drawInfo.materialID = m_SpriteMatID;
+				drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+				glm::vec3 camPos = cam->GetPosition();
+				glm::vec3 camUp = cam->GetUp();
+				for (PointLight* pointLight : m_PointLights)
 				{
-					// TODO: Sort back to front? Or clear depth and then enable depth test
-					drawInfo.pos = pointLight->GetPos();
-					drawInfo.color = pointLight->color * 1.5f;
-					drawInfo.color.a = pointLight->color.a;
-					drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
-					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight->GetPos(), camUp);
+					if (pointLight->IsVisible())
+					{
+						// TODO: Sort back to front? Or clear depth and then enable depth test
+						drawInfo.pos = pointLight->GetPos();
+						drawInfo.color = pointLight->color * 1.5f;
+						drawInfo.color.a = pointLight->color.a;
+						drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
+						glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight->GetPos(), camUp);
+						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+						DrawSpriteQuad(drawInfo);
+					}
+				}
+
+				if (m_DirectionalLight->IsVisible())
+				{
+					drawInfo.color = m_DirectionalLight->color * 1.5f;
+					drawInfo.color.a = m_DirectionalLight->color.a;
+					drawInfo.pos = m_DirectionalLight->GetPos();
+					drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
+					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->GetPos(), camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(drawInfo);
+
+					glm::vec3 dirLightForward = VEC3_RIGHT * m_DirectionalLight->GetRot();
+					m_PhysicsDebugDrawer->drawLine(
+						ToBtVec3(m_DirectionalLight->GetPos()),
+						ToBtVec3(m_DirectionalLight->GetPos() - dirLightForward * 2.5f),
+						btVector3(0.0f, 0.0f, 1.0f));
 				}
-			}
-
-			if (m_DirectionalLight->IsVisible())
-			{
-				drawInfo.color = m_DirectionalLight->color * 1.5f;
-				drawInfo.color.a = m_DirectionalLight->color.a;
-				drawInfo.pos = m_DirectionalLight->GetPos();
-				drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
-				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->GetPos(), camUp);
-				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-				DrawSpriteQuad(drawInfo);
-
-				glm::vec3 dirLightForward = VEC3_RIGHT * m_DirectionalLight->GetRot();
-				m_PhysicsDebugDrawer->drawLine(
-					ToBtVec3(m_DirectionalLight->GetPos()),
-					ToBtVec3(m_DirectionalLight->GetPos() - dirLightForward * 2.5f),
-					btVector3(0.0f, 0.0f, 1.0f));
 			}
 
 			GL_POP_DEBUG_GROUP();

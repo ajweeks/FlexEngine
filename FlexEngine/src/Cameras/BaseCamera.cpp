@@ -16,7 +16,7 @@
 
 namespace flex
 {
-	BaseCamera::BaseCamera(const std::string& cameraName, real FOV, real zNear, real zFar) :
+	BaseCamera::BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV, real zNear, real zFar) :
 		m_Name(cameraName),
 		m_View(MAT4_ZERO),
 		m_Proj(MAT4_ZERO),
@@ -37,7 +37,8 @@ namespace flex
 		m_GamepadRotationSpeed(2.0f),
 		m_Position(VEC3_ZERO),
 		m_Yaw(0.0f),
-		m_Pitch(0.0f)
+		m_Pitch(0.0f),
+		bIsGameplayCam(bIsGameplayCam)
 	{
 		ResetOrientation();
 		CalculateAxisVectorsFromPitchAndYaw();

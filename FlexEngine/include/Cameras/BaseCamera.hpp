@@ -5,7 +5,7 @@ namespace flex
 	class BaseCamera
 	{
 	public:
-		BaseCamera(const std::string& cameraName, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
+		BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
 		virtual ~BaseCamera();
 
 		virtual void Initialize();
@@ -66,6 +66,8 @@ namespace flex
 		real shutterSpeed = 1 / 8.0f; // seconds
 		real lightSensitivity = 800.0f; // ISO
 		real exposure = 0.0f;
+
+		bool bIsGameplayCam;
 
 	protected:
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch

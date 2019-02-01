@@ -17,7 +17,7 @@
 namespace flex
 {
 	FirstPersonCamera::FirstPersonCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("first-person", FOV, zNear, zFar)
+		BaseCamera("first-person", true, FOV, zNear, zFar)
 	{
 		ResetOrientation();
 		RecalculateViewProjection();

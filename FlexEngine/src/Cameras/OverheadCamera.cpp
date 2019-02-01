@@ -21,7 +21,7 @@
 namespace flex
 {
 	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("overhead", FOV, zNear, zFar)
+		BaseCamera("overhead", true, FOV, zNear, zFar)
 	{
 		ResetValues();
 	}
