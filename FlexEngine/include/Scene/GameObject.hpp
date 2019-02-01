@@ -231,7 +231,7 @@ namespace flex
 		glm::vec4 color = VEC4_ONE;
 		real brightness = 1.0f;
 
-		real shadowOpacity = 0.0f;
+		real shadowDarkness = 1.0f;
 		bool bCastShadow = true;
 		real shadowMapNearPlane = -80.0f;
 		real shadowMapFarPlane = 100.0f;

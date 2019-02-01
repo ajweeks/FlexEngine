@@ -2551,7 +2551,7 @@ namespace flex
 			ImGui::Text("Shadow");
 
 			ImGui::Checkbox("Cast shadow", &bCastShadow);
-			ImGui::SliderFloat("Shadow darkness", &shadowOpacity, 0.0f, 1.0f);
+			ImGui::SliderFloat("Shadow darkness", &shadowDarkness, 0.0f, 1.0f);
 
 			ImGui::DragFloat("Near", &shadowMapNearPlane);
 			ImGui::DragFloat("Far", &shadowMapFarPlane);
@@ -2608,7 +2608,7 @@ namespace flex
 			}
 
 			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
-			directionalLightObj.SetFloatChecked("shadow darkness", shadowOpacity);
+			directionalLightObj.SetFloatChecked("shadow darkness", shadowDarkness);
 
 			if (directionalLightObj.HasField("shadow map near"))
 			{
@@ -2645,7 +2645,7 @@ namespace flex
 		dirLightObj.fields.emplace_back("brightness", JSONValue(brightness));
 
 		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
-		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowOpacity));
+		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowDarkness));
 		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
 		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
 		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));

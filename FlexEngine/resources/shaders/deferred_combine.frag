@@ -36,7 +36,7 @@ uniform bool enableIrradianceSampler;
 uniform float exposure = 1.0;
 uniform mat4 lightViewProj;
 uniform bool castShadows = true;
-uniform float shadowOpacity = 0.0;
+uniform float shadowDarkness = 1.0;
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
@@ -180,7 +180,7 @@ void main()
 			{
 				float baseBias = 0.005;
 				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
-				float shadowSampleContrib = shadowOpacity / 9.0;
+				float shadowSampleContrib = shadowDarkness / 9.0;
 
 #if QUALITY_LEVEL_HIGH
 				for (int x = -1; x <= 1; ++x)
@@ -200,7 +200,7 @@ void main()
 				float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
 				if (shadowDepth < transformedShadowPos.z - bias)
 				{
-					dirLightShadowOpacity = 1.0-shadowOpacity;
+					dirLightShadowOpacity = 1.0 - shadowDarkness;
 				}
 #endif
 			}
