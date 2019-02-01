@@ -147,14 +147,29 @@ namespace flex
 		return result;
 	}
 
-	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, bool bRaw, const std::vector<glm::vec2>& letterOffsets) :
+	// Screen-space constructor
+	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
+		const glm::vec4& color, real xSpacing, bool bRaw) :
 		str(str),
 		anchor(anchor),
-		pos(pos),
+		pos(pos.x, pos.y, -1.0f),
+		rot(QUAT_UNIT),
 		color(color),
 		xSpacing(xSpacing),
-		bRaw(bRaw),
-		letterOffsets(letterOffsets)
+		bRaw(bRaw)
+	{
+	}
+
+	// World-space constructor
+	TextCache::TextCache(const std::string& str, const glm::vec3& pos, const glm::quat& rot,
+		const glm::vec4& color, real xSpacing, bool bRaw) :
+		str(str),
+		anchor(AnchorPoint::_NONE),
+		pos(pos),
+		rot(rot),
+		color(color),
+		xSpacing(xSpacing),
+		bRaw(bRaw)
 	{
 	}
 

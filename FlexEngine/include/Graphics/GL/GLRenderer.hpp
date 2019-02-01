@@ -88,13 +88,19 @@ namespace flex
 			// Draws the given string in the center of the screen for a short period of time
 			// Passing an empty string will immediately clear the current string
 			virtual void AddEditorString(const std::string& str) override;
-			virtual void DrawString(const std::string& str,
-									const glm::vec4& color,
-									AnchorPoint anchor,
-									const glm::vec2& pos, // Positional offset from anchor
-									real spacing,
-									bool bRaw,
-									const std::vector<glm::vec2>& letterYOffsets) override; // Horizontal per-char spacing
+			virtual void DrawStringSS(const std::string& str,
+				const glm::vec4& color,
+				AnchorPoint anchor,
+				const glm::vec2& pos, // Positional offset from anchor
+				real spacing,
+				bool bRaw = false) override;
+
+			virtual void DrawStringWS(const std::string& str,
+				const glm::vec4& color,
+				const glm::vec3& pos,
+				const glm::quat& rot,
+				real spacing,
+				bool bRaw = false) override;
 
 			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
 			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
@@ -165,7 +171,8 @@ namespace flex
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
 			void DrawScreenSpaceSprites();
 			void DrawWorldSpaceSprites();
-			void DrawText();
+			void DrawTextSS();
+			void DrawTextWS();
 
 			// Will attempt to find pre-rendered font at specified path, and
 			// only render a new file if not present or if bForceRender is true
@@ -173,9 +180,11 @@ namespace flex
 						  i16 size,
 						  const std::string& fontFilePath,
 						  const std::string& renderedFontFilePath,
-						  bool bForceRender);
+						  bool bForceRender,
+						  bool bScreenSpace);
 
-			void UpdateTextBuffer();
+			void UpdateTextBufferSS();
+			void UpdateTextBufferWS();
 
 			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
@@ -294,7 +303,7 @@ namespace flex
 			VertexBufferData m_Quad2DVertexBufferData;
 			RenderID m_Quad2DRenderID;
 
-			struct TextVertex
+			struct TextVertex2D
 			{
 				glm::vec2 pos;
 				glm::vec2 uv;
@@ -303,9 +312,22 @@ namespace flex
 				i32 channel; // uses extra ints slot
 			};
 
-			u32 m_TextQuadVAO = 0;
-			u32 m_TextQuadVBO = 0;
-			VertexBufferData m_TextQuadsVertexBufferData;
+			struct TextVertex3D
+			{
+				glm::vec3 pos;
+				glm::vec2 uv;
+				glm::vec4 color;
+				glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
+				i32 channel; // uses extra ints slot
+			};
+
+			u32 m_TextQuadSS_VAO = 0;
+			u32 m_TextQuadSS_VBO = 0;
+			VertexBufferData m_TextQuadsSSVertexBufferData;
+
+			u32 m_TextQuadWS_VAO = 0;
+			u32 m_TextQuadWS_VBO = 0;
+			VertexBufferData m_TextQuadsWSVertexBufferData;
 
 			sec m_EditorStrSecRemaining = 0.0f;
 			sec m_EditorStrSecDuration = 1.15f;
@@ -313,7 +335,8 @@ namespace flex
 			std::string m_EditorMessage;
 
 			MaterialID m_SpriteMatID = InvalidMaterialID;
-			MaterialID m_FontMatID = InvalidMaterialID;
+			MaterialID m_FontMatSSID = InvalidMaterialID;
+			MaterialID m_FontMatWSID = InvalidMaterialID;
 			MaterialID m_ShadowMatID = InvalidMaterialID;
 			MaterialID m_PostProcessMatID = InvalidMaterialID;
 			MaterialID m_PostFXAAMatID = InvalidMaterialID;

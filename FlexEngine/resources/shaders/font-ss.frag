@@ -1,4 +1,4 @@
-#version 450
+#version 400
 
 uniform sampler2D in_Texture;
 

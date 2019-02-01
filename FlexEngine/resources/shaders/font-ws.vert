@@ -1,6 +1,6 @@
-#version 450
+#version 400
 
-layout (location = 0) in vec2 in_Position2D;
+layout (location = 0) in vec3 in_Position;
 layout (location = 1) in vec4 in_Color;
 layout (location = 2) in vec2 in_TexCoord;
 layout (location = 3) in vec4 in_ExtraVec4; // RG: char size in pixels, BA: char size normalized in screen-space
@@ -8,7 +8,7 @@ layout (location = 4) in int in_ExtraInt;   // Texture channel
 
 out VSO
 {
-    vec2 position;
+    vec3 position;
     vec4 color;
     vec2 texCoord;
     vec2 charSizePixels;
@@ -18,7 +18,7 @@ out VSO
 
 void main()
 {
-	outputs.position = in_Position2D;
+	outputs.position = in_Position;
 	outputs.color = in_Color;
 	outputs.texCoord = in_TexCoord;
 	outputs.charSizePixels = in_ExtraVec4.rg;

@@ -322,7 +322,7 @@ namespace flex
 			return;
 		}
 
-		BitmapFont* font = g_Renderer->m_FntSourceCodePro;
+		BitmapFont* font = g_Renderer->m_FntSourceCodeProSS;
 		g_Renderer->SetFont(font);
 
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
@@ -352,12 +352,12 @@ namespace flex
 		std::string frameDurationStr = FloatToString(frameDuration, 2) + "ms";
 		real letterSpacing = 5;
 		real durationStrWidth = g_Renderer->GetStringWidth(frameDurationStr, font, letterSpacing, true);
-		g_Renderer->DrawString(frameDurationStr,
-							   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-							   AnchorPoint::CENTER,
-							   glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
-							   letterSpacing,
-			true, {});
+		g_Renderer->DrawStringSS(frameDurationStr,
+							     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+								 AnchorPoint::CENTER,
+								 glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
+								 letterSpacing,
+								 true);
 
 		real blockHeight = (frameSizeHalf.y / ((real)blockCount + 2));
 
@@ -388,22 +388,22 @@ namespace flex
 				std::string str = timing.blockName;
 				real strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				glm::vec2 pos(blockCenterNorm.x - strWidth * aspectRatio, frameCenter.y - frameSizeHalf.y * 1.2f);
-				g_Renderer->DrawString(timing.blockName,
-									   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-									   AnchorPoint::CENTER,
-									   pos,
-									   letterSpacing,
-					true, {});
+				g_Renderer->DrawStringSS(timing.blockName,
+										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 AnchorPoint::CENTER,
+										 pos,
+										 letterSpacing,
+										 true);
 				str = FloatToString(blockDuration, 2) + "ms";
 				strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				pos.x = blockCenterNorm.x - strWidth * aspectRatio;
 				pos.y -= 0.05f;
-				g_Renderer->DrawString(str,
-									   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-									   AnchorPoint::CENTER,
-									   pos ,
-									   letterSpacing,
-					true, {});
+				g_Renderer->DrawStringSS(str,
+										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 AnchorPoint::CENTER,
+										 pos ,
+										 letterSpacing,
+										 true);
 			}
 
 			++colorIndex;

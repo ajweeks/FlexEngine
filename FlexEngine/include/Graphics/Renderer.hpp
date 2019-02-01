@@ -93,13 +93,20 @@ namespace flex
 
 		virtual void SetFont(BitmapFont* font) = 0;
 		virtual void AddEditorString(const std::string& str) = 0;
-		virtual void DrawString(const std::string& str,
-								const glm::vec4& color,
-								AnchorPoint anchor,
-								const glm::vec2& pos,
-								real spacing,
-								bool bRaw,
-			const std::vector<glm::vec2>& letterYOffsets) = 0;
+
+		virtual void DrawStringSS(const std::string& str,
+			const glm::vec4& color,
+			AnchorPoint anchor,
+			const glm::vec2& pos,
+			real spacing,
+			bool bRaw = false) = 0;
+
+		virtual void DrawStringWS(const std::string& str,
+			const glm::vec4& color,
+			const glm::vec3& pos,
+			const glm::quat& rot,
+			real spacing,
+			bool bRaw = false) = 0;
 
 		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
 		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
@@ -171,9 +178,10 @@ namespace flex
 		static const u32 MAX_TEXTURE_DIM = 65536;
 		static const u32 MAX_POINT_LIGHT_COUNT = 4;
 
-		BitmapFont* m_FntUbuntuCondensed = nullptr;
-		BitmapFont* m_FntSourceCodePro = nullptr;
-		BitmapFont* m_FntGant = nullptr;
+		BitmapFont* m_FntUbuntuCondensedSS = nullptr;
+		BitmapFont* m_FntSourceCodeProSS = nullptr;
+		BitmapFont* m_FntGantSS = nullptr;
+		BitmapFont* m_FntGantWS = nullptr;
 
 	protected:
 		std::vector<PointLight*> m_PointLights;
@@ -199,7 +207,9 @@ namespace flex
 		std::vector<GameObject*> m_PersistentObjects;
 
 		BitmapFont* m_CurrentFont = nullptr;
-		std::vector<BitmapFont*> m_Fonts;
+		// TODO: Separate fonts from font buffers
+		std::vector<BitmapFont*> m_FontsSS;
+		std::vector<BitmapFont*> m_FontsWS;
 
 		PostProcessSettings m_PostProcessSettings;
 

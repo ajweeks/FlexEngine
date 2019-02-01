@@ -197,11 +197,17 @@ namespace flex
 			spriteMatCreateInfo.engineMaterial = true;
 			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
 
-			MaterialCreateInfo fontMatCreateInfo = {};
-			fontMatCreateInfo.name = "Font material";
-			fontMatCreateInfo.shaderName = "font";
-			fontMatCreateInfo.engineMaterial = true;
-			m_FontMatID = InitializeMaterial(&fontMatCreateInfo);
+			MaterialCreateInfo fontSSMatCreateInfo = {};
+			fontSSMatCreateInfo.name = "Font material SS";
+			fontSSMatCreateInfo.shaderName = "font-ss";
+			fontSSMatCreateInfo.engineMaterial = true;
+			m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
+
+			MaterialCreateInfo fontWSMatCreateInfo = {};
+			fontWSMatCreateInfo.name = "Font material WS";
+			fontWSMatCreateInfo.shaderName = "font-ws";
+			fontWSMatCreateInfo.engineMaterial = true;
+			m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
@@ -474,8 +480,11 @@ namespace flex
 
 		void GLRenderer::Destroy()
 		{
-			glDeleteVertexArrays(1, &m_TextQuadVAO);
-			glDeleteBuffers(1, &m_TextQuadVBO);
+			glDeleteVertexArrays(1, &m_TextQuadSS_VAO);
+			glDeleteBuffers(1, &m_TextQuadSS_VBO);
+
+			glDeleteVertexArrays(1, &m_TextQuadWS_VAO);
+			glDeleteBuffers(1, &m_TextQuadWS_VBO);
 
 			glDeleteBuffers(1, &m_CaptureRBO);
 			glDeleteBuffers(1, &m_CaptureFBO);
@@ -497,11 +506,17 @@ namespace flex
 			}
 			m_EditorObjects.clear();
 
-			for (BitmapFont* font : m_Fonts)
+			for (BitmapFont* font : m_FontsSS)
 			{
 				SafeDelete(font);
 			}
-			m_Fonts.clear();
+			m_FontsSS.clear();
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				SafeDelete(font);
+			}
+			m_FontsWS.clear();
 
 			for (GLTexture* texture : m_LoadedTextures)
 			{
@@ -1934,8 +1949,6 @@ namespace flex
 
 		void GLRenderer::Draw()
 		{
-			//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 			DrawCallInfo drawCallInfo = {};
 
 			UpdateAllMaterialUniforms();
@@ -1969,10 +1982,21 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
-			// TODO: Draw world space sprites/text here!
+			SetFont(m_FntGantWS);
+			real s = g_SecElapsedSinceProgramStart * 3.5f;
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(0.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(cos(s * 0.3f + 0.3f * 2) * 0.07f, 1.5f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(cos(s * 0.3f + 0.3f * 3) * 0.10f, 1.5f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(cos(s * 0.3f + 0.3f * 4) * 0.12f, 1.5f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(cos(s * 0.3f + 0.3f * 5) * 0.15f, 1.5f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(cos(s * 0.3f + 0.3f * 6) * 0.17f, 1.5f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f);
+
+			UpdateTextBufferWS();
+			DrawTextWS();
 
 			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
-			if (g_EngineInstance->IsRenderingEditorObjects() && bUsingGameplayCam)
+			if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
 			{
 				DrawDepthAwareEditorObjects(drawCallInfo);
 				DrawSelectedObjectWireframe(drawCallInfo);
@@ -1986,127 +2010,89 @@ namespace flex
 				DrawDepthUnawareEditorObjects(drawCallInfo);
 			}
 
+			DrawScreenSpaceSprites();
+
+
 			// Screen-space objects
-#if 1
-			std::vector<glm::vec2> letterOffsetsEmpty;
-			//std::vector<glm::vec2> letterOffsets1;
-			//letterOffsets1.reserve(26);
-			//for (i32 i = 0; i < 26; ++i)
-			//{
-			//	letterOffsets1.emplace_back(
-			//		sin(i * 0.75f + g_SecElapsedSinceProgramStart * 3.0f) * 0.5f,
-			//		cos(i * 0.75f + g_SecElapsedSinceProgramStart * 4.35f) * 0.2f);
-			//}
-			//std::vector<glm::vec2> letterOffsets2;
-			//letterOffsets2.reserve(26);
-			//for (i32 i = 0; i < 26; ++i)
-			//{
-			//	letterOffsets2.emplace_back(
-			//		cos(i + g_SecElapsedSinceProgramStart * 10.0f) * 0.5f,
-			//		sin(i + g_SecElapsedSinceProgramStart * 4.45f) * 0.1f);
-			//}
-			//std::vector<real> letterYOffsets3;
-			//letterYOffsets3.reserve(44);
-			//for (i32 i = 0; i < 44; ++i)
-			//{
-			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + g_SecElapsedSinceProgramStart * 6.0f) * 4.0f);
-			//}
-
-			std::string str;
-
-			SetFont(m_FntGant);
+			SetFont(m_FntGantSS);
 			static const glm::vec4 color(0.95f);
-			DrawString("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f, false, letterOffsetsEmpty);
+			DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f);
 			if (g_EngineInstance->IsSimulationPaused())
 			{
-				DrawString("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.09f), 0.0f, false, letterOffsetsEmpty);
+				DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.09f), 0.0f);
 			}
-			//DrawString("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, VEC2_ZERO, 1.5f, false, letterOffsetsEmpty);
-			//DrawString("#WOWIE# @LIQWIDICE FILE_NAME.ZIP * 17 (0)", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 1.5f, false, letterOffsetsEmpty);
-			//DrawString("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false, letterOffsetsEmpty);
+			//DrawStringSS("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, VEC2_ZERO, 1.5f, false);
+			//DrawStringSS("#WOWIE# @LIQWIDICE FILE_NAME.ZIP * 17 (0)", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 1.5f, false);
+			//DrawStringSS("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false);
 
 			// Text stress test:
-			/*SetFont(m_FntSourceCodePro);
-			DrawString(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.65f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.6f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.55f), 3.5f);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.5f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.1f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.45f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.2f, 0.4f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.4f), 3.5f);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.1f, 0.2f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.35f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.3f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.3f, 0.3f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.25f), 3.5f);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.5f, 0.9f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.2f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.0f, 0.8f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.15f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.4f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.1f), 3.5f);
+#if 0
+			SetFont(m_FntSourceCodeProSS);
+			real yO = -1.0f;
+			std::string str;
+			for (i32 i = 0; i < 5; ++i)
+			{
+				str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+				DrawStringSS(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+				str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+				DrawStringSS(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+				str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+				DrawStringSS(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+				str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+				DrawStringSS(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+			}
 
-			SetFont(m_FntUbuntuCondensed);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.0f), 6);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 6);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 6);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.55f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.3f), 6);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.25f, 0.0f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.4f), 6);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.2f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.5f), 6);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.95f, 0.8f, 0.6f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.6f), 6);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.6f, 0.4f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.7f), 6);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.9f, 0.9f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.8f), 6);*/
+			SetFont(m_FntUbuntuCondensedSS);
+			yO = 0.0f;
+			for (i32 i = 0; i < 3; ++i)
+			{
+				str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+				DrawStringSS(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+				yO += 0.1f;
+				str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+				DrawStringSS(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+				yO += 0.1f;
+				str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+				DrawStringSS(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+				yO += 0.1f;
+			}
 
 			//std::string str = std::string("XYZ");
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, VEC2_ZERO, 3, &letterYOffsetsEmpty);
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
-			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
+			//DrawStringSS(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
 			//glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			//std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
-			//DrawString(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, &letterYOffsetsEmpty);
+			//DrawStringSS(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, &letterYOffsetsEmpty);
 #endif
 
 			if (m_EditorStrSecRemaining > 0.0f)
 			{
-				SetFont(m_FntUbuntuCondensed);
+				SetFont(m_FntUbuntuCondensedSS);
 				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
-										0.0f, 1.0f);
-				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3, false, {});
+					0.0f, 1.0f);
+				DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 			}
 
-			DrawScreenSpaceSprites();
-
-			PROFILE_BEGIN("Render > UpdateTextBuffer & DrawText");
-			UpdateTextBuffer();
-			DrawText();
-			PROFILE_END("Render > UpdateTextBuffer & DrawText");
+			UpdateTextBufferSS();
+			DrawTextSS();
 
 			if (g_EngineInstance->IsRenderingImGui())
 			{
-				PROFILE_AUTO("Render > ImGuiRender");
+				PROFILE_AUTO("ImGuiRender");
 
 				GL_PUSH_DEBUG_GROUP("ImGui");
 
@@ -2121,16 +2107,16 @@ namespace flex
 
 			if (m_bCaptureScreenshot && screenshotAsyncTextureSave == nullptr)
 			{
-				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+				m_bCaptureScreenshot = false;
+
+				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
 				TextureHandle handle;
 				handle.internalFormat = GL_RGBA16F;
 				handle.format = GL_RGBA;
 				handle.type = GL_FLOAT;
+
 				GLuint newFrameBufferFBO;
-
-				m_bCaptureScreenshot = false;
-
-
 				glGenFramebuffers(1, &newFrameBufferFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, newFrameBufferFBO);
 
@@ -3031,12 +3017,14 @@ namespace flex
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
 		}
 
-		void GLRenderer::DrawText()
+		void GLRenderer::DrawTextSS()
 		{
-			GL_PUSH_DEBUG_GROUP("Text");
+			PROFILE_AUTO("DrawTextSS");
+
+			GL_PUSH_DEBUG_GROUP("Text SS");
 
 			bool bHasText = false;
-			for (BitmapFont* font : m_Fonts)
+			for (BitmapFont* font : m_FontsSS)
 			{
 				if (font->m_BufferSize > 0)
 				{
@@ -3050,7 +3038,7 @@ namespace flex
 				return;
 			}
 
-			GLMaterial& fontMaterial = m_Materials[m_FontMatID];
+			GLMaterial& fontMaterial = m_Materials[m_FontMatSSID];
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
 
 			glUseProgram(fontShader.program);
@@ -3075,10 +3063,21 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-			glBindVertexArray(m_TextQuadVAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+			glBindVertexArray(m_TextQuadSS_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadSS_VBO);
 
-			for (BitmapFont* font : m_Fonts)
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glDisable(GL_CULL_FACE);
+
+			glDepthFunc(GL_ALWAYS);
+			glDepthMask(GL_FALSE);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			for (BitmapFont* font : m_FontsSS)
 			{
 				if (font->m_BufferSize > 0)
 				{
@@ -3100,16 +3099,77 @@ namespace flex
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
+				}
+			}
 
-					glDisable(GL_CULL_FACE);
+			GL_POP_DEBUG_GROUP();
+		}
 
-					glDepthFunc(GL_ALWAYS);
-					glDepthMask(GL_FALSE);
+		void GLRenderer::DrawTextWS()
+		{
+			// TODO: Consolidate with DrawTextSS
 
-					glEnable(GL_BLEND);
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			PROFILE_AUTO("DrawTextWS");
+
+			GL_PUSH_DEBUG_GROUP("Text WS");
+
+			bool bHasText = false;
+			for (BitmapFont* font : m_FontsWS)
+			{
+				if (font->m_BufferSize > 0)
+				{
+					bHasText = true;
+					break;
+				}
+			}
+
+			if (!bHasText)
+			{
+				return;
+			}
+
+			GLMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			glUseProgram(fontShader.program);
+
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
+			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+			glBindVertexArray(m_TextQuadWS_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadWS_VBO);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glDisable(GL_CULL_FACE);
+
+			glDepthFunc(GL_LEQUAL);
+			glDepthMask(GL_TRUE);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			glActiveTexture(GL_TEXTURE0);
+
+			glm::mat4 viewProj = g_CameraManager->CurrentCamera()->GetViewProjection();
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				if (font->m_BufferSize > 0)
+				{
+					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
+
+					glm::mat4 transformMat = viewProj;
+					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, GL_FALSE, &transformMat[0][0]);
+
+					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
+					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
 					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
 				}
@@ -3122,7 +3182,8 @@ namespace flex
 								  i16 size,
 								  const std::string& fontFilePath,
 								  const std::string& renderedFontFilePath,
-								  bool bForceRender)
+								  bool bForceRender,
+								  bool bScreenSpace)
 		{
 			FT_Error error;
 			error = FT_Init_FreeType(&ft);
@@ -3163,7 +3224,14 @@ namespace flex
 			*font = new BitmapFont(size, fontName, face->num_glyphs);
 			BitmapFont* newFont = *font; // Shortcut
 
-			m_Fonts.push_back(newFont);
+			if (bScreenSpace)
+			{
+				m_FontsSS.push_back(newFont);
+			}
+			else
+			{
+				m_FontsWS.push_back(newFont);
+			}
 
 			newFont->m_bUseKerning = FT_HAS_KERNING(face) != 0;
 
@@ -3473,18 +3541,21 @@ namespace flex
 			FT_Done_FreeType(ft);
 
 
-			// Initialize font shader things
+			// Initialize font shaders
 			{
-				GLMaterial& mat = m_Materials[m_FontMatID];
+				MaterialID matID = bScreenSpace ? m_FontMatSSID : m_FontMatWSID;
+				GLMaterial& mat = m_Materials[matID];
 				GLShader& shader = m_Shaders[mat.material.shaderID];
 				glUseProgram(shader.program);
 
-				glGenVertexArrays(1, &m_TextQuadVAO);
-				glGenBuffers(1, &m_TextQuadVBO);
+				GLuint* VAO = bScreenSpace ? &m_TextQuadSS_VAO : &m_TextQuadWS_VAO;
+				GLuint* VBO = bScreenSpace ? &m_TextQuadSS_VBO : &m_TextQuadWS_VBO;
 
+				glGenVertexArrays(1, VAO);
+				glGenBuffers(1, VBO);
 
-				glBindVertexArray(m_TextQuadVAO);
-				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+				glBindVertexArray(*VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, *VBO);
 
 				// TODO: Set this value to previous high water mark?
 				i32 bufferSize = 500;
@@ -3496,11 +3567,22 @@ namespace flex
 				glEnableVertexAttribArray(3);
 				glEnableVertexAttribArray(4);
 
-				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
-				glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
-				glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
-				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSizePixelsCharSizeNorm));
-				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
+				if (bScreenSpace)
+				{
+					glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, pos));
+					glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, color));
+					glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, uv));
+					glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, charSizePixelsCharSizeNorm));
+					glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, channel));
+				}
+				else
+				{
+					glVertexAttribPointer(0, (GLint)3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, pos));
+					glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, color));
+					glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, uv));
+					glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, charSizePixelsCharSizeNorm));
+					glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, channel));
+				}
 			}
 
 			if (bUsingPreRenderedTexture)
@@ -3535,17 +3617,28 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::DrawString(const std::string& str,
-									const glm::vec4& color,
-									AnchorPoint anchor,
-									const glm::vec2& pos,
-									real spacing,
-									bool bRaw,
-									const std::vector<glm::vec2>& letterYOffsets)
+		void GLRenderer::DrawStringSS(const std::string& str,
+			const glm::vec4& color,
+			AnchorPoint anchor,
+			const glm::vec2& pos, // Positional offset from anchor
+			real spacing,
+			bool bRaw)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw, letterYOffsets);
+			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw);
+		}
+
+		void GLRenderer::DrawStringWS(const std::string& str,
+			const glm::vec4& color,
+			const glm::vec3& pos,
+			const glm::quat& rot,
+			real spacing,
+			bool bRaw)
+		{
+			assert(m_CurrentFont != nullptr);
+
+			m_CurrentFont->m_TextCaches.emplace_back(str, pos, rot, color, spacing, bRaw);
 		}
 
 		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
@@ -3604,13 +3697,15 @@ namespace flex
 			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, nearPlane, farPlane);
 		}
 
-		void GLRenderer::UpdateTextBuffer()
+		void GLRenderer::UpdateTextBufferSS()
 		{
+			PROFILE_AUTO("Update Text Buffer SS");
+
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
-			std::vector<TextVertex> textVertices;
-			for (BitmapFont* font : m_Fonts)
+			std::vector<TextVertex2D> textVertices;
+			for (BitmapFont* font : m_FontsSS)
 			{
 				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
 					(font->GetFontSize() / 12.0f);
@@ -3621,12 +3716,6 @@ namespace flex
 				for (TextCache& textCache : font->m_TextCaches)
 				{
 					std::string currentStr = textCache.str;
-
-					bool bUseLetterOffsets = !textCache.letterOffsets.empty();
-					if (bUseLetterOffsets)
-					{
-						assert(textCache.letterOffsets.size() >= currentStr.size());
-					}
 
 					real totalAdvanceX = 0;
 
@@ -3689,12 +3778,9 @@ namespace flex
 									continue;
 								}
 
-								real xOff = (bUseLetterOffsets ? textCache.letterOffsets[j].x : 0.0f);
-								real yOff = (bUseLetterOffsets ? textCache.letterOffsets[j].y : 0.0f);
-
 								glm::vec2 pos =
 									glm::vec2((textCache.pos.x) * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
-									glm::vec2(totalAdvanceX + metric->offsetX + xOff, -metric->offsetY + yOff) * textScale;
+									glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY) * textScale;
 
 								if (font->UseKerning())
 								{
@@ -3713,7 +3799,7 @@ namespace flex
 
 								i32 texChannel = (i32)metric->channel;
 
-								TextVertex vert{};
+								TextVertex2D vert = {};
 								vert.pos = basePos + pos;
 								vert.uv = metric->texCoord;
 								vert.color = textCache.color;
@@ -3742,10 +3828,108 @@ namespace flex
 				font->m_TextCaches.clear();
 			}
 
-			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex));
+			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex2D));
 
-			glBindVertexArray(m_TextQuadVAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+			glBindVertexArray(m_TextQuadSS_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadSS_VBO);
+			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+		}
+
+		void GLRenderer::UpdateTextBufferWS()
+		{
+			// TODO: Consolidate with UpdateTextBufferSS
+
+			PROFILE_AUTO("Update Text Buffer WS");
+
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			//real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
+			std::vector<TextVertex3D> textVertices;
+			for (BitmapFont* font : m_FontsWS)
+			{
+				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
+					(font->GetFontSize() / 12.0f);
+
+				font->m_BufferStart = (i32)(textVertices.size());
+				font->m_BufferSize = 0;
+
+				for (TextCache& textCache : font->m_TextCaches)
+				{
+					std::string currentStr = textCache.str;
+
+					real totalAdvanceX = 0;
+
+					char prevChar = ' ';
+					for (u32 j = 0; j < currentStr.length(); ++j)
+					{
+						char c = currentStr[j];
+
+						if (BitmapFont::IsCharValid(c))
+						{
+							FontMetric* metric = font->GetMetric(c);
+							if (metric->bIsValid)
+							{
+								if (c == ' ')
+								{
+									totalAdvanceX += metric->advanceX + textCache.xSpacing;
+									prevChar = c;
+									continue;
+								}
+
+								glm::vec3 pos = textCache.pos + glm::vec3(totalAdvanceX + metric->offsetX, -metric->offsetY, 0.0f) * textScale;
+
+								if (font->UseKerning())
+								{
+									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
+
+									auto iter = metric->kerning.find(charKey);
+									if (iter != metric->kerning.end())
+									{
+										pos += glm::vec3(iter->second, 0.0f) * textScale;
+									}
+								}
+
+								glm::vec4 charSizePixelsCharSizeNorm(
+									metric->width, metric->height,
+									metric->width * textScale, metric->height * textScale);
+
+								i32 texChannel = (i32)metric->channel;
+
+								TextVertex3D vert{};
+								vert.pos = pos;
+								vert.uv = metric->texCoord;
+								vert.color = textCache.color;
+								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
+								vert.channel = texChannel;
+
+								textVertices.push_back(vert);
+
+								totalAdvanceX += metric->advanceX + textCache.xSpacing;
+							}
+							else
+							{
+								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->m_Name.c_str());
+							}
+						}
+						else
+						{
+							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->m_Name.c_str());
+						}
+
+						prevChar = c;
+					}
+				}
+
+				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
+				font->m_TextCaches.clear();
+			}
+
+			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex3D));
+
+			glBindVertexArray(m_TextQuadWS_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadWS_VBO);
 			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
@@ -4366,7 +4550,8 @@ namespace flex
 				{ "post_process", RESOURCE_LOCATION  "shaders/post_process.vert", RESOURCE_LOCATION  "shaders/post_process.frag" },
 				{ "post_fxaa", RESOURCE_LOCATION  "shaders/post_fxaa.vert", RESOURCE_LOCATION  "shaders/post_fxaa.frag" },
 				{ "compute_sdf", RESOURCE_LOCATION  "shaders/ComputeSDF.vert", RESOURCE_LOCATION  "shaders/ComputeSDF.frag" },
-				{ "font", RESOURCE_LOCATION  "shaders/font.vert", RESOURCE_LOCATION  "shaders/font.frag",  RESOURCE_LOCATION  "shaders/font.geom" },
+				{ "font-ss", RESOURCE_LOCATION  "shaders/font-ss.vert", RESOURCE_LOCATION  "shaders/font-ss.frag",  RESOURCE_LOCATION  "shaders/font-ss.geom" },
+				{ "font-ws", RESOURCE_LOCATION  "shaders/font-ws.vert", RESOURCE_LOCATION  "shaders/font-ws.frag",  RESOURCE_LOCATION  "shaders/font-ws.geom" },
 				{ "shadow", RESOURCE_LOCATION  "shaders/shadow.vert", RESOURCE_LOCATION  "shaders/shadow.frag" },
 			};
 
@@ -4630,7 +4815,7 @@ namespace flex
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::HIGH_RES);
 			++shaderID;
 
-			// Font
+			// Font SS
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
@@ -4647,6 +4832,24 @@ namespace flex
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::THRESHOLD);
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SHADOW);
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SOFTEN);
+			++shaderID;
+
+			// Font WS
+			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::EXTRA_VEC4 |
+				(u32)VertexAttribute::EXTRA_INT;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TRANSFORM_MAT);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEX_SIZE);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::THRESHOLD);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SHADOW);
 			++shaderID;
 
 			// Shadow
@@ -4706,27 +4909,38 @@ namespace flex
 			// TODO: Save these strings in a config file?
 			std::string fontFilePaths[] = {
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
+				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
 				RESOURCE_LOCATION  "fonts/gant.ttf",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf"
+				RESOURCE_LOCATION  "fonts/gant.ttf",
 			};
 
 			std::string extension = ".png";
 			std::string renderedTextureFilePaths[] = {
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
+				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14",
 				RESOURCE_LOCATION  "fonts/gant-regular-10",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14"
+				RESOURCE_LOCATION  "fonts/gant-regular-64",
 			};
 
 			i16 fontSizes[] = {
 				24,
+				14,
 				10,
-				14
+				64,
 			};
 
 			BitmapFont** fonts[] = {
-				&m_FntUbuntuCondensed,
-				&m_FntGant,
-				&m_FntSourceCodePro,
+				&m_FntUbuntuCondensedSS,
+				&m_FntSourceCodeProSS,
+				&m_FntGantSS,
+				&m_FntGantWS,
+			};
+
+			bool bScreenSpace[] = {
+				true,
+				true,
+				true,
+				false,
 			};
 
 			std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
@@ -4740,9 +4954,11 @@ namespace flex
 			assert(
 				ARRAY_LENGTH(renderedTextureFilePaths) == fontCount &&
 				ARRAY_LENGTH(fonts) == fontCount &&
-				ARRAY_LENGTH(fontSizes) == fontCount);
+				ARRAY_LENGTH(fontSizes) == fontCount &&
+				ARRAY_LENGTH(bScreenSpace) == fontCount);
 
-			m_Fonts.clear();
+			m_FontsSS.clear();
+			m_FontsWS.clear();
 
 			for (i32 i = 0; i < fontCount; ++i)
 			{
@@ -4756,7 +4972,12 @@ namespace flex
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				LoadFont(fonts[i], fontSizes[i], fontFilePaths[i], renderedTextureFilePaths[i], bForceRender);
+				LoadFont(fonts[i],
+						 fontSizes[i],
+						 fontFilePaths[i],
+						 renderedTextureFilePaths[i],
+						 bForceRender,
+						 bScreenSpace[i]);
 			}
 		}
 

@@ -127,7 +127,9 @@ namespace flex
 		BOTTOM,
 		BOTTOM_LEFT,
 		LEFT,
-		WHOLE // cover the whole screen
+		WHOLE, // cover the whole screen
+
+		_NONE
 	};
 
 	enum class EventReply

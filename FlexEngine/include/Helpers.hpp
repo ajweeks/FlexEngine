@@ -200,15 +200,20 @@ namespace flex
 	struct TextCache
 	{
 	public:
-		TextCache(const std::string& text, AnchorPoint anchor, glm::vec2 position, glm::vec4 col, real xSpacing, bool bRaw, const std::vector<glm::vec2>& letterOffsets);
+		// Screen-space constructor
+		TextCache(const std::string& text, AnchorPoint anchor, const glm::vec2& position,
+			const glm::vec4& col, real xSpacing, bool bRaw);
+		// World-space constructor
+		TextCache(const std::string& text, const glm::vec3& position, const glm::quat& rot,
+			const glm::vec4& col, real xSpacing, bool bRaw);
 
 		std::string str;
 		AnchorPoint anchor;
-		glm::vec2 pos;
+		glm::vec3 pos;
+		glm::quat rot;
 		glm::vec4 color;
 		real xSpacing;
 		bool bRaw;
-		std::vector<glm::vec2> letterOffsets;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);

@@ -87,15 +87,19 @@ namespace flex
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
 			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::_NONE);
-			m_TabletOrbitAngle = m_TabletOrbitAngleUp;
 			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
 			AddChild(m_MapTabletHolder);
 
+			if (m_bTabletUp)
+			{
+				m_TabletOrbitAngle = m_TabletOrbitAngleUp;
+			}
+			else
+			{
+				m_TabletOrbitAngle = m_TabletOrbitAngleDown;
+			}
+
 			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::_NONE);
-			//RigidBody* tabletRB = m_MapTablet->SetRigidBody(new RigidBody());
-			//tabletRB->SetKinematic(true);
-			//tabletRB->SetLocalRotation(glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f)));
-			//m_MapTablet->SetCollisionShape(new btBoxShape(btVector3(0.45f, 0.68f, 0.08f)));
 			MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(mapTabletMatID, m_MapTablet));
 			mapTabletMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/map_tablet.glb");
 			m_MapTabletHolder->AddChild(m_MapTablet);
