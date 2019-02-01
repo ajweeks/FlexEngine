@@ -88,10 +88,8 @@ namespace flex
 		CART,
 		ENGINE_CART,
 		MOBILE_LIQUID_BOX,
+		TERMINAL,
 
-
-		// NOTE: Add new types above this line
-		// NOTE: All additions *must* be also added to GameObjectTypeStrings in the same order!
 		_NONE
 	};
 
@@ -109,6 +107,7 @@ namespace flex
 		"cart",
 		"engine cart",
 		"mobile liquid box",
+		"terminal",
 
 		"NONE"
 	};
@@ -127,7 +126,7 @@ namespace flex
 		BOTTOM,
 		BOTTOM_LEFT,
 		LEFT,
-		WHOLE, // cover the whole screen
+		WHOLE, // Covers the whole screen
 
 		_NONE
 	};

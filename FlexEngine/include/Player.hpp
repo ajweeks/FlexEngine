@@ -22,6 +22,7 @@ namespace flex
 		virtual void Update() override;
 		virtual void Destroy() override;
 		virtual void DrawImGuiObjects() override;
+		virtual bool SetInteractingWith(GameObject* gameObject) override;
 
 		void SetPitch(real pitch);
 		void AddToPitch(real deltaPitch);

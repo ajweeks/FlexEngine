@@ -158,6 +158,14 @@ namespace flex
 			CartID newCartID = cartManager->CreateCart(objectName);
 			newGameObject = cartManager->GetCart(newCartID);
 		} break;
+		case GameObjectType::MOBILE_LIQUID_BOX:
+		{
+			newGameObject = new MobileLiquidBox(objectName);
+		} break;
+		case GameObjectType::TERMINAL:
+		{
+			newGameObject = new Terminal(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -1311,10 +1319,14 @@ namespace flex
 	bool GameObject::SetInteractingWith(GameObject* gameObject)
 	{
 		m_ObjectInteractingWith = gameObject;
-
 		m_bBeingInteractedWith = (gameObject != nullptr);
 
 		return true;
+	}
+
+	bool GameObject::IsBeingInteractedWith() const
+	{
+		return m_bBeingInteractedWith;
 	}
 
 	GameObject* GameObject::GetObjectInteractingWith()
@@ -2126,6 +2138,8 @@ namespace flex
 				s_SqueakySounds.SetGain(glm::abs(rotationSpeed) * 2.0f - 0.2f);
 			}
 		}
+
+		GameObject::Update();
 	}
 
 	RisingBlock::RisingBlock(const std::string& name) :
@@ -2300,6 +2314,8 @@ namespace flex
 			startPos,
 			startPos + ToBtVec3(moveAxis * dist),
 			btVector3(0.3f, 0.3f, 0.5f));
+
+		GameObject::Update();
 	}
 
 	ReflectionProbe::ReflectionProbe(const std::string& name) :
@@ -3048,7 +3064,7 @@ namespace flex
 	}
 
 	EngineCart::EngineCart(CartID cartID) :
-		Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 4), GameObjectType::ENGINE_CART, engineMeshName)
+		EngineCart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 4))
 	{
 	}
 
@@ -3106,6 +3122,8 @@ namespace flex
 				moveDirection = -moveDirection;
 			}
 		}
+
+		GameObject::Update();
 	}
 
 	void EngineCart::DrawImGuiObjects()
@@ -3155,7 +3173,12 @@ namespace flex
 	}
 
 	MobileLiquidBox::MobileLiquidBox() :
-		GameObject(g_SceneManager->CurrentScene()->GetUniqueObjectName("MobileLiquidBox_", 4), GameObjectType::MOBILE_LIQUID_BOX)
+		MobileLiquidBox(g_SceneManager->CurrentScene()->GetUniqueObjectName("MobileLiquidBox_", 4))
+	{
+	}
+
+	MobileLiquidBox::MobileLiquidBox(const std::string& name) :
+		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX)
 	{
 		MaterialID matID;
 		if (!g_Renderer->GetMaterialID("pbr white", matID))
@@ -3170,11 +3193,6 @@ namespace flex
 		}
 	}
 
-	MobileLiquidBox::MobileLiquidBox(const std::string& name) :
-		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX)
-	{
-	}
-
 	GameObject* MobileLiquidBox::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
 		GameObject* newGameObject = new MobileLiquidBox();
@@ -3182,10 +3200,6 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, bCopyChildren);
 
 		return newGameObject;
-	}
-
-	void MobileLiquidBox::Update()
-	{
 	}
 
 	void MobileLiquidBox::DrawImGuiObjects()
@@ -3211,6 +3225,89 @@ namespace flex
 	void MobileLiquidBox::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		UNREFERENCED_PARAMETER(parentObject);
+	}
+
+	Terminal::Terminal() :
+		Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName("Terminal_", 2))
+	{
+	}
+
+	Terminal::Terminal(const std::string& name) :
+		GameObject(name, GameObjectType::TERMINAL)
+	{
+		m_bInteactable = true;
+
+		MaterialID matID;
+		if (!g_Renderer->GetMaterialID("Terminal Copper", matID))
+		{
+			// TODO: Create own material
+			matID = 0;
+		}
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb")))
+		{
+			PrintWarn("Failed to load terminal mesh!\n");
+		}
+	}
+
+	GameObject* Terminal::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		GameObject* newGameObject = new Terminal();
+
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
+
+		return newGameObject;
+	}
+
+	void Terminal::Update()
+	{
+
+		GameObject::Update();
+	}
+
+	bool Terminal::SetInteractingWith(GameObject* gameObject)
+	{
+		if (gameObject == nullptr)
+		{
+			return GameObject::SetInteractingWith(gameObject);
+		}
+
+		Player* player = dynamic_cast<Player*>(gameObject);
+		if (player != nullptr)
+		{
+			Transform* playerTransform = player->GetTransform();
+			glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
+			real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
+			real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
+			//Print("FoP: %.2f, FoF: %.2f\n", FoP, FoF);
+			// Ensure player is looking our direction and in front of us
+			if (FoF < -0.15f && FoP < -0.35f)
+			{
+				m_ObjectInteractingWith = gameObject;
+				m_bBeingInteractedWith = true;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+
+		JSONObject obj = parentObject.GetObject("terminal");
+		str = obj.GetString("str");
+	}
+
+	void Terminal::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject terminalObj = {};
+
+		terminalObj.fields.emplace_back("str", JSONValue(str));
+
+		parentObject.fields.emplace_back("terminal", JSONValue(terminalObj));
 	}
 
 } // namespace flex

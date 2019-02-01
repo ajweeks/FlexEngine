@@ -210,11 +210,6 @@ namespace flex
 		m_MouseDragDist = VEC2_ZERO;
 	}
 
-	bool DebugCamera::IsDebugCam() const
-	{
-		return true;
-	}
-
 	EventReply DebugCamera::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
 		if (button == MouseButton::LEFT)

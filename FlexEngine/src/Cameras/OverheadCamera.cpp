@@ -181,9 +181,4 @@ namespace flex
 		RecalculateViewProjection();
 	}
 
-	bool OverheadCamera::IsDebugCam() const
-	{
-		return false;
-	}
-
 } // namespace flex

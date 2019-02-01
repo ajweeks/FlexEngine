@@ -1098,11 +1098,12 @@ namespace flex
 
 	void BaseScene::GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects)
 	{
-		for (GameObject* rootObject : m_RootObjects)
+		std::vector<GameObject*> allObjects = GetAllObjects();
+		for (GameObject* object : allObjects)
 		{
-			if (rootObject->m_bInteractable)
+			if (object->m_bInteractable)
 			{
-				interactibleObjects.push_back(rootObject);
+				interactibleObjects.push_back(object);
 			}
 		}
 	}

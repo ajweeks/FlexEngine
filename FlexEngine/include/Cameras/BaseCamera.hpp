@@ -12,8 +12,6 @@ namespace flex
 		virtual void Update() = 0;
 		virtual void Destroy();
 
-		virtual bool IsDebugCam() const = 0;
-
 		virtual void OnSceneChanged();
 
 		virtual void OnPossess();

@@ -161,15 +161,13 @@
 		},
 		{
 			"name" : "Copper Terminal 01",
-			"type" : "object",
+			"type" : "terminal",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-10.226, 0.630, 17.648",
-				"rot" : "3.142, -0.005, 3.142",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "1.407, 0.630, 17.208",
+				"rot" : "0.000, -0.000, -0.000"
 			},
-			"mesh" : "terminal-copper",
 			"material" : "Terminal Copper",
 			"collider" : 
 			{
@@ -184,6 +182,10 @@
 				"static" : false,
 				"mask" : 1,
 				"group" : 1
+			},
+			"terminal" : 
+			{
+				"str" : "blah"
 			}
 		}
 	]

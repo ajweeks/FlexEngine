@@ -29,8 +29,8 @@ namespace flex
 
 		real m_MoveAcceleration = 120.0f;
 		real m_MaxMoveSpeed = 20.0f;
-		real m_RotateHSpeed = 4.5f;
-		real m_RotateVSpeed = 1.6f;
+		real m_RotateHSpeed = 4.0f;
+		real m_RotateVSpeed = 1.3f;
 		real m_RotateFriction = 0.03f;
 		// How quickly to turn towards direction of movement
 		real m_RotationSnappiness = 80.0f;

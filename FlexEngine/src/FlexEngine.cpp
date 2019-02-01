@@ -28,6 +28,7 @@
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
+#include "Cameras/TerminalCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -189,6 +190,9 @@ namespace flex
 		FirstPersonCamera* fpCamera = new FirstPersonCamera();
 		g_CameraManager->AddCamera(fpCamera, true);
 
+		TerminalCamera* terminalCamera = new TerminalCamera();
+		g_CameraManager->AddCamera(terminalCamera, false);
+
 		InitializeWindowAndRenderer();
 
 		g_PhysicsManager = new PhysicsManager();
@@ -219,6 +223,7 @@ namespace flex
 		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 		g_SceneManager->PostInitializeCurrentScene();
+
 		g_InputManager->Initialize();
 
 		SetupImGuiStyles();
@@ -969,8 +974,7 @@ namespace flex
 
 			g_CameraManager->Update();
 
-			const bool bDebugCam = g_CameraManager->CurrentCamera()->IsDebugCam();
-			if (bDebugCam || bSimulateFrame)
+			if (bSimulateFrame)
 			{
 				g_CameraManager->CurrentCamera()->Update();
 			}
@@ -1609,10 +1613,10 @@ namespace flex
 					m_bRenderImGui = bRenderImGui;
 				}
 
-				std::string cameraType;
-				if (rootObject.SetStringChecked("last camera type", cameraType))
+				std::string cameraName;
+				if (rootObject.SetStringChecked("last camera type", cameraName))
 				{
-					g_CameraManager->SetActiveCameraByType(cameraType);
+					g_CameraManager->SetCameraByName(cameraName, false);
 				}
 
 				JSONObject cameraTransform;

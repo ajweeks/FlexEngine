@@ -15,7 +15,6 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void OnSceneChanged() override;
 		virtual void Update() override;
-		virtual bool IsDebugCam() const override;
 
 	private:
 		void FindPlayer();

@@ -91,9 +91,4 @@ namespace flex
 		m_Player = (Player*)(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
 	}
 
-	bool FirstPersonCamera::IsDebugCam() const
-	{
-		return false;
-	}
-
 } // namespace flex

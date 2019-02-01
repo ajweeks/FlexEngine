@@ -773,6 +773,10 @@ namespace flex
 		delta = glm::clamp(delta, 0.00001f, 1.0f);
 		glm::vec3 diff = (b - a);
 		delta = glm::min(delta, glm::length(diff));
+		if (abs(delta) < 0.00001f)
+		{
+			return a;
+		}
 		return a + glm::normalize(diff) * delta;
 	}
 

@@ -15,7 +15,6 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Update() override;
 		virtual void Destroy() override;
-		virtual bool IsDebugCam() const override;
 
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);

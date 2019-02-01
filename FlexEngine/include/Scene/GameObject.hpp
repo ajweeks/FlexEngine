@@ -24,9 +24,6 @@ namespace flex
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
-		JSONObject Serialize(const BaseScene* scene) const;
-		void ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
-
 		virtual void Initialize();
 		virtual void PostInitialize();
 		virtual void Destroy();
@@ -35,6 +32,20 @@ namespace flex
 		virtual void DrawImGuiObjects();
 		virtual void DoImGuiContextMenu(bool bActive);
 		virtual bool DoDuplicateGameObjectButton(const char* buttonName);
+
+		virtual Transform* GetTransform();
+		virtual const Transform* GetTransform() const;
+
+		/*
+		* Returns true if we desire an interaction with the given object
+		*/
+		virtual bool SetInteractingWith(GameObject* gameObject);
+		bool IsBeingInteractedWith() const;
+
+		GameObject* GetObjectInteractingWith();
+
+		JSONObject Serialize(const BaseScene* scene) const;
+		void ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
 
 		void RemoveRigidBody();
 
@@ -63,9 +74,6 @@ namespace flex
 		std::vector<GameObject*> GetEarlierSiblings();
 		// Returns all objects who share our parent and have a smaller sibling index
 		std::vector<GameObject*> GetLaterSiblings();
-
-		virtual Transform* GetTransform();
-		virtual const Transform* GetTransform() const;
 
 		void AddTag(const std::string& tag);
 		bool HasTag(const std::string& tag);
@@ -107,31 +115,23 @@ namespace flex
 		// Called when another object is no longer overlapping
 		void OnOverlapEnd(GameObject* other);
 
-		// Filled if this object is a trigger
-		std::vector<GameObject*> overlappingObjects;
-
-		/*
-		* Returns true if we are now interacting, or false
-		* if the object passed in is null or equals our already set interacting object
-		*/
-		bool SetInteractingWith(GameObject* gameObject);
-
-		GameObject* GetObjectInteractingWith();
-
 		GameObjectType GetType() const;
 
 		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+
+		// Filled if this object is a trigger
+		std::vector<GameObject*> overlappingObjects;
 
 	protected:
 		friend BaseScene;
 
 		static const char* s_DefaultNewGameObjectName;
 
-		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
-
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID);
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
+
+		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
 
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
@@ -459,11 +459,29 @@ namespace flex
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
-		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
 
 		bool bInCart = false;
 		real liquidAmount = 0.0f;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+	};
+
+	class Terminal : public GameObject
+	{
+	public:
+		Terminal();
+		Terminal(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Update() override;
+		virtual bool SetInteractingWith(GameObject* gameObject) override;
+
+		std::string str;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
