@@ -58,7 +58,7 @@ namespace flex
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
-		rigidBody->SetAngularDamping(0.1f);
+		rigidBody->SetAngularDamping(2.0f);
 		rigidBody->SetLinearDamping(0.1f);
 		rigidBody->SetFriction(m_MoveFriction);
 
