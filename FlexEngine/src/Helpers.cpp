@@ -943,7 +943,7 @@ namespace flex
 
 	std::string Vec2ToString(glm::vec2 vec, i32 precision)
 	{
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero\n");
@@ -958,7 +958,7 @@ namespace flex
 
 	std::string Vec3ToString(glm::vec3 vec, i32 precision)
 	{
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero\n");
@@ -974,7 +974,7 @@ namespace flex
 
 	std::string Vec4ToString(glm::vec4 vec, i32 precision)
 	{
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");

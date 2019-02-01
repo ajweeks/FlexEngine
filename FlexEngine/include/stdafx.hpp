@@ -5,10 +5,10 @@
 #define COMPILE_VULKAN 0
 #define COMPILE_IMGUI 1
 
-#ifdef _DEBUG
+#ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
-#define COMPILE_RENDERDOC_API 0
+#define COMPILE_RENDERDOC_API 1
 #else
 #define THOROUGH_CHECKS 0
 #define ENABLE_PROFILING 0
@@ -16,7 +16,6 @@
 #endif
 
 #define VC_EXTRALEAN
-
 
 #define NOMINMAX
 #define GLFW_INCLUDE_NONE
@@ -133,14 +132,14 @@ namespace flex
 #endif
 
 #define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); assert(false); }
-#ifdef _DEBUG
+#ifdef DEBUG
 #define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Line: %d\n", __FILE__, __LINE__); assert(false); }
 #else
 #define ENSURE(condition)
 #endif
 
 #if COMPILE_OPEN_GL
-#ifdef _DEBUG
+#ifdef DEBUG
 #define GL_PUSH_DEBUG_GROUP(str) \
 if (g_EngineInstance->bHasGLDebugExtension) { glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION, 0, -1, str); }
 #define GL_POP_DEBUG_GROUP() \
@@ -148,7 +147,7 @@ if (g_EngineInstance->bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 #else
 #define GL_PUSH_DEBUG_GROUP(str)
 #define GL_POP_DEBUG_GROUP()
-#endif // _DEBUG
+#endif // DEBUG
 #else
 #define GL_PUSH_DEBUG_GROUP(str)
 #define GL_POP_DEBUG_GROUP()

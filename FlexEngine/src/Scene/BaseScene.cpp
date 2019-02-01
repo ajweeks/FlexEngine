@@ -728,7 +728,7 @@ namespace flex
 
 	void BaseScene::DestroyObjectAtEndOfFrame(GameObject* obj)
 	{
-#if _DEBUG
+#if DEBUG
 		auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), obj);
 		if (iter != m_ObjectsToDestroyAtEndOfFrame.end())
 		{
@@ -740,7 +740,7 @@ namespace flex
 
 	void BaseScene::DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs)
 	{
-#if _DEBUG
+#if DEBUG
 		for (auto o : objs)
 		{
 			auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), o);
@@ -755,7 +755,7 @@ namespace flex
 
 	void BaseScene::AddObjectAtEndOFFrame(GameObject* obj)
 	{
-#if _DEBUG
+#if DEBUG
 		auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), obj);
 		if (iter != m_ObjectsToAddAtEndOfFrame.end())
 		{
@@ -767,7 +767,7 @@ namespace flex
 
 	void BaseScene::AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs)
 	{
-#if _DEBUG
+#if DEBUG
 		for (auto o : objs)
 		{
 			auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), o);

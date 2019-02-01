@@ -2785,7 +2785,7 @@ namespace flex
 
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
 		{
-#if _DEBUG
+#if DEBUG
 			if (renderID > m_RenderObjects.size() ||
 				renderID == InvalidRenderID)
 			{
@@ -5110,10 +5110,10 @@ namespace flex
 
 			u32 size = constantData.size;
 
-#if  _DEBUG
+#if  DEBUG
 			u32 calculatedSize1 = index * 4;
 			assert(calculatedSize1 == size);
-#endif // _DEBUG
+#endif // DEBUG
 
 			memcpy(shader.uniformBuffer.constantBuffer.m_Mapped, constantData.data, size);
 		}
@@ -5281,10 +5281,10 @@ namespace flex
 			// Aligned offset
 			u32 size = uniformBuffer.dynamicData.size;
 
-#if  _DEBUG
+#if  DEBUG
 			u32 calculatedSize1 = index * 4;
 			assert(calculatedSize1 == size);
-#endif // _DEBUG
+#endif // DEBUG
 
 			void* firstIndex = uniformBuffer.dynamicBuffer.m_Mapped;
 			u64 dest = (u64)firstIndex + (renderID * m_DynamicAlignment);

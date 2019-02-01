@@ -4,7 +4,7 @@
 #include "FlexEngine.hpp"
 
 // Memory leak checking includes
-#if defined(DEBUG) | defined(_DEBUG)
+#if defined(DEBUG)
 #define _CRTDBG_MAP_ALLOC
 //#include <crtdbg.h>
 //#include <stdlib.h>
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	UNREFERENCED_PARAMETER(argv);
 
 	// Enable run-time memory leak check for debug builds
-#if defined(DEBUG) | defined(_DEBUG)
+#if defined(DEBUG)
 	// Notify user if heap is corrupt
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 

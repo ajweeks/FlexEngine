@@ -131,7 +131,7 @@ namespace flex
 
 		InitializeLogger();
 
-#if _DEBUG
+#if DEBUG
 		const char* configStr = "Debug";
 #elif DEVELOPMENT
 		const char* configStr = "Development";

@@ -188,7 +188,7 @@ namespace flex
 		}
 
 		// Check we aren't getting garbage data in
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(pos))
 		{
 			PrintError("Read garbage value from transform pos in serialized scene file! Using default value instead\n");

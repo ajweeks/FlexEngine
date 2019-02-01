@@ -2241,7 +2241,7 @@ namespace flex
 				}
 			}
 
-#if _DEBUG
+#if DEBUG
 			u32 visibleObjectCount = 0;
 			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
@@ -4678,7 +4678,7 @@ namespace flex
 				PrintShaderInfo(shader.program, shader.shader.name.c_str());
 #endif
 
-#if _DEBUG
+#if DEBUG
 				if (!IsProgramValid(shader.program))
 				{
 					PrintError("Shader program is invalid!\n");
@@ -6869,7 +6869,7 @@ namespace flex
 
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)
 		{
-#if _DEBUG
+#if DEBUG
 			if (renderID > m_RenderObjects.size() ||
 				renderID == InvalidRenderID)
 			{

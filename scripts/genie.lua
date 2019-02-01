@@ -96,7 +96,7 @@ end
 
 
 configuration "Debug"
-	defines { "_DEBUG" }
+	defines { "DEBUG" }
 	flags { "Symbols", "ExtraWarnings" }
 configuration "Development"
 	defines { "DEVELOPMENT" }
@@ -110,7 +110,7 @@ configuration "vs*"
 	linkoptions { "/ignore:4221" }
 	defines { "PLATFORM_Win" }
 	includedirs { 
-		path.join(DEPENDENCIES_DIR, "include"),
+		path.join(SOURCE_DIR, "include"),
 		path.join(DEPENDENCIES_DIR, "glad/include"),
 		path.join(DEPENDENCIES_DIR, "glfw/include"), 
 		path.join(DEPENDENCIES_DIR, "glm"), 

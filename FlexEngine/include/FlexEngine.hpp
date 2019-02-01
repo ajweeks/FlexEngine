@@ -3,6 +3,8 @@
 #include "Callbacks/InputCallbacks.hpp"
 #include "Spring.hpp"
 
+struct RENDERDOC_API_1_3_0;
+
 namespace flex
 {
 	class GameObject;
@@ -233,7 +235,7 @@ namespace flex
 		real m_SpringTimer = 0.0f;
 
 #if COMPILE_RENDERDOC_API
-		struct RENDERDOC_API_1_3_0 *m_RenderDocAPI = nullptr;
+		RENDERDOC_API_1_3_0* m_RenderDocAPI = nullptr;
 		bool m_bRenderDocTriggerCaptureNextFrame = false;
 		bool m_bRenderDocCapturingFrame = false;
 		i32 m_RenderDocUIPID = -1;

@@ -97,9 +97,9 @@ namespace flex
 		m_StartingPosition = m_Position;
 		m_LastWindowedPos = m_Position;
 
-#if _DEBUG
+#if DEBUG
 		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-#endif // _DEBUG
+#endif // DEBUG
 
 		// Don't hide window when losing focus in Windowed Fullscreen
 		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_TRUE);
@@ -172,7 +172,7 @@ namespace flex
 
 		gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-#if _DEBUG
+#if DEBUG
 		if (glDebugMessageCallback)
 		{
 			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -185,7 +185,7 @@ namespace flex
 								  &unusedIds,
 								  true);
 		}
-#endif // _DEBUG
+#endif // DEBUG
 
 		if (GLAD_GL_KHR_debug)
 		{
