@@ -1316,12 +1316,17 @@ namespace flex
 		}
 	}
 
-	bool GameObject::SetInteractingWith(GameObject* gameObject)
+	bool GameObject::AllowInteractionWith(GameObject* gameObject)
+	{
+		UNREFERENCED_PARAMETER(gameObject);
+
+		return true;
+	}
+
+	void GameObject::SetInteractingWith(GameObject* gameObject)
 	{
 		m_ObjectInteractingWith = gameObject;
 		m_bBeingInteractedWith = (gameObject != nullptr);
-
-		return true;
 	}
 
 	bool GameObject::IsBeingInteractedWith() const
@@ -3235,7 +3240,7 @@ namespace flex
 	Terminal::Terminal(const std::string& name) :
 		GameObject(name, GameObjectType::TERMINAL)
 	{
-		m_bInteactable = true;
+		m_bInteractable = true;
 
 		MaterialID matID;
 		if (!g_Renderer->GetMaterialID("Terminal Copper", matID))
@@ -3259,17 +3264,11 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Terminal::Update()
-	{
-
-		GameObject::Update();
-	}
-
-	bool Terminal::SetInteractingWith(GameObject* gameObject)
+	bool Terminal::AllowInteractionWith(GameObject* gameObject)
 	{
 		if (gameObject == nullptr)
 		{
-			return GameObject::SetInteractingWith(gameObject);
+			return true;
 		}
 
 		Player* player = dynamic_cast<Player*>(gameObject);
@@ -3283,8 +3282,6 @@ namespace flex
 			// Ensure player is looking our direction and in front of us
 			if (FoF < -0.15f && FoP < -0.35f)
 			{
-				m_ObjectInteractingWith = gameObject;
-				m_bBeingInteractedWith = true;
 				return true;
 			}
 		}

@@ -36,10 +36,8 @@ namespace flex
 		virtual Transform* GetTransform();
 		virtual const Transform* GetTransform() const;
 
-		/*
-		* Returns true if we desire an interaction with the given object
-		*/
-		virtual bool SetInteractingWith(GameObject* gameObject);
+		virtual bool AllowInteractionWith(GameObject* gameObject);
+		virtual void SetInteractingWith(GameObject* gameObject);
 		bool IsBeingInteractedWith() const;
 
 		GameObject* GetObjectInteractingWith();
@@ -478,8 +476,7 @@ namespace flex
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
-		virtual void Update() override;
-		virtual bool SetInteractingWith(GameObject* gameObject) override;
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 
 		std::string str;
 

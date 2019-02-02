@@ -56,6 +56,354 @@ namespace flex
 	{
 		// TODO: Make frame-rate-independent!
 
+		bool bAttemptingInteract = g_InputManager->GetActionPressed(Action::INTERACT);
+
+		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+
+		if (m_Player->m_bPossessed)
+		{
+			if (m_Player->m_TrackRidingID == InvalidTrackID)
+			{
+				if (g_InputManager->GetActionPressed(Action::ENTER_TRACK_BUILD_MODE))
+				{
+					m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
+					m_Player->m_bEditingTrack = false;
+				}
+
+				if (g_InputManager->GetActionPressed(Action::ENTER_TRACK_EDIT_MODE))
+				{
+					m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
+					m_Player->m_bPlacingTrack = false;
+				}
+
+				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+
+				if (m_Player->m_bPlacingTrack)
+				{
+					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(1.0f);
+
+					if (bAttemptingInteract)
+					{
+						bAttemptingInteract = false;
+
+						// Place new node
+						m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = reticlePos;
+						if (m_Player->m_CurveNodesPlaced == 4)
+						{
+							AudioManager::PlaySource(m_Player->m_SoundPlaceFinalTrackNodeID);
+
+							m_Player->m_CurvePlacing.CalculateLength();
+							m_Player->m_TrackPlacing.curves.push_back(m_Player->m_CurvePlacing);
+
+							glm::vec3 prevHandlePos = m_Player->m_CurvePlacing.points[2];
+
+							m_Player->m_CurveNodesPlaced = 0;
+							m_Player->m_CurvePlacing.points[0] = m_Player->m_CurvePlacing.points[1] = m_Player->m_CurvePlacing.points[2] = m_Player->m_CurvePlacing.points[3] = VEC3_ZERO;
+
+							glm::vec3 controlPointPos = reticlePos;
+							glm::vec3 nextHandlePos = controlPointPos + (controlPointPos - prevHandlePos);
+							m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = controlPointPos;
+							m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = nextHandlePos;
+						}
+						else
+						{
+							AudioManager::PlaySource(m_Player->m_SoundPlaceTrackNodeID);
+						}
+
+						for (i32 i = 3; i > m_Player->m_CurveNodesPlaced - 1; --i)
+						{
+							m_Player->m_CurvePlacing.points[i] = reticlePos;
+						}
+					}
+
+					if (g_InputManager->GetActionPressed(Action::COMPLETE_TRACK))
+					{
+						m_Player->m_CurveNodesPlaced = 0;
+						m_Player->m_CurvePlacing.points[0] = m_Player->m_CurvePlacing.points[1] = m_Player->m_CurvePlacing.points[2] = m_Player->m_CurvePlacing.points[3] = VEC3_ZERO;
+
+						if (!m_Player->m_TrackPlacing.curves.empty())
+						{
+							trackManager->AddTrack(m_Player->m_TrackPlacing);
+							trackManager->FindJunctions();
+							m_Player->m_TrackPlacing.curves.clear();
+						}
+					}
+
+					static const btVector4 placedCurveCol(0.5f, 0.8f, 0.3f, 0.9f);
+					static const btVector4 placingCurveCol(0.35f, 0.6f, 0.3f, 0.9f);
+					for (const BezierCurve& curve : m_Player->m_TrackPlacing.curves)
+					{
+						curve.DrawDebug(false, placedCurveCol, placedCurveCol);
+
+					}
+					if (m_Player->m_CurveNodesPlaced > 0)
+					{
+						m_Player->m_CurvePlacing.DrawDebug(false, placingCurveCol, placingCurveCol);
+					}
+
+					btTransform cylinderTransform(ToBtQuaternion(m_Player->m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
+					debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
+					debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
+				}
+
+				if (m_Player->m_bEditingTrack)
+				{
+					// TODO: Snap to points other than the one we are editing
+					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(m_Player->m_TrackEditingID == InvalidTrackID ? 1.0f : 0.0f, true);
+					if (bAttemptingInteract)
+					{
+						bAttemptingInteract = false;
+
+						if (m_Player->m_TrackEditingCurveIdx == -1)
+						{
+							// Select node
+							TrackID trackID = InvalidTrackID;
+							i32 curveIndex = -1;
+							i32 pointIndex = -1;
+							if (trackManager->GetPointInRange(reticlePos, 0.1f, &trackID, &curveIndex, &pointIndex))
+							{
+								m_Player->m_TrackEditingID = trackID;
+								m_Player->m_TrackEditingCurveIdx = curveIndex;
+								m_Player->m_TrackEditingPointIdx = pointIndex;
+							}
+						}
+						else
+						{
+							// Select none
+							m_Player->m_TrackEditingID = InvalidTrackID;
+							m_Player->m_TrackEditingCurveIdx = -1;
+							m_Player->m_TrackEditingPointIdx = -1;
+						}
+					}
+
+					if (m_Player->m_TrackEditingID != InvalidTrackID)
+					{
+						BezierCurveList* trackEditing = trackManager->GetTrack(m_Player->m_TrackEditingID);
+						glm::vec3 point = trackEditing->GetPointOnCurve(m_Player->m_TrackEditingCurveIdx, m_Player->m_TrackEditingPointIdx);
+
+						glm::vec3 newPoint(reticlePos.x, point.y, reticlePos.z);
+						trackEditing->SetPointPosAtIndex(m_Player->m_TrackEditingCurveIdx, m_Player->m_TrackEditingPointIdx, newPoint, true);
+
+						static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
+						static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
+						for (const BezierCurve& curve : trackEditing->curves)
+						{
+							curve.DrawDebug(false, editedCurveCol, editingCurveCol);
+						}
+
+						trackManager->FindJunctions();
+					}
+
+					btTransform cylinderTransform(ToBtQuaternion(m_Player->m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
+					static btVector3 ringColEditing(0.48f, 0.22f, 0.65f);
+					static btVector3 ringColEditingActive(0.6f, 0.4f, 0.85f);
+					debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
+					debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
+				}
+
+				GameObject* nearestInteractable = nullptr;
+				if (m_Player->m_ObjectInteractingWith == nullptr)
+				{
+					std::vector<GameObject*> allInteractableObjects;
+					g_SceneManager->CurrentScene()->GetInteractableObjects(allInteractableObjects);
+
+					if (!allInteractableObjects.empty())
+					{
+						// List of objects sorted by sqr dist (closest to farthest)
+						std::list<Pair<GameObject*, real>> nearbyInteractables;
+
+						real maxDistSqr = 7.0f * 7.0f;
+						const glm::vec3 pos = m_Player->m_Transform.GetWorldPosition();
+						for (GameObject* obj : allInteractableObjects)
+						{
+							if (obj != m_Player)
+							{
+								real dist2 = glm::distance2(obj->GetTransform()->GetWorldPosition(), pos);
+								if (dist2 <= maxDistSqr)
+								{
+									// Insert into sorted list
+									bool bInserted = false;
+									for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
+									{
+										if (iter->second > dist2)
+										{
+											nearbyInteractables.insert(iter, { obj, dist2 });
+											bInserted = true;
+											break;
+										}
+									}
+									if (!bInserted)
+									{
+										nearbyInteractables.emplace_back(obj, dist2);
+									}
+									break;
+								}
+							}
+						}
+
+						for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
+						{
+							GameObject* nearbyInteractable = iter->first;
+							if (!nearbyInteractable->IsBeingInteractedWith())
+							{
+								if (nearbyInteractable->AllowInteractionWith(m_Player))
+								{
+									nearestInteractable = nearbyInteractable;
+									break;
+								}
+							}
+						}
+					}
+				}
+
+				if (nearestInteractable != nullptr)
+				{
+					glm::vec3 c = nearestInteractable->GetTransform()->GetWorldPosition();
+					glm::vec3 v1 = c + glm::vec3(1.0f, 0.0f, 1.0f);
+					glm::vec3 v2 = c + glm::vec3(-1.0f, 0.0f, 1.0f);
+					glm::vec3 v3 = c + glm::vec3(0.0f, 0.0f, -1.0f);
+					debugDrawer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+					glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart) + 1.0f, 0.0f);
+					debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+					o = glm::vec3(0.0f, 2.0f, 0.0f);
+					debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+				}
+
+				if (bAttemptingInteract)
+				{
+					if (m_Player->m_ObjectInteractingWith)
+					{
+						// Toggle interaction when already interacting
+						m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
+						m_Player->SetInteractingWith(nullptr);
+						bAttemptingInteract = false;
+					}
+					else
+					{
+						if (nearestInteractable != nullptr)
+						{
+							nearestInteractable->SetInteractingWith(m_Player);
+							m_Player->SetInteractingWith(nearestInteractable);
+							bAttemptingInteract = false;
+						}
+					}
+				}
+			}
+
+			if (g_InputManager->GetActionPressed(Action::TOGGLE_TABLET))
+			{
+				m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
+			}
+
+			// TEMP:
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_C))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
+				Cart* cart = scene->GetCartManager()->GetCart(cartID);
+				cart->SetVisible(false);
+				m_Player->m_Inventory.push_back(cart);
+			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_V))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
+				EngineCart* engineCart = (EngineCart*)scene->GetCartManager()->GetCart(cartID);
+				engineCart->SetVisible(false);
+				m_Player->m_Inventory.push_back(engineCart);
+			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_B))
+			{
+				MobileLiquidBox* box = new MobileLiquidBox();
+				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+				box->SetVisible(false);
+				m_Player->m_Inventory.push_back(box);
+			}
+
+			if (!m_Player->m_Inventory.empty())
+			{
+				// Place item from inventory
+				if (g_InputManager->GetActionPressed(Action::PLACE_ITEM))
+				{
+					GameObject* obj = m_Player->m_Inventory[0];
+					bool bPlaced = false;
+
+					if (EngineCart* engineCart = dynamic_cast<EngineCart*>(obj))
+					{
+						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
+						real rangeThreshold = 4.0f;
+						real distAlongNearestTrack;
+						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+
+						if (nearestTrackID != InvalidTrackID)
+						{
+							bPlaced = true;
+							engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+							engineCart->SetVisible(true);
+						}
+					}
+					else if (Cart* cart = dynamic_cast<Cart*>(obj))
+					{
+						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
+						real rangeThreshold = 4.0f;
+						real distAlongNearestTrack;
+						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+
+						if (nearestTrackID != InvalidTrackID)
+						{
+							bPlaced = true;
+							cart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+							cart->SetVisible(true);
+						}
+					}
+					else if (MobileLiquidBox* box = dynamic_cast<MobileLiquidBox*>(obj))
+					{
+						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
+						glm::vec3 playerPos = m_Player->m_Transform.GetWorldPosition();
+						real threshold = 8.0f;
+						real closestCartDist = threshold;
+						i32 closestCartIdx = -1;
+						for (i32 i = 0; i < (i32)carts.size(); ++i)
+						{
+							real d = glm::distance(carts[i]->GetTransform()->GetWorldPosition(), playerPos);
+							if (d <= closestCartDist)
+							{
+								closestCartDist = d;
+								closestCartIdx = i;
+							}
+						}
+
+						if (closestCartIdx != -1)
+						{
+							if (box->GetParent() == nullptr)
+							{
+								g_SceneManager->CurrentScene()->RemoveRootObject(box, false);
+							}
+
+							bPlaced = true;
+
+							carts[closestCartIdx]->AddChild(box);
+							box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
+							box->SetVisible(true);
+						}
+					}
+					else
+					{
+						PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", obj->GetName().c_str());
+					}
+
+					if (bPlaced)
+					{
+						m_Player->m_Inventory.erase(m_Player->m_Inventory.begin());
+					}
+				}
+			}
+		}
+
 		m_Player->GetRigidBody()->UpdateParentTransform();
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
@@ -77,7 +425,7 @@ namespace flex
 				return;
 			}
 
-			if (g_InputManager->GetActionPressed(Action::INTERACT))
+			if (bAttemptingInteract)
 			{
 				if (m_Player->m_TrackRidingID == InvalidTrackID)
 				{
@@ -85,6 +433,8 @@ namespace flex
 					TrackID trackInRangeIndex = trackManager->GetTrackInRangeID(transform->GetWorldPosition(), m_Player->m_TrackAttachMinDist, &distAlongTrack);
 					if (trackInRangeIndex != -1)
 					{
+						bAttemptingInteract = false;
+
 						m_Player->AttachToTrack(trackInRangeIndex, distAlongTrack);
 
 						SnapPosToTrack(m_Player->m_DistAlongTrack, false);
@@ -92,6 +442,7 @@ namespace flex
 				}
 				else
 				{
+					bAttemptingInteract = false;
 					m_Player->DetachFromTrack();
 				}
 			}
@@ -149,8 +500,6 @@ namespace flex
 			}
 		}
 
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-
 		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON);
 		if (bDrawLocalAxes)
 		{
@@ -190,7 +539,9 @@ namespace flex
 			debugDrawer->drawLine(start, end, bMaxVel ? btVector3(0.9f, 0.3f, 0.4f) : btVector3(0.1f, 0.85f, 0.98f));
 		}
 
-		if (m_Player->m_bPossessed)
+		if (m_Player->m_bPossessed &&
+			!m_Player->IsBeingInteractedWith() &&
+			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
 			real lookH = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
 			if (m_Player->IsRidingTrack())

@@ -26,7 +26,12 @@ namespace flex
 
 		// Non-serialized fields
 		real m_LerpSpeed = 8.0f;
-		bool m_bMovingToTarget = false;
+		bool m_bTransitioningIn = false;
+		bool m_bTransitioningOut = false;
+
+		glm::vec3 m_StartingPos;
+		real m_StartingPitch = -1.0f;
+		real m_StartingYaw = -1.0f;
 
 	};
 } // namespace flex

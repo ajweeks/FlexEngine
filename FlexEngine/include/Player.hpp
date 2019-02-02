@@ -22,7 +22,8 @@ namespace flex
 		virtual void Update() override;
 		virtual void Destroy() override;
 		virtual void DrawImGuiObjects() override;
-		virtual bool SetInteractingWith(GameObject* gameObject) override;
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		virtual void SetInteractingWith(GameObject* gameObject) override;
 
 		void SetPitch(real pitch);
 		void AddToPitch(real deltaPitch);
@@ -96,7 +97,7 @@ namespace flex
 
 		std::vector<GameObject*> m_Inventory;
 
-		const real m_TurnToFaceDownTrackInvSpeed = 30.0f;
+		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;
 
 	private:

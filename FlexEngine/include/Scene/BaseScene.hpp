@@ -56,7 +56,7 @@ namespace flex
 		void DeleteSaveFiles();
 
 		std::vector<GameObject*>& GetRootObjects();
-		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);
+		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
 
 		GameObject* AddRootObject(GameObject* gameObject);
 		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
