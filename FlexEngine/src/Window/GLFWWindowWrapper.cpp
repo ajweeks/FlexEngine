@@ -830,6 +830,8 @@ namespace flex
 		if (glfwMods & GLFW_MOD_ALT) inputMods |= (i32)InputModifier::ALT;
 		if (glfwMods & GLFW_MOD_CONTROL) inputMods |= (i32)InputModifier::CONTROL;
 		if (glfwMods & GLFW_MOD_SUPER) inputMods |= (i32)InputModifier::SUPER;
+		if (glfwMods & GLFW_MOD_CAPS_LOCK) inputMods |= (i32)InputModifier::CAPS_LOCK;
+		if (glfwMods & GLFW_MOD_NUM_LOCK) inputMods |= (i32)InputModifier::NUM_LOCK;
 
 		return inputMods;
 	}

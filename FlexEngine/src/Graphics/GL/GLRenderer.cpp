@@ -4909,6 +4909,7 @@ namespace flex
 			// TODO: Save these strings in a config file?
 			std::string fontFilePaths[] = {
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
+				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
 				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
 				RESOURCE_LOCATION  "fonts/gant.ttf",
 				RESOURCE_LOCATION  "fonts/gant.ttf",
@@ -4917,12 +4918,14 @@ namespace flex
 			std::string extension = ".png";
 			std::string renderedTextureFilePaths[] = {
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
+				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
 				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14",
 				RESOURCE_LOCATION  "fonts/gant-regular-10",
 				RESOURCE_LOCATION  "fonts/gant-regular-64",
 			};
 
 			i16 fontSizes[] = {
+				24,
 				24,
 				14,
 				10,
@@ -4931,6 +4934,7 @@ namespace flex
 
 			BitmapFont** fonts[] = {
 				&m_FntUbuntuCondensedSS,
+				&m_FntUbuntuCondensedWS,
 				&m_FntSourceCodeProSS,
 				&m_FntGantSS,
 				&m_FntGantWS,
@@ -4938,6 +4942,7 @@ namespace flex
 
 			bool bScreenSpace[] = {
 				true,
+				false,
 				true,
 				true,
 				false,

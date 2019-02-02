@@ -17,6 +17,7 @@
 
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
+#include "Cameras/TerminalCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -2236,6 +2237,8 @@ namespace flex
 	void RisingBlock::Initialize()
 	{
 		startingPos = m_Transform.GetWorldPosition();
+
+		GameObject::Initialize();
 	}
 
 	void RisingBlock::PostInitialize()
@@ -2532,11 +2535,15 @@ namespace flex
 	void DirectionalLight::Initialize()
 	{
 		g_Renderer->RegisterDirectionalLight(this);
+
+		GameObject::Initialize();
 	}
 
 	void DirectionalLight::Destroy()
 	{
 		g_Renderer->RemoveDirectionalLight();
+
+		GameObject::Destroy();
 	}
 
 	void DirectionalLight::DrawImGuiObjects()
@@ -2701,11 +2708,15 @@ namespace flex
 	void PointLight::Initialize()
 	{
 		g_Renderer->RegisterPointLight(this);
+
+		GameObject::Initialize();
 	}
 
 	void PointLight::Destroy()
 	{
 		g_Renderer->RemovePointLight(this);
+
+		GameObject::Destroy();
 	}
 
 	void PointLight::DrawImGuiObjects()
@@ -3238,7 +3249,8 @@ namespace flex
 	}
 
 	Terminal::Terminal(const std::string& name) :
-		GameObject(name, GameObjectType::TERMINAL)
+		GameObject(name, GameObjectType::TERMINAL),
+		m_KeyEventCallback(this, &Terminal::OnKeyEvent)
 	{
 		m_bInteractable = true;
 
@@ -3253,6 +3265,20 @@ namespace flex
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
+	}
+
+	void Terminal::Initialize()
+	{
+		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 1);
+
+		GameObject::Initialize();
+	}
+
+	void Terminal::Destroy()
+	{
+		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
+
+		GameObject::Destroy();
 	}
 
 	GameObject* Terminal::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -3289,6 +3315,19 @@ namespace flex
 		return false;
 	}
 
+	void Terminal::SetInteractingWith(GameObject* gameObject)
+	{
+		if (gameObject == nullptr)
+		{
+			m_Camera = nullptr;
+		}
+		else
+		{
+			m_Camera = (TerminalCamera*)gameObject;
+		}
+		GameObject::SetInteractingWith(gameObject);
+	}
+
 	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
 	{
 		UNREFERENCED_PARAMETER(scene);
@@ -3296,6 +3335,7 @@ namespace flex
 
 		JSONObject obj = parentObject.GetObject("terminal");
 		str = obj.GetString("str");
+		cursor = (i32)str.size();
 	}
 
 	void Terminal::SerializeUniqueFields(JSONObject& parentObject) const
@@ -3305,6 +3345,183 @@ namespace flex
 		terminalObj.fields.emplace_back("str", JSONValue(str));
 
 		parentObject.fields.emplace_back("terminal", JSONValue(terminalObj));
+	}
+
+	void Terminal::TypeChar(char c)
+	{
+		str.insert(str.begin() + cursor, c);
+		cursor += 1;
+	}
+
+	void Terminal::DeleteChar()
+	{
+		if (!str.empty() && cursor > 0)
+		{
+			str.erase(str.begin() + cursor - 1);
+			cursor -= 1;
+		}
+	}
+
+	void Terminal::DeleteCharInFront()
+	{
+		if (cursor < (i32)str.size())
+		{
+			str.erase(str.begin() + cursor);
+		}
+	}
+
+	void Terminal::ClearStr()
+	{
+		str.clear();
+	}
+
+	void Terminal::MoveCursorToStart()
+	{
+		cursor = 0;
+	}
+
+	void Terminal::MoveCursorToStartOfLine()
+	{
+
+	}
+
+	void Terminal::MoveCursorToEnd()
+	{
+		cursor = (i32)str.size() - 1;
+	}
+
+	void Terminal::MoveCursorToEndOfLine()
+	{
+
+	}
+
+	void Terminal::MoveCursorLeft()
+	{
+		if (cursor > 0)
+		{
+			cursor -= 1;
+		}
+	}
+
+	void Terminal::MoveCursorRight()
+	{
+		if (cursor < (i32)str.size())
+		{
+			cursor += 1;
+		}
+	}
+
+	void Terminal::MoveCursorUp()
+	{
+
+	}
+
+	void Terminal::MoveCursorDown()
+	{
+
+	}
+
+	// TODO: Move to Terminal
+	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
+	{
+		if (m_Camera != nullptr)
+		{
+			if (action == KeyAction::PRESS)
+			{
+				const bool bCapsLock = modifiers & (i32)InputModifier::CAPS_LOCK;
+				const bool bShiftDown = modifiers & (i32)InputModifier::SHIFT;
+				const bool bCtrlDown = modifiers & (i32)InputModifier::CONTROL;
+				i32 kC = (i32)keyCode;
+				if (keyCode == KeyCode::KEY_ESCAPE)
+				{
+					m_Camera->TransitionOut();
+					return EventReply::CONSUMED;
+				}
+				if (kC >= (i32)KeyCode::KEY_APOSTROPHE && kC < (i32)KeyCode::KEY_RIGHT_BRACKET)
+				{
+					char c = KeyCodeStrings[(i32)keyCode][0];
+					// TODO: Handle symbols
+					if (bShiftDown || bCapsLock)
+					{
+						c = (char)toupper(c);
+					}
+					TypeChar(c);
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_SPACE)
+				{
+					TypeChar(' ');
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_ESCAPE)
+				{
+					TypeChar(' ');
+					TypeChar(' ');
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_ENTER)
+				{
+					TypeChar('\n');
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_BACKSPACE)
+				{
+					DeleteChar();
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_DELETE)
+				{
+					DeleteCharInFront();
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_HOME)
+				{
+					if (bCtrlDown)
+					{
+						MoveCursorToStart();
+					}
+					else
+					{
+						MoveCursorToStartOfLine();
+					}
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_END)
+				{
+					if (bCtrlDown)
+					{
+						MoveCursorToEnd();
+					}
+					else
+					{
+						MoveCursorToEndOfLine();
+					}
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_LEFT)
+				{
+					MoveCursorLeft();
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_RIGHT)
+				{
+					MoveCursorRight();
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_UP)
+				{
+					MoveCursorUp();
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_DOWN)
+				{
+					MoveCursorDown();
+					return EventReply::CONSUMED;
+				}
+			}
+		}
+
+		return EventReply::UNCONSUMED;
 	}
 
 } // namespace flex

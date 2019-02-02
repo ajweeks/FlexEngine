@@ -9,15 +9,16 @@ namespace flex
 {
 	class ICallbackMouseButton;
 	class ICallbackMouseMoved;
+	class ICallbackKeyEvent;
 
 	/*
 	* There are three main ways of retrieving input:
-	*   1. Call GetKey(Down/Pressed) with a keycode value
+	*   1. Call GetKey(Down/Pressed) with a key code value
 	*     - This is the fastest, but also least portable method. Good for debugging.
 	*
 	*   2. Call GetActionDown with an action type
 	*     - This requires setting up an abstract representation of the input
-	*       action, but allows for users to remap the keycode to whatever they like
+	*       action, but allows for users to remap the key code to whatever they like
 	*
 	*    3. Register as a listener
 	*      - This is the most involved method, but allows for full input binding
@@ -27,9 +28,6 @@ namespace flex
 	class InputManager
 	{
 	public:
-		InputManager();
-		~InputManager();
-
 		void Initialize();
 
 		void Update();
@@ -59,7 +57,7 @@ namespace flex
 		void CursorPosCallback(double x, double y);
 		void MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods);
 		void ScrollCallback(double xOffset, double yOffset);
-		void KeyCallback(KeyCode keycode, KeyAction action, i32 mods);
+		void KeyCallback(KeyCode keyCode, KeyAction action, i32 mods);
 		void CharCallback(u32 character);
 
 		bool DidMouseWrap() const;
@@ -94,6 +92,9 @@ namespace flex
 		void BindMouseMovedCallback(ICallbackMouseMoved* callback, i32 priority);
 		void UnbindMouseMovedCallback(ICallbackMouseMoved* callback);
 
+		void BindKeyEventCallback(ICallbackKeyEvent* callback, i32 priority);
+		void UnbindKeyEventCallback(ICallbackKeyEvent* callback);
+
 		void DrawImGuiKeyMapper(bool* bOpen);
 
 		static i32 s_JoystickDisconnected;
@@ -113,6 +114,7 @@ namespace flex
 		std::vector<InputBinding> m_InputBindings;
 		std::vector<Pair<ICallbackMouseButton*, i32>> m_MouseButtonCallbacks;
 		std::vector<Pair<ICallbackMouseMoved*, i32>> m_MouseMovedCallbacks;
+		std::vector<Pair<ICallbackKeyEvent*, i32>> m_KeyEventCallbacks;
 
 		u32 m_MouseButtonStates;
 		u32 m_MouseButtonsPressed;

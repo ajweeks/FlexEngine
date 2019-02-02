@@ -12,11 +12,12 @@ namespace flex
 	{
 	public:
 		TerminalCamera(real FOV = glm::radians(50.0f), real zNear = 0.1f, real zFar = 1000.0f);
-		~TerminalCamera();
 
 		virtual void Update() override;
 
 		void SetTerminal(Terminal* terminal);
+
+		void TransitionOut();
 
 	private:
 		Terminal* m_Terminal = nullptr;

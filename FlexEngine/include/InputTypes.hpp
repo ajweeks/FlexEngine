@@ -278,16 +278,18 @@ namespace flex
 		"NONE"
 	};
 
-	static_assert(ARRAY_LENGTH(KeyCodeStrings) == (u32)KeyCode::_NONE + 1, "Key code strings length must match KeyCode enum");
+	static_assert(ARRAY_LENGTH(KeyCodeStrings) == (u32)KeyCode::_NONE + 1, "KeyCodeStrings length must match KeyCode enum");
 
 	enum class InputModifier
 	{
-		SHIFT = (1 << 0),
-		CONTROL = (1 << 1),
-		ALT = (1 << 2),
-		SUPER = (1 << 3),
+		SHIFT		= (1 << 0),
+		CONTROL		= (1 << 1),
+		ALT			= (1 << 2),
+		SUPER		= (1 << 3),
+		CAPS_LOCK	= (1 << 4),
+		NUM_LOCK	= (1 << 5),
 
-		_NONE = 0,
+		_NONE		= 0,
 	};
 
 	static constexpr const char* InputModifierStrings[] =
@@ -296,6 +298,8 @@ namespace flex
 		"Control",
 		"Alt",
 		"Super",
+		"Caps lock",
+		"Num lock",
 
 		"NONE"
 	};

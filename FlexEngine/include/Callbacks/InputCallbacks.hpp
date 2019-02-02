@@ -60,4 +60,32 @@ namespace flex
 		T* inst;
 	};
 
+	class ICallbackKeyEvent
+	{
+	public:
+		virtual EventReply Execute(KeyCode keyCode, KeyAction action, i32 modifiers) = 0;
+	};
+
+	template<typename T>
+	class KeyEventCallback : public ICallbackKeyEvent
+	{
+	public:
+		using CallbackFunction = EventReply(T::*)(KeyCode, KeyAction, i32);
+
+		KeyEventCallback(T* inst, CallbackFunction func) :
+			inst(inst),
+			func(func)
+		{
+		}
+
+		virtual EventReply Execute(KeyCode keyCode, KeyAction action, i32 modifiers) override
+		{
+			return (inst->*func)(keyCode, action, modifiers);
+		}
+
+	private:
+		CallbackFunction func;
+		T* inst;
+	};
+
 } // namespace flex

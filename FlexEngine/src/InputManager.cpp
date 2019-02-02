@@ -13,14 +13,6 @@ namespace flex
 	const real InputManager::MAX_JOYSTICK_ROTATION_SPEED = 15.0f;
 	const std::string InputManager::s_InputBindingFilePath = SAVED_LOCATION "config/input-bindings.ini";
 
-	InputManager::InputManager()
-	{
-	}
-
-	InputManager::~InputManager()
-	{
-	}
-
 	void InputManager::Initialize()
 	{
 		ImGuiIO& io = ImGui::GetIO();
@@ -696,15 +688,15 @@ namespace flex
 		io.MouseWheel += m_ScrollYOffset;
 	}
 
-	void InputManager::KeyCallback(KeyCode keycode, KeyAction action, i32 mods)
+	void InputManager::KeyCallback(KeyCode keyCode, KeyAction action, i32 mods)
 	{
 		UNREFERENCED_PARAMETER(mods);
 
-		m_Keys[keycode].pDown = m_Keys[keycode].down;
+		m_Keys[keyCode].pDown = m_Keys[keyCode].down;
 
 		if (action == KeyAction::PRESS)
 		{
-			m_Keys[keycode].down = 1;
+			m_Keys[keyCode].down = 1;
 		}
 		else if (action == KeyAction::REPEAT)
 		{
@@ -712,16 +704,27 @@ namespace flex
 		}
 		else if (action == KeyAction::RELEASE)
 		{
-			m_Keys[keycode].down = 0;
+			m_Keys[keyCode].down = 0;
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.KeysDown[(i32)keycode] = m_Keys[keycode].down > 0;
+		io.KeysDown[(i32)keyCode] = m_Keys[keyCode].down > 0;
 
 		io.KeyCtrl = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true);
 		io.KeyShift = GetKeyDown(KeyCode::KEY_LEFT_SHIFT, true) || GetKeyDown(KeyCode::KEY_RIGHT_SHIFT, true);
 		io.KeyAlt = GetKeyDown(KeyCode::KEY_LEFT_ALT, true) || GetKeyDown(KeyCode::KEY_RIGHT_ALT, true);
 		io.KeySuper = GetKeyDown(KeyCode::KEY_LEFT_SUPER, true) || GetKeyDown(KeyCode::KEY_RIGHT_SUPER, true);
+
+		if (!io.WantCaptureKeyboard)
+		{
+			for (auto iter = m_KeyEventCallbacks.begin(); iter != m_KeyEventCallbacks.end(); ++iter)
+			{
+				if (iter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+				{
+					break;
+				}
+			}
+		}
 	}
 
 	void InputManager::CharCallback(u32 character)
@@ -943,7 +946,7 @@ namespace flex
 		{
 			if (callbackPair.first == callback)
 			{
-				PrintWarn("Attempted to bind on mouse button callback multiple times!\n");
+				PrintWarn("Attempted to bind mouse button callback multiple times!\n");
 				return;
 			}
 		}
@@ -991,7 +994,7 @@ namespace flex
 		{
 			if (callbackPair.first == callback)
 			{
-				PrintWarn("Attempted to bind on mouse moved callback multiple times!\n");
+				PrintWarn("Attempted to bind mouse moved callback multiple times!\n");
 				return;
 			}
 		}
@@ -1031,6 +1034,54 @@ namespace flex
 		}
 
 		m_MouseMovedCallbacks.erase(found);
+	}
+
+	void InputManager::BindKeyEventCallback(ICallbackKeyEvent* callback, i32 priority)
+	{
+		for (auto callbackPair : m_KeyEventCallbacks)
+		{
+			if (callbackPair.first == callback)
+			{
+				PrintWarn("Attempted to bind key event callback multiple times!\n");
+				return;
+			}
+		}
+
+		bool bAdded = false;
+		for (auto iter = m_KeyEventCallbacks.begin(); iter != m_KeyEventCallbacks.end(); ++iter)
+		{
+			if (iter->second < priority)
+			{
+				m_KeyEventCallbacks.insert(iter, Pair<ICallbackKeyEvent*, i32>(callback, priority));
+				bAdded = true;
+				break;
+			}
+		}
+		if (!bAdded)
+		{
+			m_KeyEventCallbacks.push_back(Pair<ICallbackKeyEvent*, i32>(callback, priority));
+		}
+	}
+
+	void InputManager::UnbindKeyEventCallback(ICallbackKeyEvent* callback)
+	{
+		auto found = m_KeyEventCallbacks.end();
+		for (auto iter = m_KeyEventCallbacks.begin(); iter != m_KeyEventCallbacks.end(); ++iter)
+		{
+			if (iter->first == callback)
+			{
+				found = iter;
+				break;
+			}
+		}
+
+		if (found == m_KeyEventCallbacks.end())
+		{
+			PrintWarn("Attempted to unbind key event callback that isn't present in callback list!\n");
+			return;
+		}
+
+		m_KeyEventCallbacks.erase(found);
 	}
 
 	void InputManager::DrawImGuiKeyMapper(bool* bOpen)

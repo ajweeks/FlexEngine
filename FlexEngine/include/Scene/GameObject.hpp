@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Audio/RandomizedAudioSource.hpp"
+#include "Callbacks/InputCallbacks.hpp"
 #include "Spring.hpp"
 #include "Transform.hpp"
 
@@ -11,6 +12,7 @@ namespace flex
 	class BaseScene;
 	class MeshComponent;
 	class BezierCurveList;
+	class TerminalCamera;
 
 	class GameObject
 	{
@@ -474,15 +476,42 @@ namespace flex
 		Terminal();
 		Terminal(const std::string& name);
 
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-
-		std::string str;
+		virtual void SetInteractingWith(GameObject* gameObject) override;
 
 	protected:
+		void TypeChar(char c);
+		void DeleteChar(); // (backspace)
+		void DeleteCharInFront(); // (delete)
+		void ClearStr();
+
+		void MoveCursorToStart();
+		void MoveCursorToStartOfLine();
+		void MoveCursorToEnd();
+		void MoveCursorToEndOfLine();
+		void MoveCursorLeft();
+		void MoveCursorRight();
+		void MoveCursorUp();
+		void MoveCursorDown();
+
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+	private:
+		friend TerminalCamera;
+
+		std::string str;
+		i32 cursor = 0;
+
+		TerminalCamera* m_Camera = nullptr;
+
+		KeyEventCallback<Terminal> m_KeyEventCallback;
+		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 
 	};
 
