@@ -120,8 +120,6 @@ namespace flex
 			}
 		}
 
-		CalculateAxisVectorsFromPitchAndYaw();
-
 		glm::vec3 translation(0.0f);
 		real moveF = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_FORWARD);
 		if (moveF != 0.0f)
@@ -205,6 +203,7 @@ namespace flex
 		m_MoveVel *= m_MoveLag;
 		m_TurnVel *= m_TurnLag;
 
+		CalculateAxisVectorsFromPitchAndYaw();
 		RecalculateViewProjection();
 
 		m_MouseDragDist = VEC2_ZERO;
